@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Editar atalhos (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+button:disabled { cursor: default; opacity: 0.4; }
+input::placeholder, textarea::placeholder { color: var(--cap-ph, #4a5578); }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Editar atalhos" voltar="H2-Home-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div role="status" aria-live="polite" style="flex-shrink: 0; box-sizing: border-box; min-height: 34px; padding: 8px 16px; display: flex; align-items: center; border-bottom: 1px solid var(--cap-line, #1a2240); font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.3; color: {{notaTom}};">{{barra}}</div>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+
+    <section aria-label="Atalhos na tela inicial" style="box-sizing: border-box; padding: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">{{contagem}}</span>
+        <span style="flex-grow: 1;"></span>
+        <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6);">{{salvoTxt}}</span>
+      </div>
+      <sc-for list="{{linhas}}" as="a" hint-placeholder-count="6">
+        <div style="box-sizing: border-box; padding: 10px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{a.line}}; display: flex; flex-direction: column; gap: 8px;">
+          <sc-if value="{{a.normal}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: flex-start; gap: 10px; min-width: 0;">
+              <span style="width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.14); color: var(--cap-accent, #00a1fe); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{a.n}}</span>
+              <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.10em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{a.l}}</span>
+                <span style="font-size: 12px; line-height: 1.35; color: var(--cap-ink2, #b1bdd6); overflow-wrap: anywhere;">{{a.q}}</span>
+                <span style="font-size: 9.5px; letter-spacing: 0.12em; font-weight: 700; color: var(--cap-ink4, #7985a6);">{{a.tipo}}</span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" onClick="{{a.subir}}" disabled="{{a.primeiro}}" aria-label="{{a.ariaSubir}}" style="flex: 1 1 0; min-width: 0; height: 44px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+              <button type="button" onClick="{{a.descer}}" disabled="{{a.ultimo}}" aria-label="{{a.ariaDescer}}" style="flex: 1 1 0; min-width: 0; height: 44px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+              <button type="button" onClick="{{a.editar}}" aria-label="{{a.ariaEditar}}" style="flex: 1 1 0; min-width: 0; height: 44px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: var(--cap-ink, #eaf1ff); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20h4l10-10-4-4L4 16z M14 6l4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+              <a href="{{a.testar}}" aria-label="{{a.ariaTestar}}" style="flex: 1.4 1 0; min-width: 0; height: 44px; box-sizing: border-box; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; display: flex; align-items: center; justify-content: center; text-decoration: none; white-space: nowrap;">Testar ›</a>
+              <button type="button" onClick="{{a.remover}}" aria-label="{{a.ariaRemover}}" style="flex: 1 1 0; min-width: 0; height: 44px; border-radius: 10px; border: 1px solid rgba(var(--cap-crit-rgb, 255,59,48), 0.45); background: transparent; color: var(--cap-crit, #ff3b30); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 7h14 M10 7V4h4v3 M7 7l1 13h8l1-13" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+            </div>
+          </sc-if>
+          <sc-if value="{{a.editando}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <span style="display: flex; align-items: baseline; gap: 8px;"><label for="ed-nome-m" style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-accent, #00a1fe);">NOME DO ATALHO</label><span style="flex-grow: 1;"></span><span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); font-variant-numeric: tabular-nums;">{{edLCont}}</span></span>
+              <input id="ed-nome-m" value="{{edL}}" onChange="{{onEdL}}" onKeyDown="{{onEdKey}}" maxlength="28" autocomplete="off" placeholder="NOME" style="height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 14px; letter-spacing: 0.08em; font-weight: 800; text-transform: uppercase; min-width: 0; width: 100%;">
+              <span style="display: flex; align-items: baseline; gap: 8px;"><label for="ed-perg-m" style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-accent, #00a1fe);">PERGUNTA QUE ELE ENVIA</label><span style="flex-grow: 1;"></span><span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); font-variant-numeric: tabular-nums;">{{edQCont}}</span></span>
+              <textarea id="ed-perg-m" value="{{edQ}}" onChange="{{onEdQ}}" onKeyDown="{{onEdKey}}" maxlength="240" rows="3" placeholder="Pergunta enviada ao Capitão IA" style="box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 14px; line-height: 1.4; resize: none; min-width: 0; width: 100%;"></textarea>
+              <span style="display: flex; gap: 6px;">
+                <button type="button" onClick="{{salvarEdicao}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12px; letter-spacing: 0.10em; font-weight: 800; cursor: pointer;">SALVAR</button>
+                <button type="button" onClick="{{cancelarEdicao}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12px; letter-spacing: 0.10em; font-weight: 700; cursor: pointer;">CANCELAR</button>
+              </span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 14px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; font-size: 12.5px; color: var(--cap-ink3, #97a3c0); text-align: center; line-height: 1.4;">Nenhum atalho na tela inicial — adicione do banco ou crie um.</div>
+      </sc-if>
+      <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">{{fonteLista}}</span>
+    </section>
+
+    <section aria-label="Pré-visualização da tela inicial" style="box-sizing: border-box; padding: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+      <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">PRÉ-VISUALIZAÇÃO · TELA INICIAL</span>
+      <div aria-hidden="true" style="box-sizing: border-box; padding: 10px; border-radius: 14px; background: var(--cap-bg, #050816); border: 1px solid var(--cap-line2, #27315a); display: flex; flex-direction: column; gap: 6px;">
+        <div style="height: 30px; border-radius: 10px; border: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.30); display: flex; align-items: center; padding: 0 10px; font-size: 10.5px; color: var(--cap-ph, #4a5578);">Pergunte ao barco…</div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;">
+          <sc-for list="{{previa}}" as="p" hint-placeholder-count="6">
+            <span style="box-sizing: border-box; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: var(--cap-ink3, #97a3c0); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: rgba(var(--cap-card-rgb, 13,19,41), 0.9); border-radius: 10px; padding: 0 6px; height: 38px; display: flex; align-items: center; justify-content: center; min-width: 0;"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{p.l}}</span></span>
+          </sc-for>
+        </div>
+        <span style="height: 32px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 9.5px; letter-spacing: 0.12em; font-weight: 700; color: var(--cap-accent, #00a1fe);">EDITAR ATALHOS</span>
+      </div>
+      <span style="font-size: 11.5px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);">Um toque no atalho envia a pergunta ao Capitão IA. Aparecem na mesma ordem na tela inicial do app e no console web.</span>
+      <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">Fonte: lista salva neste aparelho — a tela inicial lê a mesma lista.</span>
+    </section>
+
+    <section aria-label="Banco de atalhos" style="box-sizing: border-box; padding: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+      <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">{{bancoTitulo}}</span>
+      <span style="font-size: 11.5px; line-height: 1.4; color: {{bancoSubTom}};">{{bancoSub}}</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{banco}}" as="b" hint-placeholder-count="12">
+          <button type="button" onClick="{{b.add}}" disabled="{{b.cheio}}" title="{{b.q}}" aria-label="{{b.aria}}" style="box-sizing: border-box; min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 10.5px; letter-spacing: 0.08em; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; min-width: 0; text-align: left;"><span style="color: var(--cap-accent, #00a1fe); font-size: 16px; line-height: 1; flex-shrink: 0;">+</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{b.l}}</span></button>
+        </sc-for>
+      </div>
+      <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">{{bancoFonte}}</span>
+    </section>
+
+    <section aria-label="Criar atalho" style="box-sizing: border-box; padding: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+      <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-accent, #00a1fe);">CRIAR ATALHO PRÓPRIO</span>
+      <span style="display: flex; align-items: baseline; gap: 8px;"><label for="novo-nome-m" style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">NOME (ATÉ 28)</label><span style="flex-grow: 1;"></span><span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); font-variant-numeric: tabular-nums;">{{novoLCont}}</span></span>
+      <input id="novo-nome-m" value="{{novoL}}" onChange="{{onNovoL}}" onKeyDown="{{onNovoKey}}" maxlength="28" autocomplete="off" placeholder="EX.: CHECKLIST DE CHEGADA" style="height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 14px; letter-spacing: 0.08em; font-weight: 800; text-transform: uppercase; min-width: 0; width: 100%;">
+      <span style="display: flex; align-items: baseline; gap: 8px;"><label for="novo-perg-m" style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">PERGUNTA (ATÉ 240)</label><span style="flex-grow: 1;"></span><span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); font-variant-numeric: tabular-nums;">{{novoQCont}}</span></span>
+      <textarea id="novo-perg-m" value="{{novoQ}}" onChange="{{onNovoQ}}" onKeyDown="{{onNovoKey}}" maxlength="240" rows="3" placeholder="Pergunta que o atalho envia ao Capitão IA" style="box-sizing: border-box; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 14px; line-height: 1.4; resize: none; min-width: 0; width: 100%;"></textarea>
+      <button type="button" onClick="{{criar}}" disabled="{{cheio}}" style="height: 48px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12.5px; letter-spacing: 0.10em; font-weight: 800; cursor: pointer; margin-top: 2px;">CRIAR E SALVAR</button>
+      <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">Fonte: criado por você · fica só neste aparelho (sem nuvem na demonstração).</span>
+    </section>
+
+    <button type="button" onClick="{{restaurar}}" aria-pressed="{{confirmaReset}}" style="flex-shrink: 0; min-height: 44px; border-radius: 12px; border: 1px solid {{resetLine}}; background: transparent; color: {{resetTom}}; font-size: 11.5px; letter-spacing: 0.10em; font-weight: 800; cursor: pointer; padding: 0 12px;">{{resetLabel}}</button>
+
+    <div style="flex-shrink: 0; display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
+      <span style="font-size: 12px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);"><b style="color: var(--cap-ink, #eaf1ff);">Fixos e não removíveis:</b> o SOS, os 5 botões da tela inicial (Console, Gerador, Climatização, Estabilizador, Eletrônicos) e a barra do assistente.</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { lista: null, editando: '', edL: '', edQ: '', novoL: '', novoQ: '', nota: '', notaTom: 'var(--cap-ok, #34c77a)', confirmaReset: false, salvoEm: '' };
+  PLAT = 'app';
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ lista: window.CapitaoBrain.loadShortcuts() }));
+    // Outra aba/tela salvou os atalhos: recarrega a lista
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.atalhos.v1')) this.setState({ lista: window.CapitaoBrain.loadShortcuts() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); clearInterval(this._b); clearTimeout(this._n); clearTimeout(this._r); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  toast(msg, tone) { this.setState({ nota: msg, notaTom: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 4500); }
+  aviso(msg) { this.toast(msg, 'var(--cap-warn, #f0a63a)'); }
+  lista() { return this.state.lista || []; }
+  // Lê de novo antes de gravar (ler-alterar-gravar): o que outra aba salvou não se perde
+  fresh() { const B = window.CapitaoBrain; return B ? B.loadShortcuts() : this.lista().slice(); }
+  mudou(l) { this.setState({ lista: l, editando: '' }); this.aviso('A lista mudou em outra tela — confira e tente de novo'); }
+  assinatura(l) { return JSON.stringify((l || []).map((x) => [x.id, x.l, x.q])); }
+  // Grava pelo cérebro (capitao.atalhos.v1, neste aparelho) e confere relendo
+  gravar(l, msg) {
+    const B = window.CapitaoBrain; if (!B) return this.aviso('Cérebro do app ainda carregando — tente de novo');
+    B.saveShortcuts(l);
+    const lido = B.loadShortcuts();
+    if (this.assinatura(lido) !== this.assinatura(l)) { this.setState({ lista: lido }); return this.aviso('Não salvo — armazenamento deste aparelho indisponível'); }
+    this.setState({ lista: lido, salvoEm: B.now().t });
+    this.toast(msg + ' · salvo neste aparelho');
+  }
+  limpa(s, n) { return String(s || '').replace(/\s+/g, ' ').trim().slice(0, n); }
+  mover(i, d) {
+    const cur = this.lista(), j = i + d; if (i < 0 || j < 0 || j >= cur.length) return;
+    const l = this.fresh(), a = l.findIndex((x) => x.id === cur[i].id), b = l.findIndex((x) => x.id === cur[j].id);
+    if (a < 0 || b < 0) return this.mudou(l);
+    const it = l.splice(a, 1)[0]; l.splice(b, 0, it);
+    this.gravar(l, it.l + ' agora em ' + (b + 1) + 'º');
+  }
+  remover(i) {
+    const it = this.lista()[i]; if (!it) return;
+    const l = this.fresh().filter((x) => x.id !== it.id);
+    if (this.state.editando === it.id) this.setState({ editando: '' });
+    this.gravar(l, it.l + ' removido' + (String(it.id).indexOf('custom-') === 0 ? ' (criado por você — não volta ao banco)' : ' — voltou ao banco'));
+  }
+  adicionar(item) {
+    const l = this.fresh();
+    if (l.some((x) => x.id === item.id)) return this.setState({ lista: l });
+    if (l.length >= 8) return this.aviso('Máximo de 8 na tela inicial — remova um para adicionar');
+    this.gravar(l.concat([{ id: item.id, l: item.l, q: item.q }]), item.l + ' adicionado');
+  }
+  criar() {
+    const nome = this.limpa(this.state.novoL, 28).toUpperCase(), perg = this.limpa(this.state.novoQ, 240);
+    if (!nome || !perg) return this.aviso('Preencha o nome e a pergunta para criar o atalho');
+    const l = this.fresh();
+    if (l.length >= 8) return this.aviso('Máximo de 8 na tela inicial — remova um para criar');
+    if (l.some((x) => String(x.l).toUpperCase() === nome)) return this.aviso('Já existe um atalho com esse nome');
+    this.gravar(l.concat([{ id: 'custom-' + Date.now().toString(36), l: nome, q: perg }]), nome + ' criado');
+    this.setState({ novoL: '', novoQ: '' });
+  }
+  editar(i) { const a = this.lista()[i]; if (a) this.setState({ editando: a.id, edL: a.l, edQ: a.q }); }
+  salvarEdicao() {
+    const id = this.state.editando, nome = this.limpa(this.state.edL, 28).toUpperCase(), perg = this.limpa(this.state.edQ, 240);
+    if (!id) return;
+    if (!nome || !perg) return this.aviso('Nome e pergunta não podem ficar vazios');
+    const l = this.fresh(), i = l.findIndex((x) => x.id === id);
+    if (i < 0) return this.mudou(l);
+    if (l.some((x) => x.id !== id && String(x.l).toUpperCase() === nome)) return this.aviso('Já existe um atalho com esse nome');
+    l[i] = { id: id, l: nome, q: perg };
+    this.setState({ editando: '' });
+    this.gravar(l, nome + ' salvo');
+  }
+  restaurar() {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (!this.state.confirmaReset) {
+      this.setState({ confirmaReset: true }); clearTimeout(this._r); this._r = setTimeout(() => this.setState({ confirmaReset: false }), 5000);
+      return this.aviso('Toque de novo para confirmar: volta aos ' + B.DEFAULTS.length + ' padrão e os criados por você saem');
+    }
+    clearTimeout(this._r);
+    const l = B.resetShortcuts();
+    this.setState({ lista: l, confirmaReset: false, editando: '', salvoEm: B.now().t });
+    this.toast('Padrão restaurado · ' + l.length + ' atalhos');
+  }
+  renderVals() {
+    const s = this.state, B = window.CapitaoBrain, list = this.lista(), n = list.length;
+    const ALL = B ? B.ALL : [], DEF = B ? B.DEFAULTS.map((x) => x.id) : [];
+    const orig = (id) => ALL.filter((x) => x.id === id)[0];
+    const tipo = (a) => { if (String(a.id).indexOf('custom-') === 0) return 'CRIADO POR VOCÊ'; const o = orig(a.id), base = DEF.indexOf(a.id) !== -1 ? 'PADRÃO' : 'DO BANCO'; return o && (o.l !== a.l || o.q !== a.q) ? base + ' · EDITADO' : base; };
+    const testar = (q) => (B ? B.askHref(this.PLAT, q) : (this.PLAT === 'web' ? 'Main.dc.html' : 'H2-Home-Mobile.dc.html') + '#q=' + encodeURIComponent(q));
+    const banco = B ? B.bankFor(list) : [];
+    const cheio = n >= 8;
+    const cont = (v, m) => String(v || '').length + '/' + m;
+    return {
+      barra: s.nota || (!B ? 'Carregando os atalhos…' : n + ' DE 8 NA TELA INICIAL · SALVOS NESTE APARELHO'), notaTom: s.nota ? s.notaTom : 'var(--cap-ink3, #97a3c0)',
+      contagem: 'NA TELA INICIAL · ' + n + ' DE 8', salvoTxt: s.salvoEm ? 'salvo às ' + s.salvoEm : '',
+      linhas: list.map((a, i) => ({
+        n: String(i + 1), l: a.l, q: a.q, tipo: tipo(a), normal: s.editando !== a.id, editando: s.editando === a.id,
+        line: s.editando === a.id ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' : 'var(--cap-line, #1a2240)',
+        primeiro: i === 0, ultimo: i === n - 1,
+        subir: () => this.mover(i, -1), descer: () => this.mover(i, 1), editar: () => this.editar(i), remover: () => this.remover(i),
+        testar: testar(a.q),
+        ariaSubir: 'Subir ' + a.l, ariaDescer: 'Descer ' + a.l, ariaEditar: 'Editar nome e pergunta de ' + a.l, ariaRemover: 'Remover ' + a.l + ' da tela inicial', ariaTestar: 'Testar ' + a.l + ' — abre o chat com a pergunta'
+      })),
+      vazio: n === 0,
+      fonteLista: 'Fonte: este aparelho (capitao.atalhos.v1) · padrão: ' + (B ? B.DEFAULTS.length : 6) + ' atalhos do Capitão IA · Testar abre o chat com a pergunta (pelo link nada é gravado no diário).',
+      edL: s.edL, edQ: s.edQ, edLCont: cont(s.edL, 28), edQCont: cont(s.edQ, 240),
+      onEdL: (e) => this.setState({ edL: e.target.value.slice(0, 28) }), onEdQ: (e) => this.setState({ edQ: e.target.value.slice(0, 240) }),
+      onEdKey: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.salvarEdicao(); } if (e.key === 'Escape') this.setState({ editando: '' }); },
+      salvarEdicao: () => this.salvarEdicao(), cancelarEdicao: () => this.setState({ editando: '' }),
+      previa: list.map((a) => ({ l: a.l })),
+      bancoTitulo: 'BANCO · ' + banco.length + (banco.length === 1 ? ' DISPONÍVEL' : ' DISPONÍVEIS'),
+      bancoSub: cheio ? 'Tela inicial cheia (8 de 8): remova um para adicionar.' : 'Toque para pôr na tela inicial (entra no fim da lista).', bancoSubTom: cheio ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink2, #b1bdd6)',
+      banco: banco.map((b) => ({ l: b.l, q: b.q, cheio: cheio, aria: 'Adicionar ' + b.l + ' — ' + b.q, add: () => this.adicionar(b) })),
+      bancoFonte: 'Fonte: banco de ' + (B ? B.BANK.length : 12) + ' atalhos do Capitão IA · os padrão removidos voltam para cá.',
+      cheio: cheio,
+      novoL: s.novoL, novoQ: s.novoQ, novoLCont: cont(s.novoL, 28), novoQCont: cont(s.novoQ, 240),
+      onNovoL: (e) => this.setState({ novoL: e.target.value.slice(0, 28) }), onNovoQ: (e) => this.setState({ novoQ: e.target.value.slice(0, 240) }),
+      onNovoKey: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.criar(); } },
+      criar: () => this.criar(),
+      restaurar: () => this.restaurar(), confirmaReset: s.confirmaReset,
+      resetLabel: s.confirmaReset ? 'CONFIRMAR: RESTAURAR OS ' + (B ? B.DEFAULTS.length : 6) + ' PADRÃO' : 'RESTAURAR OS ' + (B ? B.DEFAULTS.length : 6) + ' PADRÃO',
+      resetLine: s.confirmaReset ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-line2, #27315a)', resetTom: s.confirmaReset ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink2, #b1bdd6)'
+    };
+  }
+}
+</script>
+</body>
+</html>
