@@ -2,7 +2,7 @@
 
 Cérebro operacional da embarcação **Capitão IA**: chat com o barco, console de telemetria e manutenção, FAQ de bordo e SOS. Tem versão **web** (computador e tablet) e versão **app** (celular), com um cérebro só.
 
-> **Versão 1.0.3 · 27/09/2026** · Wonder BOAT | WonderHUB.AI
+> **Versão 1.0.4 · 27/09/2026** · Wonder BOAT | WonderHUB.AI
 
 > **Demonstração da plataforma.** Esta embarcação é de demonstração: leituras, agenda, documentos, diário, abastecimentos e guias de bordo são **fictícios** e aparecem com o selo **DEMO** e a fonte de cada dado (Google Drive › Capitão IA v2). Modelos dos equipamentos, registro, Seafire e EPIRB estão **SEM DADOS**; o MMSI 710123456 é fictício. Procedimentos de emergência são o **padrão internacional, a confirmar com o protocolo de bordo**. Nada é inventado pelo assistente: quando falta o dado, a tela mostra **SEM DADOS**.
 
@@ -38,6 +38,7 @@ Toda tela pede login, **menos o SOS** (numa emergência ninguém pode ficar pres
 ## O que dá para fazer
 
 - **Chat com o barco:** texto, voz→texto, conversa por voz, foto ou vídeo. Cada resposta traz a **fonte**; sem fonte, **SEM DADOS**. Foto e vídeo não saem do aparelho: viram linha A CONFERIR no diário.
+- **IA na nuvem (demonstração):** nos aparelhos ativados, quando a resposta vem de um trecho do guia, a IA (Llama 3.3 70B no Cloudflare Workers AI, grátis) reescreve a resposta **só com esse trecho** — fonte "IA na nuvem (Workers AI · …)". Resposta pronta, SEM DADOS, emergência e conversa por voz continuam 100% no aparelho. Até ~3 perguntas por hora; passou disso, fica a resposta local. **Ativar um aparelho** (uma vez por celular ou computador): entrar no app com login e senha e, **depois**, abrir `https://v2.capitaoia.com.br/#ia=ativar` — aparece uma caixa: colar a `CHAVE_APP` (do arquivo PRIVADO do proprietário, fora do repositório) e confirmar. A chave fica só no aparelho e **nunca passa pelo endereço** (o endereço fica no histórico do navegador, que pode sincronizar). `#ia=sair` desativa; qualquer outro valor em `#ia=` é ignorado.
 - **Atalhos:** perguntas prontas com um toque — 6 padrão, banco de 12, até 8 na tela, editáveis.
 - **Console:** telemetria (snapshot com hora), gestão, manutenção com **Executado** (linha nova no diário), documentos, abastecimento, diário de bordo (só cresce) e equipe (convites PENDENTE, telefones só no aparelho).
 - **FAQ de bordo:** passo a passo por equipamento — gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin / áudio Fusion / VHF 315 — tirado dos guias de bordo DEMO.
@@ -77,7 +78,7 @@ E ainda: `Manual-Capitao-IA` (apresentação de uso) e o `Guia-Rapido-Capitao-IA
 
 ## Integrações
 
-Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria ao vivo (`capitao-telemetria`), IA na nuvem (`capitao-ia`: Workers AI, grátis, ou Claude API, paga — mesmo cliente) e voz em nuvem opcional (`capitao-voz`). Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
+Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria ao vivo (`capitao-telemetria`), IA na nuvem (`capitao-ia`: **Workers AI, ligada na demonstração desde a 1.0.4**; ou Claude API, paga — mesmo cliente) e voz em nuvem opcional (`capitao-voz`). Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
 
 ## Requisitos
 
@@ -100,7 +101,7 @@ manifest.webmanifest · sw.js · .nojekyll      app instalável e cache offline
 assets/                         logo Wonder BOAT e ícones
 integracoes/                    estrutura desligada das integrações
 ferramentas/                    gerador dos dados DEMO, gerador do guia, gerador de senha
-testes/                         teste do cérebro, matriz de telas e proxies da IA (worker_ia.py)
+testes/                         teste do cérebro, matriz de telas, proxies da IA (worker_ia.py) e IA no chat (chat_ia.py)
 CLAUDE.md                       guia do projeto para o Claude
 ```
 
@@ -110,6 +111,7 @@ A versão aparece no rodapé de todas as telas. Para lançar: `VERSAO` em `capit
 
 | Versão | Data | O que mudou |
 |---|---|---|
+| 1.0.4 | 27/09/2026 | **IA na nuvem ligada na demonstração** (Workers AI · Llama 3.3 70B, grátis): Worker `capitao-ia` publicado com limite global de 3 perguntas/hora (AI Gateway) e sem logs de invocação; Main e H2 usam a IA só nas respostas do guia, com a fonte "IA na nuvem"; cada aparelho ativa com `#ia=ativar` depois do login, colando a chave numa caixa (a chave nunca passa pelo endereço) · o login não leva mais nada de `#ia=`/`#tele=`/`#voz=` para o `?next=` · resposta "SEM DADOS" da IA mantém o trecho local · link de fora (`#q=`) não gasta a cota · exceção à regra do login no servidor, aprovada pelo proprietário (dados fictícios): Cloudflare Access antes de dados reais |
 | 1.0.3 | 27/09/2026 | Domínio próprio **v2.capitaoia.com.br** (o app ganha uma origem só dele; o endereço antigo redireciona). Mudou a origem: **entrar de novo em cada aparelho**; atalhos, diário, documentos, equipe e tema salvos no aparelho ficaram no endereço antigo · Workers aceitam só a origem nova |
 | 1.0.2 | 27/09/2026 | Telemetria: chave no endereço (`#tele=`) sem estragar o link e URL de teste restrita ao próprio Worker · IA na nuvem: integração grátis com Workers AI (desligada), cliente único para Workers AI ou Claude API, proxy da Claude API com as mesmas guardas · regra: origem só do app antes de ligar proxies · Manual atualizado |
 | 1.0.1 | 27/09/2026 | Senha do proprietário trocada (sal e hash novos; a senha inicial deixa de valer) |
