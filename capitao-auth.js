@@ -14,7 +14,7 @@
   // com ferramentas/gerar-senha.html e colar a linha aqui.
   var ITER = 210000;
   var USUARIOS = {
-    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: '0z0xSA1l5k6yHCZGXoNFmA==', hash: 'sG6CoaN01ERQRs7TIkmlrM0DuIfzZkRH694ZK0LwWdA=' }
+    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' }
   };
   var DONO = 'lucas';
 
