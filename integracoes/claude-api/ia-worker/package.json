@@ -1,0 +1,12 @@
+{
+  "name": "capitao-ia",
+  "private": true,
+  "type": "module",
+  "description": "Proxy da IA na nuvem (Claude API) do Capitão IA — estrutura, desligada",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0"
+  }
+}

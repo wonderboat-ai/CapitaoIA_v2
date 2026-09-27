@@ -1,0 +1,11 @@
+# ESTRUTURA — DESLIGADA (nada publicado).
+# Publicar: npm install   e depois   npx wrangler deploy   (dentro desta pasta)
+# Segredos: npx wrangler secret put ANTHROPIC_API_KEY   e   npx wrangler secret put CHAVE_APP
+name = "capitao-ia"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+MODELO = "claude-opus-5"
+# ESFORCO = "medium"   (opcional: low | medium | high | xhigh | max — padrão da API se vazio)
+ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"

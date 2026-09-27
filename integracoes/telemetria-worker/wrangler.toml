@@ -1,0 +1,11 @@
+# PREPARADO — DESLIGADO (nada publicado).
+# Publicar: npx wrangler deploy   (dentro desta pasta)
+# Segredos: npx wrangler secret put GOOGLE_SA_KEY · npx wrangler secret put CHAVE_APP · npx wrangler secret put DRIVE_FILE_ID
+# O ID do arquivo do Drive NÃO vai para o repositório: guarde como segredo.
+name = "capitao-telemetria"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+GOOGLE_SA_EMAIL = ""
+ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"
