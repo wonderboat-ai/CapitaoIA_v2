@@ -274,7 +274,11 @@ class Component extends DCLogic {
       const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, q);
       // "diagnóstico": o texto local diz versões, internet e estado da IA; o teste da chave no servidor (sem gastar a cota)
       // vem junto, na mesma mensagem.
-      if (a.key === 'diagnostico' && IA && IA.testar) { IA.testar().then((t) => entrega(Object.assign({}, a, { text: a.text + '\n• Teste no servidor: ' + t.texto }))); return; }
+      if (a.key === 'diagnostico' && IA && IA.testar) {
+        if (this.state.conversa && B.vozPensando) B.vozPensando(q); // o teste pode levar alguns segundos: núcleo em PROCESSANDO
+        IA.testar().then((t) => entrega(Object.assign({}, a, { text: a.text + '\n• Teste no servidor: ' + t.texto, fala: (a.fala ? a.fala + ' ' : '') + t.texto })));
+        return;
+      }
       const local = (nota) => {
         const ativar = pede && IA.estado && (/^(sem-chave|chave-invalida)$/.test(IA.estado()) || /chave/.test(nota)) ? [{ l: 'Ativar IA na nuvem', href: '#ia=ativar' }] : [];
         return nota ? Object.assign({}, a, { src: (a.src ? a.src + ' · ' : '') + nota, actions: (a.actions || []).concat(ativar) }) : Object.assign({}, a);
