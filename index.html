@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA</title>
+<meta name="description" content="Capitão IA — cérebro operacional da embarcação. Demonstração da plataforma com dados fictícios.">
+<meta name="theme-color" content="#050816">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./assets/favicon_64.png">
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Capitão IA">
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script>
+/* Entrada: celular → app (H2), computador/tablet → web (Main). ?v=web|app fixa a escolha neste aparelho, ?v=auto volta a detectar, ?v=lista mostra todas as telas. */
+(function () {
+  var K = 'capitao.plataforma.v1';
+  var v = new URLSearchParams(location.search).get('v');
+  try { if (v === 'web' || v === 'app') localStorage.setItem(K, v); if (v === 'auto') localStorage.removeItem(K); } catch (e) {}
+  try { if (v === 'lista') sessionStorage.setItem('capitao.lista', '1'); else if (v) sessionStorage.removeItem('capitao.lista'); } catch (e) {}
+  if (v === 'lista') return;
+  var saved = null; try { saved = localStorage.getItem(K); } catch (e) {}
+  var pick = v === 'web' || v === 'app' ? v : saved;
+  if (pick !== 'web' && pick !== 'app') {
+    var ua = navigator.userAgent || '';
+    var uad = navigator.userAgentData;
+    var mobileUA = uad && typeof uad.mobile === 'boolean' ? uad.mobile : /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
+    var shortSide = Math.min(screen.width || 9999, screen.height || 9999);
+    var coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    // Tela estreita (tablet em pé, janela pequena): a prancheta web de 1440 px ficaria ilegível — abre o app.
+    var estreita = Math.min(window.innerWidth || 9999, document.documentElement.clientWidth || 9999) < 900;
+    pick = mobileUA || (coarse && shortSide < 600) || estreita ? 'app' : 'web';
+  }
+  location.replace((pick === 'app' ? 'H2-Home-Mobile.dc.html' : 'Main.dc.html') + location.hash);
+})();
+</script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 32px 16px 48px; display: flex; flex-direction: column; gap: 26px; box-sizing: border-box; }
+.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.top img { height: 56px; width: 103px; object-fit: contain; flex-shrink: 0; }
+.top .t { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+h1 b { background: linear-gradient(90deg, var(--cap-tele, #00f4fd), var(--cap-accent, #00a1fe) 55%, var(--cap-violeta, #b45cff)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.sub { margin: 0; color: var(--cap-ink3, #97a3c0); font-size: 14px; }
+.demo { align-self: flex-start; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); color: var(--cap-ink2, #b1bdd6); font-size: 13px; line-height: 1.45; }
+.demo strong { color: var(--cap-violeta, #b45cff); letter-spacing: 0.1em; font-size: 11.5px; white-space: nowrap; }
+.go { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 14px; border: 1px solid var(--cap-line, #1a2240); background: var(--cap-card, #0d1329); color: var(--cap-ink, #eaf1ff); font-weight: 700; font-size: 14px; text-decoration: none; }
+.btn.pri { background: var(--cap-accent, #00a1fe); border-color: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; align-items: start; }
+.col { background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.col h2 { margin: 0 0 6px; font-size: 11.5px; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink3, #97a3c0); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 12px; background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); text-decoration: none; font-size: 14px; font-weight: 600; }
+.row span { font-size: 11.5px; font-weight: 500; color: var(--cap-ink4, #7985a6); white-space: nowrap; }
+.foot { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--cap-ink4, #7985a6); }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <img src="assets/logo-wonderboat.png" alt="Wonder BOAT">
+      <div class="t"><h1><b>Capitão IA</b></h1><p class="sub">Embarcação Capitão IA · base Balneário Camboriú · todas as telas</p></div>
+      <capitao-theme-toggle size="40"></capitao-theme-toggle>
+    </div>
+    <p class="demo"><strong>DEMO · DADOS FICTÍCIOS</strong><span>Demonstração da plataforma: leituras, agenda, documentos, diário e guias são fictícios; modelos, registro, Seafire e EPIRB estão SEM DADOS.</span></p>
+    <div class="go">
+      <a class="btn pri" href="index.html?v=auto">Abrir · detectar aparelho</a>
+      <a class="btn" href="index.html?v=web">Sempre web neste aparelho</a>
+      <a class="btn" href="index.html?v=app">Sempre app neste aparelho</a>
+    </div>
+    <div class="grid">
+    <section class="col"><h2>PRINCIPAL</h2>
+      <a class="row" href="Main.dc.html">Início · web<span>1440 × 900</span></a>
+      <a class="row" href="H2-Home-Mobile.dc.html">Início · app<span>390 × 844</span></a>
+      <a class="row" href="S1-SOS-Web.dc.html">SOS · web<span>S1</span></a>
+      <a class="row" href="S2-SOS-Mobile.dc.html">SOS · app<span>S2</span></a>
+    </section>
+    </div>
+    <p class="foot">Atalhos, diário, documentos e equipe ficam salvos neste navegador. Precisa de internet na primeira visita; depois abre offline, inclusive o SOS. No celular, use “Adicionar à tela de início” para abrir como app, em tela cheia. Esta lista: index.html?v=lista</p>
+  </main>
+  <capitao-rodape></capitao-rodape>
+</body>
+</html>

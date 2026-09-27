@@ -1,0 +1,23 @@
+{
+  "id": "./",
+  "name": "Capitão IA",
+  "short_name": "Capitão IA",
+  "description": "Cérebro operacional da embarcação Capitão IA · demonstração da plataforma (dados fictícios)",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050816",
+  "theme_color": "#050816",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "SOS · emergência", "short_name": "SOS", "url": "./S2-SOS-Mobile.dc.html" },
+    { "name": "Console", "short_name": "Console", "url": "./A2-Ponte-Mobile.dc.html" },
+    { "name": "Diário de bordo", "short_name": "Diário", "url": "./G3-Diario-Mobile.dc.html" }
+  ]
+}
