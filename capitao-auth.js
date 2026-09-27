@@ -24,6 +24,8 @@
 
   function arquivo(path) { var m = String(path || '').match(/([^\/]*)$/); var f = m ? m[1] : ''; try { f = decodeURIComponent(f); } catch (e) {} return f || 'index.html'; }
   function ehLogin() { return arquivo(location.pathname) === 'login.html'; }
+  // SOS abre sem login: numa emergência ninguém pode ficar preso na senha (sessão vencida, tripulante sem acesso).
+  function livre() { return /^(S1-SOS-Web|S2-SOS-Mobile)\.dc\.html$/.test(arquivo(location.pathname)); }
   function noEditor() {
     var framed = true; try { framed = window.top !== window.self; } catch (e) {}
     return framed && !PUBLICADO.test(location.hostname);
@@ -51,7 +53,7 @@
     var s = lerSessao();
     if (s) return publico(s.u);
     if (noEditor()) return publico(DONO);
-    if (!ehLogin()) paraLogin();
+    if (!ehLogin() && !livre()) paraLogin();
     return null;
   }
   function nome() { var u = usuario(); return u ? u.nome : 'sem sessão'; }
@@ -127,12 +129,12 @@
   window.addEventListener('storage', function (e) {
     if (e && e.key !== K && e.key !== null) return;
     avisar();
-    if (!ehLogin() && !noEditor() && !lerSessao()) paraLogin(); // saiu em outra aba
+    if (!ehLogin() && !livre() && !noEditor() && !lerSessao()) paraLogin(); // saiu em outra aba
   });
   // Expirou com a tela aberta: confere ao voltar para a aba, ao focar e na hora exata do vencimento.
   var vigia = 0;
   function vigiar() {
-    if (ehLogin() || noEditor()) return;
+    if (ehLogin() || livre() || noEditor()) return;
     var s = lerSessao(); clearTimeout(vigia);
     if (!s) { paraLogin(); return; }
     vigia = setTimeout(vigiar, Math.max(1000, Math.min(s.exp - Date.now() + 500, DIA)));
@@ -141,7 +143,7 @@
   window.addEventListener('focus', vigiar);
   // Voltar depois de Sair pode restaurar a página da memória (bfcache) sem rodar este script de novo.
   window.addEventListener('pageshow', function (e) {
-    if (e && e.persisted && !ehLogin() && !noEditor() && !lerSessao()) paraLogin();
+    if (e && e.persisted && !ehLogin() && !livre() && !noEditor() && !lerSessao()) paraLogin();
   });
 
   // Saudação: uma frase sorteada a cada carregamento de página (nunca a mesma da vez anterior neste aparelho).
@@ -166,10 +168,10 @@
   }
 
   function logado() { return !!lerSessao(); }
-  window.CapitaoAuth = { VERSAO: VERSAO, CREDITO: CREDITO, usuario: usuario, nome: nome, lista: lista, logado: logado, entrar: entrar, sair: sair, destinoSeguro: destinoSeguro, bloqueadoAte: bloqueadoAte, ehLogin: ehLogin, noEditor: noEditor, frase: frase, periodo: periodo, FRASES: FRASES };
+  window.CapitaoAuth = { VERSAO: VERSAO, CREDITO: CREDITO, usuario: usuario, nome: nome, lista: lista, logado: logado, entrar: entrar, sair: sair, destinoSeguro: destinoSeguro, bloqueadoAte: bloqueadoAte, ehLogin: ehLogin, livre: livre, noEditor: noEditor, frase: frase, periodo: periodo, FRASES: FRASES };
 
   // Porta: sem sessão → login, antes de qualquer desenho.
-  if (!ehLogin() && !noEditor() && !lerSessao()) { paraLogin(); return; }
+  if (!ehLogin() && !livre() && !noEditor() && !lerSessao()) { paraLogin(); return; }
   vigiar();
 
   if (!window.customElements) return;
