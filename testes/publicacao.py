@@ -15,18 +15,20 @@ from playwright.sync_api import sync_playwright
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = sys.argv[1] if len(sys.argv) > 1 else 'origin/main'
 TMP = tempfile.mkdtemp(prefix='pub_')
-A, B, B2 = os.path.join(TMP, 'A'), REPO, os.path.join(TMP, 'B2')
+A, B, B2, B3 = os.path.join(TMP, 'A'), REPO, os.path.join(TMP, 'B2'), os.path.join(TMP, 'B3')
 os.makedirs(A)
 tar = subprocess.run(['git', '-C', REPO, 'archive', REF], capture_output=True, check=True).stdout
 tarfile.open(fileobj=io.BytesIO(tar)).extractall(A, filter='data')
-shutil.copytree(REPO, B2, ignore=shutil.ignore_patterns('.git', 'testes', 'ferramentas', 'integracoes', 'guia-rapido'))
+for destino in (B2, B3):
+    shutil.copytree(REPO, destino, ignore=shutil.ignore_patterns('.git', 'testes', 'ferramentas', 'integracoes', 'guia-rapido'))
 import re
 VA = re.search(r"v: '([^']+)'", open(os.path.join(A, 'capitao-auth.js'), encoding='utf-8').read()).group(1)
 VB = re.search(r"v: '([^']+)'", open(os.path.join(REPO, 'capitao-auth.js'), encoding='utf-8').read()).group(1)
-VB2 = VB + '-teste'
-for arq, velho, novo in [('sw.js', 'capitao-site-v' + VB, 'capitao-site-v' + VB2), ('capitao-auth.js', "v: '%s'" % VB, "v: '%s'" % VB2),
-                         ('capitao-brain.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % VB2), ('capitao-ia.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % VB2)]:
-    p = os.path.join(B2, arq); s = open(p, encoding='utf-8').read(); assert velho in s, arq; open(p, 'w', encoding='utf-8', newline='\n').write(s.replace(velho, novo))
+VB2, VB3 = VB + '-teste', VB + '-teste2'
+for pasta, vn in ((B2, VB2), (B3, VB3)):
+    for arq, velho, novo in [('sw.js', 'capitao-site-v' + VB, 'capitao-site-v' + vn), ('capitao-auth.js', "v: '%s'" % VB, "v: '%s'" % vn),
+                             ('capitao-brain.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % vn), ('capitao-ia.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % vn)]:
+        p = os.path.join(pasta, arq); s = open(p, encoding='utf-8').read(); assert velho in s, arq; open(p, 'w', encoding='utf-8', newline='\n').write(s.replace(velho, novo))
 
 ESTADO = {'raiz': A, 'lento': 0, 'maxage': 60}
 T0 = time.time()
@@ -123,6 +125,21 @@ with sync_playwright() as p:
     pg.evaluate("() => { window.__marca = true; document.dispatchEvent(new Event('visibilitychange')); }")
     s = espera_versao(VB2)
     ok('2) app aberto; publica outra versão; ao voltar para a frente, procura, acha e recarrega sozinho nela', s.get('auth') == VB2 and s.get('brain') == VB2 and s.get('ia') == VB2 and not s.get('marca'), s)
+
+    # 2b) versão nova chega com texto sendo digitado: a tela NÃO recarrega (não perde o texto); esvaziou o campo, recarrega
+    time.sleep(1.5)
+    pg.fill('#pergunta-m', 'texto que o usuário está digitando')
+    ESTADO['raiz'] = B3
+    pg.evaluate("() => { window.__marca = true; navigator.serviceWorker.getRegistration().then((r) => r && r.update()); }")
+    time.sleep(9)
+    try:
+        s = pg.evaluate(SONDA); campo = pg.evaluate("() => document.querySelector('#pergunta-m').value")
+    except Exception as e:
+        s, campo = {'marca': False, 'erro': str(e)[:100]}, ''
+    ok('2b) versão nova com texto sendo digitado: a tela espera (não recarrega nem perde o texto)', s.get('marca') and campo == 'texto que o usuário está digitando', (s, campo))
+    pg.fill('#pergunta-m', '')
+    s = espera_versao(VB3)
+    ok('2b) campo vazio: recarrega sozinha na versão nova', s.get('auth') == VB3 and s.get('brain') == VB3 and not s.get('marca'), s)
 
     # visita o SOS uma vez com internet (fica guardado também pelo precache)
     pg.goto(BASE + 'S2-SOS-Mobile.dc.html'); pg.wait_for_timeout(2500)

@@ -170,7 +170,7 @@ def main():
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
-                ok(tela + ': trecho do guia leva a ficha RESUMIDA (sobre o app, embarcação; sem telemetria nem coordenadas) e o histórico vazio', '## Sobre o app' in f and '## Ficha resumida' in f and '## Telemetria' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')
@@ -181,9 +181,9 @@ def main():
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
                 ok(tela + ': SEM DADOS local chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'Não encontrei esse dado' not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
                 t, n, _ = digita('diagnóstico')
-                ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste aparelho' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
+                ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste navegador' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('diagnóstico', chave=False)
-                ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste aparelho (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste aparelho (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
+                ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste navegador (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste navegador (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?', modo='semdados')
                 ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', chave=False)
@@ -249,6 +249,8 @@ def main():
 
                 f, n = conversa('o que você faz', chave=False)
                 ok(tela + ': CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                f, n = conversa('Capitão, diagnóstico')
+                ok(tela + ': CONVERSA: "Capitão, diagnóstico" fala se a IA está ligada e o resultado do teste da chave (sem gastar a cota)', n == 1 and len(f) >= 2 and 'IA na nuvem: LIGADA' in f[1] and 'Chave aceita pelo servidor' in f[1], json.dumps(f, ensure_ascii=False)[:300])
                 f, n = conversa('qual o calado do barco', modo='erro')
                 ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
 
