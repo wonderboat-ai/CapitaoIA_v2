@@ -1,13 +1,15 @@
-/* Capitão IA — IA na nuvem (Claude API via proxy protegido) · lado do app.
+/* Capitão IA — IA na nuvem via proxy protegido (Worker `capitao-ia`) · lado do app.
    ESTRUTURA — DESLIGADA e NÃO CARREGADA por nenhuma tela. Mesmo padrão do capitao-telemetria.js:
    sem URL configurada, nada é buscado e o chat segue 100% local (respostas prontas + base de bordo + SEM DADOS).
-   Para ligar (depois do login no servidor): ver integracoes/claude-api/README.md.
-   A chave da Claude API nunca passa por aqui: o app só conhece a URL do proxy e a CHAVE_APP deste aparelho. */
+   Serve aos dois proxies (mesmo contrato): integracoes/workers-ai/ (gratuito) ou integracoes/claude-api/ (pago).
+   Para ligar (depois do login no servidor): ver o README do proxy escolhido.
+   Nenhuma chave de provedor passa por aqui: o app só conhece a URL do proxy e a CHAVE_APP deste aparelho. */
 (function () {
   if (window.CapitaoIA) return;
   var URL_PROXY = ''; // ex.: 'https://capitao-ia.<conta>.workers.dev'
-  // Teste num aparelho antes de publicar: localStorage 'capitao.ia.url.v1' = URL do proxy.
-  try { URL_PROXY = localStorage.getItem('capitao.ia.url.v1') || URL_PROXY; } catch (e) {}
+  // Teste num aparelho antes de publicar: localStorage 'capitao.ia.url.v1' = URL do proxy. Só vale com URL_PROXY vazio e só
+  // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
+  if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.ia.url.v1') || ''; if (/^https:\/\/capitao\-ia\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
   var KC = 'capitao.ia.chave.v1';
   var ESPERA = 20000; // sem resposta nesse tempo → o chat fica com a resposta local
@@ -18,7 +20,9 @@
     if (m) {
       var c = decodeURIComponent(m[1]);
       if (c === 'sair') localStorage.removeItem(KC); else localStorage.setItem(KC, c);
-      history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/(^#|&)ia=[^&]+/, '').replace(/^#&?$/, ''));
+      // Tira só o par ia=…; os outros parâmetros do endereço (#q=, #tele=, #ia=…) continuam no hash.
+      var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('ia=') !== 0; }).join('&');
+      history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
     }
   } catch (e) {}
   function chave() { try { return localStorage.getItem(KC) || ''; } catch (e) { return ''; } }
@@ -39,7 +43,10 @@
       .then(function (j) {
         clearTimeout(t);
         if (!j || typeof j.texto !== 'string' || !j.texto.trim()) return null;
-        return { text: j.texto.trim(), src: 'Fonte: IA na nuvem (Claude) · só com as fontes enviadas pelo app', key: 'ia' };
+        if (j.parou === 'max_tokens') return null; // cortada: não passa por resposta completa (a local vem inteira)
+        // Provedor e modelo vêm do proxy (Workers AI · llama-3.3-70b-…, Claude API · claude-opus-5); sem eles, só "IA na nuvem".
+        var quem = [j.provedor, j.modelo].filter(function (x) { return typeof x === 'string' && x; }).map(function (x) { return x.replace(/^@cf\/[^/]+\//, '').slice(0, 60); }).join(' · ');
+        return { text: j.texto.trim(), src: 'Fonte: IA na nuvem' + (quem ? ' (' + quem + ')' : '') + ' · só com as fontes enviadas pelo app', key: 'ia' };
       }, function () { clearTimeout(t); return null; });
   }
 
