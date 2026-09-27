@@ -1,5 +1,5 @@
 # PUBLICADO em 27/09/2026: https://capitao-ia.luka-araujos.workers.dev (painel da Cloudflare; este arquivo espelha o painel).
-# 1.0.5: o worker.js ganhou ficha de bordo + histórico (conversa) — as variáveis continuam as mesmas; é só colar o código novo.
+# 1.0.5: o worker.js ganhou ficha de bordo + histórico (conversa) — mesmas variáveis; código colado no painel em 27/09/2026 (versão bd5b8774).
 # Alternativa GRATUITA ao claude-api: publique ESTE ou o claude-api com o nome capitao-ia (mesmo endereço, mesmo cliente).
 # Publicar (precisa de Node.js): npx wrangler deploy   (dentro desta pasta) — sem dependências para instalar.
 # Segredo: npx wrangler secret put CHAVE_APP   (não há chave de API: o binding AI autentica pela conta Cloudflare)
@@ -13,7 +13,7 @@ binding = "AI"
 [vars]
 MODELO = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 MAX_TOKENS = "800"
-GATEWAY = "capitao-ia"   # AI Gateway com limite global (3 pedidos por hora, janela deslizante) e sem log de prompts
+GATEWAY = "capitao-ia"   # AI Gateway com limite global (30 pedidos por hora, janela deslizante, desde a 1.0.5; 3 na 1.0.4) e sem log de prompts
 ORIGENS = "https://v2.capitaoia.com.br"   # só o app (o github.io é dividido com os outros sites da conta e redireciona para cá)
 
 # Logs: sem os logs de invocação (eles gravam os cabeçalhos do pedido, inclusive o X-Capitao-Chave, em texto claro).
