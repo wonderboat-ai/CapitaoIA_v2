@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Documentos (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button, select { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Documentos" voltar="A2-Ponte-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <div style="box-sizing: border-box; padding: 10px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+      <div role="group" aria-label="Resumo e filtro por situação" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{tiles}}" as="k" hint-placeholder-count="4">
+          <button type="button" onClick="{{k.onClick}}" aria-pressed="{{k.active}}" aria-label="{{k.aria}}" style="box-sizing: border-box; min-height: 58px; padding: 7px 4px; border-radius: 12px; border: 1px solid {{k.line}}; background: {{k.wash}}; color: var(--cap-ink, #eaf1ff); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; min-width: 0;">
+            <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: {{k.tone}};">{{k.v}}</span>
+            <span style="font-size: 9px; letter-spacing: 0.06em; font-weight: 800; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;">{{k.l}}</span>
+          </button>
+        </sc-for>
+      </div>
+      <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; padding: 0 2px;">{{resumo}}</span>
+    </div>
+
+    <div style="box-sizing: border-box; padding: 12px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.35); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+      <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0;"><span style="font-size: 14px; font-weight: 800; flex-shrink: 0;">Enviar documento</span><span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">foto ou PDF → linha <b style="color: var(--cap-violeta, #b45cff);">A CONFERIR</b></span></span>
+      <div style="display: flex; gap: 6px; min-width: 0;">
+        <select ref="{{selRef}}" value="{{catEnvio}}" onChange="{{onCat}}" aria-label="Categoria do documento enviado" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 6px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 12.5px; font-weight: 600; cursor: pointer;">
+          <option value="" label="Categoria…"></option>
+          <sc-for list="{{catOpts}}" as="o" hint-placeholder-count="7">
+            <option value="{{o.v}}" label="{{o.v}}"></option>
+          </sc-for>
+        </select>
+        <button type="button" onClick="{{pickFoto}}" style="flex-shrink: 0; height: 44px; padding: 0 11px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12.5px; font-weight: 800; display: flex; align-items: center; gap: 5px; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Foto</button>
+        <button type="button" onClick="{{pickPdf}}" style="flex-shrink: 0; height: 44px; padding: 0 11px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 5px; cursor: pointer;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>PDF</button>
+        <input type="file" accept="image/*" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
+        <input type="file" accept=".pdf,application/pdf" ref="{{pdfRef}}" onChange="{{onPdf}}" aria-hidden="true" tabindex="-1" style="display: none;">
+      </div>
+      <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{noteTone}}; line-height: 1.35;">{{note}}</span>
+      <div style="display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 12px; background: rgba(var(--cap-warn-rgb, 240,166,58), 0.08); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.30);">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-warn, #f0a63a);"></path></svg>
+        <span style="font-size: 11px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);"><b style="color: var(--cap-ink, #eaf1ff);">Contratos, notas fiscais, título de propriedade e dados pessoais não ficam neste site.</b> Os originais ficam no Drive.</span>
+      </div>
+      <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{envioFonte}}</span>
+    </div>
+
+    <div role="group" aria-label="Filtrar por categoria" style="display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0;">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="8">
+        <button type="button" onClick="{{c.onClick}}" aria-pressed="{{c.active}}" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid {{c.line}}; background: {{c.bg}}; color: {{c.tone}}; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{c.l}}</button>
+      </sc-for>
+    </div>
+    <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">{{listTitle}}</span>
+
+    <sc-for list="{{rows}}" as="x" hint-placeholder-count="6">
+      <div data-novo="{{x.novo}}" style="box-sizing: border-box; display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border-radius: 14px; background: var(--cap-card, #0d1329); border: 1px solid {{x.line}}; flex-shrink: 0;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 11px; background: {{x.wash}}; display: flex; align-items: center; justify-content: center;">{{x.ico}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 13.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere;">{{x.n}}</span>
+            <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; overflow-wrap: anywhere;">{{x.cat}} · {{x.nota}}</span>
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="flex-grow: 1; min-width: 0; font-size: 12px; color: var(--cap-ink2, #b1bdd6); font-variant-numeric: tabular-nums;">Validade <b style="color: {{x.valTone}};">{{x.validade}}</b> {{x.dd}}</span>
+          <span style="flex-shrink: 0; padding: 6px 10px; border-radius: 999px; background: {{x.wash}}; color: {{x.tone}}; font-size: 10px; letter-spacing: 0.08em; font-weight: 800; white-space: nowrap;">{{x.st}}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--cap-line, #1a2240); padding-top: 4px;">
+          <span style="flex-grow: 1; min-width: 0; font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35; overflow-wrap: anywhere;">{{x.fonte}}</span>
+          <sc-if value="{{x.temAsk}}" hint-placeholder-val="{{true}}">
+            <a href="{{x.ask}}" aria-label="{{x.askLabel}}" style="flex-shrink: 0; min-height: 44px; box-sizing: border-box; padding: 0 4px 0 8px; display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; text-decoration: none;">Perguntar ›</a>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
+      <div style="padding: 14px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; font-size: 12px; color: var(--cap-ink3, #97a3c0); text-align: center; flex-shrink: 0;">Nenhum documento neste filtro.</div>
+    </sc-if>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
+      <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { cat: 'todas', sit: 'todas', catEnvio: '', envios: [], novo: '', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  fotoRef = React.createRef(); pdfRef = React.createRef(); selRef = React.createRef();
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ envios: window.CapitaoBrain.loadDocs() }));
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.docs.v1')) this.setState({ envios: window.CapitaoBrain.loadDocs() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); clearTimeout(this._n); clearTimeout(this._r); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'sem sessão'; } }
+  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 5000); }
+  hoje() { const d = new Date(), p = (n) => (n < 10 ? '0' : '') + n; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  tamanho(b) { if (typeof b !== 'number' || !isFinite(b)) return 'tamanho SEM DADOS'; return b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+  pick(tipo) {
+    if (!this.state.catEnvio) { this.toast('Escolha a categoria do documento antes de enviar', 'var(--cap-warn, #f0a63a)'); if (this.selRef.current) this.selRef.current.focus(); return; }
+    const r = tipo === 'PDF' ? this.pdfRef.current : this.fotoRef.current; if (r) r.click();
+  }
+  // Upload: o arquivo não sai do aparelho — só nome, tamanho e data viram uma linha A CONFERIR (capitao.docs.v1) + linha no diário
+  onArquivo(tipo, e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+    const B = window.CapitaoBrain; if (!B) return this.toast('Ainda carregando — tente de novo em instantes', 'var(--cap-warn, #f0a63a)');
+    const cat = this.state.catEnvio; if (!cat) return this.toast('Escolha a categoria do documento antes de enviar', 'var(--cap-warn, #f0a63a)');
+    const quem = this.quem(), dd = this.hoje(), s = this.tamanho(f.size);
+    const envios = B.addDoc({ n: f.name, s: s, dd: dd, st: 'A CONFERIR', cat: cat, fonte: 'enviado no app por ' + quem });
+    B.addDiario({ sys: 'Documentos', tone: 'var(--cap-violeta, #b45cff)', t: 'Documento enviado no app (' + tipo + '): ' + f.name + ' · ' + s + ' · categoria ' + cat + ' — linha criada como A CONFERIR. O arquivo ficou no aparelho; conferir e arquivar o original no Drive. Enviado por ' + quem + ' — linha nova, nada se apaga.', who: quem, src: 'app · documento' });
+    this.setState({ envios: envios, cat: 'todas', sit: 'todas', novo: f.name + '|' + dd + '|' + s });
+    this.toast('Recebido: ' + f.name + ' — A CONFERIR e no diário');
+    clearTimeout(this._r); this._r = setTimeout(() => this.revela(), 80);
+  }
+  // Mostra a linha nova rolando só a lista (sem mexer na janela nem na prancheta)
+  revela() {
+    const el = document.querySelector('[data-novo="sim"]'); if (!el) return;
+    let p = el.parentElement;
+    while (p && !(p.scrollHeight > p.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+    if (!p) return;
+    const r = el.getBoundingClientRect(), q = p.getBoundingClientRect(), k = (q.height / p.offsetHeight) || 1;
+    if (r.top < q.top) p.scrollTop -= (q.top - r.top) / k + 8; else if (r.bottom > q.bottom) p.scrollTop += (r.bottom - q.bottom) / k + 8;
+  }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const TOM = {
+      crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
+      tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'],
+      ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], neutro: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-plat-rgb, 211,220,239), 0.10)'],
+      violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)']
+    };
+    const ICON = {
+      'Registro': 'M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4', 'Seguro': 'M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z', 'Licenças': 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5',
+      'Laudos': 'M9 4h6v3H9z M7 5H5v16h14V5h-2 M9 13l2 2 4-4', 'Garantias': 'M12 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M9 14l-2 7 5-3 5 3-2-7', 'Segurança': 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6',
+      'Notas': 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6'
+    };
+    const DOC = 'M6 3h8l4 4v14H6z M14 3v4h4';
+    const base = (D.documentos || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: x.vence || null, dn: typeof x.dn === 'number' ? x.dn : null, st0: x.st, nota: x.nota || '', fonte: D.docsFonte || x.fonte || 'SEM DADOS', envio: false }));
+    const envios = (s.envios || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: null, dn: null, st0: 'A CONFERIR', nota: 'enviado ' + (x.dd || 'data SEM DADOS') + ' · ' + (x.s || 'tamanho SEM DADOS') + ' · o arquivo ficou no aparelho — conferir e arquivar o original no Drive', fonte: (x.fonte || 'enviado no app') + (x.dd ? ' · ' + x.dd : ''), envio: true, chave: x.n + '|' + x.dd + '|' + x.s }));
+    const grupo = (x) => (x.dn != null ? (x.dn < 0 ? 'vencido' : x.dn <= 90 ? 'venc90' : 'emdia') : x.st0 === 'A CONFERIR' ? 'conferir' : 'semdados');
+    const sit = (x) => ({ vencido: 'VENCIDO', venc90: 'VENCE EM ' + x.dn + ' D', emdia: 'EM DIA', conferir: 'A CONFERIR', semdados: 'SEM DADOS' })[grupo(x)];
+    const tom = (x) => { const g = grupo(x); return g === 'vencido' ? 'crit' : g === 'venc90' ? (x.dn <= 30 ? 'warn' : x.dn <= 60 ? 'tele' : 'accent') : g === 'emdia' ? 'ok' : g === 'conferir' ? 'violeta' : 'neutro'; };
+    // vence primeiro: com data (menor prazo antes) · depois A CONFERIR (envio mais novo antes) · por fim SEM DADOS
+    const peso = (x) => (x.dn != null ? x.dn : x.st0 === 'A CONFERIR' ? 1e6 : 2e6);
+    const todos = envios.concat(base).map((x, i) => Object.assign(x, { i: i })).sort((a, b) => peso(a) - peso(b) || a.i - b.i);
+    const conta = (g) => todos.filter((x) => (g === 'venc90' ? grupo(x) === 'venc90' || grupo(x) === 'vencido' : grupo(x) === g));
+    const curto = (n) => String(n).split(' (')[0];
+    const nEm = conta('emdia'), nV = conta('venc90'), nSD = conta('semdados'), nC = conta('conferir');
+    const ordCats = (D.documentos || []).map((x) => x.cat).filter((c, i, a) => c && a.indexOf(c) === i);
+    const catList = ordCats.concat(todos.map((x) => x.cat).filter((c, i, a) => a.indexOf(c) === i && ordCats.indexOf(c) === -1));
+    const passa = (x) => (s.cat === 'todas' || x.cat === s.cat) && (s.sit === 'todas' || (s.sit === 'venc90' ? grupo(x) === 'venc90' || grupo(x) === 'vencido' : grupo(x) === s.sit));
+    const lista = todos.filter(passa);
+    const setSit = (k) => () => this.setState({ sit: s.sit === k ? 'todas' : k });
+    const setCat = (k) => () => this.setState({ cat: k });
+    const desde = D.versao || (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS');
+    const sitNome = { todas: 'VENCE PRIMEIRO', emdia: 'EM DIA', venc90: 'VENCEM EM 90 DIAS', semdados: 'SEM DADOS', conferir: 'A CONFERIR' };
+    const tiles = [
+      { k: 'emdia', v: nEm.length, l: 'EM DIA', a: 'em dia', tone: 'ok' },
+      { k: 'venc90', v: nV.length, l: '≤ 90 DIAS', a: 'vencem em 90 dias', tone: 'warn' },
+      { k: 'semdados', v: nSD.length, l: 'SEM DADOS', a: 'SEM DADOS', tone: 'neutro' },
+      { k: 'conferir', v: nC.length, l: 'A CONFERIR', a: 'A CONFERIR', tone: 'violeta' }
+    ].map((k) => { const c = TOM[k.tone], on = s.sit === k.k; return Object.assign(k, { v: String(k.v), tone: c[0], wash: on ? c[1] : 'var(--cap-row, #10162e)', active: on, line: on ? c[0] : 'var(--cap-line, #1a2240)', aria: k.v + ' ' + k.a + (on ? ' — filtro ativo' : ' — filtrar'), onClick: setSit(k.k) }); });
+    const chip = (v, l, on) => ({ l: l, onClick: setCat(v), active: on, line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', tone: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' });
+    const chips = [chip('todas', 'Todos', s.cat === 'todas')].concat(catList.map((c) => chip(c, c, s.cat === c)));
+    return {
+      note: s.note, noteTone: s.noteTone,
+      tiles: tiles,
+      resumo: todos.length + ' documentos · toque para filtrar · prazos a partir de ' + desde + ' · Fonte: ' + String(D.docsFonte || 'SEM DADOS').split(' · ')[0],
+      chips: chips,
+      listTitle: (s.cat === 'todas' ? '' : s.cat.toUpperCase() + ' · ') + sitNome[s.sit] + ' · ' + lista.length + ' DE ' + todos.length,
+      rows: lista.map((x) => {
+        const c = TOM[tom(x)], novo = x.envio && x.chave === s.novo;
+        return { n: x.n, cat: x.cat, nota: x.nota || '—', ico: this.ico(ICON[x.cat] || DOC, 18, 1.7, c[0]), wash: c[1], tone: c[0], st: sit(x),
+          validade: x.vence || (x.envio ? 'a conferir' : 'SEM DADOS'), valTone: x.vence ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', dd: x.dn != null ? (x.dn < 0 ? '· vencido há ' + (-x.dn) + ' d' : '· D-' + x.dn) : '',
+          fonte: 'Fonte: ' + x.fonte, temAsk: !x.envio, ask: 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent('Situação e vencimento do documento: ' + x.n), askLabel: 'Perguntar sobre: ' + x.n,
+          novo: novo ? 'sim' : 'nao', line: novo ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.60)' : 'var(--cap-line, #1a2240)' };
+      }),
+      vazio: lista.length === 0,
+      catEnvio: s.catEnvio, catOpts: catList.map((c) => ({ v: c })), onCat: (e) => this.setState({ catEnvio: e.target.value }), selRef: this.selRef,
+      pickFoto: () => this.pick('foto'), pickPdf: () => this.pick('PDF'), fotoRef: this.fotoRef, pdfRef: this.pdfRef,
+      onFoto: (e) => this.onArquivo('foto', e), onPdf: (e) => this.onArquivo('PDF', e),
+      envioFonte: 'O arquivo não sai do aparelho: vira uma linha A CONFERIR (nome, tamanho, data) e uma linha no diário. Fonte: envios deste aparelho (' + envios.length + ')' + ((s.envios || [])[0] ? ' · último: ' + s.envios[0].n + ' · ' + s.envios[0].dd : ''),
+      falta: nSD.map((x) => curto(x.n) + ' — ' + (x.nota || 'SEM DADOS')).join(' · ') || 'nada',
+      fonte: 'Fonte: ' + (D.docsFonte || 'SEM DADOS') + ' · prazos a partir de ' + desde
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Abastecimento (web)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-cabecalho" from="./capitao-moldura.js" hint-size="1440px,68px"></x-import>
+  <div style="flex-grow: 1; display: flex; min-height: 0;">
+    <x-import component-from-global-scope="capitao-trilho" from="./capitao-moldura.js" ativo="abast" hint-size="96px,788px"></x-import>
+
+    <main style="flex-grow: 1; box-sizing: border-box; padding: 22px 26px; display: flex; flex-direction: column; gap: 16px; min-width: 0; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Abastecimento</h1>
+          <span style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
+        </div>
+        <span role="status" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 420px; text-align: right;">{{note}}</span>
+        <a href="Main.dc.html#q=Autonomia%20com%20reserva%20de%2010%25%20pelo%20diesel%20a%20bordo." style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
+      </div>
+
+      <section style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; flex-shrink: 0;">
+        <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+          <a href="{{k.href}}" style="box-sizing: border-box; padding: 11px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 3px; text-decoration: none; color: var(--cap-ink, #eaf1ff); min-width: 0;">
+            <span style="display: flex; align-items: center; gap: 7px; min-width: 0;">{{k.ico}}<span style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.l}}</span></span>
+            <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+              <span style="font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; color: {{k.tone}}; white-space: nowrap;">{{k.v}}</span>
+              <span style="font-size: 12.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.u}}</span>
+            </span>
+            <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35; flex-grow: 1;">{{k.s}}</span>
+            <span title="{{k.f}}" style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.f}}</span>
+          </a>
+        </sc-for>
+      </section>
+
+      <div style="flex-grow: 1; display: flex; gap: 16px; min-height: 0;">
+        <section style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0;">
+          <div style="box-sizing: border-box; padding: 12px 20px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+              <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 19V5 M4 19h16 M8 15v-3 M12 15V8 M16 15v-5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg></span>
+              <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+                <span style="font-size: 15px; font-weight: 700;">Nível de diesel por data</span>
+                <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{nivelSub}}</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 700; color: var(--cap-ink2, #b1bdd6); flex-shrink: 0;">
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--cap-ok, #34c77a);"></span>após abastecer</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--cap-tele, #00f4fd);"></span>BB</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--cap-accent, #00a1fe);"></span>BE</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 14px; height: 0; border-top: 2px dashed var(--cap-warn, #f0a63a);"></span>regra</span>
+              </span>
+              <a href="A1-Ponte-Web.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 12.5px; font-weight: 700; text-decoration: none; flex-shrink: 0;">Telemetria ›</a>
+            </div>
+            <div style="min-width: 0;">{{grafico}}</div>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{nivelFonte}}</span>
+          </div>
+
+          <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 20px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 7px; min-height: 0; overflow: hidden;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+              <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-ok-rgb, 52,199,122), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ok, #34c77a);"></path></svg></span>
+              <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+                <span style="font-size: 15px; font-weight: 700;">Histórico de abastecimentos</span>
+                <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{histSub}}</span>
+              </span>
+            </div>
+            <div aria-hidden="true" style="display: grid; grid-template-columns: 96px 84px minmax(0, 1fr) 124px minmax(0, 1.3fr); gap: 10px; padding: 0 12px; font-size: 10.5px; letter-spacing: 0.12em; font-weight: 700; color: var(--cap-ink4, #7985a6); flex-shrink: 0;">
+              <span>DATA</span><span>LITROS</span><span>LOCAL</span><span>SITUAÇÃO</span><span>OBSERVAÇÃO · FONTE</span>
+            </div>
+            <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+              <sc-for list="{{hist}}" as="r" hint-placeholder-count="2">
+                <div data-novo="{{r.novo}}" style="box-sizing: border-box; display: grid; grid-template-columns: 96px 84px minmax(0, 1fr) 124px minmax(0, 1.3fr); gap: 10px; align-items: center; padding: 7px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{r.line}}; font-variant-numeric: tabular-nums; flex-shrink: 0;">
+                  <span style="font-size: 13px; font-weight: 700;">{{r.d}}</span>
+                  <span style="font-size: 13px; font-weight: 700; color: {{r.lTone}};">{{r.litros}}</span>
+                  <span style="font-size: 12.5px; color: {{r.localTone}}; line-height: 1.35; overflow-wrap: anywhere;">{{r.local}}</span>
+                  <span style="padding: 6px 0; border-radius: 999px; background: {{r.wash}}; color: {{r.tone}}; font-size: 10.5px; letter-spacing: 0.08em; font-weight: 800; text-align: center; white-space: nowrap;">{{r.st}}</span>
+                  <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+                    <span style="font-size: 12px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35; overflow-wrap: anywhere;">{{r.obs}}</span>
+                    <span title="{{r.fonte}}" style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.fonte}}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); flex-shrink: 0;">{{histFonte}}</span>
+          </div>
+        </section>
+
+        <section style="width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0;">
+          <div style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.35); border-radius: 18px; display: flex; flex-direction: column; gap: 9px; flex-shrink: 0;">
+            <span style="font-size: 15px; font-weight: 700;">Foto da NF</span>
+            <span style="font-size: 12px; color: var(--cap-ink2, #b1bdd6); line-height: 1.45;">A foto fica no aparelho e o app não lê valores: vira uma linha <b style="color: var(--cap-violeta, #b45cff);">A CONFIRMAR</b> no histórico e no diário.</span>
+            <button type="button" onClick="{{pickNf}}" style="height: 46px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Foto da NF → registrar</button>
+            <input type="file" accept="image/*" ref="{{nfRef}}" onChange="{{onNf}}" aria-hidden="true" tabindex="-1" style="display: none;">
+            <span title="{{nfFonte}}" style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{nfFonte}}</span>
+          </div>
+
+          <div style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;">
+            <span style="font-size: 15px; font-weight: 700;">Consumo observado <span style="font-size: 12px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">· estimativa</span></span>
+            <sc-for list="{{taxas}}" as="t" hint-placeholder-count="3">
+              <span style="display: flex; align-items: center; gap: 10px; padding: 7px 11px; background: var(--cap-row, #10162e); border-radius: 12px; min-width: 0;">
+                <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 700;">{{t.n}}</span><span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.3;">{{t.s}}</span></span>
+                <span style="flex-shrink: 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{t.tone}};">{{t.v}}</span>
+              </span>
+            </sc-for>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{taxaFonte}}</span>
+          </div>
+
+          <span style="flex-grow: 1;"></span>
+          <div style="box-sizing: border-box; padding: 12px 16px; margin-right: 100px; background: var(--cap-card, #0d1329); border: 1px solid {{regraLine}}; border-radius: 18px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+            <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">REGRA DE BORDO</span>
+            <span style="font-size: 12px; color: var(--cap-ink, #eaf1ff); line-height: 1.4;">{{regra}}</span>
+            <span style="font-size: 11.5px; font-weight: 700; color: {{regraTone}}; line-height: 1.35;">{{regraAgora}}</span>
+            <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{regraFonte}}</span>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <x-import component-from-global-scope="capitao-faixa" from="./capitao-moldura.js" hint-size="1440px,44px"></x-import>
+  <x-import component-from-global-scope="capitao-sos-web" from="./capitao-moldura.js" hint-size="78px,78px"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  state = { envios: [], novo: '', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  nfRef = React.createRef();
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ envios: window.CapitaoBrain.loadAbast() }));
+    // NF enviada em outra aba/tela: recarrega
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.abast.v1')) this.setState({ envios: window.CapitaoBrain.loadAbast() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); clearTimeout(this._n); clearTimeout(this._r); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'sem sessão'; } }
+  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 5000); }
+  hoje() { const d = new Date(), p = (n) => (n < 10 ? '0' : '') + n; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  // Foto da NF: não sai do aparelho e o app não lê valores — só nome e data viram uma linha A CONFIRMAR (capitao.abast.v1) + linha no diário
+  onNf(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
+    const B = window.CapitaoBrain; if (!B) return this.toast('Ainda carregando — tente de novo em instantes', 'var(--cap-warn, #f0a63a)');
+    const quem = this.quem(), d = this.hoje();
+    const envios = B.addAbast({ n: f.name, d: d, st: 'A CONFIRMAR', fonte: 'foto enviada no console por ' + quem });
+    B.addDiario({ sys: 'Combustível', tone: 'var(--cap-violeta, #b45cff)', t: 'Foto da NF de abastecimento enviada no console: ' + f.name + ' — linha criada como A CONFIRMAR (litros e local a conferir na NF). A foto ficou no aparelho; o app não lê valores. Enviada por ' + quem + ' — linha nova, nada se apaga.', who: quem, src: 'console · abastecimento' });
+    this.setState({ envios: envios, novo: f.name + '|' + d });
+    this.toast('NF recebida — linha A CONFIRMAR no histórico e registro no diário');
+    clearTimeout(this._r); this._r = setTimeout(() => this.revela(), 80);
+  }
+  // Gráfico: só os pontos que existem (nível após cada abastecimento + leitura atual); dia sem ponto = SEM DADOS. Elemento React (sem {{}} em atributo de SVG).
+  grafico(W, H, pts, regra, fs) {
+    const h = React.createElement, DIA = 864e5;
+    const cor = { ok: 'var(--cap-ok, #34c77a)', bb: 'var(--cap-tele, #00f4fd)', be: 'var(--cap-accent, #00a1fe)', warn: 'var(--cap-warn, #f0a63a)', ink3: 'var(--cap-ink3, #97a3c0)', ink4: 'var(--cap-ink4, #7985a6)', line: 'var(--cap-line, #1a2240)' };
+    if (!pts.length) return h('div', { style: { padding: '24px 0', fontSize: 12.5, color: cor.ink3, textAlign: 'center' } }, 'Nível por data: SEM DADOS');
+    const ini = pts[0].t, fim = pts[pts.length - 1].t, dias = Math.max(1, Math.round((fim - ini) / DIA));
+    const L = 38, R = 14, T = 16, B = 36;
+    const x = (t) => L + (W - L - R) * ((t - ini) / DIA) / dias;
+    const y = (v) => T + (H - T - B) * (1 - v / 100);
+    const k = []; let n = 0;
+    [0, 50, 100].forEach((v) => {
+      k.push(h('line', { key: 'g' + v, x1: L, x2: W - R, y1: y(v), y2: y(v), strokeWidth: 1, style: { stroke: cor.line } }));
+      k.push(h('text', { key: 'gt' + v, x: L - 7, y: y(v) + 3.5, fontSize: fs, textAnchor: 'end', style: { fill: cor.ink4 } }, v + '%'));
+    });
+    if (typeof regra === 'number') {
+      k.push(h('line', { key: 'rg', x1: L, x2: W - R, y1: y(regra), y2: y(regra), strokeWidth: 1.4, strokeDasharray: '5 4', style: { stroke: cor.warn } }));
+      k.push(h('text', { key: 'rgt', x: L + 4, y: y(regra) - 4, fontSize: fs, style: { fill: cor.warn } }, 'regra de bordo: abastecer antes de ' + regra + ' %'));
+    }
+    const comPonto = {}; pts.forEach((p) => { comPonto[Math.round((p.t - ini) / DIA)] = 1; });
+    for (let i = 0; i <= dias; i++) {
+      const tem = !!comPonto[i], xx = x(ini + i * DIA);
+      k.push(h('line', { key: 'd' + i, x1: xx, x2: xx, y1: y(0) + 3, y2: y(0) + (tem ? 9 : 6), strokeWidth: tem ? 2 : 1, style: { stroke: tem ? cor.ink3 : cor.ink4, opacity: tem ? 1 : 0.5 } }));
+    }
+    // cada intervalo sem ponto: rótulo SEM DADOS (com o nº de dias quando cabe)
+    for (let i = 1; i < pts.length; i++) {
+      const sem = Math.round((pts[i].t - pts[i - 1].t) / DIA) - 1, larg = x(pts[i].t) - x(pts[i - 1].t);
+      if (sem < 1 || larg < fs * 7) continue;
+      const txt = larg > fs * 22 ? 'SEM DADOS · ' + sem + (sem === 1 ? ' dia' : ' dias') + ' sem ponto' : larg > fs * 13 ? 'SEM DADOS · ' + sem + ' d' : 'SEM DADOS';
+      k.push(h('text', { key: 'sd' + i, x: (x(pts[i - 1].t) + x(pts[i].t)) / 2, y: y(0) - 8, fontSize: fs - 1, textAnchor: 'middle', style: { fill: cor.ink4, letterSpacing: '0.06em' } }, txt));
+    }
+    pts.forEach((p, pi) => {
+      const xx = x(p.t), sfx = n++, junto = pi > 0 && xx - x(pts[pi - 1].t) < fs * 12;
+      const serie = p.bb != null ? [['bb', p.bb], ['be', p.be]] : [['ok', p.v]];
+      const topo = Math.max.apply(null, serie.map((s) => s[1]));
+      k.push(h('line', { key: 'st' + sfx, x1: xx, x2: xx, y1: y(0), y2: y(topo), strokeWidth: 2, style: { stroke: p.bb != null ? cor.bb : cor.ok, opacity: 0.35 } }));
+      serie.forEach((s, j) => k.push(h('circle', { key: 'c' + sfx + j, cx: xx, cy: y(s[1]), r: fs * 0.5, style: { fill: cor[s[0]] } }, h('title', null, p.tip))));
+      const perto = xx > W - R - 60, anc = perto ? 'end' : 'middle', lx = perto ? xx - 9 : xx;
+      const baixo = Math.min.apply(null, serie.map((s) => s[1])), ly = junto && p.bb != null ? y(baixo) + fs + 7 : y(topo) - 9;
+      k.push(h('text', { key: 'v' + sfx, x: lx, y: ly, fontSize: fs + 1, fontWeight: 800, textAnchor: anc, style: { fill: 'var(--cap-ink, #eaf1ff)' } }, p.rot));
+      const dx = xx < L + 24 ? 'start' : perto ? 'end' : 'middle';
+      k.push(h('text', { key: 'dt' + sfx, x: dx === 'start' ? xx - 4 : dx === 'end' ? xx + 4 : xx, y: y(0) + 21, fontSize: fs, fontWeight: 700, textAnchor: dx, style: { fill: cor.ink3 } }, p.dl));
+      k.push(h('text', { key: 'ds' + sfx, x: dx === 'start' ? xx - 4 : dx === 'end' ? xx + 4 : xx, y: y(0) + 32, fontSize: fs - 1, textAnchor: dx, style: { fill: cor.ink4 } }, p.sub));
+    });
+    return h('svg', { viewBox: '0 0 ' + W + ' ' + H, width: '100%', role: 'img', 'aria-label': pts.map((p) => p.dl + ': ' + p.rot).join(' · ') + ' · demais dias SEM DADOS', style: { display: 'block', width: '100%', height: 'auto', overflow: 'visible' } }, k);
+  }
+  // Mostra a linha nova rolando só a lista (sem mexer na janela nem na prancheta)
+  revela() {
+    const el = document.querySelector('[data-novo="sim"]'); if (!el) return;
+    let p = el.parentElement;
+    while (p && !(p.scrollHeight > p.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+    if (!p) return;
+    const r = el.getBoundingClientRect(), q = p.getBoundingClientRect(), k = (q.height / p.offsetHeight) || 1;
+    if (r.top < q.top) p.scrollTop -= (q.top - r.top) / k + 8; else if (r.bottom > q.bottom) p.scrollTop += (r.bottom - q.bottom) / k + 8;
+  }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {}, DI = S.diesel || {}, C = D.consumo || {}, A = D.autonomia || {};
+
+    const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    const mil = (x) => (typeof x === 'number' ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—');
+    const ano = (S.iso || '').slice(0, 4) || String(new Date().getFullYear());
+    const dt = (t) => { const m = /^(\d{2})\/(\d{2})(?:\/(\d{4}))?/.exec(t || ''); return m ? Date.UTC(+(m[3] || ano), +m[2] - 1, +m[1]) : null; };
+    const TOM = { ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)'], neutro: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-plat-rgb, 211,220,239), 0.10)'] };
+    const AB = (D.abastecimentos || []).slice().sort((a, b) => (dt(b.d) || 0) - (dt(a.d) || 0));
+    const ult = AB[0] || null;
+    const fAbast = D.abastFonte || 'SEM DADOS', fAbastC = String(fAbast).split(' · ')[0], fSnap = S.fonte || 'SEM DADOS';
+    const snapTxt = 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS');
+    const temDi = typeof DI.bb === 'number' && typeof DI.be === 'number';
+    const regraN = (() => { const m = /(\d+(?:,\d+)?)\s*%/.exec(D.regraAbast || ''); return m ? +m[1].replace(',', '.') : null; })();
+    const reserva = typeof D.reserva === 'number' ? Math.round(D.reserva * 100) + ' %' : 'reserva SEM DADOS';
+    // pontos do gráfico: nível depois de cada abastecimento + leitura atual (BB/BE)
+    const pts = AB.filter((a) => typeof a.nivelDepois === 'number' && dt(a.d)).map((a) => ({ t: dt(a.d), v: a.nivelDepois, rot: '≈ ' + a.nivelDepois + ' %', dl: a.d.slice(0, 5), sub: 'após ' + mil(a.litros) + ' L', tip: a.d + ' · nível após abastecer ' + mil(a.litros) + ' L ≈ ' + a.nivelDepois + ' % · ' + fAbastC }));
+    if (temDi && dt(DI.hora)) pts.push({ t: dt(DI.hora), bb: DI.bb, be: DI.be, rot: 'BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' %', dl: DI.hora, sub: 'motores ligados', tip: DI.hora + ' · BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % · ' + (DI.nota || 'última leitura') + ' · coletor NMEA' + (D.demo ? ' (DEMO)' : '') });
+    pts.sort((a, b) => a.t - b.t);
+    const span = pts.length ? Math.round((pts[pts.length - 1].t - pts[0].t) / 864e5) + 1 : 0;
+    const diasCom = {}; pts.forEach((p) => { diasCom[p.t] = 1; }); const nCom = Object.keys(diasCom).length;
+    // histórico: fotos de NF deste aparelho (A CONFIRMAR) + registro de abastecimento
+    const env = (s.envios || []).map((x) => ({ d: x.d || 'data SEM DADOS', t: dt(x.d) || 0, litros: '—', lTone: 'var(--cap-ink3, #97a3c0)', local: 'a confirmar na NF', localTone: 'var(--cap-ink3, #97a3c0)', st: x.st || 'A CONFIRMAR', tom: 'violeta', obs: 'Foto da NF: ' + x.n + ' · ficou no aparelho · o app não lê valores', fonte: 'Fonte: ' + (x.fonte || 'foto enviada no app'), chave: x.n + '|' + x.d }));
+    const reg = AB.map((a) => ({ d: a.d, t: dt(a.d) || 0, litros: typeof a.litros === 'number' ? mil(a.litros) + ' L' : 'SEM DADOS', lTone: 'var(--cap-ink, #eaf1ff)', local: (a.local || 'SEM DADOS') + (a.combustivel ? ' · ' + a.combustivel : ''), localTone: 'var(--cap-ink, #eaf1ff)', st: a.st || 'SEM DADOS', tom: a.st === 'CONFERIDO' ? 'ok' : 'neutro', obs: (a.nota || '—') + (typeof a.nivelDepois === 'number' ? ' · tanques ≈ ' + a.nivelDepois + ' % depois' : ' · nível depois SEM DADOS'), fonte: 'Fonte: ' + fAbast }));
+    const hist = env.concat(reg).map((r, i) => Object.assign(r, { i: i })).sort((a, b) => b.t - a.t || a.i - b.i).map((r) => { const c = TOM[r.tom], novo = r.chave && r.chave === s.novo; return Object.assign(r, { tone: c[0], wash: c[1], novo: novo ? 'sim' : 'nao', line: novo ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.60)' : 'transparent' }); });
+    const minT = temDi ? Math.min(DI.bb, DI.be) : null, acima = minT != null && regraN != null ? minT >= regraN : null;
+    const cz = C.cruzeiro || {}, lz = C.lenta || {}, desde = C.desdeAbast || {};
+    const I = { tank: 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4', drop: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', graf: 'M3 12h4l2-6 3 12 2.5-8 1.5 4h5', rota: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z' };
+    return {
+      note: s.note, noteTone: s.noteTone,
+      resumo: 'Diesel ' + (DI.tanques || 'SEM DADOS') + ' · ' + (DI.nota || 'última leitura') + ' ' + (DI.hora || 'SEM DADOS') + ' · ' + snapTxt + ' · telemetria ao vivo desligada',
+      kpis: [
+        { l: 'DIESEL A BORDO', v: typeof DI.litros === 'number' ? '≈ ' + mil(DI.litros) : 'SEM DADOS', u: typeof DI.capacidade === 'number' ? 'L de ' + mil(DI.capacidade) : '', s: temDi ? 'BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % · ' + (DI.nota || 'última leitura') + ' ' + (DI.hora || 'SEM DADOS') : 'SEM LEITURA', f: 'Fonte: ' + fSnap, tone: 'var(--cap-ink, #eaf1ff)', d: I.tank, t: 'var(--cap-tele, #00f4fd)', href: 'A1-Ponte-Web.dc.html' },
+        { l: 'ÚLTIMO ABASTECIMENTO', v: ult && typeof ult.litros === 'number' ? mil(ult.litros) : 'SEM DADOS', u: ult ? 'L · ' + ult.d : '', s: ult ? (ult.local || 'local SEM DADOS') + ' · ' + (ult.st || '') + (typeof ult.nivelDepois === 'number' ? ' · tanques ≈ ' + ult.nivelDepois + ' % depois' : '') : 'nenhum registro', f: 'Fonte: ' + fAbastC, tone: 'var(--cap-ok, #34c77a)', d: I.drop, t: 'var(--cap-ok, #34c77a)', href: 'Main.dc.html#q=' + encodeURIComponent('Consumo de diesel observado por regime e desde o último abastecimento.') },
+        { l: 'CONSUMIDO DESDE ' + (desde.desde ? desde.desde.slice(0, 5) : '—'), v: typeof desde.litros === 'number' ? '≈ ' + mil(desde.litros) : 'SEM DADOS', u: 'L', s: (desde.horas || 'horas SEM DADOS') + ' · estimativa pela telemetria', f: 'Fonte: ' + (C.fonte || 'SEM DADOS'), tone: 'var(--cap-ink, #eaf1ff)', d: I.graf, t: 'var(--cap-warn, #f0a63a)', href: 'Main.dc.html#q=' + encodeURIComponent('Consumo de diesel observado por regime e desde o último abastecimento.') },
+        { l: 'AUTONOMIA', v: typeof A.horas === 'number' ? '≈ ' + nb(A.horas) + ' h' : 'SEM DADOS', u: typeof A.mn === 'number' ? '≈ ' + mil(A.mn) + ' mn' : '', s: 'a ' + (cz.nos || '—') + ' nós · ' + mil(cz.rpm) + ' rpm · ' + (typeof cz.lph === 'number' ? cz.lph + ' L/h' : 'L/h SEM DADOS') + ' · reserva de ' + reserva + ' · marcha lenta ≈ ' + (typeof A.lenta === 'number' ? mil(A.lenta) + ' h' : 'SEM DADOS'), f: 'Fonte: ' + (C.fonte || 'SEM DADOS'), tone: 'var(--cap-ok, #34c77a)', d: I.rota, t: 'var(--cap-accent, #00a1fe)', href: 'Main.dc.html#q=' + encodeURIComponent('Autonomia com reserva de 10% pelo diesel a bordo.') }
+      ].map((k) => Object.assign(k, { ico: this.ico(k.d, 15, 1.8, k.t) })),
+      nivelSub: pts.length + ' pontos em ' + span + ' dias (' + (pts[0] ? pts[0].dl : '—') + ' → ' + (pts.length ? pts[pts.length - 1].dl : '—') + ') · ' + Math.max(0, span - nCom) + ' dias sem ponto = SEM DADOS',
+      grafico: this.grafico(880, 190, pts, regraN, 11),
+      nivelFonte: 'Fonte: ' + fAbastC + ' (nível após abastecer) · ' + fSnap + ' (' + (DI.hora || 'SEM DADOS') + ', ' + (DI.nota || 'última leitura') + ')',
+      histSub: hist.length + (hist.length === 1 ? ' registro' : ' registros') + ' · ' + env.length + ' A CONFIRMAR (foto de NF deste aparelho) · mais recente primeiro',
+      hist: hist,
+      histFonte: 'Fonte: ' + fAbast + ' · fotos de NF: só neste aparelho · sem valores no app',
+      pickNf: () => this.nfRef.current && this.nfRef.current.click(), nfRef: this.nfRef, onNf: (e) => this.onNf(e),
+      nfFonte: 'Fonte: fotos deste aparelho (' + env.length + ') · nada vai ao servidor',
+      taxas: [
+        { n: 'Cruzeiro', s: (cz.nos || '—') + ' nós · ' + mil(cz.rpm) + ' rpm · dois motores', v: typeof cz.lph === 'number' ? nb(cz.lph, 0) + ' L/h' : 'SEM DADOS', tone: 'var(--cap-ink, #eaf1ff)' },
+        { n: 'Marcha lenta', s: 'autonomia em lenta ≈ ' + (typeof A.lenta === 'number' ? mil(A.lenta) + ' h' : 'SEM DADOS'), v: typeof lz.lph === 'number' ? nb(lz.lph) + ' L/h' : 'SEM DADOS', tone: 'var(--cap-ink, #eaf1ff)' }
+      ],
+      taxaFonte: 'Fonte: ' + (C.fonte || 'SEM DADOS') + ' · ' + (C.periodo || 'período SEM DADOS') + ' · a NF é a fonte oficial',
+      regra: D.regraAbast ? D.regraAbast.charAt(0).toUpperCase() + D.regraAbast.slice(1) : 'SEM DADOS',
+      regraAgora: acima == null ? 'Nível agora: SEM LEITURA' : 'Agora BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % — ' + (acima ? 'acima da regra' : 'ABAIXO DA REGRA · abastecer') + ' (' + (DI.hora || '') + ')',
+      regraTone: acima === false ? 'var(--cap-crit, #ff3b30)' : acima ? 'var(--cap-ok, #34c77a)' : 'var(--cap-ink3, #97a3c0)',
+      regraLine: acima === false ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.35)',
+      regraFonte: 'Fonte: ' + fAbastC + ' · leitura: ' + snapTxt
+    };
+  }
+}
+</script>
+</body>
+</html>
