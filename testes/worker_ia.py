@@ -193,10 +193,10 @@ async (base) => {
   const comHash = async (hash, arq, global) => { history.replaceState(null, '', pagina + hash); await carrega(arq, global); return { hash: location.hash, path: location.pathname }; };
   const limpaLS = () => ['capitao.ia.url.v1', 'capitao.ia.chave.v1', 'capitao.telemetria.url.v1', 'capitao.telemetria.chave.v1', 'capitao.voz.url.v1', 'capitao.voz.chave.v1'].forEach((k) => localStorage.removeItem(k));
   limpaLS();
-  let h = await comHash('#ia=abc&q=como%20ligar', 'integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
-  ok('IA #ia= antes de outro parâmetro: guarda a chave e o endereço fica "#q=…" (caminho intacto)', h.hash === '#q=como%20ligar' && h.path === pagina && localStorage.getItem('capitao.ia.chave.v1') === 'abc', JSON.stringify(h));
-  h = await comHash('#q=x&ia=def&b=2', 'integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
-  ok('IA #ia= no meio: sobra "#q=x&b=2"', h.hash === '#q=x&b=2' && localStorage.getItem('capitao.ia.chave.v1') === 'def', JSON.stringify(h));
+  let h = await comHash('#ia=chave-no-endereco&q=como%20ligar', 'integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
+  ok('IA chave no endereço (#ia=<valor>) é IGNORADA e sai do endereço; sobra "#q=…" (caminho intacto)', h.hash === '#q=como%20ligar' && h.path === pagina && localStorage.getItem('capitao.ia.chave.v1') === null, JSON.stringify(h));
+  h = await comHash('#q=x&ia=ativar&b=2', 'integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
+  ok('IA #ia=ativar abre a caixa, guarda a chave colada e o endereço fica "#q=x&b=2"', h.hash === '#q=x&b=2' && localStorage.getItem('capitao.ia.chave.v1') === 'chave-colada-na-caixa', JSON.stringify(h) + ' ' + localStorage.getItem('capitao.ia.chave.v1'));
   h = await comHash('#ia=sair', 'integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
   ok('IA #ia=sair apaga a chave e limpa o endereço', h.hash === '' && localStorage.getItem('capitao.ia.chave.v1') === null, JSON.stringify(h));
   h = await comHash('#tele=t1&q=x', 'capitao-telemetria.js', 'CapitaoTelemetria');
@@ -227,6 +227,9 @@ async (base) => {
   resposta = { texto: 'Passo 1…', provedor: 'Claude API', modelo: 'claude-opus-5', parou: 'max_tokens' };
   const r4 = await window.CapitaoIA.perguntar('x', [{ d: TRECHO }], '');
   ok('IA resposta marcada como cortada → null (tela mantém a local)', r4 === null, JSON.stringify(r4));
+  resposta = { texto: 'SEM DADOS — os trechos não falam disso.\nFonte: nenhuma — os trechos e a leitura enviados pelo app não respondem a pergunta', provedor: 'Workers AI', modelo: 'x', parou: 'fim' };
+  const r5 = await window.CapitaoIA.perguntar('x', [{ d: TRECHO }], '');
+  ok('IA resposta SEM DADOS da IA → null (fica a local, que tem o trecho e a fonte)', r5 === null, JSON.stringify(r5));
   resposta = { erro: 'cota' };
   const r2 = await window.CapitaoIA.perguntar('x', [{ d: TRECHO }], '');
   ok('IA erro do proxy → null (tela mantém a resposta local)', r2 === null, JSON.stringify(r2));
@@ -251,6 +254,7 @@ def main():
             pg.route(base + '__sdk_falso.js', lambda rt: rt.fulfill(body=SDK_FALSO, content_type='text/javascript; charset=utf-8'))
             erros = []
             pg.on('pageerror', lambda e: erros.append(str(e)))
+            pg.on('dialog', lambda d: d.accept('chave-colada-na-caixa') if d.type == 'prompt' else d.dismiss())
             pg.goto(base + '__teste.html')
             res = pg.evaluate(JS, base)
             b.close()

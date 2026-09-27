@@ -14,15 +14,20 @@
   var KC = 'capitao.ia.chave.v1';
   var ESPERA = 20000; // sem resposta nesse tempo → o chat fica com a resposta local
 
-  // #ia=<chave> no endereço: guarda a chave neste aparelho e limpa o endereço (não fica no histórico). #ia=sair apaga.
+  // Ativar este aparelho: abrir com #ia=ativar e colar a CHAVE_APP na caixa que aparece. A chave NUNCA passa pelo
+  // endereço (o endereço fica no histórico do navegador, que pode sincronizar entre aparelhos). #ia=sair apaga a chave.
+  // Qualquer outro valor em #ia= é ignorado. O par ia=… sai do endereço; os outros (#q=, #tele=…) continuam.
   try {
     var m = location.hash.match(/(?:^#|&)ia=([^&]+)/);
     if (m) {
-      var c = decodeURIComponent(m[1]);
-      if (c === 'sair') localStorage.removeItem(KC); else localStorage.setItem(KC, c);
-      // Tira só o par ia=…; os outros parâmetros do endereço (#q=, #tele=, #ia=…) continuam no hash.
       var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('ia=') !== 0; }).join('&');
       history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
+      var c = decodeURIComponent(m[1]);
+      if (c === 'sair') localStorage.removeItem(KC);
+      else if (c === 'ativar') {
+        var dig = window.prompt('Cole a chave da IA na nuvem (CHAVE_APP). Ela fica só neste aparelho.');
+        if (dig && dig.trim()) localStorage.setItem(KC, dig.trim());
+      }
     }
   } catch (e) {}
   function chave() { try { return localStorage.getItem(KC) || ''; } catch (e) { return ''; } }
@@ -44,6 +49,7 @@
         clearTimeout(t);
         if (!j || typeof j.texto !== 'string' || !j.texto.trim()) return null;
         if (j.parou === 'max_tokens') return null; // cortada: não passa por resposta completa (a local vem inteira)
+        if (/^\s*\**\s*SEM DADOS/i.test(j.texto)) return null; // a IA achou que os trechos não respondem: fica a local, que tem o trecho e a fonte
         // Provedor e modelo vêm do proxy (Workers AI · llama-3.3-70b-…, Claude API · claude-opus-5); sem eles, só "IA na nuvem".
         var quem = [j.provedor, j.modelo].filter(function (x) { return typeof x === 'string' && x; }).map(function (x) { return x.replace(/^@cf\/[^/]+\//, '').slice(0, 60); }).join(' · ');
         return { text: j.texto.trim(), src: 'Fonte: IA na nuvem' + (quem ? ' (' + quem + ')' : '') + ' · só com as fontes enviadas pelo app', key: 'ia' };
