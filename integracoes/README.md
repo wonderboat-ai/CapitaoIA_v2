@@ -19,7 +19,7 @@ Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google
 | Coletor NMEA → Drive | a definir (equipamento SEM DADOS) | [telemetria-worker/](telemetria-worker/README.md) |
 | Google Cloud · conta de serviço | planejado | [google-cloud/](google-cloud/README.md) |
 | Login no servidor (Cloudflare Access ou repo privado) | planejado | [cloudflare/](cloudflare/README.md) |
-| IA na nuvem grátis · Workers AI (`capitao-ia`) | **ativo na demonstração** (1.0.4) · Llama 3.3 70B · 3 perguntas/hora · aparelho ativa com `#ia=ativar` (caixa para colar a chave) | [workers-ai/](workers-ai/README.md) |
+| IA na nuvem grátis · Workers AI (`capitao-ia`) | **ativo na demonstração** (1.0.4; conversa com ficha de bordo e histórico na 1.0.5) · Llama 3.3 70B · AI Gateway com 30 perguntas/hora · entra no SEM DADOS, no trecho do guia e na pergunta sobre o app, no chat e na voz · aparelho ativa com `#ia=ativar` ou o botão **Ativar IA na nuvem** (caixa para colar a chave) | [workers-ai/](workers-ai/README.md) |
 | IA na nuvem paga · Claude API (`capitao-ia`) | **estrutura** · desligada | [claude-api/](claude-api/README.md) |
 | ElevenLabs (`capitao-voz`) | **opcional** · estrutura desligada | [elevenlabs/](elevenlabs/README.md) |
 | NotebookLM | planejado (não configurado) | `capitao-brain.js › BASE` |

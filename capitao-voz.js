@@ -3,7 +3,7 @@
    anéis graduados girando devagar, espectro radial discreto que acompanha a voz e "IA" no centro.
    Cores da marca: ESCUTA ciano (#00F4FD) · PROCESSANDO violeta (#A22BFD) · RESPOSTA azul (#00A1FE).
    - ESCUTA (pergunta): o espectro sobe a cada trecho reconhecido; mostra a transcrição.
-   - PROCESSANDO: anéis aceleram enquanto a resposta é montada.
+   - PROCESSANDO: anéis aceleram enquanto a resposta é montada (esperando a IA na nuvem, fica até a resposta ser falada).
    - RESPOSTA: o espectro acompanha a fala; mostra a frase dita.
    Tocar no núcleo: escuta → envia agora; resposta → interrompe e volta a ouvir. ENCERRAR (ou Esc) desliga.
    SOS sempre no canto. */
@@ -183,7 +183,11 @@
     var novo = e !== estado; estado = e;
     if (novo) pinta(e);
     if (e === 'ouvindo') { texto(x.texto, 'AGUARDANDO COMANDO DE VOZ…'); if (x.texto) pulso(0.55); }
-    else if (e === 'pensando') { texto(x.texto || '', 'CRUZANDO TELEMETRIA · AGENDA · DOCUMENTOS…'); mostra(); some = setTimeout(esconde, 2500); return; } // sem resposta falada (voz→texto): some sozinho
+    else if (e === 'pensando') {
+      texto(x.texto || '', 'CRUZANDO TELEMETRIA · AGENDA · DOCUMENTOS…'); el.dica.textContent = x.segura ? 'CONSULTANDO A IA DE BORDO…' : COR.pensando.dica; mostra();
+      if (!x.segura) some = setTimeout(esconde, 2500); // sem resposta falada (voz→texto): some sozinho; esperando a IA (segura): fica até a fala
+      return;
+    }
     else if (e === 'falando') { texto(x.texto, ''); pulso(0.4); }
     mostra();
   });

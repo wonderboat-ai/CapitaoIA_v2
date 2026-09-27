@@ -1,8 +1,11 @@
 """Teste de ponta a ponta da IA na nuvem nas telas de chat (Main e H2), com o Worker SIMULADO — não gasta cota.
 
-Confere que a IA só entra quando a resposta local vem de um trecho do guia ('base'); que resposta pronta e SEM DADOS
-não chamam a IA; que sem a CHAVE_APP no aparelho nada vai para a rede; que erro do proxy e "SEM DADOS" da IA mantêm a
-resposta local; que link de fora (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
+Confere que a IA entra quando a resposta local não basta (SEM DADOS, trecho do guia, pergunta sobre o app — "Oque você faz?")
+e nunca em resposta pronta ou só num "oi"; que o pedido leva a ficha de bordo (sem coordenadas) e o histórico da conversa;
+que sem a CHAVE_APP no aparelho nada vai para a rede e a linha da fonte diz por quê (com o botão "Ativar IA na nuvem");
+que erro do proxy mantém a resposta local com o motivo; que "SEM DADOS" da IA mantém o trecho do guia mas troca o SEM DADOS
+genérico; que a resposta entra logo depois da pergunta dela; que na CONVERSA por voz a IA responde e a resposta dela é a
+falada; que link de fora (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
 e que o login não leva a chave do endereço para o ?next=.
 
     python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; precisa de internet para o React do unpkg)
@@ -23,7 +26,20 @@ URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capit
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 TEXTO_IA = 'Resposta simulada da IA: segure PARTIDA até o motor pegar.'
+FONTE_IA = 'Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
 PRONTA = "() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0"
+CONVERSA = '[aria-label="Conversa contínua por voz — sem tocar na tela"]'
+# Microfone e voz de mentira para a CONVERSA: o reconhecedor "ouve" as frases de window.__falas (uma por vez) e a fala só
+# registra o texto em window.__faladas. Os eventos do núcleo de voz ficam em window.__voz.
+VOZ_FALSA = r"""(() => {
+  window.__falas = []; window.__faladas = []; window.__voz = [];
+  window.addEventListener('capitao-voz', (e) => window.__voz.push(e.detail));
+  class SR {
+    start() { const f = window.__falas.shift(); if (f) setTimeout(() => { if (this.onresult) this.onresult({ results: [[{ transcript: f }]] }); }, 60); }
+    stop() {} abort() {}
+  }
+  window.SpeechRecognition = SR; window.webkitSpeechRecognition = SR;
+})()"""
 
 
 def mesmo_cliente():
@@ -57,6 +73,7 @@ def main():
                 ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900},
                                     user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
                 ctx.add_init_script(SESSAO)
+                ctx.add_init_script(VOZ_FALSA)
                 pg = ctx.new_page()
                 erros = []
                 pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
@@ -69,8 +86,8 @@ def main():
                         return route.fulfill(status=204, headers=cab)
                     estado['pedidos'].append(json.loads(req.post_data or '{}'))
                     if estado['modo'] == 'erro':
-                        return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota"}')
-                    texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — os trechos e a leitura enviados pelo app não respondem a pergunta'
+                        return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota grátis diária da IA esgotada"}')
+                    texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — a ficha, os trechos e a leitura enviados pelo app não respondem a pergunta'
                              if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar')
                     return route.fulfill(status=200, content_type='application/json', headers=cab,
                                          body=json.dumps({'texto': texto, 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}))
@@ -79,7 +96,7 @@ def main():
                 def espera_resposta():
                     try:
                         pg.wait_for_function("() => /Fonte:/.test(document.body.innerText)", timeout=15000)
-                        pg.wait_for_function("() => !document.querySelector('[data-capitao-pensando]')", timeout=10000)
+                        pg.wait_for_function("() => !document.querySelector('[data-capitao-pensando]')", timeout=20000)
                     except Exception:
                         pass
                     pg.wait_for_timeout(600)
@@ -88,18 +105,24 @@ def main():
                     pg.goto(base + 'README.md')
                     pg.evaluate("(c) => { if (c) localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); else localStorage.removeItem('capitao.ia.chave.v1'); }", chave)
 
-                def digita(q, chave=True, modo='ok'):
-                    """Pergunta digitada no campo do chat (o caminho normal)."""
+                def abre(chave=True, modo='ok'):
                     estado['modo'] = modo
                     prepara(chave)
-                    antes = len(estado['pedidos'])
                     pg.goto(base + tela + '.dc.html')
                     pg.wait_for_function(PRONTA, timeout=20000)
                     pg.wait_for_selector(campo, timeout=15000)
+
+                def envia(q):
+                    antes = len(estado['pedidos'])
                     pg.fill(campo, q)
                     pg.press(campo, 'Enter')
                     espera_resposta()
                     return pg.evaluate('() => document.body.innerText'), len(estado['pedidos']) - antes, pg.query_selector('[data-capitao-pensando]') is None
+
+                def digita(q, chave=True, modo='ok'):
+                    """Pergunta digitada no campo do chat (o caminho normal), numa conversa nova."""
+                    abre(chave, modo)
+                    return envia(q)
 
                 def por_link(q, interno):
                     """Pergunta por link #q=: de fora (sem referrer) ou de dentro do app (referrer da mesma origem)."""
@@ -118,20 +141,68 @@ def main():
 
                 t, n, livre = digita('como ligar o gerador?')
                 ok(tela + ': resposta do guia (base) chama a IA 1 vez', n == 1, 'pedidos=%d' % n)
-                ok(tela + ': mensagem trocada pela resposta da IA, com a fonte "IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)"', TEXTO_IA in t and 'Fonte: IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)' in t, t[-300:])
+                ok(tela + ': resposta da IA na tela, com a fonte dela + "via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)"', TEXTO_IA in t and FONTE_IA in t, t[-300:])
                 ok(tela + ': indicador "consultando" some depois da resposta da IA', livre)
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
+                f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
+                ok(tela + ': pedido leva a ficha de bordo (sobre o app, telemetria DEMO, sem coordenadas) e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
+                t, n, _ = digita('oi')
+                ok(tela + ': só um "oi" não chama a IA (saudação pronta)', n == 0 and 'Capitão IA online' in t, 'pedidos=%d' % n)
+                t, n, _ = digita('Oque você faz?')
+                ok(tela + ': "Oque você faz?" chama a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?')
-                ok(tela + ': SEM DADOS local não chama a IA', n == 0 and 'SEM DADOS' in t, 'pedidos=%d' % n)
+                ok(tela + ': SEM DADOS local chama a IA (com a ficha) e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
+                t, n, _ = digita('qual o calado do barco?', modo='semdados')
+                ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', chave=False)
-                ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
+                ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede (fica o trecho local)', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
+                t, n, _ = digita('qual o calado do barco?', chave=False)
+                ok(tela + ': sem a CHAVE_APP, a fonte diz "IA na nuvem desligada neste aparelho" e oferece "Ativar IA na nuvem"', n == 0 and 'IA na nuvem desligada neste aparelho' in t and pg.query_selector('a[href="#ia=ativar"]') is not None, t[-300:])
                 t, n, livre = digita('como ligar o gerador?', modo='erro')
-                ok(tela + ': erro do proxy mantém a resposta local (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and livre, 'pedidos=%d' % n)
+                ok(tela + ': erro do proxy mantém a resposta local com o motivo (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and 'IA na nuvem fora agora' in t and livre, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', modo='semdados')
                 ok(tela + ': "SEM DADOS" da IA mantém o trecho local com a fonte', n == 1 and 'PARTIDA' in t and 'Fonte: nenhuma' not in t, 'pedidos=%d' % n)
+
+                # Histórico: a 2ª pergunta leva a 1ª e a resposta dela.
+                abre()
+                envia('como ligar o gerador?')
+                t, n, _ = envia('e para desligar?')
+                h = estado['pedidos'][-1].get('historico') if estado['pedidos'] else None
+                ok(tela + ': a pergunta seguinte leva o histórico (pergunta e resposta anteriores)', n == 1 and h and len(h) == 2 and h[0] == {'papel': 'usuario', 'texto': 'como ligar o gerador?'} and h[1]['papel'] == 'capitao' and TEXTO_IA in h[1]['texto'], json.dumps(h, ensure_ascii=False)[:300])
+
+                # Ordem: a resposta da IA (demorada) entra logo depois da pergunta dela, antes da pergunta seguinte.
+                abre()
+                pg.evaluate("() => { const IA = window.CapitaoIA; IA.ativa = () => true; IA.perguntar = (q) => new Promise((r) => setTimeout(() => r({ text: 'IA respondeu: ' + q, src: 'Fonte: teste · via IA na nuvem', key: 'ia', semDados: false }), 1800)); }")
+                pg.fill(campo, 'qual o calado do barco?')
+                pg.press(campo, 'Enter')
+                pg.wait_for_timeout(300)
+                pg.fill(campo, 'autonomia')
+                pg.press(campo, 'Enter')
+                espera_resposta()
+                pg.wait_for_function("() => /IA respondeu: qual o calado/.test(document.body.innerText)", timeout=10000)
+                t = pg.evaluate('() => document.body.innerText')
+                i1, i2, i3 = t.find('IA respondeu: qual o calado do barco?'), t.find('\nautonomia\n'), t.find('≈ 11,2 h')
+                ok(tela + ': resposta da IA entra logo depois da pergunta dela (ordem pergunta › resposta mantida)', -1 < i1 < i2 < i3, (i1, i2, i3))
+
+                # CONVERSA por voz: a pergunta falada vai para a IA e a resposta falada é a da IA (o núcleo fica em PROCESSANDO).
+                abre()
+                pg.evaluate("() => { window.__falas.push('qual o calado do barco'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
+                antes = len(estado['pedidos'])
+                pg.click(CONVERSA)
+                try:
+                    pg.wait_for_function('() => window.__faladas.length >= 2', timeout=20000)
+                except Exception:
+                    pass
+                faladas = pg.evaluate('() => window.__faladas')
+                segura = pg.evaluate("() => window.__voz.some((v) => v.estado === 'pensando' && v.segura)")
+                ultimo = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
+                ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'qual o calado do barco' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
+                ok(tela + ': CONVERSA: o núcleo de voz fica em PROCESSANDO esperando a IA', segura)
+                pg.keyboard.press('Escape')
+
                 t, n = por_link('como ligar o gerador?', interno=False)
                 ok(tela + ': link de fora (#q=, sem referrer) não chama a IA', n == 0 and 'PARTIDA' in t, 'pedidos=%d' % n)
                 t, n = por_link('como ligar o gerador?', interno=True)

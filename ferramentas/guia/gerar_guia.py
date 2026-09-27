@@ -38,6 +38,13 @@ def servidor():
     return s, 'http://127.0.0.1:%d/' % s.server_address[1]
 
 
+def sem_ia(ctx):
+    """Capturas com o app só no aparelho: o cliente da IA sem URL (a resposta da IA varia e o aparelho de captura não tem a
+    chave — sem isto, a resposta do guia sairia com "IA na nuvem desligada neste aparelho" e o botão de ativar)."""
+    cliente = os.path.join(RAIZ, 'integracoes', 'ia-cliente', 'capitao-ia.js')
+    ctx.route('**/capitao-ia.js', lambda rt: rt.fulfill(path=cliente, content_type='text/javascript; charset=utf-8'))
+
+
 def pronta(pg):
     pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=20000)
     pg.wait_for_timeout(1400)
@@ -49,6 +56,7 @@ def capturas(b, base):
     def app(nome, tela, antes=None, recorte=None, sessao=True):
         ctx = b.new_context(viewport={'width': 390, 'height': 844}, device_scale_factor=2, is_mobile=True, has_touch=True, user_agent=MOBILE_UA, service_workers='block')
         ctx.add_init_script(SESSAO if sessao else "localStorage.setItem('capitao.tema.v1', 'claro');")
+        sem_ia(ctx)
         pg = ctx.new_page()
         pg.goto(base + tela, wait_until='load')
         if tela.endswith('.dc.html'):
@@ -67,6 +75,7 @@ def capturas(b, base):
     def web(nome, tela, antes=None):
         ctx = b.new_context(viewport={'width': 1440, 'height': 900}, device_scale_factor=1, service_workers='block')
         ctx.add_init_script(SESSAO)
+        sem_ia(ctx)
         pg = ctx.new_page()
         pg.goto(base + tela, wait_until='load')
         pronta(pg)

@@ -4,8 +4,9 @@
    SEM LEITURA; manual não confirmado → MANUAL NO DRIVE; foto/nota → A CONFERIR / A CONFIRMAR.
    Pipeline: answer(q, ctx) → route(q) (emergência e óleo no topo) → ANSWERS[chave] { text, src, actions }
              → buscaBase(q) (BM25 com sinônimos PT/EN sobre base-conhecimento.json) → SEM DADOS.
-   [estrutura] IA na nuvem (integracoes/workers-ai grátis ou integracoes/claude-api paga, cliente em integracoes/ia-cliente)
-   responderia a partir dos trechos da resposta `base` — não ligada. */
+   IA na nuvem (capitao-ia.js, ligada na demonstração): as telas de chat chamam a IA quando pedeIA(a, q) — SEM DADOS local,
+   trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
+   Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
@@ -393,9 +394,12 @@
     if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
     if (has(q, ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'])) return 'posicao';
-    if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce'])) return 'saudacao';
+    if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce']) || SOBRE.test(q)) return 'saudacao';
     return 'fallback';
   }
+  // Pergunta sobre o próprio Capitão IA, com os jeitos comuns de digitar e falar: "Oque você faz?", "o que vc sabe", "quem é vc",
+  // "como você funciona", "pra que serve".
+  var SOBRE = / (?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu) (?:faz|sabe|pode|consegue|responde)| quem (?:e|eh) (?:voce|vc|tu) | quem (?:voce|vc) e | como (?:voce|vc) funciona| como (?:funciona|uso|usar) (?:o |este |esse )?(?:app|aplicativo|capitao)| (?:para|pra) que (?:voce |vc )?serve/;
 
   var CANON = {}; ALL.forEach(function (x) { CANON[x.id] = norm(x.q).trim(); });
 
@@ -496,6 +500,62 @@
     if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     a.key = key;
     return a;
+  }
+
+  // ——— IA na nuvem (capitao-ia.js) ———
+  // Quando a tela chama a IA: sem resposta pronta (SEM DADOS), trecho do guia (a IA responde a partir dele) ou pergunta sobre o
+  // próprio app que vai além do cumprimento. Emergência, óleo, registro no diário e respostas prontas ficam 100% no aparelho:
+  // rápidas, offline e com a fonte. "Oi", "bom dia, capitão" também — a saudação pronta basta e não gasta a cota.
+  var SO_OI = /^(?: (?:oi|ola|opa|e ai|eai|hey|hello|hi|alo|bom dia|boa tarde|boa noite|tudo bem|tudo bom|td bem|beleza|capitao|ia))+ $/;
+  function pedeIA(a, q) {
+    var k = a && a.key;
+    if (k === 'fallback' || k === 'base') return true;
+    return k === 'saudacao' && !!String(q || '').trim() && !SO_OI.test(pad(q));
+  }
+  // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
+  var SOBRE_APP = [
+    'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com a fonte.',
+    'Responde sobre: telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado), manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo), passo a passo dos equipamentos (gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin, áudio Fusion, rádios VHF 315, motores Volvo Penta) e checklist de saída e chegada.',
+    'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela: toque no núcleo para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
+    'Registrar no diário: dizer ou digitar "registre no diário …" (o chat só grava com esse comando; o diário só cresce, nada se apaga). O atalho DIÁRIO DE BORDO grava o resumo da telemetria.',
+    'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16.',
+    'Telas: Console (telemetria), Carta (gestão), Leme (manutenção), Documentos, Abastecimento, Diário, Equipe, FAQ de bordo por equipamento, SOS.',
+    'Regra da casa: nada inventado. Cada número vem com a fonte; sem fonte = SEM DADOS; sensor ausente = SEM LEITURA; foto ou nota = A CONFERIR / A CONFIRMAR.'
+  ];
+  function agoraBR() {
+    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }
+  }
+  // Coordenadas não saem do aparelho (posição do barco só depois do login no servidor).
+  function semCoord(s) { return String(s || '').replace(/\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]\s*\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]/g, '(coordenadas só na tela do app)'); }
+  // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
+  // respostas prontas, então a IA e a tela dizem os mesmos números. Sem coordenadas e sem telefones. ~9 mil letras
+  // (o proxy aceita até 12 mil).
+  function ficha(p) {
+    p = p || 'app';
+    var out = [];
+    var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
+    out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
+    out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
+    out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + MMSI + ' · indicativo ' + (E.indicativo || SD) + '\n(Fonte: ' + (E.fonte || SD) + ')');
+    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
+    bloco('Telemetria', function () { return ANSWERS.telemetria(p); });
+    bloco('Manutenção', function () { return ANSWERS.manutencao(p); });
+    bloco('Horímetros', function () { return ANSWERS.horimetros(p); });
+    bloco('Autonomia e consumo', function () {
+      var a = ANSWERS.autonomia(p), ab = D.abastecimentos || [];
+      return { text: a.text + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (x) { return x.d + ' · ' + mil(x.litros) + ' L de ' + (x.combustivel || 'diesel') + ' · ' + (x.local || SD) + (x.st ? ' · ' + x.st : ''); }).join(' | ') + '.\nRegra: ' + (D.regraAbast || SD) + '.' : ''), src: a.src };
+    });
+    bloco('Documentos', function () { return ANSWERS.docsvenc(p); });
+    bloco('Pendências', function () { return ANSWERS.anomalias(p); });
+    bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p); });
+    bloco('Equipe e contatos', function () { return ANSWERS.contatos(p); });
+    bloco('Clima e maré', function () {
+      var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null, m = mareTexto();
+      return { text: (c ? 'Hoje em Balneário Camboriú: máx ' + Math.round(c.max) + '° · mín ' + Math.round(c.min) + '° (ECMWF).' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\nPrevisão de vento e mar para navegar: ' + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: Open-Meteo (ECMWF e Marine) na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
+    });
+    bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
+    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_PASSOS + '\n(' + FT.proto + ')');
+    return out.join('\n\n');
   }
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
@@ -827,14 +887,18 @@
     var semPar = function (s) { var a; do { a = s; s = s.replace(/\s*\([^()]*\)/g, ''); } while (s !== a); return s.replace(/\s*[()]/g, ''); };
     var item = function (l) { return semPar(l.replace(/^(\d+[.)]|•|-)\s*/, '')).trim(); };
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(function (l) { return l && !/^fonte\b/i.test(l); });
-    var r = semPar(ls[0] || ''), extra = [];
+    var r = semPar(ls[0] || ''), extra = [], lim = 220;
+    // Resposta da IA: conversa — a 1ª frase curta ganha a seguinte ("Sou o Capitão IA. Respondo sobre…"), até ~320 letras.
+    if (a && a.key === 'ia') { lim = 320; if (ls.length > 1 && r.length < 90 && !/:$/.test(r) && !/^(\d+[.)]|•|-)/.test(ls[1])) r = (/[.!?]$/.test(r) ? r : r + '.') + ' ' + semPar(ls[1]); }
     if (/ressalva/i.test(r)) extra = ls.filter(function (l) { return /ressalva\s*\d/i.test(l); }).map(function (l) { return item(l).replace(/^ressalva\s*\d+:\s*/i, '').split(' — ')[0]; });
     else if (/:$/.test(r)) { r = r.replace(/:$/, ''); extra = ls.slice(1, 3).filter(function (l) { return /^(\d+[.)]|•|-)/.test(l); }).map(item); }
     extra = extra.map(function (x) { return x.replace(/[\s.;:,]+$/, ''); }).filter(Boolean);
     if (extra.length) r = r.replace(/[.]$/, '') + ': ' + extra.join('; ') + '.';
-    if (r.length > 220) { var m = r.slice(0, 220).match(/^[\s\S]*[.!?;]/); r = m ? m[0].replace(/;$/, '.') : r.slice(0, r.lastIndexOf(' ', 220)) + '.'; }
+    if (r.length > lim) { var m = r.slice(0, lim).match(/^[\s\S]*[.!?;]/); r = m ? m[0].replace(/;$/, '.') : r.slice(0, r.lastIndexOf(' ', lim)) + '.'; }
     return r;
   }
+  // A tela avisa o núcleo de voz que espera a IA na nuvem: ele fica em PROCESSANDO até a resposta ser falada (sem sumir em 2,5 s).
+  function vozPensando(texto) { try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: 'pensando', texto: texto || '', segura: true } })); } catch (e) {} }
 
   // Controles do overlay de voz (capitao-voz.js)
   function vozEnviar() { if (ESCUTA.rec) ESCUTA.rec.parar(); }
@@ -845,6 +909,6 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
+  window.CapitaoBrain = { DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
