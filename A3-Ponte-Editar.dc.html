@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Editar blocos do console (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+button:disabled { cursor: default; }
+</style>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Editar blocos" voltar="A2-Ponte-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 11px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{avisoLine}}; border-radius: 16px; flex-shrink: 0;">
+      <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+        <span style="font-size: 13.5px; font-weight: 800;">Fica salvo só neste aparelho</span>
+        <span role="status" style="font-size: 12px; line-height: 1.35; color: {{avisoTom}};">{{aviso}}</span>
+      </span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.16em; font-weight: 800; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">{{consoleTitulo}}</span>
+      <a href="A2-Ponte-Mobile.dc.html" style="height: 44px; box-sizing: border-box; padding: 0 16px; border-radius: 12px; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13.5px; font-weight: 800; display: flex; align-items: center; text-decoration: none; flex-shrink: 0;">Concluir ›</a>
+    </div>
+
+    <div role="list" aria-label="Blocos no console, em ordem" style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+      <sc-for list="{{itens}}" as="it" hint-placeholder-count="8">
+        <div role="listitem" style="box-sizing: border-box; padding: 5px 4px 5px 6px; background: {{it.bg}}; border: 1px solid {{it.line}}; border-radius: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 3px; min-width: 0;">
+            <span aria-hidden="true" style="width: 16px; flex-shrink: 0; text-align: center; font-size: 11px; font-weight: 800; color: var(--cap-ink4, #7985a6); font-variant-numeric: tabular-nums;">{{it.pos}}</span>
+            <button type="button" onClick="{{it.abrir}}" aria-expanded="{{it.aberto}}" aria-label="{{it.icoAria}}" title="Trocar ícone" style="width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><span style="width: 36px; height: 36px; box-sizing: border-box; border-radius: 11px; background: {{it.wash}}; border: 1.5px solid {{it.icoLine}}; display: flex; align-items: center; justify-content: center;">{{it.ico}}</span></button>
+            <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding-left: 3px;">
+              <span style="font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.label}}</span>
+              <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{it.destino}}</span>
+            </span>
+            <button type="button" data-mover="{{it.chaveSobe}}" onClick="{{it.subir}}" disabled="{{it.primeiro}}" aria-label="{{it.subirAria}}" title="Subir" style="width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: none; background: transparent; color: var(--cap-ink2, #b1bdd6); opacity: {{it.opSobe}}; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 19V5 M6 11l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+            <button type="button" data-mover="{{it.chaveDesce}}" onClick="{{it.descer}}" disabled="{{it.ultimo}}" aria-label="{{it.descerAria}}" title="Descer" style="width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: none; background: transparent; color: var(--cap-ink2, #b1bdd6); opacity: {{it.opDesce}}; display: flex; align-items: center; justify-content: center; cursor: pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 5v14 M6 13l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+            <button type="button" onClick="{{it.remover}}" aria-label="{{it.removerAria}}" title="Remover — volta ao banco" style="width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;"><span aria-hidden="true" style="width: 26px; height: 26px; border-radius: 50%; background: var(--cap-crit-fill, #d32f27); color: #ffffff; font-size: 18px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center;">−</span></button>
+          </div>
+          <sc-if value="{{it.aberto}}" hint-placeholder-val="{{false}}">
+            <div role="group" aria-label="{{it.grupoAria}}" style="display: grid; grid-template-columns: repeat(7, 44px); gap: 4px; justify-content: center; padding: 2px 0 4px;">
+              <sc-for list="{{it.icones}}" as="ic" hint-placeholder-count="7">
+                <button type="button" onClick="{{ic.escolher}}" aria-pressed="{{ic.on}}" aria-label="{{ic.aria}}" title="{{ic.n}}" style="width: 44px; height: 44px; box-sizing: border-box; padding: 0; border-radius: 12px; border: 1.5px solid {{ic.line}}; background: {{ic.bg}}; display: flex; align-items: center; justify-content: center; cursor: pointer;">{{ic.el}}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
+        <div style="box-sizing: border-box; padding: 16px; border: 1.5px dashed var(--cap-dash, #34406a); border-radius: 14px; color: var(--cap-ink3, #97a3c0); font-size: 12.5px; text-align: center; line-height: 1.4;">Nenhum bloco no console — adicione do banco abaixo ou restaure o padrão.</div>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding-top: 4px;">
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+        <span style="font-size: 11px; letter-spacing: 0.16em; font-weight: 800; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">{{bancoTitulo}}</span>
+        <span style="font-size: 11.5px; color: {{bancoDicaTom}}; line-height: 1.3;">{{bancoDica}}</span>
+      </span>
+      <button type="button" onClick="{{restaurar}}" style="height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-accent, #00a1fe); font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0;">Restaurar padrão</button>
+    </div>
+    <div role="group" aria-label="Banco de blocos" style="display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0;">
+      <sc-for list="{{banco}}" as="b" hint-placeholder-count="17">
+        <button type="button" onClick="{{b.add}}" aria-disabled="{{b.cheio}}" aria-label="{{b.aria}}" title="{{b.destino}}" style="min-height: 44px; box-sizing: border-box; padding: 0 12px 0 7px; border-radius: 999px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: var(--cap-ink, #eaf1ff); opacity: {{b.op}}; display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+          <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: {{b.wash}}; display: flex; align-items: center; justify-content: center;">{{b.ico}}</span>
+          <span>{{b.label}}</span>
+          <span aria-hidden="true" style="color: var(--cap-accent, #00a1fe); font-size: 17px; font-weight: 700; line-height: 1;">+</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
+      <span><b style="color: var(--cap-ink2, #b1bdd6); letter-spacing: 0.08em;">COMO FUNCIONA</b> · {{comoFunciona}}</span>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  // ——— Blocos do console: objeto único, repetido igual em A2-Ponte-Mobile e A3-Ponte-Editar (mesmos ids) ———
+  // Gravado por aparelho em localStorage 'capitao.blocos.v1' como [{ id, label, icon }] (até 8). Sem nada salvo = PADRAO.
+  CHAVE = 'capitao.blocos.v1';
+  MAX = 8;
+  ICONES = {
+    motor: { n: 'Motor', d: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', tom: 'tele' },
+    chave: { n: 'Chave', d: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z', tom: 'warn' },
+    onda: { n: 'Ondas', d: 'M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0', tom: 'tele' },
+    doc: { n: 'Documento', d: 'M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4', tom: 'accent' },
+    painel: { n: 'Painel', d: 'M4 6h16v12H4z M8 10h8 M8 14h5', tom: 'accent' },
+    bussola: { n: 'Bússola', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', tom: 'accent' },
+    bomba: { n: 'Bomba de diesel', d: 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4', tom: 'warn' },
+    livro: { n: 'Livro', d: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11', tom: 'accent' },
+    raio: { n: 'Raio', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tom: 'ok' },
+    floco: { n: 'Floco', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tom: 'tele' },
+    giro: { n: 'Giroscópio', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tom: 'ok' },
+    tela: { n: 'Tela', d: 'M4 5h16v11H4z M9 20h6 M12 16v4', tom: 'violeta' },
+    pessoas: { n: 'Pessoas', d: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20a6 6 0 0 1 12 0 M16 11a3 3 0 1 0 0-6 M21 20a6 6 0 0 0-5-5.9', tom: 'accent' },
+    grade: { n: 'Grade', d: 'M4 5h16v14H4z M4 10h16 M9 10v9', tom: 'accent' },
+    mare: { n: 'Maré', d: 'M3 19c2-2 4-2 6 0s4 2 6 0 4-2 6 0 M12 3v11 M8.5 10.5L12 14l3.5-3.5', tom: 'tele' },
+    nuvem: { n: 'Nuvem', d: 'M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.1 11.1 3.5 3.5 0 0 0 7 18z', tom: 'tele' },
+    medidor: { n: 'Medidor', d: 'M4 17a8 8 0 1 1 16 0 M12 17l4-5 M4 17h2 M18 17h2', tom: 'ok' },
+    tanque: { n: 'Tanque', d: 'M5 6h14v12H5z M5 13h14', tom: 'accent' },
+    gota: { n: 'Gota', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', tom: 'warn' },
+    radio: { n: 'Rádio', d: 'M4 9h16v11H4z M8 9l9-5 M13 13h4 M13 16h4 M8 13v4', tom: 'crit' },
+    relogio: { n: 'Relógio', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', tom: 'tele' },
+    pino: { n: 'Alfinete', d: 'M12 21s6-6 6-11a6 6 0 0 0-12 0c0 5 6 11 6 11z M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', tom: 'accent' },
+    lista: { n: 'Lista', d: 'M10 6h10 M10 12h10 M10 18h10 M4 6l1.5 1.5L8 5 M4 12l1.5 1.5L8 11 M4 18l1.5 1.5L8 17', tom: 'ok' },
+    grafico: { n: 'Gráfico', d: 'M3 12h4l2-6 3 12 2.5-8 1.5 4h5', tom: 'tele' },
+    alerta: { n: 'Alerta', d: 'M12 4 21 20H3z M12 10v4 M12 17h.01', tom: 'crit' },
+    ancora: { n: 'Âncora', d: 'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5', tom: 'accent' },
+    estrela: { n: 'Estrela', d: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', tom: 'violeta' },
+    sino: { n: 'Sino', d: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 20a2 2 0 0 0 4 0', tom: 'warn' }
+  };
+  // 8 padrão + 17 no banco. Tela: href · pergunta pronta: q (abre o chat do app em H2-Home-Mobile.dc.html#q=…)
+  CATALOGO = [
+    { id: 'motores', label: 'Motores', icon: 'motor', href: 'B2-Carta-Mobile.dc.html', destino: 'Gestão · sistemas' },
+    { id: 'manutencao', label: 'Manutenção', icon: 'chave', href: 'C2-Leme-Mobile.dc.html', destino: 'Manutenção' },
+    { id: 'telemetria', label: 'Telemetria', icon: 'onda', href: 'E1-Navegando-Gatilhos.dc.html', destino: 'Navegando · gatilhos' },
+    { id: 'documentos', label: 'Documentos', icon: 'doc', href: 'G1-Documentos-Mobile.dc.html', destino: 'Documentos' },
+    { id: 'equipamentos', label: 'Equipamentos', icon: 'painel', href: 'F1-FAQ-Hub.dc.html', destino: 'FAQ dos equipamentos' },
+    { id: 'navegacao', label: 'Navegação', icon: 'bussola', href: 'E1-Navegando-Gatilhos.dc.html', destino: 'Navegando · gatilhos' },
+    { id: 'abastecer', label: 'Abastecer', icon: 'bomba', href: 'G2-Abastecimento-Mobile.dc.html', destino: 'Abastecimento' },
+    { id: 'diario', label: 'Diário', icon: 'livro', href: 'G3-Diario-Mobile.dc.html', destino: 'Diário de bordo' },
+    { id: 'gerador', label: 'Gerador', icon: 'raio', href: 'F4-FAQ-Gerador.dc.html', destino: 'FAQ · gerador' },
+    { id: 'climatizacao', label: 'Climatização', icon: 'floco', href: 'F5-FAQ-Climatizacao.dc.html', destino: 'FAQ · climatização' },
+    { id: 'estabilizador', label: 'Estabilizador', icon: 'giro', href: 'F2-FAQ-Estabilizador.dc.html', destino: 'FAQ · estabilizador' },
+    { id: 'eletronicos', label: 'Eletrônicos', icon: 'tela', href: 'F3-FAQ-Eletronicos.dc.html', destino: 'FAQ · eletrônicos' },
+    { id: 'equipe', label: 'Equipe', icon: 'pessoas', href: 'G4-Equipe-Mobile.dc.html', destino: 'Equipe e acessos' },
+    { id: 'sistemas', label: 'Sistemas', icon: 'grade', href: 'B2-Carta-Mobile.dc.html', destino: 'Gestão · sistemas' },
+    { id: 'mare', label: 'Maré', icon: 'mare', q: 'Maré agora' },
+    { id: 'clima', label: 'Clima', icon: 'nuvem', q: 'Clima agora' },
+    { id: 'autonomia', label: 'Autonomia', icon: 'medidor', q: 'Autonomia com o diesel a bordo' },
+    { id: 'tanques', label: 'Tanques', icon: 'tanque', q: 'Nível dos tanques agora' },
+    { id: 'porao', label: 'Porão', icon: 'gota', q: 'Situação do porão e das bombas' },
+    { id: 'canal16', label: 'Canal 16', icon: 'radio', q: 'Roteiro do canal 16' },
+    { id: 'horimetros', label: 'Horímetros', icon: 'relogio', q: 'Horímetros dos motores e do gerador' },
+    { id: 'posicao', label: 'Posição', icon: 'pino', q: 'Posição agora' },
+    { id: 'checklist', label: 'Checklist', icon: 'lista', q: 'Checklist de saída' },
+    { id: 'consumo', label: 'Consumo', icon: 'grafico', q: 'Consumo de diesel' },
+    { id: 'anomalias', label: 'Anomalias', icon: 'alerta', q: 'Anomalias abertas' }
+  ];
+  PADRAO = ['motores', 'manutencao', 'telemetria', 'documentos', 'equipamentos', 'navegacao', 'abastecer', 'diario'];
+  porId(id) { return this.CATALOGO.filter((b) => b.id === id)[0] || null; }
+  hrefDe(b) { return b.q ? 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(b.q) : b.href; }
+  padrao() { return this.PADRAO.map((id) => { const b = this.porId(id); return { id: b.id, label: b.label, icon: b.icon }; }); }
+  // Lê e valida o que está salvo neste aparelho (id do catálogo, sem repetir, até 8, ícone do conjunto); null = nada salvo → padrão
+  carregar() {
+    try {
+      const v = JSON.parse(localStorage.getItem(this.CHAVE) || 'null');
+      if (!Array.isArray(v)) return null;
+      const vistos = {};
+      return v.filter((x) => x && typeof x.id === 'string' && this.porId(x.id) && !vistos[x.id] && (vistos[x.id] = 1)).slice(0, this.MAX)
+        .map((x) => { const b = this.porId(x.id); return { id: b.id, label: b.label, icon: typeof x.icon === 'string' && this.ICONES[x.icon] ? x.icon : b.icon }; });
+    } catch (e) { return null; }
+  }
+  state = { blocos: null, aberto: '', nota: '', notaTom: 'var(--cap-ok, #34c77a)' };
+  componentDidMount() {
+    this.setState({ blocos: this.carregar() });
+    // Outra aba/tela gravou os blocos: recarrega
+    this._st = (e) => { if (!e || e.key === null || e.key === this.CHAVE) this.setState({ blocos: this.carregar() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); clearTimeout(this._n); }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  atuais() { return this.state.blocos || this.padrao(); }
+  // Ler-alterar-gravar: relê o que está salvo antes de mudar (nada gravado em outra aba se perde)
+  fresco() { return (this.carregar() || this.padrao()).map((b) => Object.assign({}, b)); }
+  gravar(lista, nota, tom, extra) {
+    try { localStorage.setItem(this.CHAVE, JSON.stringify(lista.slice(0, this.MAX).map((b) => ({ id: b.id, label: b.label, icon: b.icon })))); } catch (e) { nota = 'Não foi possível salvar neste aparelho (armazenamento bloqueado)'; tom = 'var(--cap-crit, #ff3b30)'; }
+    this.setState(Object.assign({ blocos: this.carregar() || lista, nota: nota || '', notaTom: tom || 'var(--cap-ok, #34c77a)' }, extra || {}));
+    clearTimeout(this._n); if (nota) this._n = setTimeout(() => this.setState({ nota: '' }), 3500);
+  }
+  avisar(nota, tom) { this.setState({ nota: nota, notaTom: tom || 'var(--cap-warn, #f0a63a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 3500); }
+  // Depois de mover, o foco acompanha o bloco (botão da mesma direção, ou o outro se chegou na ponta)
+  focar(id, dir) {
+    requestAnimationFrame(() => {
+      const q = (k) => document.querySelector('[data-mover="' + id + '-' + k + '"]');
+      const b = q(dir); const alvo = b && !b.disabled ? b : q(dir === 'sobe' ? 'desce' : 'sobe');
+      if (alvo && !alvo.disabled) alvo.focus();
+    });
+  }
+  mover(id, passo) {
+    const l = this.fresco(), i = l.findIndex((x) => x.id === id), j = i + passo;
+    if (i < 0 || j < 0 || j >= l.length) return this.setState({ blocos: l });
+    const x = l[i]; l[i] = l[j]; l[j] = x;
+    this.gravar(l, x.label + (passo < 0 ? ' subiu para ' : ' desceu para ') + (j + 1) + 'º');
+    this.focar(id, passo < 0 ? 'sobe' : 'desce');
+  }
+  renderVals() {
+    const s = this.state, lista = this.atuais(), ids = lista.map((b) => b.id), cheio = lista.length >= this.MAX;
+    const TOM = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)'] };
+    const cor = (k) => TOM[k] || TOM.accent;
+    const destinoDe = (c) => (c.q ? 'pergunta pronta: ' + c.q : c.destino);
+    const chavesIcone = Object.keys(this.ICONES);
+    const itens = lista.map((b, i) => {
+      const c = this.porId(b.id), ic = this.ICONES[b.icon] || this.ICONES[c.icon], k = cor(ic.tom), aberto = s.aberto === b.id;
+      return {
+        pos: String(i + 1), label: b.label, destino: destinoDe(c), ico: this.ico(ic.d, 20, 1.7, k[0]), wash: k[1], aberto: aberto,
+        bg: aberto ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.06)' : 'var(--cap-card, #0d1329)', line: aberto ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line, #1a2240)', icoLine: aberto ? 'var(--cap-accent, #00a1fe)' : 'transparent',
+        icoAria: 'Trocar ícone de ' + b.label + ' (atual: ' + ic.n + ')', grupoAria: 'Ícones para ' + b.label,
+        abrir: () => this.setState({ aberto: aberto ? '' : b.id }),
+        primeiro: i === 0, ultimo: i === lista.length - 1, opSobe: i === 0 ? '0.3' : '1', opDesce: i === lista.length - 1 ? '0.3' : '1',
+        chaveSobe: b.id + '-sobe', chaveDesce: b.id + '-desce',
+        subirAria: 'Subir ' + b.label + ' (posição ' + (i + 1) + ' de ' + lista.length + ')', descerAria: 'Descer ' + b.label + ' (posição ' + (i + 1) + ' de ' + lista.length + ')',
+        subir: () => this.mover(b.id, -1), descer: () => this.mover(b.id, 1),
+        removerAria: 'Remover ' + b.label + ' do console (volta ao banco)',
+        remover: () => { const l = this.fresco().filter((x) => x.id !== b.id); this.gravar(l, b.label + ' removido — voltou ao banco', 'var(--cap-ok, #34c77a)', { aberto: s.aberto === b.id ? '' : s.aberto }); },
+        icones: aberto ? chavesIcone.map((key) => {
+          const I = this.ICONES[key], kk = cor(I.tom), on = key === b.icon;
+          return { n: I.n, on: on, aria: 'Ícone ' + I.n + (on ? ' (atual)' : ''), el: this.ico(I.d, 20, 1.7, kk[0]), bg: on ? kk[1] : 'transparent', line: on ? kk[0] : 'var(--cap-line2, #27315a)',
+            escolher: () => { const l = this.fresco(), x = l.find((y) => y.id === b.id); if (!x) return this.setState({ blocos: l, aberto: '' }); x.icon = key; this.gravar(l, 'Ícone de ' + b.label + ': ' + I.n, 'var(--cap-ok, #34c77a)', { aberto: '' }); } };
+        }) : []
+      };
+    });
+    const banco = this.CATALOGO.filter((c) => ids.indexOf(c.id) === -1).map((c) => {
+      const ic = this.ICONES[c.icon], k = cor(ic.tom);
+      return { label: c.label, destino: destinoDe(c), ico: this.ico(ic.d, 17, 1.7, k[0]), wash: k[1], cheio: cheio, op: cheio ? '0.55' : '1',
+        aria: cheio ? c.label + ' — console cheio (8 de 8): remova um bloco para adicionar' : 'Adicionar ' + c.label + ' ao console',
+        add: () => {
+          const l = this.fresco(); if (l.some((x) => x.id === c.id)) return this.setState({ blocos: l });
+          if (l.length >= this.MAX) return this.avisar('Máximo de ' + this.MAX + ' blocos na tela — remova um para adicionar ' + c.label);
+          this.gravar(l.concat([{ id: c.id, label: c.label, icon: c.icon }]), c.label + ' adicionado na posição ' + (l.length + 1) + 'º');
+        } };
+    });
+    return {
+      aviso: s.nota || (lista.length + ' de ' + this.MAX + ' blocos no console · a ordem daqui é a ordem do console'), avisoTom: s.nota ? s.notaTom : 'var(--cap-ink3, #97a3c0)',
+      avisoLine: s.nota ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line, #1a2240)',
+      consoleTitulo: 'NO CONSOLE · ' + lista.length + ' DE ' + this.MAX,
+      itens: itens, vazio: lista.length === 0,
+      bancoTitulo: 'BANCO DE BLOCOS · ' + banco.length + (banco.length === 1 ? ' DISPONÍVEL' : ' DISPONÍVEIS'),
+      // o aviso da última ação também aparece aqui, perto do banco (o cartão do topo pode estar fora da vista)
+      bancoDica: s.nota || (cheio ? 'Console cheio (' + this.MAX + ' de ' + this.MAX + '): remova um bloco para adicionar' : 'Toque para adicionar · máximo de ' + this.MAX + ' na tela'),
+      bancoDicaTom: s.nota ? s.notaTom : cheio ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink4, #7985a6)',
+      banco: banco,
+      restaurar: () => this.gravar(this.padrao(), 'Padrão restaurado: ' + this.PADRAO.length + ' blocos', 'var(--cap-ok, #34c77a)', { aberto: '' }),
+      comoFunciona: 'toque no ícone para trocar · setas mudam a ordem · − devolve o bloco ao banco. Grava na hora, em capitao.blocos.v1, só neste aparelho — outro celular ou computador mantém os blocos dele. SOS e a barra do assistente são fixos.',
+      fonte: 'Fonte: catálogo de ' + this.CATALOGO.length + ' blocos do Capitão IA (' + this.PADRAO.length + ' padrão + ' + (this.CATALOGO.length - this.PADRAO.length) + ' no banco) · estado de cada bloco no Console, a partir de capitao-dados.js' + ((window.CapitaoDados || {}).demo ? ' (DEMO)' : '')
+    };
+  }
+}
+</script>
+</body>
+</html>

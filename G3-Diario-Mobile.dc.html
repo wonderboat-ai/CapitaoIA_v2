@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Diário de bordo (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+.cap-chips { scrollbar-width: none; } .cap-chips::-webkit-scrollbar { display: none; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Diário de bordo" voltar="A2-Ponte-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div ref="{{rolaRef}}" style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; flex-shrink: 0;">
+      <span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
+      <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 14px; font-weight: 800;">Só cresce · quem, quando e fonte</span>
+        <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{resumo}}</span>
+      </span>
+      <button type="button" onClick="{{toggleVoz}}" aria-pressed="{{ouvindo}}" aria-label="{{vozAria}}" title="{{vozTitle}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 13px; border: 1px solid {{vozLine}}; background: {{vozBg}}; color: {{vozTone}}; opacity: {{vozOpac}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    </div>
+    <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{noteTone}}; min-height: 15px; line-height: 1.35; flex-shrink: 0; overflow-wrap: anywhere;">{{note}}</span>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.30); border-radius: 16px; flex-shrink: 0;">
+      <button type="button" onClick="{{togglePend}}" aria-expanded="{{pendAberto}}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; margin: -6px -4px; padding: 0 4px; border: none; background: transparent; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left;">
+        <span style="flex-grow: 1; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-warn, #f0a63a);">{{pendTitulo}}</span>
+        <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{pendAcao}}</span>
+      </button>
+      <sc-if value="{{pendAberto}}" hint-placeholder-val="{{true}}">
+        <sc-for list="{{pend}}" as="p" hint-placeholder-count="3">
+          <button type="button" onClick="{{p.onClick}}" aria-label="{{p.aria}}" style="display: flex; gap: 9px; align-items: flex-start; min-height: 44px; padding: 8px 10px; background: var(--cap-row, #10162e); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; color: var(--cap-ink, #eaf1ff); text-align: left; cursor: pointer; flex-shrink: 0;">
+            <span style="width: 8px; height: 8px; margin-top: 5px; flex-shrink: 0; border-radius: 50%; background: {{p.tone}};"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 12.5px; font-weight: 600; line-height: 1.35;">{{p.t}}</span><span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0);">{{p.s}}</span></span>
+          </button>
+        </sc-for>
+        <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">Andamento ou solução = linha nova · {{fontePend}}</span>
+      </sc-if>
+    </div>
+
+    <div role="group" aria-label="Filtrar por sistema" class="cap-chips" style="display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; margin: 0 -16px; padding: 0 16px;">
+      <sc-for list="{{filtros}}" as="f" hint-placeholder-count="6">
+        <button type="button" onClick="{{f.onClick}}" aria-pressed="{{f.active}}" style="min-height: 44px; padding: 0 13px; border-radius: 999px; border: 1px solid {{f.line}}; background: {{f.bg}}; color: {{f.cor}}; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0;"><span aria-hidden="true" style="width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: {{f.tone}};"></span>{{f.l}}</button>
+      </sc-for>
+    </div>
+
+    <sc-for list="{{linhas}}" as="e" hint-placeholder-count="6">
+      <div style="box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{e.line}}; border-radius: 14px; flex-shrink: 0;">
+        <span style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-variant-numeric: tabular-nums;"><span style="font-size: 12px; font-weight: 800;">{{e.d}}</span><span style="font-size: 10.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">{{e.h}}</span><span style="width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: {{e.tone}};"></span></span>
+        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+          <span style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-size: 10px; letter-spacing: 0.10em; font-weight: 800; color: {{e.tone}};">{{e.sysUp}}</span>
+            <span style="padding: 1px 6px; border-radius: 5px; border: 1px solid {{e.oriLine}}; color: {{e.oriTone}}; font-size: 8.5px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap;">{{e.origem}}</span>
+            <sc-if value="{{e.pend}}" hint-placeholder-val="{{false}}"><span style="padding: 1px 6px; border-radius: 5px; border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.45); background: rgba(var(--cap-warn-rgb, 240,166,58), 0.10); color: var(--cap-warn, #f0a63a); font-size: 8.5px; letter-spacing: 0.12em; font-weight: 800;">PENDENTE</span></sc-if>
+          </span>
+          <span style="font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere;">{{e.t}}</span>
+          <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.who}} · {{e.src}}</span>
+        </span>
+      </div>
+    </sc-for>
+    <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
+      <div style="padding: 14px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; font-size: 12px; color: var(--cap-ink4, #7985a6); text-align: center; flex-shrink: 0;">Nenhum registro neste filtro.</div>
+    </sc-if>
+    <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4; padding: 2px 2px 4px; flex-shrink: 0;">{{fonteLista}}</span>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" prefixo="Registre no diário: " placeholder="Registrar no diário…" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { app: [], filtro: 'Todos', ouvindo: false, pendAberto: true, note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  rolaRef = React.createRef();
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ app: window.CapitaoBrain.loadDiario() }));
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.diario.v1')) this.setState({ app: window.CapitaoBrain.loadDiario() }); };
+    window.addEventListener('storage', this._st);
+    // Barra do assistente (capitao-barra.js, prefixo "Registre no diário: "): texto enviado grava direto no diário e fica nesta tela.
+    // VOZ→TEXTO dita para o diário aqui mesmo; conversa, foto e vídeo seguem para a home.
+    this._barra = (e) => {
+      const d = (e && e.detail) || {};
+      if (d.texto) {
+        e.preventDefault();
+        const t = String(d.texto).replace(/^\s*Registre no diário:\s*/i, '');
+        if (this.registrar(t, 'app · texto')) this.limpaBarra();
+        return;
+      }
+      if (d.modo === 'voz') { e.preventDefault(); this.toggleVoz(); }
+    };
+    window.addEventListener('capitao-barra', this._barra);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); window.removeEventListener('capitao-barra', this._barra); clearTimeout(this._n); this.calarVoz(); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  barra() { return document.querySelector('capitao-barra-chat .cpb-in'); }
+  limpaBarra() { const el = this.barra(); if (el) el.value = ''; }
+  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); return window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'; }
+  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 4500); }
+  // Registro só cresce: sempre linha nova (addDiario). Nada se edita nem se apaga.
+  registrar(texto, src) {
+    const B = window.CapitaoBrain;
+    if (!B) { this.toast('Carregando o diário — tente de novo em instantes', 'var(--cap-warn, #f0a63a)'); return false; }
+    texto = String(texto || '').replace(/\s+/g, ' ').trim();
+    if (!texto) { this.toast('Escreva ou fale o que registrar', 'var(--cap-warn, #f0a63a)'); return false; }
+    if (this.rec && src !== 'app · voz') this.calarVoz();
+    const quem = this.quem();
+    B.addDiario({ sys: 'Diário', t: texto.slice(0, 500), who: quem, src: src || 'app · texto' });
+    this.setState({ app: B.loadDiario(), filtro: 'Todos', ouvindo: false }, () => { const el = this.rolaRef.current; if (el) el.scrollTop = 0; });
+    this.toast('Registrado no diário · ' + quem + ' · linha nova, nada se apaga');
+    return true;
+  }
+  calarVoz() { const d = this.rec; this.rec = null; if (d) { try { d.cancelar(); } catch (e) {} } }
+  toggleVoz() {
+    const B = window.CapitaoBrain;
+    if (this.rec) { this.rec.parar(); return; }
+    const d = B && B.ditado && B.ditado({
+      pausa: 3000,
+      parcial: (t) => { if (this.rec !== d) return; const el = this.barra(); if (el) el.value = t; this.setState({ note: 'Ouvindo… ' + t, noteTone: 'var(--cap-accent, #00a1fe)' }); },
+      fim: (t) => { if (this.rec !== d) return; this.rec = null; this.setState({ ouvindo: false }); if (t) { if (this.registrar(t, 'app · voz')) this.limpaBarra(); } else this.toast('Não ouvi nada — toque no microfone e fale de novo', 'var(--cap-warn, #f0a63a)'); },
+      erro: (e) => { if (this.rec !== d) return; this.rec = null; this.setState({ ouvindo: false }); this.toast(e === 'no-speech' ? 'Não ouvi nada — toque no microfone e fale de novo' : 'Microfone sem permissão — digite na barra', 'var(--cap-warn, #f0a63a)'); }
+    });
+    if (!d) return this.toast('Voz indisponível neste navegador — digite na barra abaixo', 'var(--cap-warn, #f0a63a)');
+    this.rec = d; clearTimeout(this._n); this.setState({ ouvindo: true, note: 'Ouvindo… fale e faça uma pausa para gravar', noteTone: 'var(--cap-accent, #00a1fe)' });
+  }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, B = window.CapitaoBrain;
+    const TOM = { crit: 'var(--cap-crit, #ff3b30)', warn: 'var(--cap-warn, #f0a63a)', tele: 'var(--cap-tele, #00f4fd)', accent: 'var(--cap-accent, #00a1fe)', ok: 'var(--cap-ok, #34c77a)' };
+    const tomOk = (x) => (typeof x === 'string' && /^var\(--cap-[a-z0-9-]+, #[0-9a-fA-F]{3,8}\)$/.test(x) ? x : TOM.accent);
+    const p2 = (n) => (n < 10 ? '0' : '') + n;
+    const horaDe = (iso) => { const t = Date.parse(iso || ''); if (isNaN(t)) return ''; const x = new Date(t); return p2(x.getHours()) + ':' + p2(x.getMinutes()); };
+    const DEMO = D.demo ? ' DEMO' : '';
+    const fonteArq = D.diarioFonte || 'SEM DADOS';
+    const fonteSrc = B ? B.diarioFonte() : (D.diario || []).map((x) => ({ d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: fonteArq }));
+    let seq = 0;
+    // Linhas do app: t = texto e a hora vem do iso (addDiario). Linhas da fonte: h = hora.
+    const app = (s.app || []).map((e) => ({ seq: seq++, ts: Date.parse(e.iso || ''), d: e.d || '—', h: horaDe(e.iso) || '—', sys: e.sys || 'Diário', tone: tomOk(e.tone), t: e.t, who: e.who || 'SEM DADOS', src: e.src || 'app', ori: 'app', pend: false }));
+    const fonte = fonteSrc.map((e) => ({ seq: seq++, ts: Date.parse(e.iso || ''), d: e.d || '—', h: e.h || horaDe(e.iso) || '—', sys: e.sys || 'SEM DADOS', tone: TOM[e.tom] || TOM.accent, t: e.t, who: e.who || 'SEM DADOS', src: String(e.src || fonteArq).split(' · ')[0], ori: 'fonte', pend: !!e.pend }));
+    const chave = (e) => (isNaN(e.ts) ? (e.ori === 'app' ? Infinity : -Infinity) : e.ts);
+    const todas = app.concat(fonte).sort((a, b) => { const x = chave(a), y = chave(b); if (x !== y) return y > x ? 1 : -1; return a.seq - b.seq; });
+    const ORDEM = ['Navegação', 'Manutenção', 'Equipamentos', 'Eletrônicos', 'Combustível', 'Segurança', 'Documentos', 'Diário', 'Equipe'];
+    const cont = {}, corSys = {};
+    todas.forEach((e) => { cont[e.sys] = (cont[e.sys] || 0) + 1; if (!corSys[e.sys]) corSys[e.sys] = e.tone; });
+    const sistemas = Object.keys(cont).sort((a, b) => { const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b); return ((ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)) || a.localeCompare(b); });
+    const filtro = s.filtro !== 'Todos' && !cont[s.filtro] ? 'Todos' : s.filtro;
+    const vis = filtro === 'Todos' ? todas : todas.filter((e) => e.sys === filtro);
+    const setF = (k) => () => this.setState({ filtro: k });
+    const chip = (k, l, tone) => { const on = filtro === k; return { l: l, onClick: setF(k), active: on, tone: tone, line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', cor: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; };
+    const pendentes = fonte.filter((e) => e.pend).sort((a, b) => chave(b) - chave(a));
+    const temVoz = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    return {
+      rolaRef: this.rolaRef,
+      note: s.note, noteTone: s.noteTone,
+      resumo: todas.length + ' registros · ' + app.length + ' do app · ' + fonte.length + ' da fonte' + DEMO + ' · registre pela barra ou pelo microfone',
+      toggleVoz: () => this.toggleVoz(), ouvindo: s.ouvindo,
+      vozAria: s.ouvindo ? 'Parar e gravar o que ouvi' : 'Registrar por voz',
+      vozTitle: temVoz ? 'Ditado: fale e faça uma pausa' : 'Voz indisponível neste navegador',
+      vozLine: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' : 'var(--cap-line2, #27315a)', vozBg: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)' : 'var(--cap-elev, #131a33)', vozTone: s.ouvindo ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ink2, #b1bdd6)', vozOpac: temVoz ? '1' : '0.55',
+      pendAberto: s.pendAberto, togglePend: () => this.setState({ pendAberto: !s.pendAberto }),
+      pendTitulo: 'PENDÊNCIAS ABERTAS · ' + pendentes.length, pendAcao: s.pendAberto ? 'Ocultar' : 'Ver ›',
+      pend: pendentes.map((p) => ({ t: p.t, s: p.d + ' ' + p.h + ' · ' + p.sys + ' · ' + p.who, tone: p.tone, aria: 'Mostrar registros de ' + p.sys + ' — pendência de ' + p.d, onClick: setF(p.sys) })),
+      fontePend: 'Fonte: ' + fonteArq.split(' · ')[0],
+      filtros: [chip('Todos', 'Todos · ' + todas.length, 'var(--cap-ink3, #97a3c0)')].concat(sistemas.map((k) => chip(k, k + ' · ' + cont[k], corSys[k]))),
+      linhas: vis.map((e) => Object.assign({}, e, {
+        sysUp: e.sys.toUpperCase(),
+        origem: e.ori === 'app' ? 'APP' : 'FONTE' + DEMO,
+        oriTone: e.ori === 'app' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-violeta, #b45cff)',
+        oriLine: e.ori === 'app' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)',
+        line: e.ori === 'app' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.35)' : 'var(--cap-line, #1a2240)'
+      })),
+      vazio: vis.length === 0,
+      fonteLista: 'Fonte: ' + fonteArq + ' · linhas do app: este aparelho · nada se edita nem se apaga'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia rápido · Capitão IA</title>
+<meta name="description" content="Guia rápido para quem nunca usou o Capitão IA (embarcação de demonstração, dados fictícios). Versão do app 1.0.0 · 27/09/2026.">
+<style>
+  /* Guia rápido — A4 retrato, uma <section class="page"> por folha. Fundo claro, texto escuro; paleta do manual da marca
+     WonderHUB.AI (azul para ação, ciano para telemetria e voz, violeta para o selo DEMO), vermelho só na emergência.
+     Fonte: Nimbus Sans / Helvetica / Arial (tipografia de apoio do manual da marca). Sem fontes da internet. */
+  :root {
+    --ink: #081026; --ink2: #2c3857; --muted: #56627f; --line: #d5dcea; --soft: #f3f6fc;
+    --blue: #00a1fe; --blue-d: #0068c9; --blue-soft: #e6f4ff;
+    --cyan-d: #00798a; --cyan-soft: #e3fbfc; --violet: #7d16d6; --violet-soft: #f3e9fd;
+    --amber: #e39a1b; --amber-d: #8a5200; --amber-soft: #fff5e3;
+    --green-d: #12804a; --green-soft: #e3f4ea;
+    --red: #d32f27; --red-d: #a8211b; --red-soft: #fdeceb;
+    --sans: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e6eaf2; color: var(--ink); font-family: var(--sans); font-size: 10.8pt; line-height: 1.36; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @media print { body { background: #fff; } }
+  .page { width: 210mm; height: 297mm; margin: 8mm auto; background: #fff; position: relative; overflow: hidden; padding: 9mm 13mm 8mm; display: flex; flex-direction: column; box-shadow: 0 1mm 4mm rgba(0,0,0,.12); }
+  @media print { .page { margin: 0; box-shadow: none; break-after: page; } .page:last-of-type { break-after: auto; } }
+  .run { display: flex; justify-content: space-between; align-items: baseline; font-size: 7.8pt; color: var(--muted); letter-spacing: .02em; flex: none; }
+  .run.top { border-bottom: .3mm solid var(--line); padding-bottom: 1.4mm; margin-bottom: 4mm; }
+  .run.bot { border-top: .3mm solid var(--line); padding-top: 1.4mm; margin-top: 2mm; }
+  .run b { color: var(--ink2); }
+  .demo-tag { color: var(--violet); font-weight: 700; letter-spacing: .08em; }
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 3.2mm; }
+  h1, h2, h3 { margin: 0; color: var(--ink); line-height: 1.12; }
+  h2 { font-size: 20pt; font-weight: 800; letter-spacing: -.01em; }
+  h3 { font-size: 12pt; font-weight: 800; }
+  p { margin: 0; }
+  .kick { font-size: 8.5pt; letter-spacing: .18em; font-weight: 700; color: var(--blue-d); text-transform: uppercase; }
+  .lead { font-size: 11.5pt; color: var(--ink2); }
+  .k { font-weight: 700; letter-spacing: .03em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .card { border: .3mm solid var(--line); border-radius: 3mm; padding: 3.2mm 3.6mm; background: #fff; display: flex; flex-direction: column; gap: 1.4mm; }
+  .card.soft { background: var(--soft); }
+  .card.blue { background: var(--blue-soft); border-color: #b9dcff; }
+  .card.violet { background: var(--violet-soft); border-color: #dcc2f7; }
+  .card.amber { background: var(--amber-soft); border-color: #f2d49a; }
+  .card.red { background: var(--red-soft); border-color: #f3b8b4; }
+  .card.green { background: var(--green-soft); border-color: #b5dfc5; }
+  ol, ul { margin: 0; padding-left: 5mm; } li { margin: .6mm 0; }
+  .shot { border: .3mm solid var(--line); border-radius: 3mm; overflow: hidden; background: var(--soft); display: block; }
+  .shot img { display: block; width: 100%; height: auto; }
+  .phone { width: 58mm; flex: none; }
+  .row { display: flex; gap: 6mm; align-items: flex-start; }
+  .row > .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2.4mm; }
+  .cap { font-size: 8pt; color: var(--muted); margin-top: 1mm; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.6pt; }
+  th, td { text-align: left; vertical-align: top; padding: 1.8mm 2mm; border-bottom: .3mm solid var(--line); }
+  th { font-size: 8pt; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .selo { display: inline-block; font-size: 8pt; font-weight: 800; letter-spacing: .08em; padding: .6mm 1.8mm; border-radius: 1.2mm; border: .3mm solid currentColor; white-space: nowrap; }
+  .s-sem { color: var(--muted); } .s-leit { color: var(--cyan-d); } .s-man { color: var(--amber-d); } .s-conf { color: var(--amber-d); }
+  .s-pronto { color: var(--green-d); } .s-pend { color: var(--blue-d); } .s-atr { color: var(--red-d); } .s-demo { color: var(--violet); }
+  .cover { justify-content: center; align-items: flex-start; gap: 6mm; }
+  .wm { font-size: 44pt; font-weight: 800; letter-spacing: .08em; line-height: 1; }
+  .wm svg { height: .74em; width: auto; vertical-align: baseline; overflow: visible; } /* SVG: background-clip:text deixa um fio na borda no PDF do Chromium */
+  .sos-top { background: var(--red); color: #fff; border-radius: 3mm; padding: 5mm 6mm; display: flex; align-items: center; justify-content: space-between; gap: 4mm; }
+  .sos-top h2 { color: #fff; font-size: 26pt; letter-spacing: .08em; }
+  .script { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; font-size: 10.6pt; line-height: 1.5; background: var(--red-soft); border: .4mm solid #f3b8b4; border-radius: 3mm; padding: 3.5mm 4.5mm; }
+  .note { font-size: 8.6pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- 1 · CAPA -->
+<section class="page">
+  <div class="run top"><span><b>Capitão IA</b> · guia rápido</span><span class="demo-tag">DEMO · DADOS FICTÍCIOS</span></div>
+  <div class="body cover">
+    <img src="../assets/logo-wonderboat.png" alt="Wonder BOAT" style="width: 52mm; height: auto;">
+    <div class="wm">CAPITÃO <svg viewBox="0 0 100 74" aria-label="IA" role="img"><defs><linearGradient id="gIA" x1="0" y1="0" x2="1" y2="0.5"><stop offset="0" stop-color="#00c8d2"/><stop offset=".55" stop-color="#0068c9"/><stop offset="1" stop-color="#7d16d6"/></linearGradient></defs><text x="0" y="74" fill="url(#gIA)" font-family="Nimbus Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="102" letter-spacing="8">IA</text></svg></div>
+    <p class="lead" style="font-size: 15pt; max-width: 150mm;">O cérebro operacional da embarcação: você pergunta, ele responde com a fonte — e diz <b>SEM DADOS</b> quando não sabe.</p>
+    <div class="card violet" style="max-width: 172mm;">
+      <h3 style="color: var(--violet);">Esta embarcação é de demonstração</h3>
+      <p>Leituras, agenda de manutenção, documentos, diário, abastecimentos e guias de bordo são <b>fictícios</b> e aparecem com o selo <span class="selo s-demo">DEMO</span>. Modelos dos equipamentos, registro, Seafire e EPIRB estão <b>SEM DADOS</b>. O MMSI 710123456 é fictício. Os procedimentos de emergência são o <b>padrão internacional</b> — confirmar com o protocolo de bordo.</p>
+    </div>
+    <div class="grid3" style="width: 100%;">
+      <div class="card blue"><h3>Perguntar ao barco</h3><p>Texto, voz ou foto. Cada resposta traz a fonte.</p></div>
+      <div class="card soft"><h3>Operar o console</h3><p>Telemetria, manutenção, documentos, abastecimento, diário e equipe.</p></div>
+      <div class="card red"><h3>Agir na emergência</h3><p>Botão <b>SOS</b> em todas as telas — abre sem internet e sem senha.</p></div>
+    </div>
+    <div class="card soft" style="width: 100%;">
+      <h3>Três regras que valem em toda tela</h3>
+      <ol>
+        <li><b>Nada é inventado.</b> Número, data, peça ou procedimento vem de uma fonte, mostrada logo abaixo. Faltou a fonte → <span class="selo s-sem">SEM DADOS</span>.</li>
+        <li><b>Emergência acima de tudo.</b> O SOS abre offline; na emergência a resposta e a voz vêm completas.</li>
+        <li><b>O registro só cresce.</b> Diário e "Executado" criam linha nova; nada se apaga. O chat só grava quando você manda: "registre no diário…".</li>
+      </ol>
+    </div>
+  </div>
+  <div class="run bot"><span>Capitão IA · v1.0.0 · 27/09/2026</span><span>Wonder BOAT | WonderHUB.AI</span></div>
+</section>
+
+<!-- 2 · ENTRAR E INSTALAR -->
+<section class="page">
+  <div class="run top"><span><b>1</b> · Entrar e instalar</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Primeiro acesso</span>
+    <h2>Entrar, instalar e sair</h2>
+    <div class="row">
+      <div class="phone"><span class="shot"><img src="img/login-app.jpg" alt="Tela de login do Capitão IA no celular"></span><p class="cap">Login no celular (tema claro).</p></div>
+      <div class="txt">
+        <div class="card"><h3>Entrar</h3>
+          <ol><li>Abra o endereço do Capitão IA. Sem sessão, aparece o login.</li>
+          <li>Toque no seu nome (ou digite) e a senha combinada com o proprietário — ela <b>não</b> fica no site.</li>
+          <li>Deixe <span class="k">Manter conectado</span> marcado: vale 30 dias neste aparelho (sem ele, 12 horas).</li></ol></div>
+        <div class="card"><h3>Instalar como app</h3>
+          <ul><li><b>iPhone (Safari):</b> Compartilhar › Adicionar à Tela de Início.</li>
+          <li><b>Android (Chrome):</b> menu ⋮ › Instalar app. Segurar o ícone mostra atalhos: SOS, Console, Diário.</li></ul></div>
+        <div class="card"><h3>Sair e segurança</h3>
+          <ul><li><span class="k">Sair</span> fica no rodapé de qualquer tela e encerra em todas as abas.</li>
+          <li>Cinco senhas erradas travam o login por 30 s (dobra a cada erro, até 15 min).</li>
+          <li>O <b>SOS abre sem login</b>, de propósito.</li>
+          <li>É uma porta de entrada, não um cofre: o site é público. Nada sensível fica nele.</li></ul></div>
+      </div>
+    </div>
+    <div class="card blue"><h3>Computador ou celular?</h3><p>O endereço detecta sozinho: celular abre o <b>app</b>, computador ou tablet abre a <b>web</b>. Para fixar: <span class="k">?v=app</span> ou <span class="k">?v=web</span> no fim do endereço; <span class="k">?v=auto</span> volta a detectar; <span class="k">?v=lista</span> mostra todas as telas.</p></div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>2</span></div>
+</section>
+
+<!-- 3 · PERGUNTAR -->
+<section class="page">
+  <div class="run top"><span><b>2</b> · Perguntar ao barco</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Chat</span>
+    <h2>Pergunte como falaria com o comandante</h2>
+    <div class="row">
+      <div class="phone"><span class="shot"><img src="img/inicio-app.jpg" alt="Tela inicial do app"></span><p class="cap">Início do app: saudação, chat, atalhos, console, equipamentos e SOS.</p></div>
+      <div class="phone"><span class="shot"><img src="img/resposta-gerador-app.jpg" alt="Resposta sobre como ligar o gerador, com a fonte"></span><p class="cap">"Como ligar o gerador?" — trecho do guia de bordo e a fonte.</p></div>
+      <div class="txt">
+        <div class="card"><h3>Como ler a resposta</h3>
+          <ul><li><b>1ª linha</b> = a resposta.</li><li>Depois, detalhes — só se precisar.</li>
+          <li><b>Fonte:</b> sempre numa linha própria (arquivo e seção).</li>
+          <li><b>Botões</b> no fim levam direto à tela certa (›).</li></ul></div>
+        <div class="card"><h3>Atalhos</h3><p>Perguntas prontas com um toque: <span class="k">DIÁRIO DE BORDO</span> · <span class="k">SEGURO PARA SAIR?</span> · <span class="k">PARA ONDE VAMOS HOJE?</span> · <span class="k">PRÓXIMAS MANUTENÇÕES</span> · <span class="k">AUTONOMIA</span> · <span class="k">MARÉ AGORA</span>. Em <span class="k">EDITAR ATALHOS</span> você troca, cria e reordena (até 8, só neste aparelho).</p></div>
+        <div class="card amber"><h3>Registrar no diário</h3><p>O chat só grava com o comando: <span class="q">"Registre no diário: saída com 4 pessoas"</span>. Pergunta nunca vira registro.</p></div>
+      </div>
+    </div>
+    <div class="card soft"><h3>Boas perguntas</h3><p>"É seguro sair hoje?" · "Próximas manutenções" · "Autonomia" · "Quantas horas tem o gerador?" · "Alarme de fluxo da climatização" · "Documentos vencendo" · "Canal 16". Foto de etiqueta, alarme ou nota fiscal também vale: ela não sai do aparelho e vira uma linha <span class="selo s-conf">A CONFERIR</span>.</p></div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>3</span></div>
+</section>
+
+<!-- 4 · VOZ -->
+<section class="page">
+  <div class="run top"><span><b>3</b> · Falar com o barco</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Voz</span>
+    <h2>Mãos no leme: converse por voz</h2>
+    <div class="row">
+      <div class="phone"><span class="shot"><img src="img/voz-escuta-app.jpg" alt="Núcleo de voz escutando"></span><p class="cap">ESCUTA (ciano): mostra o que entendeu.</p></div>
+      <div class="phone"><span class="shot"><img src="img/voz-resposta-app.jpg" alt="Núcleo de voz respondendo"></span><p class="cap">RESPOSTA (azul): mostra a frase dita.</p></div>
+      <div class="txt">
+        <div class="card"><h3>Dois jeitos</h3>
+          <ul><li><span class="k">VOZ→TEXTO</span>: fale a pergunta; ela é escrita e respondida em texto e voz.</li>
+          <li><span class="k">CONVERSA</span> (botão redondo no meio): conversa contínua, sem tocar na tela. Abre o núcleo: "Capitão IA online. Que precisa?"</li></ul></div>
+        <div class="card"><h3>No núcleo</h3>
+          <ul><li>Tocar no núcleo durante a escuta = <b>enviar agora</b>.</li>
+          <li>Tocar durante a resposta = <b>interromper</b> e voltar a ouvir.</li>
+          <li><span class="k">ENCERRAR</span> (ou Esc) desliga. O <b>SOS</b> continua no canto.</li></ul></div>
+        <div class="card blue"><h3>Fala direta</h3><p>A voz diz só o essencial (a 1ª linha); o resto fica na tela. <b>Emergência é lida inteira.</b></p></div>
+      </div>
+    </div>
+    <div class="card soft"><h3>Para funcionar bem</h3><ul>
+      <li>Chrome, Edge ou Safari, com permissão de microfone. O Firefox não reconhece voz.</li>
+      <li>No computador, o Microsoft Edge tem a voz mais natural de graça. No iPhone: Ajustes › Acessibilidade › Conteúdo Falado › Vozes › Português (Brasil).</li>
+      <li>A voz é do próprio aparelho: grátis, sem conta e funciona sem internet.</li></ul></div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>4</span></div>
+</section>
+
+<!-- 5 · SELOS E CORES -->
+<section class="page">
+  <div class="run top"><span><b>4</b> · Selos, cores e fontes</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Honestidade</span>
+    <h2>O que cada selo quer dizer</h2>
+    <table>
+      <tr><th style="width: 34mm;">Selo</th><th>Quando aparece</th></tr>
+      <tr><td><span class="selo s-sem">SEM DADOS</span></td><td>Não há fonte carregada para isso (ex.: registro do barco, modelo do gerador, previsão oficial do mar).</td></tr>
+      <tr><td><span class="selo s-leit">SEM LEITURA</span></td><td>O sensor não chega na rede de bordo (ex.: porão e âncora).</td></tr>
+      <tr><td><span class="selo s-man">MANUAL NO DRIVE</span></td><td>O manual existe, mas o passo a passo ainda não foi confirmado.</td></tr>
+      <tr><td><span class="selo s-conf">A CONFERIR</span> <span class="selo s-conf">A CONFIRMAR</span></td><td>Entrou por foto, upload ou nota — aguarda conferência.</td></tr>
+      <tr><td><span class="selo s-pronto">PRONTO · DEMO</span></td><td>FAQ com passo a passo do guia de bordo (de demonstração).</td></tr>
+      <tr><td><span class="selo s-pend">PENDENTE</span></td><td>Convite de equipe aguardando confirmação.</td></tr>
+      <tr><td><span class="selo s-atr">ATRASADA</span> · <b>D-17</b></td><td>Prazo da manutenção: atrasada, ou faltam N dias (escada D-90 · D-60 · D-30 · D-0).</td></tr>
+      <tr><td><span class="selo s-demo">DEMO</span></td><td>Dado fictício desta embarcação de demonstração.</td></tr>
+    </table>
+    <div class="row">
+      <div class="phone"><span class="shot"><img src="img/resposta-semdados-app.jpg" alt="Resposta SEM DADOS"></span><p class="cap">Pergunta sem fonte: SEM DADOS, nunca um chute.</p></div>
+      <div class="txt">
+        <div class="card"><h3>Cores</h3><ul>
+          <li><b style="color: var(--red-d);">Vermelho</b>: emergência e atraso.</li>
+          <li><b style="color: var(--amber-d);">Âmbar</b>: atenção, vence em até 30 dias, a conferir.</li>
+          <li><b style="color: var(--green-d);">Verde</b>: em dia, pronto.</li>
+          <li><b style="color: var(--blue-d);">Azul</b>: ações e links.</li>
+          <li><b style="color: var(--cyan-d);">Ciano</b>: telemetria, maré e voz.</li>
+          <li><b style="color: var(--violet);">Violeta</b>: selo DEMO.</li></ul></div>
+        <div class="card"><h3>Quando as fontes divergem</h3><p>Vale esta ordem: manual oficial › registro oficial › laudo › diário › foto › nota informal.</p></div>
+        <div class="card"><h3>Leitura com hora</h3><p>Todo número de sensor vem com a hora. A telemetria ao vivo está desligada: a tela diz <b>SNAPSHOT DEMO · 26/09 10:12</b>, nunca "ao vivo". Motor desligado mostra a <b>última leitura com motor ligado</b>, nunca zero.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>5</span></div>
+</section>
+
+<!-- 6 · CONSOLE E MANUTENÇÃO -->
+<section class="page">
+  <div class="run top"><span><b>5</b> · Console e manutenção</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Console</span>
+    <h2>Tudo do barco em um toque</h2>
+    <div class="row">
+      <div class="phone"><span class="shot"><img src="img/console-app.jpg" alt="Console do app com blocos"></span><p class="cap">Console do app: 8 blocos que você reorganiza.</p></div>
+      <div class="txt">
+        <div class="card"><h3>Blocos do console (app)</h3><p>Motores · Manutenção · Telemetria · Documentos · Equipamentos · Navegação · Abastecer · Diário. O lápis abre a edição: mover, trocar ícone, trocar por outro do banco, restaurar. Fica salvo só neste aparelho.</p></div>
+        <div class="card amber"><h3>Botão Executado</h3><p>Na Manutenção, <span class="k">Executado</span> marca a tarefa feita e cria <b>uma linha nova no diário</b> com a data e quem marcou. Errou? <span class="k">Desfazer</span> volta a tarefa para a agenda — e também vira linha nova. Nada se apaga.</p></div>
+        <div class="card"><h3>Diário de bordo</h3><p>Só cresce: quem, quando e fonte em cada linha. Escreva no campo do Diário ou pela barra do assistente; correção é uma linha nova.</p></div>
+      </div>
+    </div>
+    <span class="shot"><img src="img/manutencao-web.jpg" alt="Manutenção na web com filtros e botão Executado"></span>
+    <p class="cap">Manutenção na web: atrasadas, D-30 e em dia, leitura de agora com hora e a agenda com Executado.</p>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>6</span></div>
+</section>
+
+<!-- 7 · WEB -->
+<section class="page">
+  <div class="run top"><span><b>6</b> · No computador</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Web</span>
+    <h2>O painel completo</h2>
+    <span class="shot"><img src="img/inicio-web.jpg" alt="Início na web"></span>
+    <p class="cap">Início na web: 5 botões fixos (Console, Gerador, Climatização, Estabilizador, Eletrônicos), chat, atalhos, faixa de leitura e SOS.</p>
+    <div class="grid2">
+      <div class="card"><h3>Trilho de 9 seções</h3><p>Início · Gestão · Telemetria · Manutenção · Documentos · Abastecer · Diário · FAQ · Equipe. Cada cartão termina com a linha <b>Fonte:</b>.</p></div>
+      <div class="card"><h3>Faixa de leitura</h3><p>Embaixo de toda tela: velocidade, proa, vento, bateria 24 V, água doce, diesel (com a hora dele), estado e hora — e <span class="k">INÍCIO ›</span>.</p></div>
+      <div class="card"><h3>Cabeçalho</h3><p>Hora do barco, máxima/mínima de hoje e maré agora na posição de referência (Balneário Camboriú). Tocar abre o windy.com. A maré é modelo, não a tábua da Marinha.</p></div>
+      <div class="card"><h3>Tema</h3><p>Sol/lua ao lado do avatar troca claro e escuro em todas as telas. O SOS do celular fica sempre escuro.</p></div>
+    </div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>7</span></div>
+</section>
+
+<!-- 8 · PROBLEMAS COMUNS -->
+<section class="page">
+  <div class="run top"><span><b>7</b> · Problemas comuns</span><span class="demo-tag">DEMO</span></div>
+  <div class="body">
+    <span class="kick">Ajuda</span>
+    <h2>Se algo não sair como esperado</h2>
+    <table>
+      <tr><th style="width: 62mm;">O que aconteceu</th><th>O que fazer</th></tr>
+      <tr><td>Não consigo entrar</td><td>Confira o nome e a senha com o proprietário. Muitas tentativas travam por alguns segundos — espere a contagem.</td></tr>
+      <tr><td>"O navegador está bloqueando os dados"</td><td>Saia da navegação anônima ou permita dados do site. O login e o diário ficam no navegador.</td></tr>
+      <tr><td>Resposta diz SEM DADOS</td><td>É honestidade: não há fonte para isso. Toque em <span class="k">Registrar pendência</span> ou mande foto da etiqueta.</td></tr>
+      <tr><td>O microfone não liga</td><td>Use Chrome, Edge ou Safari e permita o microfone. No Firefox a voz não funciona — digite.</td></tr>
+      <tr><td>Sem internet</td><td>Depois da primeira visita tudo abre offline, inclusive o SOS. Clima e maré mostram "—" até voltar a rede.</td></tr>
+      <tr><td>Meus atalhos ou o diário sumiram</td><td>Eles ficam no navegador deste aparelho. Limpar os dados do navegador apaga; outro aparelho tem os seus.</td></tr>
+      <tr><td>A tela ainda mostra a versão antiga</td><td>Feche e abra o app de novo (ou recarregue a página). A versão aparece no rodapé.</td></tr>
+      <tr><td>A tela está pequena no celular deitado</td><td>Deitado, a tela fica em tamanho real e rola; um SOS flutuante aparece no canto.</td></tr>
+    </table>
+    <div class="card violet"><h3>É uma demonstração</h3><p>Para a sua embarcação, os dados fictícios são trocados pelos reais (manuais, agenda, documentos, diário, telemetria), sempre com a fonte de cada um — e o que faltar continua aparecendo como SEM DADOS.</p></div>
+  </div>
+  <div class="run bot"><span>Capitão IA · guia rápido</span><span>8</span></div>
+</section>
+
+<!-- 9 · EMERGÊNCIA -->
+<section class="page">
+  <div class="run top"><span><b>EMERGÊNCIA</b> · recorte e deixe a bordo</span><span class="demo-tag">PROCEDIMENTO PADRÃO · CONFIRMAR COM O PROTOCOLO DE BORDO</span></div>
+  <div class="body">
+    <div class="sos-top"><h2>EMERGÊNCIA</h2><p style="font-size: 11pt; font-weight: 700; text-align: right;">No app: botão vermelho <b>SOS</b><br>em todas as telas · sem internet · sem senha</p></div>
+    <div class="card red"><h3>1 · VHF canal 16 (156,800 MHz) — MAYDAY</h3><p>Só em perigo grave e iminente. Fale devagar e repita até ter resposta:</p></div>
+    <div class="script">MAYDAY, MAYDAY, MAYDAY<br>AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA<br>MMSI 710123456 (FICTÍCIO · DEMONSTRAÇÃO)<br>POSIÇÃO — LEIA NO PLOTTER AGORA<br>NATUREZA DO PERIGO: ________<br>PESSOAS A BORDO: ________<br>AUXÍLIO NECESSÁRIO: ________<br>CÂMBIO</div>
+    <p class="note">Urgência sem perigo de vida: <b>PAN-PAN, PAN-PAN, PAN-PAN</b> no mesmo formato. Rádio com DSC: o botão DISTRESS envia o alerta com o MMSI programado; depois, a chamada por voz no 16.</p>
+    <div class="grid2">
+      <div class="card"><h3>2 · Homem ao mar</h3><ol><li>Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou algo que flutue.</li><li>Uma pessoa só aponta, sem perder de vista. Marque MOB no plotter Garmin.</li><li>Volte devagar, motor em neutro perto da pessoa (hélice). Perdeu de vista: MAYDAY com a posição da marca MOB.</li></ol></div>
+      <div class="card amber"><h3>3 · Incêndio · Seafire</h3><p><span class="selo s-sem">SEM DADOS</span> Localização, acionamento e tempo de espera do Seafire não foram carregados. Perigo grave e iminente: <b>MAYDAY no canal 16</b>.</p>
+        <h3 style="margin-top: 2mm;">4 · EPIRB</h3><p><span class="selo s-sem">SEM DADOS</span> Modelo, localização a bordo, acionamento e validade da bateria não foram carregados.</p></div>
+    </div>
+    <p class="note">Fonte: Protocolo de emergência — procedimento padrão (Google Drive › Capitão IA v2 › 07 Protocolos de emergência). Canal 16: padrão internacional de socorro. MMSI informado pelo proprietário — fictício nesta demonstração. Numa embarcação real, substitua pelo protocolo de bordo, MMSI e indicativo do registro.</p>
+  </div>
+  <div class="run bot"><span>Capitão IA · v1.0.0 · 27/09/2026 · DEMO</span><span>Wonder BOAT | WonderHUB.AI</span></div>
+</section>
+
+</body>
+</html>

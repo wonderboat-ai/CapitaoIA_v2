@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Sintoma (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Sintoma" voltar="E1-Navegando-Gatilhos.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-shrink: 0; display: flex; flex-direction: column; order: 2;">
+    <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  </div>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto; order: 1;" data-rolagem="1">
+    <span style="font-size: 12px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6); flex-shrink: 0;">{{intro}}</span>
+
+    <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">1 · SISTEMA</span>
+    <div role="group" aria-label="Sistema" style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; flex-shrink: 0;">
+      <sc-for list="{{sistemas}}" as="s" hint-placeholder-count="5">
+        <button type="button" onClick="{{s.onClick}}" aria-pressed="{{s.on}}" aria-label="{{s.aria}}" style="box-sizing: border-box; min-height: 60px; padding: 8px 8px; border-radius: 14px; border: 1.5px solid {{s.line}}; background: {{s.bg}}; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left; font-family: inherit; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; min-width: 0; grid-column: {{s.span}};">
+          <span style="display: flex; align-items: center; gap: 6px; min-width: 0;">{{s.ico}}<span style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.l}}</span></span>
+          <span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.fab}}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0); flex-shrink: 0; padding-top: 2px;">{{sinTitulo}}</span>
+    <sc-if value="{{temSistema}}" hint-placeholder-val="{{true}}">
+      <div role="group" aria-label="Sintoma" style="display: flex; flex-wrap: wrap; gap: 6px; flex-shrink: 0;">
+        <sc-for list="{{sintomas}}" as="x" hint-placeholder-count="5">
+          <button type="button" onClick="{{x.onClick}}" aria-pressed="{{x.on}}" style="min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1.5px solid {{x.line}}; background: {{x.bg}}; color: {{x.tone}}; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box;"><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{x.l}}</span><sc-if value="{{x.emerg}}" hint-placeholder-val="{{false}}"><span style="flex-shrink: 0; font-size: 9.5px; letter-spacing: 0.10em; font-weight: 800; padding: 2px 5px; border-radius: 5px; background: var(--cap-crit-fill, #d32f27); color: #ffffff;">SOS</span></sc-if></button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{semSistema}}" hint-placeholder-val="{{false}}">
+      <div style="padding: 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12.5px; line-height: 1.4; flex-shrink: 0;">Escolha primeiro o sistema. Emergência agora (fumaça, fogo, água entrando, alguém na água): toque em SOS.</div>
+    </sc-if>
+
+    <div ref="{{resRef}}" aria-live="polite" style="display: flex; flex-direction: column; gap: 9px; flex-shrink: 0;">
+      <sc-if value="{{esperaSintoma}}" hint-placeholder-val="{{false}}">
+        <div style="padding: 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12.5px; line-height: 1.4;">Escolha o sintoma — o que verificar primeiro sai do guia de bordo, com a fonte.</div>
+      </sc-if>
+      <sc-if value="{{temResposta}}" hint-placeholder-val="{{false}}">
+        <section aria-label="O que verificar primeiro" style="box-sizing: border-box; padding: 13px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-left: 3px solid {{r.acc}}; border-radius: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">O QUE VERIFICAR PRIMEIRO</span>
+            <span style="padding: 3px 7px; border-radius: 6px; background: {{r.chipWash}}; border: 1px solid {{r.chipLine}}; color: {{r.acc}}; font-size: 9.5px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap;">{{r.chip}}</span>
+          </div>
+          <span style="font-size: 14.5px; font-weight: 800; line-height: 1.3;">{{r.titulo}}</span>
+          <sc-if value="{{r.emerg}}" hint-placeholder-val="{{false}}">
+            <a href="S2-SOS-Mobile.dc.html" aria-label="Abrir o SOS — emergência" style="height: 56px; border-radius: 14px; background: var(--cap-crit-fill, #d32f27); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; box-shadow: 0 0 0 3px rgba(var(--cap-crit-rgb, 255,59,48), 0.28);"><span style="font-size: 18px; font-weight: 800; letter-spacing: 0.12em; line-height: 1;">SOS</span><span style="width: 1px; height: 22px; background: rgba(255,255,255,0.4);"></span><span style="font-size: 13px; font-weight: 700; letter-spacing: 0.08em;">ABRIR AGORA</span></a>
+          </sc-if>
+          <span style="font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;">{{r.texto}}</span>
+          <sc-if value="{{r.aviso}}" hint-placeholder-val="{{false}}">
+            <span role="note" style="font-size: 11.5px; line-height: 1.4; color: var(--cap-warn, #f0a63a);">{{r.aviso}}</span>
+          </sc-if>
+          <sc-if value="{{r.temAcoes}}" hint-placeholder-val="{{false}}">
+            <span style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <sc-for list="{{r.acoes}}" as="k" hint-placeholder-count="2">
+                <a href="{{k.href}}" style="min-height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.08em; font-weight: 700; display: flex; align-items: center; text-decoration: none;">{{k.l}} ›</a>
+              </sc-for>
+            </span>
+          </sc-if>
+          <sc-if value="{{r.podeRegistrar}}" hint-placeholder-val="{{true}}">
+            <button type="button" onClick="{{registrar}}" aria-label="{{r.regAria}}" style="height: 48px; border-radius: 12px; border: 1.5px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-elev, #131a33); color: var(--cap-ink, #eaf1ff); font-size: 13px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">{{r.regIco}}Registrar no diário</button>
+          </sc-if>
+          <sc-if value="{{r.registrado}}" hint-placeholder-val="{{false}}">
+            <a href="G3-Diario-Mobile.dc.html" style="min-height: 48px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1.5px solid rgba(var(--cap-ok-rgb, 52,199,122), 0.45); background: rgba(var(--cap-ok-rgb, 52,199,122), 0.10); color: var(--cap-ok, #34c77a); font-size: 12px; font-weight: 800; letter-spacing: 0.06em; display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none;">{{r.regLabel}}</a>
+          </sc-if>
+          <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{notaTom}}; min-height: 14px;">{{nota}}</span>
+          <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6); overflow-wrap: anywhere;">{{r.pergunta}}</span>
+          <span style="font-size: 11px; line-height: 1.4; color: var(--cap-ink4, #7985a6); overflow-wrap: anywhere;">{{r.fonte}}</span>
+        </section>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{temSistema}}" hint-placeholder-val="{{true}}">
+      <div style="box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); flex-shrink: 0;">
+        <span style="font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">{{ref.titulo}}</span>
+        <span style="font-size: 12.5px; line-height: 1.45;">{{ref.texto}}</span>
+        <span style="font-size: 11px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">{{ref.fonte}}</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240); order: 3;">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  // Layout: a barra SOS da moldura vem antes do conteúdo no DOM (order: 2 na tela) — é o 1º link de SOS, o que o SOS flutuante do capitao-app.js acompanha.
+  state = { sis: '', sin: '', baseOk: false, baseFim: false, reg: null, nota: '', notaTom: 'var(--cap-ok, #34c77a)' };
+  resRef = React.createRef();
+  componentDidMount() {
+    // #sis=motores (vindo de PANE DE MOTOR no modo navegação) já abre o sistema
+    const h = {}; String(location.hash || '').replace(/^#/, '').split('&').forEach((kv) => { const i = kv.indexOf('='); if (i > 0) { try { h[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); } catch (e) {} } });
+    if (h.sis && this.SIS().some((s) => s.id === h.sis)) this.setState({ sis: h.sis });
+    this.whenBrain(() => {
+      const B = window.CapitaoBrain;
+      try { B.carregaBase(); } catch (e) {}
+      // A base de bordo (trechos dos guias) carrega em segundo plano: a resposta é refeita quando ela chega
+      let n = 0;
+      this._kb = setInterval(() => {
+        let pronta = false; try { pronta = B.buscaBase('gerador onan').length > 0; } catch (e) {}
+        if (pronta || ++n > 40) { clearInterval(this._kb); this.setState({ baseOk: pronta, baseFim: true }); }
+      }, 150);
+    });
+  }
+  componentWillUnmount() { clearInterval(this._b); clearInterval(this._kb); clearTimeout(this._n); clearTimeout(this._v); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  quem() { try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'Lucas'; } }
+  toast(msg, tone) { this.setState({ nota: msg, notaTom: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 5000); }
+  // Sistemas e sintomas são só as escolhas da tela; o que verificar vem do cérebro (guia de bordo + fonte) — nada escrito à mão aqui.
+  // termo = palavra da pergunta + fabricante (capitao-dados.js); "como" pede o trecho do guia quando a palavra do sintoma sozinha não basta.
+  SIS() {
+    const EMERG = [{ id: 'fumaca', l: 'Fumaça / cheiro de queimado', q: 'fumaça ou cheiro de queimado', emerg: true }, { id: 'agua', l: 'Entrada de água', q: 'entrada de água', emerg: true }];
+    const temp = { id: 'temp', l: 'Temperatura alta', q: 'temperatura alta' }, oleo = { id: 'oleo', l: 'Pressão de óleo baixa', q: 'pressão de óleo baixa' };
+    const escap = { id: 'escap', l: 'Sem água no escapamento', q: 'sem água no escapamento', como: true }, naoLiga = { id: 'naoliga', l: 'Não liga', q: 'não liga' };
+    return [
+      { id: 'motores', l: 'MOTORES', palavra: 'motores', d: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', sintomas: [temp, oleo, escap, naoLiga] },
+      { id: 'gerador', l: 'GERADOR', palavra: 'gerador', d: 'M13 3L5 14h6l-1 7 8-11h-6z', sintomas: [temp, oleo, escap, naoLiga] },
+      { id: 'climatizacao', l: 'CLIMA', palavra: 'climatização', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', sintomas: [{ id: 'fluxo', l: 'Fluxo fraco', q: 'fluxo fraco' }, { id: 'alarme', l: 'Alarme de fluxo', q: 'alarme de fluxo' }, naoLiga] },
+      { id: 'estabilizador', l: 'ESTABILIZADOR', palavra: 'estabilizador', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', sintomas: [{ id: 'alarme', l: 'Alarme no display', q: 'alarme no display' }, { id: 'naoliga', l: 'Não liga / não acelera', q: 'não acelera', como: true }] },
+      { id: 'eletronicos', l: 'ELETRÔNICOS', palavra: 'eletrônicos', d: 'M4 5h16v11H4z M9 20h6 M12 16v4', sintomas: [{ id: 'ancora', l: 'Alarme de âncora', q: 'alarme de âncora' }, naoLiga] }
+    ].map((s) => Object.assign(s, { sintomas: s.sintomas.concat(EMERG) }));
+  }
+  // Depois de escolher o sintoma, traz a resposta para a vista (sem mexer na página inteira)
+  mostra() {
+    clearTimeout(this._v);
+    this._v = setTimeout(() => {
+      const el = this.resRef.current, box = el && el.closest ? el.closest('[data-rolagem]') : null;
+      if (!el || !box) return;
+      const pr = box.closest('[style*="width: 390px"]'), z = (pr && parseFloat(pr.style.zoom)) || 1;
+      const top = (el.getBoundingClientRect().top - box.getBoundingClientRect().top) / z;
+      if (top > box.clientHeight * 0.35) box.scrollTop += top - 8;
+    }, 60);
+  }
+  equip(id) { return ((window.CapitaoDados || {}).equipamentos || []).filter((e) => e.id === id)[0] || null; }
+  // "Gerador Onan · modelo SEM DADOS": sempre fabricante e modelo, o que faltar marcado
+  fabMod(id) { const e = this.equip(id); if (!e) return 'SEM DADOS'; return e.nome + ' ' + (e.fabricante || '(fabricante SEM DADOS)') + (e.modelo ? ' ' + e.modelo : ' · modelo SEM DADOS'); }
+  pergunta(s, x) { const e = this.equip(s.id); return x.q + ' ' + s.palavra + (e && e.fabricante ? ' ' + e.fabricante : '') + (x.como ? ' — como resolver?' : ''); }
+  // Resposta calculada agora pelo cérebro (commit:false = não grava nada). Refeita quando a base de bordo termina de carregar.
+  resposta(q) {
+    const B = window.CapitaoBrain; if (!B) return null;
+    const k = q + '|' + this.state.baseOk;
+    if (this._cache && this._cache.k === k) return this._cache.a;
+    let a = null;
+    try { a = B.answer(q, { platform: 'app', commit: false }); } catch (e) { a = { key: 'fallback', text: 'Não consegui calcular a resposta agora — SEM DADOS.', src: 'Fonte: nenhuma — erro ao consultar o cérebro', actions: [] }; }
+    this._cache = { k: k, a: a };
+    return a;
+  }
+  registrar(s, x, a) {
+    const B = window.CapitaoBrain; if (!B || !s || !x) return;
+    const chave = s.id + '|' + x.id;
+    if (this.state.reg && this.state.reg.chave === chave) return;
+    const ref = String((a && a.src) || 'Fonte: nenhuma — SEM DADOS').replace(/^Fonte:\s*/, '').split(' — base de conhecimento')[0];
+    const emerg = !!x.emerg || (a && a.key === 'sos'), n = B.now();
+    let e = null;
+    try {
+      e = B.addDiario({ sys: emerg ? 'Segurança' : 'Equipamentos', tone: emerg ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-warn, #f0a63a)',
+        t: 'Sintoma relatado: ' + x.l.toLowerCase() + ' — ' + this.fabMod(s.id) + '. Anomalia A CONFIRMAR · triagem no app (o que verificar: ' + ref + '). Registrado por ' + this.quem() + ' — linha nova, nada se apaga.',
+        who: this.quem(), src: 'app · sintoma' });
+    } catch (err) { e = null; }
+    const ok = !!(e && B.loadDiario().some((y) => y.iso === e.iso && y.src === 'app · sintoma'));
+    if (!ok) return this.toast('Não gravado — armazenamento deste aparelho indisponível. Anote no Diário.', 'var(--cap-warn, #f0a63a)');
+    this.setState({ reg: { chave: chave, d: n.d, t: n.t } });
+    this.toast('Sintoma registrado no diário · ' + n.d + ' ' + n.t);
+  }
+  renderVals() {
+    const st = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {}, B = window.CapitaoBrain, T = window.CapitaoTelemetria;
+    const vivo = !!(T && T.atual && T.atual());
+    const SIS = this.SIS(), s = SIS.filter((y) => y.id === st.sis)[0] || null, x = s ? s.sintomas.filter((y) => y.id === st.sin)[0] || null : null;
+    const nb = (v, d) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    const ac = 'var(--cap-accent, #00a1fe)', ok = 'var(--cap-ok, #34c77a)', warn = 'var(--cap-warn, #f0a63a)', crit = 'var(--cap-crit, #ff3b30)', tele = 'var(--cap-tele, #00f4fd)';
+    const sistemas = SIS.map((y, i) => {
+      const on = y.id === st.sis, e = this.equip(y.id);
+      return { l: y.l, span: i < 3 ? 'span 2' : 'span 3', fab: e ? (e.fabricante || 'SEM DADOS') : 'SEM DADOS', aria: 'Sistema: ' + this.fabMod(y.id), on: on, ico: this.ico(y.d, 16, 1.8, on ? ac : 'var(--cap-ink2, #b1bdd6)'),
+        line: on ? ac : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'var(--cap-card, #0d1329)',
+        onClick: () => this.setState({ sis: y.id, sin: '', reg: null, nota: '' }) };
+    });
+    const sintomas = s ? s.sintomas.map((y) => {
+      const on = y.id === st.sin;
+      const cor = y.emerg ? crit : ac, rgb = y.emerg ? 'var(--cap-crit-rgb, 255,59,48)' : 'var(--cap-accent-rgb, 0,161,254)';
+      return { l: y.l, on: on, emerg: !!y.emerg, tone: on ? cor : 'var(--cap-ink, #eaf1ff)', line: on || y.emerg ? 'rgba(' + rgb + ', ' + (on ? '0.9' : '0.45') + ')' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(' + rgb + ', 0.14)' : 'var(--cap-card, #0d1329)',
+        onClick: () => this.setState({ sin: y.id, reg: null, nota: '' }, () => this.mostra()) };
+    }) : [];
+    let r = {};
+    const a = s && x ? this.resposta(this.pergunta(s, x)) : null;
+    if (a) {
+      const e = this.equip(s.id), guia = e && e.guia && D.guias ? D.guias[e.guia] : '';
+      const emerg = !!x.emerg || a.key === 'sos';
+      const GEN = { motores: 1, gerador: 1, climatizacao: 1, estabilizador: 1, eletronicos: 1, audio: 1, porao: 1, eletrico: 1 };
+      let chip = 'RESPOSTA DO CÉREBRO', acc = ac, aviso = '';
+      if (emerg) { chip = 'EMERGÊNCIA'; acc = crit; }
+      else if (a.key === 'fallback') { chip = 'SEM DADOS'; acc = warn; }
+      else if (a.key === 'base') { chip = 'TRECHO DO GUIA'; acc = ok; }
+      else if (a.key === 'oleo') { chip = 'PASSO A PASSO DO GUIA'; acc = ok; }
+      else if (GEN[a.key]) { chip = 'RESUMO DO EQUIPAMENTO'; acc = tele; aviso = 'Sem trecho específico para “' + x.l.toLowerCase() + '” no guia de bordo — o Capitão IA devolveu o resumo do equipamento.'; }
+      if (!emerg && guia && a.key !== 'fallback' && String(a.src || '').indexOf(guia) === -1) { chip = 'OUTRA FONTE'; acc = warn; aviso = 'A resposta cita outra fonte, não o ' + guia + ' — confira antes de agir.'; }
+      const rg = st.reg && st.reg.chave === s.id + '|' + x.id;
+      r = { acc: acc, chip: chip, chipWash: 'rgba(' + (acc === ok ? 'var(--cap-ok-rgb, 52,199,122)' : acc === crit ? 'var(--cap-crit-rgb, 255,59,48)' : acc === warn ? 'var(--cap-warn-rgb, 240,166,58)' : acc === tele ? 'var(--cap-tele-rgb, 0,244,253)' : 'var(--cap-accent-rgb, 0,161,254)') + ', 0.12)',
+        chipLine: 'rgba(' + (acc === ok ? 'var(--cap-ok-rgb, 52,199,122)' : acc === crit ? 'var(--cap-crit-rgb, 255,59,48)' : acc === warn ? 'var(--cap-warn-rgb, 240,166,58)' : acc === tele ? 'var(--cap-tele-rgb, 0,244,253)' : 'var(--cap-accent-rgb, 0,161,254)') + ', 0.45)',
+        titulo: x.l + ' · ' + this.fabMod(s.id), emerg: emerg, texto: a.text, aviso: aviso + (!st.baseOk && !st.baseFim ? (aviso ? ' ' : '') + 'Base de bordo ainda carregando — a resposta é refeita em instantes.' : ''),
+        fonte: a.src || 'Fonte: nenhuma — SEM DADOS', pergunta: 'Calculado agora pelo Capitão IA · pergunta: “' + this.pergunta(s, x) + '” · nada é gravado sem o seu toque.',
+        acoes: (a.actions || []).map((k) => ({ l: k.l, href: k.href })), temAcoes: !!(a.actions && a.actions.length),
+        podeRegistrar: !rg, registrado: !!rg, regLabel: rg ? 'REGISTRADO NO DIÁRIO · ' + st.reg.d + ' ' + st.reg.t + ' · ABRIR ›' : '',
+        regAria: 'Registrar no diário: ' + x.l + ' — ' + this.fabMod(s.id), regIco: this.ico('M4 20h4l10-10-4-4L4 16z M14 6l4 4', 17, 1.8, ac) };
+    }
+    // Leitura de referência: última leitura do snapshot com a hora (nunca "ao vivo")
+    const M = S.motores || {}, G = S.gerador || {}, SK = S.seakeeper || {};
+    const snapTxt = 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS');
+    const REF = {
+      motores: M.rpm ? 'Motores ' + (M.estado || 'SEM DADOS') + ' · última leitura com motores ligados ' + (M.hora || 'SEM DADOS') + ': ' + M.rpm.join('/') + ' rpm · óleo ' + (M.oleo || []).map((v) => nb(v)).join('/') + ' bar · arrefecimento ' + (M.arref || []).join('/') + ' °C (BB/BE).' : 'SEM LEITURA dos motores no ' + snapTxt + '.',
+      gerador: G.estado ? 'Gerador ' + G.estado + ' · horímetro ' + (B ? B.horas(G.horas) : nb(G.horas)) + ' h · leitura ' + (G.hora || 'SEM DADOS') + '.' : 'SEM LEITURA do gerador no ' + snapTxt + '.',
+      estabilizador: SK.estado ? 'Seakeeper ' + SK.estado + ' · leitura ' + (SK.hora || 'SEM DADOS') + '.' : 'SEM LEITURA do estabilizador no ' + snapTxt + '.',
+      climatizacao: 'SEM LEITURA — o ' + snapTxt + ' não traz dado da climatização.',
+      eletronicos: S.gps && S.gps.texto ? 'GPS ' + (S.gps.satelites ? S.gps.satelites + ' satélites · ' : '') + S.gps.texto + ' · leitura ' + (S.hora || 'SEM DADOS') + '.' : 'GPS SEM LEITURA no ' + snapTxt + '.'
+    };
+    return {
+      intro: 'Triagem: escolha o sistema e o sintoma. O Capitão IA responde na hora com o trecho do guia de bordo e a fonte' + (D.demo ? ' (guias DEMO).' : '.'),
+      sistemas: sistemas, temSistema: !!s, semSistema: !s,
+      sinTitulo: '2 · SINTOMA' + (s ? ' · ' + this.fabMod(s.id).toUpperCase() : ''),
+      sintomas: sintomas,
+      esperaSintoma: !!s && !x, temResposta: !!a, r: r,
+      registrar: () => this.registrar(s, x, a), resRef: this.resRef,
+      nota: st.nota, notaTom: st.notaTom,
+      ref: s ? { titulo: 'LEITURA DE REFERÊNCIA · ' + s.l, texto: REF[s.id] || 'SEM DADOS', fonte: 'Fonte: ' + (S.fonte || 'SEM DADOS') + ' · ' + snapTxt + (vivo ? ' — telemetria ao vivo ligada: leituras de agora no Modo navegação' : ' — telemetria ao vivo desligada') } : { titulo: '', texto: '', fonte: '' }
+    };
+  }
+}
+</script>
+</body>
+</html>

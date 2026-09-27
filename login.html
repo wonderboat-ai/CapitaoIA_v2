@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entrar · Capitão IA</title>
+<meta name="theme-color" content="#050816">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" href="./assets/favicon_64.png">
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Capitão IA">
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script>
+/* Já logado → segue direto para o destino. */
+(function () {
+  var A = window.CapitaoAuth; if (!A) return;
+  if (A.logado()) location.replace(A.destinoSeguro(new URLSearchParams(location.search).get('next')));
+})();
+</script>
+<script src="./capitao-theme.js"></script>
+<script src="./capitao-app.js"></script>
+<style>
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+.bg { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 40% 30% at 85% 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.10) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%); }
+.top { position: relative; display: flex; justify-content: flex-end; padding: max(14px, env(safe-area-inset-top, 0px)) 16px 0; }
+main { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 16px 16px 28px; box-sizing: border-box; }
+.card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 22px; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.brand img { width: 200px; height: auto; }
+.brand h1 { margin: 0; font-size: 15px; letter-spacing: 0.32em; font-weight: 800; color: var(--cap-ink, #eaf1ff); }
+.brand h1 b { background: linear-gradient(90deg, var(--cap-tele, #00f4fd), var(--cap-accent, #00a1fe) 55%, var(--cap-violeta, #b45cff)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.brand p { margin: 0; font-size: 12.5px; color: var(--cap-ink4, #7985a6); letter-spacing: 0.04em; }
+form { display: flex; flex-direction: column; gap: 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 20px; padding: 20px; box-shadow: 0 18px 50px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.45 * var(--cap-shadow-k, 1))); }
+label { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink3, #97a3c0); }
+.field { position: relative; display: flex; }
+input[type=text], input[type=password] { width: 100%; box-sizing: border-box; min-height: 50px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--cap-line, #1a2240); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-weight: 500; font-size: 16px; line-height: 1.2; letter-spacing: 0.01em; outline: none; transition: border-color .2s, box-shadow .2s; }
+input:focus { border-color: var(--cap-accent, #00a1fe); box-shadow: 0 0 0 4px rgba(var(--cap-accent-rgb, 0,161,254), 0.16); }
+input::placeholder { color: var(--cap-ph, #4a5578); }
+.field input { padding-right: 64px; }
+.eye { position: absolute; right: 4px; top: 3px; bottom: 3px; min-width: 56px; border: 0; border-radius: 11px; background: transparent; color: var(--cap-ink3, #97a3c0); font-family: inherit; font-weight: 700; font-size: 11px; letter-spacing: 0.12em; cursor: pointer; }
+.eye:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { min-width: 96px; min-height: 40px; padding: 0 14px; white-space: nowrap; border-radius: 12px; border: 1px solid var(--cap-line, #1a2240); background: transparent; color: var(--cap-ink2, #b1bdd6); font-family: inherit; font-weight: 700; font-size: 11.5px; letter-spacing: 0.08em; cursor: pointer; }
+.chip[aria-pressed=true] { border-color: var(--cap-accent, #00a1fe); color: var(--cap-accent, #00a1fe); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.12); }
+.chip:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+.keep { flex-direction: row; align-items: center; gap: 10px; letter-spacing: 0.02em; font-weight: 500; font-size: 14px; color: var(--cap-ink2, #b1bdd6); min-height: 40px; cursor: pointer; }
+.keep input { width: 20px; height: 20px; margin: 0; accent-color: var(--cap-accent, #00a1fe); flex-shrink: 0; }
+button.go { min-height: 52px; border: 0; border-radius: 14px; background: linear-gradient(180deg, var(--cap-accent-hi, #4dbcff) 0%, var(--cap-accent, #00a1fe) 100%); color: var(--cap-on-accent, #050816); font-family: inherit; font-weight: 800; font-size: 14px; letter-spacing: 0.2em; cursor: pointer; transition: filter .2s, opacity .2s; }
+button.go:hover { filter: brightness(1.08); }
+button.go:focus-visible { outline: 2px solid var(--cap-ink, #eaf1ff); outline-offset: 2px; }
+button.go:disabled { opacity: 0.55; cursor: progress; }
+.msg { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--cap-crit, #ff3b30); }
+.msg:empty { display: none; }
+.msg.info { color: var(--cap-ink4, #7985a6); }
+.note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--cap-ink4, #7985a6); text-align: center; }
+.demo { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--cap-violeta, #b45cff); text-align: center; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="top"><capitao-theme-toggle size="40"></capitao-theme-toggle></div>
+  <main>
+    <div class="card">
+      <div class="brand">
+        <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" width="200" height="109">
+        <h1><b>CAPITÃO IA</b></h1>
+        <p>Embarcação Capitão IA · acesso da equipe</p>
+      </div>
+      <form id="f" novalidate>
+        <div class="chips" role="group" aria-label="Escolher usuário" id="chips"></div>
+        <label>USUÁRIO
+          <input id="u" type="text" name="username" autocomplete="username" autocapitalize="words" spellcheck="false" maxlength="40" placeholder="Nome do usuário" required>
+        </label>
+        <label>SENHA
+          <span class="field">
+            <input id="p" type="password" name="password" autocomplete="current-password" maxlength="128" placeholder="Senha" required>
+            <button type="button" class="eye" id="eye" aria-label="Mostrar senha" aria-pressed="false">VER</button>
+          </span>
+        </label>
+        <label class="keep"><input id="k" type="checkbox" checked> Manter conectado neste aparelho</label>
+        <p class="msg" id="m" role="alert" aria-live="assertive"></p>
+        <button class="go" id="go" type="submit">ENTRAR</button>
+      </form>
+      <p class="note">Com “manter conectado”, o acesso vale 30 dias neste aparelho. Sem ele, vale 12 horas.</p>
+      <p class="demo">DEMO · DADOS FICTÍCIOS — demonstração da plataforma Capitão IA.</p>
+    </div>
+  </main>
+  <capitao-rodape></capitao-rodape>
+<script>
+(function () {
+  var A = window.CapitaoAuth;
+  var f = document.getElementById('f'), u = document.getElementById('u'), p = document.getElementById('p'), k = document.getElementById('k');
+  var m = document.getElementById('m'), go = document.getElementById('go'), eye = document.getElementById('eye'), box = document.getElementById('chips');
+  var timer = 0;
+  function msg(t, info) { m.textContent = t || ''; m.className = info ? 'msg info' : 'msg'; }
+  // Um botão por usuário da lista (capitao-auth.js) — nomes, sem senha.
+  var lista = A && A.lista ? A.lista() : [];
+  lista.forEach(function (x) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.setAttribute('data-u', x.nome); b.setAttribute('aria-pressed', 'false'); b.textContent = x.nome.toUpperCase(); box.appendChild(b); });
+  if (lista.length) u.placeholder = lista.map(function (x) { return x.nome; }).join(', ');
+  var chips = [].slice.call(document.querySelectorAll('.chip'));
+  function marcar() { var v = u.value.trim().toLowerCase(); chips.forEach(function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-u').toLowerCase() === v ? 'true' : 'false'); }); }
+  function travado(ate) {
+    clearInterval(timer);
+    var tick = function () {
+      var s = Math.ceil((ate - Date.now()) / 1000);
+      if (s <= 0) { clearInterval(timer); go.disabled = false; msg(''); return; }
+      go.disabled = true; msg('Muitas tentativas. Tente de novo em ' + s + ' s.');
+    };
+    tick(); timer = setInterval(tick, 1000);
+  }
+  chips.forEach(function (c) { c.addEventListener('click', function () { u.value = c.getAttribute('data-u'); marcar(); p.focus(); }); });
+  u.addEventListener('input', marcar);
+  eye.addEventListener('click', function () {
+    var ver = p.type === 'password'; p.type = ver ? 'text' : 'password';
+    eye.textContent = ver ? 'OCULTAR' : 'VER'; eye.setAttribute('aria-pressed', ver ? 'true' : 'false'); eye.setAttribute('aria-label', ver ? 'Ocultar senha' : 'Mostrar senha');
+  });
+  if (!A) { msg('Não foi possível carregar o acesso. Recarregue a página.'); go.disabled = true; return; }
+  var ate = A.bloqueadoAte(); if (ate) travado(ate);
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (go.disabled) return;
+    if (!u.value.trim() || !p.value) { msg('Informe usuário e senha.'); (u.value.trim() ? p : u).focus(); return; }
+    go.disabled = true; msg('Verificando…', true);
+    A.entrar(u.value, p.value, k.checked).then(function (r) {
+      if (r.ok) {
+        msg('Bem-vindo, ' + r.usuario.nome + '.', true);
+        location.replace(A.destinoSeguro(new URLSearchParams(location.search).get('next')));
+        return;
+      }
+      p.value = ''; go.disabled = false;
+      if (r.motivo === 'bloqueado') travado(r.ate);
+      else if (r.motivo === 'armazenamento') msg('O navegador está bloqueando os dados deste site. Permita cookies e dados do site (ou saia da navegação anônima) e tente de novo.');
+      else if (r.motivo === 'navegador') msg('Este navegador não permite o login seguro. Abra pelo endereço https:// em um navegador atual.');
+      else { msg('Usuário ou senha incorretos.'); p.focus(); }
+    });
+  });
+  marcar();
+})();
+</script>
+</body>
+</html>

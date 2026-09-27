@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Telemetria (web)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-cabecalho" from="./capitao-moldura.js" hint-size="1440px,68px"></x-import>
+  <div style="flex-grow: 1; display: flex; min-height: 0;">
+    <x-import component-from-global-scope="capitao-trilho" from="./capitao-moldura.js" ativo="telemetria" hint-size="96px,788px"></x-import>
+
+    <main style="flex-grow: 1; box-sizing: border-box; padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Telemetria</h1>
+          <span style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
+        </div>
+        <span role="status" style="display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0); max-width: 420px; text-align: right;"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--cap-ink3, #97a3c0);"></span>{{nota}}</span>
+        <a href="Main.dc.html#q=Telemetria%20agora" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
+      </div>
+
+      <section aria-label="Telemetria agora" style="display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr) minmax(0, 1.05fr) minmax(0, 1.2fr) minmax(0, 1.3fr); gap: 12px; flex-shrink: 0;">
+        <sc-for list="{{blocos}}" as="b" hint-placeholder-count="4">
+          <article style="box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 9px; min-width: 0;">
+              <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: {{b.wash}}; display: flex; align-items: center; justify-content: center;">{{b.ico}}</span>
+              <h2 style="margin: 0; flex-grow: 1; min-width: 0; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{b.t}}</h2>
+              <span title="{{b.horaTip}}" style="flex-shrink: 0; padding: 3px 8px; border-radius: 999px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.10); color: var(--cap-tele, #00f4fd); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;">{{b.hora}}</span>
+            </div>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0;">
+              <sc-for list="{{b.linhas}}" as="l" hint-placeholder-count="5">
+                <sc-if value="{{l.barra}}" hint-placeholder-val="{{false}}">
+                  <div style="display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 20px;">
+                    <span style="width: 70px; flex-shrink: 0; font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">{{l.k}}</span>
+                    <span style="flex-grow: 1; min-width: 0; height: 7px; border-radius: 4px; background: var(--cap-line, #1a2240); overflow: hidden; display: block;"><span style="display: block; height: 7px; border-radius: 4px; width: {{l.w}}; background: {{l.tom}};"></span></span>
+                    <span style="width: 52px; flex-shrink: 0; text-align: right; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: {{l.tom}};">{{l.v}}</span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{l.texto}}" hint-placeholder-val="{{true}}">
+                  <div style="display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 20px;">
+                    <span style="flex-shrink: 0; font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">{{l.k}}</span>
+                    <span aria-hidden="true" style="flex-grow: 1; min-width: 6px; height: 0; border-bottom: 1px dotted var(--cap-line2, #27315a);"></span>
+                    <span style="flex-shrink: 0; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: {{l.tom}}; font-family: {{l.ff}};">{{l.v}}</span>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+            <sc-if value="{{b.obs}}" hint-placeholder-val="{{true}}">
+              <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35;">{{b.obs}}</span>
+            </sc-if>
+            <span style="padding-top: 7px; border-top: 1px solid var(--cap-line, #1a2240); font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{b.fonte}}</span>
+          </article>
+        </sc-for>
+
+        <article style="box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 9px; min-width: 0;">
+            <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: rgba(var(--cap-ink3-rgb, 151,163,192), 0.16); display: flex; align-items: center; justify-content: center;">{{motor.ico}}</span>
+            <h2 style="margin: 0; flex-grow: 1; min-width: 0; font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{motor.t}}</h2>
+            <span title="{{motor.horaTip}}" style="flex-shrink: 0; padding: 3px 8px; border-radius: 999px; background: rgba(var(--cap-warn-rgb, 240,166,58), 0.12); color: var(--cap-warn, #f0a63a); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;">{{motor.hora}}</span>
+          </div>
+          <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35;">{{motor.estado}}</span>
+          <div style="flex-grow: 1; display: grid; grid-template-columns: minmax(0, 1fr) 58px 58px; column-gap: 6px; row-gap: 5px; align-content: start;">
+            <span></span>
+            <span style="text-align: right; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: var(--cap-ink4, #7985a6);">BB</span>
+            <span style="text-align: right; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: var(--cap-ink4, #7985a6);">BE</span>
+            <sc-for list="{{motor.linhas}}" as="m" hint-placeholder-count="4">
+              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{m.k}} <span style="color: var(--cap-ink4, #7985a6);">{{m.u}}</span></span>
+              <span style="text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;">{{m.bb}}</span>
+              <span style="text-align: right; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;">{{m.be}}</span>
+            </sc-for>
+          </div>
+          <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35;">{{motor.obs}}</span>
+          <span style="padding-top: 7px; border-top: 1px solid var(--cap-line, #1a2240); font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{motor.fonte}}</span>
+        </article>
+      </section>
+
+      <div style="flex-grow: 1; display: flex; gap: 14px; min-height: 0;">
+        <section aria-label="Histórico" style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.14); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 19h16 M4 5v14 M8 15l4-5 3 3 5-6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
+            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Histórico · {{serieRot}}</span>
+              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
+            </span>
+            <span role="group" aria-label="Período" style="display: flex; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; flex-shrink: 0;">
+              <sc-for list="{{janelas}}" as="w" hint-placeholder-count="4">
+                <button type="button" onClick="{{w.onClick}}" aria-pressed="{{w.on}}" title="{{w.tip}}" style="min-width: 44px; height: 34px; padding: 0 10px; border-radius: 9px; border: none; background: {{w.bg}}; color: {{w.tom}}; font-size: 11.5px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer; white-space: nowrap;">{{w.l}}</button>
+              </sc-for>
+            </span>
+          </div>
+          <div role="group" aria-label="Série" style="display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0;">
+            <sc-for list="{{series}}" as="m" hint-placeholder-count="5">
+              <button type="button" onClick="{{m.onClick}}" aria-pressed="{{m.on}}" style="min-height: 36px; padding: 0 13px; border-radius: 999px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tom}}; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{m.l}}</button>
+            </sc-for>
+          </div>
+          <div style="flex-grow: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center;">
+            <sc-if value="{{temGrafico}}" hint-placeholder-val="{{true}}">{{grafico}}</sc-if>
+            <sc-if value="{{semGrafico}}" hint-placeholder-val="{{false}}">
+              <div style="height: 190px; box-sizing: border-box; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 0 28px; text-align: center;">
+                <span style="font-size: 11.5px; letter-spacing: 0.16em; font-weight: 800; color: var(--cap-warn, #f0a63a);">SEM DADOS</span>
+                <span style="font-size: 12.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.45;">{{vazioTexto}}</span>
+                <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.4;">{{agoraTexto}}</span>
+              </div>
+            </sc-if>
+          </div>
+          <sc-if value="{{temGrafico}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex-shrink: 0;">
+              <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--cap-accent, #00a1fe);"></span>máx</span>
+              <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--cap-tele, #00f4fd);"></span>mín</span>
+              <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;">{{legenda}}</span>
+            </div>
+          </sc-if>
+          <span style="padding-top: 8px; border-top: 1px solid var(--cap-line, #1a2240); font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35; flex-shrink: 0;">{{histFonte}}</span>
+        </section>
+
+        <section aria-label="O que vence" style="width: 400px; flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-warn-rgb, 240,166,58), 0.14); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-warn, #f0a63a);"></path></svg></span>
+            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-size: 15px; font-weight: 700;">O que vence</span>
+              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{venceSub}}</span>
+            </span>
+            <a href="{{venceHref}}" title="{{venceTip}}" style="display: flex; align-items: center; min-height: 44px; padding: 0 4px 0 8px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; flex-shrink: 0;">Manutenção ›</a>
+          </div>
+          <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{vence}}" as="v" hint-placeholder-count="5">
+              <a href="{{v.href}}" title="{{v.tip}}" style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; background: var(--cap-row, #10162e); border-radius: 12px; text-decoration: none; color: var(--cap-ink, #eaf1ff); flex-shrink: 0; min-width: 0;">
+                <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: {{v.wash}}; display: flex; align-items: center; justify-content: center;">{{v.ico}}</span>
+                <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-size: 12.5px; font-weight: 700; line-height: 1.3;">{{v.t}}</span>
+                  <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    <span style="flex-grow: 1; min-width: 0; font-size: 11px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.meta}}</span>
+                    <span style="flex-shrink: 0; padding: 4px 9px; border-radius: 999px; background: {{v.wash}}; color: {{v.tom}}; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;">{{v.dd}}</span>
+                  </span>
+                </span>
+              </a>
+            </sc-for>
+          </div>
+          <span style="padding-top: 8px; border-top: 1px solid var(--cap-line, #1a2240); font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35; flex-shrink: 0;">{{venceFonte}}</span>
+        </section>
+
+        <section aria-label="Mapa de sensores" style="width: 336px; flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M8.5 15.5a5 5 0 0 1 0-7 M15.5 8.5a5 5 0 0 1 0 7 M5.6 18.4a9 9 0 0 1 0-12.8 M18.4 5.6a9 9 0 0 1 0 12.8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg></span>
+            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-size: 15px; font-weight: 700;">Mapa de sensores</span>
+              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{mapaSub}}</span>
+            </span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; flex-shrink: 0;">
+            <sc-for list="{{sensores}}" as="s" hint-placeholder-count="12">
+              <div title="{{s.tip}}" style="box-sizing: border-box; padding: 4px 9px; border-radius: 10px; background: {{s.bg}}; border: 1px {{s.borda}} {{s.line}}; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+                <span style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; background: {{s.dot}}; border: 1.5px solid {{s.dotLine}};"></span><span style="font-size: 11.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.n}}</span></span>
+                <span style="font-size: 10.5px; line-height: 1.25; font-weight: {{s.peso}}; color: {{s.tom}}; letter-spacing: {{s.esp}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">{{s.v}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 8px 84px 0 0; border-top: 1px solid var(--cap-line, #1a2240); font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35; flex-shrink: 0;">{{mapaFonte}}</span>
+        </section>
+      </div>
+    </main>
+  </div>
+  <x-import component-from-global-scope="capitao-faixa" from="./capitao-moldura.js" hint-size="1440px,44px"></x-import>
+  <x-import component-from-global-scope="capitao-sos-web" from="./capitao-moldura.js" hint-size="78px,78px"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  state = { serie: 'b24', janela: '7 D', exec: {} };
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ exec: window.CapitaoBrain.loadExec() }));
+    // Executado em outra aba/tela: "O que vence" relê a agenda
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.executado.v1')) this.setState({ exec: window.CapitaoBrain.loadExec() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  // Gráfico da série 24 V (mín/máx por dia) — elemento React, sem {{}} em atributo de SVG
+  grafico(SV, rotulo) {
+    const h = React.createElement;
+    const W = 490, H = 190, L = 42, R = 10, T = 22, B = 28;
+    const mins = SV.map((p) => p.min), maxs = SV.map((p) => p.max);
+    const lo = Math.floor(Math.min.apply(null, mins)), hi = Math.ceil(Math.max.apply(null, maxs));
+    const y = (v) => T + ((hi - v) / Math.max(1, hi - lo)) * (H - T - B);
+    const slot = (W - L - R) / SV.length, x = (i) => L + slot * (i + 0.5);
+    const v1 = (v) => v.toFixed(1).replace('.', ',');
+    const kids = [];
+    for (let v = lo; v <= hi; v++) {
+      kids.push(h('line', { key: 'g' + v, x1: L, x2: W - R, y1: y(v), y2: y(v), strokeWidth: 1, style: { stroke: 'var(--cap-line, #1a2240)' } }));
+      kids.push(h('text', { key: 'e' + v, x: L - 8, y: y(v) + 3.5, fontSize: 10, textAnchor: 'end', style: { fill: 'var(--cap-ink4, #7985a6)' } }, v + ' V'));
+    }
+    SV.forEach((p, i) => {
+      const cx = x(i), yMax = y(p.max), yMin = y(p.min);
+      kids.push(h('rect', { key: 'r' + i, x: cx - 9, y: yMax, width: 18, height: Math.max(2, yMin - yMax), rx: 9, strokeWidth: 1.2, style: { fill: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.20)', stroke: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.70)' } }));
+      kids.push(h('circle', { key: 'a' + i, cx: cx, cy: yMax, r: 3.6, style: { fill: 'var(--cap-accent, #00a1fe)' } }));
+      kids.push(h('circle', { key: 'b' + i, cx: cx, cy: yMin, r: 3.6, style: { fill: 'var(--cap-tele, #00f4fd)' } }));
+      kids.push(h('text', { key: 'm' + i, x: cx, y: yMax - 8, fontSize: 10.5, fontWeight: 700, textAnchor: 'middle', style: { fill: 'var(--cap-ink2, #b1bdd6)' } }, v1(p.max)));
+      kids.push(h('text', { key: 'n' + i, x: cx, y: yMin + 16, fontSize: 10.5, fontWeight: 700, textAnchor: 'middle', style: { fill: 'var(--cap-ink3, #97a3c0)' } }, v1(p.min)));
+      kids.push(h('text', { key: 'd' + i, x: cx, y: H - 6, fontSize: 10.5, textAnchor: 'middle', style: { fill: 'var(--cap-ink3, #97a3c0)' } }, p.d));
+    });
+    return h('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': rotulo, style: { display: 'block', flexShrink: 0, maxWidth: '100%' } }, kids);
+  }
+  renderVals() {
+    const st = this.state, ex = st.exec || {}, D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const G = S.gps || {}, T = S.tanques || {}, DI = S.diesel || {}, M = S.motores || {}, GE = S.gerador || {}, SK = S.seakeeper || {};
+    const AG = D.agenda || [], SV = D.serie24v || [], P = D.drive || {};
+    const SD = 'SEM DADOS', SL = 'SEM LEITURA', MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+    const num = (x) => typeof x === 'number' && isFinite(x);
+    const nb = (x, d) => (num(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : null);
+    const val = (x, d, u) => (num(x) ? nb(x, d) + (u ? ' ' + u : '') : SL);
+    const g3 = (x) => (num(x) ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : SL);
+    const mil = (x) => (num(x) ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : SD);
+    const horas = (x) => { if (!num(x)) return SL; const p = x.toFixed(1).split('.'); return mil(+p[0]) + ',' + p[1]; };
+    const par = (a, i) => (Array.isArray(a) ? a[i] : null);
+    const cap = (s) => { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); };
+    const TOM = {
+      crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
+      tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'],
+      ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], neutro: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.16)']
+    };
+    const cor = (k) => TOM[k] || TOM.accent;
+    const equip = (id) => (D.equipamentos || []).filter((e) => e.id === id)[0] || {};
+    // "Gerador Onan e estabilizador Seakeeper · modelos SEM DADOS" — sempre fabricante e modelo, com o que faltar marcado
+    const fabMods = (lista) => { const es = lista.map((x) => Object.assign({ rot: x[1] }, equip(x[0]))); const semModelo = es.every((e) => !e.modelo);
+      return es.map((e) => e.rot + ' ' + (e.fabricante || '(fabricante ' + SD + ')') + (semModelo ? '' : ' · modelo ' + (e.modelo || SD))).join(' e ') + (semModelo ? ' · modelos ' + SD : ''); };
+    const quando = S.dia && S.hora ? S.dia + ' ' + S.hora : SD;
+    const fonteSnap = 'Fonte: ' + (S.fonte || SD);
+    const regra = /(\d+)\s*%/.exec(D.regraAbast || ''), minDiesel = regra ? +regra[1] : null;
+    const pctTom = (x, base) => (num(x) && minDiesel != null && base === 'diesel' && x < minDiesel ? TOM.warn[0] : base === 'diesel' ? TOM.ok[0] : base === 'agua' ? TOM.accent[0] : TOM.tele[0]);
+    const txt = (k, v, extra) => Object.assign({ k: k, v: v, texto: true, barra: false, tom: v === SL || v === SD ? TOM.warn[0] : 'var(--cap-ink, #eaf1ff)', ff: 'inherit' }, extra || {});
+    const bar = (k, x, base) => ({ k: k, v: num(x) ? nb(x) + ' %' : SL, w: num(x) ? Math.max(0, Math.min(100, x)) + '%' : '0%', barra: true, texto: false, tom: num(x) ? pctTom(x, base) : TOM.warn[0] });
+
+    // ——— Telemetria agora (snapshot) ———
+    const blocos = [
+      { t: 'Navegação', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', tom: 'tele', hora: S.hora || SD, horaTip: 'Leitura do snapshot ' + quando,
+        linhas: [txt('Posição', G.texto || SL, { ff: MONO }), txt('Satélites GPS', num(G.satelites) ? String(G.satelites) : SL), txt('SOG', num(S.sog) ? nb(S.sog) + (S.sog < 2 ? ' nó' : ' nós') : SL), txt('Proa', g3(S.proa)), txt('Profundidade', val(S.profundidade, 1, 'm'))],
+        obs: cap(S.estado || SD) + ' · ' + (S.local || SD) },
+      { t: 'Ambiente', d: 'M3 8h11a3 3 0 1 0-3-3 M3 12h15a3 3 0 1 1-3 3 M3 16h8a2 2 0 1 1-2 2', tom: 'tele', hora: S.hora || SD, horaTip: 'Leitura do snapshot ' + quando,
+        linhas: [txt('Vento', val(S.vento, 1, 'nós')), txt('Direção', num(S.ventoDe) ? 'de ' + g3(S.ventoDe) : SL), txt('Barômetro', val(S.pressao, 0, 'hPa')), txt('Ar', val(S.ar, 1, '°C')), txt('Água do mar', val(S.agua, 1, '°C'))],
+        obs: '' },
+      { t: 'Energia', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tom: 'ok', hora: S.hora || SD, horaTip: 'Baterias ' + quando + ' · gerador ' + (GE.hora || SD) + ' · Seakeeper ' + (SK.hora || SD),
+        linhas: [txt('Banco 24 V', val(S.bat24, 2, 'V')), txt('Banco 12 V', val(S.bat12, 2, 'V')), txt('Gerador', GE.estado || SL), txt('Horas gerador', num(GE.horas) ? horas(GE.horas) + ' h' : SL), txt('Seakeeper', SK.estado || SL)],
+        obs: fabMods([['gerador', 'Gerador'], ['estabilizador', 'estabilizador']]) },
+      { t: 'Tanques', d: 'M5 6h14v12H5z M5 13h14', tom: 'accent', hora: (S.hora || SD) + ' · diesel ' + (DI.hora ? DI.hora.slice(-5) : SD), horaTip: 'Água, cinzas e negras ' + quando + ' · diesel ' + (DI.nota || 'última leitura') + ' ' + (DI.hora || SD),
+        linhas: [bar('Água doce', T.agua, 'agua'), bar('Cinzas', T.cinzas, 'servida'), bar('Negras', T.negras, 'servida'), bar('Diesel BB', DI.bb, 'diesel'), bar('Diesel BE', DI.be, 'diesel')],
+        obs: 'Diesel ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' L' + (DI.tanques ? ' (' + DI.tanques + ')' : '') + ' · ' + (DI.nota || 'última leitura') + ' ' + (DI.hora || SD) }
+    ].map((b) => Object.assign(b, { ico: this.ico(b.d, 17, 1.7, cor(b.tom)[0]), wash: cor(b.tom)[1], fonte: fonteSnap }));
+
+    const eM = equip('motores');
+    const motor = {
+      t: 'Motores ' + (eM.fabricante || '(fabricante ' + SD + ')'), ico: this.ico('M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', 17, 1.7, TOM.neutro[0]),
+      hora: M.hora ? M.hora.slice(-5) : SD, horaTip: (DI.nota || 'última leitura com motores ligados') + ' · ' + (M.hora || SD),
+      estado: cap(M.estado || SD) + ' — última leitura com motores ligados ' + (M.hora || SD) + (M.marcha ? ' · marcha ' + M.marcha : ''),
+      linhas: [
+        { k: 'Rotação', u: 'rpm', bb: num(par(M.rpm, 0)) ? mil(par(M.rpm, 0)) : SL, be: num(par(M.rpm, 1)) ? mil(par(M.rpm, 1)) : SL },
+        { k: 'Óleo', u: 'bar', bb: nb(par(M.oleo, 0)) || SL, be: nb(par(M.oleo, 1)) || SL },
+        { k: 'Arrefecimento', u: '°C', bb: nb(par(M.arref, 0), 0) || SL, be: nb(par(M.arref, 1), 0) || SL },
+        { k: 'Horímetro', u: 'h', bb: horas(par(M.horimetro, 0)), be: horas(par(M.horimetro, 1)) }
+      ],
+      obs: (eM.qtd ? eM.qtd + ' motores · ' : '') + (eM.lados || 'BB e BE') + ' · modelo ' + (eM.modelo || SD),
+      fonte: fonteSnap
+    };
+
+    // ——— Histórico: só existe a série banco 24 V · 7 dias (mín/máx por dia) ———
+    const SERIES = [
+      { k: 'b24', l: 'Banco 24 V', agora: val(S.bat24, 2, 'V') + ' · ' + quando },
+      { k: 'b12', l: 'Banco 12 V', agora: val(S.bat12, 2, 'V') + ' · ' + quando },
+      { k: 'tanques', l: 'Tanques', agora: 'água ' + val(T.agua, 1, '%') + ' · cinzas ' + val(T.cinzas, 1, '%') + ' · negras ' + val(T.negras, 1, '%') + ' · ' + quando },
+      { k: 'vento', l: 'Vento', agora: val(S.vento, 1, 'nós') + (num(S.ventoDe) ? ' de ' + g3(S.ventoDe) : '') + ' · ' + quando },
+      { k: 'diesel', l: 'Diesel', agora: 'BB ' + val(DI.bb, 1, '%') + ' · BE ' + val(DI.be, 1, '%') + ' · ' + (DI.nota || 'última leitura') + ' ' + (DI.hora || SD) }
+    ];
+    const JAN = [
+      { l: '1 D', txt: 'últimas 24 h' }, { l: '7 D', txt: 'últimos 7 dias' }, { l: '30 D', txt: 'últimos 30 dias' }, { l: '1 A', txt: 'último ano' }
+    ];
+    const serie = SERIES.filter((x) => x.k === st.serie)[0] || SERIES[0];
+    const jan = JAN.filter((x) => x.l === st.janela)[0] || JAN[1];
+    const faixa = SV.length ? SV[0].d + '–' + SV[SV.length - 1].d : SD;
+    const temGrafico = serie.k === 'b24' && jan.l === '7 D' && SV.length > 0;
+    let legenda = '';
+    if (temGrafico) {
+      const lo = SV.reduce((a, p) => (p.min < a.min ? p : a), SV[0]), hi = SV.reduce((a, p) => (p.max > a.max ? p : a), SV[0]);
+      legenda = 'menor ' + nb(lo.min) + ' V (' + lo.d + ') · maior ' + nb(hi.max) + ' V (' + hi.d + ') · agora ' + val(S.bat24, 2, 'V') + ' (' + (S.hora || SD) + ')';
+    }
+    const onSel = (k) => st.serie === k, onJan = (l) => st.janela === l;
+
+    // ——— Mapa de sensores: o que chega na rede e o que é SEM LEITURA ———
+    const liga = (e) => String(e || '').split(' ')[0];
+    const nTanques = [T.agua, T.cinzas, T.negras, DI.bb, DI.be].filter(num).length;
+    const sensores = [
+      { n: 'GPS', v: num(G.satelites) ? G.satelites + ' satélites' : null, tip: 'Posição ' + (G.texto || SL) },
+      { n: 'Sonda', v: num(S.profundidade) ? 'profundidade ' + nb(S.profundidade) + ' m' : null },
+      { n: 'Vento', v: num(S.vento) ? nb(S.vento) + ' nós · de ' + g3(S.ventoDe) : null },
+      { n: 'Barômetro', v: num(S.pressao) ? nb(S.pressao, 0) + ' hPa' : null },
+      { n: 'Temperaturas', v: num(S.ar) || num(S.agua) ? 'ar ' + (nb(S.ar) || '—') + ' · mar ' + (nb(S.agua) || '—') + ' °C' : null },
+      { n: 'Tanques', v: nTanques ? nTanques + ' níveis · diesel ' + (DI.hora ? DI.hora.slice(-5) : SD) : null },
+      { n: 'Baterias', v: num(S.bat24) || num(S.bat12) ? '24 V · 12 V' : null },
+      { n: 'Motores', v: Array.isArray(M.rpm) ? 'BB · BE · ' + (M.hora ? M.hora.slice(-5) : SD) : null, tip: cap(M.estado || '') },
+      { n: 'Gerador', v: GE.estado ? liga(GE.estado) + ' · ' + (GE.hora ? GE.hora.slice(-5) : SD) : null },
+      { n: 'Seakeeper', v: SK.estado ? liga(SK.estado) + ' · ' + (SK.hora ? SK.hora.slice(-5) : SD) : null },
+      { n: 'Porão', v: S.porao == null ? null : num(S.porao) ? nb(S.porao) : 'na rede', tip: 'Nenhum sensor de porão na rede no snapshot' },
+      { n: 'Âncora', v: S.ancora == null ? null : num(S.ancora) ? nb(S.ancora) : 'na rede', tip: 'Nenhum sensor de âncora na rede no snapshot' }
+    ].map((s) => {
+      const ok = s.v != null;
+      return Object.assign(s, { v: ok ? s.v : SL, tip: s.tip || (ok ? s.n + ' na rede · snapshot ' + quando : s.n + ': ' + SL),
+        bg: ok ? 'var(--cap-elev, #131a33)' : 'transparent', borda: ok ? 'solid' : 'dashed', line: ok ? 'var(--cap-elev, #131a33)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.55)',
+        dot: ok ? 'var(--cap-ok, #34c77a)' : 'transparent', dotLine: ok ? 'var(--cap-ok, #34c77a)' : 'var(--cap-warn, #f0a63a)',
+        tom: ok ? 'var(--cap-ink3, #97a3c0)' : 'var(--cap-warn, #f0a63a)', peso: ok ? '500' : '800', esp: ok ? '0' : '0.08em' });
+    });
+    const nRede = sensores.filter((s) => s.v !== SL).length, nSem = sensores.length - nRede;
+
+    // ——— O que vence: agenda aberta, atrasadas primeiro ———
+    const ICON = { 'Climatização': 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', 'Bombas': 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', 'Gerador': 'M13 3L5 14h6l-1 7 8-11h-6z', 'Casco': 'M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0', 'Motores': 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', 'Estabilizador': 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', 'Sistema': 'M7 7h10v10H7z M10 3v4 M14 3v4 M10 17v4 M14 17v4', 'Eletrônicos': 'M4 5h16v11H4z M9 20h6 M12 16v4' };
+    const icoDe = (eq) => { for (const k in ICON) if (String(eq).indexOf(k) === 0) return ICON[k]; return 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z'; };
+    const grupo = (t) => (t.dn < 0 ? 'atrasadas' : t.dn <= 30 ? 'd30' : 'emdia');
+    const abertas = AG.filter((t) => !ex[t.id]).slice().sort((a, b) => a.dn - b.dn);
+    const nAtr = abertas.filter((t) => t.dn < 0).length, nD30 = abertas.filter((t) => t.dn >= 0 && t.dn <= 30).length, feitas = AG.length - abertas.length;
+    const vence = abertas.map((t) => {
+      const c = cor(t.dn < 0 ? 'crit' : t.tom);
+      return { t: t.t, tip: t.t + ' · ' + t.equip + ' · ' + t.quem + ' · ' + t.intervalo + ' · vence ' + t.vence, meta: t.equip.split(' (')[0] + (t.dn < 0 ? ' · venceu ' : ' · vence ') + t.vence.slice(0, 5) + (t.horas ? ' ou ' + mil(t.horas.limite) + ' h' : ''),
+        dd: t.rot || (t.dn < 0 ? 'ATRASADA · ' + (-t.dn) + ' D' : 'D-' + t.dn), tom: c[0], wash: c[1], ico: this.ico(icoDe(t.equip), 17, 1.7, c[0]), href: 'C1-Leme-Web.dc.html#f=' + grupo(t) };
+    });
+
+    return {
+      resumo: 'Coletor NMEA' + (D.demo ? ' (DEMO)' : '') + ' · snapshot ' + (S.quando || SD) + ' · ' + String(S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + ' · ' + nRede + ' sensores na rede · ' + nSem + ' ' + SL,
+      nota: 'Ao vivo desligada · snapshot' + (D.demo ? ' DEMO' : '') + ' ' + (S.hora || SD),
+      blocos: blocos, motor: motor,
+      serieRot: serie.l + ' · ' + jan.l,
+      janelaTxt: temGrafico ? 'mín/máx por dia · ' + faixa : jan.txt + ' · série não gravada',
+      janelas: JAN.map((w) => ({ l: w.l, tip: w.txt, on: onJan(w.l), onClick: () => this.setState({ janela: w.l }), bg: onJan(w.l) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tom: onJan(w.l) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
+      series: SERIES.map((m) => ({ l: m.l, on: onSel(m.k), onClick: () => this.setState({ serie: m.k }), bg: onSel(m.k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', line: onSel(m.k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', tom: onSel(m.k) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
+      temGrafico: temGrafico, semGrafico: !temGrafico,
+      grafico: temGrafico ? this.grafico(SV, 'Banco 24 V, mínimo e máximo por dia, ' + faixa + ': ' + SV.map((p) => p.d + ' ' + nb(p.min) + ' a ' + nb(p.max) + ' V').join('; ')) : null,
+      vazioTexto: serie.l + ' · ' + jan.txt + ': série não gravada no snapshot' + (D.demo ? ' DEMO' : '') + '. Só existe banco 24 V · 7 dias (mín/máx por dia, ' + faixa + ').',
+      agoraTexto: 'Leitura de agora: ' + serie.agora,
+      legenda: legenda,
+      histFonte: temGrafico ? 'Fonte: coletor NMEA' + (D.demo ? ' (DEMO)' : '') + ' · série banco 24 V, mín/máx por dia · ' + (P.raiz || SD) + ' › ' + ((P.pastas && P.pastas.tele) || SD) : 'Fonte: nenhuma — SEM DADOS (série não gravada) · leitura de agora: ' + (S.fonte || SD),
+      sensores: sensores,
+      mapaSub: nRede + ' na rede · ' + nSem + ' ' + SL + ' · snapshot ' + (S.hora || SD),
+      mapaFonte: fonteSnap,
+      venceSub: AG.length + ' tarefas · ' + (nAtr ? nAtr + (nAtr === 1 ? ' atrasada' : ' atrasadas') : 'nenhuma atrasada') + ' · ' + nD30 + ' em D-30' + (feitas ? ' · ' + feitas + (feitas === 1 ? ' executada' : ' executadas') : ''),
+      vence: vence,
+      venceHref: nAtr ? 'C1-Leme-Web.dc.html#f=atrasadas' : 'C1-Leme-Web.dc.html',
+      venceTip: nAtr ? 'Abrir as atrasadas na manutenção' : 'Abrir a manutenção',
+      venceFonte: 'Fonte: ' + (D.agendaFonte || SD)
+    };
+  }
+}
+</script>
+</body>
+</html>

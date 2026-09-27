@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capitão IA — Início (web)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+@keyframes capVivo { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(var(--cap-tele-rgb, 0,244,253), 0.22), 0 0 10px rgba(var(--cap-tele-rgb, 0,244,253), 0.7); } 50% { opacity: 0.18; box-shadow: 0 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0), 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0); } }
+input::placeholder { color: var(--cap-ph, #4a5578); }
+@keyframes capSweep { 0% { transform: translateX(-160%) skewX(-16deg); } 42% { transform: translateX(760%) skewX(-16deg); } 100% { transform: translateX(760%) skewX(-16deg); } }
+@keyframes capPulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(var(--cap-accent-rgb, 0,161,254), 0.22); } 50% { box-shadow: 0 0 0 7px rgba(var(--cap-accent-rgb, 0,161,254), 0.06); } }
+@keyframes capOrbit { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.cap-wm { font-weight: 800; letter-spacing: 0.1em; line-height: 1; white-space: nowrap; background: linear-gradient(180deg, var(--cap-wm-top, #ffffff) 12%, var(--cap-plat, #d3dcef) 46%, var(--cap-wm-bot, #5d6a8f) 96%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cap-ia { font-weight: 800; letter-spacing: 0.06em; line-height: 1; white-space: nowrap; background: linear-gradient(120deg, var(--cap-tele, #00f4fd) 0%, var(--cap-accent, #00a1fe) 50%, var(--cap-violeta, #b45cff) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+<script src="./capitao-voz.js"></script>
+</helmet>
+<div onMouseMove="{{onMove}}" onMouseLeave="{{onLeave}}" style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff);">
+<div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 62% 46% at 50% -6%, rgba(var(--cap-accent-rgb, 0,161,254), 0.13) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 30% 26% at 88% 4%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.08) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%), linear-gradient(rgba(var(--cap-hl-rgb, 255,255,255), 0.022) 1px, transparent 1px) 0 0 / 100% 88px, linear-gradient(90deg, rgba(var(--cap-hl-rgb, 255,255,255), 0.018) 1px, transparent 1px) 0 0 / 88px 100%;"></div>
+<div aria-hidden="true" style="position: absolute; left: 50%; top: 56%; width: 1500px; height: 1px; margin-left: -750px; pointer-events: none; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0.22) 50%, rgba(var(--cap-plat-rgb, 211,220,239), 0) 100%);"></div>
+{{spot}}
+<header style="position: relative; height: 52px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 18px; padding: 0 26px; background: rgba(var(--cap-bar-rgb, 10,15,34), 0.82); border-bottom: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.12); font-size: 12px; letter-spacing: 0.14em; white-space: nowrap;">
+  <a href="Main.dc.html" aria-label="Capitão IA — início" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+    <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height: 36px; width: 66px; object-fit: contain; flex-shrink: 0;">
+    <b style="font-weight: 800; border-bottom: 2px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.6); padding-bottom: 2px;">CAPITÃO IA</b>
+    <span style="color: var(--cap-ph, #4a5578);">—</span>
+    <b style="font-weight: 700;">{{local}}</b>
+  </a>
+  <span title="{{demoTip}}" style="font-size: 10px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-violeta, #b45cff); border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); border-radius: 6px; padding: 4px 8px;">{{demo}}</span>
+  <span style="flex-grow: 1;"></span>
+  <span title="{{liveTip}}" style="display: flex; align-items: center; gap: 8px; color: var(--cap-ink3, #97a3c0); font-weight: 600;">{{led}}{{liveLabel}}</span>
+  <span style="color: var(--cap-ink3, #97a3c0); font-weight: 600;">REG. {{reg}}</span>
+  <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="13" hint-size="190px,24px"></x-import>
+  <x-import component-from-global-scope="capitao-theme-toggle" from="./capitao-theme.js" size="34" hint-size="34px,34px"></x-import>
+  <a href="G4-Equipe-Web.dc.html" aria-label="Perfil — equipe e acessos" title="Equipe e acessos" style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--cap-accent, #00a1fe); color: var(--cap-accent, #00a1fe); font-size: 11px; font-weight: 800; letter-spacing: 0; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: border-color .3s, box-shadow .3s;" style-hover="border-color: var(--cap-plat, #d3dcef); box-shadow: 0 0 0 4px rgba(var(--cap-plat-rgb, 211,220,239), 0.12);"><x-import component-from-global-scope="capitao-usuario" campo="ini"></x-import></a>
+</header>
+  <main style="position: relative; flex-grow: 1; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 40px 20px;">
+    <sc-if value="{{idle}}" hint-placeholder-val="{{true}}">
+      <div style="position: relative; overflow: hidden; padding: 8px 30px 12px; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+        <div role="img" aria-label="Capitão IA" style="display: flex; align-items: baseline; gap: 0.32em; font-size: 92px;"><span class="cap-wm">CAPITÃO</span><span class="cap-ia">IA</span></div>
+        <span style="font-size: 12px; letter-spacing: 0.34em; font-weight: 700; color: var(--cap-ink3, #97a3c0);">CÉREBRO OPERACIONAL DA EMBARCAÇÃO</span>
+        {{sweep}}
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 4px;">
+        <span style="width: 150px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 100%);"></span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 2l10 10-10 10L2 12z M2 12h20 M12 2v20" stroke-width="1.6" stroke-linejoin="round" style="stroke: var(--cap-plat, #d3dcef);"></path></svg>
+        <span style="width: 150px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0) 100%);"></span>
+      </div>
+      <div style="font-style: italic; font-size: 21px; color: var(--cap-greet, #8d98b8); margin: 12px 0 22px; font-weight: 400; text-align: center;"><x-import component-from-global-scope="capitao-saudacao"></x-import></div>
+      <div style="display: grid; grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)); gap: 14px; width: 1250px;">
+        <sc-for list="{{buttons}}" as="b" hint-placeholder-count="5">
+          <a href="{{b.href}}" title="{{b.tip}}" style="box-sizing: border-box; min-height: 150px; padding: 16px 16px 14px; background: {{b.bg}}; border: 1px solid {{b.line}}; border-radius: 16px; text-decoration: none; color: var(--cap-ink, #eaf1ff); display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 10px 30px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.35 * var(--cap-shadow-k, 1))); transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s;" style-hover="transform: translateY(-4px); border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 22px 44px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.5 * var(--cap-shadow-k, 1))), 0 0 0 1px rgba(var(--cap-plat-rgb, 211,220,239), 0.16);">
+            <span style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+              <span style="width: 56px; height: 56px; flex-shrink: 0; border-radius: 16px; background: linear-gradient(160deg, rgba(var(--cap-hl-rgb, 255,255,255), 0.12) 0%, rgba(var(--cap-hl-rgb, 255,255,255), 0.02) 100%); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center;">
+                {{b.ico}}
+              </span>
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 9.5px; letter-spacing: 0.14em; font-weight: 700; color: {{b.ctone}}; border: 1px solid {{b.cline}}; background: {{b.cwash}}; border-radius: 5px; padding: 4px 8px; white-space: nowrap;"><span style="width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: {{b.ctone}};"></span>{{b.chip}}</span>
+            </span>
+            <span style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 13px; letter-spacing: 0.18em; font-weight: 700; color: {{b.tone}};">{{b.n}}</span>
+              <span style="font-size: 11px; letter-spacing: 0.04em; color: var(--cap-ink4, #7985a6);">{{b.eq}}</span>
+            </span>
+          </a>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{chatting}}" hint-placeholder-val="{{false}}">
+      <div style="width: 1250px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
+        <div role="img" aria-label="Capitão IA" style="display: flex; align-items: baseline; gap: 0.3em; font-size: 24px; padding-right: 8px;"><span class="cap-wm">CAPITÃO</span><span class="cap-ia">IA</span></div>
+        <span style="width: 1px; height: 30px; background: rgba(var(--cap-plat-rgb, 211,220,239), 0.25); margin-right: 4px;"></span>
+        <sc-for list="{{buttons}}" as="b" hint-placeholder-count="5">
+          <a href="{{b.href}}" title="{{b.tip}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid {{b.line}}; background: {{b.bg}}; display: flex; align-items: center; gap: 9px; text-decoration: none; transition: border-color .3s, transform .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55); transform: translateY(-2px);">
+            {{b.icoSm}}
+            <span style="font-size: 10.5px; letter-spacing: 0.16em; font-weight: 700; color: {{b.tone}}; white-space: nowrap;">{{b.n}}</span>
+          </a>
+        </sc-for>
+        <span style="flex-grow: 1;"></span>
+        <button type="button" onClick="{{clearThread}}" aria-label="Nova conversa" title="Nova conversa" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: transparent; color: var(--cap-ink3, #97a3c0); font-size: 11px; letter-spacing: 0.14em; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: border-color .3s, color .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.5); color: var(--cap-ink, #eaf1ff);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 6l12 12 M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg> NOVA</button>
+      </div>
+      <div ref="{{threadRef}}" aria-live="polite" style="width: 1250px; flex-grow: 1; min-height: 0; margin-top: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 2px 4px;">
+        <sc-for list="{{thread}}" as="m" hint-placeholder-count="0">
+          <div style="display: flex; justify-content: {{m.justify}};">
+            <div style="max-width: 860px; box-sizing: border-box; padding: 14px 18px; border-radius: 16px; background: {{m.bg}}; border: 1px solid {{m.line}}; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 10px; letter-spacing: 0.16em; font-weight: 700; color: {{m.ktone}};">{{m.k}}</span>
+              <span style="font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; color: var(--cap-ink, #eaf1ff);">{{m.text}}</span>
+              <sc-if value="{{m.src}}" hint-placeholder-val="{{false}}"><span style="font-size: 11.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">{{m.src}}</span></sc-if>
+              <sc-if value="{{m.hasActions}}" hint-placeholder-val="{{false}}">
+                <span style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 2px;">
+                  <sc-for list="{{m.actions}}" as="x" hint-placeholder-count="1">
+                    <a href="{{x.href}}" target="{{x.target}}" rel="{{x.rel}}" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.12em; font-weight: 700; display: flex; align-items: center; text-decoration: none; transition: border-color .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.6);">{{x.l}} ›</a>
+                  </sc-for>
+                </span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+        <sc-if value="{{thinking}}" hint-placeholder-val="{{false}}">
+          <div style="display: flex;"><div style="padding: 12px 18px; border-radius: 16px; background: rgba(var(--cap-card-rgb, 13,19,41), 0.9); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.08); font-size: 11px; letter-spacing: 0.12em; font-weight: 700; color: var(--cap-ink4, #7985a6); display: flex; align-items: center; gap: 10px;">{{orbit}}CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS · GUIAS…</div></div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <div style="width: 980px; margin-top: {{inputGap}}; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px;">
+      <sc-if value="{{attachment}}" hint-placeholder-val="{{false}}">
+        <div style="display: flex; justify-content: center;">
+          <span style="display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 14px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.12em; font-weight: 700;">{{attachLabel}}<button type="button" onClick="{{dropAttachment}}" aria-label="Remover anexo" style="width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent; color: var(--cap-accent, #00a1fe); font-size: 16px; cursor: pointer;">✕</button></span>
+        </div>
+      </sc-if>
+      <div style="display: flex; align-items: center; gap: 6px; background: linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%); border: 1px solid {{barLine}}; box-shadow: {{barShadow}}; border-radius: 16px; padding: 8px 8px 8px 22px; transition: border-color .35s, box-shadow .35s;">
+        <label for="pergunta" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Pergunta</label>
+        <input id="pergunta" maxlength="500" ref="{{inputRef}}" onKeyDown="{{onKey}}" onFocus="{{onFocus}}" onBlur="{{onBlur}}" placeholder="Pergunte qualquer coisa sobre a embarcação…" autocomplete="off" style="flex-grow: 1; background: none; border: none; outline: none; color: var(--cap-ink, #eaf1ff); font-size: 16.5px; font-family: inherit; min-width: 0; padding: 12px 0;">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="4">
+          <button type="button" onClick="{{m.onClick}}" aria-label="{{m.aria}}" title="{{m.aria}}" style="width: 64px; height: 52px; border-radius: 12px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tone}}; animation: {{m.anim}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0; flex-shrink: 0; transition: border-color .3s, color .3s, transform .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.5); color: var(--cap-ink, #eaf1ff); transform: translateY(-2px);">
+            {{m.ico}}
+            <span style="font-size: 8px; letter-spacing: 0.10em; font-weight: 700;">{{m.l}}</span>
+          </button>
+        </sc-for>
+        <button type="button" onClick="{{send}}" aria-label="Enviar" title="Enviar" style="color: var(--cap-on-accent, #050816); background: linear-gradient(180deg, var(--cap-accent-hi, #4dbcff) 0%, var(--cap-accent, #00a1fe) 100%); border: none; width: 64px; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); transition: transform .3s, box-shadow .3s;" style-hover="transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 10px 24px rgba(var(--cap-accent-rgb, 0,161,254), 0.35);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 12h14 M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <input type="file" accept="image/*" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
+        <input type="file" accept="video/*" ref="{{videoRef}}" onChange="{{onVideo}}" aria-hidden="true" tabindex="-1" style="display: none;">
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
+          <button type="button" onClick="{{c.onClick}}" title="{{c.q}}" style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: rgba(var(--cap-card-rgb, 13,19,41), 0.9); border-radius: 12px; padding: 0 20px; height: 44px; display: flex; align-items: center; cursor: pointer; transition: border-color .3s, color .3s, transform .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.5); color: var(--cap-ink, #eaf1ff); transform: translateY(-2px);">{{c.l}}</button>
+        </sc-for>
+        <a href="H3-Atalhos-Editar-Web.dc.html" aria-label="Editar atalhos" title="Editar atalhos" style="width: 44px; height: 44px; color: var(--cap-accent, #00a1fe); border: 1px dashed var(--cap-dash, #34406a); background: transparent; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: border-color .3s;" style-hover="border-color: var(--cap-plat, #d3dcef);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20h4l10-10-4-4L4 16z M14 6l4 4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></a>
+      </div>
+      <span role="status" style="text-align: center; font-size: 11px; letter-spacing: 0.10em; color: {{statusTone}}; min-height: 14px;">{{status}}</span>
+    </div>
+  </main>
+<footer style="position: relative; height: 44px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 18px; padding: 0 26px; border-top: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.10); background: rgba(var(--cap-bar-rgb, 10,15,34), 0.6); font-size: 11px; letter-spacing: 0.14em; color: var(--cap-ink4, #7985a6); white-space: nowrap;">
+  <sc-for list="{{faixa}}" as="f" hint-placeholder-count="6"><span>{{f.k}} <b style="color: var(--cap-ink3, #97a3c0);">{{f.v}}</b></span></sc-for>
+  <span>{{faixaEstado}}</span>
+  <span style="flex-grow: 1;"></span>
+  <a href="A1-Ponte-Web.dc.html" style="color: var(--cap-ink3, #97a3c0); font-weight: 700; display: flex; align-items: center; gap: 8px; text-decoration: none; min-height: 44px; letter-spacing: 0.16em; transition: color .3s;" style-hover="color: var(--cap-ink, #eaf1ff);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg> CONSOLE ›</a>
+</footer>
+<a href="S1-SOS-Web.dc.html" aria-label="SOS — emergência" style="position: absolute; right: 26px; bottom: 62px; width: 78px; height: 78px; border-radius: 50%; background: var(--cap-crit-fill, #d32f27); color: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 0 0 4px rgba(var(--cap-crit-rgb, 255,59,48), 0.30), 0 0 0 10px rgba(var(--cap-crit-rgb, 255,59,48), 0.10), 0 12px 32px rgba(var(--cap-critfill-rgb, 211,47,39), 0.45); z-index: 30; transition: transform .3s;" style-hover="transform: scale(1.05);"><span style="font-size: 18px; font-weight: 800; letter-spacing: 0.10em; line-height: 1;">SOS</span></a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = { atalhos: null, thread: [], thinking: false, listening: false, conversa: false, attachment: null, note: '', focus: false, vivo: 0 };
+  inputRef = React.createRef(); fotoRef = React.createRef(); videoRef = React.createRef(); threadRef = React.createRef(); spotRef = React.createRef();
+  FALLBACK = [
+    { id: 'diario', l: 'DIÁRIO DE BORDO', q: 'Registre no diário o resumo da navegação de agora e confirme.' },
+    { id: 'seguro', l: 'SEGURO PARA SAIR?', q: 'Avalie vento, mar, motores e pendências — sim ou não, e por quê.' },
+    { id: 'destinos', l: 'PARA ONDE VAMOS HOJE?', q: 'Destinos saindo daqui, com distância, tempo e diesel.' },
+    { id: 'manutencao', l: 'PRÓXIMAS MANUTENÇÕES', q: 'O que vence primeiro, o que está atrasado, o que falta registrar.' },
+    { id: 'autonomia', l: 'AUTONOMIA', q: 'Autonomia com reserva de 10% pelo diesel a bordo.' },
+    { id: 'mare', l: 'MARÉ AGORA', q: 'Maré agora e nas próximas 6 h na posição de referência.' }
+  ];
+  componentDidMount() {
+    this._onHash = () => this.handleHash();
+    window.addEventListener('hashchange', this._onHash);
+    // ENCERRAR no overlay de voz (capitao-voz.js): desliga a conversa ou o voz→texto em andamento.
+    this._onEncerra = () => { if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
+    window.addEventListener('capitao-voz-encerrar', this._onEncerra);
+    this._onTele = () => this.setState({ vivo: Date.now() });
+    window.addEventListener('capitao-telemetria', this._onTele);
+    this.whenBrain(() => { this.setState({ atalhos: window.CapitaoBrain.loadShortcuts() }); this.handleHash(); });
+  }
+  handleHash() {
+    const B = window.CapitaoBrain; if (!B) return;
+    const h = B.parseHash();
+    // Microfone só liga sozinho vindo de link interno: a tela de origem grava 'capitao.modo' = modo logo antes de navegar (uso único). Link de fora só realça o botão.
+    let armado = null;
+    try { armado = sessionStorage.getItem('capitao.modo'); sessionStorage.removeItem('capitao.modo'); } catch (e) {}
+    if (!h.q && !h.mode) return;
+    B.clearHash();
+    if (h.q) this.ask(h.q, null, true);
+    if ((h.mode === 'voz' || h.mode === 'conversa') && armado !== h.mode) this.flash(h.mode === 'voz' ? 'Toque em VOZ para falar a pergunta — o microfone só liga com o seu toque.' : 'Toque em CONVERSA para começar — o microfone só liga com o seu toque.', 8000, h.mode);
+    else if (h.mode === 'voz') { if (!this.rec) this.toggleVoice(); }
+    else if (h.mode === 'conversa') { if (!this.state.conversa) this.toggleConversa(); }
+    else if (h.mode === 'foto' || h.mode === 'video') this.flash(h.mode === 'foto' ? 'Toque em FOTO para escolher a imagem — etiqueta, tela de alarme, nota ou página de manual.' : 'Toque em VÍDEO para escolher o clipe de 10 s.', 0, h.mode);
+    else if (h.mode === 'texto' && this.inputRef.current) this.inputRef.current.focus();
+  }
+  componentWillUnmount() {
+    this._dead = true;
+    window.removeEventListener('hashchange', this._onHash);
+    window.removeEventListener('capitao-voz-encerrar', this._onEncerra);
+    window.removeEventListener('capitao-telemetria', this._onTele);
+    this.stopRec();
+    (this._pend || []).forEach(clearTimeout); clearTimeout(this._fl);
+    if (this._raf) cancelAnimationFrame(this._raf);
+    this._fala = null; if (window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
+  }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  // Ícone SVG como elemento React: {{…}} num atributo d do modelo cru gera erro de parse no console antes do runtime desenhar.
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  fx() {
+    if (this._fx) return this._fx;
+    const h = React.createElement;
+    this._fx = {
+      sweep: h('div', { key: 'sweep', 'aria-hidden': 'true', style: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '16%', background: 'linear-gradient(90deg, rgba(var(--cap-hl-rgb, 255,255,255), 0) 0%, rgba(var(--cap-hl-rgb, 255,255,255), 0.5) 50%, rgba(var(--cap-hl-rgb, 255,255,255), 0) 100%)', mixBlendMode: 'overlay', animation: 'capSweep 6.5s cubic-bezier(.3,.1,.2,1) infinite', pointerEvents: 'none' } }),
+      ledVivo: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 8, height: 8, flexShrink: 0, borderRadius: '50%', background: 'var(--cap-tele, #00f4fd)', animation: 'capVivo 2s ease-in-out infinite', display: 'inline-block' } }),
+      ledSnap: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 8, height: 8, flexShrink: 0, borderRadius: '50%', border: '1.5px solid var(--cap-ink3, #97a3c0)', boxSizing: 'border-box', display: 'inline-block' } }),
+      orbit: h('span', { key: 'orbit', 'aria-hidden': 'true', style: { width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.18)', borderTopColor: 'var(--cap-tele, #00f4fd)', animation: 'capOrbit 1s linear infinite', display: 'inline-block' } }),
+      spot: h('div', { key: 'spot', ref: this.spotRef, 'aria-hidden': 'true', style: { position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0, transition: 'opacity .5s', background: 'radial-gradient(560px circle at 50% 30%, rgba(var(--cap-plat-rgb, 211,220,239), 0.08), rgba(var(--cap-accent-rgb, 0,161,254), 0.05) 35%, rgba(var(--cap-bg-rgb, 5,8,22), 0) 65%)' } })
+    };
+    return this._fx;
+  }
+  onMove(e) {
+    const el = this.spotRef.current; if (!el) return;
+    const r = e.currentTarget.getBoundingClientRect(); const k = 1440 / (r.width || 1440);
+    const x = Math.round((e.clientX - r.left) * k), y = Math.round((e.clientY - r.top) * k);
+    if (this._raf) return; this._raf = requestAnimationFrame(() => { this._raf = 0; el.style.background = 'radial-gradient(560px circle at ' + x + 'px ' + y + 'px, rgba(var(--cap-plat-rgb, 211,220,239), 0.085), rgba(var(--cap-accent-rgb, 0,161,254), 0.055) 35%, rgba(var(--cap-bg-rgb, 5,8,22), 0) 65%)'; el.style.opacity = '1'; });
+  }
+  onLeave() { const el = this.spotRef.current; if (el) el.style.opacity = '0'; }
+  flash(msg, ms, realce) { this.setState({ note: msg, realce: realce || '' }); clearTimeout(this._fl); this._fl = setTimeout(() => this.setState({ note: '', realce: '' }), ms || 4000); }
+  scrollThread() { const el = this.threadRef.current; if (el) el.scrollTop = el.scrollHeight; }
+  // link = pergunta vinda do endereço (#q=): só leitura — não grava no diário, não leva o anexo nem apaga o que foi digitado.
+  ask(q, id, link) {
+    const B = window.CapitaoBrain; if (!B) return;
+    q = String(q || '').trim().slice(0, 500);
+    const att = link ? null : this.state.attachment;
+    if (!q && !att) { this.flash('Digite ou fale a pergunta — ou toque em um atalho.'); return; }
+    if (!link && this.inputRef.current) this.inputRef.current.value = '';
+    const userText = (att ? '[' + (att.kind === 'video' ? 'vídeo' : 'foto') + ' · ' + att.name + '] ' : '') + q;
+    this.setState((s) => ({ thread: s.thread.concat([{ role: 'user', text: userText }]), pending: (s.pending || 0) + 1, thinking: true, attachment: link ? s.attachment : null, note: '' }), () => this.scrollThread());
+    const t = setTimeout(() => {
+      this._pend = (this._pend || []).filter((x) => x !== t);
+      if (this._dead) return;
+      let a;
+      try {
+        if (att) {
+          a = B.answerAttachment(att.kind, att.file, { platform: 'web' });
+          if (q) { const b = B.answer(q, { platform: 'web' }); if (b.key !== 'fallback' && b.key !== 'saudacao') a = { key: b.key, text: a.text + '\n\n' + b.text, src: b.src, actions: b.actions }; }
+        } else a = B.answer(q, link ? { platform: 'web', id: id, commit: false } : { platform: 'web', id: id });
+      } catch (e) { a = { text: 'Não consegui responder agora — SEM DADOS. Tente de novo.', src: 'Fonte: nenhuma — erro ao montar a resposta', actions: [] }; }
+      this.setState((s) => { const n = Math.max(0, (s.pending || 1) - 1); return { thread: s.thread.concat([{ role: 'bot', text: a.text, src: a.src, actions: a.actions }]), pending: n, thinking: n > 0 }; }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume(B.falaCurta ? B.falaCurta(a) : a.text); });
+    }, 650);
+    this._pend = (this._pend || []).concat([t]);
+  }
+  clearThread() {
+    this.stopRec(); this._fala = null; if (window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
+    (this._pend || []).forEach(clearTimeout); this._pend = [];
+    this.setState({ thread: [], thinking: false, pending: 0, conversa: false, listening: false });
+  }
+  // Só a fala mais recente reabre o microfone, e só sem outra resposta a caminho — senão ele ouve a voz do próprio app.
+  speakAndResume(text) {
+    const B = window.CapitaoBrain; if (!B) return;
+    this.stopRec(); this.setState({ listening: false });
+    const k = this._fala = {};
+    B.speak(text, () => { if (this._fala !== k) return; this._fala = null; if (!this._dead && this.state.conversa && !this.rec && !this.state.pending) this.startVoice(true); });
+  }
+  pick(kind) { const r = kind === 'video' ? this.videoRef.current : this.fotoRef.current; if (r) r.click(); }
+  onFile(kind, e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    this.setState({ attachment: { kind: kind, name: f.name, file: f }, note: '' });
+    e.target.value = '';
+    setTimeout(() => { if (this.inputRef.current) this.inputRef.current.focus(); }, 50);
+  }
+  // Ditado contínuo (capitao-brain ditado): só envia depois de uma pausa real, ou ao tocar de novo — não corta no meio da frase.
+  startVoice(continuous) {
+    const B = window.CapitaoBrain;
+    const d = B && B.ditado && B.ditado({
+      pausa: continuous ? 2500 : 3000, espera: continuous ? 12000 : 8000,
+      parcial: (t) => { if (this.rec === d && this.inputRef.current) this.inputRef.current.value = t; },
+      fim: (t) => {
+        if (this.rec !== d) return; this.rec = null; this.setState({ listening: false });
+        if (t) { if (this.inputRef.current) this.inputRef.current.value = ''; this.ask(t); }
+        else if (this.state.conversa) this.startVoice(true); // silêncio na conversa: continua escutando
+        else this.flash('Não ouvi nada — toque em VOZ e fale de novo.');
+      },
+      erro: (e) => {
+        if (this.rec !== d) return; this.rec = null;
+        this.setState({ listening: false, conversa: false });
+        this.flash(e === 'no-speech' ? 'Não ouvi nada — toque em VOZ e fale de novo.' : 'Permissão de microfone negada — digite a pergunta.');
+      }
+    });
+    if (!d) { this.flash('Microfone indisponível neste navegador — digite a pergunta.'); return false; }
+    this.rec = d; this.setState({ listening: true, note: '' }); return true;
+  }
+  stopRec() { if (this.rec) { const d = this.rec; this.rec = null; try { d.cancelar(); } catch (e) {} } }
+  toggleVoice() {
+    if (this.state.conversa) { this.toggleConversa(); return; }
+    if (this.rec) { this.rec.parar(); return; } // tocar de novo = terminei de falar: envia o que ouviu
+    this.startVoice(false);
+  }
+  toggleConversa() {
+    const B = window.CapitaoBrain;
+    if (this.state.conversa) { this.stopRec(); this._fala = null; if (B) B.stopSpeaking(); this.setState({ conversa: false, listening: false }); return; }
+    if (this.rec) { this.stopRec(); this.setState({ listening: false }); }
+    if (!B || !(window.SpeechRecognition || window.webkitSpeechRecognition)) { this.flash('Microfone indisponível neste navegador — digite a pergunta.'); return; }
+    this.setState({ conversa: true }, () => this.speakAndResume(B.abertura ? B.abertura() : 'Capitão IA online. Que precisa?'));
+  }
+  // Leituras da faixa: telemetria ao vivo (se ligada, < 10 min) ou o snapshot do capitao-dados.js — sempre com a hora.
+  leitura() {
+    const D = window.CapitaoDados || {}, S = D.snapshot || {}, T = window.CapitaoTelemetria, v = T && T.atual ? T.atual() : null;
+    const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    const g3 = (x) => (typeof x === 'number' ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : '—');
+    const di = S.diesel || {}, dm = typeof di.bb === 'number' ? Math.round((di.bb + di.be) / 2) + '% · ' + (di.hora || '') : 'SEM DADOS';
+    if (v) return { vivo: true, hora: T.hora(v), faixa: [{ k: 'SOG', v: nb(v.sog_nos) + ' NÓ' }, { k: 'PROA', v: g3(v.proa_graus) }, { k: 'VENTO', v: nb(v.vento_verdadeiro_nos) + ' NÓS' }, { k: '24 V', v: nb(v.bateria_0_tensao_v, 2) + ' V' }, { k: 'ÁGUA DOCE', v: Math.round(v.tanque_agua_pct) + '%' }, { k: 'DIESEL', v: dm }] };
+    const tq = S.tanques || {};
+    return { vivo: false, hora: S.hora || '—', faixa: [{ k: 'SOG', v: nb(S.sog) + ' NÓ' }, { k: 'PROA', v: g3(S.proa) }, { k: 'VENTO', v: nb(S.vento) + ' NÓS' }, { k: '24 V', v: nb(S.bat24, 2) + ' V' }, { k: 'ÁGUA DOCE', v: typeof tq.agua === 'number' ? Math.round(tq.agua) + '%' : '—' }, { k: 'DIESEL', v: dm }] };
+  }
+  botoes() {
+    const D = window.CapitaoDados || {}, ag = D.agenda || [], G = (D.snapshot && D.snapshot.gerador) || {}, faq = D.faq || {};
+    const atr = ag.filter((t) => t.dn < 0).length;
+    const tarefa = (id) => ag.filter((t) => t.id === id)[0];
+    const rotor = tarefa('gerador-rotor'), filtro = tarefa('clima-filtro');
+    const h = (x) => (typeof x === 'number' ? x.toFixed(1).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/, '.') + ' h' : 'SEM LEITURA');
+    const CARD = 'linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%)';
+    const tone = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)'] };
+    const chip = (t) => ({ ctone: tone[t][0], cline: tone[t][1], cwash: tone[t][2] });
+    const base = { bg: CARD, line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.09)' };
+    const faqChip = (k) => (faq[k] && faq[k].status === 'PRONTO' ? Object.assign({ chip: 'PRONTO · DEMO' }, chip('ok')) : Object.assign({ chip: (faq[k] && faq[k].status) || 'SEM DADOS' }, chip('warn')));
+    return [
+      Object.assign({ n: '1 · CONSOLE', eq: 'Telemetria · manutenção · documentos · diário', tip: 'Console completo — telemetria, manutenção, documentos, abastecimento e diário de bordo', chip: atr ? atr + ' ATRASADAS' : 'EM DIA', href: 'A1-Ponte-Web.dc.html', d: 'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5', tone: 'var(--cap-accent, #00a1fe)', bg: 'linear-gradient(180deg, rgba(var(--cap-accent-rgb, 0,161,254), 0.16) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0.06) 100%)', line: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' }, chip(atr ? 'crit' : 'ok')),
+      Object.assign({ n: '2 · GERADOR', eq: 'Onan · modelo SEM DADOS · ' + h(G.horas), tip: 'Gerador — ligar e desligar, alarmes e horas de uso', href: 'F4-FAQ-Gerador-Web.dc.html', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tone: 'var(--cap-warn, #f0a63a)' }, base, rotor && rotor.dn < 0 ? Object.assign({ chip: 'ROTOR · ' + (-rotor.dn) + ' D' }, chip('crit')) : faqChip('gerador')),
+      Object.assign({ n: '3 · CLIMATIZAÇÃO', eq: 'Fabricante e modelo SEM DADOS', tip: 'Climatização — ligar e desligar, alarme de fluxo e filtros', href: 'F5-FAQ-Climatizacao-Web.dc.html', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tone: 'var(--cap-tele, #00f4fd)' }, base, filtro && filtro.dn < 0 ? Object.assign({ chip: 'FILTRO · ' + (-filtro.dn) + ' D' }, chip('crit')) : faqChip('climatizacao')),
+      Object.assign({ n: '4 · ESTABILIZADOR', eq: 'Seakeeper · modelo SEM DADOS', tip: 'Estabilizador — ligar antes de sair, desligar ao atracar e alarmes', href: 'F2-FAQ-Estabilizador-Web.dc.html', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tone: 'var(--cap-ok, #34c77a)' }, base, faqChip('estabilizador')),
+      Object.assign({ n: '5 · ELETRÔNICOS', eq: 'Garmin · Fusion · VHF 315', tip: 'Eletrônicos — plotter, piloto automático, VHF e áudio', href: 'F3-FAQ-Eletronicos-Web.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)' }, base, faq.eletronicos ? Object.assign({ chip: faq.eletronicos.perguntas.length + ' FAQ · DEMO' }, chip('ok')) : faqChip('eletronicos'))
+    ];
+  }
+  renderVals() {
+    const s = this.state; const fx = this.fx();
+    const D = window.CapitaoDados || {}, S = D.snapshot || {}, E = D.embarcacao || {};
+    const atalhos = s.atalhos || this.FALLBACK;
+    const chatting = s.thread.length > 0 || s.thinking;
+    const att = s.attachment;
+    const L = this.leitura();
+    const modeBase = { tone: 'var(--cap-ink2, #b1bdd6)', bg: 'var(--cap-elev, #131a33)', line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)' };
+    const on = { tone: 'var(--cap-accent, #00a1fe)', bg: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)', line: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' };
+    const hot = { tone: 'var(--cap-crit, #ff3b30)', bg: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)', line: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' };
+    const CARD = 'linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%)';
+    const re = s.note ? s.realce : ''; // botão indicado pela dica do link (#mode=)
+    const pulso = (m) => (re === m ? 'capPulse 1.6s ease-in-out infinite' : 'none');
+    return {
+      sweep: fx.sweep, led: L.vivo ? fx.ledVivo : fx.ledSnap, orbit: fx.orbit, spot: fx.spot,
+      local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(),
+      demo: D.demo ? 'DEMO' : '', demoTip: D.aviso || '',
+      liveLabel: L.vivo ? 'AO VIVO · ' + L.hora : 'SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' · ' + (S.quando || 'SEM DADOS').slice(0, 5) + ' ' + (S.hora || ''),
+      liveTip: L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor' + (D.demo ? ' (demonstração, dados fictícios)' : '') + ' de ' + (S.quando || 'SEM DADOS'),
+      reg: E.registro || 'SEM DADOS',
+      faixa: L.faixa, faixaEstado: ((S.estado || 'SEM DADOS') + ' · ' + (S.local || '')).toUpperCase().replace('ENSEADA DE ', '') + ' · ' + L.hora + (L.vivo ? '' : (D.demo ? ' · DEMO' : '')),
+      onMove: (e) => this.onMove(e), onLeave: () => this.onLeave(),
+      idle: !chatting, chatting: chatting, thinking: s.thinking,
+      inputGap: chatting ? '14px' : '24px',
+      barLine: s.focus || s.listening || s.conversa ? 'rgba(var(--cap-plat-rgb, 211,220,239), 0.55)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.10)',
+      barShadow: s.focus || s.listening || s.conversa ? 'inset 0 1px 0 rgba(255,255,255,0.10), 0 0 0 4px rgba(var(--cap-plat-rgb, 211,220,239), 0.08), 0 14px 40px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.45 * var(--cap-shadow-k, 1)))' : 'inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.35 * var(--cap-shadow-k, 1)))',
+      onFocus: () => this.setState({ focus: true }), onBlur: () => this.setState({ focus: false }),
+      attachment: !!att,
+      attachLabel: att ? (att.kind === 'video' ? 'VÍDEO · ' : 'FOTO · ') + att.name : '',
+      dropAttachment: () => this.setState({ attachment: null }),
+      clearThread: () => this.clearThread(),
+      inputRef: this.inputRef, fotoRef: this.fotoRef, videoRef: this.videoRef, threadRef: this.threadRef,
+      onKey: (e) => { if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) this.ask(e.target.value); },
+      send: () => this.ask(this.inputRef.current ? this.inputRef.current.value : ''),
+      onFoto: (e) => this.onFile('foto', e), onVideo: (e) => this.onFile('video', e),
+      status: s.conversa ? 'CONVERSA ATIVA · OUVINDO · RESPONDO EM VOZ · TOQUE EM CONVERSA PARA ENCERRAR' : s.listening ? 'OUVINDO… FALE A PERGUNTA · TOQUE DE NOVO PARA ENVIAR' : s.note ? s.note.toUpperCase() : att ? 'ANEXO PRONTO · DESCREVA EM UMA FRASE E ENVIE' : 'ATALHOS · UM TOQUE ENVIA · EDITÁVEIS',
+      statusTone: s.conversa || s.listening ? 'var(--cap-accent, #00a1fe)' : s.note ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink4, #7985a6)',
+      thread: s.thread.map((m) => ({ text: m.text, src: m.src || '', actions: (m.actions || []).map((x) => ({ l: x.l, href: x.href, target: x.ext ? '_blank' : '_self', rel: x.ext ? 'noopener' : '' })), hasActions: !!(m.actions && m.actions.length), justify: m.role === 'user' ? 'flex-end' : 'flex-start', bg: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.10)' : CARD, line: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.10)', k: m.role === 'user' ? (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas').toUpperCase() : 'CAPITÃO IA', ktone: m.role === 'user' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)' })),
+      chips: atalhos.map((a) => ({ l: a.l, q: a.q, onClick: () => this.ask(a.q, a.id) })),
+      buttons: this.botoes().map((b) => Object.assign(b, { ico: this.ico(b.d, 28, 1.7, b.tone), icoSm: this.ico(b.d, 18, 1.8, b.tone) })),
+      modes: [
+        Object.assign({ l: att && att.kind === 'foto' ? 'FOTO ✓' : 'FOTO', aria: 'Enviar foto — etiqueta, alarme na tela, nota fiscal ou página de manual', d: 'M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z', onClick: () => this.pick('foto'), anim: pulso('foto') }, (att && att.kind === 'foto') || re === 'foto' ? on : modeBase),
+        Object.assign({ l: att && att.kind === 'video' ? 'VÍDEO ✓' : 'VÍDEO', aria: 'Enviar vídeo de 10 s — som ou comportamento anormal', d: 'M3 7h11v10H3z M14 11l6-3.5v9L14 13z', onClick: () => this.pick('video'), anim: pulso('video') }, (att && att.kind === 'video') || re === 'video' ? on : modeBase),
+        Object.assign({ l: s.listening && !s.conversa ? 'OUVINDO' : 'VOZ', aria: 'Falar — a pergunta é transcrita e respondida em texto e voz', d: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3', onClick: () => this.toggleVoice(), anim: pulso('voz') }, s.listening && !s.conversa ? hot : re === 'voz' ? on : modeBase),
+        Object.assign({ l: s.conversa ? 'ATIVA' : 'CONVERSA', aria: 'Conversa contínua por voz — sem tocar na tela', d: 'M3 12h2 M7 8v8 M11 5v14 M15 8v8 M19 11v2', onClick: () => this.toggleConversa(), anim: s.conversa ? 'none' : pulso('conversa') }, s.conversa ? { tone: 'var(--cap-bg, #050816)', bg: 'var(--cap-tele, #00f4fd)', line: 'var(--cap-tele, #00f4fd)' } : re === 'conversa' ? on : { tone: 'var(--cap-tele, #00f4fd)', bg: 'rgba(var(--cap-tele-rgb, 0,244,253), 0.10)', line: 'rgba(var(--cap-tele-rgb, 0,244,253), 0.45)' })
+      ].map((m) => Object.assign(m, { ico: this.ico(m.d, 22, 1.8) }))
+    };
+  }
+}
+</script>
+</body>
+</html>

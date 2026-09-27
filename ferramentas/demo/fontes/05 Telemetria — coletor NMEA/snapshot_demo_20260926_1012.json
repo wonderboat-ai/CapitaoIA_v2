@@ -1,0 +1,47 @@
+{
+ "_aviso": "DEMO · DADOS FICTÍCIOS — leitura fictícia do coletor NMEA, só para demonstração.",
+ "timestamp_utc": "2026-09-26T13:12:00Z",
+ "lat": -26.993,
+ "lon": -48.614,
+ "sog_nos": 0.1,
+ "proa_graus": 71,
+ "gps_satelites": 26,
+ "profundidade_m": 7.4,
+ "vento_verdadeiro_nos": 9.2,
+ "vento_verdadeiro_angulo": 58,
+ "pressao_barometrica_hpa": 1017,
+ "temp_ar_externo_c": 22.6,
+ "temp_agua_c": 20.1,
+ "tanque_agua_pct": 68.5,
+ "tanque_cinzas_pct": 21.0,
+ "tanque_negras_pct": 34.5,
+ "bateria_0_tensao_v": 27.42,
+ "bateria_2_tensao_v": 13.18,
+ "seakeeper_ativo": true,
+ "seakeeper_volante_rpm": null,
+ "seakeeper_volante_pct": null,
+ "motores_ultima_leitura_ligados": {
+  "hora_local": "2026-09-26T09:31:00-03:00",
+  "rpm": [
+   700,
+   690
+  ],
+  "oleo_bar": [
+   3.4,
+   3.3
+  ],
+  "arrefecimento_c": [
+   79,
+   78
+  ],
+  "horimetro_h": [
+   412.6,
+   409.8
+  ],
+  "diesel_pct": [
+   54.0,
+   52.0
+  ]
+ },
+ "gerador_horimetro_h": 1236.4
+}

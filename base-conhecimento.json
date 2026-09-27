@@ -1,0 +1,328 @@
+{
+ "versao": "2026-09-26",
+ "aviso": "DEMO · DADOS FICTÍCIOS — trechos dos guias de bordo de demonstração (Drive › Capitão IA v2). Orientação genérica: não substitui o manual do fabricante (modelos SEM DADOS). Sem documentos pessoais, fiscais ou contratuais.",
+ "trechos": [
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "1 · Antes de ligar",
+   "texto": "Com o gerador parado, confira o nível de óleo e o líquido de arrefecimento. Abra a válvula de fundo da entrada de água salgada e confira se o filtro de água salgada está limpo. Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "2 · Ligar",
+   "texto": "No painel do gerador, pressione e segure PARTIDA até o motor pegar. Aguarde a tensão e a frequência estabilizarem no painel. Só depois transfira as cargas no quadro elétrico, uma de cada vez; ligue a climatização por último.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "3 · Água no escapamento",
+   "texto": "Com o gerador ligado, confira a saída de água pelo escapamento. Sem água saindo, desligue na hora: é sinal de falta de refrigeração (válvula de fundo fechada, filtro entupido ou rotor danificado).",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "4 · Desligar",
+   "texto": "Retire as cargas no quadro elétrico. Deixe o gerador funcionar de 3 a 5 minutos sem carga para esfriar e pressione PARADA. Feche a válvula de fundo se o barco for ficar parado por vários dias.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "5 · Alarme de alta temperatura",
+   "texto": "Desligue o gerador. Verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller). Nunca abra a tampa do arrefecimento com o motor quente. Registre o alarme no diário.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "6 · Alarme de baixa pressão de óleo",
+   "texto": "Desligue o gerador e confira o nível de óleo com ele parado. Se o nível estiver correto e o alarme voltar, não religue: chame o técnico de bordo.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "7 · Manutenção na agenda",
+   "texto": "Óleo e filtros: 12 meses ou 1.300 h (o que vier antes). Rotor (impeller): inspeção a cada 12 meses. Os intervalos oficiais estão no manual do fabricante — modelo SEM DADOS: confirmar.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "pag": null,
+   "secao": "8 · Horímetro",
+   "texto": "O horímetro aparece no painel do gerador e na telemetria. No snapshot de demonstração de 26/09/2026 10:12: 1.236,4 h, gerador ligado desde 09:35.",
+   "equip": "Gerador Onan (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "1 · Energia",
+   "texto": "O estabilizador precisa de energia AC para acelerar o volante: gerador ligado ou tomada do cais. Sem AC, o display avisa e o volante não acelera.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "2 · Ligar antes de sair",
+   "texto": "Ligue pelo display com antecedência: a estabilização só começa quando o volante chega à rotação de operação e o display indica pronto. O tempo de aceleração depende do modelo — SEM DADOS neste guia.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "3 · Estabilizar",
+   "texto": "O botão de estabilização liga e desliga o efeito sem parar o volante. Em manobra de marina, deixe a estabilização desligada se o display recomendar.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "4 · Desligar ao atracar",
+   "texto": "Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha a energia até o display indicar que parou.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "5 · Segurança",
+   "texto": "Nunca abra tampas nem faça manutenção com o volante girando. Confira no display que a rotação está em zero antes de qualquer serviço.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "6 · Alarmes",
+   "texto": "Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — SEM DADOS (manual não carregado na demonstração).",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "pag": null,
+   "secao": "7 · Manutenção na agenda",
+   "texto": "Anodo do trocador de calor: a cada 6 meses (agenda de demonstração). Outros itens: manual do fabricante, modelo SEM DADOS.",
+   "equip": "Estabilizador Seakeeper (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "1 · Ligar",
+   "texto": "Confira a válvula de fundo aberta e o filtro de água salgada limpo. Com energia AC (gerador ou cais), ligue a bomba de água salgada no painel e depois o controle da cabine.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "2 · Modos e temperatura",
+   "texto": "No controle de cada cabine escolha frio, calor ou ventilação e ajuste a temperatura desejada. Com o gerador, ligue as cabines uma de cada vez.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "3 · Alarme de fluxo",
+   "texto": "Alarme de fluxo ou de alta pressão quase sempre é falta de água salgada: filtro sujo, válvula de fundo fechada ou bomba desligada. Desligue a unidade, limpe o filtro e religue.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "4 · Fluxo de ar fraco",
+   "texto": "Fluxo de ar fraco na cabine: limpe o filtro de ar da unidade daquela cabine. Se continuar, registre no diário e chame a marina.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "5 · Desligar",
+   "texto": "Desligue pelo controle das cabines e depois a bomba de água salgada. Ao deixar o barco, feche a válvula de fundo se a climatização não for usada.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "pag": null,
+   "secao": "6 · Manutenção na agenda",
+   "texto": "Filtro de água salgada: limpeza mensal. Revisão anual pela marina. Fabricante e modelo SEM DADOS — confirmar intervalos no manual.",
+   "equip": "Climatização (fabricante e modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "1 · Plotter Garmin: homem ao mar",
+   "texto": "Ao ver alguém cair na água, acione a função MOB do plotter Garmin: a posição fica marcada e o plotter mostra o rumo de volta. Veja também o protocolo de emergência.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "2 · Piloto automático",
+   "texto": "Deixe o piloto automático em espera (standby) antes de manobrar na marina e sempre que houver gente na água. Engate só em área livre, com a rota conferida no plotter.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "3 · Alarme de âncora",
+   "texto": "Ao fundear, ative o alarme de âncora no plotter e defina o raio conforme o cabo lançado e o espaço de giro. O barco não tem sensor de âncora: a posição do ferro fica SEM LEITURA.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "4 · Rádio VHF 315: escuta",
+   "texto": "Mantenha o canal 16 em escuta permanente. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "5 · Rádio VHF 315: DSC",
+   "texto": "O botão de socorro DSC (DISTRESS) só envia a identificação se o MMSI estiver programado no rádio. Na demonstração o MMSI 710123456 é fictício; no barco real, programe o MMSI do registro.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "6 · Áudio Fusion: Bluetooth",
+   "texto": "Para parear o celular: escolha a fonte Bluetooth no controle Fusion, deixe o aparelho visível e selecione o Fusion na lista de Bluetooth do celular. O volume é ajustado por zona.",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "pag": null,
+   "secao": "7 · Atualizações",
+   "texto": "Cartas e software dos eletrônicos Garmin: atualização anual (agenda de demonstração, dezembro).",
+   "equip": "Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "1 · Antes da partida",
+   "texto": "Com os motores parados e frios: nível de óleo, líquido de arrefecimento, correias, válvulas de fundo abertas, porão seco e ventilação do compartimento ligada por alguns minutos.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "2 · Partida",
+   "texto": "Dê a partida pelo painel. Logo depois confira a saída de água pelo escapamento e a pressão de óleo no painel dos dois motores.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "3 · Aquecimento",
+   "texto": "Deixe alguns minutos em marcha lenta antes de acelerar. Evite rotação alta com o motor frio.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "4 · Pressão de óleo baixa",
+   "texto": "Se a pressão de óleo cair ou o alarme acender: reduza para marcha lenta e observe; compare BB e BE no mesmo giro (só um lado baixo aponta o motor); com o motor parado, procure vazamento e confira o nível; persistindo, desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "5 · Temperatura alta",
+   "texto": "Reduza a rotação e confira a água no escapamento. Verifique o filtro de água salgada e o rotor. Se continuar subindo, desligue o motor afetado.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "6 · Parada",
+   "texto": "Deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "7 · Manutenção na agenda",
+   "texto": "Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Revisão anual pela oficina Volvo Penta. Intervalos oficiais: manual do fabricante — modelo SEM DADOS.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Guia de bordo (DEMO) — Motores Volvo Penta",
+   "pag": null,
+   "secao": "8 · Horímetros",
+   "texto": "Horímetros na última leitura com motores ligados (26/09/2026 09:31, demonstração): BB 412,6 h · BE 409,8 h.",
+   "equip": "Motores Volvo Penta (modelo SEM DADOS)"
+  },
+  {
+   "fonte": "Checklist de saída e chegada (DEMO)",
+   "pag": null,
+   "secao": "Saída · 1 a 3",
+   "texto": "1. Gerador: confira água no escapamento depois de ligar. 2. Estabilizador: ligue com antecedência (precisa de AC). 3. Climatização: filtro de água salgada limpo antes de ligar.",
+   "equip": "Checklist de bordo (DEMO)"
+  },
+  {
+   "fonte": "Checklist de saída e chegada (DEMO)",
+   "pag": null,
+   "secao": "Saída · 4 a 6",
+   "texto": "4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16. 5. Bombas de porão: acione cada uma manualmente e confira o alarme. 6. Diesel: abastecer antes de 25 % em qualquer tanque (regra de bordo DEMO).",
+   "equip": "Checklist de bordo (DEMO)"
+  },
+  {
+   "fonte": "Checklist de saída e chegada (DEMO)",
+   "pag": null,
+   "secao": "Saída · antes de largar",
+   "texto": "Confira coletes e boia à mão, pessoas a bordo contadas e anotadas no diário, previsão do tempo consultada. Amarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).",
+   "equip": "Checklist de bordo (DEMO)"
+  },
+  {
+   "fonte": "Checklist de saída e chegada (DEMO)",
+   "pag": null,
+   "secao": "Chegada",
+   "texto": "1. Piloto em espera antes de manobrar. 2. Estabilizador: desligar ao atracar e manter energia até o volante parar. 3. Gerador: retirar cargas, esfriar e desligar. 4. Climatização: desligar e fechar válvula de fundo se o barco ficar parado. 5. Fechar a saída no diário: horas, consumo e pendências.",
+   "equip": "Checklist de bordo (DEMO)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "MAYDAY · canal 16",
+   "texto": "Só em perigo grave e iminente. VHF canal 16 (156,800 MHz). Diga devagar: MAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — MMSI — POSIÇÃO (leia no plotter) — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO. Repita até ter resposta. Procedimento padrão — confirmar com o protocolo de bordo.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "PAN-PAN · urgência",
+   "texto": "Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no canal 16, no mesmo formato da chamada MAYDAY. Procedimento padrão — confirmar com o protocolo de bordo.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "DSC · botão de socorro",
+   "texto": "Nos rádios com DSC, o botão DISTRESS envia o alerta com o MMSI e a posição do GPS, se o MMSI estiver programado. Depois do alerta, faça a chamada MAYDAY por voz no canal 16.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "Homem ao mar",
+   "texto": "Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue. Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter. Volte devagar, com o motor em neutro perto da pessoa, por causa da hélice. Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB. Procedimento padrão — confirmar com o protocolo de bordo.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "Incêndio · Seafire",
+   "texto": "SEM DADOS: localização, acionamento e tempo de espera do sistema Seafire não foram carregados. Enviar o manual ou o protocolo de bordo do Seafire.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  },
+  {
+   "fonte": "Protocolo de emergência — procedimento padrão",
+   "pag": null,
+   "secao": "EPIRB",
+   "texto": "SEM DADOS: modelo, localização a bordo, forma de acionamento e validade da bateria do EPIRB não foram carregados.",
+   "equip": "Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)"
+  }
+ ]
+}

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — SOS (web)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+@keyframes capSirene { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@keyframes capFaroE { 0%, 50%, 100% { opacity: 0.12; } 12%, 34% { opacity: 1; } }
+@keyframes capFaroD { 0%, 50%, 100% { opacity: 1; } 62%, 84% { opacity: 0.12; } }
+@keyframes capCupula { 0%, 100% { fill-opacity: 0.45; } 50% { fill-opacity: 1; } }
+@keyframes capHalo { 0%, 100% { transform: scale(0.72); opacity: 0.12; } 50% { transform: scale(1.12); opacity: 0.7; } }
+@keyframes capBrilho { 0%, 100% { box-shadow: 0 0 0 1px rgba(255,90,80,0.3), 0 8px 24px rgba(255,40,30,0.2); } 50% { box-shadow: 0 0 0 1px rgba(255,120,110,0.55), 0 8px 30px rgba(255,40,30,0.45); } }
+.cap-sirene { animation: capSirene 2s ease-in-out infinite; }
+.cap-faro-e { animation: capFaroE 1.4s linear infinite; }
+.cap-faro-d { animation: capFaroD 1.4s linear infinite; }
+.cap-cupula { animation: capCupula 1.4s ease-in-out infinite; }
+.cap-halo { transform-box: fill-box; transform-origin: center; animation: capHalo 1.4s ease-in-out infinite; }
+.cap-brilho { animation: capBrilho 1.4s ease-in-out infinite; }
+.cap-wm { font-weight: 800; letter-spacing: 0.1em; line-height: 1; white-space: nowrap; background: linear-gradient(180deg, var(--cap-wm-top, #ffffff) 12%, var(--cap-plat, #d3dcef) 46%, var(--cap-wm-bot, #5d6a8f) 96%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cap-ia { font-weight: 800; letter-spacing: 0.06em; line-height: 1; white-space: nowrap; background: linear-gradient(120deg, var(--cap-tele, #00f4fd) 0%, var(--cap-accent, #00a1fe) 50%, var(--cap-violeta, #b45cff) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@media (prefers-reduced-motion: reduce) { .cap-sirene, .cap-faro-e, .cap-faro-d, .cap-cupula, .cap-halo, .cap-brilho { animation-duration: 3.2s; } }
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff);">
+<header style="height: 52px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 18px; padding: 0 26px; background: var(--cap-bar, #0a0f22); border-bottom: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.05); font-size: 12px; letter-spacing: 0.14em; white-space: nowrap;">
+  <a href="Main.dc.html" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+    <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height: 36px; width: 66px; object-fit: contain; flex-shrink: 0;">
+    <b style="font-weight: 800; border-bottom: 2px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.6); padding-bottom: 2px;">CAPITÃO IA</b>
+    <span style="color: var(--cap-ph, #4a5578);">—</span>
+    <b style="font-weight: 700;">{{local}}</b>
+  </a>
+  <span style="font-size: 10px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-violeta, #b45cff); border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); border-radius: 6px; padding: 4px 8px;">{{demo}}</span>
+  <span style="flex-grow: 1;"></span>
+  <span style="color: var(--cap-ink3, #97a3c0); font-weight: 600;">REG. {{reg}}</span>
+  <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="13" hint-size="190px,24px"></x-import>
+  <x-import component-from-global-scope="capitao-theme-toggle" from="./capitao-theme.js" size="34" hint-size="34px,34px"></x-import>
+</header>
+  <main aria-hidden="true" style="flex-grow: 1; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 18px 40px 22px; background: radial-gradient(ellipse 55% 60% at 50% 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0.06) 0%, rgba(var(--cap-bg-rgb, 5,8,22), 0) 60%);">
+    <div style="display: flex; align-items: baseline; gap: 0.32em; font-size: 92px;"><span class="cap-wm">CAPITÃO</span><span class="cap-ia">IA</span></div>
+    <span style="font-size: 12px; letter-spacing: 0.34em; font-weight: 700; color: var(--cap-ink3, #97a3c0);">CÉREBRO OPERACIONAL DA EMBARCAÇÃO</span>
+  </main>
+<footer style="height: 44px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 18px; padding: 0 26px; border-top: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.05); font-size: 11px; letter-spacing: 0.14em; color: var(--cap-ink4, #7985a6); white-space: nowrap;">
+  <span>{{faixa}}</span><span style="flex-grow: 1;"></span>
+  <a href="Main.dc.html" style="color: var(--cap-ink3, #97a3c0); font-weight: 700; text-decoration: none; min-height: 44px; display: flex; align-items: center; letter-spacing: 0.16em;">INÍCIO ›</a>
+</footer>
+
+  <div role="dialog" aria-modal="true" aria-label="Emergência" style="position: absolute; inset: 0; background: rgba(var(--cap-bg-rgb, 5,8,22), 0.86); backdrop-filter: blur(10px); z-index: 40; display: flex; align-items: center; justify-content: center; padding: 24px; overflow-y: auto;">
+    <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; overflow: hidden; opacity: {{sireneOp}}; transition: opacity .5s;">
+      <div class="cap-sirene" style="position: absolute; inset: 0; box-shadow: inset 0 0 0 3px rgba(255,59,48,0.85), inset 0 0 70px 6px rgba(255,40,30,0.45); background: linear-gradient(180deg, rgba(255,40,30,0.14) 0%, rgba(255,40,30,0) 22%, rgba(255,40,30,0) 78%, rgba(255,40,30,0.10) 100%);"></div>
+    </div>
+    <div class="cap-brilho" style="position: relative; z-index: 1; width: 640px; flex-shrink: 0; margin: auto; box-sizing: border-box; background: var(--cap-modal, #0e1430); border: 2px solid rgba(var(--cap-crit-rgb, 255,59,48), 0.6); border-radius: 18px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" role="img" aria-label="Luz de alerta" style="display: block; overflow: visible; flex-shrink: 0;"><circle class="cap-halo" cx="32" cy="34" r="24" style="fill: rgba(var(--cap-crit-rgb, 255,59,48), 0.55);"></circle><path class="cap-faro-e" d="M14 23L6 18 M12 33H3 M14 43L6 48" stroke-width="3.2" stroke-linecap="round" style="stroke: var(--cap-crit, #ff3b30);"></path><path class="cap-faro-d" d="M50 23L58 18 M52 33H61 M50 43L58 48" stroke-width="3.2" stroke-linecap="round" style="stroke: var(--cap-crit, #ff3b30);"></path><path class="cap-cupula" d="M20 46V32a12 12 0 0 1 24 0v14z" style="fill: var(--cap-crit, #ff3b30);"></path><path d="M20 46V32a12 12 0 0 1 24 0v14z" stroke-width="2" stroke-linejoin="round" style="stroke: var(--cap-crit, #ff3b30);"></path><path d="M26 32a6 6 0 0 1 6-6" stroke-width="2.4" stroke-linecap="round" style="stroke: rgba(255,255,255,0.85);"></path><rect x="13" y="46" width="38" height="8" rx="2.5" style="fill: var(--cap-ink3, #97a3c0);"></rect></svg>
+        <b style="font-size: 24px; letter-spacing: 0.14em; color: var(--cap-crit, #ff3b30); line-height: 1;">EMERGÊNCIA</b>
+        <a href="Main.dc.html" aria-label="Fechar e voltar ao início" style="position: absolute; top: -8px; right: -10px; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cap-ink3, #97a3c0); font-size: 20px; text-decoration: none; background: rgba(var(--cap-hl-rgb, 255,255,255), 0.04);">✕</a>
+      </div>
+      <span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; color: var(--cap-ink3, #97a3c0); letter-spacing: 0.02em; text-align: center; line-height: 1.45;">{{marca}}</span>
+      <div style="display: flex; flex-direction: column; gap: 9px;">
+        <sc-for list="{{proto}}" as="p" hint-placeholder-count="4">
+          <button type="button" onClick="{{p.toggle}}" aria-expanded="{{p.open}}" style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: {{p.bg}}; border: 1px solid {{p.line}}; border-radius: 12px; color: var(--cap-ink, #eaf1ff); min-height: 56px; cursor: pointer; text-align: left; font-family: inherit; width: 100%; box-sizing: border-box;">
+            <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; background: {{p.wash}}; display: flex; align-items: center; justify-content: center;">{{p.ico}}</span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+              <span style="font-size: 14.5px; font-weight: 700;">{{p.n}}</span>
+              <span style="font-size: 12.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{p.s}}</span>
+            </span>
+            <span style="margin-left: auto; display: flex;">{{p.chev}}</span>
+          </button>
+          <sc-if value="{{p.open}}" hint-placeholder-val="{{false}}">
+            <div style="margin: -4px 0 2px; padding: 12px 16px 12px 66px; border-radius: 0 0 12px 12px; background: rgba(var(--cap-hl-rgb, 255,255,255), 0.03); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.08); border-top: none; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 10.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">{{p.rot}}</span>
+              <sc-for list="{{p.steps}}" as="st" hint-placeholder-count="3">
+                <span style="display: flex; gap: 10px; align-items: flex-start;"><span style="width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%; background: rgba(var(--cap-crit-rgb, 255,59,48), 0.14); color: var(--cap-crit, #ff3b30); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{st.n}}</span><span style="font-size: 13px; line-height: 1.45; padding-top: 1px;">{{st.t}}</span></span>
+              </sc-for>
+              <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">{{p.src}}</span>
+              <sc-if value="{{p.href}}" hint-placeholder-val="{{false}}"><a href="{{p.href}}" style="align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 9px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.10em; font-weight: 700; display: flex; align-items: center; text-decoration: none;">{{p.hl}} ›</a></sc-if>
+            </div>
+          </sc-if>
+        </sc-for>
+        <sc-if value="{{mayday}}" hint-placeholder-val="{{false}}">
+          <div style="padding: 14px 16px; border-radius: 12px; background: rgba(var(--cap-crit-rgb, 255,59,48), 0.10); border: 1px solid rgba(var(--cap-crit-rgb, 255,59,48), 0.45); display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-crit, #ff3b30);">ROTEIRO · CANAL 16 · 156,800 MHz · REPETIR ATÉ RESPOSTA</span>
+            <sc-for list="{{roteiro}}" as="r" hint-placeholder-count="8">
+              <span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 14px; font-weight: 700; line-height: 1.4; color: var(--cap-hi, #ffffff);">{{r}}</span>
+            </sc-for>
+            <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{rotuloRoteiro}}</span>
+          </div>
+        </sc-if>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button type="button" onClick="{{toggleMayday}}" aria-pressed="{{mayday}}" style="flex-grow: 1; height: 52px; border-radius: 12px; border: none; background: var(--cap-crit-fill, #d32f27); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; font-weight: 800; letter-spacing: 0.10em; white-space: nowrap; padding: 0 14px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: #ffffff;"></path></svg> {{maydayLabel}}</button>
+        <sc-for list="{{chamar}}" as="c" hint-placeholder-count="2">
+          <a href="{{c.href}}" aria-label="{{c.aria}}" title="{{c.aria}}" style="flex-grow: 1; height: 52px; border-radius: 12px; border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: rgba(var(--cap-hl-rgb, 255,255,255), 0.04); color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; justify-content: center; gap: 9px; text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;">{{c.ico}}<span style="display: flex; flex-direction: column; line-height: 1.2;"><span>{{c.n}}</span><span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--cap-ink3, #97a3c0);">{{c.sub}}</span></span></a>
+        </sc-for>
+        <button type="button" onClick="{{silence}}" aria-pressed="{{muted}}" aria-label="Pausar a sirene visual por 60 segundos" style="flex-grow: 1; height: 52px; border-radius: 12px; border: 1px solid {{silenceLine}}; background: transparent; color: {{silenceTone}}; font-size: 12.5px; font-weight: 700; cursor: pointer;">{{silenceLabel}}</button>
+      </div>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.5;">Agente de Segurança: resposta completa, sem limite de concisão. {{fonteGeral}}</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  state = { open: -1, mayday: false, left: 0, reg: null, fones: {} };
+  componentDidMount() { this.whenBrain((B) => this.setState({ reg: this.registrar(B), fones: B.loadEquipe().fones }), () => this.setState({ reg: { falhou: true } })); }
+  componentWillUnmount() { clearInterval(this._t); clearInterval(this._b); }
+  whenBrain(cb, fail) {
+    if (window.CapitaoBrain) return cb(window.CapitaoBrain);
+    let n = 0;
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(window.CapitaoBrain); else fail(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  // SOS acionado: uma linha no diário por acionamento (10 min · vale também para a tela do app). Só diz "gravado" se a linha está no diário.
+  registrar(B) {
+    const K = 'capitao.sos.v1'; let prev = null;
+    try { prev = JSON.parse(sessionStorage.getItem(K) || 'null'); } catch (e) {}
+    if (prev && prev.t && Date.now() - prev.em < 600e3) return prev;
+    const n = B.now(); let e = null;
+    try { e = B.addDiario({ sys: 'Segurança', tone: 'var(--cap-crit, #ff3b30)', t: 'SOS acionado na web às ' + n.t + ' · último fix ' + this.pos() + '.', who: (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'), src: 'web · SOS' }); } catch (x) {}
+    if (!e || !B.loadDiario().some((x) => x.iso === e.iso && x.src === 'web · SOS')) return { falhou: true };
+    const r = { em: Date.now(), t: n.t };
+    try { sessionStorage.setItem(K, JSON.stringify(r)); } catch (x) {}
+    return r;
+  }
+  pos() {
+    const D = window.CapitaoDados || {}, S = D.snapshot || {}, g = S.gps || {}, T = window.CapitaoTelemetria, v = T && T.atual ? T.atual() : null;
+    if (v) return T.posicao(v) + ' (ao vivo ' + T.hora(v) + ')';
+    return (g.texto || 'posição SEM LEITURA') + ' (' + (D.demo ? 'snapshot DEMO ' : 'snapshot ') + (S.quando || 'SEM DADOS') + ')';
+  }
+  silence() {
+    if (this.state.left > 0) { clearInterval(this._t); this.setState({ left: 0 }); return; }
+    this.setState({ left: 60 }); clearInterval(this._t);
+    this._t = setInterval(() => { const l = this.state.left - 1; if (l <= 0) { clearInterval(this._t); this.setState({ left: 0 }); } else this.setState({ left: l }); }, 1000);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, P = D.protocolos || {}, E = D.embarcacao || {}, S = D.snapshot || {}, r = s.reg;
+    const ROT = (P.rotulo || 'procedimento padrão — confirmar com o protocolo de bordo').toUpperCase();
+    const mmsi = E.mmsi ? 'MMSI ' + E.mmsi + (E.mmsiNota ? ' (' + E.mmsiNota + ')' : '') : 'MMSI SEM DADOS';
+    const fonteP = 'Fonte: ' + (P.fonte || 'protocolo de emergência');
+    const docs = 'G1-Documentos-Web.dc.html', faq3 = 'F3-FAQ-Eletronicos-Web.dc.html';
+    const RED = { tone: 'var(--cap-crit, #ff3b30)', wash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)', bg: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.08)', line: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.30)' };
+    const STD = { tone: 'var(--cap-ink, #eaf1ff)', wash: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)', bg: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.04)', line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)' };
+    const SEM = { tone: 'var(--cap-warn, #f0a63a)', wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)', bg: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.04)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)' };
+    const L = [
+      Object.assign({ n: 'VHF Canal 16 — MAYDAY', s: mmsi + ' · rádios VHF 315', d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', rot: ROT, steps: [{ n: '1', t: 'Canal 16 · 156,800 MHz. Só MAYDAY em perigo grave e iminente; urgência sem risco de vida é PAN-PAN ×3.' }, { n: '2', t: 'Abra o roteiro em CANAL 16 · MAYDAY e leia devagar: nome ×3, MMSI, posição lida no plotter, natureza do perigo, pessoas a bordo, auxílio.' }, { n: '3', t: 'Repita até ter resposta. Rádio com DSC: o botão DISTRESS envia o alerta com o MMSI programado; depois, a chamada por voz no 16.' }], src: fonteP + ' · canal 16 e MMSI informados pelo proprietário', href: '', hl: '' }, RED),
+      Object.assign({ n: 'Homem ao mar (MOB)', s: 'Grite, jogue a boia, aponte e marque MOB no plotter Garmin', d: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 13l4-4 4 4 M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0', rot: ROT, steps: (P.mob || []).map((t, i) => ({ n: String(i + 1), t: t })), src: fonteP + ' · ' + ((D.guias && D.guias.g_eletronicos) || '') + ' §1', href: faq3, hl: 'FAQ eletrônicos' }, STD),
+      Object.assign({ n: 'Incêndio · Seafire', s: 'SEM DADOS — localização, acionamento e tempo de espera não carregados', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', rot: 'SEM DADOS', steps: [{ n: '!', t: 'O procedimento do sistema Seafire não foi carregado: não há passo a passo confirmado.' }, { n: '1', t: 'Perigo grave e iminente: MAYDAY no canal 16 (roteiro abaixo).' }], src: 'Fonte: nenhuma para o Seafire — enviar o manual ou o protocolo de bordo', href: '', hl: '' }, SEM),
+      Object.assign({ n: 'EPIRB', s: 'SEM DADOS — modelo, localização a bordo e acionamento não carregados', d: 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6', rot: 'SEM DADOS', steps: [{ n: '!', t: 'Modelo, localização, forma de acionamento e validade da bateria do EPIRB não foram carregados.' }, { n: '1', t: 'Envie a foto da etiqueta e do certificado para completar este item.' }], src: 'Fonte: nenhuma para o EPIRB — ' + mmsi, href: docs, hl: 'Documentos' }, SEM)
+    ];
+    const eq = 'G4-Equipe-Web.dc.html', fone = 'M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z';
+    const liga = (id, n, quem) => { const f = s.fones[id]; return f ? { n: 'Ligar · ' + n, sub: f, href: 'tel:' + String(f).replace(/[^+\d]/g, ''), aria: 'Ligar para ' + quem + ' · ' + f, ico: this.ico(fone, 18) } : { n: n, sub: 'cadastrar tel.', href: eq, aria: 'Telefone de ' + quem + ' não cadastrado — abrir Equipe para cadastrar', ico: this.ico(fone, 18) }; };
+    const pos = this.pos();
+    const nb = (x, d) => (typeof x === 'number' ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    return {
+      local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(), demo: D.demo ? 'DEMO' : '', reg: E.registro || 'SEM DADOS',
+      faixa: 'SOG ' + nb(S.sog) + ' NÓ · PROA ' + (typeof S.proa === 'number' ? ('00' + S.proa).slice(-3) + '°' : '—') + ' · ' + (S.estado || '').toUpperCase() + ' · ' + (S.local || '').toUpperCase() + ' · SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' ' + (S.quando || ''),
+      marca: pos + ' · ' + (!r ? 'gravando no diário de bordo…' : r.falhou ? 'não gravado — registre posição e hora no diário' : 'SOS ' + r.t + ' · posição e hora gravadas no diário de bordo'),
+      chamar: [liga('marina', 'Marina', 'a marina da base'), liga('tecnico', 'Técnico', 'o técnico de bordo')],
+      proto: L.map((p, i) => Object.assign({}, p, { ico: this.ico(p.d, 20, 1.8, p.tone), open: s.open === i, toggle: () => this.setState({ open: s.open === i ? -1 : i }), chev: this.ico(s.open === i ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 16, 2, 'var(--cap-ink3, #97a3c0)') })),
+      mayday: s.mayday, toggleMayday: () => this.setState({ mayday: !s.mayday }), maydayLabel: s.mayday ? 'FECHAR ROTEIRO' : 'CANAL 16 · MAYDAY',
+      roteiro: (P.roteiro || []).map((l) => (/^POSIÇÃO/.test(l) ? l + ' (último fix ' + pos + ')' : l)),
+      rotuloRoteiro: 'Procedimento padrão — confirmar com o protocolo de bordo. Urgência sem perigo de vida: PAN-PAN ×3. ' + fonteP + '.',
+      fonteGeral: fonteP + ' · Seafire e EPIRB: SEM DADOS.',
+      silence: () => this.silence(), muted: s.left > 0, silenceLabel: s.left > 0 ? 'Pausada · ' + s.left + ' s' : 'Pausar sirene', sireneOp: s.left > 0 ? 0 : 1,
+      silenceLine: s.left > 0 ? 'rgba(var(--cap-warn-rgb, 240,166,58), 0.55)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.14)', silenceTone: s.left > 0 ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink, #eaf1ff)'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -6,3 +6,4 @@ __pycache__/
 .env
 *.local.*
 /testes/saida/
+/testes/saida-ultima.json

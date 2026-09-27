@@ -1,0 +1,11 @@
+# ESTRUTURA — DESLIGADA (opcional; nada publicado).
+# Publicar: npx wrangler deploy   (dentro desta pasta)
+# Segredos: npx wrangler secret put ELEVENLABS_API_KEY   e   npx wrangler secret put CHAVE_APP
+name = "capitao-voz"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+ELEVENLABS_VOICE_ID = ""
+MODELO = "eleven_multilingual_v2"
+ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"

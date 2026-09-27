@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Gerar senha · Capitão IA</title>
+<meta name="theme-color" content="#050816">
+<script src="../capitao-theme.js"></script>
+<style>
+body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 620px; margin: 0 auto; padding: 32px 16px 48px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
+h1 { margin: 0; font-size: 22px; }
+p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--cap-ink2, #b1bdd6); }
+form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; padding: 16px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 11.5px; letter-spacing: 0.14em; font-weight: 700; color: var(--cap-ink3, #97a3c0); }
+input { min-height: 46px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--cap-line, #1a2240); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font: inherit; font-size: 16px; font-weight: 500; letter-spacing: 0; box-sizing: border-box; width: 100%; }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { grid-column: 1 / -1; min-height: 50px; border: 0; border-radius: 12px; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font: inherit; font-weight: 800; letter-spacing: 0.16em; cursor: pointer; }
+pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace; background: var(--cap-row, #10162e); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; padding: 14px; min-height: 60px; }
+.msg { color: var(--cap-warn, #f0a63a); font-size: 13.5px; min-height: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Gerar senha · Capitão IA</h1>
+  <p>Calcula o sal e o hash (PBKDF2-SHA-256, 210.000 iterações) aqui mesmo, no navegador — a senha não sai deste aparelho e não é gravada. Cole a linha gerada em <code>USUARIOS</code> no <code>capitao-auth.js</code> e lance uma versão nova. A senha em si é combinada fora do repositório.</p>
+  <form id="f" autocomplete="off">
+    <label>LOGIN (sem acento, minúsculo)<input id="id" required pattern="[a-z][a-z0-9]*" placeholder="lucas"></label>
+    <label>NOME CURTO<input id="nome" required placeholder="Lucas"></label>
+    <label>NOME COMPLETO<input id="completo" required placeholder="Lucas Araújo"></label>
+    <label>INICIAIS<input id="ini" required maxlength="3" placeholder="LA"></label>
+    <label>PAPEL<input id="papel" required placeholder="proprietário · técnico · tripulação · equipe"></label>
+    <label>SENHA<input id="s1" type="password" required minlength="10" autocomplete="new-password"></label>
+    <label>REPITA A SENHA<input id="s2" type="password" required minlength="10" autocomplete="new-password"></label>
+    <button type="submit">GERAR LINHA</button>
+  </form>
+  <p class="msg" id="m" role="status"></p>
+  <pre id="out" aria-live="polite"></pre>
+</main>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function b64(buf) { var s = '', b = new Uint8Array(buf); for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+  function q(s) { return "'" + String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'"; }
+  $('f').addEventListener('submit', function (e) {
+    e.preventDefault(); $('m').textContent = ''; $('out').textContent = '';
+    if ($('s1').value !== $('s2').value) { $('m').textContent = 'As senhas não conferem.'; return; }
+    if (!window.crypto || !crypto.subtle) { $('m').textContent = 'Este navegador não calcula o hash (abra por https:// ou arquivo local num navegador atual).'; return; }
+    var sal = crypto.getRandomValues(new Uint8Array(16));
+    crypto.subtle.importKey('raw', new TextEncoder().encode($('s1').value), 'PBKDF2', false, ['deriveBits'])
+      .then(function (k) { return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: sal, iterations: 210000 }, k, 256); })
+      .then(function (bits) {
+        $('s1').value = ''; $('s2').value = '';
+        $('out').textContent = '    ' + $('id').value.trim() + ': { nome: ' + q($('nome').value.trim()) + ', completo: ' + q($('completo').value.trim()) + ', ini: ' + q($('ini').value.trim().toUpperCase()) + ', papel: ' + q($('papel').value.trim()) + ", sal: '" + b64(sal) + "', hash: '" + b64(bits) + "' }";
+        $('m').textContent = 'Linha gerada. Os campos de senha foram limpos.';
+      });
+  });
+})();
+</script>
+</body>
+</html>

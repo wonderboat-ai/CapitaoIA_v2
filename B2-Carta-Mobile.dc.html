@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Sistemas (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Sistemas" voltar="A2-Ponte-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <a href="C2-Leme-Mobile.dc.html" style="box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid {{atrLine}}; border-radius: 18px; text-decoration: none; color: var(--cap-ink, #eaf1ff); flex-shrink: 0;">
+      <span style="display: flex; align-items: center; gap: 10px;">
+        <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 11px; background: {{atrWash}}; display: flex; align-items: center; justify-content: center;">{{atrIco}}</span>
+        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+          <span style="font-size: 15px; font-weight: 800;">{{atrTitle}}</span>
+          <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0);">{{atrSub}}</span>
+        </span>
+        <span style="min-width: 24px; height: 24px; padding: 0 7px; box-sizing: border-box; flex-shrink: 0; border-radius: 999px; background: {{atrTone}}; color: var(--cap-on-accent, #050816); font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{atrN}}</span>
+      </span>
+      <sc-for list="{{atr}}" as="t" hint-placeholder-count="3">
+        <span style="display: flex; align-items: center; gap: 9px; font-size: 12.5px; line-height: 1.3; min-width: 0;">
+          <span style="width: 112px; flex-shrink: 0; box-sizing: border-box; padding: 3px 0; white-space: nowrap; border-radius: 999px; background: rgba(var(--cap-crit-rgb, 255,59,48), 0.14); color: var(--cap-crit, #ff3b30); font-weight: 800; font-size: 11px; text-align: center; font-variant-numeric: tabular-nums;">{{t.dd}}</span>
+          <span style="min-width: 0;">{{t.t}}</span>
+        </span>
+      </sc-for>
+    </a>
+
+    <div style="display: flex; align-items: baseline; gap: 8px; padding: 4px 4px 0; flex-shrink: 0;">
+      <span style="flex-shrink: 0; font-size: 11.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">SISTEMAS · {{nSis}}</span>
+      <span style="margin-left: auto; min-width: 0; font-size: 11px; color: var(--cap-ink4, #7985a6); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{snapLabel}}</span>
+    </div>
+
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+      <div style="box-sizing: border-box; display: flex; align-items: stretch; background: var(--cap-card, #0d1329); border: 1px solid {{r.line}}; border-radius: 14px; flex-shrink: 0; overflow: hidden;">
+        <a href="{{r.href}}" style="flex-grow: 1; min-width: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 10px 6px 10px 12px; min-height: 44px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+          <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; background: {{r.wash}}; display: flex; align-items: center; justify-content: center;">{{r.ico}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 14px; font-weight: 700; line-height: 1.25;">{{r.n}}</span>
+              <sc-if value="{{r.tag}}" hint-placeholder-val="{{false}}"><span title="{{r.tagTitle}}" style="padding: 2px 7px; border-radius: 999px; background: {{r.tagWash}}; color: {{r.tagTone}}; font-size: 9.5px; font-weight: 800; letter-spacing: 0.08em; white-space: nowrap;">{{r.tag}}</span></sc-if>
+            </span>
+            <span style="font-size: 11.5px; line-height: 1.35; color: var(--cap-ink3, #97a3c0);">{{r.fab}}</span>
+            <span style="font-size: 11.5px; line-height: 1.35; color: {{r.estTone}};">{{r.estado}}</span>
+            <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.10em; color: var(--cap-accent, #00a1fe); padding-top: 2px;">{{r.acao}} ›</span>
+          </span>
+        </a>
+        <a href="{{r.ouvir}}" aria-label="{{r.ouvirAria}}" title="{{r.ouvirAria}}" style="width: 48px; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-left: 1px solid var(--cap-line, #1a2240); color: var(--cap-tele, #00f4fd); text-decoration: none;">{{r.ouvirIco}}<span style="font-size: 8.5px; font-weight: 800; letter-spacing: 0.08em;">OUVIR</span></a>
+      </div>
+    </sc-for>
+
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 11.5px; line-height: 1.4; flex-shrink: 0;">
+      <span>{{nota}}</span>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { exec: {} };
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ exec: window.CapitaoBrain.loadExec() }));
+    // Executado marcado em outra tela: as etiquetas de prazo acompanham
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.executado.v1')) this.setState({ exec: window.CapitaoBrain.loadExec() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  renderVals() {
+    const ex = this.state.exec || {}, D = window.CapitaoDados || {}, S = D.snapshot || {}, M = S.motores || {}, G = S.gerador || {};
+    const AG = D.agenda || [], EQ = D.equipamentos || [], DOCS = D.documentos || [], SD = 'SEM DADOS', SL = 'SEM LEITURA', DEMO = D.demo ? ' DEMO' : '';
+    const TOM = {
+      crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
+      tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'],
+      ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)']
+    };
+    const cor = (k) => TOM[k] || TOM.accent;
+    const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    const mil = (x) => (typeof x === 'number' && isFinite(x) ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—');
+    const horas = (x) => { if (typeof x !== 'number' || !isFinite(x)) return '—'; const p = x.toFixed(1).split('.'); return mil(+p[0]) + ',' + p[1]; };
+    const cap1 = (t) => { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const hs = S.dia && S.hora ? S.dia + ' ' + S.hora : SD; // hora do snapshot
+    const eq = (id) => EQ.filter((e) => e.id === id)[0] || null;
+    const fab = (e, extra) => (e ? (e.fabricante || 'fabricante ' + SD) + ' · ' + (e.modelo ? e.modelo : 'modelo ' + SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '') : 'fabricante ' + SD + ' · modelo ' + SD) + (extra || '');
+    const tarefa = (id) => AG.filter((t) => t.id === id)[0] || null;
+    const diario = (re) => (D.diario || []).filter((x) => re.test(x.t))[0] || null;
+    // Etiqueta de prazo da agenda: a tarefa aberta mais próxima (Executado no aparelho sai da conta)
+    const CURTO = { 'motores-oleo': 'ÓLEO', 'motores-revisao': 'REVISÃO', 'gerador-rotor': 'ROTOR', 'gerador-revisao': 'REVISÃO', 'seakeeper-anodo': 'ANODO', 'clima-filtro': 'FILTRO', 'clima-revisao': 'REVISÃO', 'garmin-cartas': 'CARTAS', 'porao-teste': 'TESTE', 'baterias': 'VERIFICAÇÃO' };
+    const prazo = (ids) => {
+      const ts = ids.map(tarefa).filter(Boolean);
+      const abertas = ts.filter((t) => !ex[t.id]).sort((a, b) => a.dn - b.dn);
+      if (abertas.length) { const t = abertas[0]; return { tag: (CURTO[t.id] || 'AGENDA') + ' · ' + (t.dn < 0 ? t.rot : 'D-' + t.dn), tom: t.dn < 0 ? 'crit' : t.tom, title: t.t + ' · vence ' + t.vence + ' · ' + t.quem + ' (' + (D.agendaFonte || 'agenda').split(' · ')[0] + ')' }; }
+      const f = ts.filter((t) => ex[t.id])[0];
+      return f ? { tag: (CURTO[f.id] || 'AGENDA') + ' · EXECUTADO ' + ex[f.id].d, tom: 'ok', title: f.t + ' · Executado registrado no diário' } : null;
+    };
+    const semDados = { tag: SD, tom: 'warn', title: 'Não carregado nas fontes de bordo' };
+    const H2 = (q) => 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(q);
+    const B3 = (q) => 'B3-Carta-Resposta.dc.html#q=' + encodeURIComponent(q);
+    const faq = (arq, k) => ({ href: arq, acao: 'FAQ · ' + (D.faq && D.faq[k] && D.faq[k].status === 'PRONTO' ? 'PRONTO' + (D.demo ? ' · DEMO' : '') : ((D.faq && D.faq[k] && D.faq[k].status) || 'SEM DADOS')) });
+    const pergunta = (q) => ({ href: H2(q), acao: 'PERGUNTAR AO CAPITÃO' });
+    const licenca = DOCS.filter((d) => /VHF/.test(d.n))[0];
+    const clima = diario(/climatiza/i), cartas = diario(/cartas/i);
+    const eO = M.oleo ? M.oleo.map((x) => nb(x)).join('/') : null;
+
+    const L = [
+      Object.assign({ n: 'Motores', q: 'Motores', d: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', fab: fab(eq('motores')),
+        estado: M.hora ? cap1(M.estado || SD) + ' · última leitura ligados ' + M.hora + (eO ? ' · óleo ' + eO + ' bar' : '') + ' · snapshot' + DEMO : 'Motores ' + SL, p: prazo(['motores-oleo', 'motores-revisao']) }, pergunta('Motores')),
+      Object.assign({ n: 'Gerador', q: 'Gerador', d: 'M13 3L5 14h6l-1 7 8-11h-6z', fab: fab(eq('gerador')),
+        estado: G.estado ? cap1(G.estado) + ' · ' + horas(G.horas) + ' h · snapshot' + DEMO + ' ' + (G.hora || hs) : SL, p: prazo(['gerador-rotor', 'gerador-revisao']) }, faq('F4-FAQ-Gerador.dc.html', 'gerador')),
+      Object.assign({ n: 'Estabilizador', q: 'Estabilizador', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', fab: fab(eq('estabilizador')),
+        estado: S.seakeeper && S.seakeeper.estado ? cap1(S.seakeeper.estado) + ' · snapshot' + DEMO + ' ' + (S.seakeeper.hora || hs) : SL, p: prazo(['seakeeper-anodo']) }, faq('F2-FAQ-Estabilizador.dc.html', 'estabilizador')),
+      Object.assign({ n: 'Climatização', q: 'Climatização', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', fab: fab(eq('climatizacao')),
+        estado: SL + ' no coletor' + (clima ? ' · diário ' + clima.d + ': fluxo fraco na cabine de proa' + (clima.pend ? ' (pendente)' : '') : ''), p: prazo(['clima-filtro', 'clima-revisao']) }, faq('F5-FAQ-Climatizacao.dc.html', 'climatizacao')),
+      Object.assign({ n: 'Eletrônicos de navegação', q: 'Eletrônicos', d: 'M4 5h16v11H4z M9 20h6 M12 16v4', fab: fab(eq('eletronicos')),
+        estado: (S.gps && S.gps.satelites ? 'GPS na rede NMEA: ' + S.gps.satelites + ' satélites · snapshot' + DEMO + ' ' + hs : 'GPS ' + SL) + (cartas ? ' · cartas desatualizadas (diário ' + cartas.d + ')' : ''), p: prazo(['garmin-cartas']) }, faq('F3-FAQ-Eletronicos.dc.html', 'eletronicos')),
+      Object.assign({ n: 'Áudio', q: 'Áudio Fusion', d: 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', fab: fab(eq('audio')),
+        estado: SL + ' — fora do coletor NMEA' + (D.demo ? ' (DEMO)' : ''), p: null }, faq('F3-FAQ-Eletronicos.dc.html', 'eletronicos')),
+      Object.assign({ n: 'Rádios VHF', q: 'Rádio VHF', d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', fab: fab(eq('vhf')),
+        estado: SL + ' do rádio' + (licenca ? ' · licença de estação ' + (licenca.vence ? 'vence ' + licenca.vence + ' (D-' + licenca.dn + ')' : SD) + ' · ' + (licenca.fonte || '') : ''),
+        p: licenca && typeof licenca.dn === 'number' ? { tag: 'LICENÇA · D-' + licenca.dn, tom: licenca.dn <= 30 ? 'warn' : 'accent', title: licenca.n + ' · ' + (licenca.st || '') } : null }, faq('F3-FAQ-Eletronicos.dc.html', 'eletronicos')),
+      Object.assign({ n: 'EPIRB', q: 'EPIRB', d: 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6', fab: fab(eq('epirb')),
+        estado: SD + ' — modelo, localização a bordo, acionamento e validade da bateria não carregados', p: semDados }, pergunta('EPIRB')),
+      Object.assign({ n: 'Sistema de incêndio', q: 'Seafire', d: 'M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 0 2 1 3 2.5 3.5-.5-3 0-6 0-8.5z', fab: fab(eq('seafire')),
+        estado: SD + ' — localização, acionamento e tempo de espera não carregados', p: semDados }, pergunta('Seafire')),
+      Object.assign({ n: 'Porão', q: 'Porão', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', fab: 'Bombas de porão · fabricante ' + SD + ' · modelo ' + SD,
+        estado: (S.porao == null ? SL + ' — sem sensor de porão no coletor NMEA' + (D.demo ? ' (DEMO)' : '') : 'porão: ' + S.porao) , p: prazo(['porao-teste']) }, pergunta('Porão')),
+      Object.assign({ n: 'Baterias 24 V / 12 V', q: 'Baterias', d: 'M3 8h15v8H3z M18 10.5h2.5v3H18 M7 12h7', fab: 'Banco 24 V e banco 12 V · fabricante ' + SD + ' · modelo ' + SD,
+        estado: '24 V ' + nb(S.bat24, 2) + ' V · 12 V ' + nb(S.bat12, 2) + ' V · snapshot' + DEMO + ' ' + hs, p: prazo(['baterias']) }, pergunta('Baterias 24 V e 12 V'))
+    ];
+    const rows = L.map((r) => {
+      const p = r.p, c = p ? cor(p.tom) : cor('accent'), sem = /^SEM (DADOS|LEITURA)/.test(r.estado);
+      return { n: r.n, fab: r.fab, estado: r.estado, estTone: sem ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink2, #b1bdd6)', href: r.href, acao: r.acao,
+        tag: p ? p.tag : '', tagTitle: p ? p.title : '', tagTone: c[0], tagWash: c[1],
+        ico: this.ico(r.d, 20, 1.7, c[0]), wash: c[1], line: p && p.tom === 'crit' ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.40)' : 'var(--cap-line, #1a2240)',
+        ouvir: B3(r.q), ouvirAria: 'Ouvir a resposta por voz: ' + r.n, ouvirIco: this.ico('M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', 18, 1.8, 'var(--cap-tele, #00f4fd)') };
+    });
+    const atr = AG.filter((t) => t.dn < 0 && !ex[t.id]).sort((a, b) => a.dn - b.dn), n = atr.length;
+    return {
+      atrN: String(n), atrTitle: n ? 'Precisa de você' : 'Nada atrasado',
+      atrSub: n ? (n === 1 ? '1 manutenção atrasada' : n + ' manutenções atrasadas') + ' · abrir agenda ›' : 'Executadas registradas no diário · abrir agenda ›',
+      atrTone: n ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ok, #34c77a)', atrWash: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)',
+      atrLine: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.40)' : 'var(--cap-line, #1a2240)',
+      atrIco: this.ico(n ? 'M12 4 21 20H3z M12 10v4 M12 17h.01' : 'M5 12.5l4.5 4.5L19 7.5', 19, 1.8, n ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ok, #34c77a)'),
+      atr: atr.map((t) => ({ dd: t.rot || (-t.dn) + ' d', t: t.t })),
+      snapLabel: 'snapshot' + DEMO + ' ' + hs + ' · ao vivo desligado',
+      nSis: String(rows.length),
+      rows: rows,
+      nota: (D.equipNota || '') + ' Porão e baterias vêm da agenda e do coletor.',
+      fonte: 'Fonte: lista de equipamentos informada pelo proprietário · ' + (S.fonte || SD) + ' · ' + (D.agendaFonte || SD).split(' · ')[0] + ' · ' + (D.docsFonte || SD).split(' · ')[0] + ' · ' + (D.diarioFonte || SD).split(' · ')[0]
+    };
+  }
+}
+</script>
+</body>
+</html>

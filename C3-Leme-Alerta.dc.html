@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Alerta crítico (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #050816; -webkit-font-smoothing: antialiased; }
+a { color: #00a1fe; } a:hover { color: #5cc2ff; }
+a:focus-visible, button:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+button { font: inherit; }
+@keyframes capBrilho { 0%, 100% { box-shadow: 0 0 0 1px rgba(255,90,80,0.3), 0 8px 24px rgba(255,40,30,0.2); } 50% { box-shadow: 0 0 0 1px rgba(255,120,110,0.55), 0 8px 30px rgba(255,40,30,0.45); } }
+@keyframes capPisca { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.cap-brilho { animation: capBrilho 1.6s ease-in-out infinite; }
+.cap-pisca { animation: capPisca 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .cap-brilho, .cap-pisca { animation: none; } }
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #050816; color: #eaf1ff; overflow: hidden; position: relative;">
+  <!-- A barra SOS vem primeiro no DOM (e aparece embaixo, via order): é o SOS que o capitao-app.js vigia — o "Abrir SOS" rolado para fora da vista não chama o SOS flutuante por cima do alerta. -->
+  <div style="order: 2; flex-shrink: 0;">
+    <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  </div>
+  <div style="order: 1; flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;">
+
+    <div role="note" style="flex-shrink: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 12px; border: 1.5px dashed #f0a63a; background: rgba(240,166,58,0.12); display: flex; align-items: center; gap: 10px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 5h16v11H4z M9 20h6 M12 16v4 M4 5l16 11" stroke="#f0a63a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+        <span style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.10em; line-height: 1.3; color: #f0a63a;">MODELO DE ALERTA · NADA O DISPARA SEM TELEMETRIA AO VIVO</span>
+        <span style="font-size: 11px; line-height: 1.35; color: #d7c3a3;">{{seloSub}}</span>
+      </span>
+    </div>
+
+    <div class="cap-brilho" style="position: relative; flex-shrink: 0; box-sizing: border-box; padding: 14px 16px 16px; background: #d32f27; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; color: #ffffff;">
+      <a href="H2-Home-Mobile.dc.html" aria-label="Fechar o alerta e voltar ao início" style="position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.18); color: #ffffff; display: flex; align-items: center; justify-content: center; text-decoration: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 6l12 12 M18 6L6 18" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"></path></svg></a>
+      <div style="display: flex; align-items: center; gap: 10px; padding-right: 48px; min-height: 30px;">
+        <span class="cap-pisca" style="width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 5px rgba(255,255,255,0.28);"></span>
+        <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em;">ALERTA CRÍTICO · MODELO</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="width: 54px; height: 54px; flex-shrink: 0; border-radius: 17px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+          <span style="font-size: 12px; font-weight: 700; color: #ffe0dd;">Anomalia · propulsão</span>
+          <span style="font-size: 23px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em;">Pressão de óleo baixa (motor)</span>
+        </span>
+      </div>
+      <span style="font-size: 12px; line-height: 1.4; color: #ffe0dd;">{{motorSub}}</span>
+    </div>
+
+    <div style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: #eaf1ff; border-radius: 20px; color: #050816; display: flex; flex-direction: column; gap: 9px;">
+      <span style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800; color: #b3261e;">Faça agora</span><span style="font-size: 11.5px; font-weight: 600; color: #3b4766;">se a pressão cair ou o alarme acender</span></span>
+      <sc-for list="{{passos}}" as="p" hint-placeholder-count="4">
+        <span style="display: flex; gap: 11px; align-items: flex-start;">
+          <span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #050816; color: #ffffff; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{p.n}}</span>
+          <span style="font-size: 14px; font-weight: 600; line-height: 1.38; padding-top: 2px;">{{p.t}}</span>
+        </span>
+      </sc-for>
+      <span style="padding-top: 8px; border-top: 1px solid #c9d3e6; font-size: 11px; line-height: 1.45; color: #3b4766;">{{fontePassos}}</span>
+    </div>
+
+    <div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: #0d1329; border: 1px solid #1a2240; border-radius: 18px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+        <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">LEITURA AGORA</span>
+          <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: #f0a63a;">SEM LEITURA</span>
+          <span style="font-size: 11px; line-height: 1.35; color: #97a3c0;">telemetria ao vivo desligada</span>
+        </div>
+        <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">FAIXA NORMAL</span>
+          <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: #f0a63a;">SEM DADOS</span>
+          <span style="font-size: 11px; line-height: 1.35; color: #97a3c0;">{{faixaSub}}</span>
+        </div>
+      </div>
+      <div style="height: 1px; background: #1a2240;"></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">{{ultRotulo}}</span>
+        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: #eaf1ff;">{{ultValor}}</span>
+        <span style="font-size: 11px; line-height: 1.4; color: #97a3c0;">{{ultSub}}</span>
+        <span style="font-size: 10.5px; line-height: 1.4; color: #7985a6; overflow-wrap: anywhere;">{{ultFonte}}</span>
+      </div>
+    </div>
+
+    <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;">
+      <sc-if value="{{naoRegistrado}}" hint-placeholder-val="{{true}}">
+        <button type="button" onClick="{{registrar}}" aria-label="Registrar este alerta no diário de bordo — cria uma linha nova" style="height: 52px; border-radius: 16px; border: none; background: #eaf1ff; color: #050816; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 15.5px; font-weight: 800;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11 M9 9h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{registrarLabel}}</button>
+      </sc-if>
+      <sc-if value="{{registrado}}" hint-placeholder-val="{{false}}">
+        <a href="G3-Diario-Mobile.dc.html" style="height: 52px; box-sizing: border-box; border-radius: 16px; border: 1.5px solid rgba(52,199,122,0.55); background: rgba(52,199,122,0.12); color: #34c77a; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.06em;">{{registradoLabel}}</a>
+      </sc-if>
+      <span role="status" style="font-size: 12px; font-weight: 700; line-height: 1.4; color: {{notaTone}}; min-height: 0;">{{nota}}</span>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+        <a href="G4-Equipe-Mobile.dc.html" style="min-width: 0; height: 50px; box-sizing: border-box; border-radius: 14px; border: 1px solid #34406a; background: #131a33; color: #eaf1ff; display: flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none; font-size: 13px; font-weight: 700;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Contatos</a>
+        <a href="S2-SOS-Mobile.dc.html" style="min-width: 0; height: 50px; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(255,59,48,0.6); background: #2a1520; color: #ff6a60; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; font-weight: 800;">Abrir SOS</a>
+        <a href="H2-Home-Mobile.dc.html" style="min-width: 0; height: 50px; box-sizing: border-box; border-radius: 14px; border: 1px solid #27315a; background: #0d1329; color: #b1bdd6; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; font-weight: 700;">Fechar</a>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { reg: null, gravando: false, nota: '', notaTone: '#97a3c0' };
+  componentWillUnmount() { this._dead = true; clearInterval(this._b); }
+  // Tela leve e sempre escura: o cérebro só entra se a pessoa tocar em "Registrar no diário".
+  whenBrain(cb, fail) {
+    if (window.CapitaoBrain) return cb(window.CapitaoBrain);
+    let n = 0;
+    clearInterval(this._b);
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(window.CapitaoBrain); else fail(); return; }
+      if (n === 1 && !document.querySelector('script[src*="capitao-brain.js"]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  guia() { const D = window.CapitaoDados || {}; return (D.guias && D.guias.g_motores) || 'guia dos motores SEM DADOS'; }
+  // Registro só cresce: uma linha nova por toque. Só diz "registrado" se a linha está no diário.
+  registrar() {
+    if (this.state.gravando || this.state.reg) return;
+    this.setState({ gravando: true, nota: 'Gravando no diário…', notaTone: '#97a3c0' });
+    this.whenBrain((B) => {
+      if (this._dead) return;
+      const n = B.now(), quem = B.quem ? B.quem() : 'Lucas';
+      let e = null;
+      try {
+        e = B.addDiario({ sys: 'Motores', tone: 'var(--cap-crit, #ff3b30)', who: quem, src: 'app · alerta',
+          t: 'Alerta de pressão de óleo baixa (motor) registrado no app às ' + n.t + ' por ' + quem + ' — leitura SEM LEITURA no app (telemetria ao vivo desligada): conferir lado e valor no painel. Passos: ' + this.guia() + ' §4 · Pressão de óleo baixa. Linha nova, nada se apaga.' });
+      } catch (x) {}
+      const ok = !!e && B.loadDiario().some((x) => x.iso === e.iso && x.src === 'app · alerta');
+      if (!ok) { this.setState({ gravando: false, nota: 'Não gravado — anote hora e lado no diário de bordo.', notaTone: '#f0a63a' }); return; }
+      this.setState({ gravando: false, reg: { t: n.t, d: n.d }, nota: 'Linha nova no diário · ' + n.d + ' ' + n.t + ' · ' + quem, notaTone: '#34c77a' });
+    }, () => { if (!this._dead) this.setState({ gravando: false, nota: 'Não gravado (cérebro indisponível) — anote hora e lado no diário de bordo.', notaTone: '#f0a63a' }); });
+  }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {}, M = S.motores || {}, SD = 'SEM DADOS', DEMO = D.demo ? ' DEMO' : '';
+    const eq = (D.equipamentos || []).filter((e) => e.id === 'motores')[0] || {};
+    const nb = (x) => (typeof x === 'number' && isFinite(x) ? x.toFixed(1).replace('.', ',') : '—');
+    const oleo = M.oleo && M.oleo.length > 1;
+    return {
+      seloSub: 'Mostra como o alerta aparece. Sem leitura agora — confira o painel.',
+      motorSub: 'Motores ' + (eq.qtd ? eq.qtd + ' × ' : '') + (eq.fabricante || 'fabricante ' + SD) + (eq.lados ? ' (' + eq.lados + ')' : '') + ' · modelo ' + (eq.modelo || SD) + ' · lado: SEM LEITURA',
+      faixaSub: 'manual ' + (eq.fabricante || 'do fabricante') + ' · modelo ' + (eq.modelo || SD),
+      ultRotulo: 'ÚLTIMA LEITURA COM MOTORES LIGADOS · ' + (M.hora || SD),
+      ultValor: oleo ? 'Óleo BB ' + nb(M.oleo[0]) + ' bar · BE ' + nb(M.oleo[1]) + ' bar' : 'Óleo SEM LEITURA',
+      ultSub: (M.rpm ? M.rpm.join('/') + ' rpm em ' + (M.marcha || 'neutro') + ' · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · ' : '') + 'motores ' + (M.estado || SD),
+      ultFonte: 'Fonte: ' + (S.fonte || SD) + ' · snapshot' + DEMO + ' ' + (S.quando || SD),
+      // Passos do guia (§4 · Pressão de óleo baixa), resumidos exatamente como no cérebro (capitao-brain.js · OLEO_PASSOS)
+      passos: [
+        { n: '1', t: 'Reduza para marcha lenta e observe se a pressão sobe.' },
+        { n: '2', t: 'Compare BB e BE no mesmo giro — só um lado baixo aponta o motor.' },
+        { n: '3', t: 'Com o motor parado: procure vazamento e confira o nível de óleo.' },
+        { n: '4', t: 'Persistindo: desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.' }
+      ],
+      fontePassos: 'Fonte: ' + this.guia() + ' · §4 · Pressão de óleo baixa' + (D.drive && D.drive.pastas ? ' · ' + (D.drive.raiz || 'Drive') + ' › ' + D.drive.pastas.manuais : '') + ' · faixa oficial: manual do fabricante (modelo ' + (eq.modelo || SD) + ')',
+      naoRegistrado: !s.reg, registrado: !!s.reg,
+      registrar: () => this.registrar(), registrarLabel: s.gravando ? 'Gravando…' : 'Registrar no diário',
+      registradoLabel: s.reg ? 'REGISTRADO ' + s.reg.d + ' ' + s.reg.t + ' · ABRIR DIÁRIO ›' : '',
+      nota: s.nota, notaTone: s.notaTone
+    };
+  }
+}
+</script>
+</body>
+</html>
