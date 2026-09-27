@@ -10,6 +10,7 @@ Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas
     python testes/verificar.py --fotos             salva capturas em testes/saida/
     python testes/verificar.py --offline           testa a abertura offline depois da 1ª visita
+    python testes/verificar.py --so-offline        só o teste offline (sem a matriz)
 Navegador: Edge instalado (channel="msedge").
 """
 import json
@@ -65,7 +66,8 @@ CHECA = """() => {
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     fotos = '--fotos' in sys.argv
-    offline = '--offline' in sys.argv
+    offline = '--offline' in sys.argv or '--so-offline' in sys.argv
+    so_offline = '--so-offline' in sys.argv  # pula a matriz, só o teste offline
     lista = args or telas()
     if fotos:
         os.makedirs(SAIDA, exist_ok=True)
@@ -73,7 +75,7 @@ def main():
     t0 = time.time()
     with sync_playwright() as p:
         b = p.chromium.launch(channel='msedge', headless=True)
-        for tema in ('escuro', 'claro'):
+        for tema in (() if so_offline else ('escuro', 'claro')):
             for tela in lista:
                 tamanhos = APP if eh_app(tela) else WEB
                 for (w, h) in tamanhos:
@@ -125,7 +127,11 @@ def teste_offline(b, lista):
     ctx.add_init_script(SESSAO)
     pg = ctx.new_page()
     pg.goto(BASE + 'Main.dc.html', wait_until='load')
-    pg.wait_for_function("() => navigator.serviceWorker && navigator.serviceWorker.controller", timeout=30000)
+    try:
+        pg.wait_for_function("() => navigator.serviceWorker && navigator.serviceWorker.controller", timeout=30000)
+    except Exception:
+        ctx.close()
+        return ['service worker não instalou em 30 s (arquivo do CORE faltando? ex.: Guia-Rapido-Capitao-IA.pdf)']
     pg.wait_for_timeout(1500)
     ctx.set_offline(True)
     for tela in lista:
