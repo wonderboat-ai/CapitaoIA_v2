@@ -6,7 +6,7 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.4', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.5', data: '27/09/2026' };
   var CREDITO = 'Wonder BOAT | WonderHUB.AI';
   var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$/i; // GitHub Pages (redireciona) e v2.capitaoia.com.br
 

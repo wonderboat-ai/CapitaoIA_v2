@@ -5,7 +5,7 @@
 | Worker | Pasta | Status | Segredos | Variáveis |
 |---|---|---|---|---|
 | `capitao-telemetria` | `integracoes/telemetria-worker/` | preparado · desligado | `GOOGLE_SA_KEY`, `CHAVE_APP`, `DRIVE_FILE_ID` | `GOOGLE_SA_EMAIL`, `ORIGENS` |
-| `capitao-ia` (grátis) | `integracoes/workers-ai/ia-worker/` | estrutura · desligado | `CHAVE_APP` (sem chave de API: binding `AI`) | `MODELO`, `MAX_TOKENS`, `GATEWAY`, `ORIGENS` |
+| `capitao-ia` (grátis) | `integracoes/workers-ai/ia-worker/` | **publicado · ligado na demonstração** (1.0.4) | `CHAVE_APP` (sem chave de API: binding `AI`) | `MODELO`, `MAX_TOKENS`, `GATEWAY`, `ORIGENS` |
 | `capitao-ia` (paga) | `integracoes/claude-api/ia-worker/` | estrutura · desligado | `ANTHROPIC_API_KEY`, `CHAVE_APP` | `MODELO`, `ESFORCO`, `ORIGENS` |
 | `capitao-voz` | `integracoes/elevenlabs/voz-worker/` | estrutura · opcional | `ELEVENLABS_API_KEY`, `CHAVE_APP` | `ELEVENLABS_VOICE_ID`, `MODELO`, `ORIGENS` |
 
