@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Manutenção (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Manutenção" voltar="A2-Ponte-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid {{atrLine}}; border-radius: 18px; flex-shrink: 0;">
+      <span style="width: 46px; height: 46px; flex-shrink: 0; border-radius: 14px; background: {{atrWash}}; display: flex; align-items: center; justify-content: center;"><span style="font-size: 24px; font-weight: 800; color: {{atrTone}}; line-height: 1;">{{atr}}</span></span>
+      <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+        <span style="font-size: 15px; font-weight: 800;">{{atrTitle}}</span>
+        <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{atrSub}}</span>
+      </span>
+    </div>
+    <div role="group" aria-label="Filtrar agenda" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; flex-shrink: 0;">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="4">
+        <button type="button" onClick="{{c.onClick}}" aria-pressed="{{c.active}}" style="min-height: 40px; padding: 0 4px; border-radius: 999px; border: 1px solid {{c.line}}; background: {{c.bg}}; color: {{c.tone}}; font-size: 11.5px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{c.l}}</button>
+      </sc-for>
+    </div>
+    <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{noteTone}}; min-height: 14px; flex-shrink: 0;">{{note}}</span>
+    <sc-for list="{{rows}}" as="a" hint-placeholder-count="4">
+      <div style="box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); flex-shrink: 0;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+          <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; background: {{a.wash}}; display: flex; align-items: center; justify-content: center;">{{a.ico}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 13.5px; font-weight: 700; line-height: 1.3;">{{a.t}}</span>
+            <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{a.meta}}</span>
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="flex-grow: 1; padding: 7px 0; border-radius: 999px; background: {{a.chipWash}}; color: {{a.chipTone}}; font-size: 12px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums;">{{a.dd}}</span>
+          <sc-if value="{{a.notDone}}" hint-placeholder-val="{{true}}">
+            <button type="button" onClick="{{a.onDone}}" aria-label="{{a.ariaDone}}" style="flex-shrink: 0; height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--cap-line2, #27315a); background: var(--cap-elev, #131a33); color: var(--cap-ink, #eaf1ff); font-size: 13px; font-weight: 700; cursor: pointer;">Executado</button>
+          </sc-if>
+          <sc-if value="{{a.done}}" hint-placeholder-val="{{false}}">
+            <a href="G3-Diario-Mobile.dc.html" style="flex-shrink: 0; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 12px; border: 1.5px solid rgba(var(--cap-ok-rgb, 52,199,122), 0.45); background: rgba(var(--cap-ok-rgb, 52,199,122), 0.10); color: var(--cap-ok, #34c77a); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; display: flex; align-items: center; text-decoration: none;">NO DIÁRIO ›</a>
+          </sc-if>
+          <sc-if value="{{a.canUndo}}" hint-placeholder-val="{{false}}">
+            <button type="button" onClick="{{a.onUndo}}" aria-label="Desfazer — a tarefa volta para a agenda" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: 1.5px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12.5px; font-weight: 700; cursor: pointer;">Desfazer</button>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
+      <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  state = { filter: 'atrasadas', exec: {}, last: '', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  componentDidMount() {
+    this.whenBrain(() => this.setState({ exec: window.CapitaoBrain.loadExec() }));
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.executado.v1')) this.setState({ exec: window.CapitaoBrain.loadExec() }); };
+    window.addEventListener('storage', this._st);
+  }
+  componentWillUnmount() { window.removeEventListener('storage', this._st); clearTimeout(this._n); }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  quem() { return window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'; }
+  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 4000); }
+  markDone(t) {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (B.loadExec()[t.id]) return this.setState({ exec: B.loadExec() });
+    const exec = B.markExec(t.id);
+    B.addDiario({ sys: 'Manutenção', tone: 'var(--cap-warn, #f0a63a)', t: 'Executado: ' + t.t + ' (' + t.equip + '). Marcado no app por ' + this.quem() + ' — linha nova, nada se apaga.', who: this.quem(), src: 'app · manutenção' });
+    this.setState({ exec: exec, last: t.id }); this.toast('Registrado no diário: ' + t.t);
+  }
+  undo(t) {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (!B.loadExec()[t.id]) return this.setState({ exec: B.loadExec(), last: '' });
+    B.unmarkExec(t.id);
+    B.addDiario({ sys: 'Manutenção', tone: 'var(--cap-warn, #f0a63a)', t: 'Desfeito: ' + t.t + ' volta para a agenda (Executado marcado por engano). Desfeito no app por ' + this.quem() + ' — linha nova, nada se apaga.', who: this.quem(), src: 'app · manutenção' });
+    this.setState({ exec: B.loadExec(), last: '' }); this.toast('Desfeito — voltou para a agenda', 'var(--cap-warn, #f0a63a)');
+  }
+  renderVals() {
+    const s = this.state, ex = s.exec || {}, D = window.CapitaoDados || {}, S = D.snapshot || {}, AG = D.agenda || [];
+    const TOM = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'] };
+    const cor = (k) => TOM[k] || TOM.accent;
+    const ICON = { 'Climatização': 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', 'Bombas': 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', 'Gerador': 'M13 3L5 14h6l-1 7 8-11h-6z', 'Casco': 'M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0', 'Motores': 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', 'Estabilizador': 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', 'Sistema': 'M7 7h10v10H7z M10 3v4 M14 3v4 M10 17v4 M14 17v4', 'Eletrônicos': 'M4 5h16v11H4z M9 20h6 M12 16v4' };
+    const icoDe = (eq) => { for (const k in ICON) if (eq.indexOf(k) === 0) return ICON[k]; return 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z'; };
+    const grupo = (t) => (t.dn < 0 ? 'atrasadas' : t.dn <= 30 ? 'd30' : 'emdia');
+    const atr = AG.filter((t) => t.dn < 0 && !ex[t.id]), n = atr.length;
+    const lista = s.filter === 'todas' ? AG : AG.filter((t) => grupo(t) === s.filter);
+    const setF = (k) => () => this.setState({ filter: k });
+    const on = (k) => s.filter === k;
+    const nb = (x) => (typeof x === 'number' ? x.toFixed(1).replace('.', ',') : '—');
+    return {
+      atr: String(n), atrTitle: n === 1 ? 'Manutenção atrasada' : n ? 'Manutenções atrasadas' : 'Nada atrasado',
+      atrSub: n ? atr.map((t) => t.equip.split(' (')[0] + ' · ' + (-t.dn) + ' d').join(' · ') : 'Executadas registradas no diário · ' + AG.length + ' tarefas',
+      atrTone: n ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ok, #34c77a)', atrWash: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.12)', atrLine: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.40)' : 'var(--cap-line, #1a2240)',
+      chips: [['atrasadas', 'Atrasadas'], ['d30', 'D-30'], ['emdia', 'Em dia'], ['todas', 'Todas']].map((c) => ({ l: c[1], onClick: setF(c[0]), active: on(c[0]), line: on(c[0]) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: on(c[0]) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', tone: on(c[0]) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
+      note: s.note, noteTone: s.noteTone,
+      rows: lista.map((t) => {
+        const e = ex[t.id], c = cor(t.tom);
+        return { t: t.t, meta: t.equip + ' · ' + t.quem + ' · vence ' + t.vence + (t.horas ? ' ou ' + String(t.horas.limite).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' h (faltam ' + nb(t.horas.faltam) + ' h)' : ''), ico: this.ico(icoDe(t.equip), 19, 1.7, c[0]), wash: c[1],
+          done: !!e, notDone: !e, onDone: () => this.markDone(t), ariaDone: 'Marcar como executado: ' + t.t, canUndo: !!e && s.last === t.id, onUndo: () => this.undo(t),
+          dd: e ? 'EXECUTADO ' + e.d : t.dn < 0 ? (-t.dn) + (t.dn === -1 ? ' dia atrás' : ' dias atrás') : 'D-' + t.dn + ' · ' + t.vence.slice(0, 5), chipTone: e ? 'var(--cap-ok, #34c77a)' : c[0], chipWash: e ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)' : c[1] };
+      }),
+      falta: (D.agendaFalta || []).join(' · ') || 'nada',
+      fonte: 'Fonte: ' + (D.agendaFonte || 'SEM DADOS') + ' · prazos a partir de ' + (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS')
+    };
+  }
+}
+</script>
+</body>
+</html>
