@@ -11,19 +11,25 @@
   // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
   if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.ia.url.v1') || ''; if (/^https:\/\/capitao\-ia\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
-  var VERSAO = '1.0.6'; // = VERSAO do capitao-auth.js e do capitao-brain.js (o capitao-app.js recarrega se vierem misturados)
+  var VERSAO = '1.0.7'; // = VERSAO do capitao-auth.js e do capitao-brain.js (o capitao-app.js recarrega se vierem misturados)
   var KC = 'capitao.ia.chave.v1';
   var ESPERA = 15000; // sem resposta nesse tempo → o chat fica com a resposta local
   var ULTIMA = { falha: '' };
+  var ORIGEM_APP = 'https://v2.capitaoia.com.br'; // a única origem que o Worker aceita (ORIGENS): outra dá erro de CORS, que parece "sem conexão"
+  var abriuCaixa = false; // a caixa da chave já abriu nesta tela (não abre de novo pela intenção guardada)
 
   // A CHAVE_APP é um token longo (letras, números, - e _). Colada do WhatsApp, de notas ou do arquivo, costuma vir com
   // "CHAVE_APP:", aspas, espaços, quebra de linha ou caracteres invisíveis: fica só o token. Texto sem token longo passa
   // só aparado (chave de teste).
   function normalizaChave(s) {
-    s = String(s == null ? '' : s).replace(/[­​-‏‪-‮⁠-⁤﻿]/g, '').replace(/ /g, ' ');
+    s = String(s == null ? '' : s).replace(/[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '').replace(/\u00A0/g, ' ');
+    var m = s.match(/CHAVE_APP\s*[:=]?\s*["'`\u201C\u201D\u2018\u2019]?([A-Za-z0-9_-]{32,})/i); // linha do arquivo colada inteira
+    if (m) return m[1];
     var t = (s.match(/[A-Za-z0-9_-]{32,}/g) || []).sort(function (a, b) { return b.length - a.length; })[0];
-    return t || s.replace(/^[\s"'`“”‘’]+|[\s"'`“”‘’]+$/g, '');
+    return t || s.replace(/^[\s"'`\u201C\u201D\u2018\u2019]+|[\s"'`\u201C\u201D\u2018\u2019]+$/g, '');
   }
+  // Onde a chave fica: o app instalado (tela de início) e o navegador guardam à parte, mesmo no mesmo celular.
+  function onde() { try { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? 'no app instalado' : 'neste navegador'; } catch (e) { return 'neste navegador'; } }
   // Chave que dá para mandar no cabeçalho: só ASCII visível, 8 a 256 letras (acento ou símbolo fora disso faz o fetch falhar).
   function chaveValida(k) { return /^[\x21-\x7e]{8,256}$/.test(k); }
 
@@ -39,27 +45,39 @@
       var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('ia=') !== 0; }).join('&');
       history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
       var c = decodeURIComponent(m[1]);
-      if (c === 'sair') { localStorage.removeItem(KC); avisa('IA na nuvem desligada neste aparelho.'); }
-      else if (c === 'ativar') ativar();
+      if (c === 'sair') { localStorage.removeItem(KC); avisa('IA na nuvem desligada ' + onde() + '.'); }
+      else if (c === 'ativar') { try { sessionStorage.setItem('capitao.ia.ativar', '1'); } catch (e) {} ativar(); }
     } catch (e) {}
   }
+  // A chave colada é TESTADA ANTES de ser guardada: chave recusada nunca apaga uma que funcionava. Sem rede para testar,
+  // só guarda se não havia chave. A caixa fechada sem resposta pode ser a tela recarregando (versão nova): o pedido de
+  // ativar só é esquecido depois de 1,5 s — se a tela sumiu antes, ele continua e a caixa reabre na tela recarregada.
   function ativar() {
-    try { sessionStorage.removeItem('capitao.ia.ativar'); } catch (e) {}
-    var dig = window.prompt('Cole a chave da IA na nuvem (CHAVE_APP). Ela fica só neste aparelho.');
-    if (dig == null) return; // cancelou
+    abriuCaixa = true;
+    var anterior = chave();
+    var dig = window.prompt('Cole a chave da IA na nuvem (CHAVE_APP). Ela fica guardada ' + onde() + '.');
+    if (dig == null) { setTimeout(esquece, 1500); return; }
+    esquece();
     var k = normalizaChave(dig);
-    if (!chaveValida(k)) { avisa('Isso não parece a chave da IA na nuvem: cole só a CHAVE_APP (letras, números, - e _), sem nome nem aspas. Nada foi guardado.'); return; }
-    try { localStorage.setItem(KC, k); } catch (e) { avisa('Este navegador não deixou guardar a chave (armazenamento bloqueado).'); return; }
-    try { window.dispatchEvent(new CustomEvent('capitao-ia', { detail: { estado: 'ativada' } })); } catch (e) {}
-    testar().then(function (t) { avisa(t.ok ? 'IA na nuvem ativada neste aparelho ✓ — o servidor aceitou a chave. Pode perguntar.' : t.texto); });
+    if (!chaveValida(k)) { avisa('Isso não parece a chave da IA na nuvem: cole só a CHAVE_APP (letras, números, - e _), sem nome nem aspas. ' + (anterior ? 'A chave anterior continua guardada.' : 'Nada foi guardado.')); return; }
+    testar(k).then(function (t) {
+      if (!(t.ok || t.status === 429 || t.semServidor || (t.rede && !anterior))) { avisa(t.texto + (anterior ? ' A chave anterior continua guardada.' : ' Nada foi guardado.')); return; }
+      try { localStorage.setItem(KC, k); } catch (e) { avisa('Este navegador não deixou guardar a chave (armazenamento bloqueado).'); return; }
+      try { window.dispatchEvent(new CustomEvent('capitao-ia', { detail: { estado: 'ativada' } })); } catch (e) {}
+      var aqui = onde();
+      avisa(t.ok ? 'IA na nuvem ativada ' + aqui + ' ✓ — o servidor aceitou a chave. Pode perguntar.' + (aqui === 'neste navegador' ? ' Se você usa o app instalado na tela de início, ative também por lá: ele guarda à parte.' : '')
+        : 'Chave guardada ' + aqui + '. ' + t.texto);
+    });
   }
+  function esquece() { try { sessionStorage.removeItem('capitao.ia.ativar'); } catch (e) {} }
   function avisa(msg) { setTimeout(function () { try { window.alert(msg); } catch (e) {} }, 0); }
-  lerHash();
+  if (!window.CapitaoRedirecionando) lerHash();
   var api = {}; // preenchido no fim; o #ia= que chega depois vale só para o cliente em uso (window.CapitaoIA)
   window.addEventListener('hashchange', function () { if (window.CapitaoIA === api) lerHash(); });
   // Link #ia=ativar aberto sem sessão: o login tira o #ia= do endereço (nada de chave no ?next=), mas guarda a intenção
-  // (capitao-auth.js, sessionStorage 'capitao.ia.ativar'). Voltando logado a uma tela de chat, a caixa abre.
-  try { if (sessionStorage.getItem('capitao.ia.ativar') === '1' && (!window.CapitaoAuth || !window.CapitaoAuth.logado || window.CapitaoAuth.logado())) setTimeout(ativar, 600); } catch (e) {}
+  // (capitao-auth.js, sessionStorage 'capitao.ia.ativar'). Voltando logado a uma tela de chat, a caixa abre. O mesmo vale
+  // para a caixa fechada por uma recarga de versão (ativar()).
+  try { if (!window.CapitaoRedirecionando && !abriuCaixa && sessionStorage.getItem('capitao.ia.ativar') === '1' && (!window.CapitaoAuth || !window.CapitaoAuth.logado || window.CapitaoAuth.logado())) setTimeout(function () { if (!abriuCaixa && window.CapitaoIA === api) ativar(); }, 600); } catch (e) {}
   // Chave guardada antes da 1.0.6 também passa pela limpeza (uma chave colada com "CHAVE_APP:" volta a valer).
   function chave() { try { return normalizaChave(localStorage.getItem(KC) || ''); } catch (e) { return ''; } }
   // 'ligada' · 'sem-chave' (aparelho não ativado) · 'chave-invalida' (guardada, mas não dá para mandar) · 'sem-rede' ·
@@ -85,14 +103,15 @@
     if (s === 429) return 'IA na nuvem: limite de perguntas atingido — tente daqui a pouco';
     if (s === 503) return 'IA na nuvem fora agora' + (m ? ': ' + m : '');
     if (s) return 'IA na nuvem não respondeu (' + s + (m ? ': ' + m : '') + ')';
-    return 'sem conexão com a IA na nuvem';
+    return 'sem conexão com a IA na nuvem' + (location.origin !== ORIGEM_APP ? ' — este endereço não é o do app (' + ORIGEM_APP + ')' : '');
   }
   // Teste da chave e do caminho até o Worker SEM gastar a cota da IA: pergunta sem ficha, sem trecho e sem leitura → o
   // Worker confere origem e chave e responde 422 (sem_fontes) antes de chamar o modelo. 422 = tudo certo; 401 = chave
-  // recusada; 403 = origem; sem resposta = sem conexão. Nunca rejeita.
-  function testar() {
-    var k = chave();
-    if (!URL_PROXY) return Promise.resolve({ ok: false, status: 0, texto: 'IA na nuvem sem endereço neste app.' });
+  // recusada; sem resposta = sem conexão (ou origem que não é a do app: o CORS falha antes). Nunca rejeita.
+  // testar(cand): testa a chave candidata (antes de guardar); sem argumento, a chave guardada.
+  function testar(cand) {
+    var k = cand == null ? chave() : cand;
+    if (!URL_PROXY) return Promise.resolve({ ok: false, status: 0, semServidor: true, texto: 'IA na nuvem sem endereço neste app.' });
     if (!k) return Promise.resolve({ ok: false, status: 0, texto: 'Nenhuma chave guardada neste aparelho: toque em Ativar IA na nuvem e cole a CHAVE_APP.' });
     if (!chaveValida(k)) return Promise.resolve({ ok: false, status: 0, texto: 'A chave guardada neste aparelho tem caracteres que não servem: toque em Ativar IA na nuvem e cole só a CHAVE_APP.' });
     if (!window.fetch) return Promise.resolve({ ok: false, status: 0, texto: 'Este navegador não consegue falar com a IA na nuvem.' });
@@ -110,7 +129,7 @@
       return { ok: false, status: r.status, texto: 'O servidor da IA respondeu ' + r.status + ' ao teste.' };
     }, function (e) {
       clearTimeout(t);
-      return { ok: false, status: 0, texto: e && e.name === 'AbortError' ? 'O servidor da IA demorou demais para responder ao teste.' : 'Sem conexão com o servidor da IA na nuvem (internet, bloqueio de rede ou navegador).' };
+      return { ok: false, status: 0, rede: true, texto: e && e.name === 'AbortError' ? 'O servidor da IA demorou demais para responder ao teste.' : 'Sem conexão com o servidor da IA na nuvem (internet, bloqueio de rede ou navegador).' + (location.origin !== ORIGEM_APP ? ' Este endereço (' + location.origin + ') não é o do app: o servidor só aceita ' + ORIGEM_APP + '.' : '') };
     });
   }
   // Linhas para o "diagnóstico" do chat: versão deste cliente, estado, chave (só o tamanho) e o motivo da última falha.
@@ -118,7 +137,7 @@
     var k = chave(), e = estado();
     return [
       '• Cliente da IA ' + VERSAO + ' · endereço do servidor ' + (URL_PROXY ? 'configurado' : 'SEM (IA desligada neste app)'),
-      '• IA na nuvem: ' + (e === 'ligada' ? 'LIGADA neste aparelho' : e === 'sem-chave' ? 'DESLIGADA neste aparelho (sem chave)' : e === 'chave-invalida' ? 'DESLIGADA (chave guardada inválida)' : e === 'sem-rede' ? 'sem internet' : 'desligada'),
+      '• IA na nuvem: ' + (e === 'ligada' ? 'LIGADA ' + onde() : e === 'sem-chave' ? 'DESLIGADA ' + onde() + ' (sem chave)' : e === 'chave-invalida' ? 'DESLIGADA (chave guardada inválida)' : e === 'sem-rede' ? 'sem internet' : 'desligada'),
       '• Chave: ' + (k ? 'guardada (' + k.length + ' caracteres)' : 'nenhuma'),
       '• Última falha: ' + (ULTIMA.falha || 'nenhuma nesta sessão')
     ];
