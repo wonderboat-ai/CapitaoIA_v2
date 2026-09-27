@@ -782,7 +782,7 @@ window.CapitaoDados = {
      "passos": [
       {
        "n": "1",
-       "t": "Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — MANUAL NO DRIVE (não carregado na demonstração).",
+       "t": "Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — SEM DADOS (manual não carregado na demonstração).",
        "secao": "6 · Alarmes"
       }
      ]

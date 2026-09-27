@@ -270,7 +270,7 @@ GUIAS = {
             ('3 · Estabilizar', 'O botão de estabilização liga e desliga o efeito sem parar o volante. Em manobra de marina, deixe a estabilização desligada se o display recomendar.'),
             ('4 · Desligar ao atracar', 'Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha a energia até o display indicar que parou.'),
             ('5 · Segurança', 'Nunca abra tampas nem faça manutenção com o volante girando. Confira no display que a rotação está em zero antes de qualquer serviço.'),
-            ('6 · Alarmes', 'Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — MANUAL NO DRIVE (não carregado na demonstração).'),
+            ('6 · Alarmes', 'Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — SEM DADOS (manual não carregado na demonstração).'),
             ('7 · Manutenção na agenda', 'Anodo do trocador de calor: a cada 6 meses (agenda de demonstração). Outros itens: manual do fabricante, modelo SEM DADOS.'),
         ],
     },
