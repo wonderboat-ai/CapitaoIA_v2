@@ -54,7 +54,7 @@ O app está em **https://v2.capitaoia.com.br**, uma origem só dele (desde a 1.0
 2. Nesta pasta: `npm install` · `npx wrangler secret put ANTHROPIC_API_KEY` · `npx wrangler secret put CHAVE_APP` (chave longa aleatória, própria da IA) · `npx wrangler deploy`.
 3. Copiar `../ia-cliente/capitao-ia.js` para a raiz, pôr o endereço do Worker em `URL_PROXY`, incluir `<script src="./capitao-ia.js"></script>` no `<helmet>` de `Main` e `H2-Home-Mobile` e adicionar `./capitao-ia.js` em `CORE` do `sw.js`.
 4. **Ponto de encaixe** (nas telas de chat, no método `ask`): quando a resposta local for **`base`** (achou trechos no guia), chamar `CapitaoIA.perguntar(q, CapitaoBrain.buscaBase(q, 3), '')` e, se vier resposta, trocar a mensagem: a IA responde a partir desses trechos. No `fallback` **não chame**: o `answer()` só chega em `fallback` quando `buscaBase` não achou nada, então não há trecho e o proxy devolveria 422. Mande a leitura da tela em `contexto` só quando a pergunta for sobre ela (telemetria, tanques, motores…), nunca sempre: senão a IA recebe o snapshot para qualquer pergunta. A voz continua usando `falaCurta`.
-5. Em cada aparelho: abrir uma vez com `#ia=<CHAVE_APP>`. `#ia=sair` apaga.
+5. Em cada aparelho: depois do login, abrir uma vez com `#ia=ativar` e colar a chave na caixa (a chave nunca passa pelo endereço). `#ia=sair` apaga.
 6. Lançar versão (`VERSAO`, `CACHE`, tabela do README) e atualizar Manual e Guia rápido.
 
 ## Decisões em aberto

@@ -3,7 +3,7 @@
 Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google (Cloud, Drive, Workspace), GitHub, Claude API e ElevenLabs.
 **Tudo o que tem segredo vem desligado.** Nenhuma tela carrega arquivos desta pasta. O registro legível por máquina está em [`integracoes.json`](integracoes.json).
 
-## Status (27/09/2026 · app 1.0.3)
+## Status (27/09/2026 · app 1.0.4)
 
 | Integração | Status | Onde |
 |---|---|---|
@@ -19,7 +19,7 @@ Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google
 | Coletor NMEA → Drive | a definir (equipamento SEM DADOS) | [telemetria-worker/](telemetria-worker/README.md) |
 | Google Cloud · conta de serviço | planejado | [google-cloud/](google-cloud/README.md) |
 | Login no servidor (Cloudflare Access ou repo privado) | planejado | [cloudflare/](cloudflare/README.md) |
-| IA na nuvem grátis · Workers AI (`capitao-ia`) | **estrutura** · desligada · sem chave de API | [workers-ai/](workers-ai/README.md) |
+| IA na nuvem grátis · Workers AI (`capitao-ia`) | **ativo na demonstração** (1.0.4) · Llama 3.3 70B · 3 perguntas/hora · aparelho ativa com `#ia=ativar` (caixa para colar a chave) | [workers-ai/](workers-ai/README.md) |
 | IA na nuvem paga · Claude API (`capitao-ia`) | **estrutura** · desligada | [claude-api/](claude-api/README.md) |
 | ElevenLabs (`capitao-voz`) | **opcional** · estrutura desligada | [elevenlabs/](elevenlabs/README.md) |
 | NotebookLM | planejado (não configurado) | `capitao-brain.js › BASE` |
@@ -34,7 +34,7 @@ O site é estático e público. Por isso:
 1. **Chave de API nunca no site nem no repositório.** Fica como segredo num intermediário (Cloudflare Worker).
 2. **O intermediário só responde ao site** (`ORIGENS`) **e só a aparelhos com a chave** (`CHAVE_APP` no cabeçalho `X-Capitao-Chave`), com **freio por IP**.
 3. **O app vem desligado.** Cada módulo do lado do app tem `URL_PROXY = ''`; vazio = nada é buscado e a tela segue com o dado local.
-   Teste num aparelho só: `localStorage` `capitao.<modulo>.url.v1` = URL do proxy — vale só com `URL_PROXY` vazio e só para o próprio Worker no `workers.dev` (`https://capitao-<modulo>.<conta>.workers.dev`). Chave no aparelho: abrir uma vez com `#<modulo>=<CHAVE_APP>`; `#<modulo>=sair` apaga (`#tele=`, `#ia=`, `#voz=`; dá para juntar num link só).
+   Teste num aparelho só: `localStorage` `capitao.<modulo>.url.v1` = URL do proxy — vale só com `URL_PROXY` vazio e só para o próprio Worker no `workers.dev` (`https://capitao-<modulo>.<conta>.workers.dev`). Chave no aparelho: **IA** abre com `#ia=ativar` e a chave é colada numa caixa (nunca passa pelo endereço, que fica no histórico do navegador); **telemetria e voz** ainda usam `#tele=<chave>` / `#voz=<chave>` — trocar pelo mesmo esquema antes de ligá-las. `#<modulo>=sair` apaga.
 4. **Falhou, demorou ou está sem internet → cai no local**, sem perder a resposta (snapshot fixo, voz do aparelho, base de bordo, SEM DADOS).
 5. **Limite de gasto** na conta de cada serviço (Anthropic, ElevenLabs); no Workers AI, limite de requisições no AI Gateway para a cota grátis não acabar.
 6. **Arquivo com a posição do barco nunca em link público.**
@@ -55,7 +55,7 @@ O site é estático e público. Por isso:
 1. Login no servidor — [cloudflare/](cloudflare/README.md) (Access) ou [github/](github/README.md) (repositório privado).
 2. Conta de serviço Google — [google-cloud/](google-cloud/README.md).
 3. Telemetria ao vivo — [telemetria-worker/](telemetria-worker/README.md).
-4. IA na nuvem — [workers-ai/](workers-ai/README.md) (grátis) ou [claude-api/](claude-api/README.md) (paga): mesmo cliente, publique uma das duas.
+4. IA na nuvem — [workers-ai/](workers-ai/README.md) (grátis, **já ligada na demonstração como exceção aprovada**) ou [claude-api/](claude-api/README.md) (paga): mesmo cliente, publique uma das duas.
 5. Documentos sensíveis — [google-drive/](google-drive/README.md).
 6. Voz em nuvem (opcional) — [elevenlabs/](elevenlabs/README.md).
 

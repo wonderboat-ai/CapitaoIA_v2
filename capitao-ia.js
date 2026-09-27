@@ -1,12 +1,13 @@
 /* Capitão IA — IA na nuvem via proxy protegido (Worker `capitao-ia`) · lado do app.
-   ESTRUTURA — DESLIGADA e NÃO CARREGADA por nenhuma tela. Mesmo padrão do capitao-telemetria.js:
-   sem URL configurada, nada é buscado e o chat segue 100% local (respostas prontas + base de bordo + SEM DADOS).
+   LIGADO NA DEMONSTRAÇÃO (1.0.4): carregado pelo Main e pelo H2. Cópia de integracoes/ia-cliente/capitao-ia.js com a URL
+   do Worker preenchida (o teste testes/chat_ia.py confere que só essa linha difere). Sem a CHAVE_APP no aparelho
+   (#ia=ativar, depois do login), nada é buscado e o chat segue 100% local (respostas prontas + base de bordo + SEM DADOS).
    Serve aos dois proxies (mesmo contrato): integracoes/workers-ai/ (gratuito) ou integracoes/claude-api/ (pago).
-   Para ligar (depois do login no servidor): ver o README do proxy escolhido.
+   Como foi ligado e como ativar um aparelho: integracoes/workers-ai/README.md.
    Nenhuma chave de provedor passa por aqui: o app só conhece a URL do proxy e a CHAVE_APP deste aparelho. */
 (function () {
   if (window.CapitaoIA) return;
-  var URL_PROXY = ''; // ex.: 'https://capitao-ia.<conta>.workers.dev'
+  var URL_PROXY = 'https://capitao-ia.luka-araujos.workers.dev'; // Worker capitao-ia (Workers AI) — ligado na demonstração em 27/09/2026
   // Teste num aparelho antes de publicar: localStorage 'capitao.ia.url.v1' = URL do proxy. Só vale com URL_PROXY vazio e só
   // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
   if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.ia.url.v1') || ''; if (/^https:\/\/capitao\-ia\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }

@@ -31,6 +31,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 </style>
 <script src="./capitao-telemetria.js"></script>
 <script src="./capitao-brain.js"></script>
+<script src="./capitao-ia.js"></script>
 <script src="./capitao-voz.js"></script>
 </helmet>
 <div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
@@ -88,7 +89,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
           </div>
         </sc-for>
         <sc-if value="{{thinking}}" hint-placeholder-val="{{false}}">
-          <div style="display: flex;"><div style="padding: 9px 12px; border-radius: 14px; background: rgba(var(--cap-card-rgb, 13,19,41), 0.9); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.08); font-size: 9.5px; letter-spacing: 0.10em; font-weight: 700; color: var(--cap-ink4, #7985a6);">CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS…</div></div>
+          <div data-capitao-pensando="1" style="display: flex;"><div style="padding: 9px 12px; border-radius: 14px; background: rgba(var(--cap-card-rgb, 13,19,41), 0.9); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.08); font-size: 9.5px; letter-spacing: 0.10em; font-weight: 700; color: var(--cap-ink4, #7985a6);">CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS…</div></div>
         </sc-if>
       </div>
     </sc-if>
@@ -252,14 +253,36 @@ class Component extends DCLogic {
           if (q) { const b = B.answer(q, { platform: 'app' }); if (b.key !== 'fallback' && b.key !== 'saudacao') a = { key: b.key, text: a.text + '\n\n' + b.text, src: b.src, actions: b.actions }; }
         } else a = B.answer(q, link ? { platform: 'app', id: id, commit: false } : { platform: 'app', id: id });
       } catch (e) { a = { text: 'Não consegui responder agora — SEM DADOS. Tente de novo.', src: 'Fonte: nenhuma — erro ao montar a resposta', actions: [] }; }
-      this.setState((s) => { const n = Math.max(0, (s.pending || 1) - 1); return { thread: s.thread.concat([{ role: 'bot', text: a.text, src: a.src, actions: a.actions }]), pending: n, thinking: n > 0 }; }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume(B.falaCurta ? B.falaCurta(a) : a.text); });
+      const msg = { role: 'bot', text: a.text, src: a.src, actions: a.actions };
+      this.setState((s) => { const n = Math.max(0, (s.pending || 1) - 1); return { thread: s.thread.concat([msg]), pending: n, thinking: n > 0 || (s.ia || 0) > 0 }; }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume(B.falaCurta ? B.falaCurta(a) : a.text); });
+      // IA na nuvem (Workers AI): só quando a resposta local veio de um trecho do guia ('base'), fora da conversa por voz
+      // (a voz já falou a resposta local) e com a IA ativa neste aparelho. A mensagem local fica na tela até a IA
+      // responder a partir dos mesmos trechos; erro, demora, sem internet ou SEM DADOS da IA → fica a local.
+      // Pergunta por link (#q=) só usa a IA se o link veio de dentro do app (FAQ, sistemas…): link de fora não gasta a cota.
+      const IA = window.CapitaoIA;
+      let interno = !link;
+      if (link) { try { interno = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) { interno = false; } }
+      if (!att && a.key === 'base' && interno && !this.state.conversa && IA && IA.ativa()) {
+        const ger = this._ger || 0;
+        // Contador próprio (ia), separado do pending: esperar a IA não segura o microfone da conversa por voz.
+        this.setState((s) => ({ ia: (s.ia || 0) + 1, thinking: true }));
+        IA.perguntar(q, B.buscaBase(q, 3), '').then((r) => {
+          if (this._dead || ger !== (this._ger || 0)) return; // NOVA apagou a conversa: descarta sem mexer nos contadores novos
+          this.setState((s) => {
+            const ia = Math.max(0, (s.ia || 1) - 1);
+            const thread = r ? s.thread.map((m) => (m === msg ? { role: 'bot', text: r.text, src: r.src, actions: msg.actions } : m)) : s.thread;
+            return { thread: thread, ia: ia, thinking: (s.pending || 0) > 0 || ia > 0 };
+          }, () => this.scrollThread());
+        });
+      }
     }, 650);
     this._pend = (this._pend || []).concat([t]);
   }
   clearThread() {
     this.stopRec(); this._fala = null; if (window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
     (this._pend || []).forEach(clearTimeout); this._pend = [];
-    this.setState({ thread: [], thinking: false, pending: 0, conversa: false, listening: false });
+    this._ger = (this._ger || 0) + 1; // resposta da IA de antes do NOVA é descartada
+    this.setState({ thread: [], thinking: false, pending: 0, ia: 0, conversa: false, listening: false });
   }
   // Só a fala mais recente reabre o microfone, e só sem outra resposta a caminho — senão ele ouve a voz do próprio app.
   speakAndResume(text) {

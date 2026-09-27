@@ -6,7 +6,7 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.3', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.4', data: '27/09/2026' };
   var CREDITO = 'Wonder BOAT | WonderHUB.AI';
   var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$/i; // GitHub Pages (redireciona) e v2.capitaoia.com.br
 
@@ -120,7 +120,10 @@
   function paraLogin() {
     if (saindo) return; saindo = true;
     try { document.documentElement.style.visibility = 'hidden'; } catch (e) {}
-    var aqui = arquivo(location.pathname) + location.search + location.hash;
+    // Chaves de aparelho no endereço (#ia=, #tele=, #voz=) não vão para o ?next= (query vai ao servidor e ao histórico):
+    // entre primeiro e depois abra o link com a chave.
+    var h = location.hash.slice(1).split('&').filter(function (p) { return p && !/^(ia|tele|voz)=/.test(p); }).join('&');
+    var aqui = arquivo(location.pathname) + location.search + (h ? '#' + h : '');
     location.replace('login.html?next=' + encodeURIComponent(aqui));
   }
   function sair() { limpar(); avisar(); try { sessionStorage.removeItem('capitao.lista'); } catch (e) {} saindo = true; location.replace('login.html'); }

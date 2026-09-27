@@ -1,6 +1,12 @@
-# Workers AI · IA na nuvem gratuita — ESTRUTURA (desligada)
+# Workers AI · IA na nuvem gratuita — LIGADA na demonstração (1.0.4)
 
-Nada publicado, nenhuma tela chama. Hoje o chat e a voz respondem **só no aparelho**:
+**Publicado em 27/09/2026** na conta Cloudflare do proprietário: `https://capitao-ia.luka-araujos.workers.dev` (código deste `ia-worker/worker.js`, colado pelo painel), binding `AI`, `MODELO`, `MAX_TOKENS`, `ORIGENS` e `GATEWAY=capitao-ia`; `CHAVE_APP` como Secret. AI Gateway `capitao-ia`: **3 pedidos por hora, janela deslizante**, sem coleta de logs, autenticado. **Logs de invocação do Worker desligados** — eles gravavam os cabeçalhos do pedido, inclusive o `X-Capitao-Chave`, em texto claro. Ligado como **exceção aprovada pelo proprietário** à regra do login no servidor (dados fictícios, origem própria); **antes de dados reais, pôr o Cloudflare Access** na frente do Worker.
+
+**Ativar um aparelho** (uma vez por celular ou computador): entrar no app com login e senha e, **depois**, abrir `https://v2.capitaoia.com.br/#ia=ativar` — aparece uma caixa: colar a `CHAVE_APP` (do arquivo PRIVADO do proprietário, fora do repositório) e confirmar. A chave fica só no aparelho e **nunca passa pelo endereço** (o endereço fica no histórico do navegador, que pode sincronizar). `#ia=sair` desativa; qualquer outro valor em `#ia=` é ignorado.
+
+**Trocar a chave:** gerar outra, atualizar o Secret `CHAVE_APP` no painel (Workers & Pages › capitao-ia › Settings › Variables and Secrets) e reativar os aparelhos com `#ia=ativar`.
+
+Antes de ligar, o chat e a voz respondiam **só no aparelho**:
 resposta pronta (`ANSWERS`) → trecho da base de bordo (`buscaBase`) → **SEM DADOS**.
 A IA entra como **mais uma camada antes do SEM DADOS**, respondendo só com as fontes que o próprio app mandar. Ela **não substitui** as respostas prontas nem o SOS: emergência continua roteada no aparelho, offline.
 
@@ -96,7 +102,7 @@ O app está em **https://v2.capitaoia.com.br**, uma origem só dele (desde a 1.0
 3. **(Recomendado) Limite global no AI Gateway**, grátis: AI › AI Gateway › criar um gateway › Settings › Rate-limiting, dimensionado pela cota: ~70 perguntas por dia no Llama 3.3 70B, então algo como **3 requisições por hora, janela deslizante** (≈ 72 por dia); com 60 por hora a cota do dia acaba em pouco mais de 1 hora. O `default`, criado sozinho na 1ª chamada, vem **sem** limite. Depois definir `GATEWAY` com o id. O proxy desliga o log de prompts do gateway (`collectLog: false`). No plano Workers **Paid** o excedente da cota é cobrado (US$ 0,011 por 1.000 Neurons): lá o limite do gateway é também limite de gasto.
 4. **No site**, igual ao `claude-api`: copiar `../ia-cliente/capitao-ia.js` para a raiz, pôr o endereço do Worker em `URL_PROXY`, incluir `<script src="./capitao-ia.js"></script>` no `<helmet>` de `Main` e `H2-Home-Mobile` e adicionar `./capitao-ia.js` em `CORE` do `sw.js`.
 5. **Ponto de encaixe** (nas telas de chat, no método `ask`): quando a resposta local for **`base`** (achou trechos no guia), chamar `CapitaoIA.perguntar(q, CapitaoBrain.buscaBase(q, 3), '')` e, se vier resposta, trocar a mensagem: a IA responde a partir desses trechos. No `fallback` **não chame**: o `answer()` só chega em `fallback` quando `buscaBase` não achou nada, então não há trecho e o proxy devolveria 422. Mande a leitura da tela em `contexto` só quando a pergunta for sobre ela (telemetria, tanques, motores…), nunca sempre: senão a IA recebe o snapshot para qualquer pergunta. A voz continua usando `falaCurta`.
-6. **Em cada aparelho:** abrir uma vez com `#ia=<CHAVE_APP>`. `#ia=sair` apaga.
+6. **Em cada aparelho:** depois do login, abrir uma vez com `#ia=ativar` e colar a chave na caixa. `#ia=sair` apaga.
 7. **Lançar versão** (`VERSAO`, `CACHE`, tabela do README) e atualizar Manual e Guia rápido.
 
 Testar antes de ligar: `python -X utf8 testes/worker_ia.py`. O `wrangler dev` também consome a cota de Neurons.
