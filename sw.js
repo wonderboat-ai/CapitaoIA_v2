@@ -2,7 +2,7 @@
    Instala já com todas as telas: a 1ª tela aberta carrega antes do SW e nunca entraria no cache.
    Offline sem a página no cache → aviso fixo com SOS (nunca o index.html, que redireciona e podia entrar em laço).
    Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = tabela do README. Arquivo novo usado offline → CORE/TELAS. */
-const CACHE = 'capitao-site-v1.0.3';
+const CACHE = 'capitao-site-v1.0.4';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
@@ -14,7 +14,7 @@ const TELAS = [
 ];
 const CORE = [
   './', './index.html', './login.html', './support.js', './capitao-dados.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
-  './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './base-conhecimento.json',
+  './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json',
   './deck-stage.js', './manifest.webmanifest', './Guia-Rapido-Capitao-IA.pdf',
   './assets/logo-wonderboat.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png', './assets/favicon_64.png', './assets/apple-touch-icon.png'
 ].concat(TELAS.map((t) => './' + t + '.dc.html'));
@@ -58,7 +58,8 @@ self.addEventListener('fetch', (e) => {
   if (!same && !cdn) return; // clima, maré e proxies: sempre da rede (sem cache aqui)
   e.respondWith(
     fetch(req).then((res) => {
-      if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
+      // Guarda sem o #…: nada do endereço depois do # vai para o cache.
+      if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(same ? url.origin + url.pathname + url.search : req, copy)).catch(() => {}); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: same }).then((hit) => hit || (req.mode === 'navigate' ? semInternet() : Response.error())))
   );
