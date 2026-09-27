@@ -4,12 +4,19 @@
    Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = tabela do README. Arquivo novo usado offline → CORE/TELAS. */
 const CACHE = 'capitao-site-v1.0.0';
 const TELAS = [
-  'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile'
+  'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
+  'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
+  'C1-Leme-Web', 'C2-Leme-Mobile', 'E1-Navegando-Gatilhos', 'E2-Navegando-Sintoma',
+  'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
+  'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
+  'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile',
+  'G3-Diario-Web', 'G3-Diario-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile', 'H3-Atalhos-Editar-Web', 'H3-Atalhos-Editar'
 ];
 const CORE = [
   './', './index.html', './login.html', './support.js', './capitao-dados.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
-  './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './base-conhecimento.json', './manifest.webmanifest',
-  './assets/logo-wonderboat.png', './assets/icon-192.png', './assets/icon-512.png', './assets/favicon_64.png', './assets/apple-touch-icon.png'
+  './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './base-conhecimento.json',
+  './deck-stage.js', './manifest.webmanifest', './Guia-Rapido-Capitao-IA.pdf',
+  './assets/logo-wonderboat.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png', './assets/favicon_64.png', './assets/apple-touch-icon.png'
 ].concat(TELAS.map((t) => './' + t + '.dc.html'));
 // React (unpkg, versão fixa): sem ele nenhuma tela abre offline. Melhor esforço — se falhar aqui, entra no cache no próximo uso online.
 const CDN = [
