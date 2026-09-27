@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+*.pyc
+.wrangler/
+.dev.vars
+.env
+*.local.*
+/testes/saida/
