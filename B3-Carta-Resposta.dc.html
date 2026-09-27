@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Resposta por voz (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+@keyframes capOuvindo { 0%, 100% { box-shadow: 0 0 0 0 rgba(var(--cap-crit-rgb, 255,59,48), 0.35); } 50% { box-shadow: 0 0 0 6px rgba(var(--cap-crit-rgb, 255,59,48), 0.05); } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; } }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Resposta por voz" voltar="B2-Carta-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto;">
+    <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0;">
+      <div style="max-width: 300px; box-sizing: border-box; padding: 11px 15px; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); border-radius: 18px 18px 4px 18px;">
+        <span style="font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere;">{{pergunta}}</span>
+      </div>
+      <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--cap-ink3, #97a3c0); padding-right: 4px; text-align: right;">{{origemIco}}{{origem}}</span>
+    </div>
+
+    <div style="box-sizing: border-box; padding: 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0;">
+      <span style="display: flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-tele, #00f4fd);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg>{{falaRotulo}}</span>
+      <span aria-live="polite" style="font-size: {{falaSize}}; font-weight: 800; line-height: {{falaLh}}; letter-spacing: -0.01em; white-space: pre-wrap; overflow-wrap: anywhere;">{{fala}}</span>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" onClick="{{ouvir}}" aria-pressed="{{falando}}" aria-label="{{ouvirAria}}" style="flex: 0 0 116px; min-width: 0; height: 50px; border-radius: 14px; border: 1px solid {{ouvirLine}}; background: {{ouvirBg}}; color: {{ouvirTone}}; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 800; padding: 0 8px;">{{ouvirIco}}<span style="white-space: nowrap;">{{ouvirLabel}}</span></button>
+        <button type="button" onClick="{{falar}}" aria-pressed="{{ouvindo}}" aria-label="{{falarAria}}" style="flex: 1 1 0; min-width: 0; height: 50px; border-radius: 14px; border: 1px solid {{falarLine}}; background: {{falarBg}}; color: {{falarTone}}; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 800; padding: 0 8px; animation: {{falarAnim}};">{{falarIco}}<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{falarLabel}}</span></button>
+      </div>
+      <sc-if value="{{temNota}}" hint-placeholder-val="{{false}}">
+        <span role="status" style="font-size: 12px; font-weight: 700; line-height: 1.4; color: {{notaTone}};">{{nota}}</span>
+      </sc-if>
+      <sc-if value="{{mostraTexto}}" hint-placeholder-val="{{true}}">
+        <div style="height: 1px; background: var(--cap-line, #1a2240);"></div>
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0);">TEXTO COMPLETO NA TELA</span>
+        <span style="font-size: 14px; line-height: 1.5; color: var(--cap-ink2, #b1bdd6); white-space: pre-wrap; overflow-wrap: anywhere;">{{texto}}</span>
+      </sc-if>
+      <div style="padding-top: 10px; border-top: 1px solid var(--cap-line, #1a2240); display: flex; gap: 9px; align-items: flex-start;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M6 3h8l4 4v14H6z M14 3v4h4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
+        <span style="font-size: 11.5px; line-height: 1.5; color: var(--cap-ink3, #97a3c0); overflow-wrap: anywhere;">{{fonte}}</span>
+      </div>
+    </div>
+
+    <sc-if value="{{temAcoes}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0); padding-left: 2px;">AÇÕES</span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <sc-for list="{{acoes}}" as="x" hint-placeholder-count="2">
+            <a href="{{x.href}}" target="{{x.target}}" rel="{{x.rel}}" style="min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; text-decoration: none;">{{x.l}} ›</a>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+      <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0); padding-left: 2px;">OUTRAS PERGUNTAS</span>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{outras}}" as="o" hint-placeholder-count="4">
+          <button type="button" onClick="{{o.onClick}}" aria-pressed="{{o.atual}}" style="min-width: 0; height: 44px; padding: 0 10px; border-radius: 12px; border: 1px solid {{o.line}}; background: {{o.bg}}; color: {{o.tone}}; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{o.l}}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <span style="font-size: 11px; line-height: 1.45; color: var(--cap-ink4, #7985a6); flex-shrink: 0;">{{calculo}}</span>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  PADRAO = 'Motores';
+  OUTRAS = ['Motores', 'Gerador', 'Pressão de óleo baixa: o que verificar primeiro?', 'Autonomia', 'Seguro para sair?', 'Documentos vencendo'];
+  state = { q: '', origem: 'padrao', a: null, fala: '', falando: false, ouvindo: false, parcial: '', nota: '', notaTone: 'var(--cap-warn, #f0a63a)' };
+  componentDidMount() {
+    this._onHash = () => this.lerHash();
+    window.addEventListener('hashchange', this._onHash);
+    // Barra do assistente: pergunta digitada (e VOZ→TEXTO, se o navegador ouvir) responde aqui mesmo; os outros modos seguem para a conversa da home.
+    this._barra = (e) => {
+      const d = (e && e.detail) || {};
+      if (d.texto) { e.preventDefault(); this.limpaBarra(); this.perguntar(d.texto, 'barra'); }
+      else if (d.modo === 'voz' && this.temReconhecimento() && window.CapitaoBrain) { e.preventDefault(); this.falar(); }
+    };
+    window.addEventListener('capitao-barra', this._barra);
+    this.whenBrain(() => this.lerHash());
+  }
+  componentWillUnmount() {
+    this._dead = true;
+    window.removeEventListener('hashchange', this._onHash);
+    window.removeEventListener('capitao-barra', this._barra);
+    clearTimeout(this._re); clearTimeout(this._n);
+    this.paraEscuta();
+    if (this.state.falando && window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
+  }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb();
+    let n = 0;
+    const t = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  temReconhecimento() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+  temVoz() { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }
+  aviso(msg, tone, ms) { this.setState({ nota: msg, notaTone: tone || 'var(--cap-warn, #f0a63a)' }); clearTimeout(this._n); if (ms !== 0) this._n = setTimeout(() => { if (!this._dead) this.setState({ nota: '' }); }, ms || 6000); }
+  limpaBarra() { try { const i = document.querySelector('capitao-barra-chat .cpb-in'); if (i) i.value = ''; } catch (e) {} }
+  // Pergunta do endereço (#q=…) ou a padrão desta tela
+  lerHash() {
+    const B = window.CapitaoBrain; if (!B) return;
+    const h = B.parseHash();
+    if (h.q && String(h.q).trim()) this.perguntar(h.q, 'link', true);
+    else if (!this.state.a) this.perguntar(this.PADRAO, 'padrao', true);
+  }
+  // Resposta calculada agora pelo cérebro — commit:false: nada desta tela grava no diário.
+  perguntar(q, origem, veioDoEndereco) {
+    const B = window.CapitaoBrain; if (!B) return;
+    q = String(q || '').trim().slice(0, 500); if (!q) return;
+    if (this.state.falando) { B.stopSpeaking(); }
+    if (!veioDoEndereco) { try { history.replaceState(null, '', location.pathname + location.search + '#q=' + encodeURIComponent(q)); } catch (e) {} }
+    this._tent = 0; clearTimeout(this._re);
+    this.calcula(q, origem, origem === 'voz');
+  }
+  calcula(q, origem, depoisFala) {
+    const B = window.CapitaoBrain; if (!B || this._dead) return;
+    let a;
+    try { a = B.answer(q, { platform: 'app', commit: false }); } catch (e) { a = { key: 'erro', text: 'Não consegui montar a resposta agora — SEM DADOS. Tente de novo.', src: 'Fonte: nenhuma — erro ao montar a resposta', actions: [] }; }
+    let fala = '';
+    try { fala = B.falaCurta ? B.falaCurta(a) : String(a.text || '').split('\n')[0]; } catch (e) { fala = String(a.text || '').split('\n')[0]; }
+    this.setState({ q: q, origem: origem, a: a, fala: fala, falando: false }, () => { if (depoisFala) this.ouvir(true); });
+    // Base de conhecimento (guias) carrega em segundo plano: sem resposta pronta, tenta de novo quando ela chegar.
+    if (a.key === 'fallback' && (this._tent || 0) < 4) {
+      this._tent = (this._tent || 0) + 1;
+      try { B.carregaBase(); } catch (e) {}
+      clearTimeout(this._re); this._re = setTimeout(() => { if (this.state.q === q) this.calcula(q, origem, false); }, 900);
+    }
+  }
+  ouvir(auto) {
+    const B = window.CapitaoBrain; if (!B || !this.state.a) return;
+    if (this.state.falando && auto !== true) { B.stopSpeaking(); this.setState({ falando: false }); return; }
+    if (!this.temVoz()) { this.aviso('Voz indisponível neste navegador — a resposta completa está na tela.'); return; }
+    this.paraEscuta();
+    const texto = this.state.fala || this.state.a.text;
+    this.setState({ falando: true, nota: '' });
+    const ok = B.speak(texto, () => { if (!this._dead) this.setState({ falando: false }); });
+    if (ok === false) { this.setState({ falando: false }); this.aviso('Não consegui tocar a voz agora — a resposta completa está na tela.'); }
+  }
+  paraEscuta() { if (this.rec) { const d = this.rec; this.rec = null; try { d.cancelar(); } catch (e) {} } }
+  // Perguntar por voz: ditado do cérebro; tocar de novo envia o que ouviu.
+  falar() {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (this.rec) { this.rec.parar(); return; }
+    if (!this.temReconhecimento() || !B.ditado) { this.aviso('Reconhecimento de voz indisponível neste navegador — digite a pergunta na barra abaixo.', null, 9000); return; }
+    if (this.state.falando) { B.stopSpeaking(); this.setState({ falando: false }); }
+    const d = B.ditado({
+      pausa: 2500, espera: 8000,
+      parcial: (t) => { if (this.rec === d && !this._dead) this.setState({ parcial: t }); },
+      fim: (t) => {
+        if (this.rec !== d || this._dead) return; this.rec = null;
+        this.setState({ ouvindo: false, parcial: '' });
+        if (t) this.perguntar(t, 'voz'); else this.aviso('Não ouvi nada — toque em Perguntar por voz e fale de novo.');
+      },
+      erro: (e) => {
+        if (this.rec !== d || this._dead) return; this.rec = null;
+        this.setState({ ouvindo: false, parcial: '' });
+        this.aviso(e === 'no-speech' ? 'Não ouvi nada — toque em Perguntar por voz e fale de novo.' : 'Microfone sem permissão — digite a pergunta na barra abaixo.', null, 9000);
+      }
+    });
+    if (!d) { this.aviso('Reconhecimento de voz indisponível neste navegador — digite a pergunta na barra abaixo.', null, 9000); return; }
+    this.rec = d; this.setState({ ouvindo: true, parcial: '', nota: '' });
+  }
+  renderVals() {
+    const s = this.state, a = s.a, D = window.CapitaoDados || {};
+    const ORIG = { padrao: 'Pergunta padrão desta tela', link: 'Pergunta do endereço (#q=)', voz: 'Transcrita da voz', barra: 'Digitada na barra do assistente', atalho: 'Outra pergunta desta tela' };
+    const MIC = 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3';
+    const PLAY = 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', STOP = 'M7 7h10v10H7z';
+    const sr = this.temReconhecimento(), vz = this.temVoz();
+    // Emergência (SOS, pressão de óleo, EPIRB, Seafire): falaCurta devolve o texto inteiro — mostra uma vez só, com as quebras de linha.
+    const inteira = !!(a && a.key && { sos: 1, oleo: 1, epirb: 1, seafire: 1 }[a.key]);
+    const acoes = a && a.actions ? a.actions.map((x) => ({ l: x.l, href: x.href, target: x.ext ? '_blank' : '_self', rel: x.ext ? 'noopener' : '' })) : [];
+    const accent = 'var(--cap-accent, #00a1fe)', crit = 'var(--cap-crit, #ff3b30)';
+    const semSR = !sr ? 'Reconhecimento de voz indisponível neste navegador — digite a pergunta na barra abaixo.' : '';
+    const nota = s.ouvindo ? (s.parcial ? 'Ouvindo: “' + s.parcial + '” — toque de novo para enviar' : 'Ouvindo… fale a pergunta · toque de novo para enviar') : (s.nota || semSR);
+    return {
+      pergunta: s.ouvindo && s.parcial ? s.parcial : (s.q || '…'),
+      origem: s.ouvindo ? 'Ouvindo…' : (ORIG[s.origem] || '') + ' · não grava no diário',
+      origemIco: this.ico(s.origem === 'voz' || s.ouvindo ? MIC : 'M4 6h16v10H8l-4 4z', 12, 2),
+      falaRotulo: inteira ? 'EMERGÊNCIA · A VOZ LÊ A RESPOSTA INTEIRA' : 'A VOZ FALA PRIMEIRO (1ª LINHA)',
+      fala: a ? (inteira ? a.text : (s.fala || '—')) : 'Calculando a resposta…',
+      falaSize: inteira ? '17px' : String(s.fala || '').length > 150 ? '19px' : '23px', falaLh: inteira ? '1.45' : '1.28',
+      mostraTexto: !inteira,
+      texto: a ? a.text : '',
+      fonte: a ? (a.src || 'Fonte: nenhuma — SEM DADOS') : '',
+      acoes: acoes, temAcoes: acoes.length > 0,
+      ouvir: () => this.ouvir(), falando: s.falando,
+      ouvirLabel: s.falando ? 'Parar' : 'Ouvir', ouvirAria: s.falando ? 'Parar a voz' : (vz ? 'Ouvir a resposta em voz alta' : 'Ouvir — voz indisponível neste navegador'),
+      ouvirIco: this.ico(s.falando ? STOP : PLAY, 18, 1.9), ouvirTone: s.falando ? 'var(--cap-on-accent, #050816)' : accent,
+      ouvirBg: s.falando ? accent : 'rgba(var(--cap-accent-rgb, 0,161,254), 0.10)', ouvirLine: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)',
+      falar: () => this.falar(), ouvindo: s.ouvindo,
+      falarLabel: s.ouvindo ? 'Ouvindo… enviar' : 'Perguntar por voz', falarAria: s.ouvindo ? 'Ouvindo — toque para enviar a pergunta' : (sr ? 'Perguntar por voz' : 'Perguntar por voz — reconhecimento indisponível neste navegador'),
+      falarIco: this.ico(MIC, 18, 1.9), falarTone: s.ouvindo ? crit : (sr ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)'),
+      falarBg: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)' : 'var(--cap-elev, #131a33)', falarLine: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' : 'var(--cap-line2, #27315a)',
+      falarAnim: s.ouvindo ? 'capOuvindo 1.6s ease-in-out infinite' : 'none',
+      temNota: !!nota, nota: nota, notaTone: s.ouvindo ? accent : (s.nota ? s.notaTone : 'var(--cap-ink3, #97a3c0)'),
+      outras: this.OUTRAS.map((q) => { const on = s.q === q; return { l: q.replace(/: o que verificar primeiro\?$/, ''), atual: on, onClick: () => this.perguntar(q, 'atalho'), line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'var(--cap-card, #0d1329)', tone: on ? accent : 'var(--cap-ink2, #b1bdd6)' }; }),
+      calculo: 'Resposta calculada agora pelo cérebro com os dados de bordo' + (D.demo ? ' (DEMO · dados fictícios)' : '') + ' — nada escrito à mão. Perguntas desta tela não gravam no diário: para registrar, diga “registre no diário…” na conversa da home.'
+    };
+  }
+}
+</script>
+</body>
+</html>
