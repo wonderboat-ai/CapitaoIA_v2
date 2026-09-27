@@ -3,7 +3,7 @@
 Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google (Cloud, Drive, Workspace), GitHub, Claude API e ElevenLabs.
 **Tudo o que tem segredo vem desligado.** Nenhuma tela carrega arquivos desta pasta. O registro legível por máquina está em [`integracoes.json`](integracoes.json).
 
-## Status (27/09/2026 · app 1.0.1)
+## Status (27/09/2026 · app 1.0.2)
 
 | Integração | Status | Onde |
 |---|---|---|

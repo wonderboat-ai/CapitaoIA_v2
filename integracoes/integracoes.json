@@ -1,6 +1,6 @@
 {
   "versao": "2026-09-27",
-  "app": "Capitão IA 1.0.1",
+  "app": "Capitão IA 1.0.2",
   "aviso": "Registro das integrações do projeto. Só estrutura e status: nenhuma chave, ID privado ou endereço de proxy fica aqui. Status: ativo · preparado-desligado · estrutura · opcional · planejado · a-definir.",
   "regra": "Chave de API nunca no site nem no repositório: fica como segredo num proxy (Cloudflare Worker) que só aceita as ORIGENS do site e a CHAVE_APP do aparelho (cabeçalho X-Capitao-Chave), com freio por IP. Todo módulo do app vem com URL_PROXY = '' e cai no dado local em erro, demora ou sem internet.",
   "integracoes": [
