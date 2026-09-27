@@ -67,6 +67,6 @@
       "notas": "Pré-requisito para telemetria ao vivo, documentos sensíveis e IA." },
     { "id": "dominio-proprio", "nome": "v2.capitaoia.com.br", "categoria": "hospedagem", "status": "ativo",
       "onde": ["CNAME", "integracoes/cloudflare/README.md › Domínio"], "segredos": [],
-      "notas": "Desde a 1.0.3. DNS no Registro.br: CNAME v2 → wonderboat-ai.github.io. A raiz capitaoia.com.br é o site de apresentação no Lovable (não mexer). Origem só do app: o github.io fica fora de ORIGENS e redireciona para cá." }
+      "notas": "Desde a 1.0.3. DNS no Registro.br: CNAME v2 → wonderboat-ai.github.io. A raiz capitaoia.com.br é o site de apresentação no Lovable (não mexer). Domínio verificado no GitHub (TXT _github-pages-challenge-wonderboat-ai, manter); HTTPS obrigatório. Origem só do app: o github.io fica fora de ORIGENS e redireciona para cá." }
   ]
 }

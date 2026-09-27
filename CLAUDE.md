@@ -2,7 +2,7 @@
 
 Cérebro operacional da embarcação **Capitão IA** (fabricante/modelo e registro SEM DADOS · proprietário Lucas Araújo · base Balneário Camboriú (SC) · fuso America/Sao_Paulo).
 **Hoje é uma DEMONSTRAÇÃO da plataforma** para mostrar a clientes e servir de modelo para as próximas embarcações: clone da arquitetura, da taxonomia da interface e do padrão de integrações do Avanti Vessel AI 1.4.6, com **dados fictícios rotulados DEMO**.
-Repositório `wonderboat-ai/CapitaoIA_v2` (público). Site: GitHub Pages da `main`, raiz → **https://v2.capitaoia.com.br/** (arquivo `CNAME`; DNS no Registro.br: CNAME `v2` → `wonderboat-ai.github.io`; o endereço antigo wonderboat-ai.github.io/CapitaoIA_v2/ redireciona). A raiz capitaoia.com.br é o site de apresentação feito no Lovable — não mexer.
+Repositório `wonderboat-ai/CapitaoIA_v2` (público). Site: GitHub Pages da `main`, raiz → **https://v2.capitaoia.com.br/** (arquivo `CNAME`; DNS no Registro.br: CNAME `v2` → `wonderboat-ai.github.io`; o endereço antigo wonderboat-ai.github.io/CapitaoIA_v2/ redireciona). A raiz capitaoia.com.br é o site de apresentação feito no Lovable — não mexer. Domínio verificado no GitHub (TXT `_github-pages-challenge-wonderboat-ai` — manter) e HTTPS obrigatório; o Custom domain do repositório tem de continuar `v2.capitaoia.com.br`.
 Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 
 ## Como falar com o usuário

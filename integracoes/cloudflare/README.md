@@ -31,7 +31,8 @@ Pré-requisito para telemetria ao vivo, documentos sensíveis e IA sobre eles. P
 
 - **DNS:** Registro.br (servidores `e.sec.dns.br` e `f.sec.dns.br`, zona em modo avançado). Registro do app: **CNAME `v2` → `wonderboat-ai.github.io`** (sem o nome do repositório).
 - **Raiz `capitaoia.com.br`:** site de apresentação feito no Lovable (A `185.158.133.1` e TXT `_lovable`). **Não mexer.**
-- **Verificação no GitHub** (recomendada, contra takeover): Settings do perfil › Pages › Add a domain › `capitaoia.com.br` › TXT `_github-pages-challenge-wonderboat-ai` com o valor que o GitHub mostrar › Verify. Manter o TXT. Cobre os subdomínios imediatos, inclusive `v2`.
+- **Verificação no GitHub** (contra takeover): **feita em 27/09/2026** — `capitaoia.com.br` verificado em https://github.com/settings/pages (Settings do **perfil**, não do repositório) com o TXT `_github-pages-challenge-wonderboat-ai`. **Manter o TXT.** Cobre os subdomínios imediatos, inclusive `v2` (API: `protected_domain_state: verified`).
+- **Não mexer** no Custom domain em Settings › Pages do **repositório**: tem de ser `v2.capitaoia.com.br` (em 27/09 a raiz foi posta ali por engano e o app redirecionou para o site do Lovable por ~10 min).
 - **No repositório:** arquivo `CNAME` na raiz com `v2.capitaoia.com.br` (publicação por branch). Se o arquivo sumir num push, o site sai do domínio.
 - **HTTPS:** certificado Let's Encrypt emitido pelo GitHub em até 1 hora; depois, Settings › Pages › **Enforce HTTPS**. Não há registro CAA na zona (se um dia houver, incluir `letsencrypt.org`).
 - **Endereço antigo:** `https://wonderboat-ai.github.io/CapitaoIA_v2/` redireciona para `https://v2.capitaoia.com.br/`.
