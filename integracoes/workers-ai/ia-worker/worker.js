@@ -20,10 +20,10 @@
      GATEWAY     (opcional) id de um AI Gateway com limite de requisições configurado (limite global da cota)
      ORIGENS     (opcional) sites autorizados, separados por vírgula
    Proteções: só as ORIGENS, só com a CHAVE_APP, no máximo 30 perguntas por minuto por IP (IPv6 por bloco /64) e o limite
-   global do AI Gateway, se ligado. ATENÇÃO: wonderboat-ai.github.io é uma origem dividida com os outros sites da conta —
-   antes de ligar, publicar o app numa origem só dele e tirar o github.io de ORIGENS (README › Antes de ligar). */
+   global do AI Gateway, se ligado. O app está em https://v2.capitaoia.com.br, origem só dele; o wonderboat-ai.github.io é
+   dividido com os outros sites da conta e fica fora de ORIGENS. */
 
-const PADRAO_ORIGENS = 'https://wonderboat-ai.github.io';
+const PADRAO_ORIGENS = 'https://v2.capitaoia.com.br'; // só o app: o github.io é dividido com os outros sites da conta
 const PADRAO_MODELO = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const LIMITE_PERGUNTA = 500, LIMITE_TRECHO = 1200, MAX_TRECHOS = 3, LIMITE_CONTEXTO = 2000, LIMITE_MIN = 30;
 const usos = new Map(); // por instância do Worker: freio simples contra abuso, não substitui o limite global do AI Gateway

@@ -45,7 +45,7 @@ PAGINA = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title
 
 JS = r"""
 async (base) => {
-  const ORIGEM = 'https://wonderboat-ai.github.io';
+  const ORIGEM = 'https://v2.capitaoia.com.br';
   const out = [];
   const ok = (nome, cond, extra) => out.push({ nome, ok: !!cond, extra: extra === undefined ? '' : String(extra).slice(0, 400) });
   let ipN = 0;
@@ -85,6 +85,8 @@ async (base) => {
   ok('WAI preflight da origem autorizada → 204 com CORS', r.s === 204 && r.h.get('Access-Control-Allow-Origin') === ORIGEM && /X-Capitao-Chave/.test(r.h.get('Access-Control-Allow-Headers')), r.s);
   r = await run(W, req({ origem: 'https://site-estranho.com', corpo: corpo() }), env());
   ok('WAI origem não autorizada → 403', r.s === 403, r.s);
+  r = await run(W, req({ origem: 'https://wonderboat-ai.github.io', corpo: corpo() }), env());
+  ok('WAI github.io (dividido com os outros sites da conta) → 403', r.s === 403, r.s);
   r = await run(W, req({ origem: null, corpo: corpo() }), env());
   ok('WAI sem Origin → 403', r.s === 403, r.s);
   r = await run(W, req({ chave: null, corpo: corpo() }), env());

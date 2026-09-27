@@ -13,4 +13,4 @@ binding = "AI"
 MODELO = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
 MAX_TOKENS = "800"
 # GATEWAY = "default"   (opcional: AI Gateway como limite global de requisições — ver README)
-ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"
+ORIGENS = "https://v2.capitaoia.com.br"   # só o app (o github.io é dividido com os outros sites da conta e redireciona para cá)
