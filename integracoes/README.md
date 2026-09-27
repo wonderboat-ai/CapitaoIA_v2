@@ -3,11 +3,11 @@
 Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google (Cloud, Drive, Workspace), GitHub, Claude API e ElevenLabs.
 **Tudo o que tem segredo vem desligado.** Nenhuma tela carrega arquivos desta pasta. O registro legível por máquina está em [`integracoes.json`](integracoes.json).
 
-## Status (27/09/2026 · app 1.0.2)
+## Status (27/09/2026 · app 1.0.3)
 
 | Integração | Status | Onde |
 |---|---|---|
-| GitHub Pages (hospedagem) | **ativo** (publica quando o proprietário pedir o merge) | [github/](github/README.md) |
+| GitHub Pages (hospedagem) em **v2.capitaoia.com.br** | **ativo** (publica quando o proprietário pedir o merge) | [github/](github/README.md) |
 | PWA / cache offline | **ativo** | `sw.js`, `manifest.webmanifest` |
 | Open-Meteo (clima ECMWF, maré, geocoding) | **ativo** · sem chave | `capitao-clima.js` |
 | windy.com | **ativo** · só link | `capitao-clima.js` |
@@ -25,7 +25,7 @@ Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google
 | NotebookLM | planejado (não configurado) | `capitao-brain.js › BASE` |
 | Gemini (documentos sensíveis) | planejado | `CLAUDE.md › Privacidade` |
 | Google Workspace (Gmail, Agenda) | a definir | [google-workspace/](google-workspace/README.md) |
-| Domínio www.capitãoia.com.br | planejado (sem DNS) | [cloudflare/](cloudflare/README.md) |
+| Domínio v2.capitaoia.com.br (CNAME no Registro.br → GitHub Pages) | **ativo** · a raiz capitaoia.com.br é o site do Lovable | [cloudflare/](cloudflare/README.md) |
 
 ## Regra de todas as integrações
 
@@ -38,7 +38,7 @@ O site é estático e público. Por isso:
 4. **Falhou, demorou ou está sem internet → cai no local**, sem perder a resposta (snapshot fixo, voz do aparelho, base de bordo, SEM DADOS).
 5. **Limite de gasto** na conta de cada serviço (Anthropic, ElevenLabs); no Workers AI, limite de requisições no AI Gateway para a cota grátis não acabar.
 6. **Arquivo com a posição do barco nunca em link público.**
-7. **Origem só do app antes de ligar qualquer proxy.** `wonderboat-ai.github.io` é a mesma origem para todos os sites da conta: o `localStorage` (onde ficam as chaves e a última telemetria) e o `ORIGENS` valem para todos eles. Publicar o app num domínio próprio (ou numa conta só dele), tirar o github.io de `ORIGENS` e pôr o Cloudflare Access na frente dos Workers.
+7. **Origem só do app.** O app está em `https://v2.capitaoia.com.br` (desde a 1.0.3). `wonderboat-ai.github.io` é a mesma origem para todos os sites da conta — `localStorage` e `ORIGENS` valeriam para todos —, por isso fica **fora de `ORIGENS`**. Ainda falta o Cloudflare Access na frente dos Workers.
 
 ```
  aparelho (site público)                  borda (segredos)                       serviços

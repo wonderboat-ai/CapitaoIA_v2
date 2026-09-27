@@ -44,9 +44,9 @@ O proxy garante a linha `Fonte: …` no fim (fontes dos trechos enviados; leitur
 - Hierarquia quando as fontes divergem: manual oficial › registro oficial › laudo › diário › foto › nota informal.
 - A IA nunca grava no diário.
 
-## Antes de ligar: origem só do app
+## Origem só do app
 
-`https://wonderboat-ai.github.io` é **uma origem só para todos os sites da conta** (hoje 11 com GitHub Pages, e um deles carrega script de terceiro). O `localStorage` é da origem inteira: qualquer um desses sites lê a `CHAVE_APP` que o app guarda no aparelho, e `ORIGENS` com o github.io aceita pedidos de todos eles. Antes de ligar a IA (ou a telemetria): publicar o app numa **origem só dele** (o domínio www.capitãoia.com.br, quando tiver DNS, ou uma conta/organização só para ele), **tirar o github.io de `ORIGENS`** e, de preferência, pôr o **Cloudflare Access** na frente do Worker (o "login no servidor" previsto).
+O app está em **https://v2.capitaoia.com.br**, uma origem só dele (desde a 1.0.3). O endereço antigo `wonderboat-ai.github.io/CapitaoIA_v2/` redireciona para lá, e o `wonderboat-ai.github.io` — dividido com os outros sites da conta, um deles com script de terceiro — **fica fora de `ORIGENS`**. Para ligar, falta o login no servidor: de preferência o **Cloudflare Access** na frente do Worker.
 
 ## Para ligar (depois do login no servidor)
 

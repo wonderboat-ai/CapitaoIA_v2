@@ -1,12 +1,12 @@
 {
   "versao": "2026-09-27",
-  "app": "Capitão IA 1.0.2",
+  "app": "Capitão IA 1.0.3",
   "aviso": "Registro das integrações do projeto. Só estrutura e status: nenhuma chave, ID privado ou endereço de proxy fica aqui. Status: ativo · preparado-desligado · estrutura · opcional · planejado · a-definir.",
   "regra": "Chave de API nunca no site nem no repositório: fica como segredo num proxy (Cloudflare Worker) que só aceita as ORIGENS do site e a CHAVE_APP do aparelho (cabeçalho X-Capitao-Chave), com freio por IP. Todo módulo do app vem com URL_PROXY = '' e cai no dado local em erro, demora ou sem internet.",
   "integracoes": [
     { "id": "github-pages", "nome": "GitHub Pages", "categoria": "hospedagem", "status": "ativo",
       "onde": [".nojekyll", "integracoes/github/README.md"], "segredos": [],
-      "notas": "Publica da main, raiz, quando o proprietário pedir o merge. Repositório e site públicos." },
+      "notas": "Publica da main, raiz, quando o proprietário pedir o merge, em https://v2.capitaoia.com.br (arquivo CNAME). Repositório e site públicos." },
     { "id": "service-worker", "nome": "PWA · cache offline", "categoria": "hospedagem", "status": "ativo",
       "onde": ["sw.js", "manifest.webmanifest", "capitao-app.js"], "segredos": [],
       "notas": "Registra no site publicado e em localhost. Rede primeiro; cache como reserva; SOS abre offline." },
@@ -65,8 +65,8 @@
     { "id": "login-no-servidor", "nome": "Login no servidor (Cloudflare Access ou repositório privado)", "categoria": "seguranca", "status": "planejado",
       "onde": ["integracoes/cloudflare/README.md", "integracoes/github/README.md"], "segredos": [],
       "notas": "Pré-requisito para telemetria ao vivo, documentos sensíveis e IA." },
-    { "id": "dominio-proprio", "nome": "www.capitãoia.com.br (xn--capitoia-vza.com.br)", "categoria": "hospedagem", "status": "planejado",
-      "onde": ["integracoes/cloudflare/README.md › Domínio"], "segredos": [],
-      "notas": "Sem DNS em 26/09/2026: o repositório não tem CNAME. Já está nas ORIGENS dos Workers e no PUBLICADO do capitao-auth.js." }
+    { "id": "dominio-proprio", "nome": "v2.capitaoia.com.br", "categoria": "hospedagem", "status": "ativo",
+      "onde": ["CNAME", "integracoes/cloudflare/README.md › Domínio"], "segredos": [],
+      "notas": "Desde a 1.0.3. DNS no Registro.br: CNAME v2 → wonderboat-ai.github.io. A raiz capitaoia.com.br é o site de apresentação no Lovable (não mexer). Origem só do app: o github.io fica fora de ORIGENS e redireciona para cá." }
   ]
 }
