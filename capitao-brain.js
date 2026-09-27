@@ -8,7 +8,7 @@
    trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
    Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
-  var VERSAO = '1.0.6'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
+  var VERSAO = '1.0.7'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
@@ -134,7 +134,7 @@
     q = q.replace(/ oleo (?:diesel|combustivel)(?= )/g, ' diesel'); // "óleo diesel" é combustível, não óleo do motor
     if (!has(q, [' oleo']) || has(q, ['barometr', 'atmosf', 'hpa', 'pneu', 'hidraul'])) return 0;
     if (!OLEO_SINAL.test(q) && has(q, ['porao', 'vazament', 'vazand', 'pingand'])) return 0; // óleo no porão / vazamento: rota própria
-    if (has(q, ['gerador', 'onan']) && !has(q, ['motor'])) return 0; // óleo do gerador: rota do gerador
+    if (has(q, ['gerador', ' onan ']) && !has(q, ['motor'])) return 0; // óleo do gerador: rota do gerador (' onan ': 'funcionando' contém 'onan')
     var pressao = has(q, ['pressao']);
     if (OLEO_QUEDA.test(q)) return pressao || !has(q, ['troca']) ? 1 : 0;
     if (!pressao) return 0;
@@ -325,13 +325,16 @@
     // Diagnóstico deste aparelho: versões, internet, IA na nuvem e chave (só o tamanho). A tela de chat acrescenta o teste da
     // chave no servidor (CapitaoIA.testar), que não gasta a cota da IA.
     diagnostico: function (p) {
-      var AU = window.CapitaoAuth, IA = window.CapitaoIA, app = AU && AU.VERSAO ? AU.VERSAO.v : SD, cli = IA ? (IA.VERSAO || 'antigo, sem versão') : 'não carregado';
+      var AU = window.CapitaoAuth, IA = window.CapitaoIA, app = AU && AU.VERSAO ? AU.VERSAO.v : SD, cli = IA ? (IA.VERSAO || 'antigo, sem versão') : 'não usado nesta tela (fica na tela inicial)';
       var sw = !!(window.navigator && navigator.serviceWorker && navigator.serviceWorker.controller);
       var linhas = ['Diagnóstico do Capitão IA neste aparelho:', '• Versões: app ' + app + ' · cérebro ' + VERSAO + ' · cliente da IA ' + cli];
       if (app !== VERSAO || (IA && cli !== VERSAO)) linhas.push('• ATENÇÃO: arquivos de versões diferentes — feche o app por completo e abra de novo.');
       linhas.push('• Internet: ' + (window.navigator && navigator.onLine === false ? 'sem conexão' : 'conectado') + ' · app offline (service worker): ' + (sw ? 'ativo' : 'não'));
       if (IA && IA.diagnostico) { try { linhas = linhas.concat(IA.diagnostico()); } catch (e) {} }
-      return { text: linhas.join('\n'), src: 'Fonte: este aparelho' + (IA && IA.testar ? ' · teste da chave no servidor, sem gastar a cota da IA' : ''), actions: act(p, [['Ativar IA na nuvem', '#ia=ativar']]) };
+      // Na voz: o que importa é se a IA está ligada (a tela acrescenta o resultado do teste da chave).
+      var linhaIA = linhas.filter(function (l) { return /IA na nuvem:/.test(l); })[0] || '';
+      var fala = (linhaIA ? linhaIA.replace(/^•\s*/, '') + '.' : 'Nesta tela a IA na nuvem não é carregada: ela fica na tela inicial.') + (app !== VERSAO || (IA && cli !== VERSAO) ? ' Atenção: arquivos de versões diferentes, feche o app e abra de novo.' : '');
+      return { text: linhas.join('\n'), fala: fala, src: 'Fonte: este aparelho' + (IA && IA.testar ? ' · teste da chave no servidor, sem gastar a cota da IA' : ''), actions: act(p, [['Ativar IA na nuvem', IA ? '#ia=ativar' : A(p, 'home') + '#ia=ativar']]) };
     },
     fallback: function (p) { return { text: 'Não encontrei esse dado nas fontes de bordo — telemetria, agenda, documentos, diário e guias de bordo. SEM DADOS.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.', src: 'Fonte: nenhuma — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
   };
@@ -356,13 +359,15 @@
     };
   });
 
-  var EQUIP = ['seakeeper', 'estabilizador', 'climatiza', 'ar condicionado', 'ar-condicionado', 'gerador', 'onan', 'piloto', 'plotter', 'radar', 'garmin', ' vhf', ' ais ', 'epirb', 'fusion', 'audio', 'dessaliniz', 'bomba', 'porao', 'casco', 'anodo', 'zinco', 'bateria', 'tensao', 'tensoes', 'seafire', 'volvo'];
+  var EQUIP = ['seakeeper', 'estabilizador', 'climatiza', 'ar condicionado', 'ar-condicionado', 'gerador', ' onan ', 'piloto', 'plotter', 'radar', 'garmin', ' vhf', ' ais ', 'epirb', 'fusion', 'audio', 'dessaliniz', 'bomba', 'porao', 'casco', 'anodo', 'zinco', 'bateria', 'tensao', 'tensoes', 'seafire', 'volvo'];
   // "diagnóstico", "status da IA", "teste da IA", "a IA está ligada?" — a frase inteira, para não pegar pergunta comum.
-  var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda )?(?:o |um )?diagnostico(?: da ia| do app| do capitao)?|(?:o |qual o )?status da ia|(?:o )?estado da ia|teste da ia|testar a ia|testa a ia|(?:a )?ia (?:esta|ta) (?:ligada|funcionando|ativa|ativada)) $/;
+  var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda |rode |mostrar |mostra |mostre |me mostra |me mostre |me da |ver )?(?:o |um )?diagnostico(?: da ia| do app| do aplicativo| do capitao| completo)?|(?:qual e |qual )?(?:o )?(?:status|estado) (?:da ia|do app|do aplicativo)|teste da ia|testar a ia|testa a ia|teste a ia|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:(?:esta|ta) )?(?:ligada|funcionando|ativa|ativada|on)|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:nao )?(?:(?:esta|ta) )?(?:funciona|funcionando|responde|respondendo)) $/;
+  // tira "capitão,"/"capitão IA," do começo e "por favor" do fim antes de conferir (jeito comum de falar com o app)
+  function semVocativo(q) { return q.replace(/^ (?:ei |oi |ola )?capitao(?: ia)? /, ' ').replace(/ por favor $/, ' '); }
   function route(qRaw) {
     var q = pad(qRaw);
     if (!q.trim()) return 'saudacao';
-    if (DIAGNOSTICO.test(q)) return 'diagnostico';
+    if (DIAGNOSTICO.test(semVocativo(q))) return 'diagnostico';
     if (querRegistrar(qRaw, q)) return 'diario';
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
@@ -391,7 +396,7 @@
     if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
     if (has(q, ['contato', 'telefone', 'equipe', 'oficina', 'quem chamar', 'tecnico de bordo', 'marina da base'])) return 'contatos';
     if (has(q, ['porao', 'bomba'])) return 'porao';
-    if (has(q, ['gerador', 'onan'])) return 'gerador';
+    if (has(q, ['gerador', ' onan '])) return 'gerador';
     if (has(q, ['quantas horas'])) return 'horimetros';
     if (has(q, ['estabilizador', 'seakeeper'])) return 'estabilizador';
     if (has(q, ['rotacao', 'rotacoes', ' rpm ', 'giro do motor', 'giro dos motores', 'giro de motor'])) return 'motores';
@@ -546,9 +551,11 @@
   function semCoord(s) { return String(s || '').replace(/\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]\s*\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]/g, '(coordenadas só na tela do app)'); }
   // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
   // respostas prontas, então a IA e a tela dizem os mesmos números. Sem coordenadas e sem telefones. ~9 mil letras
-  // (o proxy aceita até 12 mil). ficha(p, q, a): pergunta sobre o próprio app ou respondida por trecho do guia leva só a
-  // ficha RESUMIDA (agora, sobre o app, embarcação, equipamentos — ~2,5 mil letras): gasta ~70% menos da cota diária.
-  function fichaResumida(q, a) { return !!a && (a.key === 'base' || (a.key === 'saudacao' && SOBRE.test(pad(q)))); }
+  // (o proxy aceita até 12 mil). ficha(p, q, a): pergunta pura sobre o próprio app ("o que você faz?") leva só a ficha
+  // RESUMIDA (agora, sobre o app, embarcação, equipamentos — ~3 mil letras). Com assunto ("o que você sabe sobre o
+  // seguro?") ou trecho do guia ("quando foi a última troca de óleo?"), a completa: a resumida tirava o dado pedido (1.0.7).
+  var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
+  function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
   function ficha(p, q, a) {
     p = p || 'app';
     var out = [];

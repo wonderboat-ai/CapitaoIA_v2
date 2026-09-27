@@ -65,6 +65,7 @@
       var estreita = Math.min(window.innerWidth || 9999, d.documentElement.clientWidth || 9999) < 900; // tablet em pé / janela pequena
       if (!(mobileUA || (coarse && shortSide < 600) || estreita)) return;
     }
+    window.CapitaoRedirecionando = true; // esta tela está sendo trocada: o capitao-ia.js não abre a caixa da chave aqui
     location.replace(alvo + '.dc.html' + location.hash);
     function safe(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
   })();
@@ -76,22 +77,45 @@
     // App instalado fica aberto dias (o Android traz a mesma tela ao tocar no ícone, sem recarregar): ao voltar para a
     // frente, procura versão nova (no máximo 1 vez por minuto). Achando, o SW novo instala, assume e recarrega as telas
     // abertas (sw.js › activate).
-    var procurou = 0;
+    var procurou = 0, recarregar = false;
     d.addEventListener('visibilitychange', function () {
-      if (d.visibilityState !== 'visible' || !navigator.serviceWorker.getRegistration) return;
+      if (d.visibilityState !== 'visible') { if (recarregar && !/SOS-/.test(location.pathname)) location.reload(); return; }
+      if (!navigator.serviceWorker.getRegistration) return;
       var agora = new Date().getTime(); if (agora - procurou < 60000) return; procurou = agora;
       navigator.serviceWorker.getRegistration().then(function (r) { if (r) return r.update(); }).catch(function () {});
     });
+    // Versão nova ativou (sw.js › activate avisa 'nova-versao'): esta tela responde que cuida da recarga e recarrega num
+    // momento seguro — com a tela no fundo, ou sem texto sendo digitado, conversa por voz aberta ou resposta a caminho.
+    // Assim a recarga não fecha a caixa da chave nem apaga o que o usuário escrevia. Tela que não responde (versão
+    // anterior) o SW recarrega sozinho. O SOS nunca recarrega sozinho.
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      if (!e.data || e.data.tipo !== 'nova-versao') return;
+      try { if (e.source && e.source.postMessage) e.source.postMessage({ tipo: 'versao-ok' }); } catch (x) {}
+      if (/SOS-/.test(location.pathname)) return;
+      recarregar = true; quandoPuder();
+    });
+  }
+  function ocupado() {
+    if (d.querySelector('.cpz.on') || d.querySelector('[data-capitao-pensando]')) return true; // conversa por voz / resposta a caminho
+    var campos = d.querySelectorAll('input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]), textarea');
+    for (var i = 0; i < campos.length; i++) if (String(campos[i].value || '').trim()) return true; // texto digitado
+    var a = d.activeElement; return !!(a && a.isContentEditable);
+  }
+  function quandoPuder() {
+    if (d.visibilityState !== 'visible' || !ocupado()) { location.reload(); return; }
+    setTimeout(quandoPuder, 3000);
   }
 
   // Versões misturadas: logo depois de publicar, o celular podia rodar o capitao-auth.js novo (rodapé com a versão nova) com
   // o capitao-brain.js ou o capitao-ia.js velhos, vindos do cache HTTP do aparelho (o GitHub Pages manda "max-age=600").
   // Resultado: a IA nem era chamada e voltava o SEM DADOS de antes. Na 1ª vez que isso aparece nesta sessão, busca de novo
   // na rede (cache 'reload') os arquivos e a tela, e recarrega. Não repete na mesma sessão (sem laço se a rede falhar).
+  // O SOS fica de fora: ele funciona com versões misturadas e nunca vale recarregar no meio de uma emergência. Só recarrega
+  // se ao menos um arquivo chegou da rede; senão libera nova tentativa na próxima abertura.
   window.addEventListener('load', function () {
     setTimeout(function () {
       var A = window.CapitaoAuth, B = window.CapitaoBrain, I = window.CapitaoIA, v = A && A.VERSAO && A.VERSAO.v;
-      if (!v) return;
+      if (!v || /SOS-/.test(location.pathname)) return;
       var arq = [];
       if (B && B.VERSAO !== v) arq.push('./capitao-brain.js');
       if (I && I.VERSAO !== v) arq.push('./capitao-ia.js');
@@ -100,7 +124,10 @@
       try { if (sessionStorage.getItem(K) === v) return; sessionStorage.setItem(K, v); } catch (e) { return; }
       arq = arq.concat(['./capitao-auth.js', './capitao-app.js', location.pathname]);
       Promise.all(arq.map(function (u) { return fetch(u, { cache: 'reload', credentials: 'same-origin' }).catch(function () { return null; }); }))
-        .then(function () { location.reload(); });
+        .then(function (rs) {
+          if (rs.some(function (r) { return r && r.ok; })) location.reload();
+          else { try { sessionStorage.removeItem(K); } catch (e) {} }
+        });
     }, 1200);
   });
 
