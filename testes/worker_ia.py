@@ -293,6 +293,47 @@ async (base) => {
   window.fetch = async () => { throw new TypeError('Failed to fetch'); };
   const r7 = await window.CapitaoIA.perguntar('x', [], '', { ficha: 'f' });
   ok('IA sem conexão → null e "sem conexão com a IA na nuvem"', r7 === null && window.CapitaoIA.falha() === 'sem conexão com a IA na nuvem', window.CapitaoIA.falha());
+
+  // 1.0.6 — chave colada com sujeira, validação, teste da chave sem gastar a cota e ativação com retorno.
+  const TOKEN = 'Ab3dEf6hIj9kLm2nOp5qRs8tUv1wXy4zAb7dEf0h_-k'; // 43 letras, formato da CHAVE_APP
+  const N = window.CapitaoIA.normalizaChave;
+  ok('IA normalizaChave tira "CHAVE_APP:", aspas curvas, espaço, quebra de linha e caracteres invisíveis', N('  CHAVE_APP: “' + TOKEN + '​”\n') === TOKEN && N('"' + TOKEN + '"') === TOKEN && N(TOKEN.slice(0, 20) + '​' + TOKEN.slice(20)) === TOKEN && N('chave-de-teste') === 'chave-de-teste', N('  CHAVE_APP: “' + TOKEN + '​”\n'));
+  ok('IA chaveValida: só ASCII visível, 8 a 256 letras', window.CapitaoIA.chaveValida(TOKEN) && !window.CapitaoIA.chaveValida('curta') && !window.CapitaoIA.chaveValida('chave com espaço no meio') && !window.CapitaoIA.chaveValida('chave-com-acento-é-longa'), '');
+  localStorage.setItem('capitao.ia.chave.v1', 'CHAVE_APP: ' + TOKEN);
+  ok('IA chave guardada antes da 1.0.6 com "CHAVE_APP:" volta a valer (limpa ao ler)', window.CapitaoIA.estado() === 'ligada' && window.CapitaoIA.diagnostico().join(' ').indexOf('guardada (43 caracteres)') !== -1, window.CapitaoIA.diagnostico().join(' | '));
+  localStorage.setItem('capitao.ia.chave.v1', 'chave com acentuação é ruim');
+  const rInv = await window.CapitaoIA.perguntar('x', [], '', { ficha: 'f' });
+  ok('IA chave guardada inválida → estado "chave-invalida", nada vai para a rede e o aviso fala em "chave" (botão Ativar)', window.CapitaoIA.estado() === 'chave-invalida' && rInv === null && /chave/.test(window.CapitaoIA.falha()), window.CapitaoIA.estado() + ' ' + window.CapitaoIA.falha());
+  localStorage.setItem('capitao.ia.chave.v1', TOKEN);
+  let corpoTeste = null, stTeste = 422;
+  window.fetch = async (u, o) => { corpoTeste = JSON.parse(o.body); return new Response(JSON.stringify({ erro: 'x', motivo: 'sem_fontes' }), { status: stTeste }); };
+  let t = await window.CapitaoIA.testar();
+  ok('IA testar(): pergunta sem ficha, trecho e leitura (o Worker responde 422 sem chamar o modelo) → chave aceita', t.ok === true && t.status === 422 && corpoTeste.ficha === '' && corpoTeste.trechos.length === 0 && corpoTeste.contexto === '' && /aceita/.test(t.texto), JSON.stringify(t));
+  stTeste = 401; t = await window.CapitaoIA.testar();
+  ok('IA testar(): 401 → "RECUSOU a chave"', t.ok === false && /RECUSOU a chave/.test(t.texto), t.texto);
+  window.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  t = await window.CapitaoIA.testar();
+  ok('IA testar(): sem rede → "Sem conexão com o servidor"', t.ok === false && /Sem conexão/.test(t.texto), t.texto);
+  // Ativação pelo botão do chat (#ia=ativar via hashchange) com a chave colada suja: guarda só o token e confere no servidor.
+  const alertas = [], promptReal = window.prompt, alertReal = window.alert;
+  window.alert = (m) => alertas.push(String(m));
+  window.prompt = () => '  CHAVE_APP: “' + TOKEN + '”\n';
+  stTeste = 422; window.fetch = async () => new Response('{}', { status: stTeste });
+  localStorage.removeItem('capitao.ia.chave.v1');
+  location.hash = 'ia=ativar';
+  await new Promise((a) => setTimeout(a, 400));
+  ok('IA ativar com a chave colada suja: guarda só a chave, confere no servidor e avisa "ativada ✓"', localStorage.getItem('capitao.ia.chave.v1') === TOKEN && alertas.some((m) => /ativada neste aparelho ✓/.test(m)), JSON.stringify(alertas) + ' ' + localStorage.getItem('capitao.ia.chave.v1'));
+  alertas.length = 0; window.prompt = () => 'isso não é chave';
+  location.hash = 'q=1'; await new Promise((a) => setTimeout(a, 50)); location.hash = 'ia=ativar';
+  await new Promise((a) => setTimeout(a, 300));
+  ok('IA ativar com texto que não é chave: não guarda e avisa', localStorage.getItem('capitao.ia.chave.v1') === TOKEN && alertas.some((m) => /não parece a chave/.test(m)), JSON.stringify(alertas));
+  // Link #ia=ativar aberto sem sessão: o login guardou a intenção (sessionStorage); a tela de chat abre a caixa sozinha.
+  alertas.length = 0; window.prompt = () => TOKEN; localStorage.removeItem('capitao.ia.chave.v1');
+  history.replaceState(null, '', pagina); sessionStorage.setItem('capitao.ia.ativar', '1');
+  await carrega('integracoes/ia-cliente/capitao-ia.js', 'CapitaoIA');
+  await new Promise((a) => setTimeout(a, 900));
+  ok('IA intenção de ativar guardada no login: a caixa abre ao voltar logado, a chave fica e a intenção some', localStorage.getItem('capitao.ia.chave.v1') === TOKEN && sessionStorage.getItem('capitao.ia.ativar') === null, localStorage.getItem('capitao.ia.chave.v1') + ' ' + sessionStorage.getItem('capitao.ia.ativar'));
+  window.prompt = promptReal; window.alert = alertReal;
   window.fetch = fetchReal; limpaLS();
   return out;
 }

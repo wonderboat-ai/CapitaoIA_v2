@@ -11,14 +11,27 @@
   // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
   if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.ia.url.v1') || ''; if (/^https:\/\/capitao\-ia\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
+  var VERSAO = '1.0.6'; // = VERSAO do capitao-auth.js e do capitao-brain.js (o capitao-app.js recarrega se vierem misturados)
   var KC = 'capitao.ia.chave.v1';
   var ESPERA = 15000; // sem resposta nesse tempo → o chat fica com a resposta local
   var ULTIMA = { falha: '' };
+
+  // A CHAVE_APP é um token longo (letras, números, - e _). Colada do WhatsApp, de notas ou do arquivo, costuma vir com
+  // "CHAVE_APP:", aspas, espaços, quebra de linha ou caracteres invisíveis: fica só o token. Texto sem token longo passa
+  // só aparado (chave de teste).
+  function normalizaChave(s) {
+    s = String(s == null ? '' : s).replace(/[­​-‏‪-‮⁠-⁤﻿]/g, '').replace(/ /g, ' ');
+    var t = (s.match(/[A-Za-z0-9_-]{32,}/g) || []).sort(function (a, b) { return b.length - a.length; })[0];
+    return t || s.replace(/^[\s"'`“”‘’]+|[\s"'`“”‘’]+$/g, '');
+  }
+  // Chave que dá para mandar no cabeçalho: só ASCII visível, 8 a 256 letras (acento ou símbolo fora disso faz o fetch falhar).
+  function chaveValida(k) { return /^[\x21-\x7e]{8,256}$/.test(k); }
 
   // Ativar este aparelho: abrir com #ia=ativar (ou tocar em "Ativar IA na nuvem" no chat) e colar a CHAVE_APP na caixa que
   // aparece. A chave NUNCA passa pelo endereço (o endereço fica no histórico do navegador, que pode sincronizar entre
   // aparelhos). #ia=sair apaga a chave. Qualquer outro valor em #ia= é ignorado. O par ia=… sai do endereço; os outros
   // (#q=, #tele=…) continuam. Vale ao abrir a tela e também depois (hashchange: o botão do chat, o app instalado sem barra).
+  // Depois de colar, a chave é testada no servidor (sem gastar a cota da IA) e o resultado aparece numa caixa.
   function lerHash() {
     try {
       var m = location.hash.match(/(?:^#|&)ia=([^&]+)/);
@@ -26,21 +39,44 @@
       var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('ia=') !== 0; }).join('&');
       history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
       var c = decodeURIComponent(m[1]);
-      if (c === 'sair') localStorage.removeItem(KC);
-      else if (c === 'ativar') {
-        var dig = window.prompt('Cole a chave da IA na nuvem (CHAVE_APP). Ela fica só neste aparelho.');
-        if (dig && dig.trim()) localStorage.setItem(KC, dig.trim());
-      }
+      if (c === 'sair') { localStorage.removeItem(KC); avisa('IA na nuvem desligada neste aparelho.'); }
+      else if (c === 'ativar') ativar();
     } catch (e) {}
   }
+  function ativar() {
+    try { sessionStorage.removeItem('capitao.ia.ativar'); } catch (e) {}
+    var dig = window.prompt('Cole a chave da IA na nuvem (CHAVE_APP). Ela fica só neste aparelho.');
+    if (dig == null) return; // cancelou
+    var k = normalizaChave(dig);
+    if (!chaveValida(k)) { avisa('Isso não parece a chave da IA na nuvem: cole só a CHAVE_APP (letras, números, - e _), sem nome nem aspas. Nada foi guardado.'); return; }
+    try { localStorage.setItem(KC, k); } catch (e) { avisa('Este navegador não deixou guardar a chave (armazenamento bloqueado).'); return; }
+    try { window.dispatchEvent(new CustomEvent('capitao-ia', { detail: { estado: 'ativada' } })); } catch (e) {}
+    testar().then(function (t) { avisa(t.ok ? 'IA na nuvem ativada neste aparelho ✓ — o servidor aceitou a chave. Pode perguntar.' : t.texto); });
+  }
+  function avisa(msg) { setTimeout(function () { try { window.alert(msg); } catch (e) {} }, 0); }
   lerHash();
-  window.addEventListener('hashchange', lerHash);
-  function chave() { try { return localStorage.getItem(KC) || ''; } catch (e) { return ''; } }
-  // 'ligada' · 'sem-chave' (aparelho não ativado) · 'sem-rede' · 'desligada' (sem URL do proxy)
-  function estado() { if (!URL_PROXY) return 'desligada'; if (!chave()) return 'sem-chave'; if (navigator && navigator.onLine === false) return 'sem-rede'; return 'ligada'; }
+  var api = {}; // preenchido no fim; o #ia= que chega depois vale só para o cliente em uso (window.CapitaoIA)
+  window.addEventListener('hashchange', function () { if (window.CapitaoIA === api) lerHash(); });
+  // Link #ia=ativar aberto sem sessão: o login tira o #ia= do endereço (nada de chave no ?next=), mas guarda a intenção
+  // (capitao-auth.js, sessionStorage 'capitao.ia.ativar'). Voltando logado a uma tela de chat, a caixa abre.
+  try { if (sessionStorage.getItem('capitao.ia.ativar') === '1' && (!window.CapitaoAuth || !window.CapitaoAuth.logado || window.CapitaoAuth.logado())) setTimeout(ativar, 600); } catch (e) {}
+  // Chave guardada antes da 1.0.6 também passa pela limpeza (uma chave colada com "CHAVE_APP:" volta a valer).
+  function chave() { try { return normalizaChave(localStorage.getItem(KC) || ''); } catch (e) { return ''; } }
+  // 'ligada' · 'sem-chave' (aparelho não ativado) · 'chave-invalida' (guardada, mas não dá para mandar) · 'sem-rede' ·
+  // 'desligada' (sem URL do proxy)
+  function estado() {
+    if (!URL_PROXY) return 'desligada';
+    var k = chave(); if (!k) return 'sem-chave'; if (!chaveValida(k)) return 'chave-invalida';
+    if (navigator && navigator.onLine === false) return 'sem-rede';
+    return 'ligada';
+  }
   function ativa() { return estado() === 'ligada'; }
-  // Frase curta para a linha da fonte quando a IA não entrou (a tela mostra a resposta local e o porquê).
-  function aviso() { var e = estado(); return e === 'sem-chave' ? 'IA na nuvem desligada neste aparelho' : e === 'sem-rede' ? 'sem internet: IA na nuvem fora' : ''; }
+  // Frase curta para a linha da fonte quando a IA não entrou (a tela mostra a resposta local e o porquê). As que pedem
+  // ativação falam em "chave" ou "desligada neste aparelho" (a tela mostra o botão Ativar IA na nuvem).
+  function aviso() {
+    var e = estado();
+    return e === 'sem-chave' ? 'IA na nuvem desligada neste aparelho' : e === 'chave-invalida' ? 'a chave guardada neste aparelho é inválida — ative de novo' : e === 'sem-rede' ? 'sem internet: IA na nuvem fora' : '';
+  }
   function falha() { return ULTIMA.falha; }
   function motivo(e) {
     var s = e && e.status, j = e && e.j, m = j && typeof j.erro === 'string' ? j.erro.replace(/\s+/g, ' ').slice(0, 90) : '';
@@ -50,6 +86,42 @@
     if (s === 503) return 'IA na nuvem fora agora' + (m ? ': ' + m : '');
     if (s) return 'IA na nuvem não respondeu (' + s + (m ? ': ' + m : '') + ')';
     return 'sem conexão com a IA na nuvem';
+  }
+  // Teste da chave e do caminho até o Worker SEM gastar a cota da IA: pergunta sem ficha, sem trecho e sem leitura → o
+  // Worker confere origem e chave e responde 422 (sem_fontes) antes de chamar o modelo. 422 = tudo certo; 401 = chave
+  // recusada; 403 = origem; sem resposta = sem conexão. Nunca rejeita.
+  function testar() {
+    var k = chave();
+    if (!URL_PROXY) return Promise.resolve({ ok: false, status: 0, texto: 'IA na nuvem sem endereço neste app.' });
+    if (!k) return Promise.resolve({ ok: false, status: 0, texto: 'Nenhuma chave guardada neste aparelho: toque em Ativar IA na nuvem e cole a CHAVE_APP.' });
+    if (!chaveValida(k)) return Promise.resolve({ ok: false, status: 0, texto: 'A chave guardada neste aparelho tem caracteres que não servem: toque em Ativar IA na nuvem e cole só a CHAVE_APP.' });
+    if (!window.fetch) return Promise.resolve({ ok: false, status: 0, texto: 'Este navegador não consegue falar com a IA na nuvem.' });
+    var ctl = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, ESPERA);
+    return fetch(URL_PROXY, {
+      method: 'POST', cache: 'no-store', signal: ctl ? ctl.signal : undefined,
+      headers: { 'Content-Type': 'application/json', 'X-Capitao-Chave': k },
+      body: JSON.stringify({ pergunta: 'teste da chave', trechos: [], contexto: '', ficha: '', historico: [] })
+    }).then(function (r) {
+      clearTimeout(t);
+      if (r.status === 422) return { ok: true, status: 422, texto: 'Chave aceita pelo servidor da IA na nuvem ✓ (teste sem gastar a cota).' };
+      if (r.status === 401) return { ok: false, status: 401, texto: 'O servidor RECUSOU a chave deste aparelho: confira a CHAVE_APP e cole de novo em Ativar IA na nuvem.' };
+      if (r.status === 403) return { ok: false, status: 403, texto: 'O servidor recusou este endereço do app (origem): abra por https://v2.capitaoia.com.br.' };
+      if (r.status === 429) return { ok: false, status: 429, texto: 'Chave ok, mas o limite de perguntas por minuto foi atingido: tente daqui a pouco.' };
+      return { ok: false, status: r.status, texto: 'O servidor da IA respondeu ' + r.status + ' ao teste.' };
+    }, function (e) {
+      clearTimeout(t);
+      return { ok: false, status: 0, texto: e && e.name === 'AbortError' ? 'O servidor da IA demorou demais para responder ao teste.' : 'Sem conexão com o servidor da IA na nuvem (internet, bloqueio de rede ou navegador).' };
+    });
+  }
+  // Linhas para o "diagnóstico" do chat: versão deste cliente, estado, chave (só o tamanho) e o motivo da última falha.
+  function diagnostico() {
+    var k = chave(), e = estado();
+    return [
+      '• Cliente da IA ' + VERSAO + ' · endereço do servidor ' + (URL_PROXY ? 'configurado' : 'SEM (IA desligada neste app)'),
+      '• IA na nuvem: ' + (e === 'ligada' ? 'LIGADA neste aparelho' : e === 'sem-chave' ? 'DESLIGADA neste aparelho (sem chave)' : e === 'chave-invalida' ? 'DESLIGADA (chave guardada inválida)' : e === 'sem-rede' ? 'sem internet' : 'desligada'),
+      '• Chave: ' + (k ? 'guardada (' + k.length + ' caracteres)' : 'nenhuma'),
+      '• Última falha: ' + (ULTIMA.falha || 'nenhuma nesta sessão')
+    ];
   }
   // Texto simples na tela e na voz: sem negrito, título, crase de código; lista "- x" vira "• x".
   function limpaMd(s) {
@@ -96,5 +168,5 @@
       .catch(function () { clearTimeout(t); ULTIMA.falha = 'IA na nuvem sem resposta'; return null; });
   }
 
-  window.CapitaoIA = { ativa: ativa, estado: estado, aviso: aviso, falha: falha, perguntar: perguntar };
+  window.CapitaoIA = Object.assign(api, { VERSAO: VERSAO, ativa: ativa, estado: estado, aviso: aviso, falha: falha, perguntar: perguntar, testar: testar, diagnostico: diagnostico, normalizaChave: normalizaChave, chaveValida: chaveValida });
 })();

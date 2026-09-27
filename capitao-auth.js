@@ -6,7 +6,7 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.5', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.6', data: '27/09/2026' };
   var CREDITO = 'Wonder BOAT | WonderHUB.AI';
   var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$/i; // GitHub Pages (redireciona) e v2.capitaoia.com.br
 
@@ -123,6 +123,8 @@
     // Chaves de aparelho no endereço (#ia=, #tele=, #voz=) não vão para o ?next= (query vai ao servidor e ao histórico):
     // entre primeiro e depois abra o link com a chave.
     var h = location.hash.slice(1).split('&').filter(function (p) { return p && !/^(ia|tele|voz)=/.test(p); }).join('&');
+    // #ia=ativar não é chave, é o pedido de abrir a caixa: fica guardado nesta aba e a caixa abre depois do login (capitao-ia.js).
+    if (/(?:^#|&)ia=ativar(?:&|$)/.test(location.hash)) { try { sessionStorage.setItem('capitao.ia.ativar', '1'); } catch (e) {} }
     var aqui = arquivo(location.pathname) + location.search + (h ? '#' + h : '');
     location.replace('login.html?next=' + encodeURIComponent(aqui));
   }
