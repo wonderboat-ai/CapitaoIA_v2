@@ -6,9 +6,9 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.2', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.3', data: '27/09/2026' };
   var CREDITO = 'Wonder BOAT | WonderHUB.AI';
-  var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|xn--capitoia-vza\.com\.br)$/i; // GitHub Pages e www.capitãoia.com.br
+  var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$/i; // GitHub Pages (redireciona) e v2.capitaoia.com.br
 
   // Senha verificada por PBKDF2 (210.000 iterações, SHA-256, 32 bytes). Trocar senha = gerar sal e hash novos
   // com ferramentas/gerar-senha.html e colar a linha aqui.
