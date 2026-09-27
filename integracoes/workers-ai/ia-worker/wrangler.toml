@@ -1,4 +1,5 @@
 # PUBLICADO em 27/09/2026: https://capitao-ia.luka-araujos.workers.dev (painel da Cloudflare; este arquivo espelha o painel).
+# 1.0.5: o worker.js ganhou ficha de bordo + histórico (conversa) — as variáveis continuam as mesmas; é só colar o código novo.
 # Alternativa GRATUITA ao claude-api: publique ESTE ou o claude-api com o nome capitao-ia (mesmo endereço, mesmo cliente).
 # Publicar (precisa de Node.js): npx wrangler deploy   (dentro desta pasta) — sem dependências para instalar.
 # Segredo: npx wrangler secret put CHAVE_APP   (não há chave de API: o binding AI autentica pela conta Cloudflare)
