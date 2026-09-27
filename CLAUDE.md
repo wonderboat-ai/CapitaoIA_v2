@@ -21,9 +21,9 @@ Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 - `capitao-auth.js` — porta de entrada: PBKDF2-SHA-256 (210.000 iterações, sal por usuário), sessão 12 h / 30 dias, trava após 5 erros, `VERSAO`, rodapé (versão · DEMO · usuário/Sair · crédito · Guia), saudação sorteada, período. **S1/S2 (SOS) abrem sem login.**
 - `capitao-theme.js` (escuro = fallback de cada `var(--cap-*)`, claro = variáveis no `:root`; paleta WonderHUB.AI), `capitao-app.js` (ajuste da prancheta, SW, SOS flutuante, web→app), `capitao-moldura.js` (cabeçalho, trilho de 9 seções, faixa de leitura, SOS web; topo e SOS do app), `capitao-voz.js` (núcleo ESCUTA/PROCESSANDO/RESPOSTA), `capitao-clima.js` (hora, máx/mín ECMWF, maré — Open-Meteo na posição de referência), `capitao-barra.js` (barra do assistente do app), `capitao-telemetria.js` (ao vivo via proxy, **desligado**: `URL_PROXY = ''`).
 - `base-conhecimento.json` — trechos dos guias de bordo DEMO (fonte + seção).
-- `integracoes/` — estrutura desligada (telemetria-worker, claude-api, elevenlabs, cloudflare, google-*, github, `integracoes.json`).
+- `integracoes/` — estrutura desligada (telemetria-worker, workers-ai (IA grátis), claude-api (IA paga), ia-cliente (cliente único das duas), elevenlabs, cloudflare, google-*, github, `integracoes.json`).
 - `ferramentas/` — `demo/gerar_demo.py` (dados), `gerar-senha.html` (sal + hash no navegador).
-- `testes/` — `cerebro.py` (roteamento, fonte, registro) e `verificar.py` (matriz de telas e offline).
+- `testes/` — `cerebro.py` (roteamento, fonte, registro), `verificar.py` (matriz de telas e offline) e `worker_ia.py` (proxy da IA Workers AI + cliente, com env.AI simulado).
 - `Manual-Capitao-IA.dc.html` + `deck-stage.js` (apresentação), `guia-rapido/` + `Guia-Rapido-Capitao-IA.pdf` (A4, Playwright).
 
 ## Lançar versão
@@ -51,6 +51,7 @@ Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 - Ícones do app provisórios (logo Wonder BOAT sobre #050816): o manual pede versão específica validada para avatar/favicon.
 - Dados reais da embarcação (modelos, registro, EPIRB, Seafire, protocolo de bordo, manuais dos fabricantes, coletor NMEA) — hoje SEM DADOS ou DEMO.
 - Telemetria ao vivo, IA na nuvem, voz em nuvem e documentos sensíveis: estrutura pronta e desligada; ligar junto com o login no servidor (ordem em `integracoes/README.md`).
+- **Origem compartilhada:** `wonderboat-ai.github.io` é a mesma origem para os 11 sites da conta (um carrega script de terceiro). Antes de ligar qualquer proxy: domínio próprio (ou conta só do app), tirar o github.io de `ORIGENS`, Cloudflare Access.
 - Modo navegação e alerta crítico: modelos sem disparo automático (dependem da telemetria ao vivo).
 - NotebookLM não configurado (`BASE = null`).
 - Cópias no Drive feitas em 26/09/2026: o "Guia de bordo (DEMO) — Estabilizador Seakeeper" ainda diz "MANUAL NO DRIVE" no §6 Alarmes (o repositório já diz SEM DADOS: manual do fabricante não carregado). Corrigir à mão no Drive ou reenviar a partir de `ferramentas/demo/fontes/`.
@@ -58,5 +59,6 @@ Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 ## Testes locais
 - Servir a raiz: `python -m http.server 8765 --bind 127.0.0.1`.
 - Cérebro: `python -X utf8 testes/cerebro.py` (`-v` mostra as respostas).
+- Proxy da IA (Workers AI) e cliente: `python -X utf8 testes/worker_ia.py` (env.AI simulado; não precisa de conta nem de Node).
 - Telas: `python -X utf8 testes/verificar.py [Telas…] [--fotos] [--offline]` — cada tela em escuro e claro, web 1440×900 · 1280×720 · 1920×1080 · 1024×768 e app 390×844 · 360×640 · 430×932 · 844×390 (celular com toque); confere erro de script/console, rolagem lateral, imagem/ícone deformado e prancheta; `--offline` testa a abertura sem rede depois da 1ª visita (inclui o SOS).
 - Navegador: Edge instalado (Playwright `channel="msedge"`); sessão injetada em `localStorage` `capitao.sessao.v1 = { u: 'lucas', em, exp }`.

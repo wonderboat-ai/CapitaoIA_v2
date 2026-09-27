@@ -77,7 +77,7 @@ E ainda: `Manual-Capitao-IA` (apresentação de uso) e o `Guia-Rapido-Capitao-IA
 
 ## Integrações
 
-Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria ao vivo (`capitao-telemetria`), IA na nuvem com a Claude API (`capitao-ia`) e voz em nuvem opcional (`capitao-voz`). Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
+Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria ao vivo (`capitao-telemetria`), IA na nuvem (`capitao-ia`: Workers AI, grátis, ou Claude API, paga — mesmo cliente) e voz em nuvem opcional (`capitao-voz`). Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
 
 ## Requisitos
 
@@ -100,7 +100,7 @@ manifest.webmanifest · sw.js · .nojekyll      app instalável e cache offline
 assets/                         logo Wonder BOAT e ícones
 integracoes/                    estrutura desligada das integrações
 ferramentas/                    gerador dos dados DEMO, gerador do guia, gerador de senha
-testes/                         teste do cérebro e matriz de telas
+testes/                         teste do cérebro, matriz de telas e proxies da IA (worker_ia.py)
 CLAUDE.md                       guia do projeto para o Claude
 ```
 

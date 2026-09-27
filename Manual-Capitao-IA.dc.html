@@ -252,7 +252,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">INTEGRAÇÕES</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Prontas e desligadas</h2></div>
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; font-size: 26px; line-height: 1.5; color: #b1bdd6;">
     <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00f4fd;">capitao-telemetria</b><br>coletor NMEA → Drive (privado) → Worker com conta de serviço → app.</div>
-    <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00a1fe;">capitao-ia</b><br>Claude API — só com os trechos enviados, regras do projeto, fallback de recusa.</div>
+    <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00a1fe;">capitao-ia</b><br>Workers AI (grátis) ou Claude API — só com os trechos enviados e as regras do projeto.</div>
     <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #b45cff;">capitao-voz</b><br>voz em nuvem opcional; emergência sempre na voz do aparelho.</div>
   </div>
   <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;">Regra: chave só no Worker · <b style="color: #eaf1ff;">ORIGENS</b> + <b style="color: #eaf1ff;">CHAVE_APP</b> (X-Capitao-Chave) + freio por IP · app com <b style="color: #eaf1ff;">URL_PROXY = ''</b> cai no dado local em erro, demora ou sem internet.</p>
