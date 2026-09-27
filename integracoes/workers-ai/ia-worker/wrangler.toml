@@ -1,0 +1,16 @@
+# ESTRUTURA — DESLIGADA (nada publicado).
+# Alternativa GRATUITA ao claude-api: publique ESTE ou o claude-api com o nome capitao-ia (mesmo endereço, mesmo cliente).
+# Publicar (precisa de Node.js): npx wrangler deploy   (dentro desta pasta) — sem dependências para instalar.
+# Segredo: npx wrangler secret put CHAVE_APP   (não há chave de API: o binding AI autentica pela conta Cloudflare)
+name = "capitao-ia"
+main = "worker.js"
+compatibility_date = "2026-09-27"
+
+[ai]
+binding = "AI"
+
+[vars]
+MODELO = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+MAX_TOKENS = "800"
+# GATEWAY = "default"   (opcional: AI Gateway como limite global de requisições — ver README)
+ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"

@@ -6,7 +6,8 @@
 (function () {
   if (window.CapitaoVozNuvem) return;
   var URL_PROXY = ''; // ex.: 'https://capitao-voz.<conta>.workers.dev'
-  try { URL_PROXY = localStorage.getItem('capitao.voz.url.v1') || URL_PROXY; } catch (e) {}
+  // Teste num aparelho: localStorage 'capitao.voz.url.v1'. Só vale com URL_PROXY vazio e só para o próprio Worker no workers.dev.
+  if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.voz.url.v1') || ''; if (/^https:\/\/capitao\-voz\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
   var KC = 'capitao.voz.chave.v1', ESPERA = 9000, tocando = null;
   // #voz=<chave> guarda a chave neste aparelho e limpa o endereço; #voz=sair apaga.
@@ -15,7 +16,9 @@
     if (m) {
       var c = decodeURIComponent(m[1]);
       if (c === 'sair') localStorage.removeItem(KC); else localStorage.setItem(KC, c);
-      history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/(^#|&)voz=[^&]+/, '').replace(/^#&?$/, ''));
+      // Tira só o par voz=…; os outros parâmetros do endereço (#q=, #tele=, #ia=…) continuam no hash.
+      var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('voz=') !== 0; }).join('&');
+      history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
     }
   } catch (e) {}
   function chave() { try { return localStorage.getItem(KC) || ''; } catch (e) { return ''; } }

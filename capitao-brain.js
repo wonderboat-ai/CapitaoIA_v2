@@ -4,7 +4,8 @@
    SEM LEITURA; manual não confirmado → MANUAL NO DRIVE; foto/nota → A CONFERIR / A CONFIRMAR.
    Pipeline: answer(q, ctx) → route(q) (emergência e óleo no topo) → ANSWERS[chave] { text, src, actions }
              → buscaBase(q) (BM25 com sinônimos PT/EN sobre base-conhecimento.json) → SEM DADOS.
-   [estrutura] IA na nuvem (integracoes/claude-api) entraria antes do SEM DADOS — não ligada. */
+   [estrutura] IA na nuvem (integracoes/workers-ai grátis ou integracoes/claude-api paga, cliente em integracoes/ia-cliente)
+   responderia a partir dos trechos da resposta `base` — não ligada. */
 (function () {
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
