@@ -8,6 +8,7 @@
    trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
    Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
+  var VERSAO = '1.0.6'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
@@ -222,7 +223,9 @@
   }
 
   var ANSWERS = {
-    saudacao: function (p) { return { text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + ' · ' + (D.selo || ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
+    // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
+    // que soava como se a pergunta fosse ignorada — fala o que o Capitão faz.
+    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + ' · ' + (D.selo || ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
     // Grava as palavras do usuário; sem texto (ou atalho DIÁRIO DE BORDO) grava o resumo da telemetria. commit:false (veio de link) não grava.
     diario: function (p, ctx, q) {
       var n = now(), grava = !ctx || ctx.commit !== false, nota = notaDoUsuario(q);
@@ -319,6 +322,17 @@
       var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + e.t.slice(0, 110); });
       return { text: 'Últimos registros do diário de bordo (' + (fonte.length + mine.length) + ' no total · ' + pendencias().length + ' pendências abertas):\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
     },
+    // Diagnóstico deste aparelho: versões, internet, IA na nuvem e chave (só o tamanho). A tela de chat acrescenta o teste da
+    // chave no servidor (CapitaoIA.testar), que não gasta a cota da IA.
+    diagnostico: function (p) {
+      var AU = window.CapitaoAuth, IA = window.CapitaoIA, app = AU && AU.VERSAO ? AU.VERSAO.v : SD, cli = IA ? (IA.VERSAO || 'antigo, sem versão') : 'não carregado';
+      var sw = !!(window.navigator && navigator.serviceWorker && navigator.serviceWorker.controller);
+      var linhas = ['Diagnóstico do Capitão IA neste aparelho:', '• Versões: app ' + app + ' · cérebro ' + VERSAO + ' · cliente da IA ' + cli];
+      if (app !== VERSAO || (IA && cli !== VERSAO)) linhas.push('• ATENÇÃO: arquivos de versões diferentes — feche o app por completo e abra de novo.');
+      linhas.push('• Internet: ' + (window.navigator && navigator.onLine === false ? 'sem conexão' : 'conectado') + ' · app offline (service worker): ' + (sw ? 'ativo' : 'não'));
+      if (IA && IA.diagnostico) { try { linhas = linhas.concat(IA.diagnostico()); } catch (e) {} }
+      return { text: linhas.join('\n'), src: 'Fonte: este aparelho' + (IA && IA.testar ? ' · teste da chave no servidor, sem gastar a cota da IA' : ''), actions: act(p, [['Ativar IA na nuvem', '#ia=ativar']]) };
+    },
     fallback: function (p) { return { text: 'Não encontrei esse dado nas fontes de bordo — telemetria, agenda, documentos, diário e guias de bordo. SEM DADOS.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.', src: 'Fonte: nenhuma — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
   };
 
@@ -343,9 +357,12 @@
   });
 
   var EQUIP = ['seakeeper', 'estabilizador', 'climatiza', 'ar condicionado', 'ar-condicionado', 'gerador', 'onan', 'piloto', 'plotter', 'radar', 'garmin', ' vhf', ' ais ', 'epirb', 'fusion', 'audio', 'dessaliniz', 'bomba', 'porao', 'casco', 'anodo', 'zinco', 'bateria', 'tensao', 'tensoes', 'seafire', 'volvo'];
+  // "diagnóstico", "status da IA", "teste da IA", "a IA está ligada?" — a frase inteira, para não pegar pergunta comum.
+  var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda )?(?:o |um )?diagnostico(?: da ia| do app| do capitao)?|(?:o |qual o )?status da ia|(?:o )?estado da ia|teste da ia|testar a ia|testa a ia|(?:a )?ia (?:esta|ta) (?:ligada|funcionando|ativa|ativada)) $/;
   function route(qRaw) {
     var q = pad(qRaw);
     if (!q.trim()) return 'saudacao';
+    if (DIAGNOSTICO.test(q)) return 'diagnostico';
     if (querRegistrar(qRaw, q)) return 'diario';
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
@@ -529,8 +546,10 @@
   function semCoord(s) { return String(s || '').replace(/\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]\s*\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]/g, '(coordenadas só na tela do app)'); }
   // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
   // respostas prontas, então a IA e a tela dizem os mesmos números. Sem coordenadas e sem telefones. ~9 mil letras
-  // (o proxy aceita até 12 mil).
-  function ficha(p) {
+  // (o proxy aceita até 12 mil). ficha(p, q, a): pergunta sobre o próprio app ou respondida por trecho do guia leva só a
+  // ficha RESUMIDA (agora, sobre o app, embarcação, equipamentos — ~2,5 mil letras): gasta ~70% menos da cota diária.
+  function fichaResumida(q, a) { return !!a && (a.key === 'base' || (a.key === 'saudacao' && SOBRE.test(pad(q)))); }
+  function ficha(p, q, a) {
     p = p || 'app';
     var out = [];
     var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
@@ -538,6 +557,10 @@
     out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
     out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + MMSI + ' · indicativo ' + (E.indicativo || SD) + '\n(Fonte: ' + (E.fonte || SD) + ')');
     out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
+    if (fichaResumida(q, a)) {
+      out.push('## Ficha resumida\nEsta pergunta veio só com o resumo acima (sobre o app e o barco) e, se houver, os trechos do guia. Telemetria, manutenção, documentos, diário e equipe não vieram: para um dado desses, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
+      return out.join('\n\n');
+    }
     bloco('Telemetria', function () { return ANSWERS.telemetria(p); });
     bloco('Manutenção', function () { return ANSWERS.manutencao(p); });
     bloco('Horímetros', function () { return ANSWERS.horimetros(p); });
@@ -880,6 +903,7 @@
   // Emergência (SOS, pressão de óleo, EPIRB, incêndio) é lida inteira — segurança vem antes da concisão.
   var FALA_INTEIRA = { sos: 1, oleo: 1, epirb: 1, seafire: 1 };
   function falaCurta(a) {
+    if (a && typeof a === 'object' && a.fala) return a.fala; // resposta que já traz a fala certa (saudação vinda de pergunta)
     var t = a && typeof a === 'object' ? a.text : a;
     if (a && a.key && FALA_INTEIRA[a.key]) return String(t || '');
     if (a && a.key === 'base' && a.ingles) return 'Está no ' + String(a.ref || 'manual').replace(/, p\. /, ', página ').replace(/ · .*$/, '') + ', em inglês. Mostrei o trecho na tela.';
@@ -909,6 +933,6 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

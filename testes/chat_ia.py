@@ -42,6 +42,22 @@ VOZ_FALSA = r"""(() => {
 })()"""
 
 
+def versoes():
+    """A mesma versão em todo lugar que a declara (o capitao-app.js recarrega se cérebro/cliente vierem de outra)."""
+    ler = lambda p: open(os.path.join(RAIZ, p), encoding='utf-8').read()
+    return {
+        'capitao-auth.js': re.search(r"var VERSAO = \{ v: '([^']+)'", ler('capitao-auth.js')).group(1),
+        'capitao-brain.js': re.search(r"var VERSAO = '([^']+)'", ler('capitao-brain.js')).group(1),
+        'capitao-ia.js': re.search(r"var VERSAO = '([^']+)'", ler('capitao-ia.js')).group(1),
+        'integracoes/ia-cliente/capitao-ia.js': re.search(r"var VERSAO = '([^']+)'", ler('integracoes/ia-cliente/capitao-ia.js')).group(1),
+        'sw.js': re.search(r"const CACHE = 'capitao-site-v([^']+)'", ler('sw.js')).group(1),
+        'README.md': re.search(r"\*\*Versão ([0-9.]+) ", ler('README.md')).group(1),
+    }
+
+
+VERSAO = versoes()['capitao-auth.js']
+
+
 def mesmo_cliente():
     """capitao-ia.js (raiz) = integracoes/ia-cliente/capitao-ia.js, fora o comentário do topo e a linha da URL."""
     def corpo(p):
@@ -65,6 +81,8 @@ def main():
 
     ok('capitao-ia.js da raiz é o mesmo cliente de integracoes/ia-cliente (só muda a URL)', mesmo_cliente())
     ok('URL do Worker no cliente publicado', URL_ARQ.startswith('https://capitao-ia.') and URL_ARQ.endswith('.workers.dev'), URL_ARQ)
+    vs = versoes()
+    ok('mesma versão em auth, cérebro, cliente da IA (as duas cópias), sw.js e README (' + VERSAO + ')', len(set(vs.values())) == 1, vs)
 
     try:
         with sync_playwright() as p:
@@ -77,6 +95,8 @@ def main():
                 pg = ctx.new_page()
                 erros = []
                 pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+                # erro de sintaxe na lógica da tela só aparece no console do runtime ("logic class eval FAILED")
+                pg.on('console', lambda m: erros.append(m.text[:200]) if m.type == 'error' and 'FAILED' in m.text else None)
                 estado = {'pedidos': [], 'modo': 'ok'}
 
                 def rota(route):
@@ -84,7 +104,11 @@ def main():
                     cab = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
                     if req.method == 'OPTIONS':
                         return route.fulfill(status=204, headers=cab)
-                    estado['pedidos'].append(json.loads(req.post_data or '{}'))
+                    corpo = json.loads(req.post_data or '{}')
+                    estado['pedidos'].append(corpo)
+                    if not corpo.get('ficha') and not corpo.get('trechos') and not corpo.get('contexto'):
+                        # como o Worker de verdade: sem fontes → 422 antes de chamar o modelo (é o teste da chave do diagnóstico)
+                        return route.fulfill(status=422, content_type='application/json', headers=cab, body='{"erro":"sem fontes","motivo":"sem_fontes"}')
                     if estado['modo'] == 'erro':
                         return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota grátis diária da IA esgotada"}')
                     texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — a ficha, os trechos e a leitura enviados pelo app não respondem a pergunta'
@@ -146,7 +170,7 @@ def main():
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
-                ok(tela + ': pedido leva a ficha de bordo (sobre o app, telemetria DEMO, sem coordenadas) e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                ok(tela + ': trecho do guia leva a ficha RESUMIDA (sobre o app, embarcação; sem telemetria nem coordenadas) e o histórico vazio', '## Sobre o app' in f and '## Ficha resumida' in f and '## Telemetria' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')
@@ -154,13 +178,19 @@ def main():
                 t, n, _ = digita('Oque você faz?')
                 ok(tela + ': "Oque você faz?" chama a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?')
-                ok(tela + ': SEM DADOS local chama a IA (com a ficha) e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
+                fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
+                ok(tela + ': SEM DADOS local chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'Não encontrei esse dado' not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
+                t, n, _ = digita('diagnóstico')
+                ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste aparelho' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
+                t, n, _ = digita('diagnóstico', chave=False)
+                ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste aparelho (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste aparelho (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?', modo='semdados')
                 ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', chave=False)
                 ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede (fica o trecho local)', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?', chave=False)
                 ok(tela + ': sem a CHAVE_APP, a fonte diz "IA na nuvem desligada neste aparelho" e oferece "Ativar IA na nuvem"', n == 0 and 'IA na nuvem desligada neste aparelho' in t and pg.query_selector('a[href="#ia=ativar"]') is not None, t[-300:])
+                ok(tela + ': sem a CHAVE_APP, aviso grande na tela "IA NA NUVEM NÃO ATIVADA NESTE APARELHO"', 'IA NA NUVEM NÃO ATIVADA NESTE APARELHO' in t, t[-300:])
                 t, n, livre = digita('como ligar o gerador?', modo='erro')
                 ok(tela + ': erro do proxy mantém a resposta local com o motivo (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and 'IA na nuvem fora agora' in t and livre, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', modo='semdados')
@@ -202,6 +232,45 @@ def main():
                 ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'qual o calado do barco' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
                 ok(tela + ': CONVERSA: o núcleo de voz fica em PROCESSANDO esperando a IA', segura)
                 pg.keyboard.press('Escape')
+
+                def conversa(q, chave=True, modo='ok'):
+                    """Uma pergunta falada na CONVERSA (microfone e voz de mentira); devolve as falas e quantos pedidos saíram."""
+                    abre(chave, modo)
+                    pg.evaluate("(q) => { window.__falas.push(q); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }", q)
+                    antes = len(estado['pedidos'])
+                    pg.click(CONVERSA)
+                    try:
+                        pg.wait_for_function('() => window.__faladas.length >= 2', timeout=20000)
+                    except Exception:
+                        pass
+                    f = pg.evaluate('() => window.__faladas')
+                    pg.keyboard.press('Escape')
+                    return f, len(estado['pedidos']) - antes
+
+                f, n = conversa('o que você faz', chave=False)
+                ok(tela + ': CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                f, n = conversa('qual o calado do barco', modo='erro')
+                ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+
+                # Versões misturadas (cérebro velho vindo do cache): o app recarrega sozinho uma vez e fica tudo na mesma versão.
+                cont = {'n': 0}
+
+                def cerebro_velho(route):
+                    cont['n'] += 1
+                    if cont['n'] <= 2:  # a tela pode pedir o cérebro 2 vezes (tag do helmet + whenBrain); cache velho serviria os dois
+                        corpo = open(os.path.join(RAIZ, 'capitao-brain.js'), encoding='utf-8').read().replace("var VERSAO = '%s'" % VERSAO, "var VERSAO = '0.0.1'")
+                        return route.fulfill(status=200, content_type='text/javascript; charset=utf-8', body=corpo)
+                    return route.continue_()
+                pg.route('**/capitao-brain.js*', cerebro_velho)
+                prepara(True)
+                pg.goto(base + tela + '.dc.html')
+                try:
+                    pg.wait_for_function("(v) => window.CapitaoBrain && window.CapitaoBrain.VERSAO === v && sessionStorage.getItem('capitao.recarga.v1') === v", arg=VERSAO, timeout=20000)
+                except Exception:
+                    pass
+                v = pg.evaluate("() => [window.CapitaoBrain && window.CapitaoBrain.VERSAO, sessionStorage.getItem('capitao.recarga.v1')]")
+                ok(tela + ': versões misturadas (cérebro velho do cache): recarrega sozinho uma vez e fica tudo em ' + VERSAO, v[0] == VERSAO and v[1] == VERSAO and cont['n'] >= 2, '%s pedidos do cérebro=%d' % (v, cont['n']))
+                pg.unroute('**/capitao-brain.js*', cerebro_velho)
 
                 t, n = por_link('como ligar o gerador?', interno=False)
                 ok(tela + ': link de fora (#q=, sem referrer) não chama a IA', n == 0 and 'PARTIDA' in t, 'pedidos=%d' % n)

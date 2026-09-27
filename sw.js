@@ -1,8 +1,9 @@
 /* Capitão IA — service worker (rede primeiro; cache só como reserva offline).
    Instala já com todas as telas: a 1ª tela aberta carrega antes do SW e nunca entraria no cache.
    Offline sem a página no cache → aviso fixo com SOS (nunca o index.html, que redireciona e podia entrar em laço).
-   Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = tabela do README. Arquivo novo usado offline → CORE/TELAS. */
-const CACHE = 'capitao-site-v1.0.5';
+   Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = VERSAO em capitao-brain.js e capitao-ia.js = tabela do README.
+   Arquivo novo usado offline → CORE/TELAS. */
+const CACHE = 'capitao-site-v1.0.6';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
@@ -23,16 +24,34 @@ const CDN = [
   'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'
 ];
+// Melhor esforço, fora do "tudo ou nada": o PDF do Guia rápido (1,3 MB) atrasava a ativação de versão nova no 4G.
+const EXTRA = ['./Guia-Rapido-Capitao-IA.pdf'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   // Arquivos do site: tudo ou nada (se um falhar, a instalação falha e o navegador tenta de novo na próxima visita).
   e.waitUntil(caches.open(CACHE).then((c) => Promise.all([
     c.addAll(CORE.map((u) => new Request(u, { cache: 'no-cache' }))),
+    Promise.all(EXTRA.map((u) => c.add(new Request(u, { cache: 'no-cache' })).catch(() => null))),
     Promise.all(CDN.map((u) => c.match(u).then((hit) => hit || c.add(new Request(u, { mode: 'cors' }))).catch(() => null)))
   ])));
 });
+// Versão nova assumiu: apaga o cache da anterior, passa a controlar as telas abertas e RECARREGA cada uma (menos o SOS).
+// Só o SW novo consegue isso: a tela aberta roda o código da versão anterior (no celular, o app instalado fica vivo na
+// memória) e não sabe se recarregar. A navegação fica fora do waitUntil (ela espera a própria ativação e travaria).
+// Na 1ª instalação (sem cache anterior) não recarrega nada. O #… sai do endereço (#q= refaria a pergunta).
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  const feito = caches.keys().then((ks) => {
+    const atualizou = ks.some((k) => k !== CACHE && k.indexOf('capitao-site-') === 0);
+    return Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))).then(() => self.clients.claim()).then(() => atualizou);
+  });
+  e.waitUntil(feito);
+  feito.then((atualizou) => {
+    if (!atualizou) return;
+    return self.clients.matchAll({ type: 'window' }).then((cs) => cs.forEach((c) => {
+      if (!c.navigate || /SOS-/.test(c.url)) return;
+      c.navigate(c.url.split('#')[0]).catch(() => {});
+    }));
+  }).catch(() => {});
 });
 function semInternet() {
   const b = self.registration.scope;
@@ -49,6 +68,22 @@ function semInternet() {
     + '<a href="" onclick="location.reload();return false" style="' + a + '">Tentar de novo</a></p></main></body></html>';
   return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
+// Rede primeiro DE VERDADE: o GitHub Pages manda "max-age=600", e fetch(req) comum podia devolver por até 10 min a cópia do
+// cache HTTP do aparelho — depois de publicar, o celular rodava arquivo velho (ou velho misturado com novo). Arquivo do
+// próprio site sempre confere com o servidor (no-cache: pergunta com o ETag; sem mudança, volta 304 e sai do cache).
+// Pedido que já veio com cache 'reload'/'no-store' (recarga de versão do capitao-app.js) mantém o modo dele.
+function daRede(req, same) {
+  if (!same) return fetch(req);
+  const modo = req.cache === 'reload' || req.cache === 'no-store' ? req.cache : 'no-cache';
+  // Navegador antigo que não aceita copiar um pedido de navegação com opções: segue com o pedido original.
+  try { return fetch(new Request(req, { cache: modo })); } catch (err) { return fetch(req); }
+}
+// Sinal fraco a bordo: conferir com o servidor não pode travar o app. Arquivo do site que não chega em 4 s sai da cópia
+// guardada (a busca segue e atualiza a cópia); sem cópia, continua esperando a rede.
+const PRAZO = 4000;
+function comPrazo(p, ms) {
+  return new Promise((ok, falha) => { const t = setTimeout(() => falha(new Error('prazo')), ms); p.then((r) => { clearTimeout(t); ok(r); }, (err) => { clearTimeout(t); falha(err); }); });
+}
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
@@ -56,11 +91,16 @@ self.addEventListener('fetch', (e) => {
   const same = url.origin === self.location.origin;
   const cdn = /(^|\.)unpkg\.com$/.test(url.hostname);
   if (!same && !cdn) return; // clima, maré e proxies: sempre da rede (sem cache aqui)
-  e.respondWith(
-    fetch(req).then((res) => {
-      // Guarda sem o #…: nada do endereço depois do # vai para o cache.
-      if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(same ? url.origin + url.pathname + url.search : req, copy)).catch(() => {}); }
-      return res;
-    }).catch(() => caches.match(req, { ignoreSearch: same }).then((hit) => hit || (req.mode === 'navigate' ? semInternet() : Response.error())))
-  );
+  const guardado = () => caches.match(req, { ignoreSearch: same });
+  const rede = daRede(req, same).then((res) => {
+    // Guarda sem o #…: nada do endereço depois do # vai para o cache.
+    if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(same ? url.origin + url.pathname + url.search : req, copy)).catch(() => {}); }
+    return res;
+  });
+  rede.catch(() => {}); // a busca que perdeu para a cópia guardada pode falhar depois: sem erro solto
+  e.waitUntil(rede.catch(() => {})); // a cópia se atualiza mesmo quando a resposta saiu da reserva
+  const semRede = () => guardado().then((hit) => hit || (req.mode === 'navigate' ? semInternet() : Response.error()));
+  // SOS: abre na hora pela cópia guardada (a rede atualiza a cópia em segundo plano).
+  if (same && req.mode === 'navigate' && /SOS-/.test(url.pathname)) { e.respondWith(guardado().then((hit) => hit || rede.catch(semRede))); return; }
+  e.respondWith(same ? comPrazo(rede, PRAZO).catch(() => guardado().then((hit) => hit || rede.catch(semRede))) : rede.catch(semRede));
 });

@@ -262,7 +262,7 @@ class Component extends DCLogic {
           const n = Math.max(0, (s.pending || 1) - 1), iaN = Math.max(0, (s.iaN || 0) - (ia ? 1 : 0)), i = s.thread.indexOf(um);
           const thread = i < 0 ? s.thread.concat([msg]) : s.thread.slice(0, i + 1).concat([msg], s.thread.slice(i + 1));
           return { thread: thread, pending: n, iaN: iaN, thinking: n > 0 };
-        }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume(B.falaCurta ? B.falaCurta(fin) : fin.text); });
+        }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume((B.falaCurta ? B.falaCurta(fin) : fin.text) + (fin.extraFala ? ' ' + fin.extraFala : '')); });
       };
       // IA na nuvem (Workers AI) quando a resposta local não basta (B.pedeIA): SEM DADOS, trecho do guia ou pergunta sobre o app.
       // Leva a ficha de bordo (o que o app sabe, com as fontes) e as últimas mensagens; a resposta local espera a IA e fica
@@ -272,17 +272,34 @@ class Component extends DCLogic {
       let interno = !link;
       if (link) { try { interno = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) { interno = false; } }
       const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, q);
+      // "diagnóstico": o texto local diz versões, internet e estado da IA; o teste da chave no servidor (sem gastar a cota)
+      // vem junto, na mesma mensagem.
+      if (a.key === 'diagnostico' && IA && IA.testar) { IA.testar().then((t) => entrega(Object.assign({}, a, { text: a.text + '\n• Teste no servidor: ' + t.texto }))); return; }
       const local = (nota) => {
-        const ativar = pede && IA.estado && (IA.estado() === 'sem-chave' || /chave/.test(nota)) ? [{ l: 'Ativar IA na nuvem', href: '#ia=ativar' }] : [];
-        return nota ? { key: a.key, text: a.text, src: (a.src ? a.src + ' · ' : '') + nota, actions: (a.actions || []).concat(ativar) } : a;
+        const ativar = pede && IA.estado && (/^(sem-chave|chave-invalida)$/.test(IA.estado()) || /chave/.test(nota)) ? [{ l: 'Ativar IA na nuvem', href: '#ia=ativar' }] : [];
+        return nota ? Object.assign({}, a, { src: (a.src ? a.src + ' · ' : '') + nota, actions: (a.actions || []).concat(ativar) }) : Object.assign({}, a);
       };
-      if (!pede || !IA.ativa()) { entrega(local(pede && IA.aviso ? IA.aviso() : '')); return; }
+      if (!pede || !IA.ativa()) {
+        const fin = local(pede && IA.aviso ? IA.aviso() : '');
+        // Aparelho sem a chave (ou com chave inválida): a linha da fonte é pequena e a CONVERSA cobre a tela — avisa grande
+        // e, na voz, fala o aviso uma vez por sessão.
+        const precisaAtivar = pede && IA.estado && /^(sem-chave|chave-invalida)$/.test(IA.estado());
+        if (precisaAtivar) {
+          this.flash('IA NA NUVEM NÃO ATIVADA NESTE APARELHO — TOQUE EM ATIVAR IA NA NUVEM', 12000);
+          if (this.state.conversa && !this._avisouIA) { this._avisouIA = true; fin.extraFala = 'A IA na nuvem não está ativada neste aparelho. Encerre a conversa e toque em Ativar IA na nuvem.'; }
+        }
+        entrega(fin); return;
+      }
       if (this.state.conversa && B.vozPensando) B.vozPensando(q);
       this.setState((s) => ({ iaN: (s.iaN || 0) + 1 }));
-      IA.perguntar(q, B.buscaBase(q, 3), '', { ficha: B.ficha ? B.ficha('web') : '', historico: this.historico(um) }).then((r) => {
+      IA.perguntar(q, B.buscaBase(q, 3), '', { ficha: B.ficha ? B.ficha('web', q, a) : '', historico: this.historico(um) }).then((r) => {
         // SEM DADOS da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca o SEM DADOS genérico.
         if (r && !(r.semDados && a.key === 'base')) entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' ? a.actions : [] }, true);
-        else entrega(local(r ? '' : IA.falha ? IA.falha() : ''), true);
+        else {
+          const nota = r ? '' : IA.falha ? IA.falha() : '', fin = local(nota);
+          if (nota && this.state.conversa) fin.extraFala = nota.replace(/ — /g, ', ') + '.'; // na voz, o motivo também é falado
+          entrega(fin, true);
+        }
       }, () => entrega(local(''), true));
     }, 650);
     this._pend = (this._pend || []).concat([t]);

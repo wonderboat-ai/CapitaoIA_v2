@@ -73,7 +73,36 @@
   var HOSTS = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$|^(localhost|127\.0\.0\.1|\[::1\])$/i;
   if ('serviceWorker' in navigator && HOSTS.test(location.hostname)) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+    // App instalado fica aberto dias (o Android traz a mesma tela ao tocar no ícone, sem recarregar): ao voltar para a
+    // frente, procura versão nova (no máximo 1 vez por minuto). Achando, o SW novo instala, assume e recarrega as telas
+    // abertas (sw.js › activate).
+    var procurou = 0;
+    d.addEventListener('visibilitychange', function () {
+      if (d.visibilityState !== 'visible' || !navigator.serviceWorker.getRegistration) return;
+      var agora = new Date().getTime(); if (agora - procurou < 60000) return; procurou = agora;
+      navigator.serviceWorker.getRegistration().then(function (r) { if (r) return r.update(); }).catch(function () {});
+    });
   }
+
+  // Versões misturadas: logo depois de publicar, o celular podia rodar o capitao-auth.js novo (rodapé com a versão nova) com
+  // o capitao-brain.js ou o capitao-ia.js velhos, vindos do cache HTTP do aparelho (o GitHub Pages manda "max-age=600").
+  // Resultado: a IA nem era chamada e voltava o SEM DADOS de antes. Na 1ª vez que isso aparece nesta sessão, busca de novo
+  // na rede (cache 'reload') os arquivos e a tela, e recarrega. Não repete na mesma sessão (sem laço se a rede falhar).
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var A = window.CapitaoAuth, B = window.CapitaoBrain, I = window.CapitaoIA, v = A && A.VERSAO && A.VERSAO.v;
+      if (!v) return;
+      var arq = [];
+      if (B && B.VERSAO !== v) arq.push('./capitao-brain.js');
+      if (I && I.VERSAO !== v) arq.push('./capitao-ia.js');
+      if (!arq.length) return;
+      var K = 'capitao.recarga.v1';
+      try { if (sessionStorage.getItem(K) === v) return; sessionStorage.setItem(K, v); } catch (e) { return; }
+      arq = arq.concat(['./capitao-auth.js', './capitao-app.js', location.pathname]);
+      Promise.all(arq.map(function (u) { return fetch(u, { cache: 'reload', credentials: 'same-origin' }).catch(function () { return null; }); }))
+        .then(function () { location.reload(); });
+    }, 1200);
+  });
 
   var raf = 0, rodape = null, atual = null, olhaEstilo = null;
   // Só a prancheta já desenhada (#dc-root): mexer no modelo escondido dentro do <x-dc> fazia o React apagar o zoom depois.

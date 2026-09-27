@@ -34,13 +34,15 @@ CASOS = [
     ('motores volvo penta', 'motores'), ('Telemetria agora', 'telemetria'), ('como está o barco?', 'telemetria'), ('troca do rotor do gerador', 'base'),
     ('Oque você faz?', 'saudacao'), ('o que vc sabe fazer?', 'saudacao'), ('quem é vc?', 'saudacao'), ('como você funciona?', 'saudacao'),
     ('pra que serve esse app?', 'saudacao'),
+    ('diagnóstico', 'diagnostico'), ('status da IA', 'diagnostico'), ('a IA está ligada?', 'diagnostico'), ('teste da IA', 'diagnostico'),
+    ('qual o diagnóstico do gerador?', 'gerador'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
 PEDE_IA = {
     'Oque você faz?': True, 'o que vc sabe fazer?': True, 'como ligar o gerador?': True, 'qual o preço do dólar?': True, 'não registre isso': True,
     '': False, 'oi, bom dia': False, 'MAYDAY, homem ao mar!': False, 'pressão de óleo baixa no motor BB': False,
-    'Registre no diário: saída com 4 pessoas': False, 'autonomia': False, 'é seguro sair hoje?': False,
+    'Registre no diário: saída com 4 pessoas': False, 'autonomia': False, 'é seguro sair hoje?': False, 'diagnóstico': False,
 }
 
 
@@ -76,7 +78,14 @@ def main():
         faltam = [x for x in blocos if x not in f]
         coord = [x for x in ("26°59", "048°36", "-26.99", "-48.6") if x in f]
         voz = pg.evaluate("() => window.CapitaoBrain.falaCurta({ key: 'ia', text: 'Sou o Capitão IA.\\nRespondo sobre telemetria, manutenção e documentos, sempre com a fonte.\\n• item\\nFonte: Sobre o app' })")
+        x = pg.evaluate("""() => { const B = window.CapitaoBrain, r = (q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { a, f: B.ficha('app', q, a), voz: B.falaCurta(a) }; };
+            const meta = r('Oque você faz?'), base = r('como ligar o gerador?'), sd = r('qual o calado do barco?'), oi = r('oi'), dg = r('diagnóstico');
+            return { metaF: meta.f, baseF: base.f, sdF: sd.f, metaVoz: meta.voz, oiVoz: oi.voz, dgTexto: dg.a.text, dgSrc: dg.a.src, versao: B.VERSAO }; }""")
         for nome, cond, extra in [
+            ('ficha resumida para pergunta sobre o app e para trecho do guia (sem telemetria, < 4 mil letras)', '## Ficha resumida' in x['metaF'] and '## Telemetria' not in x['metaF'] and len(x['metaF']) < 4000 and '## Ficha resumida' in x['baseF'], (len(x['metaF']), len(x['baseF']))),
+            ('ficha completa para SEM DADOS', '## Telemetria' in x['sdF'] and '## Ficha resumida' not in x['sdF'], len(x['sdF'])),
+            ('voz de "Oque você faz?" sem a IA diz o que o Capitão faz (não repete a abertura)', x['metaVoz'].startswith('Respondo sobre telemetria') and x['oiVoz'] == 'Capitão IA online. Que precisa?', (x['metaVoz'][:60], x['oiVoz'])),
+            ('diagnóstico local: versões, internet, fonte "este aparelho"', 'Diagnóstico do Capitão IA neste aparelho' in x['dgTexto'] and 'cérebro ' + x['versao'] in x['dgTexto'] and x['dgSrc'].startswith('Fonte: este aparelho'), x['dgTexto'][:200]),
             ('ficha com todos os blocos', not faltam, faltam),
             ('ficha sem coordenadas do barco', not coord, coord),
             ('ficha com rótulo DEMO e SEM DADOS', 'DEMO' in f and 'SEM DADOS' in f, ''),
