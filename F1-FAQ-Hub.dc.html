@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — FAQ de bordo (app)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+input::placeholder { color: var(--cap-ph, #4a5578); }
+#faq-busca-caixa:focus-within { border-color: var(--cap-accent, #00a1fe) !important; box-shadow: 0 0 0 3px rgba(var(--cap-accent-rgb, 0,161,254), 0.18); }
+</style>
+<script src="./capitao-telemetria.js"></script>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="FAQ de bordo" voltar="H2-Home-Mobile.dc.html" hint-size="390px,44px"></x-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow-y: auto;">
+    <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.4; flex-shrink: 0;">{{resumo}}</span>
+    <div id="faq-busca-caixa" style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 0 4px 0 14px; height: 54px; box-sizing: border-box; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; transition: border-color .2s, box-shadow .2s;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink4, #7985a6);"></path></svg>
+      <label for="faq-busca" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Buscar no FAQ de bordo ou perguntar ao barco</label>
+      <input id="faq-busca" maxlength="200" ref="{{buscaRef}}" onChange="{{onBusca}}" onKeyDown="{{onKey}}" placeholder="Buscar: “ligar gerador”, “alarme”…" autocomplete="off" enterkeyhint="search" style="flex-grow: 1; background: none; border: none; outline: none; color: var(--cap-ink, #eaf1ff); font-size: 16px; font-family: inherit; min-width: 0; padding: 12px 0 12px 4px;">
+      <sc-if value="{{temBusca}}" hint-placeholder-val="{{false}}">
+        <button type="button" onClick="{{limpar}}" aria-label="Limpar busca" style="width: 44px; height: 44px; flex-shrink: 0; border: none; background: transparent; color: var(--cap-ink3, #97a3c0); border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 6l12 12 M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+      </sc-if>
+      <button type="button" onClick="{{enviar}}" aria-label="Perguntar ao barco" title="Perguntar ao barco" style="width: 44px; height: 44px; flex-shrink: 0; border: none; border-radius: 11px; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 12h14 M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+    </div>
+    <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{notaTom}}; min-height: 14px; flex-shrink: 0; margin: -3px 0;">{{nota}}</span>
+
+    <sc-if value="{{semBusca}}" hint-placeholder-val="{{true}}">
+      <sc-for list="{{cartoes}}" as="c" hint-placeholder-count="9">
+        <a href="{{c.href}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+          <span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: {{c.wash}}; display: flex; align-items: center; justify-content: center;">{{c.ico}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+            <span style="display: flex; align-items: flex-start; gap: 8px; min-width: 0;">
+              <span style="flex-grow: 1; min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3; padding-top: 1px;">{{c.nome}}</span>
+              <span style="flex-shrink: 0; font-size: 8.5px; letter-spacing: 0.10em; font-weight: 800; color: {{c.ctom}}; border: 1px solid {{c.clinha}}; background: {{c.cwash}}; border-radius: 5px; padding: 3px 6px; white-space: nowrap;">{{c.chip}}<span style="color: var(--cap-violeta, #b45cff);">{{c.chipDemo}}</span></span>
+            </span>
+            <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{c.fab}}</span>
+            <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{c.acao}}</span>
+            <span style="font-size: 10px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{c.fonte}}</span>
+          </span>
+        </a>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{temBusca}}" hint-placeholder-val="{{false}}">
+      <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 700; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">{{resTituloApp}}</span>
+      <sc-for list="{{resultados}}" as="r" hint-placeholder-count="3">
+        <a href="{{r.href}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 10px 8px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+          <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; background: {{r.wash}}; display: flex; align-items: center; justify-content: center;">{{r.ico}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 13px; font-weight: 700; line-height: 1.3;">{{r.q}}</span>
+            <span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{r.meta}}</span>
+          </span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink4, #7985a6);"></path></svg>
+        </a>
+      </sc-for>
+      <a href="{{chatBusca}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px 8px 12px; border-radius: 14px; border: 1px dashed rgba(var(--cap-accent-rgb, 0,161,254), 0.45); text-decoration: none; color: var(--cap-accent, #00a1fe);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span style="flex-grow: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{chatBuscaTxt}}</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink4, #7985a6);"></path></svg>
+      </a>
+      <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4; flex-shrink: 0;">{{resFonte}}</span>
+    </sc-if>
+
+    <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 11.5px; line-height: 1.4;">
+      <span><b style="color: var(--cap-ink, #eaf1ff);">Regra:</b> {{regra}}</span>
+      <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6);">{{regraFonte}}</span>
+    </div>
+  </div>
+
+  <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
+  <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" hint-size="358px,108px"></x-import>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+// FAQ de bordo — hub (app): todos os equipamentos de D.equipamentos com o estado do FAQ (D.faq · D.guias).
+// PRONTO · DEMO = passo a passo do guia de demonstração; GUIA DE BORDO = guia existe, sem tela de FAQ; SEM DADOS = sem manual carregado.
+// Busca rápida: filtra as perguntas de D.faq; Enter (ou o botão) manda a pergunta ao chat.
+const CFG = { plat: 'app', chat: 'H2-Home-Mobile.dc.html', suf: '', max: 6 };
+const TOM = {
+  crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'],
+  warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
+  tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'],
+  accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'],
+  ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'],
+  violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)'],
+  ink: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.14)']
+};
+const cor = (k) => TOM[k] || TOM.accent;
+const SD = 'SEM DADOS';
+const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+const mil = (x, d) => { if (typeof x !== 'number' || !isFinite(x)) return '—'; const p = x.toFixed(d == null ? 1 : d).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p[1] ? ',' + p[1] : ''); };
+const secao = (x) => (x ? '§' + String(x).replace(/^(\d+)\s*·\s*/, '$1 ') : 'seção ' + SD);
+
+const TELA = { estabilizador: 'F2-FAQ-Estabilizador', eletronicos: 'F3-FAQ-Eletronicos', gerador: 'F4-FAQ-Gerador', climatizacao: 'F5-FAQ-Climatizacao' };
+const NOME_FAQ = { estabilizador: 'Estabilizador', eletronicos: 'Eletrônicos', gerador: 'Gerador', climatizacao: 'Climatização' };
+const ICON = { motores: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', gerador: 'M13 3L5 14h6l-1 7 8-11h-6z', estabilizador: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', climatizacao: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', eletronicos: 'M4 5h16v11H4z M9 20h6 M12 16v4', audio: 'M9 18V6l11-2v12 M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0z M20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z', vhf: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', epirb: 'M9 21h6 M10 21V10h4v11 M12 10V7 M8.5 6a5 5 0 0 1 7 0 M6 3.5a8.5 8.5 0 0 1 12 0', seafire: 'M12 3c1 3 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2.2 1.2-3.6 2.3-4.6.1 1.8.9 3 2 3.3-.4-2.8.2-5.6.2-8.2z' };
+const TOM_EQ = { motores: 'accent', gerador: 'violeta', estabilizador: 'tele', climatizacao: 'tele', eletronicos: 'accent', audio: 'accent', vhf: 'accent' };
+const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const PARADAS = ' o a os as de do da dos das e em no na nos nas como que um uma para pra com por se ao aos qual quais quando eu meu minha me faz fazer tem ter o que '.split(' ').reduce((m, w) => { if (w) m[w] = 1; return m; }, {});
+class Component extends DCLogic {
+  state = { busca: '', nota: '', notaTom: 'var(--cap-ok, #34c77a)' };
+  buscaRef = React.createRef();
+  componentWillUnmount() { clearTimeout(this._n); }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  toast(msg, tone) { this.setState({ nota: msg, notaTom: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 4000); }
+  chat(q) { return CFG.chat + (q ? '#q=' + encodeURIComponent(q) : ''); }
+  tela(k, p) { return TELA[k] + CFG.suf + '.dc.html' + (p ? '#p=' + p : ''); }
+  texto() { const el = this.buscaRef.current; return String((el && el.value) || this.state.busca || '').trim(); }
+  // Enter / botão: a pergunta vai para o chat (Main na web, H2 no app), que responde pelas fontes de bordo
+  enviar() {
+    const q = this.texto();
+    if (!q) { this.toast('Digite a pergunta — ou toque num equipamento.', 'var(--cap-warn, #f0a63a)'); if (this.buscaRef.current) this.buscaRef.current.focus(); return; }
+    window.location.href = this.chat(q.slice(0, 200));
+  }
+  limpar() { const el = this.buscaRef.current; if (el) { el.value = ''; el.focus(); } this.setState({ busca: '' }); }
+  // Busca nas perguntas de D.faq: todos os termos precisam aparecer (pergunta, seção, equipamento ou passo)
+  achar(busca) {
+    const D = window.CapitaoDados || {}, FAQ = D.faq || {};
+    const termos = norm(busca).replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w && !PARADAS[w] && (w.length > 1 || /\d/.test(w)));
+    if (!termos.length) return [];
+    const out = [];
+    Object.keys(FAQ).forEach((k) => {
+      const F = FAQ[k] || {}, te = norm(F.equip);
+      (F.perguntas || []).forEach((p, i) => {
+        const passos = p.passos || [], tq = norm(p.q), ts = norm(passos.map((x) => x.secao).join(' ')), tt = norm(passos.map((x) => x.t).join(' '));
+        let pts = 0, todos = true;
+        termos.forEach((w) => { let v = 0; if (tq.indexOf(w) !== -1) v += 4; if (ts.indexOf(w) !== -1) v += 2; if (te.indexOf(w) !== -1) v += 2; if (tt.indexOf(w) !== -1) v += 1; if (!v) todos = false; pts += v; });
+        if (todos) out.push({ k: k, i: i, p: p, F: F, pts: pts });
+      });
+    });
+    return out.sort((a, b) => b.pts - a.pts).slice(0, CFG.max);
+  }
+  faqDe(e) {
+    const D = window.CapitaoDados || {}, FAQ = D.faq || {}, G = D.guias || {};
+    if (FAQ[e.id]) return e.id;
+    const g = e.guia ? G[e.guia] : null; if (!g) return null;
+    for (const k in FAQ) if (FAQ[k] && FAQ[k].fonte === g) return k;
+    return null;
+  }
+  renderVals() {
+    const s = this.state, D = window.CapitaoDados || {}, FAQ = D.faq || {}, G = D.guias || {}, EQ = D.equipamentos || [];
+    const demo = D.demo ? ' · DEMO' : '';
+    const pasta = ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || SD);
+    const chipOk = { ctom: cor('ok')[0], clinha: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.07)' };
+    let prontos = 0;
+    const cartoes = EQ.map((e) => {
+      const k = this.faqDe(e), F = k ? FAQ[k] : null, g = e.guia ? G[e.guia] : null, t = cor(TOM_EQ[e.id] || 'ink');
+      const fab = (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '');
+      const c = { nome: e.nome, fab: fab, ico: this.ico(ICON[e.id] || 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 20, 1.7, t[0]), wash: t[1], chipDemo: '' };
+      const pronto = F && F.status === 'PRONTO', P = F && Array.isArray(F.perguntas) ? F.perguntas : [];
+      if (F && k === e.id) {
+        if (pronto) prontos++;
+        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || SD), chipDemo: pronto && D.demo ? ' · DEMO' : '',
+          sub: P.map((p) => p.q).join(' · ') || SD, acao: P.length + (P.length === 1 ? ' pergunta ›' : ' perguntas ›'),
+          href: this.tela(k), fonte: 'Fonte: ' + (F.fonte || SD) });
+      } else if (F) {
+        // Áudio e VHF: respondidos no FAQ de eletrônicos (mesmo guia) — abre direto na pergunta
+        const kw = norm(e.modelo || e.fabricante || e.nome), idx = [];
+        P.forEach((p, i) => { if (norm(p.q + ' ' + (p.passos || []).map((x) => x.secao).join(' ')).indexOf(kw) !== -1) idx.push(i); });
+        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || SD), chipDemo: pronto && D.demo ? ' · DEMO' : '',
+          sub: 'No FAQ de ' + (NOME_FAQ[k] || k) + ': ' + (idx.map((i) => P[i].q).join(' · ') || 'passo a passo do guia'),
+          acao: 'No FAQ de ' + (NOME_FAQ[k] || k) + ' ›',
+          href: this.tela(k, idx.length ? idx[0] + 1 : 0), fonte: 'Fonte: ' + (F.fonte || SD) });
+      } else if (g) {
+        // Motores: guia de bordo DEMO existe, mas sem tela de FAQ — o chat responde pelo guia
+        Object.assign(c, { chip: 'GUIA DE BORDO', ctom: cor('accent')[0], clinha: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)', cwash: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.07)',
+          sub: g + ' carregado · passo a passo ainda sem tela de FAQ — pergunte ao barco.', acao: 'Perguntar ao barco ›',
+          href: this.chat(e.nome + (e.fabricante ? ' ' + e.fabricante : '')), fonte: 'Fonte: ' + g });
+      } else {
+        Object.assign(c, { chip: SD, ctom: cor('ink')[0], clinha: 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.45)', cwash: 'transparent',
+          sub: 'Sem manual carregado — passo a passo ' + SD + '. Envie o manual ou a foto da etiqueta pelo chat.', acao: 'Perguntar ao barco ›',
+          href: this.chat(e.fabricante || e.nome), fonte: 'Fonte: nenhuma — ' + SD });
+      }
+      return c;
+    });
+    const nPerg = Object.keys(FAQ).reduce((n, k) => n + ((FAQ[k] && FAQ[k].perguntas) || []).length, 0);
+    const busca = String(s.busca || '').trim(), achados = busca ? this.achar(busca) : [];
+    const fontesRes = []; achados.forEach((a) => { if (a.F.fonte && fontesRes.indexOf(a.F.fonte) === -1) fontesRes.push(a.F.fonte); });
+    const resultados = achados.map((a) => {
+      const t = cor(TOM_EQ[a.k] || 'accent'), passos = a.p.passos || [], secs = [];
+      passos.forEach((x) => { const v = secao(x.secao); if (x.secao && secs.indexOf(v) === -1) secs.push(v); });
+      const pr = a.F.status === 'PRONTO';
+      return { q: a.p.q, meta: (a.F.equip || SD) + ' · ' + passos.length + (passos.length === 1 ? ' passo' : ' passos') + (secs.length ? ' · ' + secs.join(' · ') : ''),
+        href: this.tela(a.k, a.i + 1), ico: this.ico(ICON[a.k] || ICON.eletronicos, 19, 1.7, t[0]), wash: t[1], selo: pr ? 'PRONTO' : (a.F.status || SD), seloDemo: pr && D.demo ? ' · DEMO' : '' };
+    });
+    const nR = resultados.length;
+    return {
+      nota: s.nota, notaTom: s.notaTom,
+      resumo: EQ.length + ' equipamentos · ' + prontos + ' com passo a passo PRONTO' + demo + ' (' + nPerg + ' perguntas) · guias de bordo' + (D.demo ? ' de demonstração' : '') + ' — confirmar no manual do fabricante',
+      perguntarHref: this.chat('Quais guias de bordo estão carregados?'),
+      buscaRef: this.buscaRef,
+      onBusca: (e) => this.setState({ busca: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing) && e.keyCode !== 229) { e.preventDefault(); this.enviar(); } else if (e.key === 'Escape') this.limpar(); },
+      enviar: () => this.enviar(), limpar: () => this.limpar(),
+      temBusca: !!busca, semBusca: !busca,
+      cartoes: cartoes,
+      resultados: resultados,
+      resTitulo: nR ? nR + (nR === 1 ? ' pergunta do FAQ' : ' perguntas do FAQ') + ' com “' + busca + '”' : 'Nenhuma pergunta do FAQ com “' + busca + '”',
+      resTituloApp: (nR ? nR + (nR === 1 ? ' PERGUNTA' : ' PERGUNTAS') : 'NENHUMA PERGUNTA') + ' NO FAQ',
+      chatBusca: this.chat(busca.slice(0, 200)), chatBuscaTxt: 'Perguntar ao barco: “' + busca + '” ›',
+      resFonte: fontesRes.length ? 'Fonte: ' + fontesRes.join(' · ') : 'Fonte: nenhuma pergunta do FAQ — o barco procura nas outras fontes de bordo',
+      regra: 'sem guia carregado, a resposta é ' + SD + ' e aponta onde buscar — nada é inventado. ' + (D.equipNota || ''),
+      regraFonte: 'Fonte: ' + pasta
+    };
+  }
+}
+</script>
+</body>
+</html>
