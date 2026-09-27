@@ -6,7 +6,7 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.0', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.1', data: '27/09/2026' };
   var CREDITO = 'Wonder BOAT | WonderHUB.AI';
   var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|xn--capitoia-vza\.com\.br)$/i; // GitHub Pages e www.capitãoia.com.br
 
@@ -14,7 +14,7 @@
   // com ferramentas/gerar-senha.html e colar a linha aqui.
   var ITER = 210000;
   var USUARIOS = {
-    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: '0z0xSA1l5k6yHCZGXoNFmA==', hash: 'sG6CoaN01ERQRs7TIkmlrM0DuIfzZkRH694ZK0LwWdA=' }
+    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' }
   };
   var DONO = 'lucas';
 
