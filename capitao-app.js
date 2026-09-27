@@ -116,7 +116,8 @@
   // Enquanto o SOS da página não estiver à vista, um SOS fixo no canto leva à mesma tela de emergência.
   var sosEl = null, sosVisto = null, sosObs = null;
   function sosFixo(el) {
-    var alvo = el.querySelector('a[href*="SOS-"]');
+    // A barra SOS da tela (fixa, acima do assistente) manda; link de SOS dentro do conteúdo rolável só na falta dela.
+    var alvo = el.querySelector('capitao-sos-app a[href*="SOS-"]') || el.querySelector('a[href*="SOS-"]');
     if (!alvo || !window.IntersectionObserver) return;
     if (!sosEl) {
       sosEl = d.createElement('a'); sosEl.textContent = 'SOS'; sosEl.setAttribute('aria-label', 'SOS — emergência');
