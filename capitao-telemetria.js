@@ -6,8 +6,9 @@
 (function () {
   if (window.CapitaoTelemetria) return;
   var URL_PROXY = ''; // ex.: 'https://capitao-telemetria.<conta>.workers.dev'
-  // Teste num aparelho antes de publicar: localStorage 'capitao.telemetria.url.v1' = URL do proxy.
-  try { URL_PROXY = localStorage.getItem('capitao.telemetria.url.v1') || URL_PROXY; } catch (e) {}
+  // Teste num aparelho antes de publicar: localStorage 'capitao.telemetria.url.v1' = URL do proxy. Só vale com URL_PROXY vazio e só
+  // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
+  if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.telemetria.url.v1') || ''; if (/^https:\/\/capitao\-telemetria\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
   var KC = 'capitao.telemetria.chave.v1', KD = 'capitao.telemetria.ultima.v1';
   var D = window.CapitaoDados || {}, TZ = (D.embarcacao && D.embarcacao.fuso) || 'America/Sao_Paulo';
@@ -29,7 +30,9 @@
     if (m) {
       var c = decodeURIComponent(m[1]);
       if (c === 'sair') localStorage.removeItem(KC); else localStorage.setItem(KC, c);
-      history.replaceState(null, '', location.pathname + location.search + location.hash.replace(/(^#|&)tele=[^&]+/, '').replace(/^#&?$/, ''));
+      // Tira só o par tele=…; os outros parâmetros do endereço (#q=, #tele=, #ia=…) continuam no hash.
+      var resto = location.hash.slice(1).split('&').filter(function (p) { return p && p.indexOf('tele=') !== 0; }).join('&');
+      history.replaceState(null, '', location.pathname + location.search + (resto ? '#' + resto : ''));
     }
   } catch (e) {}
   function chave() { try { return localStorage.getItem(KC) || ''; } catch (e) { return ''; } }
