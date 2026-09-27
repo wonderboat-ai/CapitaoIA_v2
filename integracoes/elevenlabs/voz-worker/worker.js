@@ -11,7 +11,7 @@
      ORIGENS              (opcional) sites autorizados, separados por vírgula
    Proteções: só as ORIGENS, só com a CHAVE_APP, texto de até 1.200 letras e no máximo 30 falas por minuto por IP.
    Defina também um limite de gasto no ElevenLabs. */
-const PADRAO_ORIGENS = 'https://wonderboat-ai.github.io';
+const PADRAO_ORIGENS = 'https://v2.capitaoia.com.br'; // só o app: o github.io é dividido com os outros sites da conta
 const LIMITE_TEXTO = 1200, LIMITE_MIN = 30;
 const usos = new Map(); // por instância do Worker: freio simples contra abuso, não substitui o limite de gasto
 

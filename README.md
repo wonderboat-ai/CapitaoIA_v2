@@ -2,11 +2,11 @@
 
 Cérebro operacional da embarcação **Capitão IA**: chat com o barco, console de telemetria e manutenção, FAQ de bordo e SOS. Tem versão **web** (computador e tablet) e versão **app** (celular), com um cérebro só.
 
-> **Versão 1.0.2 · 27/09/2026** · Wonder BOAT | WonderHUB.AI
+> **Versão 1.0.3 · 27/09/2026** · Wonder BOAT | WonderHUB.AI
 
 > **Demonstração da plataforma.** Esta embarcação é de demonstração: leituras, agenda, documentos, diário, abastecimentos e guias de bordo são **fictícios** e aparecem com o selo **DEMO** e a fonte de cada dado (Google Drive › Capitão IA v2). Modelos dos equipamentos, registro, Seafire e EPIRB estão **SEM DADOS**; o MMSI 710123456 é fictício. Procedimentos de emergência são o **padrão internacional, a confirmar com o protocolo de bordo**. Nada é inventado pelo assistente: quando falta o dado, a tela mostra **SEM DADOS**.
 
-- **Abrir:** https://wonderboat-ai.github.io/CapitaoIA_v2/ (quando publicado)
+- **Abrir:** https://v2.capitaoia.com.br/ (o endereço antigo `wonderboat-ai.github.io/CapitaoIA_v2/` redireciona)
 - **Todas as telas:** `index.html?v=lista`
 - **Manual de uso:** `Manual-Capitao-IA.dc.html`
 - **Guia rápido (PDF, para quem nunca usou):** `Guia-Rapido-Capitao-IA.pdf`
@@ -110,6 +110,7 @@ A versão aparece no rodapé de todas as telas. Para lançar: `VERSAO` em `capit
 
 | Versão | Data | O que mudou |
 |---|---|---|
+| 1.0.3 | 27/09/2026 | Domínio próprio **v2.capitaoia.com.br** (o app ganha uma origem só dele; o endereço antigo redireciona). Mudou a origem: **entrar de novo em cada aparelho**; atalhos, diário, documentos, equipe e tema salvos no aparelho ficaram no endereço antigo · Workers aceitam só a origem nova |
 | 1.0.2 | 27/09/2026 | Telemetria: chave no endereço (`#tele=`) sem estragar o link e URL de teste restrita ao próprio Worker · IA na nuvem: integração grátis com Workers AI (desligada), cliente único para Workers AI ou Claude API, proxy da Claude API com as mesmas guardas · regra: origem só do app antes de ligar proxies · Manual atualizado |
 | 1.0.1 | 27/09/2026 | Senha do proprietário trocada (sal e hash novos; a senha inicial deixa de valer) |
 | 1.0.0 | 27/09/2026 | Primeira versão: clone do motor do Avanti Vessel AI 1.4.6 para a embarcação de demonstração Capitão IA (dados fictícios rotulados DEMO, fonte no Google Drive › Capitão IA v2) · 35 telas (15 web · 20 app) e o Manual · chat com fonte em toda resposta e SEM DADOS sem fonte · SOS offline e sem login · marca Wonder BOAT com a paleta WonderHUB.AI · integrações como estrutura desligada · Manual e Guia rápido |

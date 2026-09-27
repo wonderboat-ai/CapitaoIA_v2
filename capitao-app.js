@@ -70,7 +70,7 @@
   })();
 
   // Service worker: site publicado (GitHub Pages ou domínio próprio) e testes locais.
-  var HOSTS = /(^|\.)(wonderboat-ai\.github\.io|xn--capitoia-vza\.com\.br)$|^(localhost|127\.0\.0\.1|\[::1\])$/i;
+  var HOSTS = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$|^(localhost|127\.0\.0\.1|\[::1\])$/i;
   if ('serviceWorker' in navigator && HOSTS.test(location.hostname)) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
   }

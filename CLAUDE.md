@@ -2,7 +2,7 @@
 
 Cérebro operacional da embarcação **Capitão IA** (fabricante/modelo e registro SEM DADOS · proprietário Lucas Araújo · base Balneário Camboriú (SC) · fuso America/Sao_Paulo).
 **Hoje é uma DEMONSTRAÇÃO da plataforma** para mostrar a clientes e servir de modelo para as próximas embarcações: clone da arquitetura, da taxonomia da interface e do padrão de integrações do Avanti Vessel AI 1.4.6, com **dados fictícios rotulados DEMO**.
-Repositório `wonderboat-ai/CapitaoIA_v2` (público). Site: GitHub Pages da `main`, raiz → https://wonderboat-ai.github.io/CapitaoIA_v2/ (domínio www.capitãoia.com.br ainda sem DNS — sem `CNAME`).
+Repositório `wonderboat-ai/CapitaoIA_v2` (público). Site: GitHub Pages da `main`, raiz → **https://v2.capitaoia.com.br/** (arquivo `CNAME`; DNS no Registro.br: CNAME `v2` → `wonderboat-ai.github.io`; o endereço antigo wonderboat-ai.github.io/CapitaoIA_v2/ redireciona). A raiz capitaoia.com.br é o site de apresentação feito no Lovable — não mexer.
 Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 
 ## Como falar com o usuário
@@ -47,11 +47,10 @@ Crédito no rodapé: **Wonder BOAT | WonderHUB.AI** (grafia do manual da marca).
 
 ## Pendências conhecidas
 - Posição de referência exata da marina (lat, lon) — hoje centro da cidade.
-- Domínio www.capitãoia.com.br sem DNS (26/09/2026): sem `CNAME`; já nas `ORIGENS` e no `PUBLICADO`.
 - Ícones do app provisórios (logo Wonder BOAT sobre #050816): o manual pede versão específica validada para avatar/favicon.
 - Dados reais da embarcação (modelos, registro, EPIRB, Seafire, protocolo de bordo, manuais dos fabricantes, coletor NMEA) — hoje SEM DADOS ou DEMO.
 - Telemetria ao vivo, IA na nuvem, voz em nuvem e documentos sensíveis: estrutura pronta e desligada; ligar junto com o login no servidor (ordem em `integracoes/README.md`).
-- **Origem compartilhada:** `wonderboat-ai.github.io` é a mesma origem para os 11 sites da conta (um carrega script de terceiro). Antes de ligar qualquer proxy: domínio próprio (ou conta só do app), tirar o github.io de `ORIGENS`, Cloudflare Access.
+- **Origem:** o app tem origem própria (v2.capitaoia.com.br) desde a 1.0.3; `wonderboat-ai.github.io` (dividido com os 11 sites da conta) fica fora de `ORIGENS`. Antes de ligar qualquer proxy, falta o Cloudflare Access.
 - Modo navegação e alerta crítico: modelos sem disparo automático (dependem da telemetria ao vivo).
 - NotebookLM não configurado (`BASE = null`).
 - Cópias no Drive feitas em 26/09/2026: o "Guia de bordo (DEMO) — Estabilizador Seakeeper" ainda diz "MANUAL NO DRIVE" no §6 Alarmes (o repositório já diz SEM DADOS: manual do fabricante não carregado). Corrigir à mão no Drive ou reenviar a partir de `ferramentas/demo/fontes/`.

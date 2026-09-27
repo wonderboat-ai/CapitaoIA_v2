@@ -8,4 +8,4 @@ compatibility_date = "2026-09-01"
 [vars]
 MODELO = "claude-opus-5"
 # ESFORCO = "medium"   (opcional: low | medium | high | xhigh | max — padrão da API se vazio)
-ORIGENS = "https://wonderboat-ai.github.io,https://www.xn--capitoia-vza.com.br"
+ORIGENS = "https://v2.capitaoia.com.br"   # só o app (o github.io é dividido com os outros sites da conta e redireciona para cá)

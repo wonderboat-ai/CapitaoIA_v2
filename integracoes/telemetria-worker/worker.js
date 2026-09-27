@@ -11,7 +11,7 @@
      ORIGENS          (opcional) sites autorizados, separados por vírgula
    Proteções: só as ORIGENS, só com a CHAVE_APP, no máximo 120 leituras por minuto por IP, cache de 4 s.
    No Drive: compartilhar o JSON do coletor com o e-mail da conta de serviço (Leitor) — só esse arquivo. */
-const PADRAO_ORIGENS = 'https://wonderboat-ai.github.io';
+const PADRAO_ORIGENS = 'https://v2.capitaoia.com.br'; // só o app: o github.io é dividido com os outros sites da conta
 const LIMITE_MIN = 120; // cadência mais rápida do app: 5 s (12/min) — folga para vários aparelhos atrás do mesmo IP
 const usos = new Map(); // por instância do Worker: freio simples contra abuso
 let token = null, tokenAte = 0, cache = null, cacheEm = 0;

@@ -18,11 +18,11 @@
      ESFORCO            (opcional) low | medium | high | xhigh | max — ajuste depois de medir custo e qualidade
      ORIGENS            (opcional) sites autorizados, separados por vírgula
    Proteções: só as ORIGENS, só com a CHAVE_APP, no máximo 30 perguntas por minuto por IP (IPv6 por bloco /64).
-   Defina também um limite de gasto no Console da Anthropic. ATENÇÃO: wonderboat-ai.github.io é uma origem dividida com
-   os outros sites da conta — antes de ligar, publicar o app numa origem só dele e tirar o github.io de ORIGENS. */
+   Defina também um limite de gasto no Console da Anthropic. O app está em https://v2.capitaoia.com.br, origem só dele;
+   o wonderboat-ai.github.io é dividido com os outros sites da conta e fica fora de ORIGENS. */
 import Anthropic from '@anthropic-ai/sdk';
 
-const PADRAO_ORIGENS = 'https://wonderboat-ai.github.io';
+const PADRAO_ORIGENS = 'https://v2.capitaoia.com.br'; // só o app: o github.io é dividido com os outros sites da conta
 const LIMITE_PERGUNTA = 500, LIMITE_TRECHO = 1200, MAX_TRECHOS = 3, LIMITE_CONTEXTO = 2000, LIMITE_MIN = 30;
 const ESFORCOS = ['low', 'medium', 'high', 'xhigh', 'max'];
 const usos = new Map(); // por instância do Worker: freio simples contra abuso, não substitui o limite de gasto
