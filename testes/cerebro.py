@@ -31,7 +31,7 @@ CASOS = [
     ('dessalinizador', 'dessalinizador'), ('bateria 24 v', 'eletrico'), ('onde fica o EPIRB?', 'epirb'), ('onde fica o seafire', 'seafire'),
     ('âncora garrando?', 'ancora'), ('manual do gerador', 'gerador'), ('guias de bordo', 'manual'), ('diário de bordo', 'diarioLer'),
     ('qual o preço do dólar?', 'fallback'), ('quem ganhou o jogo ontem', 'fallback'),
-    ('motores volvo penta', 'motores'), ('troca do rotor do gerador', 'base'),
+    ('motores volvo penta', 'motores'), ('Telemetria agora', 'telemetria'), ('como está o barco?', 'telemetria'), ('troca do rotor do gerador', 'base'),
 ]
 
 

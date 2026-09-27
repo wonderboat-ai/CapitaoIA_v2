@@ -275,6 +275,19 @@
     },
     porao: function (p) { var t = tarefa('porao-teste'); return { text: 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nSem sensor de porão no barramento NMEA — SEM LEITURA.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + ' · coletor NMEA' + DEMO + ' (sem sentença de porão)', actions: act(p, [['Manutenção', 'manut']]) }; },
     gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + ' · snapshot' + DEMO + ' ' + SNAP.quando + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(rv.horas.faltam) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + ' · horímetro na telemetria' + DEMO, actions: act(p, [['Passo a passo', 'f4']]) }; },
+    telemetria: function (p) {
+      var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {};
+      return { text: 'Snapshot' + DEMO + ' de ' + SNAP.quando + ': ' + min1(SNAP.local) + '. Telemetria ao vivo desligada.'
+        + '\n• Posição ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · profundidade ' + nb(S.profundidade) + ' m'
+        + '\n• Vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · pressão ' + nb(S.pressao, 0) + ' hPa · ar ' + nb(S.ar) + ' °C · mar ' + nb(S.agua) + ' °C'
+        + '\n• Baterias 24 V ' + nb(S.bat24, 2) + ' V · 12 V ' + nb(S.bat12, 2) + ' V'
+        + '\n• Tanques: água doce ' + nb(T.agua) + ' % · cinzas ' + nb(T.cinzas) + ' % · negras ' + nb(T.negras) + ' %'
+        + '\n• Diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora
+        + '\n• ' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1)
+        + '\n• Gerador ' + (G.estado || SD) + ' · ' + (G.horas != null ? horas(G.horas) + ' h' : 'horímetro ' + SD) + ' · Seakeeper ' + (K.estado || SD)
+        + '\n• Porão e âncora: SEM LEITURA.',
+        src: FT.tele, actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
+    },
     posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · snapshot' + DEMO + ' ' + SNAP.quando + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
     docsvenc: function (p) {
       var ds = (D.documentos || []), com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
@@ -335,6 +348,7 @@
     var ol = oleo(q);
     if (ol) return ol === 1 ? 'oleo' : 'oleoLeitura';
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
+    if (has(q, ['telemetria', 'leituras', 'sensores', 'como esta o barco', 'estado do barco', 'status do barco'])) return 'telemetria';
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
     if (has(q, ['diario'])) return 'diarioLer';
     if (has(q, [' mare', 'correnteza', 'corrente de mare']) || (has(q, [' corrente']) && !has(q, ['bateria', 'carregador', 'eletric', 'tensao', 'amper', 'alternada', 'continua', 'shore', 'tomada', ' ac ', ' dc ', 'ancora', 'amarra']))) return 'mare';
