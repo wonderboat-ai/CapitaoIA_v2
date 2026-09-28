@@ -3,7 +3,7 @@
    Offline sem a página no cache → aviso fixo com SOS (nunca o index.html, que redireciona e podia entrar em laço).
    Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = VERSAO em capitao-brain.js e capitao-ia.js = tabela do README.
    Arquivo novo usado offline → CORE/TELAS. */
-const CACHE = 'capitao-site-v1.0.7';
+const CACHE = 'capitao-site-v1.0.8';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
@@ -16,17 +16,19 @@ const TELAS = [
 const CORE = [
   './', './index.html', './login.html', './support.js', './capitao-dados.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
   './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json',
-  './deck-stage.js', './manifest.webmanifest',
-  './assets/logo-wonderboat.png', './assets/icon-192.png', './assets/icon-512.png', './assets/icon-maskable-512.png', './assets/favicon_64.png', './assets/apple-touch-icon.png'
+  './capitao-simbolo.js', './capitao-rosto.js', './deck-stage.js', './manifest.webmanifest',
+  './assets/wonderhub-simbolo.png', './assets/wonderhub-assinatura.jpg', './assets/logo-wonderboat-240.png', './assets/wonderhub-favicon.ico',
+  './assets/wonderhub-apple-touch-icon.png', './assets/wonderhub-icon-192.png'
 ].concat(TELAS.map((t) => './' + t + '.dc.html'));
 // React (unpkg, versão fixa): sem ele nenhuma tela abre offline. Melhor esforço — se falhar aqui, entra no cache no próximo uso online.
 const CDN = [
   'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'
 ];
-// Melhor esforço, fora do "tudo ou nada" e fora da instalação: o PDF do Guia rápido (1,3 MB) atrasava — ou, com a conexão
-// caindo no meio, derrubava — a instalação de versão nova no 4G. Ele é baixado depois de a versão ativar.
-const EXTRA = ['./Guia-Rapido-Capitao-IA.pdf'];
+// Melhor esforço, fora do "tudo ou nada" e fora da instalação: o PDF do Guia rápido (1,7 MB) atrasava — ou, com a conexão
+// caindo no meio, derrubava — a instalação de versão nova no 4G. Idem as imagens grandes que não servem à emergência (a
+// logo Wonder BOAT do fecho do Manual e os ícones 512 do app instalado). Baixados depois de a versão ativar.
+const EXTRA = ['./assets/logo-wonderboat.png', './assets/wonderhub-icon-512.png', './assets/wonderhub-icon-maskable-512.png', './Guia-Rapido-Capitao-IA.pdf'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   // Arquivos do site: tudo ou nada (se um falhar, a instalação falha e o navegador tenta de novo na próxima visita).

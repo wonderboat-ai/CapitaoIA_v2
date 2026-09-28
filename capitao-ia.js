@@ -14,7 +14,7 @@
   // para o próprio Worker no workers.dev: outro site da mesma origem não consegue desviar o app para outro servidor.
   if (!URL_PROXY) { try { var teste = localStorage.getItem('capitao.ia.url.v1') || ''; if (/^https:\/\/capitao\-ia\.[a-z0-9-]+\.workers\.dev\/?$/.test(teste)) URL_PROXY = teste; } catch (e) {} }
   if (!/^https:\/\/[^\s]+$/.test(URL_PROXY)) URL_PROXY = '';
-  var VERSAO = '1.0.7'; // = VERSAO do capitao-auth.js e do capitao-brain.js (o capitao-app.js recarrega se vierem misturados)
+  var VERSAO = '1.0.8'; // = VERSAO do capitao-auth.js e do capitao-brain.js (o capitao-app.js recarrega se vierem misturados)
   var KC = 'capitao.ia.chave.v1';
   var ESPERA = 15000; // sem resposta nesse tempo → o chat fica com a resposta local
   var ULTIMA = { falha: '' };

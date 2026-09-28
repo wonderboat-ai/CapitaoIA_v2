@@ -92,21 +92,25 @@ def capturas(b, base):
             pg.wait_for_timeout(1500)
         return f
 
-    def voz(estado, texto):
+    def voz(estado, texto, quadro):
         def f(pg):
-            pg.evaluate("([e, t]) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: e, texto: t } }))", [estado, texto])
-            pg.wait_for_timeout(1200)
+            pg.evaluate("([e, t]) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: e, texto: t, som: e === 'falando' } }))", [estado, texto])
+            # rosto de partículas (capitao-rosto.js, entra com o app ocioso): espera ele existir e fixa um quadro (sempre igual)
+            pg.wait_for_function("() => window.CapitaoVoz && window.CapitaoVoz.rosto && window.CapitaoVoz.rosto()", timeout=20000)
+            pg.wait_for_timeout(700)
+            pg.evaluate("(t) => window.CapitaoVoz.rosto().quadro(t)", quadro)
+            pg.wait_for_timeout(300)
         return f
 
     def resposta_voz(pg):
         t = pg.evaluate("() => window.CapitaoBrain.falaCurta(window.CapitaoBrain.answer('Quantas horas tem o gerador?', { platform: 'app', commit: false }))")
-        voz('falando', t)(pg)
+        voz('falando', t, 1.6)(pg)
 
     app('login-app.jpg', 'login.html', sessao=False)
     app('inicio-app.jpg', 'H2-Home-Mobile.dc.html')
     app('resposta-gerador-app.jpg', 'H2-Home-Mobile.dc.html', pergunta('Como ligar o gerador?'))
     app('resposta-semdados-app.jpg', 'H2-Home-Mobile.dc.html', pergunta('Qual o preço do diesel hoje?'))
-    app('voz-escuta-app.jpg', 'H2-Home-Mobile.dc.html', voz('ouvindo', 'Quantas horas tem o gerador?'))
+    app('voz-escuta-app.jpg', 'H2-Home-Mobile.dc.html', voz('ouvindo', 'Quantas horas tem o gerador?', 2.1))
     app('voz-resposta-app.jpg', 'H2-Home-Mobile.dc.html', resposta_voz)
     app('console-app.jpg', 'A2-Ponte-Mobile.dc.html')
     app('editar-atalhos-app.jpg', 'H3-Atalhos-Editar.dc.html')
