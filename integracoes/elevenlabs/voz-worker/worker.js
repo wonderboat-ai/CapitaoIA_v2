@@ -10,9 +10,11 @@
      MODELO               (opcional) padrão eleven_multilingual_v2; eleven_flash_v2_5 responde mais rápido
      ORIGENS              (opcional) sites autorizados, separados por vírgula
    Proteções: só as ORIGENS, só com a CHAVE_APP, texto de até 1.200 letras e no máximo 30 falas por minuto por IP.
-   Defina também um limite de gasto no ElevenLabs. */
+   Defina também um limite de gasto no ElevenLabs.
+   Velocidade 1,15x (VELOCIDADE), a mesma da voz do aparelho (RATE no capitao-brain.js); a ElevenLabs aceita de 0,7 a 1,2. */
 const PADRAO_ORIGENS = 'https://v2.capitaoia.com.br'; // só o app: o github.io é dividido com os outros sites da conta
 const LIMITE_TEXTO = 1200, LIMITE_MIN = 30;
+const VELOCIDADE = 1.15; // = RATE do capitao-brain.js (faixa da ElevenLabs: 0,7–1,2)
 const usos = new Map(); // por instância do Worker: freio simples contra abuso, não substitui o limite de gasto
 
 function cors(origem) {
@@ -43,7 +45,7 @@ export default {
     if (texto.length > LIMITE_TEXTO) texto = texto.slice(0, LIMITE_TEXTO);
 
     const modelo = env.MODELO || 'eleven_multilingual_v2';
-    const corpo = { text: texto, model_id: modelo, voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true, speed: 1.0 } };
+    const corpo = { text: texto, model_id: modelo, voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.2, use_speaker_boost: true, speed: VELOCIDADE } };
     if (!/multilingual_v2/.test(modelo)) corpo.language_code = 'pt'; // o multilingual_v2 não aceita language_code
     let r;
     try {
