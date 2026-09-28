@@ -7,8 +7,8 @@
 <meta name="description" content="Capitão IA — cérebro operacional da embarcação. Demonstração da plataforma com dados fictícios.">
 <meta name="theme-color" content="#050816">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" type="image/png" href="./assets/favicon_64.png">
-<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<link rel="icon" href="./assets/wonderhub-favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="./assets/wonderhub-apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -45,7 +45,12 @@ a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, 
 a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 16px 48px; display: flex; flex-direction: column; gap: 26px; box-sizing: border-box; }
 .top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.top img { height: 56px; width: 103px; object-fit: contain; flex-shrink: 0; }
+/* Assinatura WonderHUB.AI (nome branco): no tema claro vai num bloco #050816, como pede o manual da marca.
+   O arquivo é a arte já sobre #050816 (JPEG leve, recortado na arte); lighten apaga o retângulo sobre o degradê do fundo.
+   266 px = 246 px de arte (mínimo do manual: 240 px). */
+.top .ass { display: block; flex-shrink: 0; max-width: 100%; box-sizing: border-box; line-height: 0; border-radius: 18px; }
+html[data-capitao-tema="claro"] .top .ass { background: #050816; padding: 6px 10px; }
+.top .ass img { display: block; width: 266px; max-width: 100%; height: auto; mix-blend-mode: lighten; }
 .top .t { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
 h1 b { background: linear-gradient(90deg, var(--cap-tele, #00f4fd), var(--cap-accent, #00a1fe) 55%, var(--cap-violeta, #b45cff)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -66,7 +71,7 @@ h1 b { background: linear-gradient(90deg, var(--cap-tele, #00f4fd), var(--cap-ac
 <body>
   <main class="wrap">
     <div class="top">
-      <img src="assets/logo-wonderboat.png" alt="Wonder BOAT">
+      <span class="ass"><img src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" width="266" height="153"></span>
       <div class="t"><h1><b>Capitão IA</b></h1><p class="sub">Embarcação Capitão IA · base Balneário Camboriú · todas as telas</p></div>
       <capitao-theme-toggle size="40"></capitao-theme-toggle>
     </div>

@@ -2,7 +2,7 @@
 
 Cérebro operacional da embarcação **Capitão IA**: chat com o barco, console de telemetria e manutenção, FAQ de bordo e SOS. Tem versão **web** (computador e tablet) e versão **app** (celular), com um cérebro só.
 
-> **Versão 1.0.7 · 27/09/2026** · Wonder BOAT | WonderHUB.AI
+> **Versão 1.0.8 · 27/09/2026** · Design by Wonder BOAT | WonderHUB.AI
 
 > **Demonstração da plataforma.** Esta embarcação é de demonstração: leituras, agenda, documentos, diário, abastecimentos e guias de bordo são **fictícios** e aparecem com o selo **DEMO** e a fonte de cada dado (Google Drive › Capitão IA v2). Modelos dos equipamentos, registro, Seafire e EPIRB estão **SEM DADOS**; o MMSI 710123456 é fictício. Procedimentos de emergência são o **padrão internacional, a confirmar com o protocolo de bordo**. Nada é inventado pelo assistente: quando falta o dado, a tela mostra **SEM DADOS**.
 
@@ -43,7 +43,7 @@ Toda tela pede login, **menos o SOS** (numa emergência ninguém pode ficar pres
 - **Console:** telemetria (snapshot com hora), gestão, manutenção com **Executado** (linha nova no diário), documentos, abastecimento, diário de bordo (só cresce) e equipe (convites PENDENTE, telefones só no aparelho).
 - **FAQ de bordo:** passo a passo por equipamento — gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin / áudio Fusion / VHF 315 — tirado dos guias de bordo DEMO.
 - **SOS:** canal 16 com roteiro MAYDAY, homem ao mar, incêndio (Seafire: SEM DADOS) e EPIRB (SEM DADOS). Em todas as telas, abre offline e sem login.
-- **Conversa por voz:** núcleo de IA em tela cheia — ESCUTA (ciano) · PROCESSANDO (violeta; fica assim enquanto a IA na nuvem responde) · RESPOSTA (azul). A voz fala só a 1ª linha (na resposta da IA, a 1ª frase e a seguinte, se a primeira for curta); emergências são lidas inteiras. Abertura: "Capitão IA online. Que precisa?"
+- **Conversa por voz:** o botão **CONVERSA** é o círculo com o ∞ da WonderHUB.AI, as cores da logo correndo pelo infinito. A conversa abre em tela cheia um **rosto de perfil feito de partículas** — ouvindo (ciano, respira) · pensando (violeta; fica assim enquanto a IA na nuvem responde) · falando (a boca acompanha a voz e solta ondas, do ciano ao magenta) —, com a legenda, o SOS no canto e ENCERRAR (ou Esc). Tocar no rosto envia (ouvindo) ou interrompe (falando). **Voz a 1,15x em tudo**, emergência inclusive. A voz fala só a 1ª linha (na resposta da IA, a 1ª frase e a seguinte, se a primeira for curta); emergências são lidas inteiras. Abertura: "Capitão IA online. Que precisa?"
 - **Cabeçalho ao vivo:** hora local do barco, máxima/mínima do dia (ECMWF via Open-Meteo) e maré agora (modelo Open-Meteo Marine — não é a tábua da Marinha), na posição de referência de Balneário Camboriú.
 - **Tema claro/escuro** (sol/lua ao lado do avatar). O SOS do app e o alerta crítico ficam sempre escuros.
 - **Personalização por aparelho:** atalhos, blocos do console (8), diário, tarefas executadas, documentos, equipe e tema. Fixos: SOS, os 5 botões do início e a barra do assistente.
@@ -94,11 +94,13 @@ capitao-dados.js                dados da embarcação (gerado — não editar à
 capitao-auth.js                 login, versão, rodapé, saudação e período
 capitao-brain.js                cérebro: respostas, roteamento, base, diário, atalhos e voz
 capitao-theme.js · capitao-app.js · capitao-moldura.js · capitao-voz.js · capitao-clima.js · capitao-barra.js · capitao-telemetria.js
+capitao-simbolo.js              ∞ da WonderHUB.AI com as cores correndo (botão CONVERSA)
+capitao-rosto.js                rosto de partículas da conversa por voz (canvas)
 base-conhecimento.json          trechos dos guias de bordo
 Manual-Capitao-IA.dc.html · deck-stage.js     apresentação de uso
 Guia-Rapido-Capitao-IA.pdf · guia-rapido/     guia rápido A4
 manifest.webmanifest · sw.js · .nojekyll      app instalável e cache offline
-assets/                         logo Wonder BOAT e ícones
+assets/ · favicon.ico           ∞ e assinatura WonderHUB.AI, ícones e favicon (∞), logo Wonder BOAT (crédito)
 integracoes/                    estrutura desligada das integrações
 ferramentas/                    gerador dos dados DEMO, gerador do guia, gerador de senha
 testes/                         teste do cérebro, matriz de telas, proxies da IA (worker_ia.py) e IA no chat (chat_ia.py)
@@ -111,6 +113,7 @@ A versão aparece no rodapé de todas as telas. Para lançar: `VERSAO` em `capit
 
 | Versão | Data | O que mudou |
 |---|---|---|
+| 1.0.8 | 27/09/2026 | **Marca WonderHUB.AI em tudo:** o ∞ nos cabeçalhos, no ícone do app instalado, na tela de abertura e no favicon; a assinatura (∞ + WonderHUB.AI) no login, no início da lista, na capa do Manual e do Guia · a Wonder BOAT fica no crédito **"Design by Wonder BOAT \| WonderHUB.AI"** (as duas logos lado a lado no login e no fecho do Manual; em texto no rodapé) · botão **CONVERSA** = círculo com o ∞ original e as cores da logo correndo pelo infinito (mais rápido com a conversa ligada), no Main, no dock da H2 e na barra das telas do app · a conversa por voz troca os anéis com "IA" por um **rosto de perfil feito de partículas** (ouvindo ciano, pensando violeta, falando com ondas da boca do ciano ao magenta); legenda, SOS, ENCERRAR, Esc e o toque continuam · **voz a 1,15x em toda fala**, emergência inclusive (e na voz em nuvem, desligada) |
 | 1.0.7 | 27/09/2026 | Correções da revisão adversarial da 1.0.6 (a IA já funcionava no celular do proprietário): "a IA não está funcionando" e "luz do óleo acesa… funcionando" caíam no gerador ("funci**onan**do" continha "onan") — o alarme de óleo volta ao passo a passo dos motores · ficha resumida só em pergunta pura sobre o app (trecho do guia e "o que você sabe sobre o seguro?" voltam à completa: a resumida tirava o dado) · chave colada é testada ANTES de ser guardada (texto recusado nunca apaga uma chave que funciona) e o aviso diz se ficou no app instalado ou no navegador · caixa da chave fechada por uma recarga reabre · a recarga de versão nova espera um momento seguro (sem texto digitado, conversa por voz ou resposta a caminho) e nunca recarrega o SOS · PDF do guia fora da instalação e React da cópia guardada (versão nova instala no 4G fraco; SOS monta sem esperar a CDN) · "diagnóstico" entende "Capitão, diagnóstico", "a IA não está funcionando"… e, na voz, fala se a IA está ligada |
 | 1.0.6 | 27/09/2026 | **A IA volta a funcionar no celular do proprietário:** depois da 1.0.5 o aparelho não mandava nenhum pedido ao Worker (métricas da Cloudflare: 0 pedidos do celular; o Worker respondia certo em 3 a 5 s). Causas atacadas: arquivos velhos ou misturados no aparelho (o GitHub Pages manda max-age=600 e o service worker buscava pelo cache HTTP; o app instalado fica vivo com o JS antigo) · chave colada com "CHAVE_APP:", aspas, espaço ou caractere invisível · aviso de IA desligada quase invisível e mudo na voz. Agora: o service worker sempre confere com o servidor (ETag); a tela recarrega uma vez quando uma versão nova assume, procura versão nova ao voltar para a frente e se recarrega sozinha se cérebro, cliente e rodapé vierem de versões diferentes · a chave é limpa ao colar, validada e testada no servidor na hora (sem gastar a cota), com aviso · link #ia=ativar aberto sem login abre a caixa depois de entrar · sem a IA ativada, aviso grande na tela e falado na conversa; a voz diz o motivo quando a IA falha e não repete a abertura em "o que você faz?" · **"diagnóstico" no chat**: versões, internet, estado da IA, chave (só o tamanho) e teste da chave no servidor · ficha resumida em pergunta sobre o app e em trecho do guia (~70 % menos cota) |
 | 1.0.5 | 27/09/2026 | **IA que conversa:** a IA na nuvem passa a responder no SEM DADOS (antes só entrava em trecho do guia), em perguntas sobre o app ("Oque você faz?" agora é entendido) e **na conversa por voz**, com a **ficha de bordo** (tudo o que o app sabe, com as fontes, sem coordenadas) e o **histórico** da conversa · conhecimento geral de náutica permitido, rotulado; dado do barco só das fontes · a resposta espera a IA e entra logo depois da pergunta; na voz, o núcleo fica em PROCESSANDO e fala a resposta da IA · sem a IA, a linha da fonte diz o porquê (aparelho não ativado, sem internet, limite, cota) e o botão **Ativar IA na nuvem** ativa o aparelho sem digitar endereço · Worker `capitao-ia` com ficha, histórico e limite do AI Gateway (429), publicado · AI Gateway de 3 para **30 perguntas por hora** · proxy da Claude API com o mesmo contrato |
@@ -128,4 +131,4 @@ A versão aparece no rodapé de todas as telas. Para lançar: `VERSAO` em `capit
 
 ---
 
-Embarcação Capitão IA · registro SEM DADOS · demonstração · Wonder BOAT | WonderHUB.AI
+Embarcação Capitão IA · registro SEM DADOS · demonstração · Design by Wonder BOAT | WonderHUB.AI

@@ -8,7 +8,7 @@
    trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
    Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
-  var VERSAO = '1.0.7'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
+  var VERSAO = '1.0.8'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
@@ -784,12 +784,20 @@
     })(s.replace(/([.!?;])\s+/g, '$1\n').split('\n'), ' ', 0);
     return out;
   }
-  // Vigia de cada bloco a 1x: 95 ms/letra (folga) + 250 ms/dígito, porque número falado é longo.
+  // Vigia de cada bloco calculada a 1x: 95 ms/letra (folga) + 250 ms/dígito, porque número falado é longo. A voz vai a
+  // 1,15x (RATE), então a fala acaba antes e a vigia só fica mais folgada.
   function estimaMs(t) { return Math.min(60000, 2000 + t.length * 95 + (t.match(/\d/g) || []).length * 250); }
   var FALA = { gen: 0, timer: null, vivo: null, fila: [] };
+  var RATE = 1.15; // velocidade da voz em TODA fala, inclusive emergência (SOS, óleo, EPIRB, Seafire) — decisão do proprietário
   function calaTimers() { clearTimeout(FALA.timer); clearInterval(FALA.vivo); FALA.timer = FALA.vivo = null; }
-  // Eventos 'capitao-voz' ({ estado: ouvindo | pensando | falando | pulso | livre, texto }) — núcleo de IA (capitao-voz.js).
-  function evVoz(estado, texto) { try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: estado, texto: texto || '' } })); } catch (e) {} }
+  // Eventos 'capitao-voz' ({ estado: ouvindo | pensando | falando | pulso | livre, texto, segura?, som? }) — núcleo de IA
+  // (capitao-voz.js). segura: esperando a IA na nuvem (vozPensando). som (no 'falando'): a voz está tocando (true, no onstart)
+  // ou calada (false: antes de o bloco começar e no fim dele) — o rosto abre a boca e solta as ondas só com som.
+  function evVoz(estado, texto, extra) {
+    var det = { estado: estado, texto: texto || '' };
+    if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) det[k] = extra[k];
+    try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: det })); } catch (e) {}
+  }
   var ESCUTA = { rec: null };
   // Ditado: escuta até a pessoa parar de falar por `pausa` ms (ou tocar de novo). Junta todos os trechos — o reconhecedor
   // fecha um "resultado final" a cada respiro e, no Android, encerra a cada frase: aqui ele religa sozinho sem perder o texto.
@@ -869,10 +877,10 @@
     function avanca() { if (++i >= partes.length) return fin(); try { fala(i); } catch (e) { fin(); } }
     function fala(k) {
       var u = new SpeechSynthesisUtterance(partes[k]), est = estimaMs(partes[k]);
-      u.lang = voz && voz.lang ? String(voz.lang).replace(/_/g, '-') : 'pt-BR'; if (voz) u.voice = voz; u.rate = 1;
-      u.onstart = function () { if (vale(u)) { vigia(u, est); evVoz('falando', legenda(k, partes.length)); } };
+      u.lang = voz && voz.lang ? String(voz.lang).replace(/_/g, '-') : 'pt-BR'; if (voz) u.voice = voz; u.rate = RATE;
+      u.onstart = function () { if (vale(u)) { vigia(u, est); evVoz('falando', legenda(k, partes.length), { som: true }); } };
       u.onboundary = function (e) { if (vale(u) && (!e || e.name !== 'sentence')) evVoz('pulso'); };
-      u.onend = function () { if (vale(u)) avanca(); };
+      u.onend = function () { if (vale(u)) { evVoz('falando', legenda(k, partes.length), { som: false }); avanca(); } };
       u.onerror = function (e) {
         if (!vale(u)) return;
         var err = e && e.error;
@@ -884,7 +892,7 @@
         avanca();
       };
       atual = u; FALA.fila.push(u); vigia(u, est + 4000);
-      evVoz('falando', legenda(k, partes.length));
+      evVoz('falando', legenda(k, partes.length), { som: false }); // som só no onstart (a voz pode demorar a começar)
       ss.speak(u);
     }
     function doAparelho() {

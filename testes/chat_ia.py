@@ -6,7 +6,8 @@ que sem a CHAVE_APP no aparelho nada vai para a rede e a linha da fonte diz por 
 que erro do proxy mantém a resposta local com o motivo; que "SEM DADOS" da IA mantém o trecho do guia mas troca o SEM DADOS
 genérico; que a resposta entra logo depois da pergunta dela; que na CONVERSA por voz a IA responde e a resposta dela é a
 falada; que link de fora (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
-e que o login não leva a chave do endereço para o ?next=.
+que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com o rosto
+de partículas (canvas + CapitaoRosto) e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
     python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; precisa de internet para o React do unpkg)
 """
@@ -39,6 +40,41 @@ VOZ_FALSA = r"""(() => {
     stop() {} abort() {}
   }
   window.SpeechRecognition = SR; window.webkitSpeechRecognition = SR;
+})()"""
+
+# Voz de verdade do cérebro (B.speak) sobre um speechSynthesis de mentira: guarda cada fala (texto e velocidade) em
+# window.__sint e chama onstart → onboundary (palavra) → onend.
+SINTESE_FALSA = r"""(() => {
+  window.__sint = []; window.__estRosto = []; window.__somRosto = [];
+  const ss = window.speechSynthesis;
+  ss.cancel = () => {}; ss.pause = () => {}; ss.resume = () => {};
+  ss.speak = (u) => {
+    window.__sint.push({ t: u.text, r: u.rate });
+    setTimeout(() => {
+      if (u.onstart) u.onstart({});
+      setTimeout(() => { if (u.onboundary) u.onboundary({ name: 'word' }); }, 40);
+      setTimeout(() => { if (u.onend) u.onend({}); }, 180);
+    }, 20);
+  };
+})()"""
+
+# O rosto do núcleo (CapitaoRosto.criar) é espiado desde que o capitao-rosto.js chega — o capitao-voz.js já o cria escondido,
+# com o app ocioso, antes da 1ª conversa: opções em window.__rostoOp, estados em window.__estRosto e o som em
+# window.__somRosto.
+ESPIA_ROSTO = r"""(() => {
+  window.__estRosto = []; window.__somRosto = [];
+  let R;
+  Object.defineProperty(window, 'CapitaoRosto', { configurable: true, get() { return R; }, set(v) {
+    R = v; if (!v || v.__espiado) return; v.__espiado = true;
+    const criar = v.criar;
+    v.criar = (tela, op) => {
+      const r = criar(tela, op), est = r.estado, som = r.som;
+      window.__rostoOp = op;
+      r.estado = (n) => { window.__estRosto.push(n); return est(n); };
+      r.som = (x) => { window.__somRosto.push(!!x); return som(x); };
+      return r;
+    };
+  } });
 })()"""
 
 
@@ -92,6 +128,7 @@ def main():
                                     user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
                 ctx.add_init_script(SESSAO)
                 ctx.add_init_script(VOZ_FALSA)
+                ctx.add_init_script(ESPIA_ROSTO)
                 pg = ctx.new_page()
                 erros = []
                 pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
@@ -253,6 +290,47 @@ def main():
                 ok(tela + ': CONVERSA: "Capitão, diagnóstico" fala se a IA está ligada e o resultado do teste da chave (sem gastar a cota)', n == 1 and len(f) >= 2 and 'IA na nuvem: LIGADA' in f[1] and 'Chave aceita pelo servidor' in f[1], json.dumps(f, ensure_ascii=False)[:300])
                 f, n = conversa('qual o calado do barco', modo='erro')
                 ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+
+                # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o rosto, e o núcleo com o rosto de
+                # partículas: CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira.
+                abre()
+                try:
+                    pg.wait_for_function('() => !!window.CapitaoRosto', timeout=15000)  # vem à parte, com o app ocioso
+                except Exception:
+                    pass
+                tem_rosto = pg.evaluate('() => !!window.CapitaoRosto')
+                ok(tela + ': capitao-rosto.js carregado à parte (com o app ocioso)', tem_rosto)
+                if tem_rosto:
+                    pg.evaluate(SINTESE_FALSA)
+                    pg.evaluate("() => { window.__voz.length = 0; window.__falas.push('homem ao mar'); }")
+                    pg.click(CONVERSA)
+                    try:  # abertura falada, pergunta ouvida, SOS falado inteiro e o microfone de volta
+                        pg.wait_for_function("() => { const v = window.__voz, i = v.findIndex((x) => x.estado === 'pensando'); return i >= 0 && v.slice(i).some((x) => x.estado === 'falando' && x.som === true) && v[v.length - 1].estado === 'ouvindo'; }", timeout=25000)
+                    except Exception:
+                        pass
+                    pg.wait_for_timeout(300)
+                    sint = pg.evaluate('() => window.__sint')
+                    voz = pg.evaluate('() => window.__voz')
+                    sos = pg.evaluate("() => { const B = window.CapitaoBrain; return B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; }")
+                    faladas_sos = ' '.join(x['t'] for x in sint[1:])
+                    # a velocidade volta do navegador como float32 (1,1499999…); a abertura sai falável ("Capitão i a online")
+                    ok(tela + ': voz a 1,15x em toda fala — abertura e emergência (SOS "homem ao mar" falado inteiro)', len(sint) >= 2 and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint) and sint[0]['t'].startswith('Capitão i a online') and sos and len(faladas_sos) >= len(sos) * 0.9, json.dumps(sint, ensure_ascii=False)[:300])
+                    fal = [x.get('som') for x in voz if x.get('estado') == 'falando']
+                    ok(tela + ': eventos "falando" levam o som (false antes de a voz começar, true no onstart, false no fim do bloco) e as palavras viram "pulso"', fal and all(isinstance(x, bool) for x in fal) and fal[0] is False and True in fal and fal[-1] is False and any(x.get('estado') == 'pulso' for x in voz), json.dumps(fal)[:300])
+                    est = pg.evaluate("() => ({ on: !!document.querySelector('.cpz.on'), tela: !!document.querySelector('.cpz canvas.cpz-tela'), rosto: !!(window.CapitaoVoz.rosto && window.CapitaoVoz.rosto()), op: window.__rostoOp || null, est: window.__estRosto, som: window.__somRosto, palco: !!document.querySelector('.cpz .cpz-palco .cpz-btn'), velho: !!document.querySelector('.cpz svg circle') })")
+                    op = est['op'] or {}
+                    ok(tela + ': o núcleo abre com o canvas do rosto e o CapitaoRosto criado (dprMax 2, fpsMax 60, crescer 0,35), sem os anéis antigos', est['on'] and est['tela'] and est['rosto'] and est['palco'] and not est['velho'] and op.get('dprMax') == 2 and op.get('fpsMax') == 60 and op.get('crescer') == 0.35, json.dumps(est, ensure_ascii=False)[:300])
+                    ok(tela + ': o rosto segue a conversa (falando, ouvindo, pensando) e recebe o som da voz', all(e in est['est'] for e in ('falando', 'ouvindo', 'pensando')) and True in est['som'] and False in est['som'], json.dumps(est, ensure_ascii=False)[:300])
+                    i = pg.evaluate('() => window.__voz.length')
+                    pg.keyboard.press('Escape')
+                    pg.wait_for_timeout(1200)
+                    fim = pg.evaluate("(i) => ({ on: !!document.querySelector('.cpz.on'), depois: window.__voz.slice(i).map((x) => x.estado), est: window.__estRosto.slice(-1)[0] })", i)
+                    ok(tela + ': Esc encerra a conversa: o núcleo some, o rosto vai para "livre" e o microfone não volta', not fim['on'] and fim['est'] == 'livre' and all(e == 'livre' for e in fim['depois']), json.dumps(fim, ensure_ascii=False))
+                    # Pressão de óleo (emergência) também a 1,15x
+                    pg.evaluate("() => { window.__sint.length = 0; const B = window.CapitaoBrain; B.speak(B.falaCurta(B.answer('a pressão de óleo caiu', { platform: 'web', commit: false }))); }")
+                    pg.wait_for_timeout(1500)
+                    sint = pg.evaluate('() => window.__sint')
+                    ok(tela + ': voz a 1,15x também no passo a passo da pressão de óleo', sint and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint), json.dumps(sint, ensure_ascii=False)[:300])
 
                 # Versões misturadas (cérebro velho vindo do cache): o app recarrega sozinho uma vez e fica tudo na mesma versão.
                 cont = {'n': 0}

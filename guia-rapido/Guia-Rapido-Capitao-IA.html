@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Guia rápido · Capitão IA</title>
-<meta name="description" content="Guia rápido para quem nunca usou o Capitão IA (embarcação de demonstração, dados fictícios). Versão do app 1.0.7 · 27/09/2026.">
+<meta name="description" content="Guia rápido para quem nunca usou o Capitão IA (embarcação de demonstração, dados fictícios). Versão do app 1.0.8 · 27/09/2026.">
 <style>
   /* Guia rápido — A4 retrato, uma <section class="page"> por folha. Fundo claro, texto escuro; paleta do manual da marca
      WonderHUB.AI (azul para ação, ciano para telemetria e voz, violeta para o selo DEMO), vermelho só na emergência.
@@ -67,6 +67,11 @@
   .sos-top h2 { color: #fff; font-size: 26pt; letter-spacing: .08em; }
   .script { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: 700; font-size: 10.6pt; line-height: 1.5; background: var(--red-soft); border: .4mm solid #f3b8b4; border-radius: 3mm; padding: 3.5mm 4.5mm; }
   .note { font-size: 8.6pt; color: var(--muted); }
+  /* Assinatura WonderHUB.AI numa folha clara: vai num bloco #050816 (manual da marca, "fundos de aplicação"); o arquivo já
+     é a arte sobre #050816, recortada. 71 mm de arquivo = 66 mm de arte = 248 px a 96 dpi (espaço grande: mínimo de 240 px
+     da prévia aprovada; manual da marca na impressão: 45 mm). */
+  .assin { display: block; line-height: 0; background: #050816; border-radius: 3mm; padding: 1.5mm 4mm; }
+  .assin img { display: block; width: 71mm; height: auto; }
 </style>
 </head>
 <body>
@@ -75,7 +80,7 @@
 <section class="page">
   <div class="run top"><span><b>Capitão IA</b> · guia rápido</span><span class="demo-tag">DEMO · DADOS FICTÍCIOS</span></div>
   <div class="body cover">
-    <img src="../assets/logo-wonderboat.png" alt="Wonder BOAT" style="width: 52mm; height: auto;">
+    <span class="assin"><img src="../assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" width="870" height="500"></span>
     <div class="wm">CAPITÃO <svg viewBox="0 0 100 74" aria-label="IA" role="img"><defs><linearGradient id="gIA" x1="0" y1="0" x2="1" y2="0.5"><stop offset="0" stop-color="#00c8d2"/><stop offset=".55" stop-color="#0068c9"/><stop offset="1" stop-color="#7d16d6"/></linearGradient></defs><text x="0" y="74" fill="url(#gIA)" font-family="Nimbus Sans, Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="102" letter-spacing="8">IA</text></svg></div>
     <p class="lead" style="font-size: 15pt; max-width: 150mm;">O cérebro operacional da embarcação: você pergunta, ele responde com a fonte — e diz <b>SEM DADOS</b> quando não sabe.</p>
     <div class="card violet" style="max-width: 172mm;">
@@ -96,7 +101,7 @@
       </ol>
     </div>
   </div>
-  <div class="run bot"><span>Capitão IA · v1.0.7 · 27/09/2026</span><span>Wonder BOAT | WonderHUB.AI</span></div>
+  <div class="run bot"><span>Capitão IA · v1.0.8 · 27/09/2026</span><span>Design by Wonder BOAT | WonderHUB.AI</span></div>
 </section>
 
 <!-- 2 · ENTRAR E INSTALAR -->
@@ -158,17 +163,17 @@
     <span class="kick">Voz</span>
     <h2>Mãos no leme: converse por voz</h2>
     <div class="row">
-      <div class="phone"><span class="shot"><img src="img/voz-escuta-app.jpg" alt="Núcleo de voz escutando"></span><p class="cap">ESCUTA (ciano): mostra o que entendeu.</p></div>
-      <div class="phone"><span class="shot"><img src="img/voz-resposta-app.jpg" alt="Núcleo de voz respondendo"></span><p class="cap">RESPOSTA (azul): mostra a frase dita.</p></div>
+      <div class="phone"><span class="shot"><img src="img/voz-escuta-app.jpg" alt="Rosto de partículas ouvindo"></span><p class="cap">Ouvindo (ciano): o rosto respira; a legenda mostra o que entendeu.</p></div>
+      <div class="phone"><span class="shot"><img src="img/voz-resposta-app.jpg" alt="Rosto de partículas falando"></span><p class="cap">Falando: ondas saem da boca, do ciano ao magenta; a legenda mostra a frase dita.</p></div>
       <div class="txt">
         <div class="card"><h3>Dois jeitos</h3>
           <ul><li><span class="k">VOZ→TEXTO</span>: fale a pergunta; ela é escrita e respondida em texto e voz.</li>
-          <li><span class="k">CONVERSA</span> (botão redondo no meio): conversa contínua, sem tocar na tela. Abre o núcleo: "Capitão IA online. Que precisa?"</li></ul></div>
-        <div class="card"><h3>No núcleo</h3>
-          <ul><li>Tocar no núcleo durante a escuta = <b>enviar agora</b>.</li>
-          <li>Tocar durante a resposta = <b>interromper</b> e voltar a ouvir.</li>
+          <li><span class="k">CONVERSA</span> (botão redondo com o infinito): conversa contínua, sem tocar na tela. "Capitão IA online. Que precisa?"</li></ul></div>
+        <div class="card"><h3>Na conversa</h3>
+          <ul><li>Rosto de partículas: <b>ouvindo</b> em ciano, <b>pensando</b> em violeta, <b>falando</b> com ondas.</li>
+          <li>Tocar ouvindo = <b>enviar agora</b>; falando = <b>interromper</b>.</li>
           <li><span class="k">ENCERRAR</span> (ou Esc) desliga. O <b>SOS</b> continua no canto.</li></ul></div>
-        <div class="card blue"><h3>Fala direta</h3><p>A voz diz só o essencial (a 1ª linha); o resto fica na tela. Com a IA ativada, o núcleo fica em PROCESSANDO até ela responder. <b>Emergência é lida inteira.</b></p></div>
+        <div class="card blue"><h3>Fala direta</h3><p>Voz a 1,15x, só o essencial (a 1ª linha); o resto fica na tela. Com a IA ativada, o rosto fica pensando até ela responder. <b>Emergência é lida inteira.</b></p></div>
       </div>
     </div>
     <div class="card soft"><h3>Para funcionar bem</h3><ul>
@@ -289,7 +294,7 @@
     </div>
     <p class="note">Fonte: Protocolo de emergência — procedimento padrão (Google Drive › Capitão IA v2 › 07 Protocolos de emergência). Canal 16: padrão internacional de socorro. MMSI informado pelo proprietário — fictício nesta demonstração. Numa embarcação real, substitua pelo protocolo de bordo, MMSI e indicativo do registro.</p>
   </div>
-  <div class="run bot"><span>Capitão IA · v1.0.7 · 27/09/2026 · DEMO</span><span>Wonder BOAT | WonderHUB.AI</span></div>
+  <div class="run bot"><span>Capitão IA · v1.0.8 · 27/09/2026 · DEMO</span><span>Design by Wonder BOAT | WonderHUB.AI</span></div>
 </section>
 
 </body>

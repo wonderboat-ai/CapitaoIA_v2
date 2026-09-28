@@ -12,6 +12,7 @@ Hoje o Capitão IA fala com **a voz do próprio aparelho** (Web Speech): grátis
 
 - Chave nunca no aparelho nem no repositório (só no Worker).
 - Falhou, demorou (> 9 s) ou sem internet → voz do aparelho, sem perder a resposta.
+- Velocidade **1,15x**, igual à voz do aparelho (`speed` no Worker; a ElevenLabs aceita de 0,7 a 1,2).
 - **Emergência sempre na voz do aparelho** (funciona offline; não depende de terceiros).
 - Voz clonada só com **consentimento por escrito** de quem grava. Sem voz definida: SEM DADOS (escolha do proprietário).
 
