@@ -78,7 +78,7 @@
       this.innerHTML =
         '<header style="height:68px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 28px">' +
           '<div style="display:flex;align-items:center;gap:14px">' +
-            '<a class="cpm-a" href="Main.dc.html" aria-label="Início" style="display:flex;align-items:center;text-decoration:none"><img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height:40px;width:74px;object-fit:contain;flex-shrink:0"></a>' +
+            '<a class="cpm-a" href="Main.dc.html" aria-label="Início" style="display:flex;align-items:center;text-decoration:none"><img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height:32px;width:75px;object-fit:contain;flex-shrink:0"></a>' +
             '<span style="width:1px;height:30px;background:var(--cap-line2,#27315a)"></span>' +
             '<div style="display:flex;flex-direction:column">' +
               '<span style="font-size:17px;font-weight:800;letter-spacing:.02em;color:var(--cap-ink,#eaf1ff)">Capitão IA</span>' +
@@ -153,7 +153,7 @@
       this.style.cssText = 'height:44px;flex-shrink:0;position:relative;';
       this.innerHTML = '<header style="height:44px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px 0 4px;background:rgba(var(--cap-bar-rgb,10,15,34),.82);border-bottom:1px solid rgba(var(--cap-plat-rgb,211,220,239),.12);white-space:nowrap">' +
         '<a class="cpm-a" href="' + esc(v) + '" aria-label="Voltar" style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--cap-ink2,#b1bdd6);text-decoration:none">' + svg(VOLTAR, 20, 2.2) + '</a>' +
-        '<a class="cpm-a" href="H2-Home-Mobile.dc.html" aria-label="Início" style="display:flex;align-items:center;flex-shrink:0;text-decoration:none"><img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height:26px;width:48px;object-fit:contain;flex-shrink:0"></a>' +
+        '<a class="cpm-a" href="H2-Home-Mobile.dc.html" aria-label="Início" style="height:44px;display:flex;align-items:center;flex-shrink:0;text-decoration:none"><img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height:20px;width:47px;object-fit:contain;flex-shrink:0"></a>' +
         '<span style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;padding-left:6px;font-size:15px;font-weight:800;letter-spacing:.01em;color:var(--cap-ink,#eaf1ff)">' + esc(t) + '</span>' +
         '<span role="img" aria-label="' + esc(L.rotulo) + '" title="' + esc(L.rotulo) + '" style="display:flex;align-items:center;padding:0 4px">' + led(L.vivo, 7) + '</span>' +
         '<capitao-theme-toggle size="30"></capitao-theme-toggle>' + avatar(30, 9.5) +

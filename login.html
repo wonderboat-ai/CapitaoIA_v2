@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#050816">
 <meta name="referrer" content="no-referrer">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" type="image/png" href="./assets/favicon_64.png">
-<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+<link rel="icon" href="./assets/wonderhub-favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="./assets/wonderhub-apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -29,14 +29,22 @@ html, body { min-height: 100%; }
 body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 .bg { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 40% 30% at 85% 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.10) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%); }
 .top { position: relative; display: flex; justify-content: flex-end; padding: max(14px, env(safe-area-inset-top, 0px)) 16px 0; }
-main { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 16px 16px 28px; box-sizing: border-box; }
-.card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 22px; }
-.brand { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.brand img { width: 200px; height: auto; }
+/* Compacto: o ENTRAR cabe na 1ª tela em 360×640 e o crédito inteiro em 390×844 e 1440×900 (a linha DEMO vem depois dele). */
+main { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 10px 16px 24px; box-sizing: border-box; }
+.card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+/* Assinatura WonderHUB.AI (nome branco): no tema claro vai num bloco #050816, como pede o manual da marca.
+   O arquivo é a arte já sobre #050816 (JPEG leve, recortado na arte); lighten apaga o retângulo sobre o degradê do fundo.
+   266 px = 246 px de arte (mínimo do manual: 240 px). */
+.ass { display: block; max-width: 100%; box-sizing: border-box; line-height: 0; border-radius: 18px; }
+html[data-capitao-tema="claro"] .ass, html[data-capitao-tema="claro"] .credito .lado { background: #050816; }
+html[data-capitao-tema="claro"] .ass { padding: 6px 10px; }
+.ass img, .credito .wh { mix-blend-mode: lighten; }
+.ass img { display: block; width: 266px; max-width: 100%; height: auto; }
 .brand h1 { margin: 0; font-size: 15px; letter-spacing: 0.32em; font-weight: 800; color: var(--cap-ink, #eaf1ff); }
 .brand h1 b { background: linear-gradient(90deg, var(--cap-tele, #00f4fd), var(--cap-accent, #00a1fe) 55%, var(--cap-violeta, #b45cff)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand p { margin: 0; font-size: 12.5px; color: var(--cap-ink4, #7985a6); letter-spacing: 0.04em; }
-form { display: flex; flex-direction: column; gap: 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 20px; padding: 20px; box-shadow: 0 18px 50px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.45 * var(--cap-shadow-k, 1))); }
+form { display: flex; flex-direction: column; gap: 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 20px; padding: 20px; box-shadow: 0 18px 50px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.45 * var(--cap-shadow-k, 1))); }
 label { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink3, #97a3c0); }
 .field { position: relative; display: flex; }
 input[type=text], input[type=password] { width: 100%; box-sizing: border-box; min-height: 50px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--cap-line, #1a2240); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-weight: 500; font-size: 16px; line-height: 1.2; letter-spacing: 0.01em; outline: none; transition: border-color .2s, box-shadow .2s; }
@@ -60,6 +68,13 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
 .msg.info { color: var(--cap-ink4, #7985a6); }
 .note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--cap-ink4, #7985a6); text-align: center; }
 .demo { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--cap-violeta, #b45cff); text-align: center; letter-spacing: 0.04em; }
+/* Crédito: as duas marcas lado a lado, cada uma com o seu arquivo oficial e espaço entre elas (manual da marca). */
+.credito { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.credito span { font-size: 10px; line-height: 1; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink4, #7985a6); }
+.credito .lado { display: flex; align-items: center; gap: 22px; padding: 8px 20px; border-radius: 14px; }
+.credito .lado i { width: 1px; height: 40px; background: #27315a; flex-shrink: 0; }
+.credito .wb { width: 81px; height: 44px; }
+.credito .wh { width: 74px; height: 43px; }
 </style>
 </head>
 <body>
@@ -68,7 +83,7 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
   <main>
     <div class="card">
       <div class="brand">
-        <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" width="200" height="109">
+        <span class="ass"><img src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" width="266" height="153"></span>
         <h1><b>CAPITÃO IA</b></h1>
         <p>Embarcação Capitão IA · acesso da equipe</p>
       </div>
@@ -88,6 +103,7 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
         <button class="go" id="go" type="submit">ENTRAR</button>
       </form>
       <p class="note">Com “manter conectado”, o acesso vale 30 dias neste aparelho. Sem ele, vale 12 horas.</p>
+      <div class="credito"><span>DESIGN BY</span><div class="lado"><img class="wb" src="assets/logo-wonderboat-240.png" alt="Wonder BOAT" width="81" height="44"><i aria-hidden="true"></i><img class="wh" src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" width="74" height="43"></div></div>
       <p class="demo">DEMO · DADOS FICTÍCIOS — demonstração da plataforma Capitão IA.</p>
     </div>
   </main>

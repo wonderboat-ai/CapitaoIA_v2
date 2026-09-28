@@ -29,8 +29,8 @@
   meta('apple-mobile-web-app-status-bar-style', 'black');
   meta('apple-mobile-web-app-title', 'Capitão IA');
   link('manifest', './manifest.webmanifest');
-  link('icon', './assets/favicon_64.png', 'image/png');
-  link('apple-touch-icon', './assets/apple-touch-icon.png');
+  link('icon', './assets/wonderhub-favicon.ico'); // ∞ WonderHUB.AI, 16/32/48 px
+  link('apple-touch-icon', './assets/wonderhub-apple-touch-icon.png');
 
   var topWin = true; try { topWin = window.top === window.self; } catch (e) { topWin = false; }
   if (!topWin) return;

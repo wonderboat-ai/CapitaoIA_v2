@@ -4,10 +4,12 @@
 Cada tela × tema (escuro, claro) × tamanho (web 1440×900 · 1280×720 · 1920×1080 · 1024×768;
 app 390×844 · 360×640 · 430×932 · 844×390). Confere: erro de script, rolagem lateral, imagem/ícone
 deformado (proporção exibida × natural) e se a prancheta desenhou. Opcional: offline depois da 1ª visita.
+Também o login e a lista (index.html?v=lista), fora das TELAS do sw.js, em todos os tamanhos: sem erro, sem rolagem
+lateral, sem imagem deformada; no login, o ENTRAR na 1ª tela (altura ≥ 640) e o crédito inteiro (altura ≥ 844).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
-    python testes/verificar.py Main S2-SOS-Mobile  só essas telas
+    python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login e index: as páginas fora das TELAS)
     python testes/verificar.py --fotos             salva capturas em testes/saida/
     python testes/verificar.py --offline           testa a abertura offline depois da 1ª visita
     python testes/verificar.py --so-offline        só o teste offline (sem a matriz)
@@ -39,6 +41,10 @@ def eh_app(t):
 
 
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
+# páginas fora das TELAS do sw.js: nome → (endereço, com sessão). O login com sessão redireciona; a lista precisa de ?v=lista.
+PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True)}
+MEDE_LOGIN = """() => { const q = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().bottom : null; };
+  return { go: q('#go'), credito: q('.credito') }; }"""
 CHECA = """() => {
   const de = document.documentElement, root = document.getElementById('dc-root');
   const lateral = Math.max(de.scrollWidth, document.body ? document.body.scrollWidth : 0) - de.clientWidth;
@@ -68,7 +74,8 @@ def main():
     fotos = '--fotos' in sys.argv
     offline = '--offline' in sys.argv or '--so-offline' in sys.argv
     so_offline = '--so-offline' in sys.argv  # pula a matriz, só o teste offline
-    lista = args or telas()
+    lista = [a for a in args if a not in PAGINAS] if args else telas()
+    paginas = [a for a in args if a in PAGINAS] if args else list(PAGINAS)
     if fotos:
         os.makedirs(SAIDA, exist_ok=True)
     falhas, total = [], 0
@@ -108,6 +115,35 @@ def main():
                         falhas.append({'tela': tela, 'tema': tema, 'tam': '%dx%d' % (w, h), 'prob': prob})
                         print('FALHA', tela, tema, '%dx%d' % (w, h), ' | '.join(prob))
                     ctx.close()
+            for nome in paginas:
+                end, com_sessao = PAGINAS[nome]
+                for (w, h) in WEB + APP:
+                    total += 1
+                    movel = (w, h) in APP
+                    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
+                                        is_mobile=movel, has_touch=movel, service_workers='block')
+                    ctx.add_init_script((SESSAO + ';' if com_sessao else '') + "localStorage.setItem('capitao.tema.v1', '" + tema + "');")
+                    pg = ctx.new_page()
+                    erros = []
+                    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+                    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+                    pg.goto(BASE + end, wait_until='load')
+                    pg.wait_for_timeout(500)
+                    r = pg.evaluate(CHECA)
+                    prob = list(erros)
+                    if r['lateral'] > 1: prob.append('rolagem lateral de %d px' % r['lateral'])
+                    if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
+                    if not pg.url.split('#')[0].endswith(end): prob.append('redirecionou para ' + pg.url)
+                    if nome == 'login':
+                        m = pg.evaluate(MEDE_LOGIN)
+                        if h >= 640 and (m['go'] is None or m['go'] > h): prob.append('ENTRAR fora da 1ª tela (borda %s > %d)' % (m['go'], h))
+                        if h >= 844 and (m['credito'] is None or m['credito'] > h): prob.append('crédito cortado (borda %s > %d)' % (m['credito'], h))
+                    if fotos:
+                        pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (nome, tema, w, h)))
+                    if prob:
+                        falhas.append({'tela': nome, 'tema': tema, 'tam': '%dx%d' % (w, h), 'prob': prob})
+                        print('FALHA', nome, tema, '%dx%d' % (w, h), ' | '.join(prob))
+                    ctx.close()
         if offline:
             total += 1
             prob = teste_offline(b, lista)
@@ -143,9 +179,44 @@ def teste_offline(b, lista):
             pg2.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
         except Exception as e:
             prob.append(tela + ' não abriu offline: ' + str(e)[:120])
+        # marca (assets/) e o ∞ do botão CONVERSA também saem da cópia guardada (CORE do sw.js)
+        try:
+            pg2.wait_for_timeout(600)
+            falta = pg2.evaluate("""async () => {
+  const f = [...document.images].filter((i) => /\\/assets\\//.test(i.src) && i.complete && !i.naturalWidth).map((i) => i.src.split('/').pop());
+  if (document.querySelector('capitao-simbolo')) {
+    for (let n = 0; n < 50 && !customElements.get('capitao-simbolo'); n++) await new Promise((ok) => setTimeout(ok, 100));
+    if (!customElements.get('capitao-simbolo')) f.push('capitao-simbolo.js');
+  }
+  return f;
+}""")
+            if falta:
+                prob.append(tela + ' offline sem: ' + ', '.join(falta))
+        except Exception as e:
+            prob.append(tela + ' offline: ' + str(e)[:120])
         if erros:
             prob.append(tela + ' offline com erro: ' + erros[0])
         pg2.close()
+    # lista (index.html): a assinatura sai da cópia guardada (CORE)
+    pg4 = ctx.new_page()
+    try:
+        pg4.goto(BASE + 'index.html?v=lista', wait_until='load', timeout=20000)
+        falta = pg4.evaluate("() => [...document.images].filter((i) => i.src.indexOf('/assets/') >= 0 && (!i.complete || !i.naturalWidth)).map((i) => i.src.split('/').pop())")
+        if falta:
+            prob.append('lista offline sem: ' + ', '.join(falta))
+    except Exception as e:
+        prob.append('lista offline: ' + str(e)[:120])
+    pg4.close()
+    # rosto da conversa por voz: entra à parte (capitao-voz.js), tem de vir da cópia guardada
+    pg3 = ctx.new_page()
+    try:
+        pg3.goto(BASE + 'S2-SOS-Mobile.dc.html', wait_until='load', timeout=20000)
+        st = pg3.evaluate("() => fetch('./capitao-rosto.js').then((r) => r.status, () => 'falhou')")
+        if st != 200:
+            prob.append('capitao-rosto.js offline: ' + str(st))
+    except Exception as e:
+        prob.append('capitao-rosto.js offline: ' + str(e)[:120])
+    pg3.close()
     ctx.close()
     return prob
 
