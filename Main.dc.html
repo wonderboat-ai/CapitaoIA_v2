@@ -31,6 +31,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 <script src="./capitao-brain.js"></script>
 <script src="./capitao-ia.js"></script>
 <script src="./capitao-voz.js"></script>
+<script src="./capitao-simbolo.js"></script>
 </helmet>
 <div onMouseMove="{{onMove}}" onMouseLeave="{{onLeave}}" style="width: 1440px; height: 900px; box-sizing: border-box; position: relative; overflow: hidden; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff);">
 <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 62% 46% at 50% -6%, rgba(var(--cap-accent-rgb, 0,161,254), 0.13) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 30% 26% at 88% 4%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.08) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%), linear-gradient(rgba(var(--cap-hl-rgb, 255,255,255), 0.022) 1px, transparent 1px) 0 0 / 100% 88px, linear-gradient(90deg, rgba(var(--cap-hl-rgb, 255,255,255), 0.018) 1px, transparent 1px) 0 0 / 88px 100%;"></div>
@@ -38,7 +39,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 {{spot}}
 <header style="position: relative; height: 52px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 18px; padding: 0 26px; background: rgba(var(--cap-bar-rgb, 10,15,34), 0.82); border-bottom: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.12); font-size: 12px; letter-spacing: 0.14em; white-space: nowrap;">
   <a href="Main.dc.html" aria-label="Capitão IA — início" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
-    <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height: 36px; width: 66px; object-fit: contain; flex-shrink: 0;">
+    <img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height: 28px; width: 66px; object-fit: contain; flex-shrink: 0;">
     <b style="font-weight: 800; border-bottom: 2px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.6); padding-bottom: 2px;">CAPITÃO IA</b>
     <span style="color: var(--cap-ph, #4a5578);">—</span>
     <b style="font-weight: 700;">{{local}}</b>
@@ -127,12 +128,16 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
       <div style="display: flex; align-items: center; gap: 6px; background: linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%); border: 1px solid {{barLine}}; box-shadow: {{barShadow}}; border-radius: 16px; padding: 8px 8px 8px 22px; transition: border-color .35s, box-shadow .35s;">
         <label for="pergunta" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Pergunta</label>
         <input id="pergunta" maxlength="500" ref="{{inputRef}}" onKeyDown="{{onKey}}" onFocus="{{onFocus}}" onBlur="{{onBlur}}" placeholder="Pergunte qualquer coisa sobre a embarcação…" autocomplete="off" style="flex-grow: 1; background: none; border: none; outline: none; color: var(--cap-ink, #eaf1ff); font-size: 16.5px; font-family: inherit; min-width: 0; padding: 12px 0;">
-        <sc-for list="{{modes}}" as="m" hint-placeholder-count="4">
+        <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
           <button type="button" onClick="{{m.onClick}}" aria-label="{{m.aria}}" title="{{m.aria}}" style="width: 64px; height: 52px; border-radius: 12px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tone}}; animation: {{m.anim}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; padding: 0; flex-shrink: 0; transition: border-color .3s, color .3s, transform .3s;" style-hover="border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.5); color: var(--cap-ink, #eaf1ff); transform: translateY(-2px);">
             {{m.ico}}
             <span style="font-size: 8px; letter-spacing: 0.10em; font-weight: 700;">{{m.l}}</span>
           </button>
         </sc-for>
+        <div style="position: relative; width: 64px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center;">
+          <button type="button" class="{{conv.cls}}" onClick="{{conv.onClick}}" aria-label="Conversa contínua por voz — sem tocar na tela" title="Conversa contínua por voz — sem tocar na tela" aria-pressed="{{conv.on}}" style="--cps-d: 56px; position: absolute; left: 50%; top: -16px; margin-left: -28px; width: 56px; height: 56px; box-sizing: border-box; border-radius: 50%; border: none; padding: 0; background: #050816; cursor: pointer;"><capitao-simbolo ritmo="{{conv.ritmo}}" aria-hidden="true"></capitao-simbolo></button>
+          <span style="font-size: 8px; line-height: 10px; letter-spacing: 0.10em; font-weight: 700; color: var(--cap-tele, #00f4fd); white-space: nowrap;">{{conv.l}}</span>
+        </div>
         <button type="button" onClick="{{send}}" aria-label="Enviar" title="Enviar" style="color: var(--cap-on-accent, #050816); background: linear-gradient(180deg, var(--cap-accent-hi, #4dbcff) 0%, var(--cap-accent, #00a1fe) 100%); border: none; width: 64px; height: 52px; display: flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.35); transition: transform .3s, box-shadow .3s;" style-hover="transform: translateY(-2px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 10px 24px rgba(var(--cap-accent-rgb, 0,161,254), 0.35);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 12h14 M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
         <input type="file" accept="image/*" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
         <input type="file" accept="video/*" ref="{{videoRef}}" onChange="{{onVideo}}" aria-hidden="true" tabindex="-1" style="display: none;">
@@ -440,9 +445,12 @@ class Component extends DCLogic {
       modes: [
         Object.assign({ l: att && att.kind === 'foto' ? 'FOTO ✓' : 'FOTO', aria: 'Enviar foto — etiqueta, alarme na tela, nota fiscal ou página de manual', d: 'M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z', onClick: () => this.pick('foto'), anim: pulso('foto') }, (att && att.kind === 'foto') || re === 'foto' ? on : modeBase),
         Object.assign({ l: att && att.kind === 'video' ? 'VÍDEO ✓' : 'VÍDEO', aria: 'Enviar vídeo de 10 s — som ou comportamento anormal', d: 'M3 7h11v10H3z M14 11l6-3.5v9L14 13z', onClick: () => this.pick('video'), anim: pulso('video') }, (att && att.kind === 'video') || re === 'video' ? on : modeBase),
-        Object.assign({ l: s.listening && !s.conversa ? 'OUVINDO' : 'VOZ', aria: 'Falar — a pergunta é transcrita e respondida em texto e voz', d: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3', onClick: () => this.toggleVoice(), anim: pulso('voz') }, s.listening && !s.conversa ? hot : re === 'voz' ? on : modeBase),
-        Object.assign({ l: s.conversa ? 'ATIVA' : 'CONVERSA', aria: 'Conversa contínua por voz — sem tocar na tela', d: 'M3 12h2 M7 8v8 M11 5v14 M15 8v8 M19 11v2', onClick: () => this.toggleConversa(), anim: s.conversa ? 'none' : pulso('conversa') }, s.conversa ? { tone: 'var(--cap-bg, #050816)', bg: 'var(--cap-tele, #00f4fd)', line: 'var(--cap-tele, #00f4fd)' } : re === 'conversa' ? on : { tone: 'var(--cap-tele, #00f4fd)', bg: 'rgba(var(--cap-tele-rgb, 0,244,253), 0.10)', line: 'rgba(var(--cap-tele-rgb, 0,244,253), 0.45)' })
-      ].map((m) => Object.assign(m, { ico: this.ico(m.d, 22, 1.8) }))
+        Object.assign({ l: s.listening && !s.conversa ? 'OUVINDO' : 'VOZ', aria: 'Falar — a pergunta é transcrita e respondida em texto e voz', d: 'M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3', onClick: () => this.toggleVoice(), anim: pulso('voz') }, s.listening && !s.conversa ? hot : re === 'voz' ? on : modeBase)
+      ].map((m) => Object.assign(m, { ico: this.ico(m.d, 22, 1.8) })),
+      // CONVERSA: círculo com o ∞ (capitao-simbolo.js). Ativa ou realçada pela dica do link (#mode=conversa): borda e
+      // brilho no ritmo ativo e as cores correndo mais rápido; aria-pressed só com a conversa ligada de verdade.
+      conv: { l: s.conversa ? 'ATIVA' : 'CONVERSA', on: s.conversa ? 'true' : 'false', onClick: () => this.toggleConversa(),
+        cls: s.conversa || re === 'conversa' ? 'cps-botao cps-ativo' : 'cps-botao', ritmo: s.conversa || re === 'conversa' ? 'ativo' : 'repouso' }
     };
   }
 }

@@ -18,9 +18,6 @@ body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial
 a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
 button { font: inherit; }
-@keyframes capNucleo { 0%, 100% { box-shadow: 0 0 0 3px rgb(var(--cap-card2-rgb, 10,15,32)), 0 0 10px rgba(0,244,253,0.22); } 50% { box-shadow: 0 0 0 3px rgb(var(--cap-card2-rgb, 10,15,32)), 0 0 16px rgba(0,244,253,0.38); } }
-@keyframes capNucleoOn { 0%, 100% { box-shadow: 0 0 0 3px rgb(var(--cap-card2-rgb, 10,15,32)), 0 0 14px rgba(0,244,253,0.45); } 50% { box-shadow: 0 0 0 3px rgb(var(--cap-card2-rgb, 10,15,32)), 0 0 22px rgba(0,244,253,0.65); } }
-@keyframes capNucleoGira { to { transform: rotate(360deg); } }
 @keyframes capVivo { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(var(--cap-tele-rgb, 0,244,253), 0.22), 0 0 10px rgba(var(--cap-tele-rgb, 0,244,253), 0.7); } 50% { opacity: 0.18; box-shadow: 0 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0), 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0); } }
 input::placeholder { color: var(--cap-ph, #4a5578); }
 @keyframes capSweep { 0% { transform: translateX(-160%) skewX(-16deg); } 42% { transform: translateX(700%) skewX(-16deg); } 100% { transform: translateX(700%) skewX(-16deg); } }
@@ -33,12 +30,13 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 <script src="./capitao-brain.js"></script>
 <script src="./capitao-ia.js"></script>
 <script src="./capitao-voz.js"></script>
+<script src="./capitao-simbolo.js"></script>
 </helmet>
 <div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
   <div aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 90% 34% at 50% -4%, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 50% 22% at 95% 2%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.09) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%), linear-gradient(rgba(var(--cap-hl-rgb, 255,255,255), 0.022) 1px, transparent 1px) 0 0 / 100% 72px;"></div>
 
   <header style="position: relative; flex-shrink: 0; box-sizing: border-box; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: rgba(var(--cap-bar-rgb, 10,15,34), 0.82); border-bottom: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.12); font-size: 10.5px; letter-spacing: 0.14em; white-space: nowrap;">
-    <img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height: 30px; width: 55px; object-fit: contain; flex-shrink: 0;">
+    <img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height: 24px; width: 56px; object-fit: contain; flex-shrink: 0;">
     <span style="flex-grow: 1;"></span>
     <span role="img" aria-label="{{liveTip}}" title="{{liveTip}}" style="display: flex; align-items: center; padding: 0 3px;">{{led}}</span>
     <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="12" hint-size="150px,24px"></x-import>
@@ -114,11 +112,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
             </button>
           </sc-for>
           <div style="position: relative; height: 58px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7px;">
-            <button type="button" onClick="{{conv.onClick}}" aria-label="{{conv.aria}}" aria-pressed="{{conv.on}}" title="{{conv.aria}}" style="position: absolute; left: 50%; top: -27px; margin-left: -31px; width: 62px; height: 62px; box-sizing: border-box; border-radius: 50%; border: 1px solid rgba(0,244,253,0.6); background: radial-gradient(circle, #0a1f3a 0%, #050816 72%); color: #00f4fd; animation: {{conv.anim}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; overflow: hidden;">
-              <span aria-hidden="true" style="position: absolute; inset: 3px; border-radius: 50%; background: conic-gradient(rgba(0,244,253,0) 0deg, rgba(0,244,253,0.7) 80deg, rgba(162,43,253,0.55) 100deg, rgba(0,244,253,0) 120deg, rgba(0,244,253,0) 360deg); -webkit-mask: radial-gradient(circle, transparent 64%, #000 66%); mask: radial-gradient(circle, transparent 64%, #000 66%); animation: capNucleoGira {{conv.giro}} linear infinite;"></span>
-              <span aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(0,244,253,0.08); border: 1px solid rgba(0,244,253,0.45);"></span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="position: relative; flex-shrink: 0; filter: drop-shadow(0 0 3px rgba(0,244,253,0.7));"><path d="M4 12h1.5 M7.5 9v6 M11 6v12 M14.5 8.5v7 M18 10.5v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-            </button>
+            <button type="button" class="{{conv.cls}}" onClick="{{conv.onClick}}" aria-label="{{conv.aria}}" aria-pressed="{{conv.on}}" title="{{conv.aria}}" style="--cps-d: 62px; position: absolute; left: 50%; top: -27px; margin-left: -31px; width: 62px; height: 62px; box-sizing: border-box; border-radius: 50%; border: none; padding: 0; background: #050816; cursor: pointer;"><capitao-simbolo ritmo="{{conv.ritmo}}" aria-hidden="true"></capitao-simbolo></button>
             <span style="font-size: 9px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-tele, #00f4fd); white-space: nowrap;">{{conv.l}}</span>
           </div>
           <sc-for list="{{modesR}}" as="m" hint-placeholder-count="2">
@@ -427,8 +421,10 @@ class Component extends DCLogic {
       painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-crit, #ff3b30)', cline: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', cwash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)' } : { chip: 'EM DIA', ctone: 'var(--cap-ok, #34c77a)', cline: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)' },
       faq: this.equipamentos(),
       modesL: [dock(texto, 0), dock(modes[2], 1)], modesR: [dock(modes[0], 1), dock(modes[1], 2)],
+      // CONVERSA: círculo com o ∞ (capitao-simbolo.js) saindo de cima do dock. Ativa ou realçada pela dica do link
+      // (#mode=conversa): borda e brilho no ritmo ativo e as cores correndo mais rápido; aria-pressed só com a conversa ligada.
       conv: { l: s.conversa ? 'ATIVA' : 'CONVERSA', on: s.conversa ? 'true' : 'false', aria: modes[3].aria, onClick: modes[3].onClick,
-        giro: s.conversa ? '5s' : '14s', anim: s.conversa || re === 'conversa' ? 'capNucleoOn 2.4s ease-in-out infinite' : 'capNucleo 4s ease-in-out infinite' }
+        cls: 'cps-botao cps-sep' + (s.conversa || re === 'conversa' ? ' cps-ativo' : ''), ritmo: s.conversa || re === 'conversa' ? 'ativo' : 'repouso' }
     };
   }
 }
