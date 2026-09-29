@@ -6,7 +6,7 @@
 (function () {
   if (window.CapitaoAuth) return;
 
-  var VERSAO = { v: '1.0.8', data: '27/09/2026' };
+  var VERSAO = { v: '1.0.9', data: '29/09/2026' };
   var CREDITO = 'Design by Wonder BOAT | WonderHUB.AI';
   var PUBLICADO = /(^|\.)(wonderboat-ai\.github\.io|capitaoia\.com\.br)$/i; // GitHub Pages (redireciona) e v2.capitaoia.com.br
 
@@ -14,7 +14,9 @@
   // com ferramentas/gerar-senha.html e colar a linha aqui.
   var ITER = 210000;
   var USUARIOS = {
-    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' }
+    lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' },
+    // Convidado da demonstração (clientes): fora da lista da embarcação. Sai antes de dados reais.
+    demo: { nome: 'Demo', completo: 'Demo', ini: 'DM', papel: 'convidado (demonstração)', sal: 'Ld3f017FocIdWkRPdUwRdg==', hash: 'v4KQ4hLEowmd7cyGWtrc7QAW0tU0s8IDQW0ENip3+kw=' }
   };
   var DONO = 'lucas';
 
