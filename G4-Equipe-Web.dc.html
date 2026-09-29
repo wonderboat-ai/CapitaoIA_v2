@@ -298,15 +298,16 @@ class Component extends DCLogic {
     // Perfis (capitao-dados) + usuário logado (capitao-auth)
     let u = null; try { u = window.CapitaoAuth ? window.CapitaoAuth.usuario() : null; } catch (e) { u = null; }
     const perfisD = (EQ.perfis || []).slice();
-    if (u && !perfisD.some((p) => p.id === u.id)) perfisD.push({ id: u.id, nome: u.completo || u.nome, ini: u.ini, papel: (u.papel || 'função') + ' · fora da lista da embarcação — A CONFIRMAR', acesso: null });
+    // Login fora da lista da embarcação → A CONFIRMAR; o convidado da demonstração (capitao-auth.js) é fora da lista por definição.
+    if (u && !perfisD.some((p) => p.id === u.id)) perfisD.push({ id: u.id, nome: u.completo || u.nome, ini: u.ini, papel: (u.papel || 'função') + ' · fora da lista da embarcação' + (u.convidado ? '' : ' — A CONFIRMAR'), acesso: u.convidado ? 'convidado' : null });
     const perfis = perfisD.map((p) => {
-      const eu = !!u && u.id === p.id, total = p.acesso === 'total';
+      const eu = !!u && u.id === p.id, total = p.acesso === 'total', conv = p.acesso === 'convidado';
       const primeiro = norm(String(p.nome || '').split(' ')[0]);
       const minhas = abertas(AG.filter((t) => norm(t.quem) === primeiro));
       const s1 = minhas.length ? minhas.length + (minhas.length === 1 ? ' tarefa' : ' tarefas') + ' na agenda: ' + minhas.map((t) => t.t + ' · ' + t.rot).join('; ') : 'Nenhuma tarefa aberta na agenda em seu nome';
       return { nome: p.nome, ini: p.ini || '—', papel: p.papel || 'SEM DADOS', eu: eu,
         s: nq((eu ? 'Sessão ativa neste aparelho · ' : '') + s1 + (eu ? ' · ' + s.atalhos + ' atalhos na tela inicial' : '')),
-        chip: total ? 'ACESSO TOTAL' : p.acesso === 'leitura' ? 'SÓ LEITURA' : 'ACESSO SEM DADOS', chipTone: total ? 'var(--cap-ok, #34c77a)' : 'var(--cap-warn, #f0a63a)', chipLine: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', chipWash: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)',
+        chip: total ? 'ACESSO TOTAL' : p.acesso === 'leitura' ? 'SÓ LEITURA' : conv ? 'CONVIDADO' : 'ACESSO SEM DADOS', chipTone: total ? 'var(--cap-ok, #34c77a)' : conv ? 'var(--cap-violeta, #b45cff)' : 'var(--cap-warn, #f0a63a)', chipLine: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', chipWash: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.10)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)',
         tone: eu ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)', line: eu ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line, #1a2240)' };
     });
     const totais = perfisD.filter((p) => p.acesso === 'total').map((p) => p.nome), leitura = perfisD.filter((p) => p.acesso === 'leitura').map((p) => p.nome);

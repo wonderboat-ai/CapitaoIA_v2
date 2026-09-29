@@ -16,7 +16,7 @@
   var USUARIOS = {
     lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' },
     // Convidado da demonstração (clientes): fora da lista da embarcação. Sai antes de dados reais.
-    demo: { nome: 'Demo', completo: 'Demo', ini: 'DM', papel: 'convidado (demonstração)', sal: 'Ld3f017FocIdWkRPdUwRdg==', hash: 'v4KQ4hLEowmd7cyGWtrc7QAW0tU0s8IDQW0ENip3+kw=' }
+    demo: { nome: 'Demo', completo: 'Demo', ini: 'DM', papel: 'convidado (demonstração)', convidado: true, sal: 'Ld3f017FocIdWkRPdUwRdg==', hash: 'v4KQ4hLEowmd7cyGWtrc7QAW0tU0s8IDQW0ENip3+kw=' }
   };
   var DONO = 'lucas';
 
@@ -48,7 +48,7 @@
 
   function publico(id) {
     var u = USUARIOS[id]; if (!u) return null;
-    return { id: id, nome: u.nome, completo: u.completo, ini: u.ini, papel: u.papel };
+    return { id: id, nome: u.nome, completo: u.completo, ini: u.ini, papel: u.papel, convidado: !!u.convidado };
   }
   // Sem sessão numa tela protegida (expirou com a página aberta): volta ao login — nada é assinado em nome de outro.
   function usuario() {
