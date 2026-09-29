@@ -8,7 +8,7 @@
    trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
    Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
-  var VERSAO = '1.0.8'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
+  var VERSAO = '1.0.9'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
