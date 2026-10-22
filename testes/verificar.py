@@ -5,7 +5,8 @@ Cada tela × tema (escuro, claro) × tamanho (web 1440×900 · 1280×720 · 1920
 app 390×844 · 360×640 · 430×932 · 844×390). Confere: erro de script, rolagem lateral, imagem/ícone
 deformado (proporção exibida × natural) e se a prancheta desenhou. Opcional: offline depois da 1ª visita.
 React do próprio site (assets/vendor): com o unpkg.com fora do ar, o início (web e app) e o SOS montam, sem erro de script e
-sem nenhum pedido ao unpkg; no teste offline, nenhum pedido ao unpkg (instalação do SW inclusive).
+sem nenhum pedido ao unpkg; no teste offline, nenhum pedido ao unpkg (instalação do SW inclusive) e a instalação já
+guarda os dois arquivos do React (CORE do sw.js, tudo ou nada).
 Também o login e a lista (index.html?v=lista), fora das TELAS do sw.js, em todos os tamanhos: sem erro, sem rolagem
 lateral, sem imagem deformada; no login, o ENTRAR na 1ª tela (altura ≥ 640) e o crédito inteiro (altura ≥ 844).
 
@@ -34,6 +35,7 @@ MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML,
 # React do próprio site (paridade Avanti 1.24.0): estas telas montam com o unpkg.com fora do ar.
 SEM_UNPKG = ['Main', 'H2-Home-Mobile', 'S2-SOS-Mobile']
 REACT_LOCAL = BASE + 'assets/vendor/react-18.3.1/'
+REACT_ARQS = ['react.production.min.js', 'react-dom.production.min.js']
 
 
 def telas():
@@ -224,6 +226,11 @@ def teste_offline(b, lista):
         ctx.close()
         return ['service worker não instalou em 30 s (arquivo do CORE faltando? ex.: Guia-Rapido-Capitao-IA.pdf)']
     pg.wait_for_timeout(1500)
+    # React no CORE do sw.js: a 1ª visita carregou o React antes de o SW controlar a tela, então só a instalação o põe no
+    # cache. Sem esta conferência a falta passaria: offline, o cache HTTP do navegador ainda serve o React ao SW.
+    guardou = pg.evaluate('(us) => Promise.all(us.map((u) => caches.match(u).then(Boolean)))', [REACT_LOCAL + arq for arq in REACT_ARQS])
+    if guardou != [True, True]:
+        prob.append('React fora do CORE do sw.js: a instalação não guardou %s' % ', '.join(arq for arq, g in zip(REACT_ARQS, guardou) if not g))
     ctx.set_offline(True)
     for tela in lista:
         erros = []

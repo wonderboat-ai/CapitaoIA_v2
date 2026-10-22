@@ -4,6 +4,7 @@ B = esta árvore de trabalho · B2 = B com a versão trocada para '<versão>-tes
  1) app aberto e usado na A; publica B; reabre (navegação servida pelo SW velho, arquivos do cache HTTP) → o SW novo
     ativa e recarrega a tela sozinho → roda B inteira ("Oque você faz?" = saudação). Pulado se A e B têm a mesma versão.
  2) app aberto na B; publica B2; a tela volta para a frente (visibilitychange) → procura versão → recarrega em B2.
+ 2b) versão nova com texto sendo digitado: a tela espera; enquanto espera, o cache da versão nova já tem o React (CORE).
  3) sem internet: SOS e início abrem do cache.
  4) sinal fraco (servidor demora 8 s): a tela abre da cópia guardada em ~4 s.
  4b) sinal fraco só no React (assets/vendor, versão fixa no caminho): sai da cópia guardada sem esperar a rede.
@@ -75,6 +76,11 @@ SESSAO = "(() => { const n = Date.now(); try { localStorage.setItem('capitao.ses
 SONDA = """() => { let k = null; try { k = CapitaoBrain.answer('Oque você faz?', { platform: 'app', commit: false }).key; } catch (e) { k = 'erro'; }
   return { auth: window.CapitaoAuth && CapitaoAuth.VERSAO.v, brain: window.CapitaoBrain && (CapitaoBrain.VERSAO || (CapitaoBrain.pedeIA ? '1.0.5' : 'antes da 1.0.5')),
            ia: window.CapitaoIA && (CapitaoIA.VERSAO || (CapitaoIA.estado ? '1.0.5' : 'antes da 1.0.5')), oque: k, sw: !!navigator.serviceWorker.controller, marca: !!window.__marca }; }"""
+# o React (assets/vendor) no cache da versão: só depois de a versão ativar (o cache anterior já apagado)
+REACT_GUARDADO = """async (nome) => { const ks = await caches.keys(); if (ks.indexOf(nome) < 0) return { caches: ks };
+  const c = await caches.open(nome);
+  return { caches: ks, react: await Promise.all(['react.production.min.js', 'react-dom.production.min.js'].map((a) =>
+    c.match(new URL('assets/vendor/react-18.3.1/' + a, location.href).href).then(Boolean))) }; }"""
 res = []
 
 
@@ -156,6 +162,13 @@ with sync_playwright() as p:
     except Exception as e:
         s, campo = {'marca': False, 'erro': str(e)[:100]}, ''
     ok('2b) versão nova com texto sendo digitado: a tela espera (não recarrega nem perde o texto)', s.get('marca') and campo == 'texto que o usuário está digitando', (s, campo))
+    # React no CORE do sw.js: a B3 ativou (o cache da B2 já foi apagado) e a tela ainda não recarregou — nenhuma tela pediu o
+    # React à B3, então só a instalação pode tê-lo guardado. Sem o CORE, o cache HTTP esconderia a falta nos cenários offline.
+    try:
+        g = pg.evaluate(REACT_GUARDADO, 'capitao-site-v' + VB3)
+    except Exception as e:
+        g = {'erro': str(e)[:100]}
+    ok('2b) a versão nova ativa já com o React no cache (CORE do sw.js, instalação tudo ou nada)', g.get('caches') == ['capitao-site-v' + VB3] and g.get('react') == [True, True], g)
     pg.fill('#pergunta-m', '')
     s = espera_versao(VB3)
     ok('2b) campo vazio: recarrega sozinha na versão nova', s.get('auth') == VB3 and s.get('brain') == VB3 and not s.get('marca'), s)
