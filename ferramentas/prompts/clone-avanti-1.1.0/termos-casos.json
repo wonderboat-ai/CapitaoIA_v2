@@ -34,7 +34,9 @@
    "uns 5 mil reais",
    "30 euros",
    "€ 30",
-   "O câmbio do dólar hoje está em 5,40."
+   "O câmbio do dólar hoje está em 5,40.",
+   "O câmbio hoje está em 5,40.",
+   "O câmbio comercial está em 5,40."
   ],
   "PESSOAIS": [
    "Ligue para a marina: (47) 3367-1234",
@@ -45,7 +47,8 @@
   "LOCAL_SEGURANCA": [
    "Os coletes ficam no paiol de proa.",
    "O extintor fica debaixo do banco",
-   "O Sea-Fire fica na praça de máquinas."
+   "O Sea-Fire fica na praça de máquinas.",
+   "O Seafire fica na praça de máquinas."
   ],
   "VAZIOS": [
    "modelo: n/d",
@@ -89,7 +92,9 @@
   "Diesel: 848 L de 1.600 L (54 %).",
   "Autonomia ≈ 11,2 h ou 202 mn.",
   "AUXÍLIO NECESSÁRIO — CÂMBIO. Canal 16 em escuta.",
-  "Termine com câmbio e aguarde a resposta no canal 16."
+  "Termine com câmbio e aguarde a resposta no canal 16.",
+  "Diga câmbio e aguarde no canal 16.",
+  "Fale câmbio devagar e chame no canal 16."
  ],
  "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
 }
