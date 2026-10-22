@@ -1,5 +1,5 @@
 {
- "_leia": "Fonte única das regex do PROMPT §3. JS: new RegExp(src, flags). Python: re.compile(src, re.I se flags contém i). Sem lookbehind; [A-Za-zÀ-ÿ] em vez de \\w para palavra em português. Conferidas em Node 22 e Python 3 com termos-casos.json. Emenda de 22/10/2026 (CONTRATO-DADOS §8.2, ponto 2), conferida em Python 3 e no Chromium: LOCAL_SEGURANCA pega a grafia Sea-Fire (sea-?fire); no DINHEIRO, câmbio só conta seguido de do/da/de/está/hoje/comercial/turismo/oficial, e o CÂMBIO do rádio passa.",
+ "_leia": "Fonte única das regex do PROMPT §3. JS: new RegExp(src, flags). Python: re.compile(src, re.I se flags contém i). Sem lookbehind; [A-Za-zÀ-ÿ] em vez de \\w para palavra em português. Conferidas em Node 22 e Python 3 com termos-casos.json. Emenda de 22/10/2026 (CONTRATO-DADOS §8.2, ponto 2), conferida em Python 3 e no Chromium: LOCAL_SEGURANCA pega a grafia Sea-Fire (sea-?fire); no DINHEIRO, câmbio só conta seguido de do/da/de/está/hoje/comercial/turismo/oficial, e o CÂMBIO do rádio passa. Revisão: câmbio também conta seguido de ':' e número ou, em até 25 letras, de valor com 1 ou 2 algarismos e duas casas (5,40); o canal 16 e o 156,800 MHz do rádio não contam.",
  "ROTULOS": {
   "src": "\\bSEM (?:DADOS|LEITURA)\\b|\\bMANUAL NO DRIVE\\b|\\bDEMO\\b",
   "flags": "",
@@ -11,7 +11,7 @@
   "uso": "varreduras e filtro de saída da IA"
  },
  "DINHEIRO": {
-  "src": "R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio\\s+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro",
+  "src": "R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio\\s+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:\\s*:\\s*\\d|[^\\n\\d]{0,25}\\d{1,2}[.,]\\d{2})|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro",
   "flags": "i",
   "uso": "filtro de saída da IA e varredura das respostas"
  },
