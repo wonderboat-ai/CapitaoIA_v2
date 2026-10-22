@@ -220,9 +220,12 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
 Crie no cérebro `PROIBIDOS`, `VAZIOS` e `EXCECOES`, e exporte em `CapitaoBrain`. Copie as mesmas regex, iguais, para os dois Workers, para o cliente (as duas cópias) e para `testes/proibidos.py`. Um teste confere que são idênticas. Todas as varreduras e filtros usam essas regex; nenhuma lista paralela.
 
 - **Rótulos**, só em maiúsculas: `/\bSEM (?:DADOS|LEITURA)\b|\bMANUAL NO DRIVE\b|\bDEMO\b/`.
-- **Autenticidade**, com `i`: `/(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])\w*\s+(?:\S+\s+){0,3}?(?:fict[ií]ci\w*|simulad\w*|de demonstra[çc][ãa]o|de teste)|(?:fict[ií]ci\w*|simulad\w*)\s+(?:\S+\s+){0,2}?(?:dad|leitur|valor|telemetri)|modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)\b/i`.
-  - Barra: "os dados são fictícios", "leitura simulada", "dados de demonstração", "modo demonstração".
-  - Passa: "Olá, Demo!", "itens a conferir", "simulador", "exercício simulado de homem ao mar", "uma demonstração das funções", "faça o autoteste".
+- **Autenticidade**, com `i`: `/(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])[\wÀ-ÿ]*\s+(?:\S+\s+){0,3}?(?:fict[ií]ci[\wÀ-ÿ]*|simulad[\wÀ-ÿ]*|de demonstra[çc][ãa]o)|dados de teste|(?:fict[ií]ci[\wÀ-ÿ]*|simulad[\wÀ-ÿ]*)\s+(?:\S+\s+){0,2}?(?:dad|leitur|valor|telemetri)|modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)(?![\wÀ-ÿ])/i`.
+  - Use `[\wÀ-ÿ]`, nunca `\w` sozinho: no JavaScript, `\w` não casa letra acentuada e "informações simuladas" escaparia no cliente e no Worker, mas não no Python.
+  - Conferido em JS (Node) e em Python com os mesmos 23 casos.
+  - Barra: "os dados são fictícios", "leitura simulada às 10:12", "São dados de demonstração", "modo demonstração", "informações simuladas", "valores fictícios", "São dados de teste".
+  - Passa: "Olá, Demo!", "itens a conferir", "A foto ficou A CONFIRMAR", "use o simulador", "exercício simulado de homem ao mar", "uma demonstração das funções do app", "faça o autoteste do EPIRB", "teste a bomba de porão", "sem leitura, confira o cabo", "valor de teste da bateria", "dados do motor: 2.050 rpm" e a frase padrão da `sobreDados`.
+  - Esses casos entram no `testes/proibidos.py`.
 - **Dinheiro** (só no filtro da IA): `/R\$\s?\d|US\$\s?\d|\b\d+(?:[.,]\d+)?\s?(?:reais|d[óo]lar(?:es)?)\b/i`.
 - **VAZIOS**: `/\bn\/?d\b|n[ãa]o (?:informad|dispon[ií]vel|cadastrad)|A CADASTRAR|a definir|indispon[ií]vel|[:·]\s*—\s*(?=[·.,\n]|$)/`.
 - **Texto visível** (só na varredura de telas e no grep, não no filtro da IA): `snapshot|ao vivo desligad|leitura fixa|MODELO DE ALERTA|NADA O DISPARA` e `(?<![A-Za-zÀ-ÿ])A (?:CONFERIR|CONFIRMAR)\b` nos dados gerados.
