@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dados do aparelho · Capitão IA</title>
+<meta name="theme-color" content="#050816">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./assets/wonderhub-favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="./assets/wonderhub-apple-touch-icon.png">
+<!-- Atrás do login como as telas (capitao-auth.js troca a página pelo login antes de desenhar). Abre offline (CORE do sw.js). -->
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./capitao-theme.js"></script>
+<script src="./capitao-app.js"></script>
+<style>
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+/* Topo fixo na rolagem: o SOS fica sempre à vista (SOS em todas as telas). */
+.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px; box-sizing: border-box; width: 100%; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 10px; background: rgba(var(--cap-bg-rgb, 5,8,22), 0.94); border-bottom: 1px solid var(--cap-line, #1a2240); }
+.top .marca { display: flex; align-items: center; flex-shrink: 0; min-height: 44px; text-decoration: none; }
+.top .marca img { display: block; width: 47px; height: 20px; object-fit: contain; }
+.top .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; color: var(--cap-ink2, #b1bdd6); }
+.top .sos { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 64px; min-height: 44px; padding: 0 14px; box-sizing: border-box; border-radius: 14px; background: var(--cap-crit-fill, #d32f27); color: #fff; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.10em; box-shadow: 0 0 0 3px rgba(var(--cap-crit-rgb, 255,59,48), 0.28); }
+.top .sos:hover { color: #fff; filter: brightness(1.08); }
+.top .sos i { font-style: normal; font-size: 11.5px; font-weight: 700; letter-spacing: 0.10em; }
+main { flex-grow: 1; display: flex; justify-content: center; padding: 22px 16px 28px; box-sizing: border-box; }
+.card { width: 100%; max-width: 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--cap-ink3, #97a3c0); }
+.box { display: flex; flex-direction: column; gap: 12px; min-width: 0; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; padding: 18px; }
+.box h2 { margin: 0; font-size: 11.5px; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink3, #97a3c0); }
+ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; color: var(--cap-ink2, #b1bdd6); overflow-wrap: anywhere; }
+ul b { color: var(--cap-ink, #eaf1ff); font-weight: 700; }
+.botoes { display: flex; gap: 10px; flex-wrap: wrap; }
+button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 14px; border: 1px solid var(--cap-accent, #00a1fe); background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-family: inherit; font-size: 14.5px; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; text-align: center; cursor: pointer; }
+button.sec { background: transparent; border-color: var(--cap-line2, #27315a); color: var(--cap-ink, #eaf1ff); }
+button:disabled { opacity: 0.5; cursor: default; }
+.prefs { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--cap-ink2, #b1bdd6); cursor: pointer; }
+.prefs input { width: 20px; height: 20px; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--cap-accent, #00a1fe); }
+#previa[hidden] { display: none; }
+#previa { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--cap-line, #1a2240); }
+#msg { min-height: 20px; margin: 0; font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+#msg.ok { color: var(--cap-ok, #34c77a); } #msg.erro { color: var(--cap-crit, #ff3b30); }
+input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="marca" href="index.html" aria-label="Início"><img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" width="47" height="20"></a>
+  <span class="t">DADOS DO APARELHO</span>
+  <capitao-theme-toggle size="40"></capitao-theme-toggle>
+  <a class="sos" id="sos" href="S1-SOS-Web.dc.html" aria-label="SOS — emergência">SOS</a>
+</header>
+<main>
+  <div class="card">
+    <h1>Dados guardados neste aparelho</h1>
+    <p>Diário, tarefas feitas, documentos e abastecimentos enviados, telefones da Equipe, atalhos e preferências que você registrou ficam só neste aparelho.
+      Guarde uma cópia antes de trocar de celular, reinstalar o app ou limpar os dados do navegador — e restaure no aparelho novo.
+      O app instalado e o navegador guardam à parte: baixe a cópia de onde você registrou.</p>
+    <div class="box">
+      <h2>NESTE APARELHO</h2>
+      <ul id="lista"><li>lendo…</li></ul>
+      <div class="botoes"><button type="button" id="baixar">Baixar cópia (arquivo .json)</button></div>
+    </div>
+    <div class="box">
+      <h2>O ARQUIVO FICA COM VOCÊ</h2>
+      <p>A cópia é gerada aqui e não vai para nenhum servidor. Ela leva os telefones da Equipe, se houver: guarde em lugar seguro e não mande para quem não é da embarcação.</p>
+      <p>Não vão no arquivo: a sessão e as tentativas de login, a chave da IA na nuvem e outras chaves de acesso, nem a previsão do tempo salva. No aparelho novo, entre e ative a IA de novo.</p>
+    </div>
+    <div class="box">
+      <h2>RESTAURAR</h2>
+      <p>Escolha a cópia baixada nesta página. O registro só cresce: diário, tarefas feitas, documentos, abastecimentos e Equipe recebem só o que falta — nada que já está neste aparelho é apagado ou trocado. Preferências (tema, atalhos, blocos do console, web ou app) só mudam se você marcar.</p>
+      <div class="botoes"><button type="button" class="sec" id="escolher">Escolher arquivo…</button></div>
+      <input type="file" id="arquivo" accept="application/json,.json">
+      <div id="previa" hidden>
+        <ul id="resumo"></ul>
+        <label class="prefs" id="prefsCaixa" hidden><input type="checkbox" id="prefs"> <span id="prefsTexto">Trocar também as preferências deste aparelho pelas do arquivo</span></label>
+        <div class="botoes"><button type="button" id="restaurar">Restaurar</button><button type="button" class="sec" id="cancelar">Cancelar</button></div>
+      </div>
+    </div>
+    <p id="msg" role="status" aria-live="polite"></p>
+    <p><a href="index.html">← Voltar ao início</a></p>
+  </div>
+</main>
+<capitao-rodape></capitao-rodape>
+<script>
+(function () {
+  var A = window.CapitaoAuth;
+  // SOS: celular → tela do app (S2), computador → web (S1), com a mesma escolha "Sempre web/app" do index.html.
+  (function () {
+    var pick = null; try { pick = localStorage.getItem('capitao.plataforma.v1'); } catch (e) {}
+    var ua = navigator.userAgent || '', uad = navigator.userAgentData;
+    var movel = uad && typeof uad.mobile === 'boolean' ? uad.mobile : /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
+    var curto = Math.min(screen.width || 9999, screen.height || 9999);
+    var toque = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    var estreita = Math.min(window.innerWidth || 9999, document.documentElement.clientWidth || 9999) < 900;
+    if (pick === 'app' || (pick !== 'web' && (movel || (toque && curto < 600) || estreita))) document.getElementById('sos').href = 'S2-SOS-Mobile.dc.html';
+  })();
+
+  var APP = 'Capitão IA', FORMATO = 1, MAX = 4 * 1024 * 1024;
+  var NOME = /^capitao\.[a-z0-9._-]+$/;
+  // Nunca no arquivo nem na restauração: login, chaves de acesso e endereços de teste dos proxies, a última leitura do coletor
+  // (tem a posição do barco) e o que é cópia de trabalho do aparelho (previsão e maré salvas, frase sorteada, replay congelado).
+  var FORA = ['capitao.sessao.v1', 'capitao.login.tentativas.v1', 'capitao.ia.chave.v1', 'capitao.ia.url.v1',
+    'capitao.telemetria.chave.v1', 'capitao.telemetria.url.v1', 'capitao.telemetria.ultima.v1', 'capitao.voz.chave.v1', 'capitao.voz.url.v1',
+    'capitao.clima.v1', 'capitao.mare.v1', 'capitao.saudacao.v1', 'capitao.replay.fixo'];
+  // Chave nova com nome de segredo também fica fora, mesmo sem estar na lista.
+  var SEGREDO = /\.(sessao|login|chave|senha|token|segredo|url)(\.|$)/;
+  function fora(k) { return !NOME.test(k) || FORA.indexOf(k) >= 0 || SEGREDO.test(k); }
+  // Registro (capitao-brain.js › K): só cresce. Restaurar soma o que falta; nunca apaga nem troca o que o aparelho já tem.
+  // nivel = até onde a soma desce: 1 = cada item (linha, tarefa) entra inteiro ou não entra; 2 = Equipe (telefones por nome e convites).
+  var REGISTRO = {
+    'capitao.diario.v1': { nome: 'Diário de bordo', forma: 'lista', un: ['linha', 'linhas'] },
+    'capitao.executado.v1': { nome: 'Tarefas feitas (Executado)', forma: 'mapa', nivel: 1, un: ['tarefa', 'tarefas'] },
+    'capitao.docs.v1': { nome: 'Documentos enviados', forma: 'lista', un: ['documento', 'documentos'] },
+    'capitao.abast.v1': { nome: 'Abastecimentos enviados', forma: 'lista', un: ['abastecimento', 'abastecimentos'] },
+    'capitao.equipe.v1': { nome: 'Equipe (telefones e convites)', forma: 'mapa', nivel: 2, un: ['item', 'itens'] }
+  };
+  // Preferências deste aparelho: podem voltar por cima, só com a caixa marcada.
+  var PREFS = {
+    'capitao.tema.v1': { nome: 'Tema', ok: function (v) { return v === 'claro' || v === 'escuro'; } },
+    'capitao.atalhos.v1': { nome: 'Atalhos', un: ['atalho', 'atalhos'] },
+    'capitao.blocos.v1': { nome: 'Blocos do console', un: ['bloco', 'blocos'] },
+    'capitao.plataforma.v1': { nome: 'Web ou app', ok: function (v) { return v === 'web' || v === 'app'; } }
+  };
+
+  var msg = document.getElementById('msg');
+  function aviso(t, ok) { msg.textContent = t; msg.className = t ? (ok ? 'ok' : 'erro') : ''; }
+  function le(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function json(v) { try { return JSON.parse(v); } catch (e) { return undefined; } }
+  function forma(x) { return Array.isArray(x) ? 'lista' : x && typeof x === 'object' ? 'mapa' : 'valor'; }
+  function plural(n, un) { return n + ' ' + (n === 1 ? un[0] : un[1]); }
+  function nomeDe(k) { return (REGISTRO[k] || PREFS[k] || {}).nome || k; }
+  function chaves() {
+    var out = [];
+    try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && !fora(k)) out.push(k); } } catch (e) {}
+    return out.sort();
+  }
+  // Quantos itens: lista = linhas; mapa = chaves; Equipe = telefones + convites.
+  function conta(k, v) {
+    if (k === 'capitao.equipe.v1' && forma(v) === 'mapa') return (forma(v.fones) === 'mapa' ? Object.keys(v.fones).length : 0) + (forma(v.convites) === 'lista' ? v.convites.length : 0);
+    var f = forma(v); return f === 'lista' ? v.length : f === 'mapa' ? Object.keys(v).length : null;
+  }
+  function descreve(k, raw) {
+    var R = REGISTRO[k], P = PREFS[k], v = json(raw);
+    if (P && P.ok) return P.ok(raw) ? raw : 'ok';
+    if (k === 'capitao.equipe.v1' && forma(v) === 'mapa') return plural(forma(v.fones) === 'mapa' ? Object.keys(v.fones).length : 0, ['telefone', 'telefones']) + ' · ' + plural(forma(v.convites) === 'lista' ? v.convites.length : 0, ['convite', 'convites']);
+    var n = conta(k, v);
+    if (n == null) return 'ok';
+    return plural(n, (R || P || {}).un || ['item', 'itens']);
+  }
+  function lista() {
+    var ul = document.getElementById('lista'), ks = chaves(); ul.textContent = '';
+    document.getElementById('baixar').disabled = !ks.length;
+    if (!ks.length) { var li = document.createElement('li'); li.textContent = 'Nada registrado neste aparelho ainda.'; ul.appendChild(li); return; }
+    ks.forEach(function (k) { var li = document.createElement('li'), b = document.createElement('b'); b.textContent = nomeDe(k); li.appendChild(b); li.appendChild(document.createTextNode(' · ' + descreve(k, le(k)))); ul.appendChild(li); });
+  }
+
+  // ——— Baixar ———
+  function fuso() { var D = window.CapitaoDados; return (D && D.embarcacao && D.embarcacao.fuso) || 'America/Sao_Paulo'; }
+  function hoje() {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: fuso(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); } catch (e) { return new Date().toISOString().slice(0, 10); }
+  }
+  function pacote() {
+    var dados = {}; chaves().forEach(function (k) { var v = le(k); if (v != null) dados[k] = v; });
+    var V = A && A.VERSAO;
+    return { app: APP, formato: FORMATO, versao: V ? V.v : '', exportado_em: new Date().toISOString(), dados: dados };
+  }
+  document.getElementById('baixar').addEventListener('click', function () {
+    var nome = 'capitao-dados-' + hoje() + '.json';
+    var blob = new Blob([JSON.stringify(pacote(), null, 1)], { type: 'application/json' });
+    var arq = null; try { arq = new File([blob], nome, { type: 'application/json' }); } catch (e) {}
+    function baixa() {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      aviso('Cópia baixada: ' + nome, true);
+    }
+    // Celular: compartilhar (salvar em Arquivos, mandar para si mesmo); computador: baixar. Compartilhar recusado → baixa.
+    if (arq && navigator.canShare && navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || '') && navigator.canShare({ files: [arq] })) {
+      navigator.share({ files: [arq], title: nome }).then(function () { aviso('Cópia pronta: ' + nome, true); }, function (e) { if (!e || e.name !== 'AbortError') baixa(); });
+      return;
+    }
+    baixa();
+  });
+
+  // ——— Restaurar ———
+  // JSON com as chaves em ordem: a mesma linha gravada de novo é a mesma linha.
+  function canon(x) {
+    if (Array.isArray(x)) return '[' + x.map(canon).join(',') + ']';
+    if (x && typeof x === 'object') return '{' + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(x[k]); }).join(',') + '}';
+    return JSON.stringify(x);
+  }
+  // Soma sem apagar: lista → a linha que o aparelho não tem entra no lugar dela na ordem do arquivo (antes da próxima linha do
+  // arquivo que o aparelho já tem; sem nenhuma, no fim) e o que já está aqui não sai nem muda de ordem. Mapa → entra a chave que
+  // falta; chave que os dois têm fica a do aparelho (com nivel 2, soma por dentro). Forma diferente → fica a do aparelho.
+  function soma(aqui, arq, nivel) {
+    var fa = forma(aqui), fb = forma(arq);
+    if (fa !== fb || fa === 'valor') return aqui;
+    if (fa === 'lista') {
+      var out = aqui.slice(), cs = out.map(canon), resto = {};
+      cs.forEach(function (c) { resto[c] = (resto[c] || 0) + 1; });
+      var marca = arq.map(function (x) { var c = canon(x); if (resto[c] > 0) { resto[c]--; return { x: x, c: c, novo: false }; } return { x: x, c: c, novo: true }; });
+      marca.forEach(function (m, i) {
+        if (!m.novo) return;
+        var pos = out.length;
+        for (var j = i + 1; j < marca.length; j++) if (!marca[j].novo) { var p = cs.indexOf(marca[j].c); if (p >= 0) { pos = p; break; } }
+        out.splice(pos, 0, m.x); cs.splice(pos, 0, m.c);
+      });
+      return out;
+    }
+    var o = {}; Object.keys(aqui).forEach(function (k) { o[k] = aqui[k]; });
+    Object.keys(arq).forEach(function (k) {
+      if (!Object.prototype.hasOwnProperty.call(aqui, k)) o[k] = arq[k];
+      else if (nivel > 1) o[k] = soma(aqui[k], arq[k], nivel - 1);
+    });
+    return o;
+  }
+  // Lê o arquivo: { erro } ou { itens: [{ k, raw, pref }] }. Outro app, formato incompatível ou corrompido → erro (nada muda).
+  function analisa(texto) {
+    var NADA = ' Nada mudou neste aparelho.';
+    var p = json(texto);
+    if (p === undefined) return { erro: 'Não consegui ler o arquivo: ele não é uma cópia do Capitão IA ou está corrompido.' + NADA };
+    if (forma(p) !== 'mapa' || p.app !== APP) return { erro: 'Este arquivo não é uma cópia do Capitão IA (é de outro app).' + NADA };
+    if (p.formato !== FORMATO) {
+      if (typeof p.formato === 'number' && p.formato > FORMATO) return { erro: 'Esta cópia foi feita por uma versão mais nova do Capitão IA (formato ' + p.formato + '). Atualize o app e tente de novo.' + NADA };
+      return { erro: 'Esta cópia é de uma versão do Capitão IA que esta não lê (formato ' + String(p.formato) + ').' + NADA };
+    }
+    if (forma(p.dados) !== 'mapa') return { erro: 'A cópia está corrompida (sem a parte dos dados).' + NADA };
+    var itens = [], ruim = [];
+    Object.keys(p.dados).forEach(function (k) {
+      var raw = p.dados[k];
+      if (typeof raw !== 'string') { ruim.push(k); return; }
+      if (fora(k)) return; // sessão, chaves e cópias de trabalho: nunca entram, nem de um arquivo montado à mão
+      var R = REGISTRO[k], P = PREFS[k];
+      if (R && forma(json(raw)) !== R.forma) { ruim.push(k); return; }
+      if (k === 'capitao.equipe.v1') { var e = json(raw); if ((e.fones !== undefined && forma(e.fones) !== 'mapa') || (e.convites !== undefined && forma(e.convites) !== 'lista')) { ruim.push(k); return; } }
+      if (P && (P.ok ? !P.ok(raw) : forma(json(raw)) !== 'lista')) { ruim.push(k); return; }
+      itens.push({ k: k, raw: raw, pref: !!P });
+    });
+    if (ruim.length) return { erro: 'A cópia está corrompida (' + ruim.map(nomeDe).join(', ') + ').' + NADA };
+    if (!itens.length) return { erro: 'O arquivo não tem dados do Capitão IA para restaurar.' + NADA };
+    return { itens: itens, versao: typeof p.versao === 'string' ? p.versao : '', em: typeof p.exportado_em === 'string' ? p.exportado_em : '' };
+  }
+  // O que cada item faria AGORA neste aparelho (relido na hora de gravar: nada que entrou depois da prévia se perde).
+  function plano(itens, comPrefs) {
+    return itens.map(function (it) {
+      var aqui = le(it.k), novo = aqui, n = 0, R = REGISTRO[it.k];
+      if (it.pref) { if (comPrefs && aqui !== it.raw) novo = it.raw; return { k: it.k, pref: true, aqui: aqui, novo: novo, muda: novo !== aqui, difere: aqui !== it.raw }; }
+      if (aqui == null) { n = conta(it.k, json(it.raw)); if (n !== 0) novo = it.raw; } // lista vazia no arquivo: nada a somar
+      else {
+        var va = json(aqui), vb = json(it.raw);
+        // Valor do aparelho que não se lê (ou de outra forma) fica como está: nunca troca o que já existe.
+        if (va !== undefined && vb !== undefined && forma(va) === forma(vb) && forma(va) !== 'valor') {
+          var s = soma(va, vb, R ? (R.nivel || 1) : 1), antes = conta(it.k, va);
+          n = (conta(it.k, s) || 0) - (antes || 0);
+          if (n > 0) novo = JSON.stringify(s);
+        }
+      }
+      return { k: it.k, pref: false, aqui: aqui, novo: novo, muda: novo !== aqui, n: n == null ? 1 : n, arq: conta(it.k, json(it.raw)) };
+    });
+  }
+  var previa = document.getElementById('previa'), resumo = document.getElementById('resumo'), caixa = document.getElementById('prefsCaixa');
+  var chk = document.getElementById('prefs'), btR = document.getElementById('restaurar'), pendente = null;
+  function fecha() { pendente = null; previa.hidden = true; resumo.textContent = ''; chk.checked = false; }
+  function mostra(r) {
+    var pl = plano(r.itens, false), prefs = pl.filter(function (x) { return x.pref && x.difere; }), novos = 0;
+    resumo.textContent = '';
+    pl.forEach(function (x) {
+      if (x.pref) return;
+      var R = REGISTRO[x.k], un = R ? R.un : ['item', 'itens'], li = document.createElement('li'), b = document.createElement('b');
+      b.textContent = nomeDe(x.k); li.appendChild(b);
+      var t = x.arq == null ? 'no arquivo' : plural(x.arq, un) + ' no arquivo';
+      li.appendChild(document.createTextNode(' · ' + t + ' · ' + (x.muda ? (x.n === 1 ? 'falta aqui ' : 'faltam aqui ') + plural(x.n, un) : 'nada novo')));
+      resumo.appendChild(li); if (x.muda) novos += x.n;
+    });
+    prefs.forEach(function (x) {
+      var li = document.createElement('li'), b = document.createElement('b'), raw = r.itens.filter(function (i) { return i.k === x.k; })[0].raw;
+      b.textContent = nomeDe(x.k); li.appendChild(b);
+      li.appendChild(document.createTextNode(' · no arquivo: ' + descreve(x.k, raw) + ' · aqui: ' + (x.aqui == null ? 'o padrão' : descreve(x.k, x.aqui)) + ' (só com a caixa marcada)'));
+      resumo.appendChild(li);
+    });
+    caixa.hidden = !prefs.length;
+    pendente = { r: r, novos: novos, prefs: prefs.length };
+    var quando = '';
+    if (r.em && !isNaN(Date.parse(r.em))) { try { quando = new Date(r.em).toLocaleString('pt-BR', { timeZone: fuso(), day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { quando = new Date(r.em).toLocaleString('pt-BR'); } }
+    aviso('', true);
+    if (!novos && !prefs.length) { fecha(); aviso('Nada a restaurar: este aparelho já tem tudo o que está na cópia' + (quando ? ' de ' + quando : '') + '. Nada mudou.', true); return; }
+    previa.hidden = false; atualizaBotao();
+    msg.textContent = 'Cópia' + (r.versao ? ' da versão ' + r.versao : '') + (quando ? ' feita em ' + quando : '') + '. Confira e toque em Restaurar.'; msg.className = '';
+  }
+  function atualizaBotao() { btR.disabled = !pendente || !(pendente.novos > 0 || (pendente.prefs > 0 && chk.checked)); }
+  chk.addEventListener('change', atualizaBotao);
+  document.getElementById('cancelar').addEventListener('click', function () { fecha(); aviso('Restauração cancelada. Nada mudou.', true); });
+  btR.addEventListener('click', function () {
+    if (!pendente) return;
+    var pl = plano(pendente.r.itens, chk.checked).filter(function (x) { return x.muda; }), feitos = [];
+    try { pl.forEach(function (x) { localStorage.setItem(x.k, x.novo); feitos.push(x); }); }
+    catch (e) {
+      // Tudo ou nada: o que já tinha sido gravado volta ao que era.
+      feitos.forEach(function (x) { try { if (x.aqui == null) localStorage.removeItem(x.k); else localStorage.setItem(x.k, x.aqui); } catch (z) {} });
+      fecha(); lista(); aviso('Não consegui gravar neste aparelho (memória do navegador cheia ou bloqueada). Nada mudou.', false); return;
+    }
+    if (window.CapitaoTheme) window.CapitaoTheme.apply(window.CapitaoTheme.get());
+    var reg = pl.filter(function (x) { return !x.pref; }).map(function (x) { return nomeDe(x.k) + ' +' + x.n; });
+    var prf = pl.filter(function (x) { return x.pref; }).map(function (x) { return nomeDe(x.k); });
+    fecha(); lista();
+    aviso((pl.length ? 'Restaurado' + (reg.length ? ': ' + reg.join(', ') : '') + (prf.length ? (reg.length ? '. ' : ': ') + 'preferências trocadas: ' + prf.join(', ') : '') + '.' : 'Nada a restaurar.') + ' Nada deste aparelho foi apagado.', true);
+  });
+  var entrada = document.getElementById('arquivo');
+  document.getElementById('escolher').addEventListener('click', function () { entrada.click(); });
+  entrada.addEventListener('change', function () {
+    var f = entrada.files && entrada.files[0]; entrada.value = ''; fecha(); aviso('', true);
+    if (!f) return;
+    if (f.size > MAX) { aviso('Arquivo grande demais para ser uma cópia do Capitão IA. Nada mudou neste aparelho.', false); return; }
+    var ler = f.text ? f.text() : new Promise(function (ok, falha) { var fr = new FileReader(); fr.onload = function () { ok(String(fr.result)); }; fr.onerror = falha; fr.readAsText(f); });
+    ler.then(function (t) { var r = analisa(t); if (r.erro) aviso(r.erro, false); else mostra(r); },
+      function () { aviso('Não consegui abrir o arquivo. Nada mudou neste aparelho.', false); });
+  });
+  window.addEventListener('storage', function () { lista(); });
+  lista();
+})();
+</script>
+</body>
+</html>

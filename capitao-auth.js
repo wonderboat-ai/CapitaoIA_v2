@@ -235,13 +235,19 @@
       quem.appendChild(nomeEl); quem.appendChild(btn);
       var cred = d.createElement('span'); cred.textContent = CREDITO;
       this.appendChild(ver); if (demo) this.appendChild(demo); this.appendChild(quem); this.appendChild(cred);
-      // Só nas telas iniciais (web e app): ícone discreto para baixar o Guia rápido em PDF.
+      // Só nas telas iniciais (web e app): ícones discretos para baixar o Guia rápido em PDF e para os Dados do aparelho
+      // (dados.html: baixar uma cópia do que está guardado aqui e restaurar).
       if (/(^|\/)(Main|H2-Home-Mobile)\.dc\.html$/.test(location.pathname)) {
         var guia = d.createElement('a'); guia.href = 'Guia-Rapido-Capitao-IA.pdf'; guia.setAttribute('download', 'Guia-Rapido-Capitao-IA.pdf');
         guia.title = 'Baixar o Guia rápido (PDF)'; guia.setAttribute('aria-label', 'Baixar o Guia rápido em PDF');
         guia.style.cssText = 'display:inline-flex;align-items:center;gap:5px;color:inherit;text-decoration:none;min-height:26px;opacity:0.85;';
         guia.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M12 4v11 M7 10l5 5 5-5 M5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Guia</span>';
         this.appendChild(guia);
+        var dados = d.createElement('a'); dados.href = 'dados.html';
+        dados.title = 'Dados do aparelho: baixar uma cópia e restaurar'; dados.setAttribute('aria-label', 'Dados do aparelho: baixar uma cópia e restaurar');
+        dados.style.cssText = guia.style.cssText;
+        dados.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Dados</span>';
+        this.appendChild(dados);
       }
       this._b = btn; this._n = nomeEl; this._q = quem;
     }

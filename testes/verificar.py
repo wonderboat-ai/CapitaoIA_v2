@@ -20,10 +20,17 @@ sem ela, SEM DADOS e nenhum vento previsto.
 Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio), em toda rodada menos a --so-offline (é o manifest,
 não uma tela): cada shortcut tem ícone any e maskable; cada src responde 200 e o PNG tem o tamanho declarado (cabeçalho lido com
 struct, sem Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
+Dados do aparelho (dados.html, paridade Avanti 1.24.0), como o login e a lista: em todos os tamanhos e nos dois temas, sem erro,
+sem rolagem lateral, com o fundo do tema e o SOS à vista no topo e depois de rolar até o fim (S1 no computador, S2 no celular);
+o rodapé do Main e da H2 leva a ela. Ida e volta: o diário com A e B vai para o arquivo (sem a sessão, as tentativas de login nem
+as chaves); o aparelho passa a ter A e C; restaurar dá C, B e A (nenhuma linha some, nada duplica ao restaurar de novo); tarefas
+feitas e Equipe só somam; o tema só volta com a caixa marcada; arquivo de outro app, de formato novo, corrompido ou com linha de
+forma errada não muda nada; sessão e chave da IA de um arquivo montado à mão nunca entram. Sem sessão, vai para o login. Abre
+offline (--offline, com "dados" na lista).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
-    python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login e index: as páginas fora das TELAS)
+    python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
     python testes/verificar.py --fotos             salva capturas em testes/saida/
     python testes/verificar.py --offline           testa a abertura offline depois da 1ª visita
     python testes/verificar.py --so-offline        só o teste offline (sem a matriz)
@@ -83,9 +90,19 @@ def corta_unpkg(ctx):
 
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 # páginas fora das TELAS do sw.js: nome → (endereço, com sessão). O login com sessão redireciona; a lista precisa de ?v=lista.
-PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True)}
+PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True), 'dados': ('dados.html', True)}
 MEDE_LOGIN = """() => { const q = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().bottom : null; };
   return { go: q('#go'), credito: q('.credito') }; }"""
+# Dados do aparelho: o SOS do topo à vista (≥ 44 px) no alto e depois de rolar até o fim; fundo e tema.
+MEDE_DADOS = """() => {
+  const de = document.documentElement, a = document.querySelector('header a[href*="SOS-"]');
+  const ve = () => { if (!a) return false; const r = a.getBoundingClientRect();
+    return r.width >= 43.5 && r.height >= 43.5 && r.top >= 0 && r.bottom <= innerHeight + 0.5 && r.left >= 0 && r.right <= de.clientWidth + 0.5; };
+  const topo = ve(); window.scrollTo(0, de.scrollHeight); const fim = ve(); window.scrollTo(0, 0);
+  return { sos: a ? a.getAttribute('href') : null, texto: a ? a.textContent.trim() : '', topo, fim, tema: de.getAttribute('data-capitao-tema'),
+           fundo: getComputedStyle(document.body).backgroundColor, titulo: document.title, lista: (document.getElementById('lista') || {}).textContent || '' };
+}"""
+FUNDO = {'escuro': 'rgb(5, 8, 22)', 'claro': 'rgb(243, 246, 252)'}
 CHECA = """() => {
   const de = document.documentElement, root = document.getElementById('dc-root');
   const lateral = Math.max(de.scrollWidth, document.body ? document.body.scrollWidth : 0) - de.clientWidth;
@@ -106,7 +123,8 @@ CHECA = """() => {
     if (par === 'none' && Math.abs(a - b) / a > 0.04) deform.push('svg ' + a.toFixed(2) + '→' + b.toFixed(2));
   });
   const prancheta = !!(root && root.querySelector('[style*="width: 1440px"],[style*="width: 390px"],[style*="width: 2380px"],deck-stage'));
-  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title };
+  const rodape = [...document.querySelectorAll('capitao-rodape a')].map((a) => a.getAttribute('href'));
+  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape };
 }"""
 
 
@@ -150,6 +168,8 @@ def main():
                     if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
                     if not r['prancheta']: prob.append('prancheta ausente')
                     if not url.split('#')[0].endswith(tela + '.dc.html'): prob.append('redirecionou para ' + url)
+                    if tela in ('Main', 'H2-Home-Mobile') and 'dados.html' not in r['rodape']:
+                        prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:
@@ -179,6 +199,15 @@ def main():
                         m = pg.evaluate(MEDE_LOGIN)
                         if h >= 640 and (m['go'] is None or m['go'] > h): prob.append('ENTRAR fora da 1ª tela (borda %s > %d)' % (m['go'], h))
                         if h >= 844 and (m['credito'] is None or m['credito'] > h): prob.append('crédito cortado (borda %s > %d)' % (m['credito'], h))
+                    if nome == 'dados':
+                        m = pg.evaluate(MEDE_DADOS)
+                        esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
+                        if m['sos'] != esperado or m['texto'] != 'SOS': prob.append('SOS do topo %r %r (esperado %s)' % (m['sos'], m['texto'], esperado))
+                        if not m['topo']: prob.append('SOS fora da 1ª tela')
+                        if not m['fim']: prob.append('SOS some ao rolar até o fim')
+                        if m['tema'] != tema or m['fundo'] != FUNDO[tema]: prob.append('tema %s com fundo %s (esperado %s)' % (m['tema'], m['fundo'], FUNDO[tema]))
+                        if m['titulo'] != 'Dados do aparelho · Capitão IA': prob.append('título %r' % m['titulo'])
+                        if 'lendo' in m['lista'] or not m['lista'].strip(): prob.append('lista do aparelho não montou: %r' % m['lista'][:80])
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (nome, tema, w, h)))
                     if prob:
@@ -210,6 +239,12 @@ def main():
                 if prob:
                     falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
                     print('FALHA reserva do React', ' | '.join(prob))
+            if 'dados' in paginas:
+                for nome, prob in teste_dados(b).items():
+                    total += 1
+                    if prob:
+                        falhas.append({'tela': 'dados', 'tema': nome, 'prob': prob})
+                        print('FALHA dados ·', nome, ' | '.join(prob))
             for nome, prob in teste_atalhos(b).items():  # qualquer lista de telas: é o manifest, não uma tela
                 total += 1
                 if prob:
@@ -217,7 +252,7 @@ def main():
                     print('FALHA atalho', nome, ' | '.join(prob))
         if offline:
             total += 1
-            prob = teste_offline(b, lista)
+            prob = teste_offline(b, lista, paginas)
             if prob:
                 falhas.append({'tela': 'offline', 'prob': prob}); print('FALHA offline', ' | '.join(prob))
         b.close()
@@ -543,8 +578,173 @@ def teste_atalhos(b):
     return res
 
 
-def teste_offline(b, lista):
-    """1ª visita com internet (SW instala), depois abre cada tela sem rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele."""
+# Dados do aparelho: linhas do diário como o capitao-brain.js grava (mais nova primeiro) e valores que nunca vão no arquivo.
+# Nenhuma chave, telefone ou senha real: os segredos aqui são marcas do teste.
+def linha_teste(letra, dia):
+    return {'d': '%02d/10' % dia, 't': 'Linha %s do teste da cópia' % letra, 'iso': '2026-10-%02dT12:00:00.000Z' % dia, 'sys': 'Diário',
+            'tone': 'var(--cap-accent, #00a1fe)', 'who': 'Lucas', 'src': 'app · texto'}
+
+
+L_A, L_B, L_C, L_D = linha_teste('A', 20), linha_teste('B', 21), linha_teste('C', 22), linha_teste('D', 23)
+
+
+def feita(dia):
+    return {'d': '%02d/10' % dia, 't': '09:00', 'iso': '2026-10-%02dT12:00:00.000Z' % dia}
+
+
+SEGREDOS = {'capitao.ia.chave.v1': 'segredo-teste-ia', 'capitao.ia.url.v1': 'segredo-teste-url', 'capitao.telemetria.chave.v1': 'segredo-teste-tele',
+            'capitao.voz.chave.v1': 'segredo-teste-voz', 'capitao.login.tentativas.v1': json.dumps({'n': 2, 'ate': 0, 'ult': 1, 'm': 'segredo-teste-login'}),
+            'capitao.telemetria.ultima.v1': json.dumps({'pos': 'segredo-teste-posicao'}), 'capitao.clima.v1': json.dumps({'dia': 'segredo-teste-clima'})}
+GRAVA_LS = "(o) => Object.keys(o).forEach((k) => localStorage.setItem(k, o[k]))"
+LE_LS = "() => Object.fromEntries(Object.keys(localStorage).sort().map((k) => [k, localStorage.getItem(k)]))"
+
+
+def teste_dados(b):
+    """Ida e volta da cópia (dados.html) e as proteções da restauração. Devolve {caso: [problemas]}. Arquivos fora do repositório."""
+    import tempfile
+    res = {}
+    pasta = tempfile.mkdtemp(prefix='capitao-dados-')
+    ctx = b.new_context(viewport={'width': 1280, 'height': 900}, accept_downloads=True, service_workers='block')
+    ctx.add_init_script(SESSAO)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+
+    def ls():
+        return pg.evaluate(LE_LS)
+
+    def diario():
+        return json.loads(ls().get('capitao.diario.v1') or 'null')
+
+    def escolhe(files):
+        pg.set_input_files('#arquivo', files)
+        pg.wait_for_function("() => document.getElementById('msg').textContent.trim()", timeout=5000)
+        return pg.evaluate("""() => ({ msg: document.getElementById('msg').textContent, classe: document.getElementById('msg').className,
+          previa: !document.getElementById('previa').hidden, resumo: document.getElementById('resumo').innerText,
+          caixa: !document.getElementById('prefsCaixa').hidden, marcada: document.getElementById('prefs').checked,
+          botao: !document.getElementById('restaurar').disabled })""")
+
+    def restaura():
+        if not pg.is_visible('#restaurar') or pg.is_disabled('#restaurar'):
+            return {'msg': '(Restaurar escondido ou desligado)', 'classe': ''}
+        pg.click('#restaurar')
+        pg.wait_for_function("() => document.getElementById('msg').className === 'ok' || document.getElementById('msg').className === 'erro'", timeout=5000)
+        return pg.evaluate("() => ({ msg: document.getElementById('msg').textContent, classe: document.getElementById('msg').className })")
+
+    try:
+        # 1) Baixar: o diário com A e B (mais nova primeiro), uma tarefa feita, Equipe, tema escuro e os segredos.
+        p = res['baixar'] = []
+        pg.goto(BASE + 'dados.html', wait_until='load')
+        pg.evaluate(GRAVA_LS, dict(SEGREDOS, **{'capitao.diario.v1': json.dumps([L_B, L_A]), 'capitao.executado.v1': json.dumps({'t1': feita(20)}),
+                                             'capitao.equipe.v1': json.dumps({'fones': {'Marinheiro': 'tel-teste-1'}, 'convites': []}), 'capitao.tema.v1': 'escuro'}))
+        pg.reload(wait_until='load')
+        pg.wait_for_timeout(300)
+        lista = pg.inner_text('#lista')
+        if 'Diário de bordo · 2 linhas' not in lista or 'segredo' in lista or 'sessao' in lista:
+            p.append('lista do aparelho: %r' % lista)
+        with pg.expect_download() as dl:
+            pg.click('#baixar')
+        nome = dl.value.suggested_filename
+        caminho = os.path.join(pasta, nome)
+        dl.value.save_as(caminho)
+        texto = open(caminho, encoding='utf-8').read()
+        pac = json.loads(texto)
+        if not re.fullmatch(r'capitao-dados-\d{4}-\d{2}-\d{2}\.json', nome): p.append('nome do arquivo %r' % nome)
+        if pac.get('app') != 'Capitão IA' or pac.get('formato') != 1 or not pac.get('versao'): p.append('cabeçalho do pacote: %r' % {k: pac.get(k) for k in ('app', 'formato', 'versao')})
+        esperadas = ['capitao.diario.v1', 'capitao.equipe.v1', 'capitao.executado.v1', 'capitao.tema.v1']
+        if sorted(pac.get('dados', {})) != esperadas: p.append('chaves no arquivo %s (esperado %s)' % (sorted(pac.get('dados', {})), esperadas))
+        vazou = [x for x in ['capitao.sessao', 'segredo-teste', 'capitao.login', 'capitao.ia.', 'capitao.telemetria', 'capitao.voz', 'capitao.clima'] if x in texto]
+        if vazou: p.append('o arquivo leva o que nunca vai: %s' % vazou)
+        if json.loads(pac['dados'].get('capitao.diario.v1', 'null')) != [L_B, L_A]: p.append('diário no arquivo diferente do aparelho')
+
+        # 2) O aparelho passa a ter A e C (B não está mais aqui), outra tarefa feita, outro telefone e o tema claro. Restaurar soma.
+        p = res['restaurar soma'] = []
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': json.dumps([L_C, L_A]), 'capitao.executado.v1': json.dumps({'t2': feita(22)}),
+                               'capitao.equipe.v1': json.dumps({'fones': {'Mecânico': 'tel-teste-2'}, 'convites': []}), 'capitao.tema.v1': 'claro'})
+        pg.reload(wait_until='load')
+        r = escolhe(caminho)
+        if not r['previa'] or 'falta aqui 1 linha' not in r['resumo'] or 'falta aqui 1 tarefa' not in r['resumo']:
+            p.append('prévia: %r · %r' % (r['msg'], r['resumo']))
+        if not r['caixa'] or r['marcada'] or not r['botao']: p.append('caixa das preferências (à vista, desmarcada) e Restaurar: %r' % r)
+        fim = restaura()
+        d, tudo = diario(), ls()
+        if d != [L_C, L_B, L_A]: p.append('diário depois de restaurar: %s (esperado C, B, A)' % [x.get('t', '?')[6:7] for x in (d or [])])
+        ex = json.loads(tudo.get('capitao.executado.v1') or '{}')
+        if ex != {'t1': feita(20), 't2': feita(22)}: p.append('tarefas feitas: %r' % ex)
+        eq = json.loads(tudo.get('capitao.equipe.v1') or '{}')
+        if eq.get('fones') != {'Mecânico': 'tel-teste-2', 'Marinheiro': 'tel-teste-1'}: p.append('Equipe: %r' % eq)
+        if tudo.get('capitao.tema.v1') != 'claro': p.append('o tema mudou sem a caixa marcada')
+        if any(tudo.get(k) != v for k, v in SEGREDOS.items()) or 'lucas' not in (tudo.get('capitao.sessao.v1') or ''):
+            p.append('restaurar mexeu em sessão ou segredo')
+        if fim['classe'] != 'ok' or 'Nada deste aparelho foi apagado' not in fim['msg']: p.append('mensagem final: %r' % fim)
+
+        # 3) Restaurar de novo: nada novo, nada duplica; o tema só volta com a caixa marcada.
+        p = res['restaurar de novo e preferências'] = []
+        r = escolhe(caminho)
+        if not r['previa'] or 'nada novo' not in r['resumo'] or r['botao']: p.append('2ª prévia (nada novo, Restaurar desligado sem a caixa): %r' % r)
+        if r['caixa']:
+            pg.check('#prefs')
+        if pg.is_disabled('#restaurar'): p.append('Restaurar continua desligado com a caixa marcada')
+        restaura()
+        tudo = ls()
+        if diario() != [L_C, L_B, L_A]: p.append('2ª restauração mudou o diário')
+        if tudo.get('capitao.tema.v1') != 'escuro' or pg.evaluate("() => document.documentElement.getAttribute('data-capitao-tema')") != 'escuro':
+            p.append('com a caixa marcada o tema não voltou para o do arquivo (escuro)')
+
+        # 4) Arquivo de outro app, de formato novo, corrompido ou com forma errada: mensagem de erro e nada muda.
+        p = res['arquivo ruim'] = []
+        linhas = json.dumps([L_D])
+        ruins = {
+            'outro app': json.dumps({'app': 'Outro App', 'formato': 1, 'dados': {'capitao.diario.v1': linhas}}),
+            'formato novo': json.dumps({'app': 'Capitão IA', 'formato': 2, 'dados': {'capitao.diario.v1': linhas}}),
+            'cortado': texto[:len(texto) // 2],
+            'não é JSON': 'isto não é uma cópia',
+            'diário que não é lista': json.dumps({'app': 'Capitão IA', 'formato': 1, 'dados': {'capitao.diario.v1': json.dumps({'t': 'x'}), 'capitao.docs.v1': '[]'}}),
+            'valor que não é texto': json.dumps({'app': 'Capitão IA', 'formato': 1, 'dados': {'capitao.diario.v1': [L_D]}}),
+            'tema inválido': json.dumps({'app': 'Capitão IA', 'formato': 1, 'dados': {'capitao.diario.v1': linhas, 'capitao.tema.v1': 'roxo'}}),
+        }
+        for caso, corpo in ruins.items():
+            antes = ls()
+            r = escolhe({'name': 'copia.json', 'mimeType': 'application/json', 'buffer': corpo.encode('utf-8')})
+            if r['classe'] != 'erro' or 'Nada mudou' not in r['msg'] or r['previa']: p.append('%s: %r' % (caso, r['msg']))
+            if ls() != antes: p.append('%s: o aparelho mudou' % caso)
+        r = escolhe({'name': 'copia.json', 'mimeType': 'application/json', 'buffer': ruins['formato novo'].encode('utf-8')})
+        if 'mais nova' not in r['msg']: p.append('formato novo sem "versão mais nova": %r' % r['msg'])
+        r = escolhe({'name': 'copia.json', 'mimeType': 'application/json', 'buffer': ruins['outro app'].encode('utf-8')})
+        if 'outro app' not in r['msg']: p.append('outro app sem dizer: %r' % r['msg'])
+
+        # 5) Arquivo montado à mão com sessão de outro usuário e outra chave da IA: só a linha D entra.
+        p = res['segredo no arquivo'] = []
+        mao = {'app': 'Capitão IA', 'formato': 1, 'dados': {'capitao.sessao.v1': json.dumps({'u': 'demo', 'em': 1, 'exp': 9e15}),
+               'capitao.ia.chave.v1': 'chave-do-arquivo', 'capitao.login.tentativas.v1': '{}', 'capitao.diario.v1': linhas}}
+        r = escolhe({'name': 'copia.json', 'mimeType': 'application/json', 'buffer': json.dumps(mao).encode('utf-8')})
+        if not r['previa'] or 'sess' in r['resumo'].lower() or 'chave' in r['resumo'].lower(): p.append('prévia: %r' % r['resumo'])
+        restaura()
+        tudo = ls()
+        if diario() != [L_C, L_B, L_A, L_D]: p.append('diário: %s (esperado C, B, A, D)' % [x.get('t', '?')[6:7] for x in (diario() or [])])
+        if tudo.get('capitao.ia.chave.v1') != SEGREDOS['capitao.ia.chave.v1'] or '"lucas"' not in (tudo.get('capitao.sessao.v1') or '') \
+                or tudo.get('capitao.login.tentativas.v1') != SEGREDOS['capitao.login.tentativas.v1']:
+            p.append('sessão, tentativas ou chave da IA vieram do arquivo')
+    except Exception as e:  # um passo que não chega ao fim (botão escondido, prazo) vira falha do caso, não derruba a matriz
+        p.append('não chegou ao fim: ' + str(e).splitlines()[0][:200])
+    res['erro de script'] = list(erros)
+    ctx.close()
+
+    # 6) Atrás do login: sem sessão, a página vai para o login (e volta para ela depois de entrar).
+    p = res['sem sessão'] = []
+    ctx = b.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
+    pg = ctx.new_page()
+    pg.goto(BASE + 'dados.html', wait_until='load')
+    pg.wait_for_timeout(300)
+    if 'login.html?next=dados.html' not in pg.url: p.append('sem sessão abriu %s' % pg.url)
+    ctx.close()
+    return res
+
+
+def teste_offline(b, lista, paginas=()):
+    """1ª visita com internet (SW instala), depois abre cada tela sem rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele.
+    Com "dados" na lista: a página dos Dados do aparelho também abre sem rede (CORE do sw.js), com a lista e o ∞."""
     prob = []
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     ctx.add_init_script(SESSAO)
@@ -562,7 +762,29 @@ def teste_offline(b, lista):
     guardou = pg.evaluate('(us) => Promise.all(us.map((u) => caches.match(u).then(Boolean)))', [REACT_LOCAL + arq for arq in REACT_ARQS])
     if guardou != [True, True]:
         prob.append('React fora do CORE do sw.js: a instalação não guardou %s' % ', '.join(arq for arq, g in zip(REACT_ARQS, guardou) if not g))
+    # dados.html no CORE: conferido no cache da instalação (como o React), e aberta logo depois de cortar a rede — mais adiante
+    # o SW pode ter reiniciado e o modo offline do Playwright nem sempre alcança o SW novo.
+    if 'dados' in paginas and not pg.evaluate('(u) => caches.match(u).then(Boolean)', BASE + 'dados.html'):
+        prob.append('dados.html fora do CORE do sw.js: a instalação não a guardou')
     ctx.set_offline(True)
+    if 'dados' in paginas:
+        pg5 = ctx.new_page()
+        erros5 = []
+        pg5.on('pageerror', lambda e: erros5.append(str(e)[:200]))
+        try:
+            pg5.goto(BASE + 'dados.html', wait_until='load', timeout=20000)
+            pg5.wait_for_timeout(400)
+            r = pg5.evaluate("""() => ({ titulo: document.title, lista: (document.getElementById('lista') || {}).textContent || '',
+  falta: [...document.images].filter((i) => i.src.indexOf('/assets/') >= 0 && (!i.complete || !i.naturalWidth)).map((i) => i.src.split('/').pop()) })""")
+            if r['titulo'] != 'Dados do aparelho · Capitão IA' or 'lendo' in r['lista']:
+                prob.append('dados.html offline: %r · %r' % (r['titulo'], r['lista'][:60]))
+            if r['falta']:
+                prob.append('dados.html offline sem: ' + ', '.join(r['falta']))
+        except Exception as e:
+            prob.append('dados.html offline: ' + str(e)[:120])
+        if erros5:
+            prob.append('dados.html offline com erro: ' + erros5[0])
+        pg5.close()
     for tela in lista:
         erros = []
         pg2 = ctx.new_page()

@@ -16,7 +16,7 @@ const TELAS = [
   'G3-Diario-Web', 'G3-Diario-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile', 'H3-Atalhos-Editar-Web', 'H3-Atalhos-Editar'
 ];
 const CORE = [
-  './', './index.html', './login.html', './support.js', './capitao-dados.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
+  './', './index.html', './login.html', './dados.html', './support.js', './capitao-dados.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
   './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json',
   './capitao-simbolo.js', './capitao-rosto.js', './deck-stage.js', './manifest.webmanifest',
   './assets/wonderhub-simbolo.png', './assets/wonderhub-assinatura.jpg', './assets/logo-wonderboat-240.png', './assets/wonderhub-favicon.ico',
