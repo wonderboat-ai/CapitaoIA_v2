@@ -430,10 +430,11 @@
     if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
     if (has(q, ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'])) return 'posicao';
-    // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?"), e depois das rotas
-    // de equipamento: relato ("a âncora garrou com a rajada", "a rajada rasgou o toldo") e limite do barco ("qual a rajada máxima que
-    // o barco aguenta?") seguem o equipamento ou a IA, como antes.
-    if (has(q, [' rajada']) && (RAJADA_SO.test(q) || has(q, [' hoje', 'amanha', 'agora', 'previst', 'esperad', 'vai ter', 'vai dar', 'tem rajada', 'ha rajada', 'havera', 'como esta', 'quant', 'do dia'])) && !has(q, ['aguent', 'suport', 'resist', 'limite'])) return 'clima';
+    // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?", "previsão de rajada"),
+    // e depois das rotas de equipamento. "Hoje"/"agora" sozinhos não bastam: relato ("pegamos uma rajada agora e o barco adernou",
+    // "a rajada de hoje arrancou o toldo", "a âncora garrou com a rajada"), pessoa em risco e limite do barco seguem o equipamento ou a IA.
+    if (has(q, [' rajada']) && (RAJADA_SO.test(q) || has(q, ['previs', 'vai ter rajada', 'tem rajada', ' ha rajada', 'havera rajada', 'como estao as rajadas', 'como esta a rajada', 'como vao estar as rajadas']))
+      && !has(q, RAJADA_RELATO)) return 'clima';
     if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce']) || SOBRE.test(q)) return 'saudacao';
     return 'fallback';
   }
@@ -442,6 +443,9 @@
   var SOBRE = / (?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu) (?:faz|sabe|pode|consegue|responde)| quem (?:e|eh) (?:voce|vc|tu) | quem (?:voce|vc) e | como (?:voce|vc) funciona| como (?:funciona|uso|usar) (?:o |este |esse )?(?:app|aplicativo|capitao)| (?:para|pra) que (?:voce |vc )?serve/;
   // Só a palavra: "rajada?", "e as rajadas?", "rajada máxima".
   var RAJADA_SO = /^ (?:e )?(?:as? )?rajadas?(?: maximas?)? $/;
+  // Relato, pessoa em risco ou limite do barco junto de "rajada": nunca a previsão do dia.
+  var RAJADA_RELATO = ['aguent', 'suport', 'resist', 'limite', 'derrub', 'quebr', 'rasg', 'arrebent', 'arranc', 'voou', 'apag', 'deslig', 'virou',
+    'adern', 'caiu', 'feri', 'machuc', 'pegamos', 'pegou', 'bateu', 'jogou', 'garr', 'alguem', 'tripulante', 'pessoa', 'o que faco', 'entrando'];
 
   var CANON = {}; ALL.forEach(function (x) { CANON[x.id] = norm(x.q).trim(); });
 
