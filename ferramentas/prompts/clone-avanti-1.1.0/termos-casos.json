@@ -1,0 +1,91 @@
+{
+ "barra": {
+  "AUTENTICIDADE": [
+   "os dados são fictícios",
+   "leitura simulada às 10:12",
+   "São dados de demonstração",
+   "modo demonstração",
+   "informações simuladas",
+   "valores fictícios",
+   "São dados de teste",
+   "o barco é fictício",
+   "a navegação é simulada",
+   "esta embarcação é de demonstração",
+   "é uma simulação",
+   "os dados são inventados",
+   "estes valores não são reais",
+   "Na demonstração o MMSI 710123456 é fictício",
+   "(agenda de demonstração)",
+   "Guia de bordo de demonstração",
+   "MMSI fictício de demonstração",
+   "embarcação Capitão IA (demonstração)"
+  ],
+  "ROTULOS": [
+   "SEM DADOS",
+   "SEM LEITURA do ferro",
+   "MANUAL NO DRIVE",
+   "snapshot DEMO"
+  ],
+  "DINHEIRO": [
+   "O dólar está R$ 5,40",
+   "custa 300 reais",
+   "O dólar está cotado a 5,40",
+   "O diesel sai a 6,29 o litro",
+   "uns 5 mil reais",
+   "30 euros",
+   "€ 30"
+  ],
+  "PESSOAIS": [
+   "Ligue para a marina: (47) 3367-1234",
+   "+55 47 99999-0000",
+   "fale com joao@marina.com.br",
+   "CPF 123.456.789-00"
+  ],
+  "LOCAL_SEGURANCA": [
+   "Os coletes ficam no paiol de proa.",
+   "O extintor fica debaixo do banco"
+  ],
+  "VAZIOS": [
+   "modelo: n/d",
+   "não informado",
+   "Telefones: A CADASTRAR",
+   "prazo a definir",
+   "satélites: — ·"
+  ],
+  "VISIVEL": [
+   "SNAPSHOT DEMO 26/09",
+   "Telemetria ao vivo desligada",
+   "MODELO DE ALERTA · NADA O DISPARA"
+  ],
+  "ANEXO": [
+   "nota fiscal A CONFERIR",
+   "foto: A CONFIRMAR"
+  ]
+ },
+ "passa": [
+  "Olá, Demo! O motor está a 2.050 rpm.",
+  "itens a conferir antes de sair",
+  "para conferir a pressão, olhe o painel",
+  "use o simulador",
+  "exercício simulado de homem ao mar",
+  "atividade simulada de abandono",
+  "uma demonstração das funções do app",
+  "demonstração do procedimento de MOB",
+  "faça o autoteste do EPIRB",
+  "teste a bomba de porão",
+  "sem leitura, confira o cabo",
+  "valor de teste da bateria: 12,6 V",
+  "dados do motor: 2.050 rpm",
+  "use o menu para definir o raio",
+  "Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.",
+  "Horímetro 1.236,4 h · diesel 848 L de 1.600 L",
+  "Navegando a 18,2 nós, rumo 120°, às 14:32:05.",
+  "Coletes: um por pessoa — conte as pessoas a bordo agora. Balsa e extintores: no local da placa de salvatagem e do plano de segurança de bordo.",
+  "O guia de bordo indica 3,0 a 5,5 bar",
+  "Isso fica fora do barco. Aqui a bordo, 14:32:05: 18,2 nós, diesel 61 %.",
+  "Consumo de cruzeiro: 68 L/h; lenta 6,2 L/h.",
+  "Diesel: 848 L de 1.600 L (54 %).",
+  "Autonomia ≈ 11,2 h ou 202 mn."
+ ],
+ "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
+}
