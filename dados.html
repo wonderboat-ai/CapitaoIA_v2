@@ -113,7 +113,11 @@ input[type=file] { display: none; }
   function fora(k) { return !NOME.test(k) || FORA.indexOf(k) >= 0 || SEGREDO.test(k); }
   function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
   function txt(x) { return typeof x === 'string'; }
-  function linhas(campo) { return { forma: 'lista', item: function (x) { return obj(x) && txt(x[campo]); } }; }
+  // quando = a hora de uma linha, para a ordem da lista (mais nova primeiro, como o app grava com unshift); null = sem hora.
+  function linhas(campo, quando) { return { forma: 'lista', item: function (x) { return obj(x) && txt(x[campo]); }, quando: quando }; }
+  // Diário: o iso que o addDiario grava. Documentos e abastecimentos: a data dd/mm/aaaa que G1 (dd) e G2 (d) gravam.
+  function hora(x) { var t = obj(x) && txt(x.iso) ? Date.parse(x.iso) : NaN; return isNaN(t) ? null : t; }
+  function dia(campo) { return function (x) { var m = obj(x) && txt(x[campo]) ? /^(\d{2})\/(\d{2})\/(\d{4})/.exec(x[campo]) : null; return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : null; }; }
   // Nome de uma tarefa da agenda ou de um contato da Equipe (capitao-dados.js), para a prévia dizer o que volta.
   function nomeEm(lista, id, campo) { var x = (lista || []).filter(function (a) { return a && a.id === id; })[0]; return x && txt(x[campo]) ? x[campo] : String(id); }
   function dadosBarco() { return window.CapitaoDados || {}; }
@@ -123,11 +127,11 @@ input[type=file] { display: none; }
   // Item que o app descarta não entra: no registro que só cresce ficaria para sempre sem aparecer, e um Executado ilegível
   // marcaria a tarefa como feita. nomeia = como a prévia diz o item que volta (diário, documentos e abastecimentos: só a conta).
   var REGISTRO = {
-    'capitao.diario.v1': { nome: 'Diário de bordo', un: ['linha', 'linhas'], partes: { '': linhas('t') } },
+    'capitao.diario.v1': { nome: 'Diário de bordo', un: ['linha', 'linhas'], partes: { '': linhas('t', hora) } },
     'capitao.executado.v1': { nome: 'Tarefas feitas (Executado)', un: ['tarefa', 'tarefas'], partes: { '': { forma: 'mapa',
       item: function (x) { return obj(x) && txt(x.d) && txt(x.t); }, nomeia: function (id) { return nomeEm(dadosBarco().agenda, id, 't'); } } } },
-    'capitao.docs.v1': { nome: 'Documentos enviados', un: ['documento', 'documentos'], partes: { '': linhas('n') } },
-    'capitao.abast.v1': { nome: 'Abastecimentos enviados', un: ['abastecimento', 'abastecimentos'], partes: { '': linhas('n') } },
+    'capitao.docs.v1': { nome: 'Documentos enviados', un: ['documento', 'documentos'], partes: { '': linhas('n', dia('dd')) } },
+    'capitao.abast.v1': { nome: 'Abastecimentos enviados', un: ['abastecimento', 'abastecimentos'], partes: { '': linhas('n', dia('d')) } },
     'capitao.equipe.v1': { nome: 'Equipe (telefones e convites)', un: ['item', 'itens'], partes: {
       fones: { forma: 'mapa', item: txt, nomeia: function (id) { return 'telefone de ' + nomeEm((dadosBarco().equipe || {}).apoio, id, 'papel'); } },
       convites: { forma: 'lista', item: linhas('nome').item, nomeia: function (c) { return 'convite de ' + c.nome; } } } }
@@ -212,8 +216,10 @@ input[type=file] { display: none; }
     if (x && typeof x === 'object') return '{' + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(x[k]); }).join(',') + '}';
     return JSON.stringify(x);
   }
-  // Soma sem apagar, numa parte: { valor, novos, ilegiveis, retidos }. Lista → a linha que o aparelho não tem entra no lugar dela
-  // na ordem do arquivo (antes da próxima linha do arquivo que o aparelho já tem; sem nenhuma, no fim) e o que já está aqui não sai
+  // Soma sem apagar, numa parte: { valor, novos, ilegiveis, retidos }. Lista → a linha que o aparelho não tem entra pela hora
+  // (mais nova primeiro, que é como o app lê: o A2 mostra a [0] como "último", o cérebro e a ficha da IA as 3 primeiras): depois da
+  // última linha mais nova que ela e antes da primeira mais velha. Entre as de mesma hora (ou sem hora) e para a linha sem hora,
+  // vale a ordem do arquivo: antes da próxima linha do arquivo que o aparelho já tem; sem nenhuma, no fim. O que já está aqui não sai
   // nem muda de ordem. Mapa → entra a chave que falta; chave que os dois têm fica a do aparelho. Item do arquivo que o app não lê
   // fica de fora (ilegiveis), e também o que o diário diz que foi desfeito depois (retidos).
   function somaParte(P, aqui, arq, desfeito) {
@@ -230,8 +236,13 @@ input[type=file] { display: none; }
       });
       marca.forEach(function (m, i) {
         if (!m.novo) return;
-        var pos = out.length;
+        var pos = out.length, t = P.quando ? P.quando(m.x) : null, lo = 0, hi = out.length, k, tk;
         for (var j = i + 1; j < marca.length; j++) if (!marca[j].novo) { var p = cs.indexOf(marca[j].c); if (p >= 0) { pos = p; break; } }
+        if (t != null) {
+          for (k = 0; k < out.length; k++) { tk = P.quando(out[k]); if (tk != null && tk < t) { hi = k; break; } }
+          for (k = hi - 1; k >= 0; k--) { tk = P.quando(out[k]); if (tk != null && tk > t) { lo = k + 1; break; } }
+          pos = Math.min(Math.max(pos, lo), hi);
+        }
         out.splice(pos, 0, m.x); cs.splice(pos, 0, m.c); r.novos.push(m.x);
       });
       r.valor = out;
@@ -251,7 +262,7 @@ input[type=file] { display: none; }
   // o convite (G4) tiram o item e gravam uma linha no diário, que é o registro. Restaurar não devolve o item quando a linha mais
   // nova do diário (deste aparelho ou do arquivo) sobre ele é a de desfazer: uma tarefa atrasada não volta como feita, um telefone
   // apagado não volta ao SOS. Os textos são os que essas telas gravam (testes/verificar.py confere nelas).
-  function momento(x) { var t = txt(x.iso) ? Date.parse(x.iso) : NaN; return isNaN(t) ? 0 : t; }
+  function momento(x) { var t = hora(x); return t == null ? 0 : t; }
   function comeca(s, p) { return s.indexOf(p) === 0; }
   function desfeitoDepois(diario, fez, desfez, desde) {
     var f = desde, u = null;

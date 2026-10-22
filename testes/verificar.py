@@ -22,8 +22,10 @@ não uma tela): cada shortcut tem ícone any e maskable; cada src responde 200 e
 struct, sem Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
 Dados do aparelho (dados.html, paridade Avanti 1.24.0), como o login e a lista: em todos os tamanhos e nos dois temas, sem erro,
 sem rolagem lateral, com o fundo do tema e o SOS à vista no topo e depois de rolar até o fim (S1 no computador, S2 no celular);
-o rodapé do Main e da H2 leva a ela. Ida e volta: o diário com A e B vai para o arquivo (sem a sessão, as tentativas de login nem
-as chaves); o aparelho passa a ter A e C; restaurar dá C, B e A (nenhuma linha some, nada duplica ao restaurar de novo); tarefas
+o rodapé do Main e da H2 leva a ela. Ida e volta: o diário, os documentos e os abastecimentos com A e B vão para o arquivo (sem a
+sessão, as tentativas de login nem as chaves); o aparelho passa a ter A e C; restaurar dá C, B e A (nenhuma linha some, nada
+duplica ao restaurar de novo); a linha que entra vai pela hora, mais nova primeiro (sem linha em comum: aparelho A, arquivo C e B
+→ C, B, A; a mais nova do arquivo vira o "último" do A2 e abre os "Últimos registros"), a sem hora na ordem do arquivo; tarefas
 feitas e Equipe só somam; o tema só volta com a caixa marcada; arquivo de outro app, de formato novo, corrompido ou com linha de
 forma errada não muda nada; sessão e chave da IA de um arquivo montado à mão nunca entram; item que o app não lê (linha sem
 texto, Executado sem data, telefone que não é texto) nunca entra no registro. Desfeito depois não volta: marcar o Executado (C1),
@@ -590,6 +592,22 @@ def linha_teste(letra, dia):
 
 
 L_A, L_B, L_C, L_D, L_E = linha_teste('A', 20), linha_teste('B', 21), linha_teste('C', 22), linha_teste('D', 23), linha_teste('E', 24)
+# Linha sem hora (iso): na restauração vale a ordem do arquivo.
+L_X = {k: v for k, v in linha_teste('X', 21).items() if k != 'iso'}
+
+
+# Documento e abastecimento no formato que G1 e G2 gravam (addDoc / addAbast: mais novo primeiro, data dd/mm/aaaa, sem iso).
+def doc_teste(letra, dia):
+    return {'n': 'Documento %s do teste da cópia.pdf' % letra, 's': '120 KB', 'dd': '%02d/10/2026' % dia, 'st': 'A CONFERIR', 'cat': 'Seguro',
+            'fonte': 'enviado no console por Lucas'}
+
+
+def abast_teste(letra, dia):
+    return {'n': 'NF %s do teste da cópia.jpg' % letra, 'd': '%02d/10/2026' % dia, 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no console por Lucas'}
+
+
+D_A, D_B, D_C = doc_teste('A', 20), doc_teste('B', 21), doc_teste('C', 22)
+N_A, N_B, N_C = abast_teste('A', 20), abast_teste('B', 21), abast_teste('C', 22)
 # Linhas que a restauração do dados.html lê para não devolver o que foi desfeito depois (Executado desfeito, telefone apagado, convite
 # cancelado). As telas web são conferidas clicando (teste_dados); as do app, que gravam o mesmo texto, no código.
 TEXTOS_DESFEITO = {
@@ -651,15 +669,18 @@ def teste_dados(b):
         return pg.evaluate("() => ({ msg: document.getElementById('msg').textContent, classe: document.getElementById('msg').className })")
 
     try:
-        # 1) Baixar: o diário com A e B (mais nova primeiro), uma tarefa feita, Equipe, tema escuro e os segredos.
+        # 1) Baixar: o diário, os documentos e os abastecimentos com A e B (mais novo primeiro), uma tarefa feita, Equipe, tema
+        # escuro e os segredos.
         p = res['baixar'] = []
         pg.goto(BASE + 'dados.html', wait_until='load')
         pg.evaluate(GRAVA_LS, dict(SEGREDOS, **{'capitao.diario.v1': json.dumps([L_B, L_A]), 'capitao.executado.v1': json.dumps({'t1': feita(20)}),
+                                             'capitao.docs.v1': json.dumps([D_B, D_A]), 'capitao.abast.v1': json.dumps([N_B, N_A]),
                                              'capitao.equipe.v1': json.dumps({'fones': {'Marinheiro': 'tel-teste-1'}, 'convites': []}), 'capitao.tema.v1': 'escuro'}))
         pg.reload(wait_until='load')
         pg.wait_for_timeout(300)
         lista = pg.inner_text('#lista')
-        if 'Diário de bordo · 2 linhas' not in lista or 'segredo' in lista or 'sessao' in lista:
+        if 'Diário de bordo · 2 linhas' not in lista or 'Documentos enviados · 2 documentos' not in lista \
+                or 'Abastecimentos enviados · 2 abastecimentos' not in lista or 'segredo' in lista or 'sessao' in lista:
             p.append('lista do aparelho: %r' % lista)
         with pg.expect_download() as dl:
             pg.click('#baixar')
@@ -670,24 +691,33 @@ def teste_dados(b):
         pac = json.loads(texto)
         if not re.fullmatch(r'capitao-dados-\d{4}-\d{2}-\d{2}\.json', nome): p.append('nome do arquivo %r' % nome)
         if pac.get('app') != 'Capitão IA' or pac.get('formato') != 1 or not pac.get('versao'): p.append('cabeçalho do pacote: %r' % {k: pac.get(k) for k in ('app', 'formato', 'versao')})
-        esperadas = ['capitao.diario.v1', 'capitao.equipe.v1', 'capitao.executado.v1', 'capitao.tema.v1']
+        esperadas = ['capitao.abast.v1', 'capitao.diario.v1', 'capitao.docs.v1', 'capitao.equipe.v1', 'capitao.executado.v1', 'capitao.tema.v1']
         if sorted(pac.get('dados', {})) != esperadas: p.append('chaves no arquivo %s (esperado %s)' % (sorted(pac.get('dados', {})), esperadas))
         vazou = [x for x in ['capitao.sessao', 'segredo-teste', 'capitao.login', 'capitao.ia.', 'capitao.telemetria', 'capitao.voz', 'capitao.clima'] if x in texto]
         if vazou: p.append('o arquivo leva o que nunca vai: %s' % vazou)
         if json.loads(pac['dados'].get('capitao.diario.v1', 'null')) != [L_B, L_A]: p.append('diário no arquivo diferente do aparelho')
+        if json.loads(pac['dados'].get('capitao.docs.v1', 'null')) != [D_B, D_A] or json.loads(pac['dados'].get('capitao.abast.v1', 'null')) != [N_B, N_A]:
+            p.append('documentos ou abastecimentos no arquivo diferentes do aparelho')
 
-        # 2) O aparelho passa a ter A e C (B não está mais aqui), outra tarefa feita, outro telefone e o tema claro. Restaurar soma.
+        # 2) O aparelho passa a ter A e C no diário, nos documentos e nos abastecimentos (B não está mais aqui, C é novo), outra
+        # tarefa feita, outro telefone e o tema claro. Restaurar soma: nada some, nada duplica.
         p = res['restaurar soma'] = []
         pg.evaluate(GRAVA_LS, {'capitao.diario.v1': json.dumps([L_C, L_A]), 'capitao.executado.v1': json.dumps({'t2': feita(22)}),
+                               'capitao.docs.v1': json.dumps([D_C, D_A]), 'capitao.abast.v1': json.dumps([N_C, N_A]),
                                'capitao.equipe.v1': json.dumps({'fones': {'Mecânico': 'tel-teste-2'}, 'convites': []}), 'capitao.tema.v1': 'claro'})
         pg.reload(wait_until='load')
         r = escolhe(caminho)
-        if not r['previa'] or 'falta aqui 1 linha' not in r['resumo'] or 'falta aqui 1 tarefa' not in r['resumo']:
-            p.append('prévia: %r · %r' % (r['msg'], r['resumo']))
+        for falta in ('Diário de bordo · 2 linhas no arquivo · falta aqui 1 linha', 'falta aqui 1 tarefa',
+                      'Documentos enviados · 2 documentos no arquivo · falta aqui 1 documento',
+                      'Abastecimentos enviados · 2 abastecimentos no arquivo · falta aqui 1 abastecimento'):
+            if not r['previa'] or falta not in r['resumo']: p.append('prévia sem %r: %r · %r' % (falta, r['msg'], r['resumo']))
         if not r['caixa'] or r['marcada'] or not r['botao']: p.append('caixa das preferências (à vista, desmarcada) e Restaurar: %r' % r)
         fim = restaura()
         d, tudo = diario(), ls()
         if d != [L_C, L_B, L_A]: p.append('diário depois de restaurar: %s (esperado C, B, A)' % [x.get('t', '?')[6:7] for x in (d or [])])
+        if json.loads(tudo.get('capitao.docs.v1') or 'null') != [D_C, D_B, D_A]: p.append('documentos depois de restaurar: %r (esperado C, B, A)' % tudo.get('capitao.docs.v1'))
+        if json.loads(tudo.get('capitao.abast.v1') or 'null') != [N_C, N_B, N_A]: p.append('abastecimentos depois de restaurar: %r (esperado C, B, A)' % tudo.get('capitao.abast.v1'))
+        if 'Documentos enviados +1' not in fim['msg'] or 'Abastecimentos enviados +1' not in fim['msg']: p.append('mensagem final sem documentos e abastecimentos: %r' % fim['msg'])
         ex = json.loads(tudo.get('capitao.executado.v1') or '{}')
         if ex != {'t1': feita(20), 't2': feita(22)}: p.append('tarefas feitas: %r' % ex)
         eq = json.loads(tudo.get('capitao.equipe.v1') or '{}')
@@ -707,6 +737,8 @@ def teste_dados(b):
         restaura()
         tudo = ls()
         if diario() != [L_C, L_B, L_A]: p.append('2ª restauração mudou o diário')
+        if json.loads(tudo.get('capitao.docs.v1') or 'null') != [D_C, D_B, D_A] or json.loads(tudo.get('capitao.abast.v1') or 'null') != [N_C, N_B, N_A]:
+            p.append('2ª restauração mudou documentos ou abastecimentos')
         if tudo.get('capitao.tema.v1') != 'escuro' or pg.evaluate("() => document.documentElement.getAttribute('data-capitao-tema')") != 'escuro':
             p.append('com a caixa marcada o tema não voltou para o do arquivo (escuro)')
 
@@ -740,7 +772,9 @@ def teste_dados(b):
         if not r['previa'] or 'sess' in r['resumo'].lower() or 'chave' in r['resumo'].lower(): p.append('prévia: %r' % r['resumo'])
         restaura()
         tudo = ls()
-        if diario() != [L_C, L_B, L_A, L_D]: p.append('diário: %s (esperado C, B, A, D)' % [x.get('t', '?')[6:7] for x in (diario() or [])])
+        # Antes a linha sem âncora no aparelho ia para o fim ([C, B, A, D]); D (23/10) é a mais nova e o app lê a lista com a mais
+        # nova primeiro (A2 "último", diarioLer): ela entra no topo. Mudado na revisão da F25.
+        if diario() != [L_D, L_C, L_B, L_A]: p.append('diário: %s (esperado D, C, B, A)' % [x.get('t', '?')[6:7] for x in (diario() or [])])
         if tudo.get('capitao.ia.chave.v1') != SEGREDOS['capitao.ia.chave.v1'] or '"lucas"' not in (tudo.get('capitao.sessao.v1') or '') \
                 or tudo.get('capitao.login.tentativas.v1') != SEGREDOS['capitao.login.tentativas.v1']:
             p.append('sessão, tentativas ou chave da IA vieram do arquivo')
@@ -847,19 +881,55 @@ def teste_dados(b):
         leva = pg.inner_text('#leva')
         if 'posições do barco gravadas no diário' not in leva or 'SOS' not in leva or 'contatos de convite' not in leva:
             p.append('o aviso não diz que a cópia leva as posições do diário e os contatos de convite: %r' % leva)
+
+        # 9) Ordem pela hora: o app grava a lista com a mais nova primeiro (unshift) e lê as primeiras (A2 "último", diarioLer e a
+        # ficha da IA). A linha que entra vai pela hora, mesmo sem linha em comum com o aparelho; a sem hora fica na ordem do arquivo;
+        # as do aparelho não trocam de lugar entre si.
+        p = res['ordem pela hora'] = []
+
+        def letras(xs):
+            return [str(x.get('t') or x.get('n') or '?').split(' ')[1] if isinstance(x, dict) else '?' for x in (xs or [])]
+
+        # a) Cópia de outro aparelho, sem linha em comum: aparelho [A], arquivo [C, B] → [C, B, A], nas três listas.
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': json.dumps([L_A]), 'capitao.docs.v1': json.dumps([D_A]), 'capitao.abast.v1': json.dumps([N_A])})
+        pg.reload(wait_until='load')
+        escolhe(arquivo({'capitao.diario.v1': json.dumps([L_C, L_B]), 'capitao.docs.v1': json.dumps([D_C, D_B]), 'capitao.abast.v1': json.dumps([N_C, N_B])}))
+        restaura()
+        tudo = ls()
+        for k, esp, rot in (('capitao.diario.v1', [L_C, L_B, L_A], 'diário'), ('capitao.docs.v1', [D_C, D_B, D_A], 'documentos'),
+                            ('capitao.abast.v1', [N_C, N_B, N_A], 'abastecimentos')):
+            v = json.loads(tudo.get(k) or 'null')
+            if v != esp: p.append('sem linha em comum, %s: %s (esperado C, B, A)' % (rot, letras(v)))
+        # b) A linha do arquivo é a mais nova de todas: aparelho [B, A], arquivo [E, X (sem hora), A] → [E, B, X, A]. O "último" do
+        # A2 e os "Últimos registros do diário" do cérebro começam pela E.
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': json.dumps([L_B, L_A])})
+        pg.reload(wait_until='load')
+        escolhe(arquivo({'capitao.diario.v1': json.dumps([L_E, L_X, L_A])}))
+        restaura()
+        d = diario()
+        if d != [L_E, L_B, L_X, L_A]: p.append('linha mais nova no arquivo: %s (esperado E, B, X, A)' % letras(d))
+        a2 = tela('A2-Ponte-Mobile.dc.html')
+        try:
+            a2.wait_for_function("() => document.body.innerText.indexOf('último 24/10') >= 0", timeout=8000)
+        except Exception:
+            p.append('o A2 não mostra "último 24/10" (linha E) depois de restaurar')
+        ult = a2.evaluate("() => window.CapitaoBrain.answer('últimos registros do diário', {}).text")
+        topo = [l for l in ult.split('\n') if l.startswith('•')][:1]
+        if not topo or 'Linha E' not in topo[0]: p.append('"últimos registros do diário" não começa pela linha E: %r' % ult[:200])
+        a2.close()
     except Exception as e:  # um passo que não chega ao fim (botão escondido, prazo) vira falha do caso, não derruba a matriz
         p.append('não chegou ao fim: ' + str(e).splitlines()[0][:200])
     res['erro de script'] = list(erros)
     ctx.close()
 
-    # 9) Os textos que a restauração reconhece continuam nas telas (as do app gravam o mesmo que as web, clicadas acima).
+    # 10) Os textos que a restauração reconhece continuam nas telas (as do app gravam o mesmo que as web, clicadas acima).
     p = res['textos de desfazer nas telas'] = []
     for tela_, trechos in TEXTOS_DESFEITO.items():
         fonte = open(os.path.join(RAIZ, tela_ + '.dc.html'), encoding='utf-8').read()
         for tr in trechos:
             if tr not in fonte: p.append('%s não grava mais %r: atualize junto o dados.html (regrasDesfeito)' % (tela_, tr))
 
-    # 10) Atrás do login: sem sessão, a página vai para o login (e volta para ela depois de entrar).
+    # 11) Atrás do login: sem sessão, a página vai para o login (e volta para ela depois de entrar).
     p = res['sem sessão'] = []
     ctx = b.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
     pg = ctx.new_page()
