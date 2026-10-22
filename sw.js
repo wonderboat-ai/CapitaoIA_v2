@@ -2,7 +2,8 @@
    Instala já com todas as telas: a 1ª tela aberta carrega antes do SW e nunca entraria no cache.
    Offline sem a página no cache → aviso fixo com SOS (nunca o index.html, que redireciona e podia entrar em laço).
    Lançar versão: CACHE aqui = VERSAO em capitao-auth.js = VERSAO em capitao-brain.js e capitao-ia.js = tabela do README.
-   Arquivo novo usado offline → CORE/TELAS. */
+   Arquivo novo usado offline → CORE/TELAS. Tudo o que o SW guarda é do próprio site (o React, de assets/vendor, desde a
+   paridade com o Avanti 1.24.0); clima, maré e proxies vão direto para a rede. */
 const CACHE = 'capitao-site-v1.0.9';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
@@ -18,25 +19,19 @@ const CORE = [
   './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json',
   './capitao-simbolo.js', './capitao-rosto.js', './deck-stage.js', './manifest.webmanifest',
   './assets/wonderhub-simbolo.png', './assets/wonderhub-assinatura.jpg', './assets/logo-wonderboat-240.png', './assets/wonderhub-favicon.ico',
-  './assets/wonderhub-apple-touch-icon.png', './assets/wonderhub-icon-192.png'
+  './assets/wonderhub-apple-touch-icon.png', './assets/wonderhub-icon-192.png',
+  // React (sem ele nenhuma tela abre, nem o SOS): do próprio site, cópia do pacote npm com o hash SRI do support.js (antes: unpkg,
+  // em melhor esforço — se o unpkg caísse, a tela só abria com a cópia do aparelho).
+  './assets/vendor/react-18.3.1/react.production.min.js', './assets/vendor/react-18.3.1/react-dom.production.min.js'
 ].concat(TELAS.map((t) => './' + t + '.dc.html'));
-// React (unpkg, versão fixa): sem ele nenhuma tela abre offline. Melhor esforço — se falhar aqui, entra no cache no próximo uso online.
-const CDN = [
-  'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
-  'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js'
-];
 // Melhor esforço, fora do "tudo ou nada" e fora da instalação: o PDF do Guia rápido (1,7 MB) atrasava — ou, com a conexão
 // caindo no meio, derrubava — a instalação de versão nova no 4G. Idem as imagens grandes que não servem à emergência (a
 // logo Wonder BOAT do fecho do Manual e os ícones 512 do app instalado). Baixados depois de a versão ativar.
 const EXTRA = ['./assets/logo-wonderboat.png', './assets/wonderhub-icon-512.png', './assets/wonderhub-icon-maskable-512.png', './Guia-Rapido-Capitao-IA.pdf'];
 self.addEventListener('install', (e) => {
   self.skipWaiting();
-  // Arquivos do site: tudo ou nada (se um falhar, a instalação falha e o navegador tenta de novo na próxima visita).
-  // React (versão fixa): reaproveita a cópia de qualquer versão anterior; sem ela, busca com prazo (não prende a instalação).
-  e.waitUntil(caches.open(CACHE).then((c) => Promise.all([
-    c.addAll(CORE.map((u) => new Request(u, { cache: 'no-cache' }))),
-    Promise.all(CDN.map((u) => comPrazo(caches.match(u).then((hit) => hit ? c.put(u, hit) : c.add(new Request(u, { mode: 'cors' }))), 8000).catch(() => null)))
-  ])));
+  // Arquivos do site (React inclusive): tudo ou nada (se um falhar, a instalação falha e o navegador tenta de novo na próxima visita).
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE.map((u) => new Request(u, { cache: 'no-cache' })))));
 });
 // Versão nova assumiu: apaga o cache da anterior e passa a controlar as telas abertas. Cada tela precisa recarregar para
 // rodar os arquivos novos — no celular, o app instalado fica vivo na memória com o código anterior. O SW avisa
@@ -101,17 +96,16 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const same = url.origin === self.location.origin;
-  const cdn = /(^|\.)unpkg\.com$/.test(url.hostname);
-  if (!same && !cdn) return; // clima, maré e proxies: sempre da rede (sem cache aqui)
+  if (!same) return; // clima, maré e proxies: sempre da rede (sem cache aqui)
   const guardado = () => caches.match(req, { ignoreSearch: same });
   const buscar = () => daRede(req, same).then((res) => {
     // Guarda sem o #…: nada do endereço depois do # vai para o cache.
     if (res && (res.ok || res.type === 'opaque')) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(same ? url.origin + url.pathname + url.search : req, copy)).catch(() => {}); }
     return res;
   });
-  // React da CDN: versão fixa (com SRI), não muda — cópia guardada primeiro; sem ela, a rede. Com sinal fraco, o SOS e as
-  // outras telas montam sem esperar o unpkg.
-  if (cdn) { e.respondWith(guardado().then((hit) => hit || buscar())); return; }
+  // React (assets/vendor): versão fixa no caminho (com SRI), não muda — cópia guardada primeiro; sem ela, a rede. Com sinal
+  // fraco, o SOS e as outras telas montam sem esperar mais um prazo de 4 s depois do support.js.
+  if (/\/assets\/vendor\//.test(url.pathname)) { e.respondWith(guardado().then((hit) => hit || buscar())); return; }
   const rede = buscar();
   rede.catch(() => {}); // a busca que perdeu para a cópia guardada pode falhar depois: sem erro solto
   e.waitUntil(rede.catch(() => {})); // a cópia se atualiza mesmo quando a resposta saiu da reserva

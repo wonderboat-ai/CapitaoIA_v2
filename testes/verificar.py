@@ -4,6 +4,8 @@
 Cada tela × tema (escuro, claro) × tamanho (web 1440×900 · 1280×720 · 1920×1080 · 1024×768;
 app 390×844 · 360×640 · 430×932 · 844×390). Confere: erro de script, rolagem lateral, imagem/ícone
 deformado (proporção exibida × natural) e se a prancheta desenhou. Opcional: offline depois da 1ª visita.
+React do próprio site (assets/vendor): com o unpkg.com fora do ar, o início (web e app) e o SOS montam, sem erro de script e
+sem nenhum pedido ao unpkg; no teste offline, nenhum pedido ao unpkg (instalação do SW inclusive).
 Também o login e a lista (index.html?v=lista), fora das TELAS do sw.js, em todos os tamanhos: sem erro, sem rolagem
 lateral, sem imagem deformada; no login, o ENTRAR na 1ª tela (altura ≥ 640) e o crédito inteiro (altura ≥ 844).
 
@@ -20,6 +22,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 from playwright.sync_api import sync_playwright
 
 BASE = 'http://127.0.0.1:8765/'
@@ -28,6 +31,9 @@ SAIDA = os.path.join(os.path.dirname(__file__), 'saida')
 WEB = [(1440, 900), (1280, 720), (1920, 1080), (1024, 768)]
 APP = [(390, 844), (360, 640), (430, 932), (844, 390)]
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
+# React do próprio site (paridade Avanti 1.24.0): estas telas montam com o unpkg.com fora do ar.
+SEM_UNPKG = ['Main', 'H2-Home-Mobile', 'S2-SOS-Mobile']
+REACT_LOCAL = BASE + 'assets/vendor/react-18.3.1/'
 
 
 def telas():
@@ -38,6 +44,18 @@ def telas():
 
 def eh_app(t):
     return not (t == 'Main' or t.endswith('-Web') or t.startswith('D-') or t.startswith('Manual-'))
+
+
+def eh_unpkg(url):
+    return bool(re.search(r'(^|\.)unpkg\.com$', urllib.parse.urlparse(url).hostname or ''))
+
+
+def corta_unpkg(ctx):
+    """unpkg.com fora do ar no contexto (o route mais novo ganha do que já houver); devolve a lista dos pedidos que tentaram ir para lá."""
+    pedidos = []
+    ctx.on('request', lambda r: pedidos.append(r.url) if eh_unpkg(r.url) else None)
+    ctx.route('https://unpkg.com/**', lambda rt: rt.abort('connectionrefused'))
+    return pedidos
 
 
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
@@ -144,6 +162,13 @@ def main():
                         falhas.append({'tela': nome, 'tema': tema, 'tam': '%dx%d' % (w, h), 'prob': prob})
                         print('FALHA', nome, tema, '%dx%d' % (w, h), ' | '.join(prob))
                     ctx.close()
+        if not so_offline:
+            for tela in [t for t in SEM_UNPKG if t in lista]:
+                total += 1
+                prob = teste_sem_unpkg(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'sem unpkg', 'prob': prob})
+                    print('FALHA sem unpkg', tela, ' | '.join(prob))
         if offline:
             total += 1
             prob = teste_offline(b, lista)
@@ -156,11 +181,41 @@ def main():
     sys.exit(1 if falhas else 0)
 
 
+def teste_sem_unpkg(b, tela):
+    """unpkg.com abortado: a tela monta (dc-root com filhos), sem erro de script, com o React de assets/vendor e sem pedido ao unpkg."""
+    movel = eh_app(tela)
+    w, h = (APP if movel else WEB)[0]
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
+                        is_mobile=movel, has_touch=movel, service_workers='block')
+    ctx.add_init_script(SESSAO)
+    unpkg = corta_unpkg(ctx)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    prob = []
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception:
+        prob.append('não montou em 15 s')
+    pg.wait_for_timeout(900)
+    r = pg.evaluate("""() => ({ react: !!(window.React && window.ReactDOM),
+  src: [...document.scripts].map((s) => s.src).filter((s) => /\\/react(-dom)?\\.production\\.min\\.js$/.test(s)) })""")
+    if not r['react']: prob.append('sem React')
+    if len(r['src']) != 2 or not all(s.startswith(REACT_LOCAL) for s in r['src']): prob.append('React fora de assets/vendor: %s' % r['src'])
+    if erros: prob += erros
+    if unpkg: prob.append('%d pedido(s) ao unpkg: %s' % (len(unpkg), unpkg[0]))
+    ctx.close()
+    return prob
+
+
 def teste_offline(b, lista):
-    """1ª visita com internet (SW instala), depois abre cada tela sem rede."""
+    """1ª visita com internet (SW instala), depois abre cada tela sem rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele."""
     prob = []
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     ctx.add_init_script(SESSAO)
+    unpkg = corta_unpkg(ctx)
     pg = ctx.new_page()
     pg.goto(BASE + 'Main.dc.html', wait_until='load')
     try:
@@ -218,6 +273,8 @@ def teste_offline(b, lista):
         prob.append('capitao-rosto.js offline: ' + str(e)[:120])
     pg3.close()
     ctx.close()
+    if unpkg:
+        prob.append('%d pedido(s) ao unpkg no teste offline (o React sai da cópia guardada de assets/vendor): %s' % (len(unpkg), unpkg[0]))
     return prob
 
 

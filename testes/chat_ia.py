@@ -9,7 +9,7 @@ falada; que link de fora (#q=) não gasta a cota e link de dentro do app usa a I
 que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com o rosto
 de partículas (canvas + CapitaoRosto) e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
-    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; precisa de internet para o React do unpkg)
+    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; o React vem do próprio site, assets/vendor)
 """
 import functools
 import http.server

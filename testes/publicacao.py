@@ -6,6 +6,8 @@ B = esta árvore de trabalho · B2 = B com a versão trocada para '<versão>-tes
  2) app aberto na B; publica B2; a tela volta para a frente (visibilitychange) → procura versão → recarrega em B2.
  3) sem internet: SOS e início abrem do cache.
  4) sinal fraco (servidor demora 8 s): a tela abre da cópia guardada em ~4 s.
+ 4b) sinal fraco só no React (assets/vendor, versão fixa no caminho): sai da cópia guardada sem esperar a rede.
+ Da B em diante, unpkg.com fora do ar (React do próprio site, paridade Avanti 1.24.0): nenhum pedido a ele.
 
     python -X utf8 testes/publicacao.py [ref-publicada]        (antes do merge: compara com a versão no ar)
 """
@@ -30,7 +32,7 @@ for pasta, vn in ((B2, VB2), (B3, VB3)):
                              ('capitao-brain.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % vn), ('capitao-ia.js', "var VERSAO = '%s'" % VB, "var VERSAO = '%s'" % vn)]:
         p = os.path.join(pasta, arq); s = open(p, encoding='utf-8').read(); assert velho in s, arq; open(p, 'w', encoding='utf-8', newline='\n').write(s.replace(velho, novo))
 
-ESTADO = {'raiz': A, 'lento': 0, 'maxage': 60}
+ESTADO = {'raiz': A, 'lento': 0, 'lento_vendor': 0, 'maxage': 60}
 T0 = time.time()
 
 
@@ -39,10 +41,18 @@ class H(http.server.BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        try:
+            self.responde()
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # sinal fraco: o navegador desistiu da resposta lenta (a tela já abriu da cópia guardada)
+
+    def responde(self):
         rel = urllib.parse.unquote(self.path.split('?')[0].split('#')[0].lstrip('/')) or 'index.html'
         f = os.path.join(ESTADO['raiz'], rel)
         if ESTADO['lento'] and rel.endswith('.html'):
             time.sleep(ESTADO['lento'])
+        if ESTADO['lento_vendor'] and rel.startswith('assets/vendor/'):
+            time.sleep(ESTADO['lento_vendor'])
         if not os.path.isfile(f):
             self.send_response(404); self.end_headers(); return
         dados = open(f, 'rb').read()
@@ -97,6 +107,13 @@ with sync_playwright() as p:
             time.sleep(1)
         return s
 
+    # React do próprio site: da B em diante, unpkg.com fora do ar e nenhum pedido a ele. A publicada (A) pode ser anterior e
+    # ainda usar o unpkg — o cenário 1 roda antes do corte.
+    unpkg = []
+    def corta_unpkg():
+        ctx.on('request', lambda r: unpkg.append(r.url) if re.search(r'(^|\.)unpkg\.com$', urllib.parse.urlparse(r.url).hostname or '') else None)
+        ctx.route('https://unpkg.com/**', lambda rt: rt.abort('connectionrefused'))
+
     if VA != VB:
         # 1) A instalada e usada (SW da A + cache HTTP fresco dos arquivos da A)
         pg.goto(BASE + 'H2-Home-Mobile.dc.html'); pronta(pg)
@@ -112,8 +129,10 @@ with sync_playwright() as p:
         s = espera_versao(VB)
         ok('1) logo depois de publicar, a 1ª abertura ainda pode vir velha (servida pelo SW da %s com o cache HTTP)' % VA, True, s0)
         ok('1) sem tocar em nada, a tela se recarrega sozinha e roda a %s inteira (SW novo ativa e recarrega)' % VB, s.get('auth') == VB and s.get('brain') == VB and s.get('ia') == VB and s.get('oque') == 'saudacao', s)
+        corta_unpkg()
     else:
         print('(cenário 1 pulado: %s já tem a versão %s desta árvore)' % (REF, VB))
+        corta_unpkg()
         ESTADO['raiz'] = B
         pg.goto(BASE + 'H2-Home-Mobile.dc.html'); pronta(pg)
         pg.wait_for_function('() => navigator.serviceWorker.ready.then(() => true)', timeout=20000)
@@ -168,6 +187,19 @@ with sync_playwright() as p:
     dt = time.time() - t1
     ESTADO['lento'] = 0
     ok('4) sinal fraco (servidor 8 s): a tela abre da cópia guardada em menos de 7 s', dt < 7, '%.1f s' % dt)
+
+    # 4b) sinal fraco só no React: versão fixa no caminho, sai da cópia guardada na hora (sem mais um prazo de 4 s)
+    ESTADO['lento_vendor'] = 8
+    t1 = time.time()
+    pg.goto(BASE + 'H2-Home-Mobile.dc.html', timeout=30000)
+    try:
+        pronta(pg, 20000)
+    except Exception:
+        pass
+    dt = time.time() - t1
+    ESTADO['lento_vendor'] = 0
+    ok('4b) sinal fraco no React (servidor 8 s em assets/vendor): sai da cópia guardada, a tela abre em menos de 4 s', dt < 4, '%.1f s' % dt)
+    ok('da %s em diante, com o unpkg fora do ar, nenhum pedido a ele (React de assets/vendor)' % VB, not unpkg, '; '.join(unpkg[:3]))
     ok('sem erro de script', not erros, '; '.join(erros))
     b.close()
 srv.shutdown()
