@@ -18,6 +18,9 @@ Cada leitor viu um subsistema só. Onde duas áreas propuseram desenhos diferent
 - **Replay × SOS.** O replay é um global à parte, `CapitaoReplay`, nunca `window.CapitaoTelemetria`. Não roda em `/SOS-/`, **não muta `D.snapshot`** (a S2 lê direto dele) e não é carregado em S1/S2. O cérebro lê `estado()` = replay ou `D.snapshot`. Onde a área "Telemetria e telas" propõe espelhar o quadro em `D.snapshot` ou pôr o replay em *todas* as telas, ignore: fica fora das duas telas do SOS.
 - **Alarme no roteiro.** O padrão é um AVISO (arrefecimento). O alarme crítico de óleo é opção (`cenario: 'alarme-critico'`), nunca grava no diário sozinho e nunca abre o SOS nem a C3.
 - **Coordenadas na ficha.** Ficam fora (`semCoord` estendido às coordenadas decimais); a IA usa posição relativa. Onde a área "IA na nuvem" sugere desligar o `semCoord` na simulação, ignore.
+- **Base de comparação com o Avanti 1.4.6.** É o tree do commit `867791b` ("Capitão IA 1.0.0 (#1)"). Os commits `6595c12` e `ed08e95` têm só 14 arquivos (núcleo e entrada): as telas, a moldura e o Manual não existem neles.
+- **Usuário convidado.** O botão do login usa o NOME exibido como id (`login.html:120/:133` → `capitao-auth.js:101-102`). Mudar só o nome exibido quebra o login. Ver a decisão (k) do PROMPT.
+- **Rebase de prazos.** Fica no rodapé gerado do `capitao-dados.js` e nunca toca o `D.snapshot`. Previsão e maré nunca são simuladas (PROMPT §2.5).
 - **Nome do módulo.** `capitao-replay.js`. As áreas usaram também `capitao-aovivo.js` e `capitao-reproducao.js`; é o mesmo módulo.
 
 ## 1. Versão e publicação
