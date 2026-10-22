@@ -17,6 +17,9 @@ temas); sem rede e sem leitura do dia, "—" (nunca o vento do snapshot); sem re
 rajada que o ECMWF não trouxe vem do melhor modelo, dito no title. Na B3-Carta-Resposta (responde ali mesmo, sem o cabeçalho do
 clima), a leitura de hoje salva entra no clima e no "seguro para sair?" como na home, com fonte, hora e o windy.com em nova aba;
 sem ela, SEM DADOS e nenhum vento previsto.
+Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio), em toda rodada (é o manifest, não uma tela):
+cada shortcut tem ícone any e maskable; cada src responde 200 e o PNG tem o tamanho declarado (cabeçalho lido com struct, sem
+Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -29,9 +32,12 @@ Navegador: Edge instalado (channel="msedge").
 import json
 import os
 import re
+import struct
 import sys
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from playwright.sync_api import sync_playwright
 
 BASE = 'http://127.0.0.1:8765/'
@@ -204,6 +210,11 @@ def main():
                 if prob:
                     falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
                     print('FALHA reserva do React', ' | '.join(prob))
+            for nome, prob in teste_atalhos(b).items():  # sempre: é o manifest, não uma tela
+                total += 1
+                if prob:
+                    falhas.append({'tela': 'manifest', 'tema': 'atalho ' + nome, 'prob': prob})
+                    print('FALHA atalho', nome, ' | '.join(prob))
         if offline:
             total += 1
             prob = teste_offline(b, lista)
@@ -443,6 +454,93 @@ def teste_reserva(b, tela):
     if erros: prob += erros
     ctx.close()
     return prob
+
+
+def tamanho_png(dados):
+    """(largura, altura) do cabeçalho IHDR do PNG, lido com struct (sem Pillow); None se não for PNG."""
+    if len(dados) < 24 or dados[:8] != b'\x89PNG\r\n\x1a\n' or dados[12:16] != b'IHDR':
+        return None
+    return struct.unpack('>II', dados[16:24])
+
+
+# Desenho de um ícone de atalho, no navegador (o PNG do mesmo site não "suja" o canvas): pixels do desenho (opacos e longe do
+# fundo #050816; a borda suavizada do disco do any fica de fora), retângulo que os contém, quantos saem da zona segura do
+# maskable (círculo de raio 0,4 × lado) e quantos pixels são opacos.
+DESENHO_ATALHO = """async ([src, lado]) => {
+  const im = new Image(); im.src = src; await im.decode();
+  const c = document.createElement('canvas'); c.width = c.height = lado;
+  const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, lado, lado).data, m = lado / 2, zona = 0.4 * lado;
+  let n = 0, fora = 0, opacos = 0, x0 = lado, y0 = lado, x1 = -1, y1 = -1;
+  for (let y = 0; y < lado; y++) for (let x = 0; x < lado; x++) {
+    const i = (y * lado + x) * 4;
+    if (d[i + 3] === 255) opacos++;
+    if (d[i + 3] < 128 || Math.abs(d[i] - 5) + Math.abs(d[i + 1] - 8) + Math.abs(d[i + 2] - 22) < 60) continue;
+    n++; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+    if (Math.hypot(x + 0.5 - m, y + 0.5 - m) > zona) fora++;
+  }
+  return { n, fora, opacos, caixa: [x0, y0, x1 + 1, y1 + 1] };
+}"""
+
+
+def teste_atalhos(b):
+    """Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio: ferramentas/icones/gerar_atalhos.py).
+    Cada shortcut do manifest.webmanifest tem ícone any e maskable (image/png); cada src responde 200 no servidor local e o PNG
+    tem exatamente o tamanho declarado em sizes (cabeçalho lido com struct). No navegador: há desenho, centrado (a caixa dele a
+    no máximo 4 % do centro); no any ele não encosta na borda; no maskable o fundo é inteiro (todo pixel opaco) e o desenho fica
+    dentro da zona segura. Devolve {nome do atalho: [problemas]}."""
+    man = json.load(open(os.path.join(RAIZ, 'manifest.webmanifest'), encoding='utf-8'))
+    sem_proxy = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    ctx = b.new_context(viewport={'width': 400, 'height': 300}, device_scale_factor=1, service_workers='block')
+    ctx.route(BASE + '__atalhos__', lambda rt: rt.fulfill(status=200, content_type='text/html; charset=utf-8', body='<!doctype html><title>atalhos</title>'))
+    pg = ctx.new_page()
+    pg.goto(BASE + '__atalhos__')
+    res = {}
+    for sc in man.get('shortcuts') or [{'short_name': '(nenhum shortcut no manifest)'}]:
+        nome = sc.get('short_name') or sc.get('name')
+        prob = res[nome] = []
+        icones = sc.get('icons') or []
+        for pp in ('any', 'maskable'):
+            if not any(pp in (i.get('purpose') or 'any').split() for i in icones):
+                prob.append('sem ícone %s' % pp)
+        for i in icones:
+            src, sizes = i.get('src') or '', i.get('sizes') or ''
+            tag = src or '(sem src)'
+            if i.get('type') != 'image/png':
+                prob.append('%s: type %r (esperado image/png)' % (tag, i.get('type')))
+            m = re.fullmatch(r'(\d+)x(\d+)', sizes)
+            if not m:
+                prob.append('%s: sizes %r fora do formato LxA' % (tag, sizes)); continue
+            decl = (int(m.group(1)), int(m.group(2)))
+            try:
+                with sem_proxy.open(BASE + src, timeout=10) as r:
+                    st, dados = r.status, r.read()
+            except urllib.error.HTTPError as e:
+                st, dados = e.code, b''
+            except Exception as e:
+                prob.append('%s: %s' % (tag, str(e)[:120])); continue
+            if st != 200:
+                prob.append('%s: HTTP %s' % (tag, st)); continue
+            real = tamanho_png(dados)
+            if real != decl:
+                prob.append('%s: PNG %s, declarado %s' % (tag, 'x'.join(map(str, real)) if real else 'inválido', sizes)); continue
+            lado = decl[0]
+            mask = 'maskable' in (i.get('purpose') or '').split()
+            d = pg.evaluate(DESENHO_ATALHO, [BASE + src, lado])
+            if d['n'] < 0.03 * lado * lado:
+                prob.append('%s: quase sem desenho (%d pixels)' % (tag, d['n'])); continue
+            x0, y0, x1, y1 = d['caixa']
+            desvio = max(abs((x0 + x1) / 2 - lado / 2), abs((y0 + y1) / 2 - lado / 2))
+            if desvio > 0.04 * lado:
+                prob.append('%s: desenho fora do centro (caixa %s, desvio %.1f px)' % (tag, d['caixa'], desvio))
+            if mask and d['opacos'] != lado * lado:
+                prob.append('%s: maskable com fundo transparente (%d de %d pixels opacos)' % (tag, d['opacos'], lado * lado))
+            if mask and d['fora']:
+                prob.append('%s: %d pixel(s) do desenho fora da zona segura de 80 %%' % (tag, d['fora']))
+            if not mask and min(x0, y0, lado - x1, lado - y1) < 0.1 * lado:
+                prob.append('%s: desenho encostando na borda (caixa %s)' % (tag, d['caixa']))
+    ctx.close()
+    return res
 
 
 def teste_offline(b, lista):

@@ -16,8 +16,23 @@
     { "src": "assets/wonderhub-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "SOS · emergência", "short_name": "SOS", "url": "./S2-SOS-Mobile.dc.html" },
-    { "name": "Console", "short_name": "Console", "url": "./A2-Ponte-Mobile.dc.html" },
-    { "name": "Diário de bordo", "short_name": "Diário", "url": "./G3-Diario-Mobile.dc.html" }
+    { "name": "SOS · emergência", "short_name": "SOS", "url": "./S2-SOS-Mobile.dc.html", "icons": [
+      { "src": "assets/atalho-sos-96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-sos-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-sos-mask-96.png", "sizes": "96x96", "type": "image/png", "purpose": "maskable" },
+      { "src": "assets/atalho-sos-mask-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+    ] },
+    { "name": "Console", "short_name": "Console", "url": "./A2-Ponte-Mobile.dc.html", "icons": [
+      { "src": "assets/atalho-console-96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-console-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-console-mask-96.png", "sizes": "96x96", "type": "image/png", "purpose": "maskable" },
+      { "src": "assets/atalho-console-mask-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+    ] },
+    { "name": "Diário de bordo", "short_name": "Diário", "url": "./G3-Diario-Mobile.dc.html", "icons": [
+      { "src": "assets/atalho-diario-96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-diario-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+      { "src": "assets/atalho-diario-mask-96.png", "sizes": "96x96", "type": "image/png", "purpose": "maskable" },
+      { "src": "assets/atalho-diario-mask-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" }
+    ] }
   ]
 }
