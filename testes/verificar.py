@@ -654,7 +654,7 @@ def teste_dados(b):
         pg.wait_for_function("() => document.getElementById('msg').textContent.trim()", timeout=5000)
         return pg.evaluate("""() => ({ msg: document.getElementById('msg').textContent, classe: document.getElementById('msg').className,
           previa: !document.getElementById('previa').hidden, resumo: document.getElementById('resumo').innerText,
-          caixa: !document.getElementById('prefsCaixa').hidden, marcada: document.getElementById('prefs').checked,
+          caixa: (() => { const c = document.getElementById('prefsCaixa'); return !!(c && c.offsetParent !== null && c.getBoundingClientRect().height > 0); })(), marcada: document.getElementById('prefs').checked,
           botao: !document.getElementById('restaurar').disabled })""")
 
     def arquivo(dados):
@@ -741,6 +741,11 @@ def teste_dados(b):
             p.append('2ª restauração mudou documentos ou abastecimentos')
         if tudo.get('capitao.tema.v1') != 'escuro' or pg.evaluate("() => document.documentElement.getAttribute('data-capitao-tema')") != 'escuro':
             p.append('com a caixa marcada o tema não voltou para o do arquivo (escuro)')
+
+        # 3b) Arquivo só com o diário: a caixa das preferências não aparece (o CSS da página não pode vencer o hidden).
+        p = res['sem preferência no arquivo, sem caixa'] = []
+        r = escolhe(arquivo({'capitao.diario.v1': json.dumps([L_D])}))
+        if not r['previa'] or r['caixa']: p.append('arquivo sem preferência mostrou a caixa das preferências: %r' % r)
 
         # 4) Arquivo de outro app, de formato novo, corrompido ou com forma errada: mensagem de erro e nada muda.
         p = res['arquivo ruim'] = []

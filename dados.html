@@ -41,7 +41,7 @@ button.sec { background: transparent; border-color: var(--cap-line2, #27315a); c
 button:disabled { opacity: 0.5; cursor: default; }
 .prefs { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--cap-ink2, #b1bdd6); cursor: pointer; }
 .prefs input { width: 20px; height: 20px; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--cap-accent, #00a1fe); }
-#previa[hidden] { display: none; }
+#previa[hidden], .prefs[hidden] { display: none; }
 #previa { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--cap-line, #1a2240); }
 #msg { min-height: 20px; margin: 0; font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
 #msg.ok { color: var(--cap-ok, #34c77a); } #msg.erro { color: var(--cap-crit, #ff3b30); }
