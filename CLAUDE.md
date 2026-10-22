@@ -17,10 +17,11 @@ Travas (ganham de qualquer decisão):
 13. Fora do barco e dinheiro: rota local; nunca preço, telefone, e-mail, CPF/CNPJ ou nome de terceiro.
 14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce; linhas com `sim: true`.
 15. Faixas do "Guia de bordo — `<equipamento>` §n"; modelos de mercado diferentes dos do Avanti; registro sem colisão.
-16. `support.js` e `deck-stage.js` não se editam à mão; nunca `{{…}}` em atributo de SVG; Worker real só com motivo.
+16. `support.js` e `deck-stage.js` não se editam à mão; nunca `{{…}}` em atributo de SVG; Worker real só com motivo; não contornar o painel nem o WAF da Cloudflare.
 (a) núcleo do Avanti em canvas · (b) nenhum selo · (c) crítico desligado · (d) 1.1.0 · (e) barco, registro e rota escolhidos pelo Claude (PARIDADE)
 (f) frase padrão da `sobreDados` · (g) exceções do "toda resposta com dado" · (h) runtime atual · (i) ficha até 16.000 se passar de ~11.500
 (j) posição contínua pela rota · (k) convidado: chave `demo`, nome Convidado, papel convidado.
+Das linhas marcadas abaixo, continua valendo o que esta seção não contradiz, como: `capitao-dados.js` e `base-conhecimento.json` só pelo gerador (nunca à mão); palavras de rota que cabem dentro de outras vão com espaço (`' onan '`); `RATE = 1.15` em toda fala (SOS inclusive); logs de invocação do Worker desligados (gravavam o `X-Capitao-Chave`).
 Vale sobre as linhas marcadas abaixo enquanto `simulacao: true`; com `simulacao: false` volta a regra Nada inventado.
 
 Cérebro operacional da embarcação **Capitão IA** (fabricante/modelo e registro SEM DADOS · proprietário Lucas Araújo · base Balneário Camboriú (SC) · fuso America/Sao_Paulo). (substituído pela Decisão 1.1.0)
