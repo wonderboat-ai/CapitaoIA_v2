@@ -5,7 +5,7 @@
 2. CONVERSA do Avanti: núcleo de anéis em `<canvas>`, cores WonderHUB, ∞ no centro; sai o rosto; contrato `.cpz` mantido.
 3. Dados completos e nenhum selo: sem DEMO, SEM DADOS, SEM LEITURA, MANUAL NO DRIVE ou A CONFERIR/A CONFIRMAR em dado de bordo (anexos à parte).
 4. Navegação simulada: laço de 150 s (`capitao-replay.js`), âncora 07:00 America/Sao_Paulo, posição contínua pela rota; tudo lê o mesmo instante.
-5. Respostas com número e hora; nunca "fictício/simulado/DEMO"; nunca afirma que é real (`sobreDados`: frase padrão do PROMPT §2.6).
+5. Respostas com número e hora; nunca "fictício/simulado/DEMO"; nunca afirma que é real (`sobreDados`: frase padrão do PROMPT §2.6); conhecimento de náutica sem rótulo (segurança e saúde: "procedimento padrão — confirmar com o protocolo de bordo").
 6. `D.simulacao` gerado. `false` = replay inerte, caminho `null` → SEM DADOS, IA sem modo, filtros de simulação desligados (coordenadas continuam).
 Travas (ganham de qualquer decisão):
 7. SOS (S1/S2) fora da simulação: só nome e protocolos; posição = GPS do aparelho ou LEIA NO PLOTTER; offline, sem login, nunca recarrega.
@@ -15,7 +15,7 @@ Travas (ganham de qualquer decisão):
 11. O replay não gera emergência: só AVISO; crítico só com `cenario: 'alarme-critico'` (desligado). Nunca abre SOS/C3, fala ou grava sozinho.
 12. Tempo e maré sempre reais; vento e mar do quadro só "a bordo agora".
 13. Fora do barco e dinheiro: rota local; nunca preço, telefone, e-mail, CPF/CNPJ ou nome de terceiro.
-14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce; linhas com `sim: true`.
+14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce; linhas com `sim: true` (menos as do SOS, que nunca o levam).
 15. Faixas do "Guia de bordo — `<equipamento>` §n"; modelos de mercado diferentes dos do Avanti; registro sem colisão.
 16. `support.js` e `deck-stage.js` não se editam à mão; nunca `{{…}}` em atributo de SVG; Worker real só com motivo; não contornar o painel nem o WAF da Cloudflare.
 (a) núcleo do Avanti em canvas · (b) nenhum selo · (c) crítico desligado · (d) 1.1.0 · (e) barco, registro e rota escolhidos pelo Claude (PARIDADE)
