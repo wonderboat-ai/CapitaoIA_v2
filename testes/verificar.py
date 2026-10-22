@@ -6,7 +6,8 @@ app 390×844 · 360×640 · 430×932 · 844×390). Confere: erro de script, rola
 deformado (proporção exibida × natural) e se a prancheta desenhou. Opcional: offline depois da 1ª visita.
 React do próprio site (assets/vendor): com o unpkg.com fora do ar, o início (web e app) e o SOS montam, sem erro de script e
 sem nenhum pedido ao unpkg; no teste offline, nenhum pedido ao unpkg (instalação do SW inclusive) e a instalação já
-guarda os dois arquivos do React (CORE do sw.js, tudo ou nada).
+guarda os dois arquivos do React (CORE do sw.js, tudo ou nada). Reserva da troca de versão: com o assets/vendor fora, o SOS
+monta com o React do endereço do unpkg e o mesmo SRI (o cache do SW da 1.0.x tem essa cópia; aqui o teste a serve).
 Também o login e a lista (index.html?v=lista), fora das TELAS do sw.js, em todos os tamanhos: sem erro, sem rolagem
 lateral, sem imagem deformada; no login, o ENTRAR na 1ª tela (altura ≥ 640) e o crédito inteiro (altura ≥ 844).
 
@@ -36,6 +37,9 @@ MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML,
 SEM_UNPKG = ['Main', 'H2-Home-Mobile', 'S2-SOS-Mobile']
 REACT_LOCAL = BASE + 'assets/vendor/react-18.3.1/'
 REACT_ARQS = ['react.production.min.js', 'react-dom.production.min.js']
+# reserva do support.js quando a cópia local falha (troca de versão com o SW da 1.0.x): endereço do unpkg → arquivo local (mesmos bytes)
+REACT_RESERVA = {'https://unpkg.com/react@18.3.1/umd/react.production.min.js': 'react.production.min.js',
+                 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js': 'react-dom.production.min.js'}
 
 
 def telas():
@@ -171,6 +175,12 @@ def main():
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'sem unpkg', 'prob': prob})
                     print('FALHA sem unpkg', tela, ' | '.join(prob))
+            if 'S2-SOS-Mobile' in lista:
+                total += 1
+                prob = teste_reserva(b, 'S2-SOS-Mobile')
+                if prob:
+                    falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
+                    print('FALHA reserva do React', ' | '.join(prob))
         if offline:
             total += 1
             prob = teste_offline(b, lista)
@@ -208,6 +218,44 @@ def teste_sem_unpkg(b, tela):
     if len(r['src']) != 2 or not all(s.startswith(REACT_LOCAL) for s in r['src']): prob.append('React fora de assets/vendor: %s' % r['src'])
     if erros: prob += erros
     if unpkg: prob.append('%d pedido(s) ao unpkg: %s' % (len(unpkg), unpkg[0]))
+    ctx.close()
+    return prob
+
+
+def teste_reserva(b, tela):
+    """Troca de versão com o SW da 1.0.x: o cache dele pode ficar com o support.js novo sem o assets/vendor. Com a cópia local
+    fora, a tela (o SOS) monta com o React da reserva — o endereço do unpkg, com o mesmo SRI —, sem erro de script. O teste
+    serve a reserva com os bytes de assets/vendor (os do pacote npm): não depende da internet."""
+    ctx = b.new_context(viewport={'width': APP[0][0], 'height': APP[0][1]}, user_agent=MOBILE_UA, is_mobile=True, has_touch=True,
+                        service_workers='block')
+    ctx.add_init_script(SESSAO)
+    pedidos = []
+
+    def unpkg(rt):
+        pedidos.append(rt.request.url)
+        arq = REACT_RESERVA.get(rt.request.url)
+        if not arq:
+            return rt.abort('connectionrefused')
+        rt.fulfill(path=os.path.join(RAIZ, 'assets', 'vendor', 'react-18.3.1', arq), status=200,
+                   headers={'content-type': 'text/javascript; charset=utf-8', 'access-control-allow-origin': '*'})
+    ctx.route('https://unpkg.com/**', unpkg)
+    ctx.route(REACT_LOCAL + '**', lambda rt: rt.abort('connectionrefused'))
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    prob = []
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception:
+        prob.append('não montou em 15 s com a cópia local fora')
+    pg.wait_for_timeout(900)
+    r = pg.evaluate("() => ({ react: !!(window.React && window.ReactDOM && window.ReactDOM.createRoot), texto: document.body.innerText.toUpperCase() })")
+    if not r['react']: prob.append('sem React')
+    if 'CANAL 16' not in r['texto'] and 'MAYDAY' not in r['texto']: prob.append('SOS sem CANAL 16 / MAYDAY: ' + r['texto'][:120])
+    if sorted(pedidos) != sorted(REACT_RESERVA): prob.append('reserva fora do esperado: %s' % pedidos)
+    if erros: prob += erros
     ctx.close()
     return prob
 

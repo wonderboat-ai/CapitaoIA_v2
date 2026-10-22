@@ -1146,6 +1146,12 @@
   var REACT_SRI = "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z";
   var REACT_DOM_URL = "assets/vendor/react-18.3.1/react-dom.production.min.js";
   var REACT_DOM_SRI = "sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1";
+  // Capitão IA (só do Capitão — reponha se o arquivo for trocado inteiro de novo): o SW da 1.0.x guarda arquivo por arquivo
+  // e, se a conexão cai logo depois deste support.js, fica com ele sem o assets/vendor — offline, nem o SOS abriria. Só
+  // quando a cópia local falha, o React sai do unpkg com o MESMO SRI: o cache da 1.0.x tem essa cópia e a serve offline.
+  // Com a local, nenhum pedido ao unpkg (testes/verificar.py e testes/publicacao.py conferem).
+  var REACT_RESERVA = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
+  var REACT_DOM_RESERVA = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
   var BABEL_URL = "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js";
   var BABEL_SRI = "sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y";
   function cdnScriptFor(url, sri) {
@@ -1845,7 +1851,11 @@
     return Promise.all([
       loadScript(react.src, react.integrity),
       loadScript(reactDom.src, reactDom.integrity)
-    ]).then(() => void 0);
+    ]).then(() => void 0, (err) => react.integrity ? Promise.all([
+      // Capitão IA: reserva da troca de versão (ver REACT_RESERVA); os dois de novo, na ordem (o ReactDOM precisa do React).
+      loadScript(REACT_RESERVA, REACT_SRI),
+      loadScript(REACT_DOM_RESERVA, REACT_DOM_SRI)
+    ]).then(() => void 0) : Promise.reject(err));
   }
   function init() {
     const runtime = createRuntime(document);
