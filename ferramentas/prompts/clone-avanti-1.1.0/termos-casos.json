@@ -33,7 +33,8 @@
    "O diesel sai a 6,29 o litro",
    "uns 5 mil reais",
    "30 euros",
-   "€ 30"
+   "€ 30",
+   "O câmbio do dólar hoje está em 5,40."
   ],
   "PESSOAIS": [
    "Ligue para a marina: (47) 3367-1234",
@@ -43,7 +44,8 @@
   ],
   "LOCAL_SEGURANCA": [
    "Os coletes ficam no paiol de proa.",
-   "O extintor fica debaixo do banco"
+   "O extintor fica debaixo do banco",
+   "O Sea-Fire fica na praça de máquinas."
   ],
   "VAZIOS": [
    "modelo: n/d",
@@ -85,7 +87,9 @@
   "Isso fica fora do barco. Aqui a bordo, 14:32:05: 18,2 nós, diesel 61 %.",
   "Consumo de cruzeiro: 68 L/h; lenta 6,2 L/h.",
   "Diesel: 848 L de 1.600 L (54 %).",
-  "Autonomia ≈ 11,2 h ou 202 mn."
+  "Autonomia ≈ 11,2 h ou 202 mn.",
+  "AUXÍLIO NECESSÁRIO — CÂMBIO. Canal 16 em escuta.",
+  "Termine com câmbio e aguarde a resposta no canal 16."
  ],
  "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
 }
