@@ -17,9 +17,9 @@ temas); sem rede e sem leitura do dia, "—" (nunca o vento do snapshot); sem re
 rajada que o ECMWF não trouxe vem do melhor modelo, dito no title. Na B3-Carta-Resposta (responde ali mesmo, sem o cabeçalho do
 clima), a leitura de hoje salva entra no clima e no "seguro para sair?" como na home, com fonte, hora e o windy.com em nova aba;
 sem ela, SEM DADOS e nenhum vento previsto.
-Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio), em toda rodada (é o manifest, não uma tela):
-cada shortcut tem ícone any e maskable; cada src responde 200 e o PNG tem o tamanho declarado (cabeçalho lido com struct, sem
-Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
+Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio), em toda rodada menos a --so-offline (é o manifest,
+não uma tela): cada shortcut tem ícone any e maskable; cada src responde 200 e o PNG tem o tamanho declarado (cabeçalho lido com
+struct, sem Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -210,7 +210,7 @@ def main():
                 if prob:
                     falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
                     print('FALHA reserva do React', ' | '.join(prob))
-            for nome, prob in teste_atalhos(b).items():  # sempre: é o manifest, não uma tela
+            for nome, prob in teste_atalhos(b).items():  # qualquer lista de telas: é o manifest, não uma tela
                 total += 1
                 if prob:
                     falhas.append({'tela': 'manifest', 'tema': 'atalho ' + nome, 'prob': prob})
