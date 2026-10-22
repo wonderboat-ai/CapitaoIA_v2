@@ -18,6 +18,7 @@ Travas (ganham de qualquer decisão):
 14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce; linhas com `sim: true` (menos as do SOS, que nunca o levam).
 15. Faixas do "Guia de bordo — `<equipamento>` §n"; modelos de mercado diferentes dos do Avanti; registro sem colisão.
 16. `support.js` e `deck-stage.js` não se editam à mão; nunca `{{…}}` em atributo de SVG; Worker real só com motivo; não contornar o painel nem o WAF da Cloudflare.
+17. EPIRB e Seafire em S1/S2 e em `sos`/`epirb`/`seafire`: só o procedimento padrão ("procedimento padrão — confirmar com o protocolo de bordo"; "modelo, validade e acionamento: veja a etiqueta do equipamento"); fabricante, modelo e validade gerados só em Equipamentos, Leme e Documentos. Salvatagem sempre local; `pedeIA` false com trecho de topo `seguranca: true`. O rebase de prazos nunca toca o `D.snapshot`.
 (a) núcleo do Avanti em canvas · (b) nenhum selo · (c) crítico desligado · (d) 1.1.0 · (e) barco, registro e rota escolhidos pelo Claude (PARIDADE)
 (f) frase padrão da `sobreDados` · (g) exceções do "toda resposta com dado" · (h) runtime atual · (i) ficha até 16.000 se passar de ~11.500
 (j) posição contínua pela rota · (k) convidado: chave `demo`, nome Convidado, papel convidado.
