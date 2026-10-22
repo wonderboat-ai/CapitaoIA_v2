@@ -25,8 +25,12 @@ sem rolagem lateral, com o fundo do tema e o SOS à vista no topo e depois de ro
 o rodapé do Main e da H2 leva a ela. Ida e volta: o diário com A e B vai para o arquivo (sem a sessão, as tentativas de login nem
 as chaves); o aparelho passa a ter A e C; restaurar dá C, B e A (nenhuma linha some, nada duplica ao restaurar de novo); tarefas
 feitas e Equipe só somam; o tema só volta com a caixa marcada; arquivo de outro app, de formato novo, corrompido ou com linha de
-forma errada não muda nada; sessão e chave da IA de um arquivo montado à mão nunca entram. Sem sessão, vai para o login. Abre
-offline (--offline, com "dados" na lista).
+forma errada não muda nada; sessão e chave da IA de um arquivo montado à mão nunca entram; item que o app não lê (linha sem
+texto, Executado sem data, telefone que não é texto) nunca entra no registro. Desfeito depois não volta: marcar o Executado (C1),
+cadastrar um telefone e abrir um convite (G4), baixar, desfazer os três nas telas e restaurar → nada volta, a prévia diz o que
+ficou de fora e a tarefa continua aberta (num aparelho sem esse diário, a cópia devolve os três); as telas do app gravam os mesmos
+textos. A cópia leva intacta a linha do SOS (com a posição) e a página avisa. Sem sessão, vai para o login. Abre offline
+(--offline, com "dados" na lista). No --offline, cada tela e página da rodada tem de estar no cache da instalação (TELAS/CORE).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -585,7 +589,17 @@ def linha_teste(letra, dia):
             'tone': 'var(--cap-accent, #00a1fe)', 'who': 'Lucas', 'src': 'app · texto'}
 
 
-L_A, L_B, L_C, L_D = linha_teste('A', 20), linha_teste('B', 21), linha_teste('C', 22), linha_teste('D', 23)
+L_A, L_B, L_C, L_D, L_E = linha_teste('A', 20), linha_teste('B', 21), linha_teste('C', 22), linha_teste('D', 23), linha_teste('E', 24)
+# Linhas que a restauração do dados.html lê para não devolver o que foi desfeito depois (Executado desfeito, telefone apagado, convite
+# cancelado). As telas web são conferidas clicando (teste_dados); as do app, que gravam o mesmo texto, no código.
+TEXTOS_DESFEITO = {
+    'C1-Leme-Web': ["t: 'Executado: ' + t.t + ' (' + t.equip + ').", "t: 'Desfeito: ' + t.t + ' volta para a agenda"],
+    'C2-Leme-Mobile': ["t: 'Executado: ' + t.t + ' (' + t.equip + ').", "t: 'Desfeito: ' + t.t + ' volta para a agenda"],
+    'G4-Equipe-Web': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe",
+                      "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — "],
+    'G4-Equipe-Mobile': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe",
+                         "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — "],
+}
 
 
 def feita(dia):
@@ -624,6 +638,10 @@ def teste_dados(b):
           previa: !document.getElementById('previa').hidden, resumo: document.getElementById('resumo').innerText,
           caixa: !document.getElementById('prefsCaixa').hidden, marcada: document.getElementById('prefs').checked,
           botao: !document.getElementById('restaurar').disabled })""")
+
+    def arquivo(dados):
+        corpo = json.dumps({'app': 'Capitão IA', 'formato': 1, 'versao': 'teste', 'exportado_em': '2026-10-22T12:00:00.000Z', 'dados': dados})
+        return {'name': 'copia.json', 'mimeType': 'application/json', 'buffer': corpo.encode('utf-8')}
 
     def restaura():
         if not pg.is_visible('#restaurar') or pg.is_disabled('#restaurar'):
@@ -726,12 +744,122 @@ def teste_dados(b):
         if tudo.get('capitao.ia.chave.v1') != SEGREDOS['capitao.ia.chave.v1'] or '"lucas"' not in (tudo.get('capitao.sessao.v1') or '') \
                 or tudo.get('capitao.login.tentativas.v1') != SEGREDOS['capitao.login.tentativas.v1']:
             p.append('sessão, tentativas ou chave da IA vieram do arquivo')
+
+        # 6) Item que o app não lê (capitao-brain.js: diário sem t, documento sem n, Executado sem d/t, telefone que não é texto,
+        # convite sem nome) nunca entra no registro: sozinho, nada a restaurar e nada muda; ao lado de uma linha boa, só ela entra.
+        p = res['item ilegível no arquivo'] = []
+        lixo = {'capitao.diario.v1': json.dumps([1, 'x', None, {'sem': 't'}, L_A]), 'capitao.docs.v1': json.dumps([{'sem': 'n'}, 7]),
+                'capitao.executado.v1': json.dumps({'t7': 1, 't8': 'x', 't9': {'d': 1, 't': '09:00'}}),
+                'capitao.equipe.v1': json.dumps({'fones': {'Cozinheiro': 5}, 'convites': [{'sem': 'nome'}, 'x']})}
+        antes = ls()
+        r = escolhe(arquivo(lixo))
+        if r['previa'] or r['classe'] != 'ok' or 'Nada a restaurar' not in r['msg'] or 'ilegíveis' not in r['msg'] or 'Nada mudou' not in r['msg']:
+            p.append('só ilegível: %r' % r['msg'])
+        if ls() != antes: p.append('só ilegível: o aparelho mudou')
+        lixo['capitao.diario.v1'] = json.dumps([1, L_E, 'x', L_A])
+        r = escolhe(arquivo(lixo))
+        if not r['previa'] or 'falta aqui 1 linha' not in r['resumo'] or '2 itens ilegíveis no arquivo ficam de fora' not in r['resumo']:
+            p.append('ilegível ao lado de linha boa, prévia: %r' % r['resumo'])
+        restaura()
+        tudo, d = ls(), diario() or []
+        if d.count(L_E) != 1 or len(d) != 5 or any(not isinstance(x, dict) for x in d): p.append('diário: %r' % d)
+        if any(tudo.get(k) != antes.get(k) for k in ('capitao.docs.v1', 'capitao.executado.v1', 'capitao.equipe.v1')):
+            p.append('item ilegível entrou: %r' % {k: tudo.get(k) for k in ('capitao.docs.v1', 'capitao.executado.v1', 'capitao.equipe.v1')})
+
+        # 7) Desfeito depois não volta: nas telas, marca o Executado de uma tarefa atrasada (C1), cadastra um telefone e abre um
+        # convite (G4); baixa a cópia; desfaz os três nas mesmas telas (o diário ganha as linhas). Restaurar: nada volta, a prévia
+        # nomeia o que ficou de fora e a tarefa continua aberta. Num aparelho sem esse diário, a mesma cópia devolve os três.
+        p = res['desfeito depois não volta'] = []
+        ctx.route('https://wa.me/**', lambda rt: rt.abort())
+        t = pg.evaluate("() => (window.CapitaoDados.agenda || []).filter((t) => t.dn < 0).map((t) => ({ id: t.id, t: t.t }))[0]")
+        papel = pg.evaluate("() => ((window.CapitaoDados.equipe || {}).apoio || [])[0].papel")
+        nome = 'Convidado do teste'
+
+        def tela(arq):
+            q = ctx.new_page()
+            q.goto(BASE + arq, wait_until='load')
+            q.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+            return q
+
+        def fone(q, aria, valor):
+            q.click('[aria-label="%s"]' % aria)
+            q.fill('[aria-label="Telefone de %s"]' % papel, valor)
+            q.click('button:has-text("SALVAR")')
+            q.wait_for_timeout(200)
+
+        c1, g4 = tela('C1-Leme-Web.dc.html'), tela('G4-Equipe-Web.dc.html')
+        c1.click('[aria-label="Marcar como executado: %s"]' % t['t'])
+        fone(g4, 'Cadastrar telefone de ' + papel, '00 0000 0000')
+        g4.fill('[aria-label="Nome de quem vai receber o convite"]', nome)
+        g4.fill('[aria-label="Celular com DDD ou e-mail"]', '(00) 0000-00000')
+        with ctx.expect_page() as aba:
+            g4.click('button:has-text("ENVIAR CONVITE")')
+        aba.value.close()
+        pg.reload(wait_until='load')
+        with pg.expect_download() as dl:
+            pg.click('#baixar')
+        caminho2 = os.path.join(pasta, 'com-os-tres.json')
+        dl.value.save_as(caminho2)
+        dentro = json.loads(json.load(open(caminho2, encoding='utf-8'))['dados'].get('capitao.equipe.v1', '{}'))
+        ex_arq = json.loads(json.load(open(caminho2, encoding='utf-8'))['dados'].get('capitao.executado.v1', '{}'))
+        if t['id'] not in ex_arq or not dentro.get('convites') or not any(v == '00 0000 0000' for v in dentro.get('fones', {}).values()):
+            p.append('a cópia não levou o Executado, o telefone e o convite feitos nas telas')
+        c1.click('button:has-text("Desfazer")')
+        fone(g4, 'Editar telefone de ' + papel, '')
+        g4.click('[aria-label="Cancelar convite de %s"]' % nome)
+        g4.wait_for_timeout(200)
+        pg.reload(wait_until='load')
+        antes = ls()
+        if t['id'] in json.loads(antes.get('capitao.executado.v1') or '{}'): p.append('o Desfazer da C1 não tirou a marca')
+        r = escolhe(caminho2)
+        for falta in (t['t'], 'telefone de ' + papel, 'convite de ' + nome):
+            if falta not in r['msg']: p.append('a mensagem não diz que fica de fora: %s · %r' % (falta, r['msg']))
+        if r['previa'] or 'Nada mudou' not in r['msg']: p.append('restaurar o desfeito: %r' % r['msg'])
+        if ls() != antes: p.append('o aparelho mudou: %r' % {k: v for k, v in ls().items() if antes.get(k) != v})
+        c1.reload(wait_until='load')
+        c1.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+        if not c1.is_visible('[aria-label="Marcar como executado: %s"]' % t['t']): p.append('a tarefa %s não continua aberta na C1' % t['id'])
+        c1.close(); g4.close()
+        pg.evaluate("() => { const s = localStorage.getItem('capitao.sessao.v1'); localStorage.clear(); localStorage.setItem('capitao.sessao.v1', s); }")
+        pg.reload(wait_until='load')
+        r = escolhe(caminho2)
+        for volta in (t['t'], 'telefone de ' + papel, 'convite de ' + nome):
+            if volta not in r['resumo']: p.append('aparelho sem o diário: a prévia não nomeia %s · %r' % (volta, r['resumo']))
+        restaura()
+        tudo = ls()
+        eq = json.loads(tudo.get('capitao.equipe.v1') or '{}')
+        if t['id'] not in json.loads(tudo.get('capitao.executado.v1') or '{}') or not eq.get('fones') or [c.get('nome') for c in eq.get('convites', [])] != [nome]:
+            p.append('aparelho sem o diário: a cópia não devolveu os três: %r' % {k: tudo.get(k) for k in ('capitao.executado.v1', 'capitao.equipe.v1')})
+
+        # 8) A cópia leva a posição gravada no diário (a linha do SOS: o registro fica intacto) e a página avisa.
+        p = res['posição no arquivo e aviso'] = []
+        sos = tela('S1-SOS-Web.dc.html')
+        sos.wait_for_timeout(500)
+        sos.close()
+        pg.reload(wait_until='load')
+        linha = [x for x in (diario() or []) if str(x.get('t', '')).startswith('SOS acionado')]
+        with pg.expect_download() as dl:
+            pg.click('#baixar')
+        caminho3 = os.path.join(pasta, 'com-sos.json')
+        dl.value.save_as(caminho3)
+        no_arq = json.loads(json.load(open(caminho3, encoding='utf-8'))['dados'].get('capitao.diario.v1', '[]'))
+        if len(linha) != 1 or linha[0] not in no_arq: p.append('a linha do SOS não foi intacta para a cópia: %r' % linha)
+        leva = pg.inner_text('#leva')
+        if 'posições do barco gravadas no diário' not in leva or 'SOS' not in leva or 'contatos de convite' not in leva:
+            p.append('o aviso não diz que a cópia leva as posições do diário e os contatos de convite: %r' % leva)
     except Exception as e:  # um passo que não chega ao fim (botão escondido, prazo) vira falha do caso, não derruba a matriz
         p.append('não chegou ao fim: ' + str(e).splitlines()[0][:200])
     res['erro de script'] = list(erros)
     ctx.close()
 
-    # 6) Atrás do login: sem sessão, a página vai para o login (e volta para ela depois de entrar).
+    # 9) Os textos que a restauração reconhece continuam nas telas (as do app gravam o mesmo que as web, clicadas acima).
+    p = res['textos de desfazer nas telas'] = []
+    for tela_, trechos in TEXTOS_DESFEITO.items():
+        fonte = open(os.path.join(RAIZ, tela_ + '.dc.html'), encoding='utf-8').read()
+        for tr in trechos:
+            if tr not in fonte: p.append('%s não grava mais %r: atualize junto o dados.html (regrasDesfeito)' % (tela_, tr))
+
+    # 10) Atrás do login: sem sessão, a página vai para o login (e volta para ela depois de entrar).
     p = res['sem sessão'] = []
     ctx = b.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
     pg = ctx.new_page()
@@ -743,8 +871,9 @@ def teste_dados(b):
 
 
 def teste_offline(b, lista, paginas=()):
-    """1ª visita com internet (SW instala), depois abre cada tela sem rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele.
-    Com "dados" na lista: a página dos Dados do aparelho também abre sem rede (CORE do sw.js), com a lista e o ∞."""
+    """1ª visita com internet (SW instala), confere no cache da instalação cada tela e página da rodada, depois abre cada tela sem
+    rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele. Com "dados" na lista: a página dos Dados do aparelho também abre
+    sem rede (CORE do sw.js), com a lista e o ∞, depois das telas."""
     prob = []
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     ctx.add_init_script(SESSAO)
@@ -762,29 +891,15 @@ def teste_offline(b, lista, paginas=()):
     guardou = pg.evaluate('(us) => Promise.all(us.map((u) => caches.match(u).then(Boolean)))', [REACT_LOCAL + arq for arq in REACT_ARQS])
     if guardou != [True, True]:
         prob.append('React fora do CORE do sw.js: a instalação não guardou %s' % ', '.join(arq for arq, g in zip(REACT_ARQS, guardou) if not g))
-    # dados.html no CORE: conferido no cache da instalação (como o React), e aberta logo depois de cortar a rede — mais adiante
-    # o SW pode ter reiniciado e o modo offline do Playwright nem sempre alcança o SW novo.
-    if 'dados' in paginas and not pg.evaluate('(u) => caches.match(u).then(Boolean)', BASE + 'dados.html'):
-        prob.append('dados.html fora do CORE do sw.js: a instalação não a guardou')
+    # Cada tela e página desta rodada no cache da instalação (TELAS/CORE do sw.js), conferido no cache como o React: depois da
+    # 1ª página aberta sem rede, o modo offline do Playwright nem sempre alcança o SW (que busca na rede e abre a tela), então só
+    # a abertura sem rede abaixo deixava passar uma tela fora do cache — menos a 1ª da lista.
+    arqs = [tela + '.dc.html' for tela in lista] + [PAGINAS[n][0].split('?')[0] for n in paginas]
+    guardou = pg.evaluate('(us) => Promise.all(us.map((u) => caches.match(u).then(Boolean)))', [BASE + a for a in arqs])
+    fora = [a for a, g in zip(arqs, guardou) if not g]
+    if fora:
+        prob.append('fora do cache da instalação (TELAS/CORE do sw.js): ' + ', '.join(fora))
     ctx.set_offline(True)
-    if 'dados' in paginas:
-        pg5 = ctx.new_page()
-        erros5 = []
-        pg5.on('pageerror', lambda e: erros5.append(str(e)[:200]))
-        try:
-            pg5.goto(BASE + 'dados.html', wait_until='load', timeout=20000)
-            pg5.wait_for_timeout(400)
-            r = pg5.evaluate("""() => ({ titulo: document.title, lista: (document.getElementById('lista') || {}).textContent || '',
-  falta: [...document.images].filter((i) => i.src.indexOf('/assets/') >= 0 && (!i.complete || !i.naturalWidth)).map((i) => i.src.split('/').pop()) })""")
-            if r['titulo'] != 'Dados do aparelho · Capitão IA' or 'lendo' in r['lista']:
-                prob.append('dados.html offline: %r · %r' % (r['titulo'], r['lista'][:60]))
-            if r['falta']:
-                prob.append('dados.html offline sem: ' + ', '.join(r['falta']))
-        except Exception as e:
-            prob.append('dados.html offline: ' + str(e)[:120])
-        if erros5:
-            prob.append('dados.html offline com erro: ' + erros5[0])
-        pg5.close()
     for tela in lista:
         erros = []
         pg2 = ctx.new_page()
@@ -812,6 +927,26 @@ def teste_offline(b, lista, paginas=()):
         if erros:
             prob.append(tela + ' offline com erro: ' + erros[0])
         pg2.close()
+    # dados.html sem rede depois das telas: a 1ª página aberta sem rede continua sendo a 1ª tela da lista (Main, na rodada
+    # inteira), a única em que o corte da rede alcança o SW com certeza.
+    if 'dados' in paginas:
+        pg5 = ctx.new_page()
+        erros5 = []
+        pg5.on('pageerror', lambda e: erros5.append(str(e)[:200]))
+        try:
+            pg5.goto(BASE + 'dados.html', wait_until='load', timeout=20000)
+            pg5.wait_for_timeout(400)
+            r = pg5.evaluate("""() => ({ titulo: document.title, lista: (document.getElementById('lista') || {}).textContent || '',
+  falta: [...document.images].filter((i) => i.src.indexOf('/assets/') >= 0 && (!i.complete || !i.naturalWidth)).map((i) => i.src.split('/').pop()) })""")
+            if r['titulo'] != 'Dados do aparelho · Capitão IA' or 'lendo' in r['lista']:
+                prob.append('dados.html offline: %r · %r' % (r['titulo'], r['lista'][:60]))
+            if r['falta']:
+                prob.append('dados.html offline sem: ' + ', '.join(r['falta']))
+        except Exception as e:
+            prob.append('dados.html offline: ' + str(e)[:120])
+        if erros5:
+            prob.append('dados.html offline com erro: ' + erros5[0])
+        pg5.close()
     # lista (index.html): a assinatura sai da cópia guardada (CORE)
     pg4 = ctx.new_page()
     try:

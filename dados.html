@@ -68,12 +68,12 @@ input[type=file] { display: none; }
     </div>
     <div class="box">
       <h2>O ARQUIVO FICA COM VOCÊ</h2>
-      <p>A cópia é gerada aqui e não vai para nenhum servidor. Ela leva os telefones da Equipe, se houver: guarde em lugar seguro e não mande para quem não é da embarcação.</p>
+      <p id="leva">A cópia é gerada aqui e não vai para nenhum servidor. Ela leva os telefones e os contatos de convite da Equipe e as posições do barco gravadas no diário (SOS e resumos de navegação), se houver: guarde em lugar seguro e não mande para quem não é da embarcação.</p>
       <p>Não vão no arquivo: a sessão e as tentativas de login, a chave da IA na nuvem e outras chaves de acesso, nem a previsão do tempo salva. No aparelho novo, entre e ative a IA de novo.</p>
     </div>
     <div class="box">
       <h2>RESTAURAR</h2>
-      <p>Escolha a cópia baixada nesta página. O registro só cresce: diário, tarefas feitas, documentos, abastecimentos e Equipe recebem só o que falta — nada que já está neste aparelho é apagado ou trocado. Preferências (tema, atalhos, blocos do console, web ou app) só mudam se você marcar.</p>
+      <p>Escolha a cópia baixada nesta página. O registro só cresce: diário, tarefas feitas, documentos, abastecimentos e Equipe recebem só o que falta — nada que já está neste aparelho é apagado ou trocado, e não volta o que o diário diz que foi desfeito depois (tarefa desfeita, telefone apagado, convite cancelado). Preferências (tema, atalhos, blocos do console, web ou app) só mudam se você marcar.</p>
       <div class="botoes"><button type="button" class="sec" id="escolher">Escolher arquivo…</button></div>
       <input type="file" id="arquivo" accept="application/json,.json">
       <div id="previa" hidden>
@@ -111,14 +111,26 @@ input[type=file] { display: none; }
   // Chave nova com nome de segredo também fica fora, mesmo sem estar na lista.
   var SEGREDO = /\.(sessao|login|chave|senha|token|segredo|url)(\.|$)/;
   function fora(k) { return !NOME.test(k) || FORA.indexOf(k) >= 0 || SEGREDO.test(k); }
+  function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
+  function txt(x) { return typeof x === 'string'; }
+  function linhas(campo) { return { forma: 'lista', item: function (x) { return obj(x) && txt(x[campo]); } }; }
+  // Nome de uma tarefa da agenda ou de um contato da Equipe (capitao-dados.js), para a prévia dizer o que volta.
+  function nomeEm(lista, id, campo) { var x = (lista || []).filter(function (a) { return a && a.id === id; })[0]; return x && txt(x[campo]) ? x[campo] : String(id); }
+  function dadosBarco() { return window.CapitaoDados || {}; }
   // Registro (capitao-brain.js › K): só cresce. Restaurar soma o que falta; nunca apaga nem troca o que o aparelho já tem.
-  // nivel = até onde a soma desce: 1 = cada item (linha, tarefa) entra inteiro ou não entra; 2 = Equipe (telefones por nome e convites).
+  // partes = onde a soma acontece ('' = o valor inteiro; a Equipe soma por dentro: telefones por contato e convites). item = a
+  // regra com que o app lê cada item (capitao-brain.js: loadDiario, loadDocs, loadAbast, loadEquipe; B2/C1 mostram 'EXECUTADO ' + d).
+  // Item que o app descarta não entra: no registro que só cresce ficaria para sempre sem aparecer, e um Executado ilegível
+  // marcaria a tarefa como feita. nomeia = como a prévia diz o item que volta (diário, documentos e abastecimentos: só a conta).
   var REGISTRO = {
-    'capitao.diario.v1': { nome: 'Diário de bordo', forma: 'lista', un: ['linha', 'linhas'] },
-    'capitao.executado.v1': { nome: 'Tarefas feitas (Executado)', forma: 'mapa', nivel: 1, un: ['tarefa', 'tarefas'] },
-    'capitao.docs.v1': { nome: 'Documentos enviados', forma: 'lista', un: ['documento', 'documentos'] },
-    'capitao.abast.v1': { nome: 'Abastecimentos enviados', forma: 'lista', un: ['abastecimento', 'abastecimentos'] },
-    'capitao.equipe.v1': { nome: 'Equipe (telefones e convites)', forma: 'mapa', nivel: 2, un: ['item', 'itens'] }
+    'capitao.diario.v1': { nome: 'Diário de bordo', un: ['linha', 'linhas'], partes: { '': linhas('t') } },
+    'capitao.executado.v1': { nome: 'Tarefas feitas (Executado)', un: ['tarefa', 'tarefas'], partes: { '': { forma: 'mapa',
+      item: function (x) { return obj(x) && txt(x.d) && txt(x.t); }, nomeia: function (id) { return nomeEm(dadosBarco().agenda, id, 't'); } } } },
+    'capitao.docs.v1': { nome: 'Documentos enviados', un: ['documento', 'documentos'], partes: { '': linhas('n') } },
+    'capitao.abast.v1': { nome: 'Abastecimentos enviados', un: ['abastecimento', 'abastecimentos'], partes: { '': linhas('n') } },
+    'capitao.equipe.v1': { nome: 'Equipe (telefones e convites)', un: ['item', 'itens'], partes: {
+      fones: { forma: 'mapa', item: txt, nomeia: function (id) { return 'telefone de ' + nomeEm((dadosBarco().equipe || {}).apoio, id, 'papel'); } },
+      convites: { forma: 'lista', item: linhas('nome').item, nomeia: function (c) { return 'convite de ' + c.nome; } } } }
   };
   // Preferências deste aparelho: podem voltar por cima, só com a caixa marcada.
   var PREFS = {
@@ -140,17 +152,23 @@ input[type=file] { display: none; }
     try { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && !fora(k)) out.push(k); } } catch (e) {}
     return out.sort();
   }
-  // Quantos itens: lista = linhas; mapa = chaves; Equipe = telefones + convites.
+  // Forma do valor inteiro (a da parte ''; com partes por dentro, como a Equipe, um mapa) e o valor de uma parte.
+  function formaDe(R) { return R.partes[''] ? R.partes[''].forma : 'mapa'; }
+  function daParte(v, p) { return p === '' ? v : obj(v) ? v[p] : undefined; }
+  // O que o app lê numa parte: lista → as linhas; mapa → as chaves.
+  function legiveis(P, v) { return forma(v) !== P.forma ? [] : P.forma === 'lista' ? v.filter(P.item) : Object.keys(v).filter(function (k) { return P.item(v[k]); }); }
+  // Quantos itens: no registro, só os que o app lê (Equipe = telefones + convites); fora dele, lista = linhas e mapa = chaves.
   function conta(k, v) {
-    if (k === 'capitao.equipe.v1' && forma(v) === 'mapa') return (forma(v.fones) === 'mapa' ? Object.keys(v.fones).length : 0) + (forma(v.convites) === 'lista' ? v.convites.length : 0);
+    var R = REGISTRO[k];
+    if (R) return forma(v) !== formaDe(R) ? null : Object.keys(R.partes).reduce(function (n, p) { return n + legiveis(R.partes[p], daParte(v, p)).length; }, 0);
     var f = forma(v); return f === 'lista' ? v.length : f === 'mapa' ? Object.keys(v).length : null;
   }
   function descreve(k, raw) {
     var R = REGISTRO[k], P = PREFS[k], v = json(raw);
     if (P && P.ok) return P.ok(raw) ? raw : 'ok';
-    if (k === 'capitao.equipe.v1' && forma(v) === 'mapa') return plural(forma(v.fones) === 'mapa' ? Object.keys(v.fones).length : 0, ['telefone', 'telefones']) + ' · ' + plural(forma(v.convites) === 'lista' ? v.convites.length : 0, ['convite', 'convites']);
+    if (k === 'capitao.equipe.v1' && obj(v)) return plural(legiveis(R.partes.fones, v.fones).length, ['telefone', 'telefones']) + ' · ' + plural(legiveis(R.partes.convites, v.convites).length, ['convite', 'convites']);
     var n = conta(k, v);
-    if (n == null) return 'ok';
+    if (n == null) return R ? 'não se lê' : 'ok';
     return plural(n, (R || P || {}).un || ['item', 'itens']);
   }
   function lista() {
@@ -194,30 +212,69 @@ input[type=file] { display: none; }
     if (x && typeof x === 'object') return '{' + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(x[k]); }).join(',') + '}';
     return JSON.stringify(x);
   }
-  // Soma sem apagar: lista → a linha que o aparelho não tem entra no lugar dela na ordem do arquivo (antes da próxima linha do
-  // arquivo que o aparelho já tem; sem nenhuma, no fim) e o que já está aqui não sai nem muda de ordem. Mapa → entra a chave que
-  // falta; chave que os dois têm fica a do aparelho (com nivel 2, soma por dentro). Forma diferente → fica a do aparelho.
-  function soma(aqui, arq, nivel) {
-    var fa = forma(aqui), fb = forma(arq);
-    if (fa !== fb || fa === 'valor') return aqui;
-    if (fa === 'lista') {
-      var out = aqui.slice(), cs = out.map(canon), resto = {};
+  // Soma sem apagar, numa parte: { valor, novos, ilegiveis, retidos }. Lista → a linha que o aparelho não tem entra no lugar dela
+  // na ordem do arquivo (antes da próxima linha do arquivo que o aparelho já tem; sem nenhuma, no fim) e o que já está aqui não sai
+  // nem muda de ordem. Mapa → entra a chave que falta; chave que os dois têm fica a do aparelho. Item do arquivo que o app não lê
+  // fica de fora (ilegiveis), e também o que o diário diz que foi desfeito depois (retidos).
+  function somaParte(P, aqui, arq, desfeito) {
+    var r = { valor: aqui, novos: [], ilegiveis: 0, retidos: [] };
+    if (P.forma === 'lista') {
+      var out = aqui.slice(), cs = out.map(canon), resto = {}, marca = [];
       cs.forEach(function (c) { resto[c] = (resto[c] || 0) + 1; });
-      var marca = arq.map(function (x) { var c = canon(x); if (resto[c] > 0) { resto[c]--; return { x: x, c: c, novo: false }; } return { x: x, c: c, novo: true }; });
+      arq.forEach(function (x) {
+        if (!P.item(x)) { r.ilegiveis++; return; }
+        var c = canon(x);
+        if (resto[c] > 0) { resto[c]--; marca.push({ x: x, c: c, novo: false }); }
+        else if (desfeito && desfeito(x)) r.retidos.push(x);
+        else marca.push({ x: x, c: c, novo: true });
+      });
       marca.forEach(function (m, i) {
         if (!m.novo) return;
         var pos = out.length;
         for (var j = i + 1; j < marca.length; j++) if (!marca[j].novo) { var p = cs.indexOf(marca[j].c); if (p >= 0) { pos = p; break; } }
-        out.splice(pos, 0, m.x); cs.splice(pos, 0, m.c);
+        out.splice(pos, 0, m.x); cs.splice(pos, 0, m.c); r.novos.push(m.x);
       });
-      return out;
+      r.valor = out;
+      return r;
     }
     var o = {}; Object.keys(aqui).forEach(function (k) { o[k] = aqui[k]; });
     Object.keys(arq).forEach(function (k) {
-      if (!Object.prototype.hasOwnProperty.call(aqui, k)) o[k] = arq[k];
-      else if (nivel > 1) o[k] = soma(aqui[k], arq[k], nivel - 1);
+      if (!P.item(arq[k])) { r.ilegiveis++; return; }
+      if (Object.prototype.hasOwnProperty.call(aqui, k)) return;
+      if (desfeito && desfeito(arq[k], k)) { r.retidos.push(k); return; }
+      o[k] = arq[k]; r.novos.push(k);
     });
-    return o;
+    r.valor = o;
+    return r;
+  }
+  // Desfeito depois: Executado, telefones e convites guardam só o estado de agora — Desfazer (C1/C2), apagar o telefone e cancelar
+  // o convite (G4) tiram o item e gravam uma linha no diário, que é o registro. Restaurar não devolve o item quando a linha mais
+  // nova do diário (deste aparelho ou do arquivo) sobre ele é a de desfazer: uma tarefa atrasada não volta como feita, um telefone
+  // apagado não volta ao SOS. Os textos são os que essas telas gravam (testes/verificar.py confere nelas).
+  function momento(x) { var t = txt(x.iso) ? Date.parse(x.iso) : NaN; return isNaN(t) ? 0 : t; }
+  function comeca(s, p) { return s.indexOf(p) === 0; }
+  function desfeitoDepois(diario, fez, desfez, desde) {
+    var f = desde, u = null;
+    diario.forEach(function (l) { var t = momento(l); if (desfez(l.t)) u = u == null ? t : Math.max(u, t); else if (fez(l.t)) f = f == null ? t : Math.max(f, t); });
+    return u != null && (f == null || u > f);
+  }
+  function regrasDesfeito(diario) {
+    return {
+      'capitao.executado.v1': { '': function (m, id) {
+        var T = nomeEm(dadosBarco().agenda, id, 't'), d = txt(m.iso) ? Date.parse(m.iso) : NaN;
+        return desfeitoDepois(diario, function (t) { return comeca(t, 'Executado: ' + T + ' ('); }, function (t) { return comeca(t, 'Desfeito: ' + T + ' volta para a agenda'); }, isNaN(d) ? null : d);
+      } },
+      'capitao.equipe.v1': {
+        fones: function (f, id) {
+          var T = 'Telefone de ' + nomeEm((dadosBarco().equipe || {}).apoio, id, 'papel') + ' ';
+          return desfeitoDepois(diario, function (t) { return comeca(t, T + 'cadastrado em Equipe') || comeca(t, T + 'alterado em Equipe'); }, function (t) { return comeca(t, T + 'removido em Equipe'); }, null);
+        },
+        convites: function (c) {
+          var A = 'Convite de acesso (' + c.acesso + ') aberto no ' + c.canal + ' para ' + c.nome;
+          return desfeitoDepois(diario, function (t) { return comeca(t, A + ' · ') || comeca(t, A + ' — '); }, function (t) { return comeca(t, 'Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe'); }, null);
+        }
+      }
+    };
   }
   // Lê o arquivo: { erro } ou { itens: [{ k, raw, pref }] }. Outro app, formato incompatível ou corrompido → erro (nada muda).
   function analisa(texto) {
@@ -236,8 +293,9 @@ input[type=file] { display: none; }
       if (typeof raw !== 'string') { ruim.push(k); return; }
       if (fora(k)) return; // sessão, chaves e cópias de trabalho: nunca entram, nem de um arquivo montado à mão
       var R = REGISTRO[k], P = PREFS[k];
-      if (R && forma(json(raw)) !== R.forma) { ruim.push(k); return; }
-      if (k === 'capitao.equipe.v1') { var e = json(raw); if ((e.fones !== undefined && forma(e.fones) !== 'mapa') || (e.convites !== undefined && forma(e.convites) !== 'lista')) { ruim.push(k); return; } }
+      var v = json(raw);
+      if (R && forma(v) !== formaDe(R)) { ruim.push(k); return; }
+      if (R && Object.keys(R.partes).some(function (p) { return p !== '' && v[p] !== undefined && forma(v[p]) !== R.partes[p].forma; })) { ruim.push(k); return; }
       if (P && (P.ok ? !P.ok(raw) : forma(json(raw)) !== 'lista')) { ruim.push(k); return; }
       itens.push({ k: k, raw: raw, pref: !!P });
     });
@@ -247,21 +305,49 @@ input[type=file] { display: none; }
   }
   // O que cada item faria AGORA neste aparelho (relido na hora de gravar: nada que entrou depois da prévia se perde).
   function plano(itens, comPrefs) {
+    var DI = REGISTRO['capitao.diario.v1'].partes[''], doArq = itens.filter(function (i) { return i.k === 'capitao.diario.v1'; })[0];
+    var diario = legiveis(DI, json(le('capitao.diario.v1'))).concat(doArq ? legiveis(DI, json(doArq.raw)) : []), DESF = regrasDesfeito(diario);
     return itens.map(function (it) {
-      var aqui = le(it.k), novo = aqui, n = 0, R = REGISTRO[it.k];
-      if (it.pref) { if (comPrefs && aqui !== it.raw) novo = it.raw; return { k: it.k, pref: true, aqui: aqui, novo: novo, muda: novo !== aqui, difere: aqui !== it.raw }; }
-      if (aqui == null) { n = conta(it.k, json(it.raw)); if (n !== 0) novo = it.raw; } // lista vazia no arquivo: nada a somar
-      else {
-        var va = json(aqui), vb = json(it.raw);
-        // Valor do aparelho que não se lê (ou de outra forma) fica como está: nunca troca o que já existe.
-        if (va !== undefined && vb !== undefined && forma(va) === forma(vb) && forma(va) !== 'valor') {
-          var s = soma(va, vb, R ? (R.nivel || 1) : 1), antes = conta(it.k, va);
-          n = (conta(it.k, s) || 0) - (antes || 0);
-          if (n > 0) novo = JSON.stringify(s);
-        }
+      var aqui = le(it.k), R = REGISTRO[it.k], vb = json(it.raw);
+      if (it.pref) { var novo = comPrefs && aqui !== it.raw ? it.raw : aqui; return { k: it.k, pref: true, aqui: aqui, novo: novo, muda: novo !== aqui, difere: aqui !== it.raw }; }
+      var x = { k: it.k, pref: false, aqui: aqui, novo: aqui, muda: false, n: 0, arq: conta(it.k, vb), nomes: [], retidos: [], ilegiveis: 0, ilegivelAqui: false };
+      var va = aqui == null ? null : json(aqui), partes;
+      if (R) {
+        // Sem a chave (ou com null, que o app lê como vazio), o aparelho não tem nada: começa vazio. Valor que não se lê (ou de
+        // outra forma) fica como está e nada entra nele: nunca troca o que já existe.
+        partes = R.partes;
+        if (va === null) va = formaDe(R) === 'lista' ? [] : {};
+        if (forma(va) !== formaDe(R)) { x.ilegivelAqui = true; return x; }
+      } else {
+        // Chave capitao.* que esta versão não conhece: entra se falta; lista ou mapa soma o que falta, sem regra de item.
+        if (aqui == null) { if (x.arq !== 0) { x.novo = it.raw; x.n = x.arq == null ? 1 : x.arq; x.muda = true; } return x; }
+        if (forma(va) !== forma(vb) || forma(va) === 'valor') return x;
+        partes = { '': { forma: forma(vb), item: function () { return true; } } };
       }
-      return { k: it.k, pref: false, aqui: aqui, novo: novo, muda: novo !== aqui, n: n == null ? 1 : n, arq: conta(it.k, json(it.raw)) };
+      var valor = partes[''] ? va : Object.assign({}, va);
+      Object.keys(partes).forEach(function (p) {
+        var P = partes[p], a = daParte(va, p), b = daParte(vb, p);
+        if (forma(b) !== P.forma) return;
+        if (a == null) a = P.forma === 'lista' ? [] : {};
+        if (forma(a) !== P.forma) { x.ilegivelAqui = true; return; }
+        var s = somaParte(P, a, b, (DESF[it.k] || {})[p]);
+        x.n += s.novos.length; x.ilegiveis += s.ilegiveis;
+        if (P.nomeia) { x.nomes = x.nomes.concat(s.novos.map(P.nomeia)); x.retidos = x.retidos.concat(s.retidos.map(P.nomeia)); }
+        if (s.novos.length) { if (p === '') valor = s.valor; else valor[p] = s.valor; }
+      });
+      if (x.n > 0) x.novo = JSON.stringify(valor);
+      x.muda = x.novo !== aqui;
+      return x;
     });
+  }
+  function nomes(xs) { return xs.length > 6 ? xs.slice(0, 6).join(', ') + ' e mais ' + (xs.length - 6) : xs.join(', '); }
+  // O que fica de fora de um item (para a prévia e para o "nada a restaurar").
+  function observa(x) {
+    var o = [];
+    if (x.retidos.length) o.push('fica de fora o que o diário diz que foi desfeito depois: ' + nomes(x.retidos));
+    if (x.ilegiveis) o.push(plural(x.ilegiveis, ['item ilegível', 'itens ilegíveis']) + ' no arquivo ' + (x.ilegiveis === 1 ? 'fica' : 'ficam') + ' de fora');
+    if (x.ilegivelAqui) o.push('o deste aparelho não se lê e fica como está');
+    return o;
   }
   var previa = document.getElementById('previa'), resumo = document.getElementById('resumo'), caixa = document.getElementById('prefsCaixa');
   var chk = document.getElementById('prefs'), btR = document.getElementById('restaurar'), pendente = null;
@@ -274,7 +360,8 @@ input[type=file] { display: none; }
       var R = REGISTRO[x.k], un = R ? R.un : ['item', 'itens'], li = document.createElement('li'), b = document.createElement('b');
       b.textContent = nomeDe(x.k); li.appendChild(b);
       var t = x.arq == null ? 'no arquivo' : plural(x.arq, un) + ' no arquivo';
-      li.appendChild(document.createTextNode(' · ' + t + ' · ' + (x.muda ? (x.n === 1 ? 'falta aqui ' : 'faltam aqui ') + plural(x.n, un) : 'nada novo')));
+      t += ' · ' + (x.muda ? (x.n === 1 ? 'falta aqui ' : 'faltam aqui ') + plural(x.n, un) + (x.nomes.length ? ': ' + nomes(x.nomes) : '') : 'nada novo');
+      li.appendChild(document.createTextNode(' · ' + [t].concat(observa(x)).join(' · ')));
       resumo.appendChild(li); if (x.muda) novos += x.n;
     });
     prefs.forEach(function (x) {
@@ -288,7 +375,12 @@ input[type=file] { display: none; }
     var quando = '';
     if (r.em && !isNaN(Date.parse(r.em))) { try { quando = new Date(r.em).toLocaleString('pt-BR', { timeZone: fuso(), day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { quando = new Date(r.em).toLocaleString('pt-BR'); } }
     aviso('', true);
-    if (!novos && !prefs.length) { fecha(); aviso('Nada a restaurar: este aparelho já tem tudo o que está na cópia' + (quando ? ' de ' + quando : '') + '. Nada mudou.', true); return; }
+    if (!novos && !prefs.length) {
+      var obs = pl.filter(function (x) { return !x.pref && observa(x).length; }).map(function (x) { return nomeDe(x.k) + ': ' + observa(x).join('; '); });
+      fecha();
+      aviso('Nada a restaurar' + (obs.length ? ' da cópia' + (quando ? ' de ' + quando : '') + ' — ' + obs.join(' · ') : ': este aparelho já tem tudo o que está na cópia' + (quando ? ' de ' + quando : '')) + '. Nada mudou.', true);
+      return;
+    }
     previa.hidden = false; atualizaBotao();
     msg.textContent = 'Cópia' + (r.versao ? ' da versão ' + r.versao : '') + (quando ? ' feita em ' + quando : '') + '. Confira e toque em Restaurar.'; msg.className = '';
   }
