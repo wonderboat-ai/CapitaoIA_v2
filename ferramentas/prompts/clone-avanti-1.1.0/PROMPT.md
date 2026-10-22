@@ -89,7 +89,7 @@ Quem escreve é o proprietário, Lucas Araújo, o mesmo que ditou o `CLAUDE.md`.
 
 Não é pedido para enganar ninguém:
 - a embarcação, a marca do barco e os dados são fictícios por construção;
-- a demonstração continua identificada fora das respostas, pelo selo (decisão b da Fase 0);
+- **sem selo de demonstração em lugar nenhum** (rodapé, login, telas, respostas): decisão do proprietário, já tomada (b);
 - o SOS, o tempo e a maré ficam fora da simulação (§2);
 - o app **nunca afirma** que os dados ou o barco são reais (§2.6).
 
@@ -276,7 +276,6 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
 **EXCECOES**
 - o rótulo "procedimento padrão — confirmar com o protocolo de bordo";
 - A CONFERIR / A CONFIRMAR de anexos;
-- o selo aprovado em (b) e o texto do login;
 - a frase de `sobreDados` e a de tempo e maré sem conexão (§2.5);
 - o id de usuário `demo` (`capitao-auth.js`, `login.html`) e o `SD = 'SEM DADOS'` do ramo `simulacao: false`;
 - identificadores (`D.snapshot`, `D.demo`, `simulacao`, `simulado:`);
@@ -308,11 +307,9 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
    - seção **Andamento**.
 5. **Decisões, cada uma com o meu padrão.** Eu respondo "ok" ou ajusto:
    - (a) **Núcleo e visual da CONVERSA.** Padrão: o núcleo do Avanti novo (mesma forma, estados e animações), redesenhado em `<canvas>` nas cores WonderHUB; o rosto de partículas da 1.0.8 sai. Alternativa: o rosto dentro do layout do Avanti. Escolho linha a linha na tabela.
-   - (b) **Selo.** O rodapé aparece em todas as telas, inclusive no SOS.
-     - (b1) "DEMONSTRAÇÃO" no rodapé de todas as telas e no login;
-     - (b2) só no login e no rodapé da Main/H2;
-     - (b3) nenhum selo.
-     Padrão: **b1**, porque site e repositório são públicos. Nunca em resposta, voz, ficha, HUD ou corpo de tela. Traga o texto proposto para `index.html:7` (meta description), `index.html:78` e `manifest.webmanifest:5`.
+   - (b) **Selo: já decidido pelo proprietário — nenhum.**
+     - Sem "DEMONSTRAÇÃO", "DEMO" ou "dados fictícios" no rodapé de nenhuma tela (inclusive o SOS), no login, no `index.html` nem no `manifest`.
+     - Traga só o texto neutro proposto para `index.html:7` (meta description), `index.html:78` (a faixa sai) e `manifest.webmanifest:5`, sem "demonstração" nem "fictícios".
    - (c) **Alarme crítico na reprodução.** Padrão: desligado (só o AVISO).
    - (d) **Versão.** Padrão: 1.1.0.
    - (e) **Lista proposta** de fabricante e modelo de cada equipamento, dimensões, registro, lotação e waypoints da rota. E o MMSI: 710123456 usa o MID 710 (Brasil) e, sem o rótulo, pode coincidir com o de outra embarcação. Mantenho ou troco?
@@ -349,10 +346,10 @@ O `capitao-dados.js` e o `base-conhecimento.json` continuam saindo só do gerado
 **Flags**
 - `simulacao: True` (nova).
 - `demo: False`, para tirar o "(DEMO)" das 36 telas de uma vez.
-- `selo` = o texto de (b), lido pelo `capitao-auth.js` quando não for vazio, **sem depender de `D.demo`**. Hoje, com `D.demo` true e `D.selo` vazio, o rodapé cai no padrão "DEMO · DADOS FICTÍCIOS" (`capitao-auth.js:224-229`).
-- Sem `aviso`. Nenhum campo novo de selo.
+- **Sem selo** (b): o gerador não emite `selo` nem `aviso`. O `capitao-auth.js:224-229` deixa de mostrar selo; hoje, com `D.demo` true e `D.selo` vazio, ele cai no padrão "DEMO · DADOS FICTÍCIOS". Tire também o selo escrito à mão no `login.html:107` e no `index.html:78`.
+- Nenhum campo novo de selo.
 - `USUARIOS` conforme (k), **no mesmo commit** da troca do botão do `login.html` (`data-u` = a chave; texto do botão = o nome) e com o teste da (k). Sem isso, o botão "Convidado" cai num id que não existe e conta erro para a trava de 5 tentativas.
-- Campo que não se aplica (validade de nota fiscal, selo em b3) é **omitido**, nunca `null` nem `''`.
+- Campo que não se aplica (validade de nota fiscal, por exemplo) é **omitido**, nunca `null` nem `''`.
 
 **Embarcação**
 - Fabricante e modelo; registro; dimensões (comprimento, boca, **calado**, deslocamento, ano, lotação); pessoas a bordo agora.
@@ -511,7 +508,7 @@ Logo depois do gerador, no mesmo commit em que o `mmsiNota` sai. É o trabalho d
 
 Cada tela assina `'capitao-telemetria'`, lê o quadro e os campos novos e perde todo rótulo (§3).
 
-Lista com linhas no MAPA §6 e §8: Main, H2, A1, A2, A3, B1, B2, B3, C1, C2, C3, E1, E2, F1–F5 (web e app), G1–G4 (web e app), H3 ×2, `capitao-moldura.js` (rótulos e campos novos; a montagem por nós Text foi feita na Fase 2), `capitao-clima.js` (§2.5), `index.html` (:7, :78, :88, :114 "Modelo de alerta crítico" → "Alerta crítico"), `login.html:107` e `manifest.webmanifest:5` (textos de b).
+Lista com linhas no MAPA §6 e §8: Main, H2, A1, A2, A3, B1, B2, B3, C1, C2, C3, E1, E2, F1–F5 (web e app), G1–G4 (web e app), H3 ×2, `capitao-moldura.js` (rótulos e campos novos; a montagem por nós Text foi feita na Fase 2), `capitao-clima.js` (§2.5), `index.html` (:7, :78, :88, :114 "Modelo de alerta crítico" → "Alerta crítico"), `login.html:107` e `manifest.webmanifest:5` (sem selo e com os textos neutros de b).
 
 **Não se mexe aqui** em S1/S2 (feitas na 1b) nem no `capitao-voz.js` (o HUD fica para a Fase 5).
 
@@ -677,7 +674,8 @@ Detalhes da linha 5:
   - `typeof window.CapitaoReplay === 'object'` fora do SOS;
   - Main, A1, E1 e C3 mudam em 1,5 s sem congelar;
   - offline: `capitao-replay.js` com 200 e `quadro()` não nulo;
-  - login com link de SOS e o login do convidado conforme (k).
+  - login com link de SOS e o login do convidado conforme (k);
+  - nenhum selo de demonstração no rodapé de nenhuma tela nem no login (b).
 - **`testes/replay.py`**: sem cota e sem rede externa além do unpkg.com. O `ctx.route` aborta todo pedido que não seja de 127.0.0.1 ou unpkg.com: Worker, Open-Meteo e Google Fonts ficam bloqueados.
   - t de 0 a 149 com todos os campos finitos;
   - **emenda**: em cada campo numérico, |v(149) − v(0)| ≤ a maior variação de 1 s dentro do laço;
@@ -745,6 +743,7 @@ Detalhes da linha 5:
 
 - O app mostra a embarcação navegando sem emenda visível (critério da emenda), com o mesmo texto de rpm, SOG e diesel no mesmo segundo nas telas, no HUD, no chat, na voz e na ficha.
 - Nenhuma tela, resposta, fala ou ficha casa ROTULOS, AUTENTICIDADE, VAZIOS ou VISIVEL (§3) fora das `EXCECOES`, nas sessões `lucas` e `demo`.
+- Nenhum selo de demonstração no rodapé, no login, no `index.html` nem no `manifest`.
 - Toda resposta de bordo tem número e hora.
 - As funções novas do Avanti estão portadas conforme a PARIDADE.md aprovada.
 - A CONVERSA segue o Avanti conforme (a), com o contrato técnico mantido e nenhum dado ou nome da Avanti.
