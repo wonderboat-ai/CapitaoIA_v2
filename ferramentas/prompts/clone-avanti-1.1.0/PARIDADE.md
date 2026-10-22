@@ -219,7 +219,17 @@ A lista de valores do Avanti existe fora do repositório (`$TEMP/paridade-avanti
 - [x] **Ok do proprietário** na tabela e nos 5 pontos da §6 (22/10/2026)
 
 **Fase 0b — port (aprovado §6.1: só as independentes)**
-- [ ] F01 React do próprio site · [ ] F03 ícones dos atalhos · [ ] F13 vento e rajada · [ ] F19 conversa sem pausa · [ ] F25 dados do aparelho
+- [x] F01 React do próprio site · [x] F03 ícones dos atalhos · [x] F13 vento e rajada · [x] F19 conversa sem pausa · [x] F25 dados do aparelho
+  (cada função com implementação, testes e revisão independente em duas lentes, até 3 rodadas; 22/10/2026)
+- **Exceção à decisão (h), para conferência do proprietário:** o `support.js` é o do Avanti 1.24.0 **mais uma reserva do Capitão**
+  no `loadReactUmd` (≈ 10 linhas marcadas "só do Capitão"): se a cópia local do React falhar, ele sai do endereço do unpkg com o mesmo
+  SRI. Motivo, reproduzido pelo revisor: o SW da 1.0.x guarda arquivo por arquivo; se a conexão cai logo depois do `support.js` novo,
+  o cache fica sem o `assets/vendor` e, offline, nem o SOS abriria. Com a reserva, abre (contraprova nos testes `publicacao.py` 5 e
+  `verificar.py` "reserva do React"). Sem ela, a saída seria lançar em 2 passos. Numa troca futura do runtime inteiro, a reserva tem
+  de ser reposta (o teste acusa).
+- `.gitattributes` com `assets/vendor/** -text`: no Windows com `core.autocrlf=true`, o fim de linha mudaria os bytes do React e o SRI
+  não bateria nos testes locais.
+- Documentação que ficou desatualizada: lista por função em `DOCS-PENDENTES.md` (entra na Fase 8).
 
 **Fase 1 — gerador e dados completos**
 - [ ] Passo 0: commit só do `CLAUDE.md` com a Decisão 1.1.0
