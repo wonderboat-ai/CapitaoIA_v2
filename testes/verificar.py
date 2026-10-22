@@ -14,7 +14,9 @@ Vento e rajada do dia no cabeçalho (paridade Avanti 1.24.0), em Main, H2-Home-M
 (JSON fixo no route; nenhum pedido sai para a internet): direção e "n/n KT", os três toques abrindo o windy.com na posição de
 referência (nova aba, noopener), nada cortado nem sobreposto no cabeçalho (web 1440×900 e 1024×768, app 390×844 e 360×640, dois
 temas); sem rede e sem leitura do dia, "—" (nunca o vento do snapshot); sem rede com a leitura salva de hoje, ela com a hora dela;
-rajada que o ECMWF não trouxe vem do melhor modelo, dito no title.
+rajada que o ECMWF não trouxe vem do melhor modelo, dito no title. Na B3-Carta-Resposta (responde ali mesmo, sem o cabeçalho do
+clima), a leitura de hoje salva entra no clima e no "seguro para sair?" como na home, com fonte, hora e o windy.com em nova aba;
+sem ela, SEM DADOS e nenhum vento previsto.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -42,6 +44,8 @@ MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML,
 SEM_UNPKG = ['Main', 'H2-Home-Mobile', 'S2-SOS-Mobile']
 # Telas com o <capitao-hora-clima> no cabeçalho (o SOS também: só previsão real ou a última leitura salva).
 CLIMA = ['Main', 'H2-Home-Mobile', 'S1-SOS-Web']
+# Telas que respondem ali mesmo sem o <capitao-hora-clima>: a previsão salva pelo cabeçalho entra na resposta como na home.
+RESPOSTA_CLIMA = ['B3-Carta-Resposta']
 REACT_LOCAL = BASE + 'assets/vendor/react-18.3.1/'
 REACT_ARQS = ['react.production.min.js', 'react-dom.production.min.js']
 # reserva do support.js quando a cópia local falha (troca de versão com o SW da 1.0.x): endereço do unpkg → arquivo local (mesmos bytes)
@@ -188,6 +192,12 @@ def main():
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'vento no cabeçalho', 'prob': prob})
                     print('FALHA vento no cabeçalho', tela, ' | '.join(prob))
+            for tela in [t for t in RESPOSTA_CLIMA if t in lista]:
+                total += 1
+                prob = teste_resposta_clima(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'previsão na resposta', 'prob': prob})
+                    print('FALHA previsão na resposta', tela, ' | '.join(prob))
             if 'S2-SOS-Mobile' in lista:
                 total += 1
                 prob = teste_reserva(b, 'S2-SOS-Mobile')
@@ -348,6 +358,52 @@ def teste_clima(b, tela):
         prob.append('ECMWF sem rajada: o cabeçalho não montou')
     elif r['vento'] != 'NE12/21KT' or 'rajada: melhor modelo do Open-Meteo' not in r['titulo']:
         prob.append('ECMWF sem rajada: %r · %s' % (r['vento'], r['titulo']))
+    return prob
+
+
+def teste_resposta_clima(b, tela):
+    """Previsão do dia na resposta de uma tela sem o cabeçalho do clima (B3): a leitura salva de hoje (capitao.clima.v1, como o
+    capitao-clima.js grava) entra no clima e no "seguro para sair?", com fonte e hora; sem ela, SEM DADOS. Open-Meteo fora (abort)."""
+    movel = eh_app(tela)
+    prob = []
+    pg0 = b.new_page()
+    hoje = pg0.evaluate(DIA_BARCO, 0)
+    pg0.close()
+    salva = {'dia': hoje, 'max': 27.4, 'min': 18.2, 'vento': 12.3, 'raj': 19.4, 'dir': 48, 'modelo': 'ECMWF'}
+    vento = 'vento até 12 nós de nordeste, rajadas até 19 nós'
+    for semeada in (True, False):
+        for q in ('é seguro sair hoje?', 'como está o vento hoje?'):
+            tag = '%s (%s)' % (q, 'leitura de hoje salva' if semeada else 'sem leitura')
+            ctx = b.new_context(viewport={'width': 390, 'height': 844}, user_agent=MOBILE_UA if movel else None,
+                                is_mobile=movel, has_touch=movel, service_workers='block')
+            ctx.add_init_script(SESSAO)
+            if semeada:
+                ctx.add_init_script("(() => { const c = %s; c.em = Date.now() - 3 * 3600e3; localStorage.setItem('capitao.clima.v1', JSON.stringify(c)); })()" % json.dumps(salva))
+            ctx.route('https://*.open-meteo.com/**', lambda rt: rt.abort('internetdisconnected'))
+            pg = ctx.new_page()
+            erros = []
+            pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+            pg.goto(BASE + tela + '.dc.html#q=' + urllib.parse.quote(q), wait_until='load')
+            try:
+                pg.wait_for_function("() => /Fonte:/.test(document.body.innerText)", timeout=15000)
+            except Exception:
+                prob.append(tag + ': a resposta não apareceu'); ctx.close(); continue
+            r = pg.evaluate("""() => ({ texto: document.body.innerText, hora: (() => { const c = JSON.parse(localStorage.getItem('capitao.clima.v1') || 'null');
+              return c ? new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(c.em)) : ''; })(),
+              windy: [...document.querySelectorAll('a')].filter((a) => a.href.startsWith('https://www.windy.com/')).map((a) => [a.href, a.target, a.rel]) })""")
+            ctx.close()
+            t = r['texto']
+            if erros: prob.append(tag + ': erro de script ' + '; '.join(erros[:2]))
+            if semeada:
+                if vento not in t or ('ECMWF via Open-Meteo, lida às ' + r['hora']) not in t:
+                    prob.append(tag + ': sem o vento previsto com fonte e hora: ' + t[:300].replace('\n', ' / '))
+                if r['windy'] != [[WINDY_REF, '_blank', 'noopener']]:
+                    prob.append(tag + ': atalho do windy.com fora do esperado: %s' % r['windy'])
+            else:
+                if 'SEM DADOS' not in t or 'vento até' in t or 'rajadas até' in t or r['windy']:
+                    prob.append(tag + ': inventou vento ou perdeu o SEM DADOS: ' + t[:300].replace('\n', ' / '))
+            if 'sem internet e sem leitura salva' in t:
+                prob.append(tag + ': diz "sem internet" sem saber (o Open-Meteo nem foi consultado)')
     return prob
 
 

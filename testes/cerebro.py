@@ -3,7 +3,8 @@
 Vento e rajada do dia (paridade Avanti 1.24.0): com a leitura do cabeçalho salva neste aparelho (capitao-clima.js, Open-Meteo
 real — aqui uma cópia fixa no localStorage, sem rede), o clima, o "seguro para sair?" e a ficha da IA trazem o vento previsto com
 a fonte e a hora (o mar segue SEM DADOS); sem leitura do dia (ou sem o capitao-clima.js), SEM DADOS e nenhum vento inventado. O vento
-não muda a decisão, nem forte (45/60 nós): o app não tem limite de vento com fonte.
+não muda a decisão, nem forte (45/60 nós): o app não tem limite de vento com fonte. "Rajada" só vai para o clima em pergunta de
+previsão: no relato de equipamento ("a âncora garrou com a rajada") e no limite do barco, a rota do equipamento ou a IA.
 
 Uso (com o site servido em http://127.0.0.1:8765):
     python -m http.server 8765 --bind 127.0.0.1      (na raiz do repositório, em outro terminal)
@@ -44,7 +45,12 @@ CASOS = [
     ('a IA não está funcionando', 'diagnostico'), ('Capitão, diagnóstico', 'diagnostico'), ('diagnóstico, por favor', 'diagnostico'),
     ('rode o diagnóstico', 'diagnostico'), ('qual é o status da IA?', 'diagnostico'), ('a IA na nuvem está ligada?', 'diagnostico'),
     ('o motor BB não está funcionando', 'motores'), ('luz do óleo acesa no BB, ainda funcionando', 'oleo'), ('o gerador onan tá ligado?', 'gerador'),
-    ('vai ter rajada hoje?', 'clima'),
+    ('vai ter rajada hoje?', 'clima'), ('como estão as rajadas?', 'clima'), ('rajadas?', 'clima'),
+    # "rajada" em relato de equipamento ou no limite do barco: a rota do equipamento ou a IA, nunca a previsão do dia
+    ('a âncora garrou com a rajada', 'ancora'), ('a rajada quebrou a antena do VHF', 'canal16'), ('o motor BB apagou na rajada', 'motores'),
+    ('seakeeper desligou na rajada', 'estabilizador'), ('o gerador desligou com a rajada', 'gerador'),
+    ('o piloto automático não segura com rajada', 'eletronicos'), ('o motor apagou na rajada hoje', 'motores'),
+    ('a rajada rasgou o toldo', 'fallback'), ('qual a rajada máxima que o barco aguenta?', 'fallback'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -52,7 +58,7 @@ PEDE_IA = {
     'Oque você faz?': True, 'o que vc sabe fazer?': True, 'como ligar o gerador?': True, 'qual o preço do dólar?': True, 'não registre isso': True,
     '': False, 'oi, bom dia': False, 'MAYDAY, homem ao mar!': False, 'pressão de óleo baixa no motor BB': False,
     'Registre no diário: saída com 4 pessoas': False, 'autonomia': False, 'é seguro sair hoje?': False, 'diagnóstico': False,
-    'a IA não está funcionando': False,
+    'a IA não está funcionando': False, 'qual a rajada máxima que o barco aguenta?': True,
 }
 
 

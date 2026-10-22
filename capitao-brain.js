@@ -222,8 +222,9 @@
     return { agora: C.metro(x), prox: prox };
   }
   // Previsão de hoje do cabeçalho (capitao-clima.js: ECMWF via Open-Meteo, mundo real — nunca o snapshot), com a fonte e a hora da
-  // leitura (sem rede, a da cópia salva do dia). null = sem previsão. O vento previsto é informação com fonte: o app não tem limite
-  // de vento para dizer se é seguro sair. Direção por extenso (o TTS lê "NE" como "né").
+  // leitura (sem rede, a da cópia salva do dia). null = sem leitura de hoje neste aparelho (as telas de pergunta livre carregam o
+  // capitao-clima.js: Main, H2 e B3). O vento previsto é informação com fonte: o app não tem limite de vento para dizer se é
+  // seguro sair. Direção por extenso (o TTS lê "NE" como "né").
   var RUMO_NOME = { N: 'norte', NE: 'nordeste', E: 'leste', SE: 'sudeste', S: 'sul', SW: 'sudoeste', W: 'oeste', NW: 'noroeste' };
   function previsao() {
     var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
@@ -277,7 +278,7 @@
     },
     clima: function (p) {
       var pv = previsao();
-      return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo sem resposta') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
+      return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
     canal16: function (p) { return { text: 'VHF canal 16 (156,800 MHz) — socorro, urgência e chamada.\n' + MMSI + ' · indicativo ' + (E.indicativo || SD) + ' · rádios VHF 315 (fabricante ' + SD + ').\nRoteiro MAYDAY (' + ROTULO + '), só em perigo grave e iminente:\nMAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — ' + MMSI + ' — POSIÇÃO: LEIA NO PLOTTER AGORA (último fix ' + SNAP.pos + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ') — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal e MMSI informados pelo proprietário', actions: act(p, [['Abrir SOS', 'sos']]) }; },
     checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência (precisa de AC).\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
@@ -390,7 +391,7 @@
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
     if (has(q, ['diario'])) return 'diarioLer';
     if (has(q, [' mare', 'correnteza', 'corrente de mare']) || (has(q, [' corrente']) && !has(q, ['bateria', 'carregador', 'eletric', 'tensao', 'amper', 'alternada', 'continua', 'shore', 'tomada', ' ac ', ' dc ', 'ancora', 'amarra']))) return 'mare';
-    if (has(q, [' clima ', 'climatic', 'tempo hoje', ' vento', ' rajada', 'chuva', 'meteor', 'temperatura hoje']) || (has(q, ['previsao']) && !has(q, [' revisao', 'manutenc', 'devoluc', 'entrega', 'chegada']))) return 'clima';
+    if (has(q, [' clima ', 'climatic', 'tempo hoje', ' vento', 'chuva', 'meteor', 'temperatura hoje']) || (has(q, ['previsao']) && !has(q, [' revisao', 'manutenc', 'devoluc', 'entrega', 'chegada']))) return 'clima';
     if (has(q, ['para onde', 'destino', 'passeio', 'onde vamos', 'melhor rota', 'rota para', 'rota ate'])) return 'destinos';
     if (has(q, ['checklist de chegada', 'chegada'])) return 'checklistChegada';
     if (has(q, ['checklist', 'check list', ' saida'])) return 'checklist';
@@ -429,12 +430,18 @@
     if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
     if (has(q, ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'])) return 'posicao';
+    // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?"), e depois das rotas
+    // de equipamento: relato ("a âncora garrou com a rajada", "a rajada rasgou o toldo") e limite do barco ("qual a rajada máxima que
+    // o barco aguenta?") seguem o equipamento ou a IA, como antes.
+    if (has(q, [' rajada']) && (RAJADA_SO.test(q) || has(q, [' hoje', 'amanha', 'agora', 'previst', 'esperad', 'vai ter', 'vai dar', 'tem rajada', 'ha rajada', 'havera', 'como esta', 'quant', 'do dia'])) && !has(q, ['aguent', 'suport', 'resist', 'limite'])) return 'clima';
     if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce']) || SOBRE.test(q)) return 'saudacao';
     return 'fallback';
   }
   // Pergunta sobre o próprio Capitão IA, com os jeitos comuns de digitar e falar: "Oque você faz?", "o que vc sabe", "quem é vc",
   // "como você funciona", "pra que serve".
   var SOBRE = / (?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu) (?:faz|sabe|pode|consegue|responde)| quem (?:e|eh) (?:voce|vc|tu) | quem (?:voce|vc) e | como (?:voce|vc) funciona| como (?:funciona|uso|usar) (?:o |este |esse )?(?:app|aplicativo|capitao)| (?:para|pra) que (?:voce |vc )?serve/;
+  // Só a palavra: "rajada?", "e as rajadas?", "rajada máxima".
+  var RAJADA_SO = /^ (?:e )?(?:as? )?rajadas?(?: maximas?)? $/;
 
   var CANON = {}; ALL.forEach(function (x) { CANON[x.id] = norm(x.q).trim(); });
 
@@ -594,7 +601,7 @@
     bloco('Equipe e contatos', function () { return ANSWERS.contatos(p); });
     bloco('Clima e maré', function () {
       var pv = previsao(), m = mareTexto();
-      return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo sem resposta') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
+      return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
     out.push('## Emergência\nAbrir o SOS do app. ' + SOS_PASSOS + '\n(' + FT.proto + ')');
