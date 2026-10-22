@@ -221,6 +221,18 @@
     });
     return { agora: C.metro(x), prox: prox };
   }
+  // Previsão de hoje do cabeçalho (capitao-clima.js: ECMWF via Open-Meteo, mundo real — nunca o snapshot), com a fonte e a hora da
+  // leitura (sem rede, a da cópia salva do dia). null = sem previsão. O vento previsto é informação com fonte: o app não tem limite
+  // de vento para dizer se é seguro sair. Direção por extenso (o TTS lê "NE" como "né").
+  var RUMO_NOME = { N: 'norte', NE: 'nordeste', E: 'leste', SE: 'sudeste', S: 'sul', SW: 'sudoeste', W: 'oeste', NW: 'noroeste' };
+  function previsao() {
+    var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
+    if (!c || typeof c.max !== 'number' || typeof c.min !== 'number') return null;
+    var n0 = function (x) { return typeof x === 'number' && isFinite(x) ? String(Math.round(x)) : null; }, dr = RUMO_NOME[C.rumo ? C.rumo(c.dir) : ''] || '';
+    var vento = n0(c.vento) ? 'vento até ' + n0(c.vento) + ' nós' + (dr ? ' de ' + dr : '') + (n0(c.raj) ? ', rajadas até ' + n0(c.raj) + ' nós' + (c.rajModelo ? ' (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' : '') : ', rajadas ' + SD) : 'vento ' + SD;
+    return { temp: 'máx ' + n0(c.max) + '° · mín ' + n0(c.min) + '°', vento: vento, fonte: C.fonte ? C.fonte(c) : 'Open-Meteo' };
+  }
+  function windy() { var C = window.CapitaoClima; return { l: 'Abrir o windy.com', href: (C && C.WINDY) || 'https://www.windy.com/', ext: true }; }
 
   var ANSWERS = {
     // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
@@ -248,8 +260,9 @@
       var ress = [];
       if (porao && porao.dn < 0) ress.push('(segurança): teste das bombas de porão e alarmes ' + prazoTxt(porao) + ' — acione cada bomba manualmente antes de largar.');
       at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });
-      ress.push('Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
-      return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]) };
+      var pv = previsao();
+      ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + ' — confira a previsão da Marinha antes de sair.' : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
+      return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
     destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + Math.floor(AUT.mn / 2) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: telemetria' + DEMO + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
     manutencao: function (p) {
@@ -263,8 +276,8 @@
       return { text: 'Maré agora ' + m.agora + ' em relação ao nível médio do mar (Balneário Camboriú).\nPróximas horas: ' + m.prox.join(' · ') + '.\nÉ modelo (≈ 8 km), não a tábua oficial da Marinha — não use para passar em canal raso. Corrente: ' + SD + '.', src: 'Fonte: Open-Meteo Marine (sea_level_height_msl) · posição de referência ' + ((D.posicaoRef && D.posicaoRef.fonte) || ''), actions: act(p, [['Clima', askHref(p, 'Clima')]]) };
     },
     clima: function (p) {
-      var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
-      return { text: (c ? 'Hoje em Balneário Camboriú: máx ' + Math.round(c.max) + '° · mín ' + Math.round(c.min) + '° (ECMWF via Open-Meteo).' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\nPrevisão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.', src: 'Fonte: Open-Meteo (ECMWF) · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) };
+      var pv = previsao();
+      return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo sem resposta') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
     canal16: function (p) { return { text: 'VHF canal 16 (156,800 MHz) — socorro, urgência e chamada.\n' + MMSI + ' · indicativo ' + (E.indicativo || SD) + ' · rádios VHF 315 (fabricante ' + SD + ').\nRoteiro MAYDAY (' + ROTULO + '), só em perigo grave e iminente:\nMAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — ' + MMSI + ' — POSIÇÃO: LEIA NO PLOTTER AGORA (último fix ' + SNAP.pos + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ') — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal e MMSI informados pelo proprietário', actions: act(p, [['Abrir SOS', 'sos']]) }; },
     checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência (precisa de AC).\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
@@ -377,7 +390,7 @@
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
     if (has(q, ['diario'])) return 'diarioLer';
     if (has(q, [' mare', 'correnteza', 'corrente de mare']) || (has(q, [' corrente']) && !has(q, ['bateria', 'carregador', 'eletric', 'tensao', 'amper', 'alternada', 'continua', 'shore', 'tomada', ' ac ', ' dc ', 'ancora', 'amarra']))) return 'mare';
-    if (has(q, [' clima ', 'climatic', 'tempo hoje', ' vento', 'chuva', 'meteor', 'temperatura hoje']) || (has(q, ['previsao']) && !has(q, [' revisao', 'manutenc', 'devoluc', 'entrega', 'chegada']))) return 'clima';
+    if (has(q, [' clima ', 'climatic', 'tempo hoje', ' vento', ' rajada', 'chuva', 'meteor', 'temperatura hoje']) || (has(q, ['previsao']) && !has(q, [' revisao', 'manutenc', 'devoluc', 'entrega', 'chegada']))) return 'clima';
     if (has(q, ['para onde', 'destino', 'passeio', 'onde vamos', 'melhor rota', 'rota para', 'rota ate'])) return 'destinos';
     if (has(q, ['checklist de chegada', 'chegada'])) return 'checklistChegada';
     if (has(q, ['checklist', 'check list', ' saida'])) return 'checklist';
@@ -580,8 +593,8 @@
     bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p); });
     bloco('Equipe e contatos', function () { return ANSWERS.contatos(p); });
     bloco('Clima e maré', function () {
-      var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null, m = mareTexto();
-      return { text: (c ? 'Hoje em Balneário Camboriú: máx ' + Math.round(c.max) + '° · mín ' + Math.round(c.min) + '° (ECMWF).' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\nPrevisão de vento e mar para navegar: ' + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: Open-Meteo (ECMWF e Marine) na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
+      var pv = previsao(), m = mareTexto();
+      return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo sem resposta') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
     out.push('## Emergência\nAbrir o SOS do app. ' + SOS_PASSOS + '\n(' + FT.proto + ')');

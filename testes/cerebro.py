@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """Capitão IA — teste do cérebro (roteamento, fonte em toda resposta, SEM DADOS sem fonte, registro só com comando).
+Vento e rajada do dia (paridade Avanti 1.24.0): com a leitura do cabeçalho salva neste aparelho (capitao-clima.js, Open-Meteo
+real — aqui uma cópia fixa no localStorage, sem rede), o clima, o "seguro para sair?" e a ficha da IA trazem o vento previsto com
+a fonte e a hora; sem leitura do dia (ou sem o capitao-clima.js), SEM DADOS e nenhum vento inventado. O vento não muda a decisão.
 
 Uso (com o site servido em http://127.0.0.1:8765):
     python -m http.server 8765 --bind 127.0.0.1      (na raiz do repositório, em outro terminal)
@@ -40,6 +43,7 @@ CASOS = [
     ('a IA não está funcionando', 'diagnostico'), ('Capitão, diagnóstico', 'diagnostico'), ('diagnóstico, por favor', 'diagnostico'),
     ('rode o diagnóstico', 'diagnostico'), ('qual é o status da IA?', 'diagnostico'), ('a IA na nuvem está ligada?', 'diagnostico'),
     ('o motor BB não está funcionando', 'motores'), ('luz do óleo acesa no BB, ainda funcionando', 'oleo'), ('o gerador onan tá ligado?', 'gerador'),
+    ('vai ter rajada hoje?', 'clima'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -108,6 +112,14 @@ def main():
         print('ficha de bordo: %d letras' % len(f))
         if '-v' in sys.argv:
             print(f)
+        # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
+        sem = {r['q']: r for r in res}
+        for q in ('clima e vento', 'é seguro sair hoje?'):
+            t = sem[q]['text']
+            if 'SEM DADOS' not in t or 'vento até' in t or 'rajadas até' in t:
+                falhas += 1
+                print('FALHA sem previsão carregada, %r inventou vento ou perdeu o SEM DADOS: %s' % (q, t[:200]))
+        falhas += vento_do_dia(b)
         if erros:
             falhas += 1
             print('ERROS DE SCRIPT:', erros)
@@ -116,6 +128,58 @@ def main():
                 print('\n## ' + r['q'] + ' → ' + r['key'] + '\n' + r['text'] + '\n' + r['src'] + '\n[voz] ' + r['curta'])
         b.close()
     sys.exit(1 if falhas else 0)
+
+
+# Leitura salva do cabeçalho (capitao.clima.v1) como o capitao-clima.js grava: dia no fuso do barco, em = 2 h atrás. 48° = NE.
+SEMEIA = """(c) => { const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' });
+  c.dia = f.format(new Date(Date.now() + c.desloca)); delete c.desloca; c.em = Date.now() - 2 * 3600e3;
+  localStorage.setItem('capitao.clima.v1', JSON.stringify(c)); window.dispatchEvent(new StorageEvent('storage', { key: 'capitao.clima.v1' }));
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(c.em)); }"""
+RESPOSTAS = """() => { const B = window.CapitaoBrain, r = (q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { key: a.key, text: a.text, src: a.src, voz: B.falaCurta(a), acoes: a.actions || [] }; };
+  const f = B.ficha('app', 'como está o tempo?', null); const i = f.indexOf('## Clima e maré');
+  return { clima: r('clima e vento'), rajada: r('vai ter rajada hoje?'), seguro: r('é seguro sair hoje?'), ficha: f, bloco: i < 0 ? '' : f.slice(i, f.indexOf('\\n## ', i + 5)) }; }"""
+VENTO = 'vento até 12 nós de nordeste, rajadas até 19 nós'
+
+
+def vento_do_dia(b):
+    """Previsão do cabeçalho no chat e na ficha. A página não tem o <capitao-hora-clima>: o capitao-clima.js não busca nada."""
+    falhas = 0
+    ctx = b.new_context()
+    ctx.route('https://*.open-meteo.com/**', lambda rt: rt.abort('internetdisconnected'))
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append(str(e)))
+    pg.goto(BASE + 'base-conhecimento.json')
+    for arq in ('capitao-dados.js', 'capitao-clima.js', 'capitao-brain.js'):
+        pg.add_script_tag(url=BASE + arq)
+    hora = pg.evaluate(SEMEIA, {'desloca': 0, 'max': 27.4, 'min': 18.2, 'vento': 12.3, 'raj': 19.4, 'dir': 48, 'modelo': 'ECMWF'})
+    com = pg.evaluate(RESPOSTAS)
+    fonte = 'ECMWF via Open-Meteo, lida às ' + hora
+    hora_r = pg.evaluate(SEMEIA, {'desloca': 0, 'max': 27.4, 'min': 18.2, 'vento': 12.3, 'raj': 21.2, 'rajModelo': 'Open-Meteo', 'dir': 48, 'modelo': 'ECMWF'})
+    raj = pg.evaluate(RESPOSTAS)
+    pg.evaluate(SEMEIA, {'desloca': -86400e3, 'max': 30, 'min': 20, 'vento': 25, 'raj': 33, 'dir': 180, 'modelo': 'ECMWF'})  # só a de ontem
+    sem = pg.evaluate(RESPOSTAS)
+    windy = [x for x in com['clima']['acoes'] if x.get('ext') and x.get('href', '').startswith('https://www.windy.com/')]
+    linha1 = lambda r: r['text'].split('\n')[0]
+    for nome, cond, extra in [
+        ('clima com a previsão: 1ª linha (a falada) com máx/mín, vento, rajada, direção, fonte e hora', linha1(com['clima']).startswith('Hoje em Balneário Camboriú: máx 27° · mín 18° · ' + VENTO) and fonte in linha1(com['clima']) and VENTO in com['clima']['voz'], linha1(com['clima'])),
+        ('clima: fonte com o modelo e a hora da leitura; toque abre o windy.com (nova aba)', ('previsão ' + fonte) in com['clima']['src'] and len(windy) == 1, (com['clima']['src'], com['clima']['acoes'])),
+        ('"vai ter rajada hoje?" responde com a rajada prevista', com['rajada']['key'] == 'clima' and 'rajadas até 19 nós' in com['rajada']['text'], com['rajada']['key']),
+        ('seguro para sair: vento previsto com fonte e hora + "confira a previsão da Marinha antes de sair"', (VENTO + ' — confira a previsão da Marinha antes de sair.') in com['seguro']['text'] and fonte in com['seguro']['text'] and ('previsão ' + fonte) in com['seguro']['src'], com['seguro']['text'][-260:]),
+        ('seguro para sair: o vento previsto não muda a decisão (sem limite de vento inventado)', linha1(com['seguro']) == linha1(sem['seguro']), (linha1(com['seguro']), linha1(sem['seguro']))),
+        ('ficha da IA: vento previsto com fonte e hora, sem limite inventado e sem coordenadas', VENTO in com['bloco'] and fonte in com['bloco'] and 'não tem limite de vento' in com['bloco'] and not [x for x in ('26°59', '048°36', '-26.99', '-48.6', 'windy.com/') if x in com['ficha']], com['bloco'][:300]),
+        ('rajada que o ECMWF não trouxe: vem do melhor modelo do Open-Meteo, dito na resposta', 'rajadas até 21 nós (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' in raj['clima']['text'] and ('lida às ' + hora_r) in raj['clima']['text'], linha1(raj['clima'])),
+        ('só a leitura de ontem: clima, seguro e ficha com SEM DADOS e nenhum vento previsto', all('vento até' not in x and 'rajadas até' not in x for x in (sem['clima']['text'], sem['seguro']['text'], sem['bloco'])) and 'Previsão do dia: SEM DADOS' in sem['clima']['text'] and 'Sem previsão de vento e mar carregada (SEM DADOS) — confira a previsão da Marinha antes de sair.' in sem['seguro']['text'] and 'Previsão do dia: SEM DADOS' in sem['bloco'] and not sem['clima']['acoes'][1:], (linha1(sem['clima']), sem['bloco'][:160])),
+        ('previsão sem erro de script', not erros, erros),
+    ]:
+        if not cond:
+            falhas += 1
+            print('FALHA', nome, extra)
+    print('vento do dia: %d falhas' % falhas)
+    if '-v' in sys.argv:
+        print('\n## clima\n' + com['clima']['text'] + '\n' + com['clima']['src'] + '\n## seguro\n' + com['seguro']['text'] + '\n' + com['seguro']['src'] + '\n' + com['bloco'])
+    ctx.close()
+    return falhas
 
 
 if __name__ == '__main__':

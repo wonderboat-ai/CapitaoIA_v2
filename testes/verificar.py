@@ -10,6 +10,11 @@ guarda os dois arquivos do React (CORE do sw.js, tudo ou nada). Reserva da troca
 monta com o React do endereço do unpkg e o mesmo SRI (o cache do SW da 1.0.x tem essa cópia; aqui o teste a serve).
 Também o login e a lista (index.html?v=lista), fora das TELAS do sw.js, em todos os tamanhos: sem erro, sem rolagem
 lateral, sem imagem deformada; no login, o ENTRAR na 1ª tela (altura ≥ 640) e o crédito inteiro (altura ≥ 844).
+Vento e rajada do dia no cabeçalho (paridade Avanti 1.24.0), em Main, H2-Home-Mobile e S1-SOS-Web, com o Open-Meteo simulado
+(JSON fixo no route; nenhum pedido sai para a internet): direção e "n/n KT", os três toques abrindo o windy.com na posição de
+referência (nova aba, noopener), nada cortado nem sobreposto no cabeçalho (web 1440×900 e 1024×768, app 390×844 e 360×640, dois
+temas); sem rede e sem leitura do dia, "—" (nunca o vento do snapshot); sem rede com a leitura salva de hoje, ela com a hora dela;
+rajada que o ECMWF não trouxe vem do melhor modelo, dito no title.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -35,6 +40,8 @@ APP = [(390, 844), (360, 640), (430, 932), (844, 390)]
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 # React do próprio site (paridade Avanti 1.24.0): estas telas montam com o unpkg.com fora do ar.
 SEM_UNPKG = ['Main', 'H2-Home-Mobile', 'S2-SOS-Mobile']
+# Telas com o <capitao-hora-clima> no cabeçalho (o SOS também: só previsão real ou a última leitura salva).
+CLIMA = ['Main', 'H2-Home-Mobile', 'S1-SOS-Web']
 REACT_LOCAL = BASE + 'assets/vendor/react-18.3.1/'
 REACT_ARQS = ['react.production.min.js', 'react-dom.production.min.js']
 # reserva do support.js quando a cópia local falha (troca de versão com o SW da 1.0.x): endereço do unpkg → arquivo local (mesmos bytes)
@@ -175,6 +182,12 @@ def main():
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'sem unpkg', 'prob': prob})
                     print('FALHA sem unpkg', tela, ' | '.join(prob))
+            for tela in [t for t in CLIMA if t in lista]:
+                total += 1
+                prob = teste_clima(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'vento no cabeçalho', 'prob': prob})
+                    print('FALHA vento no cabeçalho', tela, ' | '.join(prob))
             if 'S2-SOS-Mobile' in lista:
                 total += 1
                 prob = teste_reserva(b, 'S2-SOS-Mobile')
@@ -219,6 +232,122 @@ def teste_sem_unpkg(b, tela):
     if erros: prob += erros
     if unpkg: prob.append('%d pedido(s) ao unpkg: %s' % (len(unpkg), unpkg[0]))
     ctx.close()
+    return prob
+
+
+# Previsão de hoje como o Open-Meteo devolve (daily, nós). A data entra no teste (hoje no fuso do barco); 48° = NE.
+PREVISAO = {'temperature_2m_max': [27.4], 'temperature_2m_min': [18.2], 'wind_speed_10m_max': [12.3], 'wind_gusts_10m_max': [19.4],
+            'wind_direction_10m_dominant': [48]}
+WINDY_REF = 'https://www.windy.com/-26.991/-48.635?-26.991,-48.635,11'  # posição de referência (GeoNames 3471039), 3 casas
+DIA_BARCO = """(ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + ms))"""
+LE_CLIMA = """() => {
+  const el = document.querySelector('capitao-hora-clima'); if (!el || el.children.length < 4) return null;
+  const hd = el.closest('header'), H = hd.getBoundingClientRect(), prob = [];
+  const plano = (p) => [...p.children].flatMap((k) => getComputedStyle(k).display === 'contents' ? plano(k) : [k]);
+  const itens = plano(hd).map((k) => ({ k, r: k.getBoundingClientRect() })).filter((x) => x.r.width > 0 && x.r.height > 0).sort((a, b) => a.r.left - b.r.left);
+  const nome = (k) => (k.tagName.toLowerCase() + ' ' + (k.textContent || '').trim()).slice(0, 40);
+  itens.forEach((x, i) => {
+    if (x.r.left < H.left - 0.5 || x.r.right > H.right + 0.5 || x.r.top < H.top - 0.5 || x.r.bottom > H.bottom + 0.5) prob.push('fora do cabeçalho: ' + nome(x.k));
+    // só onde há texto: o botão do tema tem alvo de 44 px com margem negativa (de propósito) e passa da caixa de 34
+    if ((x.k.textContent || '').trim() && x.k.scrollWidth > x.k.clientWidth + 1) prob.push('texto cortado: ' + nome(x.k));
+    const y = itens[i + 1]; if (y && x.r.right > y.r.left + 0.5) prob.push('sobreposto: ' + nome(x.k) + ' × ' + nome(y.k));
+  });
+  [...el.querySelectorAll('a')].forEach((a) => { if (a.scrollWidth > a.clientWidth + 1) prob.push('texto cortado: ' + nome(a)); });
+  const de = document.documentElement, links = [...el.querySelectorAll('a')], vento = links.find((a) => /KT/.test(a.textContent));
+  const r = el.getBoundingClientRect(), hora = el.querySelector('b').getBoundingClientRect(), vr = vento ? vento.getBoundingClientRect() : null;
+  return { prob, lateral: de.scrollWidth - de.clientWidth, vento: vento ? vento.textContent : null, titulo: vento ? vento.title : '',
+           titulos: links.map((a) => a.title), links: links.map((a) => [a.href, a.target, a.rel]), texto: el.textContent,
+           duasLinhas: !!vr && vr.top > hora.bottom - 1, altura: r.height / (H.height || 1) };
+}"""
+
+
+def teste_clima(b, tela):
+    """Vento e rajada do dia no cabeçalho, com o Open-Meteo simulado (JSON fixo; marine com a maré). Ver o cabeçalho do arquivo."""
+    movel = eh_app(tela)
+    prob = []
+    pg0 = b.new_page()
+    hoje, ontem = pg0.evaluate(DIA_BARCO, 0), pg0.evaluate(DIA_BARCO, -86400e3)
+    pg0.close()
+    t0 = int(time.time()) // 3600 * 3600
+    mare = {'hourly': {'time': [t0 + 3600 * i for i in range(-24, 48)], 'sea_level_height_msl': [0.42] * 72}}
+
+    def abre(w, h, tema, modo, salva=None):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
+                            is_mobile=movel, has_touch=movel, service_workers='block')
+        ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.tema.v1', '" + tema + "');")
+        if salva:  # leitura salva (sem a data e a hora, que o próprio navegador põe: dia no fuso do barco, em = 3 h atrás)
+            ctx.add_init_script("(() => { const c = %s; c.em = Date.now() - 3 * 3600e3; localStorage.setItem('capitao.clima.v1', JSON.stringify(c)); })()" % json.dumps(salva))
+        pedidos = []
+
+        def rota(rt):
+            url = rt.request.url
+            pedidos.append(url)
+            if modo == 'sem rede':
+                return rt.abort('internetdisconnected')
+            if 'marine-api.' in url:
+                corpo = mare
+            else:
+                d = dict(PREVISAO, time=[hoje])
+                if modo == 'sem rajada no ECMWF' and 'models=ecmwf' in url:
+                    d['wind_gusts_10m_max'] = [None]
+                elif modo == 'sem rajada no ECMWF':
+                    d['wind_gusts_10m_max'] = [21.2]  # melhor modelo do Open-Meteo
+                corpo = {'daily': d}
+            rt.fulfill(status=200, content_type='application/json', body=json.dumps(corpo), headers={'access-control-allow-origin': '*'})
+        ctx.route('https://*.open-meteo.com/**', rota)
+        pg = ctx.new_page()
+        pg.goto(BASE + tela + '.dc.html', wait_until='load')
+        try:
+            pg.wait_for_function("() => { const e = document.querySelector('capitao-hora-clima'); return e && e.children.length >= 4; }", timeout=15000)
+        except Exception:
+            ctx.close()
+            return None, pedidos
+        pg.wait_for_timeout(1200)
+        r = pg.evaluate(LE_CLIMA)
+        if r is not None and salva:
+            r['hora_salva'] = pg.evaluate("() => new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(JSON.parse(localStorage.getItem('capitao.clima.v1')).em))")
+        ctx.close()
+        return r, pedidos
+
+    tams = [(390, 844), (360, 640)] if movel else [(1440, 900), (1024, 768)]
+    for tema in ('escuro', 'claro'):
+        for (w, h) in tams:
+            tag = '%s %dx%d' % (tema, w, h)
+            r, pedidos = abre(w, h, tema, 'json fixo')
+            if r is None:
+                prob.append(tag + ': o cabeçalho não montou'); continue
+            if r['vento'] != 'NE12/19KT': prob.append(tag + ': vento no cabeçalho %r (esperado NE 12/19 KT)' % r['vento'])
+            if any(x != [WINDY_REF, '_blank', 'noopener'] for x in r['links']) or len(r['links']) != 3:
+                prob.append(tag + ': toques do clima, vento e maré não abrem o windy.com na referência em nova aba: %s' % r['links'])
+            if 'ECMWF via Open-Meteo, lida às' not in r['titulo'] or 'até 12 nós de NE, rajadas até 19 nós' not in r['titulo']:
+                prob.append(tag + ': title do vento sem fonte e hora: ' + r['titulo'])
+            if r['prob']: prob.append(tag + ': ' + '; '.join(r['prob'][:4]))
+            if r['lateral'] > 1: prob.append(tag + ': rolagem lateral de %d px' % r['lateral'])
+            if movel and not r['duasLinhas']: prob.append(tag + ': no celular o vento vai na 2ª linha')
+            if movel and r['altura'] > 1: prob.append(tag + ': clima mais alto que o cabeçalho (%.2f)' % r['altura'])
+            if any('open-meteo.com' not in u for u in pedidos) or not any('models=ecmwf_ifs025' in u and 'wind_gusts_10m_max' in u and 'wind_speed_unit=kn' in u for u in pedidos):
+                prob.append(tag + ': pedido fora do esperado (ECMWF com vento e rajada em nós): %s' % pedidos[:3])
+    w, h = tams[0]
+    # sem rede e só a leitura de ontem: "—" em tudo (nem a leitura velha nem o vento do snapshot)
+    r, _ = abre(w, h, 'escuro', 'sem rede', {'dia': ontem, 'max': 30, 'min': 20, 'vento': 25, 'raj': 33, 'dir': 180, 'modelo': 'ECMWF'})
+    if r is None:
+        prob.append('sem rede: o cabeçalho não montou')
+    else:
+        if r['vento'] != '—/—KT': prob.append('sem rede, sem leitura de hoje: vento %r (esperado —/— KT)' % r['vento'])
+        if any(ch.isdigit() for ch in r['texto'][5:]): prob.append('sem rede, sem leitura de hoje: número fora da hora (HH:MM): %r' % r['texto'])
+        if 'SEM DADOS' not in r['titulo']: prob.append('sem rede: title do vento sem SEM DADOS: ' + r['titulo'])
+    # sem rede com a leitura salva de hoje: ela, com a hora dela
+    r, _ = abre(w, h, 'claro', 'sem rede', {'dia': hoje, 'max': 26, 'min': 17, 'vento': 8.4, 'raj': 14.6, 'dir': 200, 'modelo': 'ECMWF'})
+    if r is None:
+        prob.append('sem rede com leitura salva: o cabeçalho não montou')
+    elif r['vento'] != 'S8/15KT' or ('lida às ' + r['hora_salva']) not in r['titulo']:
+        prob.append('sem rede com a leitura salva de hoje: %r · %s (esperado S 8/15 KT, lida às %s)' % (r['vento'], r['titulo'], r['hora_salva']))
+    # ECMWF sem rajada: a rajada vem do melhor modelo do Open-Meteo, dito no title
+    r, pedidos = abre(w, h, 'escuro', 'sem rajada no ECMWF')
+    if r is None:
+        prob.append('ECMWF sem rajada: o cabeçalho não montou')
+    elif r['vento'] != 'NE12/21KT' or 'rajada: melhor modelo do Open-Meteo' not in r['titulo']:
+        prob.append('ECMWF sem rajada: %r · %s' % (r['vento'], r['titulo']))
     return prob
 
 
