@@ -145,7 +145,7 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
 - **O número 710123456 só em:** Embarcação, Documentos, na F3 (web e app) com o rótulo "MMSI (cadastro do app)" no lugar de "MMSI da embarcação (DSC)", em `## Embarcação` da ficha e na 2ª linha da rota nova `mmsi`. Nunca com instrução de programar.
   - Rota `mmsi`, 1ª linha (a falada): "No MAYDAY e no DSC, use o MMSI da etiqueta do rádio (Licença de Estação)."
   - 2ª linha: "Cadastro do app: MMSI 710123456."
-  - O MID 710 é do Brasil: sem o rótulo, o número pode coincidir com o de outra embarcação. Ele só fica com o ok da decisão (e).
+  - O MID 710 é do Brasil: sem o rótulo, o número pode coincidir com o de outra embarcação. O proprietário aprovou mantê-lo (decisão e), só nestes lugares.
 - O roteiro do gerador (`protocolos.roteiro`) diz "MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)", "POSIÇÃO — LEIA NO PLOTTER AGORA" (sem "último fix" nem nada colado) e "PESSOAS A BORDO: conte agora" (nunca o número gerado).
 - As chaves **`sos`, `canal16`, `epirb`, `seafire`, `salvatagem` e `mmsi` ficam fora** do VIVO generalizado, da linha de situação de bordo e do "segundo do quadro" da E2/B3. Nenhuma linha delas traz posição (nem relativa), rumo, SOG, ETA nem o número de pessoas a bordo do quadro. A 1ª linha é a instrução de segurança.
 - **Relato de falha não recebe leitura simulada.**
@@ -290,7 +290,7 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
 - Quem quebra uma asserção a muda **na mesma fase**, de forma explícita, com um comentário de motivo; nunca apaga.
 - Falha fora das quebras previstas (Fase 7) é regressão: pare e corrija.
 
-### Fase 0 — Diagnóstico e paridade (só leitura; o único arquivo escrito é a `PARIDADE.md`) → PARE e me mostre
+### Fase 0 — Diagnóstico e paridade (só leitura; o único arquivo escrito é a `PARIDADE.md`) → PARE e me mostre a tabela de paridade
 
 1. **Linha de base na 1.0.9, nesta máquina.** Com o servidor em segundo plano, rode `cerebro.py`, `worker_ia.py`, `chat_ia.py`, `verificar.py Main H2-Home-Mobile S1-SOS-Web login --offline` e `publicacao.py` (com `git fetch` antes). Tudo verde antes de qualquer edição. Se falhar Edge, Playwright ou porta, me diga.
 2. **Versão do Avanti** na pasta: `VERSAO`, `CACHE` do `sw.js` e tabela do README dele.
@@ -305,27 +305,25 @@ O cérebro separa `MMSI_NUM` (710123456) de `MMSI_RADIO` = "MMSI do rádio de bo
    - **funções novas** (rotas, integrações, telas, modos), cada uma com a proposta de port e o teste;
    - **CONVERSA lado a lado**: capturas do Avanti novo e do Capitão 1.0.9 nos mesmos 4 estados (ouvindo, pensando, falando, encerrar) e uma tabela de cada diferença visual (núcleo, legenda, ENCERRAR, botões, HUD, gestos, carregamento);
    - seção **Andamento**.
-5. **Decisões, cada uma com o meu padrão.** Eu respondo "ok" ou ajusto:
-   - (a) **Núcleo e visual da CONVERSA.** Padrão: o núcleo do Avanti novo (mesma forma, estados e animações), redesenhado em `<canvas>` nas cores WonderHUB; o rosto de partículas da 1.0.8 sai. Alternativa: o rosto dentro do layout do Avanti. Escolho linha a linha na tabela.
-   - (b) **Selo: já decidido pelo proprietário — nenhum.**
-     - Sem "DEMONSTRAÇÃO", "DEMO" ou "dados fictícios" no rodapé de nenhuma tela (inclusive o SOS), no login, no `index.html` nem no `manifest`.
-     - Traga só o texto neutro proposto para `index.html:7` (meta description), `index.html:78` (a faixa sai) e `manifest.webmanifest:5`, sem "demonstração" nem "fictícios".
-   - (c) **Alarme crítico na reprodução.** Padrão: desligado (só o AVISO).
-   - (d) **Versão.** Padrão: 1.1.0.
-   - (e) **Lista proposta** de fabricante e modelo de cada equipamento, dimensões, registro, lotação e waypoints da rota. E o MMSI: 710123456 usa o MID 710 (Brasil) e, sem o rótulo, pode coincidir com o de outra embarcação. Mantenho ou troco?
-   - (f) **Frase da `sobreDados`** (§2.6).
-   - (g) **Exceções ao "toda resposta com dado"**, uma linha de motivo para cada.
-     - Levam a situação de bordo agora, sem posição: indicativo, anexos, telefones, `foraBarco`, tempo e maré sem rede e `sobreDados`.
-     - As chaves do §2.2 (MMSI, Seafire/EPIRB, salvatagem) **nunca** levam.
-     - A posição relativa na IA também é uma exceção.
-   - (h) **Runtime.** Se o `support.js` ou o `deck-stage.js` do Avanti forem mais novos, troco o arquivo inteiro (conferindo o React e o SRI, a lista CDN do `sw.js` e o offline) ou fico no atual? Padrão: fica, a menos que uma função portada dependa dele. Nenhum host de CDN novo.
-   - (i) **Teto da ficha da IA.** Subir para 16.000 se passar de ~11.500? Padrão: sobe. Custo: a cota diária cai de ~50–60 para ~40–45 perguntas.
-   - (j) **Posição no laço.** Padrão: **contínua pela rota** (base → waypoints → volta), andando conforme a distância acumulada; só rpm, SOG, temperaturas, carga e alarmes seguem o laço de 150 s. Alternativa: circuito fechado de 150 s (a posição volta ao ponto de partida a cada 2:30).
-   - (k) **Convidado.** O botão do login usa o **nome exibido** como id (`login.html:120/:133` → `capitao-auth.js:101-102`). Padrão:
+5. **Decisões: todas já aprovadas pelo proprietário.** Valem como estão. Não pergunte de novo; registre-as no `CLAUDE.md` no passo 0 da Fase 1.
+   - (a) **Núcleo e visual da CONVERSA:** o núcleo do Avanti novo (mesma forma, estados e animações), redesenhado em `<canvas>` nas cores WonderHUB. O rosto de partículas da 1.0.8 sai. A tabela da CONVERSA lado a lado vai na PARIDADE.md para conferência.
+   - (b) **Selo: nenhum.** Sem "DEMONSTRAÇÃO", "DEMO" ou "dados fictícios" no rodapé de nenhuma tela (inclusive o SOS), no login, no `index.html` nem no `manifest`. Escreva você os textos neutros de `index.html:7` (meta description) e `manifest.webmanifest:5`, sem "demonstração" nem "fictícios"; a faixa do `index.html:78` sai.
+   - (c) **Alarme crítico na reprodução:** desligado (só o AVISO).
+   - (d) **Versão:** 1.1.0.
+   - (e) **Fabricante, modelo, dimensões, registro, lotação e waypoints:** você escolhe, seguindo o §2.10 (plausíveis de mercado, diferentes dos da Avanti, registro sem colisão com registro real). A lista vai na PARIDADE.md só para conferência. O MMSI 710123456 fica, só nos lugares do §2.2.
+   - (f) **Frase da `sobreDados`:** a padrão do §2.6.
+   - (g) **Exceções ao "toda resposta com dado":** como estão:
+     - levam a situação de bordo agora, sem posição: indicativo, anexos, telefones, `foraBarco`, tempo e maré sem rede e `sobreDados`;
+     - as chaves do §2.2 (MMSI, Seafire/EPIRB, salvatagem) **nunca** levam;
+     - a posição relativa na IA também é uma exceção.
+   - (h) **Runtime:** fica o `support.js` e o `deck-stage.js` atuais, a menos que uma função portada dependa da versão nova do Avanti. Nesse caso, troque o arquivo inteiro, conferindo o React e o SRI, a lista CDN do `sw.js` e o offline. Nenhum host de CDN novo.
+   - (i) **Teto da ficha da IA:** sobe para 16.000 se passar de ~11.500 (a cota diária cai de ~50–60 para ~40–45 perguntas).
+   - (j) **Posição no laço: contínua pela rota** (base → waypoints → volta), andando conforme a distância acumulada. Só rpm, SOG, temperaturas, carga e alarmes seguem o laço de 150 s.
+   - (k) **Convidado.** O botão do login usa o **nome exibido** como id (`login.html:120/:133` → `capitao-auth.js:101-102`). Então:
      - manter a chave `demo` (clientes continuam digitando "demo"), exibir "Convidado" e mudar o login para o botão usar a chave (`publico()` passa a expor o id);
      - o papel vira "convidado";
      - teste **sem a senha real**: o botão põe "demo" no campo; "demo", "Demo", " DEMO " e o valor do botão resolvem o mesmo id (com `crypto.subtle.deriveBits` simulado num `add_init_script`, ou com a normalização do id exposta); nenhuma senha em teste, log ou captura.
-6. **Pare aqui e espere meu ok.**
+6. **Pare aqui e espere meu ok só para a tabela de paridade** (o que entra e o que fica de fora do Avanti). Se o código do Avanti contradisser alguma decisão acima (ex.: o núcleo da CONVERSA não dá para redesenhar em canvas), traga isso junto, com a sua proposta.
 
 ### Fase 0b — Port das funções novas aprovadas
 
@@ -337,7 +335,7 @@ Porte cada função nova da tabela aprovada (motor, cérebro, SW/app, integraç�
 ### Fase 1 — Dados completos e roteiro no gerador (`ferramentas/demo/gerar_demo.py`)
 
 **Passo 0.** Antes de qualquer outra edição, faça um commit só do `CLAUDE.md` ("CLAUDE.md: decisão do proprietário 1.1.0"):
-- logo abaixo do título, a seção `## Decisão do proprietário — 1.1.0 · modo simulação (<data>)`, com as decisões do §1 como ficaram depois do ok, as travas do §2 e as escolhas da Fase 0, em até 25 linhas. Termine com "Vale sobre as linhas marcadas abaixo enquanto `simulacao: true`; com `simulacao: false` volta a regra Nada inventado".
+- logo abaixo do título, a seção `## Decisão do proprietário — 1.1.0 · modo simulação (<data>)`, com as decisões do §1, as travas do §2 e as decisões (a)–(k) da Fase 0 (já aprovadas), em até 25 linhas. Termine com "Vale sobre as linhas marcadas abaixo enquanto `simulacao: true`; com `simulacao: false` volta a regra Nada inventado".
 - no fim de cada linha conflitante (MAPA §9), a marca "(substituído pela Decisão 1.1.0)".
 A reescrita completa fica para a Fase 8.
 
