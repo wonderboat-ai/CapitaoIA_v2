@@ -267,6 +267,11 @@ def main():
                     if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
                     if not pg.url.split('#')[0].endswith(end): prob.append('redirecionou para ' + pg.url)
                     prob += problemas_selo(nome, r)
+                    # o texto da prévia do link (WhatsApp, busca): meta description, og: e twitter:, que o innerText não lê
+                    metas = pg.evaluate("""() => [...document.querySelectorAll('meta[name="description"],meta[property^="og:"],meta[name^="twitter:"]')]
+  .map((m) => (m.getAttribute('name') || m.getAttribute('property')) + ': ' + (m.getAttribute('content') || ''))""")
+                    ruins = [m for m in metas if SELO_RE.search(m)]
+                    if ruins: prob.append('selo na meta da página: %s' % ruins[:3])
                     if nome in ('login', 'index'):
                         corpo = pg.evaluate("() => ({ t: document.body.innerText, demo: document.querySelectorAll('.demo').length })")
                         if SELO_RE.search(corpo['t']) or corpo['demo']: prob.append('linha de selo na página: %r' % (SELO_RE.findall(corpo['t'])[:3],))
@@ -332,6 +337,11 @@ def main():
                     if prob:
                         falhas.append({'tela': 'dados', 'tema': nome, 'prob': prob})
                         print('FALHA dados ·', nome, ' | '.join(prob))
+            total += 1
+            prob = selo_manifest()  # qualquer lista de telas: é o manifest, não uma tela
+            if prob:
+                falhas.append({'tela': 'manifest', 'tema': 'selo', 'prob': prob})
+                print('FALHA manifest · selo', ' | '.join(prob))
             for nome, prob in teste_atalhos(b).items():  # qualquer lista de telas: é o manifest, não uma tela
                 total += 1
                 if prob:
@@ -603,6 +613,16 @@ DESENHO_ATALHO = """async ([src, lado]) => {
   }
   return { n, fora, opacos, caixa: [x0, y0, x1 + 1, y1 + 1] };
 }"""
+
+
+def selo_manifest():
+    """Selo (decisão b) no manifest.webmanifest: name, short_name e description, os mesmos dos atalhos e o rótulo das capturas —
+    é o texto da instalação do app. Devolve a lista de problemas."""
+    man = json.load(open(os.path.join(RAIZ, 'manifest.webmanifest'), encoding='utf-8'))
+    campos = [('', man)] + [('atalho %d ' % i, sc) for i, sc in enumerate(man.get('shortcuts') or [])]
+    campos += [('captura %d ' % i, c) for i, c in enumerate(man.get('screenshots') or [])]
+    return ['%s%s: %r' % (onde, k, o[k]) for onde, o in campos for k in ('name', 'short_name', 'description', 'label')
+            if isinstance(o.get(k), str) and SELO_RE.search(o[k])]
 
 
 def teste_atalhos(b):

@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Capitão IA",
   "short_name": "Capitão IA",
-  "description": "Cérebro operacional da embarcação Capitão IA · demonstração da plataforma (dados fictícios)",
+  "description": "Cérebro operacional da embarcação Capitão IA: telemetria, manutenção, documentos, diário de bordo e SOS",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "./index.html",
