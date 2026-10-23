@@ -14,7 +14,7 @@ window.CapitaoDados = {
   "mmsi": "710123456",
   "mmsiNota": "fictício · demonstração",
   "indicativo": null,
-  "fonte": "dados informados pelo proprietário (26/09/2026) · MMSI fictício de demonstração"
+  "fonte": "cadastro da embarcação no app (proprietário)"
  },
  "posicaoRef": {
   "lat": -26.99056,
@@ -48,19 +48,19 @@ window.CapitaoDados = {
    "protocolos": "07 Protocolos de emergência"
   },
   "arquivos": {
-   "leiame": "LEIA-ME — Capitão IA v2 (DEMO)",
-   "g_gerador": "Guia de bordo (DEMO) — Gerador Onan",
-   "g_seakeeper": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
-   "g_clima": "Guia de bordo (DEMO) — Climatização",
-   "g_eletronicos": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
-   "g_motores": "Guia de bordo (DEMO) — Motores Volvo Penta",
-   "checklist": "Checklist de saída e chegada (DEMO)",
-   "inventario": "Inventário de bordo (DEMO)",
-   "documentos": "Controle de documentos (DEMO)",
-   "agenda": "Agenda preditiva (DEMO)",
-   "diario": "Diário de bordo (DEMO)",
-   "snapshot": "snapshot_demo_20260926_1012.json",
-   "abast": "Registro de abastecimento (DEMO)",
+   "leiame": "LEIA-ME — Capitão IA v2",
+   "g_gerador": "Guia de bordo — Gerador Onan",
+   "g_seakeeper": "Guia de bordo — Estabilizador Seakeeper",
+   "g_clima": "Guia de bordo — Climatização",
+   "g_eletronicos": "Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "g_motores": "Guia de bordo — Motores Volvo Penta",
+   "checklist": "Checklist de bordo",
+   "inventario": "Inventário de bordo",
+   "documentos": "Controle de documentos",
+   "agenda": "Agenda preditiva",
+   "diario": "Diário de bordo",
+   "snapshot": "Leitura do coletor NMEA — 26-09-2026 10h12.json",
+   "abast": "Registro de abastecimento",
    "protocolo": "Protocolo de emergência — procedimento padrão"
   }
  },
@@ -145,7 +145,7 @@ window.CapitaoDados = {
   "hora": "10:12",
   "dia": "26/09",
   "iso": "2026-09-26T10:12:00-03:00",
-  "fonte": "coletor NMEA (DEMO) · snapshot_demo_20260926_1012.json",
+  "fonte": "coletor NMEA · leitura de 26/09/2026 10:12",
   "estado": "Fundeado",
   "local": "enseada de Balneário Camboriú",
   "gps": {
@@ -221,7 +221,7 @@ window.CapitaoDados = {
    "lph": 6.2
   },
   "periodo": "01/08–26/09/2026",
-  "fonte": "telemetria (DEMO) · taxa de combustível dos dois motores",
+  "fonte": "telemetria · taxa de combustível dos dois motores",
   "desdeAbast": {
    "litros": 192,
    "desde": "12/09/2026",
@@ -284,7 +284,7 @@ window.CapitaoDados = {
    "st": "ATRASADA",
    "rot": "ATRASADA · 25 D",
    "tom": "crit",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "clima-filtro",
@@ -298,7 +298,7 @@ window.CapitaoDados = {
    "st": "ATRASADA",
    "rot": "ATRASADA · 16 D",
    "tom": "crit",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "gerador-rotor",
@@ -312,7 +312,7 @@ window.CapitaoDados = {
    "st": "ATRASADA",
    "rot": "ATRASADA · 2 D",
    "tom": "crit",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "casco-anodos",
@@ -326,7 +326,7 @@ window.CapitaoDados = {
    "st": "D-30",
    "rot": "D-9",
    "tom": "warn",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "motores-oleo",
@@ -345,7 +345,7 @@ window.CapitaoDados = {
    "st": "D-30",
    "rot": "D-17",
    "tom": "warn",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "gerador-revisao",
@@ -364,7 +364,7 @@ window.CapitaoDados = {
    "st": "D-30",
    "rot": "D-24",
    "tom": "warn",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "seakeeper-anodo",
@@ -378,7 +378,7 @@ window.CapitaoDados = {
    "st": "D-60",
    "rot": "D-35",
    "tom": "tele",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "baterias",
@@ -392,7 +392,7 @@ window.CapitaoDados = {
    "st": "D-60",
    "rot": "D-50",
    "tom": "tele",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "garmin-cartas",
@@ -406,7 +406,7 @@ window.CapitaoDados = {
    "st": "D-90",
    "rot": "D-66",
    "tom": "accent",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "clima-revisao",
@@ -420,7 +420,7 @@ window.CapitaoDados = {
    "st": "D-90",
    "rot": "D-86",
    "tom": "accent",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   },
   {
    "id": "motores-revisao",
@@ -434,14 +434,14 @@ window.CapitaoDados = {
    "st": "EM DIA",
    "rot": "D-112",
    "tom": "ok",
-   "fonte": "Agenda preditiva (DEMO)"
+   "fonte": "Agenda preditiva"
   }
  ],
  "agendaFalta": [
   "EPIRB: teste e validade da bateria — equipamento SEM DADOS",
   "Seafire: inspeção e validade da carga — SEM DADOS"
  ],
- "agendaFonte": "Agenda preditiva (DEMO) · Drive › Capitão IA v2 › 03 Agenda de manutenção",
+ "agendaFonte": "Agenda preditiva · Drive › Capitão IA v2 › 03 Agenda de manutenção",
  "documentos": [
   {
    "n": "Título de Inscrição da Embarcação (TIE)",
@@ -450,7 +450,7 @@ window.CapitaoDados = {
    "st": "SEM DADOS",
    "nota": "registro não informado",
    "dn": null,
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Seguro da embarcação",
@@ -459,7 +459,7 @@ window.CapitaoDados = {
    "nota": "apólice no Drive (DEMO)",
    "dn": 19,
    "st": "VENCE EM 19 D",
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Licença de estação de rádio (VHF)",
@@ -468,7 +468,7 @@ window.CapitaoDados = {
    "nota": "rádios VHF 315",
    "dn": 65,
    "st": "VENCE EM 65 D",
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Laudo de vistoria anual",
@@ -477,7 +477,7 @@ window.CapitaoDados = {
    "nota": "vistoria de 18/08/2026",
    "dn": 326,
    "st": "EM DIA",
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Garantia do estabilizador Seakeeper",
@@ -486,7 +486,7 @@ window.CapitaoDados = {
    "nota": "modelo SEM DADOS",
    "dn": 175,
    "st": "EM DIA",
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Garantia dos eletrônicos Garmin",
@@ -495,7 +495,7 @@ window.CapitaoDados = {
    "nota": "modelos SEM DADOS",
    "dn": 137,
    "st": "EM DIA",
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Certificado do EPIRB",
@@ -504,7 +504,7 @@ window.CapitaoDados = {
    "st": "SEM DADOS",
    "nota": "EPIRB sem dados",
    "dn": null,
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   },
   {
    "n": "Nota fiscal de abastecimento · 12/09/2026",
@@ -513,10 +513,10 @@ window.CapitaoDados = {
    "st": "A CONFERIR",
    "nota": "foto no Drive (DEMO) · sem valores no app",
    "dn": null,
-   "fonte": "Controle de documentos (DEMO)"
+   "fonte": "Controle de documentos"
   }
  ],
- "docsFonte": "Controle de documentos (DEMO) · Drive › Capitão IA v2 › 02 Documentos",
+ "docsFonte": "Controle de documentos · Drive › Capitão IA v2 › 02 Documentos",
  "abastecimentos": [
   {
    "d": "12/09/2026",
@@ -537,8 +537,8 @@ window.CapitaoDados = {
    "nota": "NF no Drive (DEMO)"
   }
  ],
- "abastFonte": "Registro de abastecimento (DEMO) · Drive › Capitão IA v2 › 06 Abastecimento",
- "regraAbast": "abastecer antes de 25 % em qualquer tanque (regra de bordo DEMO)",
+ "abastFonte": "Registro de abastecimento · Drive › Capitão IA v2 › 06 Abastecimento",
+ "regraAbast": "abastecer antes de 25 % em qualquer tanque (Checklist de bordo § Abastecimento)",
  "diario": [
   {
    "d": "26/09",
@@ -621,7 +621,7 @@ window.CapitaoDados = {
    "t": "Vistoria anual feita; laudo arquivado no Drive."
   }
  ],
- "diarioFonte": "Diário de bordo (DEMO) · Drive › Capitão IA v2 › 04 Diário de bordo",
+ "diarioFonte": "Diário de bordo · Drive › Capitão IA v2 › 04 Diário de bordo",
  "equipe": {
   "perfis": [
    {
@@ -663,7 +663,7 @@ window.CapitaoDados = {
  "faq": {
   "gerador": {
    "status": "PRONTO",
-   "fonte": "Guia de bordo (DEMO) — Gerador Onan",
+   "fonte": "Guia de bordo — Gerador Onan",
    "equip": "Gerador Onan",
    "modelo": null,
    "perguntas": [
@@ -736,7 +736,7 @@ window.CapitaoDados = {
   },
   "estabilizador": {
    "status": "PRONTO",
-   "fonte": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
+   "fonte": "Guia de bordo — Estabilizador Seakeeper",
    "equip": "Estabilizador Seakeeper",
    "modelo": null,
    "perguntas": [
@@ -799,7 +799,7 @@ window.CapitaoDados = {
   },
   "eletronicos": {
    "status": "PRONTO",
-   "fonte": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
+   "fonte": "Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315",
    "equip": "Eletrônicos Garmin · Fusion · VHF 315",
    "modelo": null,
    "perguntas": [
@@ -862,7 +862,7 @@ window.CapitaoDados = {
   },
   "climatizacao": {
    "status": "PRONTO",
-   "fonte": "Guia de bordo (DEMO) — Climatização",
+   "fonte": "Guia de bordo — Climatização",
    "equip": "Climatização",
    "modelo": null,
    "perguntas": [
@@ -915,12 +915,12 @@ window.CapitaoDados = {
   }
  },
  "guias": {
-  "g_gerador": "Guia de bordo (DEMO) — Gerador Onan",
-  "g_seakeeper": "Guia de bordo (DEMO) — Estabilizador Seakeeper",
-  "g_clima": "Guia de bordo (DEMO) — Climatização",
-  "g_eletronicos": "Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315",
-  "g_motores": "Guia de bordo (DEMO) — Motores Volvo Penta",
-  "checklist": "Checklist de saída e chegada (DEMO)",
+  "g_gerador": "Guia de bordo — Gerador Onan",
+  "g_seakeeper": "Guia de bordo — Estabilizador Seakeeper",
+  "g_clima": "Guia de bordo — Climatização",
+  "g_eletronicos": "Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315",
+  "g_motores": "Guia de bordo — Motores Volvo Penta",
+  "checklist": "Checklist de bordo",
   "protocolo": "Protocolo de emergência — procedimento padrão"
  },
  "protocolos": {
@@ -929,7 +929,7 @@ window.CapitaoDados = {
   "canal16": {
    "canal": "16",
    "mhz": "156,800",
-   "fonte": "canal 16 e MMSI informados pelo proprietário (MMSI fictício de demonstração)"
+   "fonte": "Protocolo de emergência — procedimento padrão · MAYDAY · canal 16"
   },
   "roteiro": [
    "MAYDAY, MAYDAY, MAYDAY",

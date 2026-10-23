@@ -28,7 +28,8 @@ URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capit
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 TEXTO_IA = 'Resposta simulada da IA: segure PARTIDA até o motor pegar.'
-FONTE_IA = 'Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
+# Contrato C2: o título do guia perdeu o "(DEMO)" (Decisão 1.1.0, b); o Worker devolve a fonte do trecho que o app mandou.
+FONTE_IA = 'Guia de bordo — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
 PRONTA = "() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0"
 CONVERSA = '[aria-label="Conversa contínua por voz — sem tocar na tela"]'
 VOZ = '[aria-label="Falar — a pergunta é transcrita e respondida em texto e voz"]'  # VOZ (web) e VOZ→TEXTO (app)
@@ -151,7 +152,7 @@ def main():
                     if estado['modo'] == 'erro':
                         return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota grátis diária da IA esgotada"}')
                     texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — a ficha, os trechos e a leitura enviados pelo app não respondem a pergunta'
-                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar')
+                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo — Gerador Onan · 2 · Ligar')  # sem "(DEMO)" desde o C2
                     return route.fulfill(status=200, content_type='application/json', headers=cab,
                                          body=json.dumps({'texto': texto, 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}))
                 pg.route(URL_ARQ.rstrip('/') + '**', rota)
@@ -209,7 +210,8 @@ def main():
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
-                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                # 'DEMO' not in f: desde o C2 a ficha não leva o rótulo (Decisão 1.1.0, b); antes exigia 'DEMO' in f
+                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas nem o rótulo DEMO, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' not in f and "26°59" not in f and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')

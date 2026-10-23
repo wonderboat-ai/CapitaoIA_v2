@@ -91,7 +91,7 @@ def main():
         print('%d perguntas · %d falhas · linhas gravadas no diário: %d (esperado: 1, só o comando explícito)' % (len(res), falhas, diario))
         if diario != 1:
             falhas += 1
-        # Ficha de bordo que vai para a IA: todos os blocos, rótulo DEMO, SEM DADOS honesto, sem coordenadas e cabendo no proxy.
+        # Ficha de bordo que vai para a IA: todos os blocos, sem o rótulo DEMO, sem coordenadas e cabendo no proxy.
         f = pg.evaluate("() => window.CapitaoBrain.ficha('app')")
         blocos = ['## Agora', '## Sobre o app', '## Embarcação', '## Equipamentos', '## Telemetria', '## Manutenção', '## Horímetros', '## Autonomia e consumo',
                   '## Documentos', '## Pendências', '## Diário de bordo', '## Equipe e contatos', '## Clima e maré', '## Guias de bordo', '## Emergência']
@@ -113,7 +113,9 @@ def main():
             ('diagnóstico local: versões, internet, fonte "este aparelho"', 'Diagnóstico do Capitão IA neste aparelho' in x['dgTexto'] and 'cérebro ' + x['versao'] in x['dgTexto'] and x['dgSrc'].startswith('Fonte: este aparelho'), x['dgTexto'][:200]),
             ('ficha com todos os blocos', not faltam, faltam),
             ('ficha sem coordenadas do barco', not coord, coord),
-            ('ficha com rótulo DEMO e SEM DADOS', 'DEMO' in f and 'SEM DADOS' in f, ''),
+            # Decisão 1.1.0 (b), contrato C2: títulos e fontes sem "(DEMO)", então a ficha não leva mais o rótulo. A exigência de
+            # SEM DADOS sai junto: volta invertida na Fase 3 (nenhum SEM DADOS na ficha com simulacao: true).
+            ('ficha sem o rótulo DEMO', 'DEMO' not in f, [l for l in f.split('\n') if 'DEMO' in l][:3]),
             ('ficha entre 3.000 e 10.000 letras (o proxy aceita 12.000)', 3000 <= len(f) <= 10000, len(f)),
             ('voz da resposta da IA: 1ª frase curta + a seguinte, sem a fonte', voz == 'Sou o Capitão IA. Respondo sobre telemetria, manutenção e documentos, sempre com a fonte.', voz),
         ]:

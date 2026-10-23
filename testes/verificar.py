@@ -121,9 +121,10 @@ MEDE_DADOS = """() => {
 }"""
 FUNDO = {'escuro': 'rgb(5, 8, 22)', 'claro': 'rgb(243, 246, 252)'}
 # Texto escrito no código da tela que casa com rx, no texto visível, no title, no aria-label e no alt. O que vem do
-# capitao-dados.js fica de fora até o gerador trocar os rótulos ("Agenda preditiva (DEMO)" e os outros títulos no C2, regraAbast e
-# as fontes no C12, mmsiNota e o "no barco real" do guia na 1b): o casamento é do D quando ele e os 10 caracteres antes (ou os 10
-# depois) estão num texto do D. Casamento sem 10 caracteres de nenhum lado (o chip "PRONTO · DEMO") conta como do código.
+# capitao-dados.js fica de fora até o gerador trocar os rótulos (títulos, fontes e regraAbast já sem "(DEMO)" desde o C2; as
+# notas e os textos dos guias nos commits seguintes do gerador, mmsiNota e o "no barco real" do guia na 1b): o casamento é do D
+# quando ele e os 10 caracteres antes (ou os 10 depois) estão num texto do D. Casamento sem 10 caracteres de nenhum lado (o chip
+# "PRONTO · DEMO") conta como do código.
 FORA_DO_D = r"""((rx) => {
   const dTxt = [], anda = (v) => { if (typeof v === 'string') dTxt.push(v.toLowerCase()); else if (v && typeof v === 'object') Object.keys(v).forEach((k) => anda(v[k])); };
   anda(window.CapitaoDados || {});
@@ -1175,7 +1176,7 @@ def teste_equipe_convidado(b, tela):
         prob.append('linha do perfil: %s' % r['linhas'][:2])
     if 'Convidado' not in r['texto'] or 'CONVIDADO' not in r['texto']: prob.append('sem o nome Convidado ou o chip CONVIDADO')
     # DEMO, Demo ou demonstração escritos no código da tela (antes só Demo/demonstração, e o "(DEMO)" fixo da fonte das regras de
-    # acesso passava); os títulos "(DEMO)" do capitao-dados.js ficam de fora até o C2 (SELO_TEXTO)
+    # acesso passava); o que ainda vem do capitao-dados.js fica de fora (SELO_TEXTO; os títulos saíram no C2)
     if r['selo']: prob.append('o convidado ainda vê DEMO/Demo/demonstração: %s' % r['selo'][:3])
     if 'Convidado' not in r['rodape']: prob.append('rodapé sem o usuário Convidado: %r' % r['rodape'][:120])
     ctx.close()
