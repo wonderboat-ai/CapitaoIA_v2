@@ -46,7 +46,8 @@ entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava 
 CONFIRMAR, sem DEMO, Demo nem demonstração.
 SOS sem o registro gerado (trava §2.1 do PROMPT; CONTRATO-DADOS §6.2 C4): em S1 e S2, em todos os tamanhos e temas e na abertura
 offline (--offline), nem o embarcacao.registro do capitao-dados.js nem "REG." no texto visível, no title, no aria-label, no alt e no
-href; o D tem de ter o registro (senão a conferência não vale).
+href — na tela fechada, com o roteiro MAYDAY aberto e com cada cartão de protocolo aberto (a tela volta ao estado inicial); o D
+tem de ter o registro e o roteiro e todos os cartões têm de abrir (senão a conferência não vale).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -184,23 +185,65 @@ CHECA = """() => {
   return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima, seloTexto: seloTexto, afirma: afirma };
 }"""
 # SOS sem o registro gerado (trava §2.1; C4): o embarcacao.registro e "REG." no texto visível e nos atributos de S1/S2.
+# Revisão do C4: o roteiro MAYDAY (<sc-if value="{{mayday}}">) e os passos de cada cartão (<sc-if value="{{p.open}}">) só existem
+# no DOM depois do toque, e o roteiro é o texto lido no rádio, onde uma identificação gerada entraria primeiro. TEXTOS_SOS lê a tela
+# fechada, com o roteiro aberto e com cada cartão aberto (um de cada vez, que a tela só abre um), e devolve a tela ao estado
+# inicial; sem abrir o roteiro e todos os cartões, a conferência não vale. A 1b reaproveita os textos (MMSI, coordenada, modelo).
 TELAS_SOS = ('S1-SOS-Web', 'S2-SOS-Mobile')
-SOS_REGISTRO = r"""() => {
+TEXTOS_SOS = r"""async () => {
   const E = (window.CapitaoDados || {}).embarcacao || {}, reg = typeof E.registro === 'string' && E.registro ? E.registro : null;
-  const textos = [document.body ? document.body.innerText : ''];
-  document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }));
-  const t = textos.join('\n'), achados = [];
-  if (reg && t.indexOf(reg) >= 0) achados.push('o registro ' + reg);
-  if (/(?:^|[^A-Za-zÀ-ÿ])REG\./.test(t)) achados.push('"REG."');
-  return { reg: reg, achados: achados };
+  const textos = [];
+  const le = () => {
+    textos.push(document.body ? document.body.innerText : '');
+    document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }));
+  };
+  const ate = async (cond) => { for (let i = 0; i < 50 && !cond(); i++) await new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 30))); return cond(); };
+  // o botão do MAYDAY (o da sirene também tem aria-pressed, mas tem aria-label e não diz MAYDAY)
+  const may = () => [...document.querySelectorAll('button[aria-pressed]')].find((b) => !b.hasAttribute('aria-label') && /MAYDAY|ROTEIRO/.test(b.textContent));
+  const cartoes = () => [...document.querySelectorAll('button[aria-expanded]')];
+  le();
+  let roteiro = false, abertos = 0;
+  const m0 = may();
+  if (m0 && m0.getAttribute('aria-pressed') !== 'true') m0.click();
+  if (await ate(() => may() && may().getAttribute('aria-pressed') === 'true' && /ROTEIRO · CANAL 16/.test(document.body.innerText))) { roteiro = true; le(); }
+  const n = cartoes().length;
+  for (let i = 0; i < n; i++) {
+    const b = cartoes()[i];
+    if (!b) break;
+    if (b.getAttribute('aria-expanded') !== 'true') b.click();
+    if (await ate(() => cartoes()[i] && cartoes()[i].getAttribute('aria-expanded') === 'true')) { abertos++; le(); }
+    const c = cartoes()[i];
+    if (c && c.getAttribute('aria-expanded') === 'true') c.click();
+    await ate(() => !cartoes().some((x) => x.getAttribute('aria-expanded') === 'true'));
+  }
+  const m1 = may();
+  if (m1 && m1.getAttribute('aria-pressed') === 'true') m1.click();
+  const inicial = await ate(() => may() && may().getAttribute('aria-pressed') !== 'true' && !cartoes().some((x) => x.getAttribute('aria-expanded') === 'true'));
+  return { reg: reg, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
 }"""
 
 
+def textos_sos(pg):
+    """Texto visível e atributos de S1/S2 na tela fechada, com o roteiro MAYDAY aberto e com cada cartão aberto; e os problemas
+    da própria leitura (roteiro ou cartão que não abriu, tela que não voltou ao estado inicial)."""
+    r = pg.evaluate(TEXTOS_SOS)
+    prob = []
+    if not r['roteiro']: prob.append('a conferência não abriu o roteiro MAYDAY (botão CANAL 16 · MAYDAY)')
+    if not r['cartoes'] or r['abertos'] != r['cartoes']:
+        prob.append('a conferência abriu %d de %d cartões de protocolo' % (r['abertos'], r['cartoes']))
+    if not r['inicial']: prob.append('a tela não voltou ao estado inicial depois da conferência (roteiro ou cartão aberto)')
+    return r, prob
+
+
 def problemas_registro_sos(pg):
-    """S1/S2 (trava §2.1): nem o registro gerado nem "REG." na tela; sem o registro no D, a conferência não vale."""
-    r = pg.evaluate(SOS_REGISTRO)
-    prob = [] if r['reg'] else ['D sem embarcacao.registro: a conferência do registro no SOS não vale']
-    if r['achados']: prob.append('SOS mostra ' + ' e '.join(r['achados']) + ' (trava §2.1: só o nome da embarcação)')
+    """S1/S2 (trava §2.1): nem o registro gerado nem "REG." na tela, também no roteiro MAYDAY e nos passos de cada cartão; sem o
+    registro no D, a conferência não vale."""
+    r, prob = textos_sos(pg)
+    if not r['reg']: prob.append('D sem embarcacao.registro: a conferência do registro no SOS não vale')
+    achados = []
+    if r['reg'] and r['texto'].find(r['reg']) >= 0: achados.append('o registro ' + r['reg'])
+    if re.search(r'(?:^|[^A-Za-zÀ-ÿ])REG\.', r['texto']): achados.append('"REG."')
+    if achados: prob.append('SOS mostra ' + ' e '.join(achados) + ' (trava §2.1: só o nome da embarcação)')
     return prob
 
 

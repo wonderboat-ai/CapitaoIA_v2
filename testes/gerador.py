@@ -570,7 +570,26 @@ EXTRAS = [
      'embarcacao.tanques.agua_l ausente ou fora do tipo'),
     ('EMBARCACAO', 'pessoas a bordo no diário diferente de pessoasBordo', lambda r: mais_texto(hoje(), ' Saída com 6 pessoas a bordo.' if r else ''),
      'diario[0]: 6 pessoas a bordo ≠ embarcacao.pessoasBordo (4)'),
+    # Revisão do C4 (modo real, §0.12 e §4.3): o derivado de um None é None; "None" no texto e rotulo sem o campo de origem reprovam.
+    ('EMBARCACAO', 'rotulo com "None" no texto (modo real)', lambda r: em_modo_real(modelo=None, rotulo='None · 12,40 m · 2023' if r else None),
+     "embarcacao.rotulo com campo sem valor no texto (o derivado de um None é None): 'None · 12,40 m · 2023'"),
+    ('EMBARCACAO', 'rotulo presente sem o campo de origem (modo real)',
+     lambda r: em_modo_real(comprimento=None, rotulo='Marévia 40 HT · 12,40 m · 2023' if r else None),
+     'embarcacao.rotulo presente sem o campo de origem (comprimento None'),
+    ('EMBARCACAO', 'motorizacao com "None" no texto', lambda r: com_embarcacao(motorizacao='2 × None QSB6.7 305 · eixo' if r else '2 × Cummins QSB6.7 305 · eixo'),
+     "embarcacao.motorizacao com campo sem valor no texto (o derivado de um None é None): '2 × None QSB6.7 305 · eixo'"),
+    ('EMBARCACAO', 'motorizacao presente com os motores sem modelo (modo real)',
+     lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, modelo=None), k)[1])(em_modo_real(motorizacao='2 × Cummins QSB6.7 305 · eixo' if r else None)),
+     'embarcacao.motorizacao presente com equipamentos[motores] sem fabricante, modelo ou qtd'),
 ]
+
+
+def em_modo_real(**kw):
+    """hoje() no modo real (simulacao False), com os campos da embarcação trocados (None fica como None: SEM DADOS)."""
+    k = hoje()
+    k['D']['simulacao'] = False
+    k['D']['embarcacao'].update(kw)
+    return k
 
 
 def com_embarcacao(**kw):
@@ -762,11 +781,31 @@ def amostras():
     ok('EMBARCACAO: a embarcação gerada passa (0 violações)', not V0['EMBARCACAO'], V0['EMBARCACAO'][:3])
     V = verifica(motores_c5())['EMBARCACAO']
     ok('EMBARCACAO: a motorizacao gerada confere com o equipamentos[motores] do §1.4 (2 × Cummins QSB6.7 305)', not V, V[:3])
+    # Revisão do C4: o teste antigo punha None nos campos DEPOIS da geração e deixava o rotulo antigo ("Marévia 40 HT · …"), sem
+    # passar pela derivação; com SIMULACAO = False e um campo de origem None, o gerador gravava "None · 12,40 m · 2023" e
+    # "2 × None QSB6.7 305 · eixo", ou parava com TypeError na importação (comprimento ou diesel None). Agora o modo real usa as
+    # mesmas funções do gerador (rotulo_de, motorizacao_de, tanques_de), e os valores gerados saem delas.
+    ok('EMBARCACAO: rotulo, motorizacao e o texto dos tanques do snapshot saem de rotulo_de, motorizacao_de e tanques_de',
+       (G.EMBARCACAO['rotulo'], G.EMBARCACAO['motorizacao'], G.SNAPSHOT['diesel']['tanques'])
+       == (G.rotulo_de(G.EMBARCACAO), G.motorizacao_de(G.MOTOR), G.tanques_de(G.TANQUES))
+       == ('Marévia 40 HT · 12,40 m · 2023', '2 × Cummins QSB6.7 305 · eixo', '2 × 800 L'),
+       (G.EMBARCACAO['rotulo'], G.EMBARCACAO['motorizacao'], G.SNAPSHOT['diesel']['tanques']))
+    try:
+        sem = [G.rotulo_de(dict(G.EMBARCACAO, **{c: None})) for c in C.ORIGEM_ROTULO]
+        sem += [G.motorizacao_de(dict(G.MOTOR, **{c: None})) for c in G.MOTOR]
+        sem += [G.tanques_de(dict(G.TANQUES, **{c: None})) for c in ('diesel_l', 'diesel_n')]
+    except Exception as e:   # o TypeError da importação (comprimento ou diesel None)
+        sem = ['%s: %s' % (type(e).__name__, e)]
+    ok('EMBARCACAO: com um campo de origem None (modo real), o derivado é None (nunca "None" no texto nem TypeError)',
+       sem and all(x is None for x in sem), sem)
     k = hoje()
     k['D']['simulacao'] = False
-    k['D']['embarcacao'].update({'fabricante': None, 'modelo': None, 'registro': None, 'calado': None})
+    E = k['D']['embarcacao']
+    E.update({'fabricante': None, 'modelo': None, 'registro': None, 'calado': None, 'comprimento': None})
+    E.update({'rotulo': G.rotulo_de(E), 'motorizacao': G.motorizacao_de(dict(G.MOTOR, fabricante=None))})
     V = verifica(k)['EMBARCACAO']
-    ok('EMBARCACAO: no modo real, None (SEM DADOS) não reprova', not V, V[:3])
+    ok('EMBARCACAO: no modo real, None (SEM DADOS) não reprova, com rotulo e motorizacao derivados pelo gerador (None)',
+       not V and E['rotulo'] is None and E['motorizacao'] is None, (V[:3], E['rotulo'], E['motorizacao']))
     # Fixtures limpas: com o replay, a rota e o histórico mínimos, as asserções do laço não acusam nada a mais que o port do C8.
     k = com_historico(com_rota(hoje()))
     V = verifica(k)

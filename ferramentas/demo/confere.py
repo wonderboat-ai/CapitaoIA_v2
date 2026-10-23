@@ -228,6 +228,9 @@ UN_EMBARCACAO = {'comprimento': 'm', 'boca': 'm', 'calado': 'm', 'deslocamento':
 TANQUES_EMBARCACAO = ('diesel_l', 'diesel_n', 'agua_l', 'cinzas_l', 'negras_l')
 R_MOTORIZACAO = re.compile(r'(\d+) × (\S.*?) · (\S.*)')
 R_PESSOAS_BORDO = re.compile(r'(\d+) pessoas a bordo')
+# Campo sem valor que virou texto num derivado ("None · 12,40 m · 2023", "2 × None QSB6.7 305 · eixo"): reprova nos dois modos.
+R_SEM_VALOR = re.compile(r'(?<![A-Za-zÀ-ÿ])(?:None|null|undefined|NaN)(?![A-Za-zÀ-ÿ])')
+ORIGEM_ROTULO = ('modelo', 'comprimento', 'ano')
 
 
 # ——————————————————————————————— port do cérebro (capitao-brain.js:12-13, :122-141) ———————————————————————————————
@@ -778,7 +781,11 @@ def a_embarcacao(X):
     None fica (SEM DADOS) e o resto confere igual. rotulo = "<modelo> · <comprimento com 2 casas> m · <ano>"; motorizacao no
     formato "<n> × <motor> · <transmissão>" e, quando equipamentos[motores] já tem fabricante, modelo e qtd numérica (C5), com eles;
     un com as unidades do §1.2, só de campos numéricos da embarcação; tanques com os 5 volumes, o de diesel igual à capacidade do
-    snapshot; 1 ≤ pessoasBordo ≤ lotacao; e o número das linhas do diário fixo com "N pessoas a bordo" (a saída) = pessoasBordo."""
+    snapshot; 1 ≤ pessoasBordo ≤ lotacao; e o número das linhas do diário fixo com "N pessoas a bordo" (a saída) = pessoasBordo.
+    Revisão do C4 (modo real): rotulo e motorizacao nunca com "None" (ou null/NaN) no texto; campo de origem None ⇒ derivado None
+    (rotulo presente com modelo, comprimento ou ano None é incoerência; no modo real, motorizacao presente com fabricante,
+    modelo ou qtd de equipamentos[motores] None também — na simulação, esse None já reprova na NULO); no modo real, volume de
+    tanque None também passa (SEM DADOS)."""
     E = X.D.get('embarcacao')
     if not isinstance(E, dict):
         return ['embarcacao ausente']
@@ -791,16 +798,26 @@ def a_embarcacao(X):
     n = lambda k: E.get(k) if _positivo(E.get(k), 'int') else None
     if n('lotacao') and n('pessoasBordo') and E['pessoasBordo'] > E['lotacao']:
         out.append('embarcacao: lotacao (%d) < pessoasBordo (%d)' % (E['lotacao'], E['pessoasBordo']))
-    if all(_positivo(E.get(k), t) for k, t in (('modelo', str), ('comprimento', 'num'), ('ano', 'int'))):
+    for k in ('rotulo', 'motorizacao'):
+        if isinstance(E.get(k), str) and R_SEM_VALOR.search(E[k]):
+            out.append('embarcacao.%s com campo sem valor no texto (o derivado de um None é None): %r' % (k, E[k]))
+    sem_origem = [k for k in ORIGEM_ROTULO if E.get(k) is None]
+    if sem_origem:
+        if E.get('rotulo') is not None:
+            out.append('embarcacao.rotulo presente sem o campo de origem (%s None = SEM DADOS: o rotulo também é None)' % ', '.join(sem_origem))
+    elif all(_positivo(E.get(k), t) for k, t in (('modelo', str), ('comprimento', 'num'), ('ano', 'int'))):
         esperado = '%s · %s m · %d' % (E['modelo'], ('%.2f' % E['comprimento']).replace('.', ','), E['ano'])
-        if isinstance(E.get('rotulo'), str) and E['rotulo'] != esperado:
+        if E.get('rotulo') != esperado:
             out.append('embarcacao.rotulo ≠ o gerado dos campos (%r)' % esperado)
     mot = E.get('motorizacao')
+    eq = X.eq('motores') or {}
+    if not X.simulacao and mot is not None and [k for k in ('fabricante', 'modelo', 'qtd') if k in eq and eq[k] is None]:
+        out.append('embarcacao.motorizacao presente com equipamentos[motores] sem fabricante, modelo ou qtd (None = SEM DADOS: a '
+                   'motorizacao também é None)')
     if isinstance(mot, str) and mot:
         m = R_MOTORIZACAO.fullmatch(mot)
         if not m:
             out.append('embarcacao.motorizacao fora do formato "<n> × <motor> · <transmissão>": %r' % mot)
-        eq = X.eq('motores') or {}
         if m and all(isinstance(eq.get(k), str) and eq.get(k) for k in ('fabricante', 'modelo')) and _positivo(eq.get('qtd'), 'int'):
             if (int(m.group(1)), m.group(2)) != (eq['qtd'], eq['fabricante'] + ' ' + eq['modelo']):
                 out.append('embarcacao.motorizacao ≠ qtd, fabricante e modelo de equipamentos[motores]')
@@ -814,7 +831,7 @@ def a_embarcacao(X):
             out.append('embarcacao.un.%s: unidade de campo que não é número da embarcação' % k)
     T = E.get('tanques') if isinstance(E.get('tanques'), dict) else {}
     for k in TANQUES_EMBARCACAO:
-        if T and not _positivo(T.get(k), 'num'):
+        if T and not _positivo(T.get(k), 'num') and not (T.get(k) is None and not X.simulacao):   # modo real: None = SEM DADOS
             out.append('embarcacao.tanques.%s ausente ou fora do tipo: %r' % (k, T.get(k)))
     cap_ = ((X.D.get('snapshot') or {}).get('diesel') or {}).get('capacidade')
     if _num(cap_) and _positivo(T.get('diesel_l'), 'num') and cap_ != T['diesel_l']:

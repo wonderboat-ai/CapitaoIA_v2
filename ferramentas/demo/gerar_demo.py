@@ -110,12 +110,40 @@ def num_br(x, casas):
     return ('%.*f' % (casas, x)).replace('.', ',')
 
 
+# Textos derivados de campos (rotulo, motorizacao e o texto dos tanques do snapshot): com um campo de origem None (SEM DADOS no
+# modo real, §4.3 e §0.12), o derivado também é None — nunca "None" no texto nem TypeError na importação. Na simulação, o None
+# reprova na EMBARCACAO e na NULO do confere().
+def falta(*vals):
+    return any(v is None for v in vals)
+
+
+def rotulo_de(E):
+    """§1.2: "<modelo> · <comprimento com 2 casas> m · <ano>"; None se faltar um dos três."""
+    if falta(E.get('modelo'), E.get('comprimento'), E.get('ano')):
+        return None
+    return '%s · %s m · %d' % (E['modelo'], num_br(E['comprimento'], 2), E['ano'])
+
+
+def motorizacao_de(M):
+    """§1.2: "<qtd> × <fabricante> <modelo> · <transmissão>"; None se faltar um dos quatro."""
+    if falta(*(M.get(k) for k in ('qtd', 'fabricante', 'modelo', 'transmissao'))):
+        return None
+    return '%d × %s %s · %s' % (M['qtd'], M['fabricante'], M['modelo'], M['transmissao'])
+
+
+def tanques_de(T):
+    """O texto "<n> × <litros de cada um> L" do diesel no snapshot; None sem o número de tanques ou o volume."""
+    if falta(T.get('diesel_n'), T.get('diesel_l')) or not T['diesel_n']:
+        return None
+    return '%d × %d L' % (T['diesel_n'], T['diesel_l'] // T['diesel_n'])
+
+
 EMBARCACAO = {
     'nome': 'Capitão IA',
     'fabricante': 'Estaleiro Marévia',
     'modelo': 'Marévia 40 HT',
-    'rotulo': '',           # gerado dos campos (abaixo)
-    'motorizacao': '',      # gerado do MOTOR (abaixo)
+    'rotulo': None,         # gerado dos campos (rotulo_de, abaixo)
+    'motorizacao': None,    # gerado do MOTOR (motorizacao_de, abaixo)
     'ano': 2023,
     'registro': 'CIA-23-0417',   # = documentos[tie].numero (C7)
     'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 11.8,   # m · m · m (eixo e hélices) · t carregado
@@ -129,8 +157,8 @@ EMBARCACAO = {
     'mmsiNota': 'fictício · demonstração',   # sai na 1b (a F3 passa a ler protocolos.mmsiRotulo e protocolos.mmsiRadio)
     'fonte': 'cadastro da embarcação no app (proprietário)',
 }
-EMBARCACAO['rotulo'] = '%s · %s m · %d' % (EMBARCACAO['modelo'], num_br(EMBARCACAO['comprimento'], 2), EMBARCACAO['ano'])
-EMBARCACAO['motorizacao'] = '%d × %s %s · %s' % (MOTOR['qtd'], MOTOR['fabricante'], MOTOR['modelo'], MOTOR['transmissao'])
+EMBARCACAO['rotulo'] = rotulo_de(EMBARCACAO)
+EMBARCACAO['motorizacao'] = motorizacao_de(MOTOR)
 
 # Posição de referência para clima e maré: centro de Balneário Camboriú (fonte real, não inventada)
 POSICAO_REF = {
@@ -168,7 +196,7 @@ SNAPSHOT = {
     'bat24': 27.42, 'bat12': 13.18,
     'tanques': {'agua': 68.5, 'cinzas': 21.0, 'negras': 34.5},
     'diesel': {'bb': 54.0, 'be': 52.0, 'litros': 848, 'capacidade': TANQUES['diesel_l'],
-               'tanques': '%d × %d L' % (TANQUES['diesel_n'], TANQUES['diesel_l'] // TANQUES['diesel_n']), 'hora': '26/09 09:31',
+               'tanques': tanques_de(TANQUES), 'hora': '26/09 09:31',
                'nota': 'última leitura com motores ligados'},
     'motores': {'hora': '26/09 09:31', 'estado': 'desligados desde 09:31', 'rpm': [700, 690], 'oleo': [3.4, 3.3],
                 'arref': [79, 78], 'horimetro': [412.6, 409.8], 'marcha': 'neutro'},
