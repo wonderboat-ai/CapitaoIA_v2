@@ -332,7 +332,7 @@ GUIAS = {
     'g_seakeeper': {
         'titulo': ARQ['g_seakeeper'], 'pasta': 'manuais', 'equip': 'Estabilizador Seakeeper (modelo SEM DADOS)',
         'secoes': [
-            ('1 · Energia', 'O estabilizador precisa de energia AC para acelerar o volante: gerador ligado ou tomada do cais. Sem AC, o display avisa e o volante não acelera.'),
+            ('1 · Energia', 'O estabilizador é alimentado pelo banco de 12 V. Para acelerar o volante, mantenha o banco carregado, com o carregador ligado ao gerador ou ao cais. Com tensão baixa no 12 V, o display avisa e o volante não acelera.'),
             ('2 · Ligar antes de sair', 'Ligue pelo display com antecedência: a estabilização só começa quando o volante chega à rotação de operação e o display indica pronto. O tempo de aceleração depende do modelo — SEM DADOS neste guia.'),
             ('3 · Estabilizar', 'O botão de estabilização liga e desliga o efeito sem parar o volante. Em manobra de marina, deixe a estabilização desligada se o display recomendar.'),
             ('4 · Desligar ao atracar', 'Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha a energia até o display indicar que parou.'),
@@ -380,7 +380,7 @@ GUIAS = {
     'checklist': {
         'titulo': ARQ['checklist'], 'pasta': 'manuais', 'equip': 'Checklist de bordo',
         'secoes': [
-            ('Saída · 1 a 3', '1. Gerador: confira água no escapamento depois de ligar. 2. Estabilizador: ligue com antecedência (precisa de AC). 3. Climatização: filtro de água salgada limpo antes de ligar.'),
+            ('Saída · 1 a 3', '1. Gerador: confira água no escapamento depois de ligar. 2. Estabilizador: ligue com antecedência, com o banco de 12 V carregado. 3. Climatização: filtro de água salgada limpo antes de ligar.'),
             ('Saída · 4 a 6', '4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16. 5. Bombas de porão: acione cada uma manualmente e confira o alarme. 6. Diesel: ' + REGRA_ABAST + '.'),
             ('Saída · antes de largar', 'Confira coletes e boia à mão, pessoas a bordo contadas e anotadas no diário, previsão do tempo consultada. Amarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).'),
             ('Chegada', '1. Piloto em espera antes de manobrar. 2. Estabilizador: desligar ao atracar e manter energia até o volante parar. 3. Gerador: retirar cargas, esfriar e desligar. 4. Climatização: desligar e fechar válvula de fundo se o barco ficar parado. 5. Fechar a saída no diário: horas, consumo e pendências.'),

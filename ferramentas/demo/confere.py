@@ -4,8 +4,9 @@
 verifica() roda as asserções sobre o D, a base, o FAQ, as fontes do Drive e o texto dos arquivos gerados, e devolve as
 violações de cada uma (caminho e motivo). São as da §6.3 e, no fim, as invariantes da coluna "Asserção do gerador" da §6.4 que
 não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 ("programe" perto de MMSI) e na SEM_INDICATIVO
-(indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Por último, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
-completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo).
+(indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Depois, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
+completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
+§1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Só a varredura de termos
 (RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C5–C8 estão congeladas por caminho na
@@ -1081,6 +1082,29 @@ def a_calado_fora(X):
     return out
 
 
+# Revisão 3 do C4 (§1.5, §2.5): o Seakeeper 3 funciona só no banco de 12 V, em corrente contínua.
+R_ESTAB = re.compile(r'estabiliz|seakeeper|giroscop')   # no texto normalizado (norm)
+R_ENERGIA_AC = re.compile(r'(?<![A-Za-zÀ-ÿ0-9])(?:AC|CA)(?![A-Za-zÀ-ÿ0-9])|(?i:corrente|energia)\s+alternada')
+R_FRASE = re.compile(r'(?<=[.;!?])\s+|\n+')
+
+
+def a_estabilizador_12v(X):
+    """Nenhum texto do estabilizador fala de energia AC ("AC", "CA", corrente ou energia alternada): o Seakeeper 3 é de 12 V DC,
+    e o guia que manda ligar o gerador para ele acelerar denuncia o fictício para quem conhece o equipamento (revisão 3 do C4).
+    Inteiros: o trecho e o item do FAQ cuja fonte ou equip é o estabilizador, e todo texto cujo caminho o cita (a página de fonte
+    do guia, o D.faq.estabilizador, o snapshot.seakeeper). No resto, só a frase que cita o estabilizador: a climatização e o
+    gerador continuam com a energia AC deles, e "Com energia AC (gerador ou cais)" do guia da climatização passa."""
+    out = []
+    inteiros = ['%s[%d].' % (pre, i) for pre, lista in (('base:trechos', X.trechos), ('faq:itens', X.itens_faq))
+                for i, t in enumerate(lista) if R_ESTAB.search(norm(' '.join(str(t.get(k) or '') for k in ('fonte', 'equip'))))]
+    for cam, s in X.todos():
+        partes = [s] if R_ESTAB.search(norm(cam)) or cam.startswith(tuple(inteiros)) else \
+            [f for f in R_FRASE.split(s) if R_ESTAB.search(norm(f))]
+        for f in partes:
+            out += ['%s: energia AC num texto do estabilizador [%s] «%s»' % (cam, m.group(), trecho(f, m)) for m in R_ENERGIA_AC.finditer(f)]
+    return out
+
+
 def saidas_texto(X):
     """Toda a saída do gerador, como texto: os arquivos da raiz e as fontes do Drive."""
     out = dict(X.saidas)
@@ -1859,6 +1883,8 @@ ASSERCOES = [
     ('TERCEIROS', a_terceiros), ('SEM_PREVISAO', a_sem_previsao),
     # §1.2 (o C4 da §6.2: "asserções do registro e de lotacao ≥ pessoasBordo"), sem nome na §6.3.
     ('EMBARCACAO', a_embarcacao),
+    # Revisão 3 do C4 (§1.5, §2.5): o estabilizador é de 12 V DC; nenhum texto dele fala de energia AC.
+    ('ESTABILIZADOR_12V', a_estabilizador_12v),
 ]
 NOMES = [n for n, _ in ASSERCOES]
 

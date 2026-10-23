@@ -332,6 +332,10 @@ AMOSTRAS = {
     # (C4) a embarcação do §1.2: lotacao ≥ pessoasBordo
     'EMBARCACAO': (lambda r: (lambda k: (k['D']['embarcacao'].update({'lotacao': 3 if r else 12}), k)[1])(hoje()),
                    'embarcacao: lotacao (3) < pessoasBordo (4)'),
+    # (revisão 3 do C4) o Seakeeper 3 é de 12 V DC: o g_seakeeper §1 de antes ("Sem AC, o display avisa…") reprova
+    'ESTABILIZADOR_12V': (lambda r: com_trecho({'fonte': G.GUIAS['g_seakeeper']['titulo'], 'secao': '1 · Teste', 'equip': 'Estabilizador Seakeeper',
+                                                'texto': 'Sem AC, o display avisa e o volante não acelera.' if r else 'Com o banco de 12 V carregado.'}),
+                          'energia AC num texto do estabilizador [AC]'),
 }
 
 
@@ -606,7 +610,37 @@ EXTRAS = [
     ('base sem a UF', 'mob', None, 'Base: Balneário Camboriú.', 'base', 'Balneário Camboriú'),
     ('base sem acento, em maiúsculas', 'roteiro', 1, 'BASE BALNEARIO CAMBORIU (SC)', 'base', 'BALNEARIO CAMBORIU (SC)'),
     ('tanque de diesel', 'mob', None, 'Diesel: 1.600 L.', 'tanques.diesel_l', '1.600 L'),
-    ('cada tanque de diesel', 'mob', None, 'Tanque BB de 800 litros.', 'tanques.diesel_l (cada tanque)', '800 litros'))]
+    ('cada tanque de diesel', 'mob', None, 'Tanque BB de 800 litros.', 'tanques.diesel_l (cada tanque)', '800 litros'))] + [
+    # Revisão 3 do C4: fora do guia do estabilizador, a frase que o cita (o checklist de antes, o diário, com "CA" também); onde o
+    # caminho o cita, o texto inteiro, mesmo a frase sem a palavra (o passo do D.faq.estabilizador e a página de fonte do guia).
+    ('ESTABILIZADOR_12V', 'frase do checklist ("precisa de AC")',
+     lambda r: com_trecho({'fonte': G.GUIAS['checklist']['titulo'], 'secao': 'Saída · teste', 'equip': 'Checklist de bordo',
+                           'texto': '1. Gerador: confira a água. 2. Estabilizador: ligue com antecedência%s. 3. Climatização: filtro limpo.'
+                                    % (' (precisa de AC)' if r else '')}),
+     'energia AC num texto do estabilizador [AC] «… com antecedência (precisa de AC).»'),
+    ('ESTABILIZADOR_12V', 'frase do diário com "CA"', lambda r: mais_texto(hoje(), ' Seakeeper ligado na energia CA do cais.' if r else ''),
+     'diario[0].t: energia AC num texto do estabilizador [CA]'),
+    ('ESTABILIZADOR_12V', 'passo do D.faq.estabilizador sem a palavra',
+     lambda r: com_estab_faq(' Ligue a corrente alternada antes.' if r else ''),
+     'faq.estabilizador.perguntas[0].passos[0].t: energia AC num texto do estabilizador [corrente alternada]'),
+    ('ESTABILIZADOR_12V', 'página de fonte do guia, frase sem a palavra',
+     lambda r: com_estab_fonte(' <p>Sem AC, o volante não acelera.</p>' if r else ''),
+     'Guia de bordo — Estabilizador Seakeeper.html: energia AC num texto do estabilizador [AC]')]
+
+
+def com_estab_faq(extra):
+    """hoje() com `extra` no fim do 1º passo do D.faq.estabilizador."""
+    k = hoje()
+    k['D']['faq']['estabilizador']['perguntas'][0]['passos'][0]['t'] += extra
+    return k
+
+
+def com_estab_fonte(extra):
+    """hoje() com `extra` no fim da página de fonte do guia do estabilizador (fontes do Drive)."""
+    k = hoje()
+    rel = next(r for r in k['F'] if r.endswith('/' + G.GUIAS['g_seakeeper']['titulo'] + '.html'))
+    k['F'][rel] += extra
+    return k
 
 
 def em_modo_real(**kw):
@@ -817,13 +851,22 @@ def amostras():
             ('TERCEIROS', 'documentos[tie].numero = o registro', (lambda k: (k['D']['documentos'].append({'id': 'tie', 'n': 'TIE', 'numero': 'CIA-23-0417'}), k)[1])(hoje())),
             ('TERCEIROS', 'nota fiscal sem número', mais_texto(hoje(), ' Nota fiscal de abastecimento · 12/09/2026 conferida; apólice no Drive.')),
             ('MMSI9', 'o texto do g_ais §2 do §1.5 ("identificação programada no transponder")', mais_texto(hoje(), ' O AIS transmite a '
-             'identificação programada no transponder; o MMSI é o do rádio de bordo (etiqueta / Licença de Estação).'))):
+             'identificação programada no transponder; o MMSI é o do rádio de bordo (etiqueta / Licença de Estação).')),
+            # Revisão 3 do C4: a energia AC da climatização e do gerador, numa frase sem o estabilizador, e o modelo do piloto (ACU-400)
+            # ou "CAÇA" numa frase com ele não acusam; o g_seakeeper §1 e o checklist novos (banco de 12 V) também não.
+            ('ESTABILIZADOR_12V', 'AC da climatização e do gerador, ACU-400 e CAÇA', mais_texto(hoje(), ' Climatização com energia AC do gerador. '
+             'Estabilizador e piloto Evolution ACU-400 ligados. SEAKEEPER EM CAÇA DE ONDA.')),
+            ('ESTABILIZADOR_12V', 'o g_seakeeper §1 e o checklist de saída do §1.5', com_trecho({'fonte': G.GUIAS['g_seakeeper']['titulo'],
+             'secao': '1 · Energia', 'equip': 'Estabilizador Seakeeper', 'texto': G.GUIAS['g_seakeeper']['secoes'][0][1]
+             + ' ' + G.GUIAS['checklist']['secoes'][0][1]}))):
         novos = [m for m in verifica(k)[nome] if m not in V0[nome]]
         ok('%s: %s não acusa' % (nome, o_que), not novos, novos[:3])
     ok('SEM_INDICATIVO: a hora_local da leitura da pasta 05 não é lugar', not [m for m in V0['SEM_INDICATIVO'] if 'hora_local' in m])
     # C4 (§1.2): a embarcação gerada passa; com os equipamentos do §1.4 (C5), a motorizacao confere com os motores; no modo real
     # (§4.2), o que é None (SEM DADOS) não reprova.
     ok('EMBARCACAO: a embarcação gerada passa (0 violações)', not V0['EMBARCACAO'], V0['EMBARCACAO'][:3])
+    ok('ESTABILIZADOR_12V: a saída de hoje passa (0 violações), com o g_seakeeper §1 no banco de 12 V',
+       not V0['ESTABILIZADOR_12V'] and '12 V' in G.GUIAS['g_seakeeper']['secoes'][0][1], V0['ESTABILIZADOR_12V'][:3])
     V = verifica(motores_c5())['EMBARCACAO']
     ok('EMBARCACAO: a motorizacao gerada confere com o equipamentos[motores] do §1.4 (2 × Cummins QSB6.7 305)', not V, V[:3])
     # Revisão do C4: o teste antigo punha None nos campos DEPOIS da geração e deixava o rotulo antigo ("Marévia 40 HT · …"), sem
