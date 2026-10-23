@@ -159,8 +159,8 @@ class Component extends DCLogic {
       ];
     } else {
       vigia = { estado: 'Vigia automática inativa · SEM LEITURA ao vivo', chip: 'INATIVA', tone: warn, wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)', chipLine: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)',
-        sub: 'Última leitura real · snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'),
-        subLongo: 'Telemetria ao vivo desligada. Última leitura real: snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS') + ' · ' + (S.estado || 'SEM DADOS') + (S.local ? ' · ' + S.local : '') + '.',
+        sub: 'Última leitura · snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'),
+        subLongo: 'Telemetria ao vivo desligada. Última leitura: snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS') + ' · ' + (S.estado || 'SEM DADOS') + (S.local ? ' · ' + S.local : '') + '.',
         pos: (S.estado ? S.estado + ' · ' : '') + ((S.gps && S.gps.texto) || 'posição SEM LEITURA'),
         fonte: 'Fonte: ' + (S.fonte || 'SEM DADOS') + ' · leitura de ' + (S.quando || 'SEM DADOS') + ' (diesel ' + (DI.hora || 'SEM DADOS') + ', ' + (DI.nota || 'última leitura') + ') · telemetria ao vivo desligada' };
       const hs = S.hora || 'SEM DADOS';

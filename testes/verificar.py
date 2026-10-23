@@ -36,11 +36,14 @@ textos. A cópia leva intacta a linha do SOS (com a posição) e a página avisa
 Nenhum selo (decisão b da 1.1.0; o Manual fica de fora até a Fase 8, que o reescreve): o rodapé de nenhuma tela ou página diz
 DEMO nem dados fictícios; nenhuma caixa com a borda violeta do antigo selo diz DEMO, fictício ou SNAPSHOT; na Main e na H2 a
 caixa do cabeçalho é a ÚLTIMA LEITURA (dia e hora do snapshot), nunca vazia; S1 e S2 sem caixa de selo; login e lista sem a
-linha DEMO. Login do convidado (decisão k), com "login" na lista, sem senha nenhuma (o deriveBits do navegador é trocado por um
-que devolve o hash público do usuário do sal pedido): o botão mostra CONVIDADO e põe a chave "demo" no campo; "demo", "Demo",
-" DEMO ", "Convidado" e o valor do botão entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava (não
-chega aos 5); usuário que não existe conta 1 erro. Equipe (G4 web e app) com o convidado logado: "Convidado", papel convidado ·
-fora da lista da embarcação, sem A CONFIRMAR.
+linha DEMO; nenhum DEMO, Demo, demonstração ou fictício escrito no código de tela nenhuma (texto visível, title, aria-label e alt;
+o que vem do capitao-dados.js fica de fora até o C2, o C12 e a 1b trocarem os rótulos do gerador) e nenhuma tela afirma que o
+dado é real ("leitura real", "dados reais", "barco real": decisão 5). Login do convidado (decisão
+k), com "login" na lista, sem senha nenhuma (o deriveBits do navegador é trocado por um que devolve o hash público do usuário do
+sal pedido): o botão mostra CONVIDADO e põe a chave "demo" no campo; "demo", "Demo", " DEMO ", "Convidado" e o valor do botão
+entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava (não chega aos 5); usuário que não existe conta
+1 erro. Equipe (G4 web e app) com o convidado logado: "Convidado", papel convidado · fora da lista da embarcação, sem A
+CONFIRMAR, sem DEMO, Demo nem demonstração.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -117,6 +120,31 @@ MEDE_DADOS = """() => {
            fundo: getComputedStyle(document.body).backgroundColor, titulo: document.title, lista: (document.getElementById('lista') || {}).textContent || '' };
 }"""
 FUNDO = {'escuro': 'rgb(5, 8, 22)', 'claro': 'rgb(243, 246, 252)'}
+# Texto escrito no código da tela que casa com rx, no texto visível, no title, no aria-label e no alt. O que vem do
+# capitao-dados.js fica de fora até o gerador trocar os rótulos ("Agenda preditiva (DEMO)" e os outros títulos no C2, regraAbast e
+# as fontes no C12, mmsiNota e o "no barco real" do guia na 1b): o casamento é do D quando ele e os 10 caracteres antes (ou os 10
+# depois) estão num texto do D. Casamento sem 10 caracteres de nenhum lado (o chip "PRONTO · DEMO") conta como do código.
+FORA_DO_D = r"""((rx) => {
+  const dTxt = [], anda = (v) => { if (typeof v === 'string') dTxt.push(v.toLowerCase()); else if (v && typeof v === 'object') Object.keys(v).forEach((k) => anda(v[k])); };
+  anda(window.CapitaoDados || {});
+  const doD = (s) => !!s && dTxt.some((x) => x.indexOf(s.toLowerCase()) >= 0);
+  const textos = document.body ? document.body.innerText.split('\n') : [];
+  document.querySelectorAll('[title],[aria-label],[alt]').forEach((e) => ['title', 'aria-label', 'alt'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }));
+  const achados = [], A = 10;
+  textos.forEach((l) => {
+    for (let m = rx.exec(l); m; m = rx.exec(l)) {
+      const i = m.index, f = i + m[0].length;
+      if (!doD(i >= A ? l.slice(i - A, f) : '') && !doD(l.length - f >= A ? l.slice(i, f + A) : '')) { achados.push(l.trim().slice(0, 140)); break; }
+    }
+    rx.lastIndex = 0;
+  });
+  return achados;
+})"""
+# Selo (decisão b): DEMO, Demo, demonstração ou fictício.
+SELO_TEXTO = FORA_DO_D + r"""(/\bDEMO\b|\bDemo\b|[Dd]emonstra[çc]|DEMONSTRA[ÇC]|[Ff]ict[ií]ci|FICT[IÍ]CI/g)"""
+# Afirmar que é real (decisão 5, trava §2.6 do PROMPT): a AFIRMA_REAL do contrato, com "real" no singular ("Última leitura real"
+# da E1 passava com o "reais?" de lá).
+AFIRMA_TEXTO = FORA_DO_D + r"""(/(?:^|[^A-Za-zÀ-ÿ])(?:dados?|leituras?|barco|embarca[çc][ãa]o|navega[çc][ãa]o)\s+(?:\S+\s+){0,2}(?:rea(?:l|is)|verdadeir[A-Za-zÀ-ÿ]*|oficia(?:l|is))(?![A-Za-zÀ-ÿ])/gi)"""
 CHECA = """() => {
   const de = document.documentElement, root = document.getElementById('dc-root');
   const lateral = Math.max(de.scrollWidth, document.body ? document.body.scrollWidth : 0) - de.clientWidth;
@@ -148,7 +176,8 @@ CHECA = """() => {
   }).map((e) => e.textContent.trim());
   const S = (window.CapitaoDados || {}).snapshot || {};
   const ultima = S.quando ? ('ÚLTIMA LEITURA · ' + S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : null;
-  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima };
+  const seloTexto = """ + SELO_TEXTO + """, afirma = """ + AFIRMA_TEXTO + """;
+  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima, seloTexto: seloTexto, afirma: afirma };
 }"""
 # Selo de demonstração (decisão b da 1.1.0: nenhum): no rodapé, numa caixa de selo ou no texto do login e da lista.
 SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
@@ -163,6 +192,8 @@ def problemas_selo(tela, r):
     if tela in ('Main', 'H2-Home-Mobile') and (r['selos'] != [r['ultima']] or not r['ultima']):
         prob.append('caixa do cabeçalho %s (esperado só %r)' % (r['selos'][:3], r['ultima']))
     if tela in ('S1-SOS-Web', 'S2-SOS-Mobile') and r['selos']: prob.append('caixa de selo no SOS: %s' % r['selos'][:3])
+    if r['seloTexto']: prob.append('selo no texto da tela (fora do capitao-dados.js): %s' % r['seloTexto'][:3])
+    if r['afirma']: prob.append('a tela afirma que o dado é real (fora do capitao-dados.js): %s' % r['afirma'][:3])
     return prob
 
 
@@ -1118,11 +1149,14 @@ def teste_equipe_convidado(b, tela):
     except Exception:
         prob.append('o perfil do convidado não apareceu em 15 s')
     r = pg.evaluate("""() => ({ linhas: document.body.innerText.split('\\n').filter((l) => /fora da lista da embarca/.test(l)),
-      texto: document.body.innerText, rodape: [...document.querySelectorAll('capitao-rodape')].map((e) => e.textContent).join(' ') })""")
+      texto: document.body.innerText, rodape: [...document.querySelectorAll('capitao-rodape')].map((e) => e.textContent).join(' '),
+      selo: """ + SELO_TEXTO + """ })""")
     if not r['linhas'] or any('convidado · fora da lista da embarcação' not in l or 'A CONFIRMAR' in l for l in r['linhas']):
         prob.append('linha do perfil: %s' % r['linhas'][:2])
     if 'Convidado' not in r['texto'] or 'CONVIDADO' not in r['texto']: prob.append('sem o nome Convidado ou o chip CONVIDADO')
-    if re.search(r'\bDemo\b|demonstração', r['texto']): prob.append('o convidado ainda aparece como Demo/demonstração')
+    # DEMO, Demo ou demonstração escritos no código da tela (antes só Demo/demonstração, e o "(DEMO)" fixo da fonte das regras de
+    # acesso passava); os títulos "(DEMO)" do capitao-dados.js ficam de fora até o C2 (SELO_TEXTO)
+    if r['selo']: prob.append('o convidado ainda vê DEMO/Demo/demonstração: %s' % r['selo'][:3])
     if 'Convidado' not in r['rodape']: prob.append('rodapé sem o usuário Convidado: %r' % r['rodape'][:120])
     ctx.close()
     return prob
