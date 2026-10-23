@@ -417,7 +417,7 @@ class Component extends DCLogic {
     return {
       sweep: fx.sweep, led: L.vivo ? fx.ledVivo : fx.ledSnap, orbit: fx.orbit, spot: fx.spot,
       local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(),
-      demo: D.demo ? 'DEMO' : '', demoTip: D.aviso || '',
+      demo: D.demo ? 'DEMO' : 'ÚLTIMA LEITURA · ' + (S.quando ? (S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : 'SEM DADOS'), demoTip: D.aviso || '',
       liveLabel: L.vivo ? 'AO VIVO · ' + L.hora : 'SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' · ' + (S.quando || 'SEM DADOS').slice(0, 5) + ' ' + (S.hora || ''),
       liveTip: L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor' + (D.demo ? ' (demonstração, dados fictícios)' : '') + ' de ' + (S.quando || 'SEM DADOS'),
       reg: E.registro || 'SEM DADOS',

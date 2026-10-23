@@ -1,23 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Capitão IA — gerador dos dados de DEMONSTRAÇÃO (fictícios).
+"""Capitão IA — gerador dos dados da embarcação.
 
-Um lugar só para os dados da embarcação de demonstração. Gera:
+Um lugar só para os dados da embarcação. Gera:
   1. capitao-dados.js          (raiz)  → window.CapitaoDados, lido pelo cérebro e pelas telas
   2. base-conhecimento.json    (raiz)  → trechos dos guias de bordo, busca BM25 do chat e da voz
   3. ferramentas/demo/fontes/          → os mesmos dados como arquivos de origem (Docs/Planilhas/JSON) enviados ao
                                          Google Drive › "Capitão IA v2" (pastas 01–07)
 
-REGRAS
-- Tudo aqui é FICTÍCIO e vai rotulado "DEMO" (decisão do proprietário, 26/09/2026: demonstração da plataforma para
-  clientes e modelo para as próximas embarcações).
-- Continua SEM DADOS o que o proprietário não informou: modelo de cada equipamento, fabricante/modelo e registro do
-  barco, Seafire e EPIRB (procedimento, localização, validade). None = SEM DADOS.
-- Nada copiado da Avanti Vessel (nomes, registro, MMSI, IDs, leituras, valores).
-- Sem valores em dinheiro, CPF/CNPJ, telefones, e-mails ou nomes de terceiros — nem na demonstração (a mesma regra
+REGRAS (Decisão do proprietário 1.1.0 · modo simulação; ver o CLAUDE.md)
+- SIMULACAO = True: dados completos da embarcação de apresentação, sem selo nem rótulo (DEMO, SEM DADOS, SEM LEITURA,
+  MANUAL NO DRIVE, A CONFERIR/A CONFIRMAR). O rodapé gerado faz o rebase dos prazos e o capitao-replay.js lê D.replay.
+  Nenhum texto gerado afirma nem nega que os dados são reais (a frase da sobreDados fica no cérebro).
+- SIMULACAO = False (próxima embarcação): só dado com fonte; None = SEM DADOS. O gerador recusa replay além de limites
+  e alertas, rota, histórico simulado e dia de bordo e, enquanto o repositório for público, a posição do barco.
+- Nunca gerados: indicativo, HEX ID, telefone, lugar de equipamento de salvatagem.
+- Nada copiado da Avanti Vessel (nomes, modelos, registro, MMSI, IDs, leituras, valores, textos).
+- Sem valores em dinheiro, CPF/CNPJ, telefones, e-mails ou nomes de terceiros — nem na simulação (a mesma regra
   vale para o barco real que vier depois).
 - Procedimentos de emergência: "procedimento padrão — confirmar com o protocolo de bordo" (decisão do proprietário).
 
-Para a próxima embarcação: trocar os dados abaixo pelos reais (com a fonte de cada um) e rodar
+Para a próxima embarcação: SIMULACAO = False, trocar os dados abaixo pelos reais (com a fonte de cada um) e rodar
     python ferramentas/demo/gerar_demo.py
 """
 import csv
@@ -31,6 +33,9 @@ FONTES = os.path.join(os.path.dirname(__file__), 'fontes')
 
 REF = date(2026, 9, 26)          # data do snapshot: prazos D-n contados a partir dela
 DRIVE = 'Drive › Capitão IA v2'
+SIMULACAO = True                 # Decisão 1.1.0: embarcação de apresentação com navegação simulada (False = dados reais)
+# Selo e aviso antigos: só na base e nas fontes do Drive, até a troca dos rótulos da Fase 1. O D não leva selo nem aviso
+# (decisão b): nenhum campo de selo.
 SELO = 'DEMO · DADOS FICTÍCIOS'
 AVISO = ('Demonstração da plataforma Capitão IA: embarcação, leituras, agenda, documentos, diário, abastecimentos e guias '
          'de bordo são fictícios. Procedimentos de emergência são o padrão internacional, a confirmar com o protocolo de '
@@ -424,7 +429,7 @@ def dados():
         docs.append(x)
     return {
         'versao': REF.strftime('%d/%m/%Y'),
-        'demo': True, 'selo': SELO, 'aviso': AVISO,
+        'simulacao': SIMULACAO, 'demo': False,
         'embarcacao': EMBARCACAO, 'posicaoRef': POSICAO_REF, 'mar': MAR,
         'drive': {'raiz': DRIVE, 'pastas': PASTAS, 'arquivos': ARQ},
         'equipamentos': EQUIPAMENTOS, 'equipNota': EQUIP_NOTA,
@@ -447,8 +452,7 @@ def escreve(caminho, texto):
 
 def gera_js(D):
     cab = ('/* Capitão IA — dados da embarcação (GERADO por ferramentas/demo/gerar_demo.py — não editar à mão).\n'
-           '   ' + SELO + ': ' + AVISO + '\n'
-           '   null = SEM DADOS (ou SEM LEITURA, em sensor). Cada grupo traz a fonte (arquivo no ' + DRIVE + '). */\n')
+           '   Cada grupo traz a fonte (arquivo no ' + DRIVE + '). Na leitura, null = SEM DADOS (ou SEM LEITURA, em sensor). */\n')
     return cab + 'window.CapitaoDados = ' + json.dumps(D, ensure_ascii=False, indent=1) + ';\n'
 
 

@@ -402,7 +402,7 @@ class Component extends DCLogic {
     return {
       sweep: fx.sweep, led: vivo ? fx.ledVivo : fx.ledSnap,
       liveTip: vivo ? 'Telemetria ao vivo' : 'Telemetria ao vivo desligada — snapshot' + (D.demo ? ' de demonstração' : '') + ' de ' + (S.quando || 'SEM DADOS'),
-      demo: D.demo ? 'DEMO · DADOS FICTÍCIOS' : 'SNAPSHOT ' + (S.quando || ''), demoTip: D.aviso || '',
+      demo: D.demo ? 'DEMO · DADOS FICTÍCIOS' : 'ÚLTIMA LEITURA · ' + (S.quando ? (S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : 'SEM DADOS'), demoTip: D.aviso || '',
       idle: !chatting, chatting: chatting, thinking: s.thinking,
       pensandoTxt: s.iaN > 0 ? 'CONSULTANDO A IA DE BORDO…' : 'CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS…',
       attachment: !!att,

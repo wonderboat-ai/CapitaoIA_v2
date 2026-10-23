@@ -33,6 +33,14 @@ cadastrar um telefone e abrir um convite (G4), baixar, desfazer os três nas tel
 ficou de fora e a tarefa continua aberta (num aparelho sem esse diário, a cópia devolve os três); as telas do app gravam os mesmos
 textos. A cópia leva intacta a linha do SOS (com a posição) e a página avisa. Sem sessão, vai para o login. Abre offline
 (--offline, com "dados" na lista). No --offline, cada tela e página da rodada tem de estar no cache da instalação (TELAS/CORE).
+Nenhum selo (decisão b da 1.1.0; o Manual fica de fora até a Fase 8, que o reescreve): o rodapé de nenhuma tela ou página diz
+DEMO nem dados fictícios; nenhuma caixa com a borda violeta do antigo selo diz DEMO, fictício ou SNAPSHOT; na Main e na H2 a
+caixa do cabeçalho é a ÚLTIMA LEITURA (dia e hora do snapshot), nunca vazia; S1 e S2 sem caixa de selo; login e lista sem a
+linha DEMO. Login do convidado (decisão k), com "login" na lista, sem senha nenhuma (o deriveBits do navegador é trocado por um
+que devolve o hash público do usuário do sal pedido): o botão mostra CONVIDADO e põe a chave "demo" no campo; "demo", "Demo",
+" DEMO ", "Convidado" e o valor do botão entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava (não
+chega aos 5); usuário que não existe conta 1 erro. Equipe (G4 web e app) com o convidado logado: "Convidado", papel convidado ·
+fora da lista da embarcação, sem A CONFIRMAR.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -130,8 +138,32 @@ CHECA = """() => {
   });
   const prancheta = !!(root && root.querySelector('[style*="width: 1440px"],[style*="width: 390px"],[style*="width: 2380px"],deck-stage'));
   const rodape = [...document.querySelectorAll('capitao-rodape a')].map((a) => a.getAttribute('href'));
-  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape };
+  const rodapeTxt = [...document.querySelectorAll('capitao-rodape')].map((e) => e.textContent).join(' ');
+  // Caixas visíveis com a borda violeta do antigo selo (a cor do tema em --cap-violeta-rgb; no escuro, o fallback): o texto de cada uma.
+  const vr = (getComputedStyle(de).getPropertyValue('--cap-violeta-rgb').trim() || '162,43,253').replace(/\\s/g, '');
+  const selos = [...document.querySelectorAll('span,div,b,p')].filter((e) => {
+    const q = e.getBoundingClientRect(); if (q.width < 1 || q.height < 1) return false;
+    const cs = getComputedStyle(e), c = cs.borderTopColor.replace(/\\s/g, '');
+    return parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none' && (c.indexOf('(' + vr + ',') >= 0 || c.indexOf('(' + vr + ')') >= 0);
+  }).map((e) => e.textContent.trim());
+  const S = (window.CapitaoDados || {}).snapshot || {};
+  const ultima = S.quando ? ('ÚLTIMA LEITURA · ' + S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : null;
+  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima };
 }"""
+# Selo de demonstração (decisão b da 1.1.0: nenhum): no rodapé, numa caixa de selo ou no texto do login e da lista.
+SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
+
+
+def problemas_selo(tela, r):
+    """Selo que sobrou na tela (r = CHECA). Main e H2: a caixa do cabeçalho é a ÚLTIMA LEITURA, nunca vazia nem SNAPSHOT; SOS sem caixa."""
+    prob = []
+    if SELO_RE.search(r['rodapeTxt']): prob.append('selo no rodapé: %r' % r['rodapeTxt'][:120])
+    ruins = [t for t in r['selos'] if SELO_RE.search(t) or 'SNAPSHOT' in t.upper()]
+    if ruins: prob.append('caixa de selo: %s' % ruins[:3])
+    if tela in ('Main', 'H2-Home-Mobile') and (r['selos'] != [r['ultima']] or not r['ultima']):
+        prob.append('caixa do cabeçalho %s (esperado só %r)' % (r['selos'][:3], r['ultima']))
+    if tela in ('S1-SOS-Web', 'S2-SOS-Mobile') and r['selos']: prob.append('caixa de selo no SOS: %s' % r['selos'][:3])
+    return prob
 
 
 def main():
@@ -176,6 +208,8 @@ def main():
                     if not url.split('#')[0].endswith(tela + '.dc.html'): prob.append('redirecionou para ' + url)
                     if tela in ('Main', 'H2-Home-Mobile') and 'dados.html' not in r['rodape']:
                         prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
+                    # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
+                    if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:
@@ -201,6 +235,10 @@ def main():
                     if r['lateral'] > 1: prob.append('rolagem lateral de %d px' % r['lateral'])
                     if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
                     if not pg.url.split('#')[0].endswith(end): prob.append('redirecionou para ' + pg.url)
+                    prob += problemas_selo(nome, r)
+                    if nome in ('login', 'index'):
+                        corpo = pg.evaluate("() => ({ t: document.body.innerText, demo: document.querySelectorAll('.demo').length })")
+                        if SELO_RE.search(corpo['t']) or corpo['demo']: prob.append('linha de selo na página: %r' % (SELO_RE.findall(corpo['t'])[:3],))
                     if nome == 'login':
                         m = pg.evaluate(MEDE_LOGIN)
                         if h >= 640 and (m['go'] is None or m['go'] > h): prob.append('ENTRAR fora da 1ª tela (borda %s > %d)' % (m['go'], h))
@@ -245,6 +283,18 @@ def main():
                 if prob:
                     falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
                     print('FALHA reserva do React', ' | '.join(prob))
+            if 'login' in paginas:
+                for nome, prob in teste_login(b).items():
+                    total += 1
+                    if prob:
+                        falhas.append({'tela': 'login', 'tema': nome, 'prob': prob})
+                        print('FALHA login ·', nome, ' | '.join(prob))
+            for tela in [t for t in ('G4-Equipe-Web', 'G4-Equipe-Mobile') if t in lista]:
+                total += 1
+                prob = teste_equipe_convidado(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'convidado', 'prob': prob})
+                    print('FALHA convidado', tela, ' | '.join(prob))
             if 'dados' in paginas:
                 for nome, prob in teste_dados(b).items():
                     total += 1
@@ -943,6 +993,139 @@ def teste_dados(b):
     if 'login.html?next=dados.html' not in pg.url: p.append('sem sessão abriu %s' % pg.url)
     ctx.close()
     return res
+
+
+# Login sem senha nenhuma: o deriveBits do navegador devolve o hash público (capitao-auth.js) do usuário cujo sal veio no
+# pedido, seja qual for a senha digitada. Assim o teste confere a CHAVE que o login resolve, nunca a senha.
+DERIVE_FALSO = """(() => {
+  const MAPA = %s, S = window.SubtleCrypto && SubtleCrypto.prototype;
+  if (!S) return;
+  const b64 = (buf) => { let s = ''; new Uint8Array(buf).forEach((x) => { s += String.fromCharCode(x); }); return btoa(s); };
+  S.deriveBits = function (alg, key, len) {
+    const h = MAPA[b64(alg.salt)];
+    return Promise.resolve(h ? Uint8Array.from(atob(h), (c) => c.charCodeAt(0)).buffer : new ArrayBuffer(len / 8));
+  };
+})()"""
+SENHA_FALSA = 'nao-e-a-senha'  # qualquer texto: o deriveBits falso não olha a senha
+KT = 'capitao.login.tentativas.v1'
+
+
+def usuarios_auth():
+    """{id: (nome, sal, hash)} lidos do capitao-auth.js (sal e hash são públicos; a senha não está em lugar nenhum)."""
+    txt = open(os.path.join(RAIZ, 'capitao-auth.js'), encoding='utf-8').read()
+    return {m.group(1): (m.group(2), m.group(3), m.group(4))
+            for m in re.finditer(r"(\w+): \{ nome: '([^']+)'.*?sal: '([^']+)', hash: '([^']+)' \}", txt)}
+
+
+def teste_login(b):
+    """Convidado (decisão k da 1.1.0): o botão põe a chave, o nome fica no texto; as grafias que o cliente digita entram no mesmo
+    id; a trava de 5 tentativas não sobe com "Convidado"; usuário que não existe conta erro. Ver o cabeçalho do arquivo."""
+    res = {}
+    us = usuarios_auth()
+    mapa = json.dumps({sal: h for (_, sal, h) in us.values()})
+
+    def abre(tentativas=None):
+        ctx = b.new_context(viewport={'width': 390, 'height': 844}, service_workers='block')
+        ctx.add_init_script(DERIVE_FALSO % mapa)
+        if tentativas is not None:  # erros anteriores (a página põe o "ult" de agora: dentro da 1 h que a trava considera)
+            ctx.add_init_script("(() => { if (!sessionStorage.getItem('t')) { sessionStorage.setItem('t', '1'); localStorage.setItem('%s', JSON.stringify({ n: %d, ate: 0, ult: Date.now() })); } })()" % (KT, tentativas))
+        # destino depois do login: página vazia (o teste lê a sessão nela, sem seguir para a tela inicial)
+        ctx.route(re.compile(r'/index\.html(\?.*)?$'), lambda rt: rt.fulfill(status=200, content_type='text/html', body='<!doctype html><title>destino</title>'))
+        pg = ctx.new_page()
+        pg.goto(BASE + 'login.html', wait_until='load')
+        pg.wait_for_function("() => document.querySelectorAll('.chip').length > 0", timeout=10000)
+        return ctx, pg
+
+    def entra(pg, valor):
+        if valor is not None:
+            pg.fill('#u', valor)
+        pg.fill('#p', SENHA_FALSA)
+        pg.click('#go')
+        try:
+            pg.wait_for_url(re.compile(r'/index\.html'), timeout=8000)
+        except Exception:
+            return {'url': pg.url, 'msg': pg.evaluate("() => document.getElementById('m').textContent"),
+                    'kt': pg.evaluate("(k) => localStorage.getItem(k)", KT)}
+        return {'url': pg.url, 'sessao': pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.sessao.v1') || 'null')"),
+                'kt': pg.evaluate("(k) => localStorage.getItem(k)", KT)}
+
+    # 1) botões: texto = nome exibido, data-u = chave; o do convidado põe "demo" no campo e fica marcado
+    p = res['botões do login'] = []
+    ctx, pg = abre()
+    chips = pg.evaluate("() => [...document.querySelectorAll('.chip')].map((c) => [c.textContent, c.getAttribute('data-u')])")
+    esperado = [[nome.upper(), uid] for uid, (nome, _, _) in us.items()]
+    if chips != esperado: p.append('botões %s (esperado %s)' % (chips, esperado))
+    if ['CONVIDADO', 'demo'] not in chips: p.append('sem o botão CONVIDADO com a chave demo: %s' % chips)
+    else:
+        pg.click('.chip[data-u="demo"]')
+        v = pg.evaluate("() => [document.getElementById('u').value, document.querySelector('.chip[data-u=\"demo\"]').getAttribute('aria-pressed')]")
+        if v != ['demo', 'true']: p.append('o botão CONVIDADO pôs %r no campo (aria-pressed %s; esperado "demo", true)' % tuple(v))
+        for txt in ('Convidado', ' DEMO ', 'Demo'):
+            pg.fill('#u', txt)
+            if pg.evaluate("() => document.querySelector('.chip[data-u=\"demo\"]').getAttribute('aria-pressed')") != 'true':
+                p.append('digitar %r não marca o botão CONVIDADO' % txt)
+    ids = pg.evaluate("""() => { const A = window.CapitaoAuth; if (!A || typeof A.idDe !== 'function') return 'CapitaoAuth.idDe ausente';
+      return ['demo', 'Demo', ' DEMO ', 'Convidado', 'CONVIDADO', 'convidado ', 'Lucas Araújo', 'constructor', 'toString'].map((x) => A.idDe(x)); }""")
+    if ids != ['demo'] * 6 + ['lucas', 'constructor', 'tostring']: p.append('normalização do login: %s' % ids)
+    ctx.close()
+
+    # 2) cada grafia entra como demo, sem senha nenhuma e sem erro na trava
+    p = res['grafias do convidado'] = []
+    for valor in ('demo', 'Demo', ' DEMO ', 'Convidado', None):
+        ctx, pg = abre()
+        rot = 'botão CONVIDADO' if valor is None else repr(valor)
+        if valor is None:  # o valor que o botão põe
+            if not pg.locator('.chip[data-u="demo"]').count():
+                p.append('sem o botão com a chave demo'); ctx.close(); continue
+            pg.click('.chip[data-u="demo"]')
+        r = entra(pg, valor)
+        if not r.get('sessao') or r['sessao'].get('u') != 'demo': p.append('%s não entrou como demo: %s' % (rot, r))
+        elif r['kt'] is not None: p.append('%s entrou mas deixou a trava %s' % (rot, r['kt']))
+        ctx.close()
+
+    # 3) a trava: com 4 erros antes, "Convidado" entra e zera a trava (com o nome no campo, seria o 5º erro e travaria)
+    p = res['trava com Convidado'] = []
+    ctx, pg = abre(tentativas=4)
+    if pg.evaluate("(k) => JSON.parse(localStorage.getItem(k)).n", KT) != 4: p.append('a trava semeada não ficou em 4')
+    r = entra(pg, 'Convidado')
+    if not r.get('sessao') or r['sessao'].get('u') != 'demo': p.append('"Convidado" com 4 erros na trava não entrou: %s' % r)
+    elif r['kt'] is not None: p.append('"Convidado" entrou mas a trava ficou %s' % r['kt'])
+    ctx.close()
+
+    # 4) contraprova: usuário que não existe não entra (o deriveBits falso não abre a porta) e conta 1 erro
+    p = res['usuário que não existe'] = []
+    ctx, pg = abre()
+    r = entra(pg, 'visitante')
+    n = json.loads(r['kt'])['n'] if r.get('kt') else 0
+    if r.get('sessao') or 'login.html' not in r['url'] or n != 1 or 'incorretos' not in (r.get('msg') or ''):
+        p.append('"visitante": %s (esperado ficar no login com 1 erro na trava)' % r)
+    ctx.close()
+    return res
+
+
+def teste_equipe_convidado(b, tela):
+    """Equipe com o convidado logado (decisão k): nome Convidado, papel convidado · fora da lista da embarcação, sem A CONFIRMAR."""
+    movel = eh_app(tela)
+    w, h = (APP if movel else WEB)[0]
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
+                        is_mobile=movel, has_touch=movel, service_workers='block')
+    ctx.add_init_script("(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'demo', em: n, exp: n + 3600e3 })); })()")
+    pg = ctx.new_page()
+    prob = []
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && /fora da lista da embarca/.test(document.body.innerText)", timeout=15000)
+    except Exception:
+        prob.append('o perfil do convidado não apareceu em 15 s')
+    r = pg.evaluate("""() => ({ linhas: document.body.innerText.split('\\n').filter((l) => /fora da lista da embarca/.test(l)),
+      texto: document.body.innerText, rodape: [...document.querySelectorAll('capitao-rodape')].map((e) => e.textContent).join(' ') })""")
+    if not r['linhas'] or any('convidado · fora da lista da embarcação' not in l or 'A CONFIRMAR' in l for l in r['linhas']):
+        prob.append('linha do perfil: %s' % r['linhas'][:2])
+    if 'Convidado' not in r['texto'] or 'CONVIDADO' not in r['texto']: prob.append('sem o nome Convidado ou o chip CONVIDADO')
+    if re.search(r'\bDemo\b|demonstração', r['texto']): prob.append('o convidado ainda aparece como Demo/demonstração')
+    if 'Convidado' not in r['rodape']: prob.append('rodapé sem o usuário Convidado: %r' % r['rodape'][:120])
+    ctx.close()
+    return prob
 
 
 def teste_offline(b, lista, paginas=()):

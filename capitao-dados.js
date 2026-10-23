@@ -1,11 +1,9 @@
 /* Capitão IA — dados da embarcação (GERADO por ferramentas/demo/gerar_demo.py — não editar à mão).
-   DEMO · DADOS FICTÍCIOS: Demonstração da plataforma Capitão IA: embarcação, leituras, agenda, documentos, diário, abastecimentos e guias de bordo são fictícios. Procedimentos de emergência são o padrão internacional, a confirmar com o protocolo de bordo. Modelos dos equipamentos, registro, Seafire e EPIRB: SEM DADOS.
-   null = SEM DADOS (ou SEM LEITURA, em sensor). Cada grupo traz a fonte (arquivo no Drive › Capitão IA v2). */
+   Cada grupo traz a fonte (arquivo no Drive › Capitão IA v2). Na leitura, null = SEM DADOS (ou SEM LEITURA, em sensor). */
 window.CapitaoDados = {
  "versao": "26/09/2026",
- "demo": true,
- "selo": "DEMO · DADOS FICTÍCIOS",
- "aviso": "Demonstração da plataforma Capitão IA: embarcação, leituras, agenda, documentos, diário, abastecimentos e guias de bordo são fictícios. Procedimentos de emergência são o padrão internacional, a confirmar com o protocolo de bordo. Modelos dos equipamentos, registro, Seafire e EPIRB: SEM DADOS.",
+ "simulacao": true,
+ "demo": false,
  "embarcacao": {
   "nome": "Capitão IA",
   "modelo": null,
