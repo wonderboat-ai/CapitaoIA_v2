@@ -51,9 +51,13 @@ no texto visível, no title, no aria-label, no alt e no href — na tela fechada
 protocolo aberto (a tela volta ao estado inicial); o D tem de ter esses campos e o roteiro e todos os cartões têm de abrir (senão a
 conferência não vale). A base entra na 1b, que a tira do cabeçalho da S1.
 Equipamento de segurança fora de Equipamentos, Leme e Documentos (CONTRATO-DADOS §1.4, C5): na F1 (web e app) e na E2, nenhum
-modelo do EPIRB nem do Seafire no texto visível e nos atributos (na E2 também com cada sistema e cada sintoma escolhidos), nenhum
-link do chat (#q=) com o fabricante deles, e, na F1, o cartão do VHF e o do áudio abrem a pergunta certa do FAQ de eletrônicos
-(#p= > 0, na pergunta de "VHF" e na de "Fusion"), pelas palavras do equipamento.
+modelo nem fabricante do EPIRB e do Seafire no texto visível e nos atributos (na E2 também com cada sistema e cada sintoma
+escolhidos; o fabricante fica de fora quando é o próprio nome do sistema, o id: "Seafire"), nenhum link do chat (#q=) com o
+fabricante deles, e, na F1, o cartão do VHF e o do áudio abrem a pergunta certa do FAQ de eletrônicos (#p= > 0, na pergunta de
+"VHF" e na de "Fusion"), pelas palavras do equipamento. Revisão do C5: na F1, nenhum cartão cortado (a pergunta, a fonte e a ação
+à vista: a grade da web rola), e a pergunta de cada cartão ao chat (#q=), passada pelo cérebro, não cai em chave de emergência
+(sos, oleo, canal16, epirb, seafire), menos a do próprio equipamento de segurança, que dá a chave dele; na F1 e na E2, o fabricante
+não se repete quando o modelo já começa por ele ("Seakeeper Seakeeper 3").
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -268,8 +272,10 @@ def problemas_barco_sos(pg):
 
 
 # Equipamento de segurança (EPIRB e Seafire: seguranca no capitao-dados.js) só em Equipamentos, Leme e Documentos (CONTRATO-DADOS
-# §1.4, C5). Na F1 e na E2: o modelo nunca no texto nem nos atributos; o fabricante nunca no link do chat (#q=); na F1, o VHF e o
-# áudio abrem a pergunta deles no FAQ de eletrônicos (as palavras do equipamento). Na E2, a leitura passa por cada sistema e sintoma.
+# §1.4, C5). Na F1 e na E2: o modelo e o fabricante nunca no texto nem nos atributos; o fabricante nunca no link do chat (#q=); na
+# F1, o VHF e o áudio abrem a pergunta deles no FAQ de eletrônicos (as palavras do equipamento). Na E2, a leitura passa por cada
+# sistema e sintoma. Revisão do C5: na F1, nenhum cartão cortado e nenhuma pergunta de cartão numa chave de emergência; na F1 e na E2,
+# o fabricante não se repete quando o modelo começa por ele.
 TELAS_SEGURANCA = ('F1-FAQ-Hub', 'F1-FAQ-Hub-Web', 'E2-Navegando-Sintoma')
 TEXTOS_SEGURANCA = r"""async (e2) => {
   const D = window.CapitaoDados || {}, EQ = D.equipamentos || [], P = ((D.faq || {}).eletronicos || {}).perguntas || [];
@@ -292,16 +298,36 @@ TEXTOS_SEGURANCA = r"""async (e2) => {
       for (let j = 0; j < sint().length; j++) { sint()[j].click(); await espera(); le(); }
     }
   }
-  const cartoes = {};
-  document.querySelectorAll('a[href]').forEach((a) => { const n = (a.innerText || '').split('\n')[0].trim(); const e = EQ.find((x) => x.nome === n); if (e && !cartoes[e.id]) cartoes[e.id] = a.getAttribute('href'); });
+  const cartoes = {}, cortados = [];
+  document.querySelectorAll('a[href]').forEach((a) => {
+    const n = (a.innerText || '').split('\n')[0].trim(), e = EQ.find((x) => x.nome === n); if (!e || cartoes[e.id]) return;
+    cartoes[e.id] = a.getAttribute('href');
+    // cartão cortado: o conteúdo passa da altura do cartão (overflow: hidden esconde a pergunta, a fonte, a ação ou a nota)
+    if (a.scrollHeight - a.clientHeight > 1) cortados.push(e.id + ' (' + a.clientHeight + ' de ' + a.scrollHeight + ' px)');
+  });
+  // "Seakeeper Seakeeper 3": o fabricante seguido do modelo que já começa por ele
+  const repetidos = EQ.filter((e) => e.fabricante && e.modelo && e.modelo.toLowerCase().indexOf(e.fabricante.toLowerCase()) === 0).map((e) => e.fabricante + ' ' + e.modelo);
   return { seg: EQ.filter((e) => e.seguranca).map((e) => ({ id: e.id, fabricante: e.fabricante, modelo: e.modelo })), texto: textos.join('\n'), chats: chats,
-           cartoes: cartoes, perguntas: P.map((p) => p.q) };
+           cartoes: cartoes, cortados: cortados, repetidos: repetidos, perguntas: P.map((p) => p.q) };
 }"""
+# A pergunta de cada cartão da F1 ao chat (#q=) passada pelo cérebro (carregado na própria tela, que não o tem; commit: false).
+CHAVES_CARTOES = r"""async (qs) => {
+  if (!window.CapitaoBrain) await new Promise((ok, erro) => { const s = document.createElement('script'); s.src = './capitao-brain.js';
+    s.onload = ok; s.onerror = () => erro(new Error('capitao-brain.js não carregou')); document.head.appendChild(s); });
+  const B = window.CapitaoBrain, out = {};
+  Object.keys(qs).forEach((id) => { out[id] = B.answer(qs[id], { platform: 'app', commit: false }).key; });
+  return out;
+}"""
+# Chaves que, a partir da Fase 3, deixam a conversa em modo emergência por 15 min (PROMPT §2.2): um toque de rotina no FAQ nunca
+# cai nelas; o cartão do próprio equipamento de segurança dá a chave dele (EPIRB → epirb, Seafire → seafire).
+CHAVES_EMERGENCIA = {'sos', 'oleo', 'canal16', 'epirb', 'seafire'}
 
 
 def problemas_seguranca(pg, tela):
-    """F1 e E2 (CONTRATO-DADOS §1.4, C5): sem modelo do EPIRB e do Seafire na tela, sem o fabricante deles no link do chat e, na F1,
-    o VHF e o áudio abrindo a pergunta certa. Sem os dois equipamentos de segurança no D, a conferência não vale."""
+    """F1 e E2 (CONTRATO-DADOS §1.4, C5): sem modelo nem fabricante do EPIRB e do Seafire na tela, sem o fabricante deles no link
+    do chat e, na F1, o VHF e o áudio abrindo a pergunta certa, nenhum cartão cortado e nenhuma pergunta de cartão numa chave de
+    emergência que não seja a do próprio equipamento de segurança; sem "Seakeeper Seakeeper 3". Sem os dois equipamentos de
+    segurança no D, a conferência não vale."""
     r = pg.evaluate(TEXTOS_SEGURANCA, tela.startswith('E2-'))
     prob = []
     if sorted(e['id'] for e in r['seg']) != ['epirb', 'seafire']:
@@ -311,9 +337,17 @@ def problemas_seguranca(pg, tela):
             if next(confere.acha_nomes(r['texto'], n), None):
                 prob.append('modelo do %s na tela (só em Equipamentos, Leme e Documentos, §1.4)' % e['id'])
                 break
+        # o fabricante também (§1.4: "fabricante e modelo trocam por nota"; trava 17), menos quando a marca é o próprio nome do
+        # sistema, o id: o "Seafire" do protocolo e da resposta sos (a E2 mostra a sos nos sintomas de emergência)
+        if confere.norm(e['fabricante']) != e['id'] and next(confere.acha_nomes(r['texto'], e['fabricante']), None):
+            prob.append('fabricante do %s na tela (só em Equipamentos, Leme e Documentos, §1.4)' % e['id'])
         ruins = sorted({q for q in r['chats'] if next(confere.acha_nomes(q, e['fabricante']), None)})
         if ruins:
             prob.append('link do chat com o fabricante do %s: %s' % (e['id'], ruins[:2]))
+    baixo = r['texto'].lower()
+    rep = [x for x in r['repetidos'] if x.lower() in baixo]
+    if rep:
+        prob.append('fabricante repetido antes do modelo: %s' % rep)
     if tela.startswith('F1-'):
         for i, alvo in (('vhf', 'VHF'), ('audio', 'Fusion')):
             h = r['cartoes'].get(i) or ''
@@ -321,6 +355,21 @@ def problemas_seguranca(pg, tela):
             n = int(m.group(1)) if m else 0
             if not (0 < n <= len(r['perguntas']) and alvo in r['perguntas'][n - 1]):
                 prob.append('cartão %s da F1 não abre a pergunta de %s no FAQ de eletrônicos: %r' % (i, alvo, h))
+        if r['cortados']:
+            prob.append('cartão da F1 cortado: %s' % r['cortados'][:4])
+        qs = {i: urllib.parse.unquote(h.split('#q=', 1)[1]) for i, h in r['cartoes'].items() if '#q=' in h}
+        seg = {e['id'] for e in r['seg']}
+        if not seg <= set(qs):
+            prob.append('cartão de segurança sem pergunta ao chat: %s' % sorted(seg - set(qs)))
+        try:
+            chaves = pg.evaluate(CHAVES_CARTOES, qs)
+        except Exception as x:
+            chaves = None
+            prob.append('cérebro não respondeu às perguntas dos cartões: %s' % str(x)[:160])
+        for i, k in sorted((chaves or {}).items()):
+            if (k != i) if i in seg else (k in CHAVES_EMERGENCIA):
+                prob.append('cartão %s pergunta %r ao chat e cai na chave %s (%s)' % (
+                    i, qs[i], k, 'esperado %s' % i if i in seg else 'emergência num toque de rotina'))
     return prob
 
 

@@ -106,10 +106,12 @@
   };
   function guia(k) { return (D.guias && D.guias[k]) || SD; }
   function equip(id) { return (D.equipamentos || []).filter(function (e) { return e.id === id; })[0] || null; }
-  // "Gerador Onan · modelo SEM DADOS" — sempre fabricante e modelo, com o que faltar marcado
+  // "Gerador Onan QD 9" — sempre fabricante e modelo, com o que faltar marcado; o fabricante não se repete quando o modelo já começa
+  // por ele ("Estabilizador giroscópico Seakeeper 3", não "Seakeeper Seakeeper 3"), como o equip_de do gerador
   function fabMod(id) {
     var e = equip(id); if (!e) return SD;
-    return e.nome + ' ' + (e.fabricante || '(fabricante ' + SD + ')') + (e.modelo ? ' ' + e.modelo : ' · modelo ' + SD);
+    var f = e.fabricante, m = e.modelo;
+    return e.nome + (f && m && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? '' : ' ' + (f || '(fabricante ' + SD + ')')) + (m ? ' ' + m : ' · modelo ' + SD);
   }
   function agenda() { return D.agenda || []; }
   function atrasadas() { return agenda().filter(function (t) { return t.dn < 0; }); }
@@ -404,7 +406,8 @@
     // "próxima revisão" sem equipamento = motores; com equipamento, a rota dele (Seakeeper, climatização, gerador…)
     if (has(q, ['horimetro', 'horas de motor', 'horas do motor', 'horas dos motores']) || (has(q, ['proxima revisao']) && !has(q, EQUIP))) return 'horimetros';
     if (has(q, ['epirb', 'radiobaliza'])) return 'epirb';
-    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'extintor', 'sistema de incendio'])) return 'seafire';
+    // "supressão" (PROMPT §2.3): é o nome do Seafire nos dados ("sistema fixo de supressão", sem "incêndio", que abriria o SOS)
+    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'extintor', 'sistema de incendio', 'supressao'])) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
     if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
@@ -529,7 +532,8 @@
     var hits = buscaBase(q, 3); if (!hits.length) return null;
     var h = hits[0].d, outros = hits.slice(1).filter(function (x) { return x.d.fonte !== h.fonte || x.d.secao !== h.secao; });
     var text = trechoCurto(h.texto) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
-    return { text: text, src: 'Fonte: ' + citaFonte(h) + ' — base de conhecimento de bordo' + (h.equip ? ' · ' + h.equip : ''), actions: act(p, [['FAQ de bordo', 'faq']]), ref: citaFonte(h), ingles: !!h._en };
+    // seguranca: o trecho do topo é de segurança (EPIRB, Seafire, salvatagem, protocolo…; o gerador marca) — o pedeIA não chama a IA
+    return { text: text, src: 'Fonte: ' + citaFonte(h) + ' — base de conhecimento de bordo' + (h.equip ? ' · ' + h.equip : ''), actions: act(p, [['FAQ de bordo', 'faq']]), ref: citaFonte(h), ingles: !!h._en, seguranca: !!h.seguranca };
   }
   if (window.requestIdleCallback) requestIdleCallback(carregaBase, { timeout: 4000 }); else setTimeout(carregaBase, 1500);
 
@@ -553,8 +557,10 @@
   // próprio app que vai além do cumprimento. Emergência, óleo, registro no diário e respostas prontas ficam 100% no aparelho:
   // rápidas, offline e com a fonte. "Oi", "bom dia, capitão" também — a saudação pronta basta e não gasta a cota.
   var SO_OI = /^(?: (?:oi|ola|opa|e ai|eai|hey|hello|hi|alo|bom dia|boa tarde|boa noite|tudo bem|tudo bom|td bem|beleza|capitao|ia))+ $/;
+  // Trecho de segurança no topo (a.seguranca, do respostaBase) nunca vai à IA: fica o trecho local, com a fonte (PROMPT §2.3).
   function pedeIA(a, q) {
     var k = a && a.key;
+    if (a && a.seguranca) return false;
     if (k === 'fallback' || k === 'base') return true;
     return k === 'saudacao' && !!String(q || '').trim() && !SO_OI.test(pad(q));
   }

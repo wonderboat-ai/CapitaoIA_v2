@@ -57,6 +57,11 @@ CASOS = [
     ('quanto tempo dura uma rajada?', 'fallback'), ('tem rajada hoje?', 'clima'), ('qual a previsão de rajada para amanhã?', 'clima'),
     # C5 (CONTRATO §6.2): com os 91 trechos dos 16 guias, pergunta fora do barco continua sem trecho (nenhum guia tem "lais")
     ('como se faz um nó lais de guia?', 'fallback'),
+    # Revisão do C5: trecho de segurança no topo (g_epirb, g_seafire, protocolo §DSC) responde local e não vai à IA (PEDE_IA False,
+    # PROMPT §2.3); "supressão" é a rota seafire (§2.3); as perguntas dos cartões da F1 ao chat (Seafire, AIS e guincho, CONTRATO §1.4)
+    # caem na chave do equipamento ou no guia, nunca no SOS, no roteiro MAYDAY (canal16) nem na maré.
+    ('teste da baliza', 'base'), ('como acionar o disparo manual do sistema fixo?', 'base'), ('supressão', 'seafire'), ('botão distress', 'base'),
+    ('sistema fixo de supressão', 'seafire'), ('transponder em-trak', 'base'), ('guincho da âncora Lewmar', 'ancora'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -65,6 +70,9 @@ PEDE_IA = {
     '': False, 'oi, bom dia': False, 'MAYDAY, homem ao mar!': False, 'pressão de óleo baixa no motor BB': False,
     'Registre no diário: saída com 4 pessoas': False, 'autonomia': False, 'é seguro sair hoje?': False, 'diagnóstico': False,
     'a IA não está funcionando': False, 'qual a rajada máxima que o barco aguenta?': True,
+    # revisão do C5: base com trecho de segurança no topo (o respostaBase marca a.seguranca) e a rota seafire ficam no aparelho
+    'teste da baliza': False, 'como acionar o disparo manual do sistema fixo?': False, 'supressão': False, 'botão distress': False,
+    'transponder em-trak': False,
 }
 
 
@@ -106,6 +114,10 @@ def main():
             return { metaF: meta.f, baseK: base.a.key, baseF: base.f, sdF: sd.f, funcF: func.f, seguroK: seguro.a.key, seguroF: seguro.f, metaVoz: meta.voz, oiVoz: oi.voz,
                      dgTexto: dg.a.text, dgSrc: dg.a.src, dgVoz: dg.voz, dgHref: (dg.a.actions[0] || {}).href, versao: B.VERSAO }; }""")
         guias = pg.evaluate("() => window.CapitaoDados.guias || {}")
+        # "Seakeeper Seakeeper 3": fabricante seguido do modelo que já começa por ele (revisão do C5; o fabMod tira, como o equip_de)
+        rep = pg.evaluate("""() => (window.CapitaoDados.equipamentos || []).filter((e) => e.fabricante && e.modelo
+            && e.modelo.toLowerCase().indexOf(e.fabricante.toLowerCase()) === 0).map((e) => e.fabricante + ' ' + e.modelo)""")
+        repetidos = [(r['q'], x) for r in res for x in rep if x.lower() in (r['text'] + '\n' + r['curta']).lower()]
         topo = pg.evaluate("""() => { const B = window.CapitaoBrain, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
             const a = h('como ligar o gerador?'), b = h('Quando foi a última troca de óleo do motor?'), c = h('troca do rotor do gerador');
             return [[a.fonte, a.secao], [b.fonte, b.secao], c.fonte]; }""")
@@ -128,6 +140,8 @@ def main():
             # do FONTE_IA do chat_ia.py); a troca de óleo do motor sai da agenda dos motores e a do rotor, do gerador.
             ('C5: 1º trecho de "como ligar o gerador?" = g_gerador §2 · Ligar; óleo do motor no g_motores §7; rotor do gerador no g_gerador',
              topo == [[guias.get('g_gerador'), '2 · Ligar'], [guias.get('g_motores'), '7 · Manutenção na agenda'], guias.get('g_gerador')], topo),
+            ('revisão do C5: nenhuma resposta (nem a fala) repete o fabricante antes do modelo que começa por ele ("Seakeeper Seakeeper 3")',
+             bool(rep) and not repetidos, (rep, repetidos[:3])),
         ]:
             if not cond:
                 falhas += 1

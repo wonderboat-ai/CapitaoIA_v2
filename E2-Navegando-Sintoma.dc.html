@@ -165,8 +165,14 @@ class Component extends DCLogic {
     }, 60);
   }
   equip(id) { return ((window.CapitaoDados || {}).equipamentos || []).filter((e) => e.id === id)[0] || null; }
-  // "Gerador Onan QD 9": sempre fabricante e modelo, o que faltar marcado; equipamento de segurança (EPIRB, Seafire) só com a nota da etiqueta (§1.4)
-  fabMod(id) { const e = this.equip(id); if (!e) return 'SEM DADOS'; return e.nome + (e.seguranca ? ' · ' + e.nota : ' ' + (e.fabricante || '(fabricante SEM DADOS)') + (e.modelo ? ' ' + e.modelo : ' · modelo SEM DADOS')); }
+  // "Gerador Onan QD 9": sempre fabricante e modelo, o que faltar marcado, sem repetir o fabricante quando o modelo já começa por ele
+  // ("Estabilizador giroscópico Seakeeper 3", como o equip_de do gerador e o fabMod do cérebro: o título, o aria-label e a linha que o
+  // botão grava no diário); equipamento de segurança (EPIRB, Seafire) só com a nota da etiqueta (§1.4)
+  fabMod(id) {
+    const e = this.equip(id); if (!e) return 'SEM DADOS'; if (e.seguranca) return e.nome + ' · ' + e.nota;
+    const f = e.fabricante, m = e.modelo;
+    return e.nome + (f && m && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? '' : ' ' + (f || '(fabricante SEM DADOS)')) + (m ? ' ' + m : ' · modelo SEM DADOS');
+  }
   pergunta(s, x) { const e = this.equip(s.id); return x.q + ' ' + s.palavra + (e && e.fabricante ? ' ' + e.fabricante : '') + (x.como ? ' — como resolver?' : ''); }
   // Resposta calculada agora pelo cérebro (commit:false = não grava nada). Refeita quando a base de bordo termina de carregar.
   resposta(q) {
