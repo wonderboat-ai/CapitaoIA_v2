@@ -42,7 +42,9 @@
    "Câmbio: 5 por dólar.",
    "O câmbio turismo está acima de 6.",
    "O câmbio hoje passou de 6.",
-   "O câmbio comercial passou de 6."
+   "O câmbio comercial passou de 6.",
+   "O câmbio fechou a 5,4.",
+   "Câmbio: 150 ienes por dólar."
   ],
   "PESSOAIS": [
    "Ligue para a marina: (47) 3367-1234",
@@ -54,7 +56,10 @@
    "Os coletes ficam no paiol de proa.",
    "O extintor fica debaixo do banco",
    "O Sea-Fire fica na praça de máquinas.",
-   "O Seafire fica na praça de máquinas."
+   "O Seafire fica na praça de máquinas.",
+   "O Sea Fire fica na praça de máquinas.",
+   "O Sea\u00a0Fire fica na praça de máquinas.",
+   "O Sea\u2011Fire fica na praça de máquinas."
   ],
   "VAZIOS": [
    "modelo: n/d",
@@ -102,7 +107,9 @@
   "Diga câmbio e aguarde no canal 16.",
   "Fale câmbio devagar e chame no canal 16.",
   "Diga câmbio em voz alta no canal 16.",
-  "Diga câmbio e escute o 156,800 MHz (canal 16)."
+  "Diga câmbio e escute o 156,800 MHz (canal 16).",
+  "Para encerrar a chamada, diga câmbio:\n1. Solte o PTT.\n2. Escute o canal 16.",
+  "CÂMBIO\nDe 2 em 2 minutos, repita o MAYDAY no canal 16."
  ],
  "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
 }
