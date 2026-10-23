@@ -45,7 +45,6 @@ button { font: inherit; }
     <span style="color: var(--cap-ph, #4a5578);">—</span>
     <b style="font-weight: 700;">{{local}}</b>
   </a>
-  <span style="font-size: 10px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-violeta, #b45cff); border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); border-radius: 6px; padding: 4px 8px;">{{demo}}</span>
   <span style="flex-grow: 1;"></span>
   <span style="color: var(--cap-ink3, #97a3c0); font-weight: 600;">REG. {{reg}}</span>
   <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="13" hint-size="190px,24px"></x-import>
@@ -170,7 +169,7 @@ class Component extends DCLogic {
     const pos = this.pos();
     const nb = (x, d) => (typeof x === 'number' ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
     return {
-      local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(), demo: D.demo ? 'DEMO' : '', reg: E.registro || 'SEM DADOS',
+      local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(), reg: E.registro || 'SEM DADOS',
       faixa: 'SOG ' + nb(S.sog) + ' NÓ · PROA ' + (typeof S.proa === 'number' ? ('00' + S.proa).slice(-3) + '°' : '—') + ' · ' + (S.estado || '').toUpperCase() + ' · ' + (S.local || '').toUpperCase() + ' · SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' ' + (S.quando || ''),
       marca: pos + ' · ' + (!r ? 'gravando no diário de bordo…' : r.falhou ? 'não gravado — registre posição e hora no diário' : 'SOS ' + r.t + ' · posição e hora gravadas no diário de bordo'),
       chamar: [liga('marina', 'Marina', 'a marina da base'), liga('tecnico', 'Técnico', 'o técnico de bordo')],

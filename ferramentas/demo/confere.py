@@ -1,0 +1,1401 @@
+# -*- coding: utf-8 -*-
+"""Capitão IA — conferência dos dados gerados (CONTRATO-DADOS 1.1.0 §6.3), chamada pelo gerar_demo.py antes de gravar.
+
+verifica() roda as asserções sobre o D, a base, o FAQ, as fontes do Drive e o texto dos arquivos gerados, e devolve as
+violações de cada uma (caminho e motivo). confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção
+estrutural falhar. As da RELATORIO só relatam, até o commit que completa o dado (a varredura de termos fica assim até o C12).
+
+As listas privadas (CAPITAO_LISTAS_PRIVADAS) e a pasta do Avanti (CAPITAO_AVANTI) são opcionais e só dão CONTAGENS: nenhum
+termo delas é impresso nem gravado.
+
+Também ficam aqui os ports em Python que as asserções e o gerador usam, escritos como no JavaScript:
+  - norm/pad/has, emergencia() e oleo() do capitao-brain.js, com a lista SOS ampliada da 1b (PROMPT §2.3);
+  - SEGURANCA_PALAVRAS e segura() (§1.5), uma fonte só das listas;
+  - o laço de 150 s (§3.2: chaves, ruído por hash e arredondamento) e a CapitaoAgora.nivel (§3.3). A paridade com o JS é da
+    Fase 2; a rota e os contadores do em() entram no C8 (PORT_ROTA).
+Sem lookbehind nas regex que vão para o JavaScript (estas ficam só no Python).
+"""
+import json
+import math
+import os
+import re
+import unicodedata
+
+AQUI = os.path.dirname(os.path.abspath(__file__))
+RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
+PROIBIDOS = os.path.join(RAIZ, 'testes', 'proibidos.json')     # cópia do termos.json (PROMPT §3): a fonte das 8 regex
+RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capitao-dados.js (§1.23; entra no C7)
+
+# ——————————————————————————————— modo de cada asserção ———————————————————————————————
+# Em relatório (não reprova) até o commit que completa o dado (CONTRATO-DADOS §6.2). Cada commit tira a sua linha quando o
+# dado fica completo; dali em diante a asserção reprova o gerador. As que não estão aqui reprovam desde o C3.
+RELATORIO = {
+    'TERMOS': 'C12',            # varredura de termos (§6.2: só reprova no C12, com a exceção do mmsiNota até a 1b)
+    'NULO': 'C8',               # modelos, registro, Seafire/EPIRB, dn dos documentos e porão/âncora do snapshot (C4–C8)
+    'MMSI9': 'C6',              # o número no guia de eletrônicos §5 (C5) e no roteiro (C6)
+    'REGISTRO': 'C4',
+    'SEM_INDICATIVO': 'C4',     # a chave embarcacao.indicativo sai no C4 (§1.2)
+    'AFIRMA_REAL': 'C5',        # "no barco real, programe o MMSI" (guia de eletrônicos §5)
+    'PROTOCOLO_LIMPO': 'C6',
+    'SEGURANCA_MARCADA': 'C5',
+    'MODELOS_AVANTI': 'C5',     # o modelo antigo do VHF (troca no C5)
+    'COLISAO_MODELOS': 'C5',
+    'EQUIP': 'C5',
+    'NOTA_ETIQUETA': 'C5',
+    'IDS': 'C7',                # sistema da agenda e ref/palavras das pendências do diário (C7)
+    'AGENDA': 'C7',
+    'FONTES_RELATIVAS': 'C7',
+}
+# Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
+EXCECAO_TERMOS = {'embarcacao.mmsiNota': '1b'}
+# Ocorrências permitidas na pasta do Avanti, por candidato (COLISAO_MODELOS; ok do proprietário, §8.2 ponto 9).
+EXCECOES_MODELO = {'Seakeeper 3': 1}
+# Port da rota e dos contadores do em() (§1.14, §1.22; entra no C8). Sem ele, um D com rota reprova a EMENDA_ROTA.
+PORT_ROTA = None
+
+TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 80, 'faq-equipamentos.json': 100}   # KB = 1.024 bytes
+DIAS_MESES_PADRAO = {1: 31, 6: 184, 12: 365}
+
+# ——————————————————————————————— regex fixas das asserções ———————————————————————————————
+R_MMSI9 = re.compile(r'\b\d{9}\b')
+R_HEX15 = re.compile(r'\b[0-9A-F]{15}\b')
+R_INDICATIVO = re.compile(r'\bP[P-Y]\d[A-Z]{2,3}\b|\bZ[V-Z]\d[A-Z]{2,3}\b')       # prefixos de rádio reais do Brasil
+R_REGISTRO = re.compile(r'[A-Z]{3}-\d{2}-\d{4}')
+R_PLACAS = (re.compile(r'\b[A-Z]{2,3}-?\d{4}\b'), re.compile(r'\b[A-Z]{3}\d[A-Z]\d{2}\b'))   # antiga, anterior a 1990 e Mercosul
+R_HIN = re.compile(r'\b[A-Z]{3}[A-Z0-9]{5}[A-L]\d{3}\b')                          # código do fabricante + série + mês/ano
+R_9A11 = re.compile(r'\b\d{9,11}\b')
+# AFIRMA_REAL do §6.3, com rea(?:l|is) no lugar do reais? do contrato, que casava "reai(s)" e deixava passar o singular ("no barco
+# real"): a trava §2.6 do PROMPT ganha. Com o fim de palavra, "realizado" e "oficina" continuam passando.
+R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])(?:dados?|leituras?|barco|embarca[çc][ãa]o|navega[çc][ãa]o)\s+(?:\S+\s+){0,2}'
+                      r'(?:rea(?:l|is)|verdadeir[A-Za-zÀ-ÿ]*|oficia(?:l|is))(?![A-Za-zÀ-ÿ])', re.I)
+# Coordenada em texto (PROMPT §2.8): graus-minutos com vírgula ou ponto; decimal com 4 ou mais casas, ou em par. Milhar do pt-BR
+# (1.236,4 h · 1.600 L · 12.000) fica de fora.
+R_COORD = re.compile(r"-?\d{1,3}\s*°\s*\d{1,2}\s*[,.]\s*\d+\s*['′]?\s*[NSEWLO]?|-?\d{1,3}[.,]\d{4,}(?!\d)"
+                     r"|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}")
+# A regex de emergência do PROMPT (Fase 7): nada de MMSI, último fix, distância, velocidade, posição, rumo, ETA nem pessoas.
+R_EMERG = re.compile(r"710123456|último fix|\d+[.,]\d+\s*(?:mn|milhas?)|\d+[.,]?\d*\s*nós|°\s*\d{1,2}[,.]\d+\s*['′]"
+                     r"|\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°|\bETA\b|\b\d+\s+(?:pessoas\s+)?a bordo\b")
+R_PROTOCOLO = (
+    ('" bar"', re.compile(r'(?:^|\s)bar(?![A-Za-zÀ-ÿ])')),
+    ('"%"', re.compile('%')),
+    ('"nós"', re.compile(r'(?:^|[^A-Za-zÀ-ÿ])nós(?![A-Za-zÀ-ÿ])', re.I)),
+    ('"mn"', re.compile(r'(?:^|[^A-Za-zÀ-ÿ])mn(?![A-Za-zÀ-ÿ])', re.I)),
+    ('graus', re.compile(r'°|(?:^|[^A-Za-zÀ-ÿ])graus?(?![A-Za-zÀ-ÿ])', re.I)),
+    ('minutos', re.compile(r'\d+\s*(?:min|minutos)(?![A-Za-zÀ-ÿ])', re.I)),
+    ('regex de emergência', R_EMERG),
+)
+R_BOIA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])b[oó]ias?(?![A-Za-zÀ-ÿ])', re.I)   # também a grafia antiga "bóia"
+R_KIT = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])kits?(?![A-Za-zÀ-ÿ])', re.I)
+R_DATA = re.compile(r'\b\d{1,2}/\d{1,2}/\d{4}\b')
+LOCAL_PECAS = re.compile(r'(?:estante técnica [1-3]|caixa de sobressalentes [A-C]|armário de ferramentas)')
+ONDE_SENSORES = {'hard-top', 'mastro do radar', 'casco · meia-nau', 'meia-nau', 'praça de máquinas · centro', 'praça de máquinas',
+                 'praça de máquinas · BB', 'praça de máquinas · BE', 'praça de máquinas · ré', 'meia-nau · BB', 'meia-nau · BE',
+                 'painel do comando', 'popa', 'proa · guincho da âncora'}           # §1.19
+SALVATAGEM_EM = ('epirb', 'seafire', 'balsa', 'colete', 'extintor', 'boia')        # nunca ponto de sensor nem peça (§1.19, §1.20)
+CAMPOS_FASE1 = (   # PROMPT, Fase 1: os nomes do coletor de hoje mais os novos e os contadores
+    'timestamp_utc', 'lat', 'lon', 'sog_nos', 'proa_graus', 'gps_satelites', 'profundidade_m', 'vento_verdadeiro_nos',
+    'vento_verdadeiro_angulo', 'pressao_barometrica_hpa', 'temp_ar_externo_c', 'temp_agua_c', 'tanque_agua_pct',
+    'tanque_cinzas_pct', 'tanque_negras_pct', 'bateria_0_tensao_v', 'bateria_2_tensao_v', 'seakeeper_ativo',
+    'seakeeper_volante_rpm', 'seakeeper_volante_pct', 'gerador_horimetro_h',
+    'cog_graus', 'stw_nos', 'motor_bb_rpm', 'motor_be_rpm', 'motor_bb_oleo_bar', 'motor_be_oleo_bar', 'motor_bb_arref_c',
+    'motor_be_arref_c', 'motor_bb_carga_pct', 'motor_be_carga_pct', 'marcha', 'consumo_lph', 'diesel_bb_pct', 'diesel_be_pct',
+    'gerador_ativo', 'gerador_kw', 'porao_bb_nivel', 'porao_be_nivel', 'bomba_porao_ciclos', 'ancora_estado', 'leme_graus',
+    'piloto_rumo', 'ondas_m', 'estado', 'local', 'destino', 'eta', 'alarmes',
+    'motor_bb_horimetro_h', 'motor_be_horimetro_h', 'diesel_litros', 'distancia_mn')
+CAMPOS_F08_F33 = ('jogo_graus', 'caimento_graus', 'proa_graus', 'vento_verdadeiro_nos', 'vento_verdadeiro_angulo',
+                  'vento_aparente_nos', 'vento_aparente_angulo', 'temp_ar_externo_c', 'pressao_barometrica_hpa')
+ORIGENS = {'laço', 'rota', 'contador', 'derivado', 'fixo', 'relógio', 'janela'}
+TIPOS_CHECKLIST = ('saida', 'chegada', 'abastecimento', 'fundeio')
+SISTEMAS_EXTRA = {'casco', 'tanques'}
+SEGURANCA_AGENDA = {'epirb-teste', 'seafire-inspecao', 'porao-teste'}
+
+
+# ——————————————————————————————— port do cérebro (capitao-brain.js:12-13, :122-141) ———————————————————————————————
+def norm(s):
+    """String(s || '').toLowerCase().normalize('NFD') sem os acentos (U+0300–U+036F)."""
+    s = unicodedata.normalize('NFD', str(s or '').lower())
+    return ''.join(ch for ch in s if not '̀' <= ch <= 'ͯ')
+
+
+def pad(s):
+    """Frase normalizada com espaço nas pontas (palavra inteira = ' x ')."""
+    return ' ' + re.sub(r'\s+', ' ', re.sub(r'[?!.,;:()"“”]+', ' ', norm(s))).strip() + ' '
+
+
+def has(q, lista):
+    return any(k in q for k in lista)
+
+
+# Lista SOS do cérebro de hoje (capitao-brain.js:123-125) mais a ampliação da 1b (PROMPT §2.3). Uma fonte só: a partir da 1b, o
+# cerebro.py confere que a do capitao-brain.js é igual a esta.
+SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos ', 'socorro', 'naufrag', 'caiu no mar', 'caiu ao mar',
+       'caiu na agua', 'pessoa na agua', 'alguem na agua', 'crianca na agua', 'afogad', 'afogand',
+       'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao',
+       'colidi', 'abalroa', 'encalh', 'explos',
+       'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas',
+       'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
+       # 1b (PROMPT §2.3)
+       'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', 'sangra',
+       'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
+       'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas']
+# Rota salvatagem (PROMPT §2.3): ' boia ' sem as palavras de boia de sinalização; "extintor" só sem fogo (na rota) e sempre aqui.
+SALVATAGEM = ['colete', 'salva-vida', 'salva vida', 'balsa', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete',
+              'pirotecn', 'facho', 'salvatagem', 'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv',
+              ' plb ', ' sart ']
+BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz']
+SEGURANCA_EXTRA = ['epirb', 'radiobaliza', 'baliza', 'seafire', 'supressao', 'mayday', 'distress', ' dsc ', 'pan-pan', 'pan pan',
+                   'homem ao mar']
+
+
+def emergencia(q):
+    """q já passado pelo pad(). Fumaça no escapamento é do motor, não SOS."""
+    return has(q, SOS) or (has(q, ['fumaca']) and not has(q, ['escap']))
+
+
+OLEO_QUEDA = re.compile(r' (?:baix|abaixo|cai |caiu|caind|cair|qued|alarm|alert|luz|acend|acesa|sem |zer|perd|despenc|sum|diminu|oscil'
+                        r'|vermelh|fora d|nao esta |nao ta |saiu|menor|anormal)')
+OLEO_SINAL = re.compile(r' (?:pressao|alarm|alert|luz|acend|acesa)')
+OLEO_NEUTRO = re.compile(r' (?:qual|quais|quanto|quanta|como|normal|faixa|alta|alto|ok|esta boa|ta boa|esta bom|ta bom) ')
+OLEO_TOPICO = re.compile(r'^ (?:e )?(?:a )?pressao d[eo] oleo(?: d[oa]s? motor(?:es)?)?(?: (?:de )?(?:bb|be|bombordo|boreste))? $')
+
+
+def oleo(q):
+    """1 = queda/alarme relatado; 2 = só pergunta de pressão; 0 = outro assunto (q já passado pelo pad())."""
+    q = re.sub(r' oleo (?:diesel|combustivel)(?= )', ' diesel', q)
+    if not has(q, [' oleo']) or has(q, ['barometr', 'atmosf', 'hpa', 'pneu', 'hidraul']):
+        return 0
+    if not OLEO_SINAL.search(q) and has(q, ['porao', 'vazament', 'vazand', 'pingand']):
+        return 0
+    if has(q, ['gerador', ' onan ']) and not has(q, ['motor']):
+        return 0
+    pressao = has(q, ['pressao'])
+    if OLEO_QUEDA.search(q):
+        return 1 if pressao or not has(q, ['troca']) else 0
+    if not pressao:
+        return 0
+    return 2 if OLEO_NEUTRO.search(q) or OLEO_TOPICO.search(q) else 1
+
+
+def salvatagem(q, extintor=True):
+    boia = ' boia ' in q and not has(q, BOIA_FORA)
+    return has(q, SALVATAGEM) or boia or (extintor and 'extintor' in q)
+
+
+def segura(texto):
+    """SEGURANCA_PALAVRAS (§1.5): SOS ampliada (com a fumaça), salvatagem (extintor com ou sem fogo) e EPIRB, Seafire, MAYDAY,
+    DSC, PAN-PAN e homem ao mar. Trecho ou item que casa leva seguranca: true e nunca vai à IA."""
+    q = pad(texto)
+    return emergencia(q) or salvatagem(q) or has(q, SEGURANCA_EXTRA)
+
+
+# ——————————————————————————————— port do laço (§3.2) e da nivel (§3.3) ———————————————————————————————
+M32 = 0xFFFFFFFF
+
+
+def h32(x):
+    x &= M32
+    x = (x ^ 0x9E3779B9) & M32
+    x ^= x >> 16
+    x = (x * 0x85EBCA6B) & M32
+    x ^= x >> 13
+    x = (x * 0xC2B2AE35) & M32
+    x ^= x >> 16
+    return x
+
+
+def ruido(semente, t):
+    """u(s, t) ∈ [−1, 1], periódico em t (o laço passa o segundo da volta)."""
+    return h32(semente * 1000003 + t) / 4294967295 * 2 - 1
+
+
+def arred(x, casas):
+    """Como a tela mostra: floor(x·10^casas + 0,5) / 10^casas, com −0 → 0 (sem o round() do Python, que vai pelo par)."""
+    p = 10 ** casas
+    v = math.floor(x * p + 0.5) / p
+    return 0.0 if v == 0 else v
+
+
+def casas_de(campos, c):
+    return (campos.get(c) or {}).get('casas', 0)
+
+
+def laco_valor(R, campos, c, t):
+    """Valor do campo c no segundo t (0…149) da volta: interpolação das chaves (o segmento 145 → 150 usa o t = 0), ruído e
+    arredondamento pelas casas do D.campos; ângulo pelo arco menor e em [0, 360)."""
+    ch = R['chaves'][c]
+    passo = R.get('passo_chave', 5)
+    k = t // passo
+    f = (t - passo * k) / passo
+    a, b = ch[k % len(ch)], ch[(k + 1) % len(ch)]
+    ang = bool((campos.get(c) or {}).get('ang'))
+    x = a + ((((b - a + 540) % 360) - 180) * f if ang else (b - a) * f)
+    amp, sem = (R.get('ruido') or {}).get(c, [0, 0])
+    if amp:
+        x = x + amp * ruido(sem, t)
+    x = arred(x, casas_de(campos, c))
+    if ang:
+        x = ((x % 360) + 360) % 360
+    return 0.0 if x == 0 else x
+
+
+def quadro_laco(R, campos, t):
+    """Campos do laço e fixos no segundo t (a rota e os contadores do em() entram com o PORT_ROTA, no C8)."""
+    q = {c: laco_valor(R, campos, c, t) for c in (R.get('chaves') or {})}
+    q.update(R.get('fixos') or {})
+    return q
+
+
+def _num(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+
+
+def nivel(limites, campos, campo, q):
+    """CapitaoAgora.nivel(campo, q): {nivel, limite?, regime?} ou None (não avalia). Comparações estritas sobre o valor arredondado."""
+    L = (limites or {}).get(campo)
+    if not L:
+        return None
+    a = L.get('ativo_se')
+    if a:
+        x = q.get(a.get('campo'))
+        if 'acima' in a:
+            if not _num(x) or not arred(x, casas_de(campos, a['campo'])) > a['acima']:
+                return None
+        elif 'igual' in a:
+            if type(x) is not type(a['igual']) or x != a['igual']:
+                return None
+    v = q.get(campo)
+    if not _num(v):
+        return None
+    v = arred(v, casas_de(campos, campo))
+    idx = None
+    if 'regimes' in L:
+        R = None
+        for i, g in enumerate(L['regimes']):
+            r = q.get(g.get('rpm_campo'))
+            if not _num(r):
+                continue
+            r = arred(r, 0)
+            if ('rpm_de' not in g or g['rpm_de'] <= r) and ('rpm_ate' not in g or r < g['rpm_ate']):
+                R, idx = g, i
+                break
+        if R is None:
+            return None
+    else:
+        R = L
+
+    def fora(lim):
+        if not lim:
+            return None
+        if 'abaixo' in lim and v < lim['abaixo']:
+            return lim['abaixo']
+        if 'acima' in lim and v > lim['acima']:
+            return lim['acima']
+        return None
+
+    out = {'nivel': 'normal'}
+    lc = fora(R.get('critico'))
+    la = None if lc is not None else fora(R.get('aviso'))
+    if lc is not None:
+        out = {'nivel': 'critico', 'limite': lc}
+    elif la is not None:
+        out = {'nivel': 'aviso', 'limite': la}
+    if idx is not None:
+        out['regime'] = idx
+    return out
+
+
+def regime_de(L, nv):
+    return L['regimes'][nv['regime']] if nv and 'regime' in nv else L
+
+
+def limiares(R):
+    return [R[k][kk] for k in ('normal', 'aviso', 'critico') if isinstance(R.get(k), dict)
+            for kk in ('de', 'ate', 'abaixo', 'acima') if kk in R[k]]
+
+
+# ——————————————————————————————— utilidades ———————————————————————————————
+def junta(cam, k):
+    if not cam:
+        return str(k)
+    return cam + str(k) if cam.endswith((':', '/')) else cam + '.' + str(k)
+
+
+def textos(v, cam=''):
+    """(caminho, texto) de todo valor string, em profundidade."""
+    if isinstance(v, str):
+        yield cam, v
+    elif isinstance(v, dict):
+        for k, x in v.items():
+            yield from textos(x, junta(cam, k))
+    elif isinstance(v, (list, tuple)):
+        for i, x in enumerate(v):
+            yield from textos(x, '%s[%d]' % (cam, i))
+
+
+def textos_fontes(F):
+    """Fontes do Drive: CSV e HTML inteiros; JSON só nos valores string (número do JSON não entra)."""
+    for rel, txt in sorted(F.items()):
+        cam = 'fontes/' + rel
+        if rel.endswith('.json'):
+            yield from textos(json.loads(txt), cam + ':')
+        else:
+            yield cam, txt
+
+
+def trecho(s, m, folga=30):
+    i, j = max(0, m.start() - folga), min(len(s), m.end() + folga)
+    return ('…' if i else '') + s[i:j].replace('\n', ' ') + ('…' if j < len(s) else '')
+
+
+def cap(s):
+    return s[:1].upper() + s[1:]
+
+
+def secoes_html(txt):
+    """[(título da seção, texto)] de uma página de fonte ('<h2>sec</h2><p>txt</p>'); o que vem antes do 1º <h2> é ''."""
+    partes = re.split(r'<h2>(.*?)</h2>', txt)
+    out = [('', partes[0])]
+    for i in range(1, len(partes) - 1, 2):
+        out.append((partes[i], partes[i + 1]))
+    return out
+
+
+def sem_tags(s):
+    return re.sub(r'<[^>]+>', '', s).strip()
+
+
+def ptbr(x):
+    """Formas pt-BR de um número para procurar no texto do guia: 1.000 · 2,4 · 6,0 · 88."""
+    out = set()
+    x = float(x)
+    if x.is_integer():
+        i = int(x)
+        out |= {str(i), '{:,}'.format(i).replace(',', '.')}
+        out |= {s + ',0' for s in list(out)}
+    else:
+        s = repr(x)
+        inteiro, dec = s.split('.')
+        out |= {inteiro + ',' + dec, '{:,}'.format(int(inteiro)).replace(',', '.') + ',' + dec}
+    return out
+
+
+def tem_numero(texto, x):
+    return any(re.search(r'(?<![\d.,])' + re.escape(c) + r'(?![\d]|[.,]\d)', texto) for c in ptbr(x))
+
+
+# ——————————————————————————————— contexto ———————————————————————————————
+class Ctx:
+    def __init__(self, D, base, fontes, saidas, faq=None, rodape=None, listas=None, avanti=None, const=None):
+        self.D, self.base, self.fontes, self.saidas = D, base or {}, fontes or {}, saidas or {}
+        self.faq, self.rodape, self.listas, self.avanti = faq, rodape, listas, avanti
+        self.const = const or {}
+        self.simulacao = D.get('simulacao') is True
+        self.termos = carrega_termos()
+        self.arq = (D.get('drive') or {}).get('arquivos') or {}
+        self.pastas = (D.get('drive') or {}).get('pastas') or {}
+        self.R = D.get('replay') if isinstance(D.get('replay'), dict) else None
+        self.campos = D.get('campos') or {}
+        self.limites = (self.R or {}).get('limites') or {}
+        self.equip = [e for e in (D.get('equipamentos') or []) if isinstance(e, dict)]
+        self.agenda = [t for t in (D.get('agenda') or []) if isinstance(t, dict)]
+        self.trechos = [t for t in (self.base.get('trechos') or []) if isinstance(t, dict)]
+        self.itens_faq = [i for i in ((faq or {}).get('itens') or []) if isinstance(i, dict)]
+        self._laco = None
+
+    def todos(self):
+        """(caminho, texto) de todo valor string do D, da base, do FAQ e das fontes do Drive."""
+        yield from textos(self.D)
+        yield from textos(self.base, 'base:')
+        if self.faq is not None:
+            yield from textos(self.faq, 'faq:')
+        yield from textos_fontes(self.fontes)
+
+    def laco(self):
+        """Os 150 quadros do laço (campos do laço e fixos), calculados uma vez."""
+        if self._laco is None:
+            R = self.R or {}
+            self._laco = [quadro_laco(R, self.campos, t) for t in range(R.get('duracao', 150))] if R.get('chaves') else []
+        return self._laco
+
+    def eq(self, i):
+        return next((e for e in self.equip if e.get('id') == i), None)
+
+
+def carrega_termos(caminho=PROIBIDOS):
+    with open(caminho, encoding='utf-8') as f:
+        T = json.load(f)
+    return {k: re.compile(v['src'], re.I if 'i' in v['flags'] else 0) for k, v in T.items() if isinstance(v, dict) and 'src' in v}
+
+
+# ——————————————————————————————— asserções (§6.3) ———————————————————————————————
+def a_termos(X):
+    rot = re.compile(re.escape(((X.D.get('protocolos') or {}).get('rotulo')) or 'procedimento padrão — confirmar com o protocolo de bordo'), re.I)
+    out = []
+    for cam, s in X.todos():
+        if cam in EXCECAO_TERMOS:
+            continue
+        s = rot.sub(' ', s)   # o rótulo do procedimento padrão é EXCEÇÃO do §3
+        for k, r in X.termos.items():
+            m = r.search(s)
+            if m:
+                out.append('%s: %s «%s»' % (k, cam, trecho(s, m)))
+    return out
+
+
+def a_nulo(X):
+    out = []
+
+    def anda(v, cam):
+        if v is None:
+            out.append(cam + ': None')
+        elif isinstance(v, str):
+            if v == '':
+                out.append(cam + ": ''")
+        elif isinstance(v, float):
+            if not math.isfinite(v):
+                out.append('%s: %r' % (cam, v))
+            elif v == 0 and math.copysign(1, v) < 0:
+                out.append(cam + ': -0')
+        elif isinstance(v, dict):
+            for k, x in v.items():
+                anda(x, junta(cam, k))
+        elif isinstance(v, (list, tuple)):
+            if not v and cam != 'abastecimentos':   # a única lista vazia permitida (§1.0, §1.10)
+                out.append(cam + ': lista vazia')
+            for i, x in enumerate(v):
+                anda(x, '%s[%d]' % (cam, i))
+    anda(X.D, '')
+    return out
+
+
+def a_simulacao_unica(X):
+    js = X.saidas.get('capitao-dados.js', '')
+    alvo = '"simulacao": ' + ('true' if X.simulacao else 'false')
+    n, chaves = js.count(alvo), js.count('"simulacao":')
+    out = [] if isinstance(X.D.get('simulacao'), bool) else ['simulacao não é bool']
+    if n != 1 or chaves != 1:
+        out.append('capitao-dados.js: %r %d vez(es), chave "simulacao" %d vez(es) (precisa de 1: o replay.py troca o texto)' % (alvo, n, chaves))
+    return out
+
+
+def a_tamanho(X):
+    out = []
+    for nome, kb in TAMANHO_KB.items():
+        txt = X.saidas.get(nome)
+        if txt is not None and len(txt.encode('utf-8')) > kb * 1024:
+            out.append('%s: %.1f KB (orçamento %d KB)' % (nome, len(txt.encode('utf-8')) / 1024, kb))
+    return out
+
+
+def a_mmsi9(X):
+    out = []
+    for cam, s in X.todos():
+        if cam == 'embarcacao.mmsi':
+            continue
+        m = R_MMSI9.search(s)
+        if m:
+            out.append('%s «%s»' % (cam, trecho(s, m)))
+    return out
+
+
+def a_registro(X):
+    E = X.D.get('embarcacao') or {}
+    r = E.get('registro')
+    if r is None and not X.simulacao:
+        return []   # modo real: None = SEM DADOS
+    if not isinstance(r, str):
+        return ['embarcacao.registro ausente (dado completo na simulação, §1.2)']
+    out = []
+    if not R_REGISTRO.fullmatch(r):
+        out.append('embarcacao.registro fora do formato AAA-00-0000')
+    for nome, rx in (('placa', R_PLACAS[0]), ('placa Mercosul', R_PLACAS[1]), ('HIN', R_HIN), ('9 a 11 dígitos', R_9A11), ('HEX ID', R_HEX15)):
+        if rx.search(r) or rx.search(r.replace('-', '')):
+            out.append('embarcacao.registro imita %s' % nome)
+    if X.termos['PESSOAIS'].search(r):
+        out.append('embarcacao.registro casa a PESSOAIS')
+    tie = next((d for d in (X.D.get('documentos') or []) if isinstance(d, dict) and d.get('id') == 'tie'), None)
+    if tie is not None and tie.get('numero') != r:
+        out.append('documentos[tie].numero diferente de embarcacao.registro')
+    return out
+
+
+def a_hex15(X):
+    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_HEX15.search(s)] if m]
+
+
+def a_sem_indicativo(X):
+    out = []
+
+    def chaves(v, cam):
+        if isinstance(v, dict):
+            for k, x in v.items():
+                c = junta(cam, k)
+                if k == 'indicativo' and not c.startswith('protocolos.'):
+                    out.append(c + ': chave indicativo fora de protocolos')
+                chaves(x, c)
+        elif isinstance(v, (list, tuple)):
+            for i, x in enumerate(v):
+                chaves(x, '%s[%d]' % (cam, i))
+    chaves(X.D, '')
+    out += ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_INDICATIVO.search(s)] if m]
+    return out
+
+
+def a_afirma_real(X):
+    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_AFIRMA.search(s)] if m]
+
+
+def partes_modelo(modelo):
+    """Partes de um modelo (separadas por ' · ', ' e ' e ' + '); parte só com número ("16000 e 12000") herda o nome da anterior."""
+    out, ant = [], ''
+    for p in re.split(r' · | e | \+ ', modelo or ''):
+        p = p.strip()
+        if not p:
+            continue
+        if not re.search(r'[A-Za-zÀ-ÿ]', p) and ant:
+            p = ' '.join(w for w in ant.split() if re.search(r'[A-Za-zÀ-ÿ]', w)) + ' ' + p
+        out.append(p)
+        ant = p
+    return out
+
+
+def nomes_equip(X):
+    """Fabricante e partes do modelo de cada equipamento gerado (para PROTOCOLO_LIMPO e AGENDA)."""
+    out = []
+    for e in X.equip:
+        for v in [e.get('fabricante')] + partes_modelo(e.get('modelo') if isinstance(e.get('modelo'), str) else ''):
+            if isinstance(v, str) and v.strip():
+                out.append((e.get('id'), v.strip()))
+    return out
+
+
+def acha_nome(s, nome):
+    return re.search(r'(?:^|[^A-Za-zÀ-ÿ0-9])' + re.escape(nome) + r'(?![A-Za-zÀ-ÿ0-9])', s, re.I)
+
+
+def a_protocolo_limpo(X):
+    P = X.D.get('protocolos')
+    if P is None:
+        return []
+    out = []
+    nomes = nomes_equip(X)
+    for cam, s in textos(P, 'protocolos'):
+        for nome, rx in R_PROTOCOLO:
+            m = rx.search(s)
+            if m:
+                out.append('%s: %s «%s»' % (cam, nome, trecho(s, m)))
+        for i, n in nomes:
+            m = acha_nome(s, n)
+            if m:
+                out.append('%s: fabricante ou modelo de %s «%s»' % (cam, i, trecho(s, m)))
+    return out
+
+
+def a_local_vocab(X):
+    out = []
+    t_prot, t_ck = X.arq.get('protocolo'), X.arq.get('checklist')
+    permitidas = {t_prot: {'Homem ao mar', 'Salvatagem'}, t_ck: {'Saída · antes de largar'}}
+    # "boia" vale por origem: protocolos.mob, protocolos.salvatagem e o texto do checklist "Saída · antes de largar" (s13), em
+    # qualquer cópia (trechos, páginas de fonte, cartões EM-04/EM-09 e o CK-03 do FAQ).
+    s13 = set()
+    for tipo, itens in (((X.D.get('checklists') or {}).get('itens')) or {}).items():
+        for i, it in enumerate(itens or []):
+            if isinstance(it, dict) and it.get('id') == 's13':
+                s13.add('checklists.itens.%s[%d].' % (tipo, i))
+    for cam, s in textos(X.D):
+        if not R_BOIA.search(s):
+            continue
+        ok = cam.startswith(('protocolos.mob', 'protocolos.salvatagem')) or any(cam.startswith(p) for p in s13)
+        m = re.match(r'faq\.(\w+)\.perguntas\[\d+\]\.passos\[(\d+)\]', cam)
+        if m and not ok:   # D.faq (legado): passo tirado de uma seção permitida do protocolo ou do checklist
+            fq = X.D['faq'][m.group(1)]
+            for pq in fq.get('perguntas', []):
+                for ps in pq.get('passos', []):
+                    if ps.get('t') == s and ps.get('secao') in permitidas.get(fq.get('fonte'), ()):
+                        ok = True
+        if not ok:
+            out.append('%s: "boia" fora da salvatagem, do homem ao mar e do checklist de saída' % cam)
+    for i, t in enumerate(X.trechos):
+        if any(R_BOIA.search(v) for v in t.values() if isinstance(v, str)) and t.get('secao') not in permitidas.get(t.get('fonte'), ()):
+            out.append('base:trechos[%d] (%s · %s): "boia" fora de origem' % (i, t.get('fonte'), t.get('secao')))
+    for it in X.itens_faq:
+        if it.get('id') not in ('EM-04', 'EM-09', 'CK-03') and any(R_BOIA.search(s) for _, s in textos(it)):
+            out.append('faq:%s: "boia" fora de origem' % it.get('id'))
+    for rel, txt in X.fontes.items():
+        if not R_BOIA.search(txt):
+            continue
+        tit = next((t for t in (t_prot, t_ck) if t and rel.endswith('/' + t + '.html')), None)
+        for sec, corpo in secoes_html(txt):
+            if R_BOIA.search(corpo) and (tit is None or sec not in permitidas[tit]):
+                out.append('fontes/%s (%s): "boia" fora de origem' % (rel, sec or 'cabeçalho'))
+    for chave in ('pecas', 'sensores', 'checklists'):
+        for cam, s in textos(X.D.get(chave), chave):
+            m = R_KIT.search(s)
+            if m:
+                out.append('%s: "kit" «%s»' % (cam, trecho(s, m)))
+    for i, p in enumerate(((X.D.get('sensores') or {}).get('pontos')) or []):
+        if isinstance(p, dict) and p.get('onde') not in ONDE_SENSORES:
+            out.append('sensores.pontos[%d].onde fora do vocabulário fechado: %r' % (i, p.get('onde')))
+    for i, p in enumerate(X.D.get('pecas') or []):
+        if isinstance(p, dict) and not (isinstance(p.get('local'), str) and LOCAL_PECAS.fullmatch(p['local'])):
+            out.append('pecas[%d].local fora do vocabulário fechado: %r' % (i, p.get('local')))
+    return out
+
+
+def a_seguranca_marcada(X):
+    out = []
+    for i, t in enumerate(X.trechos):
+        if segura((t.get('secao') or '') + ' ' + (t.get('texto') or '')) and t.get('seguranca') is not True:
+            out.append('base:trechos[%d] (%s · %s) casa a SEGURANCA_PALAVRAS sem seguranca: true' % (i, t.get('fonte'), t.get('secao')))
+    for it in X.itens_faq:
+        if segura(' '.join(s for _, s in textos(it))) and it.get('seguranca') is not True:
+            out.append('faq:%s casa a SEGURANCA_PALAVRAS sem seguranca: true' % it.get('id'))
+    return out
+
+
+def a_sem_salvatagem_em(X):
+    out = []
+    for i, p in enumerate(((X.D.get('sensores') or {}).get('pontos')) or []):
+        for k in ('id', 'rotulo'):
+            if isinstance(p, dict) and has(norm(p.get(k)), SALVATAGEM_EM):
+                out.append('sensores.pontos[%d].%s: equipamento de salvatagem' % (i, k))
+    for i, p in enumerate(X.D.get('pecas') or []):
+        if isinstance(p, dict) and has(norm(p.get('n')), SALVATAGEM_EM):
+            out.append('pecas[%d].n: peça de salvatagem' % i)
+    return out
+
+
+def a_calado_fora(X):
+    out = ['base:trechos[%d] (%s · %s): "calado"' % (i, t.get('fonte'), t.get('secao'))
+           for i, t in enumerate(X.trechos) if any('calado' in norm(s) for _, s in textos(t))]
+    out += ['faq:%s: "calado"' % it.get('id') for it in X.itens_faq if any('calado' in norm(s) for _, s in textos(it))]
+    return out
+
+
+def saidas_texto(X):
+    """Toda a saída do gerador, como texto: os arquivos da raiz e as fontes do Drive."""
+    out = dict(X.saidas)
+    out.update({'fontes/' + rel: txt for rel, txt in X.fontes.items()})
+    return out
+
+
+def a_modelos_avanti(X):
+    if X.listas is None:
+        return []
+    out = []
+    S = {k: v.lower().split('\n') for k, v in saidas_texto(X).items()}
+    for nome, termos in sorted(X.listas.items()):
+        por = {k: sum(1 for l in linhas if any(t in l for t in termos)) for k, linhas in S.items()}
+        n = sum(por.values())
+        if n:   # só contagens: nenhum termo da lista é impresso
+            out.append('%s: %d linha(s) da saída casam (%s)' % (nome, n, ' · '.join('%s %d' % (k, v) for k, v in sorted(por.items()) if v)))
+    return out
+
+
+def candidatos_modelo(fabricante, modelo):
+    """Cada parte do modelo e a base dela (as duas primeiras palavras); parte ou base com menos de 4 letras ou sem dígito vai
+    com o fabricante na frente ("Lewmar V2", "Raymarine Evolution"), §2.5."""
+    out = []
+    fab = (fabricante or '').strip()
+    for p in partes_modelo(modelo):
+        for c in (p, ' '.join(p.split()[:2])):
+            if fab and (len(c) < 4 or not re.search(r'\d', c)) and not c.lower().startswith(fab.lower()):
+                c = fab + ' ' + c
+            if c not in out:
+                out.append(c)
+    return out
+
+
+def a_colisao_modelos(X):
+    out = []
+    est = X.eq('estabilizador')
+    if est and isinstance(est.get('nominal'), dict) and set(est['nominal']) != {'pct_estabiliza'}:
+        out.append('equipamentos[estabilizador].nominal: só pct_estabiliza (sem número do fabricante, §2.5)')
+    if X.avanti is None:
+        return out
+    for e in X.equip:
+        if not isinstance(e.get('modelo'), str):
+            continue
+        for c in candidatos_modelo(e.get('fabricante'), e['modelo']):
+            n = X.avanti.count(c.lower())
+            if n > EXCECOES_MODELO.get(c, 0):   # só a contagem: o texto da pasta do Avanti nunca é impresso
+                out.append('equipamentos[%s] %r: %d na pasta do Avanti (permitido %d)' % (e.get('id'), c, n, EXCECOES_MODELO.get(c, 0)))
+    return out
+
+
+def a_fonte_limites(X):
+    out = []
+    for c, L in X.limites.items():
+        f = L.get('fonte') if isinstance(L, dict) else None
+        m = re.match(r'^(.*?)\s*§\s*(\d+)?\s*(?:·\s*)?(.*?)\s*$', f or '')
+        if not m:
+            out.append('limites.%s.fonte sem §: %r' % (c, f))
+            continue
+        tit, n, nome = m.group(1), m.group(2), m.group(3)
+        tr = [t for t in X.trechos if t.get('fonte') == tit and (
+            (t.get('secao') == n + ' · ' + nome) if n and nome else (t.get('secao', '').startswith(n + ' · ') if n else t.get('secao') == nome))]
+        if not tr:
+            out.append('limites.%s.fonte aponta para um § que não existe: %r' % (c, f))
+            continue
+        texto = tr[0].get('texto', '')
+        nums = []
+        for R in [L] + list(L.get('regimes') or []):
+            nums += limiares(R) + [R[k] for k in ('rpm_de', 'rpm_ate') if k in R]
+        faltam = [x for x in nums if not tem_numero(texto, x)]
+        if faltam:
+            out.append('limites.%s: %s sem os números %s' % (c, f, ', '.join(sorted({'/'.join(sorted(ptbr(x)))[:20] for x in faltam}))))
+    return out
+
+
+def a_equip(X):
+    out = []
+    guias = X.D.get('guias') or {}
+    for i, e in enumerate(X.equip):
+        for k in ('fabricante', 'modelo'):
+            if not (isinstance(e.get(k), str) and e[k].strip()):
+                out.append('equipamentos[%s].%s ausente' % (e.get('id', i), k))
+        if not _num(e.get('qtd')):
+            out.append('equipamentos[%s].qtd não é número: %r' % (e.get('id', i), e.get('qtd')))
+        if e.get('guia') not in guias:
+            out.append('equipamentos[%s].guia fora de D.guias: %r' % (e.get('id', i), e.get('guia')))
+    return out
+
+
+def a_ids(X):
+    D, out = X.D, []
+    ag = {t.get('id'): t for t in X.agenda}
+    docs = {d.get('id') for d in (D.get('documentos') or []) if isinstance(d, dict)}
+    sistemas = {e.get('id') for e in X.equip} | SISTEMAS_EXTRA
+    ck = D.get('checklists')
+    if isinstance(ck, dict):
+        tipos = [t.get('id') for t in ck.get('tipos') or [] if isinstance(t, dict)]
+        if tuple(tipos) != TIPOS_CHECKLIST:
+            out.append('checklists.tipos: %r (precisa dos 4: %s)' % (tipos, ', '.join(TIPOS_CHECKLIST)))
+        ids_faq = {it.get('id') for it in X.itens_faq}
+        for tipo, itens in (ck.get('itens') or {}).items():
+            for it in itens or []:
+                if not (isinstance(it.get('c'), str) and it['c'].strip()):
+                    out.append('checklists.itens.%s.%s sem c' % (tipo, it.get('id')))
+                if 'faq' in it and X.faq is not None and it['faq'] not in ids_faq:
+                    out.append('checklists.itens.%s.%s.faq fora do FAQ: %r' % (tipo, it.get('id'), it['faq']))
+    for p in D.get('pecas') or []:
+        for t in p.get('tarefas') or []:
+            if t not in ag:
+                out.append('pecas.%s.tarefas: %r fora da agenda' % (p.get('id'), t))
+    pontos = ((D.get('sensores') or {}).get('pontos')) or []
+    if pontos:
+        usados = set()
+        for p in pontos:
+            for c in p.get('campos') or []:
+                usados.add(c)
+                if c not in X.campos:
+                    out.append('sensores.%s.campos: %r fora de D.campos' % (p.get('id'), c))
+        out += ['sensores: os campos não cobrem %r (F08/F33)' % c for c in CAMPOS_F08_F33 if c not in usados]
+        filas = {}
+        for p in pontos:
+            for plat, b in (p.get('bloco') or {}).items():
+                filas.setdefault((p.get('vista'), plat, b[1]), []).append((b[0], p.get('id')))
+        for (vista, plat, by), bs in filas.items():
+            bs.sort()
+            for (x1, i1), (x2, i2) in zip(bs, bs[1:]):
+                if x2 - x1 < 0.10 - 1e-9:
+                    out.append('sensores: blocos %s e %s a menos de 0,10 na fileira %s/%s/%s' % (i1, i2, vista, plat, by))
+    for m in ((D.get('alarmesPedidos') or {}).get('metricas')) or []:
+        for c in m.get('campos') or []:
+            if c not in X.campos:
+                out.append('alarmesPedidos.%s.campos: %r fora de D.campos' % (m.get('id'), c))
+        fx = m.get('faixa')
+        if not (isinstance(fx, list) and len(fx) == 2 and _num(fx[0]) and _num(fx[1]) and fx[0] < fx[1]):
+            out.append('alarmesPedidos.%s.faixa: %r' % (m.get('id'), fx))
+    for nome, lista in (('agenda', X.agenda), ('tarefasEquipe', D.get('tarefasEquipe') or []),
+                        ('replay.alertas', list(((X.R or {}).get('alertas') or {}).values()))):
+        for t in lista:
+            if t.get('sistema') not in sistemas:
+                out.append('%s.%s.sistema fora do vocabulário (ids de equipamentos, casco, tanques): %r' % (nome, t.get('id', t.get('campo')), t.get('sistema')))
+    for d in D.get('documentos') or []:
+        if 'ref' in d and d['ref'] not in ag and d['ref'] not in docs:
+            out.append('documentos.%s.ref inexistente: %r' % (d.get('id', d.get('n')), d['ref']))
+    for e in D.get('diario') or []:
+        if 'ref' in e and e['ref'] not in ag and e['ref'] not in docs:
+            out.append('diario.%s.ref inexistente: %r' % (e.get('id', e.get('iso')), e['ref']))
+        if e.get('pend'):
+            ref = ag.get(e.get('ref'))
+            if ref is None:
+                out.append('diario.%s: pendência sem ref na agenda' % e.get('id', e.get('iso')))
+            elif not e.get('palavras') or e.get('palavras') != ref.get('palavras'):
+                out.append('diario.%s.palavras diferentes das da tarefa %s' % (e.get('id', e.get('iso')), ref.get('id')))
+    dbo = (X.R or {}).get('diaDeBordo')
+    if isinstance(dbo, dict):
+        abs_ = {'ab-%d' % k for k in range(dbo.get('dias', 0))}
+        for x in list(dbo.get('diario') or []) + ([dbo['documento']] if isinstance(dbo.get('documento'), dict) else []):
+            if 'ref' in x and x['ref'] not in abs_:
+                out.append('replay.diaDeBordo.%s.ref fora de ab-0…ab-%d: %r' % (x.get('id'), dbo.get('dias', 0) - 1, x['ref']))
+    return out
+
+
+def a_laco(X):
+    R = X.R
+    if R is None:
+        return []
+    out = []
+    n = R.get('duracao', 150) // R.get('passo_chave', 5)
+    for c, ch in (R.get('chaves') or {}).items():
+        if not (isinstance(ch, list) and len(ch) == n and all(_num(x) for x in ch)):
+            out.append('replay.chaves.%s: precisa de %d números finitos' % (c, n))
+    C = X.campos
+    for c, d in C.items():
+        if d.get('origem') not in ORIGENS:
+            out.append('campos.%s.origem fora de %s: %r' % (c, sorted(ORIGENS), d.get('origem')))
+        if (d.get('origem') == 'contador') != ('sentido' in d) or ('sentido' in d and d['sentido'] not in (1, -1)):
+            out.append('campos.%s: sentido (+1/−1) em todo contador e só neles' % c)
+    for grupo, origem in (('chaves', 'laço'), ('fixos', 'fixo'), ('contadores_base', 'contador')):
+        dados = set(R.get(grupo) or {})
+        cat = {c for c, d in C.items() if d.get('origem') == origem}
+        out += ['replay.%s.%s fora de D.campos com origem %s' % (grupo, c, origem) for c in sorted(dados - cat)]
+        out += ['campos.%s (origem %s) sem valor em replay.%s' % (c, origem, grupo) for c in sorted(cat - dados)]
+    out += ['campos: falta %s (PROMPT, Fase 1)' % c for c in CAMPOS_FASE1 if c not in C]
+    sq = ((X.D.get('snapshot') or {}).get('quadro'))
+    if isinstance(sq, dict):
+        out += ['snapshot.quadro.%s fora de D.campos' % c for c in sq if c not in C]
+        out += ['snapshot.quadro sem %s (só faltam os de origem rota ou janela)' % c for c, d in C.items()
+                if c not in sq and d.get('origem') not in ('rota', 'janela')]
+    if any(d.get('origem') in ('rota', 'derivado', 'relógio', 'janela') for d in C.values()) and PORT_ROTA is None:
+        out.append('quadro ⇔ catálogo nos campos de rota, derivado, relógio e janela: falta o port do em() (C8)')
+    return out
+
+
+def a_limites_forma(X):
+    out = []
+    for c, L in X.limites.items():
+        if '*' in c or c not in X.campos:
+            out.append('limites.%s: chave com curinga ou fora de D.campos' % c)
+            continue
+        if 'regimes' in L and any(k in L for k in ('normal', 'aviso', 'critico')):
+            out.append('limites.%s: com regimes, o topo não tem normal/aviso/critico' % c)
+        a = L.get('ativo_se')
+        if a is not None and not (isinstance(a, dict) and a.get('campo') in X.campos and (('acima' in a) != ('igual' in a))):
+            out.append('limites.%s.ativo_se: precisa de campo do catálogo e de acima ou igual' % c)
+        regs = L.get('regimes') or [L]
+        for i, R in enumerate(regs):
+            nrm, av = R.get('normal') or {}, R.get('aviso') or {}
+            if not nrm:
+                out.append('limites.%s[%d]: sem normal' % (c, i))
+            if nrm.get('de') != av.get('abaixo') or nrm.get('ate') != av.get('acima'):
+                out.append('limites.%s[%d]: o normal termina no aviso (de = abaixo, ate = acima)' % (c, i))
+        out += casos_de_borda(X, c, L)
+    return out
+
+
+def casos_de_borda(X, c, L):
+    """Casos de borda do §3.3 pelo port da nivel: valor = limite → normal; limite ± 1 unidade da última casa → o nível de fora;
+    rpm 999 e 1.000 nos regimes; ativo_se desligado → None."""
+    out, un = [], 10 ** -casas_de(X.campos, c)
+    a = L.get('ativo_se') or {}
+    regs = L.get('regimes') or [L]
+    for i, R in enumerate(regs):
+        q = {}
+        if a.get('campo'):
+            q[a['campo']] = a['acima'] + 1 if 'acima' in a else a.get('igual')
+        if 'regimes' in L:
+            q[R['rpm_campo']] = R['rpm_ate'] - 1 if 'rpm_ate' in R else R.get('rpm_de', 0)
+            if a.get('campo') == R['rpm_campo'] and 'acima' in a and q[R['rpm_campo']] <= a['acima']:
+                q[R['rpm_campo']] = a['acima'] + 1
+        cr = R.get('critico') or {}
+
+        def esperado(v):
+            if ('abaixo' in cr and v < cr['abaixo']) or ('acima' in cr and v > cr['acima']):
+                return 'critico'
+            av = R.get('aviso') or {}
+            return 'aviso' if ('abaixo' in av and v < av['abaixo']) or ('acima' in av and v > av['acima']) else 'normal'
+        provas = []
+        for k, sinal in (('de', -1), ('ate', +1)):
+            if k in (R.get('normal') or {}):
+                lim = R['normal'][k]
+                provas += [lim, arred(lim + sinal * un, casas_de(X.campos, c))]
+        for k, sinal in (('abaixo', -1), ('acima', +1)):
+            if k in cr:
+                provas += [cr[k], arred(cr[k] + sinal * un, casas_de(X.campos, c))]
+        for v in provas:
+            q2 = dict(q, **{c: v})
+            nv = nivel(X.limites, X.campos, c, q2) or {}
+            reg = i if 'regimes' in L else None
+            if nv.get('nivel') != esperado(v) or nv.get('regime') != reg:
+                out.append('limites.%s[%d]: nivel(%s) = %s (regime %s), esperado %s (regime %s)' % (
+                    c, i, v, nv.get('nivel'), nv.get('regime'), esperado(v), reg))
+    if a.get('campo') and 'acima' in a:
+        q = {a['campo']: a['acima'], c: 0}
+        for R in regs:
+            if 'rpm_campo' in R and R['rpm_campo'] != a['campo']:
+                q[R['rpm_campo']] = R.get('rpm_de', 0)
+        if nivel(X.limites, X.campos, c, q) is not None:
+            out.append('limites.%s: com %s = %s, nivel tem de ser None (não avalia)' % (c, a['campo'], a['acima']))
+    return out
+
+
+def a_janela(X):
+    R = X.R
+    if R is None or not R.get('chaves'):
+        return []
+    out = []
+    js = R.get('janelas')
+    if not isinstance(js, list):
+        return ['replay.janelas ausente (derivadas pelo gerador, §1.16)']
+    for j in js:
+        if not (95 <= j.get('ini', -1) <= j.get('fim', -1) <= 120 and j['fim'] - j['ini'] + 1 >= 10):
+            out.append('replay.janelas.%s: precisa ficar em [95, 120] e durar ≥ 10 s (%s–%s)' % (j.get('id'), j.get('ini'), j.get('fim')))
+        if j.get('ini', 0) <= 60 <= j.get('fim', -1):
+            out.append('replay.janelas.%s cobre t = 60' % j.get('id'))
+    if not any(j.get('ini', 0) <= 105 <= j.get('fim', -1) for j in js):
+        out.append('nenhuma janela cobre t = 105')
+    vistos = set()
+    for t, q in enumerate(X.laco()):
+        for c in X.limites:
+            if c not in q:
+                continue
+            nv = nivel(X.limites, X.campos, c, q)
+            n = nv['nivel'] if nv else None
+            dentro = [j for j in js if j.get('campo') == c and j.get('ini', 0) <= t <= j.get('fim', -1)]
+            if n in ('aviso', 'critico') and not any(j.get('nivel') == n for j in dentro) and (c, n) not in vistos:
+                vistos.add((c, n))
+                out.append('%s = %s em t = %d (%s) fora das janelas' % (c, q[c], t, n))
+            for j in dentro:
+                if n != j.get('nivel') and (c, j.get('id'), 'j') not in vistos:
+                    vistos.add((c, j.get('id'), 'j'))
+                    out.append('replay.janelas.%s: em t = %d o nível é %s, não %s' % (j.get('id'), t, n, j.get('nivel')))
+            if n == 'critico' and R.get('cenario') == 'aviso' and (c, 'crit') not in vistos:
+                vistos.add((c, 'crit'))
+                out.append('%s crítico em t = %d com o cenário aviso' % (c, t))
+    return out
+
+
+def a_fio(X):
+    out, vistos = [], set()
+    for t, q in enumerate(X.laco()):
+        for c, L in X.limites.items():
+            if c not in q or c in vistos:
+                continue
+            nv = nivel(X.limites, X.campos, c, q)
+            if nv is None:
+                continue
+            v = arred(q[c], casas_de(X.campos, c))
+            perto = [x for x in limiares(regime_de(L, nv)) if round(abs(v - x), 9) < 0.05]
+            if perto:
+                vistos.add(c)
+                out.append('%s = %s em t = %d, a menos de 0,05 do limite %s' % (c, v, t, perto[0]))
+    return out
+
+
+def _passo(v1, v0, ang):
+    d = abs(v1 - v0)
+    return min(d, 360 - d) if ang else d
+
+
+def a_emenda(X):
+    Q = X.laco()
+    if not Q:
+        return []
+    out = []
+    for c in (X.R.get('chaves') or {}):
+        ang = bool((X.campos.get(c) or {}).get('ang'))
+        vs = [q[c] for q in Q]
+        maior = max(_passo(vs[t + 1], vs[t], ang) for t in range(len(vs) - 1))
+        if round(_passo(vs[-1], vs[0], ang) - maior, 9) > 0:
+            out.append('%s: |v(%d) − v(0)| = %s > maior passo de 1 s (%s)' % (c, len(vs) - 1, round(_passo(vs[-1], vs[0], ang), 6), round(maior, 6)))
+    return out
+
+
+def a_emenda_rota(X):
+    rota = X.D.get('rota')
+    if not isinstance(rota, dict):
+        return []
+    out = []
+    voltas = ((X.R or {}).get('por_dia') or {}).get('voltas', 576)
+    if math.gcd(int(rota.get('circuitos_dia', 0)), int(voltas)) != 1:
+        out.append('rota.circuitos_dia %r não é primo com as %d voltas do dia' % (rota.get('circuitos_dia'), voltas))
+    if PORT_ROTA is None:
+        out.append('emendas de 150 s da rota: falta o port do em() (C8)')
+    return out
+
+
+def a_piso(X):
+    R = X.R
+    if R is None or 'contadores_base' not in R:
+        return []
+    try:
+        if R['contadores_base']['diesel_litros'] - R['por_dia']['diesel_l'] >= R['diesel_piso_l'] + 50:
+            return []
+    except (KeyError, TypeError):
+        return ['replay: contadores_base.diesel_litros, por_dia.diesel_l e diesel_piso_l são obrigatórios']
+    return ['diesel na âncora − consumo do dia < piso + 50 L: o piso agiria']
+
+
+def a_horas(X):
+    out = []
+    R = X.R or {}
+    base, pdia = R.get('contadores_base') or {}, R.get('por_dia') or {}
+    for t in X.agenda:
+        h = t.get('horas')
+        if not isinstance(h, dict):
+            continue
+        cs = [c for c in h.get('campos') or [] if c in base]
+        b = max(base[c] for c in cs) if cs else h.get('atual')
+        dia = pdia.get('gerador_h' if any('gerador' in c for c in cs) else 'motor_h', 24) if cs else 24
+        if not (_num(b) and _num(h.get('limite'))):
+            out.append('agenda.%s.horas sem limite e base' % t.get('id'))
+        elif not (h['limite'] - b >= 24 and h['limite'] - (b + dia) > 0):
+            out.append('agenda.%s: folga de %.1f h na âncora (precisa de ≥ 24 h e de > 0 no fim do dia)' % (t.get('id'), h['limite'] - b))
+    return out
+
+
+def a_rota(X):
+    rota = X.D.get('rota')
+    if not isinstance(rota, dict):
+        return []
+    out = []
+    pts = [rota.get('base') or {}] + list(rota.get('pontos') or [])
+    calado = (X.D.get('embarcacao') or {}).get('calado')
+    for p in pts:
+        for k in ('nome', 'rel', 'perto'):
+            if re.search(r'\d', str(p.get(k, ''))):
+                out.append('rota.%s.%s com dígito' % (p.get('id'), k))
+        if _num(calado) and not (_num(p.get('prof_m')) and p['prof_m'] >= calado + 4):
+            out.append('rota.%s.prof_m abaixo do calado + 4 m' % p.get('id'))
+    for k in ('destino', 'volta'):
+        for kk in ('nome', 'caminho'):
+            if re.search(r'\d', str((rota.get(k) or {}).get(kk, ''))):
+                out.append('rota.%s.%s com dígito' % (k, kk))
+    pernas = rota.get('pernas') or []
+    g = rota.get('guinada_max_gps') or 3
+    nos = (((X.D.get('consumo') or {}).get('cruzeiro')) or {}).get('nos', 18)
+
+    def arco(a, b):
+        d = abs(((b - a + 540) % 360) - 180)
+        return d / g * nos / 3600
+    for i, p in enumerate(pernas):
+        ant, prox = pernas[i - 1], pernas[(i + 1) % len(pernas)]
+        maior = max(arco(ant['rumo'], p['rumo']), arco(p['rumo'], prox['rumo']))
+        if not p.get('mn', 0) > 2 * maior:
+            out.append('rota.pernas[%d] (%s → %s): %.2f mn ≤ 2 × arco de guinada (%.2f)' % (i, p.get('de'), p.get('para'), p.get('mn', 0), maior))
+    pdia = ((X.R or {}).get('por_dia') or {}).get('distancia_mn')
+    if _num(pdia):
+        a, b = rota.get('circuitos_dia', 0) * rota.get('distancia_mn', 0), pdia * rota.get('fator', 0)
+        if abs(a - b) > max(0.2, 1e-3 * b):
+            out.append('rota: circuitos_dia × distancia_mn (%.2f) ≠ por_dia × fator (%.2f)' % (a, b))
+    return out
+
+
+def a_dia_de_bordo(X):
+    R = X.R or {}
+    dbo = R.get('diaDeBordo')
+    out = []
+    hora = R.get('ancora_hora', '07:00')
+    linhas = list(X.D.get('diario') or [])
+    if isinstance(dbo, dict):
+        linhas += list(dbo.get('diario') or [])
+        if any(isinstance(d, dict) and (d.get('cat') == 'Notas' or str(d.get('id', '')).startswith('nf')) for d in X.D.get('documentos') or []):
+            out.append('documentos: a nota fiscal do abastecimento fica só em replay.diaDeBordo.documento')
+        ab = dbo.get('abastecimento') or {}
+        if ab.get('h') != hora:
+            out.append('diaDeBordo.abastecimento.h ≠ ancora_hora')
+        pdia = (R.get('por_dia') or {}).get('diesel_l')
+        cap_ = ((X.D.get('embarcacao') or {}).get('tanques') or {}).get('diesel_l')
+        base = (R.get('contadores_base') or {}).get('diesel_litros')
+        if _num(pdia) and ab.get('litros') != math.floor(pdia + 0.5):
+            out.append('diaDeBordo.abastecimento.litros ≠ round(por_dia.diesel_l)')
+        if _num(pdia) and _num(cap_) and _num(base):
+            if ab.get('nivelDepois') != arred(base / cap_ * 100, 1) or ab.get('nivelAntes') != arred((base - pdia) / cap_ * 100, 1):
+                out.append('diaDeBordo.abastecimento: nivelAntes/nivelDepois fora do modelo de 24 h')
+        ids = [x.get('id') for x in dbo.get('diario') or []]
+        if ids[:2] != ['d01', 'd02']:
+            out.append('diaDeBordo.diario: d01 antes da d02 (iso d01 = âncora + 1 s)')
+        for x in dbo.get('diario') or []:
+            if x.get('id') == 'd02' and x.get('h') != hora:
+                out.append('d02.h ≠ ancora_hora')
+            if x.get('id') == 'd01':
+                m = re.search(r'(\d+) pessoas a bordo', x.get('t', ''))
+                if not m or int(m.group(1)) != (X.D.get('embarcacao') or {}).get('pessoasBordo'):
+                    out.append('d01: o número de pessoas a bordo ≠ embarcacao.pessoasBordo')
+    for x in linhas:
+        if x.get('diasAtras') == 0 and str(x.get('h', '99:99')) > hora:
+            out.append('diário %s: diasAtras 0 depois da âncora (%s)' % (x.get('id'), x.get('h')))
+    return out
+
+
+def a_sem_emergencia(X):
+    out = []
+    R = X.R or {}
+    fontes = [('diario', X.D.get('diario') or [], ('t',)), ('replay.diaDeBordo.diario', (R.get('diaDeBordo') or {}).get('diario') or [], ('t',)),
+              ('agenda', X.agenda, ('t',))]
+    for tipo, itens in ((((X.D.get('checklists') or {}).get('itens')) or {}).items()):
+        fontes.append(('checklists.itens.' + tipo, itens or [], ('t', 'c')))
+    for nome, lista, ks in fontes:
+        for i, x in enumerate(lista):
+            for k in ks:
+                q = pad(x.get(k, ''))
+                if emergencia(q) or oleo(q) == 1:
+                    out.append('%s[%s].%s casa %s: %r' % (nome, x.get('id', i), k, 'emergencia()' if emergencia(q) else 'oleo() = 1', x.get(k)))
+    return out
+
+
+def a_agenda(X):
+    out = []
+    dias = X.const.get('DIAS_MESES', DIAS_MESES_PADRAO)
+    nomes_seg = {i: [n for j, n in nomes_equip(X) if j == i] for i in ('epirb', 'seafire')}
+    for t in X.agenda:
+        i = t.get('id')
+        if not (_num(t.get('ultimaHa')) and _num(t.get('venceEm')) and t.get('meses') in dias and t['ultimaHa'] + t['venceEm'] == dias[t['meses']]):
+            out.append('agenda.%s: ultimaHa + venceEm ≠ DIAS_MESES[meses]' % i)
+        ps = t.get('palavras')
+        if not (isinstance(ps, list) and ps and all(isinstance(p, str) and len(p.split()) >= 2 for p in ps)):
+            out.append('agenda.%s.palavras vazias ou com palavra solta' % i)
+        if emergencia(pad(t.get('t', ''))):
+            out.append('agenda.%s.t tem palavra da lista SOS' % i)
+        if (t.get('seguranca') is True) != (i in SEGURANCA_AGENDA):
+            out.append('agenda.%s: seguranca só (e sempre) em %s' % (i, ', '.join(sorted(SEGURANCA_AGENDA))))
+        if str(i).startswith(('epirb', 'seafire')) and not (_num(t.get('venceEm')) and t['venceEm'] > 0):
+            out.append('agenda.%s: tarefa de salvatagem atrasada' % i)
+        for n in nomes_seg.get(t.get('sistema'), []):
+            if acha_nome(t.get('equip', ''), n):
+                out.append('agenda.%s.equip com fabricante ou modelo de equipamento de segurança' % i)
+    atr = sum(1 for t in X.agenda if _num(t.get('venceEm')) and t['venceEm'] < 0)
+    if atr != 3:
+        out.append('agenda: %d atrasadas (precisa de 3)' % atr)
+    return out
+
+
+def a_historico(X):
+    H = X.D.get('historico')
+    if not isinstance(H, dict):
+        return []
+    out = []
+    for grupo in ('desvios', 'sazonal', 'cruzeiro'):
+        for c, s in (H.get(grupo) or {}).items():
+            if isinstance(s, dict) and 'd' in s and not all(_num(x) for x in s['d']):
+                out.append('historico.%s.%s com valor não finito' % (grupo, c))
+    met = H.get('metricas') or {}
+    out += ['historico.metricas.%s: %r fora de D.campos' % (g, c) for g, cs in met.items() for c in cs if c not in X.campos]
+    if (H.get('janelas') or {}).get('150S') != {'passo_s': 1, 'n': 150}:
+        out.append("historico.janelas['150S'] ≠ {passo_s: 1, n: 150}")
+    for g in H.get('so150') or []:
+        if g not in met:
+            out.append('historico.so150: %r fora das métricas' % g)
+        elif any((X.campos.get(c) or {}).get('origem') != 'laço' for c in met[g]):
+            out.append('historico.so150: %r tem campo fora do laço' % g)
+    for c, s in ((H.get('sazonal') or {}).items()):
+        if isinstance(s, dict) and len(s.get('d') or []) != 73:
+            out.append('historico.sazonal.%s sem 73 pontos' % c)
+    Q = X.laco()
+    if Q:
+        ar = (H.get('desvios') or {}).get('temp_ar_externo_c') or {}
+        saz = ((H.get('sazonal') or {}).get('temp_ar_externo_c')) or {}
+        d_ar = max([x / ar.get('escala', 1) for x in ar.get('d') or []] or [0])
+        d_saz = (max(saz['d']) - min(saz['d'])) / saz.get('escala', 1) if saz.get('d') else 0
+        for c, s in (H.get('desvios') or {}).items():
+            if c not in Q[0] or not s.get('d'):
+                continue
+            vs = [q[c] for q in Q]
+            dmin, dmax = min(s['d']) / s.get('escala', 1), max(s['d']) / s.get('escala', 1)
+            nrm = (X.limites.get(c) or {}).get('normal') or {}
+            if 'de' in nrm and min(vs) + dmin < nrm['de'] + 0.05 - 1e-9:
+                out.append('historico.desvios.%s: o mínimo cruza o normal (%s)' % (c, nrm['de']))
+            if 'ate' in nrm and max(vs) + dmax > nrm['ate'] - 0.05 + 1e-9:
+                out.append('historico.desvios.%s: o máximo cruza o normal (%s)' % (c, nrm['ate']))
+            if c == 'vento_verdadeiro_nos' and min(vs) + dmin < 0:
+                out.append('historico.desvios.vento_verdadeiro_nos: vento negativo')
+        pr = 'temp_praca_maquinas_c'
+        ate = ((X.limites.get(pr) or {}).get('normal') or {}).get('ate')
+        if pr in Q[0] and _num(ate) and max(q[pr] for q in Q) + d_ar + d_saz > ate - 0.05 + 1e-9:
+            out.append('historico: praça de máquinas + desvio do ar cruza %s °C' % ate)
+    return out
+
+
+def a_coord_texto(X):
+    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if cam != 'snapshot.gps.texto' for m in [R_COORD.search(s)] if m]
+
+
+def rotulo_fim(X):
+    rot = ((X.D.get('protocolos') or {}).get('rotulo')) or 'procedimento padrão — confirmar com o protocolo de bordo'
+    nota = X.const.get('NOTA_ETIQUETA', 'modelo, validade e acionamento: veja a etiqueta do equipamento')
+    return cap(rot) + '. ' + cap(nota) + '.'
+
+
+def a_rotulo_seguranca(X):
+    fim = rotulo_fim(X)
+    out = []
+    guias = {X.arq[k] for k in ('g_seafire', 'g_epirb') if X.arq.get(k)}
+    prot = X.arq.get('protocolo')
+    for i, t in enumerate(X.trechos):
+        if (t.get('fonte') in guias or (t.get('fonte') == prot and t.get('secao') == 'Salvatagem')) and not t.get('texto', '').rstrip().endswith(fim):
+            out.append('base:trechos[%d] (%s · %s) sem o rótulo no fim' % (i, t.get('fonte'), t.get('secao')))
+    for it in X.itens_faq:
+        if str(it.get('id', '')).startswith(('SF-', 'EP-')) or it.get('id') == 'EM-09':
+            if not str(it.get('resposta', '')).rstrip().endswith(fim):
+                out.append('faq:%s sem o rótulo no fim da resposta' % it.get('id'))
+    for rel, txt in X.fontes.items():
+        g = next((t for t in guias if rel.endswith('/' + t + '.html')), None)
+        p = prot and rel.endswith('/' + prot + '.html')
+        if not (g or p):
+            continue
+        for sec, corpo in secoes_html(txt)[1:]:
+            if (g or sec == 'Salvatagem') and not sem_tags(corpo).endswith(fim):
+                out.append('fontes/%s (%s) sem o rótulo no fim' % (rel, sec))
+    return out
+
+
+def a_nota_etiqueta(X):
+    nota = X.const.get('NOTA_ETIQUETA', 'modelo, validade e acionamento: veja a etiqueta do equipamento')
+    out = []
+    for i in ('epirb', 'seafire'):
+        e = X.eq(i)
+        if e is not None and e.get('nota') != nota:
+            out.append('equipamentos[%s].nota ≠ NOTA_ETIQUETA' % i)
+        p = (X.D.get('protocolos') or {}).get(i)
+        if isinstance(p, dict) and p.get('nota') != nota:
+            out.append('protocolos.%s.nota ≠ NOTA_ETIQUETA' % i)
+    return out
+
+
+def a_rodape_snapshot(X):
+    js = X.rodape
+    if js is None:
+        return []
+    out = []
+    limpo = re.sub(r'/\*.*?\*/|//[^\n]*', '', js, flags=re.S)
+    if re.search(r'snapshot\b(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*\s*(?:[+\-*/]?=(?!=)|\+\+|--)|delete\s+[\w$.]*snapshot|assign\(\s*[\w$.]*snapshot', limpo):
+        out.append('rodape.js escreve em D.snapshot')
+    m = re.search(r'(?:function\s+instante\s*\(|instante\s*[:=]\s*function\s*\()', limpo)
+    corpo = (0, 0)
+    if m:
+        i = limpo.index('{', m.end())
+        n, j = 0, i
+        while j < len(limpo):
+            n += {'{': 1, '}': -1}.get(limpo[j], 0)
+            if n == 0:
+                break
+            j += 1
+        corpo = (i, j)
+    guarda = limpo.find('/SOS-/', corpo[0]) if m else -1
+    for s in re.finditer(r'snapshot', limpo):
+        if not (corpo[0] < s.start() < corpo[1]) or not (0 <= guarda < s.start()):
+            out.append('rodape.js cita snapshot fora de instante() ou antes da guarda /SOS-/ (posição %d)' % s.start())
+    return out
+
+
+def a_fontes_relativas(X):
+    pastas = [X.pastas.get(k) for k in ('docs', 'agenda', 'diario', 'abast') if X.pastas.get(k)]
+    out = []
+    for rel, txt in sorted(X.fontes.items()):
+        if rel.endswith('.csv') and rel.split('/')[0] in pastas:
+            n = len(R_DATA.findall(txt))
+            if n:
+                out.append('fontes/%s: %d data(s) dd/mm/aaaa' % (rel, n))
+    return out
+
+
+ASSERCOES = [
+    ('TERMOS', a_termos), ('NULO', a_nulo), ('SIMULACAO_UNICA', a_simulacao_unica), ('TAMANHO', a_tamanho), ('MMSI9', a_mmsi9),
+    ('REGISTRO', a_registro), ('HEX15', a_hex15), ('SEM_INDICATIVO', a_sem_indicativo), ('AFIRMA_REAL', a_afirma_real),
+    ('PROTOCOLO_LIMPO', a_protocolo_limpo), ('LOCAL_VOCAB', a_local_vocab), ('SEGURANCA_MARCADA', a_seguranca_marcada),
+    ('SEM_SALVATAGEM_EM', a_sem_salvatagem_em), ('CALADO_FORA', a_calado_fora), ('MODELOS_AVANTI', a_modelos_avanti),
+    ('COLISAO_MODELOS', a_colisao_modelos), ('FONTE_LIMITES', a_fonte_limites), ('EQUIP', a_equip), ('IDS', a_ids),
+    ('LACO', a_laco), ('LIMITES_FORMA', a_limites_forma), ('JANELA', a_janela), ('FIO', a_fio), ('EMENDA', a_emenda),
+    ('EMENDA_ROTA', a_emenda_rota), ('PISO', a_piso), ('HORAS', a_horas), ('ROTA', a_rota), ('DIA_DE_BORDO', a_dia_de_bordo),
+    ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
+    ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('NOTA_ETIQUETA', a_nota_etiqueta), ('RODAPE_SNAPSHOT', a_rodape_snapshot),
+    ('FONTES_RELATIVAS', a_fontes_relativas),
+]
+NOMES = [n for n, _ in ASSERCOES]
+
+
+# ——————————————————————————————— listas privadas e pasta do Avanti (opcionais; só contagens) ———————————————————————————————
+def listas_privadas(env=None):
+    """{arquivo: [termos em minúsculas]} de CAPITAO_LISTAS_PRIVADAS, ou None sem a variável."""
+    pasta = (env if env is not None else os.environ).get('CAPITAO_LISTAS_PRIVADAS')
+    if not pasta:
+        return None
+    out = {}
+    for nome in ('valores.txt', 'modelos-avanti.txt'):
+        caminho = os.path.join(pasta, nome)
+        if not os.path.isfile(caminho):
+            raise SystemExit('CAPITAO_LISTAS_PRIVADAS: falta %s na pasta indicada' % nome)
+        with open(caminho, encoding='utf-8') as f:
+            out[nome] = [l.strip().lower() for l in f if l.strip()]
+    return out
+
+
+def texto_avanti(env=None):
+    """Texto (minúsculas) dos arquivos de texto da pasta do Avanti de CAPITAO_AVANTI, fora CLAUDE.md, .claude/ e .git/. Só leitura."""
+    pasta = (env if env is not None else os.environ).get('CAPITAO_AVANTI')
+    if not pasta:
+        return None
+    if not os.path.isdir(pasta):
+        raise SystemExit('CAPITAO_AVANTI: a pasta indicada não existe')
+    partes = []
+    for raiz, dirs, arqs in os.walk(pasta):
+        dirs[:] = sorted(d for d in dirs if d not in ('.claude', '.git'))
+        for a in sorted(arqs):
+            if a == 'CLAUDE.md':
+                continue
+            try:
+                with open(os.path.join(raiz, a), 'rb') as f:
+                    b = f.read()
+            except OSError:
+                continue
+            if b'\0' in b[:8192]:
+                continue   # binário
+            partes.append(b.decode('utf-8', 'ignore').lower())
+    return '\n'.join(partes)
+
+
+# ——————————————————————————————— execução ———————————————————————————————
+def verifica(D, base, fontes, saidas, faq=None, rodape=None, listas=None, avanti=None, const=None):
+    """{nome da asserção: [violações]} — todas as asserções, sem reprovar nada."""
+    X = Ctx(D, base, fontes, saidas, faq, rodape, listas, avanti, const)
+    return {nome: f(X) for nome, f in ASSERCOES}
+
+
+class ConfereFalhou(Exception):
+    pass
+
+
+def le_rodape():
+    if not os.path.isfile(RODAPE):
+        return None
+    with open(RODAPE, encoding='utf-8') as f:
+        return f.read()
+
+
+def resumo_termos(msgs):
+    por = {}
+    for m in msgs:
+        k = m.split(':', 1)[0]
+        por[k] = por.get(k, 0) + 1
+    return ' · '.join('%s %d' % (k, v) for k, v in sorted(por.items()))
+
+
+def confere(D, base, fontes, saidas, faq=None, const=None, detalhe=False, imprime=print, env=None):
+    """Roda verifica() com o rodapé e as fontes opcionais do ambiente, imprime o resumo e levanta ConfereFalhou se uma
+    asserção estrutural (fora da RELATORIO) tiver violação."""
+    listas, avanti = listas_privadas(env), texto_avanti(env)
+    V = verifica(D, base, fontes, saidas, faq, le_rodape(), listas, avanti, const)
+    falhas = {n: v for n, v in V.items() if v and n not in RELATORIO}
+    rel = {n: v for n, v in V.items() if n in RELATORIO}
+    imprime('confere(): %d asserções · %d reprovam o gerador: %s' % (
+        len(V), len(V) - len(RELATORIO), ('%d com falha (%s)' % (len(falhas), ', '.join(falhas))) if falhas else '0 falhas'))
+    partes = []
+    for n, v in rel.items():
+        extra = ': ' + resumo_termos(v) if n == 'TERMOS' and v else ''
+        partes.append('%s %d (%s%s)' % (n, len(v), RELATORIO[n], extra))
+    imprime('  em relatório até o commit que completa o dado: ' + ' · '.join(partes))
+    imprime('  listas privadas: %s · pasta do Avanti: %s' % (
+        'sem CAPITAO_LISTAS_PRIVADAS (não conferido)' if listas is None else
+        ' · '.join('%s %d termos' % (k, len(t)) for k, t in sorted(listas.items())) + ' · MODELOS_AVANTI %d violação(ões)' % len(V['MODELOS_AVANTI']),
+        'sem CAPITAO_AVANTI (não conferido)' if avanti is None else 'COLISAO_MODELOS %d violação(ões)' % len(V['COLISAO_MODELOS'])))
+    for n, v in V.items():
+        if v and (detalhe or n in falhas):
+            imprime('  · %s%s:' % (n, '' if n in falhas else ' (relatório)'))
+            for m in v:
+                imprime('      ' + m)
+    if falhas:
+        raise ConfereFalhou('confere(): %s' % ', '.join('%s %d' % (n, len(v)) for n, v in falhas.items()))
+    return V

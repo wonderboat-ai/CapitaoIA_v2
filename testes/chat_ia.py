@@ -5,11 +5,12 @@ e nunca em resposta pronta ou só num "oi"; que o pedido leva a ficha de bordo (
 que sem a CHAVE_APP no aparelho nada vai para a rede e a linha da fonte diz por quê (com o botão "Ativar IA na nuvem");
 que erro do proxy mantém a resposta local com o motivo; que "SEM DADOS" da IA mantém o trecho do guia mas troca o SEM DADOS
 genérico; que a resposta entra logo depois da pergunta dela; que na CONVERSA por voz a IA responde e a resposta dela é a
-falada; que link de fora (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
+falada; que na CONVERSA a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s e o VOZ→TEXTO a mantém; que link de fora
+(#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
 que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com o rosto
 de partículas (canvas + CapitaoRosto) e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
-    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; precisa de internet para o React do unpkg)
+    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; o React vem do próprio site, assets/vendor)
 """
 import functools
 import http.server
@@ -27,9 +28,11 @@ URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capit
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 TEXTO_IA = 'Resposta simulada da IA: segure PARTIDA até o motor pegar.'
-FONTE_IA = 'Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
+# Contrato C2: o título do guia perdeu o "(DEMO)" (Decisão 1.1.0, b); o Worker devolve a fonte do trecho que o app mandou.
+FONTE_IA = 'Guia de bordo — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
 PRONTA = "() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0"
 CONVERSA = '[aria-label="Conversa contínua por voz — sem tocar na tela"]'
+VOZ = '[aria-label="Falar — a pergunta é transcrita e respondida em texto e voz"]'  # VOZ (web) e VOZ→TEXTO (app)
 # Microfone e voz de mentira para a CONVERSA: o reconhecedor "ouve" as frases de window.__falas (uma por vez) e a fala só
 # registra o texto em window.__faladas. Os eventos do núcleo de voz ficam em window.__voz.
 VOZ_FALSA = r"""(() => {
@@ -149,7 +152,7 @@ def main():
                     if estado['modo'] == 'erro':
                         return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota grátis diária da IA esgotada"}')
                     texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — a ficha, os trechos e a leitura enviados pelo app não respondem a pergunta'
-                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar')
+                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo — Gerador Onan · 2 · Ligar')  # sem "(DEMO)" desde o C2
                     return route.fulfill(status=200, content_type='application/json', headers=cab,
                                          body=json.dumps({'texto': texto, 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}))
                 pg.route(URL_ARQ.rstrip('/') + '**', rota)
@@ -207,7 +210,8 @@ def main():
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
-                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                # 'DEMO' not in f: desde o C2 a ficha não leva o rótulo (Decisão 1.1.0, b); antes exigia 'DEMO' in f
+                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas nem o rótulo DEMO, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' not in f and "26°59" not in f and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')
@@ -290,6 +294,33 @@ def main():
                 ok(tela + ': CONVERSA: "Capitão, diagnóstico" fala se a IA está ligada e o resultado do teste da chave (sem gastar a cota)', n == 1 and len(f) >= 2 and 'IA na nuvem: LIGADA' in f[1] and 'Chave aceita pelo servidor' in f[1], json.dumps(f, ensure_ascii=False)[:300])
                 f, n = conversa('qual o calado do barco', modo='erro')
                 ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+
+                # Sem a pausa de 0,65 s na CONVERSA (paridade Avanti 1.21.2): a frase final do reconhecedor vai direto ao cérebro;
+                # fora da conversa (VOZ→TEXTO) a pausa visual fica. Medido no navegador (performance.now), do fim do ditado à
+                # chamada do B.answer com a frase: o piso do VOZ→TEXTO é o setTimeout de 0,65 s da tela, que nunca dispara antes
+                # da hora (não depende da carga da máquina); o teto da conversa (200 ms) fica ~15× acima do que a tela leva (~10 ms).
+                def atraso(botao):
+                    abre()
+                    pg.evaluate("""(q) => {
+                      const B = window.CapitaoBrain, dit = B.ditado, ans = B.answer;
+                      window.__tFim = null; window.__atraso = null; window.__falas.push(q);
+                      B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; };
+                      B.ditado = (o) => dit(Object.assign({}, o, { fim: (t) => { if (t && window.__tFim == null) window.__tFim = performance.now(); return o.fim(t); } }));
+                      B.answer = function (p) { if (p === q && window.__tFim != null && window.__atraso == null) window.__atraso = performance.now() - window.__tFim; return ans.apply(this, arguments); };
+                    }""", 'quantas horas tem o gerador')
+                    pg.click(botao)
+                    try:
+                        pg.wait_for_function('() => window.__atraso != null', timeout=20000)
+                        if botao == CONVERSA:
+                            pg.wait_for_function('() => window.__faladas.length >= 2', timeout=10000)
+                    except Exception:
+                        pass
+                    r = pg.evaluate('() => ({ ms: window.__atraso, faladas: window.__faladas })')
+                    pg.keyboard.press('Escape')
+                    return r
+                rc, rv = atraso(CONVERSA), atraso(VOZ)
+                ok(tela + ': CONVERSA: a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s (< 200 ms do fim do ditado) e a resposta é falada', rc['ms'] is not None and rc['ms'] < 200 and len(rc['faladas']) >= 2 and 'gerador' in rc['faladas'][1].lower(), json.dumps(rc, ensure_ascii=False)[:300])
+                ok(tela + ': VOZ→TEXTO (fora da conversa) mantém a pausa visual (≥ 600 ms do fim do ditado ao cérebro)', rv['ms'] is not None and rv['ms'] >= 600, json.dumps(rv, ensure_ascii=False)[:300])
 
                 # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o rosto, e o núcleo com o rosto de
                 # partículas: CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira.

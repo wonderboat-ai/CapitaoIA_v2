@@ -310,7 +310,7 @@ class Component extends DCLogic {
           entrega(fin, true);
         }
       }, () => entrega(local(''), true));
-    }, 650);
+    }, this.state.conversa ? 0 : 650); // na CONVERSA por voz, sem a pausa visual de 0,65 s: a pergunta ouvida sai na hora (a resposta é a mesma); texto, VOZ→TEXTO e atalhos mantêm a pausa
     this._pend = (this._pend || []).concat([t]);
   }
   // Últimas mensagens antes da pergunta (até 6), para a IA entender continuações: "e o gerador?", "e amanhã?".
@@ -392,13 +392,13 @@ class Component extends DCLogic {
     const tone = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)'] };
     const chip = (t) => ({ ctone: tone[t][0], cline: tone[t][1], cwash: tone[t][2] });
     const base = { bg: CARD, line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.09)' };
-    const faqChip = (k) => (faq[k] && faq[k].status === 'PRONTO' ? Object.assign({ chip: 'PRONTO · DEMO' }, chip('ok')) : Object.assign({ chip: (faq[k] && faq[k].status) || 'SEM DADOS' }, chip('warn')));
+    const faqChip = (k) => (faq[k] && faq[k].status === 'PRONTO' ? Object.assign({ chip: 'PRONTO' + (D.demo ? ' · DEMO' : '') }, chip('ok')) : Object.assign({ chip: (faq[k] && faq[k].status) || 'SEM DADOS' }, chip('warn')));
     return [
       Object.assign({ n: '1 · CONSOLE', eq: 'Telemetria · manutenção · documentos · diário', tip: 'Console completo — telemetria, manutenção, documentos, abastecimento e diário de bordo', chip: atr ? atr + ' ATRASADAS' : 'EM DIA', href: 'A1-Ponte-Web.dc.html', d: 'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5', tone: 'var(--cap-accent, #00a1fe)', bg: 'linear-gradient(180deg, rgba(var(--cap-accent-rgb, 0,161,254), 0.16) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0.06) 100%)', line: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' }, chip(atr ? 'crit' : 'ok')),
       Object.assign({ n: '2 · GERADOR', eq: 'Onan · modelo SEM DADOS · ' + h(G.horas), tip: 'Gerador — ligar e desligar, alarmes e horas de uso', href: 'F4-FAQ-Gerador-Web.dc.html', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tone: 'var(--cap-warn, #f0a63a)' }, base, rotor && rotor.dn < 0 ? Object.assign({ chip: 'ROTOR · ' + (-rotor.dn) + ' D' }, chip('crit')) : faqChip('gerador')),
       Object.assign({ n: '3 · CLIMATIZAÇÃO', eq: 'Fabricante e modelo SEM DADOS', tip: 'Climatização — ligar e desligar, alarme de fluxo e filtros', href: 'F5-FAQ-Climatizacao-Web.dc.html', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tone: 'var(--cap-tele, #00f4fd)' }, base, filtro && filtro.dn < 0 ? Object.assign({ chip: 'FILTRO · ' + (-filtro.dn) + ' D' }, chip('crit')) : faqChip('climatizacao')),
       Object.assign({ n: '4 · ESTABILIZADOR', eq: 'Seakeeper · modelo SEM DADOS', tip: 'Estabilizador — ligar antes de sair, desligar ao atracar e alarmes', href: 'F2-FAQ-Estabilizador-Web.dc.html', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tone: 'var(--cap-ok, #34c77a)' }, base, faqChip('estabilizador')),
-      Object.assign({ n: '5 · ELETRÔNICOS', eq: 'Garmin · Fusion · VHF 315', tip: 'Eletrônicos — plotter, piloto automático, VHF e áudio', href: 'F3-FAQ-Eletronicos-Web.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)' }, base, faq.eletronicos ? Object.assign({ chip: faq.eletronicos.perguntas.length + ' FAQ · DEMO' }, chip('ok')) : faqChip('eletronicos'))
+      Object.assign({ n: '5 · ELETRÔNICOS', eq: 'Garmin · Fusion · VHF 315', tip: 'Eletrônicos — plotter, piloto automático, VHF e áudio', href: 'F3-FAQ-Eletronicos-Web.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)' }, base, faq.eletronicos ? Object.assign({ chip: faq.eletronicos.perguntas.length + ' FAQ' + (D.demo ? ' · DEMO' : '') }, chip('ok')) : faqChip('eletronicos'))
     ];
   }
   renderVals() {
@@ -417,7 +417,7 @@ class Component extends DCLogic {
     return {
       sweep: fx.sweep, led: L.vivo ? fx.ledVivo : fx.ledSnap, orbit: fx.orbit, spot: fx.spot,
       local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(),
-      demo: D.demo ? 'DEMO' : '', demoTip: D.aviso || '',
+      demo: D.demo ? 'DEMO' : 'ÚLTIMA LEITURA · ' + (S.quando ? (S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : 'SEM DADOS'), demoTip: D.aviso || '',
       liveLabel: L.vivo ? 'AO VIVO · ' + L.hora : 'SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' · ' + (S.quando || 'SEM DADOS').slice(0, 5) + ' ' + (S.hora || ''),
       liveTip: L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor' + (D.demo ? ' (demonstração, dados fictícios)' : '') + ' de ' + (S.quando || 'SEM DADOS'),
       reg: E.registro || 'SEM DADOS',

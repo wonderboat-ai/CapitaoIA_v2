@@ -1,40 +1,54 @@
 # -*- coding: utf-8 -*-
-"""Capitão IA — gerador dos dados de DEMONSTRAÇÃO (fictícios).
+"""Capitão IA — gerador dos dados da embarcação.
 
-Um lugar só para os dados da embarcação de demonstração. Gera:
+Um lugar só para os dados da embarcação. Gera:
   1. capitao-dados.js          (raiz)  → window.CapitaoDados, lido pelo cérebro e pelas telas
   2. base-conhecimento.json    (raiz)  → trechos dos guias de bordo, busca BM25 do chat e da voz
   3. ferramentas/demo/fontes/          → os mesmos dados como arquivos de origem (Docs/Planilhas/JSON) enviados ao
                                          Google Drive › "Capitão IA v2" (pastas 01–07)
 
-REGRAS
-- Tudo aqui é FICTÍCIO e vai rotulado "DEMO" (decisão do proprietário, 26/09/2026: demonstração da plataforma para
-  clientes e modelo para as próximas embarcações).
-- Continua SEM DADOS o que o proprietário não informou: modelo de cada equipamento, fabricante/modelo e registro do
-  barco, Seafire e EPIRB (procedimento, localização, validade). None = SEM DADOS.
-- Nada copiado da Avanti Vessel (nomes, registro, MMSI, IDs, leituras, valores).
-- Sem valores em dinheiro, CPF/CNPJ, telefones, e-mails ou nomes de terceiros — nem na demonstração (a mesma regra
+REGRAS (Decisão do proprietário 1.1.0 · modo simulação; ver o CLAUDE.md)
+- SIMULACAO = True: dados completos da embarcação de apresentação, sem selo nem rótulo (DEMO, SEM DADOS, SEM LEITURA,
+  MANUAL NO DRIVE, A CONFERIR/A CONFIRMAR). O rodapé gerado faz o rebase dos prazos e o capitao-replay.js lê D.replay.
+  Nenhum texto gerado afirma nem nega que os dados são reais (a frase da sobreDados fica no cérebro).
+- SIMULACAO = False (próxima embarcação): só dado com fonte; None = SEM DADOS. O gerador recusa replay além de limites
+  e alertas, rota, histórico simulado e dia de bordo e, enquanto o repositório for público, a posição do barco.
+- Nunca gerados: indicativo, HEX ID, telefone, lugar de equipamento de salvatagem.
+- Nada copiado da Avanti Vessel (nomes, modelos, registro, MMSI, IDs, leituras, valores, textos).
+- Sem valores em dinheiro, CPF/CNPJ, telefones, e-mails ou nomes de terceiros — nem na simulação (a mesma regra
   vale para o barco real que vier depois).
 - Procedimentos de emergência: "procedimento padrão — confirmar com o protocolo de bordo" (decisão do proprietário).
 
-Para a próxima embarcação: trocar os dados abaixo pelos reais (com a fonte de cada um) e rodar
+Para a próxima embarcação: SIMULACAO = False, trocar os dados abaixo pelos reais (com a fonte de cada um) e rodar
     python ferramentas/demo/gerar_demo.py
+
+Uso: python -X utf8 ferramentas/demo/gerar_demo.py [--saida <pasta>] [--detalhe]
+  --saida    pasta onde gravar (padrão: a raiz do repositório); o teste usa uma pasta temporária e compara byte a byte.
+  --detalhe  lista cada violação das asserções, também as que estão em relatório.
+Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma estrutural que falha
+reprova o gerador e nada é gravado. Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
+modelos-avanti.txt) e CAPITAO_AVANTI (pasta do Avanti, só leitura). Determinístico: nenhuma data ou hora do sistema.
 """
+import argparse
 import csv
 import io
 import json
 import os
+import sys
+import unicodedata
 from datetime import date, datetime
 
-RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-FONTES = os.path.join(os.path.dirname(__file__), 'fontes')
+AQUI = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, AQUI)   # vale também com python -I
+from confere import ConfereFalhou, confere  # noqa: E402
+
+RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
+FONTES_REL = os.path.join('ferramentas', 'demo', 'fontes')   # as fontes do Drive, dentro da pasta de saída
 
 REF = date(2026, 9, 26)          # data do snapshot: prazos D-n contados a partir dela
 DRIVE = 'Drive › Capitão IA v2'
-SELO = 'DEMO · DADOS FICTÍCIOS'
-AVISO = ('Demonstração da plataforma Capitão IA: embarcação, leituras, agenda, documentos, diário, abastecimentos e guias '
-         'de bordo são fictícios. Procedimentos de emergência são o padrão internacional, a confirmar com o protocolo de '
-         'bordo. Modelos dos equipamentos, registro, Seafire e EPIRB: SEM DADOS.')
+SIMULACAO = True                 # Decisão 1.1.0: embarcação de apresentação com navegação simulada (False = dados reais)
+# Sem selo nem aviso (decisão b): nenhum campo de selo no D, e títulos, fontes, base e LEIA-ME sem rótulo.
 
 PASTAS = {
     'manuais': '01 Manuais e guias de bordo',
@@ -46,19 +60,19 @@ PASTAS = {
     'protocolos': '07 Protocolos de emergência',
 }
 ARQ = {
-    'leiame': 'LEIA-ME — Capitão IA v2 (DEMO)',
-    'g_gerador': 'Guia de bordo (DEMO) — Gerador Onan',
-    'g_seakeeper': 'Guia de bordo (DEMO) — Estabilizador Seakeeper',
-    'g_clima': 'Guia de bordo (DEMO) — Climatização',
-    'g_eletronicos': 'Guia de bordo (DEMO) — Eletrônicos Garmin, áudio Fusion e VHF 315',
-    'g_motores': 'Guia de bordo (DEMO) — Motores Volvo Penta',
-    'checklist': 'Checklist de saída e chegada (DEMO)',
-    'inventario': 'Inventário de bordo (DEMO)',
-    'documentos': 'Controle de documentos (DEMO)',
-    'agenda': 'Agenda preditiva (DEMO)',
-    'diario': 'Diário de bordo (DEMO)',
-    'snapshot': 'snapshot_demo_20260926_1012.json',
-    'abast': 'Registro de abastecimento (DEMO)',
+    'leiame': 'LEIA-ME — Capitão IA v2',
+    'g_gerador': 'Guia de bordo — Gerador Onan',
+    'g_seakeeper': 'Guia de bordo — Estabilizador Seakeeper',
+    'g_clima': 'Guia de bordo — Climatização',
+    'g_eletronicos': 'Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315',
+    'g_motores': 'Guia de bordo — Motores Volvo Penta',
+    'checklist': 'Checklist de bordo',
+    'inventario': 'Inventário de bordo',
+    'documentos': 'Controle de documentos',
+    'agenda': 'Agenda preditiva',
+    'diario': 'Diário de bordo',
+    'snapshot': 'Leitura do coletor NMEA — 26-09-2026 10h12.json',
+    'abast': 'Registro de abastecimento',
     'protocolo': 'Protocolo de emergência — procedimento padrão',
 }
 
@@ -94,7 +108,7 @@ EMBARCACAO = {
     'mmsi': '710123456',
     'mmsiNota': 'fictício · demonstração',
     'indicativo': None,        # SEM DADOS
-    'fonte': 'dados informados pelo proprietário (26/09/2026) · MMSI fictício de demonstração',
+    'fonte': 'cadastro da embarcação no app (proprietário)',
 }
 
 # Posição de referência para clima e maré: centro de Balneário Camboriú (fonte real, não inventada)
@@ -125,7 +139,7 @@ EQUIP_NOTA = 'Lista informada pelo proprietário (com "…": pode haver mais equ
 GPS = {'lat': -26.9930, 'lon': -48.6140}
 SNAPSHOT = {
     'quando': '26/09/2026 10:12', 'hora': '10:12', 'dia': '26/09', 'iso': '2026-09-26T10:12:00-03:00',
-    'fonte': 'coletor NMEA (DEMO) · ' + ARQ['snapshot'],
+    'fonte': 'coletor NMEA · leitura de 26/09/2026 10:12',
     'estado': 'Fundeado', 'local': 'enseada de Balneário Camboriú',
     'gps': {'lat': GPS['lat'], 'lon': GPS['lon'], 'texto': coord(GPS['lat'], 'N', 'S', 2) + ' ' + coord(GPS['lon'], 'E', 'W', 3), 'satelites': 26},
     'sog': 0.1, 'proa': 71, 'profundidade': 7.4,
@@ -143,10 +157,12 @@ SNAPSHOT = {
 }
 CONSUMO = {
     'cruzeiro': {'nos': 18, 'rpm': 2050, 'lph': 68}, 'lenta': {'lph': 6.2},
-    'periodo': '01/08–26/09/2026', 'fonte': 'telemetria (DEMO) · taxa de combustível dos dois motores',
+    'periodo': '01/08–26/09/2026', 'fonte': 'telemetria · taxa de combustível dos dois motores',
     'desdeAbast': {'litros': 192, 'desde': '12/09/2026', 'horas': '2,8 h de motor por lado'},
 }
 RESERVA = 0.10
+NOTA_ETIQUETA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'   # EPIRB e Seafire (§1.3, §1.4; dado no C5/C6)
+DIAS_MESES = {1: 31, 6: 184, 12: 365}   # intervalo da agenda em dias (§1.7; deslocamentos no C7)
 
 
 def autonomia():
@@ -211,7 +227,7 @@ ABASTECIMENTOS = [
     {'d': '12/09/2026', 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive (DEMO)'},
     {'d': '02/08/2026', 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive (DEMO)'},
 ]
-REGRA_ABAST = 'abastecer antes de 25 % em qualquer tanque (regra de bordo DEMO)'
+REGRA_ABAST = 'abastecer antes de 25 % em qualquer tanque (Checklist de bordo § Abastecimento)'
 
 # ——————————————————————————————— DIÁRIO DE BORDO (DEMO) ———————————————————————————————
 DIARIO = [
@@ -311,7 +327,7 @@ GUIAS = {
         ],
     },
     'checklist': {
-        'titulo': ARQ['checklist'], 'pasta': 'manuais', 'equip': 'Checklist de bordo (DEMO)',
+        'titulo': ARQ['checklist'], 'pasta': 'manuais', 'equip': 'Checklist de bordo',
         'secoes': [
             ('Saída · 1 a 3', '1. Gerador: confira água no escapamento depois de ligar. 2. Estabilizador: ligue com antecedência (precisa de AC). 3. Climatização: filtro de água salgada limpo antes de ligar.'),
             ('Saída · 4 a 6', '4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16. 5. Bombas de porão: acione cada uma manualmente e confira o alarme. 6. Diesel: ' + REGRA_ABAST + '.'),
@@ -384,7 +400,7 @@ def faq():
 PROTOCOLOS = {
     'rotulo': 'procedimento padrão — confirmar com o protocolo de bordo',
     'fonte': ARQ['protocolo'] + ' · ' + DRIVE + ' › ' + PASTAS['protocolos'],
-    'canal16': {'canal': '16', 'mhz': '156,800', 'fonte': 'canal 16 e MMSI informados pelo proprietário (MMSI fictício de demonstração)'},
+    'canal16': {'canal': '16', 'mhz': '156,800', 'fonte': ARQ['protocolo'] + ' · MAYDAY · canal 16'},
     'roteiro': ['MAYDAY, MAYDAY, MAYDAY', 'AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA', 'MMSI 710123456 (FICTÍCIO · DEMONSTRAÇÃO)',
                 'POSIÇÃO — LEIA NO PLOTTER AGORA', 'NATUREZA DO PERIGO: ________', 'PESSOAS A BORDO: ________',
                 'AUXÍLIO NECESSÁRIO: ________', 'CÂMBIO'],
@@ -424,7 +440,7 @@ def dados():
         docs.append(x)
     return {
         'versao': REF.strftime('%d/%m/%Y'),
-        'demo': True, 'selo': SELO, 'aviso': AVISO,
+        'simulacao': SIMULACAO, 'demo': False,
         'embarcacao': EMBARCACAO, 'posicaoRef': POSICAO_REF, 'mar': MAR,
         'drive': {'raiz': DRIVE, 'pastas': PASTAS, 'arquivos': ARQ},
         'equipamentos': EQUIPAMENTOS, 'equipNota': EQUIP_NOTA,
@@ -439,26 +455,106 @@ def dados():
     }
 
 
-def escreve(caminho, texto):
-    os.makedirs(os.path.dirname(caminho), exist_ok=True)
-    with open(caminho, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(texto)
+def serializa(v, nivel=0):
+    """Serializador compacto (§1.0): dicionários indentados até a profundidade 2, listas e o resto numa linha, chaves na ordem
+    do código e float pelo repr do Python. NaN e infinito não saem (allow_nan=False)."""
+    if isinstance(v, dict) and v and nivel < 2:
+        pad = ' ' * (nivel + 1)
+        itens = [pad + json.dumps(k, ensure_ascii=False) + ': ' + serializa(x, nivel + 1) for k, x in v.items()]
+        return '{\n' + ',\n'.join(itens) + '\n' + ' ' * nivel + '}'
+    return json.dumps(v, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
 
 
 def gera_js(D):
     cab = ('/* Capitão IA — dados da embarcação (GERADO por ferramentas/demo/gerar_demo.py — não editar à mão).\n'
-           '   ' + SELO + ': ' + AVISO + '\n'
-           '   null = SEM DADOS (ou SEM LEITURA, em sensor). Cada grupo traz a fonte (arquivo no ' + DRIVE + '). */\n')
-    return cab + 'window.CapitaoDados = ' + json.dumps(D, ensure_ascii=False, indent=1) + ';\n'
+           '   Cada grupo traz a fonte (arquivo no ' + DRIVE + '). Na leitura, null = SEM DADOS (ou SEM LEITURA, em sensor). */\n')
+    corpo = serializa(D).replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')   # separadores de linha quebram JS antigo
+    return cab + 'window.CapitaoDados = ' + corpo + ';\n'
 
 
-def gera_base():
-    return json.dumps({
+def base_conhecimento():
+    return {
         'versao': REF.strftime('%Y-%m-%d'),
-        'aviso': SELO + ' — trechos dos guias de bordo de demonstração (' + DRIVE + '). Orientação genérica: não substitui o '
-                 'manual do fabricante (modelos SEM DADOS). Sem documentos pessoais, fiscais ou contratuais.',
+        'aviso': ('Trechos dos guias de bordo da embarcação ' + EMBARCACAO['nome'] + ' (' + DRIVE + '). Sem documentos pessoais, '
+                  'fiscais ou contratuais.'),
         'trechos': trechos(),
-    }, ensure_ascii=False, indent=1) + '\n'
+    }
+
+
+def gera_base(B=None):
+    return serializa(base_conhecimento() if B is None else B) + '\n'
+
+
+def saidas(D, B):
+    """Arquivos da raiz: caminho relativo → texto."""
+    return {'capitao-dados.js': gera_js(D), 'base-conhecimento.json': gera_base(B)}
+
+
+def dentro(caminho, pasta):
+    caminho, pasta = os.path.normcase(caminho), os.path.normcase(pasta)
+    return caminho == pasta or caminho.startswith(pasta.rstrip(os.sep) + os.sep)
+
+
+def chave_rel(rel):
+    """Caminho relativo comparável: barras '/' e NFC (o macOS antigo devolve os nomes acentuados em NFD)."""
+    return unicodedata.normalize('NFC', rel.replace(os.sep, '/'))
+
+
+def alvo(saida, rel):
+    """<saida>/<rel>, ou SystemExit se a pasta dele (realpath, com os links do caminho resolvidos) sair da pasta de saída."""
+    caminho = os.path.join(saida, rel)
+    if not dentro(os.path.realpath(os.path.dirname(caminho)), os.path.realpath(saida)):
+        raise SystemExit('gerador: %s sairia da pasta de saída (link no caminho); nada foi gravado' % rel)
+    return caminho
+
+
+def escreve(saida, rel, texto):
+    """Grava <saida>/<rel>; nunca fora da pasta de saída (alvo(), conferido antes de criar qualquer pasta) e nunca através de
+    um link: um link no lugar do arquivo é apagado (o alvo fica intacto) e vira arquivo."""
+    caminho = alvo(saida, rel)
+    os.makedirs(os.path.dirname(caminho), exist_ok=True)
+    if os.path.islink(caminho):
+        os.unlink(caminho)
+    with open(caminho, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(texto)
+
+
+def apaga_entrada(cam):
+    """Apaga o arquivo ou o link (nunca o alvo). No Windows, link de pasta só sai com rmdir."""
+    try:
+        os.unlink(cam)
+    except OSError:
+        if not os.path.islink(cam):
+            raise
+        os.rmdir(cam)
+
+
+def limpa_fontes(saida, gerados):
+    """Apaga em <saida>/ferramentas/demo/fontes/ só o que o gerador não gera mais. Não segue link (um link vira só a entrada
+    apagada, nunca o alvo), não sai da pasta de saída nem de fontes/ (realpath) e tira as pastas que ficarem vazias.
+    Devolve os caminhos apagados (relativos a fontes/)."""
+    pasta = os.path.join(saida, FONTES_REL)
+    raiz = os.path.realpath(pasta)
+    if not os.path.isdir(raiz):
+        return []
+    if not dentro(raiz, os.path.realpath(saida)):
+        raise SystemExit('gerador: %s sairia da pasta de saída (link no caminho)' % FONTES_REL)
+    gerados = {chave_rel(g) for g in gerados}
+    apagados = []
+    for topo, pastas, arqs in os.walk(raiz, topdown=False, followlinks=False):
+        if not dentro(os.path.realpath(topo), raiz):
+            continue
+        for nome in sorted(arqs) + sorted(p for p in pastas if os.path.islink(os.path.join(topo, p))):
+            cam = os.path.join(topo, nome)
+            rel = chave_rel(os.path.relpath(cam, raiz))
+            if rel not in gerados:
+                apaga_entrada(cam)
+                apagados.append(rel)
+        for p in pastas:
+            cam = os.path.join(topo, p)
+            if not os.path.islink(cam) and os.path.isdir(cam) and not os.listdir(cam):
+                os.rmdir(cam)
+    return sorted(apagados)
 
 
 def csv_txt(cab, linhas):
@@ -476,14 +572,12 @@ def sd(v):
 
 def gera_fontes(D):
     F = {}
-    rod = '<p><i>' + SELO + ' — ' + AVISO + '</i></p>'
     for k, g in GUIAS.items():
         nota = ('Procedimento padrão internacional, não é o protocolo de bordo: confirmar com o protocolo da embarcação.'
-                if k == 'protocolo' else 'Guia de bordo de demonstração: orientação genérica, não substitui o manual do fabricante.')
+                if k == 'protocolo' else 'Guia de bordo da embarcação: orientação de operação, não substitui o manual do fabricante.')
         h = ['<h1>' + g['titulo'] + '</h1>', '<p><b>' + g['equip'] + '</b></p>', '<p><i>' + nota + '</i></p>']
         for sec, txt in g['secoes']:
             h.append('<h2>' + sec + '</h2><p>' + txt + '</p>')
-        h.append(rod)
         F[PASTAS[g['pasta']] + '/' + g['titulo'] + '.html'] = '\n'.join(h)
     F[PASTAS['manuais'] + '/' + ARQ['inventario'] + '.csv'] = csv_txt(
         ['Equipamento', 'Fabricante', 'Modelo', 'Quantidade', 'Guia de bordo'],
@@ -503,7 +597,6 @@ def gera_fontes(D):
         [[a['d'], a['litros'], a['combustivel'], a['local'], a['nivelDepois'], a['st'], a['nota']] for a in ABASTECIMENTOS])
     s = SNAPSHOT
     F[PASTAS['tele'] + '/' + ARQ['snapshot']] = json.dumps({
-        '_aviso': SELO + ' — leitura fictícia do coletor NMEA, só para demonstração.',
         'timestamp_utc': '2026-09-26T13:12:00Z', 'lat': s['gps']['lat'], 'lon': s['gps']['lon'], 'sog_nos': s['sog'],
         'proa_graus': s['proa'], 'gps_satelites': s['gps']['satelites'], 'profundidade_m': s['profundidade'],
         'vento_verdadeiro_nos': s['vento'], 'vento_verdadeiro_angulo': s['ventoDe'], 'pressao_barometrica_hpa': s['pressao'],
@@ -518,27 +611,55 @@ def gera_fontes(D):
     }, ensure_ascii=False, indent=1) + '\n'
     F[ARQ['leiame'] + '.html'] = '\n'.join([
         '<h1>' + ARQ['leiame'] + '</h1>',
-        '<p><b>' + SELO + '.</b> ' + AVISO + '</p>',
-        '<p>Esta pasta é a fonte de dados da demonstração do Capitão IA (site estático). Cada resposta do app cita o arquivo daqui de onde veio o dado.</p>',
+        '<p>Esta pasta é a fonte de dados do app Capitão IA (site estático): guias de bordo, '
+        'documentos, agenda de manutenção, diário, telemetria, abastecimento e protocolos de emergência. Cada resposta do app cita o '
+        'arquivo daqui de onde veio o dado.</p>',
         '<h2>Pastas</h2><ul>' + ''.join('<li><b>' + v + '</b></li>' for v in PASTAS.values()) + '</ul>',
-        '<h2>Regras</h2><ul><li>Nada inventado no app: sem fonte → SEM DADOS; sensor ausente → SEM LEITURA; manual existe e passo a passo não confirmado → MANUAL NO DRIVE; foto ou nota → A CONFERIR / A CONFIRMAR.</li>'
+        '<h2>Regras</h2><ul><li>Procedimentos de emergência: ' + PROTOCOLOS['rotulo'] + ' (pasta ' + PASTAS['protocolos'] + ').</li>'
         '<li>Não publicar contratos, notas fiscais, título de propriedade, CPF/CNPJ, telefones, e-mails, valores, nomes de terceiros, chaves ou link público de arquivo com a posição do barco.</li>'
         '<li>Esta pasta é privada. Não compartilhar por link público.</li></ul>',
-        '<p>Gerado por ferramentas/demo/gerar_demo.py (repositório wonderboat-ai/CapitaoIA_v2) em 26/09/2026.</p>',
+        '<p>Gerado por ferramentas/demo/gerar_demo.py (repositório wonderboat-ai/CapitaoIA_v2).</p>',
     ])
     return F
 
 
-def main():
+def main(argv=None):
+    ap = argparse.ArgumentParser(description='Gera capitao-dados.js, base-conhecimento.json e as fontes do Drive.')
+    ap.add_argument('--saida', default=RAIZ, help='pasta onde gravar (padrão: a raiz do repositório)')
+    ap.add_argument('--detalhe', action='store_true', help='lista cada violação, também as das asserções em relatório')
+    a = ap.parse_args(argv)
+    for s in (sys.stdout, sys.stderr):   # console do Windows sem -X utf8: um "≠" vira escape em vez de derrubar o gerador
+        try:
+            s.reconfigure(errors='backslashreplace')
+        except (AttributeError, ValueError):
+            pass
+    saida = os.path.abspath(a.saida)
     D = dados()
-    escreve(os.path.join(RAIZ, 'capitao-dados.js'), gera_js(D))
-    escreve(os.path.join(RAIZ, 'base-conhecimento.json'), gera_base())
-    for rel, txt in gera_fontes(D).items():
-        escreve(os.path.join(FONTES, rel), txt)
-    a = autonomia()
-    print('capitao-dados.js · base-conhecimento.json (%d trechos) · fontes em ferramentas/demo/fontes' % len(trechos()))
-    print('agenda: %d tarefas, %d atrasadas · autonomia %.1f h / %d mn' % (len(D['agenda']), sum(1 for t in D['agenda'] if t['dn'] < 0), a['horas'], a['mn']))
+    B = base_conhecimento()
+    F = gera_fontes(D)
+    try:
+        S = saidas(D, B)
+    except ValueError as e:   # serializa() recusa NaN e infinito: nada é gravado
+        print('gerador: valor não finito no D ou na base (%s); nada foi gravado' % e, file=sys.stderr)
+        return 1
+    try:   # antes de gravar: com uma asserção estrutural falhando, nada sai
+        confere(D, B, F, S, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES}, detalhe=a.detalhe)
+    except ConfereFalhou as e:
+        print(e, file=sys.stderr)
+        return 1
+    grava = list(S.items()) + [(os.path.join(FONTES_REL, rel), txt) for rel, txt in F.items()]
+    for rel, _ in grava:   # todos os caminhos conferidos antes do 1º arquivo: um link para fora não deixa gravação pela metade
+        alvo(saida, rel)
+    for rel, txt in grava:
+        escreve(saida, rel, txt)
+    apagados = limpa_fontes(saida, F)
+    au = autonomia()
+    print('capitao-dados.js · base-conhecimento.json (%d trechos) · %d fontes em %s' % (len(B['trechos']), len(F), FONTES_REL.replace(os.sep, '/')))
+    for rel in apagados:   # na raiz do repositório: tirar com git rm (ou git add -A) no mesmo commit
+        print('  apagada (não é mais gerada): fontes/' + rel)
+    print('agenda: %d tarefas, %d atrasadas · autonomia %.1f h / %d mn' % (len(D['agenda']), sum(1 for t in D['agenda'] if t['dn'] < 0), au['horas'], au['mn']))
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
