@@ -9,7 +9,8 @@
 - confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
   da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
-  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui.
+  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca do modelo
+  de hoje do VHF (congelado) por outro da lista, que reprova (modelos_sinteticos).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -19,6 +20,7 @@ import copy
 import hashlib
 import importlib.util
 import io
+import json
 import os
 import re
 import subprocess
@@ -149,7 +151,7 @@ def copias():
     # As regex que o confere() compila (cada uma com a sua flag) dão os casos: o que barra casa a indicada; o que passa não casa
     # nenhuma (o ANEXO fica fora do "passa", como no termos-casos.json). O Edge e as cópias do cérebro são do proibidos.py (Fase 3).
     T = C.carrega_termos()
-    casos = __import__('json').load(open(os.path.join(RAIZ, 'testes', 'proibidos-casos.json'), encoding='utf-8'))
+    casos = json.load(open(os.path.join(RAIZ, 'testes', 'proibidos-casos.json'), encoding='utf-8'))
     erros = ['%s não barra %r' % (k, s) for k, frases in casos['barra'].items() for s in frases if not T[k].search(s)]
     erros += ['%s barra %r' % (k, s) for s in casos['passa'] for k, r in T.items() if k != 'ANEXO' and r.search(s)]
     ok('as 8 regex no Python dão os %d casos' % (sum(len(v) for v in casos['barra'].values()) + len(casos['passa'])), not erros and len(T) == 8, erros[:3])
@@ -284,10 +286,12 @@ AMOSTRAS = {
                                                                           'local': 'estante técnica 1'}]}), k)[1])(hoje()), 'pecas[0].n'),
     'CALADO_FORA': (lambda r: (lambda k: (k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste',
                                                                     'texto': 'O calado é de 1,1 m.' if r else 'Sonda ligada.'}), k)[1])(hoje()), '"calado"'),
+    # (revisão 2 do C3) as duas contam por termo e por arquivo e não imprimem o termo: #n da lista e a assinatura do candidato
     'MODELOS_AVANTI': (lambda r: (lambda k: (k.update({'listas': {'valores.txt': ['zzq-termo-plantado'], 'modelos-avanti.txt': ['xx-nada']}}),
-                                             mais_texto(k, ' ZZQ-termo-plantado.' if r else ''))[1])(hoje()), 'valores.txt: 1 linha'),
+                                             mais_texto(k, ' ZZQ-termo-plantado.' if r else ''))[1])(hoje()), 'valores.txt #1: capitao-dados.js 1'),
     'COLISAO_MODELOS': (lambda r: (lambda k: (k.update({'avanti': 'manual do modelo xp-900 de outro barco'}),
-                                              poe(k['D']['equipamentos'], 0, modelo='XP-900' if r else 'XQ-901'), k)[2])(hoje()), "'XP-900': 1"),
+                                              poe(k['D']['equipamentos'], 0, modelo='XP-900' if r else 'XQ-901'), k)[2])(hoje()),
+                        'equipamentos[motores] candidato 1 (%s): 1 na pasta do Avanti' % C.assinatura('XP-900')),
     'FONTE_LIMITES': (lambda r: (lambda k: (k['D']['replay']['limites']['motor_be_arref_c']['critico'].update({'acima': 98 if r else 97}), k)[1])(com_replay(hoje())), 'sem os números'),
     # fabricante vazio nos motores: fora das pendências do C5 (a qtd de texto de todos é pendência de hoje; ela fica nas EXTRAS)
     'EQUIP': (lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, fabricante='') if r else None, k)[1])(hoje()), 'equipamentos[motores].fabricante ausente'),
@@ -436,7 +440,107 @@ EXTRAS = [
     # a qtd '2' dos motores é a pendência de hoje (C5); outro valor no mesmo caminho é violação nova
     ('EQUIP', 'qtd que não é número, num caminho com pendência', lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, qtd=None if r else 2), k)[1])(equip_completo(hoje())),
      'equipamentos[motores].qtd não é número: None'),
+] + [
+    # Revisão 2 do C3. RODAPE_SNAPSHOT: só a leitura D.snapshot.quadro e o valor fonte: 'snapshot', dentro de instante() e depois da
+    # guarda; os comentários saem sem cortar dentro de string ('https://' não apaga o resto da linha).
+    ('RODAPE_SNAPSHOT', o_que, (lambda a, b: lambda r: (lambda k: (k.update({'rodape': rodape(a if r else '', b if r else '')}), k)[1])(hoje()))(a, b),
+     espera) for o_que, a, b, espera in (
+        ("D['snapshot'].quadro = {} dentro de instante()", "D['snapshot'].quadro = {};", '', 'rodape.js:2 cita snapshot fora das formas aceitas'),
+        ('D.snapshot.quadro.alarmes.push(1) dentro de instante()', 'D.snapshot.quadro.alarmes.push(1);', '', 'rodape.js:2 escreve em D.snapshot'),
+        ('var s = D.snapshot; s.quadro = {} dentro de instante()', 'var s = D.snapshot; s.quadro = {};', '', 'rodape.js:2 cita snapshot fora das formas aceitas'),
+        ("'https://x' e D.snapshot.quadro = {} na mesma linha, fora de instante()", '', "var u = 'https://x'; D.snapshot.quadro = {};",
+         'rodape.js:3 escreve em D.snapshot'),
+        ('modelo `${D.snapshot.quadro}` dentro de instante()', 'var t = `q=${D.snapshot.quadro}`;', '', 'rodape.js:2 cita snapshot fora das formas aceitas'),
+        ('Object.assign(D.snapshot.quadro, …) dentro de instante()', 'Object.assign(D.snapshot.quadro, {rpm: 1});', '', 'rodape.js:2 escreve em D.snapshot'))] + [
+    ('RODAPE_SNAPSHOT', 'leitura antes da guarda /SOS-/', lambda r: (lambda k: (k.update({'rodape': RODAPE_OK.replace(
+        'if (/SOS-/', 'var p = D.snapshot.quadro; if (/SOS-/') if r else RODAPE_OK}), k)[1])(hoje()), 'antes da guarda /SOS-/'),
+    # MMSI9 e HEX15: número também conta (pelo repr), e cada ocorrência conta (um 2º MMSI numa string com pendência reprova).
+    ('MMSI9', '9 dígitos guardados como número', lambda r: (lambda k: (k['D']['embarcacao'].update({'mmsiExtra': 123456789 if r else 12345}), k)[1])(hoje()),
+     'embarcacao.mmsiExtra: 123456789'),
+    ('MMSI9', '710123456 como número no snapshot', lambda r: (lambda k: (k['D']['snapshot'].update({'mmsi': 710123456 if r else 7101}), k)[1])(hoje()),
+     'snapshot.mmsi: 710123456'),
+    ('MMSI9', '2º número de 9 dígitos numa string que já é pendência (base:trechos[25])',
+     lambda r: (lambda k: (poe(k['B']['trechos'], 25, texto=k['B']['trechos'][25]['texto'] + (' Outro 987654321.' if r else '')), k)[1])(hoje()),
+     'base:trechos[25].texto: 987654321'),
+    ('MMSI9', 'o mesmo número de novo numa string que já é pendência',
+     lambda r: (lambda k: (poe(k['B']['trechos'], 25, texto=k['B']['trechos'][25]['texto'] + (' MMSI 710123456.' if r else '')), k)[1])(hoje()),
+     'base:trechos[25].texto: 710123456'),
+    ('MMSI9', 'número de 9 dígitos num JSON das fontes', lambda r: com_json(lambda j: j.update({'mmsi': 710123456 if r else 7101})), ':mmsi: 710123456'),
+    ('HEX15', '15 dígitos guardados como número', lambda r: (lambda k: (k['D']['snapshot'].update({'id': 123456789012345 if r else 1234}), k)[1])(hoje()),
+     'snapshot.id: 123456789012345'),
+    ('HEX15', 'duas ocorrências na mesma string', lambda r: mais_texto(hoje(), ' ID 1D0F2A3B4C5D6E7 e 1D0F2A3B4C5D6E8.' if r else ' ID 1D0F2A3B4C5D6E7.'),
+     'diario[0].t: 1D0F2A3B4C5D6E8'),
+    # AGENDA: a referência é a tabela fixa do §1.7, nunca a constante do gerador conferido.
+    ('AGENDA', 'DIAS_MESES do gerador diferente do §1.7',
+     lambda r: (lambda k: (k.update({'const': dict(CONST, DIAS_MESES={1: 30, 6: 183, 12: 365} if r else dict(G.DIAS_MESES))}), k)[1])(hoje()),
+     'DIAS_MESES do gerador ≠ o do §1.7'),
+    ('AGENDA', 'tarefa coerente só com a constante trocada (20 + 10 com 1 mês = 30)',
+     lambda r: (lambda k: (k.update({'const': dict(CONST, DIAS_MESES={1: 30, 6: 183, 12: 365} if r else dict(G.DIAS_MESES))}),
+                           k['D']['agenda'].append({'id': 'nova', 'meses': 1, 'ultimaHa': 20 if r else 21, 'venceEm': 10}), k)[2])(hoje()),
+     'agenda.nova: ultimaHa + venceEm ≠ DIAS_MESES[meses]'),
+    # NULO: também a base, o FAQ e os JSON das fontes (o pag: null de hoje é pendência do C5).
+    ('NULO', "base com secao '' e equip null", lambda r: (lambda k: (poe(k['B']['trechos'], 3, **({'secao': '', 'equip': None} if r else {})), k)[1])(hoje()),
+     "base:trechos[3].secao: ''"),
+    ('NULO', 'null num JSON das fontes', lambda r: com_json(lambda j: j.update({'extra': None if r else 1})), ':extra: None'),
+    ('NULO', 'lista vazia no FAQ', lambda r: (lambda k: (k.update({'faq': {'itens': [] if r else [{'id': 'EL-01'}]}}), k)[1])(hoje()), 'faq:itens: lista vazia'),
 ]
+
+
+def rodape(dentro, fora):
+    """Rodapé mínimo em 3 linhas: instante() com a guarda e a leitura aceita (linha 2), mais `dentro` logo depois da guarda e
+    `fora` na linha 3, fora de instante()."""
+    return ("(function () { try { var D = window.CapitaoDados, A = window.CapitaoAgora = {};\n"
+            "  A.instante = function () { if (/SOS-/.test(location.pathname)) return null; %s var q = D.snapshot && D.snapshot.quadro;"
+            " return q ? { q: q, fonte: 'snapshot' } : null; };\n  A.rebase = function (ms) { %s return true; };\n} catch (e) {} })();\n") % (dentro, fora)
+
+
+def com_json(muda):
+    """hoje() com o 1º JSON das fontes do Drive (a leitura da pasta 05) mudado por muda(dict)."""
+    k = hoje()
+    rel = next(r for r in sorted(k['F']) if r.endswith('.json'))
+    j = json.loads(k['F'][rel])
+    muda(j)
+    k['F'][rel] = json.dumps(j, ensure_ascii=False)
+    return k
+
+# Listas privadas e pasta do Avanti sintéticas (os termos de verdade nunca entram no repositório).
+LISTAS_SINT = {'valores.txt': ['zzq-valor-sintetico'], 'modelos-avanti.txt': ['xp-900', 'yq-77']}
+AVANTI_SINT = 'manual do rádio xp-900; folheto do yq-77; nota do xp-900'
+
+
+def com_vhf(modelo, obs=None):
+    k = hoje()
+    k.update({'listas': LISTAS_SINT, 'avanti': AVANTI_SINT})
+    eq = k['D']['equipamentos']
+    poe(eq, [e['id'] for e in eq].index('vhf'), modelo=modelo, **({'obs': obs} if obs else {}))
+    return k
+
+
+def modelos_sinteticos():
+    """Achado da revisão 2 do C3: com o modelo de hoje do VHF congelado na PENDENTES (aqui, um da lista sintética), outro modelo da
+    lista no lugar, um 2º termo na mesma linha do capitao-dados.js ou mais uma ocorrência do mesmo termo reprovam. Antes, a conta
+    por linha e o curinga no candidato da COLISAO_MODELOS deixavam passar (o modelo do Avanti chegava ao capitao-dados.js)."""
+    print('MODELOS_AVANTI e COLISAO_MODELOS: o modelo de hoje congelado, e a troca (listas e pasta do Avanti sintéticas)')
+    nomes = ('MODELOS_AVANTI', 'COLISAO_MODELOS')
+    V0 = verifica(com_vhf('XP-900'))
+    salvo = {n: C.PENDENTES[n] for n in nomes}
+    try:
+        for n in nomes:
+            C.PENDENTES[n] = {'C5': list(V0[n])}   # como o VHF de hoje: cada violação, com a contagem exata
+        novas, _, velhas = C.separa({n: V0[n] for n in nomes})
+        ok('o modelo de hoje, congelado, passa (%d pendências)' % sum(len(V0[n]) for n in nomes), all(V0[n] for n in nomes) and not novas and not velhas,
+           (novas, velhas))
+        for o_que, k, quais in (('outro modelo da lista no lugar do de hoje', com_vhf('YQ-77'), nomes),
+                                ('2º termo da lista no obs, na mesma linha do capitao-dados.js', com_vhf('XP-900', 'Reserva: YQ-77.'), nomes[:1]),
+                                ('mais uma ocorrência do termo de hoje', com_vhf('XP-900', 'Reserva: XP-900.'), nomes[:1])):
+            V = verifica(k)
+            novas, _, velhas = C.separa({n: V[n] for n in nomes})
+            ok('%s: %s reprova' % (' e '.join(quais), o_que), all(n in novas for n in quais), {'novas': novas, 'velhas': velhas})
+    finally:
+        C.PENDENTES.update(salvo)
+    sai = ' '.join(m for n in nomes for m in V0[n]).lower()
+    ok('nenhum termo das listas nem candidato impresso nas violações', not any(t in sai for t in LISTAS_SINT['modelos-avanti.txt']), sai[:200])
+
 
 def laco_que_segura(R, campos, c, t):
     """Port defeituoso: o segmento 145 → 150 fica parado na última chave (o certo é ir para a do t = 0)."""
@@ -499,16 +603,18 @@ def amostras():
 
 def reprova(tmp):
     print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
-    D0 = G.dados
+    D0, B0 = G.dados, G.base_conhecimento
 
-    def rodar(planta, pasta):
+    def rodar(planta, pasta, base=None):
         G.dados = lambda: planta(copy.deepcopy(D0()))   # cópia: o D aponta para as listas do módulo (DIARIO, AGENDA…)
+        if base:
+            G.base_conhecimento = lambda: base(copy.deepcopy(B0()))
         opcionais = {k: os.environ.pop(k) for k in ('CAPITAO_LISTAS_PRIVADAS', 'CAPITAO_AVANTI') if k in os.environ}   # como o roda()
         try:
             with contextlib.redirect_stdout(io.StringIO()) as o, contextlib.redirect_stderr(io.StringIO()) as e:
                 rc = G.main(['--saida', pasta])
         finally:
-            G.dados = D0
+            G.dados, G.base_conhecimento = D0, B0
             os.environ.update(opcionais)
         return rc, o.getvalue() + e.getvalue()
     coord = lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + " Em 26°59,6'S."}), D)[1]
@@ -528,10 +634,15 @@ def reprova(tmp):
         D['diario'][0]['t'] = ''
         D['agenda'][0]['quem'] = None
         return D
-    for nome, pl, n in (('NULO', nulo, 3), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1)):
-        p = os.path.join(tmp, 'r-' + nome)
-        rc, saida = rodar(pl, p)
-        ok('%s plantado fora das pendências: main() devolve 1 e não grava nada' % nome,
+    # Revisão 2 do C3: o MMSI guardado como número e o null/vazio na base também reprovam (antes, main() devolvia 0 e gravava).
+    mmsi_num = lambda D: (D['documentos'][2].update({'mmsi': 710123456}), D)[1]
+    base_vazia = lambda B: (B['trechos'][3].update({'secao': '', 'equip': None}), B)[1]
+    for nome, pl, n, base, o_que in (('NULO', nulo, 3, None, ''), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
+                                     ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
+                                     ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)")):
+        p = os.path.join(tmp, 'r-%s-%d' % (nome, n))
+        rc, saida = rodar(pl, p, base)
+        ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
     p4 = os.path.join(tmp, 'r4')
     rc, saida = rodar(lambda D: (D['embarcacao'].update({'registro': 'CIA-23-0417'}), D)[1], p4)
@@ -552,6 +663,7 @@ def main():
         limpeza(tmp)
         copias()
         amostras()
+        modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))
     return 1 if falhas else 0

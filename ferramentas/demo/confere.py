@@ -17,6 +17,7 @@ Também ficam aqui os ports em Python que as asserções e o gerador usam, escri
     Fase 2; a rota e os contadores do em() entram no C8 (PORT_ROTA).
 Sem lookbehind nas regex que vão para o JavaScript (estas ficam só no Python).
 """
+import hashlib
 import json
 import math
 import os
@@ -34,8 +35,9 @@ RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO
 # Violações de hoje que dependem do dado dos C4–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
-# exato, com '*' no lugar de um trecho: o «…» citado (o caminho e a regra ficam presos), um nome que não pode estar no
-# repositório, ou a contagem de datas das 4 planilhas que o C7 refaz inteiras.
+# exato, com '*' no lugar de um trecho: o «…» citado (o caminho, a regra e, na MMSI9, os dígitos ficam presos), um nome que não
+# pode estar no repositório, ou a contagem de datas das 4 planilhas que o C7 refaz inteiras. Nas duas das listas privadas e da
+# pasta do Avanti, a contagem é exata e o termo vai por número (#n) ou por assinatura (nunca o nome).
 _AG = ('porao-teste', 'clima-filtro', 'gerador-rotor', 'casco-anodos', 'motores-oleo', 'gerador-revisao', 'seakeeper-anodo',
        'baterias', 'garmin-cartas', 'clima-revisao', 'motores-revisao')   # as 11 tarefas de hoje (C7: deslocamentos, sistema, palavras)
 _ELETRONICOS = 'fontes/01 Manuais e guias de bordo/Guia de bordo — Eletrônicos *.html'   # o título traz o VHF antigo (C5)
@@ -49,24 +51,30 @@ PENDENTES = {
         'C5': ['equipamentos[%d].%s: None' % (i, k) for i, ks in ((0, 'modelo'), (1, 'modelo'), (2, 'modelo'), (3, 'fabricante modelo'),
                                                                   (4, 'modelo'), (5, 'modelo'), (6, 'fabricante'), (7, 'fabricante modelo guia'),
                                                                   (8, 'modelo guia')) for k in ks.split()]
-              + ['faq.%s.modelo: None' % f for f in ('gerador', 'estabilizador', 'eletronicos', 'climatizacao')],
+              + ['faq.%s.modelo: None' % f for f in ('gerador', 'estabilizador', 'eletronicos', 'climatizacao')]
+              + ['base:trechos[%d].pag: None' % i for i in range(46)],   # §1.5: o pag: null sai do trecho
         'C6': ['protocolos.seafire: None', 'protocolos.epirb: None'],
         'C7': ['documentos[%d].%s: None' % (i, k) for i in (0, 6, 7) for k in ('vence', 'dn')],   # sem deslocamento: omitidos (§1.0)
-        'C8': ['snapshot.porao: None', 'snapshot.ancora: None'],
+        'C8': ['snapshot.porao: None', 'snapshot.ancora: None']   # §1.17 sem null; a leitura da pasta 05 é refeita (e renomeada)
+              + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
+                 for k in ('rpm', 'pct')],
     },
-    'MMSI9': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t «*»', 'base:trechos[25].texto «*»', _ELETRONICOS + ' «*»'],
-              'C6': ['protocolos.roteiro[2] «*»']},
+    'MMSI9': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t: 710123456 «*»', 'base:trechos[25].texto: 710123456 «*»',
+                     _ELETRONICOS + ': 710123456 «*»'],
+              'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
     'REGISTRO': {'C4': ['embarcacao.registro ausente (dado completo na simulação, §1.2)']},
     'SEM_INDICATIVO': {'C4': ['embarcacao.indicativo: chave indicativo fora de protocolos']},   # a chave sai no C4 (§1.2)
     'AFIRMA_REAL': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t «*»', 'base:trechos[25].texto «*»', _ELETRONICOS + ' «*»']},
     'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência «*»', 'protocolos.mob[1]: fabricante ou modelo de eletronicos «*»']},
     'SEGURANCA_MARCADA': {'C5': [_SEG % i for i in (0, 21, 25, 38, 40, 41, 42, 43, 44, 45)]
                           + ['base:trechos[31] (*) está no mínimo do §1.5 (g_motores) sem seguranca: true']},
-    # Contagens exatas por arquivo (só com CAPITAO_LISTAS_PRIVADAS): um modelo novo da lista em qualquer arquivo reprova.
-    'MODELOS_AVANTI': {'C5': ['modelos-avanti.txt: 14 linha(s) da saída casam (base-conhecimento.json 1 · capitao-dados.js 5 · '
-                              + _ELETRONICOS + ' 4 · fontes/01 Manuais e guias de bordo/Inventário de bordo.csv 3 · '
-                              'fontes/02 Documentos/Controle de documentos.csv 1)']},
-    'COLISAO_MODELOS': {'C5': ["equipamentos[vhf] '*': * na pasta do Avanti (permitido 0)"]},   # só com CAPITAO_AVANTI
+    # Ocorrências exatas por termo e por arquivo (só com CAPITAO_LISTAS_PRIVADAS; hoje só o #1, o VHF antigo): outro termo da lista,
+    # ou mais uma ocorrência do #1, em qualquer arquivo, reprova.
+    'MODELOS_AVANTI': {'C5': ['modelos-avanti.txt #1: %s %d' % kv for kv in (
+        ('base-conhecimento.json', 16), ('capitao-dados.js', 9), (_ELETRONICOS, 4),
+        ('fontes/01 Manuais e guias de bordo/Inventário de bordo.csv', 4), ('fontes/02 Documentos/Controle de documentos.csv', 1))]},
+    # Só com CAPITAO_AVANTI: o modelo de hoje do VHF, preso pela assinatura e pela contagem (outro modelo no lugar reprova).
+    'COLISAO_MODELOS': {'C5': ['equipamentos[vhf] candidato 1 (c9f12c054d30): 95 na pasta do Avanti (permitido 0)']},
     'EQUIP': {'C5': ['equipamentos[%s].%s ausente' % (i, k) for i, ks, _ in _EQUIP for k in ks.split() if k != 'guia']
                     + ['equipamentos[%s].qtd não é número: %s' % (i, q or repr('SEM DADOS')) for i, _, q in _EQUIP]
                     + ['equipamentos[%s].guia fora de D.guias: None' % i for i, ks, _ in _EQUIP if 'guia' in ks.split()]},
@@ -375,24 +383,27 @@ def junta(cam, k):
     return cam + str(k) if cam.endswith((':', '/')) else cam + '.' + str(k)
 
 
-def textos(v, cam=''):
-    """(caminho, texto) de todo valor string, em profundidade."""
+def textos(v, cam='', numeros=False):
+    """(caminho, texto) de todo valor string, em profundidade. Com numeros, também as folhas numéricas (int e float, fora bool),
+    pelo repr: é o texto que o serializador grava (MMSI9 e HEX15: nove dígitos guardados como número também contam)."""
     if isinstance(v, str):
         yield cam, v
+    elif numeros and isinstance(v, (int, float)) and not isinstance(v, bool):
+        yield cam, repr(v)
     elif isinstance(v, dict):
         for k, x in v.items():
-            yield from textos(x, junta(cam, k))
+            yield from textos(x, junta(cam, k), numeros)
     elif isinstance(v, (list, tuple)):
         for i, x in enumerate(v):
-            yield from textos(x, '%s[%d]' % (cam, i))
+            yield from textos(x, '%s[%d]' % (cam, i), numeros)
 
 
-def textos_fontes(F):
-    """Fontes do Drive: CSV e HTML inteiros; JSON só nos valores string (número do JSON não entra)."""
+def textos_fontes(F, numeros=False):
+    """Fontes do Drive: CSV e HTML inteiros; JSON só nos valores string (número do JSON não entra), ou também nos números."""
     for rel, txt in sorted(F.items()):
         cam = 'fontes/' + rel
         if rel.endswith('.json'):
-            yield from textos(json.loads(txt), cam + ':')
+            yield from textos(json.loads(txt), cam + ':', numeros)
         else:
             yield cam, txt
 
@@ -458,13 +469,13 @@ class Ctx:
         self.itens_faq = [i for i in ((faq or {}).get('itens') or []) if isinstance(i, dict)]
         self._laco = None
 
-    def todos(self):
-        """(caminho, texto) de todo valor string do D, da base, do FAQ e das fontes do Drive."""
-        yield from textos(self.D)
-        yield from textos(self.base, 'base:')
+    def todos(self, numeros=False):
+        """(caminho, texto) de todo valor string do D, da base, do FAQ e das fontes do Drive (com numeros, também os números)."""
+        yield from textos(self.D, '', numeros)
+        yield from textos(self.base, 'base:', numeros)
         if self.faq is not None:
-            yield from textos(self.faq, 'faq:')
-        yield from textos_fontes(self.fontes)
+            yield from textos(self.faq, 'faq:', numeros)
+        yield from textos_fontes(self.fontes, numeros)
 
     def laco(self):
         """Os 150 quadros do laço (campos do laço e fixos), calculados uma vez."""
@@ -532,6 +543,13 @@ def a_nulo(X):
             for i, x in enumerate(v):
                 anda(x, '%s[%d]' % (cam, i))
     anda(X.D, '')
+    # Também os outros arquivos gerados que a IA e o buscaBase leem (§1.0, §1.5): a base, o FAQ e os JSON das fontes do Drive.
+    anda(X.base, 'base:')
+    if X.faq is not None:
+        anda(X.faq, 'faq:')
+    for rel, txt in sorted(X.fontes.items()):
+        if rel.endswith('.json'):
+            anda(json.loads(txt), 'fontes/' + rel + ':')
     return out
 
 
@@ -555,14 +573,10 @@ def a_tamanho(X):
 
 
 def a_mmsi9(X):
-    out = []
-    for cam, s in X.todos():
-        if cam == 'embarcacao.mmsi':
-            continue
-        m = R_MMSI9.search(s)
-        if m:
-            out.append('%s «%s»' % (cam, trecho(s, m)))
-    return out
+    """Nove dígitos fora de embarcacao.mmsi (§0.3), em string ou em número, uma violação por ocorrência, com os dígitos: a
+    pendência prende o caminho, o número e quantas vezes ele aparece."""
+    return ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos(numeros=True) if cam != 'embarcacao.mmsi'
+            for m in R_MMSI9.finditer(s)]
 
 
 def a_registro(X):
@@ -587,7 +601,8 @@ def a_registro(X):
 
 
 def a_hex15(X):
-    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_HEX15.search(s)] if m]
+    """Como a MMSI9: string e número, uma violação por ocorrência."""
+    return ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos(numeros=True) for m in R_HEX15.finditer(s)]
 
 
 def a_sem_indicativo(X):
@@ -767,15 +782,16 @@ def saidas_texto(X):
 
 
 def a_modelos_avanti(X):
+    """Ocorrências de cada termo das listas privadas em cada arquivo da saída, uma violação por par (termo, arquivo), com o
+    número do termo na lista (#n) e a contagem: nenhum termo é impresso. Contar linhas não servia: o serializador põe cada lista
+    numa linha só, e um 2º termo numa linha que já casava não mudava a conta."""
     if X.listas is None:
         return []
     out = []
-    S = {k: v.lower().split('\n') for k, v in saidas_texto(X).items()}
+    S = {k: v.lower() for k, v in saidas_texto(X).items()}
     for nome, termos in sorted(X.listas.items()):
-        por = {k: sum(1 for l in linhas if any(t in l for t in termos)) for k, linhas in S.items()}
-        n = sum(por.values())
-        if n:   # só contagens: nenhum termo da lista é impresso
-            out.append('%s: %d linha(s) da saída casam (%s)' % (nome, n, ' · '.join('%s %d' % (k, v) for k, v in sorted(por.items()) if v)))
+        for i, t in enumerate(termos, 1):
+            out += ['%s #%d: %s %d' % (nome, i, k, S[k].count(t)) for k in sorted(S) if t in S[k]]
     return out
 
 
@@ -803,11 +819,17 @@ def a_colisao_modelos(X):
     for e in X.equip:
         if not isinstance(e.get('modelo'), str):
             continue
-        for c in candidatos_modelo(e.get('fabricante'), e['modelo']):
+        for j, c in enumerate(candidatos_modelo(e.get('fabricante'), e['modelo']), 1):
             n = X.avanti.count(c.lower())
-            if n > EXCECOES_MODELO.get(c, 0):   # só a contagem: o texto da pasta do Avanti nunca é impresso
-                out.append('equipamentos[%s] %r: %d na pasta do Avanti (permitido %d)' % (e.get('id'), c, n, EXCECOES_MODELO.get(c, 0)))
+            if n > EXCECOES_MODELO.get(c, 0):   # só contagens: nem o texto da pasta do Avanti nem o candidato são impressos
+                out.append('equipamentos[%s] candidato %d (%s): %d na pasta do Avanti (permitido %d)' % (
+                    e.get('id'), j, assinatura(c), n, EXCECOES_MODELO.get(c, 0)))
     return out
+
+
+def assinatura(texto):
+    """12 hexas do SHA-256 do texto em minúsculas: prende a pendência ao candidato de hoje sem escrever o nome dele."""
+    return hashlib.sha256(texto.lower().encode('utf-8')).hexdigest()[:12]
 
 
 def a_fonte_limites(X):
@@ -1226,7 +1248,9 @@ def a_sem_emergencia(X):
 
 def a_agenda(X):
     out = []
-    dias = X.const.get('DIAS_MESES', DIAS_MESES_PADRAO)
+    dias = DIAS_MESES_PADRAO   # a tabela fixa do §1.7 (31, 184, 365): a referência é daqui, nunca a do gerador conferido
+    if X.const.get('DIAS_MESES', DIAS_MESES_PADRAO) != DIAS_MESES_PADRAO:
+        out.append('DIAS_MESES do gerador ≠ o do §1.7 (%s)' % ', '.join('%d → %d' % kv for kv in sorted(DIAS_MESES_PADRAO.items())))
     nomes_seg = {i: [n for j, n in nomes_equip(X) if j == i] for i in ('epirb', 'seafire')}
     for t in X.agenda:
         i = t.get('id')
@@ -1346,29 +1370,158 @@ def a_nota_etiqueta(X):
     return out
 
 
+_RX_DEPOIS_DE = set('(,=:[!&|?{};+-*%<>~^')   # depois destes, '/' abre regex literal (senão é divisão)
+_RX_PALAVRAS = {'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await'}
+
+
+def js_partes(js):
+    """Varre o JavaScript do rodapé. Devolve (limpo, literais): limpo = o texto com os comentários trocados por espaços (quebras de
+    linha e posições ficam); literais = [(ini, fim, tipo, conteúdo)] das strings ('…', "…": tipo 's', conteúdo sem as aspas), dos
+    modelos (`…`, com os ${…} dentro: tipo 't') e das regex literais (/…/flags: tipo 'r'), que ficam intactos. Os comentários só
+    saem fora dos literais: o '//' de 'https://' não apaga o resto da linha. Regex × divisão pelo token anterior."""
+    out, lits, n = list(js), [], len(js)
+
+    def apaga(a, b):
+        for k in range(a, b):
+            if out[k] != '\n':
+                out[k] = ' '
+
+    def string(i, q):   # i depois da aspa; devolve o índice depois da aspa de fecho (sem fecho: termina na linha)
+        while i < n and js[i] != q and js[i] != '\n':
+            i += 2 if js[i] == '\\' else 1
+        return min(i + 1, n)
+
+    def regex(i):   # i depois da 1ª barra; a barra dentro de [...] não fecha
+        classe = False
+        while i < n and js[i] != '\n':
+            c = js[i]
+            if c == '\\':
+                i += 2
+                continue
+            if c == '/' and not classe:
+                i += 1
+                while i < n and (js[i].isalnum() or js[i] in '_$'):
+                    i += 1
+                return i
+            classe = True if c == '[' else False if c == ']' else classe
+            i += 1
+        return i
+
+    def modelo(i):   # i depois da crase
+        while i < n:
+            if js[i] == '\\':
+                i += 2
+            elif js[i] == '`':
+                return i + 1
+            elif js.startswith('${', i):
+                i = codigo(i + 2, True)
+            else:
+                i += 1
+        return n
+
+    def codigo(i, chave):   # até o fim, ou até o '}' que fecha o ${…} de um modelo
+        prof, ant = 0, ''
+        while i < n:
+            c = js[i]
+            if c in ' \t\r\n':
+                i += 1
+            elif js.startswith('//', i) or js.startswith('/*', i):
+                j = js.find('\n', i) if js[i + 1] == '/' else js.find('*/', i + 2)
+                j = n if j < 0 else (j if js[i + 1] == '/' else j + 2)
+                apaga(i, j)
+                i = j
+            elif c in '\'"`' or (c == '/' and (ant == '' or ant in _RX_DEPOIS_DE or ant in _RX_PALAVRAS)):
+                j = string(i + 1, c) if c in '\'"' else modelo(i + 1) if c == '`' else regex(i + 1)
+                tipo = {'`': 't', '/': 'r'}.get(c, 's')
+                lits.append((i, j, tipo, js[i + 1:j - 1] if tipo == 's' else js[i:j]))
+                i, ant = j, 'x'
+            elif c.isalnum() or c in '_$':
+                j = i
+                while j < n and (js[j].isalnum() or js[j] in '_$'):
+                    j += 1
+                ant = js[i:j] if js[i:j] in _RX_PALAVRAS else 'x'
+                i = j
+            else:
+                if chave and c == '}':
+                    if prof == 0:
+                        return i + 1
+                    prof -= 1
+                elif chave and c == '{':
+                    prof += 1
+                ant = c
+                i += 1
+        return n
+    codigo(0, False)
+    return ''.join(out), lits
+
+
+# Formas de snapshot aceitas no rodapé (§6.3, §6.4): a leitura D.snapshot.quadro (também guardada: D.snapshot && D.snapshot.quadro),
+# sem nada depois que escreva ou desça (=, op=, ++, --, '.', '?.', '['), e o valor fonte: 'snapshot'.
+R_SNAP_LEITURA = re.compile(r'D\s*\.\s*snapshot\s*(?:&&\s*D\s*\.\s*snapshot\s*)?\.\s*quadro(?![\w$])')
+R_SNAP_DEPOIS = re.compile(r'\s*(?:\?\.|\.|\[|=(?!=)|\*\*=|<<=|>>>?=|&&=|\|\|=|\?\?=|[-+*/%&|^]=|\+\+|--)')
+R_SNAP_ANTES = re.compile(r'(?:(?:^|[^\w$])delete\s*|\+\+\s*|--\s*|(?:^|[^\w$])(?:assign|defineProperty|defineProperties|setPrototypeOf|freeze|seal'
+                          r'|preventExtensions|set|deleteProperty)\s*\(\s*)$')
+# Escrita (para o motivo): snapshot com membros e uma atribuição, ++/--, um método que muda o objeto, ou delete/assign antes.
+R_SNAP_ESCRITA = re.compile(r'(?:\s*(?:\??\.\s*[\w$]+|\[[^\]]*\]))*\s*(?:=(?!=)|\*\*=|<<=|>>>?=|&&=|\|\|=|\?\?=|[-+*/%&|^]=|\+\+|--'
+                            r'|\.\s*(?:push|pop|shift|unshift|splice|sort|reverse|fill|copyWithin)\s*\()')
+
+
 def a_rodape_snapshot(X):
+    """O rodapé nunca escreve no D.snapshot (§2.1 do PROMPT; trava 17). Cada 'snapshot' do código (fora dos comentários) tem de
+    ser uma das duas formas aceitas, dentro de instante() e depois da guarda /SOS-/. Qualquer outra, mesmo só leitura (um alias
+    como `var s = D.snapshot`, D['snapshot'], um modelo ou uma regex com o nome), reprova."""
     js = X.rodape
     if js is None:
         return []
-    out = []
-    limpo = re.sub(r'/\*.*?\*/|//[^\n]*', '', js, flags=re.S)
-    if re.search(r'snapshot\b(?:\s*(?:\.[\w$]+|\[[^\]]*\]))*\s*(?:[+\-*/]?=(?!=)|\+\+|--)|delete\s+[\w$.]*snapshot|assign\(\s*[\w$.]*snapshot', limpo):
-        out.append('rodape.js escreve em D.snapshot')
-    m = re.search(r'(?:function\s+instante\s*\(|instante\s*[:=]\s*function\s*\()', limpo)
-    corpo = (0, 0)
-    if m:
-        i = limpo.index('{', m.end())
-        n, j = 0, i
-        while j < len(limpo):
-            n += {'{': 1, '}': -1}.get(limpo[j], 0)
-            if n == 0:
-                break
-            j += 1
+    limpo, lits = js_partes(js)
+    dentro = [False] * len(limpo)
+    for a, b, _, _ in lits:
+        for k in range(a, b):
+            dentro[k] = True
+    corpo = None
+    for m in re.finditer(r'function\s+instante\s*\(|instante\s*[:=]\s*(?:function\b[^(]*)?\(|(?:^|[\s,{])instante\s*\([^)]*\)\s*\{', limpo):
+        if dentro[m.start()]:
+            continue
+        i = next((k for k in range(m.end() - 1, len(limpo)) if limpo[k] == '{' and not dentro[k]), None)
+        if i is None:
+            break
+        prof, j = 0, i
+        for j in range(i, len(limpo)):
+            if not dentro[j]:
+                prof += {'{': 1, '}': -1}.get(limpo[j], 0)
+                if prof == 0:
+                    break
         corpo = (i, j)
-    guarda = limpo.find('/SOS-/', corpo[0]) if m else -1
+        break
+    guarda = next((b for a, b, t, v in lits if t == 'r' and v.startswith('/SOS-/') and corpo and corpo[0] < a < corpo[1]), None)
+    out, vistos = [], set()
     for s in re.finditer(r'snapshot', limpo):
-        if not (corpo[0] < s.start() < corpo[1]) or not (0 <= guarda < s.start()):
-            out.append('rodape.js cita snapshot fora de instante() ou antes da guarda /SOS-/ (posição %d)' % s.start())
+        p = s.start()
+        if p in vistos:
+            continue
+        lit = [l for l in lits if l[0] <= p < l[1]]   # mais de um: string dentro do ${…} de um modelo
+        linha = limpo.count('\n', 0, p) + 1
+        aqui = trecho(limpo, s, 40)
+        forma = None
+        if lit:
+            a, _, t, v = lit[0]
+            if len(lit) == 1 and t == 's' and v == 'snapshot' and re.search(r'(?:^|[^\w$])fonte\s*:\s*$', limpo[:a]):
+                forma = 'valor'
+        else:
+            mb = re.search(r'(?:^|[^\w$.])(D\s*\.\s*)$', limpo[:p])
+            a = p - len(mb.group(1)) if mb else p
+            ml = R_SNAP_LEITURA.match(limpo, a) if mb else None
+            if ml and not R_SNAP_DEPOIS.match(limpo, ml.end()) and not R_SNAP_ANTES.search(limpo[:a]):
+                forma = 'leitura'
+                vistos.update(x.start() + a for x in re.finditer(r'snapshot', ml.group()))
+            elif R_SNAP_ESCRITA.match(limpo, s.end()) or R_SNAP_ANTES.search(limpo[:a]):
+                out.append('rodape.js:%d escreve em D.snapshot «%s»' % (linha, aqui))
+                continue
+        if forma is None:
+            out.append("rodape.js:%d cita snapshot fora das formas aceitas (a leitura D.snapshot.quadro e o valor fonte: 'snapshot') «%s»"
+                       % (linha, aqui))
+        elif not (corpo and guarda is not None and guarda <= p < corpo[1]):
+            out.append('rodape.js:%d cita snapshot fora de instante() ou antes da guarda /SOS-/ «%s»' % (linha, aqui))
     return out
 
 
