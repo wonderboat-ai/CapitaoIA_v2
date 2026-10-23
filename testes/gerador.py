@@ -6,8 +6,10 @@
   O teste nunca escreve na árvore de trabalho (confere o hash dos arquivos gerados antes e depois).
 - Limpeza de fontes/: apaga só o que não gera mais, dentro da pasta, sem seguir link (o alvo de um link fica intacto) e sem
   gravar através de um link.
-- confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece); as estruturais reprovam o gerador
-  (main() devolve 1 e nada é gravado) e as em relatório não. Listas privadas e pasta do Avanti: só amostras sintéticas aqui.
+- confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
+  da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
+  gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
+  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -155,7 +157,7 @@ def copias():
 
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
 CONST = {'NOTA_ETIQUETA': G.NOTA_ETIQUETA, 'DIAS_MESES': G.DIAS_MESES}
-ROTULO_FIM = C.cap(G.PROTOCOLOS['rotulo']) + '. ' + C.cap(G.NOTA_ETIQUETA) + '.'
+ROTULO_FIM = C.rotulo_fim()   # os textos fixos do confere.py (ROTULO e NOTA), nunca os do dado
 
 
 def hoje():
@@ -165,7 +167,7 @@ def hoje():
 
 
 def verifica(k):
-    return C.verifica(k['D'], k['B'], k['F'], G.saidas(k['D'], k['B']), k['faq'], k['rodape'], k['listas'], k['avanti'], CONST)
+    return C.verifica(k['D'], k['B'], k['F'], G.saidas(k['D'], k['B']), k['faq'], k['rodape'], k['listas'], k['avanti'], k.get('const', CONST))
 
 
 def com_replay(k):
@@ -287,7 +289,8 @@ AMOSTRAS = {
     'COLISAO_MODELOS': (lambda r: (lambda k: (k.update({'avanti': 'manual do modelo xp-900 de outro barco'}),
                                               poe(k['D']['equipamentos'], 0, modelo='XP-900' if r else 'XQ-901'), k)[2])(hoje()), "'XP-900': 1"),
     'FONTE_LIMITES': (lambda r: (lambda k: (k['D']['replay']['limites']['motor_be_arref_c']['critico'].update({'acima': 98 if r else 97}), k)[1])(com_replay(hoje())), 'sem os números'),
-    'EQUIP': (lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, qtd='2' if r else 2), k)[1])(equip_completo(hoje())), 'qtd não é número'),
+    # fabricante vazio nos motores: fora das pendências do C5 (a qtd de texto de todos é pendência de hoje; ela fica nas EXTRAS)
+    'EQUIP': (lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, fabricante='') if r else None, k)[1])(hoje()), 'equipamentos[motores].fabricante ausente'),
     'IDS': (lambda r: (lambda k: (k['D'].update({'pecas': [{'id': 'p01', 'n': 'Filtro', 'qtd': 1, 'min': 1, 'local': 'estante técnica 1',
                                                            'tarefas': ['nao-existe' if r else 'motores-oleo']}]}), k)[1])(hoje()), 'fora da agenda'),
     'LACO': (lambda r: (lambda k: (k['D']['replay']['chaves'].update({'motor_be_rpm': [2040] * (29 if r else 30)}), k)[1])(com_replay(hoje())), 'replay.chaves.motor_be_rpm'),
@@ -310,14 +313,130 @@ AMOSTRAS = {
                                                k['B']['trechos'].append({'fonte': 'Guia de bordo — EPIRB', 'secao': '1 · Acionar', 'equip': 'EPIRB', 'seguranca': True,
                                                                          'texto': 'Só em perigo grave e iminente.' + ('' if r else ' ' + ROTULO_FIM)}), k)[2])(hoje()),
                          'sem o rótulo no fim'),
-    'NOTA_ETIQUETA': (lambda r: (lambda k: (poe(k['D']['equipamentos'], 7, nota=G.NOTA_ETIQUETA), poe(k['D']['equipamentos'], 8, nota='veja o manual' if r else G.NOTA_ETIQUETA), k)[2])(hoje()),
-                      'equipamentos[seafire].nota'),
+    # protocolos.seafire (None hoje, C6): a nota dos equipamentos já é pendência de hoje (C5)
+    'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
+                      'protocolos.seafire.nota'),
     'RODAPE_SNAPSHOT': (lambda r: (lambda k: (k.update({'rodape': RODAPE_OK.replace('return true;', 'D.snapshot.quadro = {}; return true;') if r else RODAPE_OK}), k)[1])(hoje()),
                         'rodape.js'),
     'FONTES_RELATIVAS': (lambda r: (lambda k: (k['F'].update({k['D']['drive']['pastas']['abast'] + '/Extra.csv': 'Data,Litros\n' + ('12/09/2026' if r else 'há 3 dias') + ',100\n'}), k)[1])(hoje()),
                          'Extra.csv'),
 }
 
+
+def protocolo(campo, i, txt):
+    """hoje() com protocolos.<campo>[i] = txt (i None: acrescenta)."""
+    k = hoje()
+    lista = k['D']['protocolos'][campo]
+    if i is None:
+        lista.append(txt)
+    else:
+        lista[i] = txt
+    return k
+
+
+def com_trecho(t, arquivos=None):
+    k = hoje()
+    k['D']['drive']['arquivos'].update(arquivos or {})
+    k['B']['trechos'].append(t)
+    return k
+
+
+def com_rotulo(rot, diario=''):
+    k = mais_texto(hoje(), diario)
+    k['D']['protocolos']['rotulo'] = rot
+    return k
+
+
+# O protocolos do CONTRATO-DADOS §1.3 (o texto que o C6 grava): as regras da PROTOCOLO_LIMPO não podem reprová-lo.
+PROTOCOLOS_C6 = {
+    'rotulo': C.ROTULO, 'fonte': 'Protocolo de emergência — procedimento padrão · Drive › Capitão IA v2 › 07 Protocolos de emergência',
+    'mmsiRadio': 'MMSI do rádio de bordo (etiqueta / Licença de Estação)', 'mmsiRotulo': 'MMSI (cadastro do app)',
+    'indicativo': 'o da Licença de Estação (no rádio)', 'plotter': 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA',
+    'hud': 'POSIÇÃO · LEIA NO PLOTTER',
+    'canal16': {'canal': '16', 'mhz': '156,800', 'fonte': 'Protocolo de emergência — procedimento padrão · MAYDAY · canal 16'},
+    'roteiro': ['MAYDAY, MAYDAY, MAYDAY', 'AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA', 'MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)',
+                'POSIÇÃO — LEIA NO PLOTTER AGORA', 'NATUREZA DO PERIGO: ________', 'PESSOAS A BORDO: conte agora', 'AUXÍLIO NECESSÁRIO: ________',
+                'CÂMBIO'],
+    'mob': ['Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue.',
+            'Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter.',
+            'Volte devagar, com o motor em neutro perto da pessoa (hélice). Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB '
+            'lida no plotter.'],
+    'seafire': {'passos': ['Fogo no motor ou alarme do sistema fixo: desligue motores e gerador e corte a ventilação do motor.',
+                           'Se o sistema não disparou sozinho e há fogo no motor, use o disparo manual.',
+                           'Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.',
+                           'Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para a saída.',
+                           'Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.'], 'nota': C.NOTA},
+    'epirb': {'passos': ['Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).',
+                         'Acione conforme a etiqueta do equipamento e deixe a antena para cima, com céu aberto.',
+                         'Leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Não desligue até o resgate.',
+                         'Disparo por engano: desligue e avise no canal 16.'],
+              'teste': ['Teste da baliza (EPIRB): faça o autoteste conforme a etiqueta. O teste não envia alerta.',
+                        'Confira na etiqueta a validade da bateria e do disparador hidrostático.'], 'nota': C.NOTA},
+    'alagamento': ['Água entrando: ligue as bombas de porão no manual, procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que '
+                   'puder. Água subindo mesmo assim: MAYDAY no canal 16.'],
+    'abandono': ['Abandono: só quando não houver como manter o barco. Antes, MAYDAY no canal 16. Coletes em todos; leve o EPIRB e o VHF '
+                 'portátil; embarque na balsa sem pular na água.'],
+    'oleo': ['Reduza para marcha lenta e confira o manômetro agora.', 'Compare BB e BE no mesmo giro: só um lado baixo aponta o motor.',
+             'Com o motor parado, procure vazamento e confira o nível de óleo na vareta.',
+             'Se continuar baixa, desligue o motor afetado, siga com o outro e chame a oficina dos motores.'],
+    'salvatagem': 'Em perigo agora: SOS do app e VHF canal 16. Coletes: um por pessoa — conte as pessoas a bordo agora (lotação: veja a placa '
+                  'de lotação). Balsa, coletes, boias, extintores e sinalizadores: no local da placa de salvatagem e do plano de segurança de '
+                  'bordo — confira na saída.',
+    'panpan': 'Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no canal '
+              '16, no mesmo formato da chamada MAYDAY.',
+    'dsc': 'O botão DISTRESS envia o alerta com a identificação programada no rádio: é o MMSI do rádio de bordo (etiqueta / Licença de '
+           'Estação). Depois do alerta, faça o MAYDAY por voz no canal 16.',
+}
+T_EPIRB = {'fonte': 'Guia de bordo — EPIRB', 'secao': '4 · Validade', 'equip': 'EPIRB',
+           'texto': 'Confira a data da bateria e do disparador hidrostático. ' + ROTULO_FIM}
+T_SEAFIRE = {'fonte': 'Guia de bordo — Sistema fixo de incêndio', 'secao': '3 · Depois da descarga', 'equip': 'Sistema fixo de supressão de incêndio',
+             'texto': 'Não abra o acesso ao motor antes do tempo da etiqueta. ' + ROTULO_FIM}
+T_PORAO = {'fonte': 'Guia de bordo — Bombas de porão Rule', 'secao': '4 · Teste', 'equip': 'Bombas de porão Rule Rule 2000 (24 V)',
+           'texto': 'Ligue as bombas no manual e confira a descarga.'}
+# Amostras extras dos achados da revisão do C3: (asserção, o que mostra, monta(ruim) → contexto, trecho esperado numa violação nova)
+EXTRAS = [
+    ('PROTOCOLO_LIMPO', 'número de pessoas no roteiro', lambda r: protocolo('roteiro', 5, 'PESSOAS A BORDO: 4' if r else 'PESSOAS A BORDO: conte agora'),
+     'protocolos.roteiro[5]: número de pessoas'),
+    ('PROTOCOLO_LIMPO', 'roteiro em maiúsculas: "4 PESSOAS A BORDO"', lambda r: protocolo('roteiro', 5, '4 PESSOAS A BORDO' if r else 'PESSOAS A BORDO: conte agora'),
+     'protocolos.roteiro[5]: regex de emergência'),
+    ('PROTOCOLO_LIMPO', 'pessoas por extenso', lambda r: protocolo('roteiro', 5, 'QUATRO PESSOAS A BORDO' if r else 'PESSOAS A BORDO: conte agora'),
+     'protocolos.roteiro[5]: número de pessoas'),
+    ('PROTOCOLO_LIMPO', 'roteiro em maiúsculas: "ÚLTIMO FIX"', lambda r: protocolo('roteiro', 3, 'ÚLTIMO FIX 07:31' if r else 'POSIÇÃO — LEIA NO PLOTTER AGORA'),
+     'protocolos.roteiro[3]: regex de emergência'),
+    ('PROTOCOLO_LIMPO', 'lotação com número', lambda r: protocolo('mob', None, 'Lotação: 12.' if r else 'Confira a placa de lotação.'),
+     'protocolos.mob[3]: número de pessoas'),
+    ('PROTOCOLO_LIMPO', 'tripulantes com número', lambda r: protocolo('mob', None, '3 tripulantes no convés.' if r else 'Confira o plotter.'),
+     'protocolos.mob[3]: número de pessoas'),
+    ('PROTOCOLO_LIMPO', 'roteiro em maiúsculas: "3,4 BAR"', lambda r: protocolo('roteiro', 4, 'PRESSÃO 3,4 BAR' if r else 'NATUREZA DO PERIGO: ________'),
+     'protocolos.roteiro[4]: " bar"'),
+    ('PROTOCOLO_LIMPO', 'minuto no singular', lambda r: protocolo('mob', None, 'Espere 1 minuto.' if r else 'Espere a indicação.'),
+     'protocolos.mob[3]: minutos'),
+    ('PROTOCOLO_LIMPO', '"ULTIMO FIX" sem o acento', lambda r: protocolo('roteiro', 3, 'ULTIMO FIX' if r else 'POSIÇÃO — LEIA NO PLOTTER AGORA'),
+     'protocolos.roteiro[3]: último fix'),
+] + [('PROTOCOLO_LIMPO', 'lugar a bordo: %r' % frase, (lambda f: lambda r: protocolo('mob', None, f if r else 'Confira o plotter.'))(frase),
+      'protocolos.mob[3]: lugar a bordo') for frase in (
+    'Pegue o extintor na praça de máquinas.', 'Coletes no paiol de proa.', 'Leve o EPIRB da cabine do comandante.',
+    'Balsa no flybridge: solte e jogue.', 'Na popa, solte a balsa.')] + [
+    ('SEGURANCA_MARCADA', 'g_epirb §4 sem palavra da lista (só a fonte casa)', lambda r: com_trecho(dict(T_EPIRB, seguranca=True) if not r else T_EPIRB),
+     'base:trechos[46] (Guia de bordo — EPIRB · 4 · Validade) casa'),
+    ('SEGURANCA_MARCADA', 'g_seafire §3 sem palavra da lista (fonte e equip casam)', lambda r: com_trecho(dict(T_SEAFIRE, seguranca=True) if not r else T_SEAFIRE),
+     '3 · Depois da descarga) casa'),
+    ('SEGURANCA_MARCADA', 'seção do mínimo do §1.5 sem palavra (g_porao §4)',
+     lambda r: com_trecho(dict(T_PORAO, seguranca=True) if not r else T_PORAO, {'g_porao': T_PORAO['fonte']}), 'no mínimo do §1.5 (g_porao)'),
+    ('SEGURANCA_MARCADA', 'item do FAQ do mínimo (EP-04) sem palavra',
+     lambda r: (lambda k: (k.update({'faq': {'itens': [dict({'id': 'EP-04', 'titulo': 'Validade', 'resposta': 'Confira a data. ' + ROTULO_FIM},
+                                                           **({} if r else {'seguranca': True}))]}}), k)[1])(hoje()), 'faq:EP-04'),
+    ('ROTULO_SEGURANCA', 'protocolos.rotulo diferente do texto fixo', lambda r: com_rotulo('procedimento padrão' if r else C.ROTULO), 'protocolos.rotulo'),
+    ('TERMOS', 'termo posto no protocolos.rotulo é acusado e não apaga o resto (não cai de 101 para 29)',
+     lambda r: com_rotulo('SEM DADOS' if r else C.ROTULO), 'ROTULOS: protocolos.rotulo'),
+    ('TERMOS', 'rótulo trocado por "fictício" não apaga o "fictício" do diário',
+     lambda r: com_rotulo('fictício', ' Valores fictícios.' if r else ''), 'AUTENTICIDADE: diario[0].t'),
+    ('NOTA_ETIQUETA', 'constante do gerador diferente do texto do §1.4',
+     lambda r: (lambda k: (k.update({'const': dict(CONST, NOTA_ETIQUETA='veja o manual' if r else C.NOTA)}), k)[1])(hoje()), 'NOTA_ETIQUETA do gerador'),
+    # a qtd '2' dos motores é a pendência de hoje (C5); outro valor no mesmo caminho é violação nova
+    ('EQUIP', 'qtd que não é número, num caminho com pendência', lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, qtd=None if r else 2), k)[1])(equip_completo(hoje())),
+     'equipamentos[motores].qtd não é número: None'),
+]
 
 def laco_que_segura(R, campos, c, t):
     """Port defeituoso: o segmento 145 → 150 fica parado na última chave (o certo é ir para a do t = 0)."""
@@ -331,8 +450,22 @@ def laco_que_segura(R, campos, c, t):
     return ((x % 360) + 360) % 360 if ang else x
 
 
+def planta(nome, o_que, monta, espera):
+    """A amostra plantada aparece como violação nova; numa estrutural, fora das pendências congeladas (reprova o gerador)."""
+    bom, mau = verifica(monta(False)), verifica(monta(True))
+    novos = [m for m in mau[nome] if m not in bom[nome]]
+    if nome in C.RELATORIO:
+        modo, reprova = ' (em relatório até o %s)' % C.RELATORIO[nome], True
+    else:
+        livres = C.separa({nome: mau[nome]})[0].get(nome, [])
+        modo, reprova = ' e reprova (fora das pendências)', any(espera in m for m in livres)
+    ok('%s: acusa a amostra plantada%s%s' % (nome, o_que, modo),
+       len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos) and reprova,
+       {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome]), 'reprova': reprova})
+
+
 def amostras():
-    print('confere(): uma amostra plantada por asserção (%d)' % len(C.NOMES))
+    print('confere(): uma amostra plantada por asserção (%d) e as %d extras da revisão' % (len(C.NOMES), len(EXTRAS)))
     faltam = [n for n in C.NOMES if n not in AMOSTRAS and n != 'EMENDA']
     ok('toda asserção da §6.3 tem amostra', not faltam, faltam)
     for nome in C.NOMES:
@@ -350,10 +483,12 @@ def amostras():
         if nome not in AMOSTRAS:
             continue
         monta, espera = AMOSTRAS[nome]
-        bom, mau = verifica(monta(False)), verifica(monta(True))
-        novos = [m for m in mau[nome] if m not in bom[nome]]
-        ok('%s: acusa a amostra plantada%s' % (nome, '' if nome not in C.RELATORIO else ' (em relatório até o %s)' % C.RELATORIO[nome]),
-           len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos), {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome])})
+        planta(nome, '', monta, espera)
+    for nome, o_que, monta, espera in EXTRAS:
+        planta(nome, ' — ' + o_que, monta, espera)
+    k = hoje()
+    k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
+    ok('PROTOCOLO_LIMPO: o protocolos do §1.3 (o texto do C6) passa nas regras novas', not verifica(k)['PROTOCOLO_LIMPO'], verifica(k)['PROTOCOLO_LIMPO'][:3])
     # Fixtures limpas: com o replay, a rota e o histórico mínimos, as asserções do laço não acusam nada a mais que o port do C8.
     k = com_historico(com_rota(hoje()))
     V = verifica(k)
@@ -363,16 +498,18 @@ def amostras():
 
 
 def reprova(tmp):
-    print('Estruturais reprovam o gerador; as em relatório não')
+    print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
     D0 = G.dados
 
     def rodar(planta, pasta):
         G.dados = lambda: planta(copy.deepcopy(D0()))   # cópia: o D aponta para as listas do módulo (DIARIO, AGENDA…)
+        opcionais = {k: os.environ.pop(k) for k in ('CAPITAO_LISTAS_PRIVADAS', 'CAPITAO_AVANTI') if k in os.environ}   # como o roda()
         try:
             with contextlib.redirect_stdout(io.StringIO()) as o, contextlib.redirect_stderr(io.StringIO()) as e:
                 rc = G.main(['--saida', pasta])
         finally:
             G.dados = D0
+            os.environ.update(opcionais)
         return rc, o.getvalue() + e.getvalue()
     coord = lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + " Em 26°59,6'S."}), D)[1]
     termo = lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + ' (DEMO)'}), D)[1]
@@ -385,9 +522,28 @@ def reprova(tmp):
     p3 = os.path.join(tmp, 'r3')
     rc, saida = rodar(nan, p3)
     ok('NaN no D: main() devolve 1 e não grava nada (o serializador recusa)', rc == 1 and not os.path.exists(p3) and 'não finito' in saida, (rc, saida[-300:]))
-    estruturais = [n for n in C.NOMES if n not in C.RELATORIO]
-    ok('estruturais de hoje (%d): nenhuma acusa os dados gerados' % len(estruturais),
-       not [n for n, v in verifica(hoje()).items() if v and n in estruturais])
+    # Achado da revisão do C3: com a asserção inteira em relatório, um null ou um vazio novo do C4–C7 passava (main() devolvia 0).
+    def nulo(D):
+        D['embarcacao']['fonte'] = None
+        D['diario'][0]['t'] = ''
+        D['agenda'][0]['quem'] = None
+        return D
+    for nome, pl, n in (('NULO', nulo, 3), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1)):
+        p = os.path.join(tmp, 'r-' + nome)
+        rc, saida = rodar(pl, p)
+        ok('%s plantado fora das pendências: main() devolve 1 e não grava nada' % nome,
+           rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
+    p4 = os.path.join(tmp, 'r4')
+    rc, saida = rodar(lambda D: (D['embarcacao'].update({'registro': 'CIA-23-0417'}), D)[1], p4)
+    ok('pendência que não ocorre mais (o registro do C4 preenchido antes da hora): main() devolve 1 e não grava nada',
+       rc == 1 and not os.path.exists(p4) and 'REGISTRO: pendência do C4 que não ocorre mais' in saida, (rc, saida[-300:]))
+    # Com o modo por caminho, as estruturais de hoje têm violações, todas congeladas na PENDENTES (antes: nenhuma violação, porque
+    # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
+    novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
+    ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
+        sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
+    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C4–C8)',
+       all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items()))
 
 
 def main():

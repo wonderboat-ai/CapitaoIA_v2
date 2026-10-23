@@ -3,7 +3,9 @@
 
 verifica() roda as asserções sobre o D, a base, o FAQ, as fontes do Drive e o texto dos arquivos gerados, e devolve as
 violações de cada uma (caminho e motivo). confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção
-estrutural falhar. As da RELATORIO só relatam, até o commit que completa o dado (a varredura de termos fica assim até o C12).
+estrutural falhar. Só a varredura de termos (RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado
+dos C4–C8 estão congeladas por caminho na PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência
+que não ocorre mais também (o commit que completa o dado tira a linha dela).
 
 As listas privadas (CAPITAO_LISTAS_PRIVADAS) e a pasta do Avanti (CAPITAO_AVANTI) são opcionais e só dão CONTAGENS: nenhum
 termo delas é impresso nem gravado.
@@ -27,27 +29,71 @@ PROIBIDOS = os.path.join(RAIZ, 'testes', 'proibidos.json')     # cópia do termo
 RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capitao-dados.js (§1.23; entra no C7)
 
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
-# Em relatório (não reprova) até o commit que completa o dado (CONTRATO-DADOS §6.2). Cada commit tira a sua linha quando o
-# dado fica completo; dali em diante a asserção reprova o gerador. As que não estão aqui reprovam desde o C3.
-RELATORIO = {
-    'TERMOS': 'C12',            # varredura de termos (§6.2: só reprova no C12, com a exceção do mmsiNota até a 1b)
-    'NULO': 'C8',               # modelos, registro, Seafire/EPIRB, dn dos documentos e porão/âncora do snapshot (C4–C8)
-    'MMSI9': 'C6',              # o número no guia de eletrônicos §5 (C5) e no roteiro (C6)
-    'REGISTRO': 'C4',
-    'SEM_INDICATIVO': 'C4',     # a chave embarcacao.indicativo sai no C4 (§1.2)
-    'AFIRMA_REAL': 'C5',        # "no barco real, programe o MMSI" (guia de eletrônicos §5)
-    'PROTOCOLO_LIMPO': 'C6',
-    'SEGURANCA_MARCADA': 'C5',
-    'MODELOS_AVANTI': 'C5',     # o modelo antigo do VHF (troca no C5)
-    'COLISAO_MODELOS': 'C5',
-    'EQUIP': 'C5',
-    'NOTA_ETIQUETA': 'C5',
-    'IDS': 'C7',                # sistema da agenda e ref/palavras das pendências do diário (C7)
-    'AGENDA': 'C7',
-    'FONTES_RELATIVAS': 'C7',
+# §6.2 C3: as estruturais reprovam o gerador; só a varredura de termos fica em relatório (não reprova), até o C12.
+RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO_TERMOS)
+# Violações de hoje que dependem do dado dos C4–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
+# que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
+# não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
+# exato, com '*' no lugar de um trecho: o «…» citado (o caminho e a regra ficam presos), um nome que não pode estar no
+# repositório, ou a contagem de datas das 4 planilhas que o C7 refaz inteiras.
+_AG = ('porao-teste', 'clima-filtro', 'gerador-rotor', 'casco-anodos', 'motores-oleo', 'gerador-revisao', 'seakeeper-anodo',
+       'baterias', 'garmin-cartas', 'clima-revisao', 'motores-revisao')   # as 11 tarefas de hoje (C7: deslocamentos, sistema, palavras)
+_ELETRONICOS = 'fontes/01 Manuais e guias de bordo/Guia de bordo — Eletrônicos *.html'   # o título traz o VHF antigo (C5)
+_EQUIP = (('motores', 'modelo', "'2'"), ('gerador', 'modelo', "'1'"), ('estabilizador', 'modelo', "'1'"), ('climatizacao', 'fabricante modelo', None),
+          ('eletronicos', 'modelo', None), ('audio', 'modelo', None), ('vhf', 'fabricante', None), ('epirb', 'fabricante modelo guia', None),
+          ('seafire', 'modelo guia', None))   # o que falta em cada equipamento hoje e a qtd de texto de hoje (C5; None = 'SEM DADOS')
+_SEG = 'base:trechos[%d] (*) casa a SEGURANCA_PALAVRAS sem seguranca: true'
+PENDENTES = {
+    'NULO': {
+        'C4': ['embarcacao.modelo: None', 'embarcacao.registro: None', 'embarcacao.indicativo: None'],
+        'C5': ['equipamentos[%d].%s: None' % (i, k) for i, ks in ((0, 'modelo'), (1, 'modelo'), (2, 'modelo'), (3, 'fabricante modelo'),
+                                                                  (4, 'modelo'), (5, 'modelo'), (6, 'fabricante'), (7, 'fabricante modelo guia'),
+                                                                  (8, 'modelo guia')) for k in ks.split()]
+              + ['faq.%s.modelo: None' % f for f in ('gerador', 'estabilizador', 'eletronicos', 'climatizacao')],
+        'C6': ['protocolos.seafire: None', 'protocolos.epirb: None'],
+        'C7': ['documentos[%d].%s: None' % (i, k) for i in (0, 6, 7) for k in ('vence', 'dn')],   # sem deslocamento: omitidos (§1.0)
+        'C8': ['snapshot.porao: None', 'snapshot.ancora: None'],
+    },
+    'MMSI9': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t «*»', 'base:trechos[25].texto «*»', _ELETRONICOS + ' «*»'],
+              'C6': ['protocolos.roteiro[2] «*»']},
+    'REGISTRO': {'C4': ['embarcacao.registro ausente (dado completo na simulação, §1.2)']},
+    'SEM_INDICATIVO': {'C4': ['embarcacao.indicativo: chave indicativo fora de protocolos']},   # a chave sai no C4 (§1.2)
+    'AFIRMA_REAL': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t «*»', 'base:trechos[25].texto «*»', _ELETRONICOS + ' «*»']},
+    'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência «*»', 'protocolos.mob[1]: fabricante ou modelo de eletronicos «*»']},
+    'SEGURANCA_MARCADA': {'C5': [_SEG % i for i in (0, 21, 25, 38, 40, 41, 42, 43, 44, 45)]
+                          + ['base:trechos[31] (*) está no mínimo do §1.5 (g_motores) sem seguranca: true']},
+    # Contagens exatas por arquivo (só com CAPITAO_LISTAS_PRIVADAS): um modelo novo da lista em qualquer arquivo reprova.
+    'MODELOS_AVANTI': {'C5': ['modelos-avanti.txt: 14 linha(s) da saída casam (base-conhecimento.json 1 · capitao-dados.js 5 · '
+                              + _ELETRONICOS + ' 4 · fontes/01 Manuais e guias de bordo/Inventário de bordo.csv 3 · '
+                              'fontes/02 Documentos/Controle de documentos.csv 1)']},
+    'COLISAO_MODELOS': {'C5': ["equipamentos[vhf] '*': * na pasta do Avanti (permitido 0)"]},   # só com CAPITAO_AVANTI
+    'EQUIP': {'C5': ['equipamentos[%s].%s ausente' % (i, k) for i, ks, _ in _EQUIP for k in ks.split() if k != 'guia']
+                    + ['equipamentos[%s].qtd não é número: %s' % (i, q or repr('SEM DADOS')) for i, _, q in _EQUIP]
+                    + ['equipamentos[%s].guia fora de D.guias: None' % i for i, ks, _ in _EQUIP if 'guia' in ks.split()]},
+    'NOTA_ETIQUETA': {'C5': ['equipamentos[epirb].nota ≠ NOTA_ETIQUETA', 'equipamentos[seafire].nota ≠ NOTA_ETIQUETA']},
+    'IDS': {'C7': ['agenda.%s.sistema fora do vocabulário (ids de equipamentos, casco, tanques): None' % i for i in _AG]
+            + ['diario.%s: pendência sem ref na agenda' % iso for iso in ('2026-09-24T17:10:00-03:00', '2026-09-20T11:05:00-03:00',
+                                                                          '2026-09-05T10:00:00-03:00')]},
+    'AGENDA': {'C7': [m % i for i in _AG for m in ('agenda.%s: ultimaHa + venceEm ≠ DIAS_MESES[meses]', 'agenda.%s.palavras vazias ou com palavra solta')]
+               + ['agenda.porao-teste: seguranca só (e sempre) em epirb-teste, porao-teste, seafire-inspecao', 'agenda: 0 atrasadas (precisa de 3)']},
+    'FONTES_RELATIVAS': {'C7': ['fontes/%s: * data(s) dd/mm/aaaa' % f for f in (
+        '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
+        '06 Abastecimento/Registro de abastecimento.csv')]},
 }
+COMMITS_PENDENTES = ('C4', 'C5', 'C6', 'C7', 'C8')
+# Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
+OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
 EXCECAO_TERMOS = {'embarcacao.mmsiNota': '1b'}
+# Textos fixos (PROMPT §2.3, §3; CONTRATO §1.3, §1.4): a referência é daqui, nunca do dado que está sendo conferido. O rótulo é a
+# EXCEÇÃO do §3 na varredura de termos; tirado do D, um termo posto no próprio rótulo sumiria de todo o dado.
+ROTULO = 'procedimento padrão — confirmar com o protocolo de bordo'
+NOTA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'
+# Mínimo do §1.5 (coluna seguranca: true da tabela dos guias): a marcação por palavra pode pegar mais seções, nunca menos. Chave
+# de drive.arquivos → números de seção (no checklist, o título); None = todas. No FAQ (§1.6), os ids das mesmas seções e os EM.
+MINIMO_SEGURANCA = {'g_motores': {'4'}, 'g_eletronicos': {'1', '5'}, 'g_porao': {'4'}, 'g_ais': {'2'}, 'g_seafire': None,
+                    'g_epirb': None, 'checklist': {'Saída · antes de largar'}, 'protocolo': None}
+MINIMO_FAQ = re.compile(r'(?:EM|SF|EP)-\d+|MO-04|EL-01|EL-05|PO-04|AI-02|CK-03')
 # Ocorrências permitidas na pasta do Avanti, por candidato (COLISAO_MODELOS; ok do proprietário, §8.2 ponto 9).
 EXCECOES_MODELO = {'Seakeeper 3': 1}
 # Port da rota e dos contadores do em() (§1.14, §1.22; entra no C8). Sem ele, um D com rota reprova a EMENDA_ROTA.
@@ -75,15 +121,24 @@ R_COORD = re.compile(r"-?\d{1,3}\s*°\s*\d{1,2}\s*[,.]\s*\d+\s*['′]?\s*[NSEWLO
 # A regex de emergência do PROMPT (Fase 7): nada de MMSI, último fix, distância, velocidade, posição, rumo, ETA nem pessoas.
 R_EMERG = re.compile(r"710123456|último fix|\d+[.,]\d+\s*(?:mn|milhas?)|\d+[.,]?\d*\s*nós|°\s*\d{1,2}[,.]\d+\s*['′]"
                      r"|\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°|\bETA\b|\b\d+\s+(?:pessoas\s+)?a bordo\b")
+# Nos protocolos, a mesma regex sem distinguir maiúsculas: o roteiro do SOS é todo em maiúsculas ("ÚLTIMO FIX", "4 PESSOAS A BORDO").
+R_EMERG_PROTOCOLO = re.compile(R_EMERG.pattern, re.I)
+# Número de pessoas (§1.3; PROMPT §2.2: "PESSOAS A BORDO: conte agora", nunca o número gerado), também por extenso e na lotação.
+_GENTE = r'(?:pessoas|tripulantes|passageiros)'
+R_PESSOAS = re.compile(_GENTE + r'[^\n]{0,20}\d|\d+\s*' + _GENTE + r'|(?:^|[^A-Za-zÀ-ÿ])(?:dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito'
+                       r'|nove|dez|onze|doze)\s+' + _GENTE + r'|lota[çc][ãa]o[^\n]{0,20}\d', re.I)
+# Tudo sem distinguir maiúsculas (o roteiro do SOS é em maiúsculas: "3,4 BAR", "1 MINUTO", "ULTIMO FIX").
 R_PROTOCOLO = (
-    ('" bar"', re.compile(r'(?:^|\s)bar(?![A-Za-zÀ-ÿ])')),
+    ('" bar"', re.compile(r'(?:^|\s)bar(?![A-Za-zÀ-ÿ])', re.I)),
     ('"%"', re.compile('%')),
     ('"nós"', re.compile(r'(?:^|[^A-Za-zÀ-ÿ])nós(?![A-Za-zÀ-ÿ])', re.I)),
     ('"mn"', re.compile(r'(?:^|[^A-Za-zÀ-ÿ])mn(?![A-Za-zÀ-ÿ])', re.I)),
     ('graus', re.compile(r'°|(?:^|[^A-Za-zÀ-ÿ])graus?(?![A-Za-zÀ-ÿ])', re.I)),
-    ('minutos', re.compile(r'\d+\s*(?:min|minutos)(?![A-Za-zÀ-ÿ])', re.I)),
-    ('regex de emergência', R_EMERG),
-)
+    ('minutos', re.compile(r'\d+\s*(?:min|minutos?)(?![A-Za-zÀ-ÿ])', re.I)),
+    ('número de pessoas', R_PESSOAS),
+    ('último fix', re.compile(r'(?:^|[^A-Za-zÀ-ÿ])[uú]ltimo\s+fix(?![A-Za-zÀ-ÿ])', re.I)),   # também sem o acento
+    ('regex de emergência', R_EMERG_PROTOCOLO),
+)   # mais o lugar a bordo, montado da LOCAL_SEGURANCA do proibidos.json (lugar_a_bordo)
 R_BOIA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])b[oó]ias?(?![A-Za-zÀ-ÿ])', re.I)   # também a grafia antiga "bóia"
 R_KIT = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])kits?(?![A-Za-zÀ-ÿ])', re.I)
 R_DATA = re.compile(r'\b\d{1,2}/\d{1,2}/\d{4}\b')
@@ -391,6 +446,7 @@ class Ctx:
         self.const = const or {}
         self.simulacao = D.get('simulacao') is True
         self.termos = carrega_termos()
+        self.lugar = lugar_a_bordo(self.termos)
         self.arq = (D.get('drive') or {}).get('arquivos') or {}
         self.pastas = (D.get('drive') or {}).get('pastas') or {}
         self.R = D.get('replay') if isinstance(D.get('replay'), dict) else None
@@ -427,9 +483,20 @@ def carrega_termos(caminho=PROIBIDOS):
     return {k: re.compile(v['src'], re.I if 'i' in v['flags'] else 0) for k, v in T.items() if isinstance(v, dict) and 'src' in v}
 
 
+def lugar_a_bordo(termos):
+    """Lugar a bordo nos protocolos (§1.3: "nenhuma string tem ... nome de lugar a bordo"), com a lista de lugares da própria
+    LOCAL_SEGURANCA (uma fonte só, sem lista paralela, PROMPT §3). A LOCAL_SEGURANCA pede o equipamento antes do lugar, na mesma
+    frase; aqui o lugar vale sozinho, em qualquer ordem."""
+    src = termos['LOCAL_SEGURANCA'].pattern
+    partes = src.split(r'[^.\n]{0,60}')
+    if len(partes) != 2 or not partes[1].startswith('(?:'):
+        raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar); ajuste lugar_a_bordo()')
+    return re.compile(r'(?:^|[^A-Za-zÀ-ÿ])' + partes[1], re.I)
+
+
 # ——————————————————————————————— asserções (§6.3) ———————————————————————————————
 def a_termos(X):
-    rot = re.compile(re.escape(((X.D.get('protocolos') or {}).get('rotulo')) or 'procedimento padrão — confirmar com o protocolo de bordo'), re.I)
+    rot = re.compile(re.escape(ROTULO), re.I)   # a EXCEÇÃO do §3 é o texto fixo, nunca o protocolos.rotulo do dado
     out = []
     for cam, s in X.todos():
         if cam in EXCECAO_TERMOS:
@@ -580,7 +647,7 @@ def a_protocolo_limpo(X):
     out = []
     nomes = nomes_equip(X)
     for cam, s in textos(P, 'protocolos'):
-        for nome, rx in R_PROTOCOLO:
+        for nome, rx in R_PROTOCOLO + (('lugar a bordo', X.lugar),):
             m = rx.search(s)
             if m:
                 out.append('%s: %s «%s»' % (cam, nome, trecho(s, m)))
@@ -642,14 +709,34 @@ def a_local_vocab(X):
     return out
 
 
+def no_minimo(X, t):
+    """Chave de drive.arquivos do trecho, se a seção dele está no mínimo do §1.5 (MINIMO_SEGURANCA); senão None."""
+    for k, secoes in MINIMO_SEGURANCA.items():
+        if X.arq.get(k) and t.get('fonte') == X.arq[k]:
+            sec = t.get('secao') or ''
+            if secoes is None or sec in secoes or sec.split(' · ')[0] in secoes:
+                return k
+    return None
+
+
 def a_seguranca_marcada(X):
+    """Palavra da SEGURANCA_PALAVRAS em qualquer campo do trecho (fonte e equip inclusive: "Guia de bordo — EPIRB", "Sistema fixo
+    de supressão de incêndio", "Protocolo de emergência") ou seção do mínimo do §1.5 ⇒ seguranca: true."""
     out = []
     for i, t in enumerate(X.trechos):
-        if segura((t.get('secao') or '') + ' ' + (t.get('texto') or '')) and t.get('seguranca') is not True:
+        if t.get('seguranca') is True:
+            continue
+        if segura(' '.join(str(t.get(k) or '') for k in ('fonte', 'equip', 'secao', 'texto'))):
             out.append('base:trechos[%d] (%s · %s) casa a SEGURANCA_PALAVRAS sem seguranca: true' % (i, t.get('fonte'), t.get('secao')))
+        elif no_minimo(X, t):
+            out.append('base:trechos[%d] (%s · %s) está no mínimo do §1.5 (%s) sem seguranca: true' % (i, t.get('fonte'), t.get('secao'), no_minimo(X, t)))
     for it in X.itens_faq:
-        if segura(' '.join(s for _, s in textos(it))) and it.get('seguranca') is not True:
+        if it.get('seguranca') is True:
+            continue
+        if segura(' '.join(s for _, s in textos(it))):
             out.append('faq:%s casa a SEGURANCA_PALAVRAS sem seguranca: true' % it.get('id'))
+        elif MINIMO_FAQ.fullmatch(str(it.get('id', ''))):
+            out.append('faq:%s está no mínimo do §1.5/§1.6 sem seguranca: true' % it.get('id'))
     return out
 
 
@@ -1213,15 +1300,17 @@ def a_coord_texto(X):
     return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if cam != 'snapshot.gps.texto' for m in [R_COORD.search(s)] if m]
 
 
-def rotulo_fim(X):
-    rot = ((X.D.get('protocolos') or {}).get('rotulo')) or 'procedimento padrão — confirmar com o protocolo de bordo'
-    nota = X.const.get('NOTA_ETIQUETA', 'modelo, validade e acionamento: veja a etiqueta do equipamento')
-    return cap(rot) + '. ' + cap(nota) + '.'
+def rotulo_fim():
+    """O fim dos textos de segurança (§1.5), com os textos fixos ROTULO e NOTA (nunca os do dado conferido)."""
+    return cap(ROTULO) + '. ' + cap(NOTA) + '.'
 
 
 def a_rotulo_seguranca(X):
-    fim = rotulo_fim(X)
+    fim = rotulo_fim()
     out = []
+    P = X.D.get('protocolos') or {}
+    if 'rotulo' in P and P['rotulo'] != ROTULO:   # §1.3: o rótulo é a EXCEÇÃO do §3, letra por letra
+        out.append('protocolos.rotulo ≠ o rótulo do procedimento padrão (EXCEÇÃO do §3, texto fixo)')
     guias = {X.arq[k] for k in ('g_seafire', 'g_epirb') if X.arq.get(k)}
     prot = X.arq.get('protocolo')
     for i, t in enumerate(X.trechos):
@@ -1243,8 +1332,10 @@ def a_rotulo_seguranca(X):
 
 
 def a_nota_etiqueta(X):
-    nota = X.const.get('NOTA_ETIQUETA', 'modelo, validade e acionamento: veja a etiqueta do equipamento')
+    nota = NOTA
     out = []
+    if X.const.get('NOTA_ETIQUETA', NOTA) != NOTA:   # a constante do gerador é o texto fixo do §1.4
+        out.append('NOTA_ETIQUETA do gerador ≠ o texto do §1.4 (%r)' % NOTA)
     for i in ('epirb', 'seafire'):
         e = X.eq(i)
         if e is not None and e.get('nota') != nota:
@@ -1373,29 +1464,83 @@ def resumo_termos(msgs):
     return ' · '.join('%s %d' % (k, v) for k, v in sorted(por.items()))
 
 
+def padrao(p):
+    """Padrão da PENDENTES → regex do texto inteiro da violação ('*' = qualquer trecho)."""
+    return re.compile('.*'.join(re.escape(x) for x in p.split('*')), re.S)
+
+
+def separa(V, inativas=()):
+    """Separa as violações das asserções estruturais (fora da RELATORIO) pela PENDENTES. Cada padrão casa UMA violação.
+    Devolve (novas, conhecidas, velhas): novas = {asserção: [violações fora das pendências]}, que reprovam; conhecidas =
+    {asserção: {commit: n}}; velhas = [(asserção, commit, padrão)] que não casaram nada, que também reprovam (a lista não pode
+    esconder a volta do defeito). As asserções de `inativas` (fonte opcional ausente) não têm pendência velha."""
+    novas, conhecidas, velhas = {}, {}, []
+    for nome, msgs in V.items():
+        if nome in RELATORIO:
+            continue
+        livres = list(msgs)
+        for commit, ps in (PENDENTES.get(nome) or {}).items():
+            for p in ps:
+                rx = padrao(p)
+                k = next((j for j, m in enumerate(livres) if rx.fullmatch(m)), None)
+                if k is None:
+                    if nome not in inativas:
+                        velhas.append((nome, commit, p))
+                    continue
+                livres.pop(k)
+                c = conhecidas.setdefault(nome, {})
+                c[commit] = c.get(commit, 0) + 1
+        if livres:
+            novas[nome] = livres
+    return novas, conhecidas, velhas
+
+
+def pendente_de(nome, m):
+    """O commit da PENDENTES cujo padrão casa a violação m (para o --detalhe), ou None."""
+    return next((c for c, ps in (PENDENTES.get(nome) or {}).items() for p in ps if padrao(p).fullmatch(m)), None)
+
+
 def confere(D, base, fontes, saidas, faq=None, const=None, detalhe=False, imprime=print, env=None):
     """Roda verifica() com o rodapé e as fontes opcionais do ambiente, imprime o resumo e levanta ConfereFalhou se uma
-    asserção estrutural (fora da RELATORIO) tiver violação."""
+    asserção estrutural tiver violação fora da PENDENTES ou se uma pendência não ocorrer mais. A RELATORIO só relata."""
     listas, avanti = listas_privadas(env), texto_avanti(env)
     V = verifica(D, base, fontes, saidas, faq, le_rodape(), listas, avanti, const)
-    falhas = {n: v for n, v in V.items() if v and n not in RELATORIO}
-    rel = {n: v for n, v in V.items() if n in RELATORIO}
+    inativas = {n for n, f in OPCIONAIS.items() if {'listas': listas, 'avanti': avanti}[f] is None}
+    novas, conhecidas, velhas = separa(V, inativas)
+    falhas = sorted(set(novas) | {n for n, _, _ in velhas}, key=NOMES.index)
     imprime('confere(): %d asserções · %d reprovam o gerador: %s' % (
         len(V), len(V) - len(RELATORIO), ('%d com falha (%s)' % (len(falhas), ', '.join(falhas))) if falhas else '0 falhas'))
+    imprime('  pendências conhecidas, por caminho (cada uma até o commit que completa o dado): ' + (' · '.join(
+        '%s %d (%s)' % (n, sum(c.values()), ' · '.join('%s %d' % kv for kv in sorted(c.items()))) for n, c in conhecidas.items()) or 'nenhuma'))
     partes = []
-    for n, v in rel.items():
-        extra = ': ' + resumo_termos(v) if n == 'TERMOS' and v else ''
-        partes.append('%s %d (%s%s)' % (n, len(v), RELATORIO[n], extra))
-    imprime('  em relatório até o commit que completa o dado: ' + ' · '.join(partes))
+    for n, v in V.items():
+        if n in RELATORIO:
+            extra = ': ' + resumo_termos(v) if n == 'TERMOS' and v else ''
+            partes.append('%s %d (até o %s%s)' % (n, len(v), RELATORIO[n], extra))
+    imprime('  em relatório: ' + ' · '.join(partes))
     imprime('  listas privadas: %s · pasta do Avanti: %s' % (
         'sem CAPITAO_LISTAS_PRIVADAS (não conferido)' if listas is None else
         ' · '.join('%s %d termos' % (k, len(t)) for k, t in sorted(listas.items())) + ' · MODELOS_AVANTI %d violação(ões)' % len(V['MODELOS_AVANTI']),
         'sem CAPITAO_AVANTI (não conferido)' if avanti is None else 'COLISAO_MODELOS %d violação(ões)' % len(V['COLISAO_MODELOS'])))
-    for n, v in V.items():
-        if v and (detalhe or n in falhas):
-            imprime('  · %s%s:' % (n, '' if n in falhas else ' (relatório)'))
-            for m in v:
+    for n in falhas:
+        if novas.get(n):
+            imprime('  · %s: %d violação(ões) fora das pendências:' % (n, len(novas[n])))
+            for m in novas[n]:
                 imprime('      ' + m)
+        for nn, c, p in velhas:
+            if nn == n:
+                imprime('  · %s: pendência do %s que não ocorre mais (tire a linha da PENDENTES): %s' % (n, c, p))
+    if detalhe:
+        for n, v in V.items():
+            if v:
+                imprime('  · %s (todas):' % n)
+                for m in v:
+                    c = 'relatório' if n in RELATORIO else pendente_de(n, m)
+                    imprime('      ' + m + ('  [%s]' % c if c else '  [NOVA]'))
     if falhas:
-        raise ConfereFalhou('confere(): %s' % ', '.join('%s %d' % (n, len(v)) for n, v in falhas.items()))
+        motivo = []
+        for n in falhas:
+            nv, vl = len(novas.get(n) or []), sum(1 for nn, _, _ in velhas if nn == n)
+            motivo.append(n + ' ' + ' + '.join(x for x in ('%d nova(s)' % nv if nv else '', '%d pendência(s) velha(s)' % vl if vl else '') if x))
+        raise ConfereFalhou('confere(): ' + ', '.join(motivo))
     return V

@@ -24,9 +24,9 @@ Para a próxima embarcação: SIMULACAO = False, trocar os dados abaixo pelos re
 
 Uso: python -X utf8 ferramentas/demo/gerar_demo.py [--saida <pasta>] [--detalhe]
   --saida    pasta onde gravar (padrão: a raiz do repositório); o teste usa uma pasta temporária e compara byte a byte.
-  --detalhe  lista cada violação das asserções, também as que estão em relatório.
-Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma estrutural que falha
-reprova o gerador e nada é gravado. Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
+  --detalhe  lista cada violação das asserções, com o commit da pendência, [relatório] ou [NOVA].
+Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma estrutural com violação
+fora das pendências congeladas (PENDENTES), ou com uma pendência que não ocorre mais, reprova o gerador e nada é gravado. Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
 modelos-avanti.txt) e CAPITAO_AVANTI (pasta do Avanti, só leitura). Determinístico: nenhuma data ou hora do sistema.
 """
 import argparse
@@ -626,7 +626,7 @@ def gera_fontes(D):
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Gera capitao-dados.js, base-conhecimento.json e as fontes do Drive.')
     ap.add_argument('--saida', default=RAIZ, help='pasta onde gravar (padrão: a raiz do repositório)')
-    ap.add_argument('--detalhe', action='store_true', help='lista cada violação, também as das asserções em relatório')
+    ap.add_argument('--detalhe', action='store_true', help='lista cada violação, com o commit da pendência, [relatório] ou [NOVA]')
     a = ap.parse_args(argv)
     for s in (sys.stdout, sys.stderr):   # console do Windows sem -X utf8: um "≠" vira escape em vez de derrubar o gerador
         try:
