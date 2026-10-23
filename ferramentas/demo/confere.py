@@ -2,10 +2,14 @@
 """Capitão IA — conferência dos dados gerados (CONTRATO-DADOS 1.1.0 §6.3), chamada pelo gerar_demo.py antes de gravar.
 
 verifica() roda as asserções sobre o D, a base, o FAQ, as fontes do Drive e o texto dos arquivos gerados, e devolve as
-violações de cada uma (caminho e motivo). confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção
-estrutural falhar. Só a varredura de termos (RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado
-dos C4–C8 estão congeladas por caminho na PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência
-que não ocorre mais também (o commit que completa o dado tira a linha dela).
+violações de cada uma (caminho e motivo). São as da §6.3 e, no fim, as invariantes da coluna "Asserção do gerador" da §6.4 que
+não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 ("programe" perto de MMSI) e na SEM_INDICATIVO
+(indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2).
+
+confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Só a varredura de termos
+(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C4–C8 estão congeladas por caminho na
+PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
+completa o dado tira a linha dela).
 
 As listas privadas (CAPITAO_LISTAS_PRIVADAS) e a pasta do Avanti (CAPITAO_AVANTI) são opcionais e só dão CONTAGENS: nenhum
 termo delas é impresso nem gravado.
@@ -45,6 +49,9 @@ _EQUIP = (('motores', 'modelo', "'2'"), ('gerador', 'modelo', "'1'"), ('estabili
           ('eletronicos', 'modelo', None), ('audio', 'modelo', None), ('vhf', 'fabricante', None), ('epirb', 'fabricante modelo guia', None),
           ('seafire', 'modelo guia', None))   # o que falta em cada equipamento hoje e a qtd de texto de hoje (C5; None = 'SEM DADOS')
 _SEG = 'base:trechos[%d] (*) casa a SEGURANCA_PALAVRAS sem seguranca: true'
+# A frase de hoje do MMSI no guia de eletrônicos, nas 3 cópias ("o MMSI 710123456 é fictício; no barco real, programe o MMSI do
+# registro"): sai no C5, com o g_eletronicos §5 de MMSI_RADIO.
+_MMSI_C5 = ('faq.eletronicos.perguntas[3].passos[1].t', 'base:trechos[25].texto', _ELETRONICOS)
 PENDENTES = {
     'NULO': {
         'C4': ['embarcacao.modelo: None', 'embarcacao.registro: None', 'embarcacao.indicativo: None'],
@@ -59,13 +66,15 @@ PENDENTES = {
               + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
                  for k in ('rpm', 'pct')],
     },
-    'MMSI9': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t: 710123456 «*»', 'base:trechos[25].texto: 710123456 «*»',
-                     _ELETRONICOS + ': 710123456 «*»'],
+    'MMSI9': {'C5': [c + m for c in _MMSI_C5 for m in (': 710123456 «*»', ': "programe" perto de MMSI «*»')],
               'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
     'REGISTRO': {'C4': ['embarcacao.registro ausente (dado completo na simulação, §1.2)']},
     'SEM_INDICATIVO': {'C4': ['embarcacao.indicativo: chave indicativo fora de protocolos']},   # a chave sai no C4 (§1.2)
-    'AFIRMA_REAL': {'C5': ['faq.eletronicos.perguntas[3].passos[1].t «*»', 'base:trechos[25].texto «*»', _ELETRONICOS + ' «*»']},
-    'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência «*»', 'protocolos.mob[1]: fabricante ou modelo de eletronicos «*»']},
+    'AFIRMA_REAL': {'C5': [c + ': barco real «*»' for c in _MMSI_C5]},
+    'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
+                  + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
+    'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência [710123456] «*»',
+                               'protocolos.mob[1]: fabricante ou modelo de equipamento [Garmin] «*»']},
     'SEGURANCA_MARCADA': {'C5': [_SEG % i for i in (0, 21, 25, 38, 40, 41, 42, 43, 44, 45)]
                           + ['base:trechos[31] (*) está no mínimo do §1.5 (g_motores) sem seguranca: true']},
     # Ocorrências exatas por termo e por arquivo (só com CAPITAO_LISTAS_PRIVADAS; hoje só o #1, o VHF antigo): outro termo da lista,
@@ -113,19 +122,33 @@ DIAS_MESES_PADRAO = {1: 31, 6: 184, 12: 365}
 # ——————————————————————————————— regex fixas das asserções ———————————————————————————————
 R_MMSI9 = re.compile(r'\b\d{9}\b')
 R_HEX15 = re.compile(r'\b[0-9A-F]{15}\b')
-R_INDICATIVO = re.compile(r'\bP[P-Y]\d[A-Z]{2,3}\b|\bZ[V-Z]\d[A-Z]{2,3}\b')       # prefixos de rádio reais do Brasil
+# Indicativo com os prefixos de rádio reais do Brasil (PP–PY e ZV–ZZ; PROMPT §2.2: nunca gerar), nos três formatos: o de
+# radioamador do contrato (PY2ABC), o de estação de navio, 2 ou 3 letras e 4 dígitos (PU1234, PPA1234), e, depois da palavra
+# "indicativo", qualquer código com o prefixo (o de 4 letras, PPXA). Solto, o de 4 letras casaria palavras em maiúsculas ("PUXE").
+_PREFIXO_RADIO = r'(?:P[P-Y]|Z[V-Z])'
+R_INDICATIVO = re.compile(r'\b' + _PREFIXO_RADIO + r'\d[A-Z]{2,3}\b|\b' + _PREFIXO_RADIO + r'[A-Z]?\d{4}\b'
+                          r'|(?i:indicativo)[^.\n]{0,40}?\b' + _PREFIXO_RADIO + r'[A-Z0-9]{2,5}\b')
 R_REGISTRO = re.compile(r'[A-Z]{3}-\d{2}-\d{4}')
 R_PLACAS = (re.compile(r'\b[A-Z]{2,3}-?\d{4}\b'), re.compile(r'\b[A-Z]{3}\d[A-Z]\d{2}\b'))   # antiga, anterior a 1990 e Mercosul
 R_HIN = re.compile(r'\b[A-Z]{3}[A-Z0-9]{5}[A-L]\d{3}\b')                          # código do fabricante + série + mês/ano
 R_9A11 = re.compile(r'\b\d{9,11}\b')
 # AFIRMA_REAL do §6.3, com rea(?:l|is) no lugar do reais? do contrato, que casava "reai(s)" e deixava passar o singular ("no barco
 # real"): a trava §2.6 do PROMPT ganha. Com o fim de palavra, "realizado" e "oficina" continuam passando.
-R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])(?:dados?|leituras?|barco|embarca[çc][ãa]o|navega[çc][ãa]o)\s+(?:\S+\s+){0,2}'
-                      r'(?:rea(?:l|is)|verdadeir[A-Za-zÀ-ÿ]*|oficia(?:l|is))(?![A-Za-zÀ-ÿ])', re.I)
+# O grupo 1 é a afirmação, sem o caractere do fim de palavra (vai na mensagem e prende a pendência).
+R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:dados?|leituras?|barco|embarca[çc][ãa]o|navega[çc][ãa]o)\s+(?:\S+\s+){0,2}'
+                      r'(?:rea(?:l|is)|verdadeir[A-Za-zÀ-ÿ]*|oficia(?:l|is)))(?![A-Za-zÀ-ÿ])', re.I)
 # Coordenada em texto (PROMPT §2.8): graus-minutos com vírgula ou ponto; decimal com 4 ou mais casas, ou em par. Milhar do pt-BR
-# (1.236,4 h · 1.600 L · 12.000) fica de fora.
-R_COORD = re.compile(r"-?\d{1,3}\s*°\s*\d{1,2}\s*[,.]\s*\d+\s*['′]?\s*[NSEWLO]?|-?\d{1,3}[.,]\d{4,}(?!\d)"
-                     r"|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}")
+# (1.236,4 h · 1.600 L · 12.000 · "1.000, 1.500 rpm") fica de fora. Além das do §2.8, a forma do semCoord de hoje
+# (capitao-brain.js: minutos inteiros com o apóstrofo e o hemisfério, 26°59'S), os segundos (26°59'35"), o "º" ordinal no lugar
+# do grau e o par separado por vírgula quando o 1º número tem sinal (-26.993,-48.614: a linha típica de CSV).
+R_COORD = re.compile(r"-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?"
+                     r"|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:[\"″”]|''|’’))"
+                     r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}"
+                     r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}")
+# MMSI9 (§6.4, trava §2.2): nunca instrução de programar o MMSI. O verbo no imperativo, no infinitivo ou no gerúndio (o grupo 1
+# ou o 2) na mesma frase que "MMSI", a até 80 letras; "programado(a)" descreve o rádio e passa (protocolos.dsc do §1.3).
+_PROGRAMAR = r'(?<![A-Za-zÀ-ÿ])((?:re)?program(?:e|em|ar|ando|á-l[oa]|e-[oa])(?![A-Za-zÀ-ÿ]))'
+R_PROGRAME_MMSI = re.compile(_PROGRAMAR + r'[^.!?;\n]{0,80}?\bMMSI\b|\bMMSI\b[^.!?;\n]{0,80}?' + _PROGRAMAR, re.I)
 # A regex de emergência do PROMPT (Fase 7): nada de MMSI, último fix, distância, velocidade, posição, rumo, ETA nem pessoas.
 R_EMERG = re.compile(r"710123456|último fix|\d+[.,]\d+\s*(?:mn|milhas?)|\d+[.,]?\d*\s*nós|°\s*\d{1,2}[,.]\d+\s*['′]"
                      r"|\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°|\bETA\b|\b\d+\s+(?:pessoas\s+)?a bordo\b")
@@ -171,6 +194,32 @@ ORIGENS = {'laço', 'rota', 'contador', 'derivado', 'fixo', 'relógio', 'janela'
 TIPOS_CHECKLIST = ('saida', 'chegada', 'abastecimento', 'fundeio')
 SISTEMAS_EXTRA = {'casco', 'tanques'}
 SEGURANCA_AGENDA = {'epirb-teste', 'seafire-inspecao', 'porao-teste'}
+# §0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo (SEM_INDICATIVO). Pelas palavras
+# do nome da chave (camelCase, '_' e '-' separam; sem acento): 'hexId' → hex, id. O indicativo vale só em protocolos (o texto de
+# instrução); o lugar, só nos campos de vocabulário fechado (LOCAL_VOCAB), no lugar do próprio barco (o quadro) e no posto e nos
+# prestadores, que não são equipamento.
+CHAVES_IDENT = {'hex': 'HEX ID', 'hexid': 'HEX ID', 'uin': 'HEX ID', 'beacon': 'HEX ID', 'tel': 'telefone', 'telefone': 'telefone',
+                'telefones': 'telefone', 'fone': 'telefone', 'fones': 'telefone', 'phone': 'telefone', 'celular': 'telefone',
+                'whatsapp': 'telefone', 'ramal': 'telefone', 'email': 'e-mail', 'mail': 'e-mail', 'cpf': 'CPF/CNPJ', 'cnpj': 'CPF/CNPJ'}
+CHAVES_LUGAR = {'local', 'locais', 'onde', 'localizacao', 'lugar', 'lugares'}
+CHAVES_HORA = {'hora', 'horario', 'data', 'fuso'}   # 'hora_local' é a hora no fuso (a leitura da pasta 05), não lugar
+LUGAR_PERMITIDO = re.compile(r'(?:sensores\.pontos\[\d+\]\.onde|pecas\[\d+\]\.local|abastecimentos\[\d+\]\.local'
+                             r'|replay\.diaDeBordo\.abastecimento\.local|equipe\.apoio\[\d+\]\.onde|campos\.local|snapshot\.local'
+                             r'|snapshot\.quadro\.local)')
+# TERCEIROS (§6.4, trava §2.7; §1.7, §1.9, §1.11): papéis em lista fechada, nunca nome de terceiro. O quem da agenda, das tarefas da
+# equipe e o who do diário: os papéis do §1.7 e o primeiro nome do proprietário (embarcacao.proprietario). Os prestadores: os 6
+# papéis do §1.11.
+PAPEIS_QUEM = ('marina', 'técnico', 'oficina de motores')
+PAPEIS_APOIO = ('Marina da base', 'Oficina de motores diesel', 'Técnico de bordo', 'Técnico de eletrônicos', 'Técnico de refrigeração',
+                'Posto de combustível')
+# Documentos (§1.8): só o TIE tem número (= embarcacao.registro). Apólice, licença, laudo e nota fiscal sem número nem emissor.
+CHAVES_DOC = {'numero', 'num', 'nr', 'apolice', 'nf', 'nfe', 'licenca', 'emissor', 'emitente', 'seguradora', 'fornecedor'}
+R_NUM_DOC = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:ap[óo]lices?|notas? fisca(?:l|is)|NF-?e?|licen[çc]as?)(?:\s+d[eoa]s?\s+[A-Za-zÀ-ÿ]+){0,2}'
+                       r'\s*(?:(?:n\.?\s?[º°]|n[úu]mero|nr\.?|#)\s*)?:?\s*\d[\d./-]{2,})', re.I)   # 3+ caracteres: "10 anos" passa
+# SEM_PREVISAO (§6.4, trava §2.5): tempo e maré são do mundo real; nenhum campo de previsão ou de maré no D (o historico inclusive)
+# nem nos JSON das fontes. O vento e o mar do quadro (a bordo agora) e o mar/posicaoRef (a posição de referência do Open-Meteo) ficam.
+CHAVES_PREVISAO = {'mare', 'mares', 'tabua', 'preamar', 'baixamar', 'previsao', 'previsoes', 'previsto', 'prevista', 'previstos',
+                   'previstas', 'forecast', 'tide', 'tides', 'boletim'}
 
 
 # ——————————————————————————————— port do cérebro (capitao-brain.js:12-13, :122-141) ———————————————————————————————
@@ -408,6 +457,32 @@ def textos_fontes(F, numeros=False):
             yield cam, txt
 
 
+def chaves_de(v, cam=''):
+    """(caminho, chave) de toda chave de dicionário, em profundidade."""
+    if isinstance(v, dict):
+        for k, x in v.items():
+            c = junta(cam, k)
+            yield c, k
+            yield from chaves_de(x, c)
+    elif isinstance(v, (list, tuple)):
+        for i, x in enumerate(v):
+            yield from chaves_de(x, '%s[%d]' % (cam, i))
+
+
+def palavras_chave(k):
+    """Palavras do nome de uma chave, sem acento e em minúsculas: camelCase, '_', '-' e a troca letra/dígito separam
+    ('hexId' → hex, id · 'telefone_marina' → telefone, marina · 'canal16' → canal, 16)."""
+    return re.findall(r'[a-z]+|\d+', norm(re.sub(r'([a-zà-ÿ0-9])([A-Z])', r'\1 \2', str(k))))
+
+
+def casado(m):
+    """O texto casado, sem o caractere do fim de palavra que as regex sem lookbehind levam na frente ((?:^|[^A-Za-zÀ-ÿ]))."""
+    s = m.group()
+    if len(s) > 1 and not re.match(r'[0-9A-Za-zÀ-ÿ°%]', s[0]) and re.match(r'[0-9A-Za-zÀ-ÿ]', s[1]):
+        s = s[1:]
+    return s.strip()
+
+
 def trecho(s, m, folga=30):
     i, j = max(0, m.start() - folga), min(len(s), m.end() + folga)
     return ('…' if i else '') + s[i:j].replace('\n', ' ') + ('…' if j < len(s) else '')
@@ -476,6 +551,16 @@ class Ctx:
         if self.faq is not None:
             yield from textos(self.faq, 'faq:', numeros)
         yield from textos_fontes(self.fontes, numeros)
+
+    def chaves(self):
+        """(caminho, chave) de toda chave do D, da base, do FAQ e dos JSON das fontes do Drive (os mesmos prefixos do todos())."""
+        yield from chaves_de(self.D, '')
+        yield from chaves_de(self.base, 'base:')
+        if self.faq is not None:
+            yield from chaves_de(self.faq, 'faq:')
+        for rel, txt in sorted(self.fontes.items()):
+            if rel.endswith('.json'):
+                yield from chaves_de(json.loads(txt), 'fontes/' + rel + ':')
 
     def laco(self):
         """Os 150 quadros do laço (campos do laço e fixos), calculados uma vez."""
@@ -574,9 +659,13 @@ def a_tamanho(X):
 
 def a_mmsi9(X):
     """Nove dígitos fora de embarcacao.mmsi (§0.3), em string ou em número, uma violação por ocorrência, com os dígitos: a
-    pendência prende o caminho, o número e quantas vezes ele aparece."""
-    return ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos(numeros=True) if cam != 'embarcacao.mmsi'
-            for m in R_MMSI9.finditer(s)]
+    pendência prende o caminho, o número e quantas vezes ele aparece. E nada de "programe" perto de MMSI (§6.4, trava §2.2), também
+    uma por ocorrência, com o verbo."""
+    out = ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos(numeros=True) if cam != 'embarcacao.mmsi'
+           for m in R_MMSI9.finditer(s)]
+    out += ['%s: "%s" perto de MMSI «%s»' % (cam, (m.group(1) or m.group(2)).lower(), trecho(s, m)) for cam, s in X.todos()
+            for m in R_PROGRAME_MMSI.finditer(s)]
+    return out
 
 
 def a_registro(X):
@@ -606,25 +695,64 @@ def a_hex15(X):
 
 
 def a_sem_indicativo(X):
+    """§0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo, em todo o D, a base, o FAQ e
+    os JSON das fontes (o indicativo só como texto de instrução em protocolos; o lugar só nos caminhos da LUGAR_PERMITIDO). E
+    nenhum indicativo com prefixo real no texto, uma violação por ocorrência."""
     out = []
-
-    def chaves(v, cam):
-        if isinstance(v, dict):
-            for k, x in v.items():
-                c = junta(cam, k)
-                if k == 'indicativo' and not c.startswith('protocolos.'):
-                    out.append(c + ': chave indicativo fora de protocolos')
-                chaves(x, c)
-        elif isinstance(v, (list, tuple)):
-            for i, x in enumerate(v):
-                chaves(x, '%s[%d]' % (cam, i))
-    chaves(X.D, '')
-    out += ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_INDICATIVO.search(s)] if m]
+    for c, k in X.chaves():
+        ps = palavras_chave(k)
+        if 'indicativo' in ps and not c.startswith('protocolos.'):
+            out.append(c + ': chave indicativo fora de protocolos')
+        tipo = next((CHAVES_IDENT[p] for p in ps if p in CHAVES_IDENT), None)
+        if tipo:
+            out.append('%s: chave de %s (§0.2: não existe como campo)' % (c, tipo))
+        if CHAVES_LUGAR & set(ps) and not CHAVES_HORA & set(ps) and not LUGAR_PERMITIDO.fullmatch(c):
+            out.append('%s: chave de lugar fora dos campos de vocabulário fechado, do lugar do barco, do posto e dos prestadores '
+                       '(§0.2: lugar de equipamento de salvatagem não existe como campo)' % c)
+    out += ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos() for m in R_INDICATIVO.finditer(s)]
     return out
 
 
 def a_afirma_real(X):
-    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() for m in [R_AFIRMA.search(s)] if m]
+    """Uma violação por ocorrência, com a afirmação casada: a pendência prende o caminho e o texto de hoje."""
+    return ['%s: %s «%s»' % (cam, m.group(1), trecho(s, m)) for cam, s in X.todos() for m in R_AFIRMA.finditer(s)]
+
+
+def a_terceiros(X):
+    """§6.4, trava §2.7 (dinheiro e terceiros), sem nome na §6.3. Papéis em lista fechada, nunca nome de terceiro: o quem da agenda
+    e das tarefas da equipe e o who do diário fixo e do dia de bordo (§1.7, §1.9), e o papel dos prestadores (§1.11). Documentos sem
+    número de apólice, NF ou licença (§1.8: só o TIE tem número): nenhuma chave de número ou de emissor fora do documentos[tie].numero
+    (= o registro, REGISTRO), e nenhum número logo depois de apólice, nota fiscal, NF ou licença em texto nenhum."""
+    D, R, out = X.D, X.R or {}, []
+    dono = str((D.get('embarcacao') or {}).get('proprietario') or '').split()
+    quem = set(PAPEIS_QUEM) | set(dono[:1])
+    dbo = R.get('diaDeBordo') if isinstance(R.get('diaDeBordo'), dict) else {}
+    for nome, lista, k in (('agenda', X.agenda, 'quem'), ('tarefasEquipe', D.get('tarefasEquipe') or [], 'quem'),
+                           ('diario', D.get('diario') or [], 'who'), ('replay.diaDeBordo.diario', dbo.get('diario') or [], 'who')):
+        for i, x in enumerate(lista):
+            if isinstance(x, dict) and x.get(k) not in quem:
+                out.append('%s.%s.%s: papel fora da lista fechada (§1.7): %r' % (nome, x.get('id', x.get('iso', i)), k, x.get(k)))
+    for i, a in enumerate(((D.get('equipe') or {}).get('apoio')) or []):
+        if isinstance(a, dict) and a.get('papel') not in PAPEIS_APOIO:
+            out.append('equipe.apoio[%d].papel: papel fora da lista fechada (§1.11): %r' % (i, a.get('papel')))
+    docs = [('documentos[%d]' % i, d) for i, d in enumerate(D.get('documentos') or [])]
+    if isinstance(dbo.get('documento'), dict):
+        docs.append(('replay.diaDeBordo.documento', dbo['documento']))
+    for cam, d in docs:
+        if not isinstance(d, dict):
+            continue
+        for c, k in chaves_de(d, cam):
+            if CHAVES_DOC & set(palavras_chave(k)) and not (c == cam + '.numero' and d.get('id') == 'tie'):
+                out.append('%s: chave de número ou emissor de documento (§1.8: só o TIE tem número)' % c)
+    out += ['%s: número de documento [%s] «%s»' % (cam, m.group(1), trecho(s, m)) for cam, s in X.todos() for m in R_NUM_DOC.finditer(s)]
+    return out
+
+
+def a_sem_previsao(X):
+    """§6.4, trava §2.5 (tempo e maré são do mundo real), sem nome na §6.3: nenhum campo de previsão ou de maré no D (o historico,
+    o catálogo de campos e o replay inclusive), na base, no FAQ e nos JSON das fontes."""
+    return ['%s: campo de previsão ou maré (tempo e maré só do Open-Meteo real)' % c for c, k in X.chaves()
+            if CHAVES_PREVISAO & set(palavras_chave(k))]
 
 
 def partes_modelo(modelo):
@@ -642,34 +770,40 @@ def partes_modelo(modelo):
 
 
 def nomes_equip(X):
-    """Fabricante e partes do modelo de cada equipamento gerado (para PROTOCOLO_LIMPO e AGENDA)."""
+    """Fabricante e candidatos do modelo de cada equipamento gerado (para PROTOCOLO_LIMPO e AGENDA), pela mesma regra da
+    candidatos_modelo() (§2.5): parte ou base com menos de 4 letras, ou sem dígito, vai com o fabricante na frente. Solta, a parte
+    "V2" do Lewmar casava o "v2" de "Capitão IA v2" no protocolos.fonte do §1.3."""
     out = []
     for e in X.equip:
-        for v in [e.get('fabricante')] + partes_modelo(e.get('modelo') if isinstance(e.get('modelo'), str) else ''):
-            if isinstance(v, str) and v.strip():
+        fab = e.get('fabricante') if isinstance(e.get('fabricante'), str) else ''
+        mod = e.get('modelo') if isinstance(e.get('modelo'), str) else ''
+        for v in [fab] + candidatos_modelo(fab, mod):
+            if v.strip() and (e.get('id'), v.strip()) not in out:
                 out.append((e.get('id'), v.strip()))
     return out
 
 
-def acha_nome(s, nome):
-    return re.search(r'(?:^|[^A-Za-zÀ-ÿ0-9])' + re.escape(nome) + r'(?![A-Za-zÀ-ÿ0-9])', s, re.I)
+def acha_nomes(s, nome):
+    """Cada ocorrência do nome como palavra inteira, sem distinguir maiúsculas (o grupo 1 é o nome casado)."""
+    return re.finditer(r'(?:^|[^A-Za-zÀ-ÿ0-9])(' + re.escape(nome) + r')(?![A-Za-zÀ-ÿ0-9])', s, re.I)
 
 
 def a_protocolo_limpo(X):
+    """Cada regra uma violação por ocorrência, com o texto casado: a pendência prende o caminho, a regra e o texto de hoje (um 2º
+    "ETA" ou "último fix" numa string que já é pendência reprova)."""
     P = X.D.get('protocolos')
     if P is None:
         return []
     out = []
-    nomes = nomes_equip(X)
+    nomes = []   # um nome por grafia: o "Garmin" dos plotters e do radar é uma ocorrência só no texto
+    for _, n in nomes_equip(X):
+        if n.lower() not in [x.lower() for x in nomes]:
+            nomes.append(n)
     for cam, s in textos(P, 'protocolos'):
         for nome, rx in R_PROTOCOLO + (('lugar a bordo', X.lugar),):
-            m = rx.search(s)
-            if m:
-                out.append('%s: %s «%s»' % (cam, nome, trecho(s, m)))
-        for i, n in nomes:
-            m = acha_nome(s, n)
-            if m:
-                out.append('%s: fabricante ou modelo de %s «%s»' % (cam, i, trecho(s, m)))
+            out += ['%s: %s [%s] «%s»' % (cam, nome, casado(m), trecho(s, m)) for m in rx.finditer(s)]
+        for n in nomes:
+            out += ['%s: fabricante ou modelo de equipamento [%s] «%s»' % (cam, m.group(1), trecho(s, m)) for m in acha_nomes(s, n)]
     return out
 
 
@@ -1266,7 +1400,7 @@ def a_agenda(X):
         if str(i).startswith(('epirb', 'seafire')) and not (_num(t.get('venceEm')) and t['venceEm'] > 0):
             out.append('agenda.%s: tarefa de salvatagem atrasada' % i)
         for n in nomes_seg.get(t.get('sistema'), []):
-            if acha_nome(t.get('equip', ''), n):
+            if next(acha_nomes(t.get('equip', ''), n), None):
                 out.append('agenda.%s.equip com fabricante ou modelo de equipamento de segurança' % i)
     atr = sum(1 for t in X.agenda if _num(t.get('venceEm')) and t['venceEm'] < 0)
     if atr != 3:
@@ -1321,7 +1455,8 @@ def a_historico(X):
 
 
 def a_coord_texto(X):
-    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if cam != 'snapshot.gps.texto' for m in [R_COORD.search(s)] if m]
+    """Uma violação por ocorrência, como as outras de texto."""
+    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if cam != 'snapshot.gps.texto' for m in R_COORD.finditer(s)]
 
 
 def rotulo_fim():
@@ -1547,6 +1682,8 @@ ASSERCOES = [
     ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
     ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('NOTA_ETIQUETA', a_nota_etiqueta), ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
+    # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).
+    ('TERCEIROS', a_terceiros), ('SEM_PREVISAO', a_sem_previsao),
 ]
 NOMES = [n for n, _ in ASSERCOES]
 

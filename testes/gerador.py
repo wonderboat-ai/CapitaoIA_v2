@@ -324,6 +324,11 @@ AMOSTRAS = {
                         'rodape.js'),
     'FONTES_RELATIVAS': (lambda r: (lambda k: (k['F'].update({k['D']['drive']['pastas']['abast'] + '/Extra.csv': 'Data,Litros\n' + ('12/09/2026' if r else 'há 3 dias') + ',100\n'}), k)[1])(hoje()),
                          'Extra.csv'),
+    # (revisão 3 do C3) as invariantes da §6.4 sem nome na §6.3: papéis em lista fechada e nenhum campo de previsão ou maré
+    'TERCEIROS': (lambda r: (lambda k: (poe(k['D']['agenda'], 0, quem='Carlos Pereira' if r else 'técnico'), k)[1])(hoje()),
+                  "agenda.porao-teste.quem: papel fora da lista fechada (§1.7): 'Carlos Pereira'"),
+    'SEM_PREVISAO': (lambda r: (lambda k: (k['D'].update({'mare' if r else 'marRef': {'alta': '10:12', 'baixa': '16:30'}}), k)[1])(hoje()),
+                     'mare: campo de previsão ou maré'),
 }
 
 
@@ -483,6 +488,64 @@ EXTRAS = [
      "base:trechos[3].secao: ''"),
     ('NULO', 'null num JSON das fontes', lambda r: com_json(lambda j: j.update({'extra': None if r else 1})), ':extra: None'),
     ('NULO', 'lista vazia no FAQ', lambda r: (lambda k: (k.update({'faq': {'itens': [] if r else [{'id': 'EL-01'}]}}), k)[1])(hoje()), 'faq:itens: lista vazia'),
+] + [
+    # Revisão 3 do C3. AFIRMA_REAL e PROTOCOLO_LIMPO: uma violação por ocorrência; a pendência prende o texto casado de hoje, e
+    # uma 2ª afirmação (ou um ETA) num caminho que já é pendência reprova.
+    ('AFIRMA_REAL', '2ª afirmação na string que já é pendência (base:trechos[25])',
+     lambda r: com_base(25, ' Os dados são reais e o barco é real.' if r else ''), 'base:trechos[25].texto: dados são reais'),
+    ('AFIRMA_REAL', '2ª afirmação no passo do FAQ que já é pendência',
+     lambda r: com_faq_passo(' A navegação é real.' if r else ''), 'faq.eletronicos.perguntas[3].passos[1].t: navegação é real'),
+    ('AFIRMA_REAL', 'afirmação em outra seção da página do guia de eletrônicos (a página já é pendência)',
+     lambda r: com_eletronicos('<h2>9 · Extra</h2><p>Os dados do barco são reais.</p>' if r else '<h2>9 · Extra</h2><p>Confira o plotter.</p>'),
+     '.html: barco são reais'),
+    ('PROTOCOLO_LIMPO', '"ETA" no roteiro[2], que já é pendência (710123456)',
+     lambda r: protocolo('roteiro', 2, hoje()['D']['protocolos']['roteiro'][2] + (' · ETA' if r else '')), 'protocolos.roteiro[2]: regex de emergência [ETA]'),
+    ('PROTOCOLO_LIMPO', 'modelo curto com o fabricante na frente ("Lewmar V2", §2.5), com os equipamentos do §1.4',
+     lambda r: (lambda k: (k['D']['protocolos']['mob'].append('Guincho Lewmar V2 pronto.' if r else 'Guincho pronto.'), k)[1])(com_equip_c5(hoje())),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [Lewmar V2]'),
+    # COORD_TEXTO: a forma do semCoord de hoje (minutos inteiros com o hemisfério), os segundos, o "º" e o par de CSV com sinal.
+] + [('COORD_TEXTO', 'coordenada %r' % c, (lambda c: lambda r: mais_texto(hoje(), (' Fundeado em %s.' % c) if r else ''))(c), 'diario[0].t')
+     for c in ("26°59'S 048°36'W", '26°59\'35" S', "26º59,6'S", '-26.993,-48.614')] + [
+    # SEM_INDICATIVO: indicativo de estação de navio (2 letras e 4 dígitos), e o de 4 letras depois da palavra "indicativo".
+    ('SEM_INDICATIVO', 'indicativo de navio PU1234 (sem a palavra "indicativo")', lambda r: mais_texto(hoje(), ' Chamada de teste da PU1234.' if r else ''),
+     'diario[0].t: PU1234'),
+    ('SEM_INDICATIVO', 'indicativo de navio PS7612', lambda r: mais_texto(hoje(), ' Rádio PS7612 testado.' if r else ''), 'diario[0].t: PS7612'),
+    ('SEM_INDICATIVO', 'indicativo de 4 letras depois de "indicativo"', lambda r: mais_texto(hoje(), ' Indicativo de chamada: PPXA.' if r else ''),
+     'Indicativo de chamada: PPXA'),
+    # §0.2: HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo.
+    ('SEM_INDICATIVO', 'lugar do EPIRB como campo (equipamentos[epirb].local)',
+     lambda r: (lambda k: (poe(k['D']['equipamentos'], 7, **({'local': 'paiol de proa'} if r else {})), k)[1])(hoje()), 'equipamentos[7].local: chave de lugar'),
+    ('SEM_INDICATIVO', 'onde num item do checklist', lambda r: (lambda k: (k['D'].update({'checklists': {'itens': {'saida': [
+        dict({'id': 's13', 't': 'Coletes conferidos.', 'c': 'coletes'}, **({'onde': 'cabine de proa'} if r else {}))]}}}), k)[1])(hoje()),
+     'checklists.itens.saida[0].onde: chave de lugar'),
+    ('SEM_INDICATIVO', 'HEX ID como campo', lambda r: (lambda k: (poe(k['D']['equipamentos'], 7, **({'hexId': 'cadastrar'} if r else {})), k)[1])(hoje()),
+     'equipamentos[7].hexId: chave de HEX ID'),
+    ('SEM_INDICATIVO', 'telefone como campo', lambda r: (lambda k: (poe(k['D']['equipe']['apoio'], 0, **({'telefone': 'cadastrar'} if r else {})), k)[1])(hoje()),
+     'equipe.apoio[0].telefone: chave de telefone'),
+    ('SEM_INDICATIVO', 'telefone como campo num JSON das fontes', lambda r: com_json(lambda j: j.update({'telefone_marina' if r else 'marina': 'x'})),
+     ':telefone_marina: chave de telefone'),
+    # MMSI9: nada de "programe" perto de MMSI (§6.4), também sem o número e num caminho que já é pendência.
+    ('MMSI9', '"programe o MMSI" sem o número', lambda r: mais_texto(hoje(), ' Programe o MMSI no rádio.' if r else ''), 'diario[0].t: "programe" perto de MMSI'),
+    ('MMSI9', '2º "programe" na string que já é pendência (base:trechos[25])',
+     lambda r: com_base(25, ' Para programar o rádio, use o MMSI.' if r else ''), 'base:trechos[25].texto: "programar" perto de MMSI'),
+    # TERCEIROS: papéis em lista fechada; só o TIE tem número.
+    ('TERCEIROS', 'nome de terceiro no papel do prestador',
+     lambda r: (lambda k: (poe(k['D']['equipe']['apoio'], 0, papel='João da Silva (marina)' if r else 'Marina da base'), k)[1])(hoje()),
+     "equipe.apoio[0].papel: papel fora da lista fechada (§1.11): 'João da Silva (marina)'"),
+    ('TERCEIROS', 'nome de terceiro no who do diário', lambda r: (lambda k: (poe(k['D']['diario'], 0, who='Carlos' if r else 'técnico'), k)[1])(hoje()),
+     "who: papel fora da lista fechada (§1.7): 'Carlos'"),
+    ('TERCEIROS', 'número de apólice como campo', lambda r: (lambda k: (poe(k['D']['documentos'], 1, **({'numero': 'apólice 01.23.456'} if r else {})), k)[1])(hoje()),
+     'documentos[1].numero: chave de número ou emissor'),
+    ('TERCEIROS', 'número de apólice no texto', lambda r: (lambda k: (poe(k['D']['documentos'], 1, nota='apólice nº 01.23.456 no Drive' if r else 'apólice no Drive'), k)[1])(hoje()),
+     'documentos[1].nota: número de documento [apólice nº 0'),
+    ('TERCEIROS', 'número da NF no diário', lambda r: mais_texto(hoje(), ' NF 4512 conferida.' if r else ' NF conferida.'), 'diario[0].t: número de documento [NF 4'),
+    # SEM_PREVISAO: nem no historico, nem no catálogo de campos, nem nos JSON das fontes.
+    ('SEM_PREVISAO', 'grupo de maré no historico', lambda r: (lambda k: (k['D']['historico']['metricas'].update({'mare' if r else 'b24b': ['bateria_0_tensao_v']}), k)[1])(com_historico(hoje())),
+     'historico.metricas.mare: campo de previsão'),
+    ('SEM_PREVISAO', 'campo de maré no catálogo', lambda r: (lambda k: (k['D']['campos'].update({'mare_altura_m' if r else 'ondas_m': {'rotulo': 'x', 'un': 'm', 'casas': 1, 'origem': 'fixo'}}),
+                                                                       k['D']['replay']['fixos'].update({'mare_altura_m' if r else 'ondas_m': 1.0}), k)[2])(com_replay(hoje())),
+     'campos.mare_altura_m: campo de previsão'),
+    ('SEM_PREVISAO', 'previsão num JSON das fontes', lambda r: com_json(lambda j: j.update({'previsao_vento_nos' if r else 'vento_nos': 12})), ':previsao_vento_nos: campo de previsão'),
 ]
 
 
@@ -501,6 +564,43 @@ def com_json(muda):
     j = json.loads(k['F'][rel])
     muda(j)
     k['F'][rel] = json.dumps(j, ensure_ascii=False)
+    return k
+
+
+def com_base(i, extra):
+    """hoje() com `extra` no fim do texto do trecho i da base."""
+    k = hoje()
+    poe(k['B']['trechos'], i, texto=k['B']['trechos'][i]['texto'] + extra)
+    return k
+
+
+def com_faq_passo(extra):
+    """hoje() com `extra` no fim do passo do D.faq que já é pendência do C5 (o MMSI do guia de eletrônicos)."""
+    k = hoje()
+    p = k['D']['faq']['eletronicos']['perguntas'][3]['passos'][1]
+    p['t'] += extra
+    return k
+
+
+def com_eletronicos(html):
+    """hoje() com `html` (uma seção nova) no fim da página de fonte do guia de eletrônicos."""
+    k = hoje()
+    rel = next(r for r in sorted(k['F']) if '/Guia de bordo — Eletrônicos' in r)
+    k['F'][rel] += html
+    return k
+
+
+# Os 16 equipamentos do CONTRATO-DADOS §1.4 (o que o C5 grava): fabricante e modelo, para a PROTOCOLO_LIMPO.
+EQUIP_C5 = [('motores', 'Cummins', 'QSB6.7 305'), ('gerador', 'Onan', 'QD 9'), ('estabilizador', 'Seakeeper', 'Seakeeper 3'),
+            ('climatizacao', 'Webasto', 'FCF Platinum 16000 e 12000'), ('eletronicos', 'Garmin', 'GPSMAP 1243xsv'), ('audio', 'Fusion', 'MS-UD755'),
+            ('vhf', 'Icom', 'IC-M510 e IC-M37'), ('epirb', 'Ocean Signal', 'SafeSea E100G'), ('seafire', 'Seafire', 'FD 300M'),
+            ('dessalinizador', 'Schenker', 'Zen 30'), ('porao', 'Rule', 'Rule 2000 (24 V)'), ('ancora', 'Lewmar', 'V2 · contador AA150'),
+            ('piloto', 'Raymarine', 'Evolution EV-1 · ACU-400'), ('radar', 'Garmin', 'GMR 24 xHD3'), ('ais', 'em-trak', 'B954'),
+            ('eletrico', 'Victron Energy', 'AGM Super Cycle 12 V 230 Ah')]
+
+
+def com_equip_c5(k):
+    k['D']['equipamentos'] = [{'id': i, 'nome': i, 'fabricante': f, 'modelo': m, 'qtd': 1, 'guia': 'g_motores'} for i, f, m in EQUIP_C5]
     return k
 
 # Listas privadas e pasta do Avanti sintéticas (os termos de verdade nunca entram no repositório).
@@ -593,6 +693,27 @@ def amostras():
     k = hoje()
     k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
     ok('PROTOCOLO_LIMPO: o protocolos do §1.3 (o texto do C6) passa nas regras novas', not verifica(k)['PROTOCOLO_LIMPO'], verifica(k)['PROTOCOLO_LIMPO'][:3])
+    # Revisão 3 do C3: com os 16 equipamentos do §1.4 (C5), o "V2" do Lewmar não casa o "v2" de "Capitão IA v2" do protocolos.fonte.
+    k = com_equip_c5(hoje())
+    k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
+    V = verifica(k)
+    ok('PROTOCOLO_LIMPO: o protocolos do §1.3 com os equipamentos do §1.4 passa (0 violações)', not V['PROTOCOLO_LIMPO'], V['PROTOCOLO_LIMPO'][:3])
+    ok('MMSI9: o protocolos do §1.3 ("identificação programada no rádio: é o MMSI") passa',
+       not [m for m in V['MMSI9'] if m.startswith('protocolos')], [m for m in V['MMSI9'] if m.startswith('protocolos')][:3])
+    # O que não pode reprovar (revisão 3): milhar do pt-BR e ângulos (COORD_TEXTO), palavras em maiúsculas com os prefixos de rádio
+    # (SEM_INDICATIVO), o número do TIE (TERCEIROS) e a hora local da leitura da pasta 05 (já nos dados de hoje).
+    V0 = verifica(hoje())
+    for nome, o_que, k in (
+            ('COORD_TEXTO', 'milhar do pt-BR, temperatura e rumo', mais_texto(hoje(), ' 1.236,4 h · 1.600 L · 2.050 rpm · 12.000 · rotações de 1.000, 1.500 e '
+                                                                              '2.000 rpm · 26 °C · rumo 230° · 1º de outubro.')),
+            ('SEM_INDICATIVO', 'PUXE e PROA em maiúsculas', mais_texto(hoje(), ' PUXE A ALAVANCA. PROA LIVRE. PRAÇA OK.')),
+            ('TERCEIROS', 'documentos[tie].numero = o registro', (lambda k: (k['D']['documentos'].append({'id': 'tie', 'n': 'TIE', 'numero': 'CIA-23-0417'}), k)[1])(hoje())),
+            ('TERCEIROS', 'nota fiscal sem número', mais_texto(hoje(), ' Nota fiscal de abastecimento · 12/09/2026 conferida; apólice no Drive.')),
+            ('MMSI9', 'o texto do g_ais §2 do §1.5 ("identificação programada no transponder")', mais_texto(hoje(), ' O AIS transmite a '
+             'identificação programada no transponder; o MMSI é o do rádio de bordo (etiqueta / Licença de Estação).'))):
+        novos = [m for m in verifica(k)[nome] if m not in V0[nome]]
+        ok('%s: %s não acusa' % (nome, o_que), not novos, novos[:3])
+    ok('SEM_INDICATIVO: a hora_local da leitura da pasta 05 não é lugar', not [m for m in V0['SEM_INDICATIVO'] if 'hora_local' in m])
     # Fixtures limpas: com o replay, a rota e o histórico mínimos, as asserções do laço não acusam nada a mais que o port do C8.
     k = com_historico(com_rota(hoje()))
     V = verifica(k)
@@ -637,9 +758,17 @@ def reprova(tmp):
     # Revisão 2 do C3: o MMSI guardado como número e o null/vazio na base também reprovam (antes, main() devolvia 0 e gravava).
     mmsi_num = lambda D: (D['documentos'][2].update({'mmsi': 710123456}), D)[1]
     base_vazia = lambda B: (B['trechos'][3].update({'secao': '', 'equip': None}), B)[1]
+    # Revisão 3 do C3: a 2ª afirmação num trecho que já é pendência, o lugar do EPIRB como campo e o nome de terceiro no quem
+    # (antes, main() devolvia 0 e gravava).
+    afirma = lambda B: (B['trechos'][25].update({'texto': B['trechos'][25]['texto'] + ' Os dados são reais e o barco é real.'}), B)[1]
+    lugar = lambda D: (D['equipamentos'][7].update({'local': 'paiol de proa'}), D)[1]
+    terceiro = lambda D: (D['agenda'][0].update({'quem': 'Carlos Pereira'}), D)[1]
     for nome, pl, n, base, o_que in (('NULO', nulo, 3, None, ''), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
                                      ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
-                                     ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)")):
+                                     ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
+                                     ('AFIRMA_REAL', lambda D: D, 2, afirma, ' (2 afirmações num trecho que já é pendência)'),
+                                     ('SEM_INDICATIVO', lugar, 1, None, ' (equipamentos[epirb].local)'),
+                                     ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)')):
         p = os.path.join(tmp, 'r-%s-%d' % (nome, n))
         rc, saida = rodar(pl, p, base)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
