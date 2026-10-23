@@ -44,10 +44,12 @@ sal pedido): o botão mostra CONVIDADO e põe a chave "demo" no campo; "demo", "
 entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava (não chega aos 5); usuário que não existe conta
 1 erro. Equipe (G4 web e app) com o convidado logado: "Convidado", papel convidado · fora da lista da embarcação, sem A
 CONFIRMAR, sem DEMO, Demo nem demonstração.
-SOS sem o registro gerado (trava §2.1 do PROMPT; CONTRATO-DADOS §6.2 C4): em S1 e S2, em todos os tamanhos e temas e na abertura
-offline (--offline), nem o embarcacao.registro do capitao-dados.js nem "REG." no texto visível, no title, no aria-label, no alt e no
-href — na tela fechada, com o roteiro MAYDAY aberto e com cada cartão de protocolo aberto (a tela volta ao estado inicial); o D
-tem de ter o registro e o roteiro e todos os cartões têm de abrir (senão a conferência não vale).
+SOS sem dado gerado da embarcação além do nome (trava §2.1 do PROMPT; CONTRATO-DADOS §1.3 e §6.2 C4): em S1 e S2, em todos os
+tamanhos e temas e na abertura offline (--offline), nem "REG." nem o registro, o fabricante, o modelo, a marca, o rotulo, a
+motorizacao e o motor do embarcacao do capitao-dados.js (sem distinguir maiúsculas nem acentos; o registro com qualquer separador)
+no texto visível, no title, no aria-label, no alt e no href — na tela fechada, com o roteiro MAYDAY aberto e com cada cartão de
+protocolo aberto (a tela volta ao estado inicial); o D tem de ter esses campos e o roteiro e todos os cartões têm de abrir (senão a
+conferência não vale). A base entra na 1b, que a tira do cabeçalho da S1.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -70,6 +72,8 @@ from playwright.sync_api import sync_playwright
 
 BASE = 'http://127.0.0.1:8765/'
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
+import confere  # noqa: E402  (barco_sos: o dado da embarcação que o SOS nunca mostra, a mesma regra do gerador)
 SAIDA = os.path.join(os.path.dirname(__file__), 'saida')
 WEB = [(1440, 900), (1280, 720), (1920, 1080), (1024, 768)]
 APP = [(390, 844), (360, 640), (430, 932), (844, 390)]
@@ -189,9 +193,13 @@ CHECA = """() => {
 # no DOM depois do toque, e o roteiro é o texto lido no rádio, onde uma identificação gerada entraria primeiro. TEXTOS_SOS lê a tela
 # fechada, com o roteiro aberto e com cada cartão aberto (um de cada vez, que a tela só abre um), e devolve a tela ao estado
 # inicial; sem abrir o roteiro e todos os cartões, a conferência não vale. A 1b reaproveita os textos (MMSI, coordenada, modelo).
+# Revisão 2 do C4: e o fabricante, o modelo, a marca, o rotulo, a motorizacao e o motor (confere.barco_sos, a regra do gerador
+# sobre o protocolos, tirada do próprio D). Sem os números (ano, dimensões, tanques): a tela do SOS mostra o clima real, e uma
+# ondulação de "1,1 m" seria o calado; no protocolos, que é só texto gerado, o gerador confere os números também. Sem a base até
+# a 1b, que a tira do cabeçalho da S1 (CONTRATO §1.2) e acrescenta aqui.
 TELAS_SOS = ('S1-SOS-Web', 'S2-SOS-Mobile')
 TEXTOS_SOS = r"""async () => {
-  const E = (window.CapitaoDados || {}).embarcacao || {}, reg = typeof E.registro === 'string' && E.registro ? E.registro : null;
+  const E = (window.CapitaoDados || {}).embarcacao || {}, barco = {}; ['nome', 'registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao'].forEach((k) => { if (typeof E[k] === 'string') barco[k] = E[k]; });
   const textos = [];
   const le = () => {
     textos.push(document.body ? document.body.innerText : '');
@@ -219,7 +227,7 @@ TEXTOS_SOS = r"""async () => {
   const m1 = may();
   if (m1 && m1.getAttribute('aria-pressed') === 'true') m1.click();
   const inicial = await ate(() => may() && may().getAttribute('aria-pressed') !== 'true' && !cartoes().some((x) => x.getAttribute('aria-expanded') === 'true'));
-  return { reg: reg, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
+  return { barco: barco, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
 }"""
 
 
@@ -235,13 +243,21 @@ def textos_sos(pg):
     return r, prob
 
 
-def problemas_registro_sos(pg):
-    """S1/S2 (trava §2.1): nem o registro gerado nem "REG." na tela, também no roteiro MAYDAY e nos passos de cada cartão; sem o
-    registro no D, a conferência não vale."""
+BARCO_SOS = ('registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao')   # o D tem de ter todos (senão a conferência não vale)
+
+
+def problemas_barco_sos(pg):
+    """S1/S2 (trava §2.1): nem "REG." nem dado gerado da embarcação além do nome (confere.barco_sos sem os números e sem a base:
+    registro, fabricante, modelo, marca, rotulo, motorizacao e motor) na tela, também no roteiro MAYDAY e nos passos de cada
+    cartão; sem esses campos no D, a conferência não vale."""
     r, prob = textos_sos(pg)
-    if not r['reg']: prob.append('D sem embarcacao.registro: a conferência do registro no SOS não vale')
+    E = r['barco']
+    falta = [k for k in BARCO_SOS if not E.get(k)]
+    if falta: prob.append('D sem embarcacao.%s: a conferência do dado da embarcação no SOS não vale' % ', '.join(falta))
     achados = []
-    if r['reg'] and r['texto'].find(r['reg']) >= 0: achados.append('o registro ' + r['reg'])
+    for campo, txt, _ in confere.acha_barco(r['texto'], E, confere.barco_sos(E, numeros=False, base=False)):
+        a = '%s %r' % (campo, txt)
+        if a not in achados: achados.append(a)
     if re.search(r'(?:^|[^A-Za-zÀ-ÿ])REG\.', r['texto']): achados.append('"REG."')
     if achados: prob.append('SOS mostra ' + ' e '.join(achados) + ' (trava §2.1: só o nome da embarcação)')
     return prob
@@ -309,7 +325,7 @@ def main():
                         prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
                     # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
                     if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
-                    if tela in TELAS_SOS: prob += problemas_registro_sos(pg)
+                    if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:
@@ -1304,7 +1320,7 @@ def teste_offline(b, lista, paginas=()):
             if falta:
                 prob.append(tela + ' offline sem: ' + ', '.join(falta))
             if tela in TELAS_SOS:
-                prob += [tela + ' offline: ' + x for x in problemas_registro_sos(pg2)]
+                prob += [tela + ' offline: ' + x for x in problemas_barco_sos(pg2)]
         except Exception as e:
             prob.append(tela + ' offline: ' + str(e)[:120])
         if erros:

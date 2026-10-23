@@ -231,6 +231,8 @@ R_PESSOAS_BORDO = re.compile(r'(\d+) pessoas a bordo')
 # Campo sem valor que virou texto num derivado ("None · 12,40 m · 2023", "2 × None QSB6.7 305 · eixo"): reprova nos dois modos.
 R_SEM_VALOR = re.compile(r'(?<![A-Za-zÀ-ÿ])(?:None|null|undefined|NaN)(?![A-Za-zÀ-ÿ])')
 ORIGEM_ROTULO = ('modelo', 'comprimento', 'ano')
+# Unidades da barco_sos (dado da embarcação no SOS), no texto normalizado (norm: minúsculas, sem acento).
+UN_SOS = {'m': r'(?:m|metros?)', 't': r'(?:t|toneladas?)', 'L': r'(?:l|litros?)'}
 
 
 # ——————————————————————————————— port do cérebro (capitao-brain.js:12-13, :122-141) ———————————————————————————————
@@ -877,9 +879,88 @@ def acha_nomes(s, nome):
     return re.finditer(r'(?:^|[^A-Za-zÀ-ÿ0-9])(' + re.escape(nome) + r')(?![A-Za-zÀ-ÿ0-9])', s, re.I)
 
 
+def _rx_texto(v):
+    """Regex do texto v no texto normalizado (norm: sem acento e em minúsculas), como palavra inteira e com qualquer espaço."""
+    return re.compile(r'(?<![a-z0-9])' + r'\s+'.join(re.escape(w) for w in norm(v).split()) + r'(?![a-z0-9])')
+
+
+def _rx_numero(x, un):
+    """Regex do número x seguido da unidade, no texto normalizado: vírgula ou ponto, zeros à direita opcionais e milhar com ou sem
+    ponto (12,4 · 12,40 · 12.4 m; 1.600 · 1600 L)."""
+    inteiro, dec = repr(float(x)).split('.')
+    dec = dec.rstrip('0')
+    i = '{:,}'.format(int(inteiro)).replace(',', r'\.?')
+    return re.compile(r'(?<![\d.,])' + i + (r'[.,]' + dec + '0*' if dec else r'(?:[.,]0+)?') + r'\s*' + UN_SOS[un] + r'(?![a-z0-9])')
+
+
+def barco_sos(E, numeros=True, base=True):
+    """[(campo, regex)] do dado gerado da embarcação que o SOS nunca mostra (trava §2.1 do PROMPT: só o nome; CONTRATO §1.3: o SOS
+    não lê D.embarcacao.{registro, mmsi, base, modelo, fabricante}), tirado do próprio D e procurado no texto normalizado (norm),
+    sem distinguir maiúsculas nem acentos (o roteiro do SOS é em maiúsculas): o registro, com qualquer separador entre os grupos ou
+    sem nenhum (CIA-23-0417, CIA 23 0417, CIA230417); o fabricante, o modelo e a marca (palavra de 4 letras ou mais do fabricante que
+    também está no modelo: "Marévia"); o rotulo; a motorizacao e o motor dela ("Cummins QSB6.7 305" e a 1ª palavra, a marca, antes
+    do C5 gravar o equipamentos[motores]); com base, a base, também sem a UF entre parênteses (a S1 escreve assim). Com numeros, o
+    ano (sozinho) e os números com unidade: comprimento, boca, calado, deslocamento e os tanques. O MMSI fica na MMSI9 e as
+    pessoas e a lotação na R_PESSOAS. Campo None (modo real, SEM DADOS) fica de fora."""
+    E = E if isinstance(E, dict) else {}
+    s = lambda k: E.get(k) if isinstance(E.get(k), str) and E.get(k).strip() else None
+    out = []
+    if s('registro'):
+        grupos = re.findall(r'[a-z0-9]+', norm(E['registro']))
+        if grupos:
+            out.append(('registro', re.compile(r'(?<![a-z0-9])' + r'[^a-z0-9\n]{0,3}'.join(grupos) + r'(?![a-z0-9])')))
+    for k in ('fabricante', 'modelo', 'rotulo', 'motorizacao'):
+        if s(k):
+            out.append((k, _rx_texto(E[k])))
+    if s('fabricante') and s('modelo'):
+        no_modelo = set(re.findall(r'[a-z0-9]+', norm(E['modelo'])))
+        for w in re.findall(r'[a-z0-9]+', norm(E['fabricante'])):
+            if len(re.sub(r'[^a-z]', '', w)) >= 4 and w in no_modelo:
+                out.append(('marca', _rx_texto(w)))
+    m = R_MOTORIZACAO.fullmatch(s('motorizacao') or '')
+    if m:
+        out.append(('motor', _rx_texto(m.group(2))))
+        marca = m.group(2).split()[0]
+        if len(re.sub(r'[^A-Za-zÀ-ÿ]', '', marca)) >= 4:
+            out.append(('motor', _rx_texto(marca)))
+    if base and s('base'):
+        out.append(('base', _rx_texto(E['base'])))
+        sem_uf = re.sub(r'\s*\(.*\)$', '', E['base'])
+        if sem_uf != E['base'] and sem_uf.strip():
+            out.append(('base', _rx_texto(sem_uf)))
+    if numeros:
+        if _positivo(E.get('ano'), 'int'):
+            out.append(('ano', re.compile(r'(?<![\d.,])%d(?![\d])' % E['ano'])))
+        un = E.get('un') if isinstance(E.get('un'), dict) else {}
+        for k in ('comprimento', 'boca', 'calado', 'deslocamento'):
+            if _positivo(E.get(k), 'num') and un.get(k) in UN_SOS:
+                out.append((k, _rx_numero(E[k], un[k])))
+        T = E.get('tanques') if isinstance(E.get('tanques'), dict) else {}
+        vols = [(k, T.get(k)) for k in TANQUES_EMBARCACAO if k.endswith('_l')]
+        if _positivo(T.get('diesel_l'), 'num') and _positivo(T.get('diesel_n'), 'int') and T['diesel_n'] > 1:
+            vols.append(('diesel_l (cada tanque)', T['diesel_l'] / T['diesel_n']))   # 2 × 800 L
+        for k, v in vols:
+            if _positivo(v, 'num'):
+                out.append(('tanques.' + k, _rx_numero(v, 'L')))
+    return out
+
+
+def acha_barco(s, E, regras):
+    """[(campo, texto casado, trecho)] de cada ocorrência das regras da barco_sos no texto s. O nome (o único dado do barco que o
+    SOS mostra) sai do texto antes, para a marca no nome ("AQUI É <nome>") não contar."""
+    t = norm(s)
+    nome = norm(E.get('nome')) if isinstance(E, dict) and isinstance(E.get('nome'), str) else ''
+    if nome.strip():
+        t = t.replace(nome, ' ' * len(nome))
+    o = s if len(s) == len(t) else t   # norm guarda o tamanho nas letras compostas; senão, o trecho sai do texto normalizado
+    return [(campo, o[m.start():m.end()], trecho(o, m)) for campo, rx in regras for m in rx.finditer(t)]
+
+
 def a_protocolo_limpo(X):
     """Cada regra uma violação por ocorrência, com o texto casado: a pendência prende o caminho, a regra e o texto de hoje (um 2º
-    "ETA" ou "último fix" numa string que já é pendência reprova)."""
+    "ETA" ou "último fix" numa string que já é pendência reprova). Revisão 2 do C4: e nenhum dado gerado da embarcação além do nome
+    (barco_sos: registro, fabricante, modelo, marca, rotulo, motorizacao, base, ano, dimensões e tanques), porque o protocolos é a
+    única fonte do SOS (trava §2.1)."""
     P = X.D.get('protocolos')
     if P is None:
         return []
@@ -888,11 +969,14 @@ def a_protocolo_limpo(X):
     for _, n in nomes_equip(X):
         if n.lower() not in [x.lower() for x in nomes]:
             nomes.append(n)
+    E = X.D.get('embarcacao') if isinstance(X.D.get('embarcacao'), dict) else {}
+    barco = barco_sos(E)
     for cam, s in textos(P, 'protocolos'):
         for nome, rx in R_PROTOCOLO + (('lugar a bordo', X.lugar),):
             out += ['%s: %s [%s] «%s»' % (cam, nome, casado(m), trecho(s, m)) for m in rx.finditer(s)]
         for n in nomes:
             out += ['%s: fabricante ou modelo de equipamento [%s] «%s»' % (cam, m.group(1), trecho(s, m)) for m in acha_nomes(s, n)]
+        out += ['%s: dado gerado da embarcação (%s) [%s] «%s»' % (cam, campo, txt, tr) for campo, txt, tr in acha_barco(s, E, barco)]
     return out
 
 

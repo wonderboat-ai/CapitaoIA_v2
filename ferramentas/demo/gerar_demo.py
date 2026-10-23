@@ -146,7 +146,8 @@ EMBARCACAO = {
     'motorizacao': None,    # gerado do MOTOR (motorizacao_de, abaixo)
     'ano': 2023,
     'registro': 'CIA-23-0417',   # = documentos[tie].numero (C7)
-    'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 11.8,   # m · m · m (eixo e hélices) · t carregado
+    # m · m · m (eixo e hélices) · t carregado (10,4 t: cabe no Seakeeper 3, até cerca de 10,5 t; revisão 2 do C4, §2.1)
+    'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 10.4,
     'lotacao': 12, 'pessoasBordo': 4,
     'tanques': dict(TANQUES),
     'un': {'comprimento': 'm', 'boca': 'm', 'calado': 'm', 'deslocamento': 't', 'lotacao': 'pessoas', 'pessoasBordo': 'pessoas'},

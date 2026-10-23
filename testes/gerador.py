@@ -405,6 +405,8 @@ T_SEAFIRE = {'fonte': 'Guia de bordo — Sistema fixo de incêndio', 'secao': '3
              'texto': 'Não abra o acesso ao motor antes do tempo da etiqueta. ' + ROTULO_FIM}
 T_PORAO = {'fonte': 'Guia de bordo — Bombas de porão Rule', 'secao': '4 · Teste', 'equip': 'Bombas de porão Rule Rule 2000 (24 V)',
            'texto': 'Ligue as bombas no manual e confira a descarga.'}
+# O texto de hoje onde a amostra do dado da embarcação entra (roteiro[1]: troca; mob: acrescenta, e o bom acrescenta este).
+BOM_SOS = {'roteiro': 'AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA', 'mob': 'Confira o plotter.'}
 # Amostras extras dos achados da revisão do C3: (asserção, o que mostra, monta(ruim) → contexto, trecho esperado numa violação nova)
 EXTRAS = [
     ('PROTOCOLO_LIMPO', 'número de pessoas no roteiro', lambda r: protocolo('roteiro', 5, 'PESSOAS A BORDO: 4' if r else 'PESSOAS A BORDO: conte agora'),
@@ -581,7 +583,30 @@ EXTRAS = [
     ('EMBARCACAO', 'motorizacao presente com os motores sem modelo (modo real)',
      lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, modelo=None), k)[1])(em_modo_real(motorizacao='2 × Cummins QSB6.7 305 · eixo' if r else None)),
      'embarcacao.motorizacao presente com equipamentos[motores] sem fabricante, modelo ou qtd'),
-]
+] + [('PROTOCOLO_LIMPO', 'dado gerado da embarcação: %s' % o_que, (lambda c, i, t: lambda r: protocolo(c, i, t if r else BOM_SOS[c]))(c, i, t),
+      'protocolos.%s[%d]: dado gerado da embarcação (%s) [%s]' % (c, 1 if c == 'roteiro' else 3, campo, casado))
+     for o_que, c, i, t, campo, casado in (
+    # Revisão 2 do C4 (trava §2.1; CONTRATO §1.3): o protocolos é a única fonte do SOS, e nenhum dado gerado da embarcação além do
+    # nome entra nele (confere.barco_sos, tirada do próprio D), sem distinguir maiúsculas nem acentos. Antes, só o número de pessoas
+    # e a lotação reprovavam: o registro, o fabricante, o modelo, o rotulo e a motorizacao no roteiro e no MOB davam 0 violações.
+    ('registro no roteiro', 'roteiro', 1, 'AQUI É CAPITÃO IA · REGISTRO CIA-23-0417', 'registro', 'CIA-23-0417'),
+    ('registro com espaços', 'roteiro', 1, 'REGISTRO CIA 23 0417', 'registro', 'CIA 23 0417'),
+    ('registro sem separador', 'roteiro', 1, 'REGISTRO CIA230417', 'registro', 'CIA230417'),
+    ('fabricante em maiúsculas', 'roteiro', 1, 'MARÉVIA 40 HT, ESTALEIRO MARÉVIA', 'fabricante', 'ESTALEIRO MARÉVIA'),
+    ('modelo sem o acento', 'roteiro', 1, 'AQUI É MAREVIA 40 HT', 'modelo', 'MAREVIA 40 HT'),
+    ('marca depois do nome', 'roteiro', 1, 'AQUI É CAPITÃO IA — MARÉVIA', 'marca', 'MARÉVIA'),
+    ('rotulo', 'roteiro', 1, 'Marévia 40 HT · 12,40 m · 2023', 'rotulo', 'Marévia 40 HT · 12,40 m · 2023'),
+    ('motorizacao no MOB', 'mob', None, '(2 × Cummins QSB6.7 305 · eixo)', 'motorizacao', '2 × Cummins QSB6.7 305 · eixo'),
+    ('marca do motor (antes do C5)', 'mob', None, 'Motores Cummins em neutro.', 'motor', 'Cummins'),
+    ('comprimento', 'mob', None, 'Barco de 12,4 m.', 'comprimento', '12,4 m'),
+    ('boca por extenso', 'mob', None, 'Boca de 3,95 metros.', 'boca', '3,95 metros'),
+    ('calado', 'mob', None, 'Calado 1,10 m.', 'calado', '1,10 m'),
+    ('deslocamento', 'mob', None, 'Deslocamento de 10,4 t.', 'deslocamento', '10,4 t'),
+    ('ano', 'mob', None, 'Barco de 2023.', 'ano', '2023'),
+    ('base sem a UF', 'mob', None, 'Base: Balneário Camboriú.', 'base', 'Balneário Camboriú'),
+    ('base sem acento, em maiúsculas', 'roteiro', 1, 'BASE BALNEARIO CAMBORIU (SC)', 'base', 'BALNEARIO CAMBORIU (SC)'),
+    ('tanque de diesel', 'mob', None, 'Diesel: 1.600 L.', 'tanques.diesel_l', '1.600 L'),
+    ('cada tanque de diesel', 'mob', None, 'Tanque BB de 800 litros.', 'tanques.diesel_l (cada tanque)', '800 litros'))]
 
 
 def em_modo_real(**kw):
@@ -752,6 +777,7 @@ def amostras():
         planta(nome, '', monta, espera)
     for nome, o_que, monta, espera in EXTRAS:
         planta(nome, ' — ' + o_que, monta, espera)
+    V0_PL = verifica(hoje())['PROTOCOLO_LIMPO']
     k = hoje()
     k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
     ok('PROTOCOLO_LIMPO: o protocolos do §1.3 (o texto do C6) passa nas regras novas', not verifica(k)['PROTOCOLO_LIMPO'], verifica(k)['PROTOCOLO_LIMPO'][:3])
@@ -762,6 +788,25 @@ def amostras():
     ok('PROTOCOLO_LIMPO: o protocolos do §1.3 com os equipamentos do §1.4 passa (0 violações)', not V['PROTOCOLO_LIMPO'], V['PROTOCOLO_LIMPO'][:3])
     ok('MMSI9: o protocolos do §1.3 ("identificação programada no rádio: é o MMSI") passa',
        not [m for m in V['MMSI9'] if m.startswith('protocolos')], [m for m in V['MMSI9'] if m.startswith('protocolos')][:3])
+    # Revisão 2 do C4 (barco_sos): o nome, o único dado do barco que o SOS mostra, não conta, nem com a marca dentro dele; número
+    # vizinho dos da embarcação também não (1,15 m · 21,1 m · 112,4 m · 12,40 mm · 10,45 t · 20230). A regra da tela (verificar.py:
+    # sem os números, porque o SOS mostra o clima real, e sem a base, que sai da S1 na 1b) não acusa o clima, a base nem o nome, e
+    # acusa o registro, o fabricante, o modelo, a marca e o motor.
+    k = protocolo('roteiro', 1, 'AQUI É MARÉVIA STAR, MARÉVIA STAR, MARÉVIA STAR')
+    k['D']['embarcacao']['nome'] = 'Marévia Star'
+    novos = [m for m in verifica(k)['PROTOCOLO_LIMPO'] if m not in V0_PL]
+    ok('PROTOCOLO_LIMPO: o nome com a marca dentro ("AQUI É MARÉVIA STAR") não acusa', not novos, novos[:3])
+    k = protocolo('mob', None, 'A 2 m da pessoa; 1,15 m; 21,1 m; 112,4 m; 12,40 mm; 10,45 t; 20230.')
+    novos = [m for m in verifica(k)['PROTOCOLO_LIMPO'] if m not in V0_PL]
+    ok('PROTOCOLO_LIMPO: número vizinho dos da embarcação não acusa', not novos, novos[:3])
+    E = hoje()['D']['embarcacao']
+    tela = C.barco_sos(E, numeros=False, base=False)
+    achou = lambda t: sorted({c for c, _, _ in C.acha_barco(t, E, tela)})
+    ok('barco_sos da tela (verificar.py): o nome, a base (até a 1b) e o clima real não acusam',
+       not achou('AQUI É CAPITÃO IA · BALNEÁRIO CAMBORIÚ · ondas 1,1 m · 22 °C · 2023'), achou('AQUI É CAPITÃO IA · BALNEÁRIO CAMBORIÚ · ondas 1,1 m · 22 °C · 2023'))
+    ok('barco_sos da tela: registro, fabricante, modelo, marca e motor acusam',
+       achou('ESTALEIRO MARÉVIA · MAREVIA 40 HT · cia 23 0417 · CUMMINS') == ['fabricante', 'marca', 'modelo', 'motor', 'registro'],
+       achou('ESTALEIRO MARÉVIA · MAREVIA 40 HT · cia 23 0417 · CUMMINS'))
     # O que não pode reprovar (revisão 3): milhar do pt-BR e ângulos (COORD_TEXTO), palavras em maiúsculas com os prefixos de rádio
     # (SEM_INDICATIVO), o número do TIE (TERCEIROS) e a hora local da leitura da pasta 05 (já nos dados de hoje).
     V0 = verifica(hoje())
