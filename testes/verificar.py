@@ -44,6 +44,9 @@ sal pedido): o botão mostra CONVIDADO e põe a chave "demo" no campo; "demo", "
 entram como demo; digitar "Convidado" com 4 erros na trava entra e zera a trava (não chega aos 5); usuário que não existe conta
 1 erro. Equipe (G4 web e app) com o convidado logado: "Convidado", papel convidado · fora da lista da embarcação, sem A
 CONFIRMAR, sem DEMO, Demo nem demonstração.
+SOS sem o registro gerado (trava §2.1 do PROMPT; CONTRATO-DADOS §6.2 C4): em S1 e S2, em todos os tamanhos e temas e na abertura
+offline (--offline), nem o embarcacao.registro do capitao-dados.js nem "REG." no texto visível, no title, no aria-label, no alt e no
+href; o D tem de ter o registro (senão a conferência não vale).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -180,6 +183,27 @@ CHECA = """() => {
   const seloTexto = """ + SELO_TEXTO + """, afirma = """ + AFIRMA_TEXTO + """;
   return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima, seloTexto: seloTexto, afirma: afirma };
 }"""
+# SOS sem o registro gerado (trava §2.1; C4): o embarcacao.registro e "REG." no texto visível e nos atributos de S1/S2.
+TELAS_SOS = ('S1-SOS-Web', 'S2-SOS-Mobile')
+SOS_REGISTRO = r"""() => {
+  const E = (window.CapitaoDados || {}).embarcacao || {}, reg = typeof E.registro === 'string' && E.registro ? E.registro : null;
+  const textos = [document.body ? document.body.innerText : ''];
+  document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }));
+  const t = textos.join('\n'), achados = [];
+  if (reg && t.indexOf(reg) >= 0) achados.push('o registro ' + reg);
+  if (/(?:^|[^A-Za-zÀ-ÿ])REG\./.test(t)) achados.push('"REG."');
+  return { reg: reg, achados: achados };
+}"""
+
+
+def problemas_registro_sos(pg):
+    """S1/S2 (trava §2.1): nem o registro gerado nem "REG." na tela; sem o registro no D, a conferência não vale."""
+    r = pg.evaluate(SOS_REGISTRO)
+    prob = [] if r['reg'] else ['D sem embarcacao.registro: a conferência do registro no SOS não vale']
+    if r['achados']: prob.append('SOS mostra ' + ' e '.join(r['achados']) + ' (trava §2.1: só o nome da embarcação)')
+    return prob
+
+
 # Selo de demonstração (decisão b da 1.1.0: nenhum): no rodapé, numa caixa de selo ou no texto do login e da lista.
 SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
 
@@ -242,6 +266,7 @@ def main():
                         prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
                     # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
                     if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
+                    if tela in TELAS_SOS: prob += problemas_registro_sos(pg)
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:
@@ -1235,6 +1260,8 @@ def teste_offline(b, lista, paginas=()):
 }""")
             if falta:
                 prob.append(tela + ' offline sem: ' + ', '.join(falta))
+            if tela in TELAS_SOS:
+                prob += [tela + ' offline: ' + x for x in problemas_registro_sos(pg2)]
         except Exception as e:
             prob.append(tela + ' offline: ' + str(e)[:120])
         if erros:

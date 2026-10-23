@@ -98,18 +98,39 @@ def coord(v, pos, neg, g):
 
 
 # ——————————————————————————————— EMBARCAÇÃO ———————————————————————————————
+# Decisão (e), CONTRATO-DADOS §1.2 e §2.1–§2.4: marca do barco fictícia e sem colisão (Estaleiro Marévia), registro que não imita
+# identificador real (AAA-00-0000: nem inscrição numérica, placa, HIN, MMSI, telefone, CPF/CNPJ ou HEX ID), dimensões de 40 pés.
+# O registro nunca vai para S1/S2 (trava §2.1); a lotação e as pessoas a bordo nunca vão para salvatagem, SOS nem roteiro. O
+# indicativo não existe como campo (§0.2): o texto de instrução fica em protocolos (C6).
+MOTOR = {'qtd': 2, 'fabricante': 'Cummins', 'modelo': 'QSB6.7 305', 'transmissao': 'eixo'}   # §2.2 (o equipamentos[motores] lê daqui no C5)
+TANQUES = {'diesel_l': 1600, 'diesel_n': 2, 'agua_l': 400, 'cinzas_l': 100, 'negras_l': 100}   # 2 × 800 L de diesel (§2.1)
+
+
+def num_br(x, casas):
+    return ('%.*f' % (casas, x)).replace('.', ',')
+
+
 EMBARCACAO = {
     'nome': 'Capitão IA',
-    'modelo': None,            # SEM DADOS (proprietário, 26/09/2026)
-    'registro': None,          # SEM DADOS
+    'fabricante': 'Estaleiro Marévia',
+    'modelo': 'Marévia 40 HT',
+    'rotulo': '',           # gerado dos campos (abaixo)
+    'motorizacao': '',      # gerado do MOTOR (abaixo)
+    'ano': 2023,
+    'registro': 'CIA-23-0417',   # = documentos[tie].numero (C7)
+    'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 11.8,   # m · m · m (eixo e hélices) · t carregado
+    'lotacao': 12, 'pessoasBordo': 4,
+    'tanques': dict(TANQUES),
+    'un': {'comprimento': 'm', 'boca': 'm', 'calado': 'm', 'deslocamento': 't', 'lotacao': 'pessoas', 'pessoasBordo': 'pessoas'},
     'proprietario': 'Lucas Araújo',
     'base': 'Balneário Camboriú (SC)',
     'fuso': 'America/Sao_Paulo',
     'mmsi': '710123456',
-    'mmsiNota': 'fictício · demonstração',
-    'indicativo': None,        # SEM DADOS
+    'mmsiNota': 'fictício · demonstração',   # sai na 1b (a F3 passa a ler protocolos.mmsiRotulo e protocolos.mmsiRadio)
     'fonte': 'cadastro da embarcação no app (proprietário)',
 }
+EMBARCACAO['rotulo'] = '%s · %s m · %d' % (EMBARCACAO['modelo'], num_br(EMBARCACAO['comprimento'], 2), EMBARCACAO['ano'])
+EMBARCACAO['motorizacao'] = '%d × %s %s · %s' % (MOTOR['qtd'], MOTOR['fabricante'], MOTOR['modelo'], MOTOR['transmissao'])
 
 # Posição de referência para clima e maré: centro de Balneário Camboriú (fonte real, não inventada)
 POSICAO_REF = {
@@ -146,7 +167,8 @@ SNAPSHOT = {
     'vento': 9.2, 'ventoDe': 58, 'pressao': 1017, 'ar': 22.6, 'agua': 20.1,
     'bat24': 27.42, 'bat12': 13.18,
     'tanques': {'agua': 68.5, 'cinzas': 21.0, 'negras': 34.5},
-    'diesel': {'bb': 54.0, 'be': 52.0, 'litros': 848, 'capacidade': 1600, 'tanques': '2 × 800 L', 'hora': '26/09 09:31',
+    'diesel': {'bb': 54.0, 'be': 52.0, 'litros': 848, 'capacidade': TANQUES['diesel_l'],
+               'tanques': '%d × %d L' % (TANQUES['diesel_n'], TANQUES['diesel_l'] // TANQUES['diesel_n']), 'hora': '26/09 09:31',
                'nota': 'última leitura com motores ligados'},
     'motores': {'hora': '26/09 09:31', 'estado': 'desligados desde 09:31', 'rpm': [700, 690], 'oleo': [3.4, 3.3],
                 'arref': [79, 78], 'horimetro': [412.6, 409.8], 'marcha': 'neutro'},

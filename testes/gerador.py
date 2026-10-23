@@ -329,6 +329,9 @@ AMOSTRAS = {
                   "agenda.porao-teste.quem: papel fora da lista fechada (§1.7): 'Carlos Pereira'"),
     'SEM_PREVISAO': (lambda r: (lambda k: (k['D'].update({'mare' if r else 'marRef': {'alta': '10:12', 'baixa': '16:30'}}), k)[1])(hoje()),
                      'mare: campo de previsão ou maré'),
+    # (C4) a embarcação do §1.2: lotacao ≥ pessoasBordo
+    'EMBARCACAO': (lambda r: (lambda k: (k['D']['embarcacao'].update({'lotacao': 3 if r else 12}), k)[1])(hoje()),
+                   'embarcacao: lotacao (3) < pessoasBordo (4)'),
 }
 
 
@@ -546,7 +549,47 @@ EXTRAS = [
                                                                        k['D']['replay']['fixos'].update({'mare_altura_m' if r else 'ondas_m': 1.0}), k)[2])(com_replay(hoje())),
      'campos.mare_altura_m: campo de previsão'),
     ('SEM_PREVISAO', 'previsão num JSON das fontes', lambda r: com_json(lambda j: j.update({'previsao_vento_nos' if r else 'vento_nos': 12})), ':previsao_vento_nos: campo de previsão'),
+] + [
+    # C4 (§1.2): os campos completos e com o tipo, rotulo e motorizacao gerados dos campos, unidades, tanques e as pessoas do diário.
+    ('EMBARCACAO', 'calado ausente', lambda r: com_embarcacao(calado=None if r else 1.1), 'embarcacao.calado ausente ou fora do tipo'),
+    ('EMBARCACAO', 'ano como texto', lambda r: com_embarcacao(ano='2023' if r else 2023), 'embarcacao.ano ausente ou fora do tipo'),
+    ('EMBARCACAO', 'pessoas a bordo zero', lambda r: com_embarcacao(pessoasBordo=0 if r else 4), 'embarcacao.pessoasBordo ausente ou fora do tipo'),
+    ('EMBARCACAO', 'rotulo que não sai dos campos', lambda r: com_embarcacao(rotulo='Marévia 40 HT · 12,4 m · 2023' if r else 'Marévia 40 HT · 12,40 m · 2023'),
+     'embarcacao.rotulo ≠ o gerado dos campos'),
+    ('EMBARCACAO', 'motorizacao fora do formato', lambda r: com_embarcacao(motorizacao='Cummins QSB6.7 305' if r else '2 × Cummins QSB6.7 305 · eixo'),
+     'embarcacao.motorizacao fora do formato'),
+    ('EMBARCACAO', 'motorizacao diferente do equipamentos[motores] do §1.4 (C5)',
+     lambda r: (lambda k: (k['D']['embarcacao'].update({'motorizacao': '2 × Cummins QSB6.7 380 · eixo' if r else '2 × Cummins QSB6.7 305 · eixo'}), k)[1])(motores_c5()),
+     'embarcacao.motorizacao ≠ qtd, fabricante e modelo de equipamentos[motores]'),
+    ('EMBARCACAO', 'unidade trocada', lambda r: com_embarcacao(un=dict(hoje()['D']['embarcacao']['un'], boca='pés' if r else 'm')), 'embarcacao.un.boca ≠'),
+    ('EMBARCACAO', 'unidade de campo que não existe', lambda r: com_embarcacao(un=dict(hoje()['D']['embarcacao']['un'], **({'pontal': 'm'} if r else {}))),
+     'embarcacao.un.pontal: unidade de campo que não é número'),
+    ('EMBARCACAO', 'tanque de diesel diferente da capacidade do snapshot',
+     lambda r: com_embarcacao(tanques=dict(hoje()['D']['embarcacao']['tanques'], diesel_l=1500 if r else 1600)), 'embarcacao.tanques.diesel_l ≠ snapshot.diesel.capacidade'),
+    ('EMBARCACAO', 'tanque sem volume', lambda r: com_embarcacao(tanques=dict(hoje()['D']['embarcacao']['tanques'], agua_l=0 if r else 400)),
+     'embarcacao.tanques.agua_l ausente ou fora do tipo'),
+    ('EMBARCACAO', 'pessoas a bordo no diário diferente de pessoasBordo', lambda r: mais_texto(hoje(), ' Saída com 6 pessoas a bordo.' if r else ''),
+     'diario[0]: 6 pessoas a bordo ≠ embarcacao.pessoasBordo (4)'),
 ]
+
+
+def com_embarcacao(**kw):
+    """hoje() com os campos da embarcação trocados (None apaga o campo)."""
+    k = hoje()
+    E = k['D']['embarcacao']
+    for c, v in kw.items():
+        if v is None:
+            E.pop(c, None)
+        else:
+            E[c] = v
+    return k
+
+
+def motores_c5():
+    """hoje() com os equipamentos do §1.4 (C5), com os 2 motores."""
+    k = com_equip_c5(hoje())
+    poe(k['D']['equipamentos'], 0, qtd=2)
+    return k
 
 
 def rodape(dentro, fora):
@@ -714,6 +757,16 @@ def amostras():
         novos = [m for m in verifica(k)[nome] if m not in V0[nome]]
         ok('%s: %s não acusa' % (nome, o_que), not novos, novos[:3])
     ok('SEM_INDICATIVO: a hora_local da leitura da pasta 05 não é lugar', not [m for m in V0['SEM_INDICATIVO'] if 'hora_local' in m])
+    # C4 (§1.2): a embarcação gerada passa; com os equipamentos do §1.4 (C5), a motorizacao confere com os motores; no modo real
+    # (§4.2), o que é None (SEM DADOS) não reprova.
+    ok('EMBARCACAO: a embarcação gerada passa (0 violações)', not V0['EMBARCACAO'], V0['EMBARCACAO'][:3])
+    V = verifica(motores_c5())['EMBARCACAO']
+    ok('EMBARCACAO: a motorizacao gerada confere com o equipamentos[motores] do §1.4 (2 × Cummins QSB6.7 305)', not V, V[:3])
+    k = hoje()
+    k['D']['simulacao'] = False
+    k['D']['embarcacao'].update({'fabricante': None, 'modelo': None, 'registro': None, 'calado': None})
+    V = verifica(k)['EMBARCACAO']
+    ok('EMBARCACAO: no modo real, None (SEM DADOS) não reprova', not V, V[:3])
     # Fixtures limpas: com o replay, a rota e o histórico mínimos, as asserções do laço não acusam nada a mais que o port do C8.
     k = com_historico(com_rota(hoje()))
     V = verifica(k)
@@ -773,16 +826,18 @@ def reprova(tmp):
         rc, saida = rodar(pl, p, base)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
+    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; a amostra passa a ser um dado do C5
+    # preenchido antes da hora (o modelo do FAQ do gerador), com o mesmo efeito.
     p4 = os.path.join(tmp, 'r4')
-    rc, saida = rodar(lambda D: (D['embarcacao'].update({'registro': 'CIA-23-0417'}), D)[1], p4)
-    ok('pendência que não ocorre mais (o registro do C4 preenchido antes da hora): main() devolve 1 e não grava nada',
-       rc == 1 and not os.path.exists(p4) and 'REGISTRO: pendência do C4 que não ocorre mais' in saida, (rc, saida[-300:]))
+    rc, saida = rodar(lambda D: (D['faq']['gerador'].update({'modelo': 'QD 9'}), D)[1], p4)
+    ok('pendência que não ocorre mais (o modelo do FAQ do gerador, do C5, preenchido antes da hora): main() devolve 1 e não grava nada',
+       rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C5 que não ocorre mais' in saida, (rc, saida[-300:]))
     # Com o modo por caminho, as estruturais de hoje têm violações, todas congeladas na PENDENTES (antes: nenhuma violação, porque
     # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
     ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
         sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
-    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C4–C8)',
+    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C5–C8; o C4 completou a embarcação)',
        all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items()))
 
 

@@ -4,10 +4,11 @@
 verifica() roda as asserções sobre o D, a base, o FAQ, as fontes do Drive e o texto dos arquivos gerados, e devolve as
 violações de cada uma (caminho e motivo). São as da §6.3 e, no fim, as invariantes da coluna "Asserção do gerador" da §6.4 que
 não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 ("programe" perto de MMSI) e na SEM_INDICATIVO
-(indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2).
+(indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Por último, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
+completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Só a varredura de termos
-(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C4–C8 estão congeladas por caminho na
+(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C5–C8 estão congeladas por caminho na
 PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
 completa o dado tira a linha dela).
 
@@ -36,7 +37,7 @@ RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capi
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
 # §6.2 C3: as estruturais reprovam o gerador; só a varredura de termos fica em relatório (não reprova), até o C12.
 RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO_TERMOS)
-# Violações de hoje que dependem do dado dos C4–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
+# Violações de hoje que dependem do dado dos C5–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
 # exato, com '*' no lugar de um trecho: o «…» citado (o caminho, a regra e, na MMSI9, os dígitos ficam presos), um nome que não
@@ -54,7 +55,6 @@ _SEG = 'base:trechos[%d] (*) casa a SEGURANCA_PALAVRAS sem seguranca: true'
 _MMSI_C5 = ('faq.eletronicos.perguntas[3].passos[1].t', 'base:trechos[25].texto', _ELETRONICOS)
 PENDENTES = {
     'NULO': {
-        'C4': ['embarcacao.modelo: None', 'embarcacao.registro: None', 'embarcacao.indicativo: None'],
         'C5': ['equipamentos[%d].%s: None' % (i, k) for i, ks in ((0, 'modelo'), (1, 'modelo'), (2, 'modelo'), (3, 'fabricante modelo'),
                                                                   (4, 'modelo'), (5, 'modelo'), (6, 'fabricante'), (7, 'fabricante modelo guia'),
                                                                   (8, 'modelo guia')) for k in ks.split()]
@@ -68,8 +68,6 @@ PENDENTES = {
     },
     'MMSI9': {'C5': [c + m for c in _MMSI_C5 for m in (': 710123456 «*»', ': "programe" perto de MMSI «*»')],
               'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
-    'REGISTRO': {'C4': ['embarcacao.registro ausente (dado completo na simulação, §1.2)']},
-    'SEM_INDICATIVO': {'C4': ['embarcacao.indicativo: chave indicativo fora de protocolos']},   # a chave sai no C4 (§1.2)
     'AFIRMA_REAL': {'C5': [c + ': barco real «*»' for c in _MMSI_C5]},
     'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
                   + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
@@ -97,7 +95,7 @@ PENDENTES = {
         '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
         '06 Abastecimento/Registro de abastecimento.csv')]},
 }
-COMMITS_PENDENTES = ('C4', 'C5', 'C6', 'C7', 'C8')
+COMMITS_PENDENTES = ('C5', 'C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2)
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
@@ -220,6 +218,16 @@ R_NUM_DOC = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:ap[óo]lices?|notas? fisca(?:l|
 # nem nos JSON das fontes. O vento e o mar do quadro (a bordo agora) e o mar/posicaoRef (a posição de referência do Open-Meteo) ficam.
 CHAVES_PREVISAO = {'mare', 'mares', 'tabua', 'preamar', 'baixamar', 'previsao', 'previsoes', 'previsto', 'prevista', 'previstos',
                    'previstas', 'forecast', 'tide', 'tides', 'boletim'}
+# EMBARCACAO (§1.2; o C4 da §6.2): os campos do §1.2 com o tipo (o registro fica na REGISTRO e o indicativo na SEM_INDICATIVO).
+# 'num' = número finito maior que zero; 'int' = inteiro maior que zero (bool não conta).
+CAMPOS_EMBARCACAO = (('nome', str), ('fabricante', str), ('modelo', str), ('rotulo', str), ('motorizacao', str), ('ano', 'int'),
+                     ('comprimento', 'num'), ('boca', 'num'), ('calado', 'num'), ('deslocamento', 'num'), ('lotacao', 'int'),
+                     ('pessoasBordo', 'int'), ('tanques', dict), ('un', dict), ('proprietario', str), ('base', str), ('fuso', str),
+                     ('mmsi', str), ('fonte', str))
+UN_EMBARCACAO = {'comprimento': 'm', 'boca': 'm', 'calado': 'm', 'deslocamento': 't', 'lotacao': 'pessoas', 'pessoasBordo': 'pessoas'}
+TANQUES_EMBARCACAO = ('diesel_l', 'diesel_n', 'agua_l', 'cinzas_l', 'negras_l')
+R_MOTORIZACAO = re.compile(r'(\d+) × (\S.*?) · (\S.*)')
+R_PESSOAS_BORDO = re.compile(r'(\d+) pessoas a bordo')
 
 
 # ——————————————————————————————— port do cérebro (capitao-brain.js:12-13, :122-141) ———————————————————————————————
@@ -753,6 +761,70 @@ def a_sem_previsao(X):
     o catálogo de campos e o replay inclusive), na base, no FAQ e nos JSON das fontes."""
     return ['%s: campo de previsão ou maré (tempo e maré só do Open-Meteo real)' % c for c, k in X.chaves()
             if CHAVES_PREVISAO & set(palavras_chave(k))]
+
+
+def _positivo(v, tipo):
+    if isinstance(v, bool):
+        return False
+    if tipo == 'int':
+        return isinstance(v, int) and v > 0
+    if tipo == 'num':
+        return isinstance(v, (int, float)) and math.isfinite(v) and v > 0
+    return isinstance(v, tipo) and len(v) > 0
+
+
+def a_embarcacao(X):
+    """§1.2 (o C4 da §6.2), sem nome na §6.3. Na simulação, os campos do §1.2 completos e com o tipo; no modo real (§4.2), o que é
+    None fica (SEM DADOS) e o resto confere igual. rotulo = "<modelo> · <comprimento com 2 casas> m · <ano>"; motorizacao no
+    formato "<n> × <motor> · <transmissão>" e, quando equipamentos[motores] já tem fabricante, modelo e qtd numérica (C5), com eles;
+    un com as unidades do §1.2, só de campos numéricos da embarcação; tanques com os 5 volumes, o de diesel igual à capacidade do
+    snapshot; 1 ≤ pessoasBordo ≤ lotacao; e o número das linhas do diário fixo com "N pessoas a bordo" (a saída) = pessoasBordo."""
+    E = X.D.get('embarcacao')
+    if not isinstance(E, dict):
+        return ['embarcacao ausente']
+    out = []
+    for k, tipo in CAMPOS_EMBARCACAO:
+        if E.get(k) is None and not X.simulacao:
+            continue   # modo real: None = SEM DADOS
+        if not _positivo(E.get(k), tipo):
+            out.append('embarcacao.%s ausente ou fora do tipo (dado completo na simulação, §1.2): %r' % (k, E.get(k)))
+    n = lambda k: E.get(k) if _positivo(E.get(k), 'int') else None
+    if n('lotacao') and n('pessoasBordo') and E['pessoasBordo'] > E['lotacao']:
+        out.append('embarcacao: lotacao (%d) < pessoasBordo (%d)' % (E['lotacao'], E['pessoasBordo']))
+    if all(_positivo(E.get(k), t) for k, t in (('modelo', str), ('comprimento', 'num'), ('ano', 'int'))):
+        esperado = '%s · %s m · %d' % (E['modelo'], ('%.2f' % E['comprimento']).replace('.', ','), E['ano'])
+        if isinstance(E.get('rotulo'), str) and E['rotulo'] != esperado:
+            out.append('embarcacao.rotulo ≠ o gerado dos campos (%r)' % esperado)
+    mot = E.get('motorizacao')
+    if isinstance(mot, str) and mot:
+        m = R_MOTORIZACAO.fullmatch(mot)
+        if not m:
+            out.append('embarcacao.motorizacao fora do formato "<n> × <motor> · <transmissão>": %r' % mot)
+        eq = X.eq('motores') or {}
+        if m and all(isinstance(eq.get(k), str) and eq.get(k) for k in ('fabricante', 'modelo')) and _positivo(eq.get('qtd'), 'int'):
+            if (int(m.group(1)), m.group(2)) != (eq['qtd'], eq['fabricante'] + ' ' + eq['modelo']):
+                out.append('embarcacao.motorizacao ≠ qtd, fabricante e modelo de equipamentos[motores]')
+    un = E.get('un') if isinstance(E.get('un'), dict) else {}
+    for k, u in UN_EMBARCACAO.items():
+        if un.get(k) != u and not (E.get(k) is None and not X.simulacao):
+            out.append('embarcacao.un.%s ≠ %r' % (k, u))
+    for k in un:
+        v = E.get(k)
+        if k not in UN_EMBARCACAO or (v is not None and not _positivo(v, 'num')):
+            out.append('embarcacao.un.%s: unidade de campo que não é número da embarcação' % k)
+    T = E.get('tanques') if isinstance(E.get('tanques'), dict) else {}
+    for k in TANQUES_EMBARCACAO:
+        if T and not _positivo(T.get(k), 'num'):
+            out.append('embarcacao.tanques.%s ausente ou fora do tipo: %r' % (k, T.get(k)))
+    cap_ = ((X.D.get('snapshot') or {}).get('diesel') or {}).get('capacidade')
+    if _num(cap_) and _positivo(T.get('diesel_l'), 'num') and cap_ != T['diesel_l']:
+        out.append('embarcacao.tanques.diesel_l ≠ snapshot.diesel.capacidade')
+    for i, x in enumerate(X.D.get('diario') or []):
+        t = x.get('t') if isinstance(x, dict) else None
+        for mm in R_PESSOAS_BORDO.finditer(t if isinstance(t, str) else ''):
+            if n('pessoasBordo') and int(mm.group(1)) != E['pessoasBordo']:
+                out.append('diario[%d]: %s pessoas a bordo ≠ embarcacao.pessoasBordo (%d)' % (i, mm.group(1), E['pessoasBordo']))
+    return out
 
 
 def partes_modelo(modelo):
@@ -1684,6 +1756,8 @@ ASSERCOES = [
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).
     ('TERCEIROS', a_terceiros), ('SEM_PREVISAO', a_sem_previsao),
+    # §1.2 (o C4 da §6.2: "asserções do registro e de lotacao ≥ pessoasBordo"), sem nome na §6.3.
+    ('EMBARCACAO', a_embarcacao),
 ]
 NOMES = [n for n, _ in ASSERCOES]
 
