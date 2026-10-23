@@ -56,8 +56,9 @@ escolhidos; o fabricante fica de fora quando é o próprio nome do sistema, o id
 fabricante deles, e, na F1, o cartão do VHF e o do áudio abrem a pergunta certa do FAQ de eletrônicos (#p= > 0, na pergunta de
 "VHF" e na de "Fusion"), pelas palavras do equipamento. Revisão do C5: na F1, nenhum cartão cortado (a pergunta, a fonte e a ação
 à vista: a grade da web rola), e a pergunta de cada cartão ao chat (#q=), passada pelo cérebro, não cai em chave de emergência
-(sos, oleo, canal16, epirb, seafire), menos a do próprio equipamento de segurança, que dá a chave dele; na F1 e na E2, o fabricante
-não se repete quando o modelo já começa por ele ("Seakeeper Seakeeper 3").
+(sos, oleo, canal16, epirb, seafire), menos a do próprio equipamento de segurança, que dá a chave dele, e a resposta dos outros cita
+o guia do próprio equipamento (menos dessalinizador, porão e sistema elétrico, cujas respostas prontas a Fase 3 reescreve); na F1 e na
+E2, o fabricante não se repete quando o modelo já começa por ele ("Seakeeper Seakeeper 3").
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -314,19 +315,30 @@ TEXTOS_SEGURANCA = r"""async (e2) => {
 CHAVES_CARTOES = r"""async (qs) => {
   if (!window.CapitaoBrain) await new Promise((ok, erro) => { const s = document.createElement('script'); s.src = './capitao-brain.js';
     s.onload = ok; s.onerror = () => erro(new Error('capitao-brain.js não carregou')); document.head.appendChild(s); });
-  const B = window.CapitaoBrain, out = {};
-  Object.keys(qs).forEach((id) => { out[id] = B.answer(qs[id], { platform: 'app', commit: false }).key; });
+  const B = window.CapitaoBrain, D = window.CapitaoDados || {}, out = {};
+  // a base de conhecimento (o guia de cada cartão) carrega em segundo plano: sem ela, toda pergunta de guia cairia no SEM DADOS
+  B.carregaBase();
+  for (let i = 0; i < 60 && !B.buscaBase('como ligar o gerador', 1).length; i++) await new Promise((ok) => setTimeout(ok, 50));
+  Object.keys(qs).forEach((id) => {
+    const a = B.answer(qs[id], { platform: 'app', commit: false }), e = (D.equipamentos || []).find((x) => x.id === id) || {};
+    const g = (D.guias || {})[e.guia];
+    out[id] = { k: a.key, guia: g || '', cita: !!g && String(a.src || '').indexOf(g) !== -1 };
+  });
   return out;
 }"""
 # Chaves que, a partir da Fase 3, deixam a conversa em modo emergência por 15 min (PROMPT §2.2): um toque de rotina no FAQ nunca
 # cai nelas; o cartão do próprio equipamento de segurança dá a chave dele (EPIRB → epirb, Seafire → seafire).
 CHAVES_EMERGENCIA = {'sos', 'oleo', 'canal16', 'epirb', 'seafire'}
+# Revisão do C5: fora os de segurança, a pergunta do cartão cai numa resposta cuja fonte é o guia do próprio equipamento (o cartão
+# diz "Fonte: <guia>"). O radar e o piloto caíam na resposta pronta dos eletrônicos e o guincho na da âncora, com a posição. Ficam de
+# fora só as respostas prontas de antes do C5 que a Fase 3 reescreve (CONTRATO §6.6): dessalinizador, porão e sistema elétrico.
+CARTAO_SEM_GUIA_ATE_FASE3 = {'dessalinizador', 'porao', 'eletrico'}
 
 
 def problemas_seguranca(pg, tela):
     """F1 e E2 (CONTRATO-DADOS §1.4, C5): sem modelo nem fabricante do EPIRB e do Seafire na tela, sem o fabricante deles no link
-    do chat e, na F1, o VHF e o áudio abrindo a pergunta certa, nenhum cartão cortado e nenhuma pergunta de cartão numa chave de
-    emergência que não seja a do próprio equipamento de segurança; sem "Seakeeper Seakeeper 3". Sem os dois equipamentos de
+    do chat e, na F1, o VHF e o áudio abrindo a pergunta certa, nenhum cartão cortado, nenhuma pergunta de cartão numa chave de
+    emergência que não seja a do próprio equipamento de segurança e a resposta dos outros com o guia dele; sem "Seakeeper Seakeeper 3". Sem os dois equipamentos de
     segurança no D, a conferência não vale."""
     r = pg.evaluate(TEXTOS_SEGURANCA, tela.startswith('E2-'))
     prob = []
@@ -366,10 +378,13 @@ def problemas_seguranca(pg, tela):
         except Exception as x:
             chaves = None
             prob.append('cérebro não respondeu às perguntas dos cartões: %s' % str(x)[:160])
-        for i, k in sorted((chaves or {}).items()):
+        for i, c in sorted((chaves or {}).items()):
+            k = c['k']
             if (k != i) if i in seg else (k in CHAVES_EMERGENCIA):
                 prob.append('cartão %s pergunta %r ao chat e cai na chave %s (%s)' % (
                     i, qs[i], k, 'esperado %s' % i if i in seg else 'emergência num toque de rotina'))
+            elif i not in seg and i not in CARTAO_SEM_GUIA_ATE_FASE3 and not c['cita']:
+                prob.append('cartão %s pergunta %r ao chat e a resposta (%s) não cita o guia dele (%s)' % (i, qs[i], k, c['guia']))
     return prob
 
 

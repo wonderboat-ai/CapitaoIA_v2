@@ -331,7 +331,9 @@
     oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\nNo snapshot' + DEMO_ + ' de ' + SNAP.quando + ' os motores estão desligados; última leitura com motores ligados ' + (M.hora || SD) + ' (marcha lenta, neutro): óleo ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar, sem alarme.\nFaixa normal: manual do fabricante — modelo ' + SD + '.\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4 · ' + SNAP.fonte, actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
     oleoLeitura: function (p) { return { text: 'Motores desligados no snapshot' + DEMO_ + ' de ' + SNAP.quando + '. Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar · ' + (M.rpm ? M.rpm.join('/') : '—') + ' rpm em neutro · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · sem alarme.\nFaixa normal: manual Volvo Penta — modelo ' + SD + '.\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) }; },
     ancora: function (p) { return { text: 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.\n' + (S.estado || SD) + ' · ' + (S.local || SD) + ' · ' + SNAP.pos + ' · profundidade ' + nb(S.profundidade) + ' m (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nAlarme de âncora: ative no plotter e defina o raio conforme o cabo lançado e o espaço de giro.', src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
-    manual: function (p) { var g = D.guias || {}; return { text: 'Guias de bordo carregados' + DEMO + ' — orientação genérica, não substituem o manual do fabricante:\n' + ['g_gerador', 'g_seakeeper', 'g_clima', 'g_eletronicos', 'g_motores', 'checklist'].map(function (k) { return '• ' + (g[k] || SD); }).join('\n') + '\nManuais dos fabricantes: ' + SD + ' (modelos não informados). Seafire e EPIRB: ' + SD + '.', src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
+    // sai a lista fixa de 6 com "modelos não informados" e "Seafire e EPIRB: SEM DADOS", que a ficha mandava ao lado do ## Equipamentos.
+    manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + DEMO + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     diarioLer: function (p) {
       var mine = loadDiario(), fonte = diarioFonte();
       var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
@@ -558,11 +560,16 @@
   // rápidas, offline e com a fonte. "Oi", "bom dia, capitão" também — a saudação pronta basta e não gasta a cota.
   var SO_OI = /^(?: (?:oi|ola|opa|e ai|eai|hey|hello|hi|alo|bom dia|boa tarde|boa noite|tudo bem|tudo bom|td bem|beleza|capitao|ia))+ $/;
   // Trecho de segurança no topo (a.seguranca, do respostaBase) nunca vai à IA: fica o trecho local, com a fonte (PROMPT §2.3).
+  // Revisão do C5: vale qualquer que seja a chave. A tela manda junto o buscaBase(q, 3), e uma saudação com assunto ("como você me
+  // ajuda com o teste da baliza?") levava o g_epirb §2 no topo; o respostaBase só marca a chave base.
   function pedeIA(a, q) {
     var k = a && a.key;
     if (a && a.seguranca) return false;
+    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;
+    var topo = String(q || '').trim() ? buscaBase(q, 1)[0] : null;
+    if (topo && topo.d.seguranca) return false;
     if (k === 'fallback' || k === 'base') return true;
-    return k === 'saudacao' && !!String(q || '').trim() && !SO_OI.test(pad(q));
+    return !!String(q || '').trim() && !SO_OI.test(pad(q));
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
   var SOBRE_APP = [

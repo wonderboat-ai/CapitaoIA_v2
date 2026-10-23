@@ -186,11 +186,16 @@ MAR = [[-26.99056, -48.63472], [-26.995, -48.60], [-27.0, -48.55]]
 # só do Seakeeper 3, com o ok do §8.2: cobre 10,5–12,5 m e até cerca de 10,5 t, só 12 V DC).
 # - id = o sistema (vocabulário fechado de agenda, tarefas e alertas: estes ids mais casco e tanques).
 # - palavras: fabricante, modelo, nome comum e erros prováveis do ditado; palavra que cabe dentro de outra vai com espaço.
-# - nominal: só números públicos do fabricante (o do estabilizador é só a regra do guia, sem número do fabricante).
+# - nominal: só números públicos do fabricante (o do estabilizador é só a regra do guia, sem rotação nem minutos do fabricante).
 # - EPIRB e Seafire: seguranca, com a nota NOTA_ETIQUETA no lugar de fabricante e modelo fora de Equipamentos, Leme e Documentos;
 #   validade = o id do documento ou da tarefa que guarda o prazo (C7).
 NOTA_ETIQUETA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'   # EPIRB e Seafire (§1.3, §1.4; protocolos no C6)
 FONTE_INVENTARIO = 'Inventário de bordo · ' + DRIVE + ' › ' + PASTAS['manuais']
+# Revisão do C5: o Seakeeper 3 estabiliza a partir de cerca de 85 % da rotação de operação (7.185 de 8.450 rpm no manual de operação do
+# fabricante, "spool-up time to stabilization"); a regra antiga de 60 % contradizia a folha pública. É a regra do guia (§2, §6 e §8) e o
+# aviso da LIMITES, com "cerca de" no texto; a rotação e os minutos do fabricante continuam fora (contagem 0 de "85 %" no contexto do
+# estabilizador na pasta do Avanti, conferida só por contagem).
+SEAKEEPER_ESTABILIZA_PCT = 85
 EQUIPAMENTOS = [
     {'id': 'motores', 'nome': 'Motores', 'fabricante': MOTOR['fabricante'], 'modelo': MOTOR['modelo'], 'qtd': MOTOR['qtd'], 'lados': 'BB e BE',
      'guia': 'g_motores', 'palavras': ['cummins', 'kamins', 'comins', 'qsb', 'motor', 'motores'],
@@ -198,7 +203,7 @@ EQUIPAMENTOS = [
     {'id': 'gerador', 'nome': 'Gerador', 'fabricante': 'Onan', 'modelo': 'QD 9', 'qtd': 1, 'guia': 'g_gerador',
      'palavras': [' onan ', 'gerador', 'qd 9', 'qd nove'], 'nominal': {'kw': 9, 'hz': 60, 'rpm': 1800}},
     {'id': 'estabilizador', 'nome': 'Estabilizador giroscópico', 'fabricante': 'Seakeeper', 'modelo': 'Seakeeper 3', 'qtd': 1, 'guia': 'g_seakeeper',
-     'palavras': ['seakeeper', 'sikiper', 'giroscopio', 'estabilizador'], 'nominal': {'pct_estabiliza': 60}},
+     'palavras': ['seakeeper', 'sikiper', 'giroscopio', 'estabilizador'], 'nominal': {'pct_estabiliza': SEAKEEPER_ESTABILIZA_PCT}},
     {'id': 'climatizacao', 'nome': 'Climatização', 'fabricante': 'Webasto', 'modelo': 'FCF Platinum 16000 e 12000', 'qtd': 3, 'guia': 'g_clima',
      'palavras': ['webasto', 'vebasto', 'fcf', 'platinum', 'climatizacao', 'ar condicionado'], 'nominal': {'btu_h_total': 40000}},
     {'id': 'eletronicos', 'nome': 'Plotters', 'fabricante': 'Garmin', 'modelo': 'GPSMAP 1243xsv', 'qtd': 2, 'guia': 'g_eletronicos',
@@ -326,7 +331,6 @@ ABASTECIMENTOS = [
     {'d': '12/09/2026', 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive (DEMO)'},
     {'d': '02/08/2026', 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive (DEMO)'},
 ]
-REGRA_ABAST = 'abastecer antes de 25 % em qualquer tanque (Checklist de bordo § Abastecimento)'
 
 # ——————————————————————————————— DIÁRIO DE BORDO (DEMO) ———————————————————————————————
 DIARIO = [
@@ -415,7 +419,7 @@ LIMITES.update({
     'profundidade_m': {'un': 'm', 'fonte': F_SONDA, 'normal': {'de': 3.0}, 'aviso': {'abaixo': 3.0}, 'critico': {'abaixo': 2.0}},
     'diesel_litros': {'un': 'L', 'fonte': F_ABAST, 'normal': {'de': DIESEL_AVISO_L}, 'aviso': {'abaixo': DIESEL_AVISO_L}, 'critico': {'abaixo': DIESEL_RESERVA_L}},
     'gerador_kw': {'un': 'kW', 'fonte': F_GERADOR, 'normal': {'ate': 8.1}, 'aviso': {'acima': 8.1}, 'ativo_se': {'campo': 'gerador_ativo', 'igual': True}},
-    'seakeeper_volante_pct': {'un': '%', 'fonte': F_SEAKEEPER, 'normal': {'de': 60}, 'aviso': {'abaixo': 60},
+    'seakeeper_volante_pct': {'un': '%', 'fonte': F_SEAKEEPER, 'normal': {'de': SEAKEEPER_ESTABILIZA_PCT}, 'aviso': {'abaixo': SEAKEEPER_ESTABILIZA_PCT},
                               'ativo_se': {'campo': 'seakeeper_ativo', 'igual': True}},
     'tanque_agua_pct': {'un': '%', 'fonte': F_TANQUES, 'normal': {'de': 15}, 'aviso': {'abaixo': 15}},
     'tanque_cinzas_pct': {'un': '%', 'fonte': F_TANQUES, 'normal': {'ate': 80}, 'aviso': {'acima': 80}},
@@ -433,6 +437,12 @@ def br(x):
 
 def _eq(i):
     return next(e for e in EQUIPAMENTOS if e['id'] == i)
+
+
+# Revisão do C5: a regra é sobre o total dos dois tanques, como o LIMITES['diesel_litros'] (aviso abaixo de 400 L): 25 % de um tanque de
+# 800 L seriam 200 L, e "em qualquer tanque" mandava abastecer com 200 L num tanque e 800 L no outro (1.000 L), sem aviso no limite.
+REGRA_ABAST = 'abastecer antes de %s %% do total dos tanques, %s L de %s L (%s)' % (
+    br(DIESEL_AVISO_PCT), br(DIESEL_AVISO_L), br(TANQUES['diesel_l']), F_ABAST)
 
 
 def texto_faixas_motores():
@@ -466,8 +476,8 @@ def texto_potencia_gerador():
 
 
 def texto_faixas_volante():
-    v = br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo'])
-    return 'Volante: estabiliza a partir de %s %% da rotação de operação; aviso abaixo de %s %% (sem estabilização).' % (v, v)
+    return 'Volante: estabiliza a partir de cerca de %s %% da rotação de operação; aviso abaixo de %s %% (sem estabilização).' % (
+        br(_eq('estabilizador')['nominal']['pct_estabiliza']), br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo']))
 
 
 def texto_faixas_baterias():
@@ -491,8 +501,9 @@ def texto_sonda():
 
 def texto_abastecimento():
     L = LIMITES['diesel_litros']
-    return ('Diesel: abastecer antes de %s %% (%s L) em qualquer tanque; reserva técnica de %s %% (%s L). Depois de abastecer, registre '
-            'os litros e o nível no app.') % (br(DIESEL_AVISO_PCT), br(L['aviso']['abaixo']), br(int(round(RESERVA * 100))), br(L['critico']['abaixo']))
+    return ('Diesel: abastecer antes de %s %% do total dos tanques (%s L de %s L); reserva técnica de %s %% (%s L). Depois de abastecer, '
+            'registre os litros e o nível no app.') % (br(DIESEL_AVISO_PCT), br(L['aviso']['abaixo']), br(TANQUES['diesel_l']),
+                                                       br(int(round(RESERVA * 100))), br(L['critico']['abaixo']))
 
 
 def texto_tanques():
@@ -612,7 +623,7 @@ GUIAS = {
         'titulo': ARQ['g_seakeeper'], 'pasta': 'manuais', 'equip': equip_de('estabilizador'),
         'secoes': [
             ('1 · Energia', 'O estabilizador é alimentado pelo banco de 12 V. Para acelerar o volante, mantenha o banco carregado, com o carregador ligado ao gerador ou ao cais. Com tensão baixa no 12 V, o display avisa e o volante não acelera.'),
-            ('2 · Ligar antes de sair', 'Ligue pelo display com antecedência, com o banco de 12 V carregado (carregador ligado ao gerador ou ao cais). O volante estabiliza a partir de %s %% da rotação de operação; o display mostra a rotação e indica quando a estabilização está disponível. Espere a indicação antes de sair.' % br(_eq('estabilizador')['nominal']['pct_estabiliza'])),
+            ('2 · Ligar antes de sair', 'Ligue pelo display com antecedência, com o banco de 12 V carregado (carregador ligado ao gerador ou ao cais). O volante estabiliza a partir de cerca de %s %% da rotação de operação; o display mostra a rotação e indica quando a estabilização está disponível. Espere a indicação antes de sair.' % br(_eq('estabilizador')['nominal']['pct_estabiliza'])),
             ('3 · Estabilizar', 'O botão de estabilização liga e desliga o efeito sem parar o volante. Em manobra de marina, deixe a estabilização desligada se o display recomendar.'),
             ('4 · Desligar ao atracar', 'Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha o banco de 12 V ligado até o display indicar que parou.'),
             ('5 · Segurança', 'Nunca abra tampas nem faça manutenção com o volante girando. Confira no display que a rotação está em zero antes de qualquer serviço.'),
@@ -710,9 +721,14 @@ GUIAS = {
     'g_seafire': {
         'titulo': ARQ['g_seafire'], 'pasta': 'manuais', 'equip': equip_de('seafire'), 'seg': True, 'nota': NOTA_PROTOCOLO,
         'secoes': [
-            ('1 · Em caso de fogo', fim_seguro(TXT_SEAFIRE[0], TXT_SEAFIRE[3], TXT_SEAFIRE[4])),
-            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[1])),
-            ('3 · Depois da descarga', fim_seguro(TXT_SEAFIRE[2], 'Depois, registre no diário e chame o técnico de bordo para a recarga.')),
+            # Revisão do C5: cada seção que a busca traz ao topo depois do disparo leva o "não abra o acesso ao motor". O §1 tem os
+            # passos na ordem do protocolo; o §2, o disparo manual e o que vem depois; o §3 diz "disparou"/"descarregou", as palavras
+            # do relato (o §2 casava "disparou" no "não disparou sozinho" e mandava usar o disparo manual depois da descarga).
+            ('1 · Em caso de fogo', fim_seguro(*TXT_SEAFIRE)),
+            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[1], TXT_SEAFIRE[2])),
+            ('3 · Depois da descarga', fim_seguro('Depois do disparo (o sistema disparou ou descarregou, sozinho ou no manual): não abra o acesso '
+                                                  'ao motor; espere o tempo indicado na etiqueta do sistema e o motor esfriar. Depois, registre no '
+                                                  'diário e chame o técnico de bordo para a recarga.')),
             ('4 · Inspeção anual', fim_seguro('Inspeção do sistema fixo e da carga a cada 12 meses, pelo técnico de bordo, conforme a agenda de manutenção.')),
         ],
     },

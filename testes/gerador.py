@@ -872,6 +872,17 @@ def amostras():
     V5 = verifica(hoje())
     ok('FONTE_LIMITES: a constante LIMITES do gerador confere com os §n dos guias (0 violações, %d limites)' % len(G.LIMITES), not V5['FONTE_LIMITES'] and len(G.LIMITES) == 21,
        V5['FONTE_LIMITES'][:3])
+    # Revisão do C5: a regra do diesel e a do volante são as da LIMITES, escritas igual no texto. Diesel: sobre o total dos tanques,
+    # como o diesel_litros (25 % de um tanque de 800 L seriam 200 L), nunca "em qualquer tanque". Volante: no ponto de estabilização
+    # do Seakeeper 3 ou acima (cerca de 85 % da rotação de operação no manual do fabricante; os 60 % de antes contradiziam a folha).
+    LD, LV = G.LIMITES['diesel_litros'], G.LIMITES['seakeeper_volante_pct']
+    abast = dict(G.GUIAS['checklist']['secoes'])['Abastecimento']
+    total = '%s L de %s L' % (G.br(LD['aviso']['abaixo']), G.br(G.TANQUES['diesel_l']))
+    ok('regra do diesel sobre o total dos tanques, igual no checklist, no regraAbast e no LIMITES (%s)' % total,
+       LD['aviso']['abaixo'] == G.TANQUES['diesel_l'] * G.DIESEL_AVISO_PCT // 100 and total in abast and total in G.REGRA_ABAST
+       and 'do total' in abast and 'do total' in G.REGRA_ABAST and 'qualquer tanque' not in abast + G.REGRA_ABAST, (abast, G.REGRA_ABAST))
+    ok('volante do estabilizador: a regra do guia (nominal), o normal e o aviso da LIMITES são o mesmo número, a partir de 85 %',
+       G._eq('estabilizador')['nominal']['pct_estabiliza'] == LV['normal']['de'] == LV['aviso']['abaixo'] >= 85, LV)
     ok('equipamentos de segurança (EPIRB e Seafire): nota = NOTA_ETIQUETA e nenhum fabricante ou modelo no equip, na fonte e no texto dos trechos',
        all(e.get('nota') == C.NOTA for e in G.EQUIPAMENTOS if e.get('seguranca')) and not [
            t for t in B0['trechos'] for e in G.EQUIPAMENTOS if e.get('seguranca') for n in [e['fabricante']] + C.candidatos_modelo(e['fabricante'], e['modelo'])

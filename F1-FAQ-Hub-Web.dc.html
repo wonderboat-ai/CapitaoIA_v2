@@ -136,9 +136,12 @@ const ICON = { motores: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', gerador:
 const TOM_EQ = { motores: 'accent', gerador: 'violeta', estabilizador: 'tele', climatizacao: 'tele', eletronicos: 'accent', audio: 'accent', vhf: 'accent' };
 // Pergunta do cartão ao chat (equipamento sem tela de FAQ): nome + fabricante, menos onde essa frase cairia noutra rota do cérebro.
 // Seafire: o nome tem "incêndio" (lista SOS: abriria a emergência) e o fabricante não vai (§1.4) — "supressão" é a rota seafire;
-// AIS: " ais " é a rota canal16 (o roteiro MAYDAY, chave de emergência); guincho: "corrente" é a rota da maré (CONTRATO §1.4).
-const PERGUNTA_EQ = { seafire: () => 'sistema fixo de supressão', ais: (e) => 'transponder' + (e.fabricante ? ' ' + e.fabricante : ''),
-  ancora: (e) => 'guincho da âncora' + (e.fabricante ? ' ' + e.fabricante : '') };
+// AIS: " ais " é a rota canal16 (o roteiro MAYDAY, chave de emergência); guincho: "corrente" é a rota da maré e " ancora " a resposta
+// pronta da âncora (com a posição e o texto antigo); radar e piloto: "radar" e "piloto" são a resposta pronta dos eletrônicos, sem eles.
+// Com a pergunta de procedimento, os três caem no guia do próprio equipamento (CONTRATO §1.4; revisão do C5).
+const comFab = (t, e) => t + (e.fabricante ? ' ' + e.fabricante : '');
+const PERGUNTA_EQ = { seafire: () => 'sistema fixo de supressão', ais: (e) => comFab('transponder', e), ancora: (e) => comFab('como lançar com o guincho', e),
+  radar: (e) => comFab('como ligar o radar', e), piloto: (e) => comFab('como engatar o piloto automático', e) };
 const perguntaEq = (e, padrao) => (PERGUNTA_EQ[e.id] ? PERGUNTA_EQ[e.id](e) : e.seguranca ? e.nome : padrao);
 const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const PARADAS = ' o a os as de do da dos das e em no na nos nas como que um uma para pra com por se ao aos qual quais quando eu meu minha me faz fazer tem ter o que '.split(' ').reduce((m, w) => { if (w) m[w] = 1; return m; }, {});
