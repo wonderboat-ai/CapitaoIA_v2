@@ -596,7 +596,9 @@ GUIAS = {
             ('2 · Partida', 'Dê a partida pelo painel, um motor de cada vez, com a marcha em neutro. Logo depois confira a saída de água pelo escapamento e a pressão de óleo no painel dos dois motores.'),
             ('3 · Aquecimento', 'Deixe alguns minutos em marcha lenta antes de acelerar. Evite rotação alta com o motor frio e suba o giro aos poucos.'),
             ('4 · Pressão de óleo baixa', ' '.join(TXT_OLEO)),
-            ('5 · Temperatura alta', 'Reduza a rotação e confira a água no escapamento. Verifique o filtro de água salgada e o rotor da bomba de água salgada. Se continuar subindo, desligue o motor afetado e siga com o outro.'),
+            # Revisão 3 do C5: sem água de refrigeração, desliga na hora (o escapamento molhado superaquece); filtro e rotor só com o motor
+            # parado e a válvula de fundo fechada, como o g_gerador §3 e §5. É o trecho do AVISO de arrefecimento do laço (§3.1).
+            ('5 · Temperatura alta', 'Reduza para marcha lenta e confira a saída de água pelo escapamento. Sem água no escapamento ou com a temperatura ainda subindo: desligue o motor afetado e siga com o outro. Com o motor parado, feche a válvula de fundo e confira o filtro de água salgada e o rotor da bomba de água salgada. Nunca abra a tampa do arrefecimento com o motor quente.'),
             ('6 · Parada', 'Deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
             ('7 · Manutenção na agenda', 'Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Rotor da bomba de água salgada: a cada 12 meses. Revisão anual pela oficina de motores.'),
             ('8 · Horímetros', 'Os horímetros de BB e BE aparecem no painel dos motores e na telemetria.'),
@@ -650,7 +652,7 @@ GUIAS = {
             ('1 · Plotter: homem ao mar', 'Ao ver alguém cair na água, acione a função MOB do plotter: a posição fica marcada e o plotter mostra o rumo de volta. Siga o protocolo de emergência (homem ao mar).'),
             ('2 · Piloto automático', 'Deixe o piloto automático em espera (standby) antes de manobrar na marina e sempre que houver gente na água. Engate só em área livre, com a rota conferida no plotter.'),
             ('3 · Alarme de âncora', 'Ao fundear, ative o alarme de âncora no plotter e defina o raio conforme a corrente lançada. O contador de corrente mostra os metros lançados no controle do guincho.'),
-            ('4 · Rádio VHF: escuta', 'Mantenha o canal 16 em escuta permanente no rádio fixo. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo. O rádio portátil fica carregado na base.'),
+            ('4 · Rádio VHF: escuta', 'Mantenha o canal 16 em escuta permanente no rádio fixo. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo. Deixe o rádio portátil carregado e pronto para uso.'),
             ('5 · Rádio VHF: DSC', TXT_DSC),
             ('6 · Áudio Fusion: Bluetooth', 'Para parear o celular: escolha a fonte Bluetooth no controle Fusion, deixe o aparelho visível e selecione o Fusion na lista de Bluetooth do celular. O volume é ajustado por zona.'),
             ('7 · Atualizações', 'Cartas e software dos plotters, do radar e do áudio: atualização anual, conforme a agenda de manutenção.'),
@@ -724,11 +726,14 @@ GUIAS = {
             # Revisão do C5: cada seção que a busca traz ao topo depois do disparo leva o "não abra o acesso ao motor". O §1 tem os
             # passos na ordem do protocolo; o §2, o disparo manual e o que vem depois; o §3 diz "disparou"/"descarregou", as palavras
             # do relato (o §2 casava "disparou" no "não disparou sozinho" e mandava usar o disparo manual depois da descarga).
+            # Revisão 3 do C5: o §2 e o §3 começam pelo 1º passo do agente limpo (motores, gerador e ventilação desligados: o motor
+            # ligado aspira o agente e a ventilação o dilui), e o §3 trata a descarga como fogo: extintor à mão ao abrir, MAYDAY se voltar.
             ('1 · Em caso de fogo', fim_seguro(*TXT_SEAFIRE)),
-            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[1], TXT_SEAFIRE[2])),
-            ('3 · Depois da descarga', fim_seguro('Depois do disparo (o sistema disparou ou descarregou, sozinho ou no manual): não abra o acesso '
-                                                  'ao motor; espere o tempo indicado na etiqueta do sistema e o motor esfriar. Depois, registre no '
-                                                  'diário e chame o técnico de bordo para a recarga.')),
+            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[0], TXT_SEAFIRE[1], TXT_SEAFIRE[2])),
+            ('3 · Depois da descarga', fim_seguro('Depois do disparo (o sistema disparou ou descarregou, sozinho ou no manual): confirme motores, '
+                                                  'gerador e ventilação desligados; não abra o acesso ao motor; espere o tempo indicado na etiqueta '
+                                                  'do sistema e o motor esfriar; ao abrir, extintor portátil à mão; se o fogo voltar, MAYDAY no '
+                                                  'canal 16. Depois, registre no diário e chame o técnico de bordo para a recarga.')),
             ('4 · Inspeção anual', fim_seguro('Inspeção do sistema fixo e da carga a cada 12 meses, pelo técnico de bordo, conforme a agenda de manutenção.')),
         ],
     },

@@ -71,6 +71,10 @@ CASOS = [
     ('como você me ajuda com o teste da baliza?', 'saudacao'), ('o que você sabe sobre o teste da baliza?', 'saudacao'),
     ('o que fazer depois do disparo do sistema fixo', 'base'), ('o sistema fixo disparou', 'base'), ('o sistema fixo descarregou', 'base'),
     ('alarme do sistema fixo', 'base'),
+    # Revisão 3 do C5: pergunta genérica sobre os equipamentos volta ao fallback (a IA responde com o "## Equipamentos" da ficha).
+    # O rótulo e a nota da etiqueta, no fim de todo trecho de segurança, punham o g_epirb §4 no topo e barravam a IA; o índice
+    # da busca não os conta mais (o texto do trecho fica igual).
+    ('quais equipamentos tem a bordo?', 'fallback'), ('equipamentos do barco', 'fallback'), ('modelo dos equipamentos', 'fallback'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -86,6 +90,8 @@ PEDE_IA = {
     'como você me ajuda com o teste da baliza?': False, 'o que você sabe sobre o teste da baliza?': False,
     'o que fazer depois do disparo do sistema fixo': False, 'o sistema fixo disparou': False,
     'como lançar com o guincho Lewmar': True, 'como ligar o radar Garmin': True, 'como engatar o piloto automático Raymarine': True,
+    # revisão 3 do C5: como antes do C5 (fallback com a IA)
+    'quais equipamentos tem a bordo?': True, 'equipamentos do barco': True, 'modelo dos equipamentos': True,
 }
 
 
@@ -137,14 +143,22 @@ def main():
         # Revisão 2 do C5: as perguntas dos cartões do guincho, do radar e do piloto (F1) trazem o guia do próprio equipamento ao topo;
         # depois do disparo do sistema fixo, o trecho do topo tem o "não abra o acesso ao motor" (qualquer seção do g_seafire, menos a
         # inspeção); o guincho não mostra a posição; a resposta "guias de bordo" lista todos os guias, sem SEM DADOS.
+        # Revisão 3 do C5: o topo depois do disparo também manda desligar motores, gerador e ventilação (o 1º passo do agente limpo);
+        # a pergunta genérica sobre os equipamentos não traz o g_epirb nem o protocolo ao topo; a temperatura alta dos motores (o
+        # AVISO de arrefecimento do laço) manda desligar o motor afetado antes de mexer no filtro e no rotor.
         rev2 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
             const cartoes = [['como lançar com o guincho Lewmar', 'g_ancora'], ['como ligar o radar Garmin', 'g_radar'],
               ['como engatar o piloto automático Raymarine', 'g_piloto']].filter(([q, g]) => h(q).fonte !== D.guias[g]).map(([q]) => q);
             const disparo = ['o que fazer depois do disparo do sistema fixo', 'o sistema fixo disparou', 'o sistema fixo disparou sozinho',
-              'o sistema fixo descarregou', 'alarme do sistema fixo'].filter((q) => (h(q).texto || '').toLowerCase().indexOf('não abra o acesso ao motor') === -1);
+              'o sistema fixo descarregou', 'o sistema descarregou', 'alarme do sistema fixo'].filter((q) => { const t = (h(q).texto || '').toLowerCase();
+                return t.indexOf('não abra o acesso ao motor') === -1 || !/desligue motores|motores, gerador e ventilação/.test(t); });
+            const generica = ['quais equipamentos tem a bordo?', 'equipamentos do barco', 'modelo dos equipamentos', 'que equipamentos o barco tem?',
+              'qual o modelo do equipamento?'].filter((q) => [D.guias.g_epirb, D.guias.protocolo].indexOf(h(q).fonte) !== -1);
+            const temp = ['temperatura alta no motor BE', 'sem água no escapamento motores Cummins — como resolver?'].filter((q) => { const x = h(q), t = x.texto || '';
+              return x.fonte !== D.guias.g_motores || !(t.indexOf('desligue o motor afetado') !== -1 && t.indexOf('desligue o motor afetado') < t.indexOf('filtro de água salgada')); });
             const g = B.answer('como lançar com o guincho Lewmar', { platform: 'app', commit: false }), m = B.answer('Quais guias de bordo estão carregados?', { platform: 'app', commit: false });
             const faltam = Object.keys(D.guias).filter((k) => m.text.indexOf(D.guias[k].replace(/^Guia de bordo — /, '')) === -1);
-            return { cartoes, disparo, guincho: g.text, manualK: m.key, manualSD: /SEM DADOS|não informad/.test(m.text), faltam }; }""")
+            return { cartoes, disparo, generica, temp, guincho: g.text, manualK: m.key, manualSD: /SEM DADOS|não informad/.test(m.text), faltam }; }""")
         for nome, cond, extra in [
             ('ficha resumida SÓ para pergunta pura sobre o app ("Oque você faz?", "como você funciona?"; sem telemetria, < 4 mil letras)', '## Ficha resumida' in x['metaF'] and '## Telemetria' not in x['metaF'] and len(x['metaF']) < 4000 and '## Ficha resumida' in x['funcF'], (len(x['metaF']), len(x['funcF']))),
             ('trecho do guia ("última troca de óleo do motor?") leva a ficha COMPLETA, com a agenda', x['baseK'] == 'base' and '## Manutenção' in x['baseF'] and '## Ficha resumida' not in x['baseF'], (x['baseK'], len(x['baseF']))),
@@ -166,8 +180,10 @@ def main():
              topo == [[guias.get('g_gerador'), '2 · Ligar'], [guias.get('g_motores'), '7 · Manutenção na agenda'], guias.get('g_gerador')], topo),
             ('revisão do C5: nenhuma resposta (nem a fala) repete o fabricante antes do modelo que começa por ele ("Seakeeper Seakeeper 3")',
              bool(rep) and not repetidos, (rep, repetidos[:3])),
-            ('revisão 2 do C5: guincho, radar e piloto da F1 no guia de cada um; depois do disparo, "não abra o acesso ao motor" no topo',
+            ('revisão 2 do C5: guincho, radar e piloto da F1 no guia de cada um; depois do disparo, "não abra o acesso ao motor" no topo (e, desde a revisão 3, o desligamento de motores, gerador e ventilação)',
              not rev2['cartoes'] and not rev2['disparo'], (rev2['cartoes'], rev2['disparo'])),
+            ('revisão 3 do C5: pergunta genérica sobre os equipamentos sem o g_epirb nem o protocolo no topo; temperatura alta dos motores desliga antes do filtro',
+             not rev2['generica'] and not rev2['temp'], (rev2['generica'], rev2['temp'])),
             ('revisão 2 do C5: a pergunta do cartão do guincho não mostra a posição do barco',
              not [x for x in ("26°59", "048°36", "-26.99", "-48.6") if x in rev2['guincho']], rev2['guincho'][:200]),
             ('revisão 2 do C5: "guias de bordo" lista os 16 guias do D.guias, sem SEM DADOS nem "modelos não informados"',

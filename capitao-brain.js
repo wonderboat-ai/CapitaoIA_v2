@@ -476,6 +476,17 @@
   function tokens(t) {
     return norm(t).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && !PARADAS[w] && (w.length > 2 || /\d/.test(w)); }).map(raiz);
   }
+  // Frases fixas que ficam no texto do trecho mas não entram no índice (revisão 3 do C5): o rótulo do procedimento padrão e a
+  // nota da etiqueta (CONTRATO §1.5), no fim de todo trecho de g_seafire, g_epirb, Salvatagem e protocolo, e o "do equipamento"
+  // depois de "etiqueta" (o equipamento do trecho já está na fonte). Repetidas em trechos curtos, punham o g_epirb §4 no topo de
+  // "quais equipamentos tem a bordo?" e de "modelo dos equipamentos", e o trecho de segurança do topo barrava a IA.
+  var NOTA_ETIQUETA = (equip('epirb') || {}).nota || 'modelo, validade e acionamento: veja a etiqueta do equipamento';
+  var FORA_DO_INDICE = [ROTULO, NOTA_ETIQUETA].map(function (f) { return norm(f); });
+  function indexavel(t) {
+    t = norm(t);
+    FORA_DO_INDICE.forEach(function (f) { t = t.split(f).join(' '); });
+    return t.replace(/\betiqueta do equipamento\b/g, 'etiqueta');
+  }
   function carregaBase() {
     if (KB.docs || KB.carregando || !window.fetch) return;
     KB.carregando = true;
@@ -483,7 +494,7 @@
       var lista = j && j.trechos; if (!lista || !lista.length) return;
       var soma = 0, df = {};
       lista.forEach(function (d) {
-        var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + d.texto + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
+        var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + indexavel(d.texto) + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
         d._lista = /invent[aá]rio|cat[aá]logo|[íi]ndice/i.test(d.fonte || '');
         d._en = (' ' + d.texto.toLowerCase() + ' ').split(/\b(?:the|and|with|to|of|is|are|your|from)\b/).length > 6;
         tk.forEach(function (w) { tf[w] = (tf[w] || 0) + 1; });
