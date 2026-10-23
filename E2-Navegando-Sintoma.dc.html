@@ -165,8 +165,8 @@ class Component extends DCLogic {
     }, 60);
   }
   equip(id) { return ((window.CapitaoDados || {}).equipamentos || []).filter((e) => e.id === id)[0] || null; }
-  // "Gerador Onan · modelo SEM DADOS": sempre fabricante e modelo, o que faltar marcado
-  fabMod(id) { const e = this.equip(id); if (!e) return 'SEM DADOS'; return e.nome + ' ' + (e.fabricante || '(fabricante SEM DADOS)') + (e.modelo ? ' ' + e.modelo : ' · modelo SEM DADOS'); }
+  // "Gerador Onan QD 9": sempre fabricante e modelo, o que faltar marcado; equipamento de segurança (EPIRB, Seafire) só com a nota da etiqueta (§1.4)
+  fabMod(id) { const e = this.equip(id); if (!e) return 'SEM DADOS'; return e.nome + (e.seguranca ? ' · ' + e.nota : ' ' + (e.fabricante || '(fabricante SEM DADOS)') + (e.modelo ? ' ' + e.modelo : ' · modelo SEM DADOS')); }
   pergunta(s, x) { const e = this.equip(s.id); return x.q + ' ' + s.palavra + (e && e.fabricante ? ' ' + e.fabricante : '') + (x.como ? ' — como resolver?' : ''); }
   // Resposta calculada agora pelo cérebro (commit:false = não grava nada). Refeita quando a base de bordo termina de carregar.
   resposta(q) {

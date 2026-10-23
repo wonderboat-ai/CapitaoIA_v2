@@ -40,7 +40,7 @@ from datetime import date, datetime
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
-from confere import ConfereFalhou, confere  # noqa: E402
+from confere import ConfereFalhou, confere, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
 
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 FONTES_REL = os.path.join('ferramentas', 'demo', 'fontes')   # as fontes do Drive, dentro da pasta de saída
@@ -61,11 +61,21 @@ PASTAS = {
 }
 ARQ = {
     'leiame': 'LEIA-ME — Capitão IA v2',
+    # Os 16 guias de bordo (CONTRATO §1.5): "Guia de bordo — <Equipamento> <Fabricante>"; os de segurança sem fabricante.
+    'g_motores': 'Guia de bordo — Motores Cummins',
     'g_gerador': 'Guia de bordo — Gerador Onan',
     'g_seakeeper': 'Guia de bordo — Estabilizador Seakeeper',
-    'g_clima': 'Guia de bordo — Climatização',
-    'g_eletronicos': 'Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315',
-    'g_motores': 'Guia de bordo — Motores Volvo Penta',
+    'g_clima': 'Guia de bordo — Climatização Webasto',
+    'g_eletronicos': 'Guia de bordo — Eletrônicos Garmin, áudio Fusion e rádios Icom',
+    'g_eletrico': 'Guia de bordo — Sistema elétrico 24 V e 12 V',
+    'g_dessalinizador': 'Guia de bordo — Dessalinizador Schenker',
+    'g_porao': 'Guia de bordo — Bombas de porão Rule',
+    'g_ancora': 'Guia de bordo — Guincho e corrente Lewmar',
+    'g_piloto': 'Guia de bordo — Piloto automático Raymarine',
+    'g_radar': 'Guia de bordo — Radar Garmin',
+    'g_ais': 'Guia de bordo — AIS em-trak',
+    'g_seafire': 'Guia de bordo — Sistema fixo de incêndio',
+    'g_epirb': 'Guia de bordo — EPIRB',
     'checklist': 'Checklist de bordo',
     'inventario': 'Inventário de bordo',
     'documentos': 'Controle de documentos',
@@ -171,19 +181,58 @@ POSICAO_REF = {
 MAR = [[-26.99056, -48.63472], [-26.995, -48.60], [-27.0, -48.55]]
 
 # ——————————————————————————————— EQUIPAMENTOS ———————————————————————————————
-# Fabricantes informados pelo proprietário; modelos SEM DADOS (None).
+# CONTRATO §1.4 e §2.5 (decisão e): os fabricantes informados pelo proprietário (menos o dos motores, §2.2), modelos reais e
+# atuais do porte de 40 pés, nenhum das listas privadas e contagem 0 por substring na pasta do Avanti (COLISAO_MODELOS; exceção
+# só do Seakeeper 3, com o ok do §8.2: cobre 10,5–12,5 m e até cerca de 10,5 t, só 12 V DC).
+# - id = o sistema (vocabulário fechado de agenda, tarefas e alertas: estes ids mais casco e tanques).
+# - palavras: fabricante, modelo, nome comum e erros prováveis do ditado; palavra que cabe dentro de outra vai com espaço.
+# - nominal: só números públicos do fabricante (o do estabilizador é só a regra do guia, sem número do fabricante).
+# - EPIRB e Seafire: seguranca, com a nota NOTA_ETIQUETA no lugar de fabricante e modelo fora de Equipamentos, Leme e Documentos;
+#   validade = o id do documento ou da tarefa que guarda o prazo (C7).
+NOTA_ETIQUETA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'   # EPIRB e Seafire (§1.3, §1.4; protocolos no C6)
+FONTE_INVENTARIO = 'Inventário de bordo · ' + DRIVE + ' › ' + PASTAS['manuais']
 EQUIPAMENTOS = [
-    {'id': 'motores', 'nome': 'Motores', 'fabricante': 'Volvo Penta', 'modelo': None, 'qtd': '2', 'lados': 'BB e BE', 'guia': 'g_motores'},
-    {'id': 'gerador', 'nome': 'Gerador', 'fabricante': 'Onan', 'modelo': None, 'qtd': '1', 'guia': 'g_gerador'},
-    {'id': 'estabilizador', 'nome': 'Estabilizador giroscópico', 'fabricante': 'Seakeeper', 'modelo': None, 'qtd': '1', 'guia': 'g_seakeeper'},
-    {'id': 'climatizacao', 'nome': 'Climatização', 'fabricante': None, 'modelo': None, 'qtd': 'SEM DADOS', 'guia': 'g_clima'},
-    {'id': 'eletronicos', 'nome': 'Eletrônicos de navegação', 'fabricante': 'Garmin', 'modelo': None, 'qtd': 'SEM DADOS', 'guia': 'g_eletronicos'},
-    {'id': 'audio', 'nome': 'Áudio', 'fabricante': 'Fusion', 'modelo': None, 'qtd': 'SEM DADOS', 'guia': 'g_eletronicos'},
-    {'id': 'vhf', 'nome': 'Rádios VHF', 'fabricante': None, 'modelo': 'VHF 315', 'qtd': 'SEM DADOS', 'guia': 'g_eletronicos'},
-    {'id': 'epirb', 'nome': 'EPIRB', 'fabricante': None, 'modelo': None, 'qtd': 'SEM DADOS', 'guia': None},
-    {'id': 'seafire', 'nome': 'Sistema de incêndio', 'fabricante': 'Seafire', 'modelo': None, 'qtd': 'SEM DADOS', 'guia': None},
+    {'id': 'motores', 'nome': 'Motores', 'fabricante': MOTOR['fabricante'], 'modelo': MOTOR['modelo'], 'qtd': MOTOR['qtd'], 'lados': 'BB e BE',
+     'guia': 'g_motores', 'palavras': ['cummins', 'kamins', 'comins', 'qsb', 'motor', 'motores'],
+     'nominal': {'potencia_cv': 305, 'rpm_max': 2600, 'rpm_cruzeiro': 2050, 'rpm_lenta': 700, 'transmissao': MOTOR['transmissao']}},
+    {'id': 'gerador', 'nome': 'Gerador', 'fabricante': 'Onan', 'modelo': 'QD 9', 'qtd': 1, 'guia': 'g_gerador',
+     'palavras': [' onan ', 'gerador', 'qd 9', 'qd nove'], 'nominal': {'kw': 9, 'hz': 60, 'rpm': 1800}},
+    {'id': 'estabilizador', 'nome': 'Estabilizador giroscópico', 'fabricante': 'Seakeeper', 'modelo': 'Seakeeper 3', 'qtd': 1, 'guia': 'g_seakeeper',
+     'palavras': ['seakeeper', 'sikiper', 'giroscopio', 'estabilizador'], 'nominal': {'pct_estabiliza': 60}},
+    {'id': 'climatizacao', 'nome': 'Climatização', 'fabricante': 'Webasto', 'modelo': 'FCF Platinum 16000 e 12000', 'qtd': 3, 'guia': 'g_clima',
+     'palavras': ['webasto', 'vebasto', 'fcf', 'platinum', 'climatizacao', 'ar condicionado'], 'nominal': {'btu_h_total': 40000}},
+    {'id': 'eletronicos', 'nome': 'Plotters', 'fabricante': 'Garmin', 'modelo': 'GPSMAP 1243xsv', 'qtd': 2, 'guia': 'g_eletronicos',
+     'palavras': ['garmin', 'gpsmap', 'plotter', 'plotters', 'chartplotter']},
+    {'id': 'audio', 'nome': 'Áudio', 'fabricante': 'Fusion', 'modelo': 'MS-UD755', 'qtd': 1, 'guia': 'g_eletronicos',
+     'palavras': ['fusion', 'audio', ' som ', 'bluetooth'], 'nominal': {'zonas': 2}},
+    {'id': 'vhf', 'nome': 'Rádios VHF', 'fabricante': 'Icom', 'modelo': 'IC-M510 e IC-M37', 'qtd': 2, 'guia': 'g_eletronicos',
+     'palavras': ['vhf', 'radio vhf', 'icom', 'canal 16']},
+    {'id': 'epirb', 'nome': 'EPIRB', 'fabricante': 'Ocean Signal', 'modelo': 'SafeSea E100G', 'qtd': 1, 'guia': 'g_epirb',
+     'palavras': ['epirb', 'radiobaliza', 'baliza', 'ipirb'], 'validade': 'doc-epirb', 'seguranca': True, 'nota': NOTA_ETIQUETA},
+    {'id': 'seafire', 'nome': 'Sistema fixo de supressão de incêndio', 'fabricante': 'Seafire', 'modelo': 'FD 300M', 'qtd': 1, 'guia': 'g_seafire',
+     'palavras': ['seafire', 'sea fire', 'sistema de incendio', 'supressao'], 'validade': 'seafire-inspecao', 'seguranca': True, 'nota': NOTA_ETIQUETA},
+    {'id': 'dessalinizador', 'nome': 'Dessalinizador', 'fabricante': 'Schenker', 'modelo': 'Zen 30', 'qtd': 1, 'guia': 'g_dessalinizador',
+     'palavras': ['schenker', 'shenker', 'zen 30', 'dessalinizador', 'osmose'], 'nominal': {'lph': 30}},
+    {'id': 'porao', 'nome': 'Bombas de porão', 'fabricante': 'Rule', 'modelo': 'Rule 2000 (24 V)', 'qtd': 2, 'lados': 'BB e BE', 'guia': 'g_porao',
+     'palavras': [' rule ', 'bomba de porao', 'bombas de porao', 'porao']},
+    {'id': 'ancora', 'nome': 'Guincho e contador de corrente', 'fabricante': 'Lewmar', 'modelo': 'V2 · contador AA150', 'qtd': 1, 'guia': 'g_ancora',
+     'palavras': ['lewmar', 'leumar', 'guincho', 'ancora', 'contador de corrente', 'molinete'], 'nominal': {'corrente_m': 60}},
+    {'id': 'piloto', 'nome': 'Piloto automático', 'fabricante': 'Raymarine', 'modelo': 'Evolution EV-1 · ACU-400', 'qtd': 1, 'guia': 'g_piloto',
+     'palavras': ['raymarine', 'reimarine', 'evolution', 'piloto automatico', 'piloto']},
+    {'id': 'radar', 'nome': 'Radar', 'fabricante': 'Garmin', 'modelo': 'GMR 24 xHD3', 'qtd': 1, 'guia': 'g_radar',
+     'palavras': ['radar', 'gmr', 'xhd3', 'domo']},
+    {'id': 'ais', 'nome': 'AIS (classe B)', 'fabricante': 'em-trak', 'modelo': 'B954', 'qtd': 1, 'guia': 'g_ais',
+     'palavras': [' ais ', 'em-trak', 'emtrak', 'transponder']},
+    # O 16º, que a B2 pede: 3 bancos; o de 12 V (as 2 em paralelo) alimenta a eletrônica de 12 V e o estabilizador (12 V DC, §2.5).
+    {'id': 'eletrico', 'nome': 'Baterias (24 V e 12 V)', 'fabricante': 'Victron Energy', 'modelo': 'AGM Super Cycle 12 V 230 Ah', 'qtd': 8, 'guia': 'g_eletrico',
+     'palavras': ['victron', 'vitron', 'bateria', 'baterias', 'banco de baterias', ' agm '],
+     'nominal': {'bancos': [{'id': 'servico', 'v': 24, 'n': 4, 'campo': 'bateria_0_tensao_v'}, {'id': 'partida', 'v': 24, 'n': 2, 'campo': 'bateria_1_tensao_v'},
+                            {'id': 'eletronica', 'v': 12, 'n': 2, 'campo': 'bateria_2_tensao_v'}]}},
 ]
-EQUIP_NOTA = 'Lista informada pelo proprietário (com "…": pode haver mais equipamentos). Modelos: SEM DADOS.'
+for _e in EQUIPAMENTOS:
+    _e['fonte'] = FONTE_INVENTARIO
+# Fica até a Fase 4 reescrever F1–F5 (que mostram "Fonte: " + equipNota), com texto neutro (§1.4).
+EQUIP_NOTA = 'Inventário de bordo · %d equipamentos · %s › %s' % (len(EQUIPAMENTOS), DRIVE, PASTAS['manuais'])
 
 # ——————————————————————————————— SNAPSHOT DO COLETOR (DEMO) ———————————————————————————————
 GPS = {'lat': -26.9930, 'lon': -48.6140}
@@ -212,7 +261,6 @@ CONSUMO = {
     'desdeAbast': {'litros': 192, 'desde': '12/09/2026', 'horas': '2,8 h de motor por lado'},
 }
 RESERVA = 0.10
-NOTA_ETIQUETA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'   # EPIRB e Seafire (§1.3, §1.4; dado no C5/C6)
 DIAS_MESES = {1: 31, 6: 184, 12: 365}   # intervalo da agenda em dias (§1.7; deslocamentos no C7)
 
 
@@ -265,7 +313,7 @@ def status_prazo(n):
 DOCUMENTOS = [
     {'n': 'Título de Inscrição da Embarcação (TIE)', 'cat': 'Registro', 'vence': None, 'st': 'SEM DADOS', 'nota': 'registro não informado'},
     {'n': 'Seguro da embarcação', 'cat': 'Seguro', 'vence': '15/10/2026', 'nota': 'apólice no Drive (DEMO)'},
-    {'n': 'Licença de estação de rádio (VHF)', 'cat': 'Licenças', 'vence': '30/11/2026', 'nota': 'rádios VHF 315'},
+    {'n': 'Licença de estação de rádio (VHF)', 'cat': 'Licenças', 'vence': '30/11/2026', 'nota': 'rádios Icom IC-M510 e IC-M37'},   # C5: o modelo antigo do VHF saiu (PARIDADE §6); o resto da lista é do C7
     {'n': 'Laudo de vistoria anual', 'cat': 'Laudos', 'vence': '18/08/2027', 'nota': 'vistoria de 18/08/2026'},
     {'n': 'Garantia do estabilizador Seakeeper', 'cat': 'Garantias', 'vence': '20/03/2027', 'nota': 'modelo SEM DADOS'},
     {'n': 'Garantia dos eletrônicos Garmin', 'cat': 'Garantias', 'vence': '10/02/2027', 'nota': 'modelos SEM DADOS'},
@@ -312,110 +360,429 @@ EQUIPE = {
     'nota': 'Telefones: A CADASTRAR em Equipe (ficam só no aparelho).',
 }
 
-# ——————————————————————————————— GUIAS DE BORDO (DEMO) → base de conhecimento ———————————————————————————————
-# Orientação operacional genérica, escrita para a embarcação de demonstração. Não substitui o manual do fabricante:
-# cada guia manda confirmar no manual (modelo SEM DADOS).
+# ——————————————————————————————— FAIXAS E LIMITES (CONTRATO §3.3) ———————————————————————————————
+# Uma constante só (LIMITES): os textos dos guias que citam faixa saem daqui, formatados em pt-BR, e cada limite aponta para o §n
+# do guia de bordo gerado que tem os números (FONTE_LIMITES; trava §2.10: nunca manual de fabricante com página inventada). O
+# D.replay.limites do C8 é esta mesma constante. São regra de bordo do Capitão, mais conservadora que os alarmes do próprio
+# equipamento, e não coincidem com as do Avanti (conferido no contrato). Forma fechada, uma chave por campo do quadro (sem
+# curinga): un, fonte, normal?, aviso?, critico?, regimes? (o topo fica sem normal/aviso/critico), ativo_se?. O normal termina
+# exatamente no limite do aviso.
+F_MOTORES = ARQ['g_motores'] + ' §9 · Faixas de operação'
+F_GERADOR = ARQ['g_gerador'] + ' §9 · Potência e carga'
+F_SEAKEEPER = ARQ['g_seakeeper'] + ' §8 · Faixas'
+F_ELETRICO = ARQ['g_eletrico'] + ' §2 · Faixas'
+F_PORAO = ARQ['g_porao'] + ' §2 · Faixas'
+F_SONDA = ARQ['g_eletronicos'] + ' §8 · Sonda'
+F_ABAST = ARQ['checklist'] + ' § Abastecimento'
+F_TANQUES = ARQ['checklist'] + ' § Tanques'
+DIESEL_AVISO_PCT = 25            # abastecer antes de 25 % (a regra do checklist)
+LENTA_RPM = (650, 750)           # faixa de marcha lenta do guia (o laço anda em 700/695 rpm)
+ARREF_CRUZEIRO_C = (80, 85)      # arrefecimento em cruzeiro, motor aquecido
+CONSUMO_MAX_LPH = 111            # dois motores na rotação máxima: cerca de 2 × 55,6 L/h (folha do fabricante)
+GERADOR_CLIMA_KW = (5.5, 6.5)    # carga do gerador com a climatização ligada (o laço anda entre 5,6 e 6,4 kW)
+
+
+def _limites_motor(lado):
+    rpm = 'motor_%s_rpm' % lado
+    return {
+        'motor_%s_oleo_bar' % lado: {'un': 'bar', 'fonte': F_MOTORES, 'regimes': [
+            {'rpm_campo': rpm, 'rpm_ate': 1000, 'normal': {'de': 1.0, 'ate': 6.0}, 'aviso': {'abaixo': 1.0, 'acima': 6.0}, 'critico': {'abaixo': 0.6}},
+            {'rpm_campo': rpm, 'rpm_de': 1000, 'normal': {'de': 2.4, 'ate': 6.0}, 'aviso': {'abaixo': 2.4, 'acima': 6.0}, 'critico': {'abaixo': 1.4}}],
+            'ativo_se': {'campo': rpm, 'acima': 0}},
+        'motor_%s_arref_c' % lado: {'un': '°C', 'fonte': F_MOTORES, 'normal': {'ate': 88}, 'aviso': {'acima': 88}, 'critico': {'acima': 97},
+                                    'ativo_se': {'campo': rpm, 'acima': 0}},
+        rpm: {'un': 'rpm', 'fonte': F_MOTORES, 'normal': {'ate': 2600}, 'aviso': {'acima': 2600}},
+        'motor_%s_carga_pct' % lado: {'un': '%', 'fonte': F_MOTORES, 'normal': {'ate': 90}, 'aviso': {'acima': 90}, 'ativo_se': {'campo': rpm, 'acima': 0}},
+    }
+
+
+def _bateria(de, ate, critico):
+    return {'un': 'V', 'fonte': F_ELETRICO, 'normal': {'de': de, 'ate': ate}, 'aviso': {'abaixo': de, 'acima': ate}, 'critico': {'abaixo': critico}}
+
+
+DIESEL_AVISO_L = TANQUES['diesel_l'] * DIESEL_AVISO_PCT // 100     # 400 L
+DIESEL_RESERVA_L = int(round(TANQUES['diesel_l'] * RESERVA))         # 160 L (reserva técnica de 10 %)
+LIMITES = {}
+LIMITES.update(_limites_motor('bb'))
+LIMITES.update(_limites_motor('be'))
+LIMITES.update({
+    'temp_praca_maquinas_c': {'un': '°C', 'fonte': F_MOTORES, 'normal': {'ate': 60}, 'aviso': {'acima': 60}},
+    'bateria_0_tensao_v': _bateria(24.4, 29.4, 23.6),   # serviço 24 V
+    'bateria_1_tensao_v': _bateria(24.4, 29.4, 23.6),   # partida 24 V
+    'bateria_2_tensao_v': _bateria(12.2, 14.7, 11.8),   # 12 V (eletrônica e estabilizador)
+    'porao_bb_nivel': {'un': 'cm', 'fonte': F_PORAO, 'normal': {'ate': 5}, 'aviso': {'acima': 5}, 'critico': {'acima': 10}},
+    'porao_be_nivel': {'un': 'cm', 'fonte': F_PORAO, 'normal': {'ate': 5}, 'aviso': {'acima': 5}, 'critico': {'acima': 10}},
+    'profundidade_m': {'un': 'm', 'fonte': F_SONDA, 'normal': {'de': 3.0}, 'aviso': {'abaixo': 3.0}, 'critico': {'abaixo': 2.0}},
+    'diesel_litros': {'un': 'L', 'fonte': F_ABAST, 'normal': {'de': DIESEL_AVISO_L}, 'aviso': {'abaixo': DIESEL_AVISO_L}, 'critico': {'abaixo': DIESEL_RESERVA_L}},
+    'gerador_kw': {'un': 'kW', 'fonte': F_GERADOR, 'normal': {'ate': 8.1}, 'aviso': {'acima': 8.1}, 'ativo_se': {'campo': 'gerador_ativo', 'igual': True}},
+    'seakeeper_volante_pct': {'un': '%', 'fonte': F_SEAKEEPER, 'normal': {'de': 60}, 'aviso': {'abaixo': 60},
+                              'ativo_se': {'campo': 'seakeeper_ativo', 'igual': True}},
+    'tanque_agua_pct': {'un': '%', 'fonte': F_TANQUES, 'normal': {'de': 15}, 'aviso': {'abaixo': 15}},
+    'tanque_cinzas_pct': {'un': '%', 'fonte': F_TANQUES, 'normal': {'ate': 80}, 'aviso': {'acima': 80}},
+    'tanque_negras_pct': {'un': '%', 'fonte': F_TANQUES, 'normal': {'ate': 80}, 'aviso': {'acima': 80}},
+})
+
+
+def br(x):
+    """Número como o guia escreve (pt-BR): 1.000 · 2.600 · 2,4 · 6,0 · 88. O float guarda a casa decimal (6.0 → "6,0")."""
+    if isinstance(x, int) and not isinstance(x, bool):
+        return '{:,}'.format(x).replace(',', '.')
+    inteiro, dec = repr(float(x)).split('.')
+    return '{:,}'.format(int(inteiro)).replace(',', '.') + ',' + dec
+
+
+def _eq(i):
+    return next(e for e in EQUIPAMENTOS if e['id'] == i)
+
+
+def texto_faixas_motores():
+    lenta, alta = LIMITES['motor_bb_oleo_bar']['regimes']
+    ar, rpm = LIMITES['motor_bb_arref_c'], LIMITES['motor_bb_rpm']
+    corte = br(lenta['rpm_ate'])
+    return ('Faixas de operação (motor aquecido). Rotação: marcha lenta %s a %s rpm; cruzeiro %s rpm (%s nós); até %s rpm. '
+            'Pressão de óleo: abaixo de %s rpm, normal de %s a %s bar; a partir de %s rpm, normal de %s a %s bar. '
+            'Aviso abaixo do normal ou acima de %s bar. Crítico abaixo de %s bar (abaixo de %s rpm) ou de %s bar (a partir de %s rpm). '
+            'Líquido de arrefecimento: normal até %s °C (em cruzeiro, %s a %s °C); aviso acima de %s °C; crítico acima de %s °C. '
+            'Carga: aviso acima de %s %%. Praça de máquinas: aviso acima de %s °C.') % (
+        br(LENTA_RPM[0]), br(LENTA_RPM[1]), br(CONSUMO['cruzeiro']['rpm']), br(CONSUMO['cruzeiro']['nos']), br(rpm['normal']['ate']),
+        corte, br(lenta['normal']['de']), br(lenta['normal']['ate']), corte, br(alta['normal']['de']), br(alta['normal']['ate']),
+        br(alta['aviso']['acima']), br(lenta['critico']['abaixo']), corte, br(alta['critico']['abaixo']), corte,
+        br(ar['normal']['ate']), br(ARREF_CRUZEIRO_C[0]), br(ARREF_CRUZEIRO_C[1]), br(ar['aviso']['acima']), br(ar['critico']['acima']),
+        br(LIMITES['motor_bb_carga_pct']['aviso']['acima']), br(LIMITES['temp_praca_maquinas_c']['aviso']['acima']))
+
+
+def texto_consumo_motores():
+    n = _eq('motores')['nominal']
+    return ('Consumo dos dois motores: cerca de %s L/h em marcha lenta (%s rpm, 5 nós), %s L/h em cruzeiro (%s rpm, %s nós) e %s L/h '
+            'na rotação máxima.') % (br(CONSUMO['lenta']['lph']), br(n['rpm_lenta']), br(CONSUMO['cruzeiro']['lph']),
+                                     br(CONSUMO['cruzeiro']['rpm']), br(CONSUMO['cruzeiro']['nos']), br(CONSUMO_MAX_LPH))
+
+
+def texto_potencia_gerador():
+    n, kw = _eq('gerador')['nominal'], LIMITES['gerador_kw']['aviso']['acima']
+    return ('Potência nominal %s kW (%s Hz, %s rpm). Carga: normal até %s kW; aviso acima de %s kW (%s %% da nominal). Com a '
+            'climatização ligada, o normal é %s a %s kW.') % (br(n['kw']), br(n['hz']), br(n['rpm']), br(kw), br(kw),
+                                                           br(int(round(kw / n['kw'] * 100))), br(GERADOR_CLIMA_KW[0]), br(GERADOR_CLIMA_KW[1]))
+
+
+def texto_faixas_volante():
+    v = br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo'])
+    return 'Volante: estabiliza a partir de %s %% da rotação de operação; aviso abaixo de %s %% (sem estabilização).' % (v, v)
+
+
+def texto_faixas_baterias():
+    def banco(L):
+        return 'normal de %s a %s V; aviso abaixo de %s V ou acima de %s V; crítico abaixo de %s V' % (
+            br(L['normal']['de']), br(L['normal']['ate']), br(L['aviso']['abaixo']), br(L['aviso']['acima']), br(L['critico']['abaixo']))
+    return 'Bancos de 24 V (serviço e partida): %s. Banco de 12 V: %s.' % (banco(LIMITES['bateria_0_tensao_v']), banco(LIMITES['bateria_2_tensao_v']))
+
+
+def texto_faixas_porao():
+    L = LIMITES['porao_bb_nivel']
+    return ('Nível normal no poço das bombas: até %s cm; aviso acima de %s cm; crítico acima de %s cm. As bombas ligam sozinhas pelo '
+            'sensor de nível.') % (br(L['normal']['ate']), br(L['aviso']['acima']), br(L['critico']['acima']))
+
+
+def texto_sonda():
+    L = LIMITES['profundidade_m']
+    return 'Profundidade mínima de navegação: %s m na sonda (aviso abaixo de %s m; crítico abaixo de %s m).' % (
+        br(L['normal']['de']), br(L['aviso']['abaixo']), br(L['critico']['abaixo']))
+
+
+def texto_abastecimento():
+    L = LIMITES['diesel_litros']
+    return ('Diesel: abastecer antes de %s %% (%s L) em qualquer tanque; reserva técnica de %s %% (%s L). Depois de abastecer, registre '
+            'os litros e o nível no app.') % (br(DIESEL_AVISO_PCT), br(L['aviso']['abaixo']), br(int(round(RESERVA * 100))), br(L['critico']['abaixo']))
+
+
+def texto_tanques():
+    return ('Tanques: água doce, aviso abaixo de %s %%; águas cinzas e negras, aviso acima de %s %%. Na marina, antes da saída: água '
+            'completada e servidas esvaziadas.') % (br(LIMITES['tanque_agua_pct']['aviso']['abaixo']), br(LIMITES['tanque_cinzas_pct']['aviso']['acima']))
+
+
+# ——————————————————————————————— TEXTOS DE EMERGÊNCIA (CONTRATO §1.3) ———————————————————————————————
+# Fonte única dos textos do procedimento padrão: os guias que os repetem (g_motores §4, g_porao §4, g_eletronicos §5, g_ais §2,
+# g_seafire, g_epirb e o protocolo) saem daqui desde o C5, e o D.protocolos do C6 é montado com eles. Sem bar, %, nós, mn, graus,
+# posição, lugar a bordo, número de pessoas, tempo em minutos, fabricante nem modelo (PROTOCOLO_LIMPO). Grafia "Seafire".
+ROTULO = 'procedimento padrão — confirmar com o protocolo de bordo'   # EXCEÇÃO do §3 do PROMPT (rótulo de segurança)
+MMSI_RADIO = 'MMSI do rádio de bordo (etiqueta / Licença de Estação)'  # trava §2.2: no MAYDAY, no DSC e no AIS, nunca o número
+TXT_ROTEIRO = ['MAYDAY, MAYDAY, MAYDAY', 'AQUI É ' + ', '.join([EMBARCACAO['nome'].upper()] * 3),
+               'MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)', 'POSIÇÃO — LEIA NO PLOTTER AGORA', 'NATUREZA DO PERIGO: ________',
+               'PESSOAS A BORDO: conte agora', 'AUXÍLIO NECESSÁRIO: ________', 'CÂMBIO']
+TXT_MOB = ['Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue.',
+           'Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter.',
+           'Volte devagar, com o motor em neutro perto da pessoa (hélice). Se perder de vista: MAYDAY no canal 16 com a posição da marca '
+           'MOB lida no plotter.']
+TXT_SEAFIRE = ['Fogo no motor ou alarme do sistema fixo: desligue motores e gerador e corte a ventilação do motor.',
+               'Se o sistema não disparou sozinho e há fogo no motor, use o disparo manual.',
+               'Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.',
+               'Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para a saída.',
+               'Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.']
+TXT_EPIRB = ['Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).',
+             'Acione conforme a etiqueta do equipamento e deixe a antena para cima, com céu aberto.',
+             'Leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Não desligue até o resgate.',
+             'Disparo por engano: desligue e avise no canal 16.']
+TXT_EPIRB_TESTE = ['Teste da baliza (EPIRB): faça o autoteste conforme a etiqueta. O teste não envia alerta.',
+                   'Confira na etiqueta a validade da bateria e do disparador hidrostático.']
+TXT_ALAGAMENTO = ['Água entrando: ligue as bombas de porão no manual, procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o '
+                  'que puder. Água subindo mesmo assim: MAYDAY no canal 16.']
+TXT_ABANDONO = ['Abandono: só quando não houver como manter o barco. Antes, MAYDAY no canal 16. Coletes em todos; leve o EPIRB e o VHF '
+                'portátil; embarque na balsa sem pular na água.']
+TXT_OLEO = ['Reduza para marcha lenta e confira o manômetro agora.', 'Compare BB e BE no mesmo giro: só um lado baixo aponta o motor.',
+            'Com o motor parado, procure vazamento e confira o nível de óleo na vareta.',
+            'Se continuar baixa, desligue o motor afetado, siga com o outro e chame a oficina dos motores.']
+TXT_SALVATAGEM = ('Em perigo agora: SOS do app e VHF canal 16. Coletes: um por pessoa — conte as pessoas a bordo agora (lotação: veja a '
+                  'placa de lotação). Balsa, coletes, boias, extintores e sinalizadores: no local da placa de salvatagem e do plano de '
+                  'segurança de bordo — confira na saída.')   # PROMPT §2.3, letra por letra
+TXT_PANPAN = ('Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no '
+              'canal 16, no mesmo formato da chamada MAYDAY.')
+TXT_DSC = ('O botão DISTRESS envia o alerta com a identificação programada no rádio: é o ' + MMSI_RADIO + '. Depois do alerta, faça o '
+           'MAYDAY por voz no canal 16.')
+
+
+def cap(s):
+    return s[:1].upper() + s[1:]
+
+
+FIM_ROTULO = cap(ROTULO) + '.'
+FIM_SEGURANCA = FIM_ROTULO + ' ' + cap(NOTA_ETIQUETA) + '.'   # fim de todo texto de g_seafire, g_epirb e da Salvatagem (§1.5)
+
+
+def fim_seguro(*frases):
+    return ' '.join(frases) + ' ' + FIM_SEGURANCA
+
+
+def roteiro_falado():
+    return ' — '.join(r.replace(': ________', '') for r in TXT_ROTEIRO)
+
+
+# ——————————————————————————————— GUIAS DE BORDO → base de conhecimento ———————————————————————————————
+# Orientação de operação escrita para a embarcação, por seção (§n). Sem "calado" até a Fase 3 (CALADO_FORA), sem número do
+# snapshot, sem código numérico de alarme, capacidade de óleo, torque ou especificação de fluido; o estabilizador só no banco de
+# 12 V (ESTABILIZADOR_12V); os números de faixa saem da LIMITES. "seg" é o mínimo de seguranca do §1.5 (True = todas as seções;
+# um conjunto = os números de seção ou os títulos); a marcação pela SEGURANCA_PALAVRAS (segura) pode pegar mais, nunca menos.
+def equip_de(*ids):
+    """"<nome> <fabricante> <modelo>" de cada equipamento (o fabricante não se repete quando o modelo já começa por ele); os de
+    segurança só pelo nome, sem fabricante nem modelo (§1.5)."""
+    out = []
+    for i in ids:
+        e = _eq(i)
+        if e.get('seguranca'):
+            out.append(e['nome'])
+        else:
+            fab = '' if e['modelo'].lower().startswith(e['fabricante'].lower()) else e['fabricante'] + ' '
+            out.append(e['nome'] + ' ' + fab + e['modelo'])
+    return ' · '.join(out)
+
+
+NOTA_GUIA = 'Guia de bordo da embarcação: orientação de operação, não substitui o manual do fabricante.'
+NOTA_PROTOCOLO = 'Procedimento padrão internacional, não é o protocolo de bordo: confirmar com o protocolo da embarcação.'
 GUIAS = {
+    'g_motores': {
+        'titulo': ARQ['g_motores'], 'pasta': 'manuais', 'equip': equip_de('motores'), 'seg': {'4'},
+        'secoes': [
+            ('1 · Antes da partida', 'Com os motores parados e frios: nível de óleo na vareta, líquido de arrefecimento, correias, válvulas de fundo abertas, porão seco e ventilação da praça de máquinas ligada por alguns minutos.'),
+            ('2 · Partida', 'Dê a partida pelo painel, um motor de cada vez, com a marcha em neutro. Logo depois confira a saída de água pelo escapamento e a pressão de óleo no painel dos dois motores.'),
+            ('3 · Aquecimento', 'Deixe alguns minutos em marcha lenta antes de acelerar. Evite rotação alta com o motor frio e suba o giro aos poucos.'),
+            ('4 · Pressão de óleo baixa', ' '.join(TXT_OLEO)),
+            ('5 · Temperatura alta', 'Reduza a rotação e confira a água no escapamento. Verifique o filtro de água salgada e o rotor da bomba de água salgada. Se continuar subindo, desligue o motor afetado e siga com o outro.'),
+            ('6 · Parada', 'Deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
+            ('7 · Manutenção na agenda', 'Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Rotor da bomba de água salgada: a cada 12 meses. Revisão anual pela oficina de motores.'),
+            ('8 · Horímetros', 'Os horímetros de BB e BE aparecem no painel dos motores e na telemetria.'),
+            ('9 · Faixas de operação', texto_faixas_motores()),
+            ('10 · Consumo', texto_consumo_motores()),
+        ],
+    },
     'g_gerador': {
-        'titulo': ARQ['g_gerador'], 'pasta': 'manuais', 'equip': 'Gerador Onan (modelo SEM DADOS)',
+        'titulo': ARQ['g_gerador'], 'pasta': 'manuais', 'equip': equip_de('gerador'),
         'secoes': [
             ('1 · Antes de ligar', 'Com o gerador parado, confira o nível de óleo e o líquido de arrefecimento. Abra a válvula de fundo da entrada de água salgada e confira se o filtro de água salgada está limpo. Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.'),
+            # §2 fica no 1º lugar do buscaBase para "como ligar o gerador?" (FONTE_IA do chat_ia.py): mantém "PARTIDA" e "gerador".
             ('2 · Ligar', 'No painel do gerador, pressione e segure PARTIDA até o motor pegar. Aguarde a tensão e a frequência estabilizarem no painel. Só depois transfira as cargas no quadro elétrico, uma de cada vez; ligue a climatização por último.'),
             ('3 · Água no escapamento', 'Com o gerador ligado, confira a saída de água pelo escapamento. Sem água saindo, desligue na hora: é sinal de falta de refrigeração (válvula de fundo fechada, filtro entupido ou rotor danificado).'),
             ('4 · Desligar', 'Retire as cargas no quadro elétrico. Deixe o gerador funcionar de 3 a 5 minutos sem carga para esfriar e pressione PARADA. Feche a válvula de fundo se o barco for ficar parado por vários dias.'),
             ('5 · Alarme de alta temperatura', 'Desligue o gerador. Verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller). Nunca abra a tampa do arrefecimento com o motor quente. Registre o alarme no diário.'),
             ('6 · Alarme de baixa pressão de óleo', 'Desligue o gerador e confira o nível de óleo com ele parado. Se o nível estiver correto e o alarme voltar, não religue: chame o técnico de bordo.'),
-            ('7 · Manutenção na agenda', 'Óleo e filtros: 12 meses ou 1.300 h (o que vier antes). Rotor (impeller): inspeção a cada 12 meses. Os intervalos oficiais estão no manual do fabricante — modelo SEM DADOS: confirmar.'),
-            ('8 · Horímetro', 'O horímetro aparece no painel do gerador e na telemetria. No snapshot de demonstração de 26/09/2026 10:12: 1.236,4 h, gerador ligado desde 09:35.'),
+            ('7 · Manutenção na agenda', 'Óleo e filtros: 12 meses ou 1.300 h (o que vier antes). Rotor (impeller): inspeção a cada 12 meses e troca quando estiver gasto.'),
+            ('8 · Horímetro', 'O horímetro aparece no painel do gerador e na telemetria.'),
+            ('9 · Potência e carga', texto_potencia_gerador()),
         ],
     },
     'g_seakeeper': {
-        'titulo': ARQ['g_seakeeper'], 'pasta': 'manuais', 'equip': 'Estabilizador Seakeeper (modelo SEM DADOS)',
+        'titulo': ARQ['g_seakeeper'], 'pasta': 'manuais', 'equip': equip_de('estabilizador'),
         'secoes': [
             ('1 · Energia', 'O estabilizador é alimentado pelo banco de 12 V. Para acelerar o volante, mantenha o banco carregado, com o carregador ligado ao gerador ou ao cais. Com tensão baixa no 12 V, o display avisa e o volante não acelera.'),
-            ('2 · Ligar antes de sair', 'Ligue pelo display com antecedência: a estabilização só começa quando o volante chega à rotação de operação e o display indica pronto. O tempo de aceleração depende do modelo — SEM DADOS neste guia.'),
+            ('2 · Ligar antes de sair', 'Ligue pelo display com antecedência, com o banco de 12 V carregado (carregador ligado ao gerador ou ao cais). O volante estabiliza a partir de %s %% da rotação de operação; o display mostra a rotação e indica quando a estabilização está disponível. Espere a indicação antes de sair.' % br(_eq('estabilizador')['nominal']['pct_estabiliza'])),
             ('3 · Estabilizar', 'O botão de estabilização liga e desliga o efeito sem parar o volante. Em manobra de marina, deixe a estabilização desligada se o display recomendar.'),
-            ('4 · Desligar ao atracar', 'Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha a energia até o display indicar que parou.'),
+            ('4 · Desligar ao atracar', 'Desligue pelo display. O volante continua girando por muito tempo depois de desligado; mantenha o banco de 12 V ligado até o display indicar que parou.'),
             ('5 · Segurança', 'Nunca abra tampas nem faça manutenção com o volante girando. Confira no display que a rotação está em zero antes de qualquer serviço.'),
-            ('6 · Alarmes', 'Anote o código mostrado no display e registre no diário com a hora. A tabela de códigos está no manual do fabricante — SEM DADOS (manual não carregado na demonstração).'),
-            ('7 · Manutenção na agenda', 'Anodo do trocador de calor: a cada 6 meses (agenda de demonstração). Outros itens: manual do fabricante, modelo SEM DADOS.'),
+            # Mensagens do display e o que fazer, sem código numérico (§8.2 ponto 1: código inventado de modelo real é vedado, §2.10).
+            ('6 · Alarmes', 'Mensagens do display e o que fazer: tensão baixa no 12 V (ligue o carregador ao gerador ou ao cais); arrefecimento do estabilizador (confira a bomba e a válvula de fundo); temperatura alta (desligue e chame o técnico); volante abaixo de %s %% (sem estabilização até o volante acelerar). O display mostra a mensagem e o código: anote no diário com a hora.' % br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo'])),
+            ('7 · Manutenção na agenda', 'Anodo do trocador de calor: a cada 6 meses. Revisão anual pelo técnico de bordo.'),
+            ('8 · Faixas', texto_faixas_volante()),
         ],
     },
     'g_clima': {
-        'titulo': ARQ['g_clima'], 'pasta': 'manuais', 'equip': 'Climatização (fabricante e modelo SEM DADOS)',
+        'titulo': ARQ['g_clima'], 'pasta': 'manuais', 'equip': equip_de('climatizacao'),
         'secoes': [
-            ('1 · Ligar', 'Confira a válvula de fundo aberta e o filtro de água salgada limpo. Com energia AC (gerador ou cais), ligue a bomba de água salgada no painel e depois o controle da cabine.'),
-            ('2 · Modos e temperatura', 'No controle de cada cabine escolha frio, calor ou ventilação e ajuste a temperatura desejada. Com o gerador, ligue as cabines uma de cada vez.'),
+            ('1 · Ligar', 'Confira a válvula de fundo aberta e o filtro de água salgada limpo. Com energia AC no quadro elétrico, ligue a bomba de água salgada no painel e depois o controle da cabine.'),
+            ('2 · Modos e temperatura', 'No controle de cada ambiente escolha frio, calor ou ventilação e ajuste a temperatura desejada. A unidade de 16.000 BTU/h atende o salão e as duas de 12.000 BTU/h, as cabines; ligue uma de cada vez para não sobrecarregar o quadro.'),
             ('3 · Alarme de fluxo', 'Alarme de fluxo ou de alta pressão quase sempre é falta de água salgada: filtro sujo, válvula de fundo fechada ou bomba desligada. Desligue a unidade, limpe o filtro e religue.'),
             ('4 · Fluxo de ar fraco', 'Fluxo de ar fraco na cabine: limpe o filtro de ar da unidade daquela cabine. Se continuar, registre no diário e chame a marina.'),
             ('5 · Desligar', 'Desligue pelo controle das cabines e depois a bomba de água salgada. Ao deixar o barco, feche a válvula de fundo se a climatização não for usada.'),
-            ('6 · Manutenção na agenda', 'Filtro de água salgada: limpeza mensal. Revisão anual pela marina. Fabricante e modelo SEM DADOS — confirmar intervalos no manual.'),
+            ('6 · Manutenção na agenda', 'Filtro de água salgada: limpeza mensal. Revisão anual pela marina.'),
         ],
     },
     'g_eletronicos': {
-        'titulo': ARQ['g_eletronicos'], 'pasta': 'manuais', 'equip': 'Eletrônicos Garmin · áudio Fusion · rádios VHF 315 (modelos SEM DADOS)',
+        'titulo': ARQ['g_eletronicos'], 'pasta': 'manuais', 'equip': equip_de('eletronicos', 'audio', 'vhf'), 'seg': {'1', '5'},
         'secoes': [
-            ('1 · Plotter Garmin: homem ao mar', 'Ao ver alguém cair na água, acione a função MOB do plotter Garmin: a posição fica marcada e o plotter mostra o rumo de volta. Veja também o protocolo de emergência.'),
+            ('1 · Plotter: homem ao mar', 'Ao ver alguém cair na água, acione a função MOB do plotter: a posição fica marcada e o plotter mostra o rumo de volta. Siga o protocolo de emergência (homem ao mar).'),
             ('2 · Piloto automático', 'Deixe o piloto automático em espera (standby) antes de manobrar na marina e sempre que houver gente na água. Engate só em área livre, com a rota conferida no plotter.'),
-            ('3 · Alarme de âncora', 'Ao fundear, ative o alarme de âncora no plotter e defina o raio conforme o cabo lançado e o espaço de giro. O barco não tem sensor de âncora: a posição do ferro fica SEM LEITURA.'),
-            ('4 · Rádio VHF 315: escuta', 'Mantenha o canal 16 em escuta permanente. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo.'),
-            ('5 · Rádio VHF 315: DSC', 'O botão de socorro DSC (DISTRESS) só envia a identificação se o MMSI estiver programado no rádio. Na demonstração o MMSI 710123456 é fictício; no barco real, programe o MMSI do registro.'),
+            ('3 · Alarme de âncora', 'Ao fundear, ative o alarme de âncora no plotter e defina o raio conforme a corrente lançada. O contador de corrente mostra os metros lançados no controle do guincho.'),
+            ('4 · Rádio VHF: escuta', 'Mantenha o canal 16 em escuta permanente no rádio fixo. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo. O rádio portátil fica carregado na base.'),
+            ('5 · Rádio VHF: DSC', TXT_DSC),
             ('6 · Áudio Fusion: Bluetooth', 'Para parear o celular: escolha a fonte Bluetooth no controle Fusion, deixe o aparelho visível e selecione o Fusion na lista de Bluetooth do celular. O volume é ajustado por zona.'),
-            ('7 · Atualizações', 'Cartas e software dos eletrônicos Garmin: atualização anual (agenda de demonstração, dezembro).'),
+            ('7 · Atualizações', 'Cartas e software dos plotters, do radar e do áudio: atualização anual, conforme a agenda de manutenção.'),
+            ('8 · Sonda', texto_sonda()),
         ],
     },
-    'g_motores': {
-        'titulo': ARQ['g_motores'], 'pasta': 'manuais', 'equip': 'Motores Volvo Penta (modelo SEM DADOS)',
+    'g_eletrico': {
+        'titulo': ARQ['g_eletrico'], 'pasta': 'manuais', 'equip': equip_de('eletrico'),
         'secoes': [
-            ('1 · Antes da partida', 'Com os motores parados e frios: nível de óleo, líquido de arrefecimento, correias, válvulas de fundo abertas, porão seco e ventilação do compartimento ligada por alguns minutos.'),
-            ('2 · Partida', 'Dê a partida pelo painel. Logo depois confira a saída de água pelo escapamento e a pressão de óleo no painel dos dois motores.'),
-            ('3 · Aquecimento', 'Deixe alguns minutos em marcha lenta antes de acelerar. Evite rotação alta com o motor frio.'),
-            ('4 · Pressão de óleo baixa', 'Se a pressão de óleo cair ou o alarme acender: reduza para marcha lenta e observe; compare BB e BE no mesmo giro (só um lado baixo aponta o motor); com o motor parado, procure vazamento e confira o nível; persistindo, desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.'),
-            ('5 · Temperatura alta', 'Reduza a rotação e confira a água no escapamento. Verifique o filtro de água salgada e o rotor. Se continuar subindo, desligue o motor afetado.'),
-            ('6 · Parada', 'Deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
-            ('7 · Manutenção na agenda', 'Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Revisão anual pela oficina Volvo Penta. Intervalos oficiais: manual do fabricante — modelo SEM DADOS.'),
-            ('8 · Horímetros', 'Horímetros na última leitura com motores ligados (26/09/2026 09:31, demonstração): BB 412,6 h · BE 409,8 h.'),
+            ('1 · Bancos', 'Oito baterias AGM de 12 V em três bancos: serviço de 24 V (4), partida dos motores de 24 V (2) e banco de 12 V (2 em paralelo), que alimenta a eletrônica de 12 V e o estabilizador. O carregador de bordo repõe os três bancos.'),
+            ('2 · Faixas', texto_faixas_baterias()),
+            ('3 · Verificação', 'Confira as tensões no painel e na telemetria antes de sair. Bornes limpos e apertados; verificação dos bancos e das conexões a cada 6 meses, conforme a agenda de manutenção.'),
+        ],
+    },
+    'g_dessalinizador': {
+        'titulo': ARQ['g_dessalinizador'], 'pasta': 'manuais', 'equip': equip_de('dessalinizador'),
+        'secoes': [
+            ('1 · Ligar', 'Abra a válvula de fundo do dessalinizador e confira o pré-filtro limpo. Ligue pelo painel do dessalinizador, com o banco de serviço carregado; a pressão sobe sozinha.'),
+            ('2 · Produção', 'Produção nominal: %s L/h. Descarte a água dos primeiros minutos depois de ligar e confira a salinidade no painel antes de mandar a água para o tanque.' % br(_eq('dessalinizador')['nominal']['lph'])),
+            ('3 · Desligar e lavar', 'Desligue pelo painel: o ciclo termina com a lavagem com água doce. Feche a válvula de fundo se o barco for ficar parado.'),
+            ('4 · Manutenção', 'Pré-filtros: troca conforme a agenda de manutenção. Barco parado por muito tempo: conservação da membrana pelo técnico de bordo.'),
+        ],
+    },
+    'g_porao': {
+        'titulo': ARQ['g_porao'], 'pasta': 'manuais', 'equip': equip_de('porao'), 'seg': {'4'},
+        'secoes': [
+            ('1 · Funcionamento', 'Duas bombas automáticas de 24 V, uma em BB e outra em BE, cada uma com sensor de nível. O painel mostra o nível do poço e conta os ciclos de cada bomba.'),
+            ('2 · Faixas', texto_faixas_porao()),
+            ('3 · Teste mensal', 'Uma vez por mês, acione cada bomba no manual, confira a saída pelo casco e o alarme do painel e registre o teste no diário.'),
+            ('4 · Água entrando', TXT_ALAGAMENTO[0]),
+        ],
+    },
+    'g_ancora': {
+        'titulo': ARQ['g_ancora'], 'pasta': 'manuais', 'equip': equip_de('ancora'),
+        'secoes': [
+            ('1 · Lançar', 'Com o barco parado sobre o ponto escolhido, lance pelo controle do guincho e dê ré devagar até a âncora unhar. Lance de 3 a 5 vezes a profundidade.'),
+            ('2 · Contador de corrente', 'O contador mostra os metros de corrente lançados no controle do guincho. Confira a marca antes de ativar o alarme de âncora no plotter.'),
+            ('3 · Recolher e travar', 'Recolha devagar, com o motor aliviando a corrente. Com a âncora no lugar, trave a corrente e desligue o guincho no disjuntor.'),
+            ('4 · Manutenção', 'Lave o guincho com água doce depois do uso e confira a corrente e o destorcedor uma vez por ano.'),
+        ],
+    },
+    'g_piloto': {
+        'titulo': ARQ['g_piloto'], 'pasta': 'manuais', 'equip': equip_de('piloto'),
+        'secoes': [
+            ('1 · Engatar', 'Engate o piloto no controle do posto de comando, com o rumo conferido no plotter e área livre à frente.'),
+            ('2 · Espera ao manobrar', 'Em manobra, na marina e sempre que houver gente na água, deixe o piloto em espera (standby).'),
+            ('3 · Assumir no timão', 'Para assumir, aperte espera e governe pelo timão. O piloto comanda a direção hidráulica por uma bomba própria.'),
+            ('4 · Alarmes', 'Alarme de desvio de rumo ou da direção: assuma no timão, ponha em espera e confira o rumo no plotter. Registre no diário com a hora.'),
+        ],
+    },
+    'g_radar': {
+        'titulo': ARQ['g_radar'], 'pasta': 'manuais', 'equip': equip_de('radar'),
+        'secoes': [
+            ('1 · Ligar e transmitir', 'Ligue o radar pelo plotter e espere o aquecimento; depois toque em transmitir. Na marina, deixe em espera.'),
+            ('2 · Zona de guarda', 'Defina a zona de guarda em volta do barco: o plotter avisa quando um alvo entra nela.'),
+            ('3 · Neblina e noite', 'Com neblina ou à noite, mantenha o radar transmitindo, reduza a velocidade e confira os alvos com o AIS no plotter.'),
+            ('4 · Segurança', 'Não fique perto do domo com o radar transmitindo e não abra o domo com ele ligado.'),
+        ],
+    },
+    'g_ais': {
+        'titulo': ARQ['g_ais'], 'pasta': 'manuais', 'equip': equip_de('ais'), 'seg': {'2'},
+        'secoes': [
+            ('1 · Alvos no plotter', 'Os alvos do AIS aparecem no plotter com nome, rumo e velocidade. Toque no alvo para ver a menor distância de passagem prevista.'),
+            ('2 · Identificação', 'O AIS transmite a identificação programada no transponder; o MMSI é o do rádio de bordo (etiqueta / Licença de Estação).'),
+            ('3 · Modo silencioso', 'No modo silencioso o transponder só recebe e não transmite a posição do barco. Use só quando necessário e volte a transmitir ao sair.'),
+        ],
+    },
+    'g_seafire': {
+        'titulo': ARQ['g_seafire'], 'pasta': 'manuais', 'equip': equip_de('seafire'), 'seg': True, 'nota': NOTA_PROTOCOLO,
+        'secoes': [
+            ('1 · Em caso de fogo', fim_seguro(TXT_SEAFIRE[0], TXT_SEAFIRE[3], TXT_SEAFIRE[4])),
+            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[1])),
+            ('3 · Depois da descarga', fim_seguro(TXT_SEAFIRE[2], 'Depois, registre no diário e chame o técnico de bordo para a recarga.')),
+            ('4 · Inspeção anual', fim_seguro('Inspeção do sistema fixo e da carga a cada 12 meses, pelo técnico de bordo, conforme a agenda de manutenção.')),
+        ],
+    },
+    'g_epirb': {
+        'titulo': ARQ['g_epirb'], 'pasta': 'manuais', 'equip': equip_de('epirb'), 'seg': True, 'nota': NOTA_PROTOCOLO,
+        'secoes': [
+            ('1 · Acionar', fim_seguro(*TXT_EPIRB[:3])),
+            ('2 · Teste da baliza', fim_seguro(*TXT_EPIRB_TESTE)),
+            ('3 · Disparo por engano', fim_seguro(TXT_EPIRB[3])),
+            ('4 · Validade', fim_seguro('Validade da bateria e do disparador hidrostático: veja a etiqueta do equipamento e o certificado em Documentos.')),
         ],
     },
     'checklist': {
-        'titulo': ARQ['checklist'], 'pasta': 'manuais', 'equip': 'Checklist de bordo',
+        'titulo': ARQ['checklist'], 'pasta': 'manuais', 'equip': 'Checklist de bordo', 'seg': {'Saída · antes de largar'},
         'secoes': [
             ('Saída · 1 a 3', '1. Gerador: confira água no escapamento depois de ligar. 2. Estabilizador: ligue com antecedência, com o banco de 12 V carregado. 3. Climatização: filtro de água salgada limpo antes de ligar.'),
             ('Saída · 4 a 6', '4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16. 5. Bombas de porão: acione cada uma manualmente e confira o alarme. 6. Diesel: ' + REGRA_ABAST + '.'),
-            ('Saída · antes de largar', 'Confira coletes e boia à mão, pessoas a bordo contadas e anotadas no diário, previsão do tempo consultada. Amarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).'),
-            ('Chegada', '1. Piloto em espera antes de manobrar. 2. Estabilizador: desligar ao atracar e manter energia até o volante parar. 3. Gerador: retirar cargas, esfriar e desligar. 4. Climatização: desligar e fechar válvula de fundo se o barco ficar parado. 5. Fechar a saída no diário: horas, consumo e pendências.'),
+            ('Saída · antes de largar', 'Coletes: um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem. Previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.'),
+            ('Chegada', '1. Piloto em espera antes de manobrar. 2. Estabilizador: desligar ao atracar e manter o banco de 12 V ligado até o volante parar. 3. Gerador: retirar cargas, esfriar e desligar. 4. Climatização: desligar e fechar válvula de fundo se o barco ficar parado. 5. Fechar a saída no diário: horas, consumo e pendências.'),
+            ('Abastecimento', texto_abastecimento()),
+            ('Tanques', texto_tanques()),
+            ('Fundeio', '1. Fundo de areia ou lama, com espaço de giro livre de outros barcos. 2. Lance com o barco parado e dê ré devagar até a âncora unhar. 3. Alarme de âncora ativado no plotter. 4. Registre no diário a hora e a profundidade.'),
         ],
     },
     'protocolo': {
         'titulo': ARQ['protocolo'], 'pasta': 'protocolos', 'equip': 'Protocolo de emergência — procedimento padrão (confirmar com o protocolo de bordo)',
+        'seg': True, 'nota': NOTA_PROTOCOLO,
         'secoes': [
-            ('MAYDAY · canal 16', 'Só em perigo grave e iminente. VHF canal 16 (156,800 MHz). Diga devagar: MAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — MMSI — POSIÇÃO (leia no plotter) — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO. Repita até ter resposta. Procedimento padrão — confirmar com o protocolo de bordo.'),
-            ('PAN-PAN · urgência', 'Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no canal 16, no mesmo formato da chamada MAYDAY. Procedimento padrão — confirmar com o protocolo de bordo.'),
-            ('DSC · botão de socorro', 'Nos rádios com DSC, o botão DISTRESS envia o alerta com o MMSI e a posição do GPS, se o MMSI estiver programado. Depois do alerta, faça a chamada MAYDAY por voz no canal 16.'),
-            ('Homem ao mar', 'Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue. Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter. Volte devagar, com o motor em neutro perto da pessoa, por causa da hélice. Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB. Procedimento padrão — confirmar com o protocolo de bordo.'),
-            ('Incêndio · Seafire', 'SEM DADOS: localização, acionamento e tempo de espera do sistema Seafire não foram carregados. Enviar o manual ou o protocolo de bordo do Seafire.'),
-            ('EPIRB', 'SEM DADOS: modelo, localização a bordo, forma de acionamento e validade da bateria do EPIRB não foram carregados.'),
+            ('MAYDAY · canal 16', 'Só em perigo grave e iminente. VHF canal 16 (156,800 MHz). Diga devagar: ' + roteiro_falado() + '. Repita até ter resposta. ' + FIM_ROTULO),
+            ('PAN-PAN', TXT_PANPAN + ' ' + FIM_ROTULO),
+            ('DSC', TXT_DSC + ' ' + FIM_ROTULO),
+            ('Homem ao mar', ' '.join(TXT_MOB) + ' ' + FIM_ROTULO),
+            ('Incêndio · Seafire', fim_seguro(*TXT_SEAFIRE)),
+            ('EPIRB', fim_seguro(*TXT_EPIRB)),
+            ('Água entrando', TXT_ALAGAMENTO[0] + ' ' + FIM_ROTULO),
+            ('Abandono', TXT_ABANDONO[0] + ' ' + FIM_ROTULO),
+            ('Salvatagem', fim_seguro(TXT_SALVATAGEM)),
         ],
     },
 }
 FONTE_GUIA = {k: g['titulo'] for k, g in GUIAS.items()}
 
 
+def trecho_seguro(g, sec, t):
+    """seguranca do trecho (§1.5): o mínimo do guia ("seg") ou a SEGURANCA_PALAVRAS em qualquer campo (fonte e equip inclusive)."""
+    seg = g.get('seg')
+    if seg is True or (seg and (sec in seg or sec.split(' · ')[0] in seg)):
+        return True
+    return segura(' '.join(t[k] for k in ('fonte', 'equip', 'secao', 'texto')))
+
+
 def trechos():
     out = []
-    for k, g in GUIAS.items():
+    for g in GUIAS.values():
         for sec, txt in g['secoes']:
-            out.append({'fonte': g['titulo'], 'pag': None, 'secao': sec, 'texto': txt, 'equip': g['equip']})
+            t = {'fonte': g['titulo'], 'secao': sec, 'texto': txt, 'equip': g['equip']}
+            if trecho_seguro(g, sec, t):
+                t['seguranca'] = True
+            out.append(t)
     return out
 
 
-# FAQ por equipamento (telas F2–F5): passo a passo tirado dos guias de bordo (DEMO)
+# FAQ por equipamento (telas F2–F5, legado até a Fase 4): passo a passo tirado das mesmas seções dos guias de bordo. Os títulos
+# do FAQ de eletrônicos mantêm "Rádio VHF" e "áudio Fusion": é por eles que a F1 abre a pergunta certa (palavras, §1.4).
 def faq():
     def passos(k, idx):
         g = GUIAS[k]
         return [{'n': str(i + 1), 't': g['secoes'][j][1], 'secao': g['secoes'][j][0]} for i, j in enumerate(idx)]
     return {
-        'gerador': {'status': 'PRONTO', 'fonte': GUIAS['g_gerador']['titulo'], 'equip': 'Gerador Onan', 'modelo': None,
+        'gerador': {'status': 'PRONTO', 'fonte': GUIAS['g_gerador']['titulo'], 'equip': 'Gerador Onan', 'modelo': _eq('gerador')['modelo'],
                     'perguntas': [
                         {'q': 'Como ligar o gerador?', 'passos': passos('g_gerador', [0, 1, 2])},
                         {'q': 'Como desligar o gerador?', 'passos': passos('g_gerador', [3])},
@@ -423,22 +790,24 @@ def faq():
                         {'q': 'Alarme de baixa pressão de óleo', 'passos': passos('g_gerador', [5])},
                         {'q': 'Quantas horas tem e quando revisar?', 'passos': passos('g_gerador', [7, 6])},
                     ]},
-        'estabilizador': {'status': 'PRONTO', 'fonte': GUIAS['g_seakeeper']['titulo'], 'equip': 'Estabilizador Seakeeper', 'modelo': None,
+        'estabilizador': {'status': 'PRONTO', 'fonte': GUIAS['g_seakeeper']['titulo'], 'equip': 'Estabilizador Seakeeper', 'modelo': _eq('estabilizador')['modelo'],
                           'perguntas': [
                               {'q': 'Como ligar antes de sair?', 'passos': passos('g_seakeeper', [0, 1, 2])},
                               {'q': 'Como desligar ao atracar?', 'passos': passos('g_seakeeper', [3, 4])},
                               {'q': 'Apareceu um alarme', 'passos': passos('g_seakeeper', [5])},
                               {'q': 'Manutenção', 'passos': passos('g_seakeeper', [6])},
                           ]},
-        'eletronicos': {'status': 'PRONTO', 'fonte': GUIAS['g_eletronicos']['titulo'], 'equip': 'Eletrônicos Garmin · Fusion · VHF 315', 'modelo': None,
+        'eletronicos': {'status': 'PRONTO', 'fonte': GUIAS['g_eletronicos']['titulo'], 'equip': 'Eletrônicos Garmin · Fusion · Icom',
+                        'modelo': ' · '.join([_eq('eletronicos')['modelo'], _eq('audio')['modelo'], _eq('vhf')['modelo'].split(' e ')[0]]),
                         'perguntas': [
                             {'q': 'Homem ao mar no plotter', 'passos': passos('g_eletronicos', [0])},
                             {'q': 'Piloto automático', 'passos': passos('g_eletronicos', [1])},
                             {'q': 'Alarme de âncora', 'passos': passos('g_eletronicos', [2])},
-                            {'q': 'Rádio VHF 315: canal 16 e DSC', 'passos': passos('g_eletronicos', [3, 4])},
+                            {'q': 'Rádio VHF: canal 16 e DSC', 'passos': passos('g_eletronicos', [3, 4])},
                             {'q': 'Parear o celular no áudio Fusion', 'passos': passos('g_eletronicos', [5])},
                         ]},
-        'climatizacao': {'status': 'PRONTO', 'fonte': GUIAS['g_clima']['titulo'], 'equip': 'Climatização', 'modelo': None,
+        'climatizacao': {'status': 'PRONTO', 'fonte': GUIAS['g_clima']['titulo'], 'equip': 'Climatização Webasto',
+                         'modelo': ' '.join(_eq('climatizacao')['modelo'].split()[:2]),
                          'perguntas': [
                              {'q': 'Como ligar a climatização?', 'passos': passos('g_clima', [0, 1])},
                              {'q': 'Alarme de fluxo', 'passos': passos('g_clima', [2])},
@@ -624,15 +993,13 @@ def sd(v):
 def gera_fontes(D):
     F = {}
     for k, g in GUIAS.items():
-        nota = ('Procedimento padrão internacional, não é o protocolo de bordo: confirmar com o protocolo da embarcação.'
-                if k == 'protocolo' else 'Guia de bordo da embarcação: orientação de operação, não substitui o manual do fabricante.')
-        h = ['<h1>' + g['titulo'] + '</h1>', '<p><b>' + g['equip'] + '</b></p>', '<p><i>' + nota + '</i></p>']
+        h = ['<h1>' + g['titulo'] + '</h1>', '<p><b>' + g['equip'] + '</b></p>', '<p><i>' + g.get('nota', NOTA_GUIA) + '</i></p>']
         for sec, txt in g['secoes']:
             h.append('<h2>' + sec + '</h2><p>' + txt + '</p>')
         F[PASTAS[g['pasta']] + '/' + g['titulo'] + '.html'] = '\n'.join(h)
-    F[PASTAS['manuais'] + '/' + ARQ['inventario'] + '.csv'] = csv_txt(
-        ['Equipamento', 'Fabricante', 'Modelo', 'Quantidade', 'Guia de bordo'],
-        [[e['nome'], sd(e['fabricante']), sd(e['modelo']), e['qtd'], FONTE_GUIA.get(e['guia'], 'SEM DADOS') if e['guia'] else 'SEM DADOS'] for e in EQUIPAMENTOS])
+    F[PASTAS['manuais'] + '/' + ARQ['inventario'] + '.csv'] = csv_txt(   # o inventário é a fonte da tela Equipamentos (§1.4)
+        ['Equipamento', 'Fabricante', 'Modelo', 'Quantidade', 'Lados', 'Guia de bordo'],
+        [[e['nome'], sd(e['fabricante']), sd(e['modelo']), e['qtd'], e.get('lados'), FONTE_GUIA.get(e['guia'], 'SEM DADOS')] for e in EQUIPAMENTOS])
     F[PASTAS['docs'] + '/' + ARQ['documentos'] + '.csv'] = csv_txt(
         ['Documento', 'Categoria', 'Validade', 'Situação em 26/09/2026', 'Observação'],
         [[x['n'], x['cat'], sd(x.get('vence')), x['st'], x['nota']] for x in D['documentos']])
@@ -694,7 +1061,7 @@ def main(argv=None):
         print('gerador: valor não finito no D ou na base (%s); nada foi gravado' % e, file=sys.stderr)
         return 1
     try:   # antes de gravar: com uma asserção estrutural falhando, nada sai
-        confere(D, B, F, S, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES}, detalhe=a.detalhe)
+        confere(D, B, F, S, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES, 'LIMITES': LIMITES}, detalhe=a.detalhe)
     except ConfereFalhou as e:
         print(e, file=sys.stderr)
         return 1

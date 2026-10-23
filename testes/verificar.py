@@ -50,6 +50,10 @@ motorizacao e o motor do embarcacao do capitao-dados.js (sem distinguir maiúscu
 no texto visível, no title, no aria-label, no alt e no href — na tela fechada, com o roteiro MAYDAY aberto e com cada cartão de
 protocolo aberto (a tela volta ao estado inicial); o D tem de ter esses campos e o roteiro e todos os cartões têm de abrir (senão a
 conferência não vale). A base entra na 1b, que a tira do cabeçalho da S1.
+Equipamento de segurança fora de Equipamentos, Leme e Documentos (CONTRATO-DADOS §1.4, C5): na F1 (web e app) e na E2, nenhum
+modelo do EPIRB nem do Seafire no texto visível e nos atributos (na E2 também com cada sistema e cada sintoma escolhidos), nenhum
+link do chat (#q=) com o fabricante deles, e, na F1, o cartão do VHF e o do áudio abrem a pergunta certa do FAQ de eletrônicos
+(#p= > 0, na pergunta de "VHF" e na de "Fusion"), pelas palavras do equipamento.
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -263,6 +267,63 @@ def problemas_barco_sos(pg):
     return prob
 
 
+# Equipamento de segurança (EPIRB e Seafire: seguranca no capitao-dados.js) só em Equipamentos, Leme e Documentos (CONTRATO-DADOS
+# §1.4, C5). Na F1 e na E2: o modelo nunca no texto nem nos atributos; o fabricante nunca no link do chat (#q=); na F1, o VHF e o
+# áudio abrem a pergunta deles no FAQ de eletrônicos (as palavras do equipamento). Na E2, a leitura passa por cada sistema e sintoma.
+TELAS_SEGURANCA = ('F1-FAQ-Hub', 'F1-FAQ-Hub-Web', 'E2-Navegando-Sintoma')
+TEXTOS_SEGURANCA = r"""async (e2) => {
+  const D = window.CapitaoDados || {}, EQ = D.equipamentos || [], P = ((D.faq || {}).eletronicos || {}).perguntas || [];
+  const textos = [], chats = [];
+  const dec = (v) => { try { return decodeURIComponent(v); } catch (x) { return v; } };
+  const le = () => {
+    textos.push(document.body ? document.body.innerText : '');
+    document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => {
+      const v = e.getAttribute(a); if (!v) return; textos.push(a === 'href' ? dec(v) : v);
+      if (a === 'href' && v.indexOf('#q=') !== -1) chats.push(dec(v.split('#q=')[1]));
+    }));
+  };
+  const espera = () => new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 40)));
+  le();
+  if (e2) {
+    const sis = () => [...document.querySelectorAll('button[aria-pressed][aria-label^="Sistema:"]')];
+    for (let i = 0; i < sis().length; i++) {
+      sis()[i].click(); await espera(); le();
+      const sint = () => [...document.querySelectorAll('button[aria-pressed]:not([aria-label])')];
+      for (let j = 0; j < sint().length; j++) { sint()[j].click(); await espera(); le(); }
+    }
+  }
+  const cartoes = {};
+  document.querySelectorAll('a[href]').forEach((a) => { const n = (a.innerText || '').split('\n')[0].trim(); const e = EQ.find((x) => x.nome === n); if (e && !cartoes[e.id]) cartoes[e.id] = a.getAttribute('href'); });
+  return { seg: EQ.filter((e) => e.seguranca).map((e) => ({ id: e.id, fabricante: e.fabricante, modelo: e.modelo })), texto: textos.join('\n'), chats: chats,
+           cartoes: cartoes, perguntas: P.map((p) => p.q) };
+}"""
+
+
+def problemas_seguranca(pg, tela):
+    """F1 e E2 (CONTRATO-DADOS §1.4, C5): sem modelo do EPIRB e do Seafire na tela, sem o fabricante deles no link do chat e, na F1,
+    o VHF e o áudio abrindo a pergunta certa. Sem os dois equipamentos de segurança no D, a conferência não vale."""
+    r = pg.evaluate(TEXTOS_SEGURANCA, tela.startswith('E2-'))
+    prob = []
+    if sorted(e['id'] for e in r['seg']) != ['epirb', 'seafire']:
+        prob.append('D sem EPIRB e Seafire com seguranca: a conferência do equipamento de segurança não vale')
+    for e in r['seg']:
+        for n in confere.candidatos_modelo(e['fabricante'], e['modelo']):
+            if next(confere.acha_nomes(r['texto'], n), None):
+                prob.append('modelo do %s na tela (só em Equipamentos, Leme e Documentos, §1.4)' % e['id'])
+                break
+        ruins = sorted({q for q in r['chats'] if next(confere.acha_nomes(q, e['fabricante']), None)})
+        if ruins:
+            prob.append('link do chat com o fabricante do %s: %s' % (e['id'], ruins[:2]))
+    if tela.startswith('F1-'):
+        for i, alvo in (('vhf', 'VHF'), ('audio', 'Fusion')):
+            h = r['cartoes'].get(i) or ''
+            m = re.search(r'F3-FAQ-Eletronicos(?:-Web)?\.dc\.html#p=(\d+)$', h)
+            n = int(m.group(1)) if m else 0
+            if not (0 < n <= len(r['perguntas']) and alvo in r['perguntas'][n - 1]):
+                prob.append('cartão %s da F1 não abre a pergunta de %s no FAQ de eletrônicos: %r' % (i, alvo, h))
+    return prob
+
+
 # Selo de demonstração (decisão b da 1.1.0: nenhum): no rodapé, numa caixa de selo ou no texto do login e da lista.
 SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
 
@@ -326,6 +387,7 @@ def main():
                     # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
                     if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
                     if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
+                    if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:

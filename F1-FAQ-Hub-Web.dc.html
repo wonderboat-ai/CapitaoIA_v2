@@ -183,7 +183,8 @@ class Component extends DCLogic {
     let prontos = 0;
     const cartoes = EQ.map((e) => {
       const k = this.faqDe(e), F = k ? FAQ[k] : null, g = e.guia ? G[e.guia] : null, t = cor(TOM_EQ[e.id] || 'ink');
-      const fab = (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '');
+      // EPIRB e Seafire (seguranca): a nota da etiqueta no lugar de fabricante e modelo, também nos links do chat (CONTRATO §1.4)
+      const fab = (e.seguranca ? e.nota : (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD)) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '');
       const c = { nome: e.nome, fab: fab, ico: this.ico(ICON[e.id] || 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 22, 1.7, t[0]), wash: t[1], chipDemo: '' };
       const pronto = F && F.status === 'PRONTO', P = F && Array.isArray(F.perguntas) ? F.perguntas : [];
       if (F && k === e.id) {
@@ -192,22 +193,23 @@ class Component extends DCLogic {
           sub: P.map((p) => p.q).join(' · ') || SD, acao: P.length + (P.length === 1 ? ' pergunta ›' : ' perguntas ›'),
           href: this.tela(k), fonte: 'Fonte: ' + (F.fonte || SD) });
       } else if (F) {
-        // Áudio e VHF: respondidos no FAQ de eletrônicos (mesmo guia) — abre direto na pergunta
-        const kw = norm(e.modelo || e.fabricante || e.nome), idx = [];
-        P.forEach((p, i) => { if (norm(p.q + ' ' + (p.passos || []).map((x) => x.secao).join(' ')).indexOf(kw) !== -1) idx.push(i); });
+        // Áudio e VHF: respondidos no FAQ de eletrônicos (mesmo guia) — abre direto na pergunta que cita uma das palavras do
+        // equipamento (D.equipamentos[].palavras: fabricante, modelo e nome comum; as com espaço nas pontas valem palavra inteira)
+        const kws = (e.palavras && e.palavras.length ? e.palavras : [e.modelo || e.fabricante || e.nome]).map((w) => norm(w)), idx = [];
+        P.forEach((p, i) => { const tx = ' ' + norm(p.q + ' ' + (p.passos || []).map((x) => x.secao).join(' ')) + ' '; if (kws.some((w) => tx.indexOf(w) !== -1)) idx.push(i); });
         Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || SD), chipDemo: pronto && D.demo ? ' · DEMO' : '',
           sub: 'No FAQ de ' + (NOME_FAQ[k] || k) + ': ' + (idx.map((i) => P[i].q).join(' · ') || 'passo a passo do guia'),
           acao: 'No FAQ de ' + (NOME_FAQ[k] || k) + ' ›',
           href: this.tela(k, idx.length ? idx[0] + 1 : 0), fonte: 'Fonte: ' + (F.fonte || SD) });
       } else if (g) {
-        // Motores: guia de bordo DEMO existe, mas sem tela de FAQ — o chat responde pelo guia
+        // Guia de bordo sem tela de FAQ (motores, porão, âncora…) — o chat responde pelo guia
         Object.assign(c, { chip: 'GUIA DE BORDO', ctom: cor('accent')[0], clinha: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)', cwash: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.07)',
           sub: g + ' carregado · passo a passo ainda sem tela de FAQ — pergunte ao barco.', acao: 'Perguntar ao barco ›',
-          href: this.chat(e.nome + (e.fabricante ? ' ' + e.fabricante : '')), fonte: 'Fonte: ' + g });
+          href: this.chat(e.seguranca ? e.nome : e.nome + (e.fabricante ? ' ' + e.fabricante : '')), fonte: 'Fonte: ' + g });
       } else {
         Object.assign(c, { chip: SD, ctom: cor('ink')[0], clinha: 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.45)', cwash: 'transparent',
           sub: 'Sem manual carregado — passo a passo ' + SD + '. Envie o manual ou a foto da etiqueta pelo chat.', acao: 'Perguntar ao barco ›',
-          href: this.chat(e.fabricante || e.nome), fonte: 'Fonte: nenhuma — ' + SD });
+          href: this.chat(e.seguranca ? e.nome : (e.fabricante || e.nome)), fonte: 'Fonte: nenhuma — ' + SD });
       }
       return c;
     });

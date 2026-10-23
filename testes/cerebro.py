@@ -55,6 +55,8 @@ CASOS = [
     ('pegamos uma rajada agora e o barco adernou', 'fallback'), ('rajada derrubou alguém no mar agora', 'fallback'),
     ('a rajada de hoje arrancou o toldo', 'fallback'), ('há rajada forte entrando, o que faço?', 'fallback'),
     ('quanto tempo dura uma rajada?', 'fallback'), ('tem rajada hoje?', 'clima'), ('qual a previsão de rajada para amanhã?', 'clima'),
+    # C5 (CONTRATO §6.2): com os 91 trechos dos 16 guias, pergunta fora do barco continua sem trecho (nenhum guia tem "lais")
+    ('como se faz um nó lais de guia?', 'fallback'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -103,6 +105,10 @@ def main():
             const func = r('como você funciona?'), seguro = r('o que você sabe sobre o seguro?');
             return { metaF: meta.f, baseK: base.a.key, baseF: base.f, sdF: sd.f, funcF: func.f, seguroK: seguro.a.key, seguroF: seguro.f, metaVoz: meta.voz, oiVoz: oi.voz,
                      dgTexto: dg.a.text, dgSrc: dg.a.src, dgVoz: dg.voz, dgHref: (dg.a.actions[0] || {}).href, versao: B.VERSAO }; }""")
+        guias = pg.evaluate("() => window.CapitaoDados.guias || {}")
+        topo = pg.evaluate("""() => { const B = window.CapitaoBrain, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
+            const a = h('como ligar o gerador?'), b = h('Quando foi a última troca de óleo do motor?'), c = h('troca do rotor do gerador');
+            return [[a.fonte, a.secao], [b.fonte, b.secao], c.fonte]; }""")
         for nome, cond, extra in [
             ('ficha resumida SÓ para pergunta pura sobre o app ("Oque você faz?", "como você funciona?"; sem telemetria, < 4 mil letras)', '## Ficha resumida' in x['metaF'] and '## Telemetria' not in x['metaF'] and len(x['metaF']) < 4000 and '## Ficha resumida' in x['funcF'], (len(x['metaF']), len(x['funcF']))),
             ('trecho do guia ("última troca de óleo do motor?") leva a ficha COMPLETA, com a agenda', x['baseK'] == 'base' and '## Manutenção' in x['baseF'] and '## Ficha resumida' not in x['baseF'], (x['baseK'], len(x['baseF']))),
@@ -118,6 +124,10 @@ def main():
             ('ficha sem o rótulo DEMO', 'DEMO' not in f, [l for l in f.split('\n') if 'DEMO' in l][:3]),
             ('ficha entre 3.000 e 10.000 letras (o proxy aceita 12.000)', 3000 <= len(f) <= 10000, len(f)),
             ('voz da resposta da IA: 1ª frase curta + a seguinte, sem a fonte', voz == 'Sou o Capitão IA. Respondo sobre telemetria, manutenção e documentos, sempre com a fonte.', voz),
+            # C5 (CONTRATO §1.5): com os 91 trechos, o g_gerador §2 · Ligar continua o 1º trecho de "como ligar o gerador?" (é a fonte
+            # do FONTE_IA do chat_ia.py); a troca de óleo do motor sai da agenda dos motores e a do rotor, do gerador.
+            ('C5: 1º trecho de "como ligar o gerador?" = g_gerador §2 · Ligar; óleo do motor no g_motores §7; rotor do gerador no g_gerador',
+             topo == [[guias.get('g_gerador'), '2 · Ligar'], [guias.get('g_motores'), '7 · Manutenção na agenda'], guias.get('g_gerador')], topo),
         ]:
             if not cond:
                 falhas += 1

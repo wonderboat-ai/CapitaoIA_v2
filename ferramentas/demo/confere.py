@@ -9,7 +9,7 @@ completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e,
 §1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Só a varredura de termos
-(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C5–C8 estão congeladas por caminho na
+(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C6–C8 estão congeladas por caminho na
 PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
 completa o dado tira a linha dela).
 
@@ -38,7 +38,7 @@ RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capi
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
 # §6.2 C3: as estruturais reprovam o gerador; só a varredura de termos fica em relatório (não reprova), até o C12.
 RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO_TERMOS)
-# Violações de hoje que dependem do dado dos C5–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
+# Violações de hoje que dependem do dado dos C6–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
 # exato, com '*' no lugar de um trecho: o «…» citado (o caminho, a regra e, na MMSI9, os dígitos ficam presos), um nome que não
@@ -46,47 +46,21 @@ RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO
 # pasta do Avanti, a contagem é exata e o termo vai por número (#n) ou por assinatura (nunca o nome).
 _AG = ('porao-teste', 'clima-filtro', 'gerador-rotor', 'casco-anodos', 'motores-oleo', 'gerador-revisao', 'seakeeper-anodo',
        'baterias', 'garmin-cartas', 'clima-revisao', 'motores-revisao')   # as 11 tarefas de hoje (C7: deslocamentos, sistema, palavras)
-_ELETRONICOS = 'fontes/01 Manuais e guias de bordo/Guia de bordo — Eletrônicos *.html'   # o título traz o VHF antigo (C5)
-_EQUIP = (('motores', 'modelo', "'2'"), ('gerador', 'modelo', "'1'"), ('estabilizador', 'modelo', "'1'"), ('climatizacao', 'fabricante modelo', None),
-          ('eletronicos', 'modelo', None), ('audio', 'modelo', None), ('vhf', 'fabricante', None), ('epirb', 'fabricante modelo guia', None),
-          ('seafire', 'modelo guia', None))   # o que falta em cada equipamento hoje e a qtd de texto de hoje (C5; None = 'SEM DADOS')
-_SEG = 'base:trechos[%d] (*) casa a SEGURANCA_PALAVRAS sem seguranca: true'
-# A frase de hoje do MMSI no guia de eletrônicos, nas 3 cópias ("o MMSI 710123456 é fictício; no barco real, programe o MMSI do
-# registro"): sai no C5, com o g_eletronicos §5 de MMSI_RADIO.
-_MMSI_C5 = ('faq.eletronicos.perguntas[3].passos[1].t', 'base:trechos[25].texto', _ELETRONICOS)
+# O C5 completou equipamentos, modelos, guias e trechos (§1.4, §1.5): as pendências dele (NULO, MMSI9, AFIRMA_REAL,
+# SEGURANCA_MARCADA, MODELOS_AVANTI, COLISAO_MODELOS, EQUIP e NOTA_ETIQUETA) saíram com o dado.
 PENDENTES = {
     'NULO': {
-        'C5': ['equipamentos[%d].%s: None' % (i, k) for i, ks in ((0, 'modelo'), (1, 'modelo'), (2, 'modelo'), (3, 'fabricante modelo'),
-                                                                  (4, 'modelo'), (5, 'modelo'), (6, 'fabricante'), (7, 'fabricante modelo guia'),
-                                                                  (8, 'modelo guia')) for k in ks.split()]
-              + ['faq.%s.modelo: None' % f for f in ('gerador', 'estabilizador', 'eletronicos', 'climatizacao')]
-              + ['base:trechos[%d].pag: None' % i for i in range(46)],   # §1.5: o pag: null sai do trecho
         'C6': ['protocolos.seafire: None', 'protocolos.epirb: None'],
         'C7': ['documentos[%d].%s: None' % (i, k) for i in (0, 6, 7) for k in ('vence', 'dn')],   # sem deslocamento: omitidos (§1.0)
         'C8': ['snapshot.porao: None', 'snapshot.ancora: None']   # §1.17 sem null; a leitura da pasta 05 é refeita (e renomeada)
               + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
                  for k in ('rpm', 'pct')],
     },
-    'MMSI9': {'C5': [c + m for c in _MMSI_C5 for m in (': 710123456 «*»', ': "programe" perto de MMSI «*»')],
-              'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
-    'AFIRMA_REAL': {'C5': [c + ': barco real «*»' for c in _MMSI_C5]},
+    'MMSI9': {'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
     'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
                   + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
     'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência [710123456] «*»',
                                'protocolos.mob[1]: fabricante ou modelo de equipamento [Garmin] «*»']},
-    'SEGURANCA_MARCADA': {'C5': [_SEG % i for i in (0, 21, 25, 38, 40, 41, 42, 43, 44, 45)]
-                          + ['base:trechos[31] (*) está no mínimo do §1.5 (g_motores) sem seguranca: true']},
-    # Ocorrências exatas por termo e por arquivo (só com CAPITAO_LISTAS_PRIVADAS; hoje só o #1, o VHF antigo): outro termo da lista,
-    # ou mais uma ocorrência do #1, em qualquer arquivo, reprova.
-    'MODELOS_AVANTI': {'C5': ['modelos-avanti.txt #1: %s %d' % kv for kv in (
-        ('base-conhecimento.json', 16), ('capitao-dados.js', 9), (_ELETRONICOS, 4),
-        ('fontes/01 Manuais e guias de bordo/Inventário de bordo.csv', 4), ('fontes/02 Documentos/Controle de documentos.csv', 1))]},
-    # Só com CAPITAO_AVANTI: o modelo de hoje do VHF, preso pela assinatura e pela contagem (outro modelo no lugar reprova).
-    'COLISAO_MODELOS': {'C5': ['equipamentos[vhf] candidato 1 (c9f12c054d30): 95 na pasta do Avanti (permitido 0)']},
-    'EQUIP': {'C5': ['equipamentos[%s].%s ausente' % (i, k) for i, ks, _ in _EQUIP for k in ks.split() if k != 'guia']
-                    + ['equipamentos[%s].qtd não é número: %s' % (i, q or repr('SEM DADOS')) for i, _, q in _EQUIP]
-                    + ['equipamentos[%s].guia fora de D.guias: None' % i for i, ks, _ in _EQUIP if 'guia' in ks.split()]},
-    'NOTA_ETIQUETA': {'C5': ['equipamentos[epirb].nota ≠ NOTA_ETIQUETA', 'equipamentos[seafire].nota ≠ NOTA_ETIQUETA']},
     'IDS': {'C7': ['agenda.%s.sistema fora do vocabulário (ids de equipamentos, casco, tanques): None' % i for i in _AG]
             + ['diario.%s: pendência sem ref na agenda' % iso for iso in ('2026-09-24T17:10:00-03:00', '2026-09-20T11:05:00-03:00',
                                                                           '2026-09-05T10:00:00-03:00')]},
@@ -96,7 +70,7 @@ PENDENTES = {
         '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
         '06 Abastecimento/Registro de abastecimento.csv')]},
 }
-COMMITS_PENDENTES = ('C5', 'C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2)
+COMMITS_PENDENTES = ('C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2) e o C5, os equipamentos e os guias (§1.4, §1.5)
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
@@ -1164,8 +1138,16 @@ def assinatura(texto):
 
 
 def a_fonte_limites(X):
+    """Cada limite aponta para um §n que existe na base e o texto dele tem os números em pt-BR. Antes do D.replay (C8), confere a
+    constante LIMITES do gerador (C5: os guias já saem dela); depois, o D.replay.limites, que tem de ser a mesma constante."""
     out = []
-    for c, L in X.limites.items():
+    lims = X.limites
+    const = X.const.get('LIMITES')
+    if not lims and isinstance(const, dict):
+        lims = const
+    elif lims and isinstance(const, dict) and lims != const:
+        out.append('replay.limites ≠ a constante LIMITES do gerador (uma fonte só, §3.3)')
+    for c, L in lims.items():
         f = L.get('fonte') if isinstance(L, dict) else None
         m = re.match(r'^(.*?)\s*§\s*(\d+)?\s*(?:·\s*)?(.*?)\s*$', f or '')
         if not m:

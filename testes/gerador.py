@@ -9,8 +9,11 @@
 - confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
   da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
-  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca do modelo
-  de hoje do VHF (congelado) por outro da lista, que reprova (modelos_sinteticos).
+  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
+  modelo congelado (como o do VHF antigo, até o C5) por outro da lista, que reprova (modelos_sinteticos).
+- C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
+  (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
+  etiqueta e sem fabricante nem modelo nos trechos.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -158,8 +161,10 @@ def copias():
 
 
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
-CONST = {'NOTA_ETIQUETA': G.NOTA_ETIQUETA, 'DIAS_MESES': G.DIAS_MESES}
+CONST = {'NOTA_ETIQUETA': G.NOTA_ETIQUETA, 'DIAS_MESES': G.DIAS_MESES, 'LIMITES': G.LIMITES}   # as constantes que o gerador passa (C5: LIMITES)
 ROTULO_FIM = C.rotulo_fim()   # os textos fixos do confere.py (ROTULO e NOTA), nunca os do dado
+# O trecho do DSC (g_eletronicos §5, MMSI_RADIO desde o C5): onde as amostras de MMSI e de afirmação entram.
+T_DSC = next(i for i, t in enumerate(G.base_conhecimento()['trechos']) if t['fonte'] == G.ARQ['g_eletronicos'] and t['secao'].startswith('5 · '))
 
 
 def hoje():
@@ -214,6 +219,8 @@ def com_replay(k):
                        'diario': [{'id': 'd01', 'diasAtras': 0, 'h': '07:00', 't': 'Saída às 07:00 com 4 pessoas a bordo.'},
                                   {'id': 'd02', 'diasAtras': 0, 'h': '07:00', 'ref': 'ab-0', 't': 'Abastecimento de 1.086 L de diesel.'}]},
     }
+    # C5: o D.replay.limites é a constante LIMITES do gerador (FONTE_LIMITES confere as duas); aqui, a do replay mínimo.
+    k['const'] = dict(k.get('const', CONST), LIMITES=D['replay']['limites'])
     k['B']['trechos'] += [
         {'fonte': 'Guia de bordo — Teste', 'secao': '9 · Faixas de operação', 'equip': 'Teste',
          'texto': 'Rotação: até 2.600 rpm. Pressão de óleo: abaixo de 1.000 rpm, normal de 1,0 a 6,0 bar; a partir de 1.000 rpm, normal de 2,4 '
@@ -293,7 +300,7 @@ AMOSTRAS = {
                                               poe(k['D']['equipamentos'], 0, modelo='XP-900' if r else 'XQ-901'), k)[2])(hoje()),
                         'equipamentos[motores] candidato 1 (%s): 1 na pasta do Avanti' % C.assinatura('XP-900')),
     'FONTE_LIMITES': (lambda r: (lambda k: (k['D']['replay']['limites']['motor_be_arref_c']['critico'].update({'acima': 98 if r else 97}), k)[1])(com_replay(hoje())), 'sem os números'),
-    # fabricante vazio nos motores: fora das pendências do C5 (a qtd de texto de todos é pendência de hoje; ela fica nas EXTRAS)
+    # fabricante vazio nos motores (o C5 completou os 16 equipamentos do §1.4; a qtd que não é número fica nas EXTRAS)
     'EQUIP': (lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, fabricante='') if r else None, k)[1])(hoje()), 'equipamentos[motores].fabricante ausente'),
     'IDS': (lambda r: (lambda k: (k['D'].update({'pecas': [{'id': 'p01', 'n': 'Filtro', 'qtd': 1, 'min': 1, 'local': 'estante técnica 1',
                                                            'tarefas': ['nao-existe' if r else 'motores-oleo']}]}), k)[1])(hoje()), 'fora da agenda'),
@@ -317,7 +324,7 @@ AMOSTRAS = {
                                                k['B']['trechos'].append({'fonte': 'Guia de bordo — EPIRB', 'secao': '1 · Acionar', 'equip': 'EPIRB', 'seguranca': True,
                                                                          'texto': 'Só em perigo grave e iminente.' + ('' if r else ' ' + ROTULO_FIM)}), k)[2])(hoje()),
                          'sem o rótulo no fim'),
-    # protocolos.seafire (None hoje, C6): a nota dos equipamentos já é pendência de hoje (C5)
+    # protocolos.seafire (None hoje, C6); a nota dos equipamentos de segurança já é a NOTA_ETIQUETA desde o C5
     'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
                       'protocolos.seafire.nota'),
     'RODAPE_SNAPSHOT': (lambda r: (lambda k: (k.update({'rodape': RODAPE_OK.replace('return true;', 'D.snapshot.quadro = {}; return true;') if r else RODAPE_OK}), k)[1])(hoje()),
@@ -435,8 +442,9 @@ EXTRAS = [
       'protocolos.mob[3]: lugar a bordo') for frase in (
     'Pegue o extintor na praça de máquinas.', 'Coletes no paiol de proa.', 'Leve o EPIRB da cabine do comandante.',
     'Balsa no flybridge: solte e jogue.', 'Na popa, solte a balsa.')] + [
+    # C5: a base tem os 91 trechos do §1.5, e o plantado entra no fim (antes, no índice 46)
     ('SEGURANCA_MARCADA', 'g_epirb §4 sem palavra da lista (só a fonte casa)', lambda r: com_trecho(dict(T_EPIRB, seguranca=True) if not r else T_EPIRB),
-     'base:trechos[46] (Guia de bordo — EPIRB · 4 · Validade) casa'),
+     'base:trechos[%d] (Guia de bordo — EPIRB · 4 · Validade) casa' % len(G.base_conhecimento()['trechos'])),
     ('SEGURANCA_MARCADA', 'g_seafire §3 sem palavra da lista (fonte e equip casam)', lambda r: com_trecho(dict(T_SEAFIRE, seguranca=True) if not r else T_SEAFIRE),
      '3 · Depois da descarga) casa'),
     ('SEGURANCA_MARCADA', 'seção do mínimo do §1.5 sem palavra (g_porao §4)',
@@ -445,13 +453,24 @@ EXTRAS = [
      lambda r: (lambda k: (k.update({'faq': {'itens': [dict({'id': 'EP-04', 'titulo': 'Validade', 'resposta': 'Confira a data. ' + ROTULO_FIM},
                                                            **({} if r else {'seguranca': True}))]}}), k)[1])(hoje()), 'faq:EP-04'),
     ('ROTULO_SEGURANCA', 'protocolos.rotulo diferente do texto fixo', lambda r: com_rotulo('procedimento padrão' if r else C.ROTULO), 'protocolos.rotulo'),
+    # C5: antes do D.replay (C8), a FONTE_LIMITES confere a constante LIMITES do gerador contra os guias; depois, as duas são uma só.
+    ('FONTE_LIMITES', 'constante LIMITES (C5) com número que o guia não tem',
+     lambda r: (lambda k: (k.update({'const': dict(CONST, LIMITES=limites_com(('motor_bb_arref_c', 'critico', 'acima'), 98 if r else 97))}), k)[1])(hoje()),
+     'limites.motor_bb_arref_c: Guia de bordo — Motores Cummins §9 · Faixas de operação sem os números'),
+    ('FONTE_LIMITES', 'constante LIMITES (C5) apontando para um § que não existe',
+     lambda r: (lambda k: (k.update({'const': dict(CONST, LIMITES=limites_com(('gerador_kw', 'fonte'),
+                                                                           G.ARQ['g_gerador'] + (' §12 · Carga' if r else ' §9 · Potência e carga')))}), k)[1])(hoje()),
+     'limites.gerador_kw.fonte aponta para um § que não existe'),
+    ('FONTE_LIMITES', 'D.replay.limites diferente da constante LIMITES do gerador',
+     lambda r: (lambda k: (k.update({'const': CONST if r else dict(CONST, LIMITES=k['D']['replay']['limites'])}), k)[1])(com_replay(hoje())),
+     'replay.limites ≠ a constante LIMITES do gerador'),
     ('TERMOS', 'termo posto no protocolos.rotulo é acusado e não apaga o resto (não cai de 101 para 29)',
      lambda r: com_rotulo('SEM DADOS' if r else C.ROTULO), 'ROTULOS: protocolos.rotulo'),
     ('TERMOS', 'rótulo trocado por "fictício" não apaga o "fictício" do diário',
      lambda r: com_rotulo('fictício', ' Valores fictícios.' if r else ''), 'AUTENTICIDADE: diario[0].t'),
     ('NOTA_ETIQUETA', 'constante do gerador diferente do texto do §1.4',
      lambda r: (lambda k: (k.update({'const': dict(CONST, NOTA_ETIQUETA='veja o manual' if r else C.NOTA)}), k)[1])(hoje()), 'NOTA_ETIQUETA do gerador'),
-    # a qtd '2' dos motores é a pendência de hoje (C5); outro valor no mesmo caminho é violação nova
+    # desde o C5 a qtd é número em todos (antes, a qtd '2' de texto dos motores era pendência): None é violação nova
     ('EQUIP', 'qtd que não é número, num caminho com pendência', lambda r: (lambda k: (poe(k['D']['equipamentos'], 0, qtd=None if r else 2), k)[1])(equip_completo(hoje())),
      'equipamentos[motores].qtd não é número: None'),
 ] + [
@@ -473,12 +492,11 @@ EXTRAS = [
      'embarcacao.mmsiExtra: 123456789'),
     ('MMSI9', '710123456 como número no snapshot', lambda r: (lambda k: (k['D']['snapshot'].update({'mmsi': 710123456 if r else 7101}), k)[1])(hoje()),
      'snapshot.mmsi: 710123456'),
-    ('MMSI9', '2º número de 9 dígitos numa string que já é pendência (base:trechos[25])',
-     lambda r: (lambda k: (poe(k['B']['trechos'], 25, texto=k['B']['trechos'][25]['texto'] + (' Outro 987654321.' if r else '')), k)[1])(hoje()),
-     'base:trechos[25].texto: 987654321'),
-    ('MMSI9', 'o mesmo número de novo numa string que já é pendência',
-     lambda r: (lambda k: (poe(k['B']['trechos'], 25, texto=k['B']['trechos'][25]['texto'] + (' MMSI 710123456.' if r else '')), k)[1])(hoje()),
-     'base:trechos[25].texto: 710123456'),
+    # C5: o trecho do DSC (g_eletronicos §5) é o MMSI_RADIO, sem número; até o C5 a frase antiga dele era pendência.
+    ('MMSI9', '9 dígitos no trecho do DSC (MMSI_RADIO, sem número desde o C5)',
+     lambda r: com_base(T_DSC, ' Outro 987654321.' if r else ''), 'base:trechos[%d].texto: 987654321' % T_DSC),
+    ('MMSI9', 'o MMSI do cadastro no trecho do DSC',
+     lambda r: com_base(T_DSC, ' MMSI 710123456.' if r else ''), 'base:trechos[%d].texto: 710123456' % T_DSC),
     ('MMSI9', 'número de 9 dígitos num JSON das fontes', lambda r: com_json(lambda j: j.update({'mmsi': 710123456 if r else 7101})), ':mmsi: 710123456'),
     ('HEX15', '15 dígitos guardados como número', lambda r: (lambda k: (k['D']['snapshot'].update({'id': 123456789012345 if r else 1234}), k)[1])(hoje()),
      'snapshot.id: 123456789012345'),
@@ -492,7 +510,7 @@ EXTRAS = [
      lambda r: (lambda k: (k.update({'const': dict(CONST, DIAS_MESES={1: 30, 6: 183, 12: 365} if r else dict(G.DIAS_MESES))}),
                            k['D']['agenda'].append({'id': 'nova', 'meses': 1, 'ultimaHa': 20 if r else 21, 'venceEm': 10}), k)[2])(hoje()),
      'agenda.nova: ultimaHa + venceEm ≠ DIAS_MESES[meses]'),
-    # NULO: também a base, o FAQ e os JSON das fontes (o pag: null de hoje é pendência do C5).
+    # NULO: também a base, o FAQ e os JSON das fontes (o pag: null saiu dos trechos no C5).
     ('NULO', "base com secao '' e equip null", lambda r: (lambda k: (poe(k['B']['trechos'], 3, **({'secao': '', 'equip': None} if r else {})), k)[1])(hoje()),
      "base:trechos[3].secao: ''"),
     ('NULO', 'null num JSON das fontes', lambda r: com_json(lambda j: j.update({'extra': None if r else 1})), ':extra: None'),
@@ -500,11 +518,12 @@ EXTRAS = [
 ] + [
     # Revisão 3 do C3. AFIRMA_REAL e PROTOCOLO_LIMPO: uma violação por ocorrência; a pendência prende o texto casado de hoje, e
     # uma 2ª afirmação (ou um ETA) num caminho que já é pendência reprova.
-    ('AFIRMA_REAL', '2ª afirmação na string que já é pendência (base:trechos[25])',
-     lambda r: com_base(25, ' Os dados são reais e o barco é real.' if r else ''), 'base:trechos[25].texto: dados são reais'),
-    ('AFIRMA_REAL', '2ª afirmação no passo do FAQ que já é pendência',
+    # C5: a frase antiga do MMSI ("no barco real, programe…") saiu das 3 cópias; a afirmação plantada nelas reprova.
+    ('AFIRMA_REAL', 'afirmação no trecho do DSC (base)',
+     lambda r: com_base(T_DSC, ' Os dados são reais e o barco é real.' if r else ''), 'base:trechos[%d].texto: dados são reais' % T_DSC),
+    ('AFIRMA_REAL', 'afirmação no passo do DSC do FAQ de eletrônicos',
      lambda r: com_faq_passo(' A navegação é real.' if r else ''), 'faq.eletronicos.perguntas[3].passos[1].t: navegação é real'),
-    ('AFIRMA_REAL', 'afirmação em outra seção da página do guia de eletrônicos (a página já é pendência)',
+    ('AFIRMA_REAL', 'afirmação em outra seção da página do guia de eletrônicos',
      lambda r: com_eletronicos('<h2>9 · Extra</h2><p>Os dados do barco são reais.</p>' if r else '<h2>9 · Extra</h2><p>Confira o plotter.</p>'),
      '.html: barco são reais'),
     ('PROTOCOLO_LIMPO', '"ETA" no roteiro[2], que já é pendência (710123456)',
@@ -535,8 +554,8 @@ EXTRAS = [
      ':telefone_marina: chave de telefone'),
     # MMSI9: nada de "programe" perto de MMSI (§6.4), também sem o número e num caminho que já é pendência.
     ('MMSI9', '"programe o MMSI" sem o número', lambda r: mais_texto(hoje(), ' Programe o MMSI no rádio.' if r else ''), 'diario[0].t: "programe" perto de MMSI'),
-    ('MMSI9', '2º "programe" na string que já é pendência (base:trechos[25])',
-     lambda r: com_base(25, ' Para programar o rádio, use o MMSI.' if r else ''), 'base:trechos[25].texto: "programar" perto de MMSI'),
+    ('MMSI9', '"programar" perto de MMSI no trecho do DSC',
+     lambda r: com_base(T_DSC, ' Para programar o rádio, use o MMSI.' if r else ''), 'base:trechos[%d].texto: "programar" perto de MMSI' % T_DSC),
     # TERCEIROS: papéis em lista fechada; só o TIE tem número.
     ('TERCEIROS', 'nome de terceiro no papel do prestador',
      lambda r: (lambda k: (poe(k['D']['equipe']['apoio'], 0, papel='João da Silva (marina)' if r else 'Marina da base'), k)[1])(hoje()),
@@ -601,7 +620,7 @@ EXTRAS = [
     ('marca depois do nome', 'roteiro', 1, 'AQUI É CAPITÃO IA — MARÉVIA', 'marca', 'MARÉVIA'),
     ('rotulo', 'roteiro', 1, 'Marévia 40 HT · 12,40 m · 2023', 'rotulo', 'Marévia 40 HT · 12,40 m · 2023'),
     ('motorizacao no MOB', 'mob', None, '(2 × Cummins QSB6.7 305 · eixo)', 'motorizacao', '2 × Cummins QSB6.7 305 · eixo'),
-    ('marca do motor (antes do C5)', 'mob', None, 'Motores Cummins em neutro.', 'motor', 'Cummins'),
+    ('marca do motor', 'mob', None, 'Motores Cummins em neutro.', 'motor', 'Cummins'),
     ('comprimento', 'mob', None, 'Barco de 12,4 m.', 'comprimento', '12,4 m'),
     ('boca por extenso', 'mob', None, 'Boca de 3,95 metros.', 'boca', '3,95 metros'),
     ('calado', 'mob', None, 'Calado 1,10 m.', 'calado', '1,10 m'),
@@ -626,6 +645,16 @@ EXTRAS = [
     ('ESTABILIZADOR_12V', 'página de fonte do guia, frase sem a palavra',
      lambda r: com_estab_fonte(' <p>Sem AC, o volante não acelera.</p>' if r else ''),
      'Guia de bordo — Estabilizador Seakeeper.html: energia AC num texto do estabilizador [AC]')]
+
+
+def limites_com(caminho, valor):
+    """Cópia da constante LIMITES do gerador com um valor trocado (caminho = (campo, chave, …))."""
+    L = copy.deepcopy(G.LIMITES)
+    x = L
+    for k in caminho[:-1]:
+        x = x[k]
+    x[caminho[-1]] = valor
+    return L
 
 
 def com_estab_faq(extra):
@@ -696,7 +725,7 @@ def com_base(i, extra):
 
 
 def com_faq_passo(extra):
-    """hoje() com `extra` no fim do passo do D.faq que já é pendência do C5 (o MMSI do guia de eletrônicos)."""
+    """hoje() com `extra` no fim do passo do DSC do D.faq de eletrônicos (o g_eletronicos §5, MMSI_RADIO desde o C5)."""
     k = hoje()
     p = k['D']['faq']['eletronicos']['perguntas'][3]['passos'][1]
     p['t'] += extra
@@ -740,11 +769,12 @@ def com_vhf(modelo, obs=None):
 def modelos_sinteticos():
     """Achado da revisão 2 do C3: com o modelo de hoje do VHF congelado na PENDENTES (aqui, um da lista sintética), outro modelo da
     lista no lugar, um 2º termo na mesma linha do capitao-dados.js ou mais uma ocorrência do mesmo termo reprovam. Antes, a conta
-    por linha e o curinga no candidato da COLISAO_MODELOS deixavam passar (o modelo do Avanti chegava ao capitao-dados.js)."""
+    por linha e o curinga no candidato da COLISAO_MODELOS deixavam passar (o modelo do Avanti chegava ao capitao-dados.js).
+    Desde o C5 o VHF antigo saiu e as duas asserções não têm pendência: o teste congela a amostra só durante a conferência."""
     print('MODELOS_AVANTI e COLISAO_MODELOS: o modelo de hoje congelado, e a troca (listas e pasta do Avanti sintéticas)')
     nomes = ('MODELOS_AVANTI', 'COLISAO_MODELOS')
     V0 = verifica(com_vhf('XP-900'))
-    salvo = {n: C.PENDENTES[n] for n in nomes}
+    salvo = {n: C.PENDENTES.get(n) for n in nomes}   # C5: nenhuma pendência das duas (None)
     try:
         for n in nomes:
             C.PENDENTES[n] = {'C5': list(V0[n])}   # como o VHF de hoje: cada violação, com a contagem exata
@@ -758,7 +788,11 @@ def modelos_sinteticos():
             novas, _, velhas = C.separa({n: V[n] for n in nomes})
             ok('%s: %s reprova' % (' e '.join(quais), o_que), all(n in novas for n in quais), {'novas': novas, 'velhas': velhas})
     finally:
-        C.PENDENTES.update(salvo)
+        for n, v in salvo.items():
+            if v is None:
+                C.PENDENTES.pop(n, None)
+            else:
+                C.PENDENTES[n] = v
     sai = ' '.join(m for n in nomes for m in V0[n]).lower()
     ok('nenhum termo das listas nem candidato impresso nas violações', not any(t in sai for t in LISTAS_SINT['modelos-avanti.txt']), sai[:200])
 
@@ -820,6 +854,29 @@ def amostras():
     k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
     V = verifica(k)
     ok('PROTOCOLO_LIMPO: o protocolos do §1.3 com os equipamentos do §1.4 passa (0 violações)', not V['PROTOCOLO_LIMPO'], V['PROTOCOLO_LIMPO'][:3])
+    # C5: os textos de emergência que os guias repetem (g_motores §4, g_porao §4, g_eletronicos §5, g_seafire, g_epirb e o
+    # protocolo) são constantes do gerador desde o C5; são os do §1.3, letra por letra (o C6 monta o D.protocolos com elas).
+    P6 = PROTOCOLOS_C6
+    ok('textos de emergência do gerador (C5) = os do §1.3', (G.TXT_ROTEIRO, G.TXT_MOB, G.TXT_SEAFIRE, G.TXT_EPIRB, G.TXT_EPIRB_TESTE, G.TXT_ALAGAMENTO,
+                                                            G.TXT_ABANDONO, G.TXT_OLEO, G.TXT_SALVATAGEM, G.TXT_PANPAN, G.TXT_DSC, G.MMSI_RADIO, G.ROTULO)
+       == (P6['roteiro'], P6['mob'], P6['seafire']['passos'], P6['epirb']['passos'], P6['epirb']['teste'], P6['alagamento'], P6['abandono'],
+           P6['oleo'], P6['salvatagem'], P6['panpan'], P6['dsc'], P6['mmsiRadio'], P6['rotulo']))
+    B0 = G.base_conhecimento()
+    secoes = {}
+    for t in B0['trechos']:
+        secoes.setdefault(t['fonte'], []).append(t['secao'])
+    ok('C5 (§1.4, §1.5): 16 equipamentos, 16 guias (um para cada equipamento), 91 trechos e o g_gerador §2 · Ligar no lugar',
+       len(G.EQUIPAMENTOS) == 16 and len(G.FONTE_GUIA) == 16 and len(B0['trechos']) == 91 and all(e['guia'] in G.FONTE_GUIA for e in G.EQUIPAMENTOS)
+       and secoes[G.ARQ['g_gerador']][1] == '2 · Ligar' and [len(secoes[G.ARQ[k]]) for k in ('g_motores', 'g_seafire', 'g_epirb', 'checklist', 'protocolo')] == [10, 4, 4, 7, 9],
+       (len(G.EQUIPAMENTOS), len(G.FONTE_GUIA), len(B0['trechos'])))
+    V5 = verifica(hoje())
+    ok('FONTE_LIMITES: a constante LIMITES do gerador confere com os §n dos guias (0 violações, %d limites)' % len(G.LIMITES), not V5['FONTE_LIMITES'] and len(G.LIMITES) == 21,
+       V5['FONTE_LIMITES'][:3])
+    ok('equipamentos de segurança (EPIRB e Seafire): nota = NOTA_ETIQUETA e nenhum fabricante ou modelo no equip, na fonte e no texto dos trechos',
+       all(e.get('nota') == C.NOTA for e in G.EQUIPAMENTOS if e.get('seguranca')) and not [
+           t for t in B0['trechos'] for e in G.EQUIPAMENTOS if e.get('seguranca') for n in [e['fabricante']] + C.candidatos_modelo(e['fabricante'], e['modelo'])
+           if any(next(C.acha_nomes(t[k], n), None) for k in ('fonte', 'equip', 'texto'))]
+       and [e['id'] for e in G.EQUIPAMENTOS if e.get('seguranca')] == ['epirb', 'seafire'])
     ok('MMSI9: o protocolos do §1.3 ("identificação programada no rádio: é o MMSI") passa',
        not [m for m in V['MMSI9'] if m.startswith('protocolos')], [m for m in V['MMSI9'] if m.startswith('protocolos')][:3])
     # Revisão 2 do C4 (barco_sos): o nome, o único dado do barco que o SOS mostra, não conta, nem com a marca dentro dele; número
@@ -940,31 +997,33 @@ def reprova(tmp):
     base_vazia = lambda B: (B['trechos'][3].update({'secao': '', 'equip': None}), B)[1]
     # Revisão 3 do C3: a 2ª afirmação num trecho que já é pendência, o lugar do EPIRB como campo e o nome de terceiro no quem
     # (antes, main() devolvia 0 e gravava).
-    afirma = lambda B: (B['trechos'][25].update({'texto': B['trechos'][25]['texto'] + ' Os dados são reais e o barco é real.'}), B)[1]
+    afirma = lambda B: (B['trechos'][T_DSC].update({'texto': B['trechos'][T_DSC]['texto'] + ' Os dados são reais e o barco é real.'}), B)[1]
     lugar = lambda D: (D['equipamentos'][7].update({'local': 'paiol de proa'}), D)[1]
     terceiro = lambda D: (D['agenda'][0].update({'quem': 'Carlos Pereira'}), D)[1]
     for nome, pl, n, base, o_que in (('NULO', nulo, 3, None, ''), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
                                      ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
                                      ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
-                                     ('AFIRMA_REAL', lambda D: D, 2, afirma, ' (2 afirmações num trecho que já é pendência)'),
+                                     ('AFIRMA_REAL', lambda D: D, 2, afirma, ' (2 afirmações no trecho do DSC)'),
                                      ('SEM_INDICATIVO', lugar, 1, None, ' (equipamentos[epirb].local)'),
                                      ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)')):
         p = os.path.join(tmp, 'r-%s-%d' % (nome, n))
         rc, saida = rodar(pl, p, base)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
-    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; a amostra passa a ser um dado do C5
-    # preenchido antes da hora (o modelo do FAQ do gerador), com o mesmo efeito.
+    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; depois, o modelo do FAQ do gerador (C5),
+    # que o C5 preencheu. Desde o C5 a amostra é um dado do C6 preenchido antes da hora (o protocolos.seafire, com os textos do
+    # §1.3 e a NOTA_ETIQUETA: só a pendência fica velha), com o mesmo efeito.
     p4 = os.path.join(tmp, 'r4')
-    rc, saida = rodar(lambda D: (D['faq']['gerador'].update({'modelo': 'QD 9'}), D)[1], p4)
-    ok('pendência que não ocorre mais (o modelo do FAQ do gerador, do C5, preenchido antes da hora): main() devolve 1 e não grava nada',
-       rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C5 que não ocorre mais' in saida, (rc, saida[-300:]))
+    rc, saida = rodar(lambda D: (D['protocolos'].update({'seafire': {'passos': list(G.TXT_SEAFIRE), 'nota': G.NOTA_ETIQUETA}}), D)[1], p4)
+    ok('pendência que não ocorre mais (o protocolos.seafire, do C6, preenchido antes da hora): main() devolve 1 e não grava nada',
+       rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C6 que não ocorre mais' in saida, (rc, saida[-300:]))
     # Com o modo por caminho, as estruturais de hoje têm violações, todas congeladas na PENDENTES (antes: nenhuma violação, porque
     # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
     ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
         sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
-    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C5–C8; o C4 completou a embarcação)',
+    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C6–C8; o C4 completou a embarcação e o C5, '
+       'os equipamentos e os guias)',
        all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items()))
 
 

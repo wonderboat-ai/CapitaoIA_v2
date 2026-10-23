@@ -1,10 +1,17 @@
-Equipamento,Fabricante,Modelo,Quantidade,Guia de bordo
-Motores,Volvo Penta,SEM DADOS,2,Guia de bordo — Motores Volvo Penta
-Gerador,Onan,SEM DADOS,1,Guia de bordo — Gerador Onan
-Estabilizador giroscópico,Seakeeper,SEM DADOS,1,Guia de bordo — Estabilizador Seakeeper
-Climatização,SEM DADOS,SEM DADOS,SEM DADOS,Guia de bordo — Climatização
-Eletrônicos de navegação,Garmin,SEM DADOS,SEM DADOS,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315"
-Áudio,Fusion,SEM DADOS,SEM DADOS,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315"
-Rádios VHF,SEM DADOS,VHF 315,SEM DADOS,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e VHF 315"
-EPIRB,SEM DADOS,SEM DADOS,SEM DADOS,SEM DADOS
-Sistema de incêndio,Seafire,SEM DADOS,SEM DADOS,SEM DADOS
+Equipamento,Fabricante,Modelo,Quantidade,Lados,Guia de bordo
+Motores,Cummins,QSB6.7 305,2,BB e BE,Guia de bordo — Motores Cummins
+Gerador,Onan,QD 9,1,,Guia de bordo — Gerador Onan
+Estabilizador giroscópico,Seakeeper,Seakeeper 3,1,,Guia de bordo — Estabilizador Seakeeper
+Climatização,Webasto,FCF Platinum 16000 e 12000,3,,Guia de bordo — Climatização Webasto
+Plotters,Garmin,GPSMAP 1243xsv,2,,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e rádios Icom"
+Áudio,Fusion,MS-UD755,1,,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e rádios Icom"
+Rádios VHF,Icom,IC-M510 e IC-M37,2,,"Guia de bordo — Eletrônicos Garmin, áudio Fusion e rádios Icom"
+EPIRB,Ocean Signal,SafeSea E100G,1,,Guia de bordo — EPIRB
+Sistema fixo de supressão de incêndio,Seafire,FD 300M,1,,Guia de bordo — Sistema fixo de incêndio
+Dessalinizador,Schenker,Zen 30,1,,Guia de bordo — Dessalinizador Schenker
+Bombas de porão,Rule,Rule 2000 (24 V),2,BB e BE,Guia de bordo — Bombas de porão Rule
+Guincho e contador de corrente,Lewmar,V2 · contador AA150,1,,Guia de bordo — Guincho e corrente Lewmar
+Piloto automático,Raymarine,Evolution EV-1 · ACU-400,1,,Guia de bordo — Piloto automático Raymarine
+Radar,Garmin,GMR 24 xHD3,1,,Guia de bordo — Radar Garmin
+AIS (classe B),em-trak,B954,1,,Guia de bordo — AIS em-trak
+Baterias (24 V e 12 V),Victron Energy,AGM Super Cycle 12 V 230 Ah,8,,Guia de bordo — Sistema elétrico 24 V e 12 V
