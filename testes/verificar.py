@@ -59,6 +59,11 @@ fabricante deles, e, na F1, o cartão do VHF e o do áudio abrem a pergunta cert
 (sos, oleo, canal16, epirb, seafire), menos a do próprio equipamento de segurança, que dá a chave dele, e a resposta dos outros cita
 o guia do próprio equipamento (menos dessalinizador, porão e sistema elétrico, cujas respostas prontas a Fase 3 reescreve); na F1 e na
 E2, o fabricante não se repete quando o modelo já começa por ele ("Seakeeper Seakeeper 3").
+Validade do EPIRB e do Seafire (CONTRATO-DADOS §1.4, revisão do C7): a data do `doc-epirb` e o `vence` das tarefas deles (o autoteste do
+EPIRB e a inspeção do sistema fixo) só em Equipamentos, Leme e Documentos (B1, B2, C1, C2 e G1). Em toda outra tela, nenhuma delas no texto
+visível nem nos atributos (title, aria-label, alt, href), nem completa (dd/mm/aaaa) nem curta depois de "vence", "venceu", "validade" ou
+"vencimento" (a A1 listava a agenda inteira com "vence 09/11" e "vence 16/03"); em C1 e G1 a data aparece (controle: a conferência
+não vale se o detector não a enxerga onde ela pode estar).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -389,6 +394,48 @@ def problemas_seguranca(pg, tela):
     return prob
 
 
+# Validade do EPIRB e do Seafire (revisão do C7; CONTRATO-DADOS §1.4): só nas telas de Equipamentos, Leme e Documentos. As datas saem do D da
+# própria tela: o `vence` das tarefas do equipamento com seguranca (e a que guarda a validade dele) e o do documento que a guarda (doc-epirb).
+TELAS_COM_VALIDADE = ('B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile', 'G1-Documentos-Web', 'G1-Documentos-Mobile')
+TELAS_COM_DATA = ('C1-Leme-Web', 'G1-Documentos-Web', 'G1-Documentos-Mobile')   # controle: mostram a data sempre (a C2 abre filtrada nas atrasadas)
+TEXTOS_VALIDADE = r"""() => {
+  const D = window.CapitaoDados;
+  if (!D) return { semD: true };
+  const seg = (D.equipamentos || []).filter((e) => e.seguranca), ids = seg.map((e) => e.id), val = seg.map((e) => e.validade).filter(Boolean);
+  const datas = [];
+  (D.agenda || []).forEach((t) => { if ((ids.indexOf(t.sistema) !== -1 || val.indexOf(t.id) !== -1) && t.vence) datas.push({ de: t.id, vence: t.vence }); });
+  (D.documentos || []).forEach((x) => { if (val.indexOf(x.id) !== -1 && x.vence) datas.push({ de: x.id, vence: x.vence }); });
+  const dec = (v) => { try { return decodeURIComponent(v); } catch (x) { return v; } };
+  const textos = [document.body ? document.body.innerText : ''];
+  document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => {
+    const v = e.getAttribute(a); if (v) textos.push(a === 'href' ? dec(v) : v);
+  }));
+  return { ids: ids, datas: datas, texto: textos.join('\n') };
+}"""
+
+
+def data_na_tela(texto, vence):
+    """A data (dd/mm/aaaa) inteira no texto, ou a curta (dd/mm) depois de vence, venceu, validade ou vencimento. A curta sozinha não vale
+    (a última inspeção cai no mesmo dd/mm um ano antes) e a seguida de "/" já é a inteira de outro ano."""
+    return vence in texto or bool(re.search(r'(?:vence|venceu|validade|vencimento)\s*(?:em\s*)?' + re.escape(vence[:5]) + r'(?![\d/])', texto, re.I))
+
+
+def problemas_validade(pg, tela):
+    """Revisão do C7 (CONTRATO-DADOS §1.4): a validade do EPIRB e do Seafire fora de Equipamentos, Leme e Documentos, e o controle de que o
+    detector enxerga a data onde ela pode estar. Tela sem o capitao-dados.js não tem o que mostrar."""
+    r = pg.evaluate(TEXTOS_VALIDADE)
+    if r.get('semD'):
+        return []
+    if sorted(r['ids']) != ['epirb', 'seafire'] or sorted(d['de'] for d in r['datas']) != ['doc-epirb', 'epirb-teste', 'seafire-inspecao']:
+        return ['D sem EPIRB e Seafire com seguranca e as 3 datas deles (doc-epirb, epirb-teste, seafire-inspecao): a conferência da validade não vale']
+    achadas = sorted(d['de'] + ' ' + d['vence'] for d in r['datas'] if data_na_tela(r['texto'], d['vence']))
+    if tela in TELAS_COM_DATA:
+        return [] if achadas else ['a conferência da validade não vale: nem a data do EPIRB nem a do Seafire aparece em %s (onde ela pode estar)' % tela]
+    if tela in TELAS_COM_VALIDADE:
+        return []
+    return ['validade do EPIRB ou do Seafire na tela (só em Equipamentos, Leme e Documentos, §1.4): %s' % achadas] if achadas else []
+
+
 # Selo de demonstração (decisão b da 1.1.0: nenhum): no rodapé, numa caixa de selo ou no texto do login e da lista.
 SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
 
@@ -453,6 +500,7 @@ def main():
                     if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
                     if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
                     if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
+                    if not tela.startswith('Manual-'): prob += problemas_validade(pg, tela)
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
                     if prob:

@@ -343,8 +343,9 @@ class Component extends DCLogic {
     const abertas = AG.filter((t) => !ex[t.id]).slice().sort((a, b) => a.dn - b.dn);
     const nAtr = abertas.filter((t) => t.dn < 0).length, nD30 = abertas.filter((t) => t.dn >= 0 && t.dn <= 30).length, feitas = AG.length - abertas.length;
     const vence = abertas.map((t) => {
-      const c = cor(t.dn < 0 ? 'crit' : t.tom);
-      return { t: t.t, tip: t.t + ' · ' + t.equip + ' · ' + t.quem + ' · ' + t.intervalo + ' · vence ' + t.vence, meta: t.equip.split(' (')[0] + (t.dn < 0 ? ' · venceu ' : ' · vence ') + t.vence.slice(0, 5) + (t.horas ? ' ou ' + mil(t.horas.limite) + ' h' : ''),
+      // EPIRB e Seafire (equipamento com seguranca): a data só em Equipamentos, Leme e Documentos (CONTRATO-DADOS §1.4); aqui, sem data na linha e a nota da etiqueta na dica
+      const c = cor(t.dn < 0 ? 'crit' : t.tom), eqS = (D.equipamentos || []).filter((e) => e.id === t.sistema && e.seguranca)[0], nota = eqS && eqS.nota;
+      return { t: t.t, tip: t.t + ' · ' + t.equip + ' · ' + t.quem + ' · ' + t.intervalo + ' · ' + (nota || 'vence ' + t.vence), meta: t.equip.split(' (')[0] + (nota ? '' : (t.dn < 0 ? ' · venceu ' : ' · vence ') + t.vence.slice(0, 5)) + (t.horas ? ' ou ' + mil(t.horas.limite) + ' h' : ''),
         dd: t.rot || (t.dn < 0 ? 'ATRASADA · ' + (-t.dn) + ' D' : 'D-' + t.dn), tom: c[0], wash: c[1], ico: this.ico(icoDe(t.equip), 17, 1.7, c[0]), href: 'C1-Leme-Web.dc.html#f=' + grupo(t) };
     });
 

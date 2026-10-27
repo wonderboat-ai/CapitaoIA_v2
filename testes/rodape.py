@@ -16,9 +16,12 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
 - a microtarefa do dia de bordo (com um D.replay.diaDeBordo de teste): entra por id, nas mesmas listas, com d01 = âncora + 1 s e
   d02 = âncora; com `simulacao = false` no fim do arquivo, nada entra; em /SOS-/ (S1, S2 e uma rota mínima) o instante é null, nada
   entra e D.simulacao não é lida nenhuma vez (getter que conta); fora do SOS a mesma leitura conta ≥ 1 (o getter funciona);
-- contagens() com o executado, as tarefas e as ações do diário do aparelho; a trava e o instante() nas três fontes (replay,
+- contagens() com o executado, as tarefas e as ações do diário do aparelho (e com JSON válido de outra forma, como '{}' onde se espera
+  lista: vale como vazio e nunca zera as outras contas); a trava e o instante() nas três fontes (replay,
   coletor e a reserva do snapshot) com os números do §1.22 e do §1.23 (12:01:00): autonomia, faltam, desdeAbast, diesel_pct;
-- os formatadores (arred, nb, mil, grau3, hora, coord, campo).
+- os formatadores (arred, nb, mil, grau3, hora, coord, campo);
+- as telas com o rodapé (C1, C2, B1, G1, A1, G3, G4): "prazos a partir de" = hoje, sem "falta registrar" vazio, e a A1 sem a data do
+  autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4).
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
     python -X utf8 testes/rodape.py
@@ -305,6 +308,26 @@ def contagens(b):
     ok('vale a última ação por alvo: d03 reaberta (3) + X1 aberta; X2 resolvida: 4', C()['pendencias'] == 4, C())
     pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', '{ não é json')""")
     ok('registro do aparelho ilegível: conta só as geradas, sem erro', C()['pendencias'] == 3 and not pg.erros, (C(), pg.erros))
+    # Revisão do C7: JSON VÁLIDO de outra forma ('{}' onde se espera lista; lista, texto ou número onde se espera mapa) valia como
+    # registro e lançava no forEach/reverse; o catch externo engolia e a conta voltava zerada (docsVencem90, pendencias e tarefasEquipe 0)
+    geradas = {'atrasadas': 3, 'd30': 6, 'd60': 3, 'd90': 2, 'emDia': 2, 'docsVencidos': 0, 'docsVencem90': 2, 'pendencias': 3, 'tarefasEquipe': 2}
+    for chave in ('capitao.tarefas.v1', 'capitao.diario.v1', 'capitao.executado.v1'):
+        for valor in ('{}', '[]', '"abc"', '5', 'true', 'null'):
+            pg.evaluate("() => localStorage.clear()")
+            pg.evaluate("([k, v]) => localStorage.setItem(k, v)", [chave, valor])
+            c = C()
+            # '{}' em executado é o mapa vazio e '[]' em tarefas/diário é a lista vazia: o próprio vazio; os outros são forma errada
+            ok('%s = %s: conta só as geradas (nada zera em silêncio)' % (chave, valor), c == geradas and not pg.erros, (c, pg.erros))
+    pg.evaluate("() => { localStorage.clear(); localStorage.setItem('capitao.tarefas.v1', '{}'); localStorage.setItem('capitao.diario.v1', '\"x\"'); localStorage.setItem('capitao.executado.v1', '[1]'); }")
+    ok('os três registros de forma errada ao mesmo tempo: as geradas', C() == geradas, C())
+    pg.evaluate("""([a]) => { localStorage.clear(); localStorage.setItem('capitao.diario.v1', '{}');
+      localStorage.setItem('capitao.tarefas.v1', JSON.stringify([{ id: 'g91', n: 'x', vence: a }])); }""", [(hoje + timedelta(days=2)).isoformat()])
+    c = C()
+    ok('diário de forma errada não apaga a conta das tarefas do aparelho (g91 entra, as pendências geradas ficam)', c['tarefasEquipe'] == 3 and c['d30'] == 7 and c['pendencias'] == 3, c)
+    pg.evaluate("""() => { localStorage.clear(); localStorage.setItem('capitao.clima.v1', '[1]'); }""")
+    pg.evaluate(FONTES, QUADRO)
+    ok('clima salvo de forma errada (lista) não prende o ar nem a água e não lança erro',
+       pg.evaluate("() => { const i = window.CapitaoAgora.instante(); return i && i.q.temp_ar_externo_c === 22.6 && i.q.temp_agua_c === 20.1; }") and not pg.erros, pg.erros)
     pg.context.close()
 
 
@@ -410,6 +433,14 @@ def telas(b):
                all(x in txt for x in ('vence 02/10/2026', 'vence 11/10/2026', 'vence 25/10/2026')) and '25 dias atrás' in txt, txt[:300])
         if tela == 'B1-Carta-Web':
             ok('B1-Carta-Web: a linha da manutenção sem "falta registrar: nada"', '14 tarefas' in txt, [l for l in txt.split('\n') if 'tarefas' in l][:2])
+        if tela == 'A1-Ponte-Web':
+            # revisão do C7: o "O que vence" lista a agenda inteira e escrevia "vence 09/11" (autoteste do EPIRB, +13) e "vence 16/03" (inspeção do
+            # sistema fixo, +140) na linha e na dica; a data deles só em Equipamentos, Leme e Documentos (§1.4); o chip D-n e a nota da etiqueta ficam
+            todo = pg.evaluate("() => [document.body.innerText].concat([...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title'))).join('\\n')")
+            ok('A1-Ponte-Web: o autoteste do EPIRB e a inspeção do sistema fixo sem a data (linha e dica), com o D-13 e o D-140',
+               not any(x in todo for x in ('09/11', '16/03')) and 'EPIRB' in txt and 'D-13' in txt and 'D-140' in txt, [l for l in todo.split('\n') if 'EPIRB' in l or 'supress' in l][:4])
+            ok('A1-Ponte-Web: a dica das duas linhas leva a nota da etiqueta', todo.count('modelo, validade e acionamento: veja a etiqueta do equipamento') == 2,
+               todo.count('modelo, validade e acionamento: veja a etiqueta do equipamento'))
         pg.context.close()
 
 

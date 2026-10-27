@@ -277,7 +277,15 @@ window.CapitaoDados = {
       for (k in extra || {}) c[k] = extra[k];
       return c;
     }
-    function local(chave, vazio) { try { var v = JSON.parse(localStorage.getItem(chave) || 'null'); return v == null ? vazio : v; } catch (e) { return vazio; } }
+    // registro do aparelho: JSON válido de OUTRA forma ('{}' onde se espera lista; lista, texto ou número onde se espera mapa) vale como vazio,
+    // para um valor estranho num campo nunca zerar as outras contas (o cérebro faz o mesmo: loadDiario e loadAbast filtram Array.isArray)
+    function local(chave, vazio) {
+      try {
+        var v = JSON.parse(localStorage.getItem(chave) || 'null'), lista = Array.isArray(vazio);
+        if (v == null || (lista ? !Array.isArray(v) : (typeof v !== 'object' || Array.isArray(v)))) return vazio;
+        return v;
+      } catch (e) { return vazio; }
+    }
     function trava(q) {
       var c = copia(q), v = local('capitao.clima.v1', null);
       if (v && A.relogio && v.dia === A.relogio.hojeIso && typeof v.max === 'number' && typeof v.min === 'number' && v.min <= v.max) {
