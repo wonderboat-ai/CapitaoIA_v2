@@ -9,18 +9,18 @@
 6. `D.simulacao` gerado. `false` = replay inerte, caminho `null` → SEM DADOS, IA sem modo, filtros de simulação desligados (coordenadas continuam).
 Travas (ganham de qualquer decisão):
 7. SOS (S1/S2) fora da simulação: só nome e protocolos; posição = GPS do aparelho ou LEIA NO PLOTTER; offline, sem login, nunca recarrega.
-8. MAYDAY em todo lugar com `MMSI_RADIO`; 710123456 só em Embarcação, Documentos, F3, `## Embarcação` e 2ª linha da rota `mmsi`.
-9. Nunca gerar indicativo, HEX ID, telefone ou lugar de equipamento de salvatagem.
-10. Emergência local, nunca na IA; relato de falha sem leitura simulada; 15 min de conversa em emergência sem posição/rumo/SOG/ETA/pessoas.
-11. O replay não gera emergência: só AVISO; crítico só com `cenario: 'alarme-critico'` (desligado). Nunca abre SOS/C3, fala ou grava sozinho.
+8. MAYDAY em todo lugar com `MMSI_RADIO` ("MMSI do rádio de bordo (etiqueta / Licença de Estação)"); 710123456 só em Embarcação, Documentos, F3 ("MMSI (cadastro do app)"), `## Embarcação` e 2ª linha da rota `mmsi`, nunca com instrução de programar.
+9. Nunca gerar indicativo (em todo lugar: "o da Licença de Estação (no rádio)"), HEX ID, telefone ou lugar de equipamento de salvatagem.
+10. Emergência local, nunca na IA; relato de falha sem leitura simulada; `sos`/`canal16`/`epirb`/`seafire`/`salvatagem`/`mmsi` abrem com a instrução de segurança e nunca trazem posição (nem relativa), rumo, SOG, ETA nem pessoas a bordo do quadro; 15 min de conversa em emergência sem posição/rumo/SOG/ETA/pessoas (`salvatagem`/`mmsi` não ligam a janela).
+11. O replay não gera emergência: só AVISO; crítico só com `cenario: 'alarme-critico'` (desligado). Nunca abre SOS/C3, troca de tela, fala ou grava sozinho.
 12. Tempo e maré sempre reais; vento e mar do quadro só "a bordo agora".
 13. Fora do barco e dinheiro: rota local; nunca preço, telefone, e-mail, CPF/CNPJ ou nome de terceiro.
-14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce; linhas com `sim: true` (menos as do SOS, que nunca o levam).
+14. Coordenadas nunca saem do aparelho (os dois modos). Registro só cresce e nenhuma chave `capitao.*` de `localStorage` é apagada ou renomeada; linhas com `sim: true` (menos as do SOS, que nunca o levam; com `simulacao: false` ganham o selo "apresentação" e saem da ficha).
 15. Faixas do "Guia de bordo — `<equipamento>` §n"; modelos de mercado diferentes dos do Avanti; registro sem colisão.
 16. `support.js` e `deck-stage.js` não se editam à mão; nunca `{{…}}` em atributo de SVG; Worker real só com motivo; não contornar o painel nem o WAF da Cloudflare.
 17. EPIRB e Seafire em S1/S2 e em `sos`/`epirb`/`seafire`: só o procedimento padrão ("procedimento padrão — confirmar com o protocolo de bordo"; "modelo, validade e acionamento: veja a etiqueta do equipamento"); fabricante, modelo e validade gerados só em Equipamentos, Leme e Documentos. Salvatagem sempre local; `pedeIA` false com trecho de topo `seguranca: true`. O rebase de prazos nunca toca o `D.snapshot`.
 (a) núcleo do Avanti em canvas · (b) nenhum selo · (c) crítico desligado · (d) 1.1.0 · (e) barco, registro e rota escolhidos pelo Claude (PARIDADE)
-(f) frase padrão da `sobreDados` · (g) exceções do "toda resposta com dado" · (h) runtime atual · (i) ficha até 16.000 se passar de ~11.500
+(f) frase padrão da `sobreDados` · (g) exceções do "toda resposta com dado": indicativo, anexos, telefones, `foraBarco`, tempo e maré sem rede e `sobreDados` levam a situação de bordo sem posição, as chaves da 10 nunca, e a posição relativa na IA também é exceção · (h) runtime atual · (i) ficha até 16.000 se passar de ~11.500
 (j) posição contínua pela rota · (k) convidado: chave `demo`, nome Convidado, papel convidado.
 Das linhas marcadas abaixo, continua valendo o que esta seção não contradiz, como: `capitao-dados.js` e `base-conhecimento.json` só pelo gerador (nunca à mão); palavras de rota que cabem dentro de outras vão com espaço (`' onan '`); `RATE = 1.15` em toda fala (SOS inclusive); logs de invocação do Worker desligados (gravavam o `X-Capitao-Chave`).
 Vale sobre as linhas marcadas abaixo enquanto `simulacao: true`; com `simulacao: false` volta a regra Nada inventado.
