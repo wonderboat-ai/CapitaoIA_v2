@@ -900,6 +900,26 @@ EXTRAS += [
 ]
 
 
+def com_simulado(r):
+    """Revisão do C3 (achado do LACO): o `simulado` que o atual() acrescenta é marca, não leitura (§1.15, «simulado fora»). Antes,
+    se o C8 o pusesse no catálogo e em replay.fixos, as 41 asserções passavam. O bom não planta nada."""
+    k = com_replay(hoje())
+    if r:
+        k['D']['campos']['simulado'] = {'rotulo': 'Simulado', 'un': 'liga/desliga', 'casas': 0, 'origem': 'fixo'}
+        k['D']['replay']['fixos']['simulado'] = True
+    return k
+
+
+# Revisão do C3 (LACO): o `simulado` fora do catálogo. Em campos (com o valor em replay.fixos, a forma que antes passava) e, sem
+# o catálogo, só em replay.fixos (a checagem de grupos já o acusava: o dado fora de D.campos).
+EXTRAS += [
+    ('LACO', 'simulado no catálogo D.campos (com o valor em replay.fixos)', com_simulado, 'campos.simulado: marca do atual(), não leitura'),
+    ('LACO', 'simulado só em replay.fixos, fora do catálogo',
+     lambda r: (lambda k: (k['D']['replay']['fixos'].update({'simulado': True}) if r else None, k)[1])(com_replay(hoje())),
+     'replay.fixos.simulado fora de D.campos com origem fixo'),
+]
+
+
 def em_modo_real(**kw):
     """hoje() no modo real (simulacao False), com os campos da embarcação trocados (None fica como None: SEM DADOS)."""
     k = hoje()

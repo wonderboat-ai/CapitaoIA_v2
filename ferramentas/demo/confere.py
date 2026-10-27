@@ -1333,6 +1333,10 @@ def a_laco(X):
         if not (isinstance(ch, list) and len(ch) == n and all(_num(x) for x in ch)):
             out.append('replay.chaves.%s: precisa de %d números finitos' % (c, n))
     C = X.campos
+    # §1.15 e §6.3 («simulado fora»): o simulado: true do CapitaoTelemetria.atual() é marca, não leitura. Nem no catálogo nem, por
+    # consequência das checagens de baixo, em replay.chaves/fixos/contadores_base nem em snapshot.quadro (ficariam fora de D.campos).
+    if 'simulado' in C:
+        out.append('campos.simulado: marca do atual(), não leitura; fica fora do catálogo (§1.15)')
     for c, d in C.items():
         if d.get('origem') not in ORIGENS:
             out.append('campos.%s.origem fora de %s: %r' % (c, sorted(ORIGENS), d.get('origem')))
