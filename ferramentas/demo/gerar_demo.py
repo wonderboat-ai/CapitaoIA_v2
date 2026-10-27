@@ -31,6 +31,7 @@ modelos-avanti.txt) e CAPITAO_AVANTI (pasta do Avanti, só leitura). Determinís
 """
 import argparse
 import csv
+import hashlib
 import io
 import json
 import os
@@ -239,7 +240,7 @@ for _e in EQUIPAMENTOS:
 # Fica até a Fase 4 reescrever F1–F5 (que mostram "Fonte: " + equipNota), com texto neutro (§1.4).
 EQUIP_NOTA = 'Inventário de bordo · %d equipamentos · %s › %s' % (len(EQUIPAMENTOS), DRIVE, PASTAS['manuais'])
 
-# ——————————————————————————————— SNAPSHOT DO COLETOR (DEMO) ———————————————————————————————
+# ——————————————————————————————— SNAPSHOT DO COLETOR ———————————————————————————————
 GPS = {'lat': -26.9930, 'lon': -48.6140}
 SNAPSHOT = {
     'quando': '26/09/2026 10:12', 'hora': '10:12', 'dia': '26/09', 'iso': '2026-09-26T10:12:00-03:00',
@@ -257,7 +258,7 @@ SNAPSHOT = {
                 'arref': [79, 78], 'horimetro': [412.6, 409.8], 'marcha': 'neutro'},
     'gerador': {'estado': 'ligado desde 09:35', 'horas': 1236.4, 'hora': '26/09 10:12'},
     'seakeeper': {'estado': 'ligado', 'hora': '26/09 10:12'},
-    'porao': None,    # SEM LEITURA: sem sensor de porão no barramento (DEMO)
+    'porao': None,    # SEM LEITURA: sem sensor de porão no barramento
     'ancora': None,   # SEM LEITURA: sem sensor de âncora
 }
 CONSUMO = {
@@ -276,14 +277,14 @@ def autonomia():
             'lenta': int(round(litros * (1 - RESERVA) / CONSUMO['lenta']['lph']))}
 
 
-# Série 24 V · 7 dias (DEMO): mín/máx por dia — única série de histórico carregada
+# Série 24 V · 7 dias: mín/máx por dia — única série de histórico carregada
 SERIE_24V = [
     {'d': '20/09', 'min': 26.1, 'max': 28.4}, {'d': '21/09', 'min': 26.0, 'max': 28.6}, {'d': '22/09', 'min': 25.9, 'max': 27.2},
     {'d': '23/09', 'min': 25.8, 'max': 27.0}, {'d': '24/09', 'min': 25.7, 'max': 28.5}, {'d': '25/09', 'min': 25.9, 'max': 27.1},
     {'d': '26/09', 'min': 26.0, 'max': 27.4},
 ]
 
-# ——————————————————————————————— AGENDA PREDITIVA (DEMO) ———————————————————————————————
+# ——————————————————————————————— AGENDA PREDITIVA ———————————————————————————————
 AGENDA = [
     {'id': 'clima-filtro', 't': 'Limpeza do filtro de água salgada da climatização', 'equip': 'Climatização (fabricante SEM DADOS)', 'quem': 'marina', 'intervalo': 'mensal', 'ultima': '10/08/2026', 'vence': '10/09/2026'},
     {'id': 'porao-teste', 't': 'Teste das bombas de porão e alarmes', 'equip': 'Bombas de porão', 'quem': 'técnico', 'intervalo': 'mensal', 'ultima': '01/08/2026', 'vence': '01/09/2026'},
@@ -313,26 +314,26 @@ def status_prazo(n):
     return {'st': 'EM DIA', 'rot': 'D-' + str(n), 'tom': 'ok'}
 
 
-# ——————————————————————————————— DOCUMENTOS (DEMO) ———————————————————————————————
+# ——————————————————————————————— DOCUMENTOS ———————————————————————————————
 # Sem números de apólice/nota, sem valores, sem dados pessoais.
 DOCUMENTOS = [
     {'n': 'Título de Inscrição da Embarcação (TIE)', 'cat': 'Registro', 'vence': None, 'st': 'SEM DADOS', 'nota': 'registro não informado'},
-    {'n': 'Seguro da embarcação', 'cat': 'Seguro', 'vence': '15/10/2026', 'nota': 'apólice no Drive (DEMO)'},
+    {'n': 'Seguro da embarcação', 'cat': 'Seguro', 'vence': '15/10/2026', 'nota': 'apólice no Drive'},
     {'n': 'Licença de estação de rádio (VHF)', 'cat': 'Licenças', 'vence': '30/11/2026', 'nota': 'rádios Icom IC-M510 e IC-M37'},   # C5: o modelo antigo do VHF saiu (PARIDADE §6); o resto da lista é do C7
     {'n': 'Laudo de vistoria anual', 'cat': 'Laudos', 'vence': '18/08/2027', 'nota': 'vistoria de 18/08/2026'},
     {'n': 'Garantia do estabilizador Seakeeper', 'cat': 'Garantias', 'vence': '20/03/2027', 'nota': 'modelo SEM DADOS'},
     {'n': 'Garantia dos eletrônicos Garmin', 'cat': 'Garantias', 'vence': '10/02/2027', 'nota': 'modelos SEM DADOS'},
     {'n': 'Certificado do EPIRB', 'cat': 'Segurança', 'vence': None, 'st': 'SEM DADOS', 'nota': 'EPIRB sem dados'},
-    {'n': 'Nota fiscal de abastecimento · 12/09/2026', 'cat': 'Notas', 'vence': None, 'st': 'A CONFERIR', 'nota': 'foto no Drive (DEMO) · sem valores no app'},
+    {'n': 'Nota fiscal de abastecimento · 12/09/2026', 'cat': 'Notas', 'vence': None, 'st': 'A CONFERIR', 'nota': 'foto no Drive · sem valores no app'},
 ]
 
-# ——————————————————————————————— ABASTECIMENTOS (DEMO) ———————————————————————————————
+# ——————————————————————————————— ABASTECIMENTOS ———————————————————————————————
 ABASTECIMENTOS = [
-    {'d': '12/09/2026', 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive (DEMO)'},
-    {'d': '02/08/2026', 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive (DEMO)'},
+    {'d': '12/09/2026', 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive'},
+    {'d': '02/08/2026', 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive'},
 ]
 
-# ——————————————————————————————— DIÁRIO DE BORDO (DEMO) ———————————————————————————————
+# ——————————————————————————————— DIÁRIO DE BORDO ———————————————————————————————
 DIARIO = [
     {'d': '26/09', 'h': '09:31', 'iso': '2026-09-26T09:31:00-03:00', 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
      't': 'Fundeado na enseada de Balneário Camboriú após 1 h 10 min de navegação. Motores desligados; gerador e Seakeeper ligados.'},
@@ -914,12 +915,14 @@ def gera_js(D):
 
 
 def base_conhecimento():
-    return {
-        'versao': REF.strftime('%Y-%m-%d'),
+    """CONTRATO §1.5: {versao, aviso, trechos}. A versao são os 8 primeiros hex do sha256 do conteúdo (aviso + trechos, pelo
+    serializa(), sem a própria versao): muda quando o texto muda, nunca com a data, e não depende do relógio do sistema."""
+    corpo = {
         'aviso': ('Trechos dos guias de bordo da embarcação ' + EMBARCACAO['nome'] + ' (' + DRIVE + '). Sem documentos pessoais, '
                   'fiscais ou contratuais.'),
         'trechos': trechos(),
     }
+    return dict({'versao': hashlib.sha256(serializa(corpo).encode('utf-8')).hexdigest()[:8]}, **corpo)
 
 
 def gera_base(B=None):

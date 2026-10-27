@@ -15,6 +15,10 @@
 - C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
   etiqueta e sem fabricante nem modelo nos trechos.
+- C2 (CONTRATO §1.1, §1.2, §1.3, §1.5, §1.10): rótulos fora dos títulos e das fontes. rotulos_c2() prende o resultado com o texto
+  do contrato: drive.arquivos, os quatro *Fonte, embarcacao.fonte, canal16.fonte e regraAbast, o aviso e a versao (8 hex do
+  sha256) da base, as fontes do Drive (nome e texto sem DEMO, snapshot, fictício nem demonstração) e o LEIA-ME sem a regra
+  antiga, sem data e sem ID.
 - Revisão final do C3: da varredura de termos, PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam já (travas §2.2 e §2.7); a
   SEM_INDICATIVO e a SEM_PREVISAO também leem o cabeçalho das colunas dos CSV das fontes (a 1ª linha com conteúdo), comparando
   também as palavras vizinhas juntas (palavras_juntas: "WhatsApp" = whats + app, "Baixa-mar"); a PROTOCOLO_LIMPO e a AGENDA proíbem
@@ -1117,6 +1121,86 @@ def registro_tie(V0):
     ok('REGISTRO: no modo real, registro None (SEM DADOS) não reprova', not V, V)
 
 
+def rotulos_c2():
+    """C2 (CONTRATO §1.1, §1.2, §1.3, §1.5, §1.10): rótulos fora dos títulos e das fontes. Prende o resultado no dado gerado, com o
+    texto do contrato (não com as constantes do gerador): os títulos de drive.arquivos, os quatro *Fonte, as fontes soltas
+    (embarcacao, canal16, regraAbast), o aviso e a versao da base, as fontes do Drive e o LEIA-ME. Sem DEMO, snapshot, fictício nem
+    demonstração em título, nome de arquivo ou fonte; a leitura da pasta 05 só soma serie e formato no C8."""
+    print('C2: rótulos fora dos títulos e das fontes (§1.5)')
+    k = hoje()
+    D, B, F = k['D'], k['B'], k['F']
+    arq, raiz = D['drive']['arquivos'], 'Drive › Capitão IA v2'
+    rot = re.compile(r'\bDEMO\b|(?i:snapshot|fictíc|demonstra)')   # DEMO só em maiúsculas: "gerar_demo.py" e o id "demo" são outra coisa
+    guias = {c for c in arq if c.startswith('g_')}
+    fixos = {'leiame': 'LEIA-ME — Capitão IA v2', 'checklist': 'Checklist de bordo', 'inventario': 'Inventário de bordo',
+             'documentos': 'Controle de documentos', 'agenda': 'Agenda preditiva', 'diario': 'Diário de bordo',
+             'abast': 'Registro de abastecimento', 'snapshot': 'Leitura do coletor NMEA — 26-09-2026 10h12.json',
+             'protocolo': 'Protocolo de emergência — procedimento padrão'}
+    ok('drive.arquivos: os 14 guias, o checklist, o protocolo e os 7 arquivos do §1.5 (serie e formato entram no C8), com o título do §1.5',
+       len(guias) == 14 and set(arq) - guias - {'serie', 'formato'} == set(fixos) and all(arq[c] == t for c, t in fixos.items())
+       and all(arq[c].startswith('Guia de bordo — ') for c in guias), sorted(set(arq) - set(fixos) - guias))
+    ok('drive.arquivos: nenhum título com DEMO, snapshot, fictício nem demonstração (o "snapshot" é só a chave)',
+       not [t for t in arq.values() if rot.search(t)], [t for t in arq.values() if rot.search(t)])
+    ok('D.guias, D.faq.*.fonte, agenda, documentos e trechos da base citam só títulos de drive.arquivos',
+       set(D['guias'].values()) <= set(arq.values()) and {f['fonte'] for f in D['faq'].values()} <= set(arq.values())
+       and {t['fonte'] for t in D['agenda'] + D['documentos']} <= set(arq.values()) and {t['fonte'] for t in B['trechos']} <= set(arq.values()),
+       sorted({t['fonte'] for t in B['trechos']} - set(arq.values()))[:3])
+    ok('os quatro *Fonte do §1.1: "<título> · Drive › Capitão IA v2 › <pasta>"',
+       (D['agendaFonte'], D['docsFonte'], D['abastFonte'], D['diarioFonte']) == (
+           'Agenda preditiva · %s › 03 Agenda de manutenção' % raiz, 'Controle de documentos · %s › 02 Documentos' % raiz,
+           'Registro de abastecimento · %s › 06 Abastecimento' % raiz, 'Diário de bordo · %s › 04 Diário de bordo' % raiz),
+       (D['agendaFonte'], D['docsFonte'], D['abastFonte'], D['diarioFonte']))
+    ok('embarcacao.fonte, protocolos.canal16.fonte e regraAbast: o texto do contrato (§1.2, §1.3, §1.10)',
+       D['embarcacao']['fonte'] == 'cadastro da embarcação no app (proprietário)'
+       and D['protocolos']['canal16']['fonte'] == 'Protocolo de emergência — procedimento padrão · MAYDAY · canal 16'
+       and D['regraAbast'] == 'abastecer antes de 25 % do total dos tanques, 400 L de 1.600 L (Checklist de bordo § Abastecimento)',
+       (D['embarcacao']['fonte'], D['protocolos']['canal16']['fonte'], D['regraAbast']))
+    fontes = [D['embarcacao']['fonte'], D['posicaoRef']['fonte'], D['snapshot']['fonte'], D['consumo']['fonte'], D['protocolos']['fonte'],
+              D['protocolos']['canal16']['fonte'], D['regraAbast'], D['equipNota'], D['agendaFonte'], D['docsFonte'], D['abastFonte'],
+              D['diarioFonte'], *(e['fonte'] for e in D['equipamentos']), *(t['fonte'] for t in D['agenda'] + D['documentos'])]
+    ok('nenhuma fonte do D com DEMO, snapshot (no texto), fictício nem demonstração (a leitura do coletor é "coletor NMEA · leitura de …")',
+       not [f for f in fontes if rot.search(f)], [f for f in fontes if rot.search(f)])
+    def textos(v):
+        """Todo valor string do D (as chaves não contam: "demo": false é a flag)."""
+        if isinstance(v, str):
+            yield v
+        elif isinstance(v, dict):
+            for x in v.values():
+                yield from textos(x)
+        elif isinstance(v, list):
+            for x in v:
+                yield from textos(x)
+    ok('D inteiro: nenhum valor com a palavra DEMO (títulos, fontes e as notas "no Drive" das listas de hoje)',
+       not [t for t in textos(D) if re.search(r'\bDEMO\b', t)], [t for t in textos(D) if re.search(r'\bDEMO\b', t)][:3])
+    # A base: versao = 8 hex do sha256 do conteúdo (muda com o texto, não com a data), aviso neutro e equip sem rótulo.
+    ok('base: aviso do §1.5 e versao = 8 hex (não a data)',
+       B['aviso'] == 'Trechos dos guias de bordo da embarcação Capitão IA (Drive › Capitão IA v2). Sem documentos pessoais, fiscais ou contratuais.'
+       and re.fullmatch(r'[0-9a-f]{8}', B['versao']) and list(B)[:2] == ['versao', 'aviso'], (B['versao'], list(B)))
+    corpo = {'aviso': B['aviso'], 'trechos': B['trechos']}
+    ok('base: a versao é o sha256 do aviso e dos trechos (pelo serializa(), sem a versao)',
+       B['versao'] == hashlib.sha256(G.serializa(corpo).encode('utf-8')).hexdigest()[:8] and B['versao'] == G.base_conhecimento()['versao'], B['versao'])
+    t0 = G.trechos
+    try:
+        G.trechos = lambda: [dict(t, texto=t['texto'] + ' ') if i == 0 else t for i, t in enumerate(t0())]
+        v2 = G.base_conhecimento()['versao']
+    finally:
+        G.trechos = t0
+    ok('base: mudar uma letra de um trecho muda a versao', v2 != B['versao'] and re.fullmatch(r'[0-9a-f]{8}', v2), (B['versao'], v2))
+    ok('base: nenhum trecho com rótulo na fonte, na seção, no equip nem no texto',
+       not [t['fonte'] for t in B['trechos'] if any(rot.search(t.get(c) or '') for c in ('fonte', 'secao', 'equip', 'texto'))], B['trechos'][0]['fonte'])
+    # As fontes do Drive: nome de arquivo e texto sem rótulo, na pasta do §1.5, e o LEIA-ME sem a regra antiga, sem data e sem ID.
+    ok('fontes/**: nenhum nome de arquivo nem texto com DEMO, snapshot, fictício nem demonstração',
+       not [r for r, t in F.items() if rot.search(r) or rot.search(t)], [r for r, t in F.items() if rot.search(r) or rot.search(t)][:3])
+    nomes = {os.path.splitext(r.split('/')[-1])[0] for r in F}
+    titulos = {os.path.splitext(t)[0] if t.endswith(('.json', '.csv')) else t for t in arq.values()}
+    ok('fontes/**: um arquivo para cada título de drive.arquivos, com o nome dele (+ .html, .csv ou .json) e nenhum outro', nomes == titulos,
+       sorted(nomes ^ titulos)[:3])
+    leia = F[arq['leiame'] + '.html']
+    antiga = re.compile(r'Nada inventado|SEM DADOS|SEM LEITURA|MANUAL NO DRIVE|A CONFERIR|A CONFIRMAR|\d{2}/\d{2}/\d{4}|drive\.google|docs\.google|[A-Za-z0-9_-]{25,}')
+    ok('LEIA-ME: sem a regra antiga (SEM DADOS, MANUAL NO DRIVE…), sem data, sem link nem ID do Drive e com o procedimento padrão',
+       not antiga.search(leia) and C.ROTULO in leia and arq['leiame'] in leia, antiga.findall(leia)[:3])
+
+
 def amostras():
     print('confere(): uma amostra plantada por asserção (%d) e as %d extras da revisão' % (len(C.NOMES), len(EXTRAS)))
     faltam = [n for n in C.NOMES if n not in AMOSTRAS and n != 'EMENDA']
@@ -1398,6 +1482,7 @@ def main():
         limpeza(tmp)
         copias()
         palavras()
+        rotulos_c2()
         amostras()
         modelos_sinteticos()
         reprova(tmp)
