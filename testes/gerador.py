@@ -222,6 +222,13 @@ def copias():
     erros = ['%s não barra %r' % (k, s) for k, frases in casos['barra'].items() for s in frases if not T[k].search(s)]
     erros += ['%s barra %r' % (k, s) for s in casos['passa'] for k, r in T.items() if k != 'ANEXO' and r.search(s)]
     ok('as 8 regex no Python dão os %d casos' % (sum(len(v) for v in casos['barra'].values()) + len(casos['passa'])), not erros and len(T) == 8, erros[:3])
+    # Revisão final do C3: cada uma das 8 regex está num dos dois modos (reprova já / relatório até o C12); uma regex nova no
+    # termos.json não fica sem classe (o padrão de em_relatorio() é o relatório, que não reprova).
+    relat = {'ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'ANEXO'}
+    ok('TERMOS: PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam já; ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL e ANEXO ficam em relatório (as 8 do termos.json)',
+       set(T) == relat | set(C.TERMOS_JA_REPROVAM) and not relat & set(C.TERMOS_JA_REPROVAM) and len(C.TERMOS_JA_REPROVAM) == 3
+       and all(C.em_relatorio('TERMOS', k + ': x') for k in relat) and not any(C.em_relatorio('TERMOS', k + ': x') for k in C.TERMOS_JA_REPROVAM)
+       and not C.em_relatorio('NULO', 'ROTULOS: x'), sorted(T))
 
 
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
@@ -736,6 +743,42 @@ def com_estab_fonte(extra):
     return k
 
 
+def com_nota_equipe(txt):
+    """hoje() com `txt` na nota da equipe (D.equipe.nota)."""
+    k = hoje()
+    k['D']['equipe']['nota'] = txt
+    return k
+
+
+def com_fonte_final(sufixo, extra):
+    """hoje() com `extra` no fim da página de fonte do Drive cujo nome termina em `sufixo`."""
+    k = hoje()
+    rel = next(r for r in sorted(k['F']) if r.endswith(sufixo))
+    k['F'][rel] += extra
+    return k
+
+
+# Revisão final do C3. A TERMOS inteira em relatório deixava passar telefone, e-mail, CPF, dinheiro e lugar de equipamento de
+# salvatagem escritos como TEXTO (as travas §2.2 e §2.7 do PROMPT): só valia o mesmo dado como chave. A PESSOAIS, a DINHEIRO e a
+# LOCAL_SEGURANCA dão 0 em todo o dado de hoje e reprovam já; as outras cinco regex continuam em relatório até o C12.
+EXTRAS += [
+    ('TERMOS', 'telefone no texto da equipe (PESSOAIS)', lambda r: com_nota_equipe('Marina: (47) 99812-3456.' if r else 'Marina: contato só no aparelho.'),
+     'PESSOAIS: equipe.nota'),
+    ('TERMOS', 'e-mail no diário (PESSOAIS)', lambda r: mais_texto(hoje(), ' Contato: oficina@exemplo.com.br.' if r else ''), 'PESSOAIS: diario[0].t'),
+    ('TERMOS', 'CPF no diário (PESSOAIS)', lambda r: mais_texto(hoje(), ' CPF 123.456.789-09.' if r else ''), 'PESSOAIS: diario[0].t'),
+    ('TERMOS', 'CNPJ numa página de fonte do Drive (PESSOAIS)', lambda r: com_fonte_final('Controle de documentos.csv', '\nX,Y,,,CNPJ 12.345.678/0001-95\n' if r else '\n'),
+     'PESSOAIS: fontes/02 Documentos/Controle de documentos.csv'),
+    ('TERMOS', 'dinheiro no diário (DINHEIRO)', lambda r: mais_texto(hoje(), ' Gasto R$ 3.450,00 no abastecimento.' if r else ''), 'DINHEIRO: diario[0].t'),
+    ('TERMOS', 'preço num trecho da base (DINHEIRO)', lambda r: com_base(T_DSC, ' O preço do rádio é 1.200 reais.' if r else ''), 'DINHEIRO: base:trechos[%d].texto' % T_DSC),
+    ('TERMOS', 'lugar do EPIRB no nome do equipamento (LOCAL_SEGURANCA)',
+     lambda r: (lambda k: (poe(k['D']['equipamentos'], 7, nome='EPIRB — fica no paiol de proa' if r else 'EPIRB'), k)[1])(hoje()), 'LOCAL_SEGURANCA: equipamentos[7].nome'),
+    ('TERMOS', 'lugar dos coletes no diário (LOCAL_SEGURANCA)', lambda r: mais_texto(hoje(), ' Coletes guardados no armário da cabine de proa.' if r else ''),
+     'LOCAL_SEGURANCA: diario[0].t'),
+    ('TERMOS', 'lugar da balsa numa página de fonte do Drive (LOCAL_SEGURANCA)', lambda r: com_fonte_final('Checklist de bordo.html', '<p>A balsa fica na popa.</p>' if r else ''),
+     'LOCAL_SEGURANCA: fontes/01 Manuais e guias de bordo/Checklist de bordo.html'),
+]
+
+
 def em_modo_real(**kw):
     """hoje() no modo real (simulacao False), com os campos da embarcação trocados (None fica como None: SEM DADOS)."""
     k = hoje()
@@ -877,7 +920,8 @@ def planta(nome, o_que, monta, espera):
     """A amostra plantada aparece como violação nova; numa estrutural, fora das pendências congeladas (reprova o gerador)."""
     bom, mau = verifica(monta(False)), verifica(monta(True))
     novos = [m for m in mau[nome] if m not in bom[nome]]
-    if nome in C.RELATORIO:
+    achados = [m for m in novos if espera in m]
+    if achados and all(C.em_relatorio(nome, m) for m in achados):   # na TERMOS, cada regex decide (PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam)
         modo, reprova = ' (em relatório até o %s)' % C.RELATORIO[nome], True
     else:
         livres = C.separa({nome: mau[nome]})[0].get(nome, [])
@@ -1038,16 +1082,20 @@ def reprova(tmp):
     print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
     D0, B0 = G.dados, G.base_conhecimento
 
-    def rodar(planta, pasta, base=None):
+    F0 = G.gera_fontes
+
+    def rodar(planta, pasta, base=None, fontes=None):
         G.dados = lambda: planta(copy.deepcopy(D0()))   # cópia: o D aponta para as listas do módulo (DIARIO, AGENDA…)
         if base:
             G.base_conhecimento = lambda: base(copy.deepcopy(B0()))
+        if fontes:
+            G.gera_fontes = lambda D: fontes(dict(F0(D)))
         opcionais = {k: os.environ.pop(k) for k in ('CAPITAO_LISTAS_PRIVADAS', 'CAPITAO_AVANTI') if k in os.environ}   # como o roda()
         try:
             with contextlib.redirect_stdout(io.StringIO()) as o, contextlib.redirect_stderr(io.StringIO()) as e:
                 rc = G.main(['--saida', pasta])
         finally:
-            G.dados, G.base_conhecimento = D0, B0
+            G.dados, G.base_conhecimento, G.gera_fontes = D0, B0, F0
             os.environ.update(opcionais)
         return rc, o.getvalue() + e.getvalue()
     coord = lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + " Em 26°59,6'S."}), D)[1]
@@ -1075,14 +1123,29 @@ def reprova(tmp):
     afirma = lambda B: (B['trechos'][T_DSC].update({'texto': B['trechos'][T_DSC]['texto'] + ' Os dados são reais e o barco é real.'}), B)[1]
     lugar = lambda D: (D['equipamentos'][7].update({'local': 'paiol de proa'}), D)[1]
     terceiro = lambda D: (D['agenda'][0].update({'quem': 'Carlos Pereira'}), D)[1]
-    for nome, pl, n, base, o_que in (('NULO', nulo, 3, None, ''), ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
+    # Revisão final do C3: as três regex da TERMOS que reprovam já (travas §2.2 e §2.7), uma a uma, com o texto num campo do D, na
+    # base e numa página de fonte do Drive (antes, a TERMOS inteira em relatório: main() devolvia 0 e gravava).
+    fone = lambda D: (D['equipe'].update({'nota': 'Marina: (47) 99812-3456.'}), D)[1]
+    dinheiro = lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + ' Gasto R$ 3.450,00 no abastecimento.'}), D)[1]
+    lugar_epirb = lambda D: (D['equipamentos'][7].update({'nome': 'EPIRB — fica no paiol de proa'}), D)[1]
+    preco_base = lambda B: (B['trechos'][T_DSC].update({'texto': B['trechos'][T_DSC]['texto'] + ' O preço do rádio é 1.200 reais.'}), B)[1]
+    def email_fonte(F):
+        rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
+        F[rel] += '<p>Escreva para oficina@exemplo.com.br.</p>'
+        return F
+    for i, (nome, pl, n, base, o_que, *fontes) in enumerate((('NULO', nulo, 3, None, ''), ('TERMOS', fone, 1, None, ' (PESSOAIS: telefone no texto da equipe)'),
+                                     ('TERMOS', lambda D: D, 1, None, ' (PESSOAIS: e-mail numa página de fonte do Drive)', email_fonte),
+                                     ('TERMOS', dinheiro, 1, None, ' (DINHEIRO: valor em reais no diário)'),
+                                     ('TERMOS', lambda D: D, 1, preco_base, ' (DINHEIRO: preço na base)'),
+                                     ('TERMOS', lugar_epirb, 1, None, ' (LOCAL_SEGURANCA: lugar do EPIRB no nome)'),
+                                     ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
                                      ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
                                      ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
                                      ('AFIRMA_REAL', lambda D: D, 2, afirma, ' (2 afirmações no trecho do DSC)'),
                                      ('SEM_INDICATIVO', lugar, 1, None, ' (equipamentos[epirb].local)'),
-                                     ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)')):
-        p = os.path.join(tmp, 'r-%s-%d' % (nome, n))
-        rc, saida = rodar(pl, p, base)
+                                     ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)'))):
+        p = os.path.join(tmp, 'r-%s-%d-%d' % (nome, n, i))
+        rc, saida = rodar(pl, p, base, fontes[0] if fontes else None)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
     # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; depois, o modelo do FAQ do gerador (C5),

@@ -8,8 +8,10 @@ não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 
 completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
 §1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC).
 
-confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Só a varredura de termos
-(RELATORIO) fica em relatório, até o C12. As violações de hoje que dependem do dado dos C6–C8 estão congeladas por caminho na
+confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Da varredura de termos
+(RELATORIO), só cinco das oito regex ficam em relatório até o C12; a PESSOAIS, a DINHEIRO e a LOCAL_SEGURANCA (telefone, e-mail,
+CPF/CNPJ, dinheiro e lugar de equipamento de salvatagem: travas §2.2 e §2.7, 0 ocorrência hoje) reprovam já, sem pendência
+(TERMOS_JA_REPROVAM, em_relatorio()). As violações de hoje que dependem do dado dos C6–C8 estão congeladas por caminho na
 PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
 completa o dado tira a linha dela).
 
@@ -38,6 +40,16 @@ RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capi
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
 # §6.2 C3: as estruturais reprovam o gerador; só a varredura de termos fica em relatório (não reprova), até o C12.
 RELATORIO = {'TERMOS': 'C12'}   # com a exceção do mmsiNota até a 1b (EXCECAO_TERMOS)
+# ...mas só as cinco regex de rótulo (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL, ANEXO). As três das travas do PROMPT §2.2 e §2.7
+# (telefone, e-mail e CPF/CNPJ; dinheiro; lugar de equipamento de salvatagem) dão 0 em todo o dado de hoje e não têm pendência:
+# reprovam já, em qualquer texto (a mesma coisa como CHAVE já reprovava na SEM_INDICATIVO). Revisão final do C3.
+TERMOS_JA_REPROVAM = ('PESSOAIS', 'DINHEIRO', 'LOCAL_SEGURANCA')
+
+
+def em_relatorio(nome, msg):
+    """A violação `msg` da asserção `nome` só é relatada (não reprova o gerador)? A TERMOS é parcial: a regex de cada violação
+    (o que vem antes do 1º ':' da mensagem) decide."""
+    return nome in RELATORIO and not (nome == 'TERMOS' and msg.split(':', 1)[0] in TERMOS_JA_REPROVAM)
 # Violações de hoje que dependem do dado dos C6–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
@@ -1943,15 +1955,13 @@ def padrao(p):
 
 
 def separa(V, inativas=()):
-    """Separa as violações das asserções estruturais (fora da RELATORIO) pela PENDENTES. Cada padrão casa UMA violação.
+    """Separa as violações das asserções estruturais (fora da RELATORIO; na TERMOS, as três de TERMOS_JA_REPROVAM) pela PENDENTES. Cada padrão casa UMA violação.
     Devolve (novas, conhecidas, velhas): novas = {asserção: [violações fora das pendências]}, que reprovam; conhecidas =
     {asserção: {commit: n}}; velhas = [(asserção, commit, padrão)] que não casaram nada, que também reprovam (a lista não pode
     esconder a volta do defeito). As asserções de `inativas` (fonte opcional ausente) não têm pendência velha."""
     novas, conhecidas, velhas = {}, {}, []
     for nome, msgs in V.items():
-        if nome in RELATORIO:
-            continue
-        livres = list(msgs)
+        livres = [m for m in msgs if not em_relatorio(nome, m)]
         for commit, ps in (PENDENTES.get(nome) or {}).items():
             for p in ps:
                 rx = padrao(p)
@@ -1981,13 +1991,15 @@ def confere(D, base, fontes, saidas, faq=None, const=None, detalhe=False, imprim
     inativas = {n for n, f in OPCIONAIS.items() if {'listas': listas, 'avanti': avanti}[f] is None}
     novas, conhecidas, velhas = separa(V, inativas)
     falhas = sorted(set(novas) | {n for n, _, _ in velhas}, key=NOMES.index)
-    imprime('confere(): %d asserções · %d reprovam o gerador: %s' % (
-        len(V), len(V) - len(RELATORIO), ('%d com falha (%s)' % (len(falhas), ', '.join(falhas))) if falhas else '0 falhas'))
+    imprime('confere(): %d asserções · %d reprovam o gerador (mais %s, da TERMOS): %s' % (
+        len(V), len(V) - len(RELATORIO), ', '.join(TERMOS_JA_REPROVAM),
+        ('%d com falha (%s)' % (len(falhas), ', '.join(falhas))) if falhas else '0 falhas'))
     imprime('  pendências conhecidas, por caminho (cada uma até o commit que completa o dado): ' + (' · '.join(
         '%s %d (%s)' % (n, sum(c.values()), ' · '.join('%s %d' % kv for kv in sorted(c.items()))) for n, c in conhecidas.items()) or 'nenhuma'))
     partes = []
     for n, v in V.items():
         if n in RELATORIO:
+            v = [m for m in v if em_relatorio(n, m)]   # na TERMOS, as de TERMOS_JA_REPROVAM saem daqui: reprovam
             extra = ': ' + resumo_termos(v) if n == 'TERMOS' and v else ''
             partes.append('%s %d (até o %s%s)' % (n, len(v), RELATORIO[n], extra))
     imprime('  em relatório: ' + ' · '.join(partes))
@@ -2008,7 +2020,7 @@ def confere(D, base, fontes, saidas, faq=None, const=None, detalhe=False, imprim
             if v:
                 imprime('  · %s (todas):' % n)
                 for m in v:
-                    c = 'relatório' if n in RELATORIO else pendente_de(n, m)
+                    c = 'relatório' if em_relatorio(n, m) else pendente_de(n, m)
                     imprime('      ' + m + ('  [%s]' % c if c else '  [NOVA]'))
     if falhas:
         motivo = []
