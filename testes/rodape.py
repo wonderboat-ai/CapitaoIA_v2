@@ -14,14 +14,18 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
   no D, o D.snapshot sem mudar (nem um byte) depois de rebases em vários dias, a paridade com a reserva do gerador (relógio
   congelado na REF: o D inteiro igual ao que o gerador gravou);
 - a microtarefa do dia de bordo (com um D.replay.diaDeBordo de teste): entra por id, nas mesmas listas, com d01 = âncora + 1 s e
-  d02 = âncora; com `simulacao = false` no fim do arquivo, nada entra; em /SOS-/ (S1, S2 e uma rota mínima) o instante é null, nada
-  entra e D.simulacao não é lida nenhuma vez (getter que conta); fora do SOS a mesma leitura conta ≥ 1 (o getter funciona);
+  d02 = âncora; com `simulacao = false` no fim do arquivo, nada entra; em /SOS-/ (S1, S2 e uma rota mínima), COM uma fonte de leitura
+  à mão (um CapitaoReplay, um CapitaoTelemetria e um D.snapshot.quadro com posição), o instante é null, nada entra e nem D.simulacao nem
+  D.replay são lidos nenhuma vez (getters que contam); fora do SOS a mesma fixture dá o instante (coletor, replay, reserva) e as leituras
+  contam ≥ 1: sem isso o "null" do SOS passava por falta de fonte e não pela guarda /SOS-/ (revisão do C7);
 - contagens() com o executado, as tarefas e as ações do diário do aparelho (e com JSON válido de outra forma, como '{}' onde se espera
   lista: vale como vazio e nunca zera as outras contas); a trava e o instante() nas três fontes (replay,
   coletor e a reserva do snapshot) com os números do §1.22 e do §1.23 (12:01:00): autonomia, faltam, desdeAbast, diesel_pct;
 - os formatadores (arred, nb, mil, grau3, hora, coord, campo);
 - as telas com o rodapé (C1, C2, B1, G1, A1, G3, G4): "prazos a partir de" = hoje, sem "falta registrar" vazio, e a A1 sem a data do
-  autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4).
+  autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4);
+- a G1 (web e app), com a nota fiscal do abastecimento tal como o arquivo gerado a traz hoje e tal como o C8 a entrega (pela microtarefa):
+  situação CONFERIDA, nunca SEM DADOS (CONTRATO §1.8), e sem o bloco FALTA REGISTRAR (revisão do C7).
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
     python -X utf8 testes/rodape.py
@@ -30,6 +34,7 @@ Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "
 import importlib.util
 import json
 import os
+import re
 import sys
 from datetime import date, datetime, time, timedelta, timezone
 
@@ -89,6 +94,15 @@ C8_LIMPO = """(function (D) { D.diario = D.diario.filter(function (x) { return x
   D.documentos = D.documentos.filter(function (x) { return x.id !== 'nf-abast'; }); D.abastecimentos = []; })(window.CapitaoDados);"""
 GETTER = """window.__lidas = 0; (function () { var v = window.CapitaoDados.simulacao; Object.defineProperty(window.CapitaoDados, 'simulacao',
   { get: function () { window.__lidas++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); })();"""
+# Leitura de teste para o SOS recusar (revisão do C7): enquanto não havia fonte nenhuma (sem CapitaoReplay, sem coletor, sem D.snapshot.quadro),
+# o instante() era null em qualquer página e a guarda /SOS-/ nunca era posta à prova. Com as três fontes à mão, só a guarda devolve null.
+# O D.replay vira um getter que conta (como a simulacao): em /SOS-/ ninguém o lê, nem o rodapé (a âncora do SOS é fixa, 07:00).
+LEITURA = "{ timestamp_utc: '2026-10-27T15:01:00Z', lat: -26.99, lon: -48.61, sog_nos: 18.1, diesel_litros: 1333, temp_ar_externo_c: 22.6, temp_agua_c: 20.1 }"
+FONTE_REPLAY = "window.CapitaoReplay = { agora: function () { return Date.now(); }, em: function () { return %s; }, t: function () { return 60; }, fase: function () { return { nome: 'cruzeiro', ini: 50, fim: 120 }; }, fixo: function () { return ''; } };" % LEITURA
+FONTE_COLETOR = "window.CapitaoTelemetria = { atual: function () { return %s; } };" % LEITURA
+FONTE_RESERVA = "window.CapitaoDados.snapshot.quadro = %s;" % LEITURA
+GETTER_REPLAY = """window.__lidasReplay = 0; (function () { var v = window.CapitaoDados.replay; Object.defineProperty(window.CapitaoDados, 'replay',
+  { get: function () { window.__lidasReplay++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); })();"""
 GUARDA = "window.__reserva = JSON.stringify(window.CapitaoDados); window.__snap0 = JSON.stringify(window.CapitaoDados.snapshot);"
 
 
@@ -249,7 +263,8 @@ def dia_de_bordo(b):
     hoje, bordo = dias(local)
     LISTAS = """() => { const D = window.CapitaoDados; return { ab: D.abastecimentos.map((a) => [a.id || null, a.diasAtras, a.d, a.h || null, a.litros]),
       diario: D.diario.slice(0, 3).map((x) => [x.id, x.d, x.iso]), nf: D.documentos.filter((x) => x.id === 'nf-abast').map((x) => [x.ref || null, x.emitido, x.dn === undefined, x.vence === undefined, x.st]),
-      ids: D.diario.map((x) => x.id), t0: D.diario[0].t, lidas: window.__lidas, inst: window.CapitaoAgora.instante(), versao: D.versao, atrasadas: D.agenda.filter((t) => t.dn < 0).length }; }"""
+      ids: D.diario.map((x) => x.id), t0: D.diario[0].t, lidas: window.__lidas, lidasReplay: window.__lidasReplay, inst: window.CapitaoAgora.instante(),
+      fontes: [!!window.CapitaoReplay, !!(window.CapitaoDados.snapshot && window.CapitaoDados.snapshot.quadro), !!(window.CapitaoTelemetria && window.CapitaoTelemetria.atual && window.CapitaoTelemetria.atual())], versao: D.versao, atrasadas: D.agenda.filter((t) => t.dn < 0).length }; }"""
     pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO + GETTER)
     r = pg.evaluate(LISTAS)
     ok('simulacao true: ab-0…ab-2 em abastecimentos, com diasAtras 0, 1 e 2 e h 07:00', [a[0] for a in r['ab']] == ['ab-0', 'ab-1', 'ab-2'] and [a[1] for a in r['ab']] == [0, 1, 2]
@@ -274,15 +289,30 @@ def dia_de_bordo(b):
        r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [], (r['ab'], r['ids'][:3], r['nf']))
     ok('simulacao = false: o rebase roda (versão e atrasadas)', r['versao'] == br(hoje) and r['atrasadas'] == 3)
     pg.context.close()
-    for nome, caminho in (('S1-SOS-Web', '/S1-SOS-Web.dc.html'), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html'), ('rota mínima /SOS-teste.html', '/SOS-teste.html')):
-        pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO + GETTER, caminho=caminho)
+    # Revisão do C7: com as três fontes de leitura à mão e o D.replay contado, o SOS tem de recusar todas. Só a guarda /SOS-/ do instante()
+    # devolve null aqui (a mutação "sem a guarda" devolvia o replay, o coletor ou a reserva com posição); o controle fora do SOS usa a mesma fixture.
+    fixture = C8_LIMPO + DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
+    for nome, caminho, extra in (('S1-SOS-Web', '/S1-SOS-Web.dc.html', ''), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html', ''),
+                                 ('rota mínima /SOS-teste.html', '/SOS-teste.html', FONTE_COLETOR)):
+        pg = abre(b, local, antes=fixture + extra, caminho=caminho)
         pg.wait_for_timeout(800)
         r = pg.evaluate(LISTAS)
-        ok('%s: instante() é null' % nome, r['inst'] is None, r['inst'])
-        ok('%s: nenhuma linha do dia de bordo e nenhuma leitura de D.simulacao (getter que conta: %s)' % (nome, r['lidas']),
-           r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [] and r['lidas'] == 0, (r['ab'][:2], r['ids'][:3], r['lidas']))
+        ok('%s: as fontes de leitura estão à mão (replay, quadro de reserva%s) e o instante() é null' % (nome, ', coletor' if extra else ''),
+           r['fontes'][:2] == [True, True] and (not extra or r['fontes'][2]) and r['inst'] is None, (r['fontes'], r['inst']))
+        ok('%s: nenhuma linha do dia de bordo e nenhuma leitura de D.simulacao (%s) nem de D.replay (%s)' % (nome, r['lidas'], r['lidasReplay']),
+           r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [] and r['lidas'] == 0 and r['lidasReplay'] == 0, (r['ab'][:2], r['ids'][:3], r['lidas'], r['lidasReplay']))
         ok('%s: o rebase roda (versão e 3 atrasadas)' % nome, r['versao'] == br(hoje) and r['atrasadas'] == 3)
         pg.context.close()
+    pg = abre(b, local, antes=fixture + FONTE_COLETOR)
+    r = pg.evaluate(LISTAS)
+    ok('controle fora do SOS, com a mesma fixture: o instante() existe (coletor), D.simulacao e D.replay são lidos (≥ 1) e o dia de bordo entra',
+       r['inst'] is not None and r['inst']['fonte'] == 'coletor' and r['lidas'] >= 1 and r['lidasReplay'] >= 1 and [a[0] for a in r['ab']] == ['ab-0', 'ab-1', 'ab-2'],
+       (r['inst'] and r['inst']['fonte'], r['lidas'], r['lidasReplay'], r['ab'][:1]))
+    ok('controle: sem o coletor o instante() vem do replay e, sem o replay, da reserva do D.snapshot.quadro',
+       pg.evaluate("""() => { const A = window.CapitaoAgora, f = [];
+         delete window.CapitaoTelemetria; window.__T0 += 1000; f.push(A.instante().fonte);
+         delete window.CapitaoReplay; window.__T0 += 1000; f.push(A.instante().fonte); return f; }""") == ['replay', 'snapshot'])
+    pg.context.close()
 
 
 def contagens(b):
@@ -442,6 +472,25 @@ def telas(b):
             ok('A1-Ponte-Web: a dica das duas linhas leva a nota da etiqueta', todo.count('modelo, validade e acionamento: veja a etiqueta do equipamento') == 2,
                todo.count('modelo, validade e acionamento: veja a etiqueta do equipamento'))
         pg.context.close()
+    # Revisão do C7: a nota fiscal do abastecimento (sem prazo, st CONFERIDA, CONTRATO §1.8) caía no grupo SEM DADOS da G1: situação e validade
+    # "SEM DADOS", "1 SEM DADOS" no resumo e o bloco FALTA REGISTRAR com a nota. Decisão (b): nenhum selo em dado de bordo. Duas formas: o arquivo
+    # gerado de hoje (a nota em documentos) e a do C8 (a nota entra pela microtarefa, junto com ab-0 e d01/d02): o problema não acaba no C8.
+    NF = """() => {
+      const nome = 'Nota fiscal do abastecimento', outros = ['Seguro da embarcação', 'Licença de Estação', 'Laudo de vistoria', 'Garantia do estabilizador', 'Certificado do EPIRB'];
+      return [...document.querySelectorAll('*')].filter((x) => x.children.length === 0 && x.textContent.trim() === nome).map((e) => {
+        while (e.parentElement && !outros.some((o) => e.parentElement.innerText.includes(o))) e = e.parentElement;   // a linha: o maior bloco que só tem esta nota
+        return e.innerText; }); }"""
+    for tela, app in (('G1-Documentos-Web', False), ('G1-Documentos-Mobile', True)):
+        for modo, antes in (('arquivo gerado', ''), ('forma do C8 (nota fiscal pela microtarefa)', C8_LIMPO + DIA_DE_BORDO)):
+            pg = abre(b, local, antes=antes, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
+            pg.wait_for_timeout(1800)
+            linhas, txt = pg.evaluate(NF), pg.evaluate("() => document.body.innerText")
+            ok('%s (%s): a linha da nota fiscal diz CONFERIDA, sem SEM DADOS na situação nem na validade' % (tela, modo),
+               len(linhas) >= 1 and any('CONFERIDA' in l for l in linhas) and not any('SEM DADOS' in l for l in linhas), linhas)
+            ok('%s (%s): nenhum documento SEM DADOS (resumo e filtro com 0) e sem o bloco FALTA REGISTRAR' % (tela, modo),
+               'FALTA REGISTRAR' not in txt and not re.search(r'[1-9]\d*\s+SEM DADOS', txt), [l for l in txt.split('\n') if 'SEM DADOS' in l or 'FALTA' in l][:3])
+            ok('%s (%s): sem erro de script' % (tela, modo), not pg.erros, pg.erros)
+            pg.context.close()
 
 
 def main():
