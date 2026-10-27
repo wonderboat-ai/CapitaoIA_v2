@@ -124,10 +124,21 @@ window.CapitaoDados = {
  "protocolos": {
   "rotulo": "procedimento padrão — confirmar com o protocolo de bordo",
   "fonte": "Protocolo de emergência — procedimento padrão · Drive › Capitão IA v2 › 07 Protocolos de emergência",
+  "mmsiRadio": "MMSI do rádio de bordo (etiqueta / Licença de Estação)",
+  "mmsiRotulo": "MMSI (cadastro do app)",
+  "indicativo": "o da Licença de Estação (no rádio)",
+  "plotter": "POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA",
+  "hud": "POSIÇÃO · LEIA NO PLOTTER",
   "canal16": {"canal":"16","mhz":"156,800","fonte":"Protocolo de emergência — procedimento padrão · MAYDAY · canal 16"},
-  "roteiro": ["MAYDAY, MAYDAY, MAYDAY","AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA","MMSI 710123456 (FICTÍCIO · DEMONSTRAÇÃO)","POSIÇÃO — LEIA NO PLOTTER AGORA","NATUREZA DO PERIGO: ________","PESSOAS A BORDO: ________","AUXÍLIO NECESSÁRIO: ________","CÂMBIO"],
-  "mob": ["Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue.","Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter Garmin.","Volte devagar, com o motor em neutro perto da pessoa (hélice). Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB."],
-  "seafire": null,
-  "epirb": null
+  "roteiro": ["MAYDAY, MAYDAY, MAYDAY","AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA","MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)","POSIÇÃO — LEIA NO PLOTTER AGORA","NATUREZA DO PERIGO: ________","PESSOAS A BORDO: conte agora","AUXÍLIO NECESSÁRIO: ________","CÂMBIO"],
+  "mob": ["Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue.","Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter.","Volte devagar, com o motor em neutro perto da pessoa (hélice). Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB lida no plotter."],
+  "seafire": {"passos":["Fogo no motor ou alarme do sistema fixo: desligue motores e gerador e corte a ventilação do motor.","Se o sistema não disparou sozinho e há fogo no motor, use o disparo manual.","Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.","Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para a saída.","Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono."],"nota":"modelo, validade e acionamento: veja a etiqueta do equipamento"},
+  "epirb": {"passos":["Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).","Acione conforme a etiqueta do equipamento e deixe a antena para cima, com céu aberto.","Leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Não desligue até o resgate.","Disparo por engano: desligue e avise no canal 16."],"teste":["Teste da baliza (EPIRB): faça o autoteste conforme a etiqueta. O teste não envia alerta.","Confira na etiqueta a validade da bateria e do disparador hidrostático."],"nota":"modelo, validade e acionamento: veja a etiqueta do equipamento"},
+  "alagamento": ["Água entrando: ligue as bombas de porão no manual, procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que puder. Água subindo mesmo assim: MAYDAY no canal 16."],
+  "abandono": ["Abandono: só quando não houver como manter o barco. Antes, MAYDAY no canal 16. Coletes em todos; leve o EPIRB e o VHF portátil; embarque na balsa sem pular na água."],
+  "oleo": ["Reduza para marcha lenta e confira o manômetro agora.","Compare BB e BE no mesmo giro: só um lado baixo aponta o motor.","Com o motor parado, procure vazamento e confira o nível de óleo na vareta.","Se continuar baixa, desligue o motor afetado, siga com o outro e chame a oficina dos motores."],
+  "salvatagem": "Em perigo agora: SOS do app e VHF canal 16. Coletes: um por pessoa — conte as pessoas a bordo agora (lotação: veja a placa de lotação). Balsa, coletes, boias, extintores e sinalizadores: no local da placa de salvatagem e do plano de segurança de bordo — confira na saída.",
+  "panpan": "Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no canal 16, no mesmo formato da chamada MAYDAY.",
+  "dsc": "O botão DISTRESS envia o alerta com a identificação programada no rádio: é o MMSI do rádio de bordo (etiqueta / Licença de Estação). Depois do alerta, faça o MAYDAY por voz no canal 16."
  }
 };

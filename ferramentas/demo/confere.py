@@ -16,7 +16,7 @@ qualquer ordem (§2.2/§2.3) na LOCAL_VOCAB (salvatagem_e_lugar: a LOCAL_SEGURAN
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Da varredura de termos
 (RELATORIO), só cinco das oito regex ficam em relatório até o C12; a PESSOAIS, a DINHEIRO e a LOCAL_SEGURANCA (telefone, e-mail,
 CPF/CNPJ, dinheiro e lugar de equipamento de salvatagem: travas §2.2 e §2.7, 0 ocorrência hoje) reprovam já, sem pendência
-(TERMOS_JA_REPROVAM, em_relatorio()). As violações de hoje que dependem do dado dos C6–C8 estão congeladas por caminho na
+(TERMOS_JA_REPROVAM, em_relatorio()). As violações de hoje que dependem do dado dos C7–C8 estão congeladas por caminho na
 PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
 completa o dado tira a linha dela).
 
@@ -57,7 +57,7 @@ def em_relatorio(nome, msg):
     """A violação `msg` da asserção `nome` só é relatada (não reprova o gerador)? A TERMOS é parcial: a regex de cada violação
     (o que vem antes do 1º ':' da mensagem) decide."""
     return nome in RELATORIO and not (nome == 'TERMOS' and msg.split(':', 1)[0] in TERMOS_JA_REPROVAM)
-# Violações de hoje que dependem do dado dos C6–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
+# Violações de hoje que dependem do dado dos C7–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
 # exato, com '*' no lugar de um trecho: o «…» citado (o caminho, a regra e, na MMSI9, os dígitos ficam presos), um nome que não
@@ -66,23 +66,20 @@ def em_relatorio(nome, msg):
 _AG = ('porao-teste', 'clima-filtro', 'gerador-rotor', 'casco-anodos', 'motores-oleo', 'gerador-revisao', 'seakeeper-anodo',
        'baterias', 'garmin-cartas', 'clima-revisao', 'motores-revisao')   # as 11 tarefas de hoje (C7: deslocamentos, sistema, palavras)
 # O C5 completou equipamentos, modelos, guias e trechos (§1.4, §1.5): as pendências dele (NULO, MMSI9, AFIRMA_REAL,
-# SEGURANCA_MARCADA, MODELOS_AVANTI, COLISAO_MODELOS, EQUIP e NOTA_ETIQUETA) saíram com o dado.
+# SEGURANCA_MARCADA, MODELOS_AVANTI, COLISAO_MODELOS, EQUIP e NOTA_ETIQUETA) saíram com o dado. O C6 completou o D.protocolos (§1.3):
+# saíram o seafire/epirb None (NULO), o MMSI do roteiro (MMSI9) e o roteiro e o MOB de antes (PROTOCOLO_LIMPO).
 PENDENTES = {
     'NULO': {
-        'C6': ['protocolos.seafire: None', 'protocolos.epirb: None'],
         'C7': ['documentos[%d].%s: None' % (i, k) for i in (0, 6, 7) for k in ('vence', 'dn')],   # sem deslocamento: omitidos (§1.0)
         'C8': ['snapshot.porao: None', 'snapshot.ancora: None']   # §1.17 sem null; a leitura da pasta 05 é refeita (e renomeada)
               + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
                  for k in ('rpm', 'pct')],
     },
-    'MMSI9': {'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
     # O registro já está preenchido (C4), e o documento do TIE ainda é o de antes (sem id, SEM DADOS, "registro não informado"): o
     # C7 grava id "tie" e numero = embarcacao.registro (§1.8) e tira esta linha (CONTRATO §6.6).
     'REGISTRO': {'C7': ['documentos[tie] ausente: o TIE precisa de id "tie" e numero = embarcacao.registro (§1.2, §1.8)']},
     'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
                   + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
-    'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência [710123456] «*»',
-                               'protocolos.mob[1]: fabricante ou modelo de equipamento [Garmin] «*»']},
     'IDS': {'C7': ['agenda.%s.sistema fora do vocabulário (ids de equipamentos, casco, tanques): None' % i for i in _AG]
             + ['diario.%s: pendência sem ref na agenda' % iso for iso in ('2026-09-24T17:10:00-03:00', '2026-09-20T11:05:00-03:00',
                                                                           '2026-09-05T10:00:00-03:00')]},
@@ -92,7 +89,7 @@ PENDENTES = {
         '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
         '06 Abastecimento/Registro de abastecimento.csv')]},
 }
-COMMITS_PENDENTES = ('C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2; o TIE do registro fica com o C7) e o C5, os equipamentos e os guias (§1.4, §1.5)
+COMMITS_PENDENTES = ('C7', 'C8')   # o C4 completou a embarcação (§1.2; o TIE do registro fica com o C7), o C5, os equipamentos e os guias (§1.4, §1.5) e o C6, o D.protocolos (§1.3)
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
@@ -101,6 +98,42 @@ EXCECAO_TERMOS = {'embarcacao.mmsiNota': '1b'}
 # EXCEÇÃO do §3 na varredura de termos; tirado do D, um termo posto no próprio rótulo sumiria de todo o dado.
 ROTULO = 'procedimento padrão — confirmar com o protocolo de bordo'
 NOTA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'
+# D.protocolos (§1.3, C6): a forma e os textos que o contrato fixa letra por letra. A referência é daqui, nunca do dado conferido
+# (o ROTULO e a NOTA, acima, valem para as outras asserções). O roteiro leva o nome da embarcação na linha 1 e é o único campo que lê o D.
+SALVATAGEM_TXT = ('Em perigo agora: SOS do app e VHF canal 16. Coletes: um por pessoa — conte as pessoas a bordo agora (lotação: veja a '
+                  'placa de lotação). Balsa, coletes, boias, extintores e sinalizadores: no local da placa de salvatagem e do plano de '
+                  'segurança de bordo — confira na saída.')   # PROMPT §2.3
+PROTOCOLOS_TEXTOS = {
+    'mmsiRadio': 'MMSI do rádio de bordo (etiqueta / Licença de Estação)', 'mmsiRotulo': 'MMSI (cadastro do app)',
+    'indicativo': 'o da Licença de Estação (no rádio)',
+    'plotter': 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA', 'hud': 'POSIÇÃO · LEIA NO PLOTTER',
+    'salvatagem': SALVATAGEM_TXT,
+    'panpan': ('Urgência sem perigo imediato de vida (pane, sem governo, alguém ferido sem risco de morte): PAN-PAN, PAN-PAN, PAN-PAN no '
+               'canal 16, no mesmo formato da chamada MAYDAY.'),
+    'dsc': ('O botão DISTRESS envia o alerta com a identificação programada no rádio: é o MMSI do rádio de bordo (etiqueta / Licença de '
+            'Estação). Depois do alerta, faça o MAYDAY por voz no canal 16.'),
+}
+PROTOCOLOS_LISTAS = {'roteiro': 8, 'mob': 3, 'alagamento': 1, 'abandono': 1, 'oleo': 4}   # campo → quantidade de strings
+PROTOCOLOS_BLOCOS = {'seafire': {'passos': 5}, 'epirb': {'passos': 4, 'teste': 2}}        # objeto → lista → quantidade (e a `nota`)
+# As linhas do roteiro MAYDAY que não dependem do dado (a 2ª é o nome ×3; MMSI, posição e pessoas nunca são o número gerado, §2.2 do PROMPT).
+ROTEIRO_FIXO = {0: 'MAYDAY, MAYDAY, MAYDAY', 2: 'MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)', 3: 'POSIÇÃO — LEIA NO PLOTTER AGORA',
+                4: 'NATUREZA DO PERIGO: ________', 5: 'PESSOAS A BORDO: conte agora', 6: 'AUXÍLIO NECESSÁRIO: ________', 7: 'CÂMBIO'}
+# Fonte única (§1.3): o D.protocolos e os guias de bordo dizem a mesma coisa. campo → [(guia em drive.arquivos, início do título da seção)];
+# o texto do campo (listas juntas por espaço) tem de estar inteiro na seção. O g_ais §2 tem texto próprio (MMSI_RADIO, sem o DSC).
+PROTOCOLOS_NOS_GUIAS = (
+    ('mob', (('protocolo', 'Homem ao mar'),)),
+    ('seafire.passos', (('protocolo', 'Incêndio'), ('g_seafire', '1 · '))),
+    ('epirb.passos', (('protocolo', 'EPIRB'),)),
+    ('epirb.passos[:3]', (('g_epirb', '1 · '),)),
+    ('epirb.teste', (('g_epirb', '2 · '),)),
+    ('epirb.passos[3]', (('g_epirb', '3 · '),)),
+    ('alagamento', (('protocolo', 'Água entrando'), ('g_porao', '4 · '))),
+    ('abandono', (('protocolo', 'Abandono'),)),
+    ('oleo', (('g_motores', '4 · '),)),
+    ('salvatagem', (('protocolo', 'Salvatagem'),)),
+    ('panpan', (('protocolo', 'PAN-PAN'),)),
+    ('dsc', (('protocolo', 'DSC'), ('g_eletronicos', '5 · '))),
+)
 # Mínimo do §1.5 (coluna seguranca: true da tabela dos guias): a marcação por palavra pode pegar mais seções, nunca menos. Chave
 # de drive.arquivos → números de seção (no checklist, o título); None = todas. No FAQ (§1.6), os ids das mesmas seções e os EM.
 MINIMO_SEGURANCA = {'g_motores': {'4'}, 'g_eletronicos': {'1', '5'}, 'g_porao': {'4'}, 'g_ais': {'2'}, 'g_seafire': None,
@@ -1989,17 +2022,128 @@ def a_ident_base(X):
 
 
 def a_nota_etiqueta(X):
+    """As quatro notas são uma constante só (§1.4, §1.3): equipamentos[epirb|seafire].nota = protocolos.epirb|seafire.nota. Desde o
+    C6 o protocolos.epirb e o protocolos.seafire existem (antes, só a primeira igualdade): sem o objeto ou sem a nota, reprova."""
     nota = NOTA
     out = []
     if X.const.get('NOTA_ETIQUETA', NOTA) != NOTA:   # a constante do gerador é o texto fixo do §1.4
         out.append('NOTA_ETIQUETA do gerador ≠ o texto do §1.4 (%r)' % NOTA)
+    P = X.D.get('protocolos')
     for i in ('epirb', 'seafire'):
         e = X.eq(i)
         if e is not None and e.get('nota') != nota:
             out.append('equipamentos[%s].nota ≠ NOTA_ETIQUETA' % i)
-        p = (X.D.get('protocolos') or {}).get(i)
-        if isinstance(p, dict) and p.get('nota') != nota:
-            out.append('protocolos.%s.nota ≠ NOTA_ETIQUETA' % i)
+        if isinstance(P, dict):
+            p = P.get(i)
+            if not isinstance(p, dict) or p.get('nota') != nota:
+                out.append('protocolos.%s.nota ≠ NOTA_ETIQUETA' % i)
+    return out
+
+
+def _campo(P, caminho):
+    """O texto de um campo do protocolos pelo caminho de PROTOCOLOS_NOS_GUIAS ('seafire.passos', 'epirb.passos[:3]', 'epirb.passos[3]'),
+    com as listas juntas por espaço; None se faltar."""
+    nome, _, fat = caminho.partition('[')
+    v = P
+    for k in nome.split('.'):
+        v = v.get(k) if isinstance(v, dict) else None
+    if fat:
+        if not isinstance(v, list):
+            return None
+        try:
+            v = v[_corte(fat[:-1])]
+        except IndexError:
+            return None
+    if isinstance(v, list):
+        return ' '.join(v) if all(isinstance(x, str) for x in v) else None
+    return v if isinstance(v, str) else None
+
+
+def _corte(txt):
+    """'3' → 3; ':3' → slice(None, 3) (só estas duas formas, sem eval)."""
+    if ':' in txt:
+        a, _, b = txt.partition(':')
+        return slice(int(a) if a else None, int(b) if b else None)
+    return int(txt)
+
+
+def a_protocolos(X):
+    """A forma do D.protocolos (§1.3, C6): as chaves e os tipos, a quantidade de strings de cada lista, os textos que o contrato fixa
+    (o MMSI_RADIO, o rótulo do MMSI, o indicativo, o plotter, o HUD, a salvatagem do PROMPT §2.3, o PAN-PAN e o DSC), o roteiro com o nome
+    da embarcação (único dado gerado do SOS, §2.1) e o fim "conte agora", e a fonte única com os guias (PROTOCOLOS_NOS_GUIAS): cada
+    texto do protocolos está inteiro na seção do guia que o repete."""
+    P = X.D.get('protocolos')
+    if not isinstance(P, dict):
+        return ['protocolos ausente: a S1/S2 leem só embarcacao.nome e o D.protocolos (§1.3)']
+    out = []
+    esperadas = {'rotulo', 'fonte', 'canal16'} | set(PROTOCOLOS_TEXTOS) | set(PROTOCOLOS_LISTAS) | set(PROTOCOLOS_BLOCOS)
+    out += ['protocolos.%s: chave que o §1.3 não tem' % k for k in P if k not in esperadas]
+    for k in ('rotulo', 'fonte'):
+        if not isinstance(P.get(k), str) or not P[k].strip():
+            out.append('protocolos.%s: precisa de texto (§1.3)' % k)
+    for k, fixo in PROTOCOLOS_TEXTOS.items():
+        v = P.get(k)
+        if not isinstance(v, str):
+            out.append('protocolos.%s: precisa de texto (§1.3)' % k)
+        elif v != fixo:
+            out.append('protocolos.%s: diferente do texto do contrato (§1.3)' % k)
+    for k, n in PROTOCOLOS_LISTAS.items():
+        v = P.get(k)
+        if not isinstance(v, list) or not all(isinstance(x, str) and x.strip() for x in v):
+            out.append('protocolos.%s: precisa de uma lista de textos (§1.3)' % k)
+        elif len(v) != n:
+            out.append('protocolos.%s: %d texto(s), o §1.3 pede %d' % (k, len(v), n))
+    for k, listas in PROTOCOLOS_BLOCOS.items():
+        b = P.get(k)
+        if not isinstance(b, dict):
+            out.append('protocolos.%s: precisa de objeto com %s e nota (§1.3)' % (k, ' e '.join(listas)))
+            continue
+        out += ['protocolos.%s.%s: chave que o §1.3 não tem' % (k, c) for c in b if c not in set(listas) | {'nota'}]
+        for c, n in listas.items():
+            v = b.get(c)
+            if not isinstance(v, list) or not all(isinstance(x, str) and x.strip() for x in v):
+                out.append('protocolos.%s.%s: precisa de uma lista de textos (§1.3)' % (k, c))
+            elif len(v) != n:
+                out.append('protocolos.%s.%s: %d texto(s), o §1.3 pede %d' % (k, c, len(v), n))
+        if not isinstance(b.get('nota'), str) or not b['nota'].strip():
+            out.append('protocolos.%s.nota: precisa de texto (§1.3)' % k)
+    c16 = P.get('canal16')
+    if not isinstance(c16, dict) or set(c16) != {'canal', 'mhz', 'fonte'}:
+        out.append('protocolos.canal16: precisa de {canal, mhz, fonte} (§1.3)')
+    else:
+        if c16['canal'] != '16' or c16['mhz'] != '156,800':
+            out.append('protocolos.canal16: canal «16» em «156,800» MHz (§1.3)')
+        if not isinstance(c16['fonte'], str) or not c16['fonte'].endswith(' · MAYDAY · canal 16') or not str(P.get('fonte', '')).startswith(c16['fonte'][:-len(' · MAYDAY · canal 16')]):
+            out.append('protocolos.canal16.fonte: o título do protocolo, «MAYDAY» e «canal 16» (§1.3)')
+    r = P.get('roteiro')
+    if isinstance(r, list) and len(r) == PROTOCOLOS_LISTAS['roteiro'] and all(isinstance(x, str) for x in r):
+        nome = ((X.D.get('embarcacao') or {}).get('nome') or '').upper()
+        fixo = dict(ROTEIRO_FIXO)
+        fixo[1] = 'AQUI É ' + ', '.join([nome] * 3)
+        out += ['protocolos.roteiro[%d]: «%s», o §1.3 pede «%s»' % (i, r[i], t) for i, t in sorted(fixo.items()) if r[i] != t]
+    # Fonte única: o texto do protocolos está inteiro na seção do guia que o repete (só se o guia e a seção existem na base).
+    for caminho, guias in PROTOCOLOS_NOS_GUIAS:
+        txt = _campo(P, caminho)
+        if txt is None:
+            continue   # a forma já reprovou
+        for chave, ini in guias:
+            titulo = X.arq.get(chave)
+            if not titulo:
+                continue
+            sec = next((t for t in X.trechos if t.get('fonte') == titulo and str(t.get('secao', '')).startswith(ini)), None)
+            if sec is None:
+                out.append('base: %s · seção «%s…» ausente (repete protocolos.%s, §1.3)' % (titulo, ini, caminho))
+            elif txt not in sec.get('texto', ''):
+                out.append('base: %s · %s não repete protocolos.%s (fonte única, §1.3)' % (titulo, sec.get('secao'), caminho))
+    # O roteiro MAYDAY falado (as linhas em branco sem o «: ________») está inteiro na seção MAYDAY do protocolo.
+    if isinstance(P.get('roteiro'), list) and all(isinstance(x, str) for x in P['roteiro']) and X.arq.get('protocolo'):
+        titulo = X.arq['protocolo']
+        sec = next((t for t in X.trechos if t.get('fonte') == titulo and str(t.get('secao', '')).startswith('MAYDAY')), None)
+        falado = ' — '.join(x.replace(': ________', '') for x in P['roteiro'])
+        if sec is None:
+            out.append('base: %s · seção «MAYDAY…» ausente (repete protocolos.roteiro, §1.3)' % titulo)
+        elif falado not in sec.get('texto', ''):
+            out.append('base: %s · %s não repete protocolos.roteiro (fonte única, §1.3)' % (titulo, sec.get('secao')))
     return out
 
 
@@ -2180,6 +2324,7 @@ ASSERCOES = [
     ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
     ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('IDENT_BASE', a_ident_base), ('NOTA_ETIQUETA', a_nota_etiqueta),
     ('SEGURANCA_SEM_MODELO', a_seguranca_sem_modelo),
+    ('PROTOCOLOS', a_protocolos),   # §1.3 (C6): a forma e a fonte única do D.protocolos
     ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).

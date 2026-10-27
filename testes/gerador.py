@@ -15,6 +15,9 @@
 - C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
   etiqueta e sem fabricante nem modelo nos trechos.
+- C6 (CONTRATO §1.3): o D.protocolos completo (18 campos, seafire e epirb com a nota da etiqueta), igual letra por letra ao texto do
+  contrato (PROTOCOLOS_C6); a asserção PROTOCOLOS acusa cada defeito de forma, texto fixo e fonte única com os guias; as pendências
+  do C6 saíram da PENDENTES (a pendência velha de hoje é a do C8).
 - C2 (CONTRATO §1.1, §1.2, §1.3, §1.5, §1.10): rótulos fora dos títulos e das fontes. rotulos_c2() prende o resultado com o texto
   do contrato: drive.arquivos, os quatro *Fonte, embarcacao.fonte, canal16.fonte e regraAbast, o aviso e a versao (8 hex do
   sha256) da base, as fontes do Drive (nome e texto sem DEMO, snapshot, fictício nem demonstração) e o LEIA-ME sem a regra
@@ -428,9 +431,13 @@ AMOSTRAS = {
     # (revisão 5 do C5) `ident`: as palavras de acionamento do trecho de segurança não levam verbo de operação nem nome de equipamento
     # (revisão 6 do C5: nem de queda sem `identCom`; as amostras das outras palavras estão nas EXTRAS, com com_ident())
     'IDENT_BASE': (lambda r: com_ident('caiu desligar' if r else 'caiu cair'), 'ident com verbo de operação ou nome de equipamento (desligar)'),
-    # protocolos.seafire (None hoje, C6); a nota dos equipamentos de segurança já é a NOTA_ETIQUETA desde o C5
-    'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
+    # a nota dos equipamentos de segurança é a NOTA_ETIQUETA desde o C5 e a do protocolos.seafire e do epirb, desde o C6
+    'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos']['seafire'].update({'nota': 'veja o manual' if r else C.NOTA}), k)[1])(hoje()),
                       'protocolos.seafire.nota'),
+    # (C6) o D.protocolos do §1.3: a salvatagem do PROMPT §2.3 é letra por letra
+    'PROTOCOLOS': (lambda r: (lambda k: (k['D']['protocolos'].update({'salvatagem': k['D']['protocolos']['salvatagem'].replace('um por pessoa', 'dois por pessoa') if r
+                                                                      else k['D']['protocolos']['salvatagem']}), k)[1])(hoje()),
+                   'protocolos.salvatagem: diferente do texto do contrato'),
     'RODAPE_SNAPSHOT': (lambda r: (lambda k: (k.update({'rodape': RODAPE_OK.replace('return true;', 'D.snapshot.quadro = {}; return true;') if r else RODAPE_OK}), k)[1])(hoje()),
                         'rodape.js'),
     'FONTES_RELATIVAS': (lambda r: (lambda k: (k['F'].update({k['D']['drive']['pastas']['abast'] + '/Extra.csv': 'Data,Litros\n' + ('12/09/2026' if r else 'há 3 dias') + ',100\n'}), k)[1])(hoje()),
@@ -824,6 +831,83 @@ EXTRAS += [
      'LOCAL_SEGURANCA: diario[0].t'),
     ('TERMOS', 'lugar da balsa numa página de fonte do Drive (LOCAL_SEGURANCA)', lambda r: com_fonte_final('Checklist de bordo.html', '<p>A balsa fica na popa.</p>' if r else ''),
      'LOCAL_SEGURANCA: fontes/01 Manuais e guias de bordo/Checklist de bordo.html'),
+]
+
+
+# C6 (CONTRATO §1.3): a asserção PROTOCOLOS acusa cada defeito do D.protocolos (forma, texto fixo, fonte única com os guias). Cada
+# amostra muda uma coisa só; a versão boa (r falso) é o dado de hoje, sem violação nova.
+def com_proto(muda=None, base=None):
+    """hoje() com muda(D.protocolos) e base(B) aplicados."""
+    k = hoje()
+    if muda:
+        muda(k['D']['protocolos'])
+    if base:
+        base(k['B'])
+    return k
+
+
+def sem_trecho(chave, sec):
+    """base(B) que tira o trecho `sec` (começo do título) do guia `chave`."""
+    def f(B):
+        B['trechos'] = [t for t in B['trechos'] if not (t['fonte'] == G.ARQ[chave] and t['secao'].startswith(sec))]
+    return f
+
+
+EXTRAS += [
+    ('PROTOCOLOS', 'o D sem o protocolos', lambda r: (lambda k: (k['D'].pop('protocolos') if r else None, k)[1])(hoje()), 'protocolos ausente'),
+    ('PROTOCOLOS', 'seafire null (o de antes do C6)', lambda r: com_proto(lambda P: P.update({'seafire': None}) if r else None),
+     'protocolos.seafire: precisa de objeto'),
+    ('PROTOCOLOS', 'epirb null (o de antes do C6)', lambda r: com_proto(lambda P: P.update({'epirb': None}) if r else None),
+     'protocolos.epirb: precisa de objeto'),
+    ('PROTOCOLOS', 'chave que o contrato não tem', lambda r: com_proto(lambda P: P.update({'telefone': 'x'}) if r else None),
+     'protocolos.telefone: chave que o §1.3 não tem'),
+    ('PROTOCOLOS', 'chave a mais no seafire', lambda r: com_proto(lambda P: P['seafire'].update({'modelo': 'x'}) if r else None),
+     'protocolos.seafire.modelo: chave que o §1.3 não tem'),
+    ('PROTOCOLOS', 'roteiro de 7 linhas', lambda r: com_proto(lambda P: P['roteiro'].pop() if r else None),
+     'protocolos.roteiro: 7 texto(s), o §1.3 pede 8'),
+    ('PROTOCOLOS', 'roteiro com outro nome de embarcação', lambda r: com_proto(lambda P: P['roteiro'].__setitem__(1, 'AQUI É OUTRO, OUTRO, OUTRO') if r else None),
+     'protocolos.roteiro[1]: «AQUI É OUTRO, OUTRO, OUTRO»'),
+    ('PROTOCOLOS', 'roteiro com a linha das pessoas em branco (a de antes do C6)',
+     lambda r: com_proto(lambda P: P['roteiro'].__setitem__(5, 'PESSOAS A BORDO: ________') if r else None), 'protocolos.roteiro[5]: «PESSOAS A BORDO: ________»'),
+    ('PROTOCOLOS', 'roteiro com o MMSI do cadastro (o de antes do C6)',
+     lambda r: com_proto(lambda P: P['roteiro'].__setitem__(2, 'MMSI 710123456') if r else None), 'protocolos.roteiro[2]: «MMSI 710123456»'),
+    ('PROTOCOLOS', 'seafire com 4 passos', lambda r: com_proto(lambda P: P['seafire']['passos'].pop() if r else None),
+     'protocolos.seafire.passos: 4 texto(s), o §1.3 pede 5'),
+    ('PROTOCOLOS', 'epirb sem o teste', lambda r: com_proto(lambda P: P['epirb'].pop('teste') if r else None),
+     'protocolos.epirb.teste: precisa de uma lista de textos'),
+    ('PROTOCOLOS', 'seafire sem a nota', lambda r: com_proto(lambda P: P['seafire'].pop('nota') if r else None),
+     'protocolos.seafire.nota: precisa de texto'),
+    ('PROTOCOLOS', 'passo vazio no MOB', lambda r: com_proto(lambda P: P['mob'].__setitem__(1, '') if r else None),
+     'protocolos.mob: precisa de uma lista de textos'),
+    ('PROTOCOLOS', 'canal 16 com o MHz em ponto', lambda r: com_proto(lambda P: P['canal16'].update({'mhz': '156.800' if r else '156,800'})),
+     'protocolos.canal16: canal «16» em «156,800» MHz'),
+    ('PROTOCOLOS', 'canal 16 sem a fonte', lambda r: com_proto(lambda P: P['canal16'].pop('fonte') if r else None),
+     'protocolos.canal16: precisa de {canal, mhz, fonte}'),
+    ('PROTOCOLOS', 'MMSI do rádio mudado', lambda r: com_proto(lambda P: P.update({'mmsiRadio': 'MMSI do rádio' if r else P['mmsiRadio']})),
+     'protocolos.mmsiRadio: diferente do texto do contrato'),
+    ('PROTOCOLOS', 'rótulo do MMSI de antes (F3)', lambda r: com_proto(lambda P: P.update({'mmsiRotulo': 'MMSI da embarcação (DSC)' if r else P['mmsiRotulo']})),
+     'protocolos.mmsiRotulo: diferente do texto do contrato'),
+    ('PROTOCOLOS', 'indicativo gerado', lambda r: com_proto(lambda P: P.update({'indicativo': 'PU2ABC' if r else P['indicativo']})),
+     'protocolos.indicativo: diferente do texto do contrato'),
+    ('PROTOCOLOS', 'HUD sem o campo', lambda r: com_proto(lambda P: P.pop('hud') if r else None), 'protocolos.hud: precisa de texto'),
+    ('PROTOCOLOS', 'plotter sem as pessoas', lambda r: com_proto(lambda P: P.update({'plotter': 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER' if r else P['plotter']})),
+     'protocolos.plotter: diferente do texto do contrato'),
+    # fonte única: o texto do D e o do guia dizem a mesma coisa
+    ('PROTOCOLOS', 'MOB do D diferente do protocolo da base', lambda r: com_proto(lambda P: P['mob'].__setitem__(0, P['mob'][0] + (' Agora.' if r else ''))),
+     'Protocolo de emergência — procedimento padrão · Homem ao mar não repete protocolos.mob'),
+    ('PROTOCOLOS', 'passos do Seafire do D diferentes do g_seafire §1',
+     lambda r: com_proto(lambda P: P['seafire']['passos'].__setitem__(0, P['seafire']['passos'][0] + (' Agora.' if r else ''))),
+     'Guia de bordo — Sistema fixo de incêndio · 1 · Em caso de fogo não repete protocolos.seafire.passos'),
+    ('PROTOCOLOS', 'óleo do D diferente do g_motores §4', lambda r: com_proto(lambda P: P['oleo'].__setitem__(3, P['oleo'][3] + (' Já.' if r else ''))),
+     'não repete protocolos.oleo'),
+    ('PROTOCOLOS', 'DSC do g_eletronicos §5 sem o texto do D', lambda r: com_proto(None, lambda B: [t.update({'texto': 'O botão DISTRESS envia o alerta.'}) if r and t['fonte'] == G.ARQ['g_eletronicos']
+                                                                                                    and t['secao'].startswith('5 · ') else None for t in B['trechos']]),
+     'não repete protocolos.dsc'),
+    ('PROTOCOLOS', 'trecho da seção MAYDAY fora da base', lambda r: com_proto(None, sem_trecho('protocolo', 'MAYDAY') if r else None),
+     'seção «MAYDAY…» ausente'),
+    ('PROTOCOLOS', 'g_epirb sem a seção 1', lambda r: com_proto(None, sem_trecho('g_epirb', '1 · ') if r else None), 'seção «1 · …» ausente'),
+    ('PROTOCOLOS', 'MAYDAY falado da base diferente do roteiro', lambda r: com_proto(lambda P: P['roteiro'].__setitem__(7, 'CÂMBIO' + (' FINAL' if r else ''))),
+     'não repete protocolos.roteiro'),
 ]
 
 
@@ -1469,10 +1553,26 @@ def amostras():
     # C5: os textos de emergência que os guias repetem (g_motores §4, g_porao §4, g_eletronicos §5, g_seafire, g_epirb e o
     # protocolo) são constantes do gerador desde o C5; são os do §1.3, letra por letra (o C6 monta o D.protocolos com elas).
     P6 = PROTOCOLOS_C6
-    ok('textos de emergência do gerador (C5) = os do §1.3', (G.TXT_ROTEIRO, G.TXT_MOB, G.TXT_SEAFIRE, G.TXT_EPIRB, G.TXT_EPIRB_TESTE, G.TXT_ALAGAMENTO,
-                                                            G.TXT_ABANDONO, G.TXT_OLEO, G.TXT_SALVATAGEM, G.TXT_PANPAN, G.TXT_DSC, G.MMSI_RADIO, G.ROTULO)
+    ok('textos de emergência do gerador (C5, C6) = os do §1.3', (G.TXT_ROTEIRO, G.TXT_MOB, G.TXT_SEAFIRE, G.TXT_EPIRB, G.TXT_EPIRB_TESTE, G.TXT_ALAGAMENTO,
+                                                                G.TXT_ABANDONO, G.TXT_OLEO, G.TXT_SALVATAGEM, G.TXT_PANPAN, G.TXT_DSC, G.MMSI_RADIO, G.ROTULO,
+                                                                G.MMSI_ROTULO, G.TXT_INDICATIVO, G.TXT_PLOTTER, G.TXT_HUD, G.NOTA_ETIQUETA)
        == (P6['roteiro'], P6['mob'], P6['seafire']['passos'], P6['epirb']['passos'], P6['epirb']['teste'], P6['alagamento'], P6['abandono'],
-           P6['oleo'], P6['salvatagem'], P6['panpan'], P6['dsc'], P6['mmsiRadio'], P6['rotulo']))
+           P6['oleo'], P6['salvatagem'], P6['panpan'], P6['dsc'], P6['mmsiRadio'], P6['rotulo'],
+           P6['mmsiRotulo'], P6['indicativo'], P6['plotter'], P6['hud'], P6['seafire']['nota']))
+    # C6: o D.protocolos que o gerador grava é o do §1.3, letra por letra (PROTOCOLOS_C6 é a cópia do contrato, escrita aqui à mão, não
+    # lida do gerador), com os 18 campos na ordem da tabela, sem nada a mais. A salvatagem é a do PROMPT §2.3.
+    Dp = hoje()['D']['protocolos']
+    ok('C6 (§1.3): o D.protocolos do gerador = o texto do contrato, letra por letra (18 campos, mesma ordem)',
+       Dp == P6 and list(Dp) == ['rotulo', 'fonte', 'mmsiRadio', 'mmsiRotulo', 'indicativo', 'plotter', 'hud', 'canal16', 'roteiro', 'mob', 'seafire',
+                                 'epirb', 'alagamento', 'abandono', 'oleo', 'salvatagem', 'panpan', 'dsc'], [k for k in Dp if Dp.get(k) != P6.get(k)])
+    ok('C6 (§1.3): seafire e epirb deixam de ser null: passos e nota da etiqueta (NOTA_ETIQUETA); o epirb leva também o teste',
+       Dp['seafire'] == {'passos': P6['seafire']['passos'], 'nota': C.NOTA} and Dp['epirb'] == {'passos': P6['epirb']['passos'], 'teste': P6['epirb']['teste'], 'nota': C.NOTA}
+       and len(Dp['seafire']['passos']) == 5 and len(Dp['epirb']['passos']) == 4)
+    ok('C6 (§1.3): o roteiro tem o MMSI do rádio (etiqueta), a posição no plotter e "PESSOAS A BORDO: conte agora"; o MOB sem marca',
+       Dp['roteiro'][2] == 'MMSI — LEIA NA ETIQUETA DO RÁDIO (Licença de Estação)' and Dp['roteiro'][5] == 'PESSOAS A BORDO: conte agora'
+       and 'último fix' not in ' '.join(Dp['roteiro']).lower() and 'Garmin' not in ' '.join(Dp['mob']) and '710123456' not in json.dumps(Dp),
+       Dp['roteiro'])
+    ok('C6 (§1.3): a salvatagem é o texto fixo do PROMPT §2.3, igual ao do confere.py e ao da cópia do contrato', Dp['salvatagem'] == C.SALVATAGEM_TXT == P6['salvatagem'])
     B0 = G.base_conhecimento()
     secoes = {}
     for t in B0['trechos']:
@@ -1736,13 +1836,13 @@ def reprova(tmp):
         rc, saida = rodar(pl, p, base, fontes[0] if fontes else None)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
-    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; depois, o modelo do FAQ do gerador (C5),
-    # que o C5 preencheu. Desde o C5 a amostra é um dado do C6 preenchido antes da hora (o protocolos.seafire, com os textos do
-    # §1.3 e a NOTA_ETIQUETA: só a pendência fica velha), com o mesmo efeito.
+    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; depois, o modelo do FAQ do gerador (C5) e o
+    # protocolos.seafire (C6), que os commits preencheram. Desde o C6 a amostra é um dado do C8 preenchido antes da hora (o
+    # snapshot.porao, que o C8 deixa sem null: só a pendência fica velha), com o mesmo efeito.
     p4 = os.path.join(tmp, 'r4')
-    rc, saida = rodar(lambda D: (D['protocolos'].update({'seafire': {'passos': list(G.TXT_SEAFIRE), 'nota': G.NOTA_ETIQUETA}}), D)[1], p4)
-    ok('pendência que não ocorre mais (o protocolos.seafire, do C6, preenchido antes da hora): main() devolve 1 e não grava nada',
-       rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C6 que não ocorre mais' in saida, (rc, saida[-300:]))
+    rc, saida = rodar(lambda D: (D['snapshot'].update({'porao': {'estado': 'seco', 'hora': D['snapshot']['hora']}}), D)[1], p4)
+    ok('pendência que não ocorre mais (o snapshot.porao, do C8, preenchido antes da hora): main() devolve 1 e não grava nada',
+       rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C8 que não ocorre mais' in saida, (rc, saida[-300:]))
     # Revisão final do C4: o TIE com id e numero certos (o que o C7 grava) sem tirar a pendência REGISTRO do C7 reprova (a pendência
     # não ocorre mais); com o numero errado, a violação nova também reprova. Em nenhum dos dois o main() grava.
     reg = D0()['embarcacao']['registro']
@@ -1757,9 +1857,10 @@ def reprova(tmp):
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
     ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
         sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
-    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C6–C8; o C4 completou a embarcação e o C5, '
-       'os equipamentos e os guias)',
-       all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items()))
+    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C7–C8; o C4 completou a embarcação, o C5, '
+       'os equipamentos e os guias e o C6, o D.protocolos)',
+       all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items())
+       and C.COMMITS_PENDENTES == ('C7', 'C8') and not any('C6' in cs for cs in C.PENDENTES.values()))
 
 
 def main():

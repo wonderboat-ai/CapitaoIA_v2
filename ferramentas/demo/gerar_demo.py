@@ -112,7 +112,7 @@ def coord(v, pos, neg, g):
 # Decisão (e), CONTRATO-DADOS §1.2 e §2.1–§2.4: marca do barco fictícia e sem colisão (Estaleiro Marévia), registro que não imita
 # identificador real (AAA-00-0000: nem inscrição numérica, placa, HIN, MMSI, telefone, CPF/CNPJ ou HEX ID), dimensões de 40 pés.
 # O registro nunca vai para S1/S2 (trava §2.1); a lotação e as pessoas a bordo nunca vão para salvatagem, SOS nem roteiro. O
-# indicativo não existe como campo (§0.2): o texto de instrução fica em protocolos (C6).
+# indicativo não existe como campo (§0.2): o texto de instrução é o protocolos.indicativo (C6).
 MOTOR = {'qtd': 2, 'fabricante': 'Cummins', 'modelo': 'QSB6.7 305', 'transmissao': 'eixo'}   # §2.2 (o equipamentos[motores] lê daqui no C5)
 TANQUES = {'diesel_l': 1600, 'diesel_n': 2, 'agua_l': 400, 'cinzas_l': 100, 'negras_l': 100}   # 2 × 800 L de diesel (§2.1)
 
@@ -552,6 +552,11 @@ TXT_PANPAN = ('Urgência sem perigo imediato de vida (pane, sem governo, alguém
               'canal 16, no mesmo formato da chamada MAYDAY.')
 TXT_DSC = ('O botão DISTRESS envia o alerta com a identificação programada no rádio: é o ' + MMSI_RADIO + '. Depois do alerta, faça o '
            'MAYDAY por voz no canal 16.')
+# Rótulos de tela do SOS e da conversa em emergência (PROMPT §2.2): quem lê é a 1b (S1/S2, F3) e a Fase 3 (cérebro); aqui só o texto.
+MMSI_ROTULO = 'MMSI (cadastro do app)'                     # no lugar de "MMSI da embarcação (DSC)" na F3: o número é o do cadastro, não o do rádio
+TXT_INDICATIVO = 'o da Licença de Estação (no rádio)'     # o indicativo nunca é gerado (prefixos PP–PY e ZV–ZZ são reais)
+TXT_PLOTTER = 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA'   # troca do emergenciaAte e do resumoAgora() do SOS
+TXT_HUD = 'POSIÇÃO · LEIA NO PLOTTER'                       # HUD da CONVERSA com alerta: true
 
 
 def cap(s):
@@ -870,20 +875,30 @@ def faq():
     }
 
 
+# D.protocolos (CONTRATO §1.3, C6): a fonte única do SOS (S1/S2), do roteiro, dos cartões EM e da página EMERGÊNCIA do Guia. Montado só
+# com as constantes TXT_* acima, as mesmas dos guias g_seafire, g_epirb e protocolo (um texto, uma fonte). Sem nada do dado gerado da
+# embarcação além do nome (o roteiro lê EMBARCACAO['nome']): nada de registro, MMSI, base, fabricante ou modelo (PROTOCOLO_LIMPO).
+# EPIRB e Seafire: só o procedimento padrão e a NOTA_ETIQUETA; fabricante, modelo e validade ficam em Equipamentos, Leme e Documentos.
+# Os leitores (S1/S2, F3, cérebro) mudam na 1b; até lá a S1/S2 ainda lê rotulo, fonte, roteiro e mob.
 PROTOCOLOS = {
-    'rotulo': 'procedimento padrão — confirmar com o protocolo de bordo',
+    'rotulo': ROTULO,
     'fonte': ARQ['protocolo'] + ' · ' + DRIVE + ' › ' + PASTAS['protocolos'],
+    'mmsiRadio': MMSI_RADIO,
+    'mmsiRotulo': MMSI_ROTULO,
+    'indicativo': TXT_INDICATIVO,
+    'plotter': TXT_PLOTTER,
+    'hud': TXT_HUD,
     'canal16': {'canal': '16', 'mhz': '156,800', 'fonte': ARQ['protocolo'] + ' · MAYDAY · canal 16'},
-    'roteiro': ['MAYDAY, MAYDAY, MAYDAY', 'AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA', 'MMSI 710123456 (FICTÍCIO · DEMONSTRAÇÃO)',
-                'POSIÇÃO — LEIA NO PLOTTER AGORA', 'NATUREZA DO PERIGO: ________', 'PESSOAS A BORDO: ________',
-                'AUXÍLIO NECESSÁRIO: ________', 'CÂMBIO'],
-    'mob': [
-        'Grite HOMEM AO MAR e o lado (bombordo ou boreste). Jogue a boia ou qualquer objeto que flutue.',
-        'Uma pessoa só aponta para quem caiu, sem perder de vista. Marque MOB no plotter Garmin.',
-        'Volte devagar, com o motor em neutro perto da pessoa (hélice). Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB.',
-    ],
-    'seafire': None,   # SEM DADOS
-    'epirb': None,     # SEM DADOS
+    'roteiro': list(TXT_ROTEIRO),
+    'mob': list(TXT_MOB),
+    'seafire': {'passos': list(TXT_SEAFIRE), 'nota': NOTA_ETIQUETA},
+    'epirb': {'passos': list(TXT_EPIRB), 'teste': list(TXT_EPIRB_TESTE), 'nota': NOTA_ETIQUETA},
+    'alagamento': list(TXT_ALAGAMENTO),
+    'abandono': list(TXT_ABANDONO),
+    'oleo': list(TXT_OLEO),
+    'salvatagem': TXT_SALVATAGEM,
+    'panpan': TXT_PANPAN,
+    'dsc': TXT_DSC,
 }
 
 
