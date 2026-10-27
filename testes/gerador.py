@@ -5,7 +5,8 @@
   base-conhecimento.json e ferramentas/demo/fontes/**); duas rodadas dão 0 diferença; nenhuma leitura do relógio do sistema.
   O teste nunca escreve na árvore de trabalho (confere o hash dos arquivos gerados antes e depois).
 - Limpeza de fontes/: apaga só o que não gera mais, dentro da pasta, sem seguir link (o alvo de um link fica intacto) e sem
-  gravar através de um link.
+  gravar através de um link. Link em qualquer pasta do caminho (fontes -> ../.., ferramentas -> uma pasta da saída…): o gerador
+  recusa antes de gravar ou apagar qualquer coisa (revisão final: antes, a limpeza apagava o capitao-dados.js recém-gravado).
 - confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
   da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
@@ -14,6 +15,9 @@
 - C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
   etiqueta e sem fabricante nem modelo nos trechos.
+- Revisão final do C3: da varredura de termos, PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam já (travas §2.2 e §2.7); a
+  SEM_INDICATIVO e a SEM_PREVISAO também leem o cabeçalho das colunas dos CSV das fontes; a PROTOCOLO_LIMPO e a AGENDA proíbem
+  cada palavra e as formas juntas do fabricante e do modelo do EPIRB e do Seafire (trava 17).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
