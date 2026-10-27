@@ -18,6 +18,9 @@
 - C6 (CONTRATO §1.3): o D.protocolos completo (18 campos, seafire e epirb com a nota da etiqueta), igual letra por letra ao texto do
   contrato (PROTOCOLOS_C6); a asserção PROTOCOLOS acusa cada defeito de forma, texto fixo e fonte única com os guias; as pendências
   do C6 saíram da PENDENTES (a pendência velha de hoje é a do C8).
+- Revisão do C6 (CONTRATO §1.3, «todas viram asserção»): a GRAFIA_SEAFIRE prende «Seafire» (sem hífen, espaço nem outra caixa) em todo valor, chave e
+  nome de arquivo do D, da base, do FAQ e das fontes; a única exceção são as `palavras` de busca dos equipamentos («sea fire», o ditado). 27 amostras
+  plantadas (12 grafias, a base inteira com «Sea Fire», chaves, CSV, JSON, FAQ, HTML com entidade e tag, nome de arquivo) e grafia_seafire().
 - C2 (CONTRATO §1.1, §1.2, §1.3, §1.5, §1.10): rótulos fora dos títulos e das fontes. rotulos_c2() prende o resultado com o texto
   do contrato: drive.arquivos, os quatro *Fonte, embarcacao.fonte, canal16.fonte e regraAbast, o aviso e a versao (8 hex do
   sha256) da base, as fontes do Drive (nome e texto sem DEMO, snapshot, fictício nem demonstração) e o LEIA-ME sem a regra
@@ -438,6 +441,9 @@ AMOSTRAS = {
     'PROTOCOLOS': (lambda r: (lambda k: (k['D']['protocolos'].update({'salvatagem': k['D']['protocolos']['salvatagem'].replace('um por pessoa', 'dois por pessoa') if r
                                                                       else k['D']['protocolos']['salvatagem']}), k)[1])(hoje()),
                    'protocolos.salvatagem: diferente do texto do contrato'),
+    # (revisão do C6) §1.3: «Seafire», sem hífen nem espaço, em todo dado (as variantes e os lugares estão nas EXTRAS)
+    'GRAFIA_SEAFIRE': (lambda r: mais_texto(hoje(), ' O Sea Fire fica pronto.' if r else ' O Seafire fica pronto.'),
+                       'diario[0].t: texto com a grafia «Sea Fire» do Seafire'),
     'RODAPE_SNAPSHOT': (lambda r: (lambda k: (k.update({'rodape': RODAPE_OK.replace('return true;', 'D.snapshot.quadro = {}; return true;') if r else RODAPE_OK}), k)[1])(hoje()),
                         'rodape.js'),
     'FONTES_RELATIVAS': (lambda r: (lambda k: (k['F'].update({k['D']['drive']['pastas']['abast'] + '/Extra.csv': 'Data,Litros\n' + ('12/09/2026' if r else 'há 3 dias') + ',100\n'}), k)[1])(hoje()),
@@ -910,6 +916,71 @@ EXTRAS += [
      'não repete protocolos.roteiro'),
 ]
 
+
+# Revisão do C6 (§1.3, «todas viram asserção»): a regra «Grafia Seafire em todo dado» não tinha asserção. «Sea Fire» no lugar de «Seafire» em todos
+# os trechos da base e «Sea-Fire» no nome do sistema ou numa nota passavam em todas as asserções (a `sea[- ...]?fire` da LOCAL_SEGURANCA só prende o
+# lugar do equipamento na frase). A GRAFIA_SEAFIRE varre todo valor string do D, da base, do FAQ e das fontes, toda chave (o cabeçalho dos CSV
+# também) e todo nome de arquivo das fontes. A única exceção são as `palavras` de busca dos equipamentos («sea fire» é o que o ditado escreve).
+I_SEAFIRE = next(i for i, e in enumerate(G.dados()['equipamentos']) if e['id'] == 'seafire')
+T_SECAO_SEAFIRE = next(i for i, t in enumerate(G.base_conhecimento()['trechos']) if t['secao'].endswith('Seafire'))   # «Incêndio · Seafire» (§1.5)
+GRAFIAS_RUINS = ('Sea Fire', 'Sea-Fire', 'sea fire', 'SEAFIRE', 'SeaFire', 'Sea  Fire', 'Sea\u00a0Fire', 'Sea\u2011Fire', 'Sea\u2014Fire', 'Sea_Fire',
+                 'Sea\u200bFire', 'Sea\u00adFire')   # espaço duplo, NBSP, hífen que não quebra, travessão, sublinhado, espaço de largura zero e hífen suave
+
+
+def seafire_nos_trechos(grafia):
+    """hoje() com «Seafire» trocado por `grafia` em todo campo texto de todos os trechos da base (o caso do revisor do C6)."""
+    k = hoje()
+    for t in k['B']['trechos']:
+        for c, v in t.items():
+            if isinstance(v, str):
+                t[c] = v.replace('Seafire', grafia)
+    return k
+
+
+def com_fonte_nova(rel, txt):
+    """hoje() com um arquivo a mais nas fontes do Drive (`rel` é o nome dentro de ferramentas/demo/fontes)."""
+    k = hoje()
+    k['F'][rel] = txt
+    return k
+
+
+EXTRAS += [('GRAFIA_SEAFIRE', 'texto do diário com %r' % v, (lambda v: lambda r: mais_texto(hoje(), (' O %s fica pronto.' % v) if r else ' O Seafire fica pronto.'))(v),
+            'diario[0].t: texto com a grafia «%s» do Seafire' % v) for v in GRAFIAS_RUINS] + [
+    ('GRAFIA_SEAFIRE', 'o título da seção do protocolo e todos os trechos da base com «Sea Fire» (o caso do revisor)',
+     lambda r: seafire_nos_trechos('Sea Fire' if r else 'Seafire'), 'base:trechos[%d].secao: texto com a grafia «Sea Fire»' % T_SECAO_SEAFIRE),
+    ('GRAFIA_SEAFIRE', 'o fabricante do equipamento seafire com «Sea Fire»',
+     lambda r: (lambda k: (poe(k['D']['equipamentos'], I_SEAFIRE, fabricante='Sea Fire' if r else 'Seafire'), k)[1])(hoje()),
+     'equipamentos[%d].fabricante: texto com a grafia «Sea Fire»' % I_SEAFIRE),
+    ('GRAFIA_SEAFIRE', 'o nome do sistema com «Sea-Fire»',
+     lambda r: (lambda k: (poe(k['D']['equipamentos'], I_SEAFIRE, nome='Sistema Sea-Fire' if r else 'Sistema fixo de supressão de incêndio'), k)[1])(hoje()),
+     'equipamentos[%d].nome: texto com a grafia «Sea-Fire»' % I_SEAFIRE),
+    ('GRAFIA_SEAFIRE', '«Sea-Fire» numa nota solta (equipNota)',
+     lambda r: (lambda k: (k['D'].update({'equipNota': k['D']['equipNota'] + (' O Sea-Fire está em dia.' if r else ' O Seafire está em dia.')}), k)[1])(hoje()),
+     'equipNota: texto com a grafia «Sea-Fire»'),
+    ('GRAFIA_SEAFIRE', 'palavras da agenda com «sea fire» (a exceção é só das palavras de busca dos equipamentos)',
+     lambda r: (lambda k: (k['D']['agenda'][0].setdefault('palavras', []).append('inspecao do sea fire' if r else 'inspecao do seafire'), k)[1])(hoje()),
+     'agenda[0].palavras[0]: texto com a grafia «sea fire»'),
+    ('GRAFIA_SEAFIRE', 'chave «Sea-Fire» no D', lambda r: (lambda k: (k['D']['embarcacao'].update({'Sea-Fire' if r else 'seafire': 'x'}), k)[1])(hoje()),
+     'embarcacao.Sea-Fire: chave com a grafia «Sea-Fire»'),
+    ('GRAFIA_SEAFIRE', 'chave «seaFire» na base', lambda r: (lambda k: (k['B']['trechos'][0].update({'seaFire' if r else 'seafire': True}), k)[1])(hoje()),
+     'base:trechos[0].seaFire: chave com a grafia «seaFire»'),
+    ('GRAFIA_SEAFIRE', 'cabeçalho «Sea Fire» num CSV das fontes', lambda r: com_coluna('Inventário de bordo.csv', 'Sea Fire' if r else 'Seafire'),
+     'Inventário de bordo.csv:Sea Fire: chave com a grafia «Sea Fire»'),
+    ('GRAFIA_SEAFIRE', 'célula «Sea Fire» num CSV das fontes', lambda r: com_fonte_final('Inventário de bordo.csv', '\nX,Sea Fire\n' if r else '\n'),
+     'Inventário de bordo.csv: texto com a grafia «Sea Fire»'),
+    ('GRAFIA_SEAFIRE', '«Sea-Fire» num JSON das fontes', lambda r: com_json(lambda j: j.update({'extra': 'Sea-Fire' if r else 'Seafire'})),
+     ':extra: texto com a grafia «Sea-Fire»'),
+    ('GRAFIA_SEAFIRE', 'item do FAQ com «Sea Fire»',
+     lambda r: (lambda k: (k.update({'faq': {'itens': [{'id': 'SF-01', 'titulo': 'Disparo do %s' % ('Sea Fire' if r else 'Seafire'), 'resposta': 'Veja o guia.'}]}}), k)[1])(hoje()),
+     'faq:itens[0].titulo: texto com a grafia «Sea Fire»'),
+    ('GRAFIA_SEAFIRE', 'página de fonte com «Sea&nbsp;Fire» (a entidade vira NBSP na tela)',
+     lambda r: com_eletronicos('<h2>9 · Teste</h2><p>O %s dispara.</p>' % ('Sea&nbsp;Fire' if r else 'Seafire')), 'html: texto com a grafia «Sea\u00a0Fire» do Seafire'),
+    ('GRAFIA_SEAFIRE', 'página de fonte com «Sea <b>fire</b>» (a tag no meio some na tela)',
+     lambda r: com_eletronicos('<h2>9 · Teste</h2><p>O %s dispara.</p>' % ('Sea <b>fire</b>' if r else 'Seafire')), 'html: texto com a grafia «Sea fire» do Seafire'),
+    ('GRAFIA_SEAFIRE', 'nome de arquivo das fontes com «Sea Fire»',
+     lambda r: com_fonte_nova('01 Manuais e guias de bordo/Guia de bordo — %s.html' % ('Sea Fire' if r else 'Seafire'), '<h1>Guia</h1>'),
+     'Guia de bordo — Sea Fire.html: nome de arquivo com a grafia «Sea Fire»'),
+]
 
 def com_tarefa_seguranca(sistema, equip):
     """hoje() com a tarefa de salvatagem do `sistema` (epirb-teste ou seafire-inspecao), em dia, com `equip` no campo equip."""
@@ -1754,6 +1825,29 @@ def porao_e_lugar():
         ok('LOCAL_VOCAB: %s não acusa' % o_que, len(verifica(k)['LOCAL_VOCAB']) == bom['LOCAL_VOCAB'], verifica(k)['LOCAL_VOCAB'][:2])
 
 
+def grafia_seafire():
+    print('Revisão do C6: a grafia «Seafire» em todo dado (GRAFIA_SEAFIRE)')
+    k = hoje()
+    V0 = verifica(k)['GRAFIA_SEAFIRE']
+    eq = k['D']['equipamentos'][I_SEAFIRE]
+    ok('GRAFIA_SEAFIRE: o dado de hoje passa (0 violações), com «Seafire» no fabricante, «seafire» no id e «sea fire» só nas palavras de busca (ditado)',
+       not V0 and eq['fabricante'] == 'Seafire' and eq['id'] == 'seafire' and 'sea fire' in eq['palavras'], (V0[:3], eq['fabricante'], eq['palavras']))
+    novos = lambda k_: [m for m in verifica(k_)['GRAFIA_SEAFIRE'] if m not in V0]
+    n = novos(mais_texto(hoje(), ' O Seafire e o id seafire-inspecao ficam em dia; o seafire normalizado também.'))
+    ok('GRAFIA_SEAFIRE: «Seafire» e «seafire» passam em qualquer texto', not n, n[:3])
+    n = novos(mais_texto(hoje(), ' Veja o sea, o fire e o mar. Fire não vale; sea. Fire! Mar de fogo.'))
+    ok('GRAFIA_SEAFIRE: «sea» e «fire» separados por pontuação ou por outra palavra não acusam', not n, n[:3])
+    n = novos(com_eletronicos('<h2>9 · Teste</h2><p>O Sea Fire dispara.</p>'))
+    ok('GRAFIA_SEAFIRE: «Sea Fire» numa página HTML conta uma vez só (o texto cru e o que o leitor vê são a mesma ocorrência)', len(n) == 1, n[:3])
+    n = novos(mais_texto(hoje(), ' O Sea Fire e o Sea-Fire ficam em dia.'))
+    ok('GRAFIA_SEAFIRE: duas ocorrências na mesma string dão duas violações (uma por ocorrência)',
+       len([m for m in n if m.startswith('diario[0].t:')]) == 2, n[:4])
+    # A mensagem diz o caminho, a grafia achada e o trecho; a regex do confere.py é uma só para o valor, a chave e o nome de arquivo.
+    n = novos(mais_texto(hoje(), ' O Sea-Fire fica pronto.'))
+    ok('GRAFIA_SEAFIRE: a mensagem tem o caminho, a grafia achada e o trecho',
+       any(m.startswith('diario[0].t: texto com a grafia «Sea-Fire» do Seafire (§1.3: «Seafire», sem hífen nem espaço) «') and 'Sea-Fire fica pronto' in m for m in n), n[:2])
+
+
 def reprova(tmp):
     print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
     D0, B0 = G.dados, G.base_conhecimento
@@ -1799,6 +1893,7 @@ def reprova(tmp):
     afirma = lambda B: (B['trechos'][T_DSC].update({'texto': B['trechos'][T_DSC]['texto'] + ' Os dados são reais e o barco é real.'}), B)[1]
     lugar = lambda D: (D['equipamentos'][7].update({'local': 'paiol de proa'}), D)[1]
     terceiro = lambda D: (D['agenda'][0].update({'quem': 'Carlos Pereira'}), D)[1]
+    seafire_ruim = lambda D: (D['equipamentos'][I_SEAFIRE].update({'nome': 'Sistema Sea-Fire'}), D)[1]   # revisão do C6 (§1.3): a grafia «Seafire»
     # Revisão final do C3: as três regex da TERMOS que reprovam já (travas §2.2 e §2.7), uma a uma, com o texto num campo do D, na
     # base e numa página de fonte do Drive (antes, a TERMOS inteira em relatório: main() devolvia 0 e gravava).
     fone = lambda D: (D['equipe'].update({'nota': 'Marina: (47) 99812-3456.'}), D)[1]
@@ -1831,7 +1926,8 @@ def reprova(tmp):
                                      ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
                                      ('AFIRMA_REAL', lambda D: D, 2, afirma, ' (2 afirmações no trecho do DSC)'),
                                      ('SEM_INDICATIVO', lugar, 1, None, ' (equipamentos[epirb].local)'),
-                                     ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)'))):
+                                     ('TERCEIROS', terceiro, 1, None, ' (nome de terceiro no quem da agenda)'),
+                                     ('GRAFIA_SEAFIRE', seafire_ruim, 1, None, ' (Sea-Fire no nome do equipamento seafire)'))):
         p = os.path.join(tmp, 'r-%s-%d-%d' % (nome, n, i))
         rc, saida = rodar(pl, p, base, fontes[0] if fontes else None)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
@@ -1873,6 +1969,7 @@ def main():
         amostras()
         porao_e_lugar()
         seguranca_sem_modelo()
+        grafia_seafire()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))

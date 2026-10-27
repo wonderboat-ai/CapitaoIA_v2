@@ -7,7 +7,9 @@ não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 
 (indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Depois, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
 completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
 §1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC) e a SEGURANCA_SEM_MODELO (revisão 7 do C5, trava
-17: fabricante, modelo e validade do EPIRB e do Seafire, e lugar a bordo, fora das telas de Equipamentos, Documentos e Leme). A REGISTRO cruza o registro com o
+17: fabricante, modelo e validade do EPIRB e do Seafire, e lugar a bordo, fora das telas de Equipamentos, Documentos e Leme). A PROTOCOLOS (C6, §1.3) prende a
+forma e a fonte única do D.protocolos, e a GRAFIA_SEAFIRE (revisão do C6, §1.3) a grafia «Seafire», sem hífen nem espaço, em todo valor, chave e nome de arquivo.
+A REGISTRO cruza o registro com o
 `numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova, e o dado de hoje
 fica congelado na PENDENTES até o C7). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
 JANELA (porao_no_normal: o teto é o normal.ate do porão, sem número solto, também dentro de janela) e o lugar de salvatagem em
@@ -38,6 +40,8 @@ import math
 import os
 import re
 import unicodedata
+from collections import Counter
+from html import unescape
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
@@ -252,6 +256,14 @@ EQUIP_SEGURANCA = ('epirb', 'seafire')   # fabricante, modelo e validade só em 
 D_EQUIP_DOC_LEME = ('equipamentos', 'documentos', 'agenda', 'agendaFalta', 'agendaFonte')
 FONTES_EQUIP_DOC_LEME = ('Inventário de bordo.csv', 'Controle de documentos.csv', 'Agenda preditiva.csv')
 SECAO_SEAFIRE = 'Incêndio · Seafire'   # título da seção do protocolo (§1.5): único lugar, fora dessas telas, onde a palavra "Seafire" aparece
+# Grafia do sistema fixo (CONTRATO §1.3, §8.2 decisão 3): «Seafire» em todo texto do dado e «seafire» em chave, id e texto normalizado
+# (a do app desde a 1.0.0). Entre «Sea» e «fire»: nada (nem espaço, nem hífen de qualquer largura, nem NBSP, nem travessão, nem sublinhado,
+# nem caractere invisível). A `sea[- ...]?fire` da LOCAL_SEGURANCA (termos.json) só prende o lugar do equipamento na frase: não prende a grafia.
+SEAFIRE_GRAFIA = ('Seafire', 'seafire')
+R_SEAFIRE = re.compile(r'sea[\s_\-\u00ad\u2010-\u2015\u2212\u200b-\u200d\u2060\ufeff]*fire', re.I)
+# A única exceção: as `palavras` de busca de cada equipamento (F31) guardam o que o ditado e o teclado escrevem ("kamins", "vebasto", "sea fire"):
+# é vocabulário de entrada, que o cérebro compara com a pergunta normalizada, nunca texto que o app mostra ou fala.
+PALAVRAS_BUSCA = re.compile(r'equipamentos\[\d+\]\.palavras\[\d+\]')
 GUIAS_DE_SEGURANCA = ('g_seafire', 'g_epirb', 'protocolo')   # guias inteiros de segurança (chaves de drive.arquivos)
 FAQ_DE_SEGURANCA = re.compile(r'(?:EM|SF|EP)-\d+')
 _MESES = 'janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro'
@@ -2147,6 +2159,45 @@ def a_protocolos(X):
     return out
 
 
+def grafias_seafire(s, pagina=False):
+    """[(texto, casado)] das grafias do sistema fixo fora de «Seafire» e «seafire» em `s` (R_SEAFIRE: «Sea Fire», «Sea-Fire», «SEAFIRE»,
+    «SeaFire»…). Numa página HTML, também no que o leitor vê (sem as tags e com as entidades): «Sea <b>fire</b>» e «Sea&nbsp;Fire» não
+    casam no texto cru. A ocorrência que o cru já achou não conta duas vezes."""
+    achados = [(s, m) for m in R_SEAFIRE.finditer(s) if m.group() not in SEAFIRE_GRAFIA]
+    if pagina:
+        visto = unescape(re.sub(r'<[^>]*>', '', s))
+        ja = Counter(m.group() for _, m in achados)
+        for m in R_SEAFIRE.finditer(visto):
+            if m.group() in SEAFIRE_GRAFIA:
+                continue
+            if ja[m.group()] > 0:
+                ja[m.group()] -= 1
+            else:
+                achados.append((visto, m))
+    return achados
+
+
+def a_grafia_seafire(X):
+    """A grafia «Seafire» em todo dado (§1.3, «todas viram asserção»; decisão 3 do §8.2): nenhum valor string do D, da base, do FAQ e das
+    fontes do Drive, nenhuma chave dessas mesmas peças (inclusive o cabeçalho dos CSV) e nenhum nome de arquivo das fontes escreve o sistema
+    fixo de outro jeito: «Sea Fire», «Sea-Fire», «Sea_Fire», «SeaFire» ou «SEAFIRE». Uma violação por ocorrência. A única exceção são as
+    `palavras` de busca dos equipamentos (PALAVRAS_BUSCA): é o que o ditado e o teclado escrevem, não texto do app."""
+    out = []
+
+    def acusa(cam, s, o_que, pagina=False):
+        out.extend('%s: %s com a grafia «%s» do Seafire (§1.3: «Seafire», sem hífen nem espaço) «%s»' % (cam, o_que, m.group(), trecho(t, m))
+                   for t, m in grafias_seafire(s, pagina))
+
+    for cam, s in X.todos():
+        if not PALAVRAS_BUSCA.fullmatch(cam):
+            acusa(cam, s, 'texto', cam.startswith('fontes/') and cam.endswith('.html'))
+    for cam, k in X.chaves():
+        acusa(cam, k, 'chave')
+    for rel in sorted(X.fontes):
+        acusa('fontes/' + rel, rel, 'nome de arquivo')
+    return out
+
+
 _RX_DEPOIS_DE = set('(,=:[!&|?{};+-*%<>~^')   # depois destes, '/' abre regex literal (senão é divisão)
 _RX_PALAVRAS = {'return', 'typeof', 'case', 'do', 'else', 'in', 'of', 'new', 'delete', 'void', 'throw', 'instanceof', 'yield', 'await'}
 
@@ -2325,6 +2376,7 @@ ASSERCOES = [
     ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('IDENT_BASE', a_ident_base), ('NOTA_ETIQUETA', a_nota_etiqueta),
     ('SEGURANCA_SEM_MODELO', a_seguranca_sem_modelo),
     ('PROTOCOLOS', a_protocolos),   # §1.3 (C6): a forma e a fonte única do D.protocolos
+    ('GRAFIA_SEAFIRE', a_grafia_seafire),   # §1.3 (revisão do C6): «Seafire» sem hífen nem espaço em todo dado
     ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).
