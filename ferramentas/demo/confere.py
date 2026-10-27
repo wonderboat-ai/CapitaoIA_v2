@@ -2083,7 +2083,7 @@ def a_protocolos(X):
     """A forma do D.protocolos (§1.3, C6): as chaves e os tipos, a quantidade de strings de cada lista, os textos que o contrato fixa
     (o MMSI_RADIO, o rótulo do MMSI, o indicativo, o plotter, o HUD, a salvatagem do PROMPT §2.3, o PAN-PAN e o DSC), o roteiro com o nome
     da embarcação (único dado gerado do SOS, §2.1) e o fim "conte agora", e a fonte única com os guias (PROTOCOLOS_NOS_GUIAS): cada
-    texto do protocolos está inteiro na seção do guia que o repete."""
+    texto do protocolos está inteiro na seção do guia que o repete; o guia ausente de drive.arquivos e a seção ausente da base reprovam."""
     P = X.D.get('protocolos')
     if not isinstance(P, dict):
         return ['protocolos ausente: a S1/S2 leem só embarcacao.nome e o D.protocolos (§1.3)']
@@ -2133,14 +2133,16 @@ def a_protocolos(X):
         fixo = dict(ROTEIRO_FIXO)
         fixo[1] = 'AQUI É ' + ', '.join([nome] * 3)
         out += ['protocolos.roteiro[%d]: «%s», o §1.3 pede «%s»' % (i, r[i], t) for i, t in sorted(fixo.items()) if r[i] != t]
-    # Fonte única: o texto do protocolos está inteiro na seção do guia que o repete (só se o guia e a seção existem na base).
+    # Fonte única: o texto do protocolos está inteiro na seção do guia que o repete. O guia ausente de drive.arquivos reprova, como a seção
+    # ausente da base (§6.3: «a seção ausente reprova»): sem guia, o campo ficaria sem conferência de fonte única, em silêncio.
     for caminho, guias in PROTOCOLOS_NOS_GUIAS:
         txt = _campo(P, caminho)
         if txt is None:
             continue   # a forma já reprovou
         for chave, ini in guias:
             titulo = X.arq.get(chave)
-            if not titulo:
+            if not isinstance(titulo, str) or not titulo.strip():
+                out.append('drive.arquivos.%s ausente (repete protocolos.%s, §1.3)' % (chave, caminho))
                 continue
             sec = next((t for t in X.trechos if t.get('fonte') == titulo and str(t.get('secao', '')).startswith(ini)), None)
             if sec is None:
@@ -2148,11 +2150,13 @@ def a_protocolos(X):
             elif txt not in sec.get('texto', ''):
                 out.append('base: %s · %s não repete protocolos.%s (fonte única, §1.3)' % (titulo, sec.get('secao'), caminho))
     # O roteiro MAYDAY falado (as linhas em branco sem o «: ________») está inteiro na seção MAYDAY do protocolo.
-    if isinstance(P.get('roteiro'), list) and all(isinstance(x, str) for x in P['roteiro']) and X.arq.get('protocolo'):
-        titulo = X.arq['protocolo']
+    if isinstance(P.get('roteiro'), list) and all(isinstance(x, str) for x in P['roteiro']):
+        titulo = X.arq.get('protocolo')
         sec = next((t for t in X.trechos if t.get('fonte') == titulo and str(t.get('secao', '')).startswith('MAYDAY')), None)
         falado = ' — '.join(x.replace(': ________', '') for x in P['roteiro'])
-        if sec is None:
+        if not isinstance(titulo, str) or not titulo.strip():
+            out.append('drive.arquivos.protocolo ausente (repete protocolos.roteiro, §1.3)')
+        elif sec is None:
             out.append('base: %s · seção «MAYDAY…» ausente (repete protocolos.roteiro, §1.3)' % titulo)
         elif falado not in sec.get('texto', ''):
             out.append('base: %s · %s não repete protocolos.roteiro (fonte única, §1.3)' % (titulo, sec.get('secao')))

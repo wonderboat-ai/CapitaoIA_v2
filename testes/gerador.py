@@ -859,6 +859,19 @@ def sem_trecho(chave, sec):
     return f
 
 
+def sem_guia(chave, so_arquivos=False):
+    """hoje() sem o guia `chave` em drive.arquivos; sem `so_arquivos`, o guia inteiro some também de D.guias, dos trechos da base e das
+    páginas de fonte do Drive (nenhum equipamento aponta para o guia `protocolo`: nada mais o prende)."""
+    k = hoje()
+    titulo = k['D']['drive']['arquivos'].pop(chave)
+    if not so_arquivos:
+        k['D']['guias'].pop(chave, None)
+        k['B']['trechos'] = [t for t in k['B']['trechos'] if t['fonte'] != titulo]
+        for rel in [r for r in k['F'] if r.endswith('/' + titulo + '.html')]:
+            k['F'].pop(rel)
+    return k
+
+
 EXTRAS += [
     ('PROTOCOLOS', 'o D sem o protocolos', lambda r: (lambda k: (k['D'].pop('protocolos') if r else None, k)[1])(hoje()), 'protocolos ausente'),
     ('PROTOCOLOS', 'seafire null (o de antes do C6)', lambda r: com_proto(lambda P: P.update({'seafire': None}) if r else None),
@@ -914,6 +927,23 @@ EXTRAS += [
     ('PROTOCOLOS', 'g_epirb sem a seção 1', lambda r: com_proto(None, sem_trecho('g_epirb', '1 · ') if r else None), 'seção «1 · …» ausente'),
     ('PROTOCOLOS', 'MAYDAY falado da base diferente do roteiro', lambda r: com_proto(lambda P: P['roteiro'].__setitem__(7, 'CÂMBIO' + (' FINAL' if r else ''))),
      'não repete protocolos.roteiro'),
+    # revisão do C6: o guia ausente de drive.arquivos reprova (a seção ausente de um guia que existe já reprovava; o guia inteiro sumia em silêncio)
+    ('PROTOCOLOS', 'guia protocolo removido por inteiro (arquivos, D.guias, base e fontes): o MOB perde a fonte única',
+     lambda r: sem_guia('protocolo') if r else hoje(), 'drive.arquivos.protocolo ausente (repete protocolos.mob, §1.3)'),
+    ('PROTOCOLOS', 'guia protocolo removido por inteiro: o roteiro MAYDAY falado perde a fonte única',
+     lambda r: sem_guia('protocolo') if r else hoje(), 'drive.arquivos.protocolo ausente (repete protocolos.roteiro, §1.3)'),
+    ('PROTOCOLOS', 'guia protocolo só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('protocolo', True) if r else hoje(), 'drive.arquivos.protocolo ausente (repete protocolos.salvatagem, §1.3)'),
+    ('PROTOCOLOS', 'g_epirb só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('g_epirb', True) if r else hoje(), 'drive.arquivos.g_epirb ausente (repete protocolos.epirb.teste, §1.3)'),
+    ('PROTOCOLOS', 'g_seafire só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('g_seafire', True) if r else hoje(), 'drive.arquivos.g_seafire ausente (repete protocolos.seafire.passos, §1.3)'),
+    ('PROTOCOLOS', 'g_porao só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('g_porao', True) if r else hoje(), 'drive.arquivos.g_porao ausente (repete protocolos.alagamento, §1.3)'),
+    ('PROTOCOLOS', 'g_motores só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('g_motores', True) if r else hoje(), 'drive.arquivos.g_motores ausente (repete protocolos.oleo, §1.3)'),
+    ('PROTOCOLOS', 'g_eletronicos só fora de drive.arquivos (base e D.guias intactos)',
+     lambda r: sem_guia('g_eletronicos', True) if r else hoje(), 'drive.arquivos.g_eletronicos ausente (repete protocolos.dsc, §1.3)'),
 ]
 
 
@@ -1612,6 +1642,11 @@ def amostras():
         planta(nome, '', monta, espera)
     for nome, o_que, monta, espera in EXTRAS:
         planta(nome, ' — ' + o_que, monta, espera)
+    # Revisão do C6: sem o guia `protocolo`, os 9 campos que ele repete reprovam um a um (antes, nenhum reprovava e os 9 perdiam a fonte única)
+    V = verifica(sem_guia('protocolo'))['PROTOCOLOS']
+    campos = ('mob', 'seafire.passos', 'epirb.passos', 'alagamento', 'abandono', 'salvatagem', 'panpan', 'dsc', 'roteiro')
+    ok('PROTOCOLOS: sem o guia protocolo, os 9 campos que ele repete reprovam um a um (drive.arquivos ausente, §1.3), e só eles',
+       len(V) == 9 and all(any(m == 'drive.arquivos.protocolo ausente (repete protocolos.%s, §1.3)' % c for m in V) for c in campos), V[:3])
     V0_PL = verifica(hoje())['PROTOCOLO_LIMPO']
     k = hoje()
     k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
