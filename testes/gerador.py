@@ -16,7 +16,8 @@
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
   etiqueta e sem fabricante nem modelo nos trechos.
 - Revisão final do C3: da varredura de termos, PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam já (travas §2.2 e §2.7); a
-  SEM_INDICATIVO e a SEM_PREVISAO também leem o cabeçalho das colunas dos CSV das fontes; a PROTOCOLO_LIMPO e a AGENDA proíbem
+  SEM_INDICATIVO e a SEM_PREVISAO também leem o cabeçalho das colunas dos CSV das fontes (a 1ª linha com conteúdo), comparando
+  também as palavras vizinhas juntas (palavras_juntas: "WhatsApp" = whats + app, "Baixa-mar"); a PROTOCOLO_LIMPO e a AGENDA proíbem
   cada palavra e as formas juntas do fabricante e do modelo do EPIRB e do Seafire (trava 17).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
@@ -867,6 +868,34 @@ EXTRAS += [
 ]
 
 
+def com_linha_em_branco(sufixo, coluna):
+    """hoje() com a coluna nova no CSV `sufixo` e uma linha em branco ANTES do cabeçalho."""
+    k = com_coluna(sufixo, coluna, 'x')
+    rel = next(r for r in sorted(k['F']) if r.endswith(sufixo))
+    k['F'][rel] = '\n' + k['F'][rel]
+    return k
+
+
+# Revisão final do C3, 2ª rodada. A grafia da marca, "WhatsApp", o camelCase separa em whats + app: a chave não casava com a
+# 'whatsapp' da CHAVES_IDENT (só "Whatsapp" e "whatsapp" reprovavam), e a coluna do CSV herdava a brecha. A palavras_juntas()
+# compara também as palavras vizinhas juntas e a chave inteira (também 'Baixa-mar' → baixamar). E a linha em branco antes do
+# cabeçalho de um CSV não esconde mais as colunas dele.
+EXTRAS += [
+    ('SEM_INDICATIVO', 'coluna WhatsApp (grafia da marca) no inventário', lambda r: com_coluna(_INV, 'WhatsApp' if r else 'Observação extra', 'ver no aparelho' if r else ''),
+     'Inventário de bordo.csv:WhatsApp: chave de telefone'),
+    ('SEM_INDICATIVO', 'coluna "Whats App" (duas palavras) no inventário', lambda r: com_coluna(_INV, 'Whats App' if r else 'Observação extra', 'ver no aparelho' if r else ''),
+     'Inventário de bordo.csv:Whats App: chave de telefone'),
+    ('SEM_INDICATIVO', 'chave whatsApp (camelCase) nos prestadores',
+     lambda r: (lambda k: (poe(k['D']['equipe']['apoio'], 0, **({'whatsApp': 'cadastrar'} if r else {})), k)[1])(hoje()), 'equipe.apoio[0].whatsApp: chave de telefone'),
+    ('SEM_INDICATIVO', 'chave WhatsApp numa lista de JSON das fontes', lambda r: com_json(lambda j: j.update({'WhatsApp_marina' if r else 'marina': 'x'})),
+     ':WhatsApp_marina: chave de telefone'),
+    ('SEM_PREVISAO', 'coluna "Baixa-mar (m)" (duas palavras que a lista traz juntas) no inventário',
+     lambda r: com_coluna(_INV, 'Baixa-mar (m)' if r else 'Observação extra', '0,2' if r else ''), 'Inventário de bordo.csv:Baixa-mar (m): campo de previsão ou maré'),
+    ('SEM_INDICATIVO', 'coluna Telefone depois de uma linha em branco no CSV', lambda r: com_linha_em_branco(_INV, 'Telefone' if r else 'Observação extra'),
+     'Inventário de bordo.csv:Telefone: chave de telefone'),
+]
+
+
 def em_modo_real(**kw):
     """hoje() no modo real (simulacao False), com os campos da embarcação trocados (None fica como None: SEM DADOS)."""
     k = hoje()
@@ -1017,6 +1046,19 @@ def planta(nome, o_que, monta, espera):
     ok('%s: acusa a amostra plantada%s%s' % (nome, o_que, modo),
        len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos) and reprova,
        {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome]), 'reprova': reprova})
+
+
+def palavras():
+    print('palavras_juntas(): o camelCase e o hífen não escondem a chave da lista (CHAVES_IDENT, CHAVES_PREVISAO)')
+    for chave, junta in (('WhatsApp', 'whatsapp'), ('whatsApp', 'whatsapp'), ('Whats App', 'whatsapp'), ('whats_app_marina', 'whatsapp'),
+                         ('Hex_I_D', 'hexid'), ('e_mail', 'email'), ('Baixa-mar (m)', 'baixamar'), ('Pré-amar', 'preamar')):
+        ps = C.palavras_juntas(chave)
+        ok('palavras_juntas(%r) tem %r' % (chave, junta), junta in ps, ps)
+    ps = C.palavras_juntas('telefone_marina')
+    ok('palavras_juntas: as palavras vêm primeiro, sem repetição ("telefone_marina")', ps[:2] == ['telefone', 'marina'] and len(ps) == len(set(ps)), ps)
+    ok('palavras_juntas: chave de uma palavra só = a própria palavra', C.palavras_juntas('local') == ['local'], C.palavras_juntas('local'))
+    ok('palavras_juntas: as palavras de palavras_chave continuam todas lá',
+       all(set(C.palavras_chave(k)) <= set(C.palavras_juntas(k)) for k in ('hexId', 'canal16', 'hora_local', 'Maré prevista (m)')))
 
 
 def amostras():
@@ -1256,6 +1298,7 @@ def reprova(tmp):
                                      ('TERMOS', lugar_epirb, 1, None, ' (LOCAL_SEGURANCA: lugar do EPIRB no nome)'),
                                      ('SEM_INDICATIVO', lambda D: D, 1, None, ' (coluna Telefone no CSV do inventário)', coluna_fonte('Inventário de bordo.csv', 'Telefone')),
                                      ('SEM_PREVISAO', lambda D: D, 1, None, ' (coluna Maré prevista no CSV do abastecimento)', coluna_fonte('Registro de abastecimento.csv', 'Maré prevista (m)')),
+                                     ('SEM_INDICATIVO', lambda D: D, 1, None, ' (coluna WhatsApp no CSV do inventário)', coluna_fonte('Inventário de bordo.csv', 'WhatsApp')),
                                      ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
                                      ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
                                      ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
@@ -1288,6 +1331,7 @@ def main():
         determinismo(tmp)
         limpeza(tmp)
         copias()
+        palavras()
         amostras()
         modelos_sinteticos()
         reprova(tmp)

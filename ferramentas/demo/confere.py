@@ -183,7 +183,8 @@ SISTEMAS_EXTRA = {'casco', 'tanques'}
 SEGURANCA_AGENDA = {'epirb-teste', 'seafire-inspecao', 'porao-teste'}
 EQUIP_SEGURANCA = ('epirb', 'seafire')   # fabricante, modelo e validade só em Equipamentos, Leme e Documentos (trava 17)
 # §0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo (SEM_INDICATIVO). Pelas palavras
-# do nome da chave (camelCase, '_' e '-' separam; sem acento): 'hexId' → hex, id. O indicativo vale só em protocolos (o texto de
+# do nome da chave (camelCase, '_' e '-' separam; sem acento): 'hexId' → hex, id, e pelas junções delas (palavras_juntas: 'WhatsApp'
+# → whats, app, whatsapp, que a grafia da marca separa). O indicativo vale só em protocolos (o texto de
 # instrução); o lugar, só nos campos de vocabulário fechado (LOCAL_VOCAB), no lugar do próprio barco (o quadro) e no posto e nos
 # prestadores, que não são equipamento.
 CHAVES_IDENT = {'hex': 'HEX ID', 'hexid': 'HEX ID', 'uin': 'HEX ID', 'beacon': 'HEX ID', 'tel': 'telefone', 'telefone': 'telefone',
@@ -478,6 +479,14 @@ def palavras_chave(k):
     return re.findall(r'[a-z]+|\d+', norm(re.sub(r'([a-zà-ÿ0-9])([A-Z])', r'\1 \2', str(k))))
 
 
+def palavras_juntas(k):
+    """palavras_chave(k) mais as junções de 2 e de 3 palavras vizinhas e a da chave inteira, sem repetir e na ordem: o camelCase
+    separa o que a lista de chaves traz inteiro ('WhatsApp' → whats, app, whatsapp · 'baixa-mar' → baixamar · 'Hex_I_D' → hexid)."""
+    ps = palavras_chave(k)
+    juntas = [''.join(ps[i:j]) for i in range(len(ps)) for j in range(i + 2, min(i + 3, len(ps)) + 1)]
+    return list(dict.fromkeys(ps + juntas + [''.join(ps)]))
+
+
 def casado(m):
     """O texto casado, sem o caractere do fim de palavra que as regex sem lookbehind levam na frente ((?:^|[^A-Za-zÀ-ÿ]))."""
     s = m.group()
@@ -557,7 +566,8 @@ class Ctx:
 
     def chaves(self):
         """(caminho, chave) de toda chave do D, da base, do FAQ e dos JSON das fontes do Drive (os mesmos prefixos do todos()) e,
-        de cada CSV das fontes, a 1ª linha: o cabeçalho de cada coluna é a chave da planilha que vai ao Drive ('fontes/<rel>:<coluna>')."""
+        de cada CSV das fontes, a 1ª linha com conteúdo (linha em branco antes dela não esconde o cabeçalho): o cabeçalho de cada coluna
+        é a chave da planilha que vai ao Drive ('fontes/<rel>:<coluna>')."""
         yield from chaves_de(self.D, '')
         yield from chaves_de(self.base, 'base:')
         if self.faq is not None:
@@ -566,7 +576,7 @@ class Ctx:
             if rel.endswith('.json'):
                 yield from chaves_de(json.loads(txt), 'fontes/' + rel + ':')
             elif rel.endswith('.csv'):
-                for col in next(csv.reader(io.StringIO(txt)), []):
+                for col in next((l for l in csv.reader(io.StringIO(txt)) if any(c.strip() for c in l)), []):
                     yield 'fontes/%s:%s' % (rel, col), col
 
     def laco(self):
@@ -709,7 +719,7 @@ def a_sem_indicativo(X):
     out = []
     posto = 'fontes/%s/%s.csv:Local' % (X.pastas.get('abast'), X.arq.get('abast'))   # a coluna Local do abastecimento = o posto
     for c, k in X.chaves():
-        ps = palavras_chave(k)
+        ps = palavras_juntas(k)
         if 'indicativo' in ps and not c.startswith('protocolos.'):
             out.append(c + ': chave indicativo fora de protocolos')
         tipo = next((CHAVES_IDENT[p] for p in ps if p in CHAVES_IDENT), None)
@@ -751,7 +761,7 @@ def a_terceiros(X):
         if not isinstance(d, dict):
             continue
         for c, k in chaves_de(d, cam):
-            if CHAVES_DOC & set(palavras_chave(k)) and not (c == cam + '.numero' and d.get('id') == 'tie'):
+            if CHAVES_DOC & set(palavras_juntas(k)) and not (c == cam + '.numero' and d.get('id') == 'tie'):
                 out.append('%s: chave de número ou emissor de documento (§1.8: só o TIE tem número)' % c)
     out += ['%s: número de documento [%s] «%s»' % (cam, m.group(1), trecho(s, m)) for cam, s in X.todos() for m in R_NUM_DOC.finditer(s)]
     return out
@@ -761,7 +771,7 @@ def a_sem_previsao(X):
     """§6.4, trava §2.5 (tempo e maré são do mundo real), sem nome na §6.3: nenhum campo de previsão ou de maré no D (o historico,
     o catálogo de campos e o replay inclusive), na base, no FAQ, nos JSON das fontes e no cabeçalho de cada coluna dos CSV das fontes."""
     return ['%s: campo de previsão ou maré (tempo e maré só do Open-Meteo real)' % c for c, k in X.chaves()
-            if CHAVES_PREVISAO & set(palavras_chave(k))]
+            if CHAVES_PREVISAO & set(palavras_juntas(k))]
 
 
 def _positivo(v, tipo):
