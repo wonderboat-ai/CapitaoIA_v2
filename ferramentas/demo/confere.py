@@ -6,7 +6,9 @@ violações de cada uma (caminho e motivo). São as da §6.3 e, no fim, as invar
 não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 ("programe" perto de MMSI) e na SEM_INDICATIVO
 (indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Depois, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
 completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
-§1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC).
+§1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC). A REGISTRO cruza o registro com o
+`numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova, e o dado de hoje
+fica congelado na PENDENTES até o C7).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Da varredura de termos
 (RELATORIO), só cinco das oito regex ficam em relatório até o C12; a PESSOAIS, a DINHEIRO e a LOCAL_SEGURANCA (telefone, e-mail,
@@ -71,6 +73,9 @@ PENDENTES = {
                  for k in ('rpm', 'pct')],
     },
     'MMSI9': {'C6': ['protocolos.roteiro[2]: 710123456 «*»']},
+    # O registro já está preenchido (C4), e o documento do TIE ainda é o de antes (sem id, SEM DADOS, "registro não informado"): o
+    # C7 grava id "tie" e numero = embarcacao.registro (§1.8) e tira esta linha (CONTRATO §6.6).
+    'REGISTRO': {'C7': ['documentos[tie] ausente: o TIE precisa de id "tie" e numero = embarcacao.registro (§1.2, §1.8)']},
     'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
                   + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
     'PROTOCOLO_LIMPO': {'C6': ['protocolos.roteiro[2]: regex de emergência [710123456] «*»',
@@ -84,7 +89,7 @@ PENDENTES = {
         '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
         '06 Abastecimento/Registro de abastecimento.csv')]},
 }
-COMMITS_PENDENTES = ('C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2) e o C5, os equipamentos e os guias (§1.4, §1.5)
+COMMITS_PENDENTES = ('C6', 'C7', 'C8')   # o C4 completou a embarcação (§1.2; o TIE do registro fica com o C7) e o C5, os equipamentos e os guias (§1.4, §1.5)
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
@@ -686,6 +691,10 @@ def a_mmsi9(X):
 
 
 def a_registro(X):
+    """§1.2 e §2.3. O formato do registro e o que ele não pode imitar (placa, HIN, 9 a 11 dígitos, HEX ID, PESSOAIS) e o cruzamento
+    com o TIE: o registro é o `numero` do documento de `id` "tie" (§1.8). Na simulação, o registro preenchido exige esse
+    documento (revisão final do C4: o TIE era procurado só quando já tinha `id`, e o dado de hoje, sem `id`, escapava do cruzamento
+    sem nenhuma pendência); no modo real (§4.2), o TIE ausente não reprova, mas um TIE com `numero` diferente sim."""
     E = X.D.get('embarcacao') or {}
     r = E.get('registro')
     if r is None and not X.simulacao:
@@ -700,8 +709,15 @@ def a_registro(X):
             out.append('embarcacao.registro imita %s' % nome)
     if X.termos['PESSOAIS'].search(r):
         out.append('embarcacao.registro casa a PESSOAIS')
-    tie = next((d for d in (X.D.get('documentos') or []) if isinstance(d, dict) and d.get('id') == 'tie'), None)
-    if tie is not None and tie.get('numero') != r:
+    ties = [d for d in (X.D.get('documentos') or []) if isinstance(d, dict) and d.get('id') == 'tie']
+    if len(ties) > 1:
+        out.append('documentos: %d documentos com id "tie" (precisa de 1)' % len(ties))
+    if not ties:
+        if X.simulacao:
+            out.append('documentos[tie] ausente: o TIE precisa de id "tie" e numero = embarcacao.registro (§1.2, §1.8)')
+    elif ties[0].get('numero') is None:
+        out.append('documentos[tie].numero ausente (= embarcacao.registro, §1.8)')
+    elif ties[0]['numero'] != r:
         out.append('documentos[tie].numero diferente de embarcacao.registro')
     return out
 

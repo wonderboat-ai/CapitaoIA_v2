@@ -1061,6 +1061,62 @@ def palavras():
        all(set(C.palavras_chave(k)) <= set(C.palavras_juntas(k)) for k in ('hexId', 'canal16', 'hora_local', 'Maré prevista (m)')))
 
 
+def registro_tie(V0):
+    """Revisão final do C4: a REGISTRO cruza o registro com o numero do documento de id "tie" (§1.2, §1.8). O TIE de hoje não tem id
+    (o C7 o regrava) e o cruzamento nunca rodava: o registro preenchido ao lado de "SEM DADOS: TIE" no mesmo dado não reprovava
+    nada, e o C7 podia esquecer o id ou o número sem que a PENDENTES o obrigasse. Na simulação, a falta do documento é a violação
+    congelada do C7; o TIE certo sem tirar a linha da PENDENTES e o TIE errado reprovam (os dois pelo main(), em reprova())."""
+    reg = G.EMBARCACAO['registro']
+    ausente = [m for m in V0['REGISTRO'] if m.startswith('documentos[tie] ausente')]
+    novas, conhecidas, velhas = C.separa({'REGISTRO': V0['REGISTRO']})
+    ok('REGISTRO: o TIE de hoje (sem id) é a única violação, congelada na PENDENTES do C7',
+       V0['REGISTRO'] == ausente and len(ausente) == 1 and not novas and not velhas and conhecidas == {'REGISTRO': {'C7': 1}},
+       (V0['REGISTRO'], novas, velhas, conhecidas))
+
+    def tie(**campos):
+        """O dado de hoje com o 1º documento (o TIE) mudado: o valor None tira a chave."""
+        k = hoje()
+        k['D']['documentos'][0].update({c: v for c, v in campos.items() if v is not None})
+        for c, v in campos.items():
+            if v is None:
+                k['D']['documentos'][0].pop(c, None)
+        return k
+    for o_que, k, trecho, nova in (
+            ('numero = o registro, sem id (o C7 esquece o id)', tie(numero=reg), 'documentos[tie] ausente', False),
+            ('numero diferente do registro, sem id', tie(numero='CIA-99-9999'), 'documentos[tie] ausente', False),
+            ('id "tie" e numero diferente do registro', tie(id='tie', numero='CIA-99-9999'), 'documentos[tie].numero diferente', True),
+            ('id "tie" e sem numero (o C7 esquece o número)', tie(id='tie', numero=None), 'documentos[tie].numero ausente', True)):
+        V = verifica(k)['REGISTRO']
+        livres = C.separa({'REGISTRO': V})[0].get('REGISTRO', [])
+        ok('REGISTRO: TIE com %s acusa%s' % (o_que, ' e reprova (fora das pendências)' if nova else ' (é a pendência do C7)'),
+           any(trecho in m for m in V) and bool(livres) == nova, (V, livres))
+    V = verifica(tie(id='tie', numero=reg))['REGISTRO']
+    velhas = C.separa({'REGISTRO': V})[2]
+    ok('REGISTRO: TIE com id "tie" e numero = o registro (o que o C7 grava) não acusa, e a pendência do C7 fica velha',
+       not V and [(n, c) for n, c, _ in velhas] == [('REGISTRO', 'C7')], (V, velhas))
+    k = tie(id='tie', numero=reg)
+    k['D']['documentos'].append(dict(k['D']['documentos'][0]))
+    V = verifica(k)['REGISTRO']
+    ok('REGISTRO: dois documentos com id "tie" acusam (o 2º não esconde o 1º)', any('2 documentos com id "tie"' in m for m in V), V)
+    k = hoje()
+    k['D']['documentos'] = [d for d in k['D']['documentos'] if 'TIE' not in d['n']]
+    V = verifica(k)['REGISTRO']
+    ok('REGISTRO: sem documento de TIE nenhum acusa o mesmo (ausente)', V == ausente, V)
+    # Modo real (§4.2): o TIE ausente não reprova (o proprietário pode ter só o registro); o numero diferente, sim; registro None = SEM DADOS
+    k = hoje()
+    k['D']['simulacao'] = False
+    V = verifica(k)['REGISTRO']
+    ok('REGISTRO: no modo real, registro preenchido e TIE sem id não reprova', not V, V)
+    k['D']['documentos'][0].update({'id': 'tie', 'numero': 'CIA-99-9999'})
+    V = verifica(k)['REGISTRO']
+    ok('REGISTRO: no modo real, TIE com numero diferente acusa', any('numero diferente' in m for m in V), V)
+    k = hoje()
+    k['D']['simulacao'] = False
+    k['D']['embarcacao']['registro'] = None
+    V = verifica(k)['REGISTRO']
+    ok('REGISTRO: no modo real, registro None (SEM DADOS) não reprova', not V, V)
+
+
 def amostras():
     print('confere(): uma amostra plantada por asserção (%d) e as %d extras da revisão' % (len(C.NOMES), len(EXTRAS)))
     faltam = [n for n in C.NOMES if n not in AMOSTRAS and n != 'EMENDA']
@@ -1190,6 +1246,7 @@ def amostras():
     # C4 (§1.2): a embarcação gerada passa; com os equipamentos do §1.4 (C5), a motorizacao confere com os motores; no modo real
     # (§4.2), o que é None (SEM DADOS) não reprova.
     ok('EMBARCACAO: a embarcação gerada passa (0 violações)', not V0['EMBARCACAO'], V0['EMBARCACAO'][:3])
+    registro_tie(V0)
     ok('ESTABILIZADOR_12V: a saída de hoje passa (0 violações), com o g_seakeeper §1 no banco de 12 V',
        not V0['ESTABILIZADOR_12V'] and '12 V' in G.GUIAS['g_seakeeper']['secoes'][0][1], V0['ESTABILIZADOR_12V'][:3])
     V = verifica(motores_c5())['EMBARCACAO']
@@ -1316,6 +1373,15 @@ def reprova(tmp):
     rc, saida = rodar(lambda D: (D['protocolos'].update({'seafire': {'passos': list(G.TXT_SEAFIRE), 'nota': G.NOTA_ETIQUETA}}), D)[1], p4)
     ok('pendência que não ocorre mais (o protocolos.seafire, do C6, preenchido antes da hora): main() devolve 1 e não grava nada',
        rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C6 que não ocorre mais' in saida, (rc, saida[-300:]))
+    # Revisão final do C4: o TIE com id e numero certos (o que o C7 grava) sem tirar a pendência REGISTRO do C7 reprova (a pendência
+    # não ocorre mais); com o numero errado, a violação nova também reprova. Em nenhum dos dois o main() grava.
+    reg = D0()['embarcacao']['registro']
+    for i, (o_que, campos, espera) in enumerate((('id "tie" e numero = o registro, sem tirar a linha da PENDENTES', {'id': 'tie', 'numero': reg},
+                                                  'REGISTRO: pendência do C7 que não ocorre mais'),
+                                                 ('id "tie" e numero errado', {'id': 'tie', 'numero': 'CIA-99-9999'}, 'REGISTRO 1 nova(s)'))):
+        p = os.path.join(tmp, 'r-tie-%d' % i)
+        rc, saida = rodar(lambda D, c=campos: (D['documentos'][0].update(c), D)[1], p)
+        ok('REGISTRO: TIE com %s: main() devolve 1 e não grava nada' % o_que, rc == 1 and not os.path.exists(p) and espera in saida, (rc, saida[-300:]))
     # Com o modo por caminho, as estruturais de hoje têm violações, todas congeladas na PENDENTES (antes: nenhuma violação, porque
     # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
