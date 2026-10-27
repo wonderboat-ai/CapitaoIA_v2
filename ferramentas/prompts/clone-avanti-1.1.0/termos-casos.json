@@ -65,7 +65,12 @@
    "Câmbio : 150 ienes por dólar.",
    "O câmbio do dia passou de 6.",
    "O cambio do dia passou de 6.",
-   "Cambio: 150 ienes por dólar."
+   "Cambio: 150 ienes por dólar.",
+   "Câmbio 5,40.",
+   "Câmbio:150 ienes por dólar.",
+   "O câmbio  do dia passou de 6.",
+   "O câmbio está 6.",
+   "O cambio esta acima de 6."
   ],
   "PESSOAIS": [
    "Ligue para a marina: (47) 3367-1234",
@@ -142,7 +147,11 @@
   "O câmbio de xxxxxxxxxxxxxxxxxxxxxxxxx6.",
   "Termine com câmbio de\n6 passos.",
   "Termine a chamada com CÂMBIO\nEspere 1,5 minuto e repita o MAYDAY.",
-  "Diga câmbio\n: 1 vez e solte o PTT."
+  "Diga câmbio\n: 1 vez e solte o PTT.",
+  "Câmbio paralelo: 5.",
+  "Diga câmbio no canal: 16.",
+  "Diga câmbio: canal 16 em escuta.",
+  "Diga câmbio na versão v.2 do manual."
  ],
  "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
 }
