@@ -206,9 +206,12 @@ CHECA = """() => {
 # sobre o protocolos, tirada do próprio D). Sem os números (ano, dimensões, tanques): a tela do SOS mostra o clima real, e uma
 # ondulação de "1,1 m" seria o calado; no protocolos, que é só texto gerado, o gerador confere os números também. Sem a base até
 # a 1b, que a tira do cabeçalho da S1 (CONTRATO §1.2) e acrescenta aqui.
+# Revisão 3 do C4: D.simulacao vai junto (TEXTOS_SOS devolve `simulacao`). Na simulação, o D tem de trazer os cinco campos da
+# embarcação (confere.falta_barco_sos); no modo real (simulacao false, CONTRATO §4.2), None é SEM DADOS e a conferência vale só
+# para o campo que existe, como a_embarcacao e a_registro no gerador.
 TELAS_SOS = ('S1-SOS-Web', 'S2-SOS-Mobile')
 TEXTOS_SOS = r"""async () => {
-  const E = (window.CapitaoDados || {}).embarcacao || {}, barco = {}; ['nome', 'registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao'].forEach((k) => { if (typeof E[k] === 'string') barco[k] = E[k]; });
+  const D = window.CapitaoDados || {}, E = D.embarcacao || {}, barco = {}; ['nome', 'registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao'].forEach((k) => { if (typeof E[k] === 'string') barco[k] = E[k]; });
   const textos = [];
   const le = () => {
     textos.push(document.body ? document.body.innerText : '');
@@ -236,7 +239,7 @@ TEXTOS_SOS = r"""async () => {
   const m1 = may();
   if (m1 && m1.getAttribute('aria-pressed') === 'true') m1.click();
   const inicial = await ate(() => may() && may().getAttribute('aria-pressed') !== 'true' && !cartoes().some((x) => x.getAttribute('aria-expanded') === 'true'));
-  return { barco: barco, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
+  return { barco: barco, simulacao: D.simulacao, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
 }"""
 
 
@@ -252,16 +255,14 @@ def textos_sos(pg):
     return r, prob
 
 
-BARCO_SOS = ('registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao')   # o D tem de ter todos (senão a conferência não vale)
-
-
 def problemas_barco_sos(pg):
     """S1/S2 (trava §2.1): nem "REG." nem dado gerado da embarcação além do nome (confere.barco_sos sem os números e sem a base:
     registro, fabricante, modelo, marca, rotulo, motorizacao e motor) na tela, também no roteiro MAYDAY e nos passos de cada
-    cartão; sem esses campos no D, a conferência não vale."""
+    cartão; na simulação, sem esses campos no D a conferência não vale; no modo real (D.simulacao false), o campo None é SEM
+    DADOS e só o que existe se confere (confere.falta_barco_sos)."""
     r, prob = textos_sos(pg)
     E = r['barco']
-    falta = [k for k in BARCO_SOS if not E.get(k)]
+    falta = confere.falta_barco_sos(E, r.get('simulacao'))
     if falta: prob.append('D sem embarcacao.%s: a conferência do dado da embarcação no SOS não vale' % ', '.join(falta))
     achados = []
     for campo, txt, _ in confere.acha_barco(r['texto'], E, confere.barco_sos(E, numeros=False, base=False)):

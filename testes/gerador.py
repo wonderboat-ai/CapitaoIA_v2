@@ -1412,6 +1412,23 @@ def amostras():
     ok('barco_sos da tela: registro, fabricante, modelo, marca e motor acusam',
        achou('ESTALEIRO MARÉVIA · MAREVIA 40 HT · cia 23 0417 · CUMMINS') == ['fabricante', 'marca', 'modelo', 'motor', 'registro'],
        achou('ESTALEIRO MARÉVIA · MAREVIA 40 HT · cia 23 0417 · CUMMINS'))
+    # Revisão 3 do C4 (problemas_barco_sos do verificar.py): na simulação, modelo e rotulo None tiram o valor da conferência da tela
+    # (falta_barco_sos os acusa; sem a chave simulacao, também); no modo real (simulacao false, §4.2), None é SEM DADOS e nada falta,
+    # nem com todos os campos None, e o que existe segue acusando (o modelo ausente não acusa nem derruba a marca, que precisa dele).
+    sem = dict(E, modelo=None, rotulo=None)
+    ok('falta_barco_sos: o dado gerado de hoje tem os cinco campos (a conferência da tela vale)',
+       C.falta_barco_sos(E, True) == [] and C.falta_barco_sos(E, False) == [], (C.falta_barco_sos(E, True), C.falta_barco_sos(E, False)))
+    ok('falta_barco_sos: na simulação, modelo e rotulo None reprovam a conferência (com simulacao ausente também)',
+       C.falta_barco_sos(sem, True) == ['modelo', 'rotulo'] and C.falta_barco_sos(sem, None) == ['modelo', 'rotulo'],
+       (C.falta_barco_sos(sem, True), C.falta_barco_sos(sem, None)))
+    ok('falta_barco_sos: no modo real, modelo e rotulo None (SEM DADOS) não reprovam, nem com todos os campos None',
+       C.falta_barco_sos(sem, False) == [] and C.falta_barco_sos({k: None for k in C.BARCO_SOS_EXIGIDO}, False) == [],
+       (C.falta_barco_sos(sem, False), C.falta_barco_sos({k: None for k in C.BARCO_SOS_EXIGIDO}, False)))
+    tela_real = C.barco_sos(sem, numeros=False, base=False)
+    texto_real = 'ESTALEIRO MARÉVIA · MAREVIA 40 HT · cia 23 0417 · CUMMINS'
+    ok('barco_sos no modo real (modelo e rotulo None): o fabricante, o motor e o registro presentes seguem acusando',
+       sorted({c for c, _, _ in C.acha_barco(texto_real, sem, tela_real)}) == ['fabricante', 'motor', 'registro'],
+       sorted({c for c, _, _ in C.acha_barco(texto_real, sem, tela_real)}))
     # O que não pode reprovar (revisão 3): milhar do pt-BR e ângulos (COORD_TEXTO), palavras em maiúsculas com os prefixos de rádio
     # (SEM_INDICATIVO), o número do TIE (TERCEIROS) e a hora local da leitura da pasta 05 (já nos dados de hoje).
     V0 = verifica(hoje())

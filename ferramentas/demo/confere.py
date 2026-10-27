@@ -998,6 +998,21 @@ def barco_sos(E, numeros=True, base=True):
     return out
 
 
+BARCO_SOS_EXIGIDO = ('registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao')
+
+
+def falta_barco_sos(E, simulacao):
+    """Campos da embarcação que a conferência da tela do SOS (verificar.py) exige no D para valer. Na simulação (D.simulacao
+    diferente de false; sem a chave, também), os cinco: sem algum deles a barco_sos não teria o que procurar e a tela passaria
+    vazia. No modo real (simulacao false, CONTRATO §4.2), nenhum: None é SEM DADOS, como na a_embarcacao e na a_registro, e a
+    conferência vale para o que estiver preenchido (a barco_sos ignora o campo vazio). Revisão 3 do C4: antes, a tela reprovava o
+    modo real com modelo ou rotulo None, embora o SOS nunca mostre esses campos."""
+    if simulacao is False:
+        return []
+    E = E if isinstance(E, dict) else {}
+    return [k for k in BARCO_SOS_EXIGIDO if not (isinstance(E.get(k), str) and E[k].strip())]
+
+
 def acha_barco(s, E, regras):
     """[(campo, texto casado, trecho)] de cada ocorrência das regras da barco_sos no texto s. O nome (o único dado do barco que o
     SOS mostra) sai do texto antes, para a marca no nome ("AQUI É <nome>") não contar."""
