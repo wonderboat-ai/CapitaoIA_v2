@@ -157,8 +157,10 @@ EMBARCACAO = {
     'motorizacao': None,    # gerado do MOTOR (motorizacao_de, abaixo)
     'ano': 2023,
     'registro': 'CIA-23-0417',   # = documentos[tie].numero (C7)
-    # m · m · m (eixo e hélices) · t carregado (10,4 t: cabe no Seakeeper 3, até cerca de 10,5 t; revisão 2 do C4, §2.1)
-    'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 10.4,
+    # m · m · m (eixo e hélices) · t métricas carregado (9,3 t, leve cerca de 7,3 t). O Seakeeper 3 cobre "até cerca de 10,5 tons" (a página
+    # do fabricante não diz qual tonelada): lida como tonelada curta, 10,5 t curtas = 21.000 lb = cerca de 9,5 t métricas, e 9,3 t cabe nas
+    # duas leituras (revisão do fechamento do C5, CONTRATO §2.1 e §8.2, item 9; era 10,4 t, que só cabia na leitura métrica)
+    'comprimento': 12.4, 'boca': 3.95, 'calado': 1.1, 'deslocamento': 9.3,
     'lotacao': 12, 'pessoasBordo': 4,
     'tanques': dict(TANQUES),
     'un': {'comprimento': 'm', 'boca': 'm', 'calado': 'm', 'deslocamento': 't', 'lotacao': 'pessoas', 'pessoasBordo': 'pessoas'},
@@ -184,7 +186,7 @@ MAR = [[-26.99056, -48.63472], [-26.995, -48.60], [-27.0, -48.55]]
 # ——————————————————————————————— EQUIPAMENTOS ———————————————————————————————
 # CONTRATO §1.4 e §2.5 (decisão e): os fabricantes informados pelo proprietário (menos o dos motores, §2.2), modelos reais e
 # atuais do porte de 40 pés, nenhum das listas privadas e contagem 0 por substring na pasta do Avanti (COLISAO_MODELOS; exceção
-# só do Seakeeper 3, com o ok do §8.2: cobre 10,5–12,5 m e até cerca de 10,5 t, só 12 V DC).
+# só do Seakeeper 3, com o ok do §8.2: cobre 10,5–12,5 m e até cerca de 10,5 tons, só 12 V DC; o barco tem 9,3 t métricas).
 # - id = o sistema (vocabulário fechado de agenda, tarefas e alertas: estes ids mais casco e tanques).
 # - palavras: fabricante, modelo, nome comum e erros prováveis do ditado; palavra que cabe dentro de outra vai com espaço.
 # - nominal: só números públicos do fabricante (o do estabilizador é só a regra do guia, sem rotação nem minutos do fabricante).

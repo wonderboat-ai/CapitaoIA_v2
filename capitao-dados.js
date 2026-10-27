@@ -15,7 +15,7 @@ window.CapitaoDados = {
   "comprimento": 12.4,
   "boca": 3.95,
   "calado": 1.1,
-  "deslocamento": 10.4,
+  "deslocamento": 9.3,
   "lotacao": 12,
   "pessoasBordo": 4,
   "tanques": {"diesel_l":1600,"diesel_n":2,"agua_l":400,"cinzas_l":100,"negras_l":100},

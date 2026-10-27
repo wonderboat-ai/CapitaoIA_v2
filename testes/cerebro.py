@@ -144,6 +144,10 @@ CASOS = [
     ('como ver o fusion', 'audio'), ('como ver o som', 'audio'), ('como ver o áudio', 'audio'), ('onde fica o motor', 'motores'),
     ('como ver os navios no radar', 'eletronicos'), ('como ver o radar no plotter', 'base'), ('como ver a posição no plotter', 'base'),
     ('como ver o motor no garmin', 'eletronicos'), ('como ver o gerador no garmin', 'gerador'),
+    # Fechamento do C5: a guarda de sinônimo do nome() no trechoServe ("ar" e "condicionado" são a "climatização", "som" é o "Fusion") não
+    # tinha caso: sem ela, a palavra do nome do equipamento valia como assunto e a pergunta de lugar abria um trecho qualquer do guia (o
+    # mutante que tirava a guarda sobrevivia). Com os três casos, ele morre; a resposta pronta fica no aparelho, como antes do C5.
+    ('onde fica o ar condicionado', 'climatizacao'), ('onde fica o ar-condicionado', 'climatizacao'), ('onde fica o som', 'audio'),
     ('como funciona a identificação do transponder', 'base'), ('o que fazer antes de largar', 'base'),
     # (2) "bomba de esgoto" é a de esgotamento do porão: relato de água a bordo, local (a rota 'porao'), não a nuvem. As outras bombas com
     # guia seguem o guia ou a rota do assunto (cada palavra do OUTRA_BOMBA tem um caso aqui); sem guia (pressurização, circulação, lavagem), IA.
@@ -208,6 +212,8 @@ PEDE_IA = {
     'como ver o som': False, 'como ver o áudio': False, 'onde fica o motor': False, 'como ver os navios no radar': False,
     'como ver o radar no plotter': True, 'como ver a posição no plotter': True, 'como ver o motor no garmin': False,
     'como ver o gerador no garmin': False, 'como funciona a identificação do transponder': False, 'o que fazer antes de largar': False,
+    # (fechamento do C5: a resposta pronta da climatização e do áudio, não a IA)
+    'onde fica o ar condicionado': False, 'onde fica o ar-condicionado': False, 'onde fica o som': False,
     'a bomba de esgoto não para': False, 'a bomba de esgoto está enchendo de água': False, 'bomba de esgoto': False,
     'bomba do estabilizador': False, 'alarme da bomba do seakeeper': True, 'bomba do piloto automático': False, 'bomba hidráulica': True,
     'a bomba do gerador': False, 'bomba do dessalinizador': False, 'como ligar a bomba do dessalinizador': True, 'bomba de pressurização': True,
@@ -357,7 +363,8 @@ def main():
             const resp = (q) => B.answer(q, { platform: 'app', commit: false });
             const nome = ['onde fica o plotter', 'como ver o radar', 'como ver o garmin', 'como ver o icom', 'como ver o fusion', 'como ver o som', 'como ver o áudio',
               'onde fica o motor', 'como ver os navios no radar', 'como ver os barcos no radar', 'como ver a água no radar', 'como ver o radar no plotter',
-              'como ver a posição no plotter', 'como ver o motor no garmin', 'como ver o gerador no garmin']
+              'como ver a posição no plotter', 'como ver o motor no garmin', 'como ver o gerador no garmin',
+              'onde fica o ar condicionado', 'onde fica o ar-condicionado', 'onde fica o som']
               .filter((q) => { const a = resp(q); return a.seguranca || h(q).seguranca || ((a.key === 'base' || a.key === 'fallback') && !B.pedeIA(a, q)); });
             // palavra genérica da identidade (IDENT_GENERICAS: caso, depois, antes, padrão, protocolo, confirmar…) sozinha não nomeia o trecho de segurança
             const generica = ['e depois', 'o que fazer depois', 'quanto tempo depois', 'antes', 'o que fazer antes', 'em caso de alarme', 'em caso de falha do motor',

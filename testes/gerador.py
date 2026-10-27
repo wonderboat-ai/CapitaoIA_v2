@@ -731,7 +731,8 @@ EXTRAS = [
     ('comprimento', 'mob', None, 'Barco de 12,4 m.', 'comprimento', '12,4 m'),
     ('boca por extenso', 'mob', None, 'Boca de 3,95 metros.', 'boca', '3,95 metros'),
     ('calado', 'mob', None, 'Calado 1,10 m.', 'calado', '1,10 m'),
-    ('deslocamento', 'mob', None, 'Deslocamento de 10,4 t.', 'deslocamento', '10,4 t'),
+    # (fechamento do C5: o deslocamento passou de 10,4 t a 9,3 t para caber no Seakeeper 3 nas duas leituras de "tons"; o dado de hoje manda)
+    ('deslocamento', 'mob', None, 'Deslocamento de 9,3 t.', 'deslocamento', '9,3 t'),
     ('ano', 'mob', None, 'Barco de 2023.', 'ano', '2023'),
     ('base sem a UF', 'mob', None, 'Base: Balneário Camboriú.', 'base', 'Balneário Camboriú'),
     ('base sem acento, em maiúsculas', 'roteiro', 1, 'BASE BALNEARIO CAMBORIU (SC)', 'base', 'BALNEARIO CAMBORIU (SC)'),
@@ -1535,14 +1536,14 @@ def amostras():
     ok('MMSI9: o protocolos do §1.3 ("identificação programada no rádio: é o MMSI") passa',
        not [m for m in V['MMSI9'] if m.startswith('protocolos')], [m for m in V['MMSI9'] if m.startswith('protocolos')][:3])
     # Revisão 2 do C4 (barco_sos): o nome, o único dado do barco que o SOS mostra, não conta, nem com a marca dentro dele; número
-    # vizinho dos da embarcação também não (1,15 m · 21,1 m · 112,4 m · 12,40 mm · 10,45 t · 20230). A regra da tela (verificar.py:
+    # vizinho dos da embarcação também não (1,15 m · 21,1 m · 112,4 m · 12,40 mm · 9,35 t · 20230). A regra da tela (verificar.py:
     # sem os números, porque o SOS mostra o clima real, e sem a base, que sai da S1 na 1b) não acusa o clima, a base nem o nome, e
     # acusa o registro, o fabricante, o modelo, a marca e o motor.
     k = protocolo('roteiro', 1, 'AQUI É MARÉVIA STAR, MARÉVIA STAR, MARÉVIA STAR')
     k['D']['embarcacao']['nome'] = 'Marévia Star'
     novos = [m for m in verifica(k)['PROTOCOLO_LIMPO'] if m not in V0_PL]
     ok('PROTOCOLO_LIMPO: o nome com a marca dentro ("AQUI É MARÉVIA STAR") não acusa', not novos, novos[:3])
-    k = protocolo('mob', None, 'A 2 m da pessoa; 1,15 m; 21,1 m; 112,4 m; 12,40 mm; 10,45 t; 20230.')
+    k = protocolo('mob', None, 'A 2 m da pessoa; 1,15 m; 21,1 m; 112,4 m; 12,40 mm; 9,35 t; 20230.')
     novos = [m for m in verifica(k)['PROTOCOLO_LIMPO'] if m not in V0_PL]
     ok('PROTOCOLO_LIMPO: número vizinho dos da embarcação não acusa', not novos, novos[:3])
     E = hoje()['D']['embarcacao']
