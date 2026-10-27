@@ -108,6 +108,10 @@ MINIMO_SEGURANCA = {'g_motores': {'4'}, 'g_eletronicos': {'1', '5'}, 'g_porao': 
 # capitao-brain.js), para o rótulo do procedimento padrão e a nota da etiqueta não ficarem de fora; acima de 800 letras a fala passa de
 # 1 minuto. Os trechos de hoje chegam a 560 (g_seafire §1 e o protocolo do Seafire).
 SEGURANCA_MAX_LETRAS = 800
+# Revisão 5 do C5 (§1.5): `ident` = palavras de acionamento do trecho de segurança (como a pessoa conta a situação que ele trata e o título
+# não diz). O cérebro as conta na identidade do trecho; verbo de operação e nome de equipamento ou de sistema ali sequestrariam
+# pergunta comum (foi o que a revisão 4 do C5 tirou do Seafire: "como desligar a ventilação", "como religar o gerador").
+IDENT_PROIBIDAS = set('ligar desligar religar abrir fechar esfriar disparo disparou alarme sistema ventilação gerador motor motores bomba porão óleo filtro água etiqueta'.split())
 MINIMO_FAQ = re.compile(r'(?:EM|SF|EP)-\d+|MO-04|EL-01|EL-05|PO-04|AI-02|CK-03')
 # Ocorrências permitidas na pasta do Avanti, por candidato (COLISAO_MODELOS; ok do proprietário, §8.2 ponto 9).
 EXCECOES_MODELO = {'Seakeeper 3': 1}
@@ -1849,6 +1853,27 @@ def a_seguranca_curta(X):
             for i, t in enumerate(X.trechos) if t.get('seguranca') and len(t.get('texto', '')) > SEGURANCA_MAX_LETRAS]
 
 
+def a_ident_base(X):
+    """`ident` só em trecho com seguranca: de 1 a 6 palavras minúsculas de 3 letras ou mais, sem verbo de operação nem nome de
+    equipamento ou de sistema (IDENT_PROIBIDAS; sem distinguir acento). Sem isso o cérebro não nomeia o trecho pela situação."""
+    proibidas = {norm(w) for w in IDENT_PROIBIDAS}
+    out = []
+    for i, t in enumerate(X.trechos):
+        if 'ident' not in t:
+            continue
+        onde = 'base:trechos[%d] (%s · %s)' % (i, t.get('fonte'), t.get('secao'))
+        ident = t['ident']
+        palavras = ident.split(' ') if isinstance(ident, str) else []
+        if t.get('seguranca') is not True:
+            out.append('%s: ident sem seguranca: true' % onde)
+        if not (1 <= len(palavras) <= 6) or not all(re.fullmatch(r'[a-zà-ú]{3,}', w) for w in palavras):
+            out.append('%s: ident precisa de 1 a 6 palavras minúsculas de 3 letras ou mais (%r)' % (onde, ident))
+        ruins = sorted(w for w in palavras if norm(w) in proibidas)
+        if ruins:
+            out.append('%s: ident com verbo de operação ou nome de equipamento (%s)' % (onde, ', '.join(ruins)))
+    return out
+
+
 def a_nota_etiqueta(X):
     nota = NOTA
     out = []
@@ -2039,7 +2064,7 @@ ASSERCOES = [
     ('LACO', a_laco), ('LIMITES_FORMA', a_limites_forma), ('JANELA', a_janela), ('FIO', a_fio), ('EMENDA', a_emenda),
     ('EMENDA_ROTA', a_emenda_rota), ('PISO', a_piso), ('HORAS', a_horas), ('ROTA', a_rota), ('DIA_DE_BORDO', a_dia_de_bordo),
     ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
-    ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('NOTA_ETIQUETA', a_nota_etiqueta),
+    ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('IDENT_BASE', a_ident_base), ('NOTA_ETIQUETA', a_nota_etiqueta),
     ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).

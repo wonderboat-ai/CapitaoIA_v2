@@ -412,6 +412,10 @@ AMOSTRAS = {
     'SEGURANCA_CURTA': (lambda r: (lambda k: (k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'seguranca': True,
                                                                         'texto': ('Passo curto. ' * (80 if r else 5)).strip()}), k)[1])(hoje()),
                         '(máximo 800'),
+    # (revisão 5 do C5) `ident`: as palavras de acionamento do trecho de segurança não levam verbo de operação nem nome de equipamento
+    'IDENT_BASE': (lambda r: (lambda k: (k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'seguranca': True,
+                                                                   'texto': 'Passo curto.', 'ident': 'caiu desligar' if r else 'caiu cair'}), k)[1])(hoje()),
+                   'ident com verbo de operação ou nome de equipamento (desligar)'),
     # protocolos.seafire (None hoje, C6); a nota dos equipamentos de segurança já é a NOTA_ETIQUETA desde o C5
     'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
                       'protocolos.seafire.nota'),

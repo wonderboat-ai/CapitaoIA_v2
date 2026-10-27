@@ -780,6 +780,16 @@ GUIAS = {
 }
 FONTE_GUIA = {k: g['titulo'] for k, g in GUIAS.items()}
 
+# Palavras de acionamento (revisão 5 do C5; CONTRATO §1.5): como a pessoa conta a situação que o trecho de segurança trata e que o
+# título não diz. O cérebro as conta na identidade do trecho (buscaBase: só entra o trecho de segurança que a pergunta nomeia); sem elas,
+# "pessoa caiu da lancha" e "barco sem governo", com as palavras do próprio trecho, iam à IA, porque a identidade era só a fonte, o
+# equipamento e o título ("Homem ao mar", "PAN-PAN"). Chave: guia → seção (o número ou o título, como no "seg") → palavras. Só emergência
+# descrita por quem a vê; nada de verbo de operação ("desligar", "abrir") nem de palavra de equipamento, que sequestram pergunta comum.
+IDENT_ACIONAMENTO = {
+    'protocolo': {'Homem ao mar': 'caiu cair queda vista', 'PAN-PAN': 'pane governo ferido urgência'},
+    'g_eletronicos': {'1': 'caiu cair queda'},
+}
+
 
 def trecho_seguro(g, sec, t):
     """seguranca do trecho (§1.5): o mínimo do guia ("seg") ou a SEGURANCA_PALAVRAS em qualquer campo (fonte e equip inclusive)."""
@@ -791,11 +801,14 @@ def trecho_seguro(g, sec, t):
 
 def trechos():
     out = []
-    for g in GUIAS.values():
+    for chave, g in GUIAS.items():
         for sec, txt in g['secoes']:
             t = {'fonte': g['titulo'], 'secao': sec, 'texto': txt, 'equip': g['equip']}
             if trecho_seguro(g, sec, t):
                 t['seguranca'] = True
+            ident = IDENT_ACIONAMENTO.get(chave, {})
+            if sec in ident or sec.split(' · ')[0] in ident:
+                t['ident'] = ident.get(sec) or ident[sec.split(' · ')[0]]
             out.append(t)
     return out
 

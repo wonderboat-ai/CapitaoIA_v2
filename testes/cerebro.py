@@ -87,6 +87,30 @@ CASOS = [
     ('como esfriar o motor', 'base'), ('como esfriar o motor depois de navegar', 'base'), ('como esfriar o motor depois de navegar rápido', 'base'),
     # o que continua local: a pergunta nomeia o assunto (o sistema fixo, a baliza, o DSC)
     ('o sistema descarregou', 'base'), ('o sistema fixo disparou sozinho', 'base'), ('distress', 'base'), ('como usar o botão distress', 'base'),
+    # Revisão 5 do C5: a resposta pronta de equipamento (GENERICAS) só cede ao trecho do guia quando ele é do assunto perguntado
+    # (trechoServe: guia do equipamento, nome que a pergunta diz, algo além do nome). Com os 91 trechos, "como ligar o plotter" trazia o
+    # "Ligar e transmitir" do radar, "como ligar o sistema de som" o §1 dos bancos de bateria, "como funciona o sistema elétrico" o §3 de
+    # verificação. Voltam à resposta pronta, como antes do C5. Quando outro dos 3 primeiros trechos é do assunto, vale ele (o trecho dos
+    # motores no "alarme de temperatura do motor", o dos alarmes do Seakeeper): "como ligar o carregador" sai do §2 do Seakeeper para o §1
+    # do g_eletrico, que cita o carregador e é do mesmo guia da resposta pronta.
+    ('como ligar o plotter', 'eletronicos'), ('como ligar o sistema de som', 'audio'), ('como ligar o sistema de áudio', 'audio'),
+    ('como funciona o sistema elétrico', 'eletrico'), ('como está o sistema elétrico', 'eletrico'), ('como funciona o sistema de baterias', 'eletrico'),
+    ('como desligar o sistema elétrico', 'eletrico'), ('como desligar o piloto', 'eletronicos'), ('como desligar a bomba', 'porao'),
+    ('como esfriar a climatização', 'climatizacao'),
+    ('como ligar o carregador', 'base'), ('como ligar o carregador de bateria', 'base'), ('alarme de temperatura do motor', 'base'),
+    ('seakeeper temperatura alta', 'base'), ('trocar o filtro do ar condicionado', 'base'),
+    # o que continua no trecho do guia: "ar" é palavra da busca ("como ligar o ar" achava o "Ligar e transmitir" do radar porque o filtro
+    # de tamanho tirava o "ar" e sobrava só "ligar"); "ar condicionado" vale pela climatização; o alarme de âncora é do plotter (§3)
+    ('como ligar o ar', 'base'), ('como ligar o ar condicionado', 'base'), ('como desligar o ar', 'base'), ('substituir filtro de ar', 'base'),
+    ('como funciona o piloto automático', 'base'), ('alarme de âncora', 'base'), ('como fundear', 'base'),
+    # Revisão 5 do C5: o trecho do protocolo que descreve uma situação (homem ao mar, PAN-PAN) também é nomeado pelas palavras com que
+    # a pessoa a conta (`ident`: caiu, vista, pane, governo…). Antes da revisão 4 o trecho vinha de qualquer palavra dele; depois, só
+    # pelo título, e estas perguntas, com as palavras do próprio trecho, iam à IA. ("ferido" também é do PAN-PAN, mas a 1b manda
+    # ` ferid` para o SOS: fica de fora daqui para o caso não mudar de chave.)
+    ('pessoa caiu da lancha', 'base'), ('não vejo a pessoa que caiu', 'base'), ('perdemos de vista quem caiu', 'base'),
+    ('sem governo', 'base'), ('barco sem governo', 'base'), ('pane no barco', 'base'),
+    # as palavras de acionamento não abrem o trecho em pergunta comum: o assunto da pergunta tem de ser o do trecho
+    ('o parafuso caiu', 'fallback'), ('quantas pessoas a bordo', 'fallback'), ('a pessoa da marina', 'fallback'), ('o governo federal', 'fallback'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -112,6 +136,15 @@ PEDE_IA = {
     'como religar o motor depois de desligar': True, 'quando trocar o óleo do motor?': True,
     'como esfriar o motor': True, 'como esfriar o motor depois de navegar': True, 'como esfriar o motor depois de navegar rápido': True,
     'o sistema descarregou': False, 'o sistema fixo disparou sozinho': False, 'distress': False, 'como usar o botão distress': False,
+    # revisão 5 do C5: resposta pronta fica no aparelho; o trecho do guia vai à IA; o protocolo de homem ao mar e de PAN-PAN, não
+    'como ligar o plotter': False, 'como ligar o sistema de som': False, 'como ligar o sistema de áudio': False, 'como funciona o sistema elétrico': False,
+    'como desligar a bomba': False, 'como ligar o carregador': True, 'como ligar o carregador de bateria': True,
+    'alarme de temperatura do motor': True, 'seakeeper temperatura alta': True, 'trocar o filtro do ar condicionado': True,
+    'como ligar o ar': True, 'como ligar o ar condicionado': True, 'como desligar o ar': True, 'substituir filtro de ar': True,
+    'como funciona o piloto automático': True, 'alarme de âncora': True,
+    'pessoa caiu da lancha': False, 'não vejo a pessoa que caiu': False, 'perdemos de vista quem caiu': False,
+    'sem governo': False, 'barco sem governo': False, 'pane no barco': False,
+    'o parafuso caiu': True, 'quantas pessoas a bordo': True, 'a pessoa da marina': True, 'o governo federal': True,
 }
 
 
@@ -206,7 +239,32 @@ def main():
             const falaDisparo = ['o sistema fixo disparou', 'o sistema fixo descarregou', 'o sistema descarregou', 'o que fazer depois do disparo do sistema fixo', 'alarme do sistema fixo']
               .filter((q) => { const f = B.falaCurta(resp(q)).toLowerCase(); return f.indexOf('não abra o acesso ao motor') === -1 || !/desligue motores|motores, gerador e ventilação/.test(f); });
             return { comuns, oleo, esfriar, dsc, inteira, falaDisparo }; }""", ['Procedimento padrão — confirmar com o protocolo de bordo.', 'Modelo, validade e acionamento: veja a etiqueta do equipamento.'])
+        # Revisão 5 do C5: (a) o topo da busca de "como ligar o ar" é a Climatização §1 · Ligar (o "ar" entra na busca; "ar condicionado" não
+        # puxa o §4 "Fluxo de ar fraco"); (b) a pergunta de homem ao mar e de PAN-PAN traz o trecho do protocolo, com seguranca, na tela;
+        # (c) a resposta pronta que o trecho de OUTRO equipamento tomaria fica, e a que o trecho do próprio guia responde bem cede a ele
+        # (o piloto no g_eletronicos §2, o alarme de âncora no §3).
+        rev5 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
+            const resp = (q) => B.answer(q, { platform: 'app', commit: false });
+            const clima = ['como ligar o ar', 'como ligar o ar condicionado', 'como desligar o ar'].map((q) => [q, h(q).fonte === D.guias.g_clima, h(q).secao])
+              .filter(([q, ok]) => !ok).map(([q, ok, sec]) => q + ' → ' + sec);
+            const climaSec = [h('como ligar o ar').secao, h('como desligar o ar').secao];
+            const protocolo = (qs, sec) => qs.filter((q) => { const a = resp(q), x = h(q); return !(a.key === 'base' && a.seguranca && x.fonte === D.guias.protocolo && x.secao === sec); });
+            const mob = protocolo(['pessoa caiu da lancha', 'não vejo a pessoa que caiu', 'perdemos de vista quem caiu', 'perdi a pessoa de vista', 'a pessoa que caiu sumiu'], 'Homem ao mar');
+            const pan = protocolo(['sem governo', 'barco sem governo', 'pane no barco'], 'PAN-PAN');
+            const guia = ['como funciona o piloto automático', 'alarme de âncora'].map((q) => h(q).fonte === D.guias.g_eletronicos);
+            // o trecho mostrado é do guia do equipamento perguntado (a.ref começa pela fonte), não o do topo da busca, que era de outro
+            const certo = [['alarme de temperatura do motor', 'g_motores'], ['seakeeper temperatura alta', 'g_seakeeper'], ['trocar o filtro do ar condicionado', 'g_clima'],
+              ['como ligar o carregador', 'g_eletrico'], ['como ligar o carregador de bateria', 'g_eletrico']]
+              .filter(([q, g]) => { const a = resp(q); return a.key !== 'base' || String(a.ref).indexOf(D.guias[g]) !== 0; }).map(([q]) => q);
+            return { clima, climaSec, mob, pan, guia, certo }; }""")
         for nome, cond, extra in [
+            ('revisão 5 do C5: "como ligar o ar", "…o ar condicionado" e "…desligar o ar" têm a Climatização no topo (§1 Ligar e §5 Desligar)',
+             not rev5['clima'] and rev5['climaSec'] == ['1 · Ligar', '5 · Desligar'], (rev5['clima'], rev5['climaSec'])),
+            ('revisão 5 do C5: homem ao mar e PAN-PAN escritos com as palavras do trecho (caiu, vista, governo, pane) trazem o protocolo, com seguranca, e não vão à IA',
+             not rev5['mob'] and not rev5['pan'], (rev5['mob'], rev5['pan'])),
+            ('revisão 5 do C5: o piloto automático e o alarme de âncora continuam no g_eletronicos (§2 e §3), e não na resposta pronta', all(rev5['guia']), rev5['guia']),
+            ('revisão 5 do C5: o trecho mostrado é do guia do equipamento perguntado (motores, Seakeeper, climatização, sistema elétrico), não o de outro equipamento que vinha antes na busca',
+             not rev5['certo'], rev5['certo']),
             ('ficha resumida SÓ para pergunta pura sobre o app ("Oque você faz?", "como você funciona?"; sem telemetria, < 4 mil letras)', '## Ficha resumida' in x['metaF'] and '## Telemetria' not in x['metaF'] and len(x['metaF']) < 4000 and '## Ficha resumida' in x['funcF'], (len(x['metaF']), len(x['funcF']))),
             ('trecho do guia ("última troca de óleo do motor?") leva a ficha COMPLETA, com a agenda', x['baseK'] == 'base' and '## Manutenção' in x['baseF'] and '## Ficha resumida' not in x['baseF'], (x['baseK'], len(x['baseF']))),
             ('pergunta sobre o app COM assunto ("o que você sabe sobre o seguro?") leva a ficha COMPLETA, com os documentos', x['seguroK'] == 'saudacao' and '## Documentos' in x['seguroF'] and '## Ficha resumida' not in x['seguroF'], (x['seguroK'], len(x['seguroF']))),

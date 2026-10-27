@@ -457,7 +457,7 @@
   // ——— Base de conhecimento de bordo (base-conhecimento.json) ———
   // Trechos dos guias de bordo (hoje, DEMO). Quando a resposta pronta não tem o dado, o chat e a voz buscam aqui
   // (BM25 com sinônimos PT/EN) e respondem com o trecho e a fonte. Carrega em segundo plano; funciona offline (cache do SW).
-  var KB = { docs: null, carregando: false, df: {}, media: 1 };
+  var KB = { docs: null, carregando: false, df: {}, media: 1, nomes: {} };
   var PARADAS = ' a o e as os um uma uns umas de da do das dos em no na nos nas por para pra com sem se que qual quais quando como onde quanto quantos quantas e ou ao aos a is the of to and in on for with is are be it this that from at by an or eu voce vc me meu minha tem ter tenho ha esta estao fica ser sao era foi faz fazer posso pode sobre mais muito barco embarcacao capitao demo nao isso aqui registre registra registrar anote anota anotar grave gravar diario '.split(' ').reduce(function (m, w) { if (w) m[w] = 1; return m; }, {});
   var SINONIMOS = {
     gerador: ['onan', 'generator', 'genset'], estabilizador: ['seakeeper', 'gyro', 'giroscopio', 'stabilizer', 'volante'], giroscopio: ['seakeeper', 'gyro', 'estabilizador'],
@@ -477,8 +477,11 @@
     trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga']
   };
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
+  // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
+  // as demais palavras de até 2 letras seguem fora.
+  // "ar condicionado" vale pela palavra "condicionado" (sinônimo de climatização): o "ar" sozinho puxaria o §4 "Fluxo de ar fraco".
   function tokens(t) {
-    return norm(t).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && !PARADAS[w] && (w.length > 2 || /\d/.test(w)); }).map(raiz);
+    return norm(t).replace(/\bar[\s-]+condicionado\b/g, 'condicionado').replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && !PARADAS[w] && (w.length > 2 || w === 'ar' || /\d/.test(w)); }).map(raiz);
   }
   // Frases fixas que ficam no texto do trecho mas não entram no índice (revisão 3 do C5): o rótulo do procedimento padrão e a
   // nota da etiqueta (CONTRATO §1.5), no fim de todo trecho de g_seafire, g_epirb, Salvatagem e protocolo, e o "do equipamento"
@@ -497,23 +500,26 @@
   // o assunto dele. Sem isso, os passos dele (desligue motores e gerador, corte a ventilação, não abra o acesso ao motor, depois da
   // descarga) casavam perguntas comuns ("como desligar a ventilação", "como religar o gerador depois de desligar"), mostravam o
   // procedimento de incêndio e, por ser de segurança, barravam a IA (pedeIA).
+  // Palavras de acionamento (revisão 5 do C5): o trecho do protocolo que descreve uma situação (homem ao mar, pane) também é nomeado pelas
+  // palavras com que a pessoa conta essa situação e que não estão no título ("caiu", "sem governo"); o gerador as põe em `ident`.
   var IDENT_GENERICAS = {}; tokens('guia bordo depois caso antes sistema procedimento padrao confirmar protocolo emergencia').forEach(function (w) { IDENT_GENERICAS[w] = 1; });
   function carregaBase() {
     if (KB.docs || KB.carregando || !window.fetch) return;
     KB.carregando = true;
     fetch('./base-conhecimento.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var lista = j && j.trechos; if (!lista || !lista.length) return;
-      var soma = 0, df = {};
+      var soma = 0, df = {}, nomes = {};
       lista.forEach(function (d) {
         var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + indexavel(d.texto) + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
         d._lista = /invent[aá]rio|cat[aá]logo|[íi]ndice/i.test(d.fonte || '');
-        d._id = {}; tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
+        d._id = {}; tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec + ' ' + (d.ident || '')).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
+        d._eq = {}; tokens((d.fonte || '') + ' ' + (d.equip || '')).forEach(function (w) { if (!IDENT_GENERICAS[w] && !/^\d/.test(w)) { d._eq[w] = 1; nomes[w] = 1; } });
         d._en = (' ' + d.texto.toLowerCase() + ' ').split(/\b(?:the|and|with|to|of|is|are|your|from)\b/).length > 6;
         tk.forEach(function (w) { tf[w] = (tf[w] || 0) + 1; });
         Object.keys(tf).forEach(function (w) { df[w] = (df[w] || 0) + 1; });
         d._tf = tf; d._n = tk.length; soma += tk.length;
       });
-      KB.df = df; KB.media = soma / lista.length; KB.docs = lista;
+      KB.df = df; KB.media = soma / lista.length; KB.nomes = nomes; KB.docs = lista;
     }).catch(function () {}).then(function () { KB.carregando = false; });
   }
   // Devolve até n trechos { d, nota } ou [] se nada for relevante o bastante.
@@ -556,9 +562,44 @@
   var MAX_SEGURANCA = 1500;
   var GENERICAS = { gerador: 1, motores: 1, audio: 1, estabilizador: 1, eletronicos: 1, climatizacao: 1, dessalinizador: 1, eletrico: 1, porao: 1, ancora: 1, manual: 1, clima: 0 };
   var ESPECIFICA = /\b(como|trocar|troca|substitu\w*|parear|pareamento|conectar|codigo|codigos|alarme|alarmes|erro|falha|falhas|defeito|superaquec\w*|oleo|filtro|impeller|impelidor|rotor|capacidade|litros|pressao|temperatura|onde fica|localiza\w*|procedimento|passo|reset\w*|calibr\w*|configur\w*|limp\w*|intervalo|torque|especifica\w*|viscosidade|bluetooth|dsc|mob|zinco|anodo|fusivel|disjuntor|fluxo)\b/;
-  function respostaBase(q, p) {
+  // Resposta pronta de equipamento × trecho do guia (revisão 5 do C5). A resposta pronta (GENERICAS) só cede ao trecho do topo quando ele é
+  // do assunto perguntado. Com os 91 trechos, "como ligar o plotter" trazia o "Ligar e transmitir" do radar ("ligue o radar pelo plotter"),
+  // "como ligar o sistema de som" o §1 dos bancos de bateria ("sistema" e "ligar", por sinônimo de "partida") e "como funciona o sistema
+  // elétrico" o §3 de verificação. Três condições:
+  //  (1) o guia é um dos do equipamento da resposta (FAMILIA; sem entrada, qualquer guia);
+  //  (2) se a pergunta diz o nome de algum equipamento (palavra exata da fonte ou do equip de algum trecho: "plotter" não vale por
+  //      "garmin"), o trecho é de um equipamento que ela nomeia (na fonte, no equip ou no título da seção);
+  //  (3) a pergunta traz algo além do nome do equipamento: uma palavra, ou sinônimo, que está no título ou no texto ("funciona" só vale
+  //      se o título do trecho for o funcionamento).
+  // Vale o 1º dos 3 trechos da busca que passa nas três; nenhum passa, fica a resposta pronta, como antes do C5. O trecho de segurança que
+  // abre a busca (a pergunta o nomeia) não passa por aqui, e a pergunta sem resposta pronta (fallback) também não.
+  // (a âncora também é do g_eletronicos: o alarme de âncora está no plotter, §3)
+  var FAMILIA = { gerador: ['g_gerador'], motores: ['g_motores'], estabilizador: ['g_seakeeper'], climatizacao: ['g_clima'], dessalinizador: ['g_dessalinizador'],
+    eletrico: ['g_eletrico'], porao: ['g_porao'], ancora: ['g_ancora', 'g_eletronicos'], audio: ['g_eletronicos'], eletronicos: ['g_eletronicos', 'g_piloto', 'g_radar', 'g_ais'] };
+  var SEM_ASSUNTO = {}; tokens('funciona funcionamento').forEach(function (w) { SEM_ASSUNTO[w] = 1; });
+  function trechoServe(key, q, d) {
+    var fam = FAMILIA[key];
+    if (fam && !fam.some(function (g) { return d.fonte === guia(g); })) return false;
+    var ws = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !IDENT_GENERICAS[w]; });
+    var nomes = ws.filter(function (w) { return KB.nomes[w]; });
+    var secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '); // o título também nomeia ("Piloto automático" no g_eletronicos §2)
+    if (nomes.length && !nomes.some(function (w) { return d._eq[w] || secao.indexOf(' ' + w + ' ') !== -1; })) return false;
+    // palavra que é nome do equipamento do trecho (ela ou um sinônimo dela está na fonte ou no equip: "ar" e "condicionado" são a
+    // "climatização"; "som" é o "Fusion") não conta como assunto
+    var nome = function (w) { return d._eq[w] || (SINONIMOS[w] || []).some(function (x) { return d._eq[raiz(x)]; }); };
+    // "funciona" só conta como assunto se o título do trecho for o funcionamento ("Funcionamento" do porão); as outras, no título ou no texto
+    return ws.some(function (w) {
+      if (nome(w)) return false;
+      if (SEM_ASSUNTO[w]) return secao.indexOf(' funcionamento ') !== -1;
+      return d._tf[w] || (SINONIMOS[w] || []).some(function (x) { return d._tf[raiz(x)]; });
+    });
+  }
+  function respostaBase(q, p, key) {
     var hits = buscaBase(q, 3); if (!hits.length) return null;
-    var h = hits[0].d, outros = hits.slice(1).filter(function (x) { return x.d.fonte !== h.fonte || x.d.secao !== h.secao; });
+    // com resposta pronta (key), vale o 1º dos 3 trechos que serve ao assunto; o de segurança do topo (a pergunta o nomeia) passa direto
+    var topo = !key || hits[0].d.seguranca ? hits[0] : hits.filter(function (x) { return trechoServe(key, q, x.d); })[0];
+    if (!topo) return null;
+    var h = topo.d, outros = hits.filter(function (x) { return x !== topo && (x.d.fonte !== h.fonte || x.d.secao !== h.secao); });
     // Trecho de segurança sai inteiro, com o rótulo do procedimento padrão e a nota da etiqueta no fim (CONTRATO §1.5): o corte de
     // 480 letras tirava os dois do §1 e do protocolo do Seafire (560) e a nota do §3 (492). O gerador limita esses trechos a 800.
     var text = trechoCurto(h.texto, h.seguranca ? MAX_SEGURANCA : 480) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
@@ -577,7 +618,7 @@
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
-    if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
+    if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     a.key = key;
     return a;
   }
