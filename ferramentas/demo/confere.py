@@ -6,7 +6,8 @@ violações de cada uma (caminho e motivo). São as da §6.3 e, no fim, as invar
 não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 ("programe" perto de MMSI) e na SEM_INDICATIVO
 (indicativo, HEX ID, telefone e lugar de salvatagem como campo, §0.2). Depois, a EMBARCACAO (§1.2, a do C4 da §6.2: os campos
 completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
-§1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC). A REGISTRO cruza o registro com o
+§1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC) e a SEGURANCA_SEM_MODELO (revisão 7 do C5, trava
+17: fabricante, modelo e validade do EPIRB e do Seafire, e lugar a bordo, fora das telas de Equipamentos, Documentos e Leme). A REGISTRO cruza o registro com o
 `numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova, e o dado de hoje
 fica congelado na PENDENTES até o C7). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
 JANELA (porao_no_normal: o teto é o normal.ate do porão, sem número solto, também dentro de janela) e o lugar de salvatagem em
@@ -212,6 +213,18 @@ TIPOS_CHECKLIST = ('saida', 'chegada', 'abastecimento', 'fundeio')
 SISTEMAS_EXTRA = {'casco', 'tanques'}
 SEGURANCA_AGENDA = {'epirb-teste', 'seafire-inspecao', 'porao-teste'}
 EQUIP_SEGURANCA = ('epirb', 'seafire')   # fabricante, modelo e validade só em Equipamentos, Leme e Documentos (trava 17)
+# Revisão 7 do C5 (SEGURANCA_SEM_MODELO): onde os nomes valem. Equipamentos, Documentos e Leme no D (o Leme lê a agenda e o agendaFalta;
+# a AGENDA cuida do campo equip dela) e, nas fontes do Drive, o inventário, o controle de documentos e a agenda. Em todo o resto
+# (guias, protocolo, base, FAQ, ficha, páginas de fonte) fabricante, modelo e validade do EPIRB e do Seafire não entram.
+D_EQUIP_DOC_LEME = ('equipamentos', 'documentos', 'agenda', 'agendaFalta', 'agendaFonte')
+FONTES_EQUIP_DOC_LEME = ('Inventário de bordo.csv', 'Controle de documentos.csv', 'Agenda preditiva.csv')
+SECAO_SEAFIRE = 'Incêndio · Seafire'   # título da seção do protocolo (§1.5): único lugar, fora dessas telas, onde a palavra "Seafire" aparece
+GUIAS_DE_SEGURANCA = ('g_seafire', 'g_epirb', 'protocolo')   # guias inteiros de segurança (chaves de drive.arquivos)
+FAQ_DE_SEGURANCA = re.compile(r'(?:EM|SF|EP)-\d+')
+_MESES = 'janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro'
+# data ou prazo de validade num texto de segurança: dd/mm, dd/mm/aaaa, aaaa-mm-dd, ano, nome de mês, ou "validade/vence…" com número perto
+R_VALIDADE = re.compile(r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:19|20)\d{2}\b|\b(?:' + _MESES + r')\b'
+                        r'|(?:venc\w*|v[aá]lid\w*|expir\w*)[^.!?;\n]{0,40}\d', re.I)
 # §0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo (SEM_INDICATIVO). Pelas palavras
 # do nome da chave (camelCase, '_' e '-' separam; sem acento): 'hexId' → hex, id, e pelas junções delas (palavras_juntas: 'WhatsApp'
 # → whats, app, whatsapp, que a grafia da marca separa). O indicativo vale só em protocolos (o texto de
@@ -1868,6 +1881,53 @@ def a_seguranca_curta(X):
             for i, t in enumerate(X.trechos) if t.get('seguranca') and len(t.get('texto', '')) > SEGURANCA_MAX_LETRAS]
 
 
+def a_seguranca_sem_modelo(X):
+    """Trava 17 (PROMPT §2.3; CONTRATO §1.4): fabricante, modelo e validade do EPIRB e do Seafire só em Equipamentos, Leme e Documentos.
+    Revisão 7 do C5: a PROTOCOLO_LIMPO e a AGENDA só olhavam o D.protocolos e o campo equip da agenda; o nome, o modelo ou a validade
+    escritos num guia, no protocolo, na base, no FAQ ou numa página de fonte passavam. Três regras:
+      (1) fabricante e modelo (cada palavra e as formas juntas, nomes_seguranca) em todo texto do D, da base, do FAQ e das fontes, fora
+          as telas acima (D_EQUIP_DOC_LEME, FONTES_EQUIP_DOC_LEME) e o título «Incêndio · Seafire» do protocolo (§1.5);
+      (2) validade (R_VALIDADE: data, ano, mês, «vence em 180 dias») nos guias inteiros de segurança (g_seafire, g_epirb e o protocolo:
+          trechos, itens EM/SF/EP do FAQ, páginas de fonte) e no D.protocolos: o prazo vem da agenda e do documento, que o rebase mantém;
+      (3) lugar a bordo (a lista da LOCAL_SEGURANCA, em qualquer frase) nos mesmos guias: a LOCAL_VOCAB só pega o lugar na frase do
+          equipamento («Fica no paiol de proa.» num guia do EPIRB passava)."""
+    out = []
+    ids = set(EQUIP_SEGURANCA) | {e.get('id') for e in X.equip if e.get('seguranca') is True}
+    nomes = []
+    for i, n in nomes_equip(X):
+        if i in ids and n.lower() not in [x.lower() for x in nomes]:
+            nomes.append(n)
+    for cam, s in X.todos():
+        if cam.split('.')[0].split('[')[0] in D_EQUIP_DOC_LEME or (cam.startswith('fontes/') and cam.endswith(FONTES_EQUIP_DOC_LEME)):
+            continue
+        t = s.replace(SECAO_SEAFIRE, ' ' * len(SECAO_SEAFIRE))
+        achados = [m for n in nomes for m in acha_nomes(t, n)]
+        for m in achados:   # uma violação por ocorrência: o nome dentro de outro («Ocean» em «Ocean Signal») não conta duas vezes
+            a, b = m.span(1)
+            if not any(c <= a and b <= d and (c, d) != (a, b) for c, d in (x.span(1) for x in achados)):
+                out.append('%s: fabricante ou modelo de equipamento de segurança [%s] «%s»' % (cam, m.group(1), trecho(t, m)))
+
+    def valida(cam, s, lugar=True):
+        out.extend('%s: validade ou data num texto do EPIRB, do Seafire ou do protocolo [%s] «%s»' % (cam, casado(m), trecho(s, m)) for m in R_VALIDADE.finditer(s))
+        if lugar:
+            out.extend('%s: lugar a bordo num texto do EPIRB, do Seafire ou do protocolo [%s] «%s»' % (cam, casado(m), trecho(s, m)) for m in X.lugar.finditer(s))
+
+    guias = {X.arq[k] for k in GUIAS_DE_SEGURANCA if X.arq.get(k)}
+    for i, t in enumerate(X.trechos):
+        if t.get('fonte') in guias:
+            valida('base:trechos[%d] (%s · %s)' % (i, t.get('fonte'), t.get('secao')), ' '.join(str(t.get(k) or '') for k in ('fonte', 'secao', 'texto', 'equip')))
+    for it in X.itens_faq:
+        if FAQ_DE_SEGURANCA.fullmatch(str(it.get('id', ''))):
+            for cam, s in textos(it, 'faq:%s' % it.get('id')):
+                valida(cam, s)
+    for rel, txt in sorted(X.fontes.items()):
+        if any(rel.endswith('/' + g + '.html') for g in guias):
+            valida('fontes/' + rel, re.sub(r'<[^>]*>', '\n', txt))
+    for cam, s in textos(X.D.get('protocolos'), 'protocolos'):
+        valida(cam, s, lugar=False)   # o lugar a bordo do protocolos é da PROTOCOLO_LIMPO
+    return out
+
+
 def palavras_de_nome(X):
     """Palavras (norm, 3 letras ou mais) que nomeiam equipamento ou sistema, tiradas do próprio dado: nome, fabricante, modelo e
     palavras de cada equipamento; fonte e equip de cada trecho da base; títulos dos guias; e o título de toda seção sem `ident` ("Ligar",
@@ -2119,6 +2179,7 @@ ASSERCOES = [
     ('EMENDA_ROTA', a_emenda_rota), ('PISO', a_piso), ('HORAS', a_horas), ('ROTA', a_rota), ('DIA_DE_BORDO', a_dia_de_bordo),
     ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
     ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('IDENT_BASE', a_ident_base), ('NOTA_ETIQUETA', a_nota_etiqueta),
+    ('SEGURANCA_SEM_MODELO', a_seguranca_sem_modelo),
     ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).

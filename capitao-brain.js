@@ -378,8 +378,12 @@
   });
 
   // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
+  // Revisão 7 do C5: "esgoto" saiu. "Bomba de esgoto" também é a de esgotamento do porão em português de bordo, e "a bomba de esgoto não
+  // para" é relato de água a bordo: tem de seguir a rota 'porao' (local, sem IA), não ir à nuvem. "Água doce" saiu por ser código morto
+  // (a rota 'tanques', mais acima, já pega a pergunta). Quem fica tem guia na base (por si ou por sinônimo: impelidor = impeller/rotor) ou é
+  // outra bomba sem relação com o porão (circulação, resfriamento, pressurização): essas vão ao guia ou à IA, e não à resposta do porão.
   var OUTRA_BOMBA = ['salgada', 'rotor', 'impeller', 'impelidor', 'circulacao', 'arrefecimento', 'refrigeracao', 'resfriamento', 'climatiza', 'condicionado', 'gerador', ' onan ',
-    'motor', 'seakeeper', 'estabilizador', 'giroscop', 'piloto', 'hidraulic', 'dessaliniz', 'agua doce', 'esgoto', 'lavagem', 'pressuriz', 'oleo', 'pressao'];
+    'motor', 'seakeeper', 'estabilizador', 'giroscop', 'piloto', 'hidraulic', 'dessaliniz', 'lavagem', 'pressuriz', 'oleo', 'pressao'];
   var EQUIP = ['seakeeper', 'estabilizador', 'climatiza', 'ar condicionado', 'ar-condicionado', 'gerador', ' onan ', 'piloto', 'plotter', 'radar', 'garmin', ' vhf', ' ais ', 'epirb', 'fusion', 'audio', 'dessaliniz', 'bomba', 'porao', 'casco', 'anodo', 'zinco', 'bateria', 'tensao', 'tensoes', 'seafire', 'volvo'];
   // "diagnóstico", "status da IA", "teste da IA", "a IA está ligada?" — a frase inteira, para não pegar pergunta comum.
   var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda |rode |mostrar |mostra |mostre |me mostra |me mostre |me da |ver )?(?:o |um )?diagnostico(?: da ia| do app| do aplicativo| do capitao| completo)?|(?:qual e |qual )?(?:o )?(?:status|estado) (?:da ia|do app|do aplicativo)|teste da ia|testar a ia|testa a ia|teste a ia|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:(?:esta|ta) )?(?:ligada|funcionando|ativa|ativada|on)|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:nao )?(?:(?:esta|ta) )?(?:funciona|funcionando|responde|respondendo)) $/;
@@ -517,21 +521,30 @@
   // "manual" (título "Disparo manual") e "mar" ("Homem ao mar") são palavras comuns demais para nomear: "onde fica o manual do motor"
   // devolvia o disparo manual do Seafire e "tem vista para o mar?", o homem ao mar. "disparo" e "homem" continuam nomeando; "pessoa ao
   // mar" é o `ident` do protocolo com `identCom`.
+  // Revisão 7 do C5: a identidade depende do guia. Num guia TODO de segurança (g_seafire, g_epirb, protocolo: todo trecho da fonte tem
+  // `seguranca`) o equipamento é o assunto, e fonte, equip e título nomeiam o trecho. Num guia MISTO (o §4 dos motores e do porão, o §1 e o
+  // §5 dos eletrônicos, o §2 do AIS, o checklist de saída) a seção de segurança é uma entre várias: o nome do equipamento não a nomeia, só o
+  // título dela, sem o nome do equipamento. Antes, "onde fica o plotter", "como ver o radar" e "como ver o garmin" (o equip do g_eletronicos
+  // traz Garmin, Fusion e Icom) devolviam o §1 "Plotter: homem ao mar", e "onde fica o motor", o §4 da pressão de óleo, com `seguranca`:
+  // trecho de segurança no topo barra a IA, e a fala lê o trecho inteiro.
   var IDENT_GENERICAS = {}; tokens('guia bordo depois caso antes sistema procedimento padrao confirmar protocolo emergencia manual mar').forEach(function (w) { IDENT_GENERICAS[w] = 1; });
   function carregaBase() {
     if (KB.docs || KB.carregando || !window.fetch) return;
     KB.carregando = true;
     fetch('./base-conhecimento.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var lista = j && j.trechos; if (!lista || !lista.length) return;
-      var soma = 0, df = {}, nomes = {};
+      var soma = 0, df = {}, nomes = {}, todoSeguro = {};
+      lista.forEach(function (d) { if (todoSeguro[d.fonte] !== 0) todoSeguro[d.fonte] = d.seguranca ? 1 : 0; });
       lista.forEach(function (d) {
         var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + indexavel(d.texto) + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
         d._lista = /invent[aá]rio|cat[aá]logo|[íi]ndice/i.test(d.fonte || '');
-        d._id = {}; tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
+        d._eq = {}; tokens((d.fonte || '') + ' ' + (d.equip || '')).forEach(function (w) { if (!IDENT_GENERICAS[w] && !/^\d/.test(w)) { d._eq[w] = 1; nomes[w] = 1; } });
+        d._id = {};
+        if (todoSeguro[d.fonte]) tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
+        else tokens(sec).forEach(function (w) { if (!IDENT_GENERICAS[w] && !d._eq[w]) d._id[w] = 1; });
         // `ident` = palavras de acionamento (valem mesmo as genéricas, como "mar" em "pessoa ao mar"); com `identCom`, só junto de uma delas na pergunta
         d._ia = {}; tokens(d.ident || '').forEach(function (w) { d._ia[w] = 1; });
         d._ic = null; if (d.identCom) { d._ic = {}; tokens(d.identCom).forEach(function (w) { d._ic[w] = 1; }); }
-        d._eq = {}; tokens((d.fonte || '') + ' ' + (d.equip || '')).forEach(function (w) { if (!IDENT_GENERICAS[w] && !/^\d/.test(w)) { d._eq[w] = 1; nomes[w] = 1; } });
         d._en = (' ' + d.texto.toLowerCase() + ' ').split(/\b(?:the|and|with|to|of|is|are|your|from)\b/).length > 6;
         tk.forEach(function (w) { tf[w] = (tf[w] || 0) + 1; });
         Object.keys(tf).forEach(function (w) { df[w] = (df[w] || 0) + 1; });

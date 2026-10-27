@@ -247,6 +247,8 @@ def copias():
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
 CONST = {'NOTA_ETIQUETA': G.NOTA_ETIQUETA, 'DIAS_MESES': G.DIAS_MESES, 'LIMITES': G.LIMITES}   # as constantes que o gerador passa (C5: LIMITES)
 ROTULO_FIM = C.rotulo_fim()   # os textos fixos do confere.py (ROTULO e NOTA), nunca os do dado
+# O trecho do g_epirb §1 · Acionar: onde as amostras da trava 17 (SEGURANCA_SEM_MODELO) entram.
+T_EPIRB1 = next(i for i, t in enumerate(G.base_conhecimento()['trechos']) if t['fonte'] == G.ARQ['g_epirb'] and t['secao'].startswith('1 · '))
 # O trecho do DSC (g_eletronicos §5, MMSI_RADIO desde o C5): onde as amostras de MMSI e de afirmação entram.
 T_DSC = next(i for i, t in enumerate(G.base_conhecimento()['trechos']) if t['fonte'] == G.ARQ['g_eletronicos'] and t['secao'].startswith('5 · '))
 
@@ -441,6 +443,9 @@ AMOSTRAS = {
     # (C4) a embarcação do §1.2: lotacao ≥ pessoasBordo
     'EMBARCACAO': (lambda r: (lambda k: (k['D']['embarcacao'].update({'lotacao': 3 if r else 12}), k)[1])(hoje()),
                    'embarcacao: lotacao (3) < pessoasBordo (4)'),
+    # (revisão 7 do C5) trava 17: o modelo do EPIRB num guia (g_epirb §1) passava no gerador; só o D.protocolos e a agenda eram conferidos
+    'SEGURANCA_SEM_MODELO': (lambda r: no_trecho('g_epirb', '1 · ', ' O modelo é o Ocean Signal SafeSea E100G.' if r else ' Confira a etiqueta do equipamento.'),
+                             'base:trechos[%d].texto: fabricante ou modelo de equipamento de segurança [Ocean Signal]' % T_EPIRB1),
     # (revisão 3 do C4) o Seakeeper 3 é de 12 V DC: o g_seakeeper §1 de antes ("Sem AC, o display avisa…") reprova
     'ESTABILIZADOR_12V': (lambda r: com_trecho({'fonte': G.GUIAS['g_seakeeper']['titulo'], 'secao': '1 · Teste', 'equip': 'Estabilizador Seakeeper',
                                                 'texto': 'Sem AC, o display avisa e o volante não acelera.' if r else 'Com o banco de 12 V carregado.'}),
@@ -1098,6 +1103,14 @@ def com_base(i, extra):
     return k
 
 
+def no_trecho(chave, sec, extra):
+    """hoje() com `extra` no fim do texto do trecho `sec` (começo do título) do guia `chave` (g_epirb, g_seafire, protocolo)."""
+    k = hoje()
+    i = next(i for i, t in enumerate(k['B']['trechos']) if t['fonte'] == G.ARQ[chave] and t['secao'].startswith(sec))
+    poe(k['B']['trechos'], i, texto=k['B']['trechos'][i]['texto'] + extra)
+    return k
+
+
 def com_faq_passo(extra):
     """hoje() com `extra` no fim do passo do DSC do D.faq de eletrônicos (o g_eletronicos §5, MMSI_RADIO desde o C5)."""
     k = hoje()
@@ -1345,6 +1358,80 @@ def rotulos_c2():
     antiga = re.compile(r'Nada inventado|SEM DADOS|SEM LEITURA|MANUAL NO DRIVE|A CONFERIR|A CONFIRMAR|\d{2}/\d{2}/\d{4}|drive\.google|docs\.google|[A-Za-z0-9_-]{25,}')
     ok('LEIA-ME: sem a regra antiga (SEM DADOS, MANUAL NO DRIVE…), sem data, sem link nem ID do Drive e com o procedimento padrão',
        not antiga.search(leia) and C.ROTULO in leia and arq['leiame'] in leia, antiga.findall(leia)[:3])
+
+
+# Revisão 7 do C5 (trava 17, PROMPT §2.3): fabricante, modelo e validade do EPIRB e do Seafire só em Equipamentos, Leme e Documentos.
+# Antes, a PROTOCOLO_LIMPO (o D.protocolos) e a AGENDA (o campo equip) eram as únicas guardas: o modelo, a validade ou o lugar escritos
+# num guia, no protocolo, na base, no FAQ ou numa página de fonte passavam. A SEGURANCA_SEM_MODELO olha tudo, menos as telas que podem.
+SSM = 'SEGURANCA_SEM_MODELO'
+MOD = 'fabricante ou modelo de equipamento de segurança'
+VAL = 'validade ou data num texto do EPIRB, do Seafire ou do protocolo'
+LUG = 'lugar a bordo num texto do EPIRB, do Seafire ou do protocolo'
+EXTRAS += [
+    (SSM, 'modelo do Seafire no g_seafire §3: «Sistema Seafire FD 300M»', lambda r: no_trecho('g_seafire', '3 · ', ' Sistema Seafire FD 300M.' if r else ' Veja a etiqueta.'),
+     MOD + ' [FD 300M]'),
+    (SSM, 'modelo do Seafire no trecho «Incêndio · Seafire» do protocolo', lambda r: no_trecho('protocolo', 'Incêndio', ' Modelo FD 300M da Seafire.' if r else ' Veja a etiqueta.'),
+     MOD + ' [FD 300M]'),
+    (SSM, 'modelo do EPIRB na Salvatagem do protocolo', lambda r: no_trecho('protocolo', 'Salvatagem', ' EPIRB SafeSea E100G.' if r else ' Veja a etiqueta.'),
+     MOD + ' [SafeSea E100G]'),
+    (SSM, 'pedaço do modelo do EPIRB no g_epirb §3: «SafeSea»', lambda r: no_trecho('g_epirb', '3 · ', ' Modelo SafeSea.' if r else ' Veja a etiqueta.'), MOD + ' [SafeSea]'),
+    (SSM, 'fabricante do Seafire no g_seafire §1', lambda r: no_trecho('g_seafire', '1 · ', ' Fabricante Seafire.' if r else ' Veja a etiqueta.'), MOD + ' [Seafire]'),
+    (SSM, 'forma junta do modelo: «FD-300M» num trecho de outro guia (o resto da base também vale)',
+     lambda r: com_base(T_DSC, ' Use o FD-300M.' if r else ''), MOD + ' [FD-300M]'),
+    (SSM, 'fabricante do EPIRB numa página de fonte do Drive (g_epirb)',
+     lambda r: com_fonte_final('Guia de bordo — EPIRB.html', '<p>Fabricante Ocean Signal.</p>' if r else ''), 'fontes/01 Manuais e guias de bordo/Guia de bordo — EPIRB.html: ' + MOD + ' [Ocean Signal]'),
+    (SSM, 'modelo do EPIRB numa página de fonte que não é de segurança (checklist)',
+     lambda r: com_fonte_final('Checklist de bordo.html', '<p>EPIRB E100G.</p>' if r else ''), 'fontes/01 Manuais e guias de bordo/Checklist de bordo.html: ' + MOD + ' [E100G]'),
+    (SSM, 'a palavra «Seafire» no diário (só o título «Incêndio · Seafire» do protocolo vale)', lambda r: mais_texto(hoje(), ' Seafire conferido.' if r else ''),
+     'diario[0].t: ' + MOD + ' [Seafire]'),
+    (SSM, 'modelo do EPIRB no FAQ de segurança (EP-04)',
+     lambda r: (lambda k: (k.update({'faq': {'itens': [{'id': 'EP-04', 'titulo': 'Validade', 'resposta': ('Modelo SafeSea. ' if r else 'Confira a data. ') + ROTULO_FIM, 'seguranca': True}]}}), k)[1])(hoje()),
+     'faq:itens[0].resposta: ' + MOD + ' [SafeSea]'),
+    (SSM, 'validade no FAQ de segurança (EP-04): «Validade 03/2028»',
+     lambda r: (lambda k: (k.update({'faq': {'itens': [{'id': 'EP-04', 'titulo': 'Validade', 'resposta': ('Validade 03/2028. ' if r else 'Confira a data. ') + ROTULO_FIM, 'seguranca': True}]}}), k)[1])(hoje()),
+     'faq:EP-04.resposta: ' + VAL),
+    (SSM, 'modelo do EPIRB no D.protocolos (junto da PROTOCOLO_LIMPO)', lambda r: protocolo('mob', None, 'Acione o SafeSea.' if r else 'Acione o EPIRB.'), 'protocolos.mob[3]: ' + MOD + ' [SafeSea]'),
+    (SSM, 'validade com data no g_epirb §4: «Validade 12/03/2027»', lambda r: no_trecho('g_epirb', '4 · ', ' Validade 12/03/2027.' if r else ' Veja a etiqueta.'), VAL),
+    (SSM, 'validade com data no g_seafire §4: «Válido até 30/11/2027»', lambda r: no_trecho('g_seafire', '4 · ', ' Válido até 30/11/2027.' if r else ' Veja a etiqueta.'), VAL),
+    (SSM, 'validade em dias no g_epirb §4: «Vence em 180 dias»', lambda r: no_trecho('g_epirb', '4 · ', ' Vence em 180 dias.' if r else ' Veja a etiqueta.'), VAL),
+    (SSM, 'validade por mês e ano no g_epirb §4: «março de 2028»', lambda r: no_trecho('g_epirb', '4 · ', ' Validade: março de 2028.' if r else ' Veja a etiqueta.'), VAL),
+    (SSM, 'validade só com o mês e o ano em número: «válida até 03/2028»', lambda r: no_trecho('g_epirb', '4 · ', ' Bateria válida até 03/2028.' if r else ' Veja a etiqueta.'), VAL),
+    (SSM, 'validade no protocolo: «vence em 2027»', lambda r: protocolo('mob', None, 'O EPIRB vence em 2027.' if r else 'Acione o EPIRB.'), 'protocolos.mob[3]: ' + VAL),
+    (SSM, 'validade numa página de fonte do protocolo', lambda r: com_fonte_final('Protocolo de emergência — procedimento padrão.html', '<p>Validade 12/03/2027.</p>' if r else ''),
+     'fontes/07 Protocolos de emergência/Protocolo de emergência — procedimento padrão.html: ' + VAL),
+    (SSM, 'lugar do EPIRB sem o equipamento na frase: «Fica no paiol de proa»', lambda r: no_trecho('g_epirb', '2 · ', ' Fica no paiol de proa.' if r else ' Veja a etiqueta.'), LUG),
+    (SSM, 'lugar numa página de fonte do g_seafire: «Fica na praça de máquinas»', lambda r: com_fonte_final('Guia de bordo — Sistema fixo de incêndio.html', '<p>Fica na praça de máquinas.</p>' if r else ''),
+     'fontes/01 Manuais e guias de bordo/Guia de bordo — Sistema fixo de incêndio.html: ' + LUG),
+]
+
+
+def seguranca_sem_modelo():
+    print('Revisão 7 do C5 (trava 17): fabricante, modelo e validade do EPIRB e do Seafire só em Equipamentos, Leme e Documentos')
+    bom = len(verifica(hoje())[SSM])
+    ok('SEGURANCA_SEM_MODELO: o dado de hoje não acusa nada (o título «Incêndio · Seafire» do protocolo, o inventário e os equipamentos valem)', bom == 0, verifica(hoje())[SSM][:3])
+    # o que pode: Equipamentos (D.equipamentos), Documentos (D.documentos), Leme (D.agenda) e os CSV do inventário, dos documentos e da agenda
+    k = hoje()
+    poe(k['D']['equipamentos'], 7, nota=k['D']['equipamentos'][7].get('nota', '') + ' SafeSea E100G, Ocean Signal.')
+    k['D']['documentos'].append({'id': 'doc-teste', 'nome': 'Certificado do EPIRB SafeSea E100G', 'vence': '12/03/2027'})
+    k['D']['agenda'].append({'id': 'x', 't': 'Teste do EPIRB SafeSea', 'sistema': 'epirb'})
+    for sufixo, extra in (('Inventário de bordo.csv', '\nEPIRB,Ocean Signal,SafeSea E100G\n'), ('Controle de documentos.csv', '\nCertificado SafeSea E100G,12/03/2027\n'),
+                          ('Agenda preditiva.csv', '\nTeste do EPIRB SafeSea\n')):
+        rel = next(r for r in sorted(k['F']) if r.endswith(sufixo))
+        k['F'][rel] += extra
+    V = verifica(k)[SSM]
+    ok('SEGURANCA_SEM_MODELO: fabricante, modelo e validade em Equipamentos, Documentos e Leme (D e CSV do inventário, dos documentos e da agenda) não acusam', not V, V[:3])
+    # a validade e o lugar só valem nos guias inteiros de segurança: «a cada 12 meses» e a «praça de máquinas» dos outros guias passam
+    V = verifica(no_trecho('g_motores', '7 · ', ' Revisão em março de 2028, na praça de máquinas.'))[SSM]
+    ok('SEGURANCA_SEM_MODELO: a validade e o lugar de um guia que não é de segurança (g_motores §7) não acusam', len(V) == bom, V[:3])
+    # o protocolo de hoje (C6) e os 16 equipamentos (C5) juntos passam
+    k = com_equip_c5(hoje())
+    k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
+    V = verifica(k)[SSM]
+    ok('SEGURANCA_SEM_MODELO: o protocolos do §1.3 (C6) com os equipamentos do §1.4 passa', not V, V[:3])
+    # a guarda vale pelo id, não pela marca `seguranca` que o dado carrega
+    k = mob_sem_marca('Acione o SafeSea.')
+    V = verifica(k)[SSM]
+    ok('SEGURANCA_SEM_MODELO: vale pelo id (epirb, seafire), também sem a marca `seguranca` nos equipamentos', any('[SafeSea]' in m for m in V), V[:3])
 
 
 def amostras():
@@ -1683,6 +1770,7 @@ def main():
         rotulos_c2()
         amostras()
         porao_e_lugar()
+        seguranca_sem_modelo()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))

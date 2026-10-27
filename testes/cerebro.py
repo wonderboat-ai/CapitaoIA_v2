@@ -122,7 +122,8 @@ CASOS = [
     ('alarme da bomba de água salgada', 'base'), ('como ligar a bomba de água salgada', 'base'), ('como desligar a bomba de água salgada', 'base'),
     ('como ligar a bomba da climatização', 'base'), ('como desligar a bomba da climatização', 'base'), ('como trocar o rotor da bomba do gerador', 'base'),
     ('como trocar a bomba de óleo', 'base'), ('a bomba de circulação', 'fallback'),
-    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'porao'), ('como ligar as bombas de porão', 'base'),
+    # (revisão 7: "como ligar as bombas de porão" já não traz o §4 "Água entrando" ao topo; fica a resposta pronta do porão, local como antes)
+    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'porao'), ('como ligar as bombas de porão', 'porao'),
     ('como trocar a bateria de partida', 'base'), ('como verificar a bateria de partida', 'base'), ('bateria de partida', 'eletrico'),
     ('o motor não pega, a bateria de partida está fraca', 'motores'),
     ('o disjuntor caiu, qual o procedimento', 'fallback'), ('a bateria caiu, procedimento', 'eletrico'), ('o gerador caiu, procedimento', 'gerador'),
@@ -134,6 +135,27 @@ CASOS = [
     # as quatro perguntas de religar depois do disparo e o alarme de âncora ficam no trecho de segurança / no plotter (seção na verificação)
     ('como religar o gerador depois que o sistema fixo disparou', 'base'), ('como ligar o gerador depois do disparo do sistema fixo', 'base'),
     ('o sistema fixo disparou, como religo o gerador?', 'base'), ('como abrir o motor depois que o sistema fixo disparou', 'base'),
+    # Revisão 7 do C5 (achados da revisão 6). (1) A identidade do trecho de segurança num guia MISTO (o §4 dos motores e do porão, o §1 e o §5
+    # dos eletrônicos, o §2 do AIS, o checklist) é só o título dele, sem o nome do equipamento: o equip do g_eletronicos traz Garmin, Fusion e
+    # Icom, e "onde fica o plotter", "como ver o radar" ou "como ver o garmin" abriam o §1 "Plotter: homem ao mar" (e "onde fica o motor", o
+    # §4 da pressão de óleo), com `seguranca`, e barravam a IA. Agora vão à resposta pronta ou ao guia certo (a verificação "revisão 7" mais
+    # abaixo confere que nenhum traz trecho de segurança); o título ainda nomeia ("pressão de óleo baixa", "água entrando", "DSC").
+    ('onde fica o plotter', 'base'), ('como ver o radar', 'eletronicos'), ('como ver o garmin', 'eletronicos'), ('como ver o icom', 'fallback'),
+    ('como ver o fusion', 'audio'), ('como ver o som', 'audio'), ('como ver o áudio', 'audio'), ('onde fica o motor', 'motores'),
+    ('como ver os navios no radar', 'eletronicos'), ('como ver o radar no plotter', 'base'), ('como ver a posição no plotter', 'base'),
+    ('como ver o motor no garmin', 'eletronicos'), ('como ver o gerador no garmin', 'gerador'),
+    ('como funciona a identificação do transponder', 'base'), ('o que fazer antes de largar', 'base'),
+    # (2) "bomba de esgoto" é a de esgotamento do porão: relato de água a bordo, local (a rota 'porao'), não a nuvem. As outras bombas com
+    # guia seguem o guia ou a rota do assunto (cada palavra do OUTRA_BOMBA tem um caso aqui); sem guia (pressurização, circulação, lavagem), IA.
+    ('a bomba de esgoto não para', 'porao'), ('a bomba de esgoto está enchendo de água', 'porao'), ('bomba de esgoto', 'porao'),
+    ('bomba do estabilizador', 'estabilizador'), ('alarme da bomba do seakeeper', 'base'), ('bomba do piloto automático', 'eletronicos'),
+    ('bomba hidráulica', 'base'), ('a bomba do gerador', 'gerador'), ('bomba do dessalinizador', 'dessalinizador'),
+    ('como ligar a bomba do dessalinizador', 'base'), ('bomba de pressurização', 'fallback'), ('a bomba de circulação não funciona', 'fallback'),
+    ('bomba de lavagem', 'fallback'), ('como funciona a bomba de porão', 'base'),
+    # (3) as palavras genéricas da identidade (IDENT_GENERICAS) não nomeiam o trecho de segurança: "em caso de…" não é o Seafire "Em caso de
+    # fogo", "procedimento padrão"/"protocolo de bordo"/"confirmar" não são o protocolo de emergência, "depois" não é o "Depois da descarga"
+    ('em caso de alarme', 'fallback'), ('em caso de falha do motor', 'motores'), ('qual o procedimento padrão', 'fallback'),
+    ('qual o protocolo de bordo', 'fallback'), ('confirmar com o protocolo de bordo', 'fallback'), ('confirmar protocolo', 'fallback'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -144,7 +166,9 @@ PEDE_IA = {
     'a IA não está funcionando': False, 'qual a rajada máxima que o barco aguenta?': True,
     # revisão do C5: base com trecho de segurança no topo (o respostaBase marca a.seguranca) e a rota seafire ficam no aparelho
     'teste da baliza': False, 'como acionar o disparo manual do sistema fixo?': False, 'supressão': False, 'botão distress': False,
-    'transponder em-trak': False,
+    # (revisão 7: a pergunta do cartão do AIS deixou de trazer o §2 "Identificação", de segurança, ao topo: o topo é o §3 do guia do AIS, sem
+    # `seguranca`, e a IA responde a partir dele)
+    'transponder em-trak': True,
     # revisão 2 do C5: o 1º trecho do buscaBase de segurança barra a IA qualquer que seja a chave (aqui, a saudação)
     'como você me ajuda com o teste da baliza?': False, 'o que você sabe sobre o teste da baliza?': False,
     'o que fazer depois do disparo do sistema fixo': False, 'o sistema fixo disparou': False,
@@ -179,6 +203,17 @@ PEDE_IA = {
     'onde fica o manual do motor': False, 'tem vista para o mar?': True, 'qual a vista do mar': True, 'a temperatura do mar caiu': True,
     'pessoa ao mar': False,
     'como religar o gerador depois que o sistema fixo disparou': False, 'o sistema fixo disparou, como religo o gerador?': False,
+    # revisão 7 do C5: a resposta pronta e a bomba de esgoto (rota 'porao') ficam no aparelho; o trecho do guia e a pergunta sem resposta vão à IA
+    'onde fica o plotter': True, 'como ver o radar': False, 'como ver o garmin': False, 'como ver o icom': True, 'como ver o fusion': False,
+    'como ver o som': False, 'como ver o áudio': False, 'onde fica o motor': False, 'como ver os navios no radar': False,
+    'como ver o radar no plotter': True, 'como ver a posição no plotter': True, 'como ver o motor no garmin': False,
+    'como ver o gerador no garmin': False, 'como funciona a identificação do transponder': False, 'o que fazer antes de largar': False,
+    'a bomba de esgoto não para': False, 'a bomba de esgoto está enchendo de água': False, 'bomba de esgoto': False,
+    'bomba do estabilizador': False, 'alarme da bomba do seakeeper': True, 'bomba do piloto automático': False, 'bomba hidráulica': True,
+    'a bomba do gerador': False, 'bomba do dessalinizador': False, 'como ligar a bomba do dessalinizador': True, 'bomba de pressurização': True,
+    'a bomba de circulação não funciona': True, 'bomba de lavagem': True, 'como funciona a bomba de porão': True,
+    'em caso de alarme': True, 'em caso de falha do motor': False, 'qual o procedimento padrão': True, 'qual o protocolo de bordo': True,
+    'confirmar com o protocolo de bordo': True, 'confirmar protocolo': True,
 }
 
 
@@ -314,7 +349,49 @@ def main():
               arLigar: onde(['como ligar o ar condicionado'], 'g_clima', '1 · Ligar'),
               arFiltro: onde(['trocar o filtro do ar condicionado'], 'g_clima', '3 · Alarme de fluxo'),
               mar: onde(['pessoa ao mar', 'pessoa ao mar, o que faço'], 'protocolo', 'Homem ao mar', true) }; }""")
+        # Revisão 7 do C5: (a) pergunta que só diz o nome do equipamento (plotter, radar, Garmin, Icom, Fusion, som, áudio, motor) nunca traz
+        # trecho de segurança ao topo nem à resposta, e o que vai ao guia ou à IA não é barrado por `seguranca`; (b) num guia misto o título
+        # do trecho de segurança ainda o nomeia (a pressão de óleo baixa, a água entrando, o DSC, a identificação do AIS, o "antes de largar");
+        # (c) a seção MOSTRADA das perguntas de bomba que a revisão 6 deixava sem teste (dessalinizador, porão, estabilizador).
+        rev7 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
+            const resp = (q) => B.answer(q, { platform: 'app', commit: false });
+            const nome = ['onde fica o plotter', 'como ver o radar', 'como ver o garmin', 'como ver o icom', 'como ver o fusion', 'como ver o som', 'como ver o áudio',
+              'onde fica o motor', 'como ver os navios no radar', 'como ver os barcos no radar', 'como ver a água no radar', 'como ver o radar no plotter',
+              'como ver a posição no plotter', 'como ver o motor no garmin', 'como ver o gerador no garmin']
+              .filter((q) => { const a = resp(q); return a.seguranca || h(q).seguranca || ((a.key === 'base' || a.key === 'fallback') && !B.pedeIA(a, q)); });
+            // palavra genérica da identidade (IDENT_GENERICAS: caso, depois, antes, padrão, protocolo, confirmar…) sozinha não nomeia o trecho de segurança
+            const generica = ['e depois', 'o que fazer depois', 'quanto tempo depois', 'antes', 'o que fazer antes', 'em caso de alarme', 'em caso de falha do motor',
+              'o que fazer em caso de alarme', 'qual o procedimento padrão', 'qual o protocolo de bordo', 'confirmar com o protocolo de bordo', 'confirmar protocolo']
+              .filter((q) => { const a = resp(q); return a.seguranca || h(q).seguranca || ((a.key === 'base' || a.key === 'fallback') && !B.pedeIA(a, q)); });
+            // "bomba" com o nome de outra bomba (OUTRA_BOMBA) não é a resposta pronta do porão; a de esgoto e a "bomba" sozinha são
+            const outra = ['como trocar o impeller da bomba', 'trocar o impelidor da bomba', 'a bomba de arrefecimento', 'a bomba de refrigeração', 'a bomba de resfriamento',
+              'a bomba de circulação', 'a bomba do ar condicionado', 'a bomba da climatização', 'a bomba de água salgada', 'o rotor da bomba', 'a bomba do onan',
+              'a bomba do gerador', 'a bomba do motor', 'a bomba do giroscópio', 'a bomba do estabilizador', 'a bomba do seakeeper', 'a bomba do piloto automático',
+              'a bomba hidráulica', 'a bomba do dessalinizador', 'a bomba de lavagem', 'a bomba de pressão', 'a bomba de pressurização', 'a bomba de óleo']
+              .filter((q) => resp(q).key === 'porao');
+            const bilge = ['a bomba de esgoto não para', 'bomba de esgoto', 'a bomba de esgoto está enchendo de água', 'a bomba não para', 'como desligar a bomba', 'bombas de porão']
+              .filter((q) => resp(q).key !== 'porao' || B.pedeIA(resp(q), q));
+            const titulo = [['pressão de óleo baixa no motor', 'g_motores', '4 · Pressão de óleo baixa'], ['rádio VHF dsc', 'g_eletronicos', '5 · Rádio VHF: DSC'],
+              ['identificação do AIS', 'g_ais', '2 · Identificação'], ['água entrando no porão', 'g_porao', '4 · Água entrando'],
+              ['o que fazer antes de largar', 'checklist', 'Saída · antes de largar']]
+              .filter(([q, g, sec]) => !(h(q).fonte === D.guias[g] && h(q).secao === sec && h(q).seguranca)).map(([q]) => q);
+            const onde = (qs, g, sec) => qs.filter((q) => { const a = resp(q); return !(a.key === 'base' && a.ref === D.guias[g] + ' · §' + sec && !a.seguranca); })
+              .map((q) => q + ' → ' + resp(q).key + ' ' + resp(q).ref);
+            return { nome, generica, outra, bilge, titulo, dessal: onde(['como ligar a bomba do dessalinizador'], 'g_dessalinizador', '1 · Ligar'),
+              porao: onde(['como funciona a bomba de porão'], 'g_porao', '1 · Funcionamento'),
+              estab: onde(['alarme da bomba do seakeeper'], 'g_seakeeper', '6 · Alarmes') }; }""")
         for nome, cond, extra in [
+            ('revisão 7 do C5: pergunta que só diz o nome do equipamento (plotter, radar, Garmin, Icom, Fusion, som, áudio, motor) sem trecho de segurança no topo nem na resposta, e sem barrar a IA',
+             not rev7['nome'], rev7['nome']),
+            ('revisão 7 do C5: palavra genérica da identidade (caso, depois, antes, padrão, protocolo, confirmar) sozinha não abre trecho de segurança nem barra a IA',
+             not rev7['generica'], rev7['generica']),
+            ('revisão 7 do C5: "bomba" com o nome de outra bomba (rotor, impeller, arrefecimento, climatização, gerador, motor, giroscópio, estabilizador, piloto, dessalinizador, óleo…) não é a resposta pronta do porão',
+             not rev7['outra'], rev7['outra']),
+            ('revisão 7 do C5: "bomba de esgoto" e "a bomba não para" seguem a rota do porão, no aparelho, sem IA', not rev7['bilge'], rev7['bilge']),
+            ('revisão 7 do C5: num guia misto o título ainda nomeia o trecho de segurança (pressão de óleo baixa, DSC, identificação do AIS, água entrando, antes de largar)',
+             not rev7['titulo'], rev7['titulo']),
+            ('revisão 7 do C5: "como ligar a bomba do dessalinizador", "como funciona a bomba de porão" e "alarme da bomba do seakeeper" mostram a seção do guia (§1 Ligar, §1 Funcionamento, §6 Alarmes)',
+             not (rev7['dessal'] or rev7['porao'] or rev7['estab']), (rev7['dessal'], rev7['porao'], rev7['estab'])),
             ('revisão 6 do C5: a bomba de água salgada, o rotor e o impeller vão ao g_motores §7 e à Climatização (§3 alarme, §1 ligar, §5 desligar), e a do gerador ao g_gerador §7, não à resposta pronta do porão',
              not (rev6['rotor'] or rev6['alarme'] or rev6['ligar'] or rev6['desligar'] or rev6['gerador']),
              (rev6['rotor'], rev6['alarme'], rev6['ligar'], rev6['desligar'], rev6['gerador'])),

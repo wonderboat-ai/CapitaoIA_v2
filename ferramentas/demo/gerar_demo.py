@@ -791,7 +791,8 @@ FONTE_GUIA = {k: g['titulo'] for k, g in GUIAS.items()}
 # (ident, identCom); a string é só `ident` (pane e governo não dependem de pessoa). "mar" entra aqui e não na identidade pelo título
 # ("mar" sozinho é o estado do mar, a vista, a temperatura da água): ver IDENT_GENERICAS do cérebro.
 # A palavra de pessoa só destrava a identidade: a cobertura da busca (2 palavras e 60 % da pergunta no texto do trecho) segue valendo, e
-# "alguém caiu", "tripulante ao mar" e "criança ao mar" ainda vão à IA até a lista SOS ampliada da 1b (§1.5).
+# "alguém caiu", "tripulante ao mar" e "criança ao mar" ainda vão à IA: a lista SOS do §2.3 do PROMPT não os tem; ficam assim até o ok do
+# proprietário aos tokens do CONTRATO §8.2, item 11, que a 1b leva para a lista (revisão 7 do C5).
 IDENT_PESSOA = 'pessoa quem alguém gente homem tripulante criança'
 IDENT_ACIONAMENTO = {
     'protocolo': {'Homem ao mar': ('caiu cair queda vista mar', IDENT_PESSOA), 'PAN-PAN': 'pane governo ferido urgência'},
