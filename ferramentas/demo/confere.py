@@ -25,7 +25,9 @@ Também ficam aqui os ports em Python que as asserções e o gerador usam, escri
     Fase 2; a rota e os contadores do em() entram no C8 (PORT_ROTA).
 Sem lookbehind nas regex que vão para o JavaScript (estas ficam só no Python).
 """
+import csv
 import hashlib
+import io
 import json
 import math
 import os
@@ -553,7 +555,8 @@ class Ctx:
         yield from textos_fontes(self.fontes, numeros)
 
     def chaves(self):
-        """(caminho, chave) de toda chave do D, da base, do FAQ e dos JSON das fontes do Drive (os mesmos prefixos do todos())."""
+        """(caminho, chave) de toda chave do D, da base, do FAQ e dos JSON das fontes do Drive (os mesmos prefixos do todos()) e,
+        de cada CSV das fontes, a 1ª linha: o cabeçalho de cada coluna é a chave da planilha que vai ao Drive ('fontes/<rel>:<coluna>')."""
         yield from chaves_de(self.D, '')
         yield from chaves_de(self.base, 'base:')
         if self.faq is not None:
@@ -561,6 +564,9 @@ class Ctx:
         for rel, txt in sorted(self.fontes.items()):
             if rel.endswith('.json'):
                 yield from chaves_de(json.loads(txt), 'fontes/' + rel + ':')
+            elif rel.endswith('.csv'):
+                for col in next(csv.reader(io.StringIO(txt)), []):
+                    yield 'fontes/%s:%s' % (rel, col), col
 
     def laco(self):
         """Os 150 quadros do laço (campos do laço e fixos), calculados uma vez."""
@@ -695,10 +701,12 @@ def a_hex15(X):
 
 
 def a_sem_indicativo(X):
-    """§0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo, em todo o D, a base, o FAQ e
-    os JSON das fontes (o indicativo só como texto de instrução em protocolos; o lugar só nos caminhos da LUGAR_PERMITIDO). E
+    """§0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo, em todo o D, a base, o FAQ,
+    os JSON das fontes e o cabeçalho de cada coluna dos CSV das fontes (o indicativo só como texto de instrução em protocolos; o
+    lugar só nos caminhos da LUGAR_PERMITIDO e na coluna Local do registro de abastecimento, que é o posto). E
     nenhum indicativo com prefixo real no texto, uma violação por ocorrência."""
     out = []
+    posto = 'fontes/%s/%s.csv:Local' % (X.pastas.get('abast'), X.arq.get('abast'))   # a coluna Local do abastecimento = o posto
     for c, k in X.chaves():
         ps = palavras_chave(k)
         if 'indicativo' in ps and not c.startswith('protocolos.'):
@@ -706,7 +714,7 @@ def a_sem_indicativo(X):
         tipo = next((CHAVES_IDENT[p] for p in ps if p in CHAVES_IDENT), None)
         if tipo:
             out.append('%s: chave de %s (§0.2: não existe como campo)' % (c, tipo))
-        if CHAVES_LUGAR & set(ps) and not CHAVES_HORA & set(ps) and not LUGAR_PERMITIDO.fullmatch(c):
+        if CHAVES_LUGAR & set(ps) and not CHAVES_HORA & set(ps) and not LUGAR_PERMITIDO.fullmatch(c) and c != posto:
             out.append('%s: chave de lugar fora dos campos de vocabulário fechado, do lugar do barco, do posto e dos prestadores '
                        '(§0.2: lugar de equipamento de salvatagem não existe como campo)' % c)
     out += ['%s: %s «%s»' % (cam, m.group(), trecho(s, m)) for cam, s in X.todos() for m in R_INDICATIVO.finditer(s)]
@@ -750,7 +758,7 @@ def a_terceiros(X):
 
 def a_sem_previsao(X):
     """§6.4, trava §2.5 (tempo e maré são do mundo real), sem nome na §6.3: nenhum campo de previsão ou de maré no D (o historico,
-    o catálogo de campos e o replay inclusive), na base, no FAQ e nos JSON das fontes."""
+    o catálogo de campos e o replay inclusive), na base, no FAQ, nos JSON das fontes e no cabeçalho de cada coluna dos CSV das fontes."""
     return ['%s: campo de previsão ou maré (tempo e maré só do Open-Meteo real)' % c for c, k in X.chaves()
             if CHAVES_PREVISAO & set(palavras_chave(k))]
 

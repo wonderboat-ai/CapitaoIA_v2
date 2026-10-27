@@ -20,6 +20,7 @@
 """
 import contextlib
 import copy
+import csv
 import hashlib
 import importlib.util
 import io
@@ -758,6 +759,17 @@ def com_fonte_final(sufixo, extra):
     return k
 
 
+def com_coluna(sufixo, coluna, valor=''):
+    """hoje() com uma coluna nova (o cabeçalho e o valor em toda linha) no CSV das fontes do Drive cujo nome termina em `sufixo`."""
+    k = hoje()
+    rel = next(r for r in sorted(k['F']) if r.endswith(sufixo))
+    linhas = list(csv.reader(io.StringIO(k['F'][rel])))
+    saida = io.StringIO()
+    csv.writer(saida, lineterminator='\n').writerows(l + [coluna if i == 0 else valor] for i, l in enumerate(linhas))
+    k['F'][rel] = saida.getvalue()
+    return k
+
+
 # Revisão final do C3. A TERMOS inteira em relatório deixava passar telefone, e-mail, CPF, dinheiro e lugar de equipamento de
 # salvatagem escritos como TEXTO (as travas §2.2 e §2.7 do PROMPT): só valia o mesmo dado como chave. A PESSOAIS, a DINHEIRO e a
 # LOCAL_SEGURANCA dão 0 em todo o dado de hoje e reprovam já; as outras cinco regex continuam em relatório até o C12.
@@ -776,6 +788,28 @@ EXTRAS += [
      'LOCAL_SEGURANCA: diario[0].t'),
     ('TERMOS', 'lugar da balsa numa página de fonte do Drive (LOCAL_SEGURANCA)', lambda r: com_fonte_final('Checklist de bordo.html', '<p>A balsa fica na popa.</p>' if r else ''),
      'LOCAL_SEGURANCA: fontes/01 Manuais e guias de bordo/Checklist de bordo.html'),
+]
+
+
+# Revisão final do C3. A SEM_INDICATIVO e a SEM_PREVISAO só olhavam as chaves do JSON: o cabeçalho de uma coluna de CSV das fontes
+# do Drive (Local, Telefone, HEX ID, Indicativo, Maré prevista) passava, e a planilha vai para o Drive. Agora a 1ª linha de cada
+# CSV é chave ('fontes/<rel>:<coluna>'); a única coluna liberada é a Local do registro de abastecimento (o posto).
+_INV, _ABA = 'Inventário de bordo.csv', 'Registro de abastecimento.csv'
+EXTRAS += [
+    ('SEM_INDICATIVO', 'coluna Local (lugar do EPIRB) no inventário', lambda r: com_coluna(_INV, 'Local' if r else 'Observação extra', 'hard-top' if r else ''),
+     'fontes/01 Manuais e guias de bordo/Inventário de bordo.csv:Local: chave de lugar'),
+    ('SEM_INDICATIVO', 'coluna Telefone no inventário', lambda r: com_coluna(_INV, 'Telefone' if r else 'Observação extra', 'ver no aparelho' if r else ''),
+     'Inventário de bordo.csv:Telefone: chave de telefone'),
+    ('SEM_INDICATIVO', 'coluna HEX ID no inventário', lambda r: com_coluna(_INV, 'HEX ID' if r else 'Observação extra', 'cadastrar' if r else ''),
+     'Inventário de bordo.csv:HEX ID: chave de HEX ID'),
+    ('SEM_INDICATIVO', 'coluna Indicativo no inventário', lambda r: com_coluna(_INV, 'Indicativo' if r else 'Observação extra', 'ver licença' if r else ''),
+     'Inventário de bordo.csv:Indicativo: chave indicativo fora de protocolos'),
+    ('SEM_INDICATIVO', 'coluna E-mail (com acento e parênteses) numa planilha de documentos', lambda r: com_coluna('Controle de documentos.csv', 'E-mail (marina)' if r else 'Observação extra', 'x' if r else ''),
+     'Controle de documentos.csv:E-mail (marina): chave de e-mail'),
+    ('SEM_PREVISAO', 'coluna Maré prevista (m) no inventário', lambda r: com_coluna(_INV, 'Maré prevista (m)' if r else 'Observação extra', '1,2' if r else ''),
+     'fontes/01 Manuais e guias de bordo/Inventário de bordo.csv:Maré prevista (m): campo de previsão ou maré'),
+    ('SEM_PREVISAO', 'coluna Previsão do tempo no abastecimento', lambda r: com_coluna(_ABA, 'Previsão do tempo' if r else 'Observação extra', 'bom' if r else ''),
+     'Registro de abastecimento.csv:Previsão do tempo: campo de previsão ou maré'),
 ]
 
 
@@ -996,6 +1030,9 @@ def amostras():
            t for t in B0['trechos'] for e in G.EQUIPAMENTOS if e.get('seguranca') for n in [e['fabricante']] + C.candidatos_modelo(e['fabricante'], e['modelo'])
            if any(next(C.acha_nomes(t[k], n), None) for k in ('fonte', 'equip', 'texto'))]
        and [e['id'] for e in G.EQUIPAMENTOS if e.get('seguranca')] == ['epirb', 'seafire'])
+    ok('SEM_INDICATIVO e SEM_PREVISAO: o cabeçalho dos CSV de hoje passa, com a coluna Local do registro de abastecimento (o posto) e sem o resto',
+       not V['SEM_INDICATIVO'] and not V['SEM_PREVISAO'] and any(c.endswith('Registro de abastecimento.csv:Local') for c, _ in C.Ctx(
+           hoje()['D'], G.base_conhecimento(), hoje()['F'], {}).chaves()), (V['SEM_INDICATIVO'][:2], V['SEM_PREVISAO'][:2]))
     ok('MMSI9: o protocolos do §1.3 ("identificação programada no rádio: é o MMSI") passa',
        not [m for m in V['MMSI9'] if m.startswith('protocolos')], [m for m in V['MMSI9'] if m.startswith('protocolos')][:3])
     # Revisão 2 do C4 (barco_sos): o nome, o único dado do barco que o SOS mostra, não conta, nem com a marca dentro dele; número
@@ -1133,11 +1170,22 @@ def reprova(tmp):
         rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
         F[rel] += '<p>Escreva para oficina@exemplo.com.br.</p>'
         return F
+    def coluna_fonte(sufixo, coluna):
+        def f(F):
+            rel = next(r for r in sorted(F) if r.endswith(sufixo))
+            linhas = list(csv.reader(io.StringIO(F[rel])))
+            saida = io.StringIO()
+            csv.writer(saida, lineterminator='\n').writerows(l + [coluna if j == 0 else 'x'] for j, l in enumerate(linhas))
+            F[rel] = saida.getvalue()
+            return F
+        return f
     for i, (nome, pl, n, base, o_que, *fontes) in enumerate((('NULO', nulo, 3, None, ''), ('TERMOS', fone, 1, None, ' (PESSOAIS: telefone no texto da equipe)'),
                                      ('TERMOS', lambda D: D, 1, None, ' (PESSOAIS: e-mail numa página de fonte do Drive)', email_fonte),
                                      ('TERMOS', dinheiro, 1, None, ' (DINHEIRO: valor em reais no diário)'),
                                      ('TERMOS', lambda D: D, 1, preco_base, ' (DINHEIRO: preço na base)'),
                                      ('TERMOS', lugar_epirb, 1, None, ' (LOCAL_SEGURANCA: lugar do EPIRB no nome)'),
+                                     ('SEM_INDICATIVO', lambda D: D, 1, None, ' (coluna Telefone no CSV do inventário)', coluna_fonte('Inventário de bordo.csv', 'Telefone')),
+                                     ('SEM_PREVISAO', lambda D: D, 1, None, ' (coluna Maré prevista no CSV do abastecimento)', coluna_fonte('Registro de abastecimento.csv', 'Maré prevista (m)')),
                                      ('EQUIP', lambda D: (D['equipamentos'][0].update({'fabricante': ''}), D)[1], 1, None, ''),
                                      ('MMSI9', mmsi_num, 1, None, ' (9 dígitos guardados como número)'),
                                      ('NULO', lambda D: D, 2, base_vazia, " (na base: secao '' e equip null)"),
