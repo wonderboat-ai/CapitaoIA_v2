@@ -44,7 +44,20 @@
    "O câmbio hoje passou de 6.",
    "O câmbio comercial passou de 6.",
    "O câmbio fechou a 5,4.",
-   "Câmbio: 150 ienes por dólar."
+   "Câmbio: 150 ienes por dólar.",
+   "O câmbio do dia passou de 6.",
+   "O câmbio da semana passou de 6.",
+   "O câmbio de hoje é 6.",
+   "O câmbio está acima de 6.",
+   "O câmbio oficial passou de 6.",
+   "Câmbio (14:32): 5,40.",
+   "O câmbio em 23/10 fechou a 5,40.",
+   "O câmbio em 2026 já subiu de 5,10 para 5,40.",
+   "Câmbio5,4.",
+   "Câmbio, 23/10: 5,40.",
+   "Câmbio fechou ontem à tarde em 5,4.",
+   "O câmbio fechou em 15,50.",
+   "O câmbio fechou a 5.40."
   ],
   "PESSOAIS": [
    "Ligue para a marina: (47) 3367-1234",
@@ -59,7 +72,11 @@
    "O Seafire fica na praça de máquinas.",
    "O Sea Fire fica na praça de máquinas.",
    "O Sea\u00a0Fire fica na praça de máquinas.",
-   "O Sea\u2011Fire fica na praça de máquinas."
+   "O Sea\u2010Fire fica na praça de máquinas.",
+   "O Sea\u2011Fire fica na praça de máquinas.",
+   "O Sea\u2012Fire fica na praça de máquinas.",
+   "O Sea\u2013Fire fica na praça de máquinas.",
+   "O Sea\u2014Fire fica na praça de máquinas."
   ],
   "VAZIOS": [
    "modelo: n/d",
@@ -109,7 +126,11 @@
   "Diga câmbio em voz alta no canal 16.",
   "Diga câmbio e escute o 156,800 MHz (canal 16).",
   "Para encerrar a chamada, diga câmbio:\n1. Solte o PTT.\n2. Escute o canal 16.",
-  "CÂMBIO\nDe 2 em 2 minutos, repita o MAYDAY no canal 16."
+  "CÂMBIO\nDe 2 em 2 minutos, repita o MAYDAY no canal 16.",
+  "Diga câmbio às 14:32 e escute o 156,800 MHz.",
+  "Diga câmbio de novo, repetindo o procedimento completo, no canal 16.",
+  "Diga câmbio e aguarde, repita a cada 1,5 min.",
+  "Termine a chamada com CÂMBIO\n1,5 minuto de espera e repita o MAYDAY."
  ],
  "_leia": "barra: cada frase tem de casar a regex indicada. passa: nenhuma frase pode casar nenhuma regex (ANEXO fora, pois 'A CONFIRMAR' de anexo é permitido)."
 }
