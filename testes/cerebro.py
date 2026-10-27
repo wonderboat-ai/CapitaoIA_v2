@@ -75,6 +75,18 @@ CASOS = [
     # O rótulo e a nota da etiqueta, no fim de todo trecho de segurança, punham o g_epirb §4 no topo e barravam a IA; o índice
     # da busca não os conta mais (o texto do trecho fica igual).
     ('quais equipamentos tem a bordo?', 'fallback'), ('equipamentos do barco', 'fallback'), ('modelo dos equipamentos', 'fallback'),
+    # Revisão 4 do C5: o passo a passo do Seafire (desligue motores e gerador, corte a ventilação, não abra o acesso ao motor, depois da
+    # descarga, espere o motor esfriar) casava perguntas comuns, mostrava o procedimento de incêndio e, por ser de segurança, barrava a IA.
+    # O trecho de segurança só entra se a pergunta nomeia o assunto dele (fonte, equipamento ou título); o g_seafire §2 e §3 não repetem
+    # mais o passo a passo. As perguntas comuns voltam à resposta pronta, ao guia certo ou à IA, como antes do C5.
+    ('como religar o gerador depois de desligar', 'gerador'), ('como abrir o motor', 'motores'), ('como abrir o gerador', 'gerador'),
+    ('como abrir o acesso ao motor', 'motores'), ('posso abrir o acesso ao motor para conferir o óleo', 'motores'),
+    ('como abrir a ventilação', 'fallback'), ('como desligar a ventilação', 'fallback'), ('como ligar a ventilação depois de desligar', 'fallback'),
+    ('como religar a ventilação depois de desligar', 'fallback'), ('o alarme disparou', 'fallback'), ('como desligar o sistema', 'fallback'),
+    ('como religar o motor depois de desligar', 'base'), ('quando trocar o óleo do motor?', 'base'),
+    ('como esfriar o motor', 'base'), ('como esfriar o motor depois de navegar', 'base'), ('como esfriar o motor depois de navegar rápido', 'base'),
+    # o que continua local: a pergunta nomeia o assunto (o sistema fixo, a baliza, o DSC)
+    ('o sistema descarregou', 'base'), ('o sistema fixo disparou sozinho', 'base'), ('distress', 'base'), ('como usar o botão distress', 'base'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -92,6 +104,14 @@ PEDE_IA = {
     'como lançar com o guincho Lewmar': True, 'como ligar o radar Garmin': True, 'como engatar o piloto automático Raymarine': True,
     # revisão 3 do C5: como antes do C5 (fallback com a IA)
     'quais equipamentos tem a bordo?': True, 'equipamentos do barco': True, 'modelo dos equipamentos': True,
+    # revisão 4 do C5: pergunta comum sem trecho de segurança no topo vai à IA (ou fica na resposta pronta, como antes do C5)
+    'como religar o gerador depois de desligar': False, 'como abrir o motor': False, 'como abrir o gerador': False,
+    'como abrir o acesso ao motor': False, 'posso abrir o acesso ao motor para conferir o óleo': False,
+    'como abrir a ventilação': True, 'como desligar a ventilação': True, 'como ligar a ventilação depois de desligar': True,
+    'como religar a ventilação depois de desligar': True, 'o alarme disparou': True, 'como desligar o sistema': True,
+    'como religar o motor depois de desligar': True, 'quando trocar o óleo do motor?': True,
+    'como esfriar o motor': True, 'como esfriar o motor depois de navegar': True, 'como esfriar o motor depois de navegar rápido': True,
+    'o sistema descarregou': False, 'o sistema fixo disparou sozinho': False, 'distress': False, 'como usar o botão distress': False,
 }
 
 
@@ -159,6 +179,33 @@ def main():
             const g = B.answer('como lançar com o guincho Lewmar', { platform: 'app', commit: false }), m = B.answer('Quais guias de bordo estão carregados?', { platform: 'app', commit: false });
             const faltam = Object.keys(D.guias).filter((k) => m.text.indexOf(D.guias[k].replace(/^Guia de bordo — /, '')) === -1);
             return { cartoes, disparo, generica, temp, guincho: g.text, manualK: m.key, manualSD: /SEM DADOS|não informad/.test(m.text), faltam }; }""")
+        # Revisão 4 do C5: (a) pergunta comum nunca traz trecho de segurança ao topo nem à resposta (g_seafire, protocolo, g_motores §4…);
+        # (b) a troca de óleo vai para a agenda (§7) e o esfriar do motor, para a parada (§6); (c) o trecho de segurança sai inteiro na
+        # tela e na voz, com o rótulo do procedimento padrão (e a nota da etiqueta, no Seafire e no EPIRB) no fim: o corte de 480 letras
+        # tirava os dois do §1 do Seafire (560 letras) e a nota do §3 (492), e a voz parava na 2ª frase; (d) "botão distress" continua
+        # local (o "distress" é o DSC do título).
+        rev4 = pg.evaluate("""([rot, nota]) => { const B = window.CapitaoBrain, D = window.CapitaoDados, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
+            const resp = (q) => B.answer(q, { platform: 'app', commit: false });
+            const comuns = ['como religar o gerador depois de desligar', 'como religar o motor depois de desligar', 'como religar os motores depois de desligar',
+              'como abrir o motor', 'como abrir o gerador', 'como abrir a ventilação', 'como desligar a ventilação', 'como ligar a ventilação depois de desligar',
+              'como religar a ventilação depois de desligar', 'quando trocar o óleo do motor?', 'como esfriar o motor depois de navegar',
+              'como esfriar o motor depois de navegar rápido', 'como esfriar o motor', 'posso abrir o acesso ao motor para conferir o óleo',
+              'como abrir o acesso ao motor', 'devo abrir o motor depois de navegar', 'o alarme disparou', 'como desligar o sistema',
+              'corte a ventilação', 'espere o tempo da etiqueta', 'como abrir o compartimento do motor'].filter((q) => resp(q).seguranca || h(q).seguranca);
+            const oleo = ['quando trocar o óleo do motor?', 'qual o intervalo de troca de óleo do motor?', 'Quando foi a última troca de óleo do motor?']
+              .filter((q) => { const x = h(q); return x.fonte !== D.guias.g_motores || x.secao !== '7 · Manutenção na agenda'; });
+            const esfriar = ['como esfriar o motor', 'como esfriar o motor depois de navegar', 'como esfriar o motor depois de navegar rápido']
+              .filter((q) => { const x = h(q); return x.fonte !== D.guias.g_motores || x.secao !== '6 · Parada'; });
+            const dsc = ['botão distress', 'como usar o botão distress', 'distress'].filter((q) => !resp(q).seguranca);
+            const inteira = ['sistema fixo em caso de alarme', 'o sistema fixo descarregou', 'o sistema fixo disparou', 'o que fazer depois do disparo do sistema fixo',
+              'alarme do sistema fixo', 'teste da baliza', 'botão distress'].map((q) => { const a = resp(q), x = h(q), t = (x.texto || '').replace(/\\s+/g, ' ').trim();
+                const comNota = [D.guias.g_seafire, D.guias.g_epirb].indexOf(x.fonte) !== -1, fim = comNota ? rot + ' ' + nota : rot;
+                return { q, seg: !!a.seguranca, tela: a.text.split('\\n')[0] === t, voz: B.falaCurta(a) === t, fim: t.slice(-fim.length) === fim, letras: t.length }; })
+              .filter((r) => !(r.seg && r.tela && r.voz && r.fim));
+            // depois do disparo, a voz também diz "não abra o acesso ao motor" e manda desligar motores, gerador e ventilação
+            const falaDisparo = ['o sistema fixo disparou', 'o sistema fixo descarregou', 'o sistema descarregou', 'o que fazer depois do disparo do sistema fixo', 'alarme do sistema fixo']
+              .filter((q) => { const f = B.falaCurta(resp(q)).toLowerCase(); return f.indexOf('não abra o acesso ao motor') === -1 || !/desligue motores|motores, gerador e ventilação/.test(f); });
+            return { comuns, oleo, esfriar, dsc, inteira, falaDisparo }; }""", ['Procedimento padrão — confirmar com o protocolo de bordo.', 'Modelo, validade e acionamento: veja a etiqueta do equipamento.'])
         for nome, cond, extra in [
             ('ficha resumida SÓ para pergunta pura sobre o app ("Oque você faz?", "como você funciona?"; sem telemetria, < 4 mil letras)', '## Ficha resumida' in x['metaF'] and '## Telemetria' not in x['metaF'] and len(x['metaF']) < 4000 and '## Ficha resumida' in x['funcF'], (len(x['metaF']), len(x['funcF']))),
             ('trecho do guia ("última troca de óleo do motor?") leva a ficha COMPLETA, com a agenda', x['baseK'] == 'base' and '## Manutenção' in x['baseF'] and '## Ficha resumida' not in x['baseF'], (x['baseK'], len(x['baseF']))),
@@ -184,6 +231,15 @@ def main():
              not rev2['cartoes'] and not rev2['disparo'], (rev2['cartoes'], rev2['disparo'])),
             ('revisão 3 do C5: pergunta genérica sobre os equipamentos sem o g_epirb nem o protocolo no topo; temperatura alta dos motores desliga antes do filtro',
              not rev2['generica'] and not rev2['temp'], (rev2['generica'], rev2['temp'])),
+            ('revisão 4 do C5: pergunta comum (religar o gerador, abrir o motor, desligar a ventilação, esfriar o motor, alarme que disparou…) sem trecho de segurança no topo nem na resposta',
+             not rev4['comuns'], rev4['comuns']),
+            ('revisão 4 do C5: "quando trocar o óleo do motor?" vai para o g_motores §7 (agenda), não para o §4 (pressão baixa); "como esfriar o motor (depois de navegar)" para o §6 (parada)',
+             not rev4['oleo'] and not rev4['esfriar'], (rev4['oleo'], rev4['esfriar'])),
+            ('revisão 4 do C5: "botão distress" e "distress" continuam locais (trecho de segurança do DSC)', not rev4['dsc'], rev4['dsc']),
+            ('revisão 4 do C5: o trecho de segurança sai inteiro na tela e na voz, com o rótulo (e a nota da etiqueta no Seafire e no EPIRB) no fim',
+             not rev4['inteira'], rev4['inteira']),
+            ('revisão 4 do C5: depois do disparo do sistema fixo, a voz diz "não abra o acesso ao motor" e manda desligar motores, gerador e ventilação',
+             not rev4['falaDisparo'], rev4['falaDisparo']),
             ('revisão 2 do C5: a pergunta do cartão do guincho não mostra a posição do barco',
              not [x for x in ("26°59", "048°36", "-26.99", "-48.6") if x in rev2['guincho']], rev2['guincho'][:200]),
             ('revisão 2 do C5: "guias de bordo" lista os 16 guias do D.guias, sem SEM DADOS nem "modelos não informados"',

@@ -470,7 +470,11 @@
     radar: ['garmin'], plotter: ['garmin', 'chartplotter'], som: ['fusion', 'audio'], audio: ['fusion', 'som'], radio: ['vhf'], vhf: ['radio', 'dsc'], ligar: ['partida', 'start', 'ligue'],
     partida: ['ligar', 'start'], desligar: ['parada', 'stop', 'parar', 'desligue'], manutencao: ['maintenance', 'revisao', 'agenda'], revisao: ['manutencao', 'service'], limpeza: ['limpe', 'cleaning'],
     capacidade: ['capacity', 'litros', 'volume'], superaquecer: ['temperatura', 'overheat', 'arrefecimento'], superaquecimento: ['temperatura', 'overheat', 'arrefecimento'], esquentando: ['temperatura', 'arrefecimento'],
-    parear: ['emparelhar', 'pairing', 'conectar', 'bluetooth'], emparelhar: ['parear', 'bluetooth'], alarm: ['alarme'], lubrificante: ['oil', 'oleo'], tanque: ['tank'], mob: ['homem', 'mar'], homem: ['mob']
+    parear: ['emparelhar', 'pairing', 'conectar', 'bluetooth'], emparelhar: ['parear', 'bluetooth'], alarm: ['alarme'], lubrificante: ['oil', 'oleo'], tanque: ['tank'], mob: ['homem', 'mar'], homem: ['mob'],
+    // Revisão 4 do C5: "quando trocar o óleo do motor?" achava só o §4 (pressão de óleo baixa) e não a agenda "Troca de óleo e filtros" (§7);
+    // "botão distress" é o DSC do rádio e "o sistema descarregou" é o §3 "Depois da descarga" (a identidade do trecho de segurança,
+    // abaixo, é o título dele). As chaves são a raiz() da palavra: distres = raiz('distress').
+    trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga']
   };
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
   function tokens(t) {
@@ -487,6 +491,13 @@
     FORA_DO_INDICE.forEach(function (f) { t = t.split(f).join(' '); });
     return t.replace(/\betiqueta do equipamento\b/g, 'etiqueta');
   }
+  // Identidade do trecho de segurança (revisão 4 do C5): as palavras da fonte, do equipamento e do título da seção, menos as que só
+  // dizem "guia", "protocolo", "sistema" ou "depois" ("sistema fixo" pesa pelo "fixo"; "como ligar o sistema de ventilação" não é o
+  // Seafire). O trecho de segurança (g_seafire, g_epirb, protocolo, §4 dos motores e do porão…) só entra na busca se a pergunta nomeia
+  // o assunto dele. Sem isso, os passos dele (desligue motores e gerador, corte a ventilação, não abra o acesso ao motor, depois da
+  // descarga) casavam perguntas comuns ("como desligar a ventilação", "como religar o gerador depois de desligar"), mostravam o
+  // procedimento de incêndio e, por ser de segurança, barravam a IA (pedeIA).
+  var IDENT_GENERICAS = {}; tokens('guia bordo depois caso antes sistema procedimento padrao confirmar protocolo emergencia').forEach(function (w) { IDENT_GENERICAS[w] = 1; });
   function carregaBase() {
     if (KB.docs || KB.carregando || !window.fetch) return;
     KB.carregando = true;
@@ -496,6 +507,7 @@
       lista.forEach(function (d) {
         var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + indexavel(d.texto) + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
         d._lista = /invent[aá]rio|cat[aá]logo|[íi]ndice/i.test(d.fonte || '');
+        d._id = {}; tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
         d._en = (' ' + d.texto.toLowerCase() + ' ').split(/\b(?:the|and|with|to|of|is|are|your|from)\b/).length > 6;
         tk.forEach(function (w) { tf[w] = (tf[w] || 0) + 1; });
         Object.keys(tf).forEach(function (w) { df[w] = (df[w] || 0) + 1; });
@@ -514,7 +526,7 @@
     var grupos = qs.map(function (w) { var g = {}; g[w] = 1; (SINONIMOS[w] || []).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
     var N = KB.docs.length, k1 = 1.2, b = 0.75, res = [], proc = PROCEDIMENTO.test(' ' + norm(q) + ' ');
     KB.docs.forEach(function (d) {
-      var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0;
+      var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0, nomeia = !d.seguranca;
       grupos.forEach(function (g) {
         var melhor = 0;
         for (var w in g) {
@@ -522,9 +534,11 @@
           var idf = Math.log(1 + (N - KB.df[w] + 0.5) / (KB.df[w] + 0.5));
           melhor = Math.max(melhor, g[w] * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d._n / KB.media)));
           if (secao.indexOf(' ' + w + ' ') !== -1) naSecao++;
+          if (d._id[w]) nomeia = true;
         }
         if (melhor > 0) { bateu++; nota += melhor; }
       });
+      if (!nomeia) return; // trecho de segurança que a pergunta não nomeia (identidade, acima)
       if (naSecao >= grupos.length) nota *= 1.6; // o título da seção cobre a pergunta inteira
       if (d._lista && proc) nota *= 0.45;
       if (nota > 0 && bateu >= Math.min(2, grupos.length) && bateu >= Math.ceil(grupos.length * 0.6)) res.push({ d: d, nota: nota });
@@ -539,12 +553,15 @@
     var c = t.slice(0, max), m = c.match(/^[\s\S]*[.!?;](?=\s)/);
     return (m && m[0].length > max * 0.5 ? m[0] : c.slice(0, c.lastIndexOf(' ')) + '…');
   }
+  var MAX_SEGURANCA = 1500;
   var GENERICAS = { gerador: 1, motores: 1, audio: 1, estabilizador: 1, eletronicos: 1, climatizacao: 1, dessalinizador: 1, eletrico: 1, porao: 1, ancora: 1, manual: 1, clima: 0 };
   var ESPECIFICA = /\b(como|trocar|troca|substitu\w*|parear|pareamento|conectar|codigo|codigos|alarme|alarmes|erro|falha|falhas|defeito|superaquec\w*|oleo|filtro|impeller|impelidor|rotor|capacidade|litros|pressao|temperatura|onde fica|localiza\w*|procedimento|passo|reset\w*|calibr\w*|configur\w*|limp\w*|intervalo|torque|especifica\w*|viscosidade|bluetooth|dsc|mob|zinco|anodo|fusivel|disjuntor|fluxo)\b/;
   function respostaBase(q, p) {
     var hits = buscaBase(q, 3); if (!hits.length) return null;
     var h = hits[0].d, outros = hits.slice(1).filter(function (x) { return x.d.fonte !== h.fonte || x.d.secao !== h.secao; });
-    var text = trechoCurto(h.texto) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
+    // Trecho de segurança sai inteiro, com o rótulo do procedimento padrão e a nota da etiqueta no fim (CONTRATO §1.5): o corte de
+    // 480 letras tirava os dois do §1 e do protocolo do Seafire (560) e a nota do §3 (492). O gerador limita esses trechos a 800.
+    var text = trechoCurto(h.texto, h.seguranca ? MAX_SEGURANCA : 480) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
     // seguranca: o trecho do topo é de segurança (EPIRB, Seafire, salvatagem, protocolo…; o gerador marca) — o pedeIA não chama a IA
     return { text: text, src: 'Fonte: ' + citaFonte(h) + ' — base de conhecimento de bordo' + (h.equip ? ' · ' + h.equip : ''), actions: act(p, [['FAQ de bordo', 'faq']]), ref: citaFonte(h), ingles: !!h._en, seguranca: !!h.seguranca };
   }
@@ -969,6 +986,9 @@
     if (a && typeof a === 'object' && a.fala) return a.fala; // resposta que já traz a fala certa (saudação vinda de pergunta)
     var t = a && typeof a === 'object' ? a.text : a;
     if (a && a.key && FALA_INTEIRA[a.key]) return String(t || '');
+    // Trecho de segurança da base (Seafire, EPIRB, salvatagem, protocolo…): o trecho inteiro, com o rótulo e a nota da etiqueta
+    // (sem a linha "Veja também"). Antes, a fala parava na 2ª frase e perdia o "não abra o acesso ao motor" e o rótulo.
+    if (a && a.key === 'base' && a.seguranca && typeof t === 'string') return t.split(/\n+/)[0].trim();
     if (a && a.key === 'base' && a.ingles) return 'Está no ' + String(a.ref || 'manual').replace(/, p\. /, ', página ').replace(/ · .*$/, '') + ', em inglês. Mostrei o trecho na tela.';
     // Tira parênteses da fala, inclusive aninhados: "(… snapshot (DEMO) …)" sai inteiro, sem sobra.
     var semPar = function (s) { var a; do { a = s; s = s.replace(/\s*\([^()]*\)/g, ''); } while (s !== a); return s.replace(/\s*[()]/g, ''); };

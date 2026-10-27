@@ -104,6 +104,10 @@ NOTA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'
 # de drive.arquivos → números de seção (no checklist, o título); None = todas. No FAQ (§1.6), os ids das mesmas seções e os EM.
 MINIMO_SEGURANCA = {'g_motores': {'4'}, 'g_eletronicos': {'1', '5'}, 'g_porao': {'4'}, 'g_ais': {'2'}, 'g_seafire': None,
                     'g_epirb': None, 'checklist': {'Saída · antes de largar'}, 'protocolo': None}
+# Revisão 4 do C5 (§1.5): o respostaBase do cérebro e a voz leem o trecho de segurança INTEIRO (até 1.500 letras, MAX_SEGURANCA do
+# capitao-brain.js), para o rótulo do procedimento padrão e a nota da etiqueta não ficarem de fora; acima de 800 letras a fala passa de
+# 1 minuto. Os trechos de hoje chegam a 560 (g_seafire §1 e o protocolo do Seafire).
+SEGURANCA_MAX_LETRAS = 800
 MINIMO_FAQ = re.compile(r'(?:EM|SF|EP)-\d+|MO-04|EL-01|EL-05|PO-04|AI-02|CK-03')
 # Ocorrências permitidas na pasta do Avanti, por candidato (COLISAO_MODELOS; ok do proprietário, §8.2 ponto 9).
 EXCECOES_MODELO = {'Seakeeper 3': 1}
@@ -1839,6 +1843,12 @@ def a_rotulo_seguranca(X):
     return out
 
 
+def a_seguranca_curta(X):
+    return ['base:trechos[%d] (%s · %s): %d letras com seguranca (máximo %d: o cérebro lê o trecho inteiro, e a fala também)'
+            % (i, t.get('fonte'), t.get('secao'), len(t.get('texto', '')), SEGURANCA_MAX_LETRAS)
+            for i, t in enumerate(X.trechos) if t.get('seguranca') and len(t.get('texto', '')) > SEGURANCA_MAX_LETRAS]
+
+
 def a_nota_etiqueta(X):
     nota = NOTA
     out = []
@@ -2029,7 +2039,8 @@ ASSERCOES = [
     ('LACO', a_laco), ('LIMITES_FORMA', a_limites_forma), ('JANELA', a_janela), ('FIO', a_fio), ('EMENDA', a_emenda),
     ('EMENDA_ROTA', a_emenda_rota), ('PISO', a_piso), ('HORAS', a_horas), ('ROTA', a_rota), ('DIA_DE_BORDO', a_dia_de_bordo),
     ('SEM_EMERGENCIA', a_sem_emergencia), ('AGENDA', a_agenda), ('HISTORICO', a_historico), ('COORD_TEXTO', a_coord_texto),
-    ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('NOTA_ETIQUETA', a_nota_etiqueta), ('RODAPE_SNAPSHOT', a_rodape_snapshot),
+    ('ROTULO_SEGURANCA', a_rotulo_seguranca), ('SEGURANCA_CURTA', a_seguranca_curta), ('NOTA_ETIQUETA', a_nota_etiqueta),
+    ('RODAPE_SNAPSHOT', a_rodape_snapshot),
     ('FONTES_RELATIVAS', a_fontes_relativas),
     # Invariantes da coluna "Asserção do gerador" da §6.4 sem nome na §6.3 (as outras de lá estão na MMSI9 e na SEM_INDICATIVO).
     ('TERCEIROS', a_terceiros), ('SEM_PREVISAO', a_sem_previsao),

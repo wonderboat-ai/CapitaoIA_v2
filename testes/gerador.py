@@ -408,6 +408,10 @@ AMOSTRAS = {
                                                k['B']['trechos'].append({'fonte': 'Guia de bordo — EPIRB', 'secao': '1 · Acionar', 'equip': 'EPIRB', 'seguranca': True,
                                                                          'texto': 'Só em perigo grave e iminente.' + ('' if r else ' ' + ROTULO_FIM)}), k)[2])(hoje()),
                          'sem o rótulo no fim'),
+    # (revisão 4 do C5) o trecho de segurança é lido inteiro pelo cérebro e pela fala: até 800 letras
+    'SEGURANCA_CURTA': (lambda r: (lambda k: (k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'seguranca': True,
+                                                                        'texto': ('Passo curto. ' * (80 if r else 5)).strip()}), k)[1])(hoje()),
+                        '(máximo 800'),
     # protocolos.seafire (None hoje, C6); a nota dos equipamentos de segurança já é a NOTA_ETIQUETA desde o C5
     'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
                       'protocolos.seafire.nota'),
@@ -905,7 +909,7 @@ EXTRAS += [
 
 def com_simulado(r):
     """Revisão do C3 (achado do LACO): o `simulado` que o atual() acrescenta é marca, não leitura (§1.15, «simulado fora»). Antes,
-    se o C8 o pusesse no catálogo e em replay.fixos, as 41 asserções passavam. O bom não planta nada."""
+    se o C8 o pusesse no catálogo e em replay.fixos, as asserções passavam. O bom não planta nada."""
     k = com_replay(hoje())
     if r:
         k['D']['campos']['simulado'] = {'rotulo': 'Simulado', 'un': 'liga/desliga', 'casas': 0, 'origem': 'fixo'}
@@ -1353,6 +1357,20 @@ def amostras():
        len(G.EQUIPAMENTOS) == 16 and len(G.FONTE_GUIA) == 16 and len(B0['trechos']) == 91 and all(e['guia'] in G.FONTE_GUIA for e in G.EQUIPAMENTOS)
        and secoes[G.ARQ['g_gerador']][1] == '2 · Ligar' and [len(secoes[G.ARQ[k]]) for k in ('g_motores', 'g_seafire', 'g_epirb', 'checklist', 'protocolo')] == [10, 4, 4, 7, 9],
        (len(G.EQUIPAMENTOS), len(G.FONTE_GUIA), len(B0['trechos'])))
+    # Revisão 4 do C5: o passo a passo do Seafire fica só no §1 (os 5 passos do protocolo, letra por letra) e no §3 (o que dizer depois do
+    # disparo). O §2 é só o disparo manual e não tem as palavras que casavam perguntas comuns ("disparou", "depois", "esfriar", "abra",
+    # "acesso"); o §3 não manda "esfriar" nem "abrir". O g_motores §6 diz "Depois de navegar" (3 das 4 palavras de "como esfriar o motor
+    # depois de navegar"). O cerebro.py confere o efeito no navegador.
+    sf = {t['secao']: t['texto'] for t in B0['trechos'] if t['fonte'] == G.ARQ['g_seafire']}
+    s1, s2, s3 = (sf[k].lower() for k in ('1 · Em caso de fogo', '2 · Disparo manual', '3 · Depois da descarga'))
+    ok('revisão 4 do C5: g_seafire §1 = os 5 passos do protocolo; "não abra o acesso ao motor" só no §1 e no §3',
+       sf['1 · Em caso de fogo'].startswith(' '.join(G.TXT_SEAFIRE)) and 'não abra o acesso ao motor' in s1 and 'não abra o acesso ao motor' in s3
+       and 'não abra' not in s2 and 'acesso' not in s2, (s2[:120],))
+    ok('revisão 4 do C5: g_seafire §2 sem "disparou", "depois" nem "esfriar"; §3 sem "esfriar" nem "abrir", com os motores, o gerador e a ventilação desligados',
+       not [w for w in ('disparou', 'depois', 'esfri') if w in s2] and not [w for w in ('esfri', ' abrir', 'ao abrir') if w in s3]
+       and 'motores, gerador e ventilação desligados' in s3 and 'disparou ou descarregou' in s3, (s2[:120], s3[:160]))
+    ok('revisão 4 do C5: g_motores §6 começa com "Depois de navegar"',
+       next(t['texto'] for t in B0['trechos'] if t['fonte'] == G.ARQ['g_motores'] and t['secao'] == '6 · Parada').startswith('Depois de navegar'))
     V5 = verifica(hoje())
     ok('FONTE_LIMITES: a constante LIMITES do gerador confere com os §n dos guias (0 violações, %d limites)' % len(G.LIMITES), not V5['FONTE_LIMITES'] and len(G.LIMITES) == 21,
        V5['FONTE_LIMITES'][:3])

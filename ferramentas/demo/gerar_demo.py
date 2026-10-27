@@ -600,7 +600,8 @@ GUIAS = {
             # Revisão 3 do C5: sem água de refrigeração, desliga na hora (o escapamento molhado superaquece); filtro e rotor só com o motor
             # parado e a válvula de fundo fechada, como o g_gerador §3 e §5. É o trecho do AVISO de arrefecimento do laço (§3.1).
             ('5 · Temperatura alta', 'Reduza para marcha lenta e confira a saída de água pelo escapamento. Sem água no escapamento ou com a temperatura ainda subindo: desligue o motor afetado e siga com o outro. Com o motor parado, feche a válvula de fundo e confira o filtro de água salgada e o rotor da bomba de água salgada. Nunca abra a tampa do arrefecimento com o motor quente.'),
-            ('6 · Parada', 'Deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
+            # Revisão 4 do C5: "Depois de navegar" faz de "como esfriar o motor depois de navegar" a pergunta deste trecho (3 das 4 palavras).
+            ('6 · Parada', 'Depois de navegar, deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
             ('7 · Manutenção na agenda', 'Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Rotor da bomba de água salgada: a cada 12 meses. Revisão anual pela oficina de motores.'),
             ('8 · Horímetros', 'Os horímetros de BB e BE aparecem no painel dos motores e na telemetria.'),
             ('9 · Faixas de operação', texto_faixas_motores()),
@@ -724,17 +725,19 @@ GUIAS = {
     'g_seafire': {
         'titulo': ARQ['g_seafire'], 'pasta': 'manuais', 'equip': equip_de('seafire'), 'seg': True, 'nota': NOTA_PROTOCOLO,
         'secoes': [
-            # Revisão do C5: cada seção que a busca traz ao topo depois do disparo leva o "não abra o acesso ao motor". O §1 tem os
-            # passos na ordem do protocolo; o §2, o disparo manual e o que vem depois; o §3 diz "disparou"/"descarregou", as palavras
-            # do relato (o §2 casava "disparou" no "não disparou sozinho" e mandava usar o disparo manual depois da descarga).
-            # Revisão 3 do C5: o §2 e o §3 começam pelo 1º passo do agente limpo (motores, gerador e ventilação desligados: o motor
-            # ligado aspira o agente e a ventilação o dilui), e o §3 trata a descarga como fogo: extintor à mão ao abrir, MAYDAY se voltar.
+            # Revisão do C5: cada seção que a busca traz ao topo depois do disparo leva o "não abra o acesso ao motor" e o desligamento de
+            # motores, gerador e ventilação (revisão 3: o motor ligado aspira o agente e a ventilação o dilui). Revisão 4: isso fica só
+            # no §1 (os 5 passos do protocolo) e no §3, que diz "disparou"/"descarregou", as palavras do relato. O §2 é só o disparo manual
+            # (sem "disparou", "depois" nem "esfriar") e o §3 não repete o "ao abrir" nem o "motor esfriar": repetidos nas três seções,
+            # esses passos casavam perguntas comuns ("como religar o gerador depois de desligar", "como abrir o motor", "como esfriar o
+            # motor depois de navegar") e, por serem de segurança, barravam a IA (cerebro.py, revisão 4).
             ('1 · Em caso de fogo', fim_seguro(*TXT_SEAFIRE)),
-            ('2 · Disparo manual', fim_seguro(TXT_SEAFIRE[0], TXT_SEAFIRE[1], TXT_SEAFIRE[2])),
-            ('3 · Depois da descarga', fim_seguro('Depois do disparo (o sistema disparou ou descarregou, sozinho ou no manual): confirme motores, '
-                                                  'gerador e ventilação desligados; não abra o acesso ao motor; espere o tempo indicado na etiqueta '
-                                                  'do sistema e o motor esfriar; ao abrir, extintor portátil à mão; se o fogo voltar, MAYDAY no '
-                                                  'canal 16. Depois, registre no diário e chame o técnico de bordo para a recarga.')),
+            ('2 · Disparo manual', fim_seguro('Se o sistema não acionou sozinho e há fogo no motor, use o disparo manual, com motores e gerador '
+                                              'desligados e a ventilação do motor cortada.')),
+            ('3 · Depois da descarga', fim_seguro('Depois do disparo do sistema (disparou ou descarregou, sozinho ou no disparo manual): confirme '
+                                                  'motores, gerador e ventilação desligados; não abra o acesso ao motor; espere o tempo indicado '
+                                                  'na etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão; se o fogo '
+                                                  'voltar, MAYDAY no canal 16. Registre no diário e chame o técnico de bordo para a recarga.')),
             ('4 · Inspeção anual', fim_seguro('Inspeção do sistema fixo e da carga a cada 12 meses, pelo técnico de bordo, conforme a agenda de manutenção.')),
         ],
     },
