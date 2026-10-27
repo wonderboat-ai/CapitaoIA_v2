@@ -314,10 +314,10 @@ class Component extends DCLogic {
     return {
       note: s.note || (feitas.length ? feitas.length + (feitas.length === 1 ? ' tarefa executada' : ' tarefas executadas') + ' no app · registradas no diário' : ''),
       noteTone: s.note ? s.noteTone : 'var(--cap-ok, #34c77a)',
-      resumo: (dia ? dia + ', ' : '') + (S.dia || SD) + ' · ' + snap + ' (telemetria ao vivo desligada) · ' + AG.length + ' tarefas · ' + DOCS.length + ' documentos · prazos contados a partir de ' + (S.quando ? S.quando.slice(0, 10) : SD),
+      resumo: (dia ? dia + ', ' : '') + (S.dia || SD) + ' · ' + snap + ' (telemetria ao vivo desligada) · ' + AG.length + ' tarefas · ' + DOCS.length + ' documentos · prazos contados a partir de ' + (D.versao || (S.quando ? S.quando.slice(0, 10) : SD)),
       kpis: kpis,
       manut: manut, manutVazio: !manut.length,
-      manutSub: (D.agendaFonte || 'Agenda').split(' · ')[0] + ' · ' + AG.length + ' tarefas' + (feitas.length ? ' · ' + feitas.length + ' executada(s) no app' : '') + ' · falta registrar: ' + ((D.agendaFalta || []).map((x) => String(x).split(':')[0]).join(' e ') || 'nada') + ' (' + SD + ')',
+      manutSub: (D.agendaFonte || 'Agenda').split(' · ')[0] + ' · ' + AG.length + ' tarefas' + (feitas.length ? ' · ' + feitas.length + ' executada(s) no app' : '') + ((D.agendaFalta || []).length ? ' · falta registrar: ' + D.agendaFalta.map((x) => String(x).split(':')[0]).join(' e ') + ' (' + SD + ')' : ''),
       manutFonte: 'Fonte: ' + (D.agendaFonte || SD) + ' · Executado: registro do aparelho (capitao.executado.v1)',
       propSub: (eqM.qtd ? eqM.qtd + ' × ' : '') + (eqM.fabricante || 'fabricante ' + SD) + ' · modelo ' + (eqM.modelo || SD),
       propEstado: cap1(M.estado || SD) + ' · última leitura com motores ligados ' + (M.hora || SD),

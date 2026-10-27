@@ -18,6 +18,10 @@
 - C6 (CONTRATO §1.3): o D.protocolos completo (18 campos, seafire e epirb com a nota da etiqueta), igual letra por letra ao texto do
   contrato (PROTOCOLOS_C6); a asserção PROTOCOLOS acusa cada defeito de forma, texto fixo e fonte única com os guias; as pendências
   do C6 saíram da PENDENTES (a pendência velha de hoje é a do C8).
+- C7 (CONTRATO §1.7–§1.9, §1.11, §1.23, §4.1, §5): agenda de 14 tarefas, tarefas da equipe, documentos (o TIE com id e numero), diário fixo,
+  equipe e fontes do Drive com prazos relativos (deslocamentos + reserva contada da REF); as pendências do C7 saíram da PENDENTES (só o
+  C8 fica) e o rodapé de verdade (rodape.js) é anexado sem mudança ao capitao-dados.js e passa a RODAPE_SNAPSHOT (rodape_real()). O
+  comportamento do rodapé, no navegador, é do testes/rodape.py.
 - Revisão do C6 (CONTRATO §1.3, «todas viram asserção»): a GRAFIA_SEAFIRE prende «Seafire» (sem hífen, espaço nem outra caixa) em todo valor, chave e
   nome de arquivo do D, da base, do FAQ e das fontes; a única exceção são as `palavras` de busca dos equipamentos («sea fire», o ditado). 27 amostras
   plantadas (12 grafias, a base inteira com «Sea Fire», chaves, CSV, JSON, FAQ, HTML com entidade e tag, nome de arquivo) e grafia_seafire().
@@ -110,7 +114,8 @@ def determinismo(tmp):
     relogio = re.findall(r'\b(?:datetime\.now|date\.today|datetime\.today|utcnow|time\.time|time\.localtime|time\.gmtime|time\.strftime)\b', fonte)
     ok('nenhuma leitura do relógio do sistema no gerador', not relogio, relogio)
     js = a.get('capitao-dados.js', b'').decode('utf-8')
-    linhas = js[js.find('window.CapitaoDados = '):].split('\n')   # sem o comentário do cabeçalho
+    # C7: o rodapé (CapitaoAgora, código indentado) vem depois dos dados; o serializador é só dos dados, até o comentário do rodapé
+    linhas = js[js.find('window.CapitaoDados = '):js.find('/* CapitaoAgora')].split('\n')   # sem o comentário do cabeçalho
     ok('serializador compacto: dicionários indentados até a profundidade 2, o resto numa linha',
        all(not l.startswith('   ') for l in linhas) and ' "embarcacao": {' in js and '\n  "nome": "Capitão IA",' in js and '\n "agenda": [{' in js,
        [l[:80] for l in linhas if l.startswith('   ')][:3])
@@ -988,7 +993,8 @@ EXTRAS += [('GRAFIA_SEAFIRE', 'texto do diário com %r' % v, (lambda v: lambda r
      lambda r: (lambda k: (k['D'].update({'equipNota': k['D']['equipNota'] + (' O Sea-Fire está em dia.' if r else ' O Seafire está em dia.')}), k)[1])(hoje()),
      'equipNota: texto com a grafia «Sea-Fire»'),
     ('GRAFIA_SEAFIRE', 'palavras da agenda com «sea fire» (a exceção é só das palavras de busca dos equipamentos)',
-     lambda r: (lambda k: (k['D']['agenda'][0].setdefault('palavras', []).append('inspecao do sea fire' if r else 'inspecao do seafire'), k)[1])(hoje()),
+     # C7: a agenda já traz as `palavras` (antes o setdefault criava a lista): a amostra troca a 1ª
+     lambda r: (lambda k: (k['D']['agenda'][0]['palavras'].__setitem__(0, 'inspecao do sea fire' if r else 'inspecao do seafire'), k)[1])(hoje()),
      'agenda[0].palavras[0]: texto com a grafia «sea fire»'),
     ('GRAFIA_SEAFIRE', 'chave «Sea-Fire» no D', lambda r: (lambda k: (k['D']['embarcacao'].update({'Sea-Fire' if r else 'seafire': 'x'}), k)[1])(hoje()),
      'embarcacao.Sea-Fire: chave com a grafia «Sea-Fire»'),
@@ -1397,6 +1403,34 @@ def planta(nome, o_que, monta, espera):
        {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome]), 'reprova': reprova})
 
 
+def rodape_real():
+    """C7 (CONTRATO §1.23, §4.1, §6.3 RODAPE_SNAPSHOT): o rodapé de verdade, o ferramentas/demo/rodape.js, é anexado sem mudança ao
+    fim do capitao-dados.js e passa a RODAPE_SNAPSHOT (só lê D.snapshot.quadro, dentro de instante() e depois da guarda /SOS-/);
+    sem a guarda, ou com uma escrita no D.snapshot, a asserção acusa e o gerador reprovaria. O comportamento (relógio, rebase, SOS)
+    é do testes/rodape.py, no navegador."""
+    print('C7: o rodape.js real')
+    real = C.le_rodape()
+    k = hoje()
+    js = G.gera_js(k['D'])
+    ok('o capitao-dados.js termina com o rodape.js, sem mudança, depois dos dados e do comentário de abertura do rodapé',
+       real is not None and js.endswith(';\n' + real) and real.startswith('/* CapitaoAgora') and js.count('/* CapitaoAgora') == 1, (len(js), len(real or '')))
+    k['rodape'] = real
+    ok('RODAPE_SNAPSHOT: o rodape.js real passa', not verifica(k)['RODAPE_SNAPSHOT'], verifica(k)['RODAPE_SNAPSHOT'][:3])
+    ok('SIMULACAO_UNICA e TAMANHO: com o rodapé, o "simulacao": true aparece uma vez e o arquivo cabe no orçamento (120 KB)',
+       not verifica(k)['SIMULACAO_UNICA'] and not verifica(k)['TAMANHO'] and len(js.encode('utf-8')) < 120 * 1024, len(js.encode('utf-8')))
+    guarda = "if (/SOS-/.test(location.pathname)) return null;"
+    ok('o rodape.js tem a guarda /SOS-/ no instante() e a da microtarefa (antes de ler D.simulacao)',
+       real.count(guarda) == 1 and real.index(guarda) < real.index('D.snapshot &&') and real.count('if (/SOS-/.test(location.pathname)) return;') == 1
+       and real.index('if (/SOS-/.test(location.pathname)) return;') < real.rindex('D.simulacao === true'), 'guardas')
+    for o_que, ruim, espera in (
+            ('sem a guarda /SOS-/ no instante()', real.replace(guarda, ''), 'antes da guarda /SOS-/'),
+            ('com uma escrita no D.snapshot.quadro', real.replace("var q = o.fonte", "D.snapshot.quadro.lat = 0; var q = o.fonte"), 'escreve em D.snapshot'),
+            ('com o D.snapshot lido fora do instante()', real.replace('rebase(Date.now());', 'var s = D.snapshot; rebase(Date.now());'), 'fora das formas aceitas')):
+        k['rodape'] = ruim
+        V = verifica(k)['RODAPE_SNAPSHOT']
+        ok('RODAPE_SNAPSHOT: o rodape.js %s acusa (%s)' % (o_que, espera), any(espera in m for m in V), V[:3])
+
+
 def palavras():
     print('palavras_juntas(): o camelCase e o hífen não escondem a chave da lista (CHAVES_IDENT, CHAVES_PREVISAO)')
     for chave, junta in (('WhatsApp', 'whatsapp'), ('whatsApp', 'whatsapp'), ('Whats App', 'whatsapp'), ('whats_app_marina', 'whatsapp'),
@@ -1410,17 +1444,26 @@ def palavras():
        all(set(C.palavras_chave(k)) <= set(C.palavras_juntas(k)) for k in ('hexId', 'canal16', 'hora_local', 'Maré prevista (m)')))
 
 
+def sem_tie():
+    k = hoje()
+    k['D']['documentos'] = [d for d in k['D']['documentos'] if d.get('id') != 'tie']
+    return k
+
+
 def registro_tie(V0):
-    """Revisão final do C4: a REGISTRO cruza o registro com o numero do documento de id "tie" (§1.2, §1.8). O TIE de hoje não tem id
-    (o C7 o regrava) e o cruzamento nunca rodava: o registro preenchido ao lado de "SEM DADOS: TIE" no mesmo dado não reprovava
-    nada, e o C7 podia esquecer o id ou o número sem que a PENDENTES o obrigasse. Na simulação, a falta do documento é a violação
-    congelada do C7; o TIE certo sem tirar a linha da PENDENTES e o TIE errado reprovam (os dois pelo main(), em reprova())."""
+    """Revisão final do C4: a REGISTRO cruza o registro com o numero do documento de id "tie" (§1.2, §1.8). Antes do C7 o TIE não
+    tinha id e a falta do documento era a violação congelada do C7; o C7 grava id "tie" e numero = o registro e tira a linha da
+    PENDENTES: agora o TIE certo não acusa nada, e o id esquecido, o número esquecido ou errado e o TIE a menos reprovam direto
+    (fora das pendências; os dois últimos pelo main(), em reprova())."""
     reg = G.EMBARCACAO['registro']
-    ausente = [m for m in V0['REGISTRO'] if m.startswith('documentos[tie] ausente')]
+    ausente = [m for m in verifica(sem_tie())['REGISTRO'] if m.startswith('documentos[tie] ausente')]
     novas, conhecidas, velhas = C.separa({'REGISTRO': V0['REGISTRO']})
-    ok('REGISTRO: o TIE de hoje (sem id) é a única violação, congelada na PENDENTES do C7',
-       V0['REGISTRO'] == ausente and len(ausente) == 1 and not novas and not velhas and conhecidas == {'REGISTRO': {'C7': 1}},
+    ok('REGISTRO: o TIE de hoje (id "tie", numero = o registro) não acusa, e a PENDENTES não tem mais o REGISTRO (a pendência do C7 saiu)',
+       not V0['REGISTRO'] and not novas and not velhas and 'REGISTRO' not in conhecidas and 'REGISTRO' not in C.PENDENTES,
        (V0['REGISTRO'], novas, velhas, conhecidas))
+    d = hoje()['D']['documentos'][0]
+    ok('C7 (§1.8): o 1º documento é o TIE, com id "tie", numero = embarcacao.registro, vence e emitido relativos',
+       d['id'] == 'tie' and d['numero'] == reg == G.EMBARCACAO['registro'] and d['venceEm'] == 646 and d['emitidoHa'] == 1180, d)
 
     def tie(**campos):
         """O dado de hoje com o 1º documento (o TIE) mudado: o valor None tira a chave."""
@@ -1430,29 +1473,21 @@ def registro_tie(V0):
             if v is None:
                 k['D']['documentos'][0].pop(c, None)
         return k
-    for o_que, k, trecho, nova in (
-            ('numero = o registro, sem id (o C7 esquece o id)', tie(numero=reg), 'documentos[tie] ausente', False),
-            ('numero diferente do registro, sem id', tie(numero='CIA-99-9999'), 'documentos[tie] ausente', False),
-            ('id "tie" e numero diferente do registro', tie(id='tie', numero='CIA-99-9999'), 'documentos[tie].numero diferente', True),
-            ('id "tie" e sem numero (o C7 esquece o número)', tie(id='tie', numero=None), 'documentos[tie].numero ausente', True)):
+    for o_que, k, trecho in (
+            ('numero = o registro, sem id (esquece o id)', tie(id=None), 'documentos[tie] ausente'),
+            ('numero diferente do registro, sem id', tie(id=None, numero='CIA-99-9999'), 'documentos[tie] ausente'),
+            ('id "tie" e numero diferente do registro', tie(numero='CIA-99-9999'), 'documentos[tie].numero diferente'),
+            ('id "tie" e sem numero (esquece o número)', tie(numero=None), 'documentos[tie].numero ausente')):
         V = verifica(k)['REGISTRO']
         livres = C.separa({'REGISTRO': V})[0].get('REGISTRO', [])
-        ok('REGISTRO: TIE com %s acusa%s' % (o_que, ' e reprova (fora das pendências)' if nova else ' (é a pendência do C7)'),
-           any(trecho in m for m in V) and bool(livres) == nova, (V, livres))
-    V = verifica(tie(id='tie', numero=reg))['REGISTRO']
-    velhas = C.separa({'REGISTRO': V})[2]
-    ok('REGISTRO: TIE com id "tie" e numero = o registro (o que o C7 grava) não acusa, e a pendência do C7 fica velha',
-       not V and [(n, c) for n, c, _ in velhas] == [('REGISTRO', 'C7')], (V, velhas))
-    k = tie(id='tie', numero=reg)
+        ok('REGISTRO: TIE com %s acusa e reprova (fora das pendências)' % o_que, any(trecho in m for m in V) and bool(livres), (V, livres))
+    k = hoje()
     k['D']['documentos'].append(dict(k['D']['documentos'][0]))
     V = verifica(k)['REGISTRO']
     ok('REGISTRO: dois documentos com id "tie" acusam (o 2º não esconde o 1º)', any('2 documentos com id "tie"' in m for m in V), V)
-    k = hoje()
-    k['D']['documentos'] = [d for d in k['D']['documentos'] if 'TIE' not in d['n']]
-    V = verifica(k)['REGISTRO']
-    ok('REGISTRO: sem documento de TIE nenhum acusa o mesmo (ausente)', V == ausente, V)
+    ok('REGISTRO: sem documento de TIE nenhum acusa o mesmo (ausente)', len(ausente) == 1, ausente)
     # Modo real (§4.2): o TIE ausente não reprova (o proprietário pode ter só o registro); o numero diferente, sim; registro None = SEM DADOS
-    k = hoje()
+    k = tie(id=None)
     k['D']['simulacao'] = False
     V = verifica(k)['REGISTRO']
     ok('REGISTRO: no modo real, registro preenchido e TIE sem id não reprova', not V, V)
@@ -1974,24 +2009,27 @@ def reprova(tmp):
     rc, saida = rodar(lambda D: (D['snapshot'].update({'porao': {'estado': 'seco', 'hora': D['snapshot']['hora']}}), D)[1], p4)
     ok('pendência que não ocorre mais (o snapshot.porao, do C8, preenchido antes da hora): main() devolve 1 e não grava nada',
        rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C8 que não ocorre mais' in saida, (rc, saida[-300:]))
-    # Revisão final do C4: o TIE com id e numero certos (o que o C7 grava) sem tirar a pendência REGISTRO do C7 reprova (a pendência
-    # não ocorre mais); com o numero errado, a violação nova também reprova. Em nenhum dos dois o main() grava.
-    reg = D0()['embarcacao']['registro']
-    for i, (o_que, campos, espera) in enumerate((('id "tie" e numero = o registro, sem tirar a linha da PENDENTES', {'id': 'tie', 'numero': reg},
-                                                  'REGISTRO: pendência do C7 que não ocorre mais'),
-                                                 ('id "tie" e numero errado', {'id': 'tie', 'numero': 'CIA-99-9999'}, 'REGISTRO 1 nova(s)'))):
+    # Revisão final do C4, atualizada no C7 (o TIE certo já está no dado e a linha da PENDENTES saiu): o id esquecido ou o numero
+    # errado do TIE reprova o main() como violação nova; em nenhum dos dois o main() grava.
+    def tie_campos(D, c):
+        for k, v in c.items():
+            D['documentos'][0].pop(k, None) if v is None else D['documentos'][0].update({k: v})
+        return D
+    for i, (o_que, campos) in enumerate((('sem o id "tie" (o TIE sem id)', {'id': None}), ('id "tie" e numero errado', {'numero': 'CIA-99-9999'}),
+                                         ('id "tie" e sem numero', {'numero': None}))):
         p = os.path.join(tmp, 'r-tie-%d' % i)
-        rc, saida = rodar(lambda D, c=campos: (D['documentos'][0].update(c), D)[1], p)
-        ok('REGISTRO: TIE com %s: main() devolve 1 e não grava nada' % o_que, rc == 1 and not os.path.exists(p) and espera in saida, (rc, saida[-300:]))
+        rc, saida = rodar(lambda D, c=campos: tie_campos(D, c), p)
+        ok('REGISTRO: TIE %s: main() devolve 1 e não grava nada' % o_que, rc == 1 and not os.path.exists(p) and 'REGISTRO 1 nova(s)' in saida, (rc, saida[-300:]))
     # Com o modo por caminho, as estruturais de hoje têm violações, todas congeladas na PENDENTES (antes: nenhuma violação, porque
     # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
     ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
         sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
-    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C7–C8; o C4 completou a embarcação, o C5, '
-       'os equipamentos e os guias e o C6, o D.protocolos)',
+    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C8; o C4 completou a embarcação, o C5, '
+       'os equipamentos e os guias, o C6, o D.protocolos e o C7, a agenda, os documentos, o diário e as fontes relativas)',
        all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items())
-       and C.COMMITS_PENDENTES == ('C7', 'C8') and not any('C6' in cs for cs in C.PENDENTES.values()))
+       and C.COMMITS_PENDENTES == ('C8',) and not any(c in cs for c in ('C6', 'C7') for cs in C.PENDENTES.values())
+       and set(C.PENDENTES) == {'NULO'})
 
 
 def main():
@@ -2001,6 +2039,7 @@ def main():
         copias()
         palavras()
         rotulos_c2()
+        rodape_real()
         amostras()
         porao_e_lugar()
         seguranca_sem_modelo()

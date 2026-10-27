@@ -1,0 +1,432 @@
+# -*- coding: utf-8 -*-
+"""Capitão IA — teste do rodapé do capitao-dados.js (CapitaoAgora, CONTRATO-DADOS §1.23 e §4.1; C7). Sem rede, sem cota.
+
+O rodapé refaz os prazos (agenda, tarefas da equipe, documentos, diário, abastecimentos e a série de 24 V) com a data do
+aparelho no fuso America/Sao_Paulo, e é a única fonte do instante (`instante()`), da trava do ar e da água e das contagens.
+Aqui, com o `Date` congelado por add_init_script (a página abre numa rota mínima que só carrega o capitao-dados.js):
+
+- âncora, hoje e dia de bordo em 06:59:59, 07:00:01, 23:59 e 00:30, com o Intl e sem ele (reserva de −180 min); os prazos, as
+  datas e o iso de cada lista contra uma conta independente em Python (datetime), a partir dos deslocamentos do gerador;
+- 3 atrasadas e a agenda ordenada por dn; em 06:59:59 e 07:00:01, d06.d = ultima do epirb-teste, d09.d = emitido do laudo e
+  d03.d = vence do gerador-rotor (dd/mm), e a d01 acima da d03;
+- o port do status_prazo contra o do gerador (n de −5 a 200), o prazoDe/docDe do rodapé;
+- idempotência (rebase 2× = 1×), listas iguais por referência (===) antes e depois do rebase de outro dia, nenhum null nem ''
+  no D, o D.snapshot sem mudar (nem um byte) depois de rebases em vários dias, a paridade com a reserva do gerador (relógio
+  congelado na REF: o D inteiro igual ao que o gerador gravou);
+- a microtarefa do dia de bordo (com um D.replay.diaDeBordo de teste): entra por id, nas mesmas listas, com d01 = âncora + 1 s e
+  d02 = âncora; com `simulacao = false` no fim do arquivo, nada entra; em /SOS-/ (S1, S2 e uma rota mínima) o instante é null, nada
+  entra e D.simulacao não é lida nenhuma vez (getter que conta); fora do SOS a mesma leitura conta ≥ 1 (o getter funciona);
+- contagens() com o executado, as tarefas e as ações do diário do aparelho; a trava e o instante() nas três fontes (replay,
+  coletor e a reserva do snapshot) com os números do §1.22 e do §1.23 (12:01:00): autonomia, faltam, desdeAbast, diesel_pct;
+- os formatadores (arred, nb, mil, grau3, hora, coord, campo).
+
+Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
+    python -X utf8 testes/rodape.py
+Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
+"""
+import importlib.util
+import json
+import os
+import sys
+from datetime import date, datetime, time, timedelta, timezone
+
+from playwright.sync_api import sync_playwright
+
+BASE = 'http://127.0.0.1:8765'
+CANAL = 'msedge'
+RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BR = timezone(timedelta(hours=-3))
+MARCA = '/* CapitaoAgora'   # o começo do rodapé no capitao-dados.js: o que entra antes dele roda antes dele
+HTML = '<!doctype html><meta charset="utf-8"><title>rodape</title><script src="/capitao-dados.js"></script>'
+
+spec = importlib.util.spec_from_file_location('gerar_demo', os.path.join(RAIZ, 'ferramentas', 'demo', 'gerar_demo.py'))
+sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
+G = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(G)
+
+falhas = 0
+total = 0
+
+
+def ok(nome, cond, info=''):
+    global falhas, total
+    total += 1
+    print(('OK    ' if cond else 'FALHA ') + nome + ('' if cond or info == '' else ' — ' + str(info)[:500]))
+    if not cond:
+        falhas += 1
+
+
+# ——— contas independentes (Python) ———
+def br(d):
+    return d.strftime('%d/%m/%Y')
+
+
+def dm(d):
+    return d.strftime('%d/%m')
+
+
+def dias(local):
+    """(hoje, dia de bordo) no fuso: o dia de bordo começa às 07:00 (antes dela, o de ontem)."""
+    hoje = local.date()
+    return hoje, hoje if local >= datetime.combine(hoje, time(7, 0), BR) else hoje - timedelta(days=1)
+
+
+def ms_de(local):
+    return int(local.timestamp() * 1000)
+
+
+# Fixture do dia de bordo (CONTRATO §1.8–§1.10), como o C8 vai gerar: três abastecimentos de 07:00, d01 e d02 no topo e a nota fiscal.
+DIA_DE_BORDO = """window.CapitaoDados.replay = { ancora_hora: '07:00', diaDeBordo: { dias: 3,
+  abastecimento: { h: '07:00', litros: 1086, combustivel: 'diesel', local: 'posto da marina da base', st: 'CONFERIDO', nivelAntes: 29.6, nivelDepois: 97.5, nota: 'para a saída das 07:00' },
+  documento: { id: 'nf-abast', n: 'Nota fiscal do abastecimento', cat: 'Notas', emitidoHa: 0, st: 'CONFERIDA', ref: 'ab-0', nota: 'abastecimento das 07:00', fonte: window.CapitaoDados.docsFonte },
+  diario: [ { id: 'd01', diasAtras: 0, h: '07:00', sys: 'Navegação', tom: 'tele', who: 'Lucas', pend: false, t: 'Saída às 07:00 com 4 pessoas a bordo.' },
+            { id: 'd02', diasAtras: 0, h: '07:00', sys: 'Combustível', tom: 'ok', who: 'Lucas', pend: false, ref: 'ab-0', t: 'Abastecimento de 1.086 L.' } ] } };"""
+# O arquivo como o C8 o deixa (sem as linhas de transição do C7): abastecimentos vazio, sem a nota fiscal nem a d01/d02 de hoje.
+C8_LIMPO = """(function (D) { D.diario = D.diario.filter(function (x) { return x.id !== 'd01' && x.id !== 'd02'; });
+  D.documentos = D.documentos.filter(function (x) { return x.id !== 'nf-abast'; }); D.abastecimentos = []; })(window.CapitaoDados);"""
+GETTER = """window.__lidas = 0; (function () { var v = window.CapitaoDados.simulacao; Object.defineProperty(window.CapitaoDados, 'simulacao',
+  { get: function () { window.__lidas++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); })();"""
+GUARDA = "window.__reserva = JSON.stringify(window.CapitaoDados); window.__snap0 = JSON.stringify(window.CapitaoDados.snapshot);"
+
+
+def abre(b, local, intl=True, antes='', depois='', caminho='/rodape.html', sessao=False, tela=None):
+    """Página com o Date congelado em `local` (e sem Intl, se pedido). `antes` roda antes do rodapé e `depois` no fim do arquivo."""
+    ctx = b.new_context(service_workers='block', **({'viewport': {'width': 390, 'height': 844}, 'has_touch': True} if tela == 'app' else {}))
+    ctx.add_init_script("(function () { var RD = Date; window.__T0 = %d; function FD() { var a = arguments; return a.length === 0 ? new RD(window.__T0) : new (Function.prototype.bind.apply(RD, [null].concat([].slice.call(a))))(); }"
+                        " FD.prototype = RD.prototype; FD.now = function () { return window.__T0; }; FD.UTC = RD.UTC; FD.parse = RD.parse; window.Date = FD; %s })();"
+                        % (ms_de(local), '' if intl else 'window.Intl = undefined;'))
+
+    if sessao:   # depois do Date congelado: a sessão vale a partir do relógio da página
+        ctx.add_init_script("(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()")
+
+    def dados(route):
+        r = route.fetch()
+        corpo = r.text()
+        assert MARCA in corpo, 'o rodapé não está no capitao-dados.js'
+        route.fulfill(response=r, body=corpo.replace(MARCA, antes + '\n' + MARCA, 1) + '\n' + depois)
+    ctx.route('**/capitao-dados.js', dados)
+    if caminho.endswith('.html') and not caminho.endswith('.dc.html'):
+        ctx.route('**' + caminho, lambda route: route.fulfill(body=HTML, content_type='text/html; charset=utf-8'))
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append(str(e)))
+    pg.goto(BASE + caminho)
+    pg.wait_for_function('() => window.CapitaoAgora && window.CapitaoAgora.relogio')
+    pg.wait_for_timeout(100)   # a microtarefa do dia de bordo
+    pg.erros = erros
+    return pg
+
+
+ESTADO = """() => { const D = window.CapitaoDados, A = window.CapitaoAgora;
+  return { relogio: A.relogio, versao: D.versao, agenda: D.agenda.map((t) => [t.id, t.ultima, t.vence, t.dn, t.st, t.rot, t.tom]),
+    tarefas: D.tarefasEquipe.map((t) => [t.id, t.vence, t.dn, t.st, t.rot, t.tom]), docs: D.documentos.map((x) => [x.id, x.emitido, x.vence, x.dn, x.st]),
+    diario: D.diario.map((x) => [x.id, x.d, x.iso]), abast: D.abastecimentos.map((a) => [a.id, a.diasAtras, a.d]), serie: D.serie24v.map((s) => s.d) }; }"""
+
+
+def esperado(local):
+    """O estado que o rebase tem de dar, calculado em Python só com os deslocamentos do gerador."""
+    hoje, bordo = dias(local)
+    ag = [[t['id'], br(hoje - timedelta(days=t['ultimaHa'])), br(hoje + timedelta(days=t['venceEm'])), t['venceEm'],
+           G.status_prazo(t['venceEm'])['st'], G.status_prazo(t['venceEm'])['rot'], G.status_prazo(t['venceEm'])['tom']] for t in G.AGENDA]
+    ag.sort(key=lambda x: (x[3], x[0]))
+    te = [[t['id'], (hoje + timedelta(days=t['venceEm'])).isoformat(), t['venceEm'], G.status_prazo(t['venceEm'])['st'],
+           G.status_prazo(t['venceEm'])['rot'], G.status_prazo(t['venceEm'])['tom']] for t in G.TAREFAS_EQUIPE]
+    docs = []
+    for x in G.DOCUMENTOS:
+        base = bordo if x['id'] == 'nf-abast' else hoje
+        docs.append([x['id'], br(base - timedelta(days=x['emitidoHa'])) if 'emitidoHa' in x else None,
+                     br(hoje + timedelta(days=x['venceEm'])) if 'venceEm' in x else None, x.get('venceEm'),
+                     G.status_doc(x['venceEm']) if 'venceEm' in x else x['st']])
+    seg = G.segundos_do_diario(G.DIARIO, lambda x: 'b' if x['id'] in G.BORDO_DIARIO else 'h')
+    di = []
+    for x, s in zip(G.DIARIO, seg):
+        base = bordo if x['id'] in G.BORDO_DIARIO else hoje
+        d = base - timedelta(days=x['diasAtras'])
+        di.append([x['id'], dm(d), '%sT%s:%02d-03:00' % (d.isoformat(), x['h'], s)])
+    return {'versao': br(hoje), 'agenda': ag, 'tarefas': te, 'docs': docs, 'diario': di,
+            'abast': [[None, a['diasAtras'], br(bordo - timedelta(days=a['diasAtras']))] for a in G.ABASTECIMENTOS],
+            'serie': [dm(bordo - timedelta(days=s['diasAtras'])) for s in G.SERIE_24V]}
+
+
+def limpa(estado):
+    """O estado do JS sem os None do JSON onde o Python põe None (id de abastecimento, campos omitidos)."""
+    e = json.loads(json.dumps(estado))
+    e.pop('relogio', None)
+    return e
+
+
+def sem_nulos(x, caminho=''):
+    """Os null, '', NaN e listas vazias do D (menos a lista de abastecimentos, que é a única que pode ser vazia; o D.snapshot tem os
+    null do C8 e fica de fora até lá)."""
+    out = []
+    if x is None:
+        out.append(caminho)
+    elif isinstance(x, str):
+        if x == '':
+            out.append(caminho + " = ''")
+    elif isinstance(x, dict):
+        for k, v in x.items():
+            if caminho == '' and k == 'snapshot':
+                continue
+            out += sem_nulos(v, caminho + '.' + k)
+    elif isinstance(x, list):
+        if not x and caminho != '.abastecimentos':
+            out.append(caminho + ' = []')
+        for i, v in enumerate(x):
+            out += sem_nulos(v, '%s[%d]' % (caminho, i))
+    return out
+
+
+def relogio_e_listas(b):
+    print('Relógio, âncora e prazos (Date congelado; com e sem Intl)')
+    casos = [('06:59:59', datetime(2026, 10, 27, 6, 59, 59, tzinfo=BR), True), ('07:00:01', datetime(2026, 10, 27, 7, 0, 1, tzinfo=BR), True),
+             ('23:59', datetime(2026, 10, 27, 23, 59, tzinfo=BR), True), ('00:30', datetime(2026, 10, 27, 0, 30, tzinfo=BR), True),
+             ('06:59:59 sem Intl', datetime(2026, 10, 27, 6, 59, 59, tzinfo=BR), False), ('07:00:01 sem Intl', datetime(2026, 10, 27, 7, 0, 1, tzinfo=BR), False)]
+    for nome, local, intl in casos:
+        pg = abre(b, local, intl=intl)
+        hoje, bordo = dias(local)
+        e, esp = pg.evaluate(ESTADO), esperado(local)
+        r = e['relogio']
+        anc = datetime.combine(hoje if local >= datetime.combine(hoje, time(7, 0), BR) else hoje - timedelta(days=1), time(7, 0), BR)
+        ok('%s: hoje %s, dia de bordo %s, âncora %s' % (nome, br(hoje), br(bordo), anc.strftime('%d/%m 07:00')),
+           r['hoje'] == br(hoje) and r['diaBordo'] == br(bordo) and r['hojeIso'] == hoje.isoformat() and r['diaBordoIso'] == bordo.isoformat()
+           and r['ancoraMs'] == ms_de(anc) and r['off'] == -180 and pg.evaluate('() => window.CapitaoAgora.assinatura') == br(hoje) + '|' + br(bordo), r)
+        e = limpa(e)
+        for k in ('versao', 'agenda', 'tarefas', 'docs', 'diario', 'serie'):
+            ok('%s: %s igual à conta em Python' % (nome, k), e[k] == esp[k], [(a, b2) for a, b2 in zip(e[k], esp[k]) if a != b2][:3] if isinstance(e[k], list) else (e[k], esp[k]))
+        ok('%s: abastecimentos com o d do dia de bordo' % nome, [[a[1], a[2]] for a in e['abast']] == [[a[1], a[2]] for a in esp['abast']], e['abast'])
+        ag = e['agenda']
+        ok('%s: 14 tarefas, 3 atrasadas, ordem por dn' % nome, len(ag) == 14 and sum(1 for t in ag if t[3] < 0) == 3 and [t[3] for t in ag] == sorted(t[3] for t in ag),
+           [(t[0], t[3]) for t in ag])
+        d = {x[0]: x for x in e['diario']}
+        ids = {t[0]: t for t in ag}
+        dc = {x[0]: x for x in e['docs']}
+        ok('%s: d06.d = ultima do epirb-teste, d09.d = emitido do laudo, d03.d = vence do gerador-rotor (dd/mm)' % nome,
+           d['d06'][1] == ids['epirb-teste'][1][:5] and d['d09'][1] == dc['laudo'][1][:5] and d['d03'][1] == ids['gerador-rotor'][2][:5],
+           (d['d06'], ids['epirb-teste'], d['d09'], dc['laudo'], d['d03'], ids['gerador-rotor']))
+        ok('%s: a d01 acima da d03 no diário (data e ordem)' % nome, [x[0] for x in e['diario']].index('d01') < [x[0] for x in e['diario']].index('d03') and d['d01'][2] > d['d03'][2],
+           (d['d01'], d['d03']))
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        pg.context.close()
+
+
+def idempotencia(b):
+    print('Idempotência, listas por referência, nulos, snapshot e paridade com a reserva')
+    local = datetime(2026, 9, 26, 12, 0, tzinfo=BR)   # a REF do gerador
+    pg = abre(b, local, antes=GUARDA)
+    r = pg.evaluate("""() => { const D = window.CapitaoDados, A = window.CapitaoAgora, s0 = JSON.stringify(D), t = Date.now();
+      const a = A.rebase(t), s1 = JSON.stringify(D), f = A.rebase(t, true), s2 = JSON.stringify(D);
+      const refs = { agenda: D.agenda, diario: D.diario, documentos: D.documentos, abastecimentos: D.abastecimentos, tarefasEquipe: D.tarefasEquipe, serie24v: D.serie24v };
+      const antes = JSON.stringify([D.agenda.map((x) => x.vence), D.diario.map((x) => x.iso)]);
+      const snaps = [], dia = 86400000;
+      for (const k of [3, 40, -10, 0]) { A.rebase(t + k * dia, true); snaps.push(JSON.stringify(D.snapshot) === window.__snap0); }
+      const depois = JSON.stringify([D.agenda.map((x) => x.vence), D.diario.map((x) => x.iso)]);
+      A.rebase(t + 3 * dia, true); const mudou = JSON.stringify([D.agenda.map((x) => x.vence), D.diario.map((x) => x.iso)]);
+      return { a, f, idem: s0 === s1 && s1 === s2, reserva: window.__reserva === s0, mesmos: Object.keys(refs).every((k) => D[k] === refs[k]), snaps,
+               igual: antes === depois, mudou: mudou !== antes, d: JSON.parse(JSON.stringify(D)) }; }""")
+    ok('rebase na REF: o D inteiro igual ao que o gerador gravou (reserva, byte a byte)', r['reserva'])
+    ok('rebase 2× = 1×: o segundo devolve false, o forçado true, e o D não muda', r['a'] is False and r['f'] is True and r['idem'])
+    ok('as listas do D são as mesmas (===) depois de rebases em outros dias; as datas mudam e voltam', r['mesmos'] and r['mudou'] and r['igual'])
+    ok('o D.snapshot não muda (nem um byte) depois de rebases em +3, +40, −10 e 0 dias', all(r['snaps']), r['snaps'])
+    nulos = sem_nulos(r['d'])
+    ok('nenhum null, \'\' ou lista vazia no D depois do rebase (fora o D.snapshot, do C8)', not nulos, nulos[:5])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+    print('Port do status_prazo e do status dos documentos contra o do gerador')
+    pg = abre(b, local)
+    r = pg.evaluate("() => { const A = window.CapitaoAgora, o = []; for (let n = -5; n <= 200; n++) o.push([n, A.prazoDe(n), A.docDe(n)]); return o; }")
+    errados = [(n, p, d) for n, p, d in r if p != G.status_prazo(n) or d['st'] != G.status_doc(n) or d['tom'] != G.status_prazo(n)['tom']]
+    ok('prazoDe/docDe = status_prazo/status_doc do gerador, de −5 a 200 dias (%d casos)' % len(r), not errados, errados[:3])
+    pg.context.close()
+
+
+def dia_de_bordo(b):
+    print('Dia de bordo (microtarefa), simulacao = false e SOS')
+    local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
+    hoje, bordo = dias(local)
+    LISTAS = """() => { const D = window.CapitaoDados; return { ab: D.abastecimentos.map((a) => [a.id || null, a.diasAtras, a.d, a.h || null, a.litros]),
+      diario: D.diario.slice(0, 3).map((x) => [x.id, x.d, x.iso]), nf: D.documentos.filter((x) => x.id === 'nf-abast').map((x) => [x.ref || null, x.emitido, x.dn === undefined, x.vence === undefined, x.st]),
+      ids: D.diario.map((x) => x.id), t0: D.diario[0].t, lidas: window.__lidas, inst: window.CapitaoAgora.instante(), versao: D.versao, atrasadas: D.agenda.filter((t) => t.dn < 0).length }; }"""
+    pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO + GETTER)
+    r = pg.evaluate(LISTAS)
+    ok('simulacao true: ab-0…ab-2 em abastecimentos, com diasAtras 0, 1 e 2 e h 07:00', [a[0] for a in r['ab']] == ['ab-0', 'ab-1', 'ab-2'] and [a[1] for a in r['ab']] == [0, 1, 2]
+       and all(a[3] == '07:00' and a[4] == 1086 for a in r['ab']), r['ab'])
+    ok('as linhas de abastecimento com o d do dia de bordo (base dia de bordo)', [a[2] for a in r['ab']] == [br(bordo - timedelta(days=k)) for k in (0, 1, 2)], r['ab'])
+    ok('d01 e d02 no topo do diário (d01 antes), sem duplicar; d01 = âncora + 1 s e d02 = âncora (07:00:00)',
+       r['ids'][:3] == ['d01', 'd02', 'd03'] and len(r['ids']) == len(set(r['ids'])) and r['diario'][0][2] == '%sT07:00:01-03:00' % bordo.isoformat()
+       and r['diario'][1][2] == '%sT07:00:00-03:00' % bordo.isoformat() and r['diario'][0][1] == dm(bordo), r['diario'])
+    ok('a nota fiscal do dia de bordo entra por id (uma só, com ref ab-0 e o emitido do dia de bordo, sem vence nem dn)', r['nf'] == [['ab-0', br(bordo), True, True, 'CONFERIDA']], r['nf'])
+    ok('fora do SOS a flag é lida (o getter conta ≥ 1: o teste do SOS vale) e o instante sem fonte é null', r['lidas'] >= 1 and r['inst'] is None, (r['lidas'], r['inst']))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+    pg = abre(b, local, antes=DIA_DE_BORDO)
+    r = pg.evaluate(LISTAS)
+    ok('sobre as linhas de transição do C7 a microtarefa substitui por id, sem duplicar (d01, d02 e a nota fiscal), e ab-0…ab-2 vão para o topo',
+       len(r['ids']) == len(set(r['ids'])) and r['ids'][0] == 'd01' and r['t0'].startswith('Saída às 07:00') and [a[0] for a in r['ab'][:3]] == ['ab-0', 'ab-1', 'ab-2'] and len(r['nf']) == 1
+       and r['nf'][0][0] == 'ab-0', (r['ids'], r['ab'][:3], r['nf']))
+    pg.context.close()
+    pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO, depois='window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(LISTAS)
+    ok('simulacao = false no fim do arquivo: nenhuma linha do dia de bordo (abastecimentos vazio, o diário começa na d03, sem nota fiscal)',
+       r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [], (r['ab'], r['ids'][:3], r['nf']))
+    ok('simulacao = false: o rebase roda (versão e atrasadas)', r['versao'] == br(hoje) and r['atrasadas'] == 3)
+    pg.context.close()
+    for nome, caminho in (('S1-SOS-Web', '/S1-SOS-Web.dc.html'), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html'), ('rota mínima /SOS-teste.html', '/SOS-teste.html')):
+        pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO + GETTER, caminho=caminho)
+        pg.wait_for_timeout(800)
+        r = pg.evaluate(LISTAS)
+        ok('%s: instante() é null' % nome, r['inst'] is None, r['inst'])
+        ok('%s: nenhuma linha do dia de bordo e nenhuma leitura de D.simulacao (getter que conta: %s)' % (nome, r['lidas']),
+           r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [] and r['lidas'] == 0, (r['ab'][:2], r['ids'][:3], r['lidas']))
+        ok('%s: o rebase roda (versão e 3 atrasadas)' % nome, r['versao'] == br(hoje) and r['atrasadas'] == 3)
+        pg.context.close()
+
+
+def contagens(b):
+    print('contagens()')
+    local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
+    hoje = local.date()
+    pg = abre(b, local)
+    C = lambda: pg.evaluate("() => window.CapitaoAgora.contagens()")
+    ok('geradas: 3 atrasadas, 6 em 30 dias (4 da agenda e 2 da equipe), 3 em 60, 2 em 90, 2 em dia; 2 tarefas da equipe; 2 documentos vencem em 90 dias; 3 pendências',
+       C() == {'atrasadas': 3, 'd30': 6, 'd60': 3, 'd90': 2, 'emDia': 2, 'docsVencidos': 0, 'docsVencem90': 2, 'pendencias': 3, 'tarefasEquipe': 2}, C())
+    pg.evaluate("""() => localStorage.setItem('capitao.executado.v1', JSON.stringify({ 'porao-teste': { d: '27/10' }, g02: { d: '27/10' } }))""")
+    c = C()
+    ok('executadas não contam (porao-teste e a g02)', c['atrasadas'] == 2 and c['d30'] == 5 and c['tarefasEquipe'] == 1, c)
+    pg.evaluate("""([a, b]) => localStorage.setItem('capitao.tarefas.v1', JSON.stringify([{ id: 'g91', n: 'x', vence: a }, { id: 'g92', n: 'y', vence: b }]))""",
+                [(hoje + timedelta(days=2)).isoformat(), (hoje - timedelta(days=1)).isoformat()])
+    c = C()
+    ok('as tarefas do aparelho entram pela data (uma a vencer, uma atrasada)', c['atrasadas'] == 3 and c['d30'] == 6 and c['tarefasEquipe'] == 3, c)
+    pg.evaluate("""() => { localStorage.removeItem('capitao.executado.v1'); localStorage.removeItem('capitao.tarefas.v1');
+      localStorage.setItem('capitao.diario.v1', JSON.stringify([{ acao: 'resolve', alvo: 'd03', iso: 't2' }, { pend: true, iso: 'X1' }])); }""")
+    ok('uma pendência do aparelho abre (X1) e a ação resolve fecha a d03: 3', C()['pendencias'] == 3, C())
+    pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', JSON.stringify([{ acao: 'reabre', alvo: 'd03', iso: 't4' }, { acao: 'resolve', alvo: 'X2', iso: 't3' }, { pend: true, iso: 'X2' },
+      { acao: 'resolve', alvo: 'd03', iso: 't2' }, { pend: true, iso: 'X1' }]))""")
+    ok('vale a última ação por alvo: d03 reaberta (3) + X1 aberta; X2 resolvida: 4', C()['pendencias'] == 4, C())
+    pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', '{ não é json')""")
+    ok('registro do aparelho ilegível: conta só as geradas, sem erro', C()['pendencias'] == 3 and not pg.erros, (C(), pg.erros))
+    pg.context.close()
+
+
+QUADRO = {'timestamp_utc': '2026-10-27T15:01:00Z', 'sog_nos': 18.1, 'stw_nos': 17.9, 'motor_bb_rpm': 2049, 'motor_be_rpm': 2038, 'diesel_litros': 1333,
+          'motor_bb_horimetro_h': 417.6, 'motor_be_horimetro_h': 414.8, 'gerador_horimetro_h': 1241.4, 'temp_ar_externo_c': 22.6, 'temp_agua_c': 20.1}
+FONTES = """(q) => { const A = window.CapitaoAgora; window.__q = q; window.CapitaoReplay = { agora: () => Date.now(), em: () => window.__q, t: () => 60,
+  fase: () => ({ nome: 'cruzeiro', ini: 50, fim: 120 }), fixo: () => '60' }; }"""
+
+
+def instante_e_trava(b):
+    print('instante() e a trava do ar e da água (§1.22 e §1.23, 12:01:00)')
+    local = datetime(2026, 10, 27, 12, 1, 0, tzinfo=BR)
+    hoje, bordo = dias(local)
+    pg = abre(b, local, antes=DIA_DE_BORDO)
+    pg.evaluate(FONTES, QUADRO)
+    # O instante é guardado por segundo (e pela leitura do clima): cada cenário avança o relógio congelado em 1 s.
+    I = lambda avanca=True: pg.evaluate("(av) => { if (av) window.__T0 += 1000; const i = window.CapitaoAgora.instante(); return i && JSON.parse(JSON.stringify(i)); }", avanca)
+    clima = lambda mx, mn, dia=hoje.isoformat(): pg.evaluate("([mx, mn, dia]) => localStorage.setItem('capitao.clima.v1', JSON.stringify({ em: Date.now(), dia, max: mx, min: mn }))", [mx, mn, dia])
+    i = I(False)
+    ok('replay: fonte, hora, hhmm, seg, fase, fonteTxt e selo', i['fonte'] == 'replay' and i['hora'] == '12:01:00' and i['hhmm'] == '12:01' and i['seg'] == 60 and i['fase']['nome'] == 'cruzeiro'
+       and i['fonteTxt'] == 'telemetria ao vivo · 12:01:00' and i['selo'] == {'tom': 'ok', 'texto': 'AO VIVO · 12:01:00'}, i)
+    ok('calc: autonomia 17,6 h · 318 mn · 194 h em marcha lenta, faltam 32,4 h e 58,6 h, desde o abastecimento 227 L, diesel 83,3 %',
+       i['calc']['autonomia'] == {'horas': 17.6, 'mn': 318, 'lenta': 194} and i['calc']['faltam'] == {'motores-oleo': 32.4, 'gerador-revisao': 58.6}
+       and i['calc']['desdeAbast'] == {'litros': 227, 'desde': br(bordo), 'h': '07:00'} and i['calc']['diesel_pct'] == 83.3, i['calc'])
+    ok('sem leitura do clima de hoje, o ar e a água ficam como vieram (22,6 e 20,1)', i['q']['temp_ar_externo_c'] == 22.6 and i['q']['temp_agua_c'] == 20.1, i['q'])
+    clima(21, 15)
+    q = I()['q']
+    ok('com {dia: hoje, max: 21, min: 15}: ar 21,0 (preso) e água 20,1 (dentro)', q['temp_ar_externo_c'] == 21 and q['temp_agua_c'] == 20.1, q)
+    clima(19, 15)
+    q = I()['q']
+    ok('com {max: 19, min: 15}: ar 19,0 e água 19,0 (os dois presos)', q['temp_ar_externo_c'] == 19 and q['temp_agua_c'] == 19, q)
+    clima(19, 15, (hoje - timedelta(days=1)).isoformat())
+    ok('leitura de ontem: nada muda', I()['q']['temp_ar_externo_c'] == 22.6)
+    clima(19, 15)
+    ok('o quadro de origem não é mutado (a trava devolve cópia)', pg.evaluate("() => window.__q.temp_ar_externo_c === 22.6 && window.__q.temp_agua_c === 20.1"))
+    ok('instante() devolve o mesmo objeto no mesmo segundo (guardado) e um novo no segundo seguinte',
+       pg.evaluate("() => { const a = window.CapitaoAgora.instante(), b = window.CapitaoAgora.instante(); window.__T0 += 1000; return a === b && window.CapitaoAgora.instante() !== a; }"))
+    pg.evaluate("() => { window.CapitaoDados.simulacao = false; }")
+    ok('com simulacao false o quadro não é preso', I()['q']['temp_ar_externo_c'] == 22.6 and I()['q']['temp_agua_c'] == 20.1)
+    pg.evaluate("() => { window.CapitaoDados.simulacao = true; }")
+    pg.evaluate("() => { window.CapitaoTelemetria = { atual: () => Object.assign({}, window.__q, { simulado: true }) }; }")
+    ok('CapitaoTelemetria.atual() com simulado: true vale como replay (e é presa)', I()['fonte'] == 'replay' and I()['q']['temp_ar_externo_c'] == 19, I())
+    pg.evaluate("() => { window.CapitaoTelemetria = { atual: () => Object.assign({}, window.__q) }; }")
+    i = I()
+    ok('coletor real (sem simulado): fonte coletor, "coletor NMEA · ao vivo 12:01:SS" e a leitura nunca é presa (22,6)',
+       i['fonte'] == 'coletor' and i['fonteTxt'] == 'coletor NMEA · ao vivo ' + i['hora'] and i['hora'].startswith('12:01:') and i['q']['temp_ar_externo_c'] == 22.6 and 'seg' not in i, i)
+    pg.evaluate("() => { delete window.CapitaoTelemetria; delete window.CapitaoReplay; }")
+    ok('sem nenhuma fonte (e sem quadro de reserva): null, sem erro', I() is None and not pg.erros, pg.erros)
+    pg.evaluate("""() => { window.CapitaoDados.snapshot.quadro = { timestamp_utc: '2026-09-26T13:12:00Z', diesel_litros: 848, temp_ar_externo_c: 22.6, temp_agua_c: 20.1 }; }""")
+    i = I()
+    ok('reserva do D.snapshot.quadro: fonte snapshot, hora 10:12:00 do fuso, "leitura de 26/09 10:12" e selo ÚLTIMA LEITURA',
+       i['fonte'] == 'snapshot' and i['hora'] == '10:12:00' and i['fonteTxt'] == 'coletor NMEA · leitura de 26/09 10:12'
+       and i['selo'] == {'tom': 'warn', 'texto': 'ÚLTIMA LEITURA · 26/09 10:12'} and i['q']['temp_ar_externo_c'] == 19, i)
+    ok('a reserva não é mutada pelo instante (o ar do quadro continua 22,6)', pg.evaluate("() => window.CapitaoDados.snapshot.quadro.temp_ar_externo_c === 22.6"))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+    pg = abre(b, local)
+    ok('o instante sem a reserva do C8 e sem replay é null (sem erro)', pg.evaluate("() => window.CapitaoAgora.instante()") is None and not pg.erros, pg.erros)
+    pg.context.close()
+
+
+def formatadores(b):
+    print('Formatadores e fuso')
+    pg = abre(b, datetime(2026, 10, 27, 12, 0, tzinfo=BR))
+    pg.evaluate("""() => { window.CapitaoDados.campos = { x: { casas: 1, mil: true }, y: { casas: 0 }, z: { casas: 0, ang: true } }; }""")
+    r = pg.evaluate("""() => { const f = window.CapitaoAgora.fmt, A = window.CapitaoAgora;
+      return { arred: [f.arred(1.25, 1), f.arred(-0.04, 1), f.arred(2.675, 2), f.arred(0.5, 0)], nb: [f.nb(1017.1, 1, true), f.nb(-0.04, 1), f.nb(1333, 0, true), f.nb(83.3125, 1), f.nb(12.5, 0), f.nb(null, 1), f.nb(NaN, 1)],
+        mil: [f.mil(1236.4), f.mil(2049)], g3: [f.grau3(59), f.grau3(-1), f.grau3(359.6), f.grau3(5), f.grau3(null)],
+        hora: [f.hora(Date.UTC(2026, 9, 27, 15, 1, 5)), f.hora(Date.UTC(2026, 9, 27, 15, 1, 5), true), f.hora(Date.UTC(2026, 9, 27, 2, 59, 59), true)],
+        coord: [f.coord(-26.993, -48.614), f.coord(-26.99999, -48.99999), f.coord(10.5, 5.25)],
+        campo: [f.campo({ x: 1017.14 }, 'x'), f.campo({ y: 2049.4 }, 'y'), f.campo({ z: 59 }, 'z'), f.campo({}, 'x'), f.campo({ marcha: 'avante' }, 'marcha'), f.campo(null, 'x'), f.campo({ q: 7.26 }, 'q')],
+        off: A.off(Date.UTC(2026, 9, 27, 12)), fuso: A.fuso }; }""")
+    ok('arred: floor(x·10^c + 0,5)/10^c, sem -0', r['arred'] == [1.3, 0, 2.68, 1], r['arred'])
+    ok('nb: vírgula, milhar com ponto, null para o que não é número', r['nb'] == ['1.017,1', '0,0', '1.333', '83,3', '13', None, None], r['nb'])
+    ok('mil e grau3', r['mil'] == ['1.236', '2.049'] and r['g3'] == ['059', '359', '000', '005', None], (r['mil'], r['g3']))
+    ok('hora no fuso (UTC−3), com e sem segundos; a virada do dia UTC', r['hora'] == ['12:01', '12:01:05', '23:59:59'], r['hora'])
+    ok('coord: graus e minutos com vírgula; 59,995′ já é o grau seguinte', r['coord'] == ["26°59,58'S 048°36,84'W", "27°00,00'S 049°00,00'W", "10°30,00'N 005°15,00'E"], r['coord'])
+    ok('campo: pelo catálogo (casas, mil, ang); texto como veio; null se falta; sem catálogo, inteiro', r['campo'] == ['1.017,1', '2049', '059', None, 'avante', None, '7'], r['campo'])
+    ok('fuso e deslocamento (America/Sao_Paulo, −180 min)', r['fuso'] == 'America/Sao_Paulo' and r['off'] == -180, (r['fuso'], r['off']))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+
+
+def telas(b):
+    print('Telas com o rodapé (Date congelado em 27/10/2026 12:00): "prazos a partir de" = hoje e a falta de registro que saiu')
+    local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
+    for tela, app, desde in (('C1-Leme-Web', False, 'prazos contados a partir de 27/10/2026'), ('C2-Leme-Mobile', True, 'prazos a partir de 27/10/2026'),
+                             ('B1-Carta-Web', False, 'prazos contados a partir de 27/10/2026'), ('G1-Documentos-Web', False, 'prazos contados a partir de 27/10/2026'),
+                             ('G1-Documentos-Mobile', True, 'prazos a partir de 27/10/2026'), ('A1-Ponte-Web', False, None), ('G3-Diario-Web', False, None),
+                             ('G4-Equipe-Web', False, None)):
+        pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
+        pg.wait_for_timeout(1800)
+        txt = pg.evaluate("() => document.body.innerText")
+        ok('%s: sem erro de script' % tela, not pg.erros, pg.erros)
+        if desde:
+            ok('%s: "%s"' % (tela, desde), desde in txt, [l for l in txt.split('\n') if 'a partir de' in l][:2])
+        ruins = [x for x in ('Falta registrar: .', 'FALTA REGISTRAR · nada', 'falta registrar: nada', 'SEM DADOS: .', '[object Object]') if x in txt]
+        ok('%s: sem "falta registrar" vazio (a agendaFalta saiu) nem [object Object]' % tela, not ruins and (not tela.startswith(('C1', 'C2')) or 'FALTA REGISTRAR' not in txt), ruins)
+        if tela.startswith('C1'):
+            ok('%s: as 14 tarefas, com o autoteste do EPIRB e a inspeção do sistema fixo' % tela, '14 tarefas' in txt, [l for l in txt.split('\n') if 'tarefas' in l][:2])
+        if tela.startswith('C2'):
+            ok('%s: as 3 atrasadas (porão, filtro da climatização, rotor do gerador) com as datas de hoje' % tela,
+               all(x in txt for x in ('vence 02/10/2026', 'vence 11/10/2026', 'vence 25/10/2026')) and '25 dias atrás' in txt, txt[:300])
+        if tela == 'B1-Carta-Web':
+            ok('B1-Carta-Web: a linha da manutenção sem "falta registrar: nada"', '14 tarefas' in txt, [l for l in txt.split('\n') if 'tarefas' in l][:2])
+        pg.context.close()
+
+
+def main():
+    with sync_playwright() as p:
+        b = p.chromium.launch(channel=CANAL, headless=True)
+        relogio_e_listas(b)
+        idempotencia(b)
+        dia_de_bordo(b)
+        contagens(b)
+        instante_e_trava(b)
+        formatadores(b)
+        telas(b)
+        b.close()
+    print('%d conferências · %d falhas' % (total, falhas))
+    sys.exit(1 if falhas else 0)
+
+
+if __name__ == '__main__':
+    main()

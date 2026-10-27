@@ -37,7 +37,7 @@ import json
 import os
 import sys
 import unicodedata
-from datetime import date, datetime
+from datetime import date, timedelta
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
@@ -90,14 +90,6 @@ ARQ = {
 
 def onde(chave_pasta, chave_arq):
     return DRIVE + ' › ' + PASTAS[chave_pasta] + ' › ' + ARQ[chave_arq]
-
-
-def d(s):
-    return datetime.strptime(s, '%d/%m/%Y').date()
-
-
-def dn(s):
-    return (d(s) - REF).days
 
 
 def coord(v, pos, neg, g):
@@ -269,7 +261,6 @@ CONSUMO = {
     'desdeAbast': {'litros': 192, 'desde': '12/09/2026', 'horas': '2,8 h de motor por lado'},
 }
 RESERVA = 0.10
-DIAS_MESES = {1: 31, 6: 184, 12: 365}   # intervalo da agenda em dias (§1.7; deslocamentos no C7)
 
 
 def autonomia():
@@ -279,29 +270,110 @@ def autonomia():
             'lenta': int(round(litros * (1 - RESERVA) / CONSUMO['lenta']['lph']))}
 
 
-# Série 24 V · 7 dias: mín/máx por dia — única série de histórico carregada
+# ——————————————————————————————— PRAZOS RELATIVOS (CONTRATO §1.0, §1.7–§1.9, §4.1) ———————————————————————————————
+# O gerador emite deslocamentos (venceEm, ultimaHa, emitidoHa, diasAtras) e grava como reserva os derivados contados da REF
+# (26/09/2026; hoje = dia de bordo = REF). O rodapé do capitao-dados.js (rodape.js) refaz esses derivados com a data do aparelho,
+# no fuso America/Sao_Paulo; se ele falhar, as telas mostram as datas da REF. Os derivados de reserva e os do rodapé são o mesmo
+# cálculo (o teste de paridade congela o relógio na REF e compara). Os deslocamentos são positivos para o passado (ultimaHa,
+# emitidoHa, diasAtras) e com sinal para o futuro (venceEm negativo = atrasado).
+FUSO_REF = '-03:00'   # Brasília não tem horário de verão desde 2019; o rodapé lê o fuso do aparelho
+
+
+def dia_br(dias):
+    """'dd/mm/aaaa' de REF + dias (negativo = passado)."""
+    return (REF + timedelta(days=dias)).strftime('%d/%m/%Y')
+
+
+def dia_ddmm(dias):
+    return (REF + timedelta(days=dias)).strftime('%d/%m')
+
+
+def dia_iso(dias):
+    return (REF + timedelta(days=dias)).isoformat()
+
+
+def iso_local(dias_atras, h, seg=0):
+    """'AAAA-MM-DDTHH:MM:SS-03:00' da hora de parede h do dia REF − dias_atras."""
+    return '%sT%s:%02d%s' % (dia_iso(-dias_atras), h, seg, FUSO_REF)
+
+
+def status_doc(n):
+    return 'VENCIDO' if n < 0 else ('VENCE EM %d D' % n if n <= 90 else 'EM DIA')
+
+
+def segundos_do_diario(linhas, base):
+    """Linhas do mesmo dia e da mesma hora na mesma base: a de cima (mais nova) ganha 1 s a mais, para o iso seguir a ordem do
+    array (d01 = âncora + 1 s, d02 = âncora; CONTRATO §1.9). Igual ao porSegundos() do rodape.js."""
+    chave = [(base(x), x['diasAtras'], x['h']) for x in linhas]
+    return [chave.count(k) - chave[:i + 1].count(k) for i, k in enumerate(chave)]
+
+
+# Série 24 V · 7 dias: mín/máx por dia — única série de histórico carregada (L até a Fase 4; o C9 refaz os valores).
+# `diasAtras` conta do dia de bordo; o rebase escreve o `d` (dd/mm).
 SERIE_24V = [
-    {'d': '20/09', 'min': 26.1, 'max': 28.4}, {'d': '21/09', 'min': 26.0, 'max': 28.6}, {'d': '22/09', 'min': 25.9, 'max': 27.2},
-    {'d': '23/09', 'min': 25.8, 'max': 27.0}, {'d': '24/09', 'min': 25.7, 'max': 28.5}, {'d': '25/09', 'min': 25.9, 'max': 27.1},
-    {'d': '26/09', 'min': 26.0, 'max': 27.4},
+    {'diasAtras': 6, 'min': 26.1, 'max': 28.4}, {'diasAtras': 5, 'min': 26.0, 'max': 28.6}, {'diasAtras': 4, 'min': 25.9, 'max': 27.2},
+    {'diasAtras': 3, 'min': 25.8, 'max': 27.0}, {'diasAtras': 2, 'min': 25.7, 'max': 28.5}, {'diasAtras': 1, 'min': 25.9, 'max': 27.1},
+    {'diasAtras': 0, 'min': 26.0, 'max': 27.4},
 ]
 
 # ——————————————————————————————— AGENDA PREDITIVA ———————————————————————————————
+# CONTRATO §1.7: 14 tarefas (os ids de hoje ficam: as telas e o capitao.executado.v1 usam o id; entram epirb-teste, motores-rotor e
+# seafire-inspecao). `sistema` ∈ ids de equipamentos ∪ {casco, tanques}; `quem` = papel, nunca nome de terceiro; `palavras` = frases
+# normalizadas (como o norm() do cérebro) que ligam um texto à tarefa, cada uma com 2+ palavras. Nenhum `t` tem palavra da lista SOS
+# (o Seafire é "sistema fixo de supressão" no `t`). `ultimaHa + venceEm` = DIAS_MESES[meses]. 3 atrasadas, nenhuma de salvatagem.
+# Folga das horas: 37,4 h (óleo) e 63,6 h (gerador) na âncora; 13,4 h e 39,6 h às 06:59:59 (asserção HORAS).
+DIAS_MESES = {1: 31, 6: 184, 12: 365}   # intervalo da agenda em dias (§1.7)
 AGENDA = [
-    {'id': 'clima-filtro', 't': 'Limpeza do filtro de água salgada da climatização', 'equip': 'Climatização (fabricante SEM DADOS)', 'quem': 'marina', 'intervalo': 'mensal', 'ultima': '10/08/2026', 'vence': '10/09/2026'},
-    {'id': 'porao-teste', 't': 'Teste das bombas de porão e alarmes', 'equip': 'Bombas de porão', 'quem': 'técnico', 'intervalo': 'mensal', 'ultima': '01/08/2026', 'vence': '01/09/2026'},
-    {'id': 'gerador-rotor', 't': 'Inspeção do rotor (impeller) do gerador', 'equip': 'Gerador Onan', 'quem': 'técnico', 'intervalo': '12 meses', 'ultima': '24/09/2025', 'vence': '24/09/2026'},
-    {'id': 'casco-anodos', 't': 'Limpeza de casco e troca de anodos', 'equip': 'Casco', 'quem': 'marina', 'intervalo': '6 meses', 'ultima': '05/04/2026', 'vence': '05/10/2026'},
-    {'id': 'motores-oleo', 't': 'Troca de óleo e filtros dos motores', 'equip': 'Motores Volvo Penta', 'quem': 'oficina Volvo Penta', 'intervalo': '12 meses ou 450 h (o que vier antes)', 'ultima': '13/10/2025', 'vence': '13/10/2026', 'horas': {'limite': 450, 'atual': 412.6}},
-    {'id': 'gerador-revisao', 't': 'Revisão do gerador: óleo e filtros', 'equip': 'Gerador Onan', 'quem': 'técnico', 'intervalo': '12 meses ou 1.300 h', 'ultima': '20/10/2025', 'vence': '20/10/2026', 'horas': {'limite': 1300, 'atual': 1236.4}},
-    {'id': 'seakeeper-anodo', 't': 'Anodo do trocador de calor do estabilizador', 'equip': 'Estabilizador Seakeeper', 'quem': 'técnico', 'intervalo': '6 meses', 'ultima': '30/04/2026', 'vence': '31/10/2026'},
-    {'id': 'baterias', 't': 'Verificação do banco de baterias e conexões', 'equip': 'Sistema elétrico 24 V / 12 V', 'quem': 'técnico', 'intervalo': '6 meses', 'ultima': '15/05/2026', 'vence': '15/11/2026'},
-    {'id': 'garmin-cartas', 't': 'Atualização de cartas e software dos eletrônicos', 'equip': 'Eletrônicos Garmin', 'quem': 'Lucas', 'intervalo': '12 meses', 'ultima': '01/12/2025', 'vence': '01/12/2026'},
-    {'id': 'clima-revisao', 't': 'Revisão anual da climatização', 'equip': 'Climatização (fabricante SEM DADOS)', 'quem': 'marina', 'intervalo': '12 meses', 'ultima': '21/12/2025', 'vence': '21/12/2026'},
-    {'id': 'motores-revisao', 't': 'Revisão anual dos motores', 'equip': 'Motores Volvo Penta', 'quem': 'oficina Volvo Penta', 'intervalo': '12 meses', 'ultima': '16/01/2026', 'vence': '16/01/2027'},
+    {'id': 'porao-teste', 't': 'Teste das bombas de porão e alarmes', 'curto': 'TESTE', 'equip': 'Bombas de porão Rule 2000', 'sistema': 'porao',
+     'quem': 'técnico', 'intervalo': 'mensal', 'meses': 1, 'ultimaHa': 56, 'venceEm': -25, 'seguranca': True,
+     'palavras': ['bombas de porao', 'bomba de porao', 'teste das bombas']},
+    {'id': 'clima-filtro', 't': 'Limpeza do filtro de água salgada da climatização', 'curto': 'FILTRO', 'equip': 'Climatização Webasto FCF Platinum',
+     'sistema': 'climatizacao', 'quem': 'marina', 'intervalo': 'mensal', 'meses': 1, 'ultimaHa': 47, 'venceEm': -16,
+     'palavras': ['filtro de agua salgada', 'filtro da climatizacao', 'filtro do ar condicionado', 'filtro do ar-condicionado']},
+    {'id': 'gerador-rotor', 't': 'Inspeção do rotor (impeller) do gerador', 'curto': 'ROTOR', 'equip': 'Gerador Onan QD 9', 'sistema': 'gerador',
+     'quem': 'técnico', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 367, 'venceEm': -2,
+     'palavras': ['rotor do gerador', 'impeller do gerador', 'rotor impeller do gerador']},
+    {'id': 'casco-anodos', 't': 'Limpeza de casco e troca de anodos', 'curto': 'ANODOS', 'equip': 'Casco', 'sistema': 'casco', 'quem': 'marina',
+     'intervalo': '6 meses', 'meses': 6, 'ultimaHa': 175, 'venceEm': 9,
+     'palavras': ['limpeza de casco', 'limpeza do casco', 'anodos do casco', 'troca de anodos']},
+    {'id': 'epirb-teste', 't': 'Autoteste do EPIRB e validade conferida na etiqueta', 'curto': 'AUTOTESTE', 'equip': 'EPIRB', 'sistema': 'epirb',
+     'quem': 'Lucas', 'intervalo': 'mensal', 'meses': 1, 'ultimaHa': 18, 'venceEm': 13, 'seguranca': True,
+     'palavras': ['autoteste do epirb', 'teste do epirb', 'teste da baliza', 'autoteste da baliza']},
+    {'id': 'motores-oleo', 't': 'Troca de óleo e filtros dos motores', 'curto': 'ÓLEO', 'equip': 'Motores Cummins QSB6.7 305', 'sistema': 'motores',
+     'quem': 'oficina de motores', 'intervalo': '12 meses ou 450 h (o que vier antes)', 'meses': 12, 'ultimaHa': 348, 'venceEm': 17,
+     'horas': {'limite': 450, 'campos': ['motor_bb_horimetro_h', 'motor_be_horimetro_h'], 'atual': 412.6},   # vale o maior dos dois
+     'palavras': ['oleo dos motores', 'oleo do motor', 'filtros dos motores']},
+    {'id': 'gerador-revisao', 't': 'Revisão do gerador: óleo e filtros', 'curto': 'REVISÃO', 'equip': 'Gerador Onan QD 9', 'sistema': 'gerador',
+     'quem': 'técnico', 'intervalo': '12 meses ou 1.300 h', 'meses': 12, 'ultimaHa': 341, 'venceEm': 24,
+     'horas': {'limite': 1300, 'campos': ['gerador_horimetro_h'], 'atual': 1236.4},
+     'palavras': ['revisao do gerador', 'oleo do gerador', 'filtros do gerador']},
+    {'id': 'seakeeper-anodo', 't': 'Anodo do trocador de calor do estabilizador', 'curto': 'ANODO', 'equip': 'Estabilizador Seakeeper 3',
+     'sistema': 'estabilizador', 'quem': 'técnico', 'intervalo': '6 meses', 'meses': 6, 'ultimaHa': 149, 'venceEm': 35,
+     'palavras': ['anodo do estabilizador', 'anodo do seakeeper', 'anodo do trocador']},
+    {'id': 'motores-rotor', 't': 'Troca do rotor da bomba de água salgada dos motores', 'curto': 'ROTOR', 'equip': 'Motores Cummins QSB6.7 305',
+     'sistema': 'motores', 'quem': 'oficina de motores', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 324, 'venceEm': 41,
+     'palavras': ['rotor da bomba de agua salgada', 'rotor dos motores', 'impeller dos motores', 'rotor do motor']},
+    {'id': 'baterias', 't': 'Verificação do banco de baterias e conexões', 'curto': 'VERIFICAÇÃO', 'equip': 'Baterias Victron Energy (24 V e 12 V)',
+     'sistema': 'eletrico', 'quem': 'técnico', 'intervalo': '6 meses', 'meses': 6, 'ultimaHa': 134, 'venceEm': 50,
+     'palavras': ['banco de baterias', 'conexoes das baterias', 'verificacao das baterias']},
+    {'id': 'garmin-cartas', 't': 'Atualização de cartas e software dos eletrônicos', 'curto': 'CARTAS', 'equip': 'Plotters Garmin GPSMAP 1243xsv',
+     'sistema': 'eletronicos', 'quem': 'Lucas', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 299, 'venceEm': 66,
+     'palavras': ['cartas do plotter', 'cartas nauticas', 'atualizacao das cartas', 'software dos eletronicos']},
+    {'id': 'clima-revisao', 't': 'Revisão anual da climatização', 'curto': 'REVISÃO', 'equip': 'Climatização Webasto FCF Platinum',
+     'sistema': 'climatizacao', 'quem': 'marina', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 279, 'venceEm': 86,
+     'palavras': ['revisao da climatizacao', 'revisao do ar condicionado']},
+    {'id': 'motores-revisao', 't': 'Revisão anual dos motores', 'curto': 'REVISÃO', 'equip': 'Motores Cummins QSB6.7 305', 'sistema': 'motores',
+     'quem': 'oficina de motores', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 253, 'venceEm': 112,
+     'palavras': ['revisao dos motores', 'revisao anual dos motores']},
+    {'id': 'seafire-inspecao', 't': 'Inspeção anual do sistema fixo de supressão', 'curto': 'INSPEÇÃO', 'equip': 'Sistema fixo de supressão de incêndio',
+     'sistema': 'seafire', 'quem': 'técnico', 'intervalo': '12 meses', 'meses': 12, 'ultimaHa': 225, 'venceEm': 140, 'seguranca': True,
+     'palavras': ['inspecao do sistema fixo', 'sistema fixo de supressao', 'inspecao do seafire']},
 ]
-AGENDA_FALTA = ['EPIRB: teste e validade da bateria — equipamento SEM DADOS',
-                'Seafire: inspeção e validade da carga — SEM DADOS']
+# F15 (CONTRATO §1.7): tarefas da equipe geradas; o rebase escreve vence ('AAAA-MM-DD', a forma do capitao.tarefas.v1), dn, st, rot, tom.
+TAREFAS_EQUIPE = [
+    {'id': 'g01', 'n': 'Revisar mangueiras do dessalinizador', 'venceEm': 20, 'quem': 'técnico', 'meses': 6, 'sistema': 'dessalinizador', 'origem': 'equipe'},
+    {'id': 'g02', 'n': 'Lavar o convés e o hard-top', 'venceEm': 5, 'quem': 'marina', 'meses': 1, 'sistema': 'casco', 'origem': 'equipe'},
+]
 
 
 def status_prazo(n):
@@ -317,55 +389,150 @@ def status_prazo(n):
 
 
 # ——————————————————————————————— DOCUMENTOS ———————————————————————————————
-# Sem números de apólice/nota, sem valores, sem dados pessoais.
+# CONTRATO §1.8. Sem valores, sem apólice, licença nem emissor: só o TIE tem número (= embarcacao.registro). A nota fiscal do
+# abastecimento é a de hoje até o C8 (que a leva para replay.diaDeBordo.documento): sem prazo, o `st` CONFERIDA é dela e o rebase
+# omite vence, dn e o st de prazo. `emitido` na base dia de bordo (id 'nf-abast').
 DOCUMENTOS = [
-    {'n': 'Título de Inscrição da Embarcação (TIE)', 'cat': 'Registro', 'vence': None, 'st': 'SEM DADOS', 'nota': 'registro não informado'},
-    {'n': 'Seguro da embarcação', 'cat': 'Seguro', 'vence': '15/10/2026', 'nota': 'apólice no Drive'},
-    {'n': 'Licença de estação de rádio (VHF)', 'cat': 'Licenças', 'vence': '30/11/2026', 'nota': 'rádios Icom IC-M510 e IC-M37'},   # C5: o modelo antigo do VHF saiu (PARIDADE §6); o resto da lista é do C7
-    {'n': 'Laudo de vistoria anual', 'cat': 'Laudos', 'vence': '18/08/2027', 'nota': 'vistoria de 18/08/2026'},
-    {'n': 'Garantia do estabilizador Seakeeper', 'cat': 'Garantias', 'vence': '20/03/2027', 'nota': 'modelo SEM DADOS'},
-    {'n': 'Garantia dos eletrônicos Garmin', 'cat': 'Garantias', 'vence': '10/02/2027', 'nota': 'modelos SEM DADOS'},
-    {'n': 'Certificado do EPIRB', 'cat': 'Segurança', 'vence': None, 'st': 'SEM DADOS', 'nota': 'EPIRB sem dados'},
-    {'n': 'Nota fiscal de abastecimento · 12/09/2026', 'cat': 'Notas', 'vence': None, 'st': 'A CONFERIR', 'nota': 'foto no Drive · sem valores no app'},
+    {'id': 'tie', 'n': 'Título de Inscrição da Embarcação (TIE)', 'cat': 'Registro', 'venceEm': 646, 'emitidoHa': 1180, 'numero': EMBARCACAO['registro'],
+     'nota': 'renovação a cada 5 anos'},
+    {'id': 'seguro', 'n': 'Seguro da embarcação', 'cat': 'Seguro', 'venceEm': 19, 'emitidoHa': 346, 'nota': 'apólice guardada a bordo e no Drive'},
+    {'id': 'licenca', 'n': 'Licença de Estação de rádio (VHF)', 'cat': 'Licenças', 'venceEm': 65, 'nota': 'rádios VHF fixo e portátil'},
+    {'id': 'laudo', 'n': 'Laudo de vistoria anual', 'cat': 'Laudos', 'venceEm': 326, 'emitidoHa': 39, 'nota': 'laudo arquivado no Drive'},
+    {'id': 'gar-estab', 'n': 'Garantia do estabilizador', 'cat': 'Garantias', 'venceEm': 175, 'nota': 'Seakeeper 3'},
+    {'id': 'gar-eletr', 'n': 'Garantia dos eletrônicos', 'cat': 'Garantias', 'venceEm': 137, 'nota': 'plotters e radar Garmin'},
+    {'id': 'doc-epirb', 'n': 'Certificado do EPIRB (bateria e disparador hidrostático)', 'cat': 'Segurança', 'venceEm': 540,
+     'nota': 'validade conferida também na etiqueta do equipamento'},
+    # Transição (sai no C8, que a leva para replay.diaDeBordo.documento com ref 'ab-0'): a nota fiscal do abastecimento de 620 L.
+    {'id': 'nf-abast', 'n': 'Nota fiscal do abastecimento', 'cat': 'Notas', 'emitidoHa': 14, 'st': 'CONFERIDA',
+     'nota': 'abastecimento de 620 L · sem valores no app'},
 ]
 
 # ——————————————————————————————— ABASTECIMENTOS ———————————————————————————————
+# Transição (sai no C8): as duas linhas de hoje viram deslocamentos e ficam até a microtarefa do rodapé inserir ab-0…ab-2 (§1.10).
 ABASTECIMENTOS = [
-    {'d': '12/09/2026', 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive'},
-    {'d': '02/08/2026', 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive'},
+    {'diasAtras': 14, 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive'},
+    {'diasAtras': 55, 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive'},
 ]
 
 # ——————————————————————————————— DIÁRIO DE BORDO ———————————————————————————————
+# CONTRATO §1.9: o diário fixo (d03–d09, na base hoje); o rebase escreve `d` e `iso`. Nada descreve emergência (asserção SEM_EMERGENCIA).
+# Pendências abertas: d03, d05, d07; cada uma leva `palavras` = as da tarefa do `ref` (uma fonte só; é por elas que um registro novo
+# cita a pendência). `diasAtras 0 ⇒ h ≤ 07:00`. d01 e d02 (dia de bordo) são os do C8; até lá ficam as duas linhas de hoje, já com
+# deslocamento: a saída (d01, 07:00) e o abastecimento de 620 L (d02).
 DIARIO = [
-    {'d': '26/09', 'h': '09:31', 'iso': '2026-09-26T09:31:00-03:00', 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
-     't': 'Fundeado na enseada de Balneário Camboriú após 1 h 10 min de navegação. Motores desligados; gerador e Seakeeper ligados.'},
-    {'d': '26/09', 'h': '08:20', 'iso': '2026-09-26T08:20:00-03:00', 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
-     't': 'Saída da base com 4 pessoas a bordo. Checklist de saída feito; teste das bombas de porão continua pendente.'},
-    {'d': '24/09', 'h': '17:10', 'iso': '2026-09-24T17:10:00-03:00', 'sys': 'Manutenção', 'tom': 'warn', 'who': 'técnico', 'pend': True,
-     't': 'Inspeção do rotor do gerador não feita no prazo — reagendar.'},
-    {'d': '20/09', 'h': '11:05', 'iso': '2026-09-20T11:05:00-03:00', 'sys': 'Equipamentos', 'tom': 'accent', 'who': 'Lucas', 'pend': True,
+    {'id': 'd01', 'diasAtras': 0, 'h': '07:00', 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
+     't': 'Saída da base com 4 pessoas a bordo. Checklist de saída feito; teste das bombas de porão continua pendente.'},   # transição (C8)
+    {'id': 'd03', 'diasAtras': 2, 'h': '17:10', 'sys': 'Manutenção', 'tom': 'warn', 'who': 'técnico', 'pend': True, 'ref': 'gerador-rotor',
+     't': 'Inspeção do rotor do gerador não feita no prazo — reagendar; rotor de reserva em falta no estoque.'},
+    {'id': 'd04', 'diasAtras': 3, 'h': '19:30', 'sys': 'Motores', 'tom': 'accent', 'who': 'Lucas', 'pend': False, 'ref': 'motores-rotor',
+     't': 'Motor BE 1 a 2 °C acima do BB em cruzeiro nos últimos dias, com picos acima de 88 °C — acompanhar; rotor da bomba de água salgada dos motores na agenda.'},
+    {'id': 'd05', 'diasAtras': 6, 'h': '11:05', 'sys': 'Equipamentos', 'tom': 'accent', 'who': 'Lucas', 'pend': True, 'ref': 'clima-filtro',
      't': 'Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada).'},
-    {'d': '12/09', 'h': '15:40', 'iso': '2026-09-12T15:40:00-03:00', 'sys': 'Combustível', 'tom': 'ok', 'who': 'Lucas', 'pend': False,
-     't': 'Abastecimento de 620 L de diesel no posto da marina; tanques em ≈ 65 %. NF no Drive.'},
-    {'d': '05/09', 'h': '10:00', 'iso': '2026-09-05T10:00:00-03:00', 'sys': 'Segurança', 'tom': 'crit', 'who': 'técnico', 'pend': True,
+    {'id': 'd02', 'diasAtras': 14, 'h': '15:40', 'sys': 'Combustível', 'tom': 'ok', 'who': 'Lucas', 'pend': False,
+     't': 'Abastecimento de 620 L de diesel no posto da marina; tanques em ≈ 65 %. NF no Drive.'},   # transição (C8)
+    {'id': 'd06', 'diasAtras': 18, 'h': '08:30', 'sys': 'Segurança', 'tom': 'ok', 'who': 'Lucas', 'pend': False, 'ref': 'epirb-teste',
+     't': 'Autoteste do EPIRB feito: luz de teste conforme a etiqueta.'},
+    {'id': 'd07', 'diasAtras': 21, 'h': '10:00', 'sys': 'Segurança', 'tom': 'crit', 'who': 'técnico', 'pend': True, 'ref': 'porao-teste',
      't': 'Teste das bombas de porão adiado por chuva.'},
-    {'d': '28/08', 'h': '16:25', 'iso': '2026-08-28T16:25:00-03:00', 'sys': 'Eletrônicos', 'tom': 'accent', 'who': 'Lucas', 'pend': False,
-     't': 'Cartas do plotter Garmin desatualizadas; atualização entra na agenda de dezembro.'},
-    {'d': '18/08', 'h': '09:00', 'iso': '2026-08-18T09:00:00-03:00', 'sys': 'Documentos', 'tom': 'ok', 'who': 'Lucas', 'pend': False,
+    {'id': 'd08', 'diasAtras': 29, 'h': '16:25', 'sys': 'Eletrônicos', 'tom': 'accent', 'who': 'Lucas', 'pend': False, 'ref': 'garmin-cartas',
+     't': 'Cartas do plotter desatualizadas; a atualização está na agenda.'},
+    {'id': 'd09', 'diasAtras': 39, 'h': '09:00', 'sys': 'Documentos', 'tom': 'ok', 'who': 'Lucas', 'pend': False, 'ref': 'laudo',
      't': 'Vistoria anual feita; laudo arquivado no Drive.'},
 ]
+BORDO_DIARIO = ('d01', 'd02')   # linhas do diário contadas no dia de bordo (as outras, em hoje); a mesma lista do rodape.js
 
 # ——————————————————————————————— EQUIPE E APOIO ———————————————————————————————
+# CONTRATO §1.11: papéis em lista fechada, sem nome de pessoa ou empresa e sem telefone; nenhum papel diz "autorizada <marca>". `para` e
+# `servico` têm o mesmo texto até a Fase 4. Os ids antigos (marina, oficina, tecnico, posto) ficam: os telefones do aparelho usam o id.
 EQUIPE = {
     'perfis': [{'id': 'lucas', 'nome': 'Lucas Araújo', 'ini': 'LA', 'papel': 'proprietário', 'acesso': 'total'}],
-    'apoio': [  # papéis, sem nomes nem telefones de terceiros
-        {'id': 'marina', 'papel': 'Marina da base', 'onde': 'Balneário Camboriú', 'para': 'casco, filtros, vaga'},
-        {'id': 'oficina', 'papel': 'Oficina Volvo Penta', 'onde': 'SEM DADOS', 'para': 'motores'},
-        {'id': 'tecnico', 'papel': 'Técnico de bordo', 'onde': 'SEM DADOS', 'para': 'gerador, Seakeeper, elétrica, porão'},
-        {'id': 'posto', 'papel': 'Posto de combustível', 'onde': 'marina da base', 'para': 'diesel'},
+    'apoio': [
+        {'id': 'marina', 'papel': 'Marina da base', 'onde': 'Balneário Camboriú (SC)', 'para': 'casco, filtros, vaga', 'servico': 'casco, filtros, vaga'},
+        {'id': 'oficina', 'papel': 'Oficina de motores diesel', 'onde': 'atende na marina da base', 'para': 'motores e gerador', 'servico': 'motores e gerador'},
+        {'id': 'tecnico', 'papel': 'Técnico de bordo', 'onde': 'atende na marina da base', 'para': 'estabilizador, elétrica, porão', 'servico': 'estabilizador, elétrica, porão'},
+        {'id': 'eletronica', 'papel': 'Técnico de eletrônicos', 'onde': 'atende na marina da base', 'para': 'plotters, rádios, piloto, radar, AIS', 'servico': 'plotters, rádios, piloto, radar, AIS'},
+        {'id': 'refrigeracao', 'papel': 'Técnico de refrigeração', 'onde': 'atende na marina da base', 'para': 'climatização, dessalinizador', 'servico': 'climatização, dessalinizador'},
+        {'id': 'posto', 'papel': 'Posto de combustível', 'onde': 'na marina da base', 'para': 'diesel', 'servico': 'diesel'},
     ],
-    'nota': 'Telefones: A CADASTRAR em Equipe (ficam só no aparelho).',
+    'nota': 'Telefones: ficam só no aparelho (Equipe).',
 }
+
+
+# Derivados de reserva (CONTRATO §1.0): o que o rodapé reescreve, contado da REF. Cada função devolve cópias, na ordem de chaves do contrato.
+AGENDA_FONTE = ARQ['agenda'] + ' · ' + DRIVE + ' › ' + PASTAS['agenda']
+DOCS_FONTE = ARQ['documentos'] + ' · ' + DRIVE + ' › ' + PASTAS['docs']
+
+
+def agenda_dados():
+    ag = []
+    for t in AGENDA:
+        n = t['venceEm']
+        x = dict(t)
+        if 'horas' in t:
+            x['horas'] = dict(t['horas'], faltam=round(t['horas']['limite'] - t['horas']['atual'], 1))
+        x['fonte'] = ARQ['agenda']   # o título em drive.arquivos (a asserção da C2); a fonte completa é a agendaFonte, que as telas leem
+        x['ultima'] = dia_br(-t['ultimaHa'])
+        x['vence'] = dia_br(n)
+        x['dn'] = n
+        x.update(status_prazo(n))
+        ag.append(x)
+    ag.sort(key=lambda t: (t['dn'], t['id']))   # como o rebase: por dn, depois por id
+    return ag
+
+
+def tarefas_equipe_dados():
+    out = []
+    for t in TAREFAS_EQUIPE:
+        x = dict(t)
+        x['vence'] = dia_iso(t['venceEm'])
+        x['dn'] = t['venceEm']
+        x.update(status_prazo(t['venceEm']))
+        out.append(x)
+    return out
+
+
+def documentos_dados():
+    docs = []
+    for doc in DOCUMENTOS:
+        x = dict(doc)
+        x['fonte'] = ARQ['documentos']   # idem: o título; a fonte completa é a docsFonte
+        if 'venceEm' in doc:   # sem prazo (a nota fiscal), vence, dn e o st de prazo ficam de fora (nunca null)
+            n = doc['venceEm']
+            x['vence'] = dia_br(n)
+            x['dn'] = n
+            x['st'] = status_doc(n)
+        if 'emitidoHa' in doc:
+            x['emitido'] = dia_br(-doc['emitidoHa'])
+        docs.append(x)
+    return docs
+
+
+def diario_dados():
+    seg = segundos_do_diario(DIARIO, lambda x: 'b' if x['id'] in BORDO_DIARIO else 'h')
+    out = []
+    for x, s in zip(DIARIO, seg):
+        y = dict(x)
+        pend_ref = next((t for t in AGENDA if t['id'] == x.get('ref')), None)
+        if x['pend']:
+            y['palavras'] = list(pend_ref['palavras'])   # uma fonte só (§1.9)
+        y['d'] = dia_ddmm(-x['diasAtras'])
+        y['iso'] = iso_local(x['diasAtras'], x['h'], s)
+        out.append(y)
+    return out
+
+
+def abastecimentos_dados():
+    out = []
+    for a in ABASTECIMENTOS:
+        x = dict(a)
+        x['d'] = dia_br(-a['diasAtras'])
+        out.append(x)
+    return out
+
+
+def serie24v_dados():
+    return [dict(x, d=dia_ddmm(-x['diasAtras'])) for x in SERIE_24V]
+
 
 # ——————————————————————————————— FAIXAS E LIMITES (CONTRATO §3.3) ———————————————————————————————
 # Uma constante só (LIMITES): os textos dos guias que citam faixa saem daqui, formatados em pt-BR, e cada limite aponta para o §n
@@ -904,39 +1071,17 @@ PROTOCOLOS = {
 
 # ——————————————————————————————— SAÍDA ———————————————————————————————
 def dados():
-    ag = []
-    for t in AGENDA:
-        n = dn(t['vence'])
-        x = dict(t)
-        x['dn'] = n
-        x.update(status_prazo(n))
-        if 'horas' in t:
-            x['horas'] = dict(t['horas'], faltam=round(t['horas']['limite'] - t['horas']['atual'], 1))
-        x['fonte'] = ARQ['agenda']
-        ag.append(x)
-    ag.sort(key=lambda t: t['dn'])
-    docs = []
-    for doc in DOCUMENTOS:
-        x = dict(doc)
-        if doc.get('vence'):
-            n = dn(doc['vence'])
-            x['dn'] = n
-            x['st'] = 'VENCIDO' if n < 0 else ('VENCE EM ' + str(n) + ' D' if n <= 90 else 'EM DIA')
-        else:
-            x['dn'] = None
-        x['fonte'] = ARQ['documentos']
-        docs.append(x)
     return {
         'versao': REF.strftime('%d/%m/%Y'),
         'simulacao': SIMULACAO, 'demo': False,
         'embarcacao': EMBARCACAO, 'posicaoRef': POSICAO_REF, 'mar': MAR,
         'drive': {'raiz': DRIVE, 'pastas': PASTAS, 'arquivos': ARQ},
         'equipamentos': EQUIPAMENTOS, 'equipNota': EQUIP_NOTA,
-        'snapshot': SNAPSHOT, 'consumo': CONSUMO, 'reserva': RESERVA, 'autonomia': autonomia(), 'serie24v': SERIE_24V,
-        'agenda': ag, 'agendaFalta': AGENDA_FALTA, 'agendaFonte': ARQ['agenda'] + ' · ' + DRIVE + ' › ' + PASTAS['agenda'],
-        'documentos': docs, 'docsFonte': ARQ['documentos'] + ' · ' + DRIVE + ' › ' + PASTAS['docs'],
-        'abastecimentos': ABASTECIMENTOS, 'abastFonte': ARQ['abast'] + ' · ' + DRIVE + ' › ' + PASTAS['abast'], 'regraAbast': REGRA_ABAST,
-        'diario': DIARIO, 'diarioFonte': ARQ['diario'] + ' · ' + DRIVE + ' › ' + PASTAS['diario'],
+        'snapshot': SNAPSHOT, 'consumo': CONSUMO, 'reserva': RESERVA, 'autonomia': autonomia(), 'serie24v': serie24v_dados(),
+        'agenda': agenda_dados(), 'agendaFonte': AGENDA_FONTE, 'tarefasEquipe': tarefas_equipe_dados(),
+        'documentos': documentos_dados(), 'docsFonte': DOCS_FONTE,
+        'abastecimentos': abastecimentos_dados(), 'abastFonte': ARQ['abast'] + ' · ' + DRIVE + ' › ' + PASTAS['abast'], 'regraAbast': REGRA_ABAST,
+        'diario': diario_dados(), 'diarioFonte': ARQ['diario'] + ' · ' + DRIVE + ' › ' + PASTAS['diario'],
         'equipe': EQUIPE,
         'faq': faq(), 'guias': FONTE_GUIA,
         'protocolos': PROTOCOLOS,
@@ -953,11 +1098,17 @@ def serializa(v, nivel=0):
     return json.dumps(v, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
 
 
+def rodape():
+    """O rodapé do capitao-dados.js (CapitaoAgora, §1.23 e §4.1), anexado sem mudança: ferramentas/demo/rodape.js."""
+    with open(os.path.join(AQUI, 'rodape.js'), encoding='utf-8', newline='') as f:
+        return f.read().replace('\r\n', '\n')
+
+
 def gera_js(D):
     cab = ('/* Capitão IA — dados da embarcação (GERADO por ferramentas/demo/gerar_demo.py — não editar à mão).\n'
            '   Cada grupo traz a fonte (arquivo no ' + DRIVE + '). Na leitura, null = SEM DADOS (ou SEM LEITURA, em sensor). */\n')
     corpo = serializa(D).replace('\u2028', '\\u2028').replace('\u2029', '\\u2029')   # separadores de linha quebram JS antigo
-    return cab + 'window.CapitaoDados = ' + corpo + ';\n'
+    return cab + 'window.CapitaoDados = ' + corpo + ';\n' + rodape()
 
 
 def base_conhecimento():
@@ -1089,6 +1240,15 @@ def sd(v):
     return 'SEM DADOS' if v is None else v
 
 
+def limite_h(t):
+    """'450 h' · '1.300 h' (milhar do pt-BR): um número solto logo depois do prazo (",24,1300") casaria a regex de coordenada da COORD_TEXTO."""
+    h = t.get('horas')
+    return ('{:,}'.format(h['limite']).replace(',', '.') + ' h') if h else None
+
+
+COL_DIA_BORDO = 'Dia de bordo (0 = hoje; o dia de bordo começa às 07:00)'   # cabeçalho dos CSV do diário e do abastecimento (§5)
+
+
 def gera_fontes(D):
     F = {}
     for k, g in GUIAS.items():
@@ -1099,19 +1259,20 @@ def gera_fontes(D):
     F[PASTAS['manuais'] + '/' + ARQ['inventario'] + '.csv'] = csv_txt(   # o inventário é a fonte da tela Equipamentos (§1.4)
         ['Equipamento', 'Fabricante', 'Modelo', 'Quantidade', 'Lados', 'Guia de bordo'],
         [[e['nome'], sd(e['fabricante']), sd(e['modelo']), e['qtd'], e.get('lados'), FONTE_GUIA.get(e['guia'], 'SEM DADOS')] for e in EQUIPAMENTOS])
+    # Fontes com prazos relativos (§5): nenhuma data absoluta (o app mostra datas recalculadas para hoje e cita estes arquivos como
+    # "Fonte:"; uma planilha com as datas da REF contaria outra história) e nenhuma coluna de situação (quem calcula é o app).
     F[PASTAS['docs'] + '/' + ARQ['documentos'] + '.csv'] = csv_txt(
-        ['Documento', 'Categoria', 'Validade', 'Situação em 26/09/2026', 'Observação'],
-        [[x['n'], x['cat'], sd(x.get('vence')), x['st'], x['nota']] for x in D['documentos']])
+        ['Documento', 'Categoria', 'Emitido há (dias)', 'Vence em (dias, contados de hoje no app)', 'Número', 'Observação'],
+        [[x['n'], x['cat'], x.get('emitidoHa'), x.get('venceEm'), x.get('numero'), x['nota']] for x in DOCUMENTOS])
     F[PASTAS['agenda'] + '/' + ARQ['agenda'] + '.csv'] = csv_txt(
-        ['Tarefa', 'Equipamento', 'Responsável', 'Intervalo', 'Última', 'Vence', 'Prazo em 26/09/2026'],
-        [[t['t'], t['equip'], t['quem'], t['intervalo'], t['ultima'], t['vence'], t['rot']] for t in D['agenda']] +
-        [[f, '', '', '', '', '', 'SEM DADOS'] for f in AGENDA_FALTA])
+        ['Tarefa', 'Equipamento', 'Responsável', 'Intervalo', 'Última (há N dias)', 'Vence em (dias; negativo = atrasada)', 'Limite de horas'],
+        [[t['t'], t['equip'], t['quem'], t['intervalo'], t['ultimaHa'], t['venceEm'], limite_h(t)] for t in AGENDA])
     F[PASTAS['diario'] + '/' + ARQ['diario'] + '.csv'] = csv_txt(
-        ['Data', 'Hora', 'Sistema', 'Registro', 'Quem', 'Pendência'],
-        [[e['d'] + '/2026', e['h'], e['sys'], e['t'], e['who'], 'ABERTA' if e['pend'] else ''] for e in DIARIO])
+        [COL_DIA_BORDO, 'Hora', 'Sistema', 'Registro', 'Quem', 'Pendência'],
+        [[e['diasAtras'], e['h'], e['sys'], e['t'], e['who'], 'ABERTA' if e['pend'] else ''] for e in DIARIO])
     F[PASTAS['abast'] + '/' + ARQ['abast'] + '.csv'] = csv_txt(
-        ['Data', 'Litros', 'Combustível', 'Local', 'Nível depois (%)', 'Situação', 'Observação'],
-        [[a['d'], a['litros'], a['combustivel'], a['local'], a['nivelDepois'], a['st'], a['nota']] for a in ABASTECIMENTOS])
+        [COL_DIA_BORDO, 'Hora', 'Litros', 'Combustível', 'Local', 'Nível depois (%)', 'Situação', 'Observação'],
+        [[a['diasAtras'], a.get('h'), a['litros'], a['combustivel'], a['local'], a['nivelDepois'], a['st'], a['nota']] for a in ABASTECIMENTOS])
     s = SNAPSHOT
     F[PASTAS['tele'] + '/' + ARQ['snapshot']] = json.dumps({
         'timestamp_utc': '2026-09-26T13:12:00Z', 'lat': s['gps']['lat'], 'lon': s['gps']['lon'], 'sog_nos': s['sog'],
@@ -1133,6 +1294,7 @@ def gera_fontes(D):
         'arquivo daqui de onde veio o dado.</p>',
         '<h2>Pastas</h2><ul>' + ''.join('<li><b>' + v + '</b></li>' for v in PASTAS.values()) + '</ul>',
         '<h2>Regras</h2><ul><li>Procedimentos de emergência: ' + PROTOCOLOS['rotulo'] + ' (pasta ' + PASTAS['protocolos'] + ').</li>'
+        '<li>Datas relativas: o app conta os prazos a partir de hoje e o diário a partir do dia de bordo, que começa às 07:00.</li>'
         '<li>Não publicar contratos, notas fiscais, título de propriedade, CPF/CNPJ, telefones, e-mails, valores, nomes de terceiros, chaves ou link público de arquivo com a posição do barco.</li>'
         '<li>Esta pasta é privada. Não compartilhar por link público.</li></ul>',
         '<p>Gerado por ferramentas/demo/gerar_demo.py (repositório wonderboat-ai/CapitaoIA_v2).</p>',

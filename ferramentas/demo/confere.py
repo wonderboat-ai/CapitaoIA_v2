@@ -10,15 +10,14 @@ completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e,
 17: fabricante, modelo e validade do EPIRB e do Seafire, e lugar a bordo, fora das telas de Equipamentos, Documentos e Leme). A PROTOCOLOS (C6, §1.3) prende a
 forma e a fonte única do D.protocolos, e a GRAFIA_SEAFIRE (revisão do C6, §1.3) a grafia «Seafire», sem hífen nem espaço, em todo valor, chave e nome de arquivo.
 A REGISTRO cruza o registro com o
-`numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova, e o dado de hoje
-fica congelado na PENDENTES até o C7). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
+`numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova; o C7 grava o TIE). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
 JANELA (porao_no_normal: o teto é o normal.ate do porão, sem número solto, também dentro de janela) e o lugar de salvatagem em
 qualquer ordem (§2.2/§2.3) na LOCAL_VOCAB (salvatagem_e_lugar: a LOCAL_SEGURANCA da TERMOS só pega o equipamento antes do lugar).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Da varredura de termos
 (RELATORIO), só cinco das oito regex ficam em relatório até o C12; a PESSOAIS, a DINHEIRO e a LOCAL_SEGURANCA (telefone, e-mail,
 CPF/CNPJ, dinheiro e lugar de equipamento de salvatagem: travas §2.2 e §2.7, 0 ocorrência hoje) reprovam já, sem pendência
-(TERMOS_JA_REPROVAM, em_relatorio()). As violações de hoje que dependem do dado dos C7–C8 estão congeladas por caminho na
+(TERMOS_JA_REPROVAM, em_relatorio()). As violações de hoje que dependem do dado do C8 estão congeladas por caminho na
 PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não ocorre mais também (o commit que
 completa o dado tira a linha dela).
 
@@ -46,7 +45,7 @@ from html import unescape
 AQUI = os.path.dirname(os.path.abspath(__file__))
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 PROIBIDOS = os.path.join(RAIZ, 'testes', 'proibidos.json')     # cópia do termos.json (PROMPT §3): a fonte das 8 regex
-RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capitao-dados.js (§1.23; entra no C7)
+RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capitao-dados.js (§1.23), anexado pelo gerar_demo.py
 
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
 # §6.2 C3: as estruturais reprovam o gerador; só a varredura de termos fica em relatório (não reprova), até o C12.
@@ -61,39 +60,26 @@ def em_relatorio(nome, msg):
     """A violação `msg` da asserção `nome` só é relatada (não reprova o gerador)? A TERMOS é parcial: a regex de cada violação
     (o que vem antes do 1º ':' da mensagem) decide."""
     return nome in RELATORIO and not (nome == 'TERMOS' and msg.split(':', 1)[0] in TERMOS_JA_REPROVAM)
-# Violações de hoje que dependem do dado dos C7–C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
+# Violações de hoje que dependem do dado do C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
 # exato, com '*' no lugar de um trecho: o «…» citado (o caminho, a regra e, na MMSI9, os dígitos ficam presos), um nome que não
-# pode estar no repositório, ou a contagem de datas das 4 planilhas que o C7 refaz inteiras. Nas duas das listas privadas e da
-# pasta do Avanti, a contagem é exata e o termo vai por número (#n) ou por assinatura (nunca o nome).
-_AG = ('porao-teste', 'clima-filtro', 'gerador-rotor', 'casco-anodos', 'motores-oleo', 'gerador-revisao', 'seakeeper-anodo',
-       'baterias', 'garmin-cartas', 'clima-revisao', 'motores-revisao')   # as 11 tarefas de hoje (C7: deslocamentos, sistema, palavras)
+# pode estar no repositório, ou uma contagem. Nas duas das listas privadas e da pasta do Avanti, a contagem é exata e o termo vai
+# por número (#n) ou por assinatura (nunca o nome).
 # O C5 completou equipamentos, modelos, guias e trechos (§1.4, §1.5): as pendências dele (NULO, MMSI9, AFIRMA_REAL,
 # SEGURANCA_MARCADA, MODELOS_AVANTI, COLISAO_MODELOS, EQUIP e NOTA_ETIQUETA) saíram com o dado. O C6 completou o D.protocolos (§1.3):
-# saíram o seafire/epirb None (NULO), o MMSI do roteiro (MMSI9) e o roteiro e o MOB de antes (PROTOCOLO_LIMPO).
+# saíram o seafire/epirb None (NULO), o MMSI do roteiro (MMSI9) e o roteiro e o MOB de antes (PROTOCOLO_LIMPO). O C7 completou a agenda
+# (14 tarefas com deslocamento, sistema e palavras), os documentos (o TIE com id e número), o diário, a equipe e as fontes com prazos
+# relativos (§1.7–§1.9, §1.11, §5): saíram as pendências do NULO (documentos sem prazo omitem vence e dn), REGISTRO, TERCEIROS, IDS,
+# AGENDA e FONTES_RELATIVAS.
 PENDENTES = {
     'NULO': {
-        'C7': ['documentos[%d].%s: None' % (i, k) for i in (0, 6, 7) for k in ('vence', 'dn')],   # sem deslocamento: omitidos (§1.0)
         'C8': ['snapshot.porao: None', 'snapshot.ancora: None']   # §1.17 sem null; a leitura da pasta 05 é refeita (e renomeada)
               + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
                  for k in ('rpm', 'pct')],
     },
-    # O registro já está preenchido (C4), e o documento do TIE ainda é o de antes (sem id, SEM DADOS, "registro não informado"): o
-    # C7 grava id "tie" e numero = embarcacao.registro (§1.8) e tira esta linha (CONTRATO §6.6).
-    'REGISTRO': {'C7': ['documentos[tie] ausente: o TIE precisa de id "tie" e numero = embarcacao.registro (§1.2, §1.8)']},
-    'TERCEIROS': {'C7': ["agenda.%s.quem: papel fora da lista fechada (§1.7): 'oficina Volvo Penta'" % i for i in ('motores-oleo', 'motores-revisao')]
-                  + ["equipe.apoio[1].papel: papel fora da lista fechada (§1.11): 'Oficina Volvo Penta'"]},   # §1.7 e §1.11 (C7)
-    'IDS': {'C7': ['agenda.%s.sistema fora do vocabulário (ids de equipamentos, casco, tanques): None' % i for i in _AG]
-            + ['diario.%s: pendência sem ref na agenda' % iso for iso in ('2026-09-24T17:10:00-03:00', '2026-09-20T11:05:00-03:00',
-                                                                          '2026-09-05T10:00:00-03:00')]},
-    'AGENDA': {'C7': [m % i for i in _AG for m in ('agenda.%s: ultimaHa + venceEm ≠ DIAS_MESES[meses]', 'agenda.%s.palavras vazias ou com palavra solta')]
-               + ['agenda.porao-teste: seguranca só (e sempre) em epirb-teste, porao-teste, seafire-inspecao', 'agenda: 0 atrasadas (precisa de 3)']},
-    'FONTES_RELATIVAS': {'C7': ['fontes/%s: * data(s) dd/mm/aaaa' % f for f in (
-        '02 Documentos/Controle de documentos.csv', '03 Agenda de manutenção/Agenda preditiva.csv', '04 Diário de bordo/Diário de bordo.csv',
-        '06 Abastecimento/Registro de abastecimento.csv')]},
 }
-COMMITS_PENDENTES = ('C7', 'C8')   # o C4 completou a embarcação (§1.2; o TIE do registro fica com o C7), o C5, os equipamentos e os guias (§1.4, §1.5) e o C6, o D.protocolos (§1.3)
+COMMITS_PENDENTES = ('C8',)   # o C4 completou a embarcação (§1.2), o C5, os equipamentos e os guias (§1.4, §1.5), o C6, o D.protocolos (§1.3) e o C7, a agenda, os documentos, o diário e as fontes relativas (§1.7–§1.9, §5)
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.

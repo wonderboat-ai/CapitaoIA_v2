@@ -81,21 +81,21 @@ window.CapitaoDados = {
   "mn": 202,
   "lenta": 123
  },
- "serie24v": [{"d":"20/09","min":26.1,"max":28.4},{"d":"21/09","min":26.0,"max":28.6},{"d":"22/09","min":25.9,"max":27.2},{"d":"23/09","min":25.8,"max":27.0},{"d":"24/09","min":25.7,"max":28.5},{"d":"25/09","min":25.9,"max":27.1},{"d":"26/09","min":26.0,"max":27.4}],
- "agenda": [{"id":"porao-teste","t":"Teste das bombas de porão e alarmes","equip":"Bombas de porão","quem":"técnico","intervalo":"mensal","ultima":"01/08/2026","vence":"01/09/2026","dn":-25,"st":"ATRASADA","rot":"ATRASADA · 25 D","tom":"crit","fonte":"Agenda preditiva"},{"id":"clima-filtro","t":"Limpeza do filtro de água salgada da climatização","equip":"Climatização (fabricante SEM DADOS)","quem":"marina","intervalo":"mensal","ultima":"10/08/2026","vence":"10/09/2026","dn":-16,"st":"ATRASADA","rot":"ATRASADA · 16 D","tom":"crit","fonte":"Agenda preditiva"},{"id":"gerador-rotor","t":"Inspeção do rotor (impeller) do gerador","equip":"Gerador Onan","quem":"técnico","intervalo":"12 meses","ultima":"24/09/2025","vence":"24/09/2026","dn":-2,"st":"ATRASADA","rot":"ATRASADA · 2 D","tom":"crit","fonte":"Agenda preditiva"},{"id":"casco-anodos","t":"Limpeza de casco e troca de anodos","equip":"Casco","quem":"marina","intervalo":"6 meses","ultima":"05/04/2026","vence":"05/10/2026","dn":9,"st":"D-30","rot":"D-9","tom":"warn","fonte":"Agenda preditiva"},{"id":"motores-oleo","t":"Troca de óleo e filtros dos motores","equip":"Motores Volvo Penta","quem":"oficina Volvo Penta","intervalo":"12 meses ou 450 h (o que vier antes)","ultima":"13/10/2025","vence":"13/10/2026","horas":{"limite":450,"atual":412.6,"faltam":37.4},"dn":17,"st":"D-30","rot":"D-17","tom":"warn","fonte":"Agenda preditiva"},{"id":"gerador-revisao","t":"Revisão do gerador: óleo e filtros","equip":"Gerador Onan","quem":"técnico","intervalo":"12 meses ou 1.300 h","ultima":"20/10/2025","vence":"20/10/2026","horas":{"limite":1300,"atual":1236.4,"faltam":63.6},"dn":24,"st":"D-30","rot":"D-24","tom":"warn","fonte":"Agenda preditiva"},{"id":"seakeeper-anodo","t":"Anodo do trocador de calor do estabilizador","equip":"Estabilizador Seakeeper","quem":"técnico","intervalo":"6 meses","ultima":"30/04/2026","vence":"31/10/2026","dn":35,"st":"D-60","rot":"D-35","tom":"tele","fonte":"Agenda preditiva"},{"id":"baterias","t":"Verificação do banco de baterias e conexões","equip":"Sistema elétrico 24 V / 12 V","quem":"técnico","intervalo":"6 meses","ultima":"15/05/2026","vence":"15/11/2026","dn":50,"st":"D-60","rot":"D-50","tom":"tele","fonte":"Agenda preditiva"},{"id":"garmin-cartas","t":"Atualização de cartas e software dos eletrônicos","equip":"Eletrônicos Garmin","quem":"Lucas","intervalo":"12 meses","ultima":"01/12/2025","vence":"01/12/2026","dn":66,"st":"D-90","rot":"D-66","tom":"accent","fonte":"Agenda preditiva"},{"id":"clima-revisao","t":"Revisão anual da climatização","equip":"Climatização (fabricante SEM DADOS)","quem":"marina","intervalo":"12 meses","ultima":"21/12/2025","vence":"21/12/2026","dn":86,"st":"D-90","rot":"D-86","tom":"accent","fonte":"Agenda preditiva"},{"id":"motores-revisao","t":"Revisão anual dos motores","equip":"Motores Volvo Penta","quem":"oficina Volvo Penta","intervalo":"12 meses","ultima":"16/01/2026","vence":"16/01/2027","dn":112,"st":"EM DIA","rot":"D-112","tom":"ok","fonte":"Agenda preditiva"}],
- "agendaFalta": ["EPIRB: teste e validade da bateria — equipamento SEM DADOS","Seafire: inspeção e validade da carga — SEM DADOS"],
+ "serie24v": [{"diasAtras":6,"min":26.1,"max":28.4,"d":"20/09"},{"diasAtras":5,"min":26.0,"max":28.6,"d":"21/09"},{"diasAtras":4,"min":25.9,"max":27.2,"d":"22/09"},{"diasAtras":3,"min":25.8,"max":27.0,"d":"23/09"},{"diasAtras":2,"min":25.7,"max":28.5,"d":"24/09"},{"diasAtras":1,"min":25.9,"max":27.1,"d":"25/09"},{"diasAtras":0,"min":26.0,"max":27.4,"d":"26/09"}],
+ "agenda": [{"id":"porao-teste","t":"Teste das bombas de porão e alarmes","curto":"TESTE","equip":"Bombas de porão Rule 2000","sistema":"porao","quem":"técnico","intervalo":"mensal","meses":1,"ultimaHa":56,"venceEm":-25,"seguranca":true,"palavras":["bombas de porao","bomba de porao","teste das bombas"],"fonte":"Agenda preditiva","ultima":"01/08/2026","vence":"01/09/2026","dn":-25,"st":"ATRASADA","rot":"ATRASADA · 25 D","tom":"crit"},{"id":"clima-filtro","t":"Limpeza do filtro de água salgada da climatização","curto":"FILTRO","equip":"Climatização Webasto FCF Platinum","sistema":"climatizacao","quem":"marina","intervalo":"mensal","meses":1,"ultimaHa":47,"venceEm":-16,"palavras":["filtro de agua salgada","filtro da climatizacao","filtro do ar condicionado","filtro do ar-condicionado"],"fonte":"Agenda preditiva","ultima":"10/08/2026","vence":"10/09/2026","dn":-16,"st":"ATRASADA","rot":"ATRASADA · 16 D","tom":"crit"},{"id":"gerador-rotor","t":"Inspeção do rotor (impeller) do gerador","curto":"ROTOR","equip":"Gerador Onan QD 9","sistema":"gerador","quem":"técnico","intervalo":"12 meses","meses":12,"ultimaHa":367,"venceEm":-2,"palavras":["rotor do gerador","impeller do gerador","rotor impeller do gerador"],"fonte":"Agenda preditiva","ultima":"24/09/2025","vence":"24/09/2026","dn":-2,"st":"ATRASADA","rot":"ATRASADA · 2 D","tom":"crit"},{"id":"casco-anodos","t":"Limpeza de casco e troca de anodos","curto":"ANODOS","equip":"Casco","sistema":"casco","quem":"marina","intervalo":"6 meses","meses":6,"ultimaHa":175,"venceEm":9,"palavras":["limpeza de casco","limpeza do casco","anodos do casco","troca de anodos"],"fonte":"Agenda preditiva","ultima":"04/04/2026","vence":"05/10/2026","dn":9,"st":"D-30","rot":"D-9","tom":"warn"},{"id":"epirb-teste","t":"Autoteste do EPIRB e validade conferida na etiqueta","curto":"AUTOTESTE","equip":"EPIRB","sistema":"epirb","quem":"Lucas","intervalo":"mensal","meses":1,"ultimaHa":18,"venceEm":13,"seguranca":true,"palavras":["autoteste do epirb","teste do epirb","teste da baliza","autoteste da baliza"],"fonte":"Agenda preditiva","ultima":"08/09/2026","vence":"09/10/2026","dn":13,"st":"D-30","rot":"D-13","tom":"warn"},{"id":"motores-oleo","t":"Troca de óleo e filtros dos motores","curto":"ÓLEO","equip":"Motores Cummins QSB6.7 305","sistema":"motores","quem":"oficina de motores","intervalo":"12 meses ou 450 h (o que vier antes)","meses":12,"ultimaHa":348,"venceEm":17,"horas":{"limite":450,"campos":["motor_bb_horimetro_h","motor_be_horimetro_h"],"atual":412.6,"faltam":37.4},"palavras":["oleo dos motores","oleo do motor","filtros dos motores"],"fonte":"Agenda preditiva","ultima":"13/10/2025","vence":"13/10/2026","dn":17,"st":"D-30","rot":"D-17","tom":"warn"},{"id":"gerador-revisao","t":"Revisão do gerador: óleo e filtros","curto":"REVISÃO","equip":"Gerador Onan QD 9","sistema":"gerador","quem":"técnico","intervalo":"12 meses ou 1.300 h","meses":12,"ultimaHa":341,"venceEm":24,"horas":{"limite":1300,"campos":["gerador_horimetro_h"],"atual":1236.4,"faltam":63.6},"palavras":["revisao do gerador","oleo do gerador","filtros do gerador"],"fonte":"Agenda preditiva","ultima":"20/10/2025","vence":"20/10/2026","dn":24,"st":"D-30","rot":"D-24","tom":"warn"},{"id":"seakeeper-anodo","t":"Anodo do trocador de calor do estabilizador","curto":"ANODO","equip":"Estabilizador Seakeeper 3","sistema":"estabilizador","quem":"técnico","intervalo":"6 meses","meses":6,"ultimaHa":149,"venceEm":35,"palavras":["anodo do estabilizador","anodo do seakeeper","anodo do trocador"],"fonte":"Agenda preditiva","ultima":"30/04/2026","vence":"31/10/2026","dn":35,"st":"D-60","rot":"D-35","tom":"tele"},{"id":"motores-rotor","t":"Troca do rotor da bomba de água salgada dos motores","curto":"ROTOR","equip":"Motores Cummins QSB6.7 305","sistema":"motores","quem":"oficina de motores","intervalo":"12 meses","meses":12,"ultimaHa":324,"venceEm":41,"palavras":["rotor da bomba de agua salgada","rotor dos motores","impeller dos motores","rotor do motor"],"fonte":"Agenda preditiva","ultima":"06/11/2025","vence":"06/11/2026","dn":41,"st":"D-60","rot":"D-41","tom":"tele"},{"id":"baterias","t":"Verificação do banco de baterias e conexões","curto":"VERIFICAÇÃO","equip":"Baterias Victron Energy (24 V e 12 V)","sistema":"eletrico","quem":"técnico","intervalo":"6 meses","meses":6,"ultimaHa":134,"venceEm":50,"palavras":["banco de baterias","conexoes das baterias","verificacao das baterias"],"fonte":"Agenda preditiva","ultima":"15/05/2026","vence":"15/11/2026","dn":50,"st":"D-60","rot":"D-50","tom":"tele"},{"id":"garmin-cartas","t":"Atualização de cartas e software dos eletrônicos","curto":"CARTAS","equip":"Plotters Garmin GPSMAP 1243xsv","sistema":"eletronicos","quem":"Lucas","intervalo":"12 meses","meses":12,"ultimaHa":299,"venceEm":66,"palavras":["cartas do plotter","cartas nauticas","atualizacao das cartas","software dos eletronicos"],"fonte":"Agenda preditiva","ultima":"01/12/2025","vence":"01/12/2026","dn":66,"st":"D-90","rot":"D-66","tom":"accent"},{"id":"clima-revisao","t":"Revisão anual da climatização","curto":"REVISÃO","equip":"Climatização Webasto FCF Platinum","sistema":"climatizacao","quem":"marina","intervalo":"12 meses","meses":12,"ultimaHa":279,"venceEm":86,"palavras":["revisao da climatizacao","revisao do ar condicionado"],"fonte":"Agenda preditiva","ultima":"21/12/2025","vence":"21/12/2026","dn":86,"st":"D-90","rot":"D-86","tom":"accent"},{"id":"motores-revisao","t":"Revisão anual dos motores","curto":"REVISÃO","equip":"Motores Cummins QSB6.7 305","sistema":"motores","quem":"oficina de motores","intervalo":"12 meses","meses":12,"ultimaHa":253,"venceEm":112,"palavras":["revisao dos motores","revisao anual dos motores"],"fonte":"Agenda preditiva","ultima":"16/01/2026","vence":"16/01/2027","dn":112,"st":"EM DIA","rot":"D-112","tom":"ok"},{"id":"seafire-inspecao","t":"Inspeção anual do sistema fixo de supressão","curto":"INSPEÇÃO","equip":"Sistema fixo de supressão de incêndio","sistema":"seafire","quem":"técnico","intervalo":"12 meses","meses":12,"ultimaHa":225,"venceEm":140,"seguranca":true,"palavras":["inspecao do sistema fixo","sistema fixo de supressao","inspecao do seafire"],"fonte":"Agenda preditiva","ultima":"13/02/2026","vence":"13/02/2027","dn":140,"st":"EM DIA","rot":"D-140","tom":"ok"}],
  "agendaFonte": "Agenda preditiva · Drive › Capitão IA v2 › 03 Agenda de manutenção",
- "documentos": [{"n":"Título de Inscrição da Embarcação (TIE)","cat":"Registro","vence":null,"st":"SEM DADOS","nota":"registro não informado","dn":null,"fonte":"Controle de documentos"},{"n":"Seguro da embarcação","cat":"Seguro","vence":"15/10/2026","nota":"apólice no Drive","dn":19,"st":"VENCE EM 19 D","fonte":"Controle de documentos"},{"n":"Licença de estação de rádio (VHF)","cat":"Licenças","vence":"30/11/2026","nota":"rádios Icom IC-M510 e IC-M37","dn":65,"st":"VENCE EM 65 D","fonte":"Controle de documentos"},{"n":"Laudo de vistoria anual","cat":"Laudos","vence":"18/08/2027","nota":"vistoria de 18/08/2026","dn":326,"st":"EM DIA","fonte":"Controle de documentos"},{"n":"Garantia do estabilizador Seakeeper","cat":"Garantias","vence":"20/03/2027","nota":"modelo SEM DADOS","dn":175,"st":"EM DIA","fonte":"Controle de documentos"},{"n":"Garantia dos eletrônicos Garmin","cat":"Garantias","vence":"10/02/2027","nota":"modelos SEM DADOS","dn":137,"st":"EM DIA","fonte":"Controle de documentos"},{"n":"Certificado do EPIRB","cat":"Segurança","vence":null,"st":"SEM DADOS","nota":"EPIRB sem dados","dn":null,"fonte":"Controle de documentos"},{"n":"Nota fiscal de abastecimento · 12/09/2026","cat":"Notas","vence":null,"st":"A CONFERIR","nota":"foto no Drive · sem valores no app","dn":null,"fonte":"Controle de documentos"}],
+ "tarefasEquipe": [{"id":"g01","n":"Revisar mangueiras do dessalinizador","venceEm":20,"quem":"técnico","meses":6,"sistema":"dessalinizador","origem":"equipe","vence":"2026-10-16","dn":20,"st":"D-30","rot":"D-20","tom":"warn"},{"id":"g02","n":"Lavar o convés e o hard-top","venceEm":5,"quem":"marina","meses":1,"sistema":"casco","origem":"equipe","vence":"2026-10-01","dn":5,"st":"D-30","rot":"D-5","tom":"warn"}],
+ "documentos": [{"id":"tie","n":"Título de Inscrição da Embarcação (TIE)","cat":"Registro","venceEm":646,"emitidoHa":1180,"numero":"CIA-23-0417","nota":"renovação a cada 5 anos","fonte":"Controle de documentos","vence":"03/07/2028","dn":646,"st":"EM DIA","emitido":"04/07/2023"},{"id":"seguro","n":"Seguro da embarcação","cat":"Seguro","venceEm":19,"emitidoHa":346,"nota":"apólice guardada a bordo e no Drive","fonte":"Controle de documentos","vence":"15/10/2026","dn":19,"st":"VENCE EM 19 D","emitido":"15/10/2025"},{"id":"licenca","n":"Licença de Estação de rádio (VHF)","cat":"Licenças","venceEm":65,"nota":"rádios VHF fixo e portátil","fonte":"Controle de documentos","vence":"30/11/2026","dn":65,"st":"VENCE EM 65 D"},{"id":"laudo","n":"Laudo de vistoria anual","cat":"Laudos","venceEm":326,"emitidoHa":39,"nota":"laudo arquivado no Drive","fonte":"Controle de documentos","vence":"18/08/2027","dn":326,"st":"EM DIA","emitido":"18/08/2026"},{"id":"gar-estab","n":"Garantia do estabilizador","cat":"Garantias","venceEm":175,"nota":"Seakeeper 3","fonte":"Controle de documentos","vence":"20/03/2027","dn":175,"st":"EM DIA"},{"id":"gar-eletr","n":"Garantia dos eletrônicos","cat":"Garantias","venceEm":137,"nota":"plotters e radar Garmin","fonte":"Controle de documentos","vence":"10/02/2027","dn":137,"st":"EM DIA"},{"id":"doc-epirb","n":"Certificado do EPIRB (bateria e disparador hidrostático)","cat":"Segurança","venceEm":540,"nota":"validade conferida também na etiqueta do equipamento","fonte":"Controle de documentos","vence":"19/03/2028","dn":540,"st":"EM DIA"},{"id":"nf-abast","n":"Nota fiscal do abastecimento","cat":"Notas","emitidoHa":14,"st":"CONFERIDA","nota":"abastecimento de 620 L · sem valores no app","fonte":"Controle de documentos","emitido":"12/09/2026"}],
  "docsFonte": "Controle de documentos · Drive › Capitão IA v2 › 02 Documentos",
- "abastecimentos": [{"d":"12/09/2026","litros":620,"combustivel":"diesel","local":"posto da marina · Balneário Camboriú","st":"CONFERIDO","nivelDepois":65,"nota":"NF no Drive"},{"d":"02/08/2026","litros":540,"combustivel":"diesel","local":"posto da marina · Balneário Camboriú","st":"CONFERIDO","nivelDepois":71,"nota":"NF no Drive"}],
+ "abastecimentos": [{"diasAtras":14,"litros":620,"combustivel":"diesel","local":"posto da marina · Balneário Camboriú","st":"CONFERIDO","nivelDepois":65,"nota":"NF no Drive","d":"12/09/2026"},{"diasAtras":55,"litros":540,"combustivel":"diesel","local":"posto da marina · Balneário Camboriú","st":"CONFERIDO","nivelDepois":71,"nota":"NF no Drive","d":"02/08/2026"}],
  "abastFonte": "Registro de abastecimento · Drive › Capitão IA v2 › 06 Abastecimento",
  "regraAbast": "abastecer antes de 25 % do total dos tanques, 400 L de 1.600 L (Checklist de bordo § Abastecimento)",
- "diario": [{"d":"26/09","h":"09:31","iso":"2026-09-26T09:31:00-03:00","sys":"Navegação","tom":"tele","who":"Lucas","pend":false,"t":"Fundeado na enseada de Balneário Camboriú após 1 h 10 min de navegação. Motores desligados; gerador e Seakeeper ligados."},{"d":"26/09","h":"08:20","iso":"2026-09-26T08:20:00-03:00","sys":"Navegação","tom":"tele","who":"Lucas","pend":false,"t":"Saída da base com 4 pessoas a bordo. Checklist de saída feito; teste das bombas de porão continua pendente."},{"d":"24/09","h":"17:10","iso":"2026-09-24T17:10:00-03:00","sys":"Manutenção","tom":"warn","who":"técnico","pend":true,"t":"Inspeção do rotor do gerador não feita no prazo — reagendar."},{"d":"20/09","h":"11:05","iso":"2026-09-20T11:05:00-03:00","sys":"Equipamentos","tom":"accent","who":"Lucas","pend":true,"t":"Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada)."},{"d":"12/09","h":"15:40","iso":"2026-09-12T15:40:00-03:00","sys":"Combustível","tom":"ok","who":"Lucas","pend":false,"t":"Abastecimento de 620 L de diesel no posto da marina; tanques em ≈ 65 %. NF no Drive."},{"d":"05/09","h":"10:00","iso":"2026-09-05T10:00:00-03:00","sys":"Segurança","tom":"crit","who":"técnico","pend":true,"t":"Teste das bombas de porão adiado por chuva."},{"d":"28/08","h":"16:25","iso":"2026-08-28T16:25:00-03:00","sys":"Eletrônicos","tom":"accent","who":"Lucas","pend":false,"t":"Cartas do plotter Garmin desatualizadas; atualização entra na agenda de dezembro."},{"d":"18/08","h":"09:00","iso":"2026-08-18T09:00:00-03:00","sys":"Documentos","tom":"ok","who":"Lucas","pend":false,"t":"Vistoria anual feita; laudo arquivado no Drive."}],
+ "diario": [{"id":"d01","diasAtras":0,"h":"07:00","sys":"Navegação","tom":"tele","who":"Lucas","pend":false,"t":"Saída da base com 4 pessoas a bordo. Checklist de saída feito; teste das bombas de porão continua pendente.","d":"26/09","iso":"2026-09-26T07:00:00-03:00"},{"id":"d03","diasAtras":2,"h":"17:10","sys":"Manutenção","tom":"warn","who":"técnico","pend":true,"ref":"gerador-rotor","t":"Inspeção do rotor do gerador não feita no prazo — reagendar; rotor de reserva em falta no estoque.","palavras":["rotor do gerador","impeller do gerador","rotor impeller do gerador"],"d":"24/09","iso":"2026-09-24T17:10:00-03:00"},{"id":"d04","diasAtras":3,"h":"19:30","sys":"Motores","tom":"accent","who":"Lucas","pend":false,"ref":"motores-rotor","t":"Motor BE 1 a 2 °C acima do BB em cruzeiro nos últimos dias, com picos acima de 88 °C — acompanhar; rotor da bomba de água salgada dos motores na agenda.","d":"23/09","iso":"2026-09-23T19:30:00-03:00"},{"id":"d05","diasAtras":6,"h":"11:05","sys":"Equipamentos","tom":"accent","who":"Lucas","pend":true,"ref":"clima-filtro","t":"Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada).","palavras":["filtro de agua salgada","filtro da climatizacao","filtro do ar condicionado","filtro do ar-condicionado"],"d":"20/09","iso":"2026-09-20T11:05:00-03:00"},{"id":"d02","diasAtras":14,"h":"15:40","sys":"Combustível","tom":"ok","who":"Lucas","pend":false,"t":"Abastecimento de 620 L de diesel no posto da marina; tanques em ≈ 65 %. NF no Drive.","d":"12/09","iso":"2026-09-12T15:40:00-03:00"},{"id":"d06","diasAtras":18,"h":"08:30","sys":"Segurança","tom":"ok","who":"Lucas","pend":false,"ref":"epirb-teste","t":"Autoteste do EPIRB feito: luz de teste conforme a etiqueta.","d":"08/09","iso":"2026-09-08T08:30:00-03:00"},{"id":"d07","diasAtras":21,"h":"10:00","sys":"Segurança","tom":"crit","who":"técnico","pend":true,"ref":"porao-teste","t":"Teste das bombas de porão adiado por chuva.","palavras":["bombas de porao","bomba de porao","teste das bombas"],"d":"05/09","iso":"2026-09-05T10:00:00-03:00"},{"id":"d08","diasAtras":29,"h":"16:25","sys":"Eletrônicos","tom":"accent","who":"Lucas","pend":false,"ref":"garmin-cartas","t":"Cartas do plotter desatualizadas; a atualização está na agenda.","d":"28/08","iso":"2026-08-28T16:25:00-03:00"},{"id":"d09","diasAtras":39,"h":"09:00","sys":"Documentos","tom":"ok","who":"Lucas","pend":false,"ref":"laudo","t":"Vistoria anual feita; laudo arquivado no Drive.","d":"18/08","iso":"2026-08-18T09:00:00-03:00"}],
  "diarioFonte": "Diário de bordo · Drive › Capitão IA v2 › 04 Diário de bordo",
  "equipe": {
   "perfis": [{"id":"lucas","nome":"Lucas Araújo","ini":"LA","papel":"proprietário","acesso":"total"}],
-  "apoio": [{"id":"marina","papel":"Marina da base","onde":"Balneário Camboriú","para":"casco, filtros, vaga"},{"id":"oficina","papel":"Oficina Volvo Penta","onde":"SEM DADOS","para":"motores"},{"id":"tecnico","papel":"Técnico de bordo","onde":"SEM DADOS","para":"gerador, Seakeeper, elétrica, porão"},{"id":"posto","papel":"Posto de combustível","onde":"marina da base","para":"diesel"}],
-  "nota": "Telefones: A CADASTRAR em Equipe (ficam só no aparelho)."
+  "apoio": [{"id":"marina","papel":"Marina da base","onde":"Balneário Camboriú (SC)","para":"casco, filtros, vaga","servico":"casco, filtros, vaga"},{"id":"oficina","papel":"Oficina de motores diesel","onde":"atende na marina da base","para":"motores e gerador","servico":"motores e gerador"},{"id":"tecnico","papel":"Técnico de bordo","onde":"atende na marina da base","para":"estabilizador, elétrica, porão","servico":"estabilizador, elétrica, porão"},{"id":"eletronica","papel":"Técnico de eletrônicos","onde":"atende na marina da base","para":"plotters, rádios, piloto, radar, AIS","servico":"plotters, rádios, piloto, radar, AIS"},{"id":"refrigeracao","papel":"Técnico de refrigeração","onde":"atende na marina da base","para":"climatização, dessalinizador","servico":"climatização, dessalinizador"},{"id":"posto","papel":"Posto de combustível","onde":"na marina da base","para":"diesel","servico":"diesel"}],
+  "nota": "Telefones: ficam só no aparelho (Equipe)."
  },
  "faq": {
   "gerador": {"status":"PRONTO","fonte":"Guia de bordo — Gerador Onan","equip":"Gerador Onan","modelo":"QD 9","perguntas":[{"q":"Como ligar o gerador?","passos":[{"n":"1","t":"Com o gerador parado, confira o nível de óleo e o líquido de arrefecimento. Abra a válvula de fundo da entrada de água salgada e confira se o filtro de água salgada está limpo. Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.","secao":"1 · Antes de ligar"},{"n":"2","t":"No painel do gerador, pressione e segure PARTIDA até o motor pegar. Aguarde a tensão e a frequência estabilizarem no painel. Só depois transfira as cargas no quadro elétrico, uma de cada vez; ligue a climatização por último.","secao":"2 · Ligar"},{"n":"3","t":"Com o gerador ligado, confira a saída de água pelo escapamento. Sem água saindo, desligue na hora: é sinal de falta de refrigeração (válvula de fundo fechada, filtro entupido ou rotor danificado).","secao":"3 · Água no escapamento"}]},{"q":"Como desligar o gerador?","passos":[{"n":"1","t":"Retire as cargas no quadro elétrico. Deixe o gerador funcionar de 3 a 5 minutos sem carga para esfriar e pressione PARADA. Feche a válvula de fundo se o barco for ficar parado por vários dias.","secao":"4 · Desligar"}]},{"q":"Alarme de alta temperatura","passos":[{"n":"1","t":"Desligue o gerador. Verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller). Nunca abra a tampa do arrefecimento com o motor quente. Registre o alarme no diário.","secao":"5 · Alarme de alta temperatura"}]},{"q":"Alarme de baixa pressão de óleo","passos":[{"n":"1","t":"Desligue o gerador e confira o nível de óleo com ele parado. Se o nível estiver correto e o alarme voltar, não religue: chame o técnico de bordo.","secao":"6 · Alarme de baixa pressão de óleo"}]},{"q":"Quantas horas tem e quando revisar?","passos":[{"n":"1","t":"O horímetro aparece no painel do gerador e na telemetria.","secao":"8 · Horímetro"},{"n":"2","t":"Óleo e filtros: 12 meses ou 1.300 h (o que vier antes). Rotor (impeller): inspeção a cada 12 meses e troca quando estiver gasto.","secao":"7 · Manutenção na agenda"}]}]},
@@ -142,3 +142,240 @@ window.CapitaoDados = {
   "dsc": "O botão DISTRESS envia o alerta com a identificação programada no rádio: é o MMSI do rádio de bordo (etiqueta / Licença de Estação). Depois do alerta, faça o MAYDAY por voz no canal 16."
  }
 };
+/* CapitaoAgora — rodapé do capitao-dados.js (CONTRATO-DADOS §1.23, §4.1): anexado pelo gerar_demo.py, não editar lá.
+   O relógio do aparelho no fuso da embarcação refaz os prazos; o D continua só dado. Nada aqui escreve no D.snapshot. */
+(function () {
+  try {
+    var D = window.CapitaoDados, MIN = 60000, DIA = 86400000, EM_SOS = false;
+    if (!D) return;
+    try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
+    var FUSO = (D.embarcacao && D.embarcacao.fuso) || 'America/Sao_Paulo';
+    var BORDO = { d01: 1, d02: 1 };   // linhas do diário contadas no dia de bordo (as outras, em hoje)
+    var A = window.CapitaoAgora = { fuso: FUSO, assinatura: '' };
+    function p2(n) { return (n < 10 ? '0' : '') + n; }
+
+    // fuso: minutos (local − UTC), com cache por hora; sem Intl, o de Brasília (sem horário de verão desde 2019)
+    var dtf = null, cache = {};
+    function off(ms) {
+      var h = Math.floor(ms / 3600000), r = -180;
+      if (cache[h] !== undefined) return cache[h];
+      try {
+        dtf = dtf || new Intl.DateTimeFormat('en-CA', { timeZone: FUSO, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        var ps = dtf.formatToParts(new Date(h * 3600000)), v = {};
+        for (var i = 0; i < ps.length; i++) v[ps[i].type] = parseInt(ps[i].value, 10);
+        r = Math.round((Date.UTC(v.year, v.month - 1, v.day, v.hour % 24, v.minute, v.second) - h * 3600000) / MIN);
+        if (!isFinite(r)) r = -180;
+      } catch (e) { r = -180; }
+      return (cache[h] = r);
+    }
+    function diaN(ms) { return Math.floor((ms + off(ms) * MIN) / DIA); }   // dia do calendário no fuso, em dias desde 1970
+    function ymd(n) { var d = new Date(n * DIA); return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()]; }
+    function br(n) { var x = ymd(n); return p2(x[2]) + '/' + p2(x[1]) + '/' + x[0]; }
+    function isoDia(n) { var x = ymd(n); return x[0] + '-' + p2(x[1]) + '-' + p2(x[2]); }
+    function ddmm(n) { return br(n).slice(0, 5); }
+    function deData(s) {   // 'dd/mm/aaaa' ou 'aaaa-mm-dd' → dia desde 1970 (data absoluta); NaN se não for data
+      var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s || ''), n = m ? [m[3], m[2], m[1]] : /^(\d{4})-(\d\d)-(\d\d)/.exec(s || '');
+      if (n && !m) n = [n[1], n[2], n[3]];
+      return n ? Math.floor(Date.UTC(+n[0], +n[1] - 1, +n[2]) / DIA) : NaN;
+    }
+    function isoLocal(n, hhmm, seg) {   // 'AAAA-MM-DDTHH:MM:SS-03:00': hora de parede do fuso naquele dia
+      var x = ymd(n), hm = /^\d\d:\d\d$/.test(hhmm) ? hhmm : '00:00', parede = Date.UTC(x[0], x[1] - 1, x[2], +hm.slice(0, 2), +hm.slice(3), seg);
+      var o = off(parede - off(parede) * MIN), a = Math.abs(o);
+      return isoDia(n) + 'T' + hm + ':' + p2(seg) + (o < 0 ? '-' : '+') + p2(Math.floor(a / 60)) + ':' + p2(a % 60);
+    }
+
+    // âncora do dia de bordo: 07:00 de hoje no fuso (antes das 07:00, a de ontem). A mesma função para o rebase e para o replay
+    function ancMin() {
+      var m = EM_SOS ? null : /^(\d\d):(\d\d)$/.exec((D.replay && D.replay.ancora_hora) || '');   // o SOS não lê o replay
+      return m ? +m[1] * 60 + +m[2] : 420;
+    }
+    function ancora(ms) {
+      var o = off(ms), l = ms + o * MIN, parede = Math.floor(l / DIA) * DIA + ancMin() * MIN;   // parede: relógio do fuso lido como UTC
+      if (l < parede) parede -= DIA;
+      return parede - off(parede - o * MIN) * MIN;
+    }
+
+    // prazos (port do status_prazo do gerador)
+    function prazoDe(n) {
+      var i = n < 0 ? 0 : n <= 30 ? 1 : n <= 60 ? 2 : n <= 90 ? 3 : 4;
+      return { st: ['ATRASADA', 'D-30', 'D-60', 'D-90', 'EM DIA'][i], rot: i ? 'D-' + n : 'ATRASADA · ' + (-n) + ' D', tom: ['crit', 'warn', 'tele', 'accent', 'ok'][i] };
+    }
+    function docDe(n) { return { st: n < 0 ? 'VENCIDO' : n <= 90 ? 'VENCE EM ' + n + ' D' : 'EM DIA', tom: prazoDe(n).tom }; }
+
+    // rebase: só campos derivados, de deslocamentos que nunca reescreve; idempotente; as listas mudam no lugar (sort/splice)
+    function dnDe(x, hoje) { var n = typeof x.venceEm === 'number' ? x.venceEm : deData(x.vence) - hoje; return n; }   // NaN sem prazo
+    function segundos(lista) {   // mesmo dia e mesma hora: a linha de cima (mais nova) ganha 1 s a mais, para o iso seguir a ordem
+      var ch = lista.map(function (x) { return x && typeof x.diasAtras === 'number' ? (BORDO[x.id] ? 'b' : 'h') + x.diasAtras + x.h : ''; }), vistos = {};
+      return ch.map(function (k) {
+        if (!k) return 0;
+        vistos[k] = (vistos[k] || 0) + 1;
+        return ch.filter(function (c) { return c === k; }).length - vistos[k];
+      });
+    }
+    function rebase(ms, forca) {
+      try {
+        ms = typeof ms === 'number' && isFinite(ms) ? ms : Date.now();
+        var hojeN = diaN(ms), anc = ancora(ms), bordoN = diaN(anc), assin = br(hojeN) + '|' + br(bordoN), n;
+        if (!forca && A.assinatura === assin) return false;
+        A.relogio = { ms: ms, hoje: br(hojeN), hojeIso: isoDia(hojeN), diaBordo: br(bordoN), diaBordoIso: isoDia(bordoN), ancoraMs: anc, off: off(ms) };
+        var prazo = function (x, fmt) {   // vence (se veio de venceEm), dn, st, rot, tom
+          var n = dnDe(x, hojeN), d;
+          if (isNaN(n)) return;
+          if (typeof x.venceEm === 'number') x.vence = fmt(hojeN + n);
+          d = prazoDe(n); x.dn = n; x.st = d.st; x.rot = d.rot; x.tom = d.tom;
+        };
+        (D.agenda || []).forEach(function (t) { if (typeof t.ultimaHa === 'number') t.ultima = br(hojeN - t.ultimaHa); prazo(t, br); });
+        (D.agenda || []).sort(function (a, b) { return (a.dn - b.dn) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+        (D.tarefasEquipe || []).forEach(function (t) { prazo(t, isoDia); });
+        (D.documentos || []).forEach(function (x) {
+          if (typeof x.emitidoHa === 'number') x.emitido = br((x.id === 'nf-abast' || /^ab-/.test(String(x.ref)) ? bordoN : hojeN) - x.emitidoHa);
+          if (isNaN(n = dnDe(x, hojeN))) return;   // sem prazo (a nota fiscal): vence, dn e o st de prazo ficam de fora; o st gerado é dela
+          if (typeof x.venceEm === 'number') x.vence = br(hojeN + n);
+          x.dn = n; x.st = docDe(n).st;
+        });
+        var di = D.diario || [], seg = segundos(di);
+        di.forEach(function (x, i) {
+          if (!x || typeof x.diasAtras !== 'number') return;
+          var n = (BORDO[x.id] ? bordoN : hojeN) - x.diasAtras;
+          x.d = ddmm(n); x.iso = isoLocal(n, x.h, seg[i]);
+        });
+        (D.abastecimentos || []).forEach(function (a) { if (a && typeof a.diasAtras === 'number') a.d = br(bordoN - a.diasAtras); });
+        (D.serie24v || []).forEach(function (s) { if (s && typeof s.diasAtras === 'number') s.d = ddmm(bordoN - s.diasAtras); });
+        D.versao = br(hojeN);
+        A.assinatura = assin;
+        return true;
+      } catch (e) { return false; }
+    }
+
+    // formatadores: o valor como a tela mostra, floor(x·10^c + 0,5) / 10^c, sem -0
+    function arred(x, c) { var p = Math.pow(10, c || 0), v = Math.floor(x * p + 0.5) / p; return v === 0 ? 0 : v; }
+    function nb(x, c, mil) {
+      if (typeof x !== 'number' || !isFinite(x)) return null;
+      var v = arred(x, c), s = Math.abs(v).toFixed(c || 0).split('.');
+      if (mil) s[0] = s[0].replace(/(\d)(?=(\d{3})+$)/g, '$1.');
+      return (v < 0 ? '-' : '') + s.join(',');
+    }
+    function grau3(x) { return typeof x === 'number' && isFinite(x) ? ('00' + (Math.round(((x % 360) + 360) % 360) % 360)).slice(-3) : null; }
+    function hora(ms, comSeg) { var d = new Date(ms + off(ms) * MIN); return p2(d.getUTCHours()) + ':' + p2(d.getUTCMinutes()) + (comSeg ? ':' + p2(d.getUTCSeconds()) : ''); }
+    function grausMin(v, pos, neg, g) {   // 59,995′ já é o grau seguinte
+      var a = Math.abs(v), gr = Math.floor(a), mi = Math.round((a - gr) * 6000) / 100;
+      if (mi >= 60) { gr += 1; mi = 0; }
+      return ('000' + gr).slice(-g) + '°' + (mi < 10 ? '0' : '') + mi.toFixed(2).replace('.', ',') + "'" + (v < 0 ? neg : pos);
+    }
+    function coord(lat, lon) { return grausMin(lat, 'N', 'S', 2) + ' ' + grausMin(lon, 'E', 'W', 3); }   // só para tela
+    function campo(q, nome) {   // o valor como a tela mostra, ou null se falta: o leitor mantém o seu SD/SL
+      var v = q ? q[nome] : null, c = D.campos && D.campos[nome];
+      if (typeof v === 'string') return v;
+      if (typeof v !== 'number' || !isFinite(v)) return null;
+      return c && c.ang ? grau3(v) : nb(v, c && typeof c.casas === 'number' ? c.casas : 0, c && c.mil);
+    }
+
+    // trava do ar e da água: presos na máx/mín de hoje da leitura salva do clima (§2.5 do PROMPT); devolve cópia, a origem não muda
+    function copia(o, extra) {
+      var c = {}, k;
+      for (k in o) if (Object.prototype.hasOwnProperty.call(o, k)) c[k] = o[k];
+      for (k in extra || {}) c[k] = extra[k];
+      return c;
+    }
+    function local(chave, vazio) { try { var v = JSON.parse(localStorage.getItem(chave) || 'null'); return v == null ? vazio : v; } catch (e) { return vazio; } }
+    function trava(q) {
+      var c = copia(q), v = local('capitao.clima.v1', null);
+      if (v && A.relogio && v.dia === A.relogio.hojeIso && typeof v.max === 'number' && typeof v.min === 'number' && v.min <= v.max) {
+        ['temp_ar_externo_c', 'temp_agua_c'].forEach(function (f) { if (typeof c[f] === 'number') c[f] = Math.min(v.max, Math.max(v.min, c[f])); });
+      }
+      return c;
+    }
+
+    // contagens: tarefas abertas (agenda e equipe, geradas e do aparelho; as executadas não contam), documentos e pendências do diário
+    function contagens() {
+      var c = { atrasadas: 0, d30: 0, d60: 0, d90: 0, emDia: 0, docsVencidos: 0, docsVencem90: 0, pendencias: 0, tarefasEquipe: 0 };
+      try {
+        var hoje = diaN(A.relogio ? A.relogio.ms : Date.now()), feitas = local('capitao.executado.v1', {}), acoes = {}, linhas = local('capitao.diario.v1', []), eq = [];
+        var conta = function (dn) { c[dn < 0 ? 'atrasadas' : dn <= 30 ? 'd30' : dn <= 60 ? 'd60' : dn <= 90 ? 'd90' : 'emDia']++; };
+        (D.agenda || []).forEach(function (t) { if (!feitas[t.id] && typeof t.dn === 'number') conta(t.dn); });
+        (D.tarefasEquipe || []).forEach(function (t) { eq.push({ id: t.id, dn: t.dn }); });
+        local('capitao.tarefas.v1', []).forEach(function (t) { if (t && !isNaN(deData(t.vence))) eq.push({ id: t.id, dn: deData(t.vence) - hoje }); });
+        eq.forEach(function (t) { if (!feitas[t.id] && typeof t.dn === 'number') { conta(t.dn); c.tarefasEquipe++; } });
+        (D.documentos || []).forEach(function (x) { if (typeof x.dn === 'number') { if (x.dn < 0) c.docsVencidos++; else if (x.dn <= 90) c.docsVencem90++; } });
+        // pendência aberta: linha com pend (gerada, pelo id; do aparelho, pelo iso) cuja última ação por alvo (resolve/reabre) não é "resolve"
+        linhas.slice().reverse().forEach(function (l) { if (l && (l.acao === 'resolve' || l.acao === 'reabre') && l.alvo) acoes[l.alvo] = l.acao; });
+        (D.diario || []).forEach(function (x) { if (x.pend && acoes[x.id] !== 'resolve') c.pendencias++; });
+        linhas.forEach(function (l) { if (l && l.pend && !l.acao && acoes[l.iso] !== 'resolve') c.pendencias++; });
+      } catch (e) {}
+      return c;
+    }
+
+    // instante: o quadro único que telas, cérebro e IA leem. Nunca lança erro; em /SOS-/ é null, antes de qualquer leitura (§1.3).
+    // tend, txt e resumo entram com o replay e o D.campos (Fases 2 a 4); o calc sai daqui e vale para as três fontes.
+    var guardado = null;
+    function calcular(q) {
+      var o = { faltam: {} }, cons = D.consumo || {}, cr = cons.cruzeiro || {}, ln = cons.lenta || {}, cap = D.embarcacao && D.embarcacao.tanques && D.embarcacao.tanques.diesel_l;
+      var util = typeof q.diesel_litros === 'number' ? q.diesel_litros * (1 - (typeof D.reserva === 'number' ? D.reserva : 0.1)) : null, ab = (D.abastecimentos || [])[0];
+      if (util != null && typeof cap === 'number' && cap > 0) o.diesel_pct = arred(q.diesel_litros / cap * 100, 1);
+      if (util != null && cr.lph > 0 && cr.nos > 0 && ln.lph > 0) o.autonomia = { horas: arred(util / cr.lph, 1), mn: Math.floor(util / cr.lph * cr.nos + 0.5), lenta: Math.floor(util / ln.lph + 0.5) };
+      if (util != null && typeof cap === 'number' && ab && typeof ab.nivelDepois === 'number') {
+        o.desdeAbast = { litros: Math.floor(ab.nivelDepois / 100 * cap - q.diesel_litros + 0.5), desde: ab.d };
+        if (ab.h) o.desdeAbast.h = ab.h;
+      }
+      (D.agenda || []).forEach(function (t) {
+        var h = t.horas, a = null;
+        if (!h || !h.campos || typeof h.limite !== 'number') return;
+        h.campos.forEach(function (f) { if (typeof q[f] === 'number' && (a == null || q[f] > a)) a = q[f]; });
+        if (a != null) o.faltam[t.id] = arred(h.limite - a, 1);
+      });
+      return o;
+    }
+    function instante() {
+      try {
+        if (/SOS-/.test(location.pathname)) return null;
+        var R = window.CapitaoReplay, T = window.CapitaoTelemetria, ms = Date.now(), o = null, x, i;
+        if (R && typeof R.agora === 'function') { x = R.agora(); if (typeof x === 'number' && isFinite(x)) ms = x; }
+        var clima = ''; try { clima = localStorage.getItem('capitao.clima.v1') || ''; } catch (e) {}
+        var chave = Math.floor(ms / 1000) + '|' + A.assinatura + '|' + (R && typeof R.fixo === 'function' ? R.fixo() : '') + '|' + clima;   // guardado por segundo
+        if (guardado && guardado.chave === chave) return guardado.i;
+        if (T && typeof T.atual === 'function' && (x = T.atual())) o = { q: x, fonte: x.simulado ? 'replay' : 'coletor' };
+        if (!o && R && typeof R.em === 'function' && (x = R.em(ms))) o = { q: x, fonte: 'replay' };
+        if (!o && D.snapshot && D.snapshot.quadro) o = { q: D.snapshot.quadro, fonte: 'snapshot', reserva: true };
+        if (!o) return null;
+        var q = o.fonte !== 'coletor' && D.simulacao === true ? trava(o.q) : copia(o.q);   // leitura real nunca é presa
+        var t = o.reserva ? Date.parse(q.timestamp_utc) : ms, hh = hora(isNaN(t) ? ms : t, true), lei = ddmm(diaN(isNaN(t) ? ms : t)) + ' ' + hh.slice(0, 5);
+        i = { ms: ms, q: q, fonte: o.fonte, hora: hh, hhmm: hh.slice(0, 5) };
+        i.fonteTxt = o.reserva ? 'coletor NMEA \u00b7 leitura de ' + lei : o.fonte === 'coletor' ? 'coletor NMEA \u00b7 ao vivo ' + hh : 'telemetria ao vivo \u00b7 ' + hh;
+        i.selo = o.reserva ? { tom: 'warn', texto: '\u00daLTIMA LEITURA \u00b7 ' + lei } : { tom: 'ok', texto: 'AO VIVO \u00b7 ' + hh };
+        if (o.fonte === 'replay' && R) {
+          if (typeof R.t === 'function') i.seg = R.t(ms);
+          if (typeof R.fase === 'function') i.fase = R.fase(ms);
+        }
+        i.calc = calcular(q);
+        guardado = { chave: chave, i: i };
+        return i;
+      } catch (e) { return null; }
+    }
+
+    A.off = off; A.ancora = ancora; A.prazoDe = prazoDe; A.docDe = docDe; A.rebase = rebase; A.trava = trava; A.contagens = contagens; A.instante = instante;
+    A.fmt = { arred: arred, nb: nb, mil: function (x) { return nb(x, 0, true); }, grau3: grau3, hora: hora, coord: coord, campo: campo };
+    rebase(Date.now());
+
+    // Dia de bordo (só com simulacao: true), numa microtarefa: roda depois do arquivo inteiro, para a injeção de teste "simulacao = false"
+    // no fim dele valer. Insere por id (rodar de novo substitui) e nas mesmas listas (splice); nunca grava no aparelho. Em /SOS-/ sai
+    // antes de ler a flag: o SOS nunca lê D.simulacao.
+    function poe(lista, item, pos) {
+      for (var i = 0; i < lista.length; i++) if (lista[i] && lista[i].id === item.id) { lista.splice(i, 1, item); return; }
+      if (pos >= 0 && pos <= lista.length) lista.splice(pos, 0, item); else lista.push(item);
+    }
+    function insereDiaDeBordo() {
+      var B = D.replay && D.replay.diaDeBordo, k;
+      if (!B) return;
+      D.abastecimentos = D.abastecimentos || []; D.diario = D.diario || []; D.documentos = D.documentos || [];
+      if (B.abastecimento) for (k = 0; k < (B.dias || 0); k++) poe(D.abastecimentos, copia(B.abastecimento, { id: 'ab-' + k, diasAtras: k }), k);
+      (B.diario || []).forEach(function (l, j) { poe(D.diario, copia(l), j); });
+      if (B.documento) poe(D.documentos, copia(B.documento), -1);
+    }
+    Promise.resolve().then(function () {
+      try {
+        if (/SOS-/.test(location.pathname)) return;
+        if (D.simulacao === true) { insereDiaDeBordo(); rebase(Date.now(), true); }
+      } catch (e) {}
+    });
+  } catch (e) {}
+})();
