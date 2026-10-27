@@ -111,6 +111,29 @@ CASOS = [
     ('sem governo', 'base'), ('barco sem governo', 'base'), ('pane no barco', 'base'),
     # as palavras de acionamento não abrem o trecho em pergunta comum: o assunto da pergunta tem de ser o do trecho
     ('o parafuso caiu', 'fallback'), ('quantas pessoas a bordo', 'fallback'), ('a pessoa da marina', 'fallback'), ('o governo federal', 'fallback'),
+    # Revisão 6 do C5: (1) "bomba" sozinha é a de porão; com o nome de outra bomba (água salgada, rotor, impeller, climatização, gerador, óleo…)
+    # a pergunta vai ao guia do equipamento, e não à resposta pronta do porão ("Teste de bombas de porão… SEM LEITURA"), que a rota 'porao'
+    # dava a toda "bomba" e que o trechoServe (FAMILIA.porao) deixava como resposta; (2) "bateria de partida" é o banco de baterias
+    # (g_eletrico §1), não a partida do motor; "bateria do motor" e o motor que não pega seguem os motores; (3) "caiu" também é disjuntor,
+    # energia e sinal: só a pessoa que caiu abre o protocolo de homem ao mar (identCom); (4) "manual" e "mar" sozinhos não nomeiam o
+    # Disparo manual nem o Homem ao mar. A seção mostrada de cada uma está na verificação "revisão 6 do C5", mais abaixo.
+    ('como trocar o rotor da bomba de água salgada', 'base'), ('quando trocar o rotor da bomba de água salgada', 'base'),
+    ('como trocar o impeller da bomba de água salgada', 'base'), ('rotor da bomba', 'base'), ('como inspecionar o rotor da bomba', 'base'),
+    ('alarme da bomba de água salgada', 'base'), ('como ligar a bomba de água salgada', 'base'), ('como desligar a bomba de água salgada', 'base'),
+    ('como ligar a bomba da climatização', 'base'), ('como desligar a bomba da climatização', 'base'), ('como trocar o rotor da bomba do gerador', 'base'),
+    ('como trocar a bomba de óleo', 'base'), ('a bomba de circulação', 'fallback'),
+    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'porao'), ('como ligar as bombas de porão', 'base'),
+    ('como trocar a bateria de partida', 'base'), ('como verificar a bateria de partida', 'base'), ('bateria de partida', 'eletrico'),
+    ('o motor não pega, a bateria de partida está fraca', 'motores'),
+    ('o disjuntor caiu, qual o procedimento', 'fallback'), ('a bateria caiu, procedimento', 'eletrico'), ('o gerador caiu, procedimento', 'gerador'),
+    ('o plotter caiu, como resolver', 'eletronicos'), ('o motor caiu, como resolver', 'motores'), ('a conexão do plotter caiu, procedimento', 'eletronicos'),
+    ('a energia caiu', 'fallback'), ('o wifi caiu', 'fallback'), ('a tensão caiu', 'eletrico'), ('caiu a chave no mar', 'fallback'),
+    ('onde fica o manual do motor', 'manual'), ('como acho o manual do motor', 'manual'), ('onde fica o manual', 'manual'),
+    ('tem vista para o mar?', 'fallback'), ('qual a vista do mar', 'fallback'), ('a temperatura do mar caiu', 'fallback'),
+    ('pessoa ao mar', 'base'),
+    # as quatro perguntas de religar depois do disparo e o alarme de âncora ficam no trecho de segurança / no plotter (seção na verificação)
+    ('como religar o gerador depois que o sistema fixo disparou', 'base'), ('como ligar o gerador depois do disparo do sistema fixo', 'base'),
+    ('o sistema fixo disparou, como religo o gerador?', 'base'), ('como abrir o motor depois que o sistema fixo disparou', 'base'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -145,6 +168,17 @@ PEDE_IA = {
     'pessoa caiu da lancha': False, 'não vejo a pessoa que caiu': False, 'perdemos de vista quem caiu': False,
     'sem governo': False, 'barco sem governo': False, 'pane no barco': False,
     'o parafuso caiu': True, 'quantas pessoas a bordo': True, 'a pessoa da marina': True, 'o governo federal': True,
+    # revisão 6 do C5: o trecho do guia (outra bomba, bateria de partida) vai à IA; a resposta pronta e o protocolo de pessoa ao mar, não;
+    # o disjuntor, a energia e a vista do mar são conversa comum (IA); o trecho de segurança nomeado barra a IA
+    'como trocar o rotor da bomba de água salgada': True, 'quando trocar o rotor da bomba de água salgada': True, 'rotor da bomba': True,
+    'alarme da bomba de água salgada': True, 'como ligar a bomba da climatização': True, 'como trocar o rotor da bomba do gerador': True,
+    'a bomba de circulação': True, 'bombas de porão': False, 'como ligar as bombas de porão': False,
+    'como trocar a bateria de partida': True, 'bateria de partida': False,
+    'o disjuntor caiu, qual o procedimento': True, 'a bateria caiu, procedimento': False, 'o plotter caiu, como resolver': False,
+    'a energia caiu': True, 'o wifi caiu': True, 'caiu a chave no mar': True,
+    'onde fica o manual do motor': False, 'tem vista para o mar?': True, 'qual a vista do mar': True, 'a temperatura do mar caiu': True,
+    'pessoa ao mar': False,
+    'como religar o gerador depois que o sistema fixo disparou': False, 'o sistema fixo disparou, como religo o gerador?': False,
 }
 
 
@@ -257,7 +291,40 @@ def main():
               ['como ligar o carregador', 'g_eletrico'], ['como ligar o carregador de bateria', 'g_eletrico']]
               .filter(([q, g]) => { const a = resp(q); return a.key !== 'base' || String(a.ref).indexOf(D.guias[g]) !== 0; }).map(([q]) => q);
             return { clima, climaSec, mob, pan, guia, certo }; }""")
+        # Revisão 6 do C5: a seção MOSTRADA (a.ref = fonte · §seção; o topo do buscaBase pode ser de outro guia, que o trechoServe pula) de
+        # cada pergunta que a revisão 5 do C5 perdia ou deixava sem trava: a bomba que não é de porão no guia do equipamento; a bateria de
+        # partida nos bancos; depois do disparo do sistema fixo, o §3 do Seafire (com seguranca: sem ele, o gerador/motores respondiam
+        # com a resposta pronta); o alarme de âncora e o "como fundear" no plotter (g_eletronicos §3), não no contador de corrente nem no
+        # recolher do guincho; "ar condicionado" na Climatização §1 e §3 (o "ar" solto puxava o §4 "Fluxo de ar fraco"); pessoa ao mar no protocolo.
+        rev6 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados;
+            const resp = (q) => B.answer(q, { platform: 'app', commit: false });
+            const onde = (qs, g, sec, seg) => qs.filter((q) => { const a = resp(q); return !(a.key === 'base' && a.ref === D.guias[g] + ' · §' + sec && !!a.seguranca === !!seg); })
+              .map((q) => q + ' → ' + resp(q).key + ' ' + resp(q).ref);
+            return {
+              rotor: onde(['como trocar o rotor da bomba de água salgada', 'quando trocar o rotor da bomba de água salgada', 'como trocar o impeller da bomba de água salgada',
+                'rotor da bomba', 'como inspecionar o rotor da bomba'], 'g_motores', '7 · Manutenção na agenda'),
+              alarme: onde(['alarme da bomba de água salgada'], 'g_clima', '3 · Alarme de fluxo'),
+              ligar: onde(['como ligar a bomba de água salgada', 'como ligar a bomba da climatização'], 'g_clima', '1 · Ligar'),
+              desligar: onde(['como desligar a bomba de água salgada', 'como desligar a bomba da climatização'], 'g_clima', '5 · Desligar'),
+              gerador: onde(['como trocar o rotor da bomba do gerador'], 'g_gerador', '7 · Manutenção na agenda'),
+              bancos: onde(['como trocar a bateria de partida', 'como verificar a bateria de partida'], 'g_eletrico', '1 · Bancos'),
+              disparo: onde(['como religar o gerador depois que o sistema fixo disparou', 'como ligar o gerador depois do disparo do sistema fixo',
+                'o sistema fixo disparou, como religo o gerador?', 'como abrir o motor depois que o sistema fixo disparou'], 'g_seafire', '3 · Depois da descarga', true),
+              ancora: onde(['alarme de âncora', 'como fundear'], 'g_eletronicos', '3 · Alarme de âncora'),
+              arLigar: onde(['como ligar o ar condicionado'], 'g_clima', '1 · Ligar'),
+              arFiltro: onde(['trocar o filtro do ar condicionado'], 'g_clima', '3 · Alarme de fluxo'),
+              mar: onde(['pessoa ao mar', 'pessoa ao mar, o que faço'], 'protocolo', 'Homem ao mar', true) }; }""")
         for nome, cond, extra in [
+            ('revisão 6 do C5: a bomba de água salgada, o rotor e o impeller vão ao g_motores §7 e à Climatização (§3 alarme, §1 ligar, §5 desligar), e a do gerador ao g_gerador §7, não à resposta pronta do porão',
+             not (rev6['rotor'] or rev6['alarme'] or rev6['ligar'] or rev6['desligar'] or rev6['gerador']),
+             (rev6['rotor'], rev6['alarme'], rev6['ligar'], rev6['desligar'], rev6['gerador'])),
+            ('revisão 6 do C5: "como trocar/verificar a bateria de partida" vai ao g_eletrico §1 · Bancos, não à resposta pronta dos motores', not rev6['bancos'], rev6['bancos']),
+            ('revisão 6 do C5: depois do disparo do sistema fixo, religar o gerador ou abrir o motor traz o g_seafire §3 (trecho de segurança, sem IA), não a resposta pronta',
+             not rev6['disparo'], rev6['disparo']),
+            ('revisão 6 do C5: "alarme de âncora" e "como fundear" mostram o g_eletronicos §3 (alarme no plotter), não o contador de corrente nem o recolher do guincho', not rev6['ancora'], rev6['ancora']),
+            ('revisão 6 do C5: "como ligar o ar condicionado" é a Climatização §1 e "trocar o filtro do ar condicionado" o §3 (o "ar" solto puxava o §4 "Fluxo de ar fraco")',
+             not (rev6['arLigar'] or rev6['arFiltro']), (rev6['arLigar'], rev6['arFiltro'])),
+            ('revisão 6 do C5: "pessoa ao mar" traz o protocolo de homem ao mar, com seguranca (o "mar" sozinho não nomeia, o identCom "pessoa" sim)', not rev6['mar'], rev6['mar']),
             ('revisão 5 do C5: "como ligar o ar", "…o ar condicionado" e "…desligar o ar" têm a Climatização no topo (§1 Ligar e §5 Desligar)',
              not rev5['clima'] and rev5['climaSec'] == ['1 · Ligar', '5 · Desligar'], (rev5['clima'], rev5['climaSec'])),
             ('revisão 5 do C5: homem ao mar e PAN-PAN escritos com as palavras do trecho (caiu, vista, governo, pane) trazem o protocolo, com seguranca, e não vão à IA',

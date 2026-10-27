@@ -358,6 +358,17 @@ def mais_texto(k, txt):
 
 
 # nome → (monta(ruim) → contexto, trecho esperado numa violação nova)
+def com_ident(ident, com='pessoa quem', **resto):
+    """hoje() com um trecho de segurança de teste que traz `ident` e `identCom` (None: sem identCom)."""
+    k = hoje()
+    t = {'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'seguranca': True, 'texto': 'Passo curto.', 'ident': ident}
+    if com is not None:
+        t['identCom'] = com
+    t.update(resto)
+    k['B']['trechos'].append(t)
+    return k
+
+
 AMOSTRAS = {
     'TERMOS': (lambda r: mais_texto(hoje(), ' (DEMO)' if r else ''), 'ROTULOS: diario[0].t'),
     'NULO': (lambda r: (lambda k: (k['D']['embarcacao'].update({'apelido': '' if r else 'CIA'}), k)[1])(hoje()), "embarcacao.apelido: ''"),
@@ -413,9 +424,8 @@ AMOSTRAS = {
                                                                         'texto': ('Passo curto. ' * (80 if r else 5)).strip()}), k)[1])(hoje()),
                         '(máximo 800'),
     # (revisão 5 do C5) `ident`: as palavras de acionamento do trecho de segurança não levam verbo de operação nem nome de equipamento
-    'IDENT_BASE': (lambda r: (lambda k: (k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'seguranca': True,
-                                                                   'texto': 'Passo curto.', 'ident': 'caiu desligar' if r else 'caiu cair'}), k)[1])(hoje()),
-                   'ident com verbo de operação ou nome de equipamento (desligar)'),
+    # (revisão 6 do C5: nem de queda sem `identCom`; as amostras das outras palavras estão nas EXTRAS, com com_ident())
+    'IDENT_BASE': (lambda r: com_ident('caiu desligar' if r else 'caiu cair'), 'ident com verbo de operação ou nome de equipamento (desligar)'),
     # protocolos.seafire (None hoje, C6); a nota dos equipamentos de segurança já é a NOTA_ETIQUETA desde o C5
     'NOTA_ETIQUETA': (lambda r: (lambda k: (k['D']['protocolos'].update({'seafire': {'nota': 'veja o manual' if r else C.NOTA}}), k)[1])(hoje()),
                       'protocolos.seafire.nota'),
@@ -986,6 +996,28 @@ EXTRAS += [
      lambda r: com_porao(aninhado={'bb_cm': 1.2, 'be_cm': 7.5 if r else 0.9, 'ciclos_h': 0}), 'snapshot.porao.be_cm = 7.5: acima do normal'),
 ]
 
+
+# Revisão 6 do C5: o IDENT_BASE barrava só 21 palavras ("caiu plotter", "caiu ligue", "caiu bateria", "caiu garmin" passavam). O conjunto
+# proibido sai do dado (equipamentos, fontes, equips e títulos da base) mais os verbos com flexão, e "pessoa"/"alguém" vão em identCom.
+IDENT_RUINS = ['plotter', 'ligue', 'desligue', 'abra', 'bateria', 'garmin', 'cummins', 'âncora', 'piloto', 'epirb', 'vhf', 'seakeeper', 'climatização',
+               'bombas', 'guincho', 'manutenção', 'partida', 'radar', 'raymarine', 'fusion', 'schenker', 'webasto', 'lewmar', 'victron', 'religue', 'esfrie']
+EXTRAS += [('IDENT_BASE', 'ident com «caiu %s»' % w, (lambda w: lambda r: com_ident('caiu ' + w if r else 'caiu cair'))(w),
+            'ident com verbo de operação ou nome de equipamento (%s)' % w) for w in IDENT_RUINS]
+EXTRAS += [
+    ('IDENT_BASE', 'ident com «pessoa» (a palavra de pessoa vai em identCom)', lambda r: com_ident('caiu pessoa' if r else 'caiu cair'),
+     'ident com palavra de pessoa (pessoa)'),
+    ('IDENT_BASE', 'ident com «alguém»', lambda r: com_ident('caiu alguém' if r else 'caiu cair'), 'ident com palavra de pessoa (alguém)'),
+    ('IDENT_BASE', 'ident de queda («caiu») sem identCom: «o disjuntor caiu» nomearia o trecho', lambda r: com_ident('caiu cair', com=None if r else 'pessoa'),
+     'ident com palavra de queda ou de vista (cair, caiu) sem identCom'),
+    ('IDENT_BASE', 'ident com «vista» sem identCom: «tem vista para o mar»', lambda r: com_ident('pane vista', com=None if r else 'pessoa'),
+     'ident com palavra de queda ou de vista (vista) sem identCom'),
+    ('IDENT_BASE', 'identCom sem ident', lambda r: com_ident('pane governo', com='pessoa') if not r else (lambda k: (k['B']['trechos'].append(
+        {'fonte': 'Guia de bordo — Teste', 'secao': '2 · Teste', 'equip': 'Teste', 'seguranca': True, 'texto': 'Passo curto.', 'identCom': 'pessoa'}), k)[1])(hoje()),
+     'identCom sem ident'),
+    ('IDENT_BASE', 'identCom com palavra fora da lista de pessoa', lambda r: com_ident('caiu cair', com='pessoa plotter' if r else 'pessoa quem'),
+     'identCom precisa de 1 a 8 palavras de pessoa da lista fechada'),
+    ('IDENT_BASE', 'identCom vazio', lambda r: com_ident('caiu cair', com='' if r else 'pessoa'), 'identCom precisa de 1 a 8 palavras de pessoa da lista fechada'),
+]
 
 def com_lugar(onde, txt):
     """hoje() com `txt` (equipamento de salvatagem e lugar na mesma frase) no diário, num trecho da base, num item do FAQ ou numa

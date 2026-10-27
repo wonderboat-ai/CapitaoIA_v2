@@ -785,9 +785,17 @@ FONTE_GUIA = {k: g['titulo'] for k, g in GUIAS.items()}
 # "pessoa caiu da lancha" e "barco sem governo", com as palavras do próprio trecho, iam à IA, porque a identidade era só a fonte, o
 # equipamento e o título ("Homem ao mar", "PAN-PAN"). Chave: guia → seção (o número ou o título, como no "seg") → palavras. Só emergência
 # descrita por quem a vê; nada de verbo de operação ("desligar", "abrir") nem de palavra de equipamento, que sequestram pergunta comum.
+# Revisão 6 do C5: "caiu" também é disjuntor, energia e sinal ("o plotter caiu, como resolver" devolvia o protocolo de homem ao mar e
+# barrava a IA). As palavras de quem cai valem só junto de uma palavra de pessoa na pergunta (`identCom`, IDENT_PESSOA): "pessoa caiu da
+# lancha", "perdemos de vista quem caiu", "pessoa ao mar" nomeiam; "o disjuntor caiu" e "tem vista para o mar" não. A tupla é
+# (ident, identCom); a string é só `ident` (pane e governo não dependem de pessoa). "mar" entra aqui e não na identidade pelo título
+# ("mar" sozinho é o estado do mar, a vista, a temperatura da água): ver IDENT_GENERICAS do cérebro.
+# A palavra de pessoa só destrava a identidade: a cobertura da busca (2 palavras e 60 % da pergunta no texto do trecho) segue valendo, e
+# "alguém caiu", "tripulante ao mar" e "criança ao mar" ainda vão à IA até a lista SOS ampliada da 1b (§1.5).
+IDENT_PESSOA = 'pessoa quem alguém gente homem tripulante criança'
 IDENT_ACIONAMENTO = {
-    'protocolo': {'Homem ao mar': 'caiu cair queda vista', 'PAN-PAN': 'pane governo ferido urgência'},
-    'g_eletronicos': {'1': 'caiu cair queda'},
+    'protocolo': {'Homem ao mar': ('caiu cair queda vista mar', IDENT_PESSOA), 'PAN-PAN': 'pane governo ferido urgência'},
+    'g_eletronicos': {'1': ('caiu cair queda', IDENT_PESSOA)},
 }
 
 
@@ -808,7 +816,11 @@ def trechos():
                 t['seguranca'] = True
             ident = IDENT_ACIONAMENTO.get(chave, {})
             if sec in ident or sec.split(' · ')[0] in ident:
-                t['ident'] = ident.get(sec) or ident[sec.split(' · ')[0]]
+                palavras = ident.get(sec) or ident[sec.split(' · ')[0]]
+                if isinstance(palavras, tuple):
+                    t['ident'], t['identCom'] = palavras
+                else:
+                    t['ident'] = palavras
             out.append(t)
     return out
 
