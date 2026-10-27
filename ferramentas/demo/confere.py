@@ -181,6 +181,7 @@ ORIGENS = {'laço', 'rota', 'contador', 'derivado', 'fixo', 'relógio', 'janela'
 TIPOS_CHECKLIST = ('saida', 'chegada', 'abastecimento', 'fundeio')
 SISTEMAS_EXTRA = {'casco', 'tanques'}
 SEGURANCA_AGENDA = {'epirb-teste', 'seafire-inspecao', 'porao-teste'}
+EQUIP_SEGURANCA = ('epirb', 'seafire')   # fabricante, modelo e validade só em Equipamentos, Leme e Documentos (trava 17)
 # §0.2: indicativo, HEX ID, telefone e lugar de equipamento de salvatagem não existem como campo (SEM_INDICATIVO). Pelas palavras
 # do nome da chave (camelCase, '_' e '-' separam; sem acento): 'hexId' → hex, id. O indicativo vale só em protocolos (o texto de
 # instrução); o lugar, só nos campos de vocabulário fechado (LOCAL_VOCAB), no lugar do próprio barco (o quadro) e no posto e nos
@@ -855,15 +856,33 @@ def partes_modelo(modelo):
     return out
 
 
+def nomes_seguranca(fab, mod):
+    """Nomes a mais do fabricante e do modelo de um equipamento de segurança (EPIRB e Seafire; trava 17: fabricante, modelo e
+    validade só em Equipamentos, Leme e Documentos), além dos candidatos da candidatos_modelo():
+      - cada palavra do fabricante e do modelo com 3 caracteres ou mais que não seja só número ("Ocean", "Signal", "SafeSea",
+        "E100G", "300M"): o "FD 300M" também aparece como "a 300M" ou "o E100G";
+      - o fabricante e cada parte do modelo sem o espaço e com o hífen no lugar ("OceanSignal", "FD300M", "FD-300M", "SafeSea-E100G").
+    Só para estes dois: nos outros equipamentos uma palavra solta do modelo ("V2", "M37") casaria texto comum ("Capitão IA v2")."""
+    out = []
+    for texto in [fab] + partes_modelo(mod):
+        palavras = [w for w in re.split(r'[\s\-\u00a0\u2010-\u2014/.,;:()+]+', texto or '') if w]
+        out += [w for w in palavras if len(w) >= 3 and not re.fullmatch(r'[\d.,]+', w)]
+        if len(palavras) > 1:
+            out += [sep.join(palavras) for sep in ('', '-')]
+    return out
+
+
 def nomes_equip(X):
     """Fabricante e candidatos do modelo de cada equipamento gerado (para PROTOCOLO_LIMPO e AGENDA), pela mesma regra da
     candidatos_modelo() (§2.5): parte ou base com menos de 4 letras, ou sem dígito, vai com o fabricante na frente. Solta, a parte
-    "V2" do Lewmar casava o "v2" de "Capitão IA v2" no protocolos.fonte do §1.3."""
+    "V2" do Lewmar casava o "v2" de "Capitão IA v2" no protocolos.fonte do §1.3. Nos equipamentos de segurança (EQUIP_SEGURANCA, ou
+    `seguranca`), também cada palavra e as juntas (nomes_seguranca)."""
     out = []
     for e in X.equip:
         fab = e.get('fabricante') if isinstance(e.get('fabricante'), str) else ''
         mod = e.get('modelo') if isinstance(e.get('modelo'), str) else ''
-        for v in [fab] + candidatos_modelo(fab, mod):
+        mais = nomes_seguranca(fab, mod) if e.get('seguranca') is True or e.get('id') in EQUIP_SEGURANCA else []   # pelo id também: a marca `seguranca` não pode ser o que desliga a guarda
+        for v in [fab] + candidatos_modelo(fab, mod) + mais:
             if v.strip() and (e.get('id'), v.strip()) not in out:
                 out.append((e.get('id'), v.strip()))
     return out
@@ -969,8 +988,11 @@ def a_protocolo_limpo(X):
     for cam, s in textos(P, 'protocolos'):
         for nome, rx in R_PROTOCOLO + (('lugar a bordo', X.lugar),):
             out += ['%s: %s [%s] «%s»' % (cam, nome, casado(m), trecho(s, m)) for m in rx.finditer(s)]
-        for n in nomes:
-            out += ['%s: fabricante ou modelo de equipamento [%s] «%s»' % (cam, m.group(1), trecho(s, m)) for m in acha_nomes(s, n)]
+        achados = [m for n in nomes for m in acha_nomes(s, n)]
+        for m in achados:   # uma violação por ocorrência: o nome dentro de outro ("Ocean" em "Ocean Signal", "300M" em "FD-300M") não conta duas vezes
+            a, b = m.span(1)
+            if not any(c <= a and b <= d and (c, d) != (a, b) for c, d in (x.span(1) for x in achados)):
+                out.append('%s: fabricante ou modelo de equipamento [%s] «%s»' % (cam, m.group(1), trecho(s, m)))
         out += ['%s: dado gerado da embarcação (%s) [%s] «%s»' % (cam, campo, txt, tr) for campo, txt, tr in acha_barco(s, E, barco)]
     return out
 
@@ -1584,7 +1606,7 @@ def a_agenda(X):
     dias = DIAS_MESES_PADRAO   # a tabela fixa do §1.7 (31, 184, 365): a referência é daqui, nunca a do gerador conferido
     if X.const.get('DIAS_MESES', DIAS_MESES_PADRAO) != DIAS_MESES_PADRAO:
         out.append('DIAS_MESES do gerador ≠ o do §1.7 (%s)' % ', '.join('%d → %d' % kv for kv in sorted(DIAS_MESES_PADRAO.items())))
-    nomes_seg = {i: [n for j, n in nomes_equip(X) if j == i] for i in ('epirb', 'seafire')}
+    nomes_seg = {i: [n for j, n in nomes_equip(X) if j == i] for i in EQUIP_SEGURANCA}
     for t in X.agenda:
         i = t.get('id')
         if not (_num(t.get('ultimaHa')) and _num(t.get('venceEm')) and t.get('meses') in dias and t['ultimaHa'] + t['venceEm'] == dias[t['meses']]):
@@ -1598,9 +1620,8 @@ def a_agenda(X):
             out.append('agenda.%s: seguranca só (e sempre) em %s' % (i, ', '.join(sorted(SEGURANCA_AGENDA))))
         if str(i).startswith(('epirb', 'seafire')) and not (_num(t.get('venceEm')) and t['venceEm'] > 0):
             out.append('agenda.%s: tarefa de salvatagem atrasada' % i)
-        for n in nomes_seg.get(t.get('sistema'), []):
-            if next(acha_nomes(t.get('equip', ''), n), None):
-                out.append('agenda.%s.equip com fabricante ou modelo de equipamento de segurança' % i)
+        if any(next(acha_nomes(t.get('equip', ''), n), None) for n in nomes_seg.get(t.get('sistema'), [])):   # uma por tarefa
+            out.append('agenda.%s.equip com fabricante ou modelo de equipamento de segurança' % i)
     atr = sum(1 for t in X.agenda if _num(t.get('venceEm')) and t['venceEm'] < 0)
     if atr != 3:
         out.append('agenda: %d atrasadas (precisa de 3)' % atr)

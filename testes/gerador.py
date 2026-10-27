@@ -791,6 +791,56 @@ EXTRAS += [
 ]
 
 
+def com_tarefa_seguranca(sistema, equip):
+    """hoje() com a tarefa de salvatagem do `sistema` (epirb-teste ou seafire-inspecao), em dia, com `equip` no campo equip."""
+    k = hoje()
+    meses, ultima, vence = (1, 18, 13) if sistema == 'epirb' else (12, 360, 5)
+    k['D']['agenda'].append({'id': 'epirb-teste' if sistema == 'epirb' else 'seafire-inspecao', 't': 'Teste do dispositivo', 'sistema': sistema, 'meses': meses,
+                             'ultimaHa': ultima, 'venceEm': vence, 'palavras': ['teste do dispositivo'], 'seguranca': True, 'equip': equip})
+    return k
+
+
+def mob_sem_marca(frase):
+    """hoje() com a frase no fim do protocolos.mob e os 16 equipamentos do §1.4 SEM a marca `seguranca`: a guarda do EPIRB e do Seafire
+    vale pelo id, não pela marca que o próprio dado carrega."""
+    k = com_equip_c5(hoje())
+    k['D']['protocolos']['mob'].append(frase)
+    return k
+
+
+# Revisão final do C3. PROTOCOLO_LIMPO e AGENDA só proibiam o fabricante, o modelo inteiro e as duas primeiras palavras dele: um
+# pedaço do modelo do EPIRB e do Seafire ("SafeSea", "E100G", "FD-300M", "FD300M") passava no protocolos (que o S1/S2 lê) e no equip
+# da agenda (trava 17). Para esses dois equipamentos, cada palavra do fabricante e do modelo (3 caracteres ou mais, que não seja
+# só número) e as formas juntas, sem espaço e com hífen. Os outros equipamentos ficam na regra de §2.5: o "V2" solto casaria o "v2"
+# de "Capitão IA v2" do protocolos.fonte.
+EXTRAS += [
+    ('PROTOCOLO_LIMPO', 'pedaço do modelo do EPIRB: "SafeSea"', lambda r: protocolo('mob', None, 'Acione o SafeSea conforme a etiqueta.' if r else 'Acione o EPIRB conforme a etiqueta.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [SafeSea]'),
+    ('PROTOCOLO_LIMPO', 'pedaço do modelo do EPIRB: "E100G"', lambda r: protocolo('mob', None, 'Leve o E100G para a balsa.' if r else 'Leve o EPIRB para a balsa.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [E100G]'),
+    ('PROTOCOLO_LIMPO', 'modelo do Seafire com hífen no lugar do espaço: "FD-300M"', lambda r: protocolo('mob', None, 'Dispare o FD-300M no manual.' if r else 'Dispare o sistema fixo no manual.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [FD-300M]'),
+    ('PROTOCOLO_LIMPO', 'modelo do Seafire sem o espaço: "FD300M"', lambda r: protocolo('mob', None, 'Dispare o FD300M no manual.' if r else 'Dispare o sistema fixo no manual.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [FD300M]'),
+    ('PROTOCOLO_LIMPO', 'fabricante do EPIRB sem o espaço: "OceanSignal"', lambda r: protocolo('mob', None, 'Ligue para a OceanSignal.' if r else 'Ligue para o fabricante.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [OceanSignal]'),
+    ('PROTOCOLO_LIMPO', 'palavra do fabricante do EPIRB: "Signal"', lambda r: protocolo('mob', None, 'O Signal está ligado.' if r else 'O sinal está ligado.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [Signal]'),
+    ('PROTOCOLO_LIMPO', 'pedaço do modelo do EPIRB sem a marca `seguranca` no dado (vale pelo id)', lambda r: mob_sem_marca('Acione o SafeSea.' if r else 'Acione o EPIRB.'),
+     'protocolos.mob[3]: fabricante ou modelo de equipamento [SafeSea]'),
+    ('AGENDA', 'equip do EPIRB com pedaço do modelo: "SafeSea"', lambda r: com_tarefa_seguranca('epirb', 'EPIRB SafeSea' if r else 'EPIRB'),
+     'agenda.epirb-teste.equip com fabricante ou modelo de equipamento de segurança'),
+    ('AGENDA', 'equip do EPIRB com pedaço do modelo: "E100G"', lambda r: com_tarefa_seguranca('epirb', 'EPIRB E100G' if r else 'EPIRB'),
+     'agenda.epirb-teste.equip com fabricante ou modelo de equipamento de segurança'),
+    ('AGENDA', 'equip do EPIRB com o fabricante, uma violação só ("Ocean Signal")', lambda r: com_tarefa_seguranca('epirb', 'EPIRB Ocean Signal' if r else 'EPIRB'),
+     'agenda.epirb-teste.equip com fabricante ou modelo de equipamento de segurança'),
+    ('AGENDA', 'equip do Seafire com o modelo sem o espaço: "FD300M"', lambda r: com_tarefa_seguranca('seafire', 'Sistema fixo FD300M' if r else 'Sistema fixo'),
+     'agenda.seafire-inspecao.equip com fabricante ou modelo de equipamento de segurança'),
+    ('AGENDA', 'equip do Seafire com o modelo com hífen: "FD-300M"', lambda r: com_tarefa_seguranca('seafire', 'Sistema fixo FD-300M' if r else 'Sistema fixo'),
+     'agenda.seafire-inspecao.equip com fabricante ou modelo de equipamento de segurança'),
+]
+
+
 # Revisão final do C3. A SEM_INDICATIVO e a SEM_PREVISAO só olhavam as chaves do JSON: o cabeçalho de uma coluna de CSV das fontes
 # do Drive (Local, Telefone, HEX ID, Indicativo, Maré prevista) passava, e a planilha vai para o Drive. Agora a 1ª linha de cada
 # CSV é chave ('fontes/<rel>:<coluna>'); a única coluna liberada é a Local do registro de abastecimento (o posto).
@@ -1030,6 +1080,22 @@ def amostras():
            t for t in B0['trechos'] for e in G.EQUIPAMENTOS if e.get('seguranca') for n in [e['fabricante']] + C.candidatos_modelo(e['fabricante'], e['modelo'])
            if any(next(C.acha_nomes(t[k], n), None) for k in ('fonte', 'equip', 'texto'))]
        and [e['id'] for e in G.EQUIPAMENTOS if e.get('seguranca')] == ['epirb', 'seafire'])
+    # Revisão final do C3 (trava 17): o que continua passando, de propósito. Os outros equipamentos ficam na regra do §2.5 (parte solta
+    # do modelo, como "M37" e "Evolution", não conta; "IC-M37", "Icom" e "Lewmar V2" contam), o "v2" de "Capitão IA v2" no
+    # protocolos.fonte não acusa o "V2" do Lewmar, e uma frase com o nome inteiro do EPIRB dá UMA violação (não uma por palavra).
+    for frase in ('Piloto Evolution em espera.', 'Use o M37 portátil.', 'Gerado pelo Capitão IA v2.', 'Acione o sinal do EPIRB.'):
+        k = com_equip_c5(hoje())
+        k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
+        k['D']['protocolos']['mob'].append(frase)
+        ok('PROTOCOLO_LIMPO: %r passa (regra do §2.5 para os outros equipamentos)' % frase, not verifica(k)['PROTOCOLO_LIMPO'], verifica(k)['PROTOCOLO_LIMPO'][:2])
+    for frase in ('Dispare o FD 300M no manual.', 'Acione o SafeSea E100G agora.', 'Fabricante: Ocean Signal.'):
+        k = hoje()
+        k['D']['protocolos'] = copy.deepcopy(PROTOCOLOS_C6)
+        k['D']['protocolos']['mob'].append(frase)
+        v = verifica(k)['PROTOCOLO_LIMPO']
+        ok('PROTOCOLO_LIMPO: %r dá uma violação só por ocorrência' % frase, len([m for m in v if 'fabricante ou modelo' in m]) == 1, v[:4])
+    v = [m for m in verifica(com_tarefa_seguranca('epirb', 'EPIRB Ocean Signal SafeSea E100G'))['AGENDA'] if 'epirb-teste.equip' in m]
+    ok('AGENDA: o equip com o fabricante e o modelo inteiros dá uma violação por tarefa (não uma por palavra)', len(v) == 1, v)
     ok('SEM_INDICATIVO e SEM_PREVISAO: o cabeçalho dos CSV de hoje passa, com a coluna Local do registro de abastecimento (o posto) e sem o resto',
        not V['SEM_INDICATIVO'] and not V['SEM_PREVISAO'] and any(c.endswith('Registro de abastecimento.csv:Local') for c, _ in C.Ctx(
            hoje()['D'], G.base_conhecimento(), hoje()['F'], {}).chaves()), (V['SEM_INDICATIVO'][:2], V['SEM_PREVISAO'][:2]))
