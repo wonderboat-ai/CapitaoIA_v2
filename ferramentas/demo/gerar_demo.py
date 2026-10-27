@@ -941,21 +941,51 @@ def chave_rel(rel):
     return unicodedata.normalize('NFC', rel.replace(os.sep, '/'))
 
 
+def eh_link(caminho):
+    """Link simbólico ou junção do Windows (sem seguir): é link mesmo quando o alvo não existe mais."""
+    return os.path.islink(caminho) or getattr(os.path, 'isjunction', lambda p: False)(caminho)
+
+
+def sem_link(saida, rel_pasta):
+    """SystemExit se algum componente de <saida>/<rel_pasta>, a partir da pasta de saída, for link (aponte para onde apontar,
+    inclusive para dentro da própria saída). A pasta de saída em si é escolha de quem chama (--saida) e entra pelo realpath;
+    dali para baixo nenhum link é seguido: um link no caminho levaria a gravação, ou a limpeza, para outro lugar da saída
+    (fontes -> ../.. apagava o capitao-dados.js recém-gravado) ou para fora dela."""
+    if os.path.isabs(rel_pasta):
+        raise SystemExit('gerador: %s sairia da pasta de saída; nada foi gravado' % rel_pasta)
+    base = os.path.realpath(saida)
+    atual = base
+    for parte in os.path.normpath(rel_pasta).split(os.sep):
+        if parte in ('', os.curdir):
+            continue
+        if parte == os.pardir:
+            raise SystemExit('gerador: %s sairia da pasta de saída; nada foi gravado' % rel_pasta)
+        atual = os.path.join(atual, parte)
+        if eh_link(atual):
+            raise SystemExit('gerador: %s é um link no caminho de %s; nada foi gravado nem apagado' % (os.path.relpath(atual, base), rel_pasta))
+        if not os.path.lexists(atual):
+            return   # o resto ainda não existe: não há o que seguir
+
+
 def alvo(saida, rel):
-    """<saida>/<rel>, ou SystemExit se a pasta dele (realpath, com os links do caminho resolvidos) sair da pasta de saída."""
+    """<saida>/<rel>, ou SystemExit se a pasta dele tiver link em algum componente (sem_link) ou, pelo realpath, sair da
+    pasta de saída. O próprio arquivo pode ser um link: escreve() o troca por arquivo, sem gravar no alvo do link."""
     caminho = os.path.join(saida, rel)
+    sem_link(saida, os.path.dirname(rel))
     if not dentro(os.path.realpath(os.path.dirname(caminho)), os.path.realpath(saida)):
-        raise SystemExit('gerador: %s sairia da pasta de saída (link no caminho); nada foi gravado' % rel)
+        raise SystemExit('gerador: %s sairia da pasta de saída; nada foi gravado' % rel)
+    if os.path.isdir(caminho) and not eh_link(caminho):
+        raise SystemExit('gerador: %s é uma pasta, não um arquivo; nada foi gravado' % rel)
     return caminho
 
 
 def escreve(saida, rel, texto):
-    """Grava <saida>/<rel>; nunca fora da pasta de saída (alvo(), conferido antes de criar qualquer pasta) e nunca através de
-    um link: um link no lugar do arquivo é apagado (o alvo fica intacto) e vira arquivo."""
+    """Grava <saida>/<rel>; nunca fora da pasta de saída nem por um link de pasta (alvo(), conferido antes de criar qualquer
+    pasta) e nunca através de um link: um link no lugar do arquivo é apagado (o alvo fica intacto) e vira arquivo."""
     caminho = alvo(saida, rel)
     os.makedirs(os.path.dirname(caminho), exist_ok=True)
-    if os.path.islink(caminho):
-        os.unlink(caminho)
+    if eh_link(caminho):
+        apaga_entrada(caminho)
     with open(caminho, 'w', encoding='utf-8', newline='\n') as f:
         f.write(texto)
 
@@ -971,21 +1001,20 @@ def apaga_entrada(cam):
 
 
 def limpa_fontes(saida, gerados):
-    """Apaga em <saida>/ferramentas/demo/fontes/ só o que o gerador não gera mais. Não segue link (um link vira só a entrada
-    apagada, nunca o alvo), não sai da pasta de saída nem de fontes/ (realpath) e tira as pastas que ficarem vazias.
-    Devolve os caminhos apagados (relativos a fontes/)."""
-    pasta = os.path.join(saida, FONTES_REL)
-    raiz = os.path.realpath(pasta)
+    """Apaga em <saida>/ferramentas/demo/fontes/ só o que o gerador não gera mais. Recusa (SystemExit, nada apagado) se
+    ferramentas/, demo/ ou fontes/ for link (sem_link): seguir o link apagaria o que estiver no alvo, inclusive o capitao-dados.js
+    recém-gravado. Dentro de fontes/ nenhum link é seguido: um link velho vira só a entrada apagada, nunca o alvo; o caminho
+    percorrido é conferido pelo realpath, e as pastas que ficarem vazias saem. Devolve os caminhos apagados (relativos a fontes/)."""
+    sem_link(saida, FONTES_REL)
+    raiz = os.path.join(os.path.realpath(saida), FONTES_REL)
     if not os.path.isdir(raiz):
         return []
-    if not dentro(raiz, os.path.realpath(saida)):
-        raise SystemExit('gerador: %s sairia da pasta de saída (link no caminho)' % FONTES_REL)
     gerados = {chave_rel(g) for g in gerados}
     apagados = []
     for topo, pastas, arqs in os.walk(raiz, topdown=False, followlinks=False):
-        if not dentro(os.path.realpath(topo), raiz):
-            continue
-        for nome in sorted(arqs) + sorted(p for p in pastas if os.path.islink(os.path.join(topo, p))):
+        if eh_link(topo) or os.path.normcase(os.path.realpath(topo)) != os.path.normcase(os.path.normpath(topo)):
+            continue   # link no caminho (o walk não desce em link; o realpath pega também a junção do Windows): nunca percorrido
+        for nome in sorted(arqs) + sorted(p for p in pastas if eh_link(os.path.join(topo, p))):
             cam = os.path.join(topo, nome)
             rel = chave_rel(os.path.relpath(cam, raiz))
             if rel not in gerados:
@@ -993,7 +1022,7 @@ def limpa_fontes(saida, gerados):
                 apagados.append(rel)
         for p in pastas:
             cam = os.path.join(topo, p)
-            if not os.path.islink(cam) and os.path.isdir(cam) and not os.listdir(cam):
+            if not eh_link(cam) and os.path.isdir(cam) and not os.listdir(cam):
                 os.rmdir(cam)
     return sorted(apagados)
 

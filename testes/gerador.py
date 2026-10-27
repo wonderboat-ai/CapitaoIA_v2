@@ -144,6 +144,70 @@ def limpeza(tmp):
     r = roda(s4)
     ok('pasta de fontes/ que é link para fora: recusa sem gravar nada', r.returncode != 0 and not os.listdir(fora4)
        and not os.path.exists(os.path.join(s4, 'capitao-dados.js')), (r.returncode, r.stderr[-200:]))
+    link_na_saida(tmp)
+
+
+def conteudo(pasta):
+    """{caminho relativo: bytes} de tudo o que está numa pasta (arquivos e links, sem seguir link; um link vira 'link -> alvo')."""
+    out = {}
+    for topo, pastas, arqs in os.walk(pasta, followlinks=False):
+        for n in arqs + [p for p in pastas if os.path.islink(os.path.join(topo, p))]:
+            c = os.path.join(topo, n)
+            out[os.path.relpath(c, pasta)] = ('link -> ' + os.readlink(c)).encode() if os.path.islink(c) else open(c, 'rb').read()
+    return out
+
+
+def link_na_saida(tmp):
+    """Revisão final do C3: um link no caminho de fontes/ que aponta para DENTRO da pasta de saída (o link para fora já tem teste).
+    Antes, `fontes -> ../..` fazia o gerador gravar as fontes na raiz da saída e a limpeza apagar o capitao-dados.js recém-gravado,
+    o que não é fonte gerada (e, na raiz do repositório, o .env e o testes/saida-ultima.json). Agora o gerador recusa antes de
+    gravar ou apagar qualquer coisa (sem_link), em alvo() e em limpa_fontes()."""
+    print('Link no caminho de fontes/ para dentro da saída')
+    def monta(nome, ligacoes):
+        """saida com a árvore sentinela e os links pedidos; devolve a pasta."""
+        s = os.path.join(tmp, 'lk-' + nome)
+        for rel, txt in (('capitao-dados.js', 'ANTIGO dados'), ('base-conhecimento.json', 'ANTIGA base'), ('.env', 'segredo'),
+                         (os.path.join('testes', 'saida-ultima.json'), '{}'), (os.path.join('dados', 'sentinela.txt'), 'intacto'),
+                         (os.path.join('dados', 'sub', 'outra.txt'), 'intacta'), (os.path.join('real', 'demo', 'fontes', 'velho.txt'), 'velho')):
+            os.makedirs(os.path.dirname(os.path.join(s, rel)), exist_ok=True)
+            open(os.path.join(s, rel), 'w').write(txt)
+        for rel, alvo_link in ligacoes:
+            c = os.path.join(s, rel)
+            os.makedirs(os.path.dirname(c), exist_ok=True)
+            os.symlink(alvo_link, c)
+        return s
+    try:
+        casos = [('fontes -> ../.. (a raiz da saída)', monta('raiz', [(FONTES_REL, os.path.join('..', '..'))])),
+                 ('fontes -> ../../dados (pasta da saída com outros arquivos)', monta('dados', [(FONTES_REL, os.path.join('..', '..', 'dados'))])),
+                 ('ferramentas -> real (uma pasta acima de fontes/)', monta('acima', [('ferramentas', 'real')])),
+                 ('ferramentas/demo -> ../real/demo', monta('demo', [(os.path.join('ferramentas', 'demo'), os.path.join('..', 'real', 'demo'))]))]
+    except (OSError, NotImplementedError):
+        print('  (links simbólicos indisponíveis neste sistema: conferências de link puladas)')
+        return
+    for nome, s in casos:
+        antes = conteudo(s)
+        r = roda(s)
+        ok('%s: recusa (código != 0), diz que é link e não grava nem apaga nada' % nome,
+           r.returncode != 0 and 'link' in r.stderr and conteudo(s) == antes,
+           (r.returncode, r.stderr[-200:], sorted(set(conteudo(s)) ^ set(antes))))
+        try:   # direto na limpeza, com "nada é gerado" (o pior caso: tudo o que está no alvo do link seria apagado se ele fosse seguido)
+            G.limpa_fontes(s, {})
+            recusou = False
+        except SystemExit:
+            recusou = True
+        ok('%s: limpa_fontes() recusa sozinha e não apaga nada' % nome, recusou and conteudo(s) == antes, sorted(set(conteudo(s)) ^ set(antes)))
+        try:
+            G.alvo(s, os.path.join(FONTES_REL, G.PASTAS['docs'], 'x.csv'))
+            recusou = False
+        except SystemExit:
+            recusou = True
+        ok('%s: alvo() recusa o caminho que passa pelo link' % nome, recusou)
+    # Sem link no caminho, a mesma árvore sentinela grava normalmente e o que não é do gerador fica como estava.
+    s = monta('sem-link', [])
+    r = roda(s)
+    ok('sem link no caminho: grava (código 0) e não toca no que não é do gerador', r.returncode == 0 and arvore(s) == arvore(os.path.join(tmp, 'g1'))
+       and open(os.path.join(s, '.env')).read() == 'segredo' and open(os.path.join(s, 'dados', 'sentinela.txt')).read() == 'intacto'
+       and open(os.path.join(s, 'real', 'demo', 'fontes', 'velho.txt')).read() == 'velho', (r.returncode, r.stderr[-200:]))
 
 
 def copias():
