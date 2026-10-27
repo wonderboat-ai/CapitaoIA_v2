@@ -23,6 +23,9 @@
   SEM_INDICATIVO e a SEM_PREVISAO também leem o cabeçalho das colunas dos CSV das fontes (a 1ª linha com conteúdo), comparando
   também as palavras vizinhas juntas (palavras_juntas: "WhatsApp" = whats + app, "Baixa-mar"); a PROTOCOLO_LIMPO e a AGENDA proíbem
   cada palavra e as formas juntas do fabricante e do modelo do EPIRB e do Seafire (trava 17).
+- Revisão do C3 (porao_e_lugar): o porão ≤ 5 cm da §6.4 vive na JANELA (teto = normal.ate, sem número solto, também dentro de janela
+  de aviso, no laço com ruído, em replay.fixos, snapshot.quadro e snapshot.porao) e o lugar de salvatagem em qualquer ordem na
+  LOCAL_VOCAB (D, base, FAQ e páginas de fonte; «No paiol de proa ficam os coletes» passava fora de protocolos).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -920,6 +923,89 @@ EXTRAS += [
 ]
 
 
+def com_porao(chaves=None, limites=True, janela=None, fixos=None, quadro=None, aninhado=None, ruido=None, const=None):
+    """com_replay() com o porão BB no catálogo, nas chaves (30 valores) e, com `limites`, o BB e o BE no D.replay.limites (o teto do
+    normal é o normal.ate, e o texto do guia de teste tem os números). `const`: a constante LIMITES que o confere recebe (padrão: a do replay)."""
+    k = com_replay(hoje())
+    D = k['D']
+    D['campos']['porao_bb_nivel'] = {'rotulo': 'Porão BB', 'un': 'cm', 'casas': 1, 'origem': 'laço'}
+    D['replay']['chaves']['porao_bb_nivel'] = chaves or [1.2] * 30
+    if ruido:
+        D['replay']['ruido']['porao_bb_nivel'] = ruido
+    if limites:
+        for lado in ('bb', 'be'):
+            D['replay']['limites']['porao_%s_nivel' % lado] = {'un': 'cm', 'fonte': 'Guia de bordo — Teste §9 · Faixas de operação', 'normal': {'ate': 5},
+                                                              'aviso': {'acima': 5}, 'critico': {'acima': 10}}
+        k['B']['trechos'][-2]['texto'] += ' Porão: normal até 5 cm; aviso acima de 5 cm; crítico acima de 10 cm.'
+    if janela:
+        D['replay']['janelas'].append(janela)
+    if fixos:
+        D['replay']['fixos'].update(fixos)
+    if quadro is not None:
+        D['snapshot']['quadro'] = quadro
+    if aninhado is not None:
+        D['snapshot']['porao'] = aninhado
+    if const is not None:
+        k['const'] = dict(k['const'], LIMITES=const)
+    return k
+
+
+# Rampa de 4,0 a 7,0 cm e de volta (chaves 19…23, t = 95…115): o porão passa de 5 cm de t = 97 a t = 113, dentro de uma janela de aviso.
+PORAO_ALTO = [1.2] * 19 + [4.0, 7.0, 7.0, 7.0, 4.0] + [1.2] * 6
+JANELA_PORAO = {'id': 'porao_bb', 'campo': 'porao_bb_nivel', 'nivel': 'aviso', 'ini': 97, 'fim': 113}
+
+# Revisão do C3 (JANELA, §6.4 «porão ≤ 5 cm»): o porão acima do normal passava em todas as asserções, até dentro de uma janela de
+# aviso com os limites e o guia coerentes (a JANELA aceita o aviso dentro da janela). O teto é o normal.ate (D.replay.limites e a
+# constante LIMITES do gerador), sem número solto.
+EXTRAS += [
+    ('JANELA', 'porão com 12 cm nas chaves, sem entrada em replay.limites (o teto vem da constante LIMITES do gerador)',
+     lambda r: com_porao([12.0 if r else 1.2] * 30, limites=False, const=G.LIMITES), 'replay.chaves.porao_bb_nivel[0] = 12.0: acima do normal (até 5 cm)'),
+    ('JANELA', 'porão de 7 cm numa janela de aviso, com limites e guia coerentes (as chaves)',
+     lambda r: com_porao(PORAO_ALTO if r else None, janela=JANELA_PORAO if r else None), 'replay.chaves.porao_bb_nivel[20] = 7.0: acima do normal'),
+    ('JANELA', 'porão de 7 cm numa janela de aviso (o segundo do laço, t = 97)',
+     lambda r: com_porao(PORAO_ALTO if r else None, janela=JANELA_PORAO if r else None), 'replay (laço), porao_bb_nivel em t = 97 = 5.2: acima do normal'),
+    ('JANELA', 'janela de porão (campo porao_bb_nivel) mesmo com os valores no normal',
+     lambda r: com_porao(janela=JANELA_PORAO if r else None), 'replay.janelas.porao_bb: janela de porão'),
+    ('JANELA', 'campo de porão sem teto: nem em replay.limites nem na constante LIMITES',
+     lambda r: com_porao(limites=not r), 'porao_bb_nivel: sem normal.ate'),
+    ('JANELA', 'o ruído passa o porão de 5 cm com as chaves em 4,9 (só o laço acusa)',
+     lambda r: com_porao([4.9 if r else 4.0] * 30, ruido=[0.3, 1112]), 'replay (laço), porao_bb_nivel em t = '),
+    ('JANELA', 'porão acima do normal em replay.fixos (o lado BE)',
+     lambda r: com_porao(fixos={'porao_be_nivel': 7.0 if r else 1.0}), 'replay.fixos.porao_be_nivel = 7.0: acima do normal'),
+    ('JANELA', 'porão acima do normal em snapshot.quadro',
+     lambda r: com_porao(quadro={'porao_bb_nivel': 6.1 if r else 1.1}), 'snapshot.quadro.porao_bb_nivel = 6.1: acima do normal'),
+    ('JANELA', 'porão acima do normal no snapshot.porao aninhado (be_cm)',
+     lambda r: com_porao(aninhado={'bb_cm': 1.2, 'be_cm': 7.5 if r else 0.9, 'ciclos_h': 0}), 'snapshot.porao.be_cm = 7.5: acima do normal'),
+]
+
+
+def com_lugar(onde, txt):
+    """hoje() com `txt` (equipamento de salvatagem e lugar na mesma frase) no diário, num trecho da base, num item do FAQ ou numa
+    página de fonte do Drive."""
+    k = hoje()
+    if onde == 'diario':
+        return mais_texto(k, txt)
+    if onde == 'base':
+        k['B']['trechos'].append({'fonte': 'Guia de bordo — Teste', 'secao': '1 · Teste', 'equip': 'Teste', 'texto': txt})
+    elif onde == 'faq':
+        k['faq'] = {'itens': [{'id': 'XX-01', 'titulo': 'Teste', 'resposta': txt}]}
+    else:
+        rel = next(r for r in sorted(k['F']) if r.endswith('Checklist de bordo.html'))
+        k['F'][rel] += '<p>' + txt + '</p>'
+    return k
+
+
+# Revisão do C3 (LOCAL_VOCAB): a LOCAL_SEGURANCA da TERMOS pede o equipamento antes do lugar; a ordem inversa («No paiol de proa
+# ficam os coletes») passava em todas as asserções fora de protocolos. Em qualquer ordem, em todo texto (D, base, FAQ e fontes).
+BOM_LUGAR = ' Os coletes foram conferidos na saída.'
+for _onde in ('diario', 'base', 'faq', 'fonte'):
+    for _txt in ('No paiol de proa ficam os coletes.', 'Na popa fica a balsa.', 'Sob o banco do cockpit, o extintor.'):
+        EXTRAS.append(('LOCAL_VOCAB', 'equipamento de salvatagem e lugar na mesma frase, ordem inversa (%s: «%s»)' % (_onde, _txt),
+                       lambda r, o=_onde, t=_txt: com_lugar(o, t if r else BOM_LUGAR), 'equipamento de salvatagem e lugar a bordo na mesma frase'))
+EXTRAS.append(('LOCAL_VOCAB', 'a forma direta («Os coletes ficam no paiol de proa»): a TERMOS e a LOCAL_VOCAB acusam',
+               lambda r: com_lugar('diario', ' Os coletes ficam no paiol de proa.' if r else BOM_LUGAR), '[colete + paiol]'))
+
+
 def em_modo_real(**kw):
     """hoje() no modo real (simulacao False), com os campos da embarcação trocados (None fica como None: SEM DADOS)."""
     k = hoje()
@@ -1388,6 +1474,27 @@ def amostras():
     ok('EMENDA_ROTA: sem o port da rota (C8), um D com rota reprova', V['EMENDA_ROTA'] == ['emendas de 150 s da rota: falta o port do em() (C8)'], V['EMENDA_ROTA'])
 
 
+def porao_e_lugar():
+    print('Revisão do C3: porão ≤ teto do normal (JANELA) e salvatagem + lugar na mesma frase em qualquer ordem (LOCAL_VOCAB)')
+    V = verifica(com_porao())
+    ok('JANELA: o porão no normal (1,2 cm, com o teto de 5 cm em replay.limites) não acusa nada', not V['JANELA'], V['JANELA'][:3])
+    V = verifica(com_porao(quadro={'porao_bb_nivel': 5.0}, aninhado={'bb_cm': 5.0, 'be_cm': 0.9, 'ciclos_h': 0}, fixos={'porao_be_nivel': 5.0}))
+    ok('JANELA: o porão no teto (5,0 cm, comparação estrita como a nivel()) não acusa', not V['JANELA'], V['JANELA'][:3])
+    ok('o teto do porão do gerador é o normal.ate do guia (g_porao §2: 5 cm), nos dois lados',
+       [G.LIMITES[c]['normal']['ate'] for c in ('porao_bb_nivel', 'porao_be_nivel')] == [5, 5])
+    # O que não é acusado: a frase genérica da salvatagem (sem nome de lugar), o lugar sem equipamento e as tags da página de fonte, que
+    # separam a frase (cada <p> é uma frase).
+    bom = {n: len(v) for n, v in verifica(hoje()).items()}
+    termos = C.carrega_termos()
+    equip, lugar = C.equip_salvatagem(termos), C.lugar_a_bordo(termos)
+    pares = [f for f in C.R_FRASE.split(G.TXT_SALVATAGEM) if equip.search(f) and lugar.search(f)]
+    ok('LOCAL_VOCAB: a frase genérica da salvatagem («no local da placa de salvatagem…») tem equipamento e nenhum lugar: passa sem exceção',
+       equip.search(G.TXT_SALVATAGEM) and not lugar.search(G.TXT_SALVATAGEM) and not pares, pares)
+    for o_que, k in (('lugar sem equipamento', com_lugar('diario', ' Confira o paiol de proa antes de sair.')),
+                     ('equipamento numa tag e lugar na seguinte (páginas de fonte)', com_lugar('fonte', 'Coletes</p><p>Paiol de proa'))):
+        ok('LOCAL_VOCAB: %s não acusa' % o_que, len(verifica(k)['LOCAL_VOCAB']) == bom['LOCAL_VOCAB'], verifica(k)['LOCAL_VOCAB'][:2])
+
+
 def reprova(tmp):
     print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
     D0, B0 = G.dados, G.base_conhecimento
@@ -1504,6 +1611,7 @@ def main():
         palavras()
         rotulos_c2()
         amostras()
+        porao_e_lugar()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))

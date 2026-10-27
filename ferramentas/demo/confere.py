@@ -8,7 +8,9 @@ não têm nome lá (TERCEIROS, SEM_PREVISAO); as outras da §6.4 ficam na MMSI9 
 completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e, por último, a ESTABILIZADOR_12V (revisão 3 do C4,
 §1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC). A REGISTRO cruza o registro com o
 `numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova, e o dado de hoje
-fica congelado na PENDENTES até o C7).
+fica congelado na PENDENTES até o C7). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
+JANELA (porao_no_normal: o teto é o normal.ate do porão, sem número solto, também dentro de janela) e o lugar de salvatagem em
+qualquer ordem (§2.2/§2.3) na LOCAL_VOCAB (salvatagem_e_lugar: a LOCAL_SEGURANCA da TERMOS só pega o equipamento antes do lugar).
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção estrutural falhar. Da varredura de termos
 (RELATORIO), só cinco das oito regex ficam em relatório até o C12; a PESSOAIS, a DINHEIRO e a LOCAL_SEGURANCA (telefone, e-mail,
@@ -550,6 +552,7 @@ class Ctx:
         self.simulacao = D.get('simulacao') is True
         self.termos = carrega_termos()
         self.lugar = lugar_a_bordo(self.termos)
+        self.salvatagem = equip_salvatagem(self.termos)
         self.arq = (D.get('drive') or {}).get('arquivos') or {}
         self.pastas = (D.get('drive') or {}).get('pastas') or {}
         self.R = D.get('replay') if isinstance(D.get('replay'), dict) else None
@@ -601,15 +604,25 @@ def carrega_termos(caminho=PROIBIDOS):
     return {k: re.compile(v['src'], re.I if 'i' in v['flags'] else 0) for k, v in T.items() if isinstance(v, dict) and 'src' in v}
 
 
+def metades_local(termos):
+    """As duas metades da LOCAL_SEGURANCA do proibidos.json, (equipamento, lugar), cada uma como grupo `(?:...)`: a regex pede o
+    equipamento antes do lugar, na mesma frase, a até 60 caracteres. Uma fonte só das duas listas (PROMPT §3), sem lista paralela."""
+    partes = termos['LOCAL_SEGURANCA'].pattern.split(r'[^.\n]{0,60}')
+    if len(partes) != 2 or not all(p.startswith('(?:') and p.endswith(')') for p in partes):
+        raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar); ajuste metades_local()')
+    return partes
+
+
 def lugar_a_bordo(termos):
     """Lugar a bordo nos protocolos (§1.3: "nenhuma string tem ... nome de lugar a bordo"), com a lista de lugares da própria
-    LOCAL_SEGURANCA (uma fonte só, sem lista paralela, PROMPT §3). A LOCAL_SEGURANCA pede o equipamento antes do lugar, na mesma
-    frase; aqui o lugar vale sozinho, em qualquer ordem."""
-    src = termos['LOCAL_SEGURANCA'].pattern
-    partes = src.split(r'[^.\n]{0,60}')
-    if len(partes) != 2 or not partes[1].startswith('(?:'):
-        raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar); ajuste lugar_a_bordo()')
-    return re.compile(r'(?:^|[^A-Za-zÀ-ÿ])' + partes[1], re.I)
+    LOCAL_SEGURANCA. A LOCAL_SEGURANCA pede o equipamento antes do lugar, na mesma frase; aqui o lugar vale sozinho, em qualquer ordem."""
+    return re.compile(r'(?:^|[^A-Za-zÀ-ÿ])' + metades_local(termos)[1], re.I)
+
+
+def equip_salvatagem(termos):
+    """Equipamento de salvatagem (a metade da frente da LOCAL_SEGURANCA, mais "salva-vidas" sozinho: "bote salva-vidas"), com o
+    início de palavra de lugar_a_bordo(). Junto de lugar_a_bordo(), acha o par na mesma frase em qualquer ordem."""
+    return re.compile(r'(?:^|[^A-Za-zÀ-ÿ])(?:' + metades_local(termos)[0] + r'|salva[- \u00a0\u2010-\u2014]?vidas?)', re.I)
 
 
 # ——————————————————————————————— asserções (§6.3) ———————————————————————————————
@@ -1071,6 +1084,23 @@ def a_local_vocab(X):
     for i, p in enumerate(X.D.get('pecas') or []):
         if isinstance(p, dict) and not (isinstance(p.get('local'), str) and LOCAL_PECAS.fullmatch(p['local'])):
             out.append('pecas[%d].local fora do vocabulário fechado: %r' % (i, p.get('local')))
+    return out + salvatagem_e_lugar(X)
+
+
+def salvatagem_e_lugar(X):
+    """Trava §2.2/§2.3 (regra 9 do CLAUDE.md: nunca gerar lugar de equipamento de salvatagem), em qualquer ordem. A LOCAL_SEGURANCA
+    da TERMOS pede o equipamento antes do lugar («Os coletes ficam no paiol de proa»); aqui vale a mesma frase em qualquer ordem
+    («No paiol de proa ficam os coletes»), em todo texto do D, da base, do FAQ e das fontes do Drive (nas páginas HTML, cada tag
+    separa a frase). As duas listas são as da LOCAL_SEGURANCA (equip_salvatagem() e lugar_a_bordo()). A frase genérica da
+    salvatagem («no local da placa de salvatagem e do plano de segurança de bordo») não tem nome de lugar e passa sem exceção."""
+    out = []
+    for cam, s in X.todos():
+        if cam.endswith('.html'):
+            s = re.sub(r'<[^>]*>', '\n', s)
+        for f in R_FRASE.split(s):
+            a, b = X.salvatagem.search(f), X.lugar.search(f)
+            if a and b:
+                out.append('%s: equipamento de salvatagem e lugar a bordo na mesma frase [%s + %s] «%s»' % (cam, casado(a), casado(b), f.strip()[:140]))
     return out
 
 
@@ -1426,11 +1456,65 @@ def casos_de_borda(X, c, L):
     return out
 
 
+def e_porao(c):
+    """Campo de nível do porão (porao_bb_nivel, porao_be_nivel: §1.15)."""
+    return isinstance(c, str) and c.startswith('porao_') and c.endswith('_nivel')
+
+
+def teto_porao(X, c):
+    """Teto do normal do porão (cm): o `normal.ate` do campo, sem número solto (§3.3, g_porao §2). Vem do D.replay.limites e da
+    constante LIMITES do gerador (a FONTE_LIMITES confere que são a mesma); o menor dos que existirem. None sem nenhum."""
+    tetos = []
+    for lims in (X.limites, X.const.get('LIMITES')):
+        L = lims.get(c) if isinstance(lims, dict) else None
+        normal = L.get('normal') if isinstance(L, dict) else None
+        v = normal.get('ate') if isinstance(normal, dict) else None
+        if _num(v):
+            tetos.append(v)
+    return min(tetos) if tetos else None
+
+
+def porao_no_normal(X):
+    """PROMPT §2.4 («nada de ... água no porão acima do normal») e a coluna «Asserção do gerador» da §6.4 («JANELA, SEM_EMERGENCIA;
+    porão ≤ 5 cm»), sem número solto: o teto é o normal.ate do porão (teto_porao). A JANELA aceita o aviso dentro da janela, e o
+    porão não pode: nenhum nível do porão passa do teto, nem nas chaves do replay, nem em nenhum segundo do laço (ruído e
+    arredondamento incluídos), nem em replay.fixos, em snapshot.quadro ou em snapshot.porao (bb_cm, be_cm), e nenhuma janela é de
+    porão. Um campo de porão sem teto em lugar nenhum também reprova (não há como conferir). Uma violação por (campo, origem)."""
+    out = []
+    R = X.R or {}
+    snap = X.D.get('snapshot') if isinstance(X.D.get('snapshot'), dict) else {}
+    quadro = snap.get('quadro') if isinstance(snap.get('quadro'), dict) else {}
+    aninhado = snap.get('porao') if isinstance(snap.get('porao'), dict) else {}
+    leituras = []   # (origem, caminho, campo, valor)
+    for c, ch in (R.get('chaves') or {}).items():
+        if e_porao(c) and isinstance(ch, list):
+            leituras += [('chaves', 'replay.chaves.%s[%d]' % (c, i), c, v) for i, v in enumerate(ch)]
+    leituras += [('fixos', 'replay.fixos.' + c, c, v) for c, v in (R.get('fixos') or {}).items() if e_porao(c)]
+    for t, q in enumerate(X.laco()):
+        leituras += [('laço', 'replay (laço), %s em t = %d' % (c, t), c, v) for c, v in q.items() if e_porao(c)]
+    leituras += [('quadro', 'snapshot.quadro.' + c, c, v) for c, v in quadro.items() if e_porao(c)]
+    leituras += [('aninhado', 'snapshot.porao.' + k, 'porao_%s_nivel' % k[:2], aninhado[k]) for k in ('bb_cm', 'be_cm') if k in aninhado]
+    vistos = set()
+    for origem, cam, c, v in leituras:
+        teto = teto_porao(X, c)
+        if teto is None:
+            if (c, None) not in vistos:
+                vistos.add((c, None))
+                out.append('%s: sem normal.ate em D.replay.limites nem na constante LIMITES: sem o teto do normal (g_porao §2) não há como conferir o porão' % c)
+        elif _num(v) and v > teto and (c, origem) not in vistos:
+            vistos.add((c, origem))
+            out.append('%s = %s: acima do normal (até %s cm); o replay não gera água no porão acima do normal, nem dentro de janela (PROMPT §2.4)' % (cam, v, teto))
+    for j in R.get('janelas') if isinstance(R.get('janelas'), list) else []:
+        if isinstance(j, dict) and e_porao(j.get('campo')):
+            out.append('replay.janelas.%s: janela de porão (campo %s); o replay não gera água no porão acima do normal (PROMPT §2.4)' % (j.get('id'), j.get('campo')))
+    return out
+
+
 def a_janela(X):
+    out = porao_no_normal(X)
     R = X.R
     if R is None or not R.get('chaves'):
-        return []
-    out = []
+        return out
     js = R.get('janelas')
     if not isinstance(js, list):
         return ['replay.janelas ausente (derivadas pelo gerador, §1.16)']
