@@ -12,6 +12,7 @@ Uso (com o site servido em http://127.0.0.1:8765):
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
 import json
+import re
 import sys
 from playwright.sync_api import sync_playwright
 
@@ -460,6 +461,7 @@ def main():
         print('ficha de bordo: %d letras' % len(f))
         if '-v' in sys.argv:
             print(f)
+        falhas += agenda_sem_falta(pg)
         # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
         sem = {r['q']: r for r in res}
         for q in ('clima e vento', 'é seguro sair hoje?'):
@@ -476,6 +478,44 @@ def main():
                 print('\n## ' + r['q'] + ' → ' + r['key'] + '\n' + r['text'] + '\n' + r['src'] + '\n[voz] ' + r['curta'])
         b.close()
     sys.exit(1 if falhas else 0)
+
+
+# Revisão do C7 (CONTRATO §1.7, §6.2): o D.agendaFalta saiu do dado gerado e a resposta `manutencao` (que é também o bloco `## Manutenção` da
+# ficha da IA) ganhou a guarda de 1 linha: sem a lista, nada de "Falta registrar: ." (sem a guarda a frase saía vazia nas duas, e a ficha ia a
+# 9.420 letras). Só o rodape.py (que lê o innerText das telas) cobria as outras guardas do C7; o texto do cérebro nunca aparece nelas.
+# O controle com a lista cheia prova que a guarda cala só o vazio e a frase continua quando há o que registrar.
+FALTA = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, tinha = Object.prototype.hasOwnProperty.call(D, 'agendaFalta'), antigo = D.agendaFalta;
+  const r = () => { const a = B.answer('próximas manutenções', { platform: 'app', commit: false }); return { key: a.key, text: a.text, ficha: B.ficha('app') }; };
+  const o = { tinha };
+  try {
+    delete D.agendaFalta; o.gerado = r();
+    D.agendaFalta = []; o.vazia = r();
+    D.agendaFalta = ['Marca do guincho: SEM DADOS']; o.cheia = r();
+  } finally { if (tinha) D.agendaFalta = antigo; else delete D.agendaFalta; }
+  return o; }"""
+
+
+def agenda_sem_falta(pg):
+    falhas = 0
+    x = pg.evaluate(FALTA)
+    vazio = re.compile(r'Falta registrar: ?\.')
+    frase = 'Falta registrar: Marca do guincho: SEM DADOS.'
+    for nome, cond, extra in [
+        ('revisão do C7: o dado gerado não traz o D.agendaFalta', not x['tinha'], x['tinha']),
+        ('revisão do C7: sem o D.agendaFalta, a resposta de manutenção e a ficha não dizem "Falta registrar"', x['gerado']['key'] == 'manutencao'
+         and 'Falta registrar' not in x['gerado']['text'] and 'Falta registrar' not in x['gerado']['ficha'], (x['gerado']['key'], x['gerado']['text'][-120:])),
+        ('revisão do C7: com o D.agendaFalta vazio a guarda segue calada (nada de "Falta registrar: ." na resposta nem na ficha)',
+         not vazio.search(x['vazia']['text']) and not vazio.search(x['vazia']['ficha']) and 'Falta registrar' not in x['vazia']['text'] + x['vazia']['ficha'],
+         x['vazia']['text'][-120:]),
+        ('revisão do C7: com algo a registrar a frase continua, na resposta e na ficha', frase in x['cheia']['text'] and frase in x['cheia']['ficha'], x['cheia']['text'][-160:]),
+        ('revisão do C7: a resposta sem o D.agendaFalta é igual à com a lista vazia (a guarda não muda o resto)',
+         x['gerado']['text'] == x['vazia']['text'], (len(x['gerado']['text']), len(x['vazia']['text']))),
+    ]:
+        if not cond:
+            falhas += 1
+            print('FALHA', nome, extra)
+    print('agenda sem "Falta registrar" vazio: %d falhas' % falhas)
+    return falhas
 
 
 # Leitura salva do cabeçalho (capitao.clima.v1) como o capitao-clima.js grava: dia no fuso do barco, em = 2 h atrás. 48° = NE.

@@ -13,6 +13,9 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
 - idempotência (rebase 2× = 1×), listas iguais por referência (===) antes e depois do rebase de outro dia, nenhum null nem ''
   no D, o D.snapshot sem mudar (nem um byte) depois de rebases em vários dias, a paridade com a reserva do gerador (relógio
   congelado na REF: o D inteiro igual ao que o gerador gravou);
+- as demais chaves do D (protocolos, embarcacao, equipamentos, guias, faq, consumo, equipe, drive…; replay, rota, historico e campos quando existirem)
+  iguais, byte a byte, ao que o gerador gravou depois de rebases em +3, +40, −10 e 0 dias e com S1 e S2 abertas em outro dia, com dois rodapés
+  mutantes que provam que a conferência falha (revisão do C7: só o D.snapshot era vigiado e o texto do SOS podia ser reescrito);
 - a microtarefa do dia de bordo (com um D.replay.diaDeBordo de teste): entra por id, nas mesmas listas, com d01 = âncora + 1 s e
   d02 = âncora; com `simulacao = false` no fim do arquivo, nada entra; em /SOS-/ (S1, S2 e uma rota mínima), COM uma fonte de leitura
   à mão (um CapitaoReplay, um CapitaoTelemetria e um D.snapshot.quadro com posição), o instante é null, nada entra e nem D.simulacao nem
@@ -104,10 +107,32 @@ FONTE_RESERVA = "window.CapitaoDados.snapshot.quadro = %s;" % LEITURA
 GETTER_REPLAY = """window.__lidasReplay = 0; (function () { var v = window.CapitaoDados.replay; Object.defineProperty(window.CapitaoDados, 'replay',
   { get: function () { window.__lidasReplay++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); })();"""
 GUARDA = "window.__reserva = JSON.stringify(window.CapitaoDados); window.__snap0 = JSON.stringify(window.CapitaoDados.snapshot);"
+# Revisão do C7: o que o rebase escreve (CONTRATO §4.1: derivados e deslocamentos que ele nunca reescreve). Toda OUTRA chave do D tem de sair do
+# rebase byte a byte como o gerador a gravou, e não só o D.snapshot (o D.protocolos e o D.embarcacao são as duas entradas do SOS: S1/S2 leem
+# só embarcacao.nome e protocolos). A fotografia é tirada antes do rodapé, chave por chave; as chaves de C8/C9 (replay, rota, historico, campos)
+# entram sozinhas quando existirem, e NOMEADAS prende as que já existem (renomear uma não deixa a conferência vazia).
+DERIVADAS = ('versao', 'agenda', 'tarefasEquipe', 'documentos', 'diario', 'abastecimentos', 'serie24v')
+NOMEADAS = ('snapshot', 'protocolos', 'embarcacao', 'equipamentos', 'guias', 'faq', 'consumo', 'equipe', 'drive')
+FOTO = "window.__foto = {}; (function () { var D = window.CapitaoDados; Object.keys(D).forEach(function (k) { window.__foto[k] = JSON.stringify(D[k]); }); })();"
+# as chaves que mudaram em relação à fotografia (fora as derivadas) e as que o rebase acrescentou ao D
+MUDOU = """(derivadas) => { const D = window.CapitaoDados, f = window.__foto;
+  return { mudou: Object.keys(f).filter((k) => derivadas.indexOf(k) < 0 && JSON.stringify(D[k]) !== f[k]), novas: Object.keys(D).filter((k) => !(k in f)),
+           chaves: Object.keys(f).filter((k) => derivadas.indexOf(k) < 0) }; }"""
+# rebases em outros dias (forçados), como a virada das 07:00 ou da meia-noite com a página aberta; devolve o MUDOU de cada um
+REBASES = """([derivadas, dias, mudou]) => { const A = window.CapitaoAgora, t = Date.now(), r = {}, m = eval(mudou);
+  for (const k of dias) { A.rebase(t + k * 86400000, true); r[k] = m(derivadas); } return r; }"""
+# Mutantes do rodapé: rebases que escrevem onde não devem. Os dois são idempotentes e só agem fora da REF (26/09/2026), como o que a revisão
+# reproduziu: na REF o rodapé de verdade e o mutante dão o mesmo D, e só um rebase em outro dia mostra a diferença.
+DIA_REF = (date(2026, 9, 26) - date(1970, 1, 1)).days
+ALVO_MUTANTE = 'D.versao = br(hojeN);'
+MUTANTE_SOS = ALVO_MUTANTE + (" if (hojeN !== %d && D.protocolos && D.embarcacao) { D.protocolos.mmsiRotulo = String(D.protocolos.mmsiRotulo).toUpperCase();"
+                              " D.embarcacao.nome = String(D.embarcacao.nome).toUpperCase(); }" % DIA_REF)
+MUTANTE_GUIAS = ALVO_MUTANTE + (" if (hojeN !== %d && D.guias) { for (var g in D.guias) { D.guias[g] = String(D.guias[g]).toUpperCase(); break; } }" % DIA_REF)
 
 
-def abre(b, local, intl=True, antes='', depois='', caminho='/rodape.html', sessao=False, tela=None):
-    """Página com o Date congelado em `local` (e sem Intl, se pedido). `antes` roda antes do rodapé e `depois` no fim do arquivo."""
+def abre(b, local, intl=True, antes='', depois='', caminho='/rodape.html', sessao=False, tela=None, muta=None):
+    """Página com o Date congelado em `local` (e sem Intl, se pedido). `antes` roda antes do rodapé e `depois` no fim do arquivo.
+    `muta` = (trecho do rodape.js, trecho no lugar dele): o rodapé mutante dos testes que provam que a conferência falha (revisão do C7)."""
     ctx = b.new_context(service_workers='block', **({'viewport': {'width': 390, 'height': 844}, 'has_touch': True} if tela == 'app' else {}))
     ctx.add_init_script("(function () { var RD = Date; window.__T0 = %d; function FD() { var a = arguments; return a.length === 0 ? new RD(window.__T0) : new (Function.prototype.bind.apply(RD, [null].concat([].slice.call(a))))(); }"
                         " FD.prototype = RD.prototype; FD.now = function () { return window.__T0; }; FD.UTC = RD.UTC; FD.parse = RD.parse; window.Date = FD; %s })();"
@@ -120,6 +145,9 @@ def abre(b, local, intl=True, antes='', depois='', caminho='/rodape.html', sessa
         r = route.fetch()
         corpo = r.text()
         assert MARCA in corpo, 'o rodapé não está no capitao-dados.js'
+        if muta:
+            assert corpo.count(muta[0]) == 1, 'o trecho do mutante não está (uma vez) no rodapé: ' + muta[0]
+            corpo = corpo.replace(muta[0], muta[1], 1)
         route.fulfill(response=r, body=corpo.replace(MARCA, antes + '\n' + MARCA, 1) + '\n' + depois)
     ctx.route('**/capitao-dados.js', dados)
     if caminho.endswith('.html') and not caminho.endswith('.dc.html'):
@@ -254,6 +282,53 @@ def idempotencia(b):
     r = pg.evaluate("() => { const A = window.CapitaoAgora, o = []; for (let n = -5; n <= 200; n++) o.push([n, A.prazoDe(n), A.docDe(n)]); return o; }")
     errados = [(n, p, d) for n, p, d in r if p != G.status_prazo(n) or d['st'] != G.status_doc(n) or d['tom'] != G.status_prazo(n)['tom']]
     ok('prazoDe/docDe = status_prazo/status_doc do gerador, de −5 a 200 dias (%d casos)' % len(r), not errados, errados[:3])
+    pg.context.close()
+
+
+def so_o_derivado(b):
+    """Revisão do C7. CONTRATO §4.1: o rebase NUNCA toca D.snapshot, D.protocolos, D.embarcacao, D.replay, D.rota, D.historico nem D.campos
+    (nem nenhuma chave que ele não deriva). Só o D.snapshot era vigiado, e um rebase que reescrevesse o texto do SOS (D.protocolos,
+    D.embarcacao) em qualquer dia fora da REF passava em tudo. Aqui a fotografia de cada chave não derivada, tirada antes do rodapé, tem de ser
+    igual depois de rebases em +3, +40, −10 e 0 dias e depois de abrir S1 e S2 em outro dia; e dois rodapés mutantes (que escrevem no
+    D.protocolos e no D.embarcacao, ou no D.guias, só fora da REF) provam que a conferência falha."""
+    print('O rebase só escreve o que deriva: as demais chaves do D (protocolos, embarcacao…) iguais ao que o gerador gravou')
+    local = datetime(2026, 9, 26, 12, 0, tzinfo=BR)   # a REF do gerador
+    DIAS = [3, 40, -10, 0]
+    pg = abre(b, local, antes=FOTO)
+    r = pg.evaluate(REBASES, [list(DERIVADAS), DIAS, MUDOU])
+    chaves = pg.evaluate(MUDOU, list(DERIVADAS))['chaves']
+    ok('as chaves vigiadas incluem snapshot, protocolos, embarcacao, equipamentos, guias, faq, consumo, equipe e drive (%d no total)' % len(chaves),
+       all(k in chaves for k in NOMEADAS) and not any(k in chaves for k in DERIVADAS), chaves)
+    ok('REF + 3, + 40, − 10 e 0 dias: nenhuma chave não derivada muda (nem um byte) e o rebase não acrescenta chave ao D',
+       all(r[str(k)]['mudou'] == [] and r[str(k)]['novas'] == [] for k in DIAS), {k: (v['mudou'], v['novas']) for k, v in r.items()})
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+    # S1 e S2 abertas em outro dia (27/10): a virada do dia roda no carregamento e de novo na hora (rebase forçado em +3 e −10 dias)
+    outro = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
+    for nome, caminho in (('S1-SOS-Web', '/S1-SOS-Web.dc.html'), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html')):
+        pg = abre(b, outro, antes=FOTO, caminho=caminho)
+        pg.wait_for_timeout(800)
+        carga = pg.evaluate(MUDOU, list(DERIVADAS))
+        r = pg.evaluate(REBASES, [list(DERIVADAS), [3, -10], MUDOU])
+        ok('%s aberta em 27/10/2026: o D.protocolos e o D.embarcacao (e o resto) saem do rebase como o gerador gravou, na carga e em +3 e −10 dias' % nome,
+           carga['mudou'] == [] and carga['novas'] == [] and all(v['mudou'] == [] and v['novas'] == [] for v in r.values())
+           and all(k in carga['chaves'] for k in NOMEADAS), (carga, r))
+        pg.context.close()
+    # os mutantes: a mesma conferência tem de acusar a chave escrita (sem isso ela poderia passar no vácuo)
+    for nome, muta, quem in (('rebase que reescreve o D.protocolos e o D.embarcacao fora da REF', MUTANTE_SOS, ['protocolos', 'embarcacao']),
+                             ('rebase que reescreve o D.guias fora da REF', MUTANTE_GUIAS, ['guias'])):
+        pg = abre(b, local, antes=GUARDA + FOTO, muta=(ALVO_MUTANTE, muta))
+        na_ref = pg.evaluate(MUDOU, list(DERIVADAS))['mudou']   # o mutante é inerte na REF: um teste que só rebaseasse na REF não o veria
+        r = pg.evaluate(REBASES, [list(DERIVADAS), DIAS, MUDOU])
+        snap = pg.evaluate("() => JSON.stringify(window.CapitaoDados.snapshot) === window.__snap0")   # e a conferência de antes (só o snapshot) passava
+        ok('mutante (%s): na REF passa, em +3, +40 e −10 dias a conferência acusa %s, e o D.snapshot (a conferência antiga) continua igual' % (nome, ' e '.join(quem)),
+           na_ref == [] and snap and all(sorted(r[str(k)]['mudou']) == sorted(quem) for k in (3, 40, -10)), (na_ref, snap, {k: v['mudou'] for k, v in r.items()}))
+        pg.context.close()
+    pg = abre(b, outro, antes=FOTO, caminho='/S1-SOS-Web.dc.html', muta=(ALVO_MUTANTE, MUTANTE_SOS))
+    pg.wait_for_timeout(800)
+    carga = pg.evaluate(MUDOU, list(DERIVADAS))
+    ok('mutante na S1 aberta em 27/10/2026: o texto do SOS reescrito pelo rebase da carga é acusado (protocolos e embarcacao)',
+       sorted(carga['mudou']) == ['embarcacao', 'protocolos'], carga['mudou'])
     pg.context.close()
 
 
@@ -498,6 +573,7 @@ def main():
         b = p.chromium.launch(channel=CANAL, headless=True)
         relogio_e_listas(b)
         idempotencia(b)
+        so_o_derivado(b)
         dia_de_bordo(b)
         contagens(b)
         instante_e_trava(b)
