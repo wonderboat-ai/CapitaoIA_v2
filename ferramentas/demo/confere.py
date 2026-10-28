@@ -3363,10 +3363,23 @@ R_FONTE = re.compile(r'(.+?) §\s*(.+)')     # «<título> §<n> · <seção>» 
 # Revisão do C11 (a tela e a voz leem a `resposta` inteira): a frase do trecho de origem que escala («MAYDAY»), condiciona («e há fogo no motor»),
 # proíbe («Não abra o acesso ao motor…», «Não desligue até o resgate», «Nunca abra a tampa…»), libera com cautela («e só então libere o acesso, com o
 # extintor portátil à mão»), manda ventilar por «cheiro de combustível», manda usar o «SOS do app» ou limita o uso («Só em perigo grave e iminente»)
-# não pode ficar só nos passos, na `atencao` ou no `senao`. Os «^» valem para a oração (ela abre com o Não/Nunca/Só em perigo, não o tem no meio).
+# não pode ficar só nos passos, na `atencao` ou no `senao`. Os «^» valem para a oração (ela abre com o Não/Nunca/Evite/Só em perigo, não o tem no meio).
 # «MAYDAY, MAYDAY, MAYDAY» é o roteiro do EM-01, que a resposta diz em prosa e os passos repetem letra por letra.
-R_ESCALA = re.compile(r'MAYDAY|há fogo|^(?:não|nunca)\b|\bsó então\b|cheiro de combustível|SOS do app|^só em perigo', re.I)
+R_ESCALA = re.compile(r'MAYDAY|há fogo|^(?:não|nunca|evite)\b|\bsó então\b|cheiro de combustível|SOS do app|^só em perigo', re.I)
 ROTEIRO_MAYDAY = 'MAYDAY, MAYDAY, MAYDAY'
+# Revisão 3 do C11: a regra DERIVADA do trecho (a lista fechada acima só pegava a oração que ABRE com Não/Nunca/Só em perigo: o GE-06 sem «não religue»
+# e o EL-02 sem «Engate só em área livre» passavam). Em toda oração do trecho (as que a R_ESCALA já lê inteiras ficam fora), o núcleo da frase que
+# PROÍBE, LIMITA ou manda agir no aviso tem de estar na `resposta` (a tela e a voz leem a resposta, não o `atencao` nem o passo a passo):
+#   - proíbe: «não», «nunca» ou «evite» que começa a cláusula (depois de vírgula, dois-pontos, «e», «ou», «mas» ou «para»: «, não religue», «para não sobrecarregar»);
+#     «o volante não acelera» e «a climatização não for usada» descrevem o estado, não proíbem, e ficam fora;
+#   - limita: «só»/«somente» na 1ª palavra da cláusula, na 2ª («Engate só em área livre», «Use só quando necessário») ou depois de «:», «,» ou «e»
+#     («e só então libere»); «Uma pessoa só aponta» («uma pessoa sozinha») e «o transponder só recebe» não são limite;
+#   - aviso: a frase «<grandeza> abaixo|acima|fora do normal|aviso|mínimo: <ação>; <ação>» (R_LIMIAR) — cada ação (as 3 primeiras palavras) vem na
+#     resposta ou no `senao` (a linha «se fora da faixa» que os itens de faixa já mostram); só no `acao` (um resumo) ou nos passos não vale (EL-08).
+# O núcleo é a palavra-chave com até 2 palavras seguintes (até a pontuação) e, no «só» da 2ª posição, a palavra antes: o resto da frase pode mudar.
+R_PROIBE = re.compile(r'(?:^|[,:;(]\s*|\b(?:e|ou|mas|para)\s+)(?P<t>não|nunca|evite)\b', re.I)
+R_SO = re.compile(r'(?:^(?P<v>\w+)\s+|(?:^|[:,]\s*|\be\s+))(?P<t>só|somente)\b', re.I)
+R_LIMIAR = re.compile(r'\b(?:abaixo|acima|fora)\s+d[oa]s?\s+(?:normal|aviso|mínimo|máximo|crítico)\b', re.I)
 # A ação que o trecho só manda fazer COM a condição («Se o sistema não disparou sozinho e há fogo no motor, use o disparo manual»): a condição vai junto
 # dela em todo campo que a manda fazer (acao, passos, atencao, senao, obs), senão quem lê só o passo a passo ou a linha de ação descarrega o sistema fixo
 # sem fogo. A ação é o fim da oração depois da vírgula («disparo manual»: as 2 últimas palavras) e a condição, a parte «há fogo no motor».
@@ -3390,6 +3403,41 @@ def _clausulas(txt):
     return [o.strip() for f in _frases(txt) for o in re.split(r';\s+', f) if o.strip()]
 
 
+def _pals_faq(txt):
+    """As palavras de um texto em minúscula, sem pontuação (o milhar e a vírgula decimal ficam no número: «2.050», «6,0»)."""
+    return re.findall(r'\w+(?:[.,]\d+)*', str(txt).lower())
+
+
+def _nucleos(oracao):
+    """Os núcleos de uma oração do trecho que a resposta tem de manter (R_PROIBE e R_SO): [(rótulo, palavras)]. O núcleo é a palavra-chave, a anterior
+    (só no «Engate só…») e até 2 seguintes antes da pontuação: «não religue», «evite rotação alta», «engate só em área», «não sobrecarregar o»."""
+    out = []
+    for rx in (R_PROIBE, R_SO):
+        for m in rx.finditer(oracao):
+            depois = re.split(r'[,:;.()!?]', oracao[m.end('t'):], 1)[0]
+            ant = [m.group('v')] if rx is R_SO and m.group('v') else []
+            pal = _pals_faq(' '.join(ant + [m.group('t')])) + _pals_faq(depois)[:2]
+            out.append((' '.join(pal), pal))
+    return out
+
+
+def _acoes_aviso(texto):
+    """As ações do trecho para a leitura fora do limite (R_LIMIAR): uma por «;» depois dos dois-pontos de «<grandeza> acima do normal: …»,
+    como [(ação, 3 primeiras palavras)]."""
+    out = []
+    for f in _frases(texto):
+        esq, dp, dir_ = f.partition(':')
+        if dp and R_LIMIAR.search(esq):
+            out += [(a.strip(), _pals_faq(a)[:3]) for a in dir_.split(';') if _pals_faq(a)]
+    return out
+
+
+def _tem(pal, em):
+    """As palavras `pal`, em sequência, estão em `em` (lista de palavras)."""
+    n = len(pal)
+    return n > 0 and any(em[i:i + n] == pal for i in range(len(em) - n + 1))
+
+
 def _resolve_fonte(texto, por_trecho):
     """O trecho da base que uma fonte do FAQ cita (título do guia e seção), ou None."""
     m = R_FONTE.fullmatch(str(texto or ''))
@@ -3407,13 +3455,16 @@ def a_faq(X):
       - item com as chaves do contrato na ordem, 3 variantes diferentes, fontes só dos 3 tipos, `emerg` só nos EM, `ver` com ids que existem;
       - a 1ª fonte é a seção da base daquele id (EM-n: a do protocolo), e todo número do item está no texto dessa seção (nada de número novo);
       - `seguranca` em todo item cujo trecho de origem tem; a resposta termina com o rótulo que o trecho termina e, com seguranca, tem até 800 letras;
-      - a resposta mantém toda frase ou oração do trecho de origem que escala (MAYDAY), condiciona («há fogo»), proíbe («Não…», «Nunca…»), libera com
+      - a resposta mantém toda frase ou oração do trecho de origem que escala (MAYDAY), condiciona («há fogo»), proíbe («Não…», «Nunca…», «Evite…»), libera com
         cautela («só então»), manda ventilar («cheiro de combustível»), manda usar o «SOS do app» ou limita o uso («Só em perigo…»), não só os passos;
+      - e, derivado do trecho (R_PROIBE, R_SO, R_LIMIAR), o núcleo de toda oração que proíbe no meio da frase («, não religue», «para não sobrecarregar»), que limita
+        com «só» («Engate só em área livre», «Use só quando necessário») ou que manda agir no aviso («Profundidade abaixo do mínimo: reduza…»; na resposta ou no senao);
+      - a marca do horímetro da agenda («450 h», «1.300 h») só aparece numa frase que diz «horímetro» (não é o intervalo entre trocas);
       - a ação que a base só manda fazer com condição («disparo manual» só com «há fogo no motor») leva a condição em resposta, acao, atencao, senao,
         obs e no passo a passo (no passo ou antes dele);
       - o checklist: nenhum texto do FAQ repete o item «boa prática» que o app avalia (CK_ESTADO): vira ordem de conferência, não afirmação de estado;
       - os cartões EM passam as regras do D.protocolos (sem bar, %, nós, graus, pessoas, lugar, fabricante, modelo nem dado do barco);
-      - o glossário: os 14 termos, MMSI com o texto MMSI_RADIO e os de segurança com o rótulo."""
+      - o glossário: os 14 termos, MMSI com o texto MMSI_RADIO, os de segurança com o rótulo e os ângulos do vento (TWA, AWA) em relação à proa."""
     Q = X.faq
     if Q is None:
         return []
@@ -3439,6 +3490,9 @@ def a_faq(X):
             m = R_CONDICIONADA.search(c)
             if m:
                 condicionadas[' '.join(_norm_frase(m.group('acao')).split()[-2:])] = _norm_frase(m.group('cond'))
+    # As marcas de horímetro da agenda («450 h», «1.300 h»): o limite lido no horímetro (faltam = limite − atual), não o intervalo entre trocas.
+    marcas_h = [('{:,}'.format(a['horas']['limite'])).replace(',', '.') for a in (X.D.get('agenda') or [])
+                if isinstance(a, dict) and isinstance(a.get('horas'), dict) and isinstance(a['horas'].get('limite'), int)]
     # ——— ids ———
     ids = [i.get('id') if isinstance(i, dict) else None for i in itens]
     out += ['faq.itens: id repetido %r' % i for i, n in Counter(ids).items() if n > 1]
@@ -3561,6 +3615,23 @@ def a_faq(X):
         for c in _clausulas(t.get('texto', '')):
             if R_ESCALA.search(c) and ('mayday' if ROTEIRO_MAYDAY in c else _norm_frase(c).rstrip('.!?;: ')) not in resp_n:
                 out.append('%s.resposta: corta a frase do trecho de origem que escala ou condiciona «%s» (a tela e a voz leem a resposta inteira; ela mantém toda frase do trecho que escala, condiciona, proíbe ou libera com cautela)' % (cam, c[:90]))
+        # ——— a marca do horímetro dita como tal (revisão 3): «ou 450 h» solto lê-se como intervalo de troca (um gerador não troca o óleo a cada 1.300 h) ———
+        for c, texto in textos(it, cam):
+            if c.split('.')[-1].split('[')[0] in ('id', 'ver', 'fontes', 'equip', 'tipo', 'texto', 'secao') or '.fontes[' in c or '.ver[' in c:
+                continue
+            for f in _frases(texto):
+                if any(re.search(r'(?<![\d.,])%s h\b' % re.escape(m), f) for m in marcas_h) and 'horímetro' not in f.lower():
+                    out.append('%s: dá a marca do horímetro como se fosse o intervalo entre trocas (diga «ao chegar a … h no horímetro», como a agenda: faltam = limite − atual) «%s»' % (c, f[:90]))
+        # ——— o que proíbe, limita ou manda agir no aviso (R_PROIBE, R_SO, R_LIMIAR): derivado do trecho, nas orações que a R_ESCALA não lê inteiras ———
+        resp_p, sen_p = _pals_faq(it.get('resposta', '')), _pals_faq(it.get('senao', ''))
+        for c in _clausulas(t.get('texto', '')):
+            if not R_ESCALA.search(c):
+                for rot, pal in _nucleos(c):
+                    if not _tem(pal, resp_p):
+                        out.append('%s.resposta: corta o que o trecho de origem proíbe ou limita «%s» (a tela e a voz leem a resposta inteira; o núcleo da oração «%s» fica nela, não só no atencao, no senao ou nos passos)' % (cam, rot, c[:90]))
+        for a, pal in _acoes_aviso(t.get('texto', '')):
+            if not (_tem(pal, resp_p) or _tem(pal, sen_p)):
+                out.append('%s.resposta: não traz a ação do aviso do trecho de origem «%s» (na resposta ou no senao; o acao e os passos não bastam)' % (cam, a[:90]))
         # ——— a ação condicionada vai com a condição em todo campo que a manda fazer (a F6 e a voz leem a linha de ação e o passo a passo, não só a resposta) ———
         for acao_c, cond_c in condicionadas.items():
             for campo in ('resposta', 'acao', 'atencao', 'senao', 'obs'):
@@ -3598,6 +3669,8 @@ def a_faq(X):
             if tuple(g.keys()) != ('termo', 'texto', 'fonte') or not all(isinstance(g[k], str) and g[k].strip() for k in g):
                 out.append('%s: precisa de {termo, texto, fonte} com texto' % cam)
                 continue
+            if g['termo'] in ('TWA', 'AWA') and 'proa' not in g['texto'].lower():   # revisão 3: «Direção do vento verdadeiro» era a TWD (em relação ao norte), não o ângulo TWA
+                out.append('%s.texto: o ângulo do vento (TWA, AWA) é medido em relação à proa e o texto não diz «proa» (a direção em relação ao norte verdadeiro é a TWD)' % cam)
             if g['termo'] == 'MMSI' and PROTOCOLOS_TEXTOS['mmsiRadio'] not in g['texto']:
                 out.append('%s.texto: sem o texto MMSI_RADIO (%s)' % (cam, PROTOCOLOS_TEXTOS['mmsiRadio']))
             if g['termo'] in FAQ_GLOSSARIO_ROTULO and not g['texto'].rstrip().endswith(cap(ROTULO) + '.'):

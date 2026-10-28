@@ -59,6 +59,10 @@
   Revisão do C11: a resposta dos cartões e dos itens de segurança mantém a frase do trecho que escala (MAYDAY) ou condiciona («e há fogo no motor»)
   — a asserção FAQ reprova a resposta que a corta (EM-04, EM-05, EM-08, SF-01, SF-03, EP-01, EL-05 e PO-04 foram corrigidos) — e os itens do checklist
   «boa prática» que o app avalia entram no FAQ como ordem de conferência (FAQ_CK_ORDEM), nunca como o estado («Nenhuma tarefa de segurança atrasada»).
+  3ª revisão do C11: a asserção FAQ ganha a regra DERIVADA do trecho (R_PROIBE, R_SO, R_LIMIAR) no lugar da lista fechada: o núcleo de toda oração que proíbe no meio
+  da frase («, não religue»), que limita com «só» («Engate só em área livre») ou que manda agir no aviso («Profundidade abaixo do mínimo: reduza…») fica na resposta
+  (EL-02, AI-03, EL-08, MO-03, CL-02 e CK-06 foram corrigidos, e o SK-05 e o CK-05 ganharam a 2ª frase do trecho; GE-06 sem «não religue» e EL-02 sem «área livre» são amostras plantadas); a marca do horímetro
+  («ao chegar a 450 h no horímetro») não é o intervalo entre trocas (MO-07, GE-07 e o §7 dos guias de motores e gerador); o TWA do glossário é o ângulo em relação à proa.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -3256,6 +3260,42 @@ def c11_faq(tmp):
         return [m for m in C.a_faq(C.Ctx(D, B, c['F'], {}, Q_)) if 'manda fazer' in m]
     Qc = copy.deepcopy(Q)
     ok('2ª revisão do C11 (sem falso positivo): com a condição num passo antes de «Use o disparo manual.», a asserção FAQ não acusa', condicao_antes(Qc) == [], condicao_antes(Qc))
+    # ——— 3ª revisão do C11: a regra derivada do trecho; a marca do horímetro; o TWA ———
+    ok('3ª revisão do C11: a resposta traz «Engate só em área livre…» (EL-02), «Use só quando necessário…» (AI-03), «Evite rotação alta…» (MO-03), «ligue uma de cada vez para não sobrecarregar o quadro» (CL-02), '
+       '«não religue» (GE-06) e a ação do aviso de profundidade (EL-08), a CK-06 leva as ações do aviso no `senao`, e a resposta do SK-05 («antes de qualquer serviço») e a do CK-05 (a pergunta é «o que registro?») trazem a 2ª frase',
+       frase('EL-02', 'Engate só em área livre, com a rota conferida no plotter.') and frase('AI-03', 'Use só quando necessário e volte a transmitir ao sair.')
+       and frase('MO-03', 'Evite rotação alta com o motor frio e suba o giro aos poucos.') and frase('CL-02', 'ligue uma de cada vez para não sobrecarregar o quadro.')
+       and frase('GE-06', 'não religue') and frase('EL-08', 'Profundidade abaixo do mínimo: reduza a velocidade; confira a carta no plotter; mude de rumo para águas mais fundas.')
+       and 'Água doce abaixo do aviso: complete a água doce na marina' in faq_it(Q, 'CK-06')['senao'] and 'Servidas acima do aviso: esvazie as servidas na marina' in faq_it(Q, 'CK-06')['senao']
+       and frase('SK-05', 'Confira no display que a rotação está em zero antes de qualquer serviço.') and frase('CK-05', 'Depois de abastecer, registre os litros e o nível no app.'),
+       {i: resp_(i)[:100] for i in ('EL-02', 'AI-03', 'MO-03', 'CL-02', 'GE-06', 'EL-08', 'SK-05', 'CK-05')})
+    nuc = lambda o: [r for r, _ in C._nucleos(o)]
+    ok('3ª revisão do C11 (a regra é derivada do trecho, não uma lista de ids): o núcleo que proíbe no meio da frase («, não religue», «para não sobrecarregar»), o «só» que limita (1ª, 2ª posição, depois de «:» ou «e») '
+       'e a ação do aviso entram; «o volante não acelera», «a climatização não for usada», «Uma pessoa só aponta» e «o transponder só recebe» (estado, não limite) ficam de fora',
+       nuc('Se o nível estiver correto e o alarme voltar, não religue: chame o técnico de bordo.') == ['não religue']
+       and nuc('Engate só em área livre, com a rota conferida no plotter.') == ['engate só em área'] and nuc('Use só quando necessário e volte a transmitir ao sair.') == ['use só quando necessário']
+       and nuc('Evite rotação alta com o motor frio e suba o giro aos poucos.') == ['evite rotação alta'] and nuc('ligue uma de cada vez para não sobrecarregar o quadro.') == ['não sobrecarregar o']
+       and nuc('Só depois transfira as cargas no quadro elétrico, uma de cada vez') == ['só depois transfira'] and nuc('espere o tempo da etiqueta e só então libere o acesso') == ['só então libere']
+       and nuc('Com tensão baixa no 12 V, o display avisa e o volante não acelera.') == [] and nuc('Ao deixar o barco, feche a válvula de fundo se a climatização não for usada.') == []
+       and nuc('Uma pessoa só aponta para quem caiu, sem perder de vista.') == [] and nuc('Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.') == []
+       and [a for a, _ in C._acoes_aviso('Profundidade abaixo do mínimo: reduza a velocidade; confira a carta no plotter. Rotação: marcha lenta 650 a 750 rpm.')] == ['reduza a velocidade', 'confira a carta no plotter.'],
+       [nuc('Uma pessoa só aponta para quem caiu, sem perder de vista.'), nuc('Com tensão baixa no 12 V, o display avisa e o volante não acelera.')])
+    mo7, ge7 = faq_it(Q, 'MO-07'), faq_it(Q, 'GE-07')
+    agenda_h = {a['id']: a['horas'] for a in D['agenda'] if a.get('horas')}
+    sec7 = lambda g: next(t['texto'] for t in B['trechos'] if t['fonte'] == D['drive']['arquivos'][g] and t['secao'] == '7 · Manutenção na agenda')
+    ok('3ª revisão do C11: 450 h e 1.300 h são a marca do horímetro (a agenda tem limite e faltam = limite − atual), não o intervalo entre trocas: o §7 dos guias de motores e do gerador e a resposta do MO-07 e do GE-07 '
+       'dizem «ao chegar a … h no horímetro», e a pergunta é «Quando é a próxima troca…»',
+       agenda_h['motores-oleo']['limite'] == 450 and agenda_h['gerador-revisao']['limite'] == 1300 and agenda_h['motores-oleo']['faltam'] > 0 and agenda_h['gerador-revisao']['faltam'] > 0
+       and 'Troca de óleo e filtros: 12 meses ou ao chegar a 450 h no horímetro (o que vier antes).' in sec7('g_motores')
+       and 'Óleo e filtros: 12 meses ou ao chegar a 1.300 h no horímetro (o que vier antes).' in sec7('g_gerador')
+       and 'ou ao chegar a 450 h no horímetro (o que vier antes)' in mo7['resposta'] and 'ou ao chegar a 1.300 h no horímetro (o que vier antes)' in ge7['resposta']
+       and mo7['pergunta'].startswith('Quando é a próxima troca') and ge7['pergunta'].startswith('Quando é a próxima troca')
+       and not re.search(r'quanto em quanto tempo', G.gera_faq(Q), re.I), (mo7['pergunta'], ge7['pergunta'], agenda_h))
+    twa, awa = next(g for g in Q['glossario'] if g['termo'] == 'TWA'), next(g for g in Q['glossario'] if g['termo'] == 'AWA')
+    ok('3ª revisão do C11: o TWA do glossário é o ângulo do vento verdadeiro em relação à proa (CONTRATO §1.22: «TWA = angulo verdadeiro − proa»), como o AWA, e diz que o quadro do coletor traz a direção em relação ao norte '
+       '(TWD); a fonte segue sendo o formato do quadro',
+       twa['texto'].startswith('Ângulo do vento verdadeiro (True Wind Angle)') and 'em relação à proa' in twa['texto'] and 'norte verdadeiro' in twa['texto'] and 'TWD' in twa['texto']
+       and 'em relação à proa' in awa['texto'] and twa['fonte'] == awa['fonte'] and not twa['texto'].startswith('Direção'), twa['texto'])
     ordem = {x['id']: x for lista in ck.values() for x in lista}
     ok('revisão do C11: CK-03, CK-04, CK-05 e CK-07 trazem os itens «boa prática» do checklist com verbo de ordem (FAQ_CK_ORDEM, os 12), nunca o texto do ✓ que o app avalia '
        '(«Nenhuma tarefa de segurança atrasada», «Nenhum alerta ativo no painel», «Motores desligados»…)',
@@ -3408,6 +3448,29 @@ def c11_faq(tmp):
          'faq:EM-05.atencao: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
         ('SF-01 com a resposta mandando o disparo manual sem a condição', resp('SF-01', 'se o sistema não disparou sozinho e há fogo no motor, use o disparo manual', 'use o disparo manual'),
          'faq:SF-01.resposta: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
+        # ——— 3ª revisão do C11: o núcleo que proíbe, limita ou manda agir no aviso (regra derivada do trecho); a marca do horímetro; o TWA ———
+        ('GE-06 sem «não religue» na resposta (a oração não abre com Não: «…o alarme voltar, não religue»)', resp('GE-06', ' não religue e', ''),
+         'faq:GE-06.resposta: corta o que o trecho de origem proíbe ou limita «não religue»'),
+        ('EL-02 sem «Engate só em área livre…» na resposta (a condição do engate só estava nos passos)', resp('EL-02', ' Engate só em área livre, com a rota conferida no plotter.'),
+         'faq:EL-02.resposta: corta o que o trecho de origem proíbe ou limita «engate só em área»'),
+        ('AI-03 sem «Use só quando necessário e volte a transmitir ao sair.»', resp('AI-03', ' Use só quando necessário e volte a transmitir ao sair.'),
+         'faq:AI-03.resposta: corta o que o trecho de origem proíbe ou limita «use só quando necessário»'),
+        ('MO-03 sem «Evite rotação alta com o motor frio…» (a oração abre com Evite)', resp('MO-03', ' Evite rotação alta com o motor frio e suba o giro aos poucos.'),
+         'faq:MO-03.resposta: corta a frase do trecho de origem que escala ou condiciona «Evite rotação alta'),
+        ('CL-02 sem «ligue uma de cada vez para não sobrecarregar o quadro»', resp('CL-02', '; ligue uma de cada vez para não sobrecarregar o quadro'),
+         'faq:CL-02.resposta: corta o que o trecho de origem proíbe ou limita «não sobrecarregar o»'),
+        ('EL-08 sem a ação do aviso «reduza a velocidade; confira a carta…» (só no acao e nos passos)', resp('EL-08', ' Profundidade abaixo do mínimo: reduza a velocidade; confira a carta no plotter; mude de rumo para águas mais fundas.'),
+         'faq:EL-08.resposta: não traz a ação do aviso do trecho de origem «reduza a velocidade»'),
+        ('MO-09 sem o `senao` (a ação do aviso de faixa não está na resposta nem no senao)', lambda D_, B_, Q_: it(Q_, 'MO-09').pop('senao'),
+         'faq:MO-09.resposta: não traz a ação do aviso do trecho de origem «reduza o giro para o cruzeiro»'),
+        ('CK-06 sem o `senao` (as ações do aviso só ficam nos passos)', lambda D_, B_, Q_: it(Q_, 'CK-06').pop('senao'),
+         'faq:CK-06.resposta: não traz a ação do aviso do trecho de origem «complete a água doce na marina»'),
+        ('MO-07 com «12 meses ou 450 h» solto (sem «horímetro»: lê-se como intervalo de troca)', resp('MO-07', 'ou ao chegar a 450 h no horímetro', 'ou 450 h'),
+         'faq:MO-07.resposta: dá a marca do horímetro como se fosse o intervalo entre trocas'),
+        ('GE-07 com «12 meses ou 1.300 h» solto (um gerador não troca o óleo a cada 1.300 h)', resp('GE-07', 'ou ao chegar a 1.300 h no horímetro', 'ou 1.300 h'),
+         'faq:GE-07.resposta: dá a marca do horímetro como se fosse o intervalo entre trocas'),
+        ('TWA do glossário como «Direção do vento verdadeiro» (é a TWD, em relação ao norte)', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'TWA').update(
+            {'texto': 'Direção do vento verdadeiro (True Wind Angle): de onde vem o vento verdadeiro.'}), 'faq.glossario.TWA.texto: o ângulo do vento (TWA, AWA) é medido em relação à proa'),
         # ——— revisão do C11: o checklist entra como ordem de conferência, nunca como o estado que o app avalia ———
         ('CK-03 com «Nenhuma tarefa de segurança atrasada.» (o porao-teste está atrasado na agenda)', com_obs('CK-03', 'Nenhuma tarefa de segurança atrasada.'),
          'faq:CK-03.obs: repete o item s12 do checklist'),
@@ -3488,6 +3551,9 @@ def c11_faq(tmp):
                                                    lambda Q_: it(Q_, 'EP-01').update({'resposta': it(Q_, 'EP-01')['resposta'].replace(' Não desligue até o resgate.', '')}), 'FAQ'),
                                                   ('CK-03 com o texto do ✓ «Nenhuma tarefa de segurança atrasada.» (revisão do C11)',
                                                    lambda Q_: it(Q_, 'CK-03').update({'obs': it(Q_, 'CK-03')['obs'] + ' Nenhuma tarefa de segurança atrasada.'}), 'FAQ'),
+                                                  ('GE-06 sem «não religue» na resposta e EL-02 sem «Engate só em área livre» (3ª revisão do C11: a regra derivada do trecho)',
+                                                   lambda Q_: (it(Q_, 'GE-06').update({'resposta': it(Q_, 'GE-06')['resposta'].replace(' não religue e', '')}),
+                                                               it(Q_, 'EL-02').update({'resposta': it(Q_, 'EL-02')['resposta'].replace(' Engate só em área livre, com a rota conferida no plotter.', '')})), 'FAQ'),
                                                   ('preço no item (a DINHEIRO reprova já; a TERMOS em relatório, não)',
                                                    lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' Custa R$ 9,90.'}), 'TERMOS'),
                                                   ('«DEMO» no item (relatório: não reprova, grava)', None, None))):
