@@ -42,7 +42,8 @@ from datetime import date, timedelta
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
-from confere import ConfereFalhou, arred, confere, deriva_janelas, desvio_em, mn_entre, quadro_laco, rumo_entre, ruido, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
+from confere import (ConfereFalhou, arred, blocos_sensores, confere, deriva_janelas, desvio_em, mn_entre, quadro_laco, rumo_entre,  # noqa: E402
+                     ruido, segura, sensor_xy)   # segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só; blocos_sensores e sensor_xy: a regra do §1.19, uma só
 
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 FONTES_REL = os.path.join('ferramentas', 'demo', 'fontes')   # as fontes do Drive, dentro da pasta de saída
@@ -1538,6 +1539,203 @@ def historico_dados():
             'so150': list(SO150_HIST), 'fonte': 'coletor NMEA de bordo · histórico'}
 
 
+# ——————————————————————————————— CHECKLISTS, SENSORES, PEÇAS E ALARMES PEDIDOS (CONTRATO §1.18–§1.21) ———————————————————————————————
+# F09 (checklists guiados), F08 (sensores sobre o desenho), F22 (peças e estoque) e F12 (alarmes pedidos no chat). Só a FORMA vem do Avanti 1.24.0
+# (id, c, t, fonte, auto, parcial, faq, link; ponto com bloco; peça com qtd e mínimo; métrica com faixa): o conteúdo é do Capitão. Os ids, os
+# rótulos `c`, o ✓ automático, o FAQ, as faixas e a fórmula do bloco têm a referência no confere.py (asserção FUNCOES); aqui ficam os textos.
+BOA_PRATICA = 'boa prática'   # fonte do item que não tem seção nos guias gerados (procedimento comum de marinharia, sem número)
+CK_TIPOS = [   # `l` = rótulo da aba, `aba` = a linha curta embaixo, `nome` = o título da tela, `sys` = a categoria da linha que o CONCLUIR grava no diário
+    {'id': 'saida', 'l': 'Saída', 'aba': 'antes de largar', 'nome': 'Checklist de saída', 'sys': 'Navegação'},
+    {'id': 'chegada', 'l': 'Chegada', 'aba': 'ao atracar', 'nome': 'Checklist de chegada', 'sys': 'Navegação'},
+    {'id': 'abastecimento', 'l': 'Abastecimento', 'aba': 'no posto', 'nome': 'Checklist de abastecimento', 'sys': 'Combustível'},
+    {'id': 'fundeio', 'l': 'Fundeio', 'aba': 'ao fundear', 'nome': 'Checklist de fundeio', 'sys': 'Navegação'},
+]
+
+
+def _ck(i, c, t, fonte, auto=None, parcial=False, faq=None, link=None):
+    """Item do checklist na ordem de chaves do contrato; o que não se aplica é omitido (nunca null)."""
+    it = {'id': i, 'c': c, 't': t, 'fonte': fonte}
+    for k, v in (('auto', auto), ('parcial', True if parcial else None), ('faq', faq), ('link', link)):
+        if v is not None:
+            it[k] = v
+    return it
+
+
+def _fs(guia, secao):
+    """«Guia de bordo — … §n · título» (seção numerada) ou «Checklist de bordo § título»; a seção tem de existir no guia (asserção FUNCOES)."""
+    return fonte_da_secao(guia, secao)
+
+
+# Os textos que a tabela do §1.18 abrevia ficam por extenso. O s05 e o a07 dizem «em cada tanque» (a tabela do contrato, e o ✓ mostra os dois lados);
+# a regra do guia (§ Abastecimento) e o alerta de diesel são sobre o total dos tanques: dois tanques acima de 25 % já cumprem a do guia.
+def checklists_dados():
+    """D.checklists (§1.18): 4 tipos, 14 + 8 + 7 + 6 itens."""
+    CK, ELE, ANC = 'checklist', 'g_eletronicos', 'g_ancora'
+    itens = {
+        'saida': [
+            _ck('s01', 'previsão', 'Previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.',
+                _fs(CK, 'Saída · antes de largar'), 'tempo', True),
+            _ck('s02', 'alertas', 'Nenhum alerta ativo no painel.', BOA_PRATICA, 'alertas'),
+            _ck('s03', 'motores frios', 'Óleo, arrefecimento, correias e válvulas de fundo conferidos com os motores frios.',
+                _fs('g_motores', '1 · Antes da partida'), faq='MO-01'),
+            _ck('s04', 'porão', 'Porão seco e bombas testadas no manual.', _fs('g_porao', '3 · Teste mensal'), 'porao', True, 'PO-03'),
+            _ck('s05', 'diesel', 'Diesel acima de 25 % em cada tanque.', _fs(CK, 'Abastecimento'), 'diesel'),
+            _ck('s06', 'tanques', 'Água doce acima de 15 %; servidas abaixo de 80 %.', _fs(CK, 'Tanques'), 'tanques'),
+            _ck('s07', 'baterias', 'Bancos de 24 V e 12 V dentro da faixa.', _fs('g_eletrico', '2 · Faixas'), 'baterias', faq='EE-02'),
+            _ck('s08', 'gerador', 'Gerador ligado: água saindo pelo escapamento.', _fs('g_gerador', '3 · Água no escapamento'), faq='GE-03'),
+            _ck('s09', 'estabilizador', 'Estabilizador ligado com antecedência (o display indica quando está pronto).',
+                _fs('g_seakeeper', '2 · Ligar antes de sair'), 'seakeeper', faq='SK-02'),
+            _ck('s10', 'plotter e VHF', 'Plotter ligado, piloto em espera e VHF no canal 16.', _fs(CK, 'Saída · 4 a 6'), faq='EL-04'),
+            _ck('s11', 'documentos', 'Documentos em dia (TIE, seguro, Licença de Estação).', BOA_PRATICA, 'documentos', True),
+            _ck('s12', 'tarefas de segurança', 'Nenhuma tarefa de segurança atrasada.', BOA_PRATICA, 'tarefas'),
+            _ck('s13', 'coletes e salvatagem', 'Coletes: um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem.',
+                _fs(CK, 'Saída · antes de largar'), faq='EM-09'),
+            _ck('s14', 'cabos e defensas', 'Cabos e defensas recolhidos depois de largar.', BOA_PRATICA),
+        ],
+        'chegada': [
+            _ck('c01', 'piloto', 'Piloto em espera antes de manobrar.', _fs(ELE, '2 · Piloto automático'), faq='EL-02'),
+            _ck('c02', 'estabilizador', 'Estabilizador desligado ao atracar; energia até o volante parar.', _fs('g_seakeeper', '4 · Desligar ao atracar'),
+                'seakeeperOff', faq='SK-04'),
+            _ck('c03', 'motores', 'Motores 2 a 3 min em marcha lenta antes de desligar.', _fs('g_motores', '6 · Parada'), 'motoresOff', faq='MO-06'),
+            _ck('c04', 'gerador', 'Gerador sem cargas, alguns minutos para esfriar e desligado.', _fs('g_gerador', '4 · Desligar'), 'geradorOff', faq='GE-04'),
+            _ck('c05', 'climatização', 'Climatização desligada e válvula de fundo fechada se o barco ficar parado.', _fs('g_clima', '5 · Desligar'), faq='CL-05'),
+            _ck('c06', 'porão', 'Porão conferido: nível normal e bombas no automático.', _fs('g_porao', '2 · Faixas'), 'porao'),
+            _ck('c07', 'cabos e defensas', 'Cabos e defensas prontos antes de atracar.', BOA_PRATICA),
+            _ck('c08', 'diário', 'Saída fechada no diário: horas, consumo e pendências.', _fs(CK, 'Chegada'), link='G3-Diario'),
+        ],
+        'abastecimento': [
+            _ck('a01', 'motores', 'Motores desligados.', BOA_PRATICA, 'motoresOff'),
+            _ck('a02', 'gerador', 'Gerador desligado.', BOA_PRATICA, 'geradorOff'),
+            _ck('a03', 'nível antes', 'Nível de diesel anotado antes.', BOA_PRATICA, 'diesel'),
+            _ck('a04', 'sem fumar', 'Sem fumar a bordo; extintor portátil à mão.', BOA_PRATICA),
+            _ck('a05', 'bocal e tampa', 'Bocal certo (diesel) e tampa do tanque fechada depois.', BOA_PRATICA),
+            _ck('a06', 'nível depois', 'Nível depois anotado em Abastecimento.', _fs(CK, 'Abastecimento'), link='G2-Abastecimento'),
+            _ck('a07', 'regra do diesel', 'Diesel acima de 25 % em cada tanque antes de sair.', _fs(CK, 'Abastecimento'), faq='CK-05'),
+        ],
+        'fundeio': [
+            _ck('f01', 'profundidade', 'Profundidade conferida na sonda.', _fs(ELE, '8 · Sonda'), 'profundidade', faq='EL-08'),
+            _ck('f02', 'corrente', 'Corrente: lance de 3 a 5 vezes a profundidade.', _fs(ANC, '1 · Lançar'), faq='AN-01'),
+            _ck('f03', 'alarme de âncora', 'Alarme de âncora ativado no plotter, com o raio.', _fs(ELE, '3 · Alarme de âncora'), faq='EL-03'),
+            _ck('f04', 'deriva', 'Motores em neutro e deriva conferida.', BOA_PRATICA, 'deriva'),
+            _ck('f05', 'guincho', 'Guincho desligado e trava da corrente.', _fs(ANC, '3 · Recolher e travar'), faq='AN-03'),
+            _ck('f06', 'maré e vento', 'Maré e vento conferidos (previsão da Marinha).', BOA_PRATICA, 'mare'),
+        ],
+    }
+    return {'fonte': ARQ['checklist'], 'tipos': [dict(t) for t in CK_TIPOS], 'itens': itens}
+
+
+# F08 (§1.19): n, id, vista, l, a (perfil) ou b (planta), rótulo, onde (vocabulário fechado, sem «boia») e os campos do quadro que o ponto mostra.
+# l = 0 na popa e 1 na proa; a = 0 na quilha e 1 no topo; b = −1 em BB e +1 em BE. Nenhum ponto é equipamento de salvatagem nem de incêndio.
+SENSORES_DEF = [
+    (1, 'gps', 'perfil', 0.55, 0.95, 'Antena GPS', 'hard-top', ['gps_satelites']),
+    (2, 'radar', 'perfil', 0.52, 1.0, 'Radar', 'mastro do radar', ['radar_ativo']),
+    (3, 'meteo', 'perfil', 0.48, 1.0, 'Estação meteorológica', 'mastro do radar',
+     ['vento_verdadeiro_nos', 'vento_verdadeiro_angulo', 'vento_aparente_nos', 'vento_aparente_angulo', 'temp_ar_externo_c', 'pressao_barometrica_hpa']),
+    (4, 'sonda', 'perfil', 0.62, 0.05, 'Sonda', 'casco · meia-nau', ['profundidade_m', 'temp_agua_c']),
+    (5, 'inclinometro', 'perfil', 0.50, 0.35, 'Inclinômetro', 'meia-nau', ['jogo_graus', 'caimento_graus', 'proa_graus']),
+    (6, 'estabilizador', 'perfil', 0.45, 0.20, 'Estabilizador', 'praça de máquinas · centro', ['seakeeper_volante_rpm', 'seakeeper_volante_pct']),
+    (7, 'praca', 'perfil', 0.25, 0.30, 'Praça de máquinas', 'praça de máquinas', ['temp_praca_maquinas_c']),
+    (8, 'motor_bb', 'planta', 0.25, -0.40, 'Motor BB', 'praça de máquinas · BB',
+     ['motor_bb_rpm', 'motor_bb_oleo_bar', 'motor_bb_arref_c', 'motor_bb_carga_pct', 'motor_bb_horimetro_h']),
+    (9, 'motor_be', 'planta', 0.25, 0.40, 'Motor BE', 'praça de máquinas · BE',
+     ['motor_be_rpm', 'motor_be_oleo_bar', 'motor_be_arref_c', 'motor_be_carga_pct', 'motor_be_horimetro_h']),
+    (10, 'gerador', 'planta', 0.18, 0.0, 'Gerador', 'praça de máquinas · ré', ['gerador_kw', 'gerador_horimetro_h']),
+    (11, 'diesel_bb', 'planta', 0.38, -0.60, 'Tanque de diesel BB', 'meia-nau · BB', ['diesel_bb_pct']),
+    (12, 'diesel_be', 'planta', 0.38, 0.60, 'Tanque de diesel BE', 'meia-nau · BE', ['diesel_be_pct']),
+    (13, 'agua', 'planta', 0.60, 0.0, 'Tanque de água doce', 'meia-nau', ['tanque_agua_pct']),
+    (14, 'servidas', 'planta', 0.70, 0.30, 'Tanques de servidas', 'meia-nau · BE', ['tanque_cinzas_pct', 'tanque_negras_pct']),
+    (15, 'b24s', 'planta', 0.30, -0.15, 'Banco de serviço 24 V', 'praça de máquinas · BB', ['bateria_0_tensao_v']),
+    (16, 'b24p', 'planta', 0.30, 0.15, 'Banco de partida 24 V', 'praça de máquinas · BE', ['bateria_1_tensao_v']),
+    (17, 'b12', 'planta', 0.55, 0.20, 'Banco 12 V', 'painel do comando', ['bateria_2_tensao_v']),
+    (18, 'porao_bb', 'planta', 0.22, -0.25, 'Sensor de nível do porão BB', 'praça de máquinas · BB', ['porao_bb_nivel']),
+    (19, 'porao_be', 'planta', 0.22, 0.25, 'Sensor de nível do porão BE', 'praça de máquinas · BE', ['porao_be_nivel', 'bomba_porao_ciclos']),
+    (20, 'leme', 'planta', 0.04, 0.0, 'Leme', 'popa', ['leme_graus', 'piloto_rumo']),
+    (21, 'guincho', 'planta', 0.95, 0.0, 'Guincho e contador de corrente', 'proa · guincho da âncora', ['ancora_estado']),
+    (22, 'dessal', 'planta', 0.33, 0.20, 'Dessalinizador', 'praça de máquinas · BE', ['dessalinizador_ativo']),
+]
+
+
+SENSORES_IMG = {'perfil': {'img': 'assets/sensores-perfil.svg', 'w': 1200, 'h': 360}, 'planta': {'img': 'assets/sensores-planta.svg', 'w': 1200, 'h': 420}}
+SENSORES_REF = {'popa_x': 0.04, 'proa_x': 0.95, 'quilha_y': 0.92, 'topo_y': 0.08, 'eixo_y': 0.5, 'meia_boca': 0.32}   # frações do desenho; o da Fase 4 as segue
+
+
+def sensores_dados():
+    """D.sensores (§1.19): o desenho (caminho e tamanho; o desenho da Fase 4 segue a `referencia`), os 22 pontos com x, y e o bloco das duas plataformas."""
+    pontos = []
+    for n, i, vista, l, ab, rotulo, ond, campos in SENSORES_DEF:
+        p = {'n': n, 'id': i, 'vista': vista, 'l': l, 'a' if vista == 'perfil' else 'b': ab}
+        p['x'], p['y'] = sensor_xy(p, SENSORES_REF)
+        p.update({'rotulo': rotulo, 'onde': ond, 'campos': list(campos)})
+        pontos.append(p)
+    blocos = {plat: {v: blocos_sensores([p for p in pontos if p['vista'] == v], plat) for v in ('perfil', 'planta')} for plat in ('web', 'app')}
+    for p in pontos:
+        p['bloco'] = {plat: blocos[plat][p['vista']][p['id']] for plat in ('web', 'app')}
+    return {'perfil': dict(SENSORES_IMG['perfil']), 'planta': dict(SENSORES_IMG['planta']), 'referencia': dict(SENSORES_REF), 'pontos': pontos}
+
+
+# F22 (§1.20): sem código de fabricante (um `pn` inventado de fabricante real leva à compra errada) e sem preço; `local` de vocabulário fechado
+# (estante técnica 1–3, caixa de sobressalentes A–C, armário de ferramentas); nenhuma peça de salvatagem. A BAIXA (p03) e a ZERO (p05, a falta do diário d03).
+PECAS = [
+    {'id': 'p01', 'n': 'Filtro de óleo do motor', 'qtd': 4, 'min': 2, 'local': 'estante técnica 1', 'tarefas': ['motores-oleo']},
+    {'id': 'p02', 'n': 'Filtro de combustível (separador de água) dos motores', 'qtd': 4, 'min': 2, 'local': 'estante técnica 1', 'tarefas': ['motores-revisao']},
+    {'id': 'p03', 'n': 'Rotor (impeller) da bomba de água salgada dos motores', 'qtd': 1, 'min': 2, 'local': 'caixa de sobressalentes A', 'tarefas': ['motores-rotor']},
+    {'id': 'p04', 'n': 'Correia do alternador', 'qtd': 2, 'min': 1, 'local': 'caixa de sobressalentes A', 'tarefas': ['motores-revisao']},
+    {'id': 'p05', 'n': 'Rotor (impeller) do gerador', 'qtd': 0, 'min': 1, 'local': 'caixa de sobressalentes B', 'tarefas': ['gerador-rotor']},
+    {'id': 'p06', 'n': 'Filtro de óleo do gerador', 'qtd': 2, 'min': 1, 'local': 'estante técnica 2', 'tarefas': ['gerador-revisao']},
+    {'id': 'p07', 'n': 'Anodo do trocador de calor do estabilizador', 'qtd': 2, 'min': 1, 'local': 'caixa de sobressalentes B', 'tarefas': ['seakeeper-anodo']},
+    {'id': 'p08', 'n': 'Jogo de anodos do eixo e do casco', 'qtd': 1, 'min': 1, 'local': 'estante técnica 3', 'tarefas': ['casco-anodos']},
+    {'id': 'p09', 'n': 'Tela do filtro de água salgada da climatização', 'qtd': 1, 'min': 1, 'local': 'caixa de sobressalentes C', 'tarefas': ['clima-filtro']},
+    {'id': 'p10', 'n': 'Pré-filtro do dessalinizador', 'qtd': 2, 'min': 2, 'local': 'caixa de sobressalentes C'},
+    {'id': 'p11', 'n': 'Jogo de fusíveis de 24 V', 'qtd': 1, 'min': 1, 'local': 'armário de ferramentas', 'tarefas': ['baterias']},
+    {'id': 'p12', 'n': 'Escova do limpador do para-brisa', 'qtd': 2, 'min': 1, 'local': 'armário de ferramentas'},
+]
+
+# F12 (§1.21): a lista fechada de métricas que o chat aceita em «me avise se…». A regra é a `faixa` própria de cada métrica (a referência está no
+# confere.py: FAIXAS_PEDIDAS), não o D.replay.limites: vento, SOG, pressão e a água do mar não têm limite de alarme no guia. `nome`, `un` e `casas` saem do D.campos.
+# `palavras`: o que o ditado e o teclado escrevem, sem acento e em minúsculas (palavra que cabe dentro de outra vai com espaço, ' sog '). A palavra
+# sem o lado vale nos dois motores: o pedido sem «BB» nem «BE» abre um alarme para cada um (Fase 3).
+ALARMES_PEDIDOS_DEF = [   # (id, campo, faixa [mín, máx], palavras, motor)
+    ('oleo_bb', 'motor_bb_oleo_bar', (0.5, 6.0),
+     ['pressao do oleo', 'pressao de oleo', 'oleo do motor', 'oleo bb', 'oleo do bb', 'oleo de bombordo', 'oleo do motor bb', 'oleo do motor de bombordo'], True),
+    ('oleo_be', 'motor_be_oleo_bar', (0.5, 6.0),
+     ['pressao do oleo', 'pressao de oleo', 'oleo do motor', 'oleo be', 'oleo do be', 'oleo de boreste', 'oleo do motor be', 'oleo do motor de boreste'], True),
+    ('arref_bb', 'motor_bb_arref_c', (60, 100),
+     ['arrefecimento', 'temperatura do motor', 'temperatura de arrefecimento', 'arrefecimento bb', 'arrefecimento do bb', 'arrefecimento de bombordo',
+      'temperatura do motor bb', 'temperatura do motor de bombordo', 'temperatura do bb'], True),
+    ('arref_be', 'motor_be_arref_c', (60, 100),
+     ['arrefecimento', 'temperatura do motor', 'temperatura de arrefecimento', 'arrefecimento be', 'arrefecimento do be', 'arrefecimento de boreste',
+      'temperatura do motor be', 'temperatura do motor de boreste', 'temperatura do be'], True),
+    ('rpm_bb', 'motor_bb_rpm', (500, 2600),
+     ['rotacao', 'rpm', 'giro do motor', 'rotacao bb', 'rotacao do bb', 'rotacao de bombordo', 'rpm bb', 'rpm do bb', 'giro do bb'], True),
+    ('rpm_be', 'motor_be_rpm', (500, 2600),
+     ['rotacao', 'rpm', 'giro do motor', 'rotacao be', 'rotacao do be', 'rotacao de boreste', 'rpm be', 'rpm do be', 'giro do be'], True),
+    ('b24s', 'bateria_0_tensao_v', (22.0, 30.0), ['banco de servico', 'bateria de servico', 'tensao de servico', 'bateria de 24'], False),
+    ('b24p', 'bateria_1_tensao_v', (22.0, 30.0), ['banco de partida', 'bateria de partida', 'tensao de partida', 'bateria de 24'], False),
+    ('b12', 'bateria_2_tensao_v', (11.0, 15.0), ['banco de 12', 'bateria de 12', 'banco da eletronica', 'bateria da eletronica'], False),
+    ('profundidade', 'profundidade_m', (1, 50), ['profundidade', 'sonda', 'fundo raso'], False),
+    ('vento', 'vento_verdadeiro_nos', (5, 50), ['vento', 'rajada', 'vento verdadeiro'], False),
+    ('sog', 'sog_nos', (1, 30), ['velocidade', ' sog ', 'velocidade sobre o fundo'], False),
+    ('pressao', 'pressao_barometrica_hpa', (980, 1040), ['pressao atmosferica', 'pressao barometrica', 'barometro', ' hpa '], False),
+    ('agua_mar', 'temp_agua_c', (10, 32), ['temperatura da agua', 'agua do mar', 'temperatura do mar'], False),
+    ('diesel', 'diesel_litros', (100, 1600), ['diesel', 'combustivel', 'nivel de diesel', 'litros de diesel'], False),
+    ('agua', 'tanque_agua_pct', (5, 100), ['agua doce', 'tanque de agua', 'nivel de agua'], False),
+    ('cinzas', 'tanque_cinzas_pct', (5, 100), ['aguas cinzas', 'agua cinza', 'cinzas', 'servidas'], False),
+    ('negras', 'tanque_negras_pct', (5, 100), ['aguas negras', 'agua negra', 'negras', 'servidas'], False),
+]
+
+
+def alarmes_pedidos_dados():
+    """D.alarmesPedidos (§1.21): a chave do aparelho, o teto de 10, a histerese de 10 s, nível só aviso e as 18 métricas, cada uma com a sua faixa."""
+    ms = []
+    for i, campo, (lo, hi), palavras, motor in ALARMES_PEDIDOS_DEF:
+        d = CAMPOS[campo]
+        m = {'id': i, 'campos': [campo], 'nome': d['rotulo'], 'palavras': list(palavras), 'un': d['un'], 'casas': d['casas'], 'faixa': [lo, hi], 'ops': ['<', '>']}
+        if motor:
+            m['motor'] = True
+        ms.append(m)
+    return {'chave': 'capitao.alarmes.v1', 'max': 10, 'histerese_s': 10, 'nivel': 'aviso', 'fonte': 'alarme pedido no chat · avaliado neste aparelho', 'metricas': ms}
+
+
 # ——————————————————————————————— SAÍDA ———————————————————————————————
 def snapshot_dados():
     """O snapshot (L, §1.17). Com SIMULACAO = False o repositório público não leva a posição do barco (§4.3): sai a lat/lon do quadro e do gps."""
@@ -1572,6 +1770,7 @@ def dados():
         'equipe': EQUIPE,
         'faq': faq(), 'guias': FONTE_GUIA,
         'protocolos': PROTOCOLOS,
+        'checklists': checklists_dados(), 'sensores': sensores_dados(), 'pecas': [dict(p) for p in PECAS], 'alarmesPedidos': alarmes_pedidos_dados(),   # C10: nos dois modos
     })
     return D
 

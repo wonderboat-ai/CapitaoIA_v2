@@ -3020,6 +3020,285 @@ def a_fontes_relativas(X):
     return out
 
 
+# ——————————————————————————————— F08, F09, F12, F22 (C10; CONTRATO §1.18–§1.21) ———————————————————————————————
+# A referência é daqui, nunca do dado conferido (como PROTOCOLOS_TEXTOS): os ids, os rótulos `c`, os ✓ automáticos e as faixas do contrato.
+# Os textos `t` dos itens ficam só no gerador (a tabela do §1.18 os escreve por extenso, com a fonte de cada um no guia gerado).
+CK_TIPOS = (   # §1.18: (id, l, aba, nome, sys); `l` é o rótulo da aba, `aba` a linha curta, `nome` o título da tela, `sys` a categoria do diário
+    ('saida', 'Saída', 'antes de largar', 'Checklist de saída', 'Navegação'),
+    ('chegada', 'Chegada', 'ao atracar', 'Checklist de chegada', 'Navegação'),
+    ('abastecimento', 'Abastecimento', 'no posto', 'Checklist de abastecimento', 'Combustível'),
+    ('fundeio', 'Fundeio', 'ao fundear', 'Checklist de fundeio', 'Navegação'))
+CK_C = {   # id do item → `c` (o rótulo curto que entra na lista de pendentes do CONCLUIR)
+    'saida': {'s01': 'previsão', 's02': 'alertas', 's03': 'motores frios', 's04': 'porão', 's05': 'diesel', 's06': 'tanques', 's07': 'baterias',
+              's08': 'gerador', 's09': 'estabilizador', 's10': 'plotter e VHF', 's11': 'documentos', 's12': 'tarefas de segurança',
+              's13': 'coletes e salvatagem', 's14': 'cabos e defensas'},
+    'chegada': {'c01': 'piloto', 'c02': 'estabilizador', 'c03': 'motores', 'c04': 'gerador', 'c05': 'climatização', 'c06': 'porão',
+                'c07': 'cabos e defensas', 'c08': 'diário'},
+    'abastecimento': {'a01': 'motores', 'a02': 'gerador', 'a03': 'nível antes', 'a04': 'sem fumar', 'a05': 'bocal e tampa', 'a06': 'nível depois',
+                      'a07': 'regra do diesel'},
+    'fundeio': {'f01': 'profundidade', 'f02': 'corrente', 'f03': 'alarme de âncora', 'f04': 'deriva', 'f05': 'guincho', 'f06': 'maré e vento'}}
+CK_AUTO = {   # id → (auto, parcial): o ✓ automático (§1.18); o que não está aqui não tem `auto` nem `parcial`
+    's01': ('tempo', True), 's02': ('alertas', False), 's04': ('porao', True), 's05': ('diesel', False), 's06': ('tanques', False),
+    's07': ('baterias', False), 's09': ('seakeeper', False), 's11': ('documentos', True), 's12': ('tarefas', False),
+    'c02': ('seakeeperOff', False), 'c03': ('motoresOff', False), 'c04': ('geradorOff', False), 'c06': ('porao', False),
+    'a01': ('motoresOff', False), 'a02': ('geradorOff', False), 'a03': ('diesel', False), 'f01': ('profundidade', False),
+    'f04': ('deriva', False), 'f06': ('mare', False)}
+CK_FAQ = {'s03': 'MO-01', 's04': 'PO-03', 's07': 'EE-02', 's08': 'GE-03', 's09': 'SK-02', 's10': 'EL-04', 's13': 'EM-09', 'c01': 'EL-02',
+          'c02': 'SK-04', 'c03': 'MO-06', 'c04': 'GE-04', 'c05': 'CL-05', 'a07': 'CK-05', 'f01': 'EL-08', 'f02': 'AN-01', 'f03': 'EL-03', 'f05': 'AN-03'}
+CK_LINK = {'c08': 'G3-Diario', 'a06': 'G2-Abastecimento'}   # a tela do app (sem o -Web/-Mobile): o CONCLUIR e o item levam até ela
+CK_CHAVES = ('id', 'c', 't', 'fonte', 'auto', 'parcial', 'faq', 'link')
+BOA_PRATICA = 'boa prática'
+
+SENSORES_DESENHO = {'perfil': {'img': 'assets/sensores-perfil.svg', 'w': 1200, 'h': 360}, 'planta': {'img': 'assets/sensores-planta.svg', 'w': 1200, 'h': 420}}
+SENSORES_REFERENCIA = {'popa_x': 0.04, 'proa_x': 0.95, 'quilha_y': 0.92, 'topo_y': 0.08, 'eixo_y': 0.5, 'meia_boca': 0.32}
+SENSORES_IDS = ('gps', 'radar', 'meteo', 'sonda', 'inclinometro', 'estabilizador', 'praca', 'motor_bb', 'motor_be', 'gerador', 'diesel_bb', 'diesel_be',
+                'agua', 'servidas', 'b24s', 'b24p', 'b12', 'porao_bb', 'porao_be', 'leme', 'guincho', 'dessal')   # n = 1…22; os 7 primeiros são do perfil
+SENSORES_PERFIL = 7
+BLOCO_FILEIRAS = {'web': {'cima': (0.05, 0.15), 'baixo': (0.85, 0.95)}, 'app': {'cima': (0.04, 0.13), 'baixo': (0.87, 0.96)}}   # `by`, na ordem de preferência
+BLOCO_BX = (0.06, 0.94)   # `bx` = `x` limitado a este intervalo (quando cabe)
+BLOCO_DIST = 0.10         # dois blocos da mesma fileira nunca a menos de 0,10
+
+
+def sensor_xy(p, ref=SENSORES_REFERENCIA):
+    """(x, y) do ponto pelas frações da `referencia` (§1.19): x = popa_x + l·(proa_x − popa_x); no perfil, y = quilha_y + a·(topo_y − quilha_y);
+    na planta, y = eixo_y + b·meia_boca. Quatro casas."""
+    x = ref['popa_x'] + p['l'] * (ref['proa_x'] - ref['popa_x'])
+    y = (ref['quilha_y'] + p['a'] * (ref['topo_y'] - ref['quilha_y'])) if p['vista'] == 'perfil' else (ref['eixo_y'] + p['b'] * ref['meia_boca'])
+    return round(x, 4), round(y, 4)
+
+
+def blocos_sensores(pontos, plat):
+    """{id: [bx, by, lado]} dos pontos de UMA vista, para a plataforma `plat` ('web' ou 'app') (§1.19). Os pontos entram em ordem de `x` (empate:
+    pelo `n`); o `lado` alterna 'cima' e 'baixo' a partir de 'cima'; dentro do lado, o bloco vai na 1ª fileira em que fica a pelo menos 0,10
+    do bloco anterior dessa fileira, com `bx` = `x` limitado a [0,06, 0,94]. Revisão do C10: com 4 fileiras de 0,10, cinco sensores do perfil
+    (em 0,09 de largura) e dez da planta (em 0,18) não cabem com `bx` = `x`. Quando nenhuma fileira do lado cabe, o bloco anda para a direita só
+    o necessário: vai para a fileira do lado que libera primeiro, a 0,10 do bloco anterior dela. Passando de 0,94, levanta ValueError (o gerador
+    falha em vez de gravar blocos que se sobrepõem)."""
+    fil, ultimo, out = BLOCO_FILEIRAS[plat], {}, {}
+    for i, p in enumerate(sorted(pontos, key=lambda q: (q['x'], q['n']))):
+        lado = 'cima' if i % 2 == 0 else 'baixo'
+        bx = round(min(max(p['x'], BLOCO_BX[0]), BLOCO_BX[1]), 4)
+        cabem = [by for by in fil[lado] if by not in ultimo.get(lado, {}) or round(bx - ultimo[lado][by], 4) >= BLOCO_DIST]
+        if cabem:
+            by = cabem[0]
+        else:
+            by = min(fil[lado], key=lambda f: ultimo[lado][f])
+            bx = round(ultimo[lado][by] + BLOCO_DIST, 4)
+            if bx > BLOCO_BX[1]:
+                raise ValueError('sensores: sem lugar para o bloco de %s (%s, %s)' % (p['id'], plat, lado))
+        ultimo.setdefault(lado, {})[by] = bx
+        out[p['id']] = [bx, by, lado]
+    return out
+
+
+PECAS_IDS = tuple('p%02d' % i for i in range(1, 13))
+PECAS_QTD = {'p03': (1, 2), 'p05': (0, 1)}   # a única BAIXA (1 de 2) e a única ZERO (0 de 1, a mesma falta do diário d03); as outras estão no mínimo ou acima
+PECAS_CHAVES = ('id', 'n', 'qtd', 'min', 'local', 'tarefas', 'obs')
+
+ALARMES_CHAVES = ('chave', 'max', 'histerese_s', 'nivel', 'fonte', 'metricas')
+ALARMES_METRICA = ('id', 'campos', 'nome', 'palavras', 'un', 'casas', 'faixa', 'ops', 'motor')
+FAIXAS_PEDIDAS = {   # campo → faixa aceita para o limite pedido (§1.21); a regra é a `faixa` própria, não o D.replay.limites
+    'motor_bb_oleo_bar': (0.5, 6.0), 'motor_be_oleo_bar': (0.5, 6.0), 'motor_bb_arref_c': (60, 100), 'motor_be_arref_c': (60, 100),
+    'motor_bb_rpm': (500, 2600), 'motor_be_rpm': (500, 2600), 'bateria_0_tensao_v': (22.0, 30.0), 'bateria_1_tensao_v': (22.0, 30.0),
+    'bateria_2_tensao_v': (11.0, 15.0), 'profundidade_m': (1, 50), 'vento_verdadeiro_nos': (5, 50), 'sog_nos': (1, 30),
+    'pressao_barometrica_hpa': (980, 1040), 'temp_agua_c': (10, 32), 'diesel_litros': (100, 1600), 'tanque_agua_pct': (5, 100),
+    'tanque_cinzas_pct': (5, 100), 'tanque_negras_pct': (5, 100)}
+
+
+def _f_checklists(X):
+    """F09 (§1.18): os 4 tipos, os 36 itens com `c`, ✓ automático, FAQ e tela do contrato, a `fonte` de cada um (um §n que existe nos guias
+    gerados ou «boa prática») e a trava de lugar e de número de pessoas."""
+    out, ck = [], X.D.get('checklists')
+    if not isinstance(ck, dict):
+        return ['checklists ausente (F09, §1.18)']
+    if set(ck) != {'fonte', 'tipos', 'itens'}:
+        out.append('checklists: chaves %s (precisa de fonte, tipos e itens)' % sorted(ck))
+    if ck.get('fonte') != X.arq.get('checklist'):
+        out.append('checklists.fonte %r ≠ o título do guia (drive.arquivos.checklist)' % ck.get('fonte'))
+    if ck.get('tipos') != [dict(zip(('id', 'l', 'aba', 'nome', 'sys'), t)) for t in CK_TIPOS]:
+        out.append('checklists.tipos ≠ os 4 do §1.18 (id, l, aba, nome, sys), nesta ordem')
+    itens = ck.get('itens')
+    if not (isinstance(itens, dict) and list(itens) == [t[0] for t in CK_TIPOS]):
+        return out + ['checklists.itens: precisa dos 4 tipos %s, nesta ordem' % ', '.join(t[0] for t in CK_TIPOS)]
+    secao = lambda t: ' §' + t['secao'] if str(t.get('secao'))[:1].isdigit() else ' § ' + str(t.get('secao'))   # «Guia §1 · Antes» · «Checklist § Chegada»
+    fontes_ok = {BOA_PRATICA} | {str(t.get('fonte')) + secao(t) for t in X.trechos}
+    for tipo, ref in CK_C.items():
+        lista = itens[tipo]
+        if not (isinstance(lista, list) and all(isinstance(it, dict) for it in lista)):
+            out.append('checklists.itens.%s não é uma lista de itens' % tipo)
+            continue
+        ids = [it.get('id') for it in lista]
+        if ids != list(ref):
+            out.append('checklists.itens.%s: ids %s ≠ %s' % (tipo, ids, list(ref)))
+        for it in lista:
+            i = it.get('id')
+            cam = 'checklists.itens.%s.%s' % (tipo, i)
+            if set(it) - set(CK_CHAVES):
+                out.append('%s: chave fora da forma (%s)' % (cam, ', '.join(sorted(set(it) - set(CK_CHAVES)))))
+            if it.get('c') != ref.get(i):
+                out.append('%s.c %r ≠ %r (§1.18)' % (cam, it.get('c'), ref.get(i)))
+            if not (isinstance(it.get('t'), str) and it['t'].strip()):
+                out.append('%s.t vazio' % cam)
+            elif R_PESSOAS.search(it['t']):
+                out.append('%s.t: número de pessoas no item «%s»' % (cam, it['t']))
+            if it.get('fonte') not in fontes_ok:
+                out.append('%s.fonte %r não é um §n que existe nos guias gerados nem «%s»' % (cam, it.get('fonte'), BOA_PRATICA))
+            auto = CK_AUTO.get(i)
+            esperado = (auto[0], True if auto[1] else None) if auto else (None, None)   # `parcial` só existe com o valor true
+            if (it.get('auto'), it.get('parcial')) != esperado:
+                out.append('%s: auto/parcial %r/%r ≠ %r/%r (tabela do §1.18; parcial só com o valor true)' % (cam, it.get('auto'), it.get('parcial'), *esperado))
+            if it.get('faq') != CK_FAQ.get(i):
+                out.append('%s.faq %r ≠ %r' % (cam, it.get('faq'), CK_FAQ.get(i)))
+            if it.get('link') != CK_LINK.get(i):
+                out.append('%s.link %r ≠ %r' % (cam, it.get('link'), CK_LINK.get(i)))
+    return out
+
+
+def _f_sensores(X):
+    """F08 (§1.19): o desenho, a `referencia`, os 22 pontos com x/y pela fórmula, e o `bloco` de cada plataforma pela regra (a recontagem do
+    contrato) e pelos invariantes soltos (lado alternado, fileira e `bx` dentro dos limites)."""
+    out, sn = [], X.D.get('sensores')
+    if not isinstance(sn, dict):
+        return ['sensores ausente (F08, §1.19)']
+    if set(sn) != {'perfil', 'planta', 'referencia', 'pontos'}:
+        out.append('sensores: chaves %s (precisa de perfil, planta, referencia e pontos)' % sorted(sn))
+    for v in ('perfil', 'planta'):
+        if sn.get(v) != SENSORES_DESENHO[v]:
+            out.append('sensores.%s %r ≠ %r (o desenho da Fase 4 segue este caminho e este tamanho)' % (v, sn.get(v), SENSORES_DESENHO[v]))
+    if sn.get('referencia') != SENSORES_REFERENCIA:
+        out.append('sensores.referencia ≠ a do §1.19')
+    pontos = sn.get('pontos')
+    if not (isinstance(pontos, list) and len(pontos) == len(SENSORES_IDS) and all(isinstance(p, dict) for p in pontos)):
+        return out + ['sensores.pontos: precisa de %d pontos' % len(SENSORES_IDS)]
+    for i, p in enumerate(pontos):
+        cam, vista = 'sensores.pontos[%s]' % p.get('id', i), 'perfil' if i < SENSORES_PERFIL else 'planta'
+        if p.get('n') != i + 1 or p.get('id') != SENSORES_IDS[i] or p.get('vista') != vista:
+            out.append('%s: n/id/vista %r/%r/%r ≠ %d/%s/%s (§1.19)' % (cam, p.get('n'), p.get('id'), p.get('vista'), i + 1, SENSORES_IDS[i], vista))
+        eixo = 'a' if vista == 'perfil' else 'b'
+        lim = (0, 1) if vista == 'perfil' else (-1, 1)
+        if set(p) != {'n', 'id', 'vista', 'l', eixo, 'x', 'y', 'rotulo', 'onde', 'campos', 'bloco'}:
+            out.append('%s: chaves %s fora da forma da vista %s' % (cam, sorted(p), vista))
+            continue
+        if not (_num(p['l']) and 0 <= p['l'] <= 1 and _num(p[eixo]) and lim[0] <= p[eixo] <= lim[1]):
+            out.append('%s: l/%s fora de %s' % (cam, eixo, lim))
+            continue
+        xy = sensor_xy(dict(p, vista=vista), sn.get('referencia') if isinstance(sn.get('referencia'), dict) and set(sn['referencia']) == set(SENSORES_REFERENCIA) else SENSORES_REFERENCIA)
+        if (p['x'], p['y']) != xy:
+            out.append('%s: (x, y) %r ≠ a fórmula da referencia %r' % (cam, (p['x'], p['y']), xy))
+        for k in ('rotulo', 'onde'):
+            if not (isinstance(p[k], str) and p[k].strip()):
+                out.append('%s.%s vazio' % (cam, k))
+        if not (isinstance(p['campos'], list) and p['campos'] and all(isinstance(c, str) for c in p['campos']) and len(set(p['campos'])) == len(p['campos'])):
+            out.append('%s.campos: precisa de uma lista não vazia de campos sem repetição' % cam)
+    por_vista = {v: [p for p in lista if _num(p.get('x')) and _num(p.get('n')) and isinstance(p.get('id'), str)]
+                 for v, lista in (('perfil', pontos[:SENSORES_PERFIL]), ('planta', pontos[SENSORES_PERFIL:]))}   # pela posição na lista, não pelo `vista` gravado
+    for plat in ('web', 'app'):
+        for v, ps in por_vista.items():
+            try:
+                esperado = blocos_sensores(ps, plat)
+            except (ValueError, TypeError, KeyError) as e:
+                out.append('sensores.%s/%s: %s' % (v, plat, e))
+                continue
+            for k, p in enumerate(sorted(ps, key=lambda q: (q['x'], q['n']))):
+                b = (p.get('bloco') or {}).get(plat) if isinstance(p.get('bloco'), dict) else None
+                cam = 'sensores.pontos[%s].bloco.%s' % (p['id'], plat)
+                if not (isinstance(b, list) and len(b) == 3 and _num(b[0]) and _num(b[1]) and b[2] in BLOCO_FILEIRAS[plat]):
+                    out.append('%s: precisa de [bx, by, lado] com lado cima ou baixo (%r)' % (cam, b))
+                    continue
+                if b[2] != ('cima' if k % 2 == 0 else 'baixo'):
+                    out.append('%s: lado %r não alterna (cima, baixo, … em ordem de x)' % (cam, b[2]))
+                if b[1] not in BLOCO_FILEIRAS[plat][b[2]]:
+                    out.append('%s: by %r fora das fileiras %s do lado %s' % (cam, b[1], BLOCO_FILEIRAS[plat][b[2]], b[2]))
+                if not BLOCO_BX[0] <= b[0] <= BLOCO_BX[1] or b[0] < min(max(p['x'], BLOCO_BX[0]), BLOCO_BX[1]) - 1e-9:
+                    out.append('%s: bx %r fora de [x limitado a %s, %s] (o bloco só anda para a direita, e só quando a fileira não cabe)' % (cam, b[0], BLOCO_BX[0], BLOCO_BX[1]))
+                if b != esperado.get(p['id']):
+                    out.append('%s: %r ≠ %r (a regra do §1.19 recontada)' % (cam, b, esperado.get(p['id'])))
+    return out
+
+
+def _f_pecas(X):
+    """F22 (§1.20): 12 peças, sem código de fabricante (`pn`) nem preço, a única BAIXA e a única ZERO, `tarefas` na agenda (IDS)."""
+    out, pecas = [], X.D.get('pecas')
+    if pecas is None:
+        return ['pecas ausente (F22, §1.20)']
+    if not (isinstance(pecas, list) and len(pecas) == len(PECAS_IDS) and all(isinstance(p, dict) for p in pecas)):
+        return ['pecas: precisa de %d peças (F22, §1.20)' % len(PECAS_IDS)]
+    if [p.get('id') for p in pecas] != list(PECAS_IDS):
+        out.append('pecas: ids %s ≠ %s' % ([p.get('id') for p in pecas], list(PECAS_IDS)))
+    for p in pecas:
+        cam = 'pecas.%s' % p.get('id')
+        if set(p) - set(PECAS_CHAVES) or not {'id', 'n', 'qtd', 'min', 'local'} <= set(p):
+            out.append('%s: chaves %s fora da forma (sem pn nem preço)' % (cam, sorted(p)))
+        if not (isinstance(p.get('n'), str) and p['n'].strip()):
+            out.append('%s.n vazio' % cam)
+        q, m = p.get('qtd'), p.get('min')
+        if not (type(q) is int and type(m) is int and q >= 0 and m >= 1):
+            out.append('%s: qtd/min %r/%r (inteiros, qtd ≥ 0 e min ≥ 1)' % (cam, q, m))
+        elif (q, m) != PECAS_QTD.get(p['id'], (q, m)) or (p['id'] not in PECAS_QTD and q < m):
+            out.append('%s: qtd/min %r/%r (só p03 fica abaixo do mínimo, 1 de 2, e só p05 chega a zero, 0 de 1)' % (cam, q, m))
+        if 'tarefas' in p and not (isinstance(p['tarefas'], list) and p['tarefas'] and all(isinstance(t, str) for t in p['tarefas'])):
+            out.append('%s.tarefas: lista não vazia de ids da agenda' % cam)
+    p05 = next((p for p in pecas if p.get('id') == 'p05'), {})
+    if 'gerador-rotor' not in (p05.get('tarefas') or []):
+        out.append('pecas.p05: o rotor do gerador em falta (d03) precisa da tarefa gerador-rotor')
+    return out
+
+
+def _f_alarmes(X):
+    """F12 (§1.21): a lista fechada de 18 métricas, cada uma com a `faixa` do contrato (não o D.replay.limites), `un` e `casas` do D.campos,
+    ops '<' e '>', `motor` só nos campos do motor; o nível é só `aviso`."""
+    out, al = [], X.D.get('alarmesPedidos')
+    if not isinstance(al, dict):
+        return ['alarmesPedidos ausente (F12, §1.21)']
+    if list(al) != list(ALARMES_CHAVES):
+        out.append('alarmesPedidos: chaves %s ≠ %s' % (list(al), list(ALARMES_CHAVES)))
+    if al.get('chave') != 'capitao.alarmes.v1' or al.get('max') != 10 or al.get('histerese_s') != 10:
+        out.append('alarmesPedidos: chave/max/histerese_s %r/%r/%r ≠ capitao.alarmes.v1/10/10' % (al.get('chave'), al.get('max'), al.get('histerese_s')))
+    if al.get('nivel') != 'aviso':
+        out.append('alarmesPedidos.nivel %r ≠ aviso (o alarme pedido nunca vira crítico, §2.4)' % al.get('nivel'))
+    if al.get('fonte') != 'alarme pedido no chat · avaliado neste aparelho':
+        out.append('alarmesPedidos.fonte %r' % al.get('fonte'))
+    ms = al.get('metricas')
+    if not (isinstance(ms, list) and all(isinstance(m, dict) for m in ms)):
+        return out + ['alarmesPedidos.metricas: lista de métricas']
+    ids, usados = [m.get('id') for m in ms], []
+    if len(set(ids)) != len(ids) or not all(isinstance(i, str) and i for i in ids):
+        out.append('alarmesPedidos.metricas: ids repetidos ou vazios')
+    for m in ms:
+        cam = 'alarmesPedidos.%s' % m.get('id')
+        if set(m) - set(ALARMES_METRICA) or not set(ALARMES_METRICA) - {'motor'} <= set(m):
+            out.append('%s: chaves %s fora da forma' % (cam, sorted(m)))
+        cs = m.get('campos')
+        if not (isinstance(cs, list) and len(cs) == 1 and cs[0] in FAIXAS_PEDIDAS):
+            out.append('%s.campos %r: um campo da lista fechada do §1.21' % (cam, cs))
+            continue
+        c = cs[0]
+        usados.append(c)
+        ref = FAIXAS_PEDIDAS[c]
+        if not (isinstance(m.get('faixa'), list) and tuple(m['faixa']) == ref):
+            out.append('%s.faixa %r ≠ %r (§1.21)' % (cam, m.get('faixa'), list(ref)))
+        if m.get('ops') != ['<', '>']:
+            out.append("%s.ops %r ≠ ['<', '>']" % (cam, m.get('ops')))
+        if ('motor' in m and m['motor'] is not True) or (m.get('motor') is True) != c.startswith('motor_'):
+            out.append('%s.motor %r (true só nos campos do motor: óleo, arrefecimento e rpm)' % (cam, m.get('motor')))
+        d = X.campos.get(c) or {}
+        if m.get('un') != d.get('un') or m.get('casas') != d.get('casas'):
+            out.append('%s: un/casas %r/%r ≠ os do D.campos %r/%r' % (cam, m.get('un'), m.get('casas'), d.get('un'), d.get('casas')))
+        if not (isinstance(m.get('nome'), str) and m['nome'].strip()):
+            out.append('%s.nome vazio' % cam)
+        ps = m.get('palavras')
+        if not (isinstance(ps, list) and ps and all(isinstance(x, str) and x.strip() and x.strip() == norm(x).strip() for x in ps) and len(set(ps)) == len(ps)):
+            out.append('%s.palavras: lista não vazia, sem repetição, minúsculas e sem acento' % cam)
+    if sorted(usados) != sorted(FAIXAS_PEDIDAS):
+        out.append('alarmesPedidos.metricas: os campos %s ≠ os 18 do §1.21' % sorted(usados))
+    return out
+
+
+def a_funcoes(X):
+    """C10 (§1.18–§1.21): checklists (F09), sensores (F08), peças (F22) e alarmes pedidos (F12), os quatro nos dois modos."""
+    return _f_checklists(X) + _f_sensores(X) + _f_pecas(X) + _f_alarmes(X)
+
+
 ASSERCOES = [
     ('TERMOS', a_termos), ('NULO', a_nulo), ('SIMULACAO_UNICA', a_simulacao_unica), ('TAMANHO', a_tamanho), ('MMSI9', a_mmsi9),
     ('REGISTRO', a_registro), ('HEX15', a_hex15), ('SEM_INDICATIVO', a_sem_indicativo), ('AFIRMA_REAL', a_afirma_real),
@@ -3041,6 +3320,8 @@ ASSERCOES = [
     ('EMBARCACAO', a_embarcacao),
     # Revisão 3 do C4 (§1.5, §2.5): o estabilizador é de 12 V DC; nenhum texto dele fala de energia AC.
     ('ESTABILIZADOR_12V', a_estabilizador_12v),
+    # C10 (§1.18–§1.21): a forma e a referência do contrato dos checklists, sensores, peças e alarmes pedidos, sem nome na §6.3.
+    ('FUNCOES', a_funcoes),
 ]
 NOMES = [n for n, _ in ASSERCOES]
 

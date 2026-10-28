@@ -47,6 +47,10 @@
   chave ou coluna de posição em qualquer fonte do Drive (c8_real: o D e as fontes de verdade do modo real, com a posição plantada); o Formato do
   quadro do coletor não mostra mais a coluna Origem (a taxonomia interna do D.campos) e a LACO acusa essa coluna e os valores de ORIGENS numa
   planilha da pasta 05.
+- C10 (CONTRATO §1.18–§1.21; c10_funcoes): checklists (4 tipos, 35 itens com `c`, ✓ automático, FAQ e `fonte` num §n que existe ou «boa prática»),
+  sensores (22 pontos, x/y pela fórmula, `bloco` das duas plataformas), peças (12, a única BAIXA e a única ZERO) e alarmes pedidos (18 métricas,
+  `faixa` própria, nível só aviso), nos dois modos; a asserção FUNCOES (forma e referência do contrato) e as regras que o C10 ativou (IDS,
+  NULO, SEM_EMERGENCIA, SEM_SALVATAGEM_EM, LOCAL_VOCAB, TERMOS) com amostras plantadas.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -519,6 +523,9 @@ AMOSTRAS = {
     # (revisão 7 do C5) trava 17: o modelo do EPIRB num guia (g_epirb §1) passava no gerador; só o D.protocolos e a agenda eram conferidos
     'SEGURANCA_SEM_MODELO': (lambda r: no_trecho('g_epirb', '1 · ', ' O modelo é o Ocean Signal SafeSea E100G.' if r else ' Confira a etiqueta do equipamento.'),
                              'base:trechos[%d].texto: fabricante ou modelo de equipamento de segurança [Ocean Signal]' % T_EPIRB1),
+    # (C10) a forma e a referência do contrato dos checklists, sensores, peças e alarmes pedidos: a faixa do óleo de 0,5–6,0 bar passa a 0,5–7,0
+    'FUNCOES': (lambda r: (lambda k: (por_id(k['D']['alarmesPedidos']['metricas'], 'oleo_bb').update({'faixa': [0.5, 7.0 if r else 6.0]}), k)[1])(hoje()),
+                'alarmesPedidos.oleo_bb.faixa'),
     # (revisão 3 do C4) o Seakeeper 3 é de 12 V DC: o g_seakeeper §1 de antes ("Sem AC, o display avisa…") reprova
     'ESTABILIZADOR_12V': (lambda r: com_trecho({'fonte': G.GUIAS['g_seakeeper']['titulo'], 'secao': '1 · Teste', 'equip': 'Estabilizador Seakeeper',
                                                 'texto': 'Sem AC, o display avisa e o volante não acelera.' if r else 'Com o banco de 12 V carregado.'}),
@@ -2758,6 +2765,272 @@ def c9_historico():
            'modo real: D.serie24v só na simulação')
 
 
+# ——————————————————————————————— C10: checklists, sensores, peças e alarmes pedidos (CONTRATO §1.18–§1.21) ———————————————————————————————
+C10_ITENS = {'saida': 14, 'chegada': 8, 'abastecimento': 7, 'fundeio': 6}
+
+
+def c10_ck(D, i):
+    """O item `i` do checklist (em qualquer tipo)."""
+    return next(x for lista in D['checklists']['itens'].values() for x in lista if x['id'] == i)
+
+
+def c10_sn(D, i):
+    return next(p for p in D['sensores']['pontos'] if p['id'] == i)
+
+
+def c10_pc(D, i):
+    return next(p for p in D['pecas'] if p['id'] == i)
+
+
+def c10_al(D, i):
+    return next(m for m in D['alarmesPedidos']['metricas'] if m['id'] == i)
+
+
+C10_CTX = {}
+
+
+def c10_base():
+    """A base e as fontes de hoje, geradas uma vez: as asserções leves leem os trechos (a `fonte` do item) e, nas de texto, as fontes."""
+    if not C10_CTX:
+        D = G.dados()
+        B = G.base_conhecimento()
+        C10_CTX.update(B=B, F=G.gera_fontes(D))
+    return C10_CTX
+
+
+def c10_planta(regra, fn, o_que, muda, espera, so_uma=False, faq=None):
+    """A asserção `fn` (a função da `regra` no confere.py, sozinha sobre o D alterado) acusa a amostra plantada como violação NOVA (com `so_uma`,
+    a única). É a prova leve de cada checagem: a rodada completa (verifica) custa segundos por amostra e as estruturais reprovam o gerador."""
+    c = c10_base()
+    bom, D = fn(C.Ctx(copy.deepcopy(G.dados()), c['B'], c['F'], {}, faq)), copy.deepcopy(G.dados())
+    muda(D)
+    novos = [m for m in fn(C.Ctx(D, c['B'], c['F'], {}, faq)) if m not in bom]
+    ok('%s: acusa a amostra plantada — C10: %s%s' % (regra, o_que, ' (uma violação só)' if so_uma else ''),
+       any(espera in m for m in novos) and (not so_uma or len(novos) == 1) and (regra in C.RELATORIO) == (regra == 'TERMOS'), {'novas': novos[:3]})
+
+
+def c10_funcoes():
+    print('C10 (CONTRATO §1.18–§1.21): checklists (F09), sensores (F08), peças (F22) e alarmes pedidos (F12)')
+    k = hoje()
+    D = k['D']
+    V = verifica(k)
+    ok('o dado de hoje não acusa nada na FUNCOES, na IDS, na NULO, na SEM_EMERGENCIA, na SEM_SALVATAGEM_EM, na LOCAL_VOCAB nem na TAMANHO',
+       not any(V[n] for n in ('FUNCOES', 'IDS', 'NULO', 'SEM_EMERGENCIA', 'SEM_SALVATAGEM_EM', 'LOCAL_VOCAB', 'TAMANHO')),
+       {n: V[n][:2] for n in ('FUNCOES', 'IDS', 'NULO', 'SEM_EMERGENCIA', 'SEM_SALVATAGEM_EM', 'LOCAL_VOCAB', 'TAMANHO') if V[n]})
+    # ——— checklists (§1.18)
+    ck = D['checklists']
+    ok('checklists: a fonte é o título do guia, os 4 tipos (id, l, aba, nome, sys) na ordem do contrato e 14 + 8 + 7 + 6 itens',
+       ck['fonte'] == 'Checklist de bordo' and [t['id'] for t in ck['tipos']] == ['saida', 'chegada', 'abastecimento', 'fundeio']
+       and ck['tipos'][2] == {'id': 'abastecimento', 'l': 'Abastecimento', 'aba': 'no posto', 'nome': 'Checklist de abastecimento', 'sys': 'Combustível'}
+       and {t: len(v) for t, v in ck['itens'].items()} == C10_ITENS and sum(C10_ITENS.values()) == 35, {t: len(v) for t, v in ck['itens'].items()})
+    ok('checklists: s01 e s04 e s11 são parciais; o s12 é sobre a agenda (`tarefas`); tempo e maré (s01, f06) são `auto`; o resto do ✓ automático da tabela do §1.18 (19 itens)',
+       [x['id'] for t in ck['itens'].values() for x in t if x.get('parcial')] == ['s01', 's04', 's11'] and c10_ck(D, 's12')['auto'] == 'tarefas'
+       and c10_ck(D, 's01')['auto'] == 'tempo' and c10_ck(D, 'f06')['auto'] == 'mare' and sum(1 for t in ck['itens'].values() for x in t if 'auto' in x) == 19,
+       [(x['id'], x.get('auto')) for t in ck['itens'].values() for x in t if 'auto' in x])
+    ok('checklists: o s09 (estabilizador) não cita minutos do fabricante; o s13 é a frase do guia (coletes, "conte as pessoas a bordo agora") e a única com "boia"',
+       'min' not in c10_ck(D, 's09')['t'] and c10_ck(D, 's13')['t'].startswith('Coletes: um por pessoa — conte as pessoas a bordo agora;')
+       and [x['id'] for t in ck['itens'].values() for x in t if 'boia' in x['t'].lower()] == ['s13'], c10_ck(D, 's09')['t'])
+    ok('checklists: a fonte do item é o §n do guia que diz o que ele diz (s03 → Motores §1, s07 → elétrico §2, c03 → Motores §6, f02 → Guincho §1) ou «boa prática»; o s05 e o a07, o Abastecimento do checklist',
+       c10_ck(D, 's03')['fonte'] == 'Guia de bordo — Motores Cummins §1 · Antes da partida'
+       and c10_ck(D, 's07')['fonte'] == 'Guia de bordo — Sistema elétrico 24 V e 12 V §2 · Faixas' and c10_ck(D, 'c03')['fonte'] == 'Guia de bordo — Motores Cummins §6 · Parada'
+       and c10_ck(D, 'f02')['fonte'] == 'Guia de bordo — Guincho e corrente Lewmar §1 · Lançar' and c10_ck(D, 's05')['fonte'] == c10_ck(D, 'a07')['fonte'] == 'Checklist de bordo § Abastecimento'
+       and sum(1 for t in ck['itens'].values() for x in t if x['fonte'] == 'boa prática') == 12, [x['id'] for t in ck['itens'].values() for x in t if x['fonte'] == 'boa prática'])
+    ok('checklists: os itens do FAQ (17) e as duas telas (c08 → diário, a06 → Abastecimento) do contrato; os demais não têm `faq` nem `link`',
+       sum(1 for t in ck['itens'].values() for x in t if 'faq' in x) == 17 and c10_ck(D, 'a07')['faq'] == 'CK-05' and c10_ck(D, 's13')['faq'] == 'EM-09'
+       and c10_ck(D, 'c08')['link'] == 'G3-Diario' and c10_ck(D, 'a06')['link'] == 'G2-Abastecimento'
+       and sum(1 for t in ck['itens'].values() for x in t if 'link' in x) == 2, '')
+    # ——— sensores (§1.19)
+    sn = D['sensores']
+    ok('sensores: o desenho (caminho e tamanho que a Fase 4 segue), a referencia e 22 pontos (7 no perfil, 15 na planta), n de 1 a 22',
+       sn['perfil'] == {'img': 'assets/sensores-perfil.svg', 'w': 1200, 'h': 360} and sn['planta'] == {'img': 'assets/sensores-planta.svg', 'w': 1200, 'h': 420}
+       and sn['referencia'] == {'popa_x': 0.04, 'proa_x': 0.95, 'quilha_y': 0.92, 'topo_y': 0.08, 'eixo_y': 0.5, 'meia_boca': 0.32}
+       and [p['n'] for p in sn['pontos']] == list(range(1, 23)) and sum(1 for p in sn['pontos'] if p['vista'] == 'perfil') == 7, '')
+    gps, mbb = c10_sn(D, 'gps'), c10_sn(D, 'motor_bb')
+    ok('sensores: x e y pela fórmula, contados à mão aqui (antena GPS: l 0,55, a 0,95 → 0,5405 e 0,122; motor BB: l 0,25, b −0,40 → 0,2675 e 0,372)',
+       (gps['x'], gps['y']) == (0.5405, 0.122) and (mbb['x'], mbb['y']) == (0.2675, 0.372) and 'b' not in gps and 'a' not in mbb, (gps, mbb))
+    ok('sensores: a estação meteorológica (vento verdadeiro e aparente, ar, pressão) e o inclinômetro (jogo, caimento, proa = roll, pitch, yaw) do contrato',
+       c10_sn(D, 'meteo')['campos'] == ['vento_verdadeiro_nos', 'vento_verdadeiro_angulo', 'vento_aparente_nos', 'vento_aparente_angulo', 'temp_ar_externo_c', 'pressao_barometrica_hpa']
+       and c10_sn(D, 'inclinometro')['campos'] == ['jogo_graus', 'caimento_graus', 'proa_graus'], '')
+    blocos = [(p['vista'], plat, b[1]) for p in sn['pontos'] for plat, b in p['bloco'].items()]
+    ok('sensores: as fileiras do contrato (web: 0,05 e 0,15 em cima, 0,85 e 0,95 embaixo; app: 0,04 e 0,13, 0,87 e 0,96), o lado alterna e bx fica em [0,06, 0,94]',
+       {(plat, b[1]) for p in sn['pontos'] for plat, b in p['bloco'].items()} == {('web', 0.05), ('web', 0.15), ('web', 0.85), ('web', 0.95),
+                                                                                  ('app', 0.04), ('app', 0.13), ('app', 0.87), ('app', 0.96)}
+       and all(0.06 <= b[0] <= 0.94 for p in sn['pontos'] for b in p['bloco'].values()) and len(blocos) == 44, '')
+    # o contrato fixa bx = x, o que 5 sensores do perfil (em 0,09 de largura) e 10 da planta (em 0,18) não comportam em 4 fileiras de 0,10: o bloco anda para a direita só o necessário
+    move = [(p['id'], plat) for p in sn['pontos'] for plat, b in p['bloco'].items() if b[0] > min(max(p['x'], 0.06), 0.94) + 1e-9]
+    ok('sensores: onde 4 fileiras não comportam bx = x, o bloco anda para a direita só o necessário (nunca para a esquerda): %d dos 44 blocos; o resto fica em bx = x' % len(move),
+       0 < len(move) < 22 and all(c10_sn(D, i)['bloco'][pl][0] - c10_sn(D, i)['x'] < 0.15 for i, pl in move), move)
+    ok('sensores: a regra recontada aqui (blocos_sensores, por plataforma e por vista) dá o bloco gravado em cada ponto, e o gps anda de 0,5405 para 0,5495 (a 0,10 do estabilizador, na mesma fileira)',
+       all(c10_sn(D, i)['bloco'][pl] == b for pl in ('web', 'app') for v in ('perfil', 'planta')
+           for i, b in C.blocos_sensores([p for p in sn['pontos'] if p['vista'] == v], pl).items()) and gps['bloco']['web'] == [0.5495, 0.85, 'baixo'], gps['bloco'])
+    # ——— peças (§1.20)
+    ok('pecas: 12 peças, p01 a p12, sem código de fabricante (pn) nem preço; só a p03 está abaixo do mínimo (1 de 2) e só a p05 chega a zero (0 de 1, a falta do diário d03)',
+       [p['id'] for p in D['pecas']] == ['p%02d' % i for i in range(1, 13)] and not any({'pn', 'preco', 'valor'} & set(p) for p in D['pecas'])
+       and [p['id'] for p in D['pecas'] if p['qtd'] < p['min']] == ['p03', 'p05'] and [p['id'] for p in D['pecas'] if p['qtd'] == 0] == ['p05']
+       and c10_pc(D, 'p05')['tarefas'] == ['gerador-rotor'], '')
+    ok('pecas: o `local` é de vocabulário fechado e as `tarefas` existem na agenda; a p10 e a p12 não têm tarefa (a chave é omitida, nunca vazia)',
+       all(C.LOCAL_PECAS.fullmatch(p['local']) for p in D['pecas']) and all(t in {a['id'] for a in D['agenda']} for p in D['pecas'] for t in p.get('tarefas', []))
+       and 'tarefas' not in c10_pc(D, 'p10') and 'tarefas' not in c10_pc(D, 'p12'), '')
+    # ——— alarmes pedidos (§1.21)
+    al = D['alarmesPedidos']
+    ok('alarmesPedidos: chave capitao.alarmes.v1, no máximo 10, histerese de 10 s, nível só aviso e a fonte do contrato',
+       (al['chave'], al['max'], al['histerese_s'], al['nivel'], al['fonte']) == ('capitao.alarmes.v1', 10, 10, 'aviso', 'alarme pedido no chat · avaliado neste aparelho'), list(al))
+    ok('alarmesPedidos: 18 métricas, as faixas do contrato escritas de novo aqui (óleo 0,5–6,0 · arrefecimento 60–100 · rpm 500–2.600 · 24 V 22–30 · 12 V 11–15 · profundidade 1–50 · '
+       'vento 5–50 · SOG 1–30 · pressão 980–1.040 · água do mar 10–32 · diesel 100–1.600 · tanques 5–100) e `motor` só no óleo, no arrefecimento e na rpm',
+       [(m['id'], m['faixa']) for m in al['metricas']] == [
+           ('oleo_bb', [0.5, 6.0]), ('oleo_be', [0.5, 6.0]), ('arref_bb', [60, 100]), ('arref_be', [60, 100]), ('rpm_bb', [500, 2600]), ('rpm_be', [500, 2600]),
+           ('b24s', [22.0, 30.0]), ('b24p', [22.0, 30.0]), ('b12', [11.0, 15.0]), ('profundidade', [1, 50]), ('vento', [5, 50]), ('sog', [1, 30]),
+           ('pressao', [980, 1040]), ('agua_mar', [10, 32]), ('diesel', [100, 1600]), ('agua', [5, 100]), ('cinzas', [5, 100]), ('negras', [5, 100])]
+       and [m['id'] for m in al['metricas'] if m.get('motor')] == ['oleo_bb', 'oleo_be', 'arref_bb', 'arref_be', 'rpm_bb', 'rpm_be'], [m['id'] for m in al['metricas']])
+    ok('alarmesPedidos: a regra é a `faixa` própria, não o D.replay.limites (o vento, a SOG, a pressão e a água do mar não têm limite no replay); nome, un e casas saem do D.campos',
+       all(m['campos'][0] not in D['replay']['limites'] for m in al['metricas'] if m['id'] in ('vento', 'sog', 'pressao', 'agua_mar'))
+       and all((m['nome'], m['un'], m['casas']) == (D['campos'][m['campos'][0]]['rotulo'], D['campos'][m['campos'][0]]['un'], D['campos'][m['campos'][0]]['casas']) for m in al['metricas']), '')
+    # ——— nos dois modos, determinístico e dentro do orçamento
+    js = G.gera_js(D)
+    print('        capitao-dados.js: %.1f KB (orçamento 120 KB) · checklists %.1f KB · sensores %.1f KB · pecas %.1f KB · alarmesPedidos %.1f KB' % (
+        (len(js.encode('utf-8')) / 1024,) + tuple(len(json.dumps(D[c], ensure_ascii=False, separators=(',', ':')).encode('utf-8')) / 1024
+                                                  for c in ('checklists', 'sensores', 'pecas', 'alarmesPedidos'))))
+    ok('TAMANHO: o capitao-dados.js com os quatro blocos continua abaixo do orçamento de 120 KB (o plano B do §5, checklists e sensores em arquivo à parte, não entra)',
+       len(js.encode('utf-8')) <= 120 * 1024, len(js))
+    ok('os quatro blocos são determinísticos (duas chamadas dão o mesmo dado)',
+       G.checklists_dados() == G.checklists_dados() == D['checklists'] and G.sensores_dados() == G.sensores_dados() == D['sensores']
+       and G.alarmes_pedidos_dados() == G.alarmes_pedidos_dados() == D['alarmesPedidos'], '')
+    sim0 = G.SIMULACAO
+    try:
+        G.SIMULACAO = False
+        Dr = G.dados()
+        Vr = C.verifica(Dr, G.base_conhecimento(), G.gera_fontes(Dr), G.saidas(Dr, G.base_conhecimento()), None, None, None, None, CONST)
+    finally:
+        G.SIMULACAO = sim0
+    ok('SIMULACAO = False: os quatro blocos continuam (checklists, sensores, peças e alarmes pedidos não dependem da navegação simulada) e a FUNCOES não acusa nada',
+       all(c in Dr for c in ('checklists', 'sensores', 'pecas', 'alarmesPedidos')) and not Vr['FUNCOES'] and not Vr['IDS'], (Vr['FUNCOES'][:2], Vr['IDS'][:2]))
+    # ——— plantas (FUNCOES, leves)
+    f = C.a_funcoes
+    cp = lambda o, m, e, u=False: c10_planta('FUNCOES', f, o, m, e, u)
+    cp('tipos do checklist fora de ordem', lambda D: D['checklists']['tipos'].reverse(), 'checklists.tipos ≠ os 4 do §1.18', True)
+    cp('checklist sem o tipo fundeio', lambda D: D['checklists']['itens'].pop('fundeio'), 'checklists.itens: precisa dos 4 tipos', True)
+    cp('fonte do checklist que não é o título do guia', lambda D: D['checklists'].update({'fonte': 'Checklist'}), 'checklists.fonte', True)
+    cp('item s14 a menos', lambda D: D['checklists']['itens']['saida'].pop(), 'checklists.itens.saida: ids', True)
+    cp('item c09 a mais', lambda D: D['checklists']['itens']['chegada'].append(dict(c10_ck(D, 'c07'), id='c09')), 'checklists.itens.chegada: ids')
+    cp('rótulo `c` trocado (s05 «combustível»)', lambda D: c10_ck(D, 's05').update({'c': 'combustível'}), 'checklists.itens.saida.s05.c', True)
+    cp('texto vazio', lambda D: c10_ck(D, 's02').update({'t': ' '}), 'checklists.itens.saida.s02.t vazio', True)
+    cp('número de pessoas no item', lambda D: c10_ck(D, 's14').update({'t': 'Leve 4 pessoas a bordo.'}), 'número de pessoas no item', True)
+    cp('fonte que não existe (§11 do guia dos motores)', lambda D: c10_ck(D, 's03').update({'fonte': 'Guia de bordo — Motores Cummins §11 · Inventado'}), 's03.fonte', True)
+    cp('«boa prática» sem o acento', lambda D: c10_ck(D, 's14').update({'fonte': 'boa pratica'}), 's14.fonte', True)
+    cp('fonte vazia', lambda D: c10_ck(D, 's14').update({'fonte': ''}), 's14.fonte', True)
+    cp('✓ automático fora da tabela (s10 «tempo»)', lambda D: c10_ck(D, 's10').update({'auto': 'tempo'}), 'checklists.itens.saida.s10: auto/parcial', True)
+    cp('`parcial: false` gravado (a chave só existe com true)', lambda D: c10_ck(D, 's02').update({'parcial': False}), 'checklists.itens.saida.s02: auto/parcial', True)
+    cp('s04 sem a marca parcial', lambda D: c10_ck(D, 's04').pop('parcial'), 'checklists.itens.saida.s04: auto/parcial', True)
+    cp('s11 sem o auto', lambda D: (c10_ck(D, 's11').pop('auto'), c10_ck(D, 's11').pop('parcial')), 'checklists.itens.saida.s11: auto/parcial', True)
+    cp('faq trocado (s03 «MO-02»)', lambda D: c10_ck(D, 's03').update({'faq': 'MO-02'}), 'checklists.itens.saida.s03.faq', True)
+    cp('faq que o contrato não dá (s14)', lambda D: c10_ck(D, 's14').update({'faq': 'MO-01'}), 'checklists.itens.saida.s14.faq', True)
+    cp('link da tela com o sufixo (G3-Diario-Web)', lambda D: c10_ck(D, 'c08').update({'link': 'G3-Diario-Web'}), 'checklists.itens.chegada.c08.link', True)
+    cp('chave fora da forma no item (onde)', lambda D: c10_ck(D, 's14').update({'onde': 'convés'}), 'chave fora da forma (onde)', True)
+    cp('desenho do perfil em outro caminho', lambda D: D['sensores']['perfil'].update({'img': 'assets/outro.svg'}), 'sensores.perfil', True)
+    cp('referência do desenho mudada', lambda D: D['sensores']['referencia'].update({'popa_x': 0.05}), 'sensores.referencia ≠ a do §1.19')
+    cp('21 pontos', lambda D: D['sensores']['pontos'].pop(), 'sensores.pontos: precisa de 22 pontos', True)
+    cp('ponto com o n trocado', lambda D: c10_sn(D, 'gps').update({'n': 2}), 'sensores.pontos[gps]: n/id/vista')
+    cp('x fora da fórmula', lambda D: c10_sn(D, 'gps').update({'x': 0.55}), 'sensores.pontos[gps]: (x, y)')
+    cp('y fora da fórmula', lambda D: c10_sn(D, 'motor_bb').update({'y': 0.4}), 'sensores.pontos[motor_bb]: (x, y)', True)
+    cp('ponto do perfil na planta', lambda D: c10_sn(D, 'praca').update({'vista': 'planta'}), 'sensores.pontos[praca]: n/id/vista')
+    cp('ponto da planta com `a`', lambda D: c10_sn(D, 'motor_bb').update({'a': 0.3}), 'sensores.pontos[motor_bb]: chaves')
+    cp('l fora de 0 a 1', lambda D: c10_sn(D, 'leme').update({'l': 1.5}), 'sensores.pontos[leme]: l/b fora de')
+    cp('rótulo vazio', lambda D: c10_sn(D, 'leme').update({'rotulo': ''}), 'sensores.pontos[leme].rotulo vazio', True)
+    cp('ponto sem campos', lambda D: c10_sn(D, 'leme').update({'campos': []}), 'sensores.pontos[leme].campos', True)
+    cp('campo repetido no ponto', lambda D: c10_sn(D, 'leme').update({'campos': ['leme_graus', 'leme_graus']}), 'sensores.pontos[leme].campos', True)
+    cp('lado que não alterna (praça «baixo»)', lambda D: c10_sn(D, 'praca')['bloco']['web'].__setitem__(2, 'baixo'), 'sensores.pontos[praca].bloco.web: lado')
+    cp('fileira fora das do lado (app by 0,5)', lambda D: c10_sn(D, 'praca')['bloco']['app'].__setitem__(1, 0.5), 'sensores.pontos[praca].bloco.app: by 0.5 fora das fileiras')
+    cp('bloco à esquerda do ponto (gps bx 0,5)', lambda D: c10_sn(D, 'gps')['bloco']['web'].__setitem__(0, 0.5), 'sensores.pontos[gps].bloco.web: bx')
+    cp('bloco além de 0,94 (guincho 0,97)', lambda D: c10_sn(D, 'guincho')['bloco']['web'].__setitem__(0, 0.97), 'sensores.pontos[guincho].bloco.web: bx')
+    cp('bloco que a regra não dá (praça bx +0,0001)', lambda D: c10_sn(D, 'praca')['bloco']['app'].__setitem__(0, 0.2676),
+       'sensores.pontos[praca].bloco.app: [0.2676, 0.04, \'cima\'] ≠', True)
+    cp('bloco sem o lado', lambda D: c10_sn(D, 'praca')['bloco'].update({'web': [0.2675, 0.05]}), 'sensores.pontos[praca].bloco.web: precisa de [bx, by, lado]', True)
+    cp('11 peças', lambda D: D['pecas'].pop(), 'pecas: precisa de 12 peças', True)
+    cp('peças fora de ordem', lambda D: D['pecas'].reverse(), 'pecas: ids')
+    cp('código de fabricante na peça (pn)', lambda D: c10_pc(D, 'p01').update({'pn': 'X-100'}), 'pecas.p01: chaves', True)
+    cp('preço na peça', lambda D: c10_pc(D, 'p01').update({'preco': 10}), 'pecas.p01: chaves', True)
+    cp('peça abaixo do mínimo fora da p03 (p01 com 1)', lambda D: c10_pc(D, 'p01').update({'qtd': 1}), 'pecas.p01: qtd/min 1/2', True)
+    cp('p03 no mínimo (a única BAIXA deixa de ser)', lambda D: c10_pc(D, 'p03').update({'qtd': 2}), 'pecas.p03: qtd/min 2/2', True)
+    cp('quantidade negativa', lambda D: c10_pc(D, 'p10').update({'qtd': -1}), 'pecas.p10: qtd/min -1/2', True)
+    cp('quantidade fracionária', lambda D: c10_pc(D, 'p10').update({'qtd': 2.5}), 'pecas.p10: qtd/min 2.5/2', True)
+    cp('quantidade booleana', lambda D: c10_pc(D, 'p10').update({'qtd': True}), 'pecas.p10: qtd/min True/2', True)
+    cp('p05 sem a tarefa do rotor do gerador', lambda D: c10_pc(D, 'p05').update({'tarefas': ['baterias']}), 'pecas.p05: o rotor do gerador', True)
+    cp('tarefas vazia', lambda D: c10_pc(D, 'p01').update({'tarefas': []}), 'pecas.p01.tarefas', True)
+    cp('nome da peça vazio', lambda D: c10_pc(D, 'p01').update({'n': ''}), 'pecas.p01.n vazio', True)
+    cp('nível do alarme pedido «critico»', lambda D: D['alarmesPedidos'].update({'nivel': 'critico'}), 'alarmesPedidos.nivel', True)
+    cp('teto de 11 alarmes', lambda D: D['alarmesPedidos'].update({'max': 11}), 'alarmesPedidos: chave/max/histerese_s', True)
+    cp('chave do aparelho trocada', lambda D: D['alarmesPedidos'].update({'chave': 'capitao.alarme.v1'}), 'alarmesPedidos: chave/max/histerese_s', True)
+    cp('fonte do alarme pedido trocada', lambda D: D['alarmesPedidos'].update({'fonte': 'alarme'}), 'alarmesPedidos.fonte', True)
+    cp('chaves do topo fora de ordem', lambda D: D.update({'alarmesPedidos': dict(reversed(list(D['alarmesPedidos'].items())))}), 'alarmesPedidos: chaves')
+    cp('faixa do óleo ampliada (0,5–7,0)', lambda D: c10_al(D, 'oleo_bb').update({'faixa': [0.5, 7.0]}), 'alarmesPedidos.oleo_bb.faixa', True)
+    cp('faixa do vento ampliada (5–60)', lambda D: c10_al(D, 'vento').update({'faixa': [5, 60]}), 'alarmesPedidos.vento.faixa', True)
+    cp('faixa invertida', lambda D: c10_al(D, 'sog').update({'faixa': [30, 1]}), 'alarmesPedidos.sog.faixa', True)
+    cp('só o operador «<»', lambda D: c10_al(D, 'sog').update({'ops': ['<']}), 'alarmesPedidos.sog.ops', True)
+    cp('óleo sem `motor`', lambda D: c10_al(D, 'oleo_bb').pop('motor'), 'alarmesPedidos.oleo_bb.motor', True)
+    cp('`motor` no vento', lambda D: c10_al(D, 'vento').update({'motor': True}), 'alarmesPedidos.vento.motor', True)
+    cp('`motor: false` na rpm', lambda D: c10_al(D, 'rpm_bb').update({'motor': False}), 'alarmesPedidos.rpm_bb.motor', True)
+    cp('unidade diferente do D.campos', lambda D: c10_al(D, 'diesel').update({'un': 'l'}), 'alarmesPedidos.diesel: un/casas', True)
+    cp('casas diferentes do D.campos', lambda D: c10_al(D, 'oleo_be').update({'casas': 2}), 'alarmesPedidos.oleo_be: un/casas', True)
+    cp('palavra com acento e maiúscula', lambda D: c10_al(D, 'agua').update({'palavras': ['Água doce']}), 'alarmesPedidos.agua.palavras', True)
+    cp('palavras vazias', lambda D: c10_al(D, 'agua').update({'palavras': []}), 'alarmesPedidos.agua.palavras', True)
+    cp('palavra repetida', lambda D: c10_al(D, 'agua').update({'palavras': ['agua doce', 'agua doce']}), 'alarmesPedidos.agua.palavras', True)
+    cp('17 métricas', lambda D: D['alarmesPedidos']['metricas'].pop(), 'alarmesPedidos.metricas: os campos', True)
+    cp('métrica com 2 campos', lambda D: c10_al(D, 'agua').update({'campos': ['tanque_agua_pct', 'tanque_cinzas_pct']}), 'alarmesPedidos.agua.campos')
+    cp('campo fora da lista fechada', lambda D: c10_al(D, 'agua').update({'campos': ['tanque_xpto_pct']}), 'alarmesPedidos.agua.campos')
+    cp('nome da métrica vazio', lambda D: c10_al(D, 'agua').update({'nome': ''}), 'alarmesPedidos.agua.nome vazio', True)
+    cp('ids repetidos nas métricas', lambda D: c10_al(D, 'negras').update({'id': 'cinzas'}), 'alarmesPedidos.metricas: ids repetidos', True)
+    cp('chave fora da forma na métrica', lambda D: c10_al(D, 'agua').update({'lado': 'bb'}), 'alarmesPedidos.agua: chaves', True)
+    cp('checklists ausente', lambda D: D.pop('checklists'), 'checklists ausente')
+    cp('sensores ausente', lambda D: D.pop('sensores'), 'sensores ausente')
+    cp('pecas ausente', lambda D: D.pop('pecas'), 'pecas ausente')
+    cp('alarmesPedidos ausente', lambda D: D.pop('alarmesPedidos'), 'alarmesPedidos ausente')
+    # ——— plantas das outras regras que o C10 ativa (cada uma sobre a sua função, leve)
+    ids = lambda o, m, e, u=True: c10_planta('IDS', C.a_ids, o, m, e, u)
+    c = c10_base()
+    faq_ok = {'itens': [{'id': i} for i in sorted(set(C.CK_FAQ.values()))]}
+    faq_sem = {'itens': [{'id': i} for i in sorted(set(C.CK_FAQ.values()) - {'MO-01'})]}
+    bom = [m for m in C.a_ids(C.Ctx(copy.deepcopy(G.dados()), c['B'], c['F'], {}, faq_ok)) if 'checklists' in m]
+    mau = [m for m in C.a_ids(C.Ctx(copy.deepcopy(G.dados()), c['B'], c['F'], {}, faq_sem)) if 'checklists' in m]
+    ok('IDS: com o FAQ que tem os 17 ids do checklist nada acusa; sem o MO-01, o s03 acusa «faq fora do FAQ» (uma violação só)',
+       not bom and len(mau) == 1 and 'checklists.itens.saida.s03.faq fora do FAQ' in mau[0], (bom[:2], mau[:2]))
+    ids('peça com a tarefa fora da agenda', lambda D: c10_pc(D, 'p01').update({'tarefas': ['nao-existe']}), 'pecas.p01.tarefas')
+    ids('sensor com o campo fora do D.campos', lambda D: c10_sn(D, 'leme').update({'campos': ['leme_graus', 'leme_xpto']}), "sensores.leme.campos: 'leme_xpto' fora de D.campos")
+    ids('sensores que não cobrem o caimento (F08)', lambda D: c10_sn(D, 'inclinometro').update({'campos': ['jogo_graus', 'proa_graus']}),
+        "sensores: os campos não cobrem 'caimento_graus' (F08/F33)")
+    ids('alarme pedido com o campo fora do D.campos', lambda D: c10_al(D, 'agua').update({'campos': ['tanque_xpto_pct']}), 'alarmesPedidos.agua.campos')
+    ids('faixa do alarme pedido invertida', lambda D: c10_al(D, 'sog').update({'faixa': [30, 1]}), 'alarmesPedidos.sog.faixa')
+    ids('dois blocos da mesma fileira a menos de 0,10 (gps junto do radar)', lambda D: c10_sn(D, 'gps')['bloco']['web'].__setitem__(1, 0.15) or
+        c10_sn(D, 'gps')['bloco']['web'].__setitem__(2, 'cima') or c10_sn(D, 'gps')['bloco']['web'].__setitem__(0, 0.52), 'sensores: blocos')
+    c10_planta('NULO', C.a_nulo, 'quantidade da peça nula', lambda D: c10_pc(D, 'p01').update({'qtd': None}), 'pecas[0].qtd', True)
+    c10_planta('NULO', C.a_nulo, 'lista de tarefas vazia na peça', lambda D: c10_pc(D, 'p01').update({'tarefas': []}), 'pecas[0].tarefas', True)
+    c10_planta('NULO', C.a_nulo, 'texto vazio no item do checklist', lambda D: c10_ck(D, 's14').update({'t': ''}), 'checklists.itens.saida[13].t', True)
+    c10_planta('NULO', C.a_nulo, 'faixa nula no alarme pedido', lambda D: c10_al(D, 'sog').update({'faixa': None}), 'alarmesPedidos.metricas[11].faixa', True)
+    c10_planta('SEM_EMERGENCIA', C.a_sem_emergencia, 'item do checklist com incêndio no texto', lambda D: c10_ck(D, 's14').update({'t': 'Incêndio a bordo: saia.'}),
+               'checklists.itens.saida[s14].t casa emergencia()', True)
+    c10_planta('SEM_EMERGENCIA', C.a_sem_emergencia, 'item do checklist com mayday no rótulo `c`', lambda D: c10_ck(D, 's14').update({'c': 'mayday'}),
+               'checklists.itens.saida[s14].c casa emergencia()', True)
+    c10_planta('SEM_EMERGENCIA', C.a_sem_emergencia, 'item do checklist com a queda da pressão do óleo (oleo() = 1)', lambda D: c10_ck(D, 'c03').update({'t': 'Pressão de óleo caiu: reduza.'}),
+               'checklists.itens.chegada[c03].t casa oleo() = 1', True)
+    c10_planta('SEM_SALVATAGEM_EM', C.a_sem_salvatagem_em, 'ponto de sensor «EPIRB»', lambda D: c10_sn(D, 'leme').update({'rotulo': 'EPIRB'}), 'sensores.pontos[19].rotulo', True)
+    c10_planta('SEM_SALVATAGEM_EM', C.a_sem_salvatagem_em, 'id de sensor «balsa»', lambda D: c10_sn(D, 'leme').update({'id': 'balsa'}), 'sensores.pontos[19].id', True)
+    c10_planta('SEM_SALVATAGEM_EM', C.a_sem_salvatagem_em, 'peça «Extintor portátil»', lambda D: c10_pc(D, 'p12').update({'n': 'Extintor portátil'}), 'pecas[11].n', True)
+    c10_planta('SEM_SALVATAGEM_EM', C.a_sem_salvatagem_em, 'peça «Colete»', lambda D: c10_pc(D, 'p12').update({'n': 'Colete salva-vidas'}), 'pecas[11].n', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '«kit» na peça', lambda D: c10_pc(D, 'p11').update({'n': 'Kit de fusíveis de 24 V'}), 'pecas[10].n: "kit"', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '«kit» no item do checklist', lambda D: c10_ck(D, 's14').update({'t': 'Kit de cabos e defensas recolhido.'}), 'checklists.itens.saida[13].t: "kit"', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '«kit» no ponto do sensor', lambda D: c10_sn(D, 'leme').update({'rotulo': 'Kit do leme'}), 'sensores.pontos[19].rotulo: "kit"', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '`onde` do sensor fora do vocabulário fechado', lambda D: c10_sn(D, 'leme').update({'onde': 'paiol de proa'}),
+               'sensores.pontos[19].onde fora do vocabulário fechado', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '`local` da peça fora do vocabulário fechado', lambda D: c10_pc(D, 'p01').update({'local': 'paiol de proa'}),
+               'pecas[0].local fora do vocabulário fechado', True)
+    c10_planta('LOCAL_VOCAB', C.a_local_vocab, '«boia» num item do checklist que não é o s13', lambda D: c10_ck(D, 's14').update({'t': 'Boia e cabos recolhidos.'}),
+               'checklists.itens.saida[13].t: "boia" fora', True)
+    c10_planta('TERMOS', C.a_termos, 'rótulo «(DEMO)» num item do checklist', lambda D: c10_ck(D, 's14').update({'t': 'Cabos recolhidos (DEMO).'}),
+               'ROTULOS: checklists.itens.saida[13].t')
+    c10_planta('TERMOS', C.a_termos, 'rótulo «SEM DADOS» na peça', lambda D: c10_pc(D, 'p12').update({'n': 'Escova SEM DADOS'}), 'ROTULOS: pecas[11].n')
+    c10_planta('COORD_TEXTO', C.a_coord_texto, 'coordenada no texto do item do checklist', lambda D: c10_ck(D, 's14').update({'t': "Fundeado em 26°59,6'S."}),
+               'checklists.itens.saida[13].t', True)
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix='capitao-gerador-') as tmp:
         determinismo(tmp)
@@ -2772,6 +3045,7 @@ def main():
         grafia_seafire()
         c8_rota_e_replay()
         c9_historico()
+        c10_funcoes()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))
