@@ -47,7 +47,8 @@
   chave ou coluna de posição em qualquer fonte do Drive (c8_real: o D e as fontes de verdade do modo real, com a posição plantada); o Formato do
   quadro do coletor não mostra mais a coluna Origem (a taxonomia interna do D.campos) e a LACO acusa essa coluna e os valores de ORIGENS numa
   planilha da pasta 05.
-- C10 (CONTRATO §1.18–§1.21; c10_funcoes): checklists (4 tipos, 35 itens com `c`, ✓ automático, FAQ e `fonte` num §n que existe ou «boa prática»),
+- C10 (CONTRATO §1.18–§1.21; c10_funcoes): checklists (4 tipos, 35 itens com `c`, ✓ automático, FAQ, `fonte` (a da CK_FONTE: um §n que existe ou «boa prática»)
+  e os números do `t` (os da CK_NUM, vindos das mesmas constantes do guia e cada um no texto da seção citada)),
   sensores (22 pontos, x/y pela fórmula, `bloco` das duas plataformas), peças (12, a única BAIXA e a única ZERO) e alarmes pedidos (18 métricas,
   `faixa` própria, nível só aviso), nos dois modos; a asserção FUNCOES (forma e referência do contrato) e as regras que o C10 ativou (IDS,
   NULO, SEM_EMERGENCIA, SEM_SALVATAGEM_EM, LOCAL_VOCAB, TERMOS) com amostras plantadas.
@@ -2904,6 +2905,27 @@ def c10_funcoes():
         G.SIMULACAO = sim0
     ok('SIMULACAO = False: os quatro blocos continuam (checklists, sensores, peças e alarmes pedidos não dependem da navegação simulada) e a FUNCOES não acusa nada',
        all(c in Dr for c in ('checklists', 'sensores', 'pecas', 'alarmesPedidos')) and not Vr['FUNCOES'] and not Vr['IDS'], (Vr['FUNCOES'][:2], Vr['IDS'][:2]))
+    # ——— revisão do C10: os números do `t` saem das constantes do guia e do LIMITES (coerência por construção, §0.10) e a FUNCOES os prende
+    ok('checklists: c03 e f02 dizem o mesmo número que a seção do guia que a `fonte` cita (as duas saem de PARADA_MOTORES_MIN e LANCE_ANCORA_VEZES)',
+       '%s minutos' % G.de_a(G.PARADA_MOTORES_MIN) in dict(G.GUIAS['g_motores']['secoes'])['6 · Parada'] and c10_ck(D, 'c03')['t'] == 'Motores 2 a 3 min em marcha lenta antes de desligar.'
+       and '%s vezes' % G.de_a(G.LANCE_ANCORA_VEZES) in dict(G.GUIAS['g_ancora']['secoes'])['1 · Lançar'] and c10_ck(D, 'f02')['t'] == 'Corrente: lance de 3 a 5 vezes a profundidade.',
+       (c10_ck(D, 'c03')['t'], c10_ck(D, 'f02')['t']))
+    c0 = (G.DIESEL_AVISO_PCT, G.PARADA_MOTORES_MIN, G.LANCE_ANCORA_VEZES, G.LIMITES['tanque_agua_pct']['aviso']['abaixo'], G.LIMITES['tanque_cinzas_pct']['aviso']['acima'])
+    try:
+        G.DIESEL_AVISO_PCT, G.PARADA_MOTORES_MIN, G.LANCE_ANCORA_VEZES = 30, (4, 5), (6, 8)
+        G.LIMITES['tanque_agua_pct']['aviso']['abaixo'], G.LIMITES['tanque_cinzas_pct']['aviso']['acima'] = 20, 90
+        mexido = G.checklists_dados()
+    finally:
+        G.DIESEL_AVISO_PCT, G.PARADA_MOTORES_MIN, G.LANCE_ANCORA_VEZES = c0[:3]
+        G.LIMITES['tanque_agua_pct']['aviso']['abaixo'], G.LIMITES['tanque_cinzas_pct']['aviso']['acima'] = c0[3:]
+    dm = copy.deepcopy(D)
+    dm['checklists'] = mexido
+    novos = [m for m in C.a_funcoes(C.Ctx(dm, c10_base()['B'], c10_base()['F'], {}, None)) if '.t: números' in m]
+    ok('checklists: o `t` de s05, s06, a07, c03 e f02 acompanha a constante (30 %, 20 % e 90 %, 4 a 5 min, 6 a 8 vezes) e a FUNCOES acusa os cinco contra o contrato',
+       c10_ck(dm, 's05')['t'] == 'Diesel acima de 30 % em cada tanque.' and c10_ck(dm, 's06')['t'] == 'Água doce acima de 20 %; servidas abaixo de 90 %.'
+       and c10_ck(dm, 'a07')['t'] == 'Diesel acima de 30 % em cada tanque antes de sair.' and c10_ck(dm, 'c03')['t'] == 'Motores 4 a 5 min em marcha lenta antes de desligar.'
+       and c10_ck(dm, 'f02')['t'] == 'Corrente: lance de 6 a 8 vezes a profundidade.' and len(novos) == 5
+       and (G.DIESEL_AVISO_PCT, G.PARADA_MOTORES_MIN, G.LANCE_ANCORA_VEZES) == c0[:3] and G.checklists_dados() == D['checklists'], novos[:3])
     # ——— plantas (FUNCOES, leves)
     f = C.a_funcoes
     cp = lambda o, m, e, u=False: c10_planta('FUNCOES', f, o, m, e, u)
@@ -2918,6 +2940,26 @@ def c10_funcoes():
     cp('fonte que não existe (§11 do guia dos motores)', lambda D: c10_ck(D, 's03').update({'fonte': 'Guia de bordo — Motores Cummins §11 · Inventado'}), 's03.fonte', True)
     cp('«boa prática» sem o acento', lambda D: c10_ck(D, 's14').update({'fonte': 'boa pratica'}), 's14.fonte', True)
     cp('fonte vazia', lambda D: c10_ck(D, 's14').update({'fonte': ''}), 's14.fonte', True)
+    # revisão do C10: o texto do item e a `fonte` presos ao contrato (CK_NUM, CK_FONTE) e à seção citada; antes, só a existência da fonte era conferida
+    cp('s06 com «acima de 50 %» (o guia diz 15 %)', lambda D: c10_ck(D, 's06').update({'t': 'Água doce acima de 50 %; servidas abaixo de 80 %.'}),
+       'checklists.itens.saida.s06.t: números', True)
+    cp('s06 com os dois números trocados (80 % e 15 %)', lambda D: c10_ck(D, 's06').update({'t': 'Água doce acima de 80 %; servidas abaixo de 15 %.'}),
+       'checklists.itens.saida.s06.t: números', True)
+    cp('s05 com «40 %» (o guia diz 25 %)', lambda D: c10_ck(D, 's05').update({'t': 'Diesel acima de 40 % em cada tanque.'}), 'checklists.itens.saida.s05.t: números', True)
+    cp('a07 com «40 %»', lambda D: c10_ck(D, 'a07').update({'t': 'Diesel acima de 40 % em cada tanque antes de sair.'}), 'checklists.itens.abastecimento.a07.t: números', True)
+    cp('f02 com «7 a 9 vezes» (o guia diz 3 a 5)', lambda D: c10_ck(D, 'f02').update({'t': 'Corrente: lance de 7 a 9 vezes a profundidade.'}),
+       'checklists.itens.fundeio.f02.t: números', True)
+    cp('c03 com «10 min» (o guia diz 2 a 3)', lambda D: c10_ck(D, 'c03').update({'t': 'Motores 10 min em marcha lenta antes de desligar.'}),
+       'checklists.itens.chegada.c03.t: números', True)
+    cp('número num item que não tem (s14 com 5 min)', lambda D: c10_ck(D, 's14').update({'t': 'Cabos e defensas recolhidos em 5 min.'}),
+       'checklists.itens.saida.s14.t: números', True)
+    cp('s08 com a fonte de outro guia que existe (Climatização §5)', lambda D: c10_ck(D, 's08').update({'fonte': 'Guia de bordo — Climatização Webasto §5 · Desligar'}),
+       'checklists.itens.saida.s08.fonte', True)
+    cp('s03 com «boa prática» (o item tem seção, Motores §1)', lambda D: c10_ck(D, 's03').update({'fonte': 'boa prática'}), 'checklists.itens.saida.s03.fonte', True)
+    cp('s14 com a fonte de um guia (sem seção no guia)', lambda D: c10_ck(D, 's14').update({'fonte': 'Guia de bordo — Motores Cummins §6 · Parada'}),
+       'checklists.itens.saida.s14.fonte', True)
+    cp('a07 com a fonte dos Tanques (a seção que existe, mas não tem o 25 %)', lambda D: c10_ck(D, 'a07').update({'fonte': 'Checklist de bordo § Tanques'}),
+       'checklists.itens.abastecimento.a07.fonte')
     cp('✓ automático fora da tabela (s10 «tempo»)', lambda D: c10_ck(D, 's10').update({'auto': 'tempo'}), 'checklists.itens.saida.s10: auto/parcial', True)
     cp('`parcial: false` gravado (a chave só existe com true)', lambda D: c10_ck(D, 's02').update({'parcial': False}), 'checklists.itens.saida.s02: auto/parcial', True)
     cp('s04 sem a marca parcial', lambda D: c10_ck(D, 's04').pop('parcial'), 'checklists.itens.saida.s04: auto/parcial', True)

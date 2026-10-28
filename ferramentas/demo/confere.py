@@ -3046,6 +3046,21 @@ CK_AUTO = {   # id → (auto, parcial): o ✓ automático (§1.18); o que não e
 CK_FAQ = {'s03': 'MO-01', 's04': 'PO-03', 's07': 'EE-02', 's08': 'GE-03', 's09': 'SK-02', 's10': 'EL-04', 's13': 'EM-09', 'c01': 'EL-02',
           'c02': 'SK-04', 'c03': 'MO-06', 'c04': 'GE-04', 'c05': 'CL-05', 'a07': 'CK-05', 'f01': 'EL-08', 'f02': 'AN-01', 'f03': 'EL-03', 'f05': 'AN-03'}
 CK_LINK = {'c08': 'G3-Diario', 'a06': 'G2-Abastecimento'}   # a tela do app (sem o -Web/-Mobile): o CONCLUIR e o item levam até ela
+# Revisão do C10: a `fonte` de cada item (None = «boa prática», os 12 itens sem seção nos guias gerados) e os números que o `t` diz, na ordem em que
+# aparecem (a tabela do §1.18: 25 % do diesel, 15 % da água doce e 80 % das servidas, 2 a 3 min, 3 a 5 vezes; os bancos de 24 V e 12 V e o canal 16).
+# O gerador monta esses números das mesmas constantes que montam o guia; aqui eles ficam presos ao contrato e à seção que a `fonte` cita.
+CK_FONTE = {   # id → (chave do guia em drive.arquivos, seção como está na base) ou None
+    's01': ('checklist', 'Saída · antes de largar'), 's02': None, 's03': ('g_motores', '1 · Antes da partida'), 's04': ('g_porao', '3 · Teste mensal'),
+    's05': ('checklist', 'Abastecimento'), 's06': ('checklist', 'Tanques'), 's07': ('g_eletrico', '2 · Faixas'),
+    's08': ('g_gerador', '3 · Água no escapamento'), 's09': ('g_seakeeper', '2 · Ligar antes de sair'), 's10': ('checklist', 'Saída · 4 a 6'),
+    's11': None, 's12': None, 's13': ('checklist', 'Saída · antes de largar'), 's14': None,
+    'c01': ('g_eletronicos', '2 · Piloto automático'), 'c02': ('g_seakeeper', '4 · Desligar ao atracar'), 'c03': ('g_motores', '6 · Parada'),
+    'c04': ('g_gerador', '4 · Desligar'), 'c05': ('g_clima', '5 · Desligar'), 'c06': ('g_porao', '2 · Faixas'), 'c07': None,
+    'c08': ('checklist', 'Chegada'),
+    'a01': None, 'a02': None, 'a03': None, 'a04': None, 'a05': None, 'a06': ('checklist', 'Abastecimento'), 'a07': ('checklist', 'Abastecimento'),
+    'f01': ('g_eletronicos', '8 · Sonda'), 'f02': ('g_ancora', '1 · Lançar'), 'f03': ('g_eletronicos', '3 · Alarme de âncora'), 'f04': None,
+    'f05': ('g_ancora', '3 · Recolher e travar'), 'f06': None}
+CK_NUM = {'s05': ('25',), 's06': ('15', '80'), 's07': ('24', '12'), 's10': ('16',), 'c03': ('2', '3'), 'a07': ('25',), 'f02': ('3', '5')}   # o que não está aqui não tem número
 CK_CHAVES = ('id', 'c', 't', 'fonte', 'auto', 'parcial', 'faq', 'link')
 BOA_PRATICA = 'boa prática'
 
@@ -3106,8 +3121,9 @@ FAIXAS_PEDIDAS = {   # campo → faixa aceita para o limite pedido (§1.21); a r
 
 
 def _f_checklists(X):
-    """F09 (§1.18): os 4 tipos, os 36 itens com `c`, ✓ automático, FAQ e tela do contrato, a `fonte` de cada um (um §n que existe nos guias
-    gerados ou «boa prática») e a trava de lugar e de número de pessoas."""
+    """F09 (§1.18): os 4 tipos, os 35 itens com `c`, ✓ automático, FAQ e tela do contrato, a `fonte` de cada um (a da CK_FONTE: um §n que existe
+    nos guias gerados ou «boa prática»), os números do `t` (os da CK_NUM, e cada um no texto da seção que a `fonte` cita) e a trava de lugar e de
+    número de pessoas."""
     out, ck = [], X.D.get('checklists')
     if not isinstance(ck, dict):
         return ['checklists ausente (F09, §1.18)']
@@ -3122,6 +3138,8 @@ def _f_checklists(X):
         return out + ['checklists.itens: precisa dos 4 tipos %s, nesta ordem' % ', '.join(t[0] for t in CK_TIPOS)]
     secao = lambda t: ' §' + t['secao'] if str(t.get('secao'))[:1].isdigit() else ' § ' + str(t.get('secao'))   # «Guia §1 · Antes» · «Checklist § Chegada»
     fontes_ok = {BOA_PRATICA} | {str(t.get('fonte')) + secao(t) for t in X.trechos}
+    texto_de = {str(t.get('fonte')) + secao(t): str(t.get('texto')) for t in X.trechos}   # o texto da seção que a `fonte` cita
+    ref_fonte = lambda r: BOA_PRATICA if r is None else str(X.arq.get(r[0])) + (' §' + r[1] if r[1][:1].isdigit() else ' § ' + r[1])
     for tipo, ref in CK_C.items():
         lista = itens[tipo]
         if not (isinstance(lista, list) and all(isinstance(it, dict) for it in lista)):
@@ -3137,12 +3155,26 @@ def _f_checklists(X):
                 out.append('%s: chave fora da forma (%s)' % (cam, ', '.join(sorted(set(it) - set(CK_CHAVES)))))
             if it.get('c') != ref.get(i):
                 out.append('%s.c %r ≠ %r (§1.18)' % (cam, it.get('c'), ref.get(i)))
+            fonte = it.get('fonte')
+            if fonte not in fontes_ok:
+                out.append('%s.fonte %r não é um §n que existe nos guias gerados nem «%s»' % (cam, fonte, BOA_PRATICA))
+            elif i in CK_FONTE and fonte != ref_fonte(CK_FONTE[i]):
+                out.append('%s.fonte %r ≠ %r (a seção que diz o que o item diz, §1.18)' % (cam, fonte, ref_fonte(CK_FONTE[i])))
             if not (isinstance(it.get('t'), str) and it['t'].strip()):
                 out.append('%s.t vazio' % cam)
             elif R_PESSOAS.search(it['t']):
                 out.append('%s.t: número de pessoas no item «%s»' % (cam, it['t']))
-            if it.get('fonte') not in fontes_ok:
-                out.append('%s.fonte %r não é um §n que existe nos guias gerados nem «%s»' % (cam, it.get('fonte'), BOA_PRATICA))
+            else:   # os números do texto: os do contrato, na ordem, e cada um no texto da seção que a `fonte` cita (nenhum com «boa prática»)
+                nums = re.findall(r'\d+(?:,\d+)?', it['t'])
+                esperados = CK_NUM.get(i, ())
+                secao_txt = texto_de.get(fonte)
+                if tuple(nums) != esperados:
+                    out.append('%s.t: números %s ≠ %s do §1.18 («%s»)' % (cam, nums, list(esperados), it['t']))
+                elif nums and secao_txt is None:
+                    out.append('%s.t: números %s sem seção para conferir (fonte %r)' % (cam, nums, fonte))
+                elif any(not tem_numero(secao_txt, float(n.replace(',', '.'))) for n in nums):
+                    out.append('%s.t: número %s que o texto da seção citada na fonte não tem («%s»)' % (
+                        cam, [n for n in nums if not tem_numero(secao_txt, float(n.replace(',', '.')))], it['t']))
             auto = CK_AUTO.get(i)
             esperado = (auto[0], True if auto[1] else None) if auto else (None, None)   # `parcial` só existe com o valor true
             if (it.get('auto'), it.get('parcial')) != esperado:

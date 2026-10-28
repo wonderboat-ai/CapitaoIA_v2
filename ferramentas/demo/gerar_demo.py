@@ -573,6 +573,10 @@ F_SONDA = ARQ['g_eletronicos'] + ' §8 · Sonda'
 F_ABAST = ARQ['checklist'] + ' § Abastecimento'
 F_TANQUES = ARQ['checklist'] + ' § Tanques'
 DIESEL_AVISO_PCT = 25            # abastecer antes de 25 % (a regra do checklist)
+# Os números que o guia e o item do checklist dizem juntos saem de uma constante só (revisão do C10, §0.10): o texto do guia e o `t` do item
+# (c03, f02, s05, s06, a07) são montados dela, e a FUNCOES (confere.py) confere que cada número do `t` está na seção que a `fonte` cita.
+PARADA_MOTORES_MIN = (2, 3)      # minutos em marcha lenta antes de desligar os motores (g_motores §6; checklist c03)
+LANCE_ANCORA_VEZES = (3, 5)      # lance de corrente, em vezes a profundidade (g_ancora §1; checklist f02)
 LENTA_RPM = (650, 750)           # faixa de marcha lenta do guia (o laço anda em 700/695 rpm)
 ARREF_CRUZEIRO_C = (80, 85)      # arrefecimento em cruzeiro, motor aquecido
 CONSUMO_MAX_LPH = 111            # dois motores na rotação máxima: cerca de 2 × 55,6 L/h (folha do fabricante)
@@ -656,6 +660,11 @@ def br(x):
         return '{:,}'.format(x).replace(',', '.')
     inteiro, dec = repr(float(x)).split('.')
     return '{:,}'.format(int(inteiro)).replace(',', '.') + ',' + dec
+
+
+def de_a(faixa):
+    """Faixa como o guia escreve: (2, 3) → «2 a 3»."""
+    return '%s a %s' % (br(faixa[0]), br(faixa[1]))
 
 
 def _eq(i):
@@ -834,7 +843,7 @@ GUIAS = {
             # parado e a válvula de fundo fechada, como o g_gerador §3 e §5. É o trecho do AVISO de arrefecimento do laço (§3.1).
             ('5 · Temperatura alta', 'Reduza para marcha lenta e confira a saída de água pelo escapamento. Sem água no escapamento ou com a temperatura ainda subindo: desligue o motor afetado e siga com o outro. Com o motor parado, feche a válvula de fundo e confira o filtro de água salgada e o rotor da bomba de água salgada. Nunca abra a tampa do arrefecimento com o motor quente.'),
             # Revisão 4 do C5: "Depois de navegar" faz de "como esfriar o motor depois de navegar" a pergunta deste trecho (3 das 4 palavras).
-            ('6 · Parada', 'Depois de navegar, deixe de 2 a 3 minutos em marcha lenta antes de desligar, para o motor esfriar por igual.'),
+            ('6 · Parada', 'Depois de navegar, deixe de %s minutos em marcha lenta antes de desligar, para o motor esfriar por igual.' % de_a(PARADA_MOTORES_MIN)),
             ('7 · Manutenção na agenda', 'Troca de óleo e filtros: 12 meses ou 450 h (o que vier antes). Rotor da bomba de água salgada: a cada 12 meses. Revisão anual pela oficina de motores.'),
             ('8 · Horímetros', 'Os horímetros de BB e BE aparecem no painel dos motores e na telemetria.'),
             ('9 · Faixas de operação', texto_faixas_motores()),
@@ -923,7 +932,7 @@ GUIAS = {
     'g_ancora': {
         'titulo': ARQ['g_ancora'], 'pasta': 'manuais', 'equip': equip_de('ancora'),
         'secoes': [
-            ('1 · Lançar', 'Com o barco parado sobre o ponto escolhido, lance pelo controle do guincho e dê ré devagar até a âncora unhar. Lance de 3 a 5 vezes a profundidade.'),
+            ('1 · Lançar', 'Com o barco parado sobre o ponto escolhido, lance pelo controle do guincho e dê ré devagar até a âncora unhar. Lance de %s vezes a profundidade.' % de_a(LANCE_ANCORA_VEZES)),
             ('2 · Contador de corrente', 'O contador mostra os metros de corrente lançados no controle do guincho. Confira a marca antes de ativar o alarme de âncora no plotter.'),
             ('3 · Recolher e travar', 'Recolha devagar, com o motor aliviando a corrente. Com a âncora no lugar, trave a corrente e desligue o guincho no disjuntor.'),
             ('4 · Manutenção', 'Lave o guincho com água doce depois do uso e confira a corrente e o destorcedor uma vez por ano.'),
@@ -1579,8 +1588,9 @@ def checklists_dados():
             _ck('s03', 'motores frios', 'Óleo, arrefecimento, correias e válvulas de fundo conferidos com os motores frios.',
                 _fs('g_motores', '1 · Antes da partida'), faq='MO-01'),
             _ck('s04', 'porão', 'Porão seco e bombas testadas no manual.', _fs('g_porao', '3 · Teste mensal'), 'porao', True, 'PO-03'),
-            _ck('s05', 'diesel', 'Diesel acima de 25 % em cada tanque.', _fs(CK, 'Abastecimento'), 'diesel'),
-            _ck('s06', 'tanques', 'Água doce acima de 15 %; servidas abaixo de 80 %.', _fs(CK, 'Tanques'), 'tanques'),
+            _ck('s05', 'diesel', 'Diesel acima de %s %% em cada tanque.' % br(DIESEL_AVISO_PCT), _fs(CK, 'Abastecimento'), 'diesel'),
+            _ck('s06', 'tanques', 'Água doce acima de %s %%; servidas abaixo de %s %%.' % (
+                br(LIMITES['tanque_agua_pct']['aviso']['abaixo']), br(LIMITES['tanque_cinzas_pct']['aviso']['acima'])), _fs(CK, 'Tanques'), 'tanques'),
             _ck('s07', 'baterias', 'Bancos de 24 V e 12 V dentro da faixa.', _fs('g_eletrico', '2 · Faixas'), 'baterias', faq='EE-02'),
             _ck('s08', 'gerador', 'Gerador ligado: água saindo pelo escapamento.', _fs('g_gerador', '3 · Água no escapamento'), faq='GE-03'),
             _ck('s09', 'estabilizador', 'Estabilizador ligado com antecedência (o display indica quando está pronto).',
@@ -1596,7 +1606,8 @@ def checklists_dados():
             _ck('c01', 'piloto', 'Piloto em espera antes de manobrar.', _fs(ELE, '2 · Piloto automático'), faq='EL-02'),
             _ck('c02', 'estabilizador', 'Estabilizador desligado ao atracar; energia até o volante parar.', _fs('g_seakeeper', '4 · Desligar ao atracar'),
                 'seakeeperOff', faq='SK-04'),
-            _ck('c03', 'motores', 'Motores 2 a 3 min em marcha lenta antes de desligar.', _fs('g_motores', '6 · Parada'), 'motoresOff', faq='MO-06'),
+            _ck('c03', 'motores', 'Motores %s min em marcha lenta antes de desligar.' % de_a(PARADA_MOTORES_MIN), _fs('g_motores', '6 · Parada'), 'motoresOff',
+                faq='MO-06'),
             _ck('c04', 'gerador', 'Gerador sem cargas, alguns minutos para esfriar e desligado.', _fs('g_gerador', '4 · Desligar'), 'geradorOff', faq='GE-04'),
             _ck('c05', 'climatização', 'Climatização desligada e válvula de fundo fechada se o barco ficar parado.', _fs('g_clima', '5 · Desligar'), faq='CL-05'),
             _ck('c06', 'porão', 'Porão conferido: nível normal e bombas no automático.', _fs('g_porao', '2 · Faixas'), 'porao'),
@@ -1610,11 +1621,11 @@ def checklists_dados():
             _ck('a04', 'sem fumar', 'Sem fumar a bordo; extintor portátil à mão.', BOA_PRATICA),
             _ck('a05', 'bocal e tampa', 'Bocal certo (diesel) e tampa do tanque fechada depois.', BOA_PRATICA),
             _ck('a06', 'nível depois', 'Nível depois anotado em Abastecimento.', _fs(CK, 'Abastecimento'), link='G2-Abastecimento'),
-            _ck('a07', 'regra do diesel', 'Diesel acima de 25 % em cada tanque antes de sair.', _fs(CK, 'Abastecimento'), faq='CK-05'),
+            _ck('a07', 'regra do diesel', 'Diesel acima de %s %% em cada tanque antes de sair.' % br(DIESEL_AVISO_PCT), _fs(CK, 'Abastecimento'), faq='CK-05'),
         ],
         'fundeio': [
             _ck('f01', 'profundidade', 'Profundidade conferida na sonda.', _fs(ELE, '8 · Sonda'), 'profundidade', faq='EL-08'),
-            _ck('f02', 'corrente', 'Corrente: lance de 3 a 5 vezes a profundidade.', _fs(ANC, '1 · Lançar'), faq='AN-01'),
+            _ck('f02', 'corrente', 'Corrente: lance de %s vezes a profundidade.' % de_a(LANCE_ANCORA_VEZES), _fs(ANC, '1 · Lançar'), faq='AN-01'),
             _ck('f03', 'alarme de âncora', 'Alarme de âncora ativado no plotter, com o raio.', _fs(ELE, '3 · Alarme de âncora'), faq='EL-03'),
             _ck('f04', 'deriva', 'Motores em neutro e deriva conferida.', BOA_PRATICA, 'deriva'),
             _ck('f05', 'guincho', 'Guincho desligado e trava da corrente.', _fs(ANC, '3 · Recolher e travar'), faq='AN-03'),
