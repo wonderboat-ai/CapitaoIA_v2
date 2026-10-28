@@ -4,7 +4,8 @@
 Um lugar só para os dados da embarcação. Gera:
   1. capitao-dados.js          (raiz)  → window.CapitaoDados, lido pelo cérebro e pelas telas
   2. base-conhecimento.json    (raiz)  → trechos dos guias de bordo, busca BM25 do chat e da voz
-  3. ferramentas/demo/fontes/          → os mesmos dados como arquivos de origem (Docs/Planilhas/JSON) enviados ao
+  3. faq-equipamentos.json     (raiz)  → FAQ dos equipamentos (F10): um item por seção dos guias e cartões de emergência (CONTRATO §1.6)
+  4. ferramentas/demo/fontes/          → os mesmos dados como arquivos de origem (Docs/Planilhas/JSON) enviados ao
                                          Google Drive › "Capitão IA v2" (pastas 01–07)
 
 REGRAS (Decisão do proprietário 1.1.0 · modo simulação; ver o CLAUDE.md)
@@ -36,13 +37,14 @@ import io
 import json
 import math
 import os
+import re
 import sys
 import unicodedata
 from datetime import date, timedelta
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
-from confere import (ConfereFalhou, arred, blocos_sensores, confere, deriva_janelas, desvio_em, mn_entre, quadro_laco, rumo_entre,  # noqa: E402
+from confere import (ConfereFalhou, arred, blocos_sensores, confere, deriva_janelas, desvio_em, mn_entre, quadro_laco, rumo_entre, textos,  # noqa: E402
                      ruido, segura, sensor_xy)   # segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só; blocos_sensores e sensor_xy: a regra do §1.19, uma só
 
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
@@ -94,6 +96,11 @@ ARQ = {
 
 def onde(chave_pasta, chave_arq):
     return DRIVE + ' › ' + PASTAS[chave_pasta] + ' › ' + ARQ[chave_arq]
+
+
+def fonte_da_secao(guia, secao):
+    """«Guia de bordo — Motores Cummins §5 · Temperatura alta» (seção numerada) ou «Checklist de bordo § Abastecimento» (sem número)."""
+    return ARQ[guia] + (' §' + secao if secao[:1].isdigit() else ' § ' + secao)
 
 
 def coord(v, pos, neg, g):
@@ -1110,6 +1117,523 @@ def faq():
     }
 
 
+# ——————————————————————————————— FAQ DOS EQUIPAMENTOS (faq-equipamentos.json, F10; CONTRATO §1.6) ———————————————————————————————
+# Arquivo próprio na raiz, gerado aqui e lido pelo cérebro e pela F6 nas Fases 3 e 4 (fora do CORE do sw.js até lá). Um item por seção
+# dos 15 guias e do checklist (82: id = prefixo do guia + número da seção, MO-01…CK-07) e os 9 cartões de emergência EM-01…EM-09 do
+# protocolo (91 no total). Do Avanti vem só a forma; o texto é do Capitão e sai dos guias gerados:
+#   - passo a passo, atenção e "se não" são frases da própria seção (índice na lista de frases) ou recortes dela, nunca número novo
+#     (a asserção FAQ confere que todo número do item está no trecho da base que ele cita);
+#   - titulo, pergunta, variantes (as 3 maneiras de perguntar), acao e resposta são escritos aqui, sem dado que a seção não tenha;
+#   - sem confiabilidade (conf), edição, origem, selos, decisões, lacunas, divergências, alertas, inválidos nem limites: todo item vem do
+#     guia de bordo gerado, um nível só não informa nada (decisão 8 do §8.2). Fica só o glossário;
+#   - seguranca: true no item cujo trecho de origem tem, ou cujo texto casa a SEGURANCA_PALAVRAS (nada com seguranca vai à IA, F30);
+#   - EM, SF e EP só com o procedimento padrão rotulado, sem fabricante, modelo, validade, posição, pessoas nem lugar (§1.6).
+FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
+             ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
+             ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))
+# Os 9 cartões: EM-n ↔ a seção do protocolo (a ordem do contrato, não a da base: o EPIRB vem depois de abandono).
+FAQ_EM = (('EM-01', 'MAYDAY · canal 16'), ('EM-02', 'PAN-PAN'), ('EM-03', 'DSC'), ('EM-04', 'Homem ao mar'), ('EM-05', 'Incêndio · Seafire'),
+          ('EM-06', 'Água entrando'), ('EM-07', 'Abandono'), ('EM-08', 'EPIRB'), ('EM-09', 'Salvatagem'))
+FAQ_SECOES = (('Emergência', ('EM',)), ('Motores', ('MO',)), ('Gerador e energia', ('GE', 'EE')), ('Estabilizador', ('SK',)),
+              ('Climatização, água e porão', ('CL', 'DS', 'PO')), ('Eletrônicos e rádios', ('EL',)),
+              ('Fundeio, piloto, radar e AIS', ('AN', 'PI', 'RA', 'AI')), ('Incêndio e EPIRB', ('SF', 'EP')), ('Checklists', ('CK',)))
+# fontes[].tipo: «Guia de bordo» (a seção do guia ou do checklist), «Protocolo» (a seção do protocolo) e «Boa prática» (item do checklist sem seção nos guias);
+# nunca «Manual» nem «Foto»: não há manual do fabricante nem foto em dado de bordo (a asserção FAQ confere os três).
+# A 2ª fonte dos itens que repetem o texto de uma seção do protocolo (a D.protocolos é a fonte única; PROTOCOLOS_NOS_GUIAS do confere.py).
+FAQ_PROTOCOLO = {'SF-01': 'Incêndio · Seafire', 'EP-01': 'EPIRB', 'EP-03': 'EPIRB', 'EL-05': 'DSC', 'PO-04': 'Água entrando'}
+FAQ_BOA_PRATICA = 'Checklist de bordo · itens sem seção nos guias de bordo (boa prática)'
+FAQ_AGENDA = 'Datas e situação de cada tarefa: veja a agenda de manutenção do app.'
+FAQ_EQUIP_EM = {'EM-01': 'Rádios VHF', 'EM-02': 'Rádios VHF', 'EM-03': 'Rádios VHF', 'EM-04': 'Plotters', 'EM-05': 'Sistema fixo de supressão de incêndio',
+                'EM-06': 'Bombas de porão', 'EM-07': 'Protocolo de emergência', 'EM-08': 'EPIRB', 'EM-09': 'Salvatagem'}
+
+
+def _f(t, q, v, r, a=None, p=None, at=None, se=None, ob=None, ver=(), eq=None):
+    """A especificação de um item: titulo, pergunta, as 3 variantes, resposta, acao e o resto. r, at, se e ob: texto, índice de frase da
+    seção ou lista deles (juntos por espaço); ('ck', ids…) = o texto do item do checklist. p: None = as frases que r, at e se não usaram,
+    [] = sem passo a passo, ou a lista de frases (índice ou texto)."""
+    return dict(t=t, q=q, v=list(v), r=r, a=a, p=p, at=at, se=se, ob=ob, ver=tuple(ver), eq=eq)
+
+
+FAQ_TEXTOS = {
+    # ——— Emergência: cartões EM (o texto é o do D.protocolos; o rótulo do procedimento padrão vem no fim da resposta) ———
+    'EM-01': _f('MAYDAY: pedido de socorro pelo rádio', 'Como faço um pedido de socorro (MAYDAY) pelo rádio?',
+                ['chamada de socorro no canal 16', 'o que falar no MAYDAY', 'como chamar socorro no VHF'],
+                'No canal 16 do VHF, fale MAYDAY três vezes e o nome da embarcação três vezes; depois o MMSI do rádio de bordo (etiqueta / '
+                'Licença de Estação), a posição lida no plotter, a natureza do perigo, as pessoas a bordo (conte agora) e o auxílio '
+                'necessário. Termine com CÂMBIO e repita até ter resposta.',
+                a='VHF no canal 16: MAYDAY três vezes, depois o roteiro.', p=list(TXT_ROTEIRO), at='Só em perigo grave e iminente.',
+                se='Sem resposta: repita a chamada até ter resposta.', ver=('EM-03', 'EM-04', 'EL-04')),
+    'EM-02': _f('PAN-PAN: urgência sem perigo imediato de vida', 'Quando uso o PAN-PAN em vez do MAYDAY?',
+                ['diferença entre PAN-PAN e MAYDAY', 'pane sem governo: que chamada faço', 'chamada de urgência no canal 16'],
+                TXT_PANPAN, a='Canal 16: PAN-PAN três vezes, no mesmo formato do MAYDAY.',
+                p=['PAN-PAN, PAN-PAN, PAN-PAN no canal 16.', 'Siga o mesmo formato da chamada MAYDAY.'], ver=('EM-01',)),
+    'EM-03': _f('Alerta DSC de socorro pelo rádio', 'Como mando o alerta DSC de socorro pelo rádio?',
+                ['botão DISTRESS do rádio VHF', 'identificação do rádio no alerta de socorro', 'depois do botão DISTRESS, o que faço'],
+                TXT_DSC, a='Depois do alerta, faça o MAYDAY por voz no canal 16.',
+                p=['O botão DISTRESS envia o alerta com a identificação programada no rádio.', 'Depois do alerta, faça o MAYDAY por voz no canal 16.'],
+                ver=('EM-01', 'EL-05')),
+    'EM-04': _f('Homem ao mar (MOB)', 'O que faço quando alguém cai na água?',
+                ['pessoa caiu do barco', 'homem ao mar: primeiros passos', 'como recuperar quem caiu'],
+                'Grite HOMEM AO MAR e o lado, jogue a boia ou qualquer objeto que flutue, aponte sem perder de vista e marque MOB no plotter. '
+                'Volte devagar, com o motor em neutro perto da pessoa.',
+                a='Grite HOMEM AO MAR, jogue a boia e aponte sem perder de vista.', p=list(TXT_MOB), ver=('EL-01', 'EM-01')),
+    'EM-05': _f('Incêndio a bordo', 'O que faço se houver fogo a bordo?',
+                ['fogo no motor', 'alarme do sistema fixo de incêndio', 'como usar o extintor portátil no fogo'],
+                'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
+                'sozinho, use o disparo manual. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
+                a='Desligue motores e gerador e corte a ventilação do motor.', p=list(TXT_SEAFIRE), ver=('SF-01', 'SF-03', 'EM-01')),
+    'EM-06': _f('Água entrando no barco', 'O que faço se estiver entrando água?',
+                ['alagamento no porão', 'a bomba de porão não dá conta', 'nível do porão subindo'],
+                TXT_ALAGAMENTO[0], a='Ligue as bombas de porão no manual e procure a entrada de água.',
+                p=['Ligue as bombas de porão no manual.', 'Procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que puder.',
+                   'Água subindo mesmo assim: MAYDAY no canal 16.'], ver=('PO-04', 'PO-02', 'EM-01')),
+    'EM-07': _f('Abandono do barco', 'Quando e como abandono o barco?',
+                ['preciso abandonar o barco', 'ordem de abandono', 'o que levar para a balsa'],
+                TXT_ABANDONO[0], a='Antes de abandonar, MAYDAY no canal 16.',
+                p=['Só abandone quando não houver como manter o barco.', 'Antes, MAYDAY no canal 16.', 'Coletes em todos.',
+                   'Leve o EPIRB e o VHF portátil.', 'Embarque na balsa sem pular na água.'], ver=('EM-01', 'EM-08', 'EM-09')),
+    'EM-08': _f('EPIRB (radiobaliza): acionar', 'Quando e como aciono o EPIRB?',
+                ['como disparar a radiobaliza', 'acionar a baliza de emergência', 'EPIRB em perigo grave'],
+                'Acione conforme a etiqueta do equipamento, com a antena para cima e céu aberto, e leve o EPIRB para a balsa ou mantenha-o '
+                'flutuando preso por um cabo. Disparo por engano: desligue e avise no canal 16.',
+                a='Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).', p=list(TXT_EPIRB), ver=('EP-01', 'EP-03', 'EM-01')),
+    'EM-09': _f('Salvatagem: coletes, balsa e extintores', 'Onde estão os coletes, a balsa e os extintores?',
+                ['equipamentos de salvatagem do barco', 'quantos coletes preciso levar', 'onde ficam os sinalizadores'],
+                TXT_SALVATAGEM, a='Em perigo agora: SOS do app e VHF canal 16.',
+                p=['Em perigo agora: SOS do app e VHF canal 16.', 'Coletes: um por pessoa — conte as pessoas a bordo agora (lotação: veja a placa de lotação).',
+                   'Balsa, coletes, boias, extintores e sinalizadores: no local da placa de salvatagem e do plano de segurança de bordo — confira na saída.'],
+                ver=('CK-03', 'EM-07')),
+    # ——— Motores ———
+    'MO-01': _f('Antes de dar a partida nos motores', 'O que olho nos motores antes da partida?',
+                ['verificação antes da partida do motor', 'motor frio: o que olhar primeiro', 'checar o motor antes de ligar'],
+                'Com os motores parados e frios, confira o nível de óleo na vareta, o líquido de arrefecimento, as correias, as válvulas de fundo '
+                'abertas e o porão seco, e deixe a ventilação da praça de máquinas ligada por alguns minutos.',
+                a='Com os motores frios: óleo, arrefecimento, correias e válvulas de fundo.',
+                p=['Nível de óleo na vareta.', 'Líquido de arrefecimento.', 'Correias.', 'Válvulas de fundo abertas.', 'Porão seco.',
+                   'Ventilação da praça de máquinas ligada por alguns minutos.'], ver=('MO-02', 'CK-01')),
+    'MO-02': _f('Dar a partida nos motores', 'Como ligo os motores?',
+                ['dar partida no motor', 'partida dos dois motores pelo painel', 'ligar o motor de bombordo e o de boreste'],
+                'Dê a partida pelo painel, um motor de cada vez, com a marcha em neutro, e logo depois confira a saída de água pelo escapamento '
+                'e a pressão de óleo no painel dos dois motores.',
+                a='Partida pelo painel, um motor de cada vez, com a marcha em neutro.', ver=('MO-01', 'MO-03', 'MO-04')),
+    'MO-03': _f('Aquecer os motores', 'Preciso aquecer o motor antes de acelerar?',
+                ['motor frio: posso acelerar', 'tempo de aquecimento do motor', 'marcha lenta antes de acelerar'],
+                'Sim: deixe alguns minutos em marcha lenta antes de acelerar.', a='Alguns minutos em marcha lenta antes de acelerar.',
+                p=[0], at=1, ver=('MO-02', 'MO-09')),
+    'MO-04': _f('Pressão de óleo baixa no motor', 'O que faço se a pressão de óleo cair?',
+                ['alarme de pressão de óleo no motor', 'manômetro de óleo baixo', 'motor sem pressão de óleo'],
+                'Reduza para marcha lenta e confira o manômetro; compare BB e BE no mesmo giro, porque só um lado baixo aponta o motor. Se '
+                'continuar baixa, desligue o motor afetado, siga com o outro e chame a oficina dos motores.',
+                a='Reduza para marcha lenta e confira o manômetro agora.', ver=('MO-09', 'MO-05')),
+    'MO-05': _f('Temperatura alta no motor', 'O motor esquentou demais, o que faço?',
+                ['alarme de temperatura do motor', 'arrefecimento do motor subindo', 'motor superaquecendo'],
+                'Reduza para marcha lenta e confira a saída de água pelo escapamento. Se não sair água ou a temperatura continuar subindo, '
+                'desligue o motor afetado e siga com o outro.',
+                a='Marcha lenta e saída de água pelo escapamento.', p=[0, 2], at=3, se=1, ver=('MO-09', 'GE-05')),
+    'MO-06': _f('Desligar os motores depois de navegar', 'Quanto tempo deixo o motor em marcha lenta antes de desligar?',
+                ['esfriar o motor antes de parar', 'posso desligar o motor logo ao chegar', 'marcha lenta antes de desligar'],
+                'Depois de navegar, de %s minutos em marcha lenta, para o motor esfriar por igual.' % de_a(PARADA_MOTORES_MIN),
+                a='De %s minutos em marcha lenta antes de desligar.' % de_a(PARADA_MOTORES_MIN), p=[0], ver=('CK-04', 'MO-03')),
+    'MO-07': _f('Manutenção dos motores na agenda', 'De quanto em quanto tempo troco o óleo e o rotor dos motores?',
+                ['troca de óleo e filtros do motor', 'prazo de troca do rotor da bomba de água salgada', 'revisão anual dos motores'],
+                [0, 1, 2], p=[], ob=FAQ_AGENDA),
+    'MO-08': _f('Horímetros dos motores', 'Onde vejo as horas de uso dos motores?',
+                ['horímetro dos motores de BB e BE', 'quantas horas têm os motores', 'horas de motor na telemetria'], [0], p=[]),
+    'MO-09': _f('Faixas de operação dos motores', 'Quais são os valores normais de rotação, óleo e temperatura dos motores?',
+                ['faixa normal do motor', 'limites de pressão de óleo e arrefecimento', 'rotação de cruzeiro dos motores'],
+                [0, 1, 2, 3, 4, 5, 6, 7], p=[], se=[8, 9]),
+    'MO-10': _f('Consumo de diesel dos motores', 'Quanto os motores gastam de diesel por hora?',
+                ['consumo em marcha lenta e em cruzeiro', 'litros por hora dos dois motores', 'gasto de combustível na rotação máxima'],
+                [0], p=[], ver=('CK-05',)),
+    # ——— Gerador ———
+    'GE-01': _f('Antes de ligar o gerador', 'O que olho no gerador antes de ligar?',
+                ['verificação do gerador antes da partida', 'gerador parado: o que checar', 'óleo e filtro de água salgada do gerador'],
+                'Com o gerador parado, confira o nível de óleo e o líquido de arrefecimento, abra a válvula de fundo da entrada de água salgada e '
+                'veja se o filtro de água salgada está limpo.',
+                a='Óleo, arrefecimento, válvula de fundo aberta e filtro limpo.', ver=('GE-02', 'CK-01')),
+    'GE-02': _f('Ligar o gerador', 'Como ligo o gerador?',
+                ['dar partida no gerador', 'passar as cargas para o gerador', 'ligar a climatização depois do gerador'],
+                'No painel do gerador, segure PARTIDA até o motor pegar e espere a tensão e a frequência estabilizarem; só depois transfira as '
+                'cargas, uma de cada vez, e ligue a climatização por último.',
+                a='Segure PARTIDA no painel do gerador até o motor pegar.', ver=('GE-01', 'GE-03', 'GE-04')),
+    'GE-03': _f('Água no escapamento do gerador', 'Como sei se o gerador está refrigerando?',
+                ['gerador sem água no escapamento', 'saída de água do gerador', 'falta de refrigeração do gerador'],
+                'Com o gerador ligado, a água tem de sair pelo escapamento. Sem água saindo, desligue na hora.',
+                a='Sem água saindo pelo escapamento, desligue o gerador na hora.', p=[0], se=1, ver=('GE-05', 'CK-01')),
+    'GE-04': _f('Desligar o gerador', 'Como desligo o gerador?',
+                ['parar o gerador', 'retirar a carga e esfriar o gerador', 'fechar a válvula de fundo do gerador'],
+                'Retire as cargas no quadro elétrico, deixe o gerador de 3 a 5 minutos sem carga para esfriar e pressione PARADA.',
+                a='Retire as cargas, deixe esfriar e pressione PARADA.', ver=('GE-02', 'CK-04')),
+    'GE-05': _f('Alarme de alta temperatura do gerador', 'O gerador deu alarme de temperatura alta, o que faço?',
+                ['gerador esquentando', 'alarme de temperatura no gerador', 'gerador superaquecido'],
+                'Desligue o gerador, verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller) e registre o alarme no diário.',
+                a='Desligue o gerador.', p=[0, 1, 3], at=2, ver=('GE-03', 'MO-05')),
+    'GE-06': _f('Alarme de baixa pressão de óleo do gerador', 'O gerador deu alarme de pressão de óleo, o que faço?',
+                ['gerador sem pressão de óleo', 'alarme de óleo no gerador', 'nível de óleo do gerador'],
+                'Desligue o gerador e confira o nível de óleo com ele parado. Se o nível estiver correto e o alarme voltar, não religue e chame '
+                'o técnico de bordo.',
+                a='Desligue o gerador e confira o nível de óleo com ele parado.', p=[0], se=1),
+    'GE-07': _f('Manutenção do gerador na agenda', 'Quando troco o óleo e o rotor do gerador?',
+                ['troca de óleo e filtros do gerador', 'inspeção do rotor (impeller)', 'revisão do gerador na agenda'],
+                [0, 1], p=[], ob=FAQ_AGENDA),
+    'GE-08': _f('Horímetro do gerador', 'Onde vejo as horas de uso do gerador?',
+                ['horas do gerador', 'quantas horas tem o gerador', 'horímetro do gerador na telemetria'], [0], p=[]),
+    'GE-09': _f('Potência e carga do gerador', 'Quanta carga o gerador aguenta?',
+                ['potência nominal do gerador', 'carga normal com a climatização ligada', 'carga acima do normal no gerador'],
+                [0, 1, 2], p=[], se=3, ver=('GE-02',)),
+    # ——— Estabilizador (só o banco de 12 V, em corrente contínua) ———
+    'SK-01': _f('Energia do estabilizador', 'De onde o estabilizador tira energia?',
+                ['alimentação do Seakeeper', 'banco de 12 V do estabilizador', 'volante que não acelera'],
+                [0], p=[1], se=2, ver=('SK-02', 'SK-06', 'EE-01')),
+    'SK-02': _f('Ligar o estabilizador antes de sair', 'Como ligo o estabilizador antes de sair?',
+                ['ligar o Seakeeper', 'esperar o estabilizador ficar pronto', 'rotação do volante no display'],
+                'Ligue pelo display com antecedência, com o banco de 12 V carregado, e espere a indicação de que a estabilização está disponível '
+                'antes de sair.',
+                a='Ligue pelo display com antecedência e espere a indicação.', ver=('SK-01', 'SK-08', 'CK-01')),
+    'SK-03': _f('Ligar e desligar a estabilização', 'Posso desligar o efeito do estabilizador sem parar o volante?',
+                ['botão de estabilização', 'estabilizador na manobra de marina', 'desligar só a estabilização'], [0, 1], p=[]),
+    'SK-04': _f('Desligar o estabilizador ao atracar', 'Como desligo o estabilizador ao chegar?',
+                ['parar o Seakeeper', 'volante ainda girando depois de desligar', 'quando desligo o banco de 12 V'],
+                'Desligue pelo display e mantenha o banco de 12 V ligado até o display indicar que o volante parou.',
+                a='Desligue pelo display e mantenha o banco de 12 V ligado.', ver=('SK-05', 'CK-04')),
+    'SK-05': _f('Segurança com o volante do estabilizador', 'Posso mexer no estabilizador com o volante girando?',
+                ['manutenção do estabilizador', 'abrir tampas do Seakeeper', 'conferir que o volante parou'], [0], p=[1]),
+    'SK-06': _f('Alarmes e mensagens do estabilizador', 'O estabilizador mostrou uma mensagem de alarme, o que faço?',
+                ['mensagem no display do Seakeeper', 'estabilizador com temperatura alta', 'tensão baixa no estabilizador'],
+                [0], p=[1], ver=('SK-01', 'SK-08')),
+    'SK-07': _f('Manutenção do estabilizador na agenda', 'Quando faço a manutenção do estabilizador?',
+                ['anodo do trocador de calor', 'revisão anual do Seakeeper', 'troca do anodo do estabilizador'], [0, 1], p=[], ob=FAQ_AGENDA),
+    'SK-08': _f('Faixa do volante do estabilizador', 'A partir de que rotação o estabilizador estabiliza?',
+                ['rotação do volante do Seakeeper', 'volante abaixo do normal', 'quando o estabilizador começa a funcionar'],
+                [0], p=[], se=1, ver=('SK-02', 'SK-06')),
+    # ——— Climatização ———
+    'CL-01': _f('Ligar a climatização', 'Como ligo o ar-condicionado?',
+                ['ligar a climatização', 'ligar o ar da cabine', 'bomba de água salgada da climatização'],
+                'Confira a válvula de fundo aberta e o filtro de água salgada limpo; com energia AC no quadro elétrico, ligue a bomba de água '
+                'salgada no painel e depois o controle da cabine.',
+                a='Válvula de fundo aberta, filtro limpo, bomba e depois o controle.', ver=('CL-03', 'CL-05', 'CK-01')),
+    'CL-02': _f('Modos e temperatura da climatização', 'Como escolho frio, calor ou ventilação?',
+                ['ajustar a temperatura da cabine', 'unidades de 16.000 e 12.000 BTU/h', 'ligar uma unidade de cada vez'], [0], p=[], at=1),
+    'CL-03': _f('Alarme de fluxo da climatização', 'A climatização deu alarme de fluxo ou de alta pressão, o que faço?',
+                ['alarme de água salgada na climatização', 'ar-condicionado desligou por alarme', 'filtro de água salgada sujo'],
+                [0], a='Desligue a unidade, limpe o filtro e religue.', p=[1], ver=('CL-01', 'CL-06')),
+    'CL-04': _f('Pouco ar saindo na cabine', 'O ar da cabine está fraco, o que faço?',
+                ['fluxo de ar fraco', 'limpar o filtro de ar da cabine', 'unidade da cabine com pouco ar'],
+                [0], a='Limpe o filtro de ar da unidade daquela cabine.', p=[], se=1),
+    'CL-05': _f('Desligar a climatização', 'Como desligo a climatização?',
+                ['desligar o ar-condicionado', 'desligar a bomba de água salgada da climatização', 'fechar a válvula de fundo ao deixar o barco'],
+                'Desligue pelo controle das cabines e depois a bomba de água salgada; ao deixar o barco, feche a válvula de fundo se a '
+                'climatização não for usada.',
+                a='Desligue as cabines e depois a bomba de água salgada.', ver=('CK-04',)),
+    'CL-06': _f('Manutenção da climatização na agenda', 'Quando limpo o filtro de água salgada da climatização?',
+                ['limpeza mensal do filtro', 'revisão anual da climatização', 'filtro de água salgada do ar-condicionado'],
+                [0, 1], p=[], ob=FAQ_AGENDA),
+    # ——— Eletrônicos e rádios ———
+    'EL-01': _f('Marcar homem ao mar no plotter', 'Como marco um homem ao mar no plotter?',
+                ['função MOB do plotter', 'alguém caiu na água: o que faço no plotter', 'rumo de volta para quem caiu'],
+                [0], a='Acione a função MOB do plotter.', p=[1], ver=('EM-04',), eq=equip_de('eletronicos')),
+    'EL-02': _f('Piloto automático: espera e engate', 'Quando deixo o piloto automático em espera?',
+                ['piloto em standby', 'engatar o piloto automático', 'piloto ao manobrar na marina'],
+                [0], p=[1], ver=('PI-01', 'PI-02', 'CK-04'), eq=equip_de('piloto')),
+    'EL-03': _f('Alarme de âncora no plotter', 'Como ativo o alarme de âncora?',
+                ['raio do alarme de âncora', 'ativar o alarme ao fundear', 'contador de corrente e alarme de âncora'],
+                'Ative o alarme de âncora no plotter ao fundear e defina o raio conforme a corrente lançada.',
+                a='Ative o alarme no plotter e defina o raio pela corrente lançada.', ver=('AN-02', 'CK-07'), eq=equip_de('eletronicos')),
+    'EL-04': _f('Rádio VHF: escuta do canal 16', 'Qual canal fica em escuta no rádio VHF?',
+                ['escuta permanente do canal 16', 'dupla escuta do VHF', 'rádio portátil carregado'],
+                'Mantenha o canal 16 em escuta permanente no rádio fixo; a dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo.',
+                a='Rádio fixo em escuta permanente no canal 16.', ver=('EL-05', 'CK-02'), eq=equip_de('vhf')),
+    'EL-05': _f('Rádio VHF: botão DISTRESS (DSC)', 'Para que serve o botão DISTRESS do rádio?',
+                ['alerta DSC do rádio VHF', 'identificação do rádio no alerta de socorro', 'depois do botão DISTRESS, o que faço'],
+                [0], a='Depois do DISTRESS, faça o MAYDAY por voz no canal 16.', p=[1], ver=('EM-03', 'EM-01'), eq=equip_de('vhf')),
+    'EL-06': _f('Áudio Fusion: parear o celular', 'Como pareio o celular no som do barco?',
+                ['Bluetooth do Fusion', 'conectar o celular ao áudio', 'volume por zona do áudio'],
+                'No controle Fusion, escolha a fonte Bluetooth, deixe o celular visível e selecione o Fusion na lista de Bluetooth do celular.',
+                a='Fonte Bluetooth no controle Fusion e Fusion na lista do celular.',
+                p=['Escolha a fonte Bluetooth no controle Fusion.', 'Deixe o aparelho visível.', 'Selecione o Fusion na lista de Bluetooth do celular.'],
+                ob=1, eq=equip_de('audio')),
+    'EL-07': _f('Atualização de cartas e software', 'Com que frequência atualizo as cartas e o software dos plotters?',
+                ['atualização anual dos plotters', 'software do radar e do áudio', 'cartas náuticas do plotter'], [0], p=[], eq=equip_de('eletronicos')),
+    'EL-08': _f('Profundidade mínima na sonda', 'Qual a profundidade mínima para navegar?',
+                ['alarme de profundidade da sonda', 'água rasa: o que faço', 'sonda mostrando pouca profundidade'],
+                [0], a='Abaixo do mínimo: reduza a velocidade e mude de rumo.',
+                p=['Reduza a velocidade.', 'Confira a carta no plotter.', 'Mude de rumo para águas mais fundas.'], ver=('CK-07',), eq=equip_de('eletronicos')),
+    # ——— Sistema elétrico ———
+    'EE-01': _f('Bancos de baterias', 'Quantas baterias tem o barco e como estão ligadas?',
+                ['bancos de 24 V e 12 V', 'banco de partida dos motores', 'carregador de bordo'], [0, 1], p=[], ver=('EE-02', 'SK-01')),
+    'EE-02': _f('Faixas de tensão das baterias', 'Qual a tensão normal dos bancos de baterias?',
+                ['tensão baixa nas baterias', 'faixa do banco de 12 V', 'banco de serviço de 24 V'], [0, 1], p=[], se=2, ver=('EE-03', 'CK-01')),
+    'EE-03': _f('Verificação das baterias', 'Quando verifico as baterias?',
+                ['conferir as tensões antes de sair', 'bornes das baterias', 'verificação dos bancos a cada 6 meses'], [0, 1], p=[]),
+    # ——— Dessalinizador ———
+    'DS-01': _f('Ligar o dessalinizador', 'Como ligo o dessalinizador?',
+                ['fazer água doce a bordo', 'dessalinizador: válvula de fundo e pré-filtro', 'ligar o dessalinizador pelo painel'],
+                'Abra a válvula de fundo do dessalinizador, confira o pré-filtro limpo e ligue pelo painel, com o banco de serviço carregado; a '
+                'pressão sobe sozinha.',
+                a='Válvula de fundo aberta, pré-filtro limpo e liga pelo painel.', ver=('DS-02', 'DS-03')),
+    'DS-02': _f('Produção do dessalinizador', 'Quanta água o dessalinizador faz por hora?',
+                ['produção nominal em litros por hora', 'salinidade da água produzida', 'água dos primeiros minutos'],
+                [0], p=['Descarte a água dos primeiros minutos depois de ligar.', 'Confira a salinidade no painel antes de mandar a água para o tanque.']),
+    'DS-03': _f('Desligar e lavar o dessalinizador', 'Como desligo o dessalinizador?',
+                ['lavagem com água doce no fim do ciclo', 'desligar o dessalinizador pelo painel', 'dessalinizador com o barco parado'], [0], p=[1]),
+    'DS-04': _f('Manutenção do dessalinizador', 'Quando troco os pré-filtros do dessalinizador?',
+                ['pré-filtros do dessalinizador', 'conservação da membrana', 'dessalinizador parado por muito tempo'], [0, 1], p=[]),
+    # ——— Bombas de porão ———
+    'PO-01': _f('Como funcionam as bombas de porão', 'As bombas de porão ligam sozinhas?',
+                ['sensor de nível do porão', 'ciclos das bombas de porão', 'bombas automáticas de BB e BE'], [0, 1], p=[], ver=('PO-02', 'PO-03')),
+    'PO-02': _f('Nível normal do porão', 'Qual o nível normal de água no porão?',
+                ['nível do poço das bombas', 'alarme de nível do porão', 'porão acima do normal'], [0, 1], p=[], se=2, ver=('PO-04', 'EM-06')),
+    'PO-03': _f('Teste mensal das bombas de porão', 'Como testo as bombas de porão?',
+                ['acionar a bomba de porão no manual', 'teste mensal do porão', 'alarme do painel do porão'],
+                'Uma vez por mês, acione cada bomba no manual e registre o teste no diário.',
+                p=['Acione cada bomba no manual.', 'Confira a saída pelo casco e o alarme do painel.', 'Registre o teste no diário.'], ver=('PO-01', 'CK-02')),
+    'PO-04': _f('Água entrando: bombas de porão', 'Entrou água no barco, o que faço?',
+                ['alagamento no porão', 'água subindo no porão', 'bomba de porão sem dar conta'],
+                [0], p=['Ligue as bombas de porão no manual.', 'Procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que puder.', 1],
+                ver=('EM-06', 'PO-02')),
+    # ——— Guincho e âncora ———
+    'AN-01': _f('Lançar a âncora', 'Como lanço a âncora?',
+                ['fundear com o guincho', 'quanto de corrente lançar', 'dar ré até a âncora unhar'],
+                'Com o barco parado sobre o ponto escolhido, lance pelo controle do guincho e dê ré devagar até a âncora unhar, com corrente de '
+                '%s vezes a profundidade.' % de_a(LANCE_ANCORA_VEZES),
+                a='Barco parado, lance pelo guincho e dê ré devagar até unhar.', ver=('AN-02', 'EL-03', 'CK-07')),
+    'AN-02': _f('Contador de corrente', 'Como sei quantos metros de corrente lancei?',
+                ['marca do contador de corrente', 'metros de corrente no controle do guincho', 'contador do guincho antes do alarme de âncora'],
+                [0], p=[1], ver=('AN-01', 'EL-03')),
+    'AN-03': _f('Recolher a âncora e travar a corrente', 'Como recolho a âncora?',
+                ['içar a âncora', 'travar a corrente', 'desligar o guincho no disjuntor'],
+                'Recolha devagar, com o motor aliviando a corrente; com a âncora no lugar, trave a corrente e desligue o guincho no disjuntor.',
+                ver=('CK-04',)),
+    'AN-04': _f('Manutenção do guincho', 'Que cuidado o guincho precisa depois do uso?',
+                ['lavar o guincho com água doce', 'corrente e destorcedor', 'conferência anual do guincho'], [0], p=[]),
+    # ——— Piloto automático ———
+    'PI-01': _f('Engatar o piloto automático', 'Como engato o piloto automático?',
+                ['ligar o piloto Raymarine', 'piloto no posto de comando', 'engatar com o rumo conferido no plotter'],
+                'Engate o piloto no controle do posto de comando, com o rumo conferido no plotter e área livre à frente.',
+                a='Rumo conferido no plotter e área livre à frente.',
+                p=['Engate o piloto no controle do posto de comando.', 'Confira o rumo no plotter.', 'Confira que a área à frente está livre.'],
+                ver=('PI-02', 'EL-02')),
+    'PI-02': _f('Piloto em espera ao manobrar', 'Quando deixo o piloto em espera?',
+                ['piloto em standby', 'piloto na marina', 'piloto com gente na água'], [0], p=[]),
+    'PI-03': _f('Assumir o leme no timão', 'Como assumo o leme com o piloto ligado?',
+                ['sair do piloto automático', 'governar pelo timão', 'direção hidráulica do piloto'], [0], p=[], ob=1),
+    'PI-04': _f('Alarmes do piloto automático', 'O piloto deu alarme de desvio de rumo, o que faço?',
+                ['desvio de rumo do piloto', 'alarme da direção hidráulica', 'piloto alarmando'], [0], p=[1]),
+    # ——— Radar ———
+    'RA-01': _f('Ligar o radar e transmitir', 'Como ligo o radar?',
+                ['transmitir com o radar', 'ligar o radar pelo plotter', 'radar em espera na marina'], [0], p=[1]),
+    'RA-02': _f('Zona de guarda do radar', 'Como defino a zona de guarda do radar?',
+                ['alerta de alvo no radar', 'zona de guarda em volta do barco', 'radar avisando alvo próximo'], [0], p=[]),
+    'RA-03': _f('Radar com neblina ou à noite', 'Como uso o radar na neblina?',
+                ['radar à noite', 'conferir alvos com o AIS', 'reduzir a velocidade na neblina'],
+                'Mantenha o radar transmitindo, reduza a velocidade e confira os alvos com o AIS no plotter.',
+                p=['Mantenha o radar transmitindo.', 'Reduza a velocidade.', 'Confira os alvos com o AIS no plotter.']),
+    'RA-04': _f('Segurança com o domo do radar', 'Posso chegar perto do radar transmitindo?',
+                ['domo do radar ligado', 'abrir o domo do radar', 'cuidados com o radar transmitindo'], [0], p=[]),
+    # ——— AIS ———
+    'AI-01': _f('Alvos do AIS no plotter', 'Como vejo os outros barcos pelo AIS?',
+                ['alvos do AIS', 'distância de passagem prevista', 'nome, rumo e velocidade dos alvos'], [0], p=[1]),
+    'AI-02': _f('Identificação do AIS', 'Que identificação o AIS transmite?',
+                ['MMSI do AIS', 'transponder classe B', 'identificação do barco no AIS'], [0], p=[]),
+    'AI-03': _f('AIS em modo silencioso', 'O que faz o modo silencioso do AIS?',
+                ['transponder só recebendo', 'AIS sem transmitir a posição', 'voltar a transmitir o AIS'], [0], p=[], at=1),
+    # ——— Sistema fixo de incêndio (só o procedimento padrão; a resposta termina com o rótulo e a nota da etiqueta) ———
+    'SF-01': _f('Fogo a bordo: sistema fixo de incêndio', 'O que faço em caso de fogo no motor?',
+                ['alarme do sistema fixo de incêndio', 'fogo no motor', 'quando usar o extintor portátil'],
+                'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
+                'sozinho, use o disparo manual.',
+                a='Desligue motores e gerador e corte a ventilação do motor.', ver=('EM-05', 'SF-02', 'SF-03')),
+    'SF-02': _f('Disparo manual do sistema fixo', 'Como uso o disparo manual do sistema fixo?',
+                ['sistema fixo não disparou sozinho', 'acionar o disparo manual de incêndio', 'disparo manual com o motor desligado'],
+                [0], a='Motores e gerador desligados, ventilação cortada e disparo manual.',
+                p=['Desligue motores e gerador.', 'Corte a ventilação do motor.', 'Use o disparo manual.'], ver=('SF-01', 'SF-03')),
+    'SF-03': _f('Depois do disparo do sistema fixo', 'O sistema fixo disparou, o que faço depois?',
+                ['sistema fixo descarregou', 'quando abrir o acesso ao motor', 'recarga do sistema fixo'],
+                'Depois do disparo, confirme motores, gerador e ventilação desligados e não abra o acesso ao motor; espere o tempo indicado na '
+                'etiqueta do sistema.',
+                a='Não abra o acesso ao motor: espere o tempo da etiqueta do sistema.',
+                p=['Confirme motores, gerador e ventilação desligados.', 'Não abra o acesso ao motor.',
+                   'Espere o tempo indicado na etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão.',
+                   'Se o fogo voltar, MAYDAY no canal 16.', 1], ver=('SF-01', 'EM-05')),
+    'SF-04': _f('Inspeção anual do sistema fixo', 'Quando inspeciono o sistema fixo de incêndio?',
+                ['inspeção do sistema e da carga', 'revisão anual do sistema fixo', 'técnico de bordo e o sistema fixo'], [0], p=[]),
+    # ——— EPIRB ———
+    'EP-01': _f('Acionar o EPIRB', 'Como aciono o EPIRB?',
+                ['disparar a radiobaliza', 'EPIRB: antena para cima e céu aberto', 'levar o EPIRB para a balsa'],
+                'Acione conforme a etiqueta do equipamento, com a antena para cima e céu aberto, só em perigo grave e iminente e depois do '
+                'MAYDAY (ou sem rádio).',
+                a='Só em perigo grave e iminente, depois do MAYDAY.', p=[1, 2, 3], ver=('EM-08', 'EP-03')),
+    'EP-02': _f('Teste da baliza (EPIRB)', 'Como testo o EPIRB?',
+                ['autoteste da radiobaliza', 'o teste do EPIRB envia alerta', 'bateria e disparador hidrostático'],
+                'Faça o autoteste conforme a etiqueta; o teste não envia alerta.',
+                p=['Faça o autoteste conforme a etiqueta.', 2], ver=('EP-04',)),
+    'EP-03': _f('EPIRB disparado por engano', 'Disparei o EPIRB sem querer, o que faço?',
+                ['baliza disparou por engano', 'desligar o EPIRB disparado', 'avisar no canal 16 depois do disparo'],
+                'Desligue o EPIRB e avise no canal 16.', p=['Desligue o EPIRB.', 'Avise no canal 16.'], ver=('EP-01', 'EM-08')),
+    'EP-04': _f('Validade do EPIRB', 'Onde vejo a validade do EPIRB?',
+                ['validade da bateria da radiobaliza', 'disparador hidrostático', 'certificado do EPIRB'],
+                'A validade da bateria e do disparador hidrostático está na etiqueta do equipamento e no certificado em Documentos.',
+                p=[], ver=('EP-02',)),
+    # ——— Checklists (o texto é o da seção do checklist; os itens sem seção nos guias entram como boa prática) ———
+    'CK-01': _f('Checklist de saída: gerador, estabilizador e climatização', 'O que confiro antes de sair: gerador, estabilizador e climatização?',
+                ['checklist de saída, itens 1 a 3', 'água no escapamento do gerador na saída', 'filtro de água salgada antes de ligar a climatização'],
+                'Antes de sair: água no escapamento depois de ligar o gerador, estabilizador ligado com antecedência e filtro de água salgada '
+                'limpo antes de ligar a climatização.',
+                ver=('GE-03', 'SK-02', 'CL-01')),
+    'CK-02': _f('Checklist de saída: eletrônicos, porão e diesel', 'O que confiro antes de sair: eletrônicos, porão e diesel?',
+                ['checklist de saída, itens 4 a 6', 'plotter, piloto e VHF antes de sair', 'bombas de porão e diesel antes de largar'],
+                'Antes de sair: plotter ligado, piloto em espera até sair da marina, VHF no canal 16, bombas de porão testadas no manual e '
+                'diesel acima do aviso.',
+                ver=('EL-04', 'PO-03', 'CK-05')),
+    'CK-03': _f('Checklist de saída: coletes, previsão e salvatagem', 'O que confiro antes de largar: coletes, balsa e previsão do dia?',
+                ['coletes, balsa e extintores antes de sair', 'previsão do dia antes de largar', 'boletim da Marinha antes de sair'],
+                'Antes de largar: um colete por pessoa (conte as pessoas a bordo agora), balsa, boia e extintores conforme a placa de '
+                'salvatagem, e a previsão do dia consultada.',
+                ob=('ck', 's02', 's11', 's12', 's14'), ver=('EM-09', 'EM-07')),
+    'CK-04': _f('Checklist de chegada', 'O que faço ao chegar na marina?',
+                ['fechar a saída no diário', 'desligar estabilizador, gerador e climatização ao atracar', 'checklist ao atracar'],
+                'Ao chegar: piloto em espera antes de manobrar, estabilizador desligado com o banco de 12 V ligado até o volante parar, gerador '
+                'sem cargas e desligado, climatização desligada e a saída fechada no diário.',
+                ob=('ck', 'c07'), ver=('SK-04', 'GE-04', 'CL-05', 'MO-06')),
+    'CK-05': _f('Checklist de abastecimento', 'Quando devo abastecer e o que registro?',
+                ['regra do diesel', 'reserva técnica de diesel', 'abastecer antes de 25 %'],
+                [0], p=[1], at=('ck', 'a04'), se=2, ob=('ck', 'a01', 'a02', 'a03', 'a05'), ver=('MO-10', 'CK-06')),
+    'CK-06': _f('Checklist de tanques', 'Quando completo a água e esvazio as servidas?',
+                ['água doce abaixo do aviso', 'tanques de águas cinzas e negras', 'servidas acima do aviso'], [0, 1], p=[2, 3], ver=('CK-01',)),
+    'CK-07': _f('Checklist de fundeio', 'O que confiro ao fundear?',
+                ['checklist ao fundear', 'alarme de âncora e diário no fundeio', 'fundo de areia ou lama'],
+                'Ao fundear: fundo de areia ou lama, com espaço de giro; lance com o barco parado, dê ré devagar até a âncora unhar, ative o '
+                'alarme de âncora no plotter e registre a hora e a profundidade no diário.',
+                ob=('ck', 'f04', 'f06'), ver=('AN-01', 'EL-03')),
+}
+
+# Glossário (F10): termo, texto e a fonte (onde o app usa o termo). Os da telemetria citam o formato do quadro do coletor (pasta 05); os de
+# segurança levam o rótulo do procedimento padrão, e o MMSI o texto MMSI_RADIO (nunca o número).
+FAQ_TELE = ARQ['formato'] + ' · ' + DRIVE + ' › ' + PASTAS['tele']
+FAQ_GLOSSARIO = (
+    ('SOG', 'Velocidade sobre o fundo (Speed Over Ground): a velocidade do barco em relação ao fundo, medida pelo GPS.', FAQ_TELE),
+    ('STW', 'Velocidade na água (Speed Through Water): a velocidade do barco em relação à água.', FAQ_TELE),
+    ('COG', 'Rumo sobre o fundo (Course Over Ground): o rumo que o barco faz em relação ao fundo, medido pelo GPS.', FAQ_TELE),
+    ('HDG', 'Proa (Heading): para onde aponta a proa do barco, em graus.', FAQ_TELE),
+    ('TWS', 'Velocidade do vento verdadeiro (True Wind Speed): o vento sobre a água, sem o movimento do barco.', FAQ_TELE),
+    ('TWA', 'Direção do vento verdadeiro (True Wind Angle): de onde vem o vento verdadeiro.', FAQ_TELE),
+    ('AWA', 'Ângulo do vento aparente (Apparent Wind Angle): de onde vem o vento sentido a bordo, em relação à proa; positivo a boreste.', FAQ_TELE),
+    ('DPT', 'Profundidade (Depth): a profundidade sob o barco, medida pela sonda.', FAQ_TELE),
+    ('ETA', 'Chegada prevista (Estimated Time of Arrival): a hora local em que o barco deve chegar ao destino.', FAQ_TELE),
+    ('MOB', 'Homem ao mar (Man Overboard): a marca que o plotter grava para quem caiu na água. ' + FIM_ROTULO,
+     fonte_da_secao('g_eletronicos', '1 · Plotter: homem ao mar')),
+    ('DSC', 'Chamada seletiva digital (Digital Selective Calling): o alerta do rádio VHF, enviado pelo botão DISTRESS. Depois do alerta, faça '
+            'o MAYDAY por voz no canal 16. ' + FIM_ROTULO, fonte_da_secao('protocolo', 'DSC')),
+    ('MMSI', MMSI_RADIO + ': a identificação do rádio no alerta DSC e no AIS.', fonte_da_secao('protocolo', 'DSC')),
+    ('EPIRB', 'Radiobaliza de emergência (Emergency Position-Indicating Radio Beacon): só em perigo grave e iminente, depois do MAYDAY (ou sem '
+              'rádio). ' + FIM_SEGURANCA, fonte_da_secao('g_epirb', '1 · Acionar')),
+    ('BB/BE', 'Bombordo (BB) e boreste (BE): o lado esquerdo e o lado direito do barco, de quem olha para a proa.',
+     fonte_da_secao('g_motores', '8 · Horímetros')),
+)
+
+
+def frases(txt):
+    """As frases de uma seção de guia (o passo a passo do FAQ). No checklist ("1. Gerador: … 2. Estabilizador: …") cada item é uma frase,
+    sem o número; o número só separa depois de um ponto ou de um parêntese ("canal 16. 5. Bombas" não parte em "canal" e "16.")."""
+    if re.match(r'\d+\. ', txt):
+        return [re.sub(r'^\d+\.\s+', '', p) for p in re.split(r'(?<=[.)])\s+(?=\d+\.\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])', txt)]
+    return re.split(r'(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])', txt)
+
+
+def _sem_fim(txt):
+    """(texto sem o rótulo do fim, o rótulo): o fim de segurança (rótulo e nota da etiqueta), o do rótulo só, ou nenhum (§1.5)."""
+    for fim in (FIM_SEGURANCA, FIM_ROTULO):
+        if txt.endswith(' ' + fim):
+            return txt[:-len(fim) - 1], fim
+    return txt, ''
+
+
+def _faq_texto(x, fr, ck):
+    """Campo do FAQ: o texto, a frase de índice N da seção, ('ck', ids…) = o texto dos itens do checklist, ou uma lista deles (juntos por espaço)."""
+    if x is None:
+        return None
+    if isinstance(x, int):
+        return fr[x]
+    if isinstance(x, str):
+        return x
+    if x and x[0] == 'ck':
+        return ' '.join(ck[i]['t'] for i in x[1:])
+    return ' '.join(_faq_texto(i, fr, ck) for i in x)
+
+
+def _indices(x):
+    """Os índices de frase que um campo usa (r, at, se): o que sobra vira passo a passo quando p é None."""
+    if isinstance(x, int):
+        return {x}
+    if isinstance(x, (list, tuple)) and not (x and x[0] == 'ck'):
+        return {i for i in x if isinstance(i, int)}
+    return set()
+
+
+def faq_equipamentos(B=None):
+    """CONTRATO §1.6: {versao, total, secoes, itens, glossario}. A versao são os 8 primeiros hex do sha256 do conteúdo (como a da base):
+    muda quando o texto muda, nunca com a data. Os itens saem na ordem das seções do FAQ (EM primeiro); a base entra só para herdar o
+    `seguranca` do trecho de origem."""
+    B = base_conhecimento() if B is None else B
+    trecho = {(t['fonte'], t['secao']): t for t in B['trechos']}
+    ck = {x['id']: x for lista in checklists_dados()['itens'].values() for x in lista}
+    por_id = {}
+    for iid, sec in FAQ_EM:
+        spec = FAQ_TEXTOS[iid]
+        t = trecho.get((ARQ['protocolo'], sec), {})   # trecho que falta na base: a asserção FAQ acusa (o gerador não cai)
+        _, fim = _sem_fim(t.get('texto', ''))
+        por_id[iid] = (spec, [], t, fim, [('Protocolo', fonte_da_secao('protocolo', sec))], FAQ_EQUIP_EM[iid], True)
+    for prefixo, chave in FAQ_GUIAS:
+        g = GUIAS[chave]
+        for n, (sec, txt) in enumerate(g['secoes'], 1):
+            iid = '%s-%02d' % (prefixo, n)
+            corpo, fim = _sem_fim(txt)
+            spec = FAQ_TEXTOS[iid]
+            fontes = [('Guia de bordo', fonte_da_secao(chave, sec))]
+            if iid in FAQ_PROTOCOLO:
+                fontes.append(('Protocolo', fonte_da_secao('protocolo', FAQ_PROTOCOLO[iid])))
+            usa_ck = [i for k in ('r', 'at', 'se', 'ob') for i in (spec[k][1:] if isinstance(spec[k], tuple) and spec[k][:1] == ('ck',) else ())]
+            for i in usa_ck:
+                if ck[i]['fonte'] != BOA_PRATICA:
+                    raise SystemExit('gerador: %s cita o item %s do checklist, que tem seção nos guias (só os de «boa prática» entram assim)' % (iid, i))
+            if usa_ck:
+                fontes.append(('Boa prática', FAQ_BOA_PRATICA))
+            por_id[iid] = (spec, frases(corpo), trecho.get((g['titulo'], sec), {}), fim, fontes, spec['eq'] or g['equip'], False)
+    itens, secoes = [], []
+    for k, (titulo, prefixos) in enumerate(FAQ_SECOES, 1):
+        ids = [i for p in prefixos for i in por_id if i.startswith(p + '-')]
+        secoes.append({'n': k, 'titulo': titulo, 'ids': ids})
+        for iid in ids:
+            spec, fr, t, fim, fontes, equip, em = por_id[iid]
+            r = _faq_texto(spec['r'], fr, ck)
+            usados = _indices(spec['r']) | _indices(spec['at']) | _indices(spec['se'])
+            if spec['p'] is None:
+                p = [fr[i] for i in range(len(fr)) if i not in usados]
+            else:
+                p = [_faq_texto(x, fr, ck) for x in spec['p']]
+            it = {'id': iid, 'titulo': spec['t'], 'pergunta': spec['q'], 'variantes': spec['v'], 'resposta': r + (' ' + fim if fim else '')}
+            if p:
+                it['passos'] = p
+            for chave_it, campo in (('acao', 'a'), ('atencao', 'at'), ('senao', 'se'), ('obs', 'ob')):
+                v = _faq_texto(spec[campo], fr, ck)
+                if v:
+                    it[chave_it] = v
+            it.update({'fontes': [{'tipo': tp, 'texto': tx} for tp, tx in fontes], 'secao': k, 'equip': equip, 'emerg': em})
+            ver = list(spec['ver'])
+            if t.get('seguranca') or segura(' '.join(x for _, x in textos(dict(it, ver=ver)))):   # a leitura da SEGURANCA_MARCADA: todo texto do item, ids e fontes inclusive
+                it['seguranca'] = True
+            if ver:
+                it['ver'] = ver
+            itens.append(it)
+    corpo = {'total': len(itens), 'secoes': secoes, 'itens': itens,
+             'glossario': [{'termo': a, 'texto': b, 'fonte': c} for a, b, c in FAQ_GLOSSARIO]}
+    return dict({'versao': hashlib.sha256(serializa(corpo).encode('utf-8')).hexdigest()[:8]}, **corpo)
+
+
+def gera_faq(Q=None):
+    return serializa(faq_equipamentos() if Q is None else Q) + '\n'
+
+
 # D.protocolos (CONTRATO §1.3, C6): a fonte única do SOS (S1/S2), do roteiro, dos cartões EM e da página EMERGÊNCIA do Guia. Montado só
 # com as constantes TXT_* acima, as mesmas dos guias g_seafire, g_epirb e protocolo (um texto, uma fonte). Sem nada do dado gerado da
 # embarcação além do nome (o roteiro lê EMBARCACAO['nome']): nada de registro, MMSI, base, fabricante ou modelo (PROTOCOLO_LIMPO).
@@ -1348,11 +1872,6 @@ ALERTAS_DEF = [
     ('cinzas', 'tanque_cinzas_pct', 'tanques', None, 'Tanque de águas cinzas', 'checklist', 'Tanques', PASSOS_SERVIDAS),
     ('negras', 'tanque_negras_pct', 'tanques', None, 'Tanque de águas negras', 'checklist', 'Tanques', PASSOS_SERVIDAS),
 ]
-
-
-def fonte_da_secao(guia, secao):
-    """«Guia de bordo — Motores Cummins §5 · Temperatura alta» (seção numerada) ou «Checklist de bordo § Abastecimento» (sem número)."""
-    return ARQ[guia] + (' §' + secao if secao[:1].isdigit() else ' § ' + secao)
 
 
 def alertas_dados():
@@ -1824,9 +2343,10 @@ def gera_base(B=None):
     return serializa(base_conhecimento() if B is None else B) + '\n'
 
 
-def saidas(D, B):
-    """Arquivos da raiz: caminho relativo → texto."""
-    return {'capitao-dados.js': gera_js(D), 'base-conhecimento.json': gera_base(B)}
+def saidas(D, B, Q=None):
+    """Arquivos da raiz: caminho relativo → texto. Q = o FAQ dos equipamentos (None: o de hoje, calculado com a base B)."""
+    return {'capitao-dados.js': gera_js(D), 'base-conhecimento.json': gera_base(B),
+            'faq-equipamentos.json': gera_faq(faq_equipamentos(B) if Q is None else Q)}
 
 
 def dentro(caminho, pasta):
@@ -2018,7 +2538,7 @@ def gera_fontes(D):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description='Gera capitao-dados.js, base-conhecimento.json e as fontes do Drive.')
+    ap = argparse.ArgumentParser(description='Gera capitao-dados.js, base-conhecimento.json, faq-equipamentos.json e as fontes do Drive.')
     ap.add_argument('--saida', default=RAIZ, help='pasta onde gravar (padrão: a raiz do repositório)')
     ap.add_argument('--detalhe', action='store_true', help='lista cada violação, com o commit da pendência, [relatório] ou [NOVA]')
     a = ap.parse_args(argv)
@@ -2030,14 +2550,15 @@ def main(argv=None):
     saida = os.path.abspath(a.saida)
     D = dados()
     B = base_conhecimento()
+    Q = faq_equipamentos(B)
     F = gera_fontes(D)
     try:
-        S = saidas(D, B)
+        S = saidas(D, B, Q)
     except ValueError as e:   # serializa() recusa NaN e infinito: nada é gravado
         print('gerador: valor não finito no D ou na base (%s); nada foi gravado' % e, file=sys.stderr)
         return 1
     try:   # antes de gravar: com uma asserção estrutural falhando, nada sai
-        confere(D, B, F, S, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES, 'LIMITES': LIMITES}, detalhe=a.detalhe)
+        confere(D, B, F, S, Q, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES, 'LIMITES': LIMITES}, detalhe=a.detalhe)
     except ConfereFalhou as e:
         print(e, file=sys.stderr)
         return 1
@@ -2048,7 +2569,8 @@ def main(argv=None):
         escreve(saida, rel, txt)
     apagados = limpa_fontes(saida, F)
     au = autonomia()
-    print('capitao-dados.js · base-conhecimento.json (%d trechos) · %d fontes em %s' % (len(B['trechos']), len(F), FONTES_REL.replace(os.sep, '/')))
+    print('capitao-dados.js · base-conhecimento.json (%d trechos) · faq-equipamentos.json (%d itens) · %d fontes em %s'
+          % (len(B['trechos']), Q['total'], len(F), FONTES_REL.replace(os.sep, '/')))
     for rel in apagados:   # na raiz do repositório: tirar com git rm (ou git add -A) no mesmo commit
         print('  apagada (não é mais gerada): fontes/' + rel)
     print('agenda: %d tarefas, %d atrasadas · autonomia %.1f h / %d mn' % (len(D['agenda']), sum(1 for t in D['agenda'] if t['dn'] < 0), au['horas'], au['mn']))

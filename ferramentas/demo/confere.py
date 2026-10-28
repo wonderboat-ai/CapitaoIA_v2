@@ -9,6 +9,8 @@ completos, rotulo e motorizacao gerados dos campos, lotacao ≥ pessoasBordo) e,
 §1.5 e §2.5: o Seakeeper 3 é de 12 V DC, e nenhum texto do estabilizador fala de energia AC) e a SEGURANCA_SEM_MODELO (revisão 7 do C5, trava
 17: fabricante, modelo e validade do EPIRB e do Seafire, e lugar a bordo, fora das telas de Equipamentos, Documentos e Leme). A PROTOCOLOS (C6, §1.3) prende a
 forma e a fonte única do D.protocolos, e a GRAFIA_SEAFIRE (revisão do C6, §1.3) a grafia «Seafire», sem hífen nem espaço, em todo valor, chave e nome de arquivo.
+A FAQ (C11, §1.6) prende o faq-equipamentos.json: a forma, os 91 ids, a ligação de cada item com o trecho da base que ele cita (a fonte e os números), a herança do `seguranca`
+e do rótulo, os cartões EM sem dado do barco e o glossário; as outras asserções de texto já leem o FAQ.
 A REGISTRO cruza o registro com o
 `numero` do documento de id "tie" (§1.8; revisão final do C4: na simulação, sem esse documento ela reprova; o C7 grava o TIE). Duas da §6.4 moram dentro de asserções da §6.3, sem nome novo: o «porão ≤ 5 cm» (§2.4) na
 JANELA (porao_no_normal: o teto é o normal.ate do porão, sem número solto, também dentro de janela) e o lugar de salvatagem em
@@ -1410,6 +1412,12 @@ def a_protocolo_limpo(X):
     P = X.D.get('protocolos')
     if P is None:
         return []
+    return _regras_protocolo(X, textos(P, 'protocolos'))
+
+
+def _regras_protocolo(X, pares):
+    """As regras da PROTOCOLO_LIMPO sobre (caminho, texto): sem bar, %, nós, mn, graus, minutos, número de pessoas, último fix, a regex de
+    emergência, lugar a bordo, fabricante ou modelo de equipamento e dado gerado da embarcação. Do D.protocolos (C6) e dos cartões EM do FAQ (C11)."""
     out = []
     nomes = []   # um nome por grafia: o "Garmin" dos plotters e do radar é uma ocorrência só no texto
     for _, n in nomes_equip(X):
@@ -1417,7 +1425,7 @@ def a_protocolo_limpo(X):
             nomes.append(n)
     E = X.D.get('embarcacao') if isinstance(X.D.get('embarcacao'), dict) else {}
     barco = barco_sos(E)
-    for cam, s in textos(P, 'protocolos'):
+    for cam, s in pares:
         for nome, rx in R_PROTOCOLO + (('lugar a bordo', X.lugar),):
             out += ['%s: %s [%s] «%s»' % (cam, nome, casado(m), trecho(s, m)) for m in rx.finditer(s)]
         achados = [m for n in nomes for m in acha_nomes(s, n)]
@@ -3332,6 +3340,206 @@ def a_funcoes(X):
     return _f_checklists(X) + _f_sensores(X) + _f_pecas(X) + _f_alarmes(X)
 
 
+# ——————————————————————————————— FAQ DOS EQUIPAMENTOS (C11, §1.6) ———————————————————————————————
+# A referência é daqui, nunca do dado conferido (como a CK_FAQ): o topo, as chaves de um item, os 15 prefixos de guia, os 9 cartões EM
+# (a ordem do contrato, não a da base: o EPIRB vem depois de abandono), os tipos de fonte e o glossário.
+FAQ_TOPO = ('versao', 'total', 'secoes', 'itens', 'glossario')
+FAQ_CHAVES = ('id', 'titulo', 'pergunta', 'variantes', 'resposta', 'passos', 'acao', 'atencao', 'senao', 'obs', 'fontes', 'secao', 'equip', 'emerg',
+              'seguranca', 'ver')   # na ordem em que o gerador grava
+FAQ_OBRIGATORIAS = ('id', 'titulo', 'pergunta', 'variantes', 'resposta', 'fontes', 'secao', 'equip', 'emerg')
+FAQ_TEXTO = ('titulo', 'pergunta', 'resposta', 'acao', 'atencao', 'senao', 'obs', 'equip')   # os campos de texto simples (passos e variantes são listas)
+# Sem o chip de confiabilidade nem os anexos do Avanti (decisão 8 do §8.2): nada disto existe, em nenhum nível.
+FAQ_PROIBIDAS = {'conf', 'edicao', 'origem', 'selos', 'decisoes', 'limites', 'lacuna', 'lacunas', 'divergencias', 'invalidos', 'alertas'}
+FAQ_TIPOS = ('Guia de bordo', 'Protocolo', 'Boa prática')   # nunca "Manual" nem "Foto"
+FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
+             ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
+             ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))   # prefixo → chave de drive.arquivos; id = prefixo + número da seção
+FAQ_EM = (('EM-01', 'MAYDAY · canal 16'), ('EM-02', 'PAN-PAN'), ('EM-03', 'DSC'), ('EM-04', 'Homem ao mar'), ('EM-05', 'Incêndio · Seafire'),
+          ('EM-06', 'Água entrando'), ('EM-07', 'Abandono'), ('EM-08', 'EPIRB'), ('EM-09', 'Salvatagem'))   # id → seção do protocolo
+FAQ_GLOSSARIO = ('SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 'MOB', 'DSC', 'MMSI', 'EPIRB', 'BB/BE')
+FAQ_GLOSSARIO_ROTULO = ('MOB', 'DSC')   # os termos de segurança levam o rótulo do procedimento padrão (o EPIRB, também a nota da etiqueta)
+R_NUMERO = re.compile(r'\d+(?:[.,]\d+)*')   # 2.050 · 6,0 · 12 · 16: o número como o guia escreve
+R_FONTE = re.compile(r'(.+?) §\s*(.+)')     # «<título> §<n> · <seção>» (numerada) ou «<título> § <seção>» (sem número)
+
+
+def _resolve_fonte(texto, por_trecho):
+    """O trecho da base que uma fonte do FAQ cita (título do guia e seção), ou None."""
+    m = R_FONTE.fullmatch(str(texto or ''))
+    return por_trecho.get((m.group(1), m.group(2))) if m else None
+
+
+def a_faq(X):
+    """O faq-equipamentos.json (§1.6): a forma, os 91 ids (15 guias + 9 cartões EM) e a ligação de cada item com o trecho da base que ele cita.
+    Sem o faq (os testes do D sozinho), nada a conferir. As regras de texto (8 regex, coordenada, grafia Seafire, calado, estabilizador de
+    12 V, rótulo no fim de SF/EP/EM-09, `seguranca` pela SEGURANCA_PALAVRAS, fabricante e modelo do EPIRB e do Seafire, tamanho) são das
+    outras asserções, que já leem o FAQ; aqui ficam as que só o FAQ tem:
+      - topo {versao, total, secoes, itens, glossario}; `total` = itens; nenhuma chave de confiabilidade, edição, origem, selos, decisões,
+        limites, lacunas, divergências, alertas nem inválidos, em nenhum nível;
+      - ids únicos = EM-01…EM-09 + prefixo e número de cada seção dos guias; `secoes` {n, titulo, ids} partem os itens, e `secao` do item é o `n`;
+      - item com as chaves do contrato na ordem, 3 variantes diferentes, fontes só dos 3 tipos, `emerg` só nos EM, `ver` com ids que existem;
+      - a 1ª fonte é a seção da base daquele id (EM-n: a do protocolo), e todo número do item está no texto dessa seção (nada de número novo);
+      - `seguranca` em todo item cujo trecho de origem tem; a resposta termina com o rótulo que o trecho termina e, com seguranca, tem até 800 letras;
+      - os cartões EM passam as regras do D.protocolos (sem bar, %, nós, graus, pessoas, lugar, fabricante, modelo nem dado do barco);
+      - o glossário: os 14 termos, MMSI com o texto MMSI_RADIO e os de segurança com o rótulo."""
+    Q = X.faq
+    if Q is None:
+        return []
+    if not isinstance(Q, dict):
+        return ['faq: não é um objeto']
+    out = []
+    if tuple(Q.keys()) != FAQ_TOPO:
+        out.append('faq: chaves do topo %s (precisa de %s)' % (list(Q.keys()), list(FAQ_TOPO)))
+    if not re.fullmatch(r'[0-9a-f]{8}', str(Q.get('versao'))):
+        out.append('faq.versao: %r (8 hex do sha256 do conteúdo)' % (Q.get('versao'),))
+    out += ['%s: chave de %s (§1.6: sem confiabilidade, edição, origem, selos, decisões, limites, lacunas, divergências, alertas nem inválidos)' % (c, k)
+            for c, k in chaves_de(Q, 'faq:') if k in FAQ_PROIBIDAS]
+    itens = Q.get('itens')
+    if not isinstance(itens, list) or not itens:
+        return out + ['faq.itens: lista vazia ou ausente']
+    if Q.get('total') != len(itens) or not isinstance(Q.get('total'), int):
+        out.append('faq.total: %r ≠ %d itens' % (Q.get('total'), len(itens)))
+    por_trecho = {(t.get('fonte'), t.get('secao')): t for t in X.trechos}
+    # ——— ids ———
+    ids = [i.get('id') if isinstance(i, dict) else None for i in itens]
+    out += ['faq.itens: id repetido %r' % i for i, n in Counter(ids).items() if n > 1]
+    esperado, trecho_de = [], {}
+    for iid, sec in FAQ_EM:
+        esperado.append(iid)
+        trecho_de[iid] = por_trecho.get((X.arq.get('protocolo'), sec))
+    for pre, chave in FAQ_GUIAS:
+        secoes = [t for t in X.trechos if t.get('fonte') == X.arq.get(chave)]
+        for n, t in enumerate(secoes, 1):
+            esperado.append('%s-%02d' % (pre, n))
+            trecho_de[esperado[-1]] = t
+    if set(ids) != set(esperado):
+        out.append('faq.itens: ids ≠ os do contrato (%d esperados): faltam %s, sobram %s' % (
+            len(esperado), sorted(set(esperado) - set(ids))[:6], sorted(set(ids) - set(esperado), key=str)[:6]))
+    for iid, t in trecho_de.items():
+        if t is None:
+            out.append('faq:%s: o trecho de origem não existe na base' % iid)
+    # ——— seções ———
+    por_id = {i['id']: i for i in itens if isinstance(i, dict) and isinstance(i.get('id'), str)}
+    grupos = Q.get('secoes')
+    visto = []
+    if not (isinstance(grupos, list) and grupos):
+        out.append('faq.secoes: lista vazia ou ausente')
+    else:
+        for k, g in enumerate(grupos, 1):
+            cam = 'faq.secoes[%d]' % (k - 1)
+            if not (isinstance(g, dict) and tuple(g.keys()) == ('n', 'titulo', 'ids')):
+                out.append('%s: precisa de {n, titulo, ids}' % cam)
+                continue
+            if g['n'] != k:
+                out.append('%s.n: %r (precisa de %d: o filtro lê a seção por D.secoes[n − 1])' % (cam, g['n'], k))
+            if not (isinstance(g['titulo'], str) and g['titulo'].strip()):
+                out.append('%s.titulo vazio' % cam)
+            if not (isinstance(g['ids'], list) and g['ids']):
+                out.append('%s.ids: lista vazia' % cam)
+                continue
+            for iid in g['ids']:
+                visto.append(iid)
+                if iid in por_id and por_id[iid].get('secao') != k:
+                    out.append('faq:%s.secao: %r (está em faq.secoes[%d], n = %d)' % (iid, por_id[iid].get('secao'), k - 1, k))
+        if sorted(visto, key=str) != sorted(por_id, key=str) or len(visto) != len(set(visto)):
+            out.append('faq.secoes: os ids das seções não partem os itens (cada item em uma seção só): faltam %s, sobram %s'
+                       % (sorted(set(por_id) - set(visto))[:6], sorted(set(visto) - set(por_id), key=str)[:6]))
+    # ——— itens ———
+    titulos, perguntas = Counter(i.get('titulo') for i in itens if isinstance(i, dict)), Counter(i.get('pergunta') for i in itens if isinstance(i, dict))
+    for it in itens:
+        if not isinstance(it, dict):
+            out.append('faq.itens: item que não é objeto')
+            continue
+        iid = str(it.get('id'))
+        cam = 'faq:' + iid
+        chaves = tuple(it.keys())
+        if [k for k in FAQ_CHAVES if k in it] != list(chaves) or any(k not in FAQ_CHAVES for k in chaves):
+            out.append('%s: chaves %s (permitidas, nesta ordem: %s)' % (cam, list(chaves), list(FAQ_CHAVES)))
+        out += ['%s: falta a chave %s' % (cam, k) for k in FAQ_OBRIGATORIAS if k not in it]
+        for k in FAQ_TEXTO:
+            if k in it and not (isinstance(it[k], str) and it[k].strip()):
+                out.append('%s.%s: %r (texto vazio; campo vazio é omitido)' % (cam, k, it[k]))
+        v = it.get('variantes')
+        if not (isinstance(v, list) and len(v) == 3 and all(isinstance(x, str) and x.strip() for x in v) and len(set(v)) == 3 and it.get('pergunta') not in v):
+            out.append('%s.variantes: %r (3 maneiras de perguntar, diferentes entre si e da pergunta)' % (cam, v))
+        if 'passos' in it and not (isinstance(it['passos'], list) and it['passos'] and all(isinstance(x, str) and x.strip() for x in it['passos'])):
+            out.append('%s.passos: %r (lista de frases; sem passo a passo, a chave é omitida)' % (cam, it['passos']))
+        if titulos[it.get('titulo')] > 1:
+            out.append('%s.titulo repetido: %r' % (cam, it.get('titulo')))
+        if perguntas[it.get('pergunta')] > 1:
+            out.append('%s.pergunta repetida: %r' % (cam, it.get('pergunta')))
+        if not isinstance(it.get('secao'), int) or isinstance(it.get('secao'), bool):
+            out.append('%s.secao: %r (inteiro)' % (cam, it.get('secao')))
+        if it.get('emerg') is not (iid.startswith('EM-')):
+            out.append('%s.emerg: %r (verdadeiro só nos cartões EM)' % (cam, it.get('emerg')))
+        if 'seguranca' in it and it['seguranca'] is not True:
+            out.append('%s.seguranca: %r (só verdadeiro; senão a chave é omitida)' % (cam, it['seguranca']))
+        if 'ver' in it:
+            ver = it['ver']
+            if not (isinstance(ver, list) and ver and len(set(ver)) == len(ver) and iid not in ver and all(x in por_id for x in ver)):
+                out.append('%s.ver: %r (ids que existem, sem repetir nem citar o próprio)' % (cam, ver))
+        fontes = it.get('fontes')
+        if not (isinstance(fontes, list) and fontes and all(isinstance(f, dict) and tuple(f.keys()) == ('tipo', 'texto') for f in fontes)):
+            out.append('%s.fontes: %r (lista de {tipo, texto})' % (cam, fontes))
+            continue
+        for j, f in enumerate(fontes):
+            if f['tipo'] not in FAQ_TIPOS:
+                out.append('%s.fontes[%d].tipo: %r (só %s)' % (cam, j, f['tipo'], ', '.join(FAQ_TIPOS)))
+            if not (isinstance(f['texto'], str) and f['texto'].strip()):
+                out.append('%s.fontes[%d].texto vazio' % (cam, j))
+            elif f['tipo'] != 'Boa prática' and _resolve_fonte(f['texto'], por_trecho) is None:
+                out.append('%s.fontes[%d]: %r não é uma seção da base (título do guia §seção)' % (cam, j, f['texto']))
+        if fontes[0].get('tipo') == 'Boa prática':
+            out.append('%s.fontes[0]: a 1ª fonte é a seção do guia ou do protocolo, não a boa prática' % cam)
+        # ——— a ligação com a base: a 1ª fonte é o trecho daquele id ———
+        t = trecho_de.get(iid)
+        if t is None:
+            continue
+        citado = _resolve_fonte(fontes[0].get('texto'), por_trecho)
+        if citado is not t:
+            out.append('%s.fontes[0]: %r não é a seção do id (esperado: %s · %s)' % (cam, fontes[0].get('texto'), t.get('fonte'), t.get('secao')))
+        permitidos = set()
+        for f in fontes:
+            c = _resolve_fonte(f.get('texto'), por_trecho)
+            if c is not None:
+                permitidos |= set(R_NUMERO.findall('%s %s' % (c.get('secao'), c.get('texto'))))
+        for c, texto in textos(it, cam):
+            if c.split('.')[-1].split('[')[0] in ('id', 'ver', 'fontes', 'equip', 'tipo', 'texto', 'secao') or '.fontes[' in c or '.ver[' in c or c == cam + '.equip':
+                continue
+            for n in R_NUMERO.findall(texto):
+                if n not in permitidos:
+                    out.append('%s: número %s que não está na seção citada (nada de número novo; vem do guia gerado) «%s»' % (c, n, texto[:90]))
+        # ——— segurança e rótulo herdados do trecho ———
+        if t.get('seguranca') is True and it.get('seguranca') is not True:
+            out.append('%s: o trecho de origem tem seguranca: true e o item não (nada com seguranca vai à IA)' % cam)
+        fim = next((f for f in (rotulo_fim(), cap(ROTULO) + '.') if str(t.get('texto', '')).rstrip().endswith(f)), None)
+        if fim and not str(it.get('resposta', '')).rstrip().endswith(fim):
+            out.append('%s: a resposta não termina com o rótulo que o trecho de origem termina «%s»' % (cam, fim[-60:]))
+        if not fim and ROTULO.lower() in str(it.get('resposta', '')).lower():   # o rótulo abre frase com maiúscula no fim do texto
+            out.append('%s: rótulo do procedimento padrão numa resposta cujo trecho de origem não o tem' % cam)
+        if it.get('seguranca') is True and len(str(it.get('resposta', ''))) > SEGURANCA_MAX_LETRAS:   # como o trecho (SEGURANCA_CURTA): a tela e a voz leem a resposta inteira
+            out.append('%s.resposta: %d letras com seguranca (máximo %d: a tela e a voz leem inteira, com o rótulo no fim)' % (cam, len(it['resposta']), SEGURANCA_MAX_LETRAS))
+    # ——— cartões EM: as regras do D.protocolos ———
+    out += _regras_protocolo(X, [(c, s) for it in itens if isinstance(it, dict) and str(it.get('id', '')).startswith('EM-')
+                                 for c, s in textos(it, 'faq:%s' % it.get('id')) if not re.search(r'\.(?:id|ver\[\d+\]|fontes\[\d+\]\.\w+|secao|equip)$', c)])
+    # ——— glossário ———
+    gl = Q.get('glossario')
+    if not (isinstance(gl, list) and [g.get('termo') if isinstance(g, dict) else None for g in gl] == list(FAQ_GLOSSARIO)):
+        out.append('faq.glossario: os termos precisam ser %s' % ', '.join(FAQ_GLOSSARIO))
+    else:
+        for g in gl:
+            cam = 'faq.glossario.' + g['termo']
+            if tuple(g.keys()) != ('termo', 'texto', 'fonte') or not all(isinstance(g[k], str) and g[k].strip() for k in g):
+                out.append('%s: precisa de {termo, texto, fonte} com texto' % cam)
+                continue
+            if g['termo'] == 'MMSI' and PROTOCOLOS_TEXTOS['mmsiRadio'] not in g['texto']:
+                out.append('%s.texto: sem o texto MMSI_RADIO (%s)' % (cam, PROTOCOLOS_TEXTOS['mmsiRadio']))
+            if g['termo'] in FAQ_GLOSSARIO_ROTULO and not g['texto'].rstrip().endswith(cap(ROTULO) + '.'):
+                out.append('%s.texto: sem o rótulo do procedimento padrão no fim' % cam)
+            if g['termo'] == 'EPIRB' and not g['texto'].rstrip().endswith(rotulo_fim()):
+                out.append('%s.texto: sem o rótulo e a nota da etiqueta no fim' % cam)
+    return out
+
+
 ASSERCOES = [
     ('TERMOS', a_termos), ('NULO', a_nulo), ('SIMULACAO_UNICA', a_simulacao_unica), ('TAMANHO', a_tamanho), ('MMSI9', a_mmsi9),
     ('REGISTRO', a_registro), ('HEX15', a_hex15), ('SEM_INDICATIVO', a_sem_indicativo), ('AFIRMA_REAL', a_afirma_real),
@@ -3355,6 +3563,8 @@ ASSERCOES = [
     ('ESTABILIZADOR_12V', a_estabilizador_12v),
     # C10 (§1.18–§1.21): a forma e a referência do contrato dos checklists, sensores, peças e alarmes pedidos, sem nome na §6.3.
     ('FUNCOES', a_funcoes),
+    # C11 (§1.6): o faq-equipamentos.json (F10): forma, ids, ligação com a base, números do guia, segurança, rótulo, cartões EM e glossário.
+    ('FAQ', a_faq),
 ]
 NOMES = [n for n, _ in ASSERCOES]
 

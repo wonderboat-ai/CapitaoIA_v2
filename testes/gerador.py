@@ -52,6 +52,10 @@
   sensores (22 pontos, x/y pela fórmula, `bloco` das duas plataformas), peças (12, a única BAIXA e a única ZERO) e alarmes pedidos (18 métricas,
   `faixa` própria, nível só aviso), nos dois modos; a asserção FUNCOES (forma e referência do contrato) e as regras que o C10 ativou (IDS,
   NULO, SEM_EMERGENCIA, SEM_SALVATAGEM_EM, LOCAL_VOCAB, TERMOS) com amostras plantadas.
+- C11 (CONTRATO §1.6; c11_faq): faq-equipamentos.json (F10) — 91 itens (82 seções dos guias e do checklist, MO-01…CK-07, e os 9 cartões EM-01…09 do protocolo), 9 seções, glossário de
+  14 termos, sem conf, edição nem anexos do Avanti; a 1ª fonte de cada item é o trecho da base do id e todo número do item está nele; EM, SF, EP e CK-03 com seguranca e o rótulo do
+  procedimento padrão no fim; a asserção FAQ e as outras que leem o FAQ (TERMOS, NULO, TAMANHO, COORD_TEXTO, GRAFIA_SEAFIRE, CALADO_FORA, ESTABILIZADOR_12V, LOCAL_VOCAB, ROTULO_SEGURANCA,
+  SEGURANCA_MARCADA, SEGURANCA_SEM_MODELO, IDS…) com amostras plantadas, e o main() que reprova o FAQ com defeito (sem gravar nada).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -94,7 +98,7 @@ def ok(nome, cond, info=''):
 def arvore(pasta):
     """{caminho relativo: bytes} dos arquivos gerados numa pasta de saída."""
     out = {}
-    for rel in ('capitao-dados.js', 'base-conhecimento.json'):
+    for rel in ('capitao-dados.js', 'base-conhecimento.json', 'faq-equipamentos.json'):
         p = os.path.join(pasta, rel)
         if os.path.isfile(p):
             out[rel] = open(p, 'rb').read()
@@ -288,7 +292,8 @@ def hoje():
 
 
 def verifica(k):
-    return C.verifica(k['D'], k['B'], k['F'], G.saidas(k['D'], k['B']), k['faq'], k['rodape'], k['listas'], k['avanti'], k.get('const', CONST))
+    # o FAQ da amostra (ou {} sem FAQ): o saidas() não recalcula o de hoje sobre uma base plantada (que pode estar sem trecho)
+    return C.verifica(k['D'], k['B'], k['F'], G.saidas(k['D'], k['B'], {} if k['faq'] is None else k['faq']), k['faq'], k['rodape'], k['listas'], k['avanti'], k.get('const', CONST))
 
 
 def com_replay(k):
@@ -3073,6 +3078,288 @@ def c10_funcoes():
                'checklists.itens.saida[13].t', True)
 
 
+# ——————————————————————————————— C11: faq-equipamentos.json (F10, CONTRATO §1.6) ———————————————————————————————
+C11_CTX = {}
+
+
+def c11_base():
+    """O D, a base, as fontes e o FAQ de hoje, gerados uma vez; cada amostra trabalha numa cópia (c11_planta)."""
+    if not C11_CTX:
+        D = G.dados()
+        B = G.base_conhecimento()
+        C11_CTX.update(D=D, B=B, F=G.gera_fontes(D), Q=G.faq_equipamentos(B))
+    return C11_CTX
+
+
+def hoje_faq(muda=None):
+    """hoje() com o FAQ de verdade (e `muda(k)` por cima): o verifica() completo lê o FAQ junto de tudo o mais."""
+    k = hoje()
+    k['faq'] = copy.deepcopy(G.faq_equipamentos(k['B']))
+    if muda:
+        muda(k)
+    return k
+
+
+def faq_it(Q, i):
+    return por_id(Q['itens'], i)
+
+
+def c11_ix(i):
+    """Índice do item no `itens` (o caminho das mensagens do TERMOS, do COORD_TEXTO e do NULO é faq:itens[n])."""
+    return next(n for n, x in enumerate(c11_base()['Q']['itens']) if x['id'] == i)
+
+
+def c11_planta(regra, o_que, muda, espera, so_uma=False):
+    """A asserção `regra` (sozinha, sobre o D, a base, as fontes e o FAQ de hoje) acusa a amostra plantada como violação NOVA (com `so_uma`, a
+    única). `muda(D, B, Q)` mexe nas cópias. É a prova leve de cada checagem do FAQ; a rodada completa fica no hoje_faq() e no main()."""
+    c = c11_base()
+    fn = dict(C.ASSERCOES)[regra]
+
+    def ctx(planta):
+        D, B, Q = copy.deepcopy(c['D']), copy.deepcopy(c['B']), copy.deepcopy(c['Q'])
+        if planta:
+            muda(D, B, Q)
+        return C.Ctx(D, B, c['F'], {'faq-equipamentos.json': G.gera_faq(Q)}, Q)
+    bom = fn(ctx(False))
+    novos = [m for m in fn(ctx(True)) if m not in bom]
+    ok('%s: acusa a amostra plantada — C11: %s%s' % (regra, o_que, ' (uma violação só)' if so_uma else ''),
+       any(espera in m for m in novos) and (not so_uma or len(novos) == 1), {'novas': novos[:3], 'espera': espera})
+
+
+def c11_faq(tmp):
+    print('C11 (CONTRATO §1.6): faq-equipamentos.json (F10) — 82 itens dos guias e do checklist, 9 cartões EM, glossário; sem conf nem anexos do Avanti')
+    c = c11_base()
+    Q, D, B = c['Q'], c['D'], c['B']
+    itens = Q['itens']
+    P = D['protocolos']
+    # ——— o dado de hoje ———
+    Vf = verifica(hoje_faq())
+    novas, _, velhas = C.separa(Vf, set(C.OPCIONAIS))
+    ok('o FAQ de hoje não acusa nada em nenhuma das %d asserções (a FAQ, a TERMOS, a SEGURANCA_MARCADA, o rótulo, a trava 17, a grafia, o tamanho…)' % len(C.NOMES),
+       not novas and not velhas, {n: v[:2] for n, v in novas.items()} or velhas)
+    ok('o arquivo gerado tem o topo {versao, total, secoes, itens, glossario}, a versao de 8 hex do sha256 do conteúdo e total = itens = 91',
+       list(Q) == ['versao', 'total', 'secoes', 'itens', 'glossario'] and Q['total'] == len(itens) == 91
+       and Q['versao'] == hashlib.sha256(G.serializa({k: v for k, v in Q.items() if k != 'versao'}).encode('utf-8')).hexdigest()[:8], list(Q))
+    ok('o gerador é determinístico: duas rodadas dão o mesmo FAQ, e o texto gravado = gera_faq() (versao nova quando o texto muda)',
+       G.faq_equipamentos(B) == Q and G.gera_faq(Q) == G.saidas(D, B, Q)['faq-equipamentos.json'] and G.gera_faq(Q).endswith('}\n'))
+    kb = len(G.gera_faq(Q).encode('utf-8')) / 1024
+    ok('tamanho: %.1f KB (orçamento do contrato: 100 KB; estimativa 55–70 KB, com 91 itens e o glossário)' % kb, 40 < kb <= 100, kb)
+    # ——— ids, seções e a ligação com a base ———
+    prefixos = {'EM': 9, 'MO': 10, 'GE': 9, 'SK': 8, 'CL': 6, 'EL': 8, 'EE': 3, 'DS': 4, 'PO': 4, 'AN': 4, 'PI': 4, 'RA': 4, 'AI': 3, 'SF': 4, 'EP': 4, 'CK': 7}
+    ids = [x['id'] for x in itens]
+    ok('91 ids únicos: EM-01…09, MO-01…10, GE-01…09, SK-01…08, CL-01…06, EL-01…08, EE-01…03, DS-01…04, PO-01…04, AN, PI, RA 01…04, AI-01…03, SF e EP 01…04, CK-01…07',
+       len(set(ids)) == 91 and {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos} == prefixos
+       and all(re.fullmatch(r'[A-Z]{2}-\d{2}', i) for i in ids) and sum(prefixos.values()) == 91, {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos})
+    ok('cada seção de guia ou do checklist vira um item (82) e as 9 do protocolo os cartões EM (a base tem 91 trechos): a 1ª fonte de cada item é o trecho do id',
+       len(B['trechos']) == 91 and sum(1 for i in ids if not i.startswith('EM-')) == 82
+       and all(sum(1 for t in B['trechos'] if t['fonte'] == D['drive']['arquivos'][k]) == prefixos[p]
+               for p, k in (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
+                            ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
+                            ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))),
+       len(B['trechos']))
+    ok('9 seções {n, titulo, ids}: n = posição (D.secoes[n − 1]), os ids partem os itens e `secao` do item é o n; a 1ª é a Emergência com os 9 cartões',
+       [s['n'] for s in Q['secoes']] == list(range(1, 10)) and [len(s['ids']) for s in Q['secoes']] == [9, 10, 12, 8, 14, 8, 15, 8, 7]
+       and Q['secoes'][0]['titulo'] == 'Emergência' and Q['secoes'][0]['ids'] == ['EM-%02d' % n for n in range(1, 10)]
+       and all(x['secao'] == s['n'] for s in Q['secoes'] for i in s['ids'] for x in [faq_it(Q, i)]), [(s['n'], s['titulo'], len(s['ids'])) for s in Q['secoes']])
+    ok('os itens vêm na ordem das seções (EM primeiro), cada item na chave do contrato e na ordem do contrato, sem chave de confiabilidade nem anexo',
+       ids == [i for s in Q['secoes'] for i in s['ids']] and all(list(x) == [k for k in C.FAQ_CHAVES if k in x] for x in itens)
+       and not any(k in C.FAQ_PROIBIDAS for _, k in C.chaves_de(Q, 'faq:')), [x['id'] for x in itens if list(x) != [k for k in C.FAQ_CHAVES if k in x]])
+    ok('o item: 3 variantes diferentes, `emerg` só nos 9 EM, passos e demais campos omitidos quando vazios, títulos e perguntas únicos',
+       all(len(x['variantes']) == 3 == len(set(x['variantes'])) for x in itens) and [x['id'] for x in itens if x['emerg']] == ['EM-%02d' % n for n in range(1, 10)]
+       and len({x['titulo'] for x in itens}) == 91 == len({x['pergunta'] for x in itens})
+       and all(x.get('passos', ['x']) for x in itens) and sum(1 for x in itens if 'passos' not in x) > 0)
+    tipos = {f['tipo'] for x in itens for f in x['fontes']}
+    ok('fontes[].tipo ∈ {Guia de bordo, Protocolo, Boa prática}: nenhuma «Manual» nem «Foto»; os cartões EM citam o protocolo e os itens do checklist sem seção, a boa prática',
+       tipos == {'Guia de bordo', 'Protocolo', 'Boa prática'} and all([f['tipo'] for f in faq_it(Q, 'EM-%02d' % n)['fontes']] == ['Protocolo'] for n in range(1, 10))
+       and [x['id'] for x in itens if any(f['tipo'] == 'Boa prática' for f in x['fontes'])] == ['CK-03', 'CK-04', 'CK-05', 'CK-07'], tipos)
+    # ——— segurança, rótulo e os cartões de emergência ———
+    seg = {x['id'] for x in itens if x.get('seguranca')}
+    minimo = {'EM-%02d' % n for n in range(1, 10)} | {'SF-%02d' % n for n in range(1, 5)} | {'EP-%02d' % n for n in range(1, 5)} | {'MO-04', 'EL-01', 'EL-05', 'PO-04', 'AI-02', 'CK-03'}
+    ok('seguranca: true nos EM, SF, EP, CK-03 e nas outras seções do mínimo do §1.5 (MO-04, EL-01, EL-05, PO-04, AI-02) e no CK-05 (extintor), mais o GE-01 (cheiro de combustível) e o PO-02 (alagamento): 26 itens',
+       minimo <= seg and {'CK-05', 'GE-01', 'PO-02'} <= seg and len(seg) == 26 and all(x.get('seguranca') in (None, True) for x in itens), sorted(seg ^ minimo))
+    base_seg = {(t['fonte'], t['secao']) for t in B['trechos'] if t.get('seguranca')}
+    ok('nenhum trecho de segurança da base tem item sem seguranca: o item herda o trecho (nada com seguranca vai à IA, F30)',
+       all(x.get('seguranca') or (lambda m: (m.group(1), m.group(2)))(C.R_FONTE.fullmatch(x['fontes'][0]['texto'])) not in base_seg for x in itens))
+    fim = C.rotulo_fim()
+    ok('EM, SF, EP e a Salvatagem terminam com o rótulo do procedimento padrão (EM-05, EM-08, EM-09, SF e EP também com a nota da etiqueta) e só eles',
+       all(faq_it(Q, i)['resposta'].endswith(fim) for i in ['EM-05', 'EM-08', 'EM-09'] + ['SF-%02d' % n for n in range(1, 5)] + ['EP-%02d' % n for n in range(1, 5)])
+       and all(faq_it(Q, 'EM-%02d' % n)['resposta'].endswith(C.cap(C.ROTULO) + '.') for n in (1, 2, 3, 4, 6, 7))
+       and sorted(x['id'] for x in itens if C.ROTULO.lower() in x['resposta'].lower()) == sorted(['EM-%02d' % n for n in range(1, 10)] + ['SF-%02d' % n for n in range(1, 5)]
+                                                                                              + ['EP-%02d' % n for n in range(1, 5)]))
+    ok('os cartões EM repetem o D.protocolos: PAN-PAN, DSC (MMSI_RADIO) e Salvatagem letra por letra; o roteiro, o MOB, o fogo e o EPIRB são os passos; só o procedimento padrão',
+       faq_it(Q, 'EM-02')['resposta'] == P['panpan'] + ' ' + C.cap(C.ROTULO) + '.' and faq_it(Q, 'EM-03')['resposta'] == P['dsc'] + ' ' + C.cap(C.ROTULO) + '.'
+       and P['mmsiRadio'] in faq_it(Q, 'EM-03')['resposta'] and P['mmsiRadio'] in faq_it(Q, 'EM-01')['resposta'] and faq_it(Q, 'EM-09')['resposta'] == P['salvatagem'] + ' ' + fim
+       and faq_it(Q, 'EM-01')['passos'] == P['roteiro'] and faq_it(Q, 'EM-04')['passos'] == P['mob'] and faq_it(Q, 'EM-05')['passos'] == P['seafire']['passos']
+       and faq_it(Q, 'EM-08')['passos'] == P['epirb']['passos'] and faq_it(Q, 'EM-06')['resposta'].startswith(P['alagamento'][0])
+       and faq_it(Q, 'EM-07')['resposta'].startswith(P['abandono'][0]) and ' '.join(faq_it(Q, 'EM-09')['passos']) == P['salvatagem'])
+    ok('SF e EP sem fabricante, modelo nem validade: `equip` = «Sistema fixo de supressão de incêndio» / «EPIRB»; nenhum texto do FAQ cita «Ocean Signal», «SafeSea», «FD 300M» nem «Seafire» fora do título do protocolo',
+       {x['equip'] for x in itens if x['id'].startswith('SF-')} == {'Sistema fixo de supressão de incêndio'} and {x['equip'] for x in itens if x['id'].startswith('EP-')} == {'EPIRB'}
+       and not [m for m in Vf['SEGURANCA_SEM_MODELO'] if m.startswith('faq:')] and not [m for m in Vf['GRAFIA_SEAFIRE'] if m.startswith('faq:')])
+    # ——— ligação com o checklist e o glossário ———
+    ck = D['checklists']['itens']
+    com_faq = [(x, x['faq']) for t in ck.values() for x in t if 'faq' in x]
+    ok('os 17 `faq` do checklist existem no FAQ e, fora s10 (EL-04) e s13 (EM-09), apontam para a seção que a `fonte` do item cita',
+       len(com_faq) == 17 and all(f in ids for _, f in com_faq)
+       and all(faq_it(Q, f)['fontes'][0]['texto'] == x['fonte'] for x, f in com_faq if x['id'] not in ('s10', 's13')) and dict((x['id'], f) for x, f in com_faq)['s13'] == 'EM-09',
+       [(x['id'], f, x['fonte']) for x, f in com_faq if f not in ids or (x['id'] not in ('s10', 's13') and faq_it(Q, f)['fontes'][0]['texto'] != x['fonte'])])
+    gl = Q['glossario']
+    ok('glossário: SOG, STW, COG, HDG, TWS, TWA, AWA, DPT, ETA, MOB, DSC, MMSI, EPIRB e BB/BE, cada um {termo, texto, fonte}; MMSI com o texto MMSI_RADIO (nunca o número); MOB, DSC e EPIRB com o rótulo',
+       [g['termo'] for g in gl] == ['SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 'MOB', 'DSC', 'MMSI', 'EPIRB', 'BB/BE'] and all(list(g) == ['termo', 'texto', 'fonte'] for g in gl)
+       and P['mmsiRadio'] in next(g for g in gl if g['termo'] == 'MMSI')['texto'] and not re.search(r'\d{9}', ' '.join(g['texto'] for g in gl))
+       and all(next(g for g in gl if g['termo'] == t)['texto'].endswith(C.cap(C.ROTULO) + '.') for t in ('MOB', 'DSC')) and next(g for g in gl if g['termo'] == 'EPIRB')['texto'].endswith(fim))
+    # ——— o gerador ———
+    antigo = G.FAQ_TEXTOS['CK-05']['ob']
+    G.FAQ_TEXTOS['CK-05']['ob'] = ('ck', 's03')   # o s03 tem seção nos guias (g_motores §1): só os de «boa prática» entram assim
+    try:
+        G.faq_equipamentos(B)
+        recusou = False
+    except SystemExit as e:
+        recusou = 'boa prática' in str(e)
+    finally:
+        G.FAQ_TEXTOS['CK-05']['ob'] = antigo
+    ok('o gerador recusa citar no FAQ o item do checklist que tem seção nos guias (só os de «boa prática» entram como obs ou atenção)', recusou)
+    sem_dsc = dict(B, trechos=[t for t in B['trechos'] if not (t['fonte'] == D['drive']['arquivos']['protocolo'] and t['secao'] == 'DSC')])
+    ok('o gerador não cai com a base sem um trecho (a asserção FAQ acusa): sem a seção DSC do protocolo, o EM-03 sai com a base e o FAQ acusa «o trecho de origem não existe»',
+       any('faq:EM-03: o trecho de origem não existe' in m for m in C.a_faq(C.Ctx(D, sem_dsc, c['F'], {}, G.faq_equipamentos(sem_dsc)))))
+    # ——— amostras plantadas: a FAQ ———
+    def it(Q_, i):
+        return faq_it(Q_, i)
+    A = [
+        ('chave `conf` num item (o chip de confiabilidade do Avanti)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'conf': 'alta'}), 'chave de conf'),
+        ('chave `lacuna` num item', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'lacuna': 'falta o manual'}), 'chave de lacuna'),
+        ('chave `edicao` no topo', lambda D_, B_, Q_: Q_.update({'edicao': '02/10/2026'}), 'chave de edicao'),
+        ('anexo `lacunas` no topo', lambda D_, B_, Q_: Q_.update({'lacunas': [{'equip': 'x', 'texto': 'y', 'onde': 'z'}]}), 'chave de lacunas'),
+        ('anexo `divergencias` no topo', lambda D_, B_, Q_: Q_.update({'divergencias': []}), 'chave de divergencias'),
+        ('anexo `alertas` no topo', lambda D_, B_, Q_: Q_.update({'alertas': []}), 'chave de alertas'),
+        ('anexo `invalidos` no topo', lambda D_, B_, Q_: Q_.update({'invalidos': []}), 'chave de invalidos'),
+        ('`origem`, `selos`, `decisoes` e `limites` no topo', lambda D_, B_, Q_: Q_.update({'origem': 'x', 'selos': ['y'], 'decisoes': ['z'], 'limites': ['w']}), 'chave de selos'),
+        ('versao que não é o hash de 8 hex', lambda D_, B_, Q_: Q_.update({'versao': 'v1'}), 'faq.versao'),
+        ('total errado', lambda D_, B_, Q_: Q_.update({'total': 281}), 'faq.total: 281 ≠ 91 itens'),
+        ('id repetido', lambda D_, B_, Q_: it(Q_, 'MO-02').update({'id': 'MO-01'}), 'id repetido'),
+        ('id fora do contrato', lambda D_, B_, Q_: it(Q_, 'MO-10').update({'id': 'MO-11'}), 'ids ≠ os do contrato'),
+        ('`secao` do item fora da seção em que está', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'secao': 3}), 'faq:MO-01.secao: 3'),
+        ('`n` da seção fora da posição', lambda D_, B_, Q_: Q_['secoes'][2].update({'n': 7}), 'faq.secoes[2].n'),
+        ('item que sai de todas as seções', lambda D_, B_, Q_: Q_['secoes'][1]['ids'].remove('MO-05'), 'não partem os itens'),
+        ('2 variantes', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'variantes': it(Q_, 'MO-01')['variantes'][:2]}), 'faq:MO-01.variantes'),
+        ('variante igual à pergunta', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'variantes': [it(Q_, 'MO-01')['pergunta']] + it(Q_, 'MO-01')['variantes'][1:]}), 'faq:MO-01.variantes'),
+        ('passos vazio (a chave se omite)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'passos': []}), 'faq:MO-01.passos'),
+        ('título repetido', lambda D_, B_, Q_: it(Q_, 'MO-02').update({'titulo': it(Q_, 'MO-01')['titulo']}), 'titulo repetido'),
+        ('pergunta repetida', lambda D_, B_, Q_: it(Q_, 'MO-02').update({'pergunta': it(Q_, 'MO-01')['pergunta']}), 'pergunta repetida'),
+        ('`emerg` num item que não é EM', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'emerg': True}), 'faq:MO-01.emerg'),
+        ('cartão EM sem `emerg`', lambda D_, B_, Q_: it(Q_, 'EM-01').update({'emerg': False}), 'faq:EM-01.emerg'),
+        ('`seguranca` falso', lambda D_, B_, Q_: it(Q_, 'EM-01').update({'seguranca': False}), 'faq:EM-01.seguranca'),
+        ('`ver` com id que não existe', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'ver': ['XX-99']}), 'faq:MO-01.ver'),
+        ('`ver` que cita o próprio item', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'ver': ['MO-01']}), 'faq:MO-01.ver'),
+        ('fonte do tipo «Manual»', lambda D_, B_, Q_: it(Q_, 'MO-01')['fontes'][0].update({'tipo': 'Manual'}), "fontes[0].tipo: 'Manual'"),
+        ('fonte do tipo «Foto»', lambda D_, B_, Q_: it(Q_, 'MO-01')['fontes'].append({'tipo': 'Foto', 'texto': 'Boa prática'}), "fontes[1].tipo: 'Foto'"),
+        ('fonte com seção que não existe na base', lambda D_, B_, Q_: it(Q_, 'MO-01')['fontes'].append({'tipo': 'Guia de bordo', 'texto': 'Guia de bordo — Motores Cummins §99 · Nada'}),
+         'não é uma seção da base'),
+        ('1ª fonte de outro id', lambda D_, B_, Q_: it(Q_, 'MO-01')['fontes'][0].update({'texto': it(Q_, 'MO-02')['fontes'][0]['texto']}), 'não é a seção do id'),
+        ('1ª fonte que é a boa prática', lambda D_, B_, Q_: it(Q_, 'CK-03')['fontes'].reverse(), 'a 1ª fonte é a seção do guia'),
+        ('item sem fontes', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'fontes': []}), 'faq:MO-01.fontes'),
+        ('número novo num passo (7 vezes)', lambda D_, B_, Q_: it(Q_, 'MO-02')['passos'].append('Repita 7 vezes.'), 'número 7 que não está na seção citada'),
+        ('número novo com milhar (2.600 rpm no gerador)', lambda D_, B_, Q_: it(Q_, 'GE-02').update({'acao': 'Segure até 2.600 rpm.'}), 'número 2.600'),
+        ('número novo numa variante', lambda D_, B_, Q_: it(Q_, 'MO-08')['variantes'].__setitem__(0, 'horímetro a cada 500 h'), 'número 500'),
+        ('item de segurança sem `seguranca` (o trecho tem)', lambda D_, B_, Q_: it(Q_, 'MO-04').pop('seguranca'), 'nada com seguranca vai à IA'),
+        ('cartão EM-02 sem o rótulo no fim', lambda D_, B_, Q_: it(Q_, 'EM-02').update({'resposta': P['panpan']}), 'a resposta não termina com o rótulo'),
+        ('rótulo numa resposta cujo trecho não o tem', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' ' + C.cap(C.ROTULO) + '.'}), 'rótulo do procedimento padrão numa resposta'),
+        ('resposta de segurança com mais de 800 letras', lambda D_, B_, Q_: it(Q_, 'EM-02').update({'resposta': P['panpan'] + ' ' + 'Repita a chamada. ' * 50 + C.cap(C.ROTULO) + '.'}),
+         'letras com seguranca (máximo 800'),
+        ('EM com minutos', lambda D_, B_, Q_: it(Q_, 'EM-06')['passos'].append('Espere 5 minutos.'), 'faq:EM-06.passos[3]: minutos'),
+        ('EM com pressão em bar', lambda D_, B_, Q_: it(Q_, 'EM-06').update({'atencao': 'Pressão de 3,4 bar.'}), 'faq:EM-06.atencao: " bar"'),
+        ('EM com número de pessoas', lambda D_, B_, Q_: it(Q_, 'EM-01')['passos'].__setitem__(5, 'PESSOAS A BORDO: 4'), 'faq:EM-01.passos[5]: número de pessoas'),
+        ('EM com lugar a bordo', lambda D_, B_, Q_: it(Q_, 'EM-09').update({'obs': 'Coletes no paiol de proa.'}), 'faq:EM-09.obs: lugar a bordo'),
+        ('EM com o registro da embarcação', lambda D_, B_, Q_: it(Q_, 'EM-04').update({'obs': 'Registro %s.' % D_['embarcacao']['registro']}), 'faq:EM-04.obs: dado gerado da embarcação (registro)'),
+        ('EM com a posição na pergunta', lambda D_, B_, Q_: it(Q_, 'EM-01').update({'pergunta': 'Chamada de socorro a 3 mn da costa?'}), 'faq:EM-01.pergunta'),
+        ('glossário sem um termo', lambda D_, B_, Q_: Q_['glossario'].pop(2), 'faq.glossario: os termos precisam ser'),
+        ('MMSI do glossário sem o texto MMSI_RADIO', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'MMSI').update({'texto': 'Identificação do rádio.'}), 'sem o texto MMSI_RADIO'),
+        ('MOB do glossário sem o rótulo', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'MOB').update({'texto': 'Homem ao mar.'}), 'glossario.MOB.texto: sem o rótulo'),
+        ('EPIRB do glossário sem a nota da etiqueta', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'EPIRB').update({'texto': 'Radiobaliza. ' + C.cap(C.ROTULO) + '.'}),
+         'glossario.EPIRB.texto: sem o rótulo e a nota da etiqueta'),
+    ]
+    for o_que, muda_, espera in A:
+        c11_planta('FAQ', o_que, muda_, espera)
+    c11_planta('FAQ', 'a repetição da pergunta de outro item é a única violação nova', lambda D_, B_, Q_: it(Q_, 'MO-02').update({'pergunta': it(Q_, 'MO-01')['pergunta']}),
+               'pergunta repetida', so_uma=False)
+    # ——— amostras plantadas: as outras asserções, agora sobre o FAQ ———
+    ix = c11_ix
+    B1 = [
+        ('TERMOS', 'rótulo «DEMO» na resposta', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' (DEMO)'}), 'ROTULOS: faq:itens[%d].resposta' % ix('MO-01')),
+        ('TERMOS', 'selo «SEM DADOS» no passo', lambda D_, B_, Q_: it(Q_, 'GE-02')['passos'].append('SEM DADOS'), 'ROTULOS: faq:itens[%d].passos[3]' % ix('GE-02')),
+        ('TERMOS', '«os dados são fictícios» (AUTENTICIDADE)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'obs': 'Os dados são fictícios.'}), 'AUTENTICIDADE: faq:itens[%d].obs' % ix('MO-01')),
+        ('TERMOS', 'preço (DINHEIRO)', lambda D_, B_, Q_: it(Q_, 'MO-07').update({'obs': 'Custa R$ 1.200.'}), 'DINHEIRO: faq:itens[%d].obs' % ix('MO-07')),
+        ('TERMOS', 'telefone (PESSOAIS)', lambda D_, B_, Q_: it(Q_, 'CL-04').update({'senao': 'Ligue para (47) 99999-0000.'}), 'PESSOAIS: faq:itens[%d].senao' % ix('CL-04')),
+        ('TERMOS', 'equipamento de salvatagem com lugar (LOCAL_SEGURANCA)', lambda D_, B_, Q_: it(Q_, 'CK-03').update({'obs': 'Os coletes ficam no paiol de proa.'}),
+         'LOCAL_SEGURANCA: faq:itens[%d].obs' % ix('CK-03')),
+        ('TERMOS', '«n/d» (VAZIOS)', lambda D_, B_, Q_: it(Q_, 'MO-08').update({'obs': 'n/d'}), 'VAZIOS: faq:itens[%d].obs' % ix('MO-08')),
+        ('TERMOS', 'selo A CONFERIR (ANEXO)', lambda D_, B_, Q_: it(Q_, 'MO-08').update({'obs': 'A CONFERIR'}), 'ANEXO: faq:itens[%d].obs' % ix('MO-08')),
+        ('NULO', 'campo vazio num item (`acao` vazia)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'acao': ''}), "faq:itens[%d].acao: ''" % ix('MO-01')),
+        ('NULO', 'lista vazia no item (`ver` vazio)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'ver': []}), 'faq:itens[%d].ver: lista vazia' % ix('MO-01')),
+        ('NULO', 'null no item', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'obs': None}), 'faq:itens[%d].obs: None' % ix('MO-01')),
+        ('TAMANHO', 'FAQ acima de 100 KB', lambda D_, B_, Q_: Q_.update({'sobra': 'abc ' * 30000}), 'faq-equipamentos.json'),
+        ('COORD_TEXTO', 'coordenada em graus e minutos no passo', lambda D_, B_, Q_: it(Q_, 'GE-02')['passos'].append("Fundeado em 26°59,6'S."), 'faq:itens[%d].passos[3]' % ix('GE-02')),
+        ('GRAFIA_SEAFIRE', '«Sea Fire» no título', lambda D_, B_, Q_: it(Q_, 'SF-01').update({'titulo': 'Disparo do Sea Fire'}), 'faq:itens[%d].titulo' % ix('SF-01')),
+        ('GRAFIA_SEAFIRE', 'chave com «sea_fire»', lambda D_, B_, Q_: it(Q_, 'SF-01').update({'sea_fire': 'x'}), 'sea_fire'),
+        ('CALADO_FORA', '«calado» no passo (até a Fase 3)', lambda D_, B_, Q_: it(Q_, 'EL-08')['passos'].append('Confira o calado.'), 'faq:EL-08: "calado"'),
+        ('ESTABILIZADOR_12V', 'energia AC num passo do estabilizador', lambda D_, B_, Q_: it(Q_, 'SK-02')['passos'].append('Ligue com energia AC.'), 'energia AC num texto do estabilizador'),
+        ('LOCAL_VOCAB', '«boia» num item fora do EM-04, EM-09 e CK-03', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'obs': 'Jogue a boia.'}), 'faq:MO-01: "boia" fora de origem'),
+        ('LOCAL_VOCAB', 'lugar de salvatagem em qualquer ordem', lambda D_, B_, Q_: it(Q_, 'CK-03').update({'obs': 'No paiol de proa ficam os coletes.'}), 'equipamento de salvatagem e lugar a bordo na mesma frase'),
+        ('ROTULO_SEGURANCA', 'SF-01 sem o rótulo no fim da resposta', lambda D_, B_, Q_: it(Q_, 'SF-01').update({'resposta': 'Desligue motores e gerador.'}), 'faq:SF-01 sem o rótulo no fim da resposta'),
+        ('ROTULO_SEGURANCA', 'EM-09 só com o rótulo, sem a nota da etiqueta', lambda D_, B_, Q_: it(Q_, 'EM-09').update({'resposta': P['salvatagem'] + ' ' + C.cap(C.ROTULO) + '.'}), 'faq:EM-09 sem o rótulo no fim da resposta'),
+        ('SEGURANCA_MARCADA', 'item com a palavra «extintor» sem seguranca', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'obs': 'Extintor à mão.'}), 'faq:MO-01 casa a SEGURANCA_PALAVRAS sem seguranca'),
+        ('SEGURANCA_MARCADA', 'CK-03 sem seguranca (o mínimo do §1.5/§1.6)', lambda D_, B_, Q_: it(Q_, 'CK-03').pop('seguranca'), 'faq:CK-03'),
+        ('SEGURANCA_MARCADA', 'EM-05 sem seguranca', lambda D_, B_, Q_: it(Q_, 'EM-05').pop('seguranca'), 'faq:EM-05'),
+        ('SEGURANCA_MARCADA', 'SF-04 sem seguranca', lambda D_, B_, Q_: it(Q_, 'SF-04').pop('seguranca'), 'faq:SF-04'),
+        ('SEGURANCA_MARCADA', 'EP-02 sem seguranca', lambda D_, B_, Q_: it(Q_, 'EP-02').pop('seguranca'), 'faq:EP-02'),
+        ('SEGURANCA_SEM_MODELO', 'modelo do EPIRB num passo de outro item', lambda D_, B_, Q_: it(Q_, 'MO-01')['passos'].append('Confira o SafeSea.'), 'fabricante ou modelo de equipamento de segurança [SafeSea]'),
+        ('SEGURANCA_SEM_MODELO', 'fabricante do EPIRB no EP-01', lambda D_, B_, Q_: it(Q_, 'EP-01').update({'obs': 'Fabricante Ocean Signal.'}), 'fabricante ou modelo de equipamento de segurança [Ocean Signal]'),
+        ('SEGURANCA_SEM_MODELO', 'validade (data) no EP-04', lambda D_, B_, Q_: it(Q_, 'EP-04').update({'obs': 'Vence em 03/2028.'}), 'validade ou data num texto do EPIRB'),
+        ('SEGURANCA_SEM_MODELO', 'lugar a bordo no SF-02', lambda D_, B_, Q_: it(Q_, 'SF-02').update({'obs': 'O acesso fica na praça de máquinas.'}), 'lugar a bordo num texto do EPIRB'),
+        ('SEM_INDICATIVO', 'chave de telefone no item', lambda D_, B_, Q_: it(Q_, 'CL-04').update({'telefone': 'x'}), 'chave de telefone'),
+        ('SEM_INDICATIVO', 'indicativo no texto', lambda D_, B_, Q_: it(Q_, 'EL-04').update({'obs': 'Indicativo PU2ABC.'}), 'PU2ABC'),
+        ('MMSI9', 'nove dígitos no item', lambda D_, B_, Q_: it(Q_, 'EL-05').update({'obs': 'MMSI 710123456.'}), 'faq:itens[%d].obs' % ix('EL-05')),
+        ('AFIRMA_REAL', '«os dados são reais»', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'obs': 'Os dados são reais.'}), 'faq:itens[%d].obs' % ix('MO-01')),
+        ('IDS', 'faq do checklist que não existe no FAQ', lambda D_, B_, Q_: Q_['itens'].remove(it(Q_, 'MO-01')), 'checklists.itens.saida.s03.faq fora do FAQ'),
+    ]
+    for regra, o_que, muda_, espera in B1:
+        c11_planta(regra, o_que, muda_, espera)
+    # ——— o gerador reprova (main() devolve 1 e não grava nada) ———
+    def rodar_faq(muda_, pasta):
+        orig = G.faq_equipamentos
+        G.faq_equipamentos = lambda B_=None: (lambda Q_: (muda_(Q_), Q_)[1])(copy.deepcopy(orig(B_)))
+        opcionais = {k: os.environ.pop(k) for k in ('CAPITAO_LISTAS_PRIVADAS', 'CAPITAO_AVANTI') if k in os.environ}
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as o, contextlib.redirect_stderr(io.StringIO()) as e:
+                rc = G.main(['--saida', pasta])
+        finally:
+            G.faq_equipamentos = orig
+            os.environ.update(opcionais)
+        return rc, o.getvalue() + e.getvalue()
+    for n_, (nome, muda_, esperado) in enumerate((('número novo num passo', lambda Q_: it(Q_, 'MO-02')['passos'].append('Repita 7 vezes.'), 'FAQ'),
+                                                  ('chave `conf` no item', lambda Q_: it(Q_, 'MO-01').update({'conf': 'alta'}), 'FAQ'),
+                                                  ('EM-01 sem seguranca (SEGURANCA_MARCADA)', lambda Q_: it(Q_, 'EM-01').pop('seguranca'), 'SEGURANCA_MARCADA'),
+                                                  ('preço no item (a DINHEIRO reprova já; a TERMOS em relatório, não)',
+                                                   lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' Custa R$ 9,90.'}), 'TERMOS'),
+                                                  ('«DEMO» no item (relatório: não reprova, grava)', None, None))):
+        if muda_ is None:   # o relatório da TERMOS não reprova: main() devolve 0 e grava
+            pasta = os.path.join(tmp, 'faq-%d' % n_)
+            rc, saida = rodar_faq(lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' (DEMO)'}), pasta)
+            ok('FAQ plantado (%s): main() devolve 0 e grava (a varredura de termos fica em relatório até o C12)' % nome,
+               rc == 0 and os.path.isfile(os.path.join(pasta, 'faq-equipamentos.json')), (rc, saida[-300:]))
+            continue
+        pasta = os.path.join(tmp, 'faq-%d' % n_)
+        rc, saida = rodar_faq(muda_, pasta)
+        ok('FAQ plantado (%s): main() devolve 1 e não grava nada (%s)' % (nome, esperado), rc == 1 and not os.path.exists(pasta) and esperado in saida, (rc, saida[-300:]))
+    pasta = os.path.join(tmp, 'faq-bom')
+    rc, saida = rodar_faq(lambda Q_: None, pasta)
+    ok('o FAQ de hoje, sem mudança: main() devolve 0 e grava o faq-equipamentos.json igual ao de G.faq_equipamentos()',
+       rc == 0 and open(os.path.join(pasta, 'faq-equipamentos.json'), encoding='utf-8').read() == G.gera_faq(Q), (rc, saida[-300:]))
+
+
+AMOSTRAS['FAQ'] = (lambda r: hoje_faq(lambda k: faq_it(k['faq'], 'MO-02').update({'pergunta': faq_it(k['faq'], 'MO-01')['pergunta']}) if r else None),
+                   'faq:MO-02.pergunta repetida')   # C11: o FAQ de hoje, com a pergunta do MO-01 também no MO-02
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix='capitao-gerador-') as tmp:
         determinismo(tmp)
@@ -3088,6 +3375,7 @@ def main():
         c8_rota_e_replay()
         c9_historico()
         c10_funcoes()
+        c11_faq(tmp)
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))
