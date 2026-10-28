@@ -2518,6 +2518,10 @@ def c8_rota_e_replay():
     dia = next(t for r, t in F.items() if r.endswith('Diário de bordo.csv'))
     ok('pastas 06 e 04: o abastecimento tem os 3 dias de bordo (0, 1 e 2) com 1.086 L e o diário traz a d01 e a d02 do dia de bordo antes das fixas',
        len(aba.strip().split('\n')) == 4 and aba.count('1.086') == 3 and '\n0,07:00,' in aba and dia.split('\n')[1].startswith('0,07:00,Navegação') and dia.split('\n')[2].startswith('0,07:00,Combustível'), (aba[:200], dia[:300]))
+    # revisão do C8 (nivelDepois): o CSV do abastecimento em pt-BR nos dois números da linha, litros «1.086» e nível «97,5» (o nível saía «97.5» ao lado de «1.086»)
+    linhas_aba = list(csv.reader(io.StringIO(aba)))
+    ok('pasta 06: cada linha do abastecimento traz litros «1.086» e nível depois «97,5» (pt-BR nos dois), sem «97.5»',
+       len(linhas_aba) == 4 and all(len(l) == 8 for l in linhas_aba) and all((l[2], l[5]) == ('1.086', '97,5') for l in linhas_aba[1:]) and '97.5' not in aba, linhas_aba[:2])
     # ——— plantas
     for nome, o_que, monta, espera, *so in C8_PLANTAS:
         planta(nome, ' — C8: ' + o_que, monta, espera, so_uma=bool(so and so[0]))

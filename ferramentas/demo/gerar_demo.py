@@ -1664,7 +1664,8 @@ def gera_fontes(D):
     ab = bordo.get('abastecimento')
     F[PASTAS['abast'] + '/' + ARQ['abast'] + '.csv'] = csv_txt(   # um por dia de bordo (0, 1 e 2): a lista que a microtarefa do rodapé monta
         [COL_DIA_BORDO, 'Hora', 'Litros', 'Combustível', 'Local', 'Nível depois (%)', 'Situação', 'Observação'],
-        [[k, ab['h'], br(ab['litros']), ab['combustivel'], ab['local'], ab['nivelDepois'], ab['st'], ab['nota']] for k in range(bordo.get('dias', 0))] if ab else [])
+        # pt-BR nos dois números: litros «1.086» e nível «97,5» (o csv_txt cita o que tem vírgula); o nível cru saía «97.5» ao lado de «1.086»
+        [[k, ab['h'], br(ab['litros']), ab['combustivel'], ab['local'], num_br(ab['nivelDepois'], 1), ab['st'], ab['nota']] for k in range(bordo.get('dias', 0))] if ab else [])
     s = snapshot_dados()   # não o SNAPSHOT cru: com SIMULACAO = False a leitura da pasta 05 também sai sem lat/lon (§4.3; é arquivo do repositório público)
     pos = {'lat': s['gps']['lat'], 'lon': s['gps']['lon']} if 'lat' in s['gps'] else {}
     F[PASTAS['tele'] + '/' + ARQ['snapshot']] = json.dumps({

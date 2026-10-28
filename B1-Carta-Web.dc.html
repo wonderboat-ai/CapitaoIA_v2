@@ -296,7 +296,7 @@ class Component extends DCLogic {
 
     // ——— Abastecimento ———
     const CON = D.consumo || {}, AUT = D.autonomia || {}, cru = CON.cruzeiro || {}, len = CON.lenta || {}, des = CON.desdeAbast || {};
-    const abast = (D.abastecimentos || []).slice(0, 2).map((a) => ({ d: String(a.d).slice(0, 5), l: mil(a.litros) + ' L ' + (a.combustivel || '') + (typeof a.nivelDepois === 'number' ? ' · ≈ ' + a.nivelDepois + ' % depois' : ''), st: a.st || 'A CONFERIR', tone: a.st === 'CONFERIDO' ? cor('ok')[0] : cor('violeta')[0], title: a.d + ' · ' + mil(a.litros) + ' L · ' + (a.local || '') + ' · ' + (a.nota || '') }));
+    const abast = (D.abastecimentos || []).slice(0, 2).map((a) => ({ d: String(a.d).slice(0, 5), l: mil(a.litros) + ' L ' + (a.combustivel || '') + (typeof a.nivelDepois === 'number' ? ' · ≈ ' + nb(a.nivelDepois, 1) + ' % depois' : ''), st: a.st || 'A CONFERIR', tone: a.st === 'CONFERIDO' ? cor('ok')[0] : cor('violeta')[0], title: a.d + ' · ' + mil(a.litros) + ' L · ' + (a.local || '') + ' · ' + (a.nota || '') }));
     const reserva = typeof D.reserva === 'number' ? Math.round(D.reserva * 100) + ' %' : SD;
 
     // ——— semana ———

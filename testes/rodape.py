@@ -739,7 +739,9 @@ SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar[, o que não pode
     ('A1-Ponte-Web', False, ('BB 1,2 · BE 0,9 cm', 'lançada · 30 m'), ('Nenhum sensor',)),   # A1:328-329 já tratavam objeto no valor mas a dica fixa dizia «Nenhum sensor» ao lado de «na rede»
     ('A2-Ponte-Mobile', True, ()),
     ('E1-Navegando-Gatilhos', False, ()),
-    ('G2-Abastecimento-Web', False, ('3 registros', '27/10/2026', '26/10/2026', '25/10/2026')),
+    ('G2-Abastecimento-Web', False, ('3 registros', '27/10/2026', '26/10/2026', '25/10/2026', '97,5 %'), ('97.5',)),   # revisão do C8 (nivelDepois): o nível depois do abastecimento é 97,5 (float); as telas concatenavam o número cru («97.5 %»)
+    ('G2-Abastecimento-Mobile', True, ('97,5 %',), ('97.5',)),
+    ('B1-Carta-Web', False, ('1.086 L diesel · ≈ 97,5 % depois',), ('97.5',)),
 )
 
 
@@ -768,9 +770,10 @@ def snapshot_sem_null(b, local):
                len(chips) == 2 and 'BB 1,2 · BE 0,9 cm' in chips[0][0] and 'lançada · 30 m' in chips[1][0] and not any('Nenhum sensor' in t for _, t in chips)
                and all(' na rede · ' in t for _, t in chips), chips)
         if tela.startswith('G2'):   # as 3 linhas de abastecimento do dia de bordo (ab-0…ab-2): 07:00, 1.086 L cada, a nota fiscal conferida (§1.9, §1.10)
+            litros = '\n1.086 L\n' if not app else ' · 1.086 L\n'   # a web põe os litros numa coluna; o app, na linha «27/10/2026 · 1.086 L»
             ok('%s: as 3 linhas do histórico, cada uma com 1.086 L e a saída das 07:00' % tela,
-               todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)') == 3 and todo.count('\n1.086 L\n') >= 3,
-               (todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)'), todo.count('\n1.086 L\n')))
+               todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)') == 3 and todo.count(litros) >= 3,
+               (todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)'), todo.count(litros)))
         pg.context.close()
 
 
