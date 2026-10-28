@@ -25,6 +25,12 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
   lista: vale como vazio e nunca zera as outras contas); a trava e o instante() nas três fontes (replay,
   coletor e a reserva do snapshot) com os números do §1.22 e do §1.23 (12:01:00): autonomia, faltam, desdeAbast, diesel_pct;
 - os formatadores (arred, nb, mil, grau3, hora, coord, campo);
+- nenhuma escrita no aparelho (§4.1: «não grava no localStorage nem cria linha no diário do aparelho»; revisão do C7): um contador em
+  Storage.prototype (setItem, removeItem, clear: localStorage e sessionStorage) e em indexedDB.open, com a pilha de cada escrita, separa as
+  do rodapé (pilha no capitao-dados.js) das da tela; 0 do rodapé na carga e no uso (rebase forçado em vários dias, contagens, trava,
+  instante, prazoDe, docDe, fmt) na rota mínima, na A1, na S1, na S2 e na /SOS-teste.html, com o controle (a escrita do próprio teste entra no
+  contador) e 10 mutantes que gravam (diário e executado do aparelho, sessionStorage, clear, indexedDB, a microtarefa, o instante, as contagens,
+  a trava, o rebase forçado) que a conferência tem de acusar; mais a leitura estática do código do rodape.js;
 - as telas com o rodapé (C1, C2, B1, G1, A1, G3, G4): "prazos a partir de" = hoje, sem "falta registrar" vazio, e a A1 sem a data do
   autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4);
 - a G1 (web e app), com a nota fiscal do abastecimento tal como o arquivo gerado a traz hoje e tal como o C8 a entrega (pela microtarefa):
@@ -128,12 +134,26 @@ ALVO_MUTANTE = 'D.versao = br(hojeN);'
 MUTANTE_SOS = ALVO_MUTANTE + (" if (hojeN !== %d && D.protocolos && D.embarcacao) { D.protocolos.mmsiRotulo = String(D.protocolos.mmsiRotulo).toUpperCase();"
                               " D.embarcacao.nome = String(D.embarcacao.nome).toUpperCase(); }" % DIA_REF)
 MUTANTE_GUIAS = ALVO_MUTANTE + (" if (hojeN !== %d && D.guias) { for (var g in D.guias) { D.guias[g] = String(D.guias[g]).toUpperCase(); break; } }" % DIA_REF)
+# Revisão do C7: contador de escritas no aparelho (§4.1). Cada escrita (setItem, removeItem e clear, de localStorage e de sessionStorage, e
+# indexedDB.open) entra em window.__escritas com a operação, a chave e `dados`: true se a pilha passa pelo capitao-dados.js, onde o rodapé é
+# anexado (a sessão, o tema e o resto das telas escrevem de outros arquivos e não contam como do rodapé; os testes de si mesmos também não).
+ESCRITAS = """(function () { var reg = window.__escritas = [];
+  function nota(op, chave) { var st = ''; try { st = new Error().stack || ''; } catch (e) {} reg.push({ op: op, chave: chave, dados: st.indexOf('capitao-dados.js') >= 0 }); }
+  ['setItem', 'removeItem', 'clear'].forEach(function (op) { var o = Storage.prototype[op];
+    Storage.prototype[op] = function (k) { nota(op, op === 'clear' ? null : String(k)); return o.apply(this, arguments); }; });
+  if (window.IDBFactory) { var ob = IDBFactory.prototype.open; IDBFactory.prototype.open = function (n) { nota('indexedDB.open', String(n)); return ob.apply(this, arguments); }; } })();"""
+# o uso de toda a API do rodapé que mexe com o aparelho ou com o D: rebase forçado em vários dias, contagens, trava, instante, prazoDe, docDe, fmt
+USA = """([dias, quadro]) => { const A = window.CapitaoAgora, t = Date.now();
+  A.rebase(t, true); for (const k of dias) A.rebase(t + k * 86400000, true); A.rebase(t, true);
+  return { inst: !!A.instante(), contagens: A.contagens(), trava: A.trava(quadro), prazo: A.prazoDe(5), doc: A.docDe(5), campo: A.fmt.campo(quadro, 'sog_nos') }; }"""
+DADOS_ESCRITAS = "() => window.__escritas.filter((e) => e.dados).map((e) => e.op + ':' + e.chave)"
 
 
 def abre(b, local, intl=True, antes='', depois='', caminho='/rodape.html', sessao=False, tela=None, muta=None):
     """Página com o Date congelado em `local` (e sem Intl, se pedido). `antes` roda antes do rodapé e `depois` no fim do arquivo.
     `muta` = (trecho do rodape.js, trecho no lugar dele): o rodapé mutante dos testes que provam que a conferência falha (revisão do C7)."""
     ctx = b.new_context(service_workers='block', **({'viewport': {'width': 390, 'height': 844}, 'has_touch': True} if tela == 'app' else {}))
+    ctx.add_init_script(ESCRITAS)   # antes de qualquer outro script da página (a sessão do `sessao`, o rodapé, as telas)
     ctx.add_init_script("(function () { var RD = Date; window.__T0 = %d; function FD() { var a = arguments; return a.length === 0 ? new RD(window.__T0) : new (Function.prototype.bind.apply(RD, [null].concat([].slice.call(a))))(); }"
                         " FD.prototype = RD.prototype; FD.now = function () { return window.__T0; }; FD.UTC = RD.UTC; FD.parse = RD.parse; window.Date = FD; %s })();"
                         % (ms_de(local), '' if intl else 'window.Intl = undefined;'))
@@ -390,6 +410,72 @@ def dia_de_bordo(b):
     pg.context.close()
 
 
+def sem_escrita_no_aparelho(b):
+    """Revisão do C7. CONTRATO §4.1: o rodapé «não grava no localStorage nem cria linha no diário do aparelho», e a regra 14 do CLAUDE.md diz
+    que o registro só cresce e que nenhuma chave capitao.* é apagada. O rodapé roda em toda página, na S1 e na S2 também: um removeItem do
+    diário ou um setItem do executado na carga apagaria o registro de quem só abriu o SOS. O RODAPE_SNAPSHOT só vigia o D.snapshot e nada
+    olhava o Storage (três mutantes sobreviviam). Aqui o contador do abre() separa as escritas do rodapé (pilha no capitao-dados.js)."""
+    print('O rodapé não grava no aparelho (localStorage, sessionStorage, indexedDB): na carga, no uso e nos mutantes que gravam')
+    local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
+    fixture = C8_LIMPO + DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
+    DIAS = [3, 40, -10, 0]
+    for nome, caminho, antes, sessao in (('rota mínima, fora do SOS (o dia de bordo entra pela microtarefa)', '/rodape.html', fixture + FONTE_COLETOR, False),
+                                         ('A1-Ponte-Web (tela de verdade, com sessão)', '/A1-Ponte-Web.dc.html', C8_LIMPO + DIA_DE_BORDO, True),
+                                         ('S1-SOS-Web', '/S1-SOS-Web.dc.html', fixture, False), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html', fixture, False),
+                                         ('rota mínima /SOS-teste.html', '/SOS-teste.html', fixture + FONTE_COLETOR, False)):
+        pg = abre(b, local, antes=antes, caminho=caminho, sessao=sessao)
+        pg.wait_for_timeout(800)
+        na_carga = pg.evaluate(DADOS_ESCRITAS)
+        # a leitura do clima de hoje põe a trava para valer; a escrita é do teste (e conta no contador, sem ser do rodapé)
+        pg.evaluate("() => localStorage.setItem('capitao.clima.v1', JSON.stringify({ em: Date.now(), dia: window.CapitaoAgora.relogio.hojeIso, max: 21, min: 15 }))")
+        r = pg.evaluate(USA, [DIAS, QUADRO])
+        no_uso = pg.evaluate(DADOS_ESCRITAS)
+        pg.evaluate("() => { localStorage.setItem('x', '1'); localStorage.removeItem('x'); sessionStorage.setItem('x', '1'); localStorage.clear(); }")
+        todas = pg.evaluate("() => window.__escritas.map((e) => e.op + ':' + e.chave + ':' + e.dados)")
+        ok('%s: 0 escritas do rodapé na carga (a microtarefa e o 1º rebase incluídos)' % nome, na_carga == [], na_carga)
+        ok('%s: 0 escritas do rodapé no uso (rebase forçado em +3, +40, −10 e 0 dias, contagens, trava, instante, prazoDe, docDe, fmt)' % nome,
+           no_uso == [] and r['contagens']['atrasadas'] == 3 and r['trava']['temp_ar_externo_c'] == 21, (no_uso, r['contagens'], r['trava']))
+        ok('%s: controle: as 4 escritas do próprio teste (setItem, removeItem, sessionStorage, clear) entram no contador e não são do rodapé' % nome,
+           todas[-4:] == ['setItem:x:false', 'removeItem:x:false', 'setItem:x:false', 'clear:null:false'], todas[-5:])
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        pg.context.close()
+    # Mutantes: o rodapé de verdade com UMA escrita no aparelho, no ponto que o nome diz. A conferência de cima tem de acusar cada uma, com a
+    # operação e a chave certas. Os da carga rodam também na S1 e na S2 (onde o estrago seria pior: apagar o diário de quem só abriu o SOS).
+    MUTANTES = (
+        ('removeItem do diário do aparelho na carga (S1)', '/S1-SOS-Web.dc.html', ALVO_MUTANTE, ALVO_MUTANTE + " localStorage.removeItem('capitao.diario.v1');",
+         'removeItem:capitao.diario.v1'),
+        ('setItem do executado do aparelho na carga (S2)', '/S2-SOS-Mobile.dc.html', ALVO_MUTANTE, ALVO_MUTANTE + " localStorage.setItem('capitao.executado.v1', '{}');",
+         'setItem:capitao.executado.v1'),
+        ('setItem em sessionStorage na carga', '/rodape.html', ALVO_MUTANTE, ALVO_MUTANTE + " sessionStorage.setItem('capitao.intencao', '1');", 'setItem:capitao.intencao'),
+        ('localStorage.clear() na carga (/SOS-teste.html)', '/SOS-teste.html', ALVO_MUTANTE, ALVO_MUTANTE + " localStorage.clear();", 'clear:null'),
+        ('indexedDB.open na carga', '/rodape.html', ALVO_MUTANTE, ALVO_MUTANTE + " indexedDB.open('capitao-teste');", 'indexedDB.open:capitao-teste'),
+        ('linha "sim" no diário do aparelho pela microtarefa do dia de bordo', '/rodape.html', "if (D.simulacao === true) { insereDiaDeBordo(); rebase(Date.now(), true); }",
+         "if (D.simulacao === true) { insereDiaDeBordo(); rebase(Date.now(), true); localStorage.setItem('capitao.diario.v1', '[{\"sim\":true,\"t\":\"x\"}]'); }",
+         'setItem:capitao.diario.v1'),
+        ('setItem da leitura do clima dentro do instante()', '/rodape.html', "try { clima = localStorage.getItem('capitao.clima.v1') || ''; } catch (e) {}",
+         "try { clima = localStorage.getItem('capitao.clima.v1') || ''; localStorage.setItem('capitao.clima.v1', clima); } catch (e) {}", 'setItem:capitao.clima.v1'),
+        ('setItem do diário dentro das contagens() (S2)', '/S2-SOS-Mobile.dc.html', "linhas = local('capitao.diario.v1', []), eq = [];",
+         "linhas = (localStorage.setItem('capitao.diario.v1', '[]'), local('capitao.diario.v1', [])), eq = [];", 'setItem:capitao.diario.v1'),
+        ('removeItem do clima dentro da trava() (S1)', '/S1-SOS-Web.dc.html', "var c = copia(q), v = local('capitao.clima.v1', null);",
+         "var c = copia(q), v = (localStorage.removeItem('capitao.clima.v1'), local('capitao.clima.v1', null));", 'removeItem:capitao.clima.v1'),
+        ('setItem só no rebase forçado (S2)', '/S2-SOS-Mobile.dc.html', "if (!forca && A.assinatura === assin) return false;",
+         "if (!forca && A.assinatura === assin) return false; if (forca) localStorage.setItem('capitao.rebase', '1');", 'setItem:capitao.rebase'),
+    )
+    for nome, caminho, alvo, no_lugar, esperado in MUTANTES:
+        pg = abre(b, local, antes=fixture, caminho=caminho, muta=(alvo, no_lugar))
+        pg.wait_for_timeout(800)
+        pg.evaluate(USA, [DIAS, QUADRO])
+        lista = pg.evaluate(DADOS_ESCRITAS)
+        ok('mutante (%s): a conferência acusa %s' % (nome, esperado), esperado in lista, lista)
+        pg.context.close()
+    # leitura estática do código (sem os comentários), de complemento: o contador de cima é a prova; o texto cai em alias
+    cod = open(os.path.join(RAIZ, 'ferramentas', 'demo', 'rodape.js'), encoding='utf-8').read()
+    cod = re.sub(r'/\*.*?\*/', '', cod, flags=re.S)
+    cod = re.sub(r'(?m)(^|\s)//.*$', '', cod)
+    achou = re.findall(r'\b(setItem|removeItem|clear|sessionStorage|indexedDB|cookie)\b', cod)
+    ok('rodape.js: o código (sem os comentários) não tem setItem, removeItem, clear, sessionStorage, indexedDB nem cookie', not achou, achou)
+
+
 def contagens(b):
     print('contagens()')
     local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
@@ -575,6 +661,7 @@ def main():
         idempotencia(b)
         so_o_derivado(b)
         dia_de_bordo(b)
+        sem_escrita_no_aparelho(b)
         contagens(b)
         instante_e_trava(b)
         formatadores(b)

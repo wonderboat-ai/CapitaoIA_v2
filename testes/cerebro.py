@@ -32,6 +32,9 @@ CASOS = [
     ('consumo de diesel', 'consumo'), ('nível dos tanques', 'tanques'), ('quem chamar da equipe?', 'contatos'),
     ('pendências abertas', 'anomalias'), ('bombas de porão', 'porao'), ('como ligar o gerador?', 'base'),
     ('quantas horas tem o gerador', 'gerador'), ('posição agora', 'posicao'), ('documentos vencendo', 'docsvenc'),
+    # Revisão do C7: o botão "Perguntar sobre" da G1 (web e app) pergunta "Situação e vencimento do documento: <nome>". Com o doc-epirb ("Certificado
+    # do EPIRB…") a pergunta caía na rota `epirb`; é papelada, e `epirb` é das chaves que ligam a conversa em emergência na Fase 3.
+    ('Situação e vencimento do documento: Certificado do EPIRB (bateria e disparador hidrostático)', 'docsvenc'),
     ('horímetros', 'horimetros'), ('estabilizador Seakeeper', 'estabilizador'), ('climatização', 'climatizacao'),
     ('alarme de fluxo da climatização', 'base'), ('plotter garmin', 'eletronicos'), ('parear bluetooth no fusion', 'base'),
     ('dessalinizador', 'dessalinizador'), ('bateria 24 v', 'eletrico'), ('onde fica o EPIRB?', 'epirb'), ('onde fica o seafire', 'seafire'),
@@ -462,6 +465,7 @@ def main():
         if '-v' in sys.argv:
             print(f)
         falhas += agenda_sem_falta(pg)
+        falhas += perguntas_da_g1(pg)
         # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
         sem = {r['q']: r for r in res}
         for q in ('clima e vento', 'é seguro sair hoje?'):
@@ -576,6 +580,38 @@ def vento_do_dia(b):
     if '-v' in sys.argv:
         print('\n## clima\n' + com['clima']['text'] + '\n' + com['clima']['src'] + '\n## seguro\n' + com['seguro']['text'] + '\n' + com['seguro']['src'] + '\n' + com['bloco'])
     ctx.close()
+    return falhas
+
+
+# Revisão do C7 (CONTRATO §1.4, §1.8): o botão "Perguntar sobre: <documento>" da G1 (G1-Documentos-Web.dc.html:263 e Mobile:209) pergunta
+# 'Situação e vencimento do documento: ' + o nome. O C7 criou o doc-epirb ("Certificado do EPIRB (bateria e disparador hidrostático)") e a pergunta
+# dele ia para a rota `epirb`. Hoje isso mostrava a resposta velha do EPIRB (SEM DADOS) em vez do status do documento; na Fase 3 as chaves `sos`,
+# `oleo`, `canal16`, `epirb` e `seafire` ligam o `emergenciaAte` (conversa em emergência por 15 min, IA desligada, posição trocada): um toque na
+# papelada abriria o modo emergência. Regra do contrato (§1.4): nenhuma pergunta de botão cai numa chave de emergência. Aqui: a pergunta de CADA
+# documento do D, escrita como a G1 a escreve, dá `docsvenc` e não vai à IA. Ficam para a 1b o filtro do `docsvenc` (a nota da etiqueta no lugar
+# da data do doc-epirb, §6.6) e o teste de que a resposta não liga o `emergenciaAte` (a marca não existe antes da Fase 3).
+EMERGENCIA = ('sos', 'oleo', 'canal16', 'epirb', 'seafire')
+G1_PERGUNTAS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados;
+  return D.documentos.map((x) => { const q = 'Situação e vencimento do documento: ' + x.n, a = B.answer(q, { platform: 'app', commit: false });
+    return { id: x.id, q, key: a.key, ia: B.pedeIA(a, q), src: a.src, tela: B.answer(q, { platform: 'web', commit: false }).key }; }); }"""
+
+
+def perguntas_da_g1(pg):
+    falhas = 0
+    r = pg.evaluate(G1_PERGUNTAS)
+    ruins = [(x['id'], x['key'], x['tela']) for x in r if x['key'] != 'docsvenc' or x['tela'] != 'docsvenc']
+    em_emergencia = [x['id'] for x in r if x['key'] in EMERGENCIA]
+    for nome, cond, extra in [
+        ('revisão do C7: o D tem os documentos da G1 (pelo menos 7, com o doc-epirb)', len(r) >= 7 and 'doc-epirb' in [x['id'] for x in r], [x['id'] for x in r]),
+        ('revisão do C7: "Situação e vencimento do documento: <nome>" de cada documento da G1 dá docsvenc (app e web)', not ruins, ruins),
+        ('revisão do C7: nenhuma pergunta da G1 cai numa chave que liga a conversa em emergência (sos, oleo, canal16, epirb, seafire)', not em_emergencia, em_emergencia),
+        ('revisão do C7: a pergunta da G1 não vai à IA e traz a fonte', all(x['ia'] is False and (x['src'] or '').startswith('Fonte') for x in r),
+         [(x['id'], x['ia'], x['src']) for x in r if x['ia'] is not False or not (x['src'] or '').startswith('Fonte')]),
+    ]:
+        if not cond:
+            falhas += 1
+            print('FALHA', nome, extra)
+    print('perguntas da G1 (documentos): %d falhas' % falhas)
     return falhas
 
 

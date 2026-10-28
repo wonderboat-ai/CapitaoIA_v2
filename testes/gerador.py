@@ -22,6 +22,9 @@
   equipe e fontes do Drive com prazos relativos (deslocamentos + reserva contada da REF); as pendências do C7 saíram da PENDENTES (só o
   C8 fica) e o rodapé de verdade (rodape.js) é anexado sem mudança ao capitao-dados.js e passa a RODAPE_SNAPSHOT (rodape_real()). O
   comportamento do rodapé, no navegador, é do testes/rodape.py.
+- Revisão do C7 (C7_REV): o C7 tirou da PENDENTES as linhas AGENDA, IDS e FONTES_RELATIVAS, e com elas a prova de que essas regras (e as do
+  NULO e do DIA_DE_BORDO sobre as listas novas) reprovam. Agora cada uma tem amostra plantada ISOLADA (planta(..., so_uma=True): a única
+  violação nova da regra), 28 no total, e a de salvatagem atrasada da AGENDA troca a tarefa que existe (antes acrescentava um 2º id).
 - Revisão do C6 (CONTRATO §1.3, «todas viram asserção»): a GRAFIA_SEAFIRE prende «Seafire» (sem hífen, espaço nem outra caixa) em todo valor, chave e
   nome de arquivo do D, da base, do FAQ e das fontes; a única exceção são as `palavras` de busca dos equipamentos («sea fire», o ditado). 27 amostras
   plantadas (12 grafias, a base inteira com «Sea Fire», chaves, CSV, JSON, FAQ, HTML com entidade e tag, nome de arquivo) e grafia_seafire().
@@ -360,6 +363,25 @@ def poe(lista, i, **kw):
     lista[i] = dict(lista[i], **kw)
 
 
+def por_id(lista, i):
+    """O item de `lista` com esse id (levanta se não existe: a amostra que perde o alvo falha alto, não passa em silêncio)."""
+    return next(x for x in lista if x.get('id') == i)
+
+
+SEM = object()   # em muda(): tira a chave (None é valor: o NULO precisa dele)
+
+
+def muda(k, lista, i, **kw):
+    """hoje() com o item `i` de D[lista] mudado; o valor SEM tira a chave. Devolve k."""
+    x = por_id(k['D'][lista], i)
+    for c, v in kw.items():
+        if v is SEM:
+            x.pop(c, None)
+        else:
+            x[c] = v
+    return k
+
+
 RODAPE_OK = ("(function () { try {\n  var D = window.CapitaoDados, A = window.CapitaoAgora = {};\n"
              "  A.instante = function () { if (/SOS-/.test(location.pathname)) return null; var q = D.snapshot && D.snapshot.quadro;"
              " return q ? { q: q, fonte: 'snapshot' } : null; };\n  A.rebase = function (ms) { return true; };\n} catch (e) {} })();\n")
@@ -422,9 +444,10 @@ AMOSTRAS = {
     'ROTA': (lambda r: (lambda k: (k['D']['rota']['pontos'][0].update({'nome': 'Ponto 2' if r else 'Ilha das Cabras'}), k)[1])(com_rota(hoje())), 'com dígito'),
     'DIA_DE_BORDO': (lambda r: (lambda k: (k['D']['replay']['diaDeBordo']['abastecimento'].update({'h': '06:45' if r else '07:00'}), k)[1])(com_replay(hoje())), 'ancora_hora'),
     'SEM_EMERGENCIA': (lambda r: mais_texto(hoje(), ' Bomba de porão não para.' if r else ''), 'emergencia()'),
-    'AGENDA': (lambda r: (lambda k: (k['D']['agenda'].append({'id': 'seafire-inspecao', 't': 'Inspeção anual do sistema fixo de supressão', 'sistema': 'seafire',
-                                                               'meses': 12, 'ultimaHa': 370 if r else 360, 'venceEm': -5 if r else 5,
-                                                               'palavras': ['inspecao do seafire'], 'seguranca': True, 'equip': 'Sistema fixo'}), k)[1])(hoje()),
+    # Revisão do C7: troca a tarefa que já existe (antes, acrescentava um 2º `seafire-inspecao`, com o id repetido e uma 4ª atrasada) e põe
+    # o gerador-rotor em dia no lugar, para ficarem as 3 atrasadas: a amostra acusa só a regra da salvatagem (a C7_REV a repete e exige 1 só)
+    'AGENDA': (lambda r: (lambda k: (muda(k, 'agenda', 'seafire-inspecao', ultimaHa=370, venceEm=-5) if r else None,
+                                     muda(k, 'agenda', 'gerador-rotor', ultimaHa=360, venceEm=5) if r else None, k)[2])(hoje()),
                'tarefa de salvatagem atrasada'),
     'HISTORICO': (lambda r: (lambda k: (k['D']['historico']['desvios']['bateria_0_tensao_v'].update({'d': [0, -400] if r else [0, -6]}), k)[1])(com_historico(hoje())), 'o mínimo cruza'),
     'COORD_TEXTO': (lambda r: mais_texto(hoje(), " Fundeado em 26°59,6'S." if r else ''), 'diario[0].t'),
@@ -1068,6 +1091,65 @@ EXTRAS += [
 ]
 
 
+# Revisão do C7 (CONTRATO §1.7–§1.9, §6.2 C7, §6.3). O C7 tirou da PENDENTES as linhas AGENDA, IDS e FONTES_RELATIVAS: o dado real congelado
+# ali era a prova de que as regras reprovam, e nenhuma amostra plantada ficou no lugar. Sem elas, uma regressão em confere.py (palavra solta,
+# conta das 3 atrasadas, sistema fora do vocabulário, ref do diário ou do documento, pendência sem ref ou com palavras diferentes, diasAtras 0
+# depois da âncora, documento sem prazo com null ou '') não seria vista por teste algum. Cada amostra é ISOLADA: planta(..., so_uma=True) exige
+# que ela seja a única violação nova da regra (nenhuma se apoia em outra mensagem). A r=False é o dado de hoje, que não acusa nada.
+def planta_c7(lista, i, **kw):
+    """monta(r): hoje() com D[lista][i] mudado por `kw` quando r (SEM tira a chave)."""
+    return lambda r: muda(hoje(), lista, i, **kw) if r else hoje()
+
+
+def com_dia_de_bordo_8h20(r):
+    """O D com um replay mínimo e a d01 do dia de bordo (a do replay, que a microtarefa insere) às 08:20, com diasAtras 0."""
+    k = com_replay(hoje())
+    if r:
+        k['D']['replay']['diaDeBordo']['diario'][0]['h'] = '08:20'
+    return k
+
+
+def com_csv_na_pasta(pasta, nome, txt):
+    k = hoje()
+    k['F'][k['D']['drive']['pastas'][pasta] + '/' + nome] = txt
+    return k
+
+
+_NF = 'nf-abast'   # a nota fiscal do abastecimento fica em `documentos` até o C8 (depois, só em replay.diaDeBordo.documento): o C8 retoca estas duas
+C7_REV = [
+    ('AGENDA', 'palavra solta (uma palavra só nas `palavras`)', planta_c7('agenda', 'casco-anodos', palavras=['rotor']), 'agenda.casco-anodos.palavras vazias ou com palavra solta'),
+    ('AGENDA', 'palavras vazias', planta_c7('agenda', 'casco-anodos', palavras=[]), 'agenda.casco-anodos.palavras vazias ou com palavra solta'),
+    ('AGENDA', 'ultimaHa + venceEm fora da tabela (6 meses = 184)', planta_c7('agenda', 'casco-anodos', ultimaHa=170), 'agenda.casco-anodos: ultimaHa + venceEm ≠ DIAS_MESES[meses]'),
+    ('AGENDA', 'só 2 atrasadas (a do porão em dia)', planta_c7('agenda', 'porao-teste', ultimaHa=26, venceEm=5), 'agenda: 2 atrasadas (precisa de 3)'),
+    ('AGENDA', '4 atrasadas (a limpeza do casco vencida)', planta_c7('agenda', 'casco-anodos', ultimaHa=186, venceEm=-2), 'agenda: 4 atrasadas (precisa de 3)'),
+    ('AGENDA', 'seguranca numa tarefa que não é de salvatagem', planta_c7('agenda', 'casco-anodos', seguranca=True), 'agenda.casco-anodos: seguranca só (e sempre) em'),
+    ('AGENDA', 'a tarefa do porão sem seguranca', planta_c7('agenda', 'porao-teste', seguranca=SEM), 'agenda.porao-teste: seguranca só (e sempre) em'),
+    ('AGENDA', 'palavra da lista SOS no `t`', planta_c7('agenda', 'casco-anodos', t='Incêndio no casco'), 'agenda.casco-anodos.t tem palavra da lista SOS'),
+    ('AGENDA', 'salvatagem atrasada (o seafire-inspecao vencido, as 3 atrasadas mantidas)', AMOSTRAS['AGENDA'][0], 'agenda.seafire-inspecao: tarefa de salvatagem atrasada'),
+    ('IDS', 'sistema da agenda fora do vocabulário', planta_c7('agenda', 'casco-anodos', sistema='xyz'), 'agenda.casco-anodos.sistema fora do vocabulário'),
+    ('IDS', 'sistema da tarefa da equipe fora do vocabulário', planta_c7('tarefasEquipe', 'g01', sistema='xyz'), 'tarefasEquipe.g01.sistema fora do vocabulário'),
+    ('IDS', 'ref do diário que não existe', planta_c7('diario', 'd04', ref='nao-existe'), "diario.d04.ref inexistente: 'nao-existe'"),
+    ('IDS', 'ref do documento que não existe', planta_c7('documentos', 'seguro', ref='nao-existe'), "documentos.seguro.ref inexistente: 'nao-existe'"),
+    ('IDS', 'pendência do diário sem ref na agenda', planta_c7('diario', 'd03', ref=SEM), 'diario.d03: pendência sem ref na agenda'),
+    ('IDS', 'pendência com palavras diferentes das da tarefa', planta_c7('diario', 'd03', palavras=['x y']), 'diario.d03.palavras diferentes das da tarefa gerador-rotor'),
+    ('IDS', 'pendência sem palavras', planta_c7('diario', 'd05', palavras=SEM), 'diario.d05.palavras diferentes das da tarefa clima-filtro'),
+    ('DIA_DE_BORDO', 'a d01 do diário fixo às 08:20 com diasAtras 0 (depois da âncora das 07:00)', planta_c7('diario', 'd01', h='08:20'),
+     'diário d01: diasAtras 0 depois da âncora (08:20)'),
+    ('DIA_DE_BORDO', 'a d01 do dia de bordo (replay.diaDeBordo.diario) às 08:20 com diasAtras 0', com_dia_de_bordo_8h20, 'diário d01: diasAtras 0 depois da âncora (08:20)'),
+    ('NULO', 'dn None num documento', planta_c7('documentos', 'seguro', dn=None), '].dn: None'),
+    ('NULO', "vence '' num documento", planta_c7('documentos', 'licenca', vence=''), "].vence: ''"),
+    ('NULO', 'a nota fiscal (documento sem prazo) com dn None', planta_c7('documentos', _NF, dn=None), '].dn: None'),
+    ('NULO', "a nota fiscal (documento sem prazo) com vence ''", planta_c7('documentos', _NF, vence=''), "].vence: ''"),
+    ('NULO', "iso '' numa linha do diário fixo", planta_c7('diario', 'd03', iso=''), "].iso: ''"),
+]
+for _pasta in ('docs', 'agenda', 'diario', 'abast'):   # as quatro pastas da regra, uma a uma (a regra lê só estas)
+    C7_REV.append(('FONTES_RELATIVAS', 'data dd/mm/aaaa num CSV da pasta «%s»' % _pasta,
+                   (lambda p: lambda r: com_csv_na_pasta(p, 'Extra.csv', 'Data,Valor\n' + ('12/09/2026' if r else 'há 3 dias') + ',1\n'))(_pasta),
+                   'Extra.csv: 1 data(s) dd/mm/aaaa'))
+C7_REV.append(('FONTES_RELATIVAS', 'data no cabeçalho de um CSV (a 1ª linha)',
+               lambda r: com_csv_na_pasta('diario', 'Extra.csv', ('Data 26/09/2026' if r else 'Data') + ',Valor\n1,2\n'), 'Extra.csv: 1 data(s) dd/mm/aaaa'))
+
+
 # Revisão final do C3. A SEM_INDICATIVO e a SEM_PREVISAO só olhavam as chaves do JSON: o cabeçalho de uma coluna de CSV das fontes
 # do Drive (Local, Telefone, HEX ID, Indicativo, Maré prevista) passava, e a planilha vai para o Drive. Agora a 1ª linha de cada
 # CSV é chave ('fontes/<rel>:<coluna>'); a única coluna liberada é a Local do registro de abastecimento (o posto).
@@ -1388,8 +1470,9 @@ def laco_que_segura(R, campos, c, t):
     return ((x % 360) + 360) % 360 if ang else x
 
 
-def planta(nome, o_que, monta, espera):
-    """A amostra plantada aparece como violação nova; numa estrutural, fora das pendências congeladas (reprova o gerador)."""
+def planta(nome, o_que, monta, espera, so_uma=False):
+    """A amostra plantada aparece como violação nova; numa estrutural, fora das pendências congeladas (reprova o gerador). Com `so_uma`
+    (revisão do C7), é também a ÚNICA violação nova da regra: a amostra isolada não se apoia em outra mensagem da mesma regra."""
     bom, mau = verifica(monta(False)), verifica(monta(True))
     novos = [m for m in mau[nome] if m not in bom[nome]]
     achados = [m for m in novos if espera in m]
@@ -1398,8 +1481,8 @@ def planta(nome, o_que, monta, espera):
     else:
         livres = C.separa({nome: mau[nome]})[0].get(nome, [])
         modo, reprova = ' e reprova (fora das pendências)', any(espera in m for m in livres)
-    ok('%s: acusa a amostra plantada%s%s' % (nome, o_que, modo),
-       len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos) and reprova,
+    ok('%s: acusa a amostra plantada%s%s%s' % (nome, o_que, modo, ' (uma violação só)' if so_uma else ''),
+       len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos) and reprova and (not so_uma or len(novos) == 1),
        {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome]), 'reprova': reprova})
 
 
@@ -1656,7 +1739,7 @@ def seguranca_sem_modelo():
 
 
 def amostras():
-    print('confere(): uma amostra plantada por asserção (%d) e as %d extras da revisão' % (len(C.NOMES), len(EXTRAS)))
+    print('confere(): uma amostra plantada por asserção (%d), as %d extras da revisão e as %d isoladas da revisão do C7' % (len(C.NOMES), len(EXTRAS), len(C7_REV)))
     faltam = [n for n in C.NOMES if n not in AMOSTRAS and n != 'EMENDA']
     ok('toda asserção da §6.3 tem amostra', not faltam, faltam)
     for nome in C.NOMES:
@@ -1677,6 +1760,12 @@ def amostras():
         planta(nome, '', monta, espera)
     for nome, o_que, monta, espera in EXTRAS:
         planta(nome, ' — ' + o_que, monta, espera)
+    for nome, o_que, monta, espera in C7_REV:
+        planta(nome, ' — C7: ' + o_que, monta, espera, so_uma=True)
+    # a FONTES_RELATIVAS lê só as pastas 02, 03, 04 e 06: a data da 05 (a leitura de 26/09 fica até a Fase 3, §6.6) e a do inventário não acusam
+    for pasta in ('tele', 'manuais'):
+        V = verifica(com_csv_na_pasta(pasta, 'Extra.csv', 'Data,Valor\n12/09/2026,1\n'))['FONTES_RELATIVAS']
+        ok('FONTES_RELATIVAS: uma data num CSV da pasta «%s» (fora das quatro da regra) não acusa' % pasta, not V, V[:2])
     # Revisão do C6: sem o guia `protocolo`, os 9 campos que ele repete reprovam um a um (antes, nenhum reprovava e os 9 perdiam a fonte única)
     V = verifica(sem_guia('protocolo'))['PROTOCOLOS']
     campos = ('mob', 'seafire.passos', 'epirb.passos', 'alagamento', 'abandono', 'salvatagem', 'panpan', 'dsc', 'roteiro')
