@@ -359,13 +359,28 @@ def com_rota(k):
     return k
 
 
+def serie24v_do(D):
+    """A serie24v (L, §1.13) do D mínimo: mín/máx da volta da bateria_0 + o desvio do dia (a fórmula do gerador, para a fixture não depender da série de hoje)."""
+    R, c = D['replay'], 'bateria_0_tensao_v'
+    vs = [C.quadro_laco(R, D['campos'], t)[c] for t in range(R['duracao'])]
+    return [{'diasAtras': x, 'min': C.arred(min(vs) + C.desvio_em(D['historico'], c, x), 2), 'max': C.arred(max(vs) + C.desvio_em(D['historico'], c, x), 2),
+             'd': G.dia_ddmm(-x)} for x in range(6, -1, -1)]
+
+
 def com_historico(k):
+    """O replay mínimo (com_replay) com um histórico mínimo e BEM FORMADO (C9, §1.13: 183 desvios, a curva do ano de 73 pontos, 60 dias de
+    cruzeiro, as janelas do contrato) e a série 24 V coerente com ele. Só o campo do catálogo mínimo (bateria_0, BE) tem série."""
     k = com_replay(k)
-    k['D']['historico'] = {
-        'desvios': {'bateria_0_tensao_v': {'escala': 100, 'd': [0, 3, -6, 2]}},
-        'sazonal': {'temp_ar_externo_c': {'escala': 10, 'd': [0] * 73}},
-        'janelas': {'150S': {'passo_s': 1, 'n': 150}},
-        'metricas': {'b24': ['bateria_0_tensao_v'], 'arref': ['motor_be_arref_c']}, 'so150': ['arref']}
+    D = k['D']
+    D['historico'] = {
+        'fim': 'ancora', 'passo_dias': 2, 'n': 183,
+        'desvios': {'bateria_0_tensao_v': {'escala': 100, 'd': ([0, 3, -6, 2] * 46)[:183]}},
+        'sazonal': {'passo_dias': 5, 'n': 73, 'temp_ar_externo_c': {'escala': 10, 'd': G.sazonal_tabela(4.5, 15)}},
+        'cruzeiro': {'dias': 60, 'motor_be_arref_c': {'escala': 10, 'd': [830] * 60}, 'motor_be_oleo_bar': {'escala': 100, 'd': [380] * 60}},
+        'janelas': copy.deepcopy(G.JANELAS_HIST),
+        'metricas': {'b24': ['bateria_0_tensao_v'], 'arref': ['motor_be_arref_c']}, 'so150': ['arref'],
+        'fonte': 'coletor NMEA de bordo · histórico'}
+    D['serie24v'] = serie24v_do(D)
     return k
 
 
@@ -465,7 +480,8 @@ AMOSTRAS = {
     'AGENDA': (lambda r: (lambda k: (muda(k, 'agenda', 'seafire-inspecao', ultimaHa=370, venceEm=-5) if r else None,
                                      muda(k, 'agenda', 'gerador-rotor', ultimaHa=360, venceEm=5) if r else None, k)[2])(hoje()),
                'tarefa de salvatagem atrasada'),
-    'HISTORICO': (lambda r: (lambda k: (k['D']['historico']['desvios']['bateria_0_tensao_v'].update({'d': [0, -400] if r else [0, -6]}), k)[1])(com_historico(hoje())), 'o mínimo cruza'),
+    # C9: a fixture com_historico é bem formada (183 pontos), então a amostra troca UM ponto do desvio (antes trocava a lista inteira por [0, -400])
+    'HISTORICO': (lambda r: (lambda k: (k['D']['historico']['desvios']['bateria_0_tensao_v']['d'].__setitem__(1, -400 if r else 3), k)[1])(com_historico(hoje())), 'o mínimo cruza'),
     'COORD_TEXTO': (lambda r: mais_texto(hoje(), " Fundeado em 26°59,6'S." if r else ''), 'diario[0].t'),
     'ROTULO_SEGURANCA': (lambda r: (lambda k: (k['D']['drive']['arquivos'].update({'g_epirb': 'Guia de bordo — EPIRB'}),
                                                k['B']['trechos'].append({'fonte': 'Guia de bordo — EPIRB', 'secao': '1 · Acionar', 'equip': 'EPIRB', 'seguranca': True,
@@ -2563,6 +2579,181 @@ def c8_rota_e_replay():
        not [j for j in R['janelas'] if j['nivel'] == 'critico'] and min(R['chaves']['motor_bb_oleo_bar']) >= 2.8)
 
 
+# ——————————————————————————————— C9: histórico (CONTRATO §1.13) ———————————————————————————————
+C9_DESVIOS = {'vento_verdadeiro_nos': (10, 40), 'pressao_barometrica_hpa': (10, 70), 'bateria_0_tensao_v': (100, 6), 'bateria_1_tensao_v': (100, 6),
+              'bateria_2_tensao_v': (100, 6), 'temp_ar_externo_c': (10, 15), 'temp_agua_c': (10, 4)}   # campo: (escala, pico do contrato em d)
+C9_METRICAS = {'b24': ['bateria_0_tensao_v', 'bateria_1_tensao_v'], 'b12': ['bateria_2_tensao_v'], 'tanques': ['tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct'],
+               'vento': ['vento_verdadeiro_nos'], 'pressao': ['pressao_barometrica_hpa'], 'diesel': ['diesel_litros'],
+               'temperaturas': ['temp_praca_maquinas_c', 'temp_ar_externo_c', 'temp_agua_c'], 'motores': ['motor_bb_rpm', 'motor_be_rpm'],
+               'oleo': ['motor_bb_oleo_bar', 'motor_be_oleo_bar'], 'arref': ['motor_bb_arref_c', 'motor_be_arref_c'], 'navegacao': ['sog_nos', 'stw_nos'],
+               'consumo': ['consumo_lph']}   # a literal do §1.13, escrita de novo aqui (nunca lida do gerador)
+C9_JANELAS = {'150S': {'passo_s': 1, 'n': 150}, '1D': {'passo_s': 900, 'n': 96}, '7D': {'passo_s': 3600, 'n': 168}, '30D': {'passo_s': 21600, 'n': 120},
+              '1A': {'passo_s': 86400, 'n': 365}}
+
+
+def c9_d():
+    """O D de hoje (cópia funda), sem fontes nem base: para as plantas leves da HISTORICO (a asserção roda sozinha, em milissegundos)."""
+    return copy.deepcopy(G.dados())
+
+
+def c9_ctx(D):
+    return C.Ctx(D, {}, {}, {})
+
+
+def c9_planta(o_que, muda, espera, so_uma=False):
+    """HISTORICO: a amostra plantada aparece como violação nova (e, com `so_uma`, é a ÚNICA). A HISTORICO é estrutural: reprova o gerador."""
+    bom, D = C.a_historico(c9_ctx(c9_d())), c9_d()
+    muda(D)
+    novos = [m for m in C.a_historico(c9_ctx(D)) if m not in bom]
+    ok('HISTORICO: acusa a amostra plantada — C9: %s%s' % (o_que, ' (uma violação só)' if so_uma else ''),
+       any(espera in m for m in novos) and (not so_uma or len(novos) == 1) and 'HISTORICO' not in C.RELATORIO, {'novas': novos[:3]})
+
+
+def c9_hist(D):
+    return D['historico']
+
+
+def c9_d_de(campo, i, valor):
+    return lambda D: D['historico']['desvios'][campo]['d'].__setitem__(i, valor)
+
+
+def c9_serie(D, i, **kw):
+    D['serie24v'][i].update(kw)
+
+
+def c9_historico():
+    print('C9 (CONTRATO §1.13): histórico (desvios, curva do ano, cruzeiro, janelas) e a série 24 V')
+    k = hoje()
+    D = k['D']
+    H = D['historico']
+    V = verifica(k)
+    ok('o dado de hoje não acusa nada na HISTORICO, na TAMANHO nem na NULO, e a PENDENTES continua vazia',
+       not V['HISTORICO'] and not V['TAMANHO'] and not V['NULO'] and C.PENDENTES == {}, {n: V[n][:2] for n in ('HISTORICO', 'TAMANHO', 'NULO') if V[n]})
+    ok('a forma do §1.13: fim «ancora», um desvio a cada 2 dias (n = 183: de 366 a 2 dias atrás), os 7 campos de desvio e a fonte',
+       list(H) == ['fim', 'passo_dias', 'n', 'desvios', 'sazonal', 'cruzeiro', 'janelas', 'metricas', 'so150', 'fonte'] and H['fim'] == 'ancora'
+       and (H['passo_dias'], H['n']) == (2, 183) and list(H['desvios']) == list(C9_DESVIOS) and H['fonte'] == 'coletor NMEA de bordo · histórico', list(H))
+    ok('cada desvio: inteiros, 183 pontos, a escala do contrato (10, 10, 100 ×3, 10, 10) e o pico exatamente na amplitude (±40 = 4 nós, ±70 = 7 hPa, ±6 = 0,06 V, ±15 = 1,5 °C, ±4 = 0,4 °C)',
+       all(s['escala'] == C9_DESVIOS[c][0] and len(s['d']) == 183 and all(type(x) is int for x in s['d']) and max(abs(x) for x in s['d']) == C9_DESVIOS[c][1]
+           and len(set(s['d'])) > 8 for c, s in H['desvios'].items()), {c: (s['escala'], len(s['d']), min(s['d']), max(s['d'])) for c, s in H['desvios'].items()})
+    sz = H['sazonal']
+    ok('a curva do ano: passo de 5 dias, 73 pontos, ar ±4,5 °C (máximo em meados de janeiro, mínimo em meados de julho) e água ±3,5 °C (fevereiro e agosto), em décimos',
+       (sz['passo_dias'], sz['n']) == (5, 73) and list(sz) == ['passo_dias', 'n', 'temp_ar_externo_c', 'temp_agua_c']
+       and max(sz['temp_ar_externo_c']['d']) == 45 and min(sz['temp_ar_externo_c']['d']) == -45 and max(sz['temp_agua_c']['d']) == 35 and min(sz['temp_agua_c']['d']) == -35
+       and 5 * sz['temp_ar_externo_c']['d'].index(45) in range(5, 25) and 5 * sz['temp_ar_externo_c']['d'].index(-45) in range(170, 215)
+       and 5 * sz['temp_agua_c']['d'].index(35) in range(30, 60) and 5 * sz['temp_agua_c']['d'].index(-35) in range(200, 240)
+       and all(len(sz[c]['d']) == 73 for c in ('temp_ar_externo_c', 'temp_agua_c')), {c: sz[c]['d'][:6] for c in ('temp_ar_externo_c', 'temp_agua_c')})
+    ok('a curva do ano fecha o ciclo (o ponto 73 seria o 1º de janeiro de novo): a diferença entre o último e o primeiro ponto é um passo da curva, sem salto',
+       all(abs(sz[c]['d'][0] - sz[c]['d'][-1]) <= 3 for c in ('temp_ar_externo_c', 'temp_agua_c')), {c: (sz[c]['d'][0], sz[c]['d'][-1]) for c in ('temp_ar_externo_c', 'temp_agua_c')})
+    cz = H['cruzeiro']
+    ok('o cruzeiro (F11): 60 dias, BB em 82,0 ± 0,2 °C, BE subindo de ~82,4 a ~83,9 °C e o óleo ao redor de 3,9 e 3,8 bar',
+       cz['dias'] == 60 and list(cz) == ['dias', 'motor_bb_arref_c', 'motor_be_arref_c', 'motor_bb_oleo_bar', 'motor_be_oleo_bar']
+       and all(len(cz[c]['d']) == 60 and all(type(x) is int for x in cz[c]['d']) for c in list(cz)[1:]) and (cz['motor_bb_arref_c']['escala'], cz['motor_bb_oleo_bar']['escala']) == (10, 100)
+       and 818 <= min(cz['motor_bb_arref_c']['d']) and max(cz['motor_bb_arref_c']['d']) <= 822 and 823 <= cz['motor_be_arref_c']['d'][0] <= 826
+       and 837 <= cz['motor_be_arref_c']['d'][-1] <= 840 and 387 <= min(cz['motor_bb_oleo_bar']['d']) and max(cz['motor_bb_oleo_bar']['d']) <= 393
+       and 377 <= min(cz['motor_be_oleo_bar']['d']) and max(cz['motor_be_oleo_bar']['d']) <= 383, {c: (cz[c]['d'][0], cz[c]['d'][-1]) for c in list(cz)[1:]})
+    Q = [C.quadro_laco(D['replay'], D['campos'], t) for t in range(150)]
+    f = next(x for x in D['replay']['fases'] if x['nome'] == 'cruzeiro')
+    mb, me = [sum(q[c] for q in Q[f['ini']:f['fim']]) / (f['fim'] - f['ini']) for c in ('motor_bb_arref_c', 'motor_be_arref_c')]
+    ok('o achado da F11 (§1.13): hoje, pelo laço na fase de cruzeiro, o BE está 2,5 °C acima do BB (84,5 contra 82,0), e a série sobe até ontem sem passar de hoje',
+       round(me, 1) == 84.5 and round(mb, 1) == 82.0 and round(me - mb, 1) == 2.5 and (cz['motor_be_arref_c']['d'][-1] - cz['motor_bb_arref_c']['d'][-1]) / 10 < me - mb, (me, mb))
+    ok('as janelas e os grupos do contrato, escritos de novo aqui: 150S (1 s × 150), 1D (900 s × 96), 7D, 30D, 1A, os 12 grupos de métricas e os 5 grupos só do laço (so150)',
+       H['janelas'] == C9_JANELAS and H['metricas'] == C9_METRICAS and H['so150'] == ['motores', 'oleo', 'arref', 'navegacao', 'consumo'], H['janelas'])
+    ok('todo campo das métricas está no D.campos e nenhum grupo é de maré nem de previsão (tempo e maré são sempre os reais)',
+       all(c in D['campos'] for cs in H['metricas'].values() for c in cs) and not [g for g in H['metricas'] if 'mare' in g or 'previs' in g], '')
+    # ——— a série 24 V (L): mín/máx da volta + o desvio do dia, calculado à mão aqui (sem C.desvio_em)
+    sv, d = D['serie24v'], H['desvios']['bateria_0_tensao_v']['d']
+    vs = [q['bateria_0_tensao_v'] for q in Q]
+    vmin, vmax = min(vs), max(vs)
+    dev = {0: 0, 1: d[182] / 2, 2: d[182], 3: (d[181] + d[182]) / 2, 4: d[181], 5: (d[180] + d[181]) / 2, 6: d[180]}   # centésimos de volt, 1 a 7 dias atrás
+    ok('serie24v: 7 dias (6…0) com o mín/máx da volta do banco de serviço (27,28 a 27,82 V) mais o desvio do dia (os pontos de 2 em 2 dias e a média dos vizinhos), e o d de cada dia',
+       [x['diasAtras'] for x in sv] == list(range(6, -1, -1)) and (vmin, vmax) == (27.28, 27.82) and (sv[-1]['min'], sv[-1]['max']) == (27.28, 27.82)
+       and all(abs(x['min'] - (vmin + dev[x['diasAtras']] / 100)) <= 0.0051 and abs(x['max'] - (vmax + dev[x['diasAtras']] / 100)) <= 0.0051 for x in sv)
+       and [x['d'] for x in sv] == [G.dia_ddmm(-x) for x in range(6, -1, -1)] and len({x['min'] for x in sv}) >= 3, (sv, dev))
+    ok('serie24v: a semana varia (mín e máx andam juntos, 0,04 V de ponta a ponta) e fica dentro do normal do banco (24,4 a 29,4 V)',
+       max(x['max'] for x in sv) - min(x['max'] for x in sv) >= 0.03 and all(24.45 <= x['min'] < x['max'] <= 29.35 for x in sv), sv)
+    # ——— a interpolação de referência (o port que o cliente da Fase 2 repete): d[0] a 366 dias, d[182] a 2 dias, 0 hoje, linear entre os pontos
+    e = H['desvios']['temp_ar_externo_c']['escala']
+    da = H['desvios']['temp_ar_externo_c']['d']
+    ok('desvio_em: 0 hoje (o último ponto de toda série é o quadro), d[182] a 2 dias, a metade a 1 dia, d[0] a 366 dias, a média dos dois primeiros a 365 e o primeiro além do ano',
+       all(C.desvio_em(H, c, 0) == 0 and C.desvio_em(H, c, -3) == 0 for c in H['desvios']) and C.desvio_em(H, 'temp_ar_externo_c', 2) == da[182] / e
+       and C.desvio_em(H, 'temp_ar_externo_c', 1) == da[182] / e / 2 and C.desvio_em(H, 'temp_ar_externo_c', 366) == da[0] / e
+       and C.desvio_em(H, 'temp_ar_externo_c', 365) == (da[0] + da[1]) / 2 / e and C.desvio_em(H, 'temp_ar_externo_c', 500) == da[0] / e
+       and C.desvio_em(H, 'temp_ar_externo_c', 3) == (da[181] + da[182]) / 2 / e, '')
+    ok('o histórico é determinístico (duas chamadas dão o mesmo dado; o relógio do sistema o determinismo() já confere)',
+       G.historico_dados() == G.historico_dados() == H, '')
+    js = G.gera_js(D)
+    bloco = len(json.dumps(H, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))
+    print('        capitao-dados.js: %.1f KB (orçamento 120 KB) · historico: %.1f KB · serie24v: %d bytes' % (
+        len(js.encode('utf-8')) / 1024, bloco / 1024, len(json.dumps(sv, ensure_ascii=False, separators=(',', ':')).encode('utf-8'))))
+    ok('TAMANHO: o capitao-dados.js com o histórico continua abaixo do orçamento de 120 KB (o plano B do §5, histórico em arquivo à parte, não entra)',
+       len(js.encode('utf-8')) <= 120 * 1024 and 4 * 1024 <= bloco <= 12 * 1024, (len(js), bloco))
+    # ——— plantas (HISTORICO, leves: a asserção roda sozinha sobre o D alterado)
+    c9_planta('historico ausente na simulação', lambda D: D.pop('historico'), 'historico ausente na simulação')
+    c9_planta('fim diferente de «ancora»', lambda D: D['historico'].update({'fim': 'hoje'}), "historico.fim ≠ 'ancora'", True)
+    c9_planta('n × passo_dias que não cobre o ano (n = 100 e os desvios cortados em 100)',
+              lambda D: (D['historico'].update({'n': 100}), [s.update({'d': s['d'][:100]}) for s in D['historico']['desvios'].values()]), 'não cobre os 366 dias')
+    c9_planta('desvio com 182 pontos (n = 183)', lambda D: D['historico']['desvios']['vento_verdadeiro_nos']['d'].pop(), 'desvios.vento_verdadeiro_nos com 182 pontos (precisa de 183)', True)
+    c9_planta('desvio com valor não inteiro (1,5 em vez de 15)', c9_d_de('temp_ar_externo_c', 7, 1.5), 'desvios.temp_ar_externo_c com valor não inteiro', True)
+    c9_planta('desvio sem variação (tudo 0: o gráfico de 30 D e 1 A sairia reto)', lambda D: D['historico']['desvios']['pressao_barometrica_hpa'].update({'d': [0] * 183}),
+              'desvios.pressao_barometrica_hpa sem variação')
+    c9_planta('escala zero', lambda D: D['historico']['desvios']['temp_agua_c'].update({'escala': 0}), 'desvios.temp_agua_c.escala precisa ser inteiro positivo')
+    c9_planta('curva do ano com 72 pontos', lambda D: D['historico']['sazonal']['temp_agua_c']['d'].pop(), 'sazonal.temp_agua_c sem 73 pontos')
+    c9_planta('curva do ano do ar plana (30 D e 1 A sairiam retos)', lambda D: D['historico']['sazonal']['temp_ar_externo_c'].update({'d': [0] * 72 + [1]}), 'varia só 0.1 °C no ano')
+    c9_planta('curva do ano do hemisfério norte (máximo em meados de julho)',
+              lambda D: D['historico']['sazonal']['temp_ar_externo_c'].update({'d': G.sazonal_tabela(4.5, 196)}), 'litoral de SC', True)
+    c9_planta('janela de 7 dias com 100 baldes de uma hora (passa de 4 dias)', lambda D: D['historico']['janelas']['7D'].update({'n': 100}),
+              "janelas['7D'] = {'passo_s': 3600, 'n': 100}: passo_s × n precisa dar 604800 s", True)
+    c9_planta('janela de 30 dias com balde de 25.920 s (não é múltiplo de 150 s)', lambda D: D['historico']['janelas']['30D'].update({'passo_s': 25920, 'n': 100}),
+              "janelas['30D']", True)
+    c9_planta('janela de 150 s trocada', lambda D: D['historico']['janelas'].update({'150S': {'passo_s': 5, 'n': 30}}), "janelas['150S']", True)
+    c9_planta('janela de 1 dia tirada', lambda D: D['historico']['janelas'].pop('1D'), "janelas['1D'] ausente", True)
+    c9_planta('grupo só do laço com campo derivado que não é o STW (diesel_bb_pct em «navegacao»)', lambda D: D['historico']['metricas']['navegacao'].append('diesel_bb_pct'),
+              "so150: 'navegacao' tem campo fora do laço", True)
+    c9_planta('grupo só do laço com campo de contador (diesel_litros em «consumo»)', lambda D: D['historico']['metricas']['consumo'].append('diesel_litros'),
+              "so150: 'consumo' tem campo fora do laço", True)
+    c9_planta('grupo de métricas do laço fora do so150 e sem desvio (o vento sem desvio)', lambda D: D['historico']['desvios'].pop('vento_verdadeiro_nos'),
+              'vento_verdadeiro_nos é do laço e não tem desvio', True)
+    c9_planta('a água sem a curva do ano', lambda D: D['historico']['sazonal'].pop('temp_agua_c'), 'historico.sazonal sem temp_agua_c', True)
+    c9_planta('o ar sem o desvio do dia', lambda D: D['historico']['desvios'].pop('temp_ar_externo_c'), 'historico.desvios sem temp_ar_externo_c')
+    c9_planta('cruzeiro sem a média do óleo BE', lambda D: D['historico']['cruzeiro'].pop('motor_be_oleo_bar'), 'historico.cruzeiro sem motor_be_oleo_bar', True)
+    c9_planta('cruzeiro do BB acima do normal (90,0 °C)', lambda D: D['historico']['cruzeiro']['motor_bb_arref_c']['d'].__setitem__(10, 900),
+              'historico.cruzeiro.motor_bb_arref_c: 90.0 cruza o normal', True)
+    c9_planta('cruzeiro do óleo BE abaixo do normal de cruzeiro (2,0 bar)', lambda D: D['historico']['cruzeiro']['motor_be_oleo_bar']['d'].__setitem__(5, 200),
+              'historico.cruzeiro.motor_be_oleo_bar: 2.0 cruza o normal', True)
+    c9_planta('cruzeiro do BE em 88,0 °C (no limite de 88: a menos de 0,05)', lambda D: D['historico']['cruzeiro']['motor_be_arref_c']['d'].__setitem__(30, 880),
+              'historico.cruzeiro.motor_be_arref_c: 88.0 cruza o normal', True)
+    c9_planta('BE sem subir em relação ao BB (a série plana em 82,4 °C)', lambda D: D['historico']['cruzeiro']['motor_be_arref_c'].update({'d': [824] * 60}),
+              'o BE não sobe em relação ao BB', True)
+    c9_planta('BE acima de hoje já ontem (84,9 °C contra 84,5 pelo laço)', lambda D: D['historico']['cruzeiro']['motor_be_arref_c']['d'].__setitem__(59, 849),
+              'ontem o BE estava', True)
+    c9_planta('bateria de partida com desvio de +5 V (o máximo passa de 29,4 V)', c9_d_de('bateria_1_tensao_v', 3, 500), 'historico.desvios.bateria_1_tensao_v: o máximo cruza o normal (29.4)', True)
+    c9_planta('vento negativo (desvio de −20 nós)', c9_d_de('vento_verdadeiro_nos', 3, -200), 'vento negativo', True)
+    c9_planta('praça de máquinas com o desvio do ar de +12 °C (46 + 12 + 9 passa de 60 °C)', c9_d_de('temp_ar_externo_c', 5, 120), 'praça de máquinas + desvio do ar cruza 60', False)
+    c9_planta('serie24v ausente', lambda D: D.pop('serie24v'), 'serie24v ausente na simulação')
+    c9_planta('serie24v com um dia que não é objeto (a asserção acusa, não levanta exceção)', lambda D: D['serie24v'].__setitem__(2, None), 'serie24v: cada dia precisa ser', True)
+    c9_planta('desvios fora da forma (uma lista no lugar do objeto)', lambda D: D['historico'].update({'desvios': []}), 'historico.desvios sem temp_ar_externo_c')
+    c9_planta('serie24v com 6 dias', lambda D: D['serie24v'].pop(0), 'serie24v: diasAtras precisa ser 6…0', False)
+    c9_planta('serie24v com min igual a max', lambda D: c9_serie(D, 6, min=27.28, max=27.28), 'serie24v[0]: min (27.28) não é menor que max (27.28)', False)
+    c9_planta('serie24v com o mín/máx de hoje trocado (a série antiga: 26,0 a 27,4 V)', lambda D: c9_serie(D, 6, min=26.0, max=27.4), 'serie24v[0]: 26.0 a 27.4 ≠ o mín/máx da volta', True)
+    c9_planta('serie24v fora do normal do banco (máx 29,9 V)', lambda D: c9_serie(D, 3, min=29.3, max=29.9), 'cruza o normal (24.4 a 29.4 V)', False)
+    # ——— a fixture mínima (replay mínimo + histórico mínimo bem formado) não acusa nada, e a série 24 V dela confere com a fórmula
+    Vm = verifica(com_historico(com_rota(hoje())))
+    ok('a fixture mínima (com_historico) não acusa nada na HISTORICO: forma completa, série 24 V da própria fixture', not Vm['HISTORICO'], Vm['HISTORICO'][:3])
+    # ——— modo real (§4.3): sem histórico nem série 24 V (o mín/máx saem do laço e do histórico simulados), e nada estrutural acusa
+    sim0 = G.SIMULACAO
+    try:
+        G.SIMULACAO = False
+        Dr = G.dados()
+        Vr = C.verifica(Dr, G.base_conhecimento(), G.gera_fontes(Dr), G.saidas(Dr, G.base_conhecimento()), None, None, None, None, CONST)
+    finally:
+        G.SIMULACAO = sim0
+    ok('SIMULACAO = False: o D sai sem historico nem serie24v (SEM DADOS nos leitores) e a HISTORICO não acusa a falta',
+       'historico' not in Dr and 'serie24v' not in Dr and not Vr['HISTORICO'] and not Vr['LACO'], (Vr['HISTORICO'][:2], Vr['LACO'][:2]))
+    planta('LACO', ' — C9: histórico simulado no modo real (§4.3)', c8_real(lambda D: D.update({'historico': G.historico_dados()}), 'D'), 'modo real: D.historico só na simulação')
+    planta('LACO', ' — C9: série 24 V simulada no modo real (§4.3)', c8_real(lambda D: D.update({'serie24v': [{'diasAtras': 0, 'min': 27.2, 'max': 27.8, 'd': '26/09'}]}), 'D'),
+           'modo real: D.serie24v só na simulação')
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix='capitao-gerador-') as tmp:
         determinismo(tmp)
@@ -2576,6 +2767,7 @@ def main():
         seguranca_sem_modelo()
         grafia_seafire()
         c8_rota_e_replay()
+        c9_historico()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))

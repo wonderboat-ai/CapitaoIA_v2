@@ -408,6 +408,22 @@ def casas_de(campos, c):
     return (campos.get(c) or {}).get('casas', 0)
 
 
+def desvio_em(H, campo, dias_atras):
+    """Desvio do campo em unidades reais, a `dias_atras` dias de bordo (§1.13; port da interpolação do CapitaoReplay.serie, Fase 2): linear
+    entre os pontos de `passo_dias` em `passo_dias` dias (d[0] a n·passo dias atrás … d[n−1] a passo dias atrás) e 0 na âncora de hoje."""
+    s = H['desvios'][campo]
+    d, n, passo = s['d'], H['n'], H['passo_dias']
+    if dias_atras <= 0:
+        return 0.0
+    p = n - dias_atras / passo    # posição em d (d[n] seria hoje, 0)
+    if p <= 0:
+        return d[0] / s['escala']
+    i = int(math.floor(p))
+    a = d[i] if i < n else 0
+    b = d[i + 1] if i + 1 < n else 0
+    return (a + (b - a) * (p - i)) / s['escala']
+
+
 def laco_valor(R, campos, c, t):
     """Valor do campo c no segundo t (0…149) da volta: interpolação das chaves (o segmento 145 → 150 usa o t = 0), ruído e
     arredondamento pelas casas do D.campos; ângulo pelo arco menor e em [0, 360)."""
@@ -1866,6 +1882,8 @@ def a_laco(X):
         out += ['modo real: replay.%s só na simulação (o replay sai só com limites e alertas, §4.3)' % k for k in (X.R or {}) if k not in ('limites', 'alertas')]
         if 'historico' in X.D:
             out.append('modo real: D.historico só na simulação (§4.3)')
+        if 'serie24v' in X.D:
+            out.append('modo real: D.serie24v só na simulação (§4.3: o mín/máx sai do laço e do histórico simulados)')
         if isinstance(sq, dict) and ('lat' in sq or 'lon' in sq):
             out.append('modo real: snapshot.quadro sem posição enquanto o repositório for público (§4.3)')
         gps = (X.D.get('snapshot') or {}).get('gps')   # §4.3: «emitir snapshot.gps» com posição também é a posição do barco (lat, lon e o texto delas)
@@ -2313,38 +2331,130 @@ def a_agenda(X):
     return out
 
 
+# HISTORICO (§1.13, §6.3). Janelas dos gráficos: o balde de cada uma é múltiplo de 150 s (e alinhado às 07:00), e passo_s × n é a duração dela.
+DURACAO_JANELA_S = {'1D': 86400, '7D': 7 * 86400, '30D': 30 * 86400, '1A': 365 * 86400}
+# Campos de grupo so150 que não são do laço mas derivam dele (§1.22: STW = SOG − corrente·cos(COG − rumo)): vão na mesma janela de 150 s da SOG
+# (grupo `navegacao`, §1.13). Qualquer outro derivado (diesel_bb_pct, proa…) em so150 reprova.
+SO150_DERIVADOS_DO_LACO = ('stw_nos',)
+CRUZEIRO_CAMPOS = ('motor_bb_arref_c', 'motor_be_arref_c', 'motor_bb_oleo_bar', 'motor_be_oleo_bar')   # as quatro médias de cruzeiro da F11
+TEMPERATURAS_CURVA = ('temp_ar_externo_c', 'temp_agua_c')   # ar e água: desvio do dia + curva do ano (a praça acompanha o ar)
+CURVA_MIN_C = 4.0   # a curva do ano do ar e da água varia pelo menos isto de ponta a ponta (o contrato dá 9 e 7); 30 D e 1 A não saem retos
+SERIE24V_TOL = 0.006   # V: o mín/máx da série 24 V vs o laço + o desvio do dia, com o arredondamento de 2 casas
+
+
+def _inteiros(d, n=None):
+    return isinstance(d, list) and (n is None or len(d) == n) and all(isinstance(x, int) and not isinstance(x, bool) for x in d)
+
+
+def _media(v):
+    return sum(v) / len(v)
+
+
+def _obj(x):
+    return x if isinstance(x, dict) else {}   # bloco fora da forma: a asserção acusa a falta, nunca levanta exceção
+
+
+def _serie_ok(s):
+    """Série {escala, d} bem formada (escala inteira positiva, d de inteiros, não vazia): a forma já reprovou nas outras, aqui só se confere o número."""
+    return isinstance(s, dict) and isinstance(s.get('escala'), int) and not isinstance(s['escala'], bool) and s['escala'] > 0 and _inteiros(s.get('d')) and len(s['d']) > 0
+
+
 def a_historico(X):
     H = X.D.get('historico')
     if not isinstance(H, dict):
-        return []
+        return [] if not X.simulacao else ['historico ausente na simulação (§1.13: desvios, curva do ano, médias de cruzeiro, janelas)']
     out = []
-    for grupo in ('desvios', 'sazonal', 'cruzeiro'):
-        for c, s in (H.get(grupo) or {}).items():
-            if isinstance(s, dict) and 'd' in s and not all(_num(x) for x in s['d']):
+    met = {g: cs for g, cs in _obj(H.get('metricas')).items() if isinstance(cs, list)}
+    # ——— forma (§1.13): tudo em inteiros com escala; os comprimentos acompanham n, o da tabela do ano e os dias de cruzeiro
+    if H.get('fim') != 'ancora':
+        out.append("historico.fim ≠ 'ancora' (o último dia guardado termina na âncora do dia de bordo atual)")
+    passo, n = H.get('passo_dias'), H.get('n')
+    if not (isinstance(passo, int) and isinstance(n, int) and not isinstance(passo, bool) and not isinstance(n, bool) and passo > 0 and n > 0):
+        out.append('historico.passo_dias e historico.n precisam ser inteiros positivos')
+        passo = n = 0
+    elif passo * n < 366:
+        out.append('historico: n × passo_dias (%d) não cobre os 366 dias do ano' % (passo * n))
+    saz = _obj(H.get('sazonal'))
+    if saz.get('passo_dias') is not None or saz.get('n') is not None:
+        if (saz.get('passo_dias'), saz.get('n')) != (5, 73):
+            out.append('historico.sazonal: passo_dias e n precisam ser 5 e 73 (a tabela do ano, 73 × 5 = 365 dias): %r e %r' % (saz.get('passo_dias'), saz.get('n')))
+    else:
+        out.append('historico.sazonal sem passo_dias e n')
+    dias = _obj(H.get('cruzeiro')).get('dias')
+    if not (isinstance(dias, int) and not isinstance(dias, bool) and dias > 0):
+        out.append('historico.cruzeiro.dias precisa ser inteiro positivo')
+        dias = 0
+    for grupo, comp in (('desvios', n), ('sazonal', 73), ('cruzeiro', dias)):
+        for c, s in _obj(H.get(grupo)).items():
+            if not (isinstance(s, dict) and isinstance(s.get('d'), list)):
+                continue
+            e = s.get('escala')
+            if not (isinstance(e, int) and not isinstance(e, bool) and e > 0):
+                out.append('historico.%s.%s.escala precisa ser inteiro positivo' % (grupo, c))
+            if not all(_num(x) for x in s['d']):
                 out.append('historico.%s.%s com valor não finito' % (grupo, c))
-    met = H.get('metricas') or {}
+            elif not _inteiros(s['d']):
+                out.append('historico.%s.%s com valor não inteiro (valor real = d / escala)' % (grupo, c))
+            if grupo != 'sazonal' and comp and len(s['d']) != comp:   # a curva do ano tem a mensagem própria («sem 73 pontos»)
+                out.append('historico.%s.%s com %d pontos (precisa de %d)' % (grupo, c, len(s['d']), comp))
+            if grupo == 'desvios' and len(set(s['d'])) < 2:
+                out.append('historico.desvios.%s sem variação (a série de 30 D e 1 A sairia reta)' % c)
     out += ['historico.metricas.%s: %r fora de D.campos' % (g, c) for g, cs in met.items() for c in cs if c not in X.campos]
-    if (H.get('janelas') or {}).get('150S') != {'passo_s': 1, 'n': 150}:
+    if not (isinstance(H.get('fonte'), str) and H['fonte'].strip()):
+        out.append('historico.fonte ausente')
+    # ——— janelas dos gráficos
+    jan = _obj(H.get('janelas'))
+    if jan.get('150S') != {'passo_s': 1, 'n': 150}:
         out.append("historico.janelas['150S'] ≠ {passo_s: 1, n: 150}")
+    for k, dur in DURACAO_JANELA_S.items():
+        w = jan.get(k)
+        if not (isinstance(w, dict) and isinstance(w.get('passo_s'), int) and isinstance(w.get('n'), int)):
+            out.append('historico.janelas[%r] ausente ou fora da forma {passo_s, n}' % k)
+        elif w['passo_s'] * w['n'] != dur or w['passo_s'] % 150:
+            out.append('historico.janelas[%r] = %s: passo_s × n precisa dar %d s, com o balde múltiplo de 150 s' % (k, w, dur))
+    # ——— so150: grupos só do laço (a volta se repete nas janelas longas); o resto precisa de desvio ou ser contador
     for g in H.get('so150') or []:
         if g not in met:
             out.append('historico.so150: %r fora das métricas' % g)
-        elif any((X.campos.get(c) or {}).get('origem') != 'laço' for c in met[g]):
+        elif any((X.campos.get(c) or {}).get('origem') != 'laço' and c not in SO150_DERIVADOS_DO_LACO for c in met[g]):
             out.append('historico.so150: %r tem campo fora do laço' % g)
-    for c, s in ((H.get('sazonal') or {}).items()):
-        if isinstance(s, dict) and len(s.get('d') or []) != 73:
+    des = _obj(H.get('desvios'))
+    for g, cs in met.items():
+        if g in (H.get('so150') or []):
+            continue
+        for c in cs:
+            org = (X.campos.get(c) or {}).get('origem')
+            if org == 'laço' and c not in des and c != 'temp_praca_maquinas_c':   # a praça acompanha o ar externo (desvio + curva do ano)
+                out.append('historico.metricas.%s: %s é do laço e não tem desvio (a janela longa sairia reta; só os grupos do laço ficam em so150)' % (g, c))
+    for c in TEMPERATURAS_CURVA:
+        if c in X.campos:
+            for grupo in ('desvios', 'sazonal'):
+                if not isinstance(_obj(H.get(grupo)).get(c), dict):
+                    out.append('historico.%s sem %s (ar e água levam o desvio do dia e a curva do ano)' % (grupo, c))
+    for c in CRUZEIRO_CAMPOS:
+        if c in X.campos and not isinstance(_obj(H.get('cruzeiro')).get(c), dict):
+            out.append('historico.cruzeiro sem %s (média de cruzeiro da F11)' % c)
+    for c, s in saz.items():
+        if isinstance(s, dict) and len(s['d'] if isinstance(s.get('d'), list) else []) != 73:
             out.append('historico.sazonal.%s sem 73 pontos' % c)
+        elif isinstance(s, dict) and _inteiros(s.get('d')):
+            ponta = (max(s['d']) - min(s['d'])) / (s.get('escala') or 1)
+            dia_max, dia_min = 5 * s['d'].index(max(s['d'])), 5 * s['d'].index(min(s['d']))
+            if ponta < CURVA_MIN_C:
+                out.append('historico.sazonal.%s varia só %.1f °C no ano (a curva precisa de %.1f °C pelo menos: 30 D e 1 A sairiam retos)' % (c, ponta, CURVA_MIN_C))
+            elif not ((dia_max >= 335 or dia_max <= 105) and 135 <= dia_min <= 285):   # verão de dez a mar, inverno de jun a set (hemisfério sul)
+                out.append('historico.sazonal.%s: o máximo cai no dia %d e o mínimo no dia %d do ano (litoral de SC: máximo de dezembro a março, mínimo de junho a setembro)' % (c, dia_max, dia_min))
+    # ——— nenhum valor cruza limite (desvios + laço; cruzeiro; praça + desvio do ar + curva); só as séries bem formadas (a forma reprovou acima)
     Q = X.laco()
     if Q:
-        ar = (H.get('desvios') or {}).get('temp_ar_externo_c') or {}
-        saz = ((H.get('sazonal') or {}).get('temp_ar_externo_c')) or {}
-        d_ar = max([x / ar.get('escala', 1) for x in ar.get('d') or []] or [0])
-        d_saz = (max(saz['d']) - min(saz['d'])) / saz.get('escala', 1) if saz.get('d') else 0
-        for c, s in (H.get('desvios') or {}).items():
-            if c not in Q[0] or not s.get('d'):
+        ar, sz = des.get('temp_ar_externo_c'), saz.get('temp_ar_externo_c')
+        d_ar = max([x / ar['escala'] for x in ar['d']]) if _serie_ok(ar) else 0
+        d_saz = (max(sz['d']) - min(sz['d'])) / sz['escala'] if _serie_ok(sz) else 0
+        for c, s in des.items():
+            if c not in Q[0] or not _serie_ok(s):
                 continue
             vs = [q[c] for q in Q]
-            dmin, dmax = min(s['d']) / s.get('escala', 1), max(s['d']) / s.get('escala', 1)
+            dmin, dmax = min(s['d']) / s['escala'], max(s['d']) / s['escala']
             nrm = (X.limites.get(c) or {}).get('normal') or {}
             if 'de' in nrm and min(vs) + dmin < nrm['de'] + 0.05 - 1e-9:
                 out.append('historico.desvios.%s: o mínimo cruza o normal (%s)' % (c, nrm['de']))
@@ -2356,6 +2466,72 @@ def a_historico(X):
         ate = ((X.limites.get(pr) or {}).get('normal') or {}).get('ate')
         if pr in Q[0] and _num(ate) and max(q[pr] for q in Q) + d_ar + d_saz > ate - 0.05 + 1e-9:
             out.append('historico: praça de máquinas + desvio do ar cruza %s °C' % ate)
+        out += _cruzeiro(X, H, Q)
+        out += _serie24v(X, H, Q)
+    return out
+
+
+def _cruzeiro(X, H, Q):
+    """Médias de cruzeiro (F11): dentro do normal, com a folga de 0,05, no regime de cruzeiro; e o BE sobe em relação ao BB até o valor de hoje
+    (média do laço na fase de cruzeiro), que é o que o achado «Motor BE N °C acima do BB em cruzeiro, subindo há 60 dias» conta."""
+    out = []
+    cz = _obj(H.get('cruzeiro'))
+    for c in CRUZEIRO_CAMPOS:
+        s = cz.get(c)
+        if not (isinstance(s, dict) and _inteiros(s.get('d')) and isinstance(s.get('escala'), int) and s['escala'] > 0):
+            continue
+        for v in s['d']:
+            x = v / s['escala']
+            # em cruzeiro (2.050 rpm, motores girando): o óleo muda de regime com a rotação e o arrefecimento só vale com o motor ligado
+            bom = all((nivel(X.limites, X.campos, c, {'motor_bb_rpm': 2050, 'motor_be_rpm': 2050, c: x + e}) or {}).get('nivel', 'normal') == 'normal'
+                      for e in (-0.05, 0, 0.05))
+            if not bom:
+                out.append('historico.cruzeiro.%s: %s cruza o normal (ou fica a menos de 0,05 do limite)' % (c, x))
+                break
+    bb, be = cz.get('motor_bb_arref_c'), cz.get('motor_be_arref_c')
+    fase = next((f for f in ((X.R or {}).get('fases') or []) if f.get('nome') == 'cruzeiro'), None)
+    if fase and isinstance(bb, dict) and isinstance(be, dict) and _inteiros(bb.get('d')) and _inteiros(be.get('d')) and len(bb['d']) == len(be['d']) >= 30 \
+            and Q and 'motor_be_arref_c' in Q[0] and 'motor_bb_arref_c' in Q[0]:
+        seg = Q[fase['ini']:fase['fim']]
+        hoje = _media([q['motor_be_arref_c'] for q in seg]) - _media([q['motor_bb_arref_c'] for q in seg])
+        dif = [b / be['escala'] - a / bb['escala'] for a, b in zip(bb['d'], be['d'])]
+        if _media(dif[-15:]) - _media(dif[:15]) < 0.5:
+            out.append('historico.cruzeiro: o BE não sobe em relação ao BB (F11: «subindo há %d dias»): %.1f → %.1f °C' % (len(dif), _media(dif[:15]), _media(dif[-15:])))
+        if not dif[-1] < hoje:
+            out.append('historico.cruzeiro: ontem o BE estava %.1f °C acima do BB e hoje, pelo laço, %.1f (a série precisa subir até hoje)' % (dif[-1], hoje))
+    return out
+
+
+def _serie24v(X, H, Q):
+    """serie24v (L, §1.13): 7 itens {diasAtras: 6…0, min, max, d}; o mín/máx de hoje é o da volta do banco de serviço, e os dos outros dias são o da
+    volta mais o desvio do dia (o mesmo deslocamento nos dois); dentro do normal, com a folga de 0,05."""
+    sv = X.D.get('serie24v')
+    if not isinstance(sv, list) or not sv:
+        return ['serie24v ausente na simulação (§1.13: 7 dias de mín/máx do banco de serviço)']
+    if not all(isinstance(x, dict) for x in sv):
+        return ['serie24v: cada dia precisa ser {diasAtras, min, max, d}']
+    c = 'bateria_0_tensao_v'
+    s = _obj(H.get('desvios')).get(c)
+    n, passo = H.get('n'), H.get('passo_dias')
+    if c not in Q[0] or not (isinstance(s, dict) and isinstance(n, int) and isinstance(passo, int) and passo > 0 and _inteiros(s.get('d'), n)
+                             and isinstance(s.get('escala'), int) and s['escala'] > 0):
+        return []   # sem o desvio de referência bem formado (a forma já reprovou acima), não há o que comparar
+    out = []
+    if [x.get('diasAtras') for x in sv] != list(range(6, -1, -1)):
+        out.append('serie24v: diasAtras precisa ser 6…0 (7 dias): %r' % [x.get('diasAtras') for x in sv])
+    vs = [q[c] for q in Q]
+    nrm = (X.limites.get(c) or {}).get('normal') or {}
+    for x in sv:
+        if not (_num(x.get('min')) and _num(x.get('max')) and _num(x.get('diasAtras'))):
+            out.append('serie24v[%s] sem min e max numéricos' % x.get('diasAtras'))
+            continue
+        dev = desvio_em(H, c, x['diasAtras'])
+        if x['min'] >= x['max']:
+            out.append('serie24v[%d]: min (%s) não é menor que max (%s)' % (x['diasAtras'], x['min'], x['max']))
+        if abs(x['min'] - (min(vs) + dev)) > SERIE24V_TOL or abs(x['max'] - (max(vs) + dev)) > SERIE24V_TOL:
+            out.append('serie24v[%d]: %s a %s ≠ o mín/máx da volta (%s a %s) mais o desvio do dia (%+.3f V)' % (x['diasAtras'], x['min'], x['max'], min(vs), max(vs), dev))
+        if ('de' in nrm and x['min'] < nrm['de'] + 0.05 - 1e-9) or ('ate' in nrm and x['max'] > nrm['ate'] - 0.05 + 1e-9):
+            out.append('serie24v[%d]: %s a %s cruza o normal (%s a %s V)' % (x['diasAtras'], x['min'], x['max'], nrm.get('de'), nrm.get('ate')))
     return out
 
 

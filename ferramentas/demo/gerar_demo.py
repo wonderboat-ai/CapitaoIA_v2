@@ -42,7 +42,7 @@ from datetime import date, timedelta
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
-from confere import ConfereFalhou, arred, confere, deriva_janelas, mn_entre, quadro_laco, rumo_entre, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
+from confere import ConfereFalhou, arred, confere, deriva_janelas, desvio_em, mn_entre, quadro_laco, rumo_entre, ruido, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
 
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 FONTES_REL = os.path.join('ferramentas', 'demo', 'fontes')   # as fontes do Drive, dentro da pasta de saída
@@ -338,13 +338,9 @@ def segundos_do_diario(linhas, base):
     return [chave.count(k) - chave[:i + 1].count(k) for i, k in enumerate(chave)]
 
 
-# Série 24 V · 7 dias: mín/máx por dia — única série de histórico carregada (L até a Fase 4; o C9 refaz os valores).
-# `diasAtras` conta do dia de bordo; o rebase escreve o `d` (dd/mm).
-SERIE_24V = [
-    {'diasAtras': 6, 'min': 26.1, 'max': 28.4}, {'diasAtras': 5, 'min': 26.0, 'max': 28.6}, {'diasAtras': 4, 'min': 25.9, 'max': 27.2},
-    {'diasAtras': 3, 'min': 25.8, 'max': 27.0}, {'diasAtras': 2, 'min': 25.7, 'max': 28.5}, {'diasAtras': 1, 'min': 25.9, 'max': 27.1},
-    {'diasAtras': 0, 'min': 26.0, 'max': 27.4},
-]
+# Série 24 V · 7 dias: mín/máx por dia do banco de serviço (L até a Fase 4). `diasAtras` conta do dia de bordo; o rebase escreve o `d` (dd/mm).
+# Só os dias ficam aqui: o mín/máx de cada um é o da volta de 150 s do laço + o desvio do dia do histórico (serie24v_dados, §1.13).
+SERIE_24V = [{'diasAtras': k} for k in range(6, -1, -1)]
 
 # ——————————————————————————————— AGENDA PREDITIVA ———————————————————————————————
 # CONTRATO §1.7: 14 tarefas (os ids de hoje ficam: as telas e o capitao.executado.v1 usam o id; entram epirb-teste, motores-rotor e
@@ -547,7 +543,17 @@ def abastecimentos_dados():
 
 
 def serie24v_dados():
-    return [dict(x, d=dia_ddmm(-x['diasAtras'])) for x in SERIE_24V]
+    """serie24v (L, §1.13): 7 itens {diasAtras: 6…0, min, max, d} = mín/máx da volta do banco de serviço (bateria_0_tensao_v) + o desvio do
+    dia (o do histórico, interpolado entre os pontos de 2 em 2 dias até 0 hoje). Só na simulação (dados() a chama lá): o mín/máx sai do laço e do
+    histórico simulados, que o modo real não emite (§4.3); sem a série, o leitor cai no «série não gravada»."""
+    R, _, campos = replay_dados()
+    vs = [quadro_laco(R, campos, t)['bateria_0_tensao_v'] for t in range(R['duracao'])]
+    H = historico_dados()
+    out = []
+    for x in SERIE_24V:
+        dev = desvio_em(H, 'bateria_0_tensao_v', x['diasAtras'])
+        out.append(dict(x, min=arred(min(vs) + dev, 2), max=arred(max(vs) + dev, 2), d=dia_ddmm(-x['diasAtras'])))
+    return out
 
 
 # ——————————————————————————————— FAIXAS E LIMITES (CONTRATO §3.3) ———————————————————————————————
@@ -1439,6 +1445,99 @@ def dia_de_bordo(R):
                   'tanques de diesel em %s %%.' % (br(litros), ANCORA_HORA, num_br(depois, 1))}]}
 
 
+# ——————————————————————————————— HISTÓRICO (CONTRATO §1.13) ———————————————————————————————
+# Só na simulação (com SIMULACAO = False o gerador não emite histórico simulado, §4.3). Cada dia de bordo repete o modelo de 24 h (o laço de
+# 150 s e os contadores), e os baldes dos gráficos são múltiplos de 150 s alinhados às 07:00; então o gerador guarda só o que NÃO é laço nem
+# contador: o desvio lento de tempo e baterias em relação a hoje (um a cada 2 dias, de 366 dias atrás até 2 dias atrás; hoje = 0, e o cliente
+# interpola linearmente até 0 na âncora), a curva do ano do ar e da água (tabela por dia do calendário, em relação à média do ano) e as médias
+# de cruzeiro da F11. Tudo em inteiros com escala (valor real = d / escala), sem Math.sin no cliente. O último ponto de qualquer série é o quadro
+# de hoje (desvio 0). Sem maré nem previsão (trava §2.5): tempo e maré são sempre os reais.
+HIST_PASSO_DIAS, HIST_N = 2, 183              # d[0] = 366 dias atrás … d[182] = 2 dias atrás
+SAZONAL_PASSO_DIAS, SAZONAL_N = 5, 73         # 1º de janeiro = índice 0; 73 × 5 = 365 dias
+CRUZEIRO_DIAS = 60                            # d[0] = 60 dias atrás … d[59] = ontem
+HIST_SEMENTE = 2000                           # sementes do ruído por hash (h32), fora das do laço (1100 + n) e da rota (1201, 1202)
+# (campo, escala, amplitude real, oitavas (período em pontos de 2 dias, peso), semente): as amplitudes são as do contrato (±4 nós, ±7 hPa,
+# ±0,06 V, ±1,5 °C no ar e ±0,4 °C na água); a série é normalizada para chegar exatamente à amplitude.
+DESVIOS_DEF = [
+    ('vento_verdadeiro_nos', 10, 4.0, ((4, 1.0), (2, 0.7), (1, 0.4)), 1),
+    ('pressao_barometrica_hpa', 10, 7.0, ((6, 1.0), (3, 0.5)), 2),
+    ('bateria_0_tensao_v', 100, 0.06, ((6, 1.0), (3, 0.7), (1, 0.3)), 22),   # semente escolhida: a semana da série 24 V (serie24v) varia 0,04 V
+    ('bateria_1_tensao_v', 100, 0.06, ((7, 1.0), (3, 0.6), (1, 0.3)), 4),
+    ('bateria_2_tensao_v', 100, 0.06, ((5, 1.0), (2, 0.6), (1, 0.3)), 5),
+    ('temp_ar_externo_c', 10, 1.5, ((5, 1.0), (2, 0.6)), 6),
+    ('temp_agua_c', 10, 0.4, ((12, 1.0), (4, 0.5)), 7),
+]
+# (campo, amplitude real, dia do calendário do máximo): ar +4,5 °C em meados de janeiro e −4,5 °C em meados de julho; água +3,5 °C em meados de
+# fevereiro e −3,5 °C em meados de agosto (litoral de SC, hemisfério sul).
+SAZONAL_DEF = [('temp_ar_externo_c', 4.5, 15), ('temp_agua_c', 3.5, 45)]
+JANELAS_HIST = {'150S': {'passo_s': 1, 'n': 150}, '1D': {'passo_s': 900, 'n': 96}, '7D': {'passo_s': 3600, 'n': 168},
+                '30D': {'passo_s': 21600, 'n': 120}, '1A': {'passo_s': 86400, 'n': 365}}
+METRICAS_HIST = {'b24': ['bateria_0_tensao_v', 'bateria_1_tensao_v'], 'b12': ['bateria_2_tensao_v'],
+                 'tanques': ['tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct'], 'vento': ['vento_verdadeiro_nos'],
+                 'pressao': ['pressao_barometrica_hpa'], 'diesel': ['diesel_litros'],
+                 'temperaturas': ['temp_praca_maquinas_c', 'temp_ar_externo_c', 'temp_agua_c'],
+                 'motores': ['motor_bb_rpm', 'motor_be_rpm'], 'oleo': ['motor_bb_oleo_bar', 'motor_be_oleo_bar'],
+                 'arref': ['motor_bb_arref_c', 'motor_be_arref_c'], 'navegacao': ['sog_nos', 'stw_nos'], 'consumo': ['consumo_lph']}
+SO150_HIST = ['motores', 'oleo', 'arref', 'navegacao', 'consumo']   # grupos só do laço: nas janelas longas a volta se repete e a linha sairia reta
+# Cruzeiro (F11): médias por dia de bordo. BB estável em 82,0 ± 0,2 °C; BE sobe de 82,4 a 83,9 °C em 60 dias (hoje, 84,5 pelo laço com os picos,
+# 2,5 °C acima do BB); óleo ao redor do de hoje (3,9 e 3,8 bar). (escala, centro real, amplitude real, semente); no BE o centro é (início, fim) da subida.
+CRUZEIRO_BB_ARREF, CRUZEIRO_BE_ARREF = (10, 82.0, 0.2, 11), (10, (82.4, 83.9), 0.1, 12)
+CRUZEIRO_OLEO = {'motor_bb_oleo_bar': (100, 3.90, 0.03, 13), 'motor_be_oleo_bar': (100, 3.80, 0.03, 14)}
+
+
+def _meio(x):
+    return int(math.floor(x + 0.5))   # arredonda a metade para cima (sem o round() do Python, que vai pelo par)
+
+
+def _suave(semente, n, oitavas):
+    """n pontos em [−1, 1]: ruído de valor em oitavas ((período em pontos, peso), …), com suavização entre as âncoras (h32 do confere:
+    determinístico, sem relógio nem Math.sin); normalizado para o pico dar exatamente ±1."""
+    pesos = sum(p for _, p in oitavas)
+    v = []
+    for i in range(n):
+        t = 0.0
+        for o, (per, peso) in enumerate(oitavas):
+            j, r = divmod(i, per)
+            f = r / per
+            a, b = ruido(semente * 10 + o, j), ruido(semente * 10 + o, j + 1)
+            t += peso * (a + (b - a) * f * f * (3 - 2 * f))
+        v.append(t / pesos)
+    m = max(abs(x) for x in v) or 1
+    return [x / m for x in v]
+
+
+def sazonal_tabela(amp, dia_pico):
+    """A curva do ano em décimos de grau, a cada SAZONAL_PASSO_DIAS dias do calendário (índice 0 = 1º de janeiro), com o máximo em dia_pico."""
+    return [_meio(amp * 10 * math.cos(2 * math.pi * (SAZONAL_PASSO_DIAS * i - dia_pico) / 365)) for i in range(SAZONAL_N)]
+
+
+def cruzeiro_dados():
+    n = CRUZEIRO_DIAS
+    bb_e, be_e = CRUZEIRO_BB_ARREF, CRUZEIRO_BE_ARREF
+    ruido_bb, ruido_be = _suave(HIST_SEMENTE + bb_e[3], n, ((4, 1.0), (1, 0.6))), _suave(HIST_SEMENTE + be_e[3], n, ((4, 1.0), (1, 0.6)))
+    de, ate = be_e[1]
+    out = {'dias': n,
+           'motor_bb_arref_c': {'escala': bb_e[0], 'd': [_meio(bb_e[0] * (bb_e[1] + bb_e[2] * ruido_bb[i])) for i in range(n)]},
+           'motor_be_arref_c': {'escala': be_e[0], 'd': [_meio(be_e[0] * (de + (ate - de) * i / (n - 1) + be_e[2] * ruido_be[i])) for i in range(n)]}}
+    for campo, (esc, centro, amp, sem) in CRUZEIRO_OLEO.items():
+        r = _suave(HIST_SEMENTE + sem, n, ((5, 1.0), (1, 0.5)))
+        out[campo] = {'escala': esc, 'd': [_meio(esc * (centro + amp * r[i])) for i in range(n)]}
+    return out
+
+
+def historico_dados():
+    """D.historico (§1.13), na ordem do contrato. Determinístico (nenhuma data nem aleatório do sistema)."""
+    desvios = {}
+    for campo, esc, amp, oit, sem in DESVIOS_DEF:
+        desvios[campo] = {'escala': esc, 'd': [_meio(esc * amp * x) for x in _suave(HIST_SEMENTE + sem, HIST_N, oit)]}
+    sazonal = {'passo_dias': SAZONAL_PASSO_DIAS, 'n': SAZONAL_N}
+    for campo, amp, pico in SAZONAL_DEF:
+        sazonal[campo] = {'escala': 10, 'd': sazonal_tabela(amp, pico)}
+    return {'fim': 'ancora', 'passo_dias': HIST_PASSO_DIAS, 'n': HIST_N, 'desvios': desvios, 'sazonal': sazonal, 'cruzeiro': cruzeiro_dados(),
+            'janelas': {k: dict(v) for k, v in JANELAS_HIST.items()}, 'metricas': {k: list(v) for k, v in METRICAS_HIST.items()},
+            'so150': list(SO150_HIST), 'fonte': 'coletor NMEA de bordo · histórico'}
+
+
 # ——————————————————————————————— SAÍDA ———————————————————————————————
 def snapshot_dados():
     """O snapshot (L, §1.17). Com SIMULACAO = False o repositório público não leva a posição do barco (§4.3): sai a lat/lon do quadro e do gps."""
@@ -1461,11 +1560,11 @@ def dados():
         'snapshot': snapshot_dados(), 'consumo': CONSUMO, 'reserva': RESERVA, 'autonomia': autonomia(),
     }
     if SIMULACAO:   # §4.3: com SIMULACAO = False não há rota, destinos, histórico simulado nem dia de bordo, e o replay sai só com limites e alertas
-        D.update({'destinos': destinos_dados(rota), 'rota': rota, 'replay': R})
+        D.update({'destinos': destinos_dados(rota), 'rota': rota, 'replay': R, 'historico': historico_dados(),
+                  'serie24v': serie24v_dados()})   # serie24v (L): o mín/máx sai do laço e do histórico simulados; sem simulação não há série (SEM DADOS)
     else:
         D['replay'] = {'limites': R['limites'], 'alertas': R['alertas']}
     D.update({
-        'serie24v': serie24v_dados(),
         'agenda': agenda_dados(), 'agendaFonte': AGENDA_FONTE, 'tarefasEquipe': tarefas_equipe_dados(),
         'documentos': documentos_dados(), 'docsFonte': DOCS_FONTE,
         'abastecimentos': abastecimentos_dados(), 'abastFonte': ARQ['abast'] + ' · ' + DRIVE + ' › ' + PASTAS['abast'], 'regraAbast': REGRA_ABAST,
