@@ -43,6 +43,10 @@
   ruído, fixos, contadores, limites, 21 alertas, janelas derivadas, dia de bordo), consumo, destinos e snapshot sem null; o em() portado contra os números do
   §1.22 (12:01:00, 12:01:45, a virada 06:59:59 → 07:00:00); as 575 emendas de 150 s sem chegada e o cenário alarme-critico; as asserções novas com amostras
   plantadas (C8_PLANTAS) e a PENDENTES vazia.
+- Revisão do C8 (§4.3, §0 item 6): com SIMULACAO = False a leitura da pasta 05 também sai sem lat/lon (antes lia o SNAPSHOT cru) e a LACO acusa
+  chave ou coluna de posição em qualquer fonte do Drive (c8_real: o D e as fontes de verdade do modo real, com a posição plantada); o Formato do
+  quadro do coletor não mostra mais a coluna Origem (a taxonomia interna do D.campos) e a LACO acusa essa coluna e os valores de ORIGENS numa
+  planilha da pasta 05.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -2214,7 +2218,55 @@ def c8_pernas(i, **kw):
     return c8_com(lambda D: D['rota']['pernas'][i].update(kw))
 
 
+POSICAO_KEYS = {'lat', 'lon'}
+
+
+def c8_real(fn):
+    """O D e as fontes de verdade no modo real (SIMULACAO False no gerador), com fn(F) quando r: a planta da posição nas fontes do Drive (§4.3)."""
+    def monta(r):
+        sim0 = G.SIMULACAO
+        try:
+            G.SIMULACAO = False
+            k = hoje()
+        finally:
+            G.SIMULACAO = sim0
+        if r:
+            fn(k['F'])
+        return k
+    return monta
+
+
+def c8_fonte(sufixo, fn):
+    """hoje() com o texto da fonte que termina em `sufixo` trocado por fn(texto) quando r."""
+    def monta(r):
+        k = hoje()
+        if r:
+            rel = next(x for x in k['F'] if x.endswith(sufixo))
+            k['F'][rel] = fn(k['F'][rel])
+        return k
+    return monta
+
+
+def c8_leitura(k_F):
+    rel = next(x for x in k_F if x.endswith('.json') and 'Leitura do coletor NMEA' in x)
+    j = json.loads(k_F[rel])
+    j.update({'lat': -26.993, 'lon': -48.614})
+    k_F[rel] = json.dumps(j, ensure_ascii=False, indent=1) + '\n'
+
+
+def c8_serie_com_posicao(k_F):
+    k_F[next(x for x in k_F if x.endswith('.json') and 'Leitura do coletor NMEA' in x).rsplit('/', 1)[0] + '/Série com posição.csv'] = 'Hora;Latitude;Longitude\n07:00;-26,99;-48,61\n'
+
+
 C8_PLANTAS = [
+    ('LACO', 'leitura da pasta 05 com lat e lon no modo real (§4.3)', c8_real(c8_leitura), 'modo real: fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA'),
+    ('LACO', 'série da pasta 05 com colunas Latitude e Longitude no modo real (§4.3)', c8_real(c8_serie_com_posicao), 'Série com posição.csv: traz Latitude e Longitude'),
+    ('LACO', 'coluna Origem no Formato do quadro do coletor',
+     c8_fonte('Formato do quadro do coletor.csv', lambda t: t.replace('Casas decimais,Contador,Observação', 'Casas decimais,Origem,Contador,Observação', 1)),
+     'a coluna «Origem» mostra a taxonomia interna'),
+    ('LACO', 'valor da taxonomia interna (laço) numa célula do Formato do quadro',
+     c8_fonte('Formato do quadro do coletor.csv', lambda t: t.replace('sog_nos,Velocidade sobre o fundo (SOG),nós,1,,', 'sog_nos,Velocidade sobre o fundo (SOG),nós,1,,laço', 1)),
+     'o valor «laço» é da taxonomia interna'),
     ('LACO', 'campo do catálogo que o quadro do em() não tem (xyz)', c8_com(lambda D: D['campos'].update({'xyz': {'rotulo': 'Xyz', 'un': 'x', 'casas': 0, 'origem': 'rota'}})),
      'em(): o quadro não tem xyz, que está em D.campos'),
     ('LACO', 'campo do quadro fora do catálogo (wp_mn tirado de D.campos)', c8_com(lambda D: D['campos'].pop('wp_mn')), 'em(): o quadro tem wp_mn, que não está em D.campos'),
@@ -2353,7 +2405,9 @@ def c8_rota_e_replay():
     formato = next(t for r, t in F.items() if r.endswith('Formato do quadro do coletor.csv'))
     ok('pasta 05: a série de 150 s (t_s 0–149 + os 28 campos do laço, sem data, lat nem lon) e o formato do quadro (um campo por linha, 66)',
        len(linhas) == 151 and linhas[0].split(';') == ['t_s'] + [c for c in cam if c in R['chaves']] and linhas[1].split(';')[0] == '0' and linhas[150].split(';')[0] == '149' and all(len(l.split(';')) == 29 for l in linhas)
-       and not {'lat', 'lon', 'timestamp_utc'} & set(linhas[0].split(';')) and len(formato.strip().split('\n')) == 67 and formato.startswith('Campo,Rótulo,Unidade,Casas decimais,Origem'), linhas[:2])
+       and not {'lat', 'lon', 'timestamp_utc'} & set(linhas[0].split(';')) and len(formato.strip().split('\n')) == 67
+       # revisão do C8: sem a coluna Origem (laço, rota, janela… é a taxonomia interna do D.campos; o coletor NMEA real não a tem)
+       and formato.startswith('Campo,Rótulo,Unidade,Casas decimais,Contador,Observação\n') and not (set(C.ORIGENS) & {c for l in formato.split('\n') for c in l.split(',')}), linhas[:2])
     aba = next(t for r, t in F.items() if r.endswith('Registro de abastecimento.csv'))
     dia = next(t for r, t in F.items() if r.endswith('Diário de bordo.csv'))
     ok('pastas 06 e 04: o abastecimento tem os 3 dias de bordo (0, 1 e 2) com 1.086 L e o diário traz a d01 e a d02 do dia de bordo antes das fixas',
@@ -2366,12 +2420,23 @@ def c8_rota_e_replay():
     try:
         G.SIMULACAO = False
         Dr = G.dados()
-        Vr = C.verifica(Dr, G.base_conhecimento(), G.gera_fontes(Dr), G.saidas(Dr, G.base_conhecimento()), None, None, None, None, CONST)
+        Fr = G.gera_fontes(Dr)
+        Vr = C.verifica(Dr, G.base_conhecimento(), Fr, G.saidas(Dr, G.base_conhecimento()), None, None, None, None, CONST)
     finally:
         G.SIMULACAO = sim0
     ok('SIMULACAO = False: o D sai sem rota, destinos, chaves, janelas nem dia de bordo (replay só com limites e alertas), o snapshot.quadro sem lat/lon e nenhuma violação estrutural',
        'rota' not in Dr and 'destinos' not in Dr and list(Dr['replay']) == ['limites', 'alertas'] and 'lat' not in Dr['snapshot']['quadro'] and 'lat' not in Dr['snapshot']['gps']
        and Dr['simulacao'] is False and not {n: v for n, v in Vr.items() if v and n != 'TERMOS'}, {n: v[:2] for n, v in Vr.items() if v and n != 'TERMOS'})
+    # Revisão do C8: o D já saía sem posição no modo real, mas a leitura da pasta 05 (arquivo do repositório público) levava lat/lon do SNAPSHOT cru
+    leitura_r = next((json.loads(t) for r, t in Fr.items() if r.endswith('.json') and 'Leitura do coletor NMEA' in r), None)
+    leitura_s = next(json.loads(t) for r, t in k['F'].items() if r.endswith('.json') and 'Leitura do coletor NMEA' in r)
+    ok('SIMULACAO = False: a leitura da pasta 05 sai sem lat/lon (o resto igual à da simulação), nenhuma fonte do Drive tem chave nem coluna de posição, e a série e o formato do quadro não são emitidos',
+       leitura_r is not None and not POSICAO_KEYS & set(leitura_r) and {c: v for c, v in leitura_s.items() if c not in ('lat', 'lon')} == leitura_r
+       and POSICAO_KEYS <= set(leitura_s) and not C.posicao_nas_fontes(Fr) and not [r for r in Fr if r.endswith('Série do coletor NMEA — 150 s.csv') or r.endswith('Formato do quadro do coletor.csv')],
+       (leitura_r, C.posicao_nas_fontes(Fr)))
+    ok('SIMULACAO = True: a leitura da pasta 05 continua com lat e lon numéricos (§1.17), a série vai sem posição e nenhuma planilha da pasta 05 mostra a taxonomia interna',
+       isinstance(leitura_s['lat'], float) and isinstance(leitura_s['lon'], float) and not C.formato_sem_taxonomia(C.Ctx(D, {}, k['F'], {}))
+       and not [m for m in C.posicao_nas_fontes(k['F']) if 'Leitura' not in m], C.formato_sem_taxonomia(C.Ctx(D, {}, k['F'], {})))
     # ——— o cenário alarme-critico (§3.5): só mudando a constante; o óleo BB ganha aviso → crítico → aviso dentro de 95–120 s
     cen0 = G.CENARIO
     try:

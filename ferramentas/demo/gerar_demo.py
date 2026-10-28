@@ -1657,9 +1657,10 @@ def gera_fontes(D):
     F[PASTAS['abast'] + '/' + ARQ['abast'] + '.csv'] = csv_txt(   # um por dia de bordo (0, 1 e 2): a lista que a microtarefa do rodapé monta
         [COL_DIA_BORDO, 'Hora', 'Litros', 'Combustível', 'Local', 'Nível depois (%)', 'Situação', 'Observação'],
         [[k, ab['h'], br(ab['litros']), ab['combustivel'], ab['local'], ab['nivelDepois'], ab['st'], ab['nota']] for k in range(bordo.get('dias', 0))] if ab else [])
-    s = SNAPSHOT
+    s = snapshot_dados()   # não o SNAPSHOT cru: com SIMULACAO = False a leitura da pasta 05 também sai sem lat/lon (§4.3; é arquivo do repositório público)
+    pos = {'lat': s['gps']['lat'], 'lon': s['gps']['lon']} if 'lat' in s['gps'] else {}
     F[PASTAS['tele'] + '/' + ARQ['snapshot']] = json.dumps({
-        'timestamp_utc': '2026-09-26T13:12:00Z', 'lat': s['gps']['lat'], 'lon': s['gps']['lon'], 'sog_nos': s['sog'],
+        'timestamp_utc': '2026-09-26T13:12:00Z', **pos, 'sog_nos': s['sog'],
         'proa_graus': s['proa'], 'gps_satelites': s['gps']['satelites'], 'profundidade_m': s['profundidade'],
         'vento_verdadeiro_nos': s['vento'], 'vento_verdadeiro_angulo': s['ventoDe'], 'pressao_barometrica_hpa': s['pressao'],
         'temp_ar_externo_c': s['ar'], 'temp_agua_c': s['agua'], 'tanque_agua_pct': s['tanques']['agua'],
@@ -1680,8 +1681,8 @@ def gera_fontes(D):
         F[PASTAS['tele'] + '/' + ARQ['serie']] = csv_txt(
             ['t_s'] + cols, [[t] + [('%.*f' % (C_[c].get('casas', 0), Q[t][c])).replace('.', ',') for c in cols] for t in range(R['duracao'])], sep=';')
         F[PASTAS['tele'] + '/' + ARQ['formato']] = csv_txt(
-            ['Campo', 'Rótulo', 'Unidade', 'Casas decimais', 'Origem', 'Contador', 'Observação'],
-            [[c, d['rotulo'], d.get('un'), d.get('casas'), d['origem'], {1: 'sobe', -1: 'desce'}.get(d.get('sentido')),
+            ['Campo', 'Rótulo', 'Unidade', 'Casas decimais', 'Contador', 'Observação'],   # sem a coluna Origem: é a taxonomia interna do gerador (laço, rota, janela…), não do coletor
+            [[c, d['rotulo'], d.get('un'), d.get('casas'), {1: 'sobe', -1: 'desce'}.get(d.get('sentido')),
               d.get('desc') or ('ângulo de 0 a 360 graus' if d.get('ang') else None)] for c, d in C_.items()])
     F[ARQ['leiame'] + '.html'] = '\n'.join([
         '<h1>' + ARQ['leiame'] + '</h1>',

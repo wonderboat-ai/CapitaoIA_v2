@@ -1731,6 +1731,49 @@ def alertas_no_guia(X):
     return out
 
 
+POSICAO_CHAVES = {'lat', 'lon', 'lng', 'latitude', 'longitude'}
+
+
+def _cabecalho_csv(txt):
+    """As colunas da 1ª linha com conteúdo de um CSV das fontes (vírgula ou ponto e vírgula) e as demais linhas."""
+    sep = ';' if ';' in txt.split('\n', 1)[0] else ','
+    linhas = [l for l in csv.reader(io.StringIO(txt), delimiter=sep)]
+    i = next((j for j, l in enumerate(linhas) if any(c.strip() for c in l)), None)
+    return ([], []) if i is None else (linhas[i], linhas[i + 1:])
+
+
+def posicao_nas_fontes(fontes):
+    """Fontes do Drive com posição: JSON com chave lat/lon/latitude/longitude (em qualquer profundidade) ou CSV com coluna assim.
+    §4.3: com SIMULACAO = False o repositório público não leva a posição do barco, nem na leitura nem na série da pasta 05."""
+    out = []
+    for rel, txt in sorted(fontes.items()):
+        if rel.endswith('.json'):
+            achou = sorted({k for _, k in chaves_de(json.loads(txt)) if norm(str(k)).strip() in POSICAO_CHAVES})
+        elif rel.endswith('.csv'):
+            achou = sorted({c for c in _cabecalho_csv(txt)[0] if norm(c).strip() in POSICAO_CHAVES})
+        else:
+            continue
+        if achou:
+            out.append('fontes/%s: traz %s' % (rel, ' e '.join(achou)))
+    return out
+
+
+def formato_sem_taxonomia(X):
+    """Pasta 05: nenhuma planilha mostra a taxonomia interna do D.campos (coluna «Origem» nem um valor de ORIGENS numa célula): o
+    Formato do quadro descreve o coletor NMEA, e laço, janela ou rota denunciariam que as leituras são geradas (CONTRATO §0, item 6)."""
+    out, tele = [], (X.pastas.get('tele') or '\0') + '/'
+    for rel, txt in sorted(X.fontes.items()):
+        if not (rel.startswith(tele) and rel.endswith('.csv')):
+            continue
+        cab, corpo = _cabecalho_csv(txt)
+        if any(norm(c).strip() == 'origem' for c in cab):
+            out.append('fontes/%s: a coluna «Origem» mostra a taxonomia interna do D.campos' % rel)
+        vistos = sorted({c.strip() for l in corpo for c in l if c.strip() in ORIGENS})
+        if vistos:
+            out.append('fontes/%s: o valor «%s» é da taxonomia interna do D.campos.origem' % (rel, '», «'.join(vistos)))
+    return out
+
+
 def a_laco(X):
     R = X.R
     if R is None:
@@ -1777,6 +1820,7 @@ def a_laco(X):
             nv = nivel(X.limites, C, c, sq)
             if nv and nv['nivel'] != 'normal':
                 out.append('snapshot.quadro.%s = %s: nivel %s (o instante guardado só tem campo normal ou que não se avalia)' % (c, sq.get(c), nv['nivel']))
+    out += formato_sem_taxonomia(X)   # nos dois modos
     if not X.simulacao:   # §4.3: com SIMULACAO = False o gerador não emite rota, histórico simulado, dia de bordo nem a posição do barco
         if 'rota' in X.D or 'destinos' in X.D:
             out.append('modo real: D.rota e D.destinos só na simulação (§4.3)')
@@ -1785,6 +1829,7 @@ def a_laco(X):
             out.append('modo real: D.historico só na simulação (§4.3)')
         if isinstance(sq, dict) and ('lat' in sq or 'lon' in sq):
             out.append('modo real: snapshot.quadro sem posição enquanto o repositório for público (§4.3)')
+        out += ['modo real: %s (as fontes do Drive vão sem posição enquanto o repositório for público, §4.3)' % m for m in posicao_nas_fontes(X.fontes)]
     return out
 
 
