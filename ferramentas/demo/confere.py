@@ -3043,6 +3043,7 @@ CK_AUTO = {   # id → (auto, parcial): o ✓ automático (§1.18); o que não e
     'c02': ('seakeeperOff', False), 'c03': ('motoresOff', False), 'c04': ('geradorOff', False), 'c06': ('porao', False),
     'a01': ('motoresOff', False), 'a02': ('geradorOff', False), 'a03': ('diesel', False), 'f01': ('profundidade', False),
     'f04': ('deriva', False), 'f06': ('mare', False)}
+# O `faq` é a seção do mesmo guia que a `fonte` (§1.18), menos s10 (EL-04: Rádio VHF, Eletrônicos §4) e s13 (EM-09: cartão de Salvatagem): por desenho, apontam para o cartão do assunto.
 CK_FAQ = {'s03': 'MO-01', 's04': 'PO-03', 's07': 'EE-02', 's08': 'GE-03', 's09': 'SK-02', 's10': 'EL-04', 's13': 'EM-09', 'c01': 'EL-02',
           'c02': 'SK-04', 'c03': 'MO-06', 'c04': 'GE-04', 'c05': 'CL-05', 'a07': 'CK-05', 'f01': 'EL-08', 'f02': 'AN-01', 'f03': 'EL-03', 'f05': 'AN-03'}
 CK_LINK = {'c08': 'G3-Diario', 'a06': 'G2-Abastecimento'}   # a tela do app (sem o -Web/-Mobile): o CONCLUIR e o item levam até ela
