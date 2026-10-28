@@ -25,9 +25,10 @@ Para a próxima embarcação: SIMULACAO = False, trocar os dados abaixo pelos re
 
 Uso: python -X utf8 ferramentas/demo/gerar_demo.py [--saida <pasta>] [--detalhe]
   --saida    pasta onde gravar (padrão: a raiz do repositório); o teste usa uma pasta temporária e compara byte a byte.
-  --detalhe  lista cada violação das asserções, com o commit da pendência, [relatório] ou [NOVA].
-Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma estrutural com violação
-fora das pendências congeladas (PENDENTES), ou com uma pendência que não ocorre mais, reprova o gerador e nada é gravado. Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
+  --detalhe  lista cada violação das asserções, com o commit da pendência ou [NOVA].
+Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma com violação fora das
+pendências congeladas (PENDENTES), ou com uma pendência que não ocorre mais, reprova o gerador e nada é gravado. Desde o C12 isso vale
+também para a varredura de termos (as 8 regex do termos.json; a única exceção é o campo embarcacao.mmsiNota, até a 1b). Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
 modelos-avanti.txt) e CAPITAO_AVANTI (pasta do Avanti, só leitura). Determinístico: nenhuma data ou hora do sistema.
 """
 import argparse
@@ -2570,7 +2571,7 @@ def gera_fontes(D):
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Gera capitao-dados.js, base-conhecimento.json, faq-equipamentos.json e as fontes do Drive.')
     ap.add_argument('--saida', default=RAIZ, help='pasta onde gravar (padrão: a raiz do repositório)')
-    ap.add_argument('--detalhe', action='store_true', help='lista cada violação, com o commit da pendência, [relatório] ou [NOVA]')
+    ap.add_argument('--detalhe', action='store_true', help='lista cada violação, com o commit da pendência ou [NOVA]')
     a = ap.parse_args(argv)
     for s in (sys.stdout, sys.stderr):   # console do Windows sem -X utf8: um "≠" vira escape em vez de derrubar o gerador
         try:
@@ -2587,7 +2588,7 @@ def main(argv=None):
     except ValueError as e:   # serializa() recusa NaN e infinito: nada é gravado
         print('gerador: valor não finito no D ou na base (%s); nada foi gravado' % e, file=sys.stderr)
         return 1
-    try:   # antes de gravar: com uma asserção estrutural falhando, nada sai
+    try:   # antes de gravar: com uma asserção falhando (a varredura de termos também, desde o C12), nada sai
         confere(D, B, F, S, Q, const={'NOTA_ETIQUETA': NOTA_ETIQUETA, 'DIAS_MESES': DIAS_MESES, 'LIMITES': LIMITES}, detalhe=a.detalhe)
     except ConfereFalhou as e:
         print(e, file=sys.stderr)

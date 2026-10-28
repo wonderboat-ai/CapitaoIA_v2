@@ -10,7 +10,7 @@
 - confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
   da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
-  (relatório até o C12) não reprova. Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
+  reprova como as outras desde o C12 (as 8 regex; a única exceção é o campo embarcacao.mmsiNota, até a 1b). Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
   modelo congelado (como o do VHF antigo, até o C5) por outro da lista, que reprova (modelos_sinteticos).
 - C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
@@ -274,13 +274,14 @@ def copias():
     erros = ['%s não barra %r' % (k, s) for k, frases in casos['barra'].items() for s in frases if not T[k].search(s)]
     erros += ['%s barra %r' % (k, s) for s in casos['passa'] for k, r in T.items() if k != 'ANEXO' and r.search(s)]
     ok('as 8 regex no Python dão os %d casos' % (sum(len(v) for v in casos['barra'].values()) + len(casos['passa'])), not erros and len(T) == 8, erros[:3])
-    # Revisão final do C3: cada uma das 8 regex está num dos dois modos (reprova já / relatório até o C12); uma regex nova no
-    # termos.json não fica sem classe (o padrão de em_relatorio() é o relatório, que não reprova).
-    relat = {'ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'ANEXO'}
-    ok('TERMOS: PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam já; ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL e ANEXO ficam em relatório (as 8 do termos.json)',
-       set(T) == relat | set(C.TERMOS_JA_REPROVAM) and not relat & set(C.TERMOS_JA_REPROVAM) and len(C.TERMOS_JA_REPROVAM) == 3
-       and all(C.em_relatorio('TERMOS', k + ': x') for k in relat) and not any(C.em_relatorio('TERMOS', k + ': x') for k in C.TERMOS_JA_REPROVAM)
-       and not C.em_relatorio('NULO', 'ROTULOS: x'), sorted(T))
+    # C12 (CONTRATO §6.2): do C3 ao C11 este teste prendia a divisão das 8 regex em "reprova já" (PESSOAIS, DINHEIRO, LOCAL_SEGURANCA) e
+    # "relatório até o C12" (as outras cinco). Com o C12 não há mais relatório: o modo sumiu do confere.py (RELATORIO, TERMOS_JA_REPROVAM e
+    # em_relatorio()), as 8 do termos.json reprovam, e a única exceção é o caminho exato do campo mmsiNota, até a 1b.
+    ok('TERMOS (C12): as 8 regex do termos.json reprovam o gerador; o modo "relatório" não existe mais no confere.py',
+       set(T) == {'ROTULOS', 'AUTENTICIDADE', 'DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA', 'VAZIOS', 'VISIVEL', 'ANEXO'}
+       and not any(hasattr(C, n) for n in ('RELATORIO', 'TERMOS_JA_REPROVAM', 'em_relatorio')), sorted(T))
+    ok('TERMOS (C12): a única exceção da varredura é embarcacao.mmsiNota, que sai na 1b',
+       C.EXCECAO_TERMOS == {'embarcacao.mmsiNota': '1b'}, C.EXCECAO_TERMOS)
 
 
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
@@ -908,7 +909,7 @@ def com_coluna(sufixo, coluna, valor=''):
 
 # Revisão final do C3. A TERMOS inteira em relatório deixava passar telefone, e-mail, CPF, dinheiro e lugar de equipamento de
 # salvatagem escritos como TEXTO (as travas §2.2 e §2.7 do PROMPT): só valia o mesmo dado como chave. A PESSOAIS, a DINHEIRO e a
-# LOCAL_SEGURANCA dão 0 em todo o dado de hoje e reprovam já; as outras cinco regex continuam em relatório até o C12.
+# LOCAL_SEGURANCA davam 0 em todo o dado e reprovavam já; as outras cinco regex ficaram em relatório até o C12, que as fez reprovar (reprova()).
 EXTRAS += [
     ('TERMOS', 'telefone no texto da equipe (PESSOAIS)', lambda r: com_nota_equipe('Marina: (47) 99812-3456.' if r else 'Marina: contato só no aparelho.'),
      'PESSOAIS: equipe.nota'),
@@ -1541,12 +1542,9 @@ def planta(nome, o_que, monta, espera, so_uma=False):
     (revisão do C7), é também a ÚNICA violação nova da regra: a amostra isolada não se apoia em outra mensagem da mesma regra."""
     bom, mau = verifica(monta(False)), verifica(monta(True))
     novos = [m for m in mau[nome] if m not in bom[nome]]
-    achados = [m for m in novos if espera in m]
-    if achados and all(C.em_relatorio(nome, m) for m in achados):   # na TERMOS, cada regex decide (PESSOAIS, DINHEIRO e LOCAL_SEGURANCA reprovam)
-        modo, reprova = ' (em relatório até o %s)' % C.RELATORIO[nome], True
-    else:
-        livres = C.separa({nome: mau[nome]})[0].get(nome, [])
-        modo, reprova = ' e reprova (fora das pendências)', any(espera in m for m in livres)
+    # C12: toda asserção reprova (a TERMOS também; antes, as cinco regex de rótulo só relatavam): a amostra tem de ficar fora das pendências
+    livres = C.separa({nome: mau[nome]})[0].get(nome, [])
+    modo, reprova = ' e reprova (fora das pendências)', any(espera in m for m in livres)
     ok('%s: acusa a amostra plantada%s%s%s' % (nome, o_que, modo, ' (uma violação só)' if so_uma else ''),
        len(mau[nome]) > len(bom[nome]) and any(espera in m for m in novos) and reprova and (not so_uma or len(novos) == 1),
        {'novas': novos[:3], 'antes': len(bom[nome]), 'depois': len(mau[nome]), 'reprova': reprova})
@@ -2076,7 +2074,7 @@ def grafia_seafire():
 
 
 def reprova(tmp):
-    print('Estruturais reprovam o gerador (fora das pendências); a varredura de termos (relatório) não')
+    print('Toda asserção reprova o gerador (fora das pendências), a varredura de termos inclusive (C12)')
     D0, B0 = G.dados, G.base_conhecimento
 
     F0 = G.gera_fontes
@@ -2101,7 +2099,9 @@ def reprova(tmp):
     rc, saida = rodar(coord, p1)
     ok('COORD_TEXTO plantada: main() devolve 1 e não grava nada', rc == 1 and not os.path.exists(p1) and 'COORD_TEXTO' in saida, (rc, saida[-300:]))
     rc, saida = rodar(termo, p2)
-    ok('TERMOS plantado (relatório até o C12): main() devolve 0 e grava', rc == 0 and os.path.isfile(os.path.join(p2, 'capitao-dados.js')), (rc, saida[-300:]))
+    # C12 (CONTRATO §6.2): a varredura de termos passou de relatório (main() devolvia 0 e gravava) a reprovar, como as estruturais.
+    ok('TERMOS plantado («(DEMO)» no diário): main() devolve 1 e não grava nada (desde o C12; antes, relatório: devolvia 0 e gravava)',
+       rc == 1 and not os.path.exists(p2) and 'TERMOS 1 nova(s)' in saida, (rc, saida[-300:]))
     nan = lambda D: (D['snapshot'].update({'sog': float('nan')}), D)[1]
     p3 = os.path.join(tmp, 'r3')
     rc, saida = rodar(nan, p3)
@@ -2131,6 +2131,15 @@ def reprova(tmp):
         rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
         F[rel] += '<p>Escreva para oficina@exemplo.com.br.</p>'
         return F
+    # C12: as cinco regex de rótulo (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL, ANEXO), que do C3 ao C11 só relatavam, reprovam o main() como as três
+    # de antes; uma amostra de cada, no diário, e mais a base, o nome do arquivo de uma fonte e o campo ao lado da exceção (embarcacao.fonte).
+    no_diario = lambda txt: (lambda D: (D['diario'][0].update({'t': D['diario'][0]['t'] + txt}), D)[1])
+    rotulo_base = lambda B: (B['trechos'][T_DSC].update({'texto': B['trechos'][T_DSC]['texto'] + ' SEM DADOS.'}), B)[1]
+    def nome_fonte(F):   # a página sai com «DEMO» no nome, como iria para o Drive (pasta e arquivo)
+        rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
+        F[rel.replace('Checklist de bordo', 'Checklist de bordo (DEMO)')] = F.pop(rel)
+        return F
+    fonte_fict = lambda D: (D['embarcacao'].update({'fonte': D['embarcacao']['fonte'] + ' (dados fictícios)'}), D)[1]
     def coluna_fonte(sufixo, coluna):
         def f(F):
             rel = next(r for r in sorted(F) if r.endswith(sufixo))
@@ -2145,6 +2154,14 @@ def reprova(tmp):
                                      ('TERMOS', dinheiro, 1, None, ' (DINHEIRO: valor em reais no diário)'),
                                      ('TERMOS', lambda D: D, 1, preco_base, ' (DINHEIRO: preço na base)'),
                                      ('TERMOS', lugar_epirb, 1, None, ' (LOCAL_SEGURANCA: lugar do EPIRB no nome)'),
+                                     ('TERMOS', no_diario(' (DEMO)'), 1, None, ' (ROTULOS: «DEMO» no diário)'),
+                                     ('TERMOS', lambda D: D, 1, rotulo_base, ' (ROTULOS: «SEM DADOS» na base)'),
+                                     ('TERMOS', lambda D: D, 1, None, ' (ROTULOS: «DEMO» no nome do arquivo de uma fonte do Drive)', nome_fonte),
+                                     ('TERMOS', no_diario(' Os dados são fictícios.'), 1, None, ' (AUTENTICIDADE: «os dados são fictícios» no diário)'),
+                                     ('TERMOS', fonte_fict, 1, None, ' (AUTENTICIDADE: «dados fictícios» em embarcacao.fonte, ao lado da exceção do mmsiNota)'),
+                                     ('TERMOS', no_diario(' Combustível: n/d.'), 1, None, ' (VAZIOS: «n/d» no diário)'),
+                                     ('TERMOS', no_diario(' Veja o snapshot.'), 1, None, ' (VISIVEL: «snapshot» no diário)'),
+                                     ('TERMOS', no_diario(' Foto A CONFERIR.'), 1, None, ' (ANEXO: «A CONFERIR» no diário)'),
                                      ('SEM_INDICATIVO', lambda D: D, 1, None, ' (coluna Telefone no CSV do inventário)', coluna_fonte('Inventário de bordo.csv', 'Telefone')),
                                      ('SEM_PREVISAO', lambda D: D, 1, None, ' (coluna Maré prevista no CSV do abastecimento)', coluna_fonte('Registro de abastecimento.csv', 'Maré prevista (m)')),
                                      ('SEM_INDICATIVO', lambda D: D, 1, None, ' (coluna WhatsApp no CSV do inventário)', coluna_fonte('Inventário de bordo.csv', 'WhatsApp')),
@@ -2188,6 +2205,67 @@ def reprova(tmp):
         sum(c.values()) for c in conhecidas.values()), not novas and not velhas and not conhecidas, {'novas': novas, 'velhas': velhas[:3]})
     ok('PENDENTES: vazia desde o C8 (o C4 completou a embarcação, o C5, os equipamentos e os guias, o C6, o D.protocolos, o C7, a agenda, os documentos, o diário '
        'e as fontes relativas e o C8, o snapshot, a rota e o replay), e nenhum commit pendente', C.PENDENTES == {} and C.COMMITS_PENDENTES == ())
+
+
+def c12_termos(tmp):
+    """C12 (CONTRATO §6.2, «Gerador: fontes do Drive, varredura obrigatória e PARIDADE»): a varredura de termos reprova o gerador, com uma
+    exceção só, embarcacao.mmsiNota (até a 1b); as fontes do Drive (conteúdo e nome de arquivo) passam nas 8 regex, também na árvore gravada
+    (o «grep final» do §3 em ferramentas/demo/fontes/**, sem lookahead de ripgrep: as regex do proibidos.json, cada uma com a sua flag)."""
+    print('C12: varredura de termos obrigatória, exceção só do mmsiNota e grep final das fontes do Drive')
+    k = hoje()
+    ctx = lambda D, F=None: C.Ctx(D, k['B'], F if F is not None else k['F'], {})
+    ok('TERMOS: o dado de hoje (D, base e fontes, conteúdo e nome de arquivo) passa nas 8 regex, só com a exceção do mmsiNota',
+       not C.a_termos(ctx(k['D'])) and 'mmsiNota' in k['D']['embarcacao'], C.a_termos(ctx(k['D']))[:3])
+    nota = k['D']['embarcacao']['mmsiNota']
+    # a exceção vale pelo CAMINHO exato: o mesmo texto noutro campo é acusado, e o campo da exceção aceita qualquer texto até a 1b
+    D = copy.deepcopy(k['D'])
+    D['embarcacao']['outraNota'] = nota
+    V = C.a_termos(ctx(D))
+    ok('TERMOS: o texto do mmsiNota noutro campo (embarcacao.outraNota) é acusado: a exceção é por caminho, não por texto',
+       len(V) == 1 and V[0].startswith('AUTENTICIDADE: embarcacao.outraNota «'), V[:3])
+    D = copy.deepcopy(k['D'])
+    D['embarcacao']['mmsiNota'] = 'DEMO · SEM DADOS'
+    ok('TERMOS: o campo embarcacao.mmsiNota é a única exceção (aceita até «DEMO · SEM DADOS» enquanto existir; a 1b tira o campo e a linha)',
+       not C.a_termos(ctx(D)), C.a_termos(ctx(D))[:3])
+    D = copy.deepcopy(k['D'])
+    D['embarcacao'].pop('mmsiNota')
+    ok('TERMOS: sem o campo mmsiNota (como fica na 1b) o dado continua passando', not C.a_termos(ctx(D)), C.a_termos(ctx(D))[:3])
+    # o nome do arquivo de uma fonte é varrido (a pasta e o arquivo vão para o Drive); a página com o mesmo nome limpo passa
+    F = dict(k['F'])
+    rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
+    F[rel.replace('Checklist de bordo', 'Checklist de bordo (DEMO)')] = F.pop(rel)
+    V = C.a_termos(ctx(k['D'], F))
+    ok('TERMOS: «DEMO» no nome do arquivo de uma fonte é acusado, com o caminho e «(nome do arquivo)»',
+       len(V) == 1 and V[0].startswith('ROTULOS: fontes/') and '(nome do arquivo)' in V[0] and 'Checklist de bordo (DEMO).html' in V[0], V[:3])
+    # grep final do §3 em ferramentas/demo/fontes/** (a árvore gravada), por arquivo e por nome, com a flag de cada regex
+    T = C.carrega_termos()
+    rot = re.compile(re.escape(C.ROTULO), re.I)
+    base = os.path.join(RAIZ, 'ferramentas', 'demo', 'fontes')
+    achados, arquivos = [], {}
+    for raiz, _, nomes in os.walk(base):
+        for nome in nomes:
+            caminho = os.path.join(raiz, nome)
+            rel = os.path.relpath(caminho, base).replace(os.sep, '/')
+            with open(caminho, encoding='utf-8') as f:
+                arquivos[rel] = f.read()
+            for alvo in (rel, rot.sub(' ', arquivos[rel])):
+                achados += ['%s: %s' % (n, rel) for n, r in sorted(T.items()) if r.search(alvo)]
+    ok('grep final (§3): os %d arquivos de ferramentas/demo/fontes/** não casam nenhuma das 8 regex, nem no nome (sem DEMO, SEM DADOS, fictício, snapshot…)'
+       % len(arquivos), arquivos and not achados, achados[:3])
+    ok('grep final (§3): a árvore gravada tem os mesmos arquivos que o gerador gera (nenhum a mais, nenhum a menos)',
+       sorted(arquivos) == sorted(k['F']), sorted(set(arquivos) ^ set(k['F']))[:3])
+    # o main() de hoje: grava (código 0) e o resumo diz que a varredura de termos reprova, com 0 violações e a exceção
+    pasta = os.path.join(tmp, 'c12-hoje')
+    opcionais = {n: os.environ.pop(n) for n in ('CAPITAO_LISTAS_PRIVADAS', 'CAPITAO_AVANTI') if n in os.environ}   # como o roda()
+    try:
+        with contextlib.redirect_stdout(io.StringIO()) as o, contextlib.redirect_stderr(io.StringIO()) as e:
+            rc = G.main(['--saida', pasta])
+    finally:
+        os.environ.update(opcionais)
+    saida = o.getvalue() + e.getvalue()
+    ok('main() de hoje: devolve 0, grava, e o resumo da confere() diz que toda asserção reprova, com a varredura de termos em 0 e a exceção do mmsiNota',
+       rc == 0 and os.path.isfile(os.path.join(pasta, 'capitao-dados.js')) and 'todas reprovam o gerador' in saida and '0 falhas' in saida
+       and 'varredura de termos: 0 violação(ões) · exceção: embarcacao.mmsiNota' in saida and 'em relatório' not in saida, (rc, saida[-400:]))
 
 
 # ——————————————————————————————— C8 (CONTRATO §1.14–§1.17, §1.22, §3, §4.1) ———————————————————————————————
@@ -2626,7 +2704,7 @@ def c9_planta(o_que, muda, espera, so_uma=False):
     muda(D)
     novos = [m for m in C.a_historico(c9_ctx(D)) if m not in bom]
     ok('HISTORICO: acusa a amostra plantada — C9: %s%s' % (o_que, ' (uma violação só)' if so_uma else ''),
-       any(espera in m for m in novos) and (not so_uma or len(novos) == 1) and 'HISTORICO' not in C.RELATORIO, {'novas': novos[:3]})
+       any(espera in m for m in novos) and (not so_uma or len(novos) == 1), {'novas': novos[:3]})
 
 
 def c9_hist(D):
@@ -2819,7 +2897,7 @@ def c10_planta(regra, fn, o_que, muda, espera, so_uma=False, faq=None):
     muda(D)
     novos = [m for m in fn(C.Ctx(D, c['B'], c['F'], {}, faq)) if m not in bom]
     ok('%s: acusa a amostra plantada — C10: %s%s' % (regra, o_que, ' (uma violação só)' if so_uma else ''),
-       any(espera in m for m in novos) and (not so_uma or len(novos) == 1) and (regra in C.RELATORIO) == (regra == 'TERMOS'), {'novas': novos[:3]})
+       any(espera in m for m in novos) and (not so_uma or len(novos) == 1), {'novas': novos[:3]})
 
 
 def c10_funcoes():
@@ -3554,15 +3632,11 @@ def c11_faq(tmp):
                                                   ('GE-06 sem «não religue» na resposta e EL-02 sem «Engate só em área livre» (3ª revisão do C11: a regra derivada do trecho)',
                                                    lambda Q_: (it(Q_, 'GE-06').update({'resposta': it(Q_, 'GE-06')['resposta'].replace(' não religue e', '')}),
                                                                it(Q_, 'EL-02').update({'resposta': it(Q_, 'EL-02')['resposta'].replace(' Engate só em área livre, com a rota conferida no plotter.', '')})), 'FAQ'),
-                                                  ('preço no item (a DINHEIRO reprova já; a TERMOS em relatório, não)',
+                                                  ('preço no item (DINHEIRO)',
                                                    lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' Custa R$ 9,90.'}), 'TERMOS'),
-                                                  ('«DEMO» no item (relatório: não reprova, grava)', None, None))):
-        if muda_ is None:   # o relatório da TERMOS não reprova: main() devolve 0 e grava
-            pasta = os.path.join(tmp, 'faq-%d' % n_)
-            rc, saida = rodar_faq(lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' (DEMO)'}), pasta)
-            ok('FAQ plantado (%s): main() devolve 0 e grava (a varredura de termos fica em relatório até o C12)' % nome,
-               rc == 0 and os.path.isfile(os.path.join(pasta, 'faq-equipamentos.json')), (rc, saida[-300:]))
-            continue
+                                                  # C12: a varredura de termos reprova (do C3 ao C11 este caso era relatório: main() devolvia 0 e gravava)
+                                                  ('«DEMO» no item (ROTULOS, desde o C12)',
+                                                   lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' (DEMO)'}), 'TERMOS'))):
         pasta = os.path.join(tmp, 'faq-%d' % n_)
         rc, saida = rodar_faq(muda_, pasta)
         ok('FAQ plantado (%s): main() devolve 1 e não grava nada (%s)' % (nome, esperado), rc == 1 and not os.path.exists(pasta) and esperado in saida, (rc, saida[-300:]))
@@ -3594,6 +3668,7 @@ def main():
         c11_faq(tmp)
         modelos_sinteticos()
         reprova(tmp)
+        c12_termos(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))
     return 1 if falhas else 0
 

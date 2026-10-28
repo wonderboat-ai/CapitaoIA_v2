@@ -208,6 +208,50 @@ Ambiente: contêiner Linux na nuvem, não a máquina Windows. Chromium do Playwr
 
 A lista de valores do Avanti existe fora do repositório (`$TEMP/paridade-avanti/valores.txt`, 59 itens: nome e casco, MMSI, indicativo, inscrição, HIN, Hex ID, séries, URLs, hashes, nomes de pessoas e empresas, lugares). `git grep -n -i -F -f` com ela dá **0** na árvore atual.
 
+## 9. Decisão (e): o que o Claude escolheu na Fase 1 (barco, registro, rota)
+
+A decisão (e) do `CLAUDE.md` deixa o barco, o registro e a rota para o Claude, com a lista aqui. Nenhuma escolha repete valor ou modelo do Avanti: o gerador confere por substring contra as duas listas privadas e contra a pasta do Avanti (só contagens; ver o §8), e o `git grep` das listas na árvore dá 0. Fonte dos números: `ferramentas/demo/gerar_demo.py` (o `CONTRATO-DADOS.md` §2 e §8 têm o porquê de cada um).
+
+### 9.1 Escolhas (para conferência)
+
+| Item | Escolha |
+|---|---|
+| Barco | Estaleiro Marévia · Marévia 40 HT · 2023 (marca fictícia, sem colisão) |
+| Dimensões | 12,40 m · boca 3,95 m · calado 1,10 m · 9,3 t métricas · tanques 2 × 800 L de diesel, 400 L de água, 100 + 100 L de servidas |
+| Lotação / a bordo | 12 / 4 |
+| Registro | CIA-23-0417 (= número do TIE; nunca no SOS) |
+| MMSI / indicativo | 710123456 só nos lugares do §2.2 do PROMPT (Embarcação, Documentos, F3 «MMSI (cadastro do app)», `## Embarcação` e a 2ª linha da rota `mmsi`) / indicativo nunca gerado |
+| Motores | 2 × Cummins QSB6.7 305 (eixo) |
+| Gerador | Onan QD 9 (9 kW, 60 Hz) |
+| Estabilizador | Seakeeper 3 (12 V DC, no banco de 12 V; sem números do fabricante no guia; exceção de contagem aprovada, ponto 9 abaixo) |
+| Climatização | Webasto FCF Platinum 16000 + 2 × 12000 |
+| Plotters / radar | Garmin GPSMAP 1243xsv ×2 / Garmin GMR 24 xHD3 |
+| Áudio / VHF | Fusion MS-UD755 / Icom IC-M510 + IC-M37 (troca do rádio que o 1.0.9 tinha em comum com o Avanti) |
+| EPIRB / incêndio | Ocean Signal SafeSea E100G / Seafire FD 300M (fabricante, modelo e validade só em Equipamentos, Leme e Documentos; nos guias e no SOS, só o procedimento padrão) |
+| Dessalinizador / bombas / guincho | Schenker Zen 30 / Rule 2000 (24 V) ×2 / Lewmar V2 + AA150 |
+| Piloto / AIS | Raymarine Evolution (EV-1 · ACU-400) / em-trak B954 |
+| Baterias | Victron Energy AGM Super Cycle 12 V 230 Ah ×8 (serviço 24 V, partida 24 V, 12 V) |
+| Base e rota | 19 circuitos por dia, fator 0,9866 · Barra Sul (saída do Rio Camboriú) → Ilha das Cabras → Ponta das Laranjeiras → Taquaras → Estaleirinho → Praia do Pinho → Laranjeiras → Ilha das Cabras → base; circuito de 16,17 mn. Os pontos e as 8 pernas passaram pelo portão manual do C8 contra a costa (0 amostras em terra); a rota só existe na simulação, **nunca no SOS** |
+
+A rota do contrato (15,42 mn, fator 0,9407) mudou no portão manual: os pontos do contrato cortavam terra, foram movidos para o mar e o circuito ficou mais longo. Circuito, fator, velocidade média, COG, ETA e `destino_mn` do §1.22 do contrato são, por isso, os do `D.rota` gerado (os números do contrato ficam históricos; entram nos documentos pendentes da Fase 8).
+
+### 9.2 Pontos do §8.2 do contrato: resolvidos pelo orquestrador com a proposta do contrato
+
+| # | Ponto | Decisão | Como ficou |
+|---|---|---|---|
+| 1 | Códigos de alarme do Seakeeper | resolvido pelo orquestrador com a proposta do contrato: mensagens do display e o que fazer, sem código numérico | `g_seakeeper` §6 · Alarmes lista quatro mensagens com a providência de cada uma e manda anotar a mensagem e o código no diário; nenhum número de manual do fabricante |
+| 2 | Emenda do `termos.json` (câmbio do rádio no DINHEIRO e `sea-?fire` no LOCAL_SEGURANCA) | resolvido pelo orquestrador com a proposta do contrato | Entrou antes do C3 (commit «Termos: câmbio do rádio e grafia Sea-Fire», com as revisões); `testes/proibidos.json` e `proibidos-casos.json` são cópias iguais do `termos.json` e do `termos-casos.json` (134 casos: 91 que barram e 43 que passam) |
+| 3 | Grafia «Seafire» (sem hífen) em todo dado | resolvido pelo orquestrador com a proposta do contrato | asserção `GRAFIA_SEAFIRE` (valor, chave e nome de arquivo; a exceção é só `equipamentos[].palavras[]`, o vocabulário do ditado) |
+| 4 | Motores: Cummins no lugar da marca de hoje | resolvido pelo orquestrador com a proposta do contrato | 2 × Cummins QSB6.7 305, coerente com 2.050 rpm a 18 nós; os textos fixos «Volvo Penta» do cérebro, da C3 e da G4 saem nas Fases 3 e 4 (contrato §6.6) |
+| 5 | Piloto de fabricante diferente do dos plotters | resolvido pelo orquestrador com a proposta do contrato | Raymarine Evolution (EV-1 · ACU-400): direção hidráulica pede piloto hidráulico |
+| 6 | `porao-teste` como tarefa de segurança | resolvido pelo orquestrador com a proposta do contrato | `agenda[porao-teste].seguranca: true`; o item s12 do checklist («Nenhuma tarefa de segurança atrasada») fica pendente enquanto o teste estiver atrasado. A asserção `AGENDA` limita `seguranca` a `epirb-teste`, `seafire-inspecao` e `porao-teste` |
+| 7 | 19 circuitos por dia, posição abaixo do SOG | resolvido pelo orquestrador com a proposta do contrato (aceitar, ou alongar o circuito no portão manual se a carta pedir) | A carta pediu: 19 circuitos mantidos, circuito alongado para 16,17 mn e fator 0,9866 (a posição anda 1,3 % abaixo do que o odômetro soma). `gcd(19, 576) = 1`, então nenhuma chegada cai numa emenda de 150 s (`EMENDA_ROTA`) |
+| 8 | FAQ sem o chip de confiabilidade nem os anexos de decisões e divergências | resolvido pelo orquestrador com a proposta do contrato | `faq-equipamentos.json` com 91 itens, todos vindos do guia de bordo gerado; a asserção `FAQ` reprova `conf`, `edicao`, `origem`, `selos`, `decisoes`, `limites`, `lacunas`, `divergencias`, `alertas` e `invalidos` |
+| 9 | Estabilizador Seakeeper 3 (1 ocorrência por substring na pasta do Avanti) | resolvido pelo orquestrador com a proposta do contrato (aceitar, depois de conferir na web) | Conferido de novo em 28/10/2026 por busca na web (listagem da Twin Disc e matéria da Motor Boat & Yachting): o modelo é para barcos de 10,5 a 12,5 m (35 a 41 pés), é só 12 V DC e a rotação nominal é 8.450 rpm; o limite de peso («até cerca de 10,5 t») só aparece em blog de terceiros. O barco de 12,40 m e 9,3 t métricas cabe nas duas leituras e o volante do laço (~8.420 rpm) fica abaixo da nominal. Fica. `EXCECOES_MODELO = {'Seakeeper 3': 1}` na `COLISAO_MODELOS`; o modelo não está nas listas privadas |
+| 10 | Linha do SOS no diário sem `sim` | resolvido pelo orquestrador com a proposta do contrato (pela trava §2.1) | Vale na 1b e na Fase 7: `addDiario` e a microtarefa do rodapé não leem `D.simulacao` em `/SOS-/`; com `simulacao: false`, um MAYDAY ou MOB gravado no aparelho de apresentação não vira «apresentação» nem sai da ficha |
+
+**Não está entre os 10 e continua em aberto:** o ponto 11 do §8.2 do contrato (tokens a mais na lista `SOS` da 1b: «alguém caiu», «tripulante ao mar», «sem governo», «fazendo água», «leme travou» e as outras frases de queda e de perda de governo). Sem o ok do proprietário, a frase continua valendo como está (vai à IA, sem trecho local). Decidir antes da Fase 1b.
+
 ## Andamento
 
 **Fase 0 — diagnóstico e paridade**
@@ -231,13 +275,15 @@ A lista de valores do Avanti existe fora do repositório (`$TEMP/paridade-avanti
   não bateria nos testes locais.
 - Documentação que ficou desatualizada: lista por função em `DOCS-PENDENTES.md` (entra na Fase 8).
 
-**Fase 1 — gerador e dados completos**
-- [ ] Passo 0: commit só do `CLAUDE.md` com a Decisão 1.1.0
-- [ ] Flags `simulacao: True`, `demo: False`, sem selo; `USUARIOS` e login (k) no mesmo commit
-- [ ] Embarcação, equipamentos (+6, nenhum modelo do Avanti: sai o rádio VHF), guias, `g_seafire`, `g_epirb`, `MMSI_RADIO`
-- [ ] Prazos relativos + rebase no rodapé do `capitao-dados.js`
-- [ ] Histórico (séries da F07), ROTA, `D.replay`; FAQ gerado (F10), itens dos checklists (F09), peças (F22), posições dos sensores (F08)
-- [ ] Fontes do Drive; determinismo provado; lista da decisão (e) nesta PARIDADE.md
+**Fase 1 — gerador e dados completos** (commits locais C1–C12, sem push: a Fase 1 vai para o remoto junto com a 1b, contrato §6.6)
+- [x] Passo 0: commit só do `CLAUDE.md` com a Decisão 1.1.0 (`CLAUDE.md: decisão do proprietário 1.1.0`)
+- [x] Flags `simulacao: True`, `demo: False`, sem selo; `USUARIOS` e login (k) no mesmo commit (C1, `Flags 1.1.0, convidado (k) e selos`)
+- [x] Embarcação, equipamentos (+6, nenhum modelo do Avanti: sai o rádio VHF), guias, `g_seafire`, `g_epirb`, `MMSI_RADIO` (C2 a C6: rótulos fora dos títulos, `--saida`/determinismo/`confere()`, embarcação e registro, equipamentos/modelos/guias, protocolos)
+- [x] Prazos relativos + rebase no rodapé do `capitao-dados.js` (C7, `ferramentas/demo/rodape.js`)
+- [x] Histórico (séries da F07), ROTA, `D.replay`; FAQ gerado (F10), itens dos checklists (F09), peças (F22), posições dos sensores (F08) (C8 a C11)
+- [x] Fontes do Drive sem rótulo; determinismo provado (2 rodadas e a árvore sem diferença); lista da decisão (e) nesta PARIDADE.md (§9.1) e os 10 pontos do §8.2 do contrato, resolvidos pelo orquestrador com a proposta do contrato (§9.2) (C12)
+- [x] A varredura de termos (as 8 regex do `termos.json`) **reprova o gerador** desde o C12; a única exceção é `embarcacao.mmsiNota`, que sai na 1b
+- Fica para as fases seguintes (contrato §6.6): a 1b (SOS fora da simulação, `mmsiNota`, ponto 11 do §8.2) e, nas Fases 2 a 4, os leitores que ainda leem a forma antiga (L); a documentação (README, Manual, Guia e PDF, `CLAUDE.md`) é da Fase 8 (`DOCS-PENDENTES.md`).
 
 **Fase 1b — SOS fora da simulação**
 - [ ] S1/S2: GPS do aparelho, `MMSI_RADIO`, sem REG/selo/snapshot, clima só real; F04 (grava só na ação)
