@@ -466,6 +466,7 @@ def main():
             print(f)
         falhas += agenda_sem_falta(pg)
         falhas += perguntas_da_g1(pg)
+        falhas += consumo_sem_abastecimentos(b)
         # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
         sem = {r['q']: r for r in res}
         for q in ('clima e vento', 'é seguro sair hoje?'):
@@ -594,6 +595,52 @@ EMERGENCIA = ('sos', 'oleo', 'canal16', 'epirb', 'seafire')
 G1_PERGUNTAS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados;
   return D.documentos.map((x) => { const q = 'Situação e vencimento do documento: ' + x.n, a = B.answer(q, { platform: 'app', commit: false });
     return { id: x.id, q, key: a.key, ia: B.pedeIA(a, q), src: a.src, tela: B.answer(q, { platform: 'web', commit: false }).key }; }); }"""
+
+
+# C8 (CONTRATO §1.10, §6.2): o arquivo gerado leva `abastecimentos: []` e a microtarefa do rodapé insere ab-0…ab-2 só com simulacao: true.
+# Com `simulacao = false` acrescentado ao fim do capitao-dados.js (a injeção do teste do modo real), nenhuma linha do dia de bordo entra, nenhuma
+# nota fiscal do abastecimento aparece e o `consumo` do cérebro (e o `## Autonomia e consumo` da ficha) não escrevem «Abastecimentos registrados: .».
+def acrescenta(extra):
+    """Handler do page.route que entrega o capitao-dados.js com `extra` no fim (a injeção do teste do modo real)."""
+    def entrega(route):
+        r = route.fetch()
+        route.fulfill(response=r, body=r.text() + extra)
+    return entrega
+
+
+def consumo_sem_abastecimentos(b):
+    falhas = 0
+    achados = {}
+    for modo, extra in (('simulacao true', ''), ('simulacao false injetado', ';window.CapitaoDados.simulacao = false;')):
+        pg = b.new_page()
+        pg.route('**/capitao-dados.js', acrescenta(extra))
+        pg.goto(BASE + 'base-conhecimento.json')
+        pg.add_script_tag(url=BASE + 'capitao-dados.js')
+        pg.add_script_tag(url=BASE + 'capitao-brain.js')
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        achados[modo] = pg.evaluate("""() => { localStorage.clear(); const B = window.CapitaoBrain, D = window.CapitaoDados, a = B.answer('consumo de diesel', { platform: 'app', commit: false }),
+          f = B.ficha('app');
+          return { key: a.key, text: a.text, src: a.src, ab: D.abastecimentos.length, nf: D.documentos.filter((x) => x.id === 'nf-abast').length,
+                   ids: D.diario.slice(0, 2).map((x) => x.id), bloco: f.slice(f.indexOf('## Autonomia e consumo'), f.indexOf('## Documentos')), docs: D.documentos.length }; }""")
+        pg.close()
+    sim, real = achados['simulacao true'], achados['simulacao false injetado']
+    for nome, cond, extra in [
+        ('C8: com simulacao true entram as 3 linhas de abastecimento do dia de bordo, a nota fiscal, e d01 e d02 no topo do diário',
+         sim['ab'] == 3 and sim['nf'] == 1 and sim['ids'] == ['d01', 'd02'] and sim['docs'] == 8, sim),
+        ('C8: com simulacao true a resposta `consumo` e a ficha listam os 3 abastecimentos (1.086 L cada) e a fonte do guia §10',
+         sim['key'] == 'consumo' and sim['text'].count('1.086 L') == 3 and 'Abastecimentos registrados: ' in sim['text'] and 'Guia de bordo — Motores Cummins §10 · Consumo' in sim['src']
+         and sim['bloco'].count('1.086 L') == 3, (sim['text'][-200:], sim['src'])),
+        ('C8: com simulacao = false injetado, nenhuma linha de abastecimento, nenhuma nota fiscal e o diário começa na d03',
+         real['ab'] == 0 and real['nf'] == 0 and real['ids'][0] == 'd03' and real['docs'] == 7, real),
+        ('C8: com simulacao = false, o `consumo` e a ficha não escrevem «Abastecimentos registrados: .» (a guarda do cérebro) e o resto da resposta fica igual',
+         real['key'] == 'consumo' and 'Abastecimentos registrados' not in real['text'] and 'Abastecimentos registrados' not in real['bloco'] and not re.search(r'\.\s*\.', real['text'])
+         and real['text'] == sim['text'].split('\nAbastecimentos registrados')[0], (real['text'][-200:], real['bloco'][-200:])),
+    ]:
+        if not cond:
+            falhas += 1
+            print('FALHA', nome, extra)
+    print('consumo sem abastecimentos (simulacao false): %d falhas' % falhas)
+    return falhas
 
 
 def perguntas_da_g1(pg):

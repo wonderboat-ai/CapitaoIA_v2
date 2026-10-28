@@ -17,8 +17,8 @@
  "bateria_0_tensao_v": 27.42,
  "bateria_2_tensao_v": 13.18,
  "seakeeper_ativo": true,
- "seakeeper_volante_rpm": null,
- "seakeeper_volante_pct": null,
+ "seakeeper_volante_rpm": 8420,
+ "seakeeper_volante_pct": 100,
  "motores_ultima_leitura_ligados": {
   "hora_local": "2026-09-26T09:31:00-03:00",
   "rpm": [

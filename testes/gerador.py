@@ -39,6 +39,10 @@
 - Revisão do C3 (porao_e_lugar): o porão ≤ 5 cm da §6.4 vive na JANELA (teto = normal.ate, sem número solto, também dentro de janela
   de aviso, no laço com ruído, em replay.fixos, snapshot.quadro e snapshot.porao) e o lugar de salvatagem em qualquer ordem na
   LOCAL_VOCAB (D, base, FAQ e páginas de fonte; «No paiol de proa ficam os coletes» passava fora de protocolos).
+- C8 (CONTRATO §1.14–§1.17, §1.22, §3, §4.1; c8_rota_e_replay): rota (pontos, pernas, 19 circuitos, fator ≤ 1), D.campos (66), D.replay (28 chaves,
+  ruído, fixos, contadores, limites, 21 alertas, janelas derivadas, dia de bordo), consumo, destinos e snapshot sem null; o em() portado contra os números do
+  §1.22 (12:01:00, 12:01:45, a virada 06:59:59 → 07:00:00); as 575 emendas de 150 s sem chegada e o cenário alarme-critico; as asserções novas com amostras
+  plantadas (C8_PLANTAS) e a PENDENTES vazia.
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -280,6 +284,7 @@ def verifica(k):
 def com_replay(k):
     """O D de hoje com um replay mínimo e coerente (campos, chaves, limites, janela, contadores) e o guia das faixas na base."""
     D = k['D']
+    D['snapshot'] = {c: v for c, v in D['snapshot'].items() if c not in ('porao', 'quadro')}   # o replay mínimo não tem os limites do porão (§2.4)
     D['embarcacao'].update({'calado': 1.1, 'pessoasBordo': 4, 'tanques': {'diesel_l': 1600}})
     D['documentos'] = [d for d in D['documentos'] if d.get('cat') != 'Notas']   # a nota fiscal vai para o dia de bordo
     D['campos'] = {
@@ -332,14 +337,20 @@ def com_replay(k):
 
 
 def com_rota(k):
+    """O replay mínimo com uma rota mínima coerente (2 pontos, 2 pernas pré-calculadas, 19 circuitos, fator em [0,9; 1,0]); o port do em() não
+    roda nela (o replay mínimo não tem por_volta, fases nem o resto), e as asserções da rota não acusam nada."""
     k = com_replay(k)
+    a, b = (-26.9985, -48.6160), (-26.9985, -48.4710)   # ~7,7 mn: 19 circuitos de 2 pernas = ~295 mn, o fator de 311,5 mn/dia fica em [0,9; 1,0]
+    mn, ida, volta = round(C.mn_entre(a, b), 4), round(C.rumo_entre(a, b), 2), round(C.rumo_entre(b, a), 2)
+    dist = round(2 * mn, 4)
     k['D']['rota'] = {
-        'base': {'id': 'base', 'nome': 'Barra Sul', 'rel': 'da Barra Sul', 'perto': 'na saída da Barra Sul', 'prof_m': 8},
-        'pontos': [{'id': 'cabras', 'nome': 'Ilha das Cabras', 'rel': 'da Ilha das Cabras', 'perto': 'ao largo da Ilha das Cabras', 'prof_m': 12}],
+        'base': {'id': 'base', 'nome': 'Barra Sul', 'rel': 'da Barra Sul', 'perto': 'na saída da Barra Sul', 'lat': a[0], 'lon': a[1], 'prof_m': 8},
+        'pontos': [{'id': 'cabras', 'nome': 'Ilha das Cabras', 'rel': 'da Ilha das Cabras', 'perto': 'ao largo da Ilha das Cabras', 'lat': b[0], 'lon': b[1], 'prof_m': 12}],
         'destino': {'id': 'cabras', 'nome': 'Ilha das Cabras', 'caminho': 'a caminho da Ilha das Cabras'},
         'volta': {'nome': 'Barra Sul (base)', 'caminho': 'a caminho da Barra Sul'},
-        'pernas': [{'de': 'base', 'para': 'cabras', 'mn': 1.0, 'rumo': 50}, {'de': 'cabras', 'para': 'base', 'mn': 1.0, 'rumo': 230}],
-        'distancia_mn': 2.0, 'circuitos_dia': 19, 'fator': 0.122, 'guinada_max_gps': 3}
+        'pernas': [{'de': 'base', 'para': 'cabras', 'mn': mn, 'rumo': ida, 'ini_mn': 0.0}, {'de': 'cabras', 'para': 'base', 'mn': mn, 'rumo': volta, 'ini_mn': mn}],
+        'distancia_mn': dist, 'ida_mn': mn, 'circuitos_dia': 19, 'fator': round(19 * dist / 311.5, 6), 'guinada_max_gps': 3,
+        'corrente': {'nos': 0.3, 'para_graus': 200}}
     return k
 
 
@@ -601,13 +612,12 @@ EXTRAS = [
      lambda r: (lambda k: (k.update({'faq': {'itens': [dict({'id': 'EP-04', 'titulo': 'Validade', 'resposta': 'Confira a data. ' + ROTULO_FIM},
                                                            **({} if r else {'seguranca': True}))]}}), k)[1])(hoje()), 'faq:EP-04'),
     ('ROTULO_SEGURANCA', 'protocolos.rotulo diferente do texto fixo', lambda r: com_rotulo('procedimento padrão' if r else C.ROTULO), 'protocolos.rotulo'),
-    # C5: antes do D.replay (C8), a FONTE_LIMITES confere a constante LIMITES do gerador contra os guias; depois, as duas são uma só.
-    ('FONTE_LIMITES', 'constante LIMITES (C5) com número que o guia não tem',
-     lambda r: (lambda k: (k.update({'const': dict(CONST, LIMITES=limites_com(('motor_bb_arref_c', 'critico', 'acima'), 98 if r else 97))}), k)[1])(hoje()),
+    # C5: antes do D.replay (C8), a FONTE_LIMITES conferia a constante LIMITES do gerador contra os guias; desde o C8 as duas são uma só (a amostra muda as duas).
+    ('FONTE_LIMITES', 'LIMITES com número que o guia não tem (a constante do gerador e o D.replay.limites, que são uma só desde o C8)',
+     lambda r: com_limites(limites_com(('motor_bb_arref_c', 'critico', 'acima'), 98 if r else 97)),
      'limites.motor_bb_arref_c: Guia de bordo — Motores Cummins §9 · Faixas de operação sem os números'),
-    ('FONTE_LIMITES', 'constante LIMITES (C5) apontando para um § que não existe',
-     lambda r: (lambda k: (k.update({'const': dict(CONST, LIMITES=limites_com(('gerador_kw', 'fonte'),
-                                                                           G.ARQ['g_gerador'] + (' §12 · Carga' if r else ' §9 · Potência e carga')))}), k)[1])(hoje()),
+    ('FONTE_LIMITES', 'LIMITES apontando para um § que não existe',
+     lambda r: com_limites(limites_com(('gerador_kw', 'fonte'), G.ARQ['g_gerador'] + (' §12 · Carga' if r else ' §9 · Potência e carga'))),
      'limites.gerador_kw.fonte aponta para um § que não existe'),
     ('FONTE_LIMITES', 'D.replay.limites diferente da constante LIMITES do gerador',
      lambda r: (lambda k: (k.update({'const': CONST if r else dict(CONST, LIMITES=k['D']['replay']['limites'])}), k)[1])(com_replay(hoje())),
@@ -794,6 +804,14 @@ EXTRAS = [
     ('ESTABILIZADOR_12V', 'página de fonte do guia, frase sem a palavra',
      lambda r: com_estab_fonte(' <p>Sem AC, o volante não acelera.</p>' if r else ''),
      'Guia de bordo — Estabilizador Seakeeper.html: energia AC num texto do estabilizador [AC]')]
+
+
+def com_limites(lim):
+    """hoje() com a constante LIMITES do gerador e o D.replay.limites trocados por `lim` (desde o C8 as duas são uma só)."""
+    k = hoje()
+    k['D']['replay']['limites'] = lim
+    k['const'] = dict(CONST, LIMITES=lim)
+    return k
 
 
 def limites_com(caminho, valor):
@@ -1115,7 +1133,14 @@ def com_csv_na_pasta(pasta, nome, txt):
     return k
 
 
-_NF = 'nf-abast'   # a nota fiscal do abastecimento fica em `documentos` até o C8 (depois, só em replay.diaDeBordo.documento): o C8 retoca estas duas
+def com_nf(**kw):
+    """hoje() com a nota fiscal do dia de bordo (replay.diaDeBordo.documento, onde ela mora desde o C8) mudada por `kw`."""
+    return lambda r: (lambda k: (k['D']['replay']['diaDeBordo']['documento'].update(kw) if r else None, k)[1])(hoje())
+
+
+def com_d01_8h20(r):
+    """hoje() com uma linha do diário fixo (a d03) em diasAtras 0 às 08:20: depois da âncora das 07:00."""
+    return muda(hoje(), 'diario', 'd03', diasAtras=0, h='08:20') if r else hoje()
 C7_REV = [
     ('AGENDA', 'palavra solta (uma palavra só nas `palavras`)', planta_c7('agenda', 'casco-anodos', palavras=['rotor']), 'agenda.casco-anodos.palavras vazias ou com palavra solta'),
     ('AGENDA', 'palavras vazias', planta_c7('agenda', 'casco-anodos', palavras=[]), 'agenda.casco-anodos.palavras vazias ou com palavra solta'),
@@ -1133,13 +1158,13 @@ C7_REV = [
     ('IDS', 'pendência do diário sem ref na agenda', planta_c7('diario', 'd03', ref=SEM), 'diario.d03: pendência sem ref na agenda'),
     ('IDS', 'pendência com palavras diferentes das da tarefa', planta_c7('diario', 'd03', palavras=['x y']), 'diario.d03.palavras diferentes das da tarefa gerador-rotor'),
     ('IDS', 'pendência sem palavras', planta_c7('diario', 'd05', palavras=SEM), 'diario.d05.palavras diferentes das da tarefa clima-filtro'),
-    ('DIA_DE_BORDO', 'a d01 do diário fixo às 08:20 com diasAtras 0 (depois da âncora das 07:00)', planta_c7('diario', 'd01', h='08:20'),
-     'diário d01: diasAtras 0 depois da âncora (08:20)'),
+    ('DIA_DE_BORDO', 'uma linha do diário fixo (d03) às 08:20 com diasAtras 0 (depois da âncora das 07:00)', com_d01_8h20,
+     'diário d03: diasAtras 0 depois da âncora (08:20)'),
     ('DIA_DE_BORDO', 'a d01 do dia de bordo (replay.diaDeBordo.diario) às 08:20 com diasAtras 0', com_dia_de_bordo_8h20, 'diário d01: diasAtras 0 depois da âncora (08:20)'),
     ('NULO', 'dn None num documento', planta_c7('documentos', 'seguro', dn=None), '].dn: None'),
     ('NULO', "vence '' num documento", planta_c7('documentos', 'licenca', vence=''), "].vence: ''"),
-    ('NULO', 'a nota fiscal (documento sem prazo) com dn None', planta_c7('documentos', _NF, dn=None), '].dn: None'),
-    ('NULO', "a nota fiscal (documento sem prazo) com vence ''", planta_c7('documentos', _NF, vence=''), "].vence: ''"),
+    ('NULO', 'a nota fiscal do dia de bordo (documento sem prazo) com dn None', com_nf(dn=None), 'replay.diaDeBordo.documento.dn: None'),
+    ('NULO', "a nota fiscal do dia de bordo (documento sem prazo) com vence ''", com_nf(vence=''), "replay.diaDeBordo.documento.vence: ''"),
     ('NULO', "iso '' numa linha do diário fixo", planta_c7('diario', 'd03', iso=''), "].iso: ''"),
 ]
 for _pasta in ('docs', 'agenda', 'diario', 'abast'):   # as quatro pastas da regra, uma a uma (a regra lê só estas)
@@ -1588,7 +1613,7 @@ def rotulos_c2():
     """C2 (CONTRATO §1.1, §1.2, §1.3, §1.5, §1.10): rótulos fora dos títulos e das fontes. Prende o resultado no dado gerado, com o
     texto do contrato (não com as constantes do gerador): os títulos de drive.arquivos, os quatro *Fonte, as fontes soltas
     (embarcacao, canal16, regraAbast), o aviso e a versao da base, as fontes do Drive e o LEIA-ME. Sem DEMO, snapshot, fictício nem
-    demonstração em título, nome de arquivo ou fonte; a leitura da pasta 05 só soma serie e formato no C8."""
+    demonstração em título, nome de arquivo ou fonte; a pasta 05 soma a série de 150 s e o formato do quadro no C8."""
     print('C2: rótulos fora dos títulos e das fontes (§1.5)')
     k = hoje()
     D, B, F = k['D'], k['B'], k['F']
@@ -1599,8 +1624,9 @@ def rotulos_c2():
              'documentos': 'Controle de documentos', 'agenda': 'Agenda preditiva', 'diario': 'Diário de bordo',
              'abast': 'Registro de abastecimento', 'snapshot': 'Leitura do coletor NMEA — 26-09-2026 10h12.json',
              'protocolo': 'Protocolo de emergência — procedimento padrão'}
-    ok('drive.arquivos: os 14 guias, o checklist, o protocolo e os 7 arquivos do §1.5 (serie e formato entram no C8), com o título do §1.5',
-       len(guias) == 14 and set(arq) - guias - {'serie', 'formato'} == set(fixos) and all(arq[c] == t for c, t in fixos.items())
+    fixos.update({'serie': 'Série do coletor NMEA — 150 s.csv', 'formato': 'Formato do quadro do coletor.csv'})   # C8 (§1.5)
+    ok('drive.arquivos: os 14 guias, o checklist, o protocolo e os 9 arquivos do §1.5 (a série de 150 s e o formato do quadro entram no C8), com o título do §1.5',
+       len(guias) == 14 and set(arq) - guias == set(fixos) and all(arq[c] == t for c, t in fixos.items())
        and all(arq[c].startswith('Guia de bordo — ') for c in guias), sorted(set(arq) - set(fixos) - guias))
     ok('drive.arquivos: nenhum título com DEMO, snapshot, fictício nem demonstração (o "snapshot" é só a chave)',
        not [t for t in arq.values() if rot.search(t)], [t for t in arq.values() if rot.search(t)])
@@ -1960,7 +1986,8 @@ def amostras():
     V = verifica(k)
     for n in ('JANELA', 'FIO', 'EMENDA', 'LIMITES_FORMA', 'FONTE_LIMITES', 'PISO', 'HORAS', 'ROTA', 'DIA_DE_BORDO', 'HISTORICO'):
         ok('%s: nada a acusar no replay mínimo coerente' % n, not V[n], V[n][:3])
-    ok('EMENDA_ROTA: sem o port da rota (C8), um D com rota reprova', V['EMENDA_ROTA'] == ['emendas de 150 s da rota: falta o port do em() (C8)'], V['EMENDA_ROTA'])
+    ok('EMENDA_ROTA: uma rota que o port do em() não consegue rodar (a rota mínima, sem pernas, ini_mn nem corrente) reprova com o motivo',
+       len(V['EMENDA_ROTA']) == 1 and V['EMENDA_ROTA'][0].startswith('emendas de 150 s da rota: o port do em() não rodou ('), V['EMENDA_ROTA'])
 
 
 def porao_e_lugar():
@@ -2091,12 +2118,16 @@ def reprova(tmp):
         rc, saida = rodar(pl, p, base, fontes[0] if fontes else None)
         ok('%s plantado fora das pendências%s: main() devolve 1 e não grava nada' % (nome, o_que),
            rc == 1 and not os.path.exists(p) and ('%s %d nova(s)' % (nome, n)) in saida, (rc, saida[-300:]))
-    # C4: o registro (a amostra daqui até o C3) já vem preenchido e a pendência dele saiu; depois, o modelo do FAQ do gerador (C5) e o
-    # protocolos.seafire (C6), que os commits preencheram. Desde o C6 a amostra é um dado do C8 preenchido antes da hora (o
-    # snapshot.porao, que o C8 deixa sem null: só a pendência fica velha), com o mesmo efeito.
+    # Pendência que não ocorre mais: o C8 tirou as últimas da PENDENTES (o snapshot sem null); a amostra põe uma pendência sintética (que o dado
+    # de hoje não tem) e o main() reprova, sem gravar nada (a lista não pode esconder a volta do defeito).
     p4 = os.path.join(tmp, 'r4')
-    rc, saida = rodar(lambda D: (D['snapshot'].update({'porao': {'estado': 'seco', 'hora': D['snapshot']['hora']}}), D)[1], p4)
-    ok('pendência que não ocorre mais (o snapshot.porao, do C8, preenchido antes da hora): main() devolve 1 e não grava nada',
+    pend0, commits0 = C.PENDENTES, C.COMMITS_PENDENTES
+    C.PENDENTES, C.COMMITS_PENDENTES = {'NULO': {'C8': ['snapshot.porao: None']}}, ('C8',)
+    try:
+        rc, saida = rodar(lambda D: D, p4)
+    finally:
+        C.PENDENTES, C.COMMITS_PENDENTES = pend0, commits0
+    ok('pendência que não ocorre mais (uma linha da PENDENTES que o dado já não tem): main() devolve 1 e não grava nada',
        rc == 1 and not os.path.exists(p4) and 'NULO: pendência do C8 que não ocorre mais' in saida, (rc, saida[-300:]))
     # Revisão final do C4, atualizada no C7 (o TIE certo já está no dado e a linha da PENDENTES saiu): o id esquecido ou o numero
     # errado do TIE reprova o main() como violação nova; em nenhum dos dois o main() grava.
@@ -2113,12 +2144,248 @@ def reprova(tmp):
     # 14 delas estavam inteiras em relatório). As listas privadas e a pasta do Avanti não vão a este teste (OPCIONAIS).
     novas, conhecidas, velhas = C.separa(verifica(hoje()), set(C.OPCIONAIS))
     ok('dados de hoje: nenhuma violação estrutural fora das pendências e nenhuma pendência velha (%d congeladas)' % sum(
-        sum(c.values()) for c in conhecidas.values()), not novas and not velhas, {'novas': novas, 'velhas': velhas[:3]})
-    ok('PENDENTES: só asserções estruturais, e cada pendência com o commit que a tira (C8; o C4 completou a embarcação, o C5, '
-       'os equipamentos e os guias, o C6, o D.protocolos e o C7, a agenda, os documentos, o diário e as fontes relativas)',
-       all(n in C.NOMES and n not in C.RELATORIO and set(cs) <= set(C.COMMITS_PENDENTES) for n, cs in C.PENDENTES.items())
-       and C.COMMITS_PENDENTES == ('C8',) and not any(c in cs for c in ('C6', 'C7') for cs in C.PENDENTES.values())
-       and set(C.PENDENTES) == {'NULO'})
+        sum(c.values()) for c in conhecidas.values()), not novas and not velhas and not conhecidas, {'novas': novas, 'velhas': velhas[:3]})
+    ok('PENDENTES: vazia desde o C8 (o C4 completou a embarcação, o C5, os equipamentos e os guias, o C6, o D.protocolos, o C7, a agenda, os documentos, o diário '
+       'e as fontes relativas e o C8, o snapshot, a rota e o replay), e nenhum commit pendente', C.PENDENTES == {} and C.COMMITS_PENDENTES == ())
+
+
+# ——————————————————————————————— C8 (CONTRATO §1.14–§1.17, §1.22, §3, §4.1) ———————————————————————————————
+# Os valores do §1.22 que não dependem da rota (o laço, os contadores e os tanques, em 12:01:00 e 12:01:45) e os da virada (07:00:00 e 06:59:59):
+# a referência é daqui (copiada do contrato), nunca do gerador.
+S60, S105 = 120 * 150 + 60, 120 * 150 + 105   # fixar('60') = 12:01:00 e fixar('105') = 12:01:45
+C8_LACO_60 = {'sog_nos': 18.1, 'motor_bb_rpm': 2049, 'motor_be_rpm': 2038, 'motor_bb_oleo_bar': 3.9, 'motor_be_oleo_bar': 3.8, 'motor_bb_arref_c': 82.0,
+              'motor_be_arref_c': 82.1, 'motor_bb_carga_pct': 62, 'motor_be_carga_pct': 61, 'consumo_lph': 68.0, 'diesel_litros': 1333, 'diesel_bb_pct': 83.7,
+              'diesel_be_pct': 82.9, 'distancia_mn': 65.1, 'motor_bb_horimetro_h': 417.6, 'motor_be_horimetro_h': 414.8, 'gerador_kw': 6.4,
+              'gerador_horimetro_h': 1241.4, 'seakeeper_volante_rpm': 8426, 'seakeeper_volante_pct': 100, 'bateria_0_tensao_v': 27.79, 'bateria_1_tensao_v': 27.95,
+              'bateria_2_tensao_v': 13.69, 'tanque_agua_pct': 86.0, 'tanque_cinzas_pct': 15.0, 'tanque_negras_pct': 9.5, 'porao_bb_nivel': 1.1,
+              'porao_be_nivel': 0.9, 'ondas_m': 0.8, 'vento_verdadeiro_nos': 11.3, 'vento_verdadeiro_angulo': 59, 'pressao_barometrica_hpa': 1017.1,
+              'temp_ar_externo_c': 22.6, 'temp_agua_c': 20.1, 'temp_praca_maquinas_c': 46, 'jogo_graus': 0.5, 'caimento_graus': 3.1, 'leme_graus': 0.3,
+              'gps_satelites': 18, 'ais_alvos': 4, 'estado': 'Navegando', 'marcha': 'avante', 'alarmes': []}
+C8_LACO_105 = {'sog_nos': 18.0, 'motor_bb_rpm': 2049, 'motor_be_rpm': 2036, 'motor_bb_arref_c': 81.9, 'motor_be_arref_c': 89.6, 'diesel_litros': 1332,
+               'diesel_bb_pct': 83.6, 'diesel_be_pct': 82.9, 'distancia_mn': 65.3, 'gerador_kw': 6.2, 'seakeeper_volante_rpm': 8416, 'bateria_0_tensao_v': 27.8,
+               'bateria_1_tensao_v': 27.97, 'porao_bb_nivel': 1.2, 'vento_verdadeiro_nos': 9.8, 'vento_verdadeiro_angulo': 54, 'jogo_graus': 0.3, 'caimento_graus': 3.2,
+               'leme_graus': 0.2}
+C8_ALARME_105 = {'id': 'arref_be', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'be', 'campo': 'motor_be_arref_c', 'valor': 89.6, 'limite': 88,
+                 'desde': '2026-09-26T15:01:39Z'}
+C8_A_ANTES = {'diesel_litros': 474, 'distancia_mn': 311.5, 'motor_bb_horimetro_h': 436.6, 'motor_be_horimetro_h': 433.8, 'gerador_horimetro_h': 1260.4,
+              'tanque_agua_pct': 63.2, 'tanque_cinzas_pct': 41.6, 'tanque_negras_pct': 26.6, 'destino': 'Barra Sul (base)', 'destino_mn': 0.0, 'eta': '07:00'}
+C8_A_DEPOIS = {'diesel_litros': 1560, 'distancia_mn': 0.0, 'motor_bb_horimetro_h': 412.6, 'motor_be_horimetro_h': 409.8, 'gerador_horimetro_h': 1236.4,
+               'tanque_agua_pct': 92.0, 'tanque_cinzas_pct': 8.0, 'tanque_negras_pct': 5.0, 'destino': 'Estaleirinho', 'wp_proximo': 'Ilha das Cabras'}
+C8_REGRAS = ('LACO', 'LIMITES_FORMA', 'JANELA', 'FIO', 'EMENDA', 'EMENDA_ROTA', 'PISO', 'HORAS', 'ROTA', 'DIA_DE_BORDO', 'IDS', 'NULO', 'FONTE_LIMITES',
+             'SEM_EMERGENCIA', 'COORD_TEXTO', 'TAMANHO', 'RODAPE_SNAPSHOT', 'FONTES_RELATIVAS')
+
+
+def c8_muda(caminho, valor=SEM):
+    """hoje() com D[...caminho] trocado (SEM apaga a chave): a planta das asserções da rota e do replay."""
+    def monta(r):
+        k = hoje()
+        if r:
+            x = k['D']
+            for c in caminho[:-1]:
+                x = x[c]
+            if valor is SEM:
+                x.pop(caminho[-1], None)
+            else:
+                x[caminho[-1]] = valor
+        return k
+    return monta
+
+
+def c8_com(fn):
+    """hoje() mexido por fn(D) quando r."""
+    def monta(r):
+        k = hoje()
+        if r:
+            fn(k['D'])
+        return k
+    return monta
+
+
+def c8_escala_ponteiro(D):
+    D['rota']['fator'] = round(D['rota']['fator'] * 1.0001, 6)   # uma chegada ao ponto cai exatamente na emenda N = 72 (10:00:00)
+
+
+
+def c8_alerta(aid, **kw):
+    return c8_com(lambda D: D['replay']['alertas'][aid].update(kw))
+
+
+def c8_pernas(i, **kw):
+    return c8_com(lambda D: D['rota']['pernas'][i].update(kw))
+
+
+C8_PLANTAS = [
+    ('LACO', 'campo do catálogo que o quadro do em() não tem (xyz)', c8_com(lambda D: D['campos'].update({'xyz': {'rotulo': 'Xyz', 'un': 'x', 'casas': 0, 'origem': 'rota'}})),
+     'em(): o quadro não tem xyz, que está em D.campos'),
+    ('LACO', 'campo do quadro fora do catálogo (wp_mn tirado de D.campos)', c8_com(lambda D: D['campos'].pop('wp_mn')), 'em(): o quadro tem wp_mn, que não está em D.campos'),
+    ('LACO', 'snapshot.quadro com o porão em aviso (7 cm)', c8_com(lambda D: D['snapshot']['quadro'].update({'porao_bb_nivel': 7.0})),
+     'snapshot.quadro.porao_bb_nivel = 7.0: nivel aviso'),
+    ('LACO', 'replay sem as fases (§1.16)', c8_muda(('replay', 'fases')), 'replay sem fases (§1.16)'),
+    ('LACO', 'rota e destinos com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: D.rota e D.destinos só na simulação'),
+    ('LACO', 'replay inteiro com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: replay.chaves só na simulação'),
+    ('LACO', 'posição no snapshot.quadro com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: snapshot.quadro sem posição'),
+    ('EMENDA_ROTA', 'uma chegada ao ponto numa emenda de 150 s (fator × 1,0001)', c8_com(c8_escala_ponteiro), 'emenda 72 (10:00:00): a chegada cai no par de segundos consecutivos'),
+    ('EMENDA_ROTA', 'contador que salta na emenda (a distância por volta dobrada)', c8_com(lambda D: D['replay']['por_volta'].update({'distancia_mn': 1.0816})), 'distancia_mn salta'),
+    ('EMENDA_ROTA', 'a virada em A com a posição saltando (fator × 1,0001)', c8_com(c8_escala_ponteiro), 'virada em A: lat salta'),
+    ('EMENDA_ROTA', 'circuitos_dia 20 (não é primo com as 576 voltas)', c8_muda(('rota', 'circuitos_dia'), 20), 'rota.circuitos_dia 20 não é primo com as 576 voltas do dia'),
+    ('EMENDA_ROTA', 'rota sem pernas (o port do em() não roda)', c8_muda(('rota', 'pernas'), []), 'emendas de 150 s da rota: o port do em() não rodou'),
+    ('ROTA', 'perna com a distância errada', c8_pernas(2, mn=3.5), 'rota.pernas[2].mn 3.5 ≠ a distância entre os pontos'),
+    ('ROTA', 'perna com o rumo errado', c8_pernas(3, rumo=90.0), 'rota.pernas[3].rumo 90.0 ≠ o rumo entre os pontos'),
+    ('ROTA', 'perna com o início errado', c8_pernas(4, ini_mn=7.0), 'rota.pernas[4].ini_mn 7.0 ≠ a soma das pernas anteriores'),
+    ('ROTA', 'ida_mn errado', c8_muda(('rota', 'ida_mn'), 7.0), 'rota.ida_mn 7.0 ≠ a distância da base ao destino'),
+    ('ROTA', 'distancia_mn diferente da soma das pernas', c8_muda(('rota', 'distancia_mn'), 15.0), 'rota.distancia_mn 15.0 ≠ a soma das pernas'),
+    ('ROTA', 'fator acima de 1 (a posição andaria mais que o odômetro)', c8_muda(('rota', 'fator'), 1.02), 'rota.fator 1.02 fora de [0,9; 1,0]'),
+    ('ROTA', 'perna de ordem trocada (de/para)', c8_pernas(1, de='laranjeiras'), 'rota.pernas[1] vai de'),
+    ('ROTA', 'nome de ponto com dígito', c8_com(lambda D: D['rota']['pontos'][0].update({'nome': 'Ilha 2'})), 'rota.cabras.nome com dígito'),
+    ('IDS', 'passo de alerta que o guia não tem', c8_com(lambda D: D['replay']['alertas']['arref_be']['passos'].__setitem__(0, 'Chame o rebocador.')),
+     "replay.alertas.arref_be: o passo 'Chame o rebocador.' não está inteiro em"),
+    ('IDS', 'alerta com seção que o guia não tem', c8_alerta('gerador', secao='12 · Carga'), "replay.alertas.gerador: o guia 'Guia de bordo — Gerador Onan' não tem a seção '12 · Carga'"),
+    ('IDS', 'alerta com a fonte errada', c8_alerta('b12', fonte='Guia de bordo — Sistema elétrico 24 V e 12 V §9 · Faixas'), 'replay.alertas.b12.fonte'),
+    ('IDS', 'alerta com guia fora de D.guias', c8_alerta('praca', guia='g_xyz'), "replay.alertas.praca.guia fora de D.guias: 'g_xyz'"),
+    ('IDS', 'alerta de óleo com passos diferentes de protocolos.oleo', c8_alerta('oleo_be', passos=['Reduza para marcha lenta e confira o manômetro agora.']),
+     'replay.alertas.oleo_be.passos ≠ protocolos.oleo'),
+    ('IDS', 'alerta com campo fora do catálogo', c8_alerta('agua', campo='tanque_xyz'), "replay.alertas.agua.campo 'tanque_xyz' fora de D.campos ou de replay.limites"),
+    ('DIA_DE_BORDO', 'litros diferentes do salto do contador entre A − 1 s e A', c8_com(lambda D: D['replay']['diaDeBordo']['abastecimento'].update({'litros': 1090})),
+     'litros (1090) ≠ o salto do contador entre A − 1 s e A'),
+    ('DIA_DE_BORDO', 'nivelDepois fora do modelo de 24 h', c8_com(lambda D: D['replay']['diaDeBordo']['abastecimento'].update({'nivelDepois': 96.0})),
+     'nivelAntes/nivelDepois ≠ o diesel % de em(A − 1 s) e de em(A)'),
+    ('NULO', 'snapshot.porao None (a pendência do C8 acabou)', c8_muda(('snapshot', 'porao'), None), 'snapshot.porao: None'),
+    ('NULO', 'snapshot.ancora None', c8_muda(('snapshot', 'ancora'), None), 'snapshot.ancora: None'),
+]
+
+
+def c8_rota_e_replay():
+    print('C8 (CONTRATO §1.14–§1.17, §1.22, §3): rota, replay, campos, alertas, dia de bordo e snapshot sem null')
+    k = hoje()
+    D, R, rota, cam = k['D'], k['D']['replay'], k['D']['rota'], k['D']['campos']
+    V = verifica(k)
+    ok('o dado de hoje não acusa nada nas asserções do laço, da rota, do dia de bordo e do snapshot (%s)' % ', '.join(C8_REGRAS[:6] + ('…',)),
+       all(not V[n] for n in C8_REGRAS), {n: V[n][:2] for n in C8_REGRAS if V[n]})
+    ok('PENDENTES vazia: o snapshot sem null (porao e ancora objetos, volante com número) tirou as 4 pendências do C8',
+       C.PENDENTES == {} and isinstance(D['snapshot']['porao'], dict) and isinstance(D['snapshot']['ancora'], dict)
+       and D['snapshot']['seakeeper']['volante_rpm'] == 8420 and D['snapshot']['gerador']['kw'] == 5.6)
+    # ——— a forma do §1.15 e do §1.16
+    ok('D.campos: 66 campos, ordem do §1.22, origem em 7 valores, sentido só (e sempre) nos 8 contadores (+1 em horímetros, distância e servidas; −1 em diesel e água)',
+       len(cam) == 66 and list(cam)[:3] == ['timestamp_utc', 'lat', 'lon'] and list(cam)[-3:] == ['wp_mn', 'eta', 'alarmes'] and set(c['origem'] for c in cam.values()) == C.ORIGENS
+       and {c for c, d in cam.items() if 'sentido' in d} == set(R['contadores_base'])
+       and {c: d['sentido'] for c, d in cam.items() if 'sentido' in d} == {'motor_bb_horimetro_h': 1, 'motor_be_horimetro_h': 1, 'gerador_horimetro_h': 1, 'distancia_mn': 1,
+                                                                          'tanque_cinzas_pct': 1, 'tanque_negras_pct': 1, 'diesel_litros': -1, 'tanque_agua_pct': -1}
+       and 'simulado' not in cam, (len(cam), sorted(set(c['origem'] for c in cam.values()))))
+    ok('D.replay: duracao 150, passo 1, passo_chave 5, cenario aviso, ancora_hora 07:00, voltas_fixo 120, 5 fases, 28 chaves de 30 quadros, 11 fixos, 8 contadores_base, 3 taxas',
+       [R[c] for c in ('duracao', 'passo', 'passo_chave', 'cenario', 'ancora_hora', 'voltas_fixo')] == [150, 1, 5, 'aviso', '07:00', 120] and len(R['fases']) == 5
+       and len(R['chaves']) == 28 and all(len(v) == 30 for v in R['chaves'].values()) and len(R['fixos']) == 11 and len(R['contadores_base']) == 8 and len(R['taxas_h']) == 3
+       and [f['nome'] for f in R['fases']] == ['marcha lenta', 'aceleração', 'cruzeiro', 'redução', 'marcha lenta'] and R['limites'] == G.LIMITES, list(R))
+    ok('D.replay.ruido: [amplitude, semente] de cada chave (sementes 1100 + a posição) e da proa e da profundidade (1201 e 1202)',
+       all(R['ruido'][c] == [G.AMPLITUDE_RUIDO[c], 1100 + i] for i, c in enumerate(G.ORDEM_LACO)) and R['ruido']['proa_graus'] == [0.4, 1201] and R['ruido']['profundidade_m'] == [0.2, 1202])
+    ok('D.replay.por_volta e por_dia: 1,8857 L (1,7899 + 0,0958) e 0,5408 mn por volta; 576 voltas = 1.086,2 L e 311,5 mn por dia; 1.560 − 1.086,2 ≥ o piso (400) + 50',
+       R['por_volta'] == {'diesel_l': 1.8857, 'motores_l': 1.7899, 'gerador_l': 0.0958, 'distancia_mn': 0.5408, 'motor_h': 0.041667, 'gerador_h': 0.041667}
+       and R['por_dia'] == {'voltas': 576, 'diesel_l': 1086.2, 'distancia_mn': 311.5, 'motor_h': 24, 'gerador_h': 24} and R['diesel_piso_l'] == 400, (R['por_volta'], R['por_dia']))
+    ok('D.replay.janelas derivadas pelo gerador: uma só, arref_be (motor_be_arref_c) em aviso de 99 a 116 s',
+       R['janelas'] == [{'id': 'arref_be', 'campo': 'motor_be_arref_c', 'nivel': 'aviso', 'ini': 99, 'fim': 116}], R['janelas'])
+    al = R['alertas']
+    ok('D.replay.alertas: 21 ids do §1.16, cada um com campo, sistema, título, guia, seção, passos e fonte; óleo = protocolos.oleo; arref_be com os 3 passos do §5',
+       list(al) == ['arref_bb', 'arref_be', 'oleo_bb', 'oleo_be', 'rpm_bb', 'rpm_be', 'carga_bb', 'carga_be', 'praca', 'b24s', 'b24p', 'b12', 'porao_bb', 'porao_be', 'profundidade',
+                    'diesel', 'gerador', 'seakeeper', 'agua', 'cinzas', 'negras'] and all(set(a) >= {'campo', 'sistema', 'titulo', 'guia', 'secao', 'passos', 'fonte'} for a in al.values())
+       and al['oleo_bb']['passos'] == al['oleo_be']['passos'] == D['protocolos']['oleo'] and len(al['arref_be']['passos']) == 3
+       and al['arref_be']['fonte'] == 'Guia de bordo — Motores Cummins §5 · Temperatura alta' and al['arref_be']['lado'] == 'be' and 'lado' not in al['praca'], list(al))
+    ok('D.consumo: lenta 5 nós · 700 rpm · 6,2 L/h, máxima 26 nós · 2.600 rpm · 111 L/h, gerador 2,3 L/h, 5 faixas de rpm, margem de manobra de 60 L e a fonte do guia §10',
+       D['consumo']['lenta'] == {'nos': 5, 'rpm': 700, 'lph': 6.2} and D['consumo']['maxima'] == {'nos': 26, 'rpm': 2600, 'lph': 111} and D['consumo']['gerador_lph'] == 2.3
+       and [f['nome'] for f in D['consumo']['faixas']] == ['marcha lenta', 'deslocamento', 'transição', 'planeio', 'cruzeiro'] and D['consumo']['margemManobra_l'] == 60
+       and D['consumo']['fonte'] == 'Guia de bordo — Motores Cummins §10 · Consumo', D['consumo'])
+    # ——— a rota (§1.14, §2.6)
+    ids = [rota['base']['id']] + [p['id'] for p in rota['pontos']]
+    ok('D.rota: base + 7 pontos na ordem do circuito, 8 pernas pré-calculadas (mn, rumo, ini_mn), destino Estaleirinho, 19 circuitos e fator ≤ 1',
+       ids == ['base', 'cabras', 'laranjeiras', 'taquaras', 'estaleirinho', 'pinho', 'laranjeiras_v', 'cabras_v'] and len(rota['pernas']) == 8 and rota['circuitos_dia'] == 19
+       and rota['destino']['id'] == 'estaleirinho' and 0.9 <= rota['fator'] <= 1.0 and rota['guinada_max_gps'] == 3 and rota['corrente'] == {'nos': 0.3, 'para_graus': 200}
+       and abs(rota['distancia_mn'] - sum(p['mn'] for p in rota['pernas'])) < 1e-3, (rota['distancia_mn'], rota['fator']))
+    ok('D.destinos: Ilha das Cabras, Ponta das Laranjeiras, Taquaras e Estaleirinho, com a distância pela rota a partir da base',
+       [d['nome'] for d in D['destinos']] == ['Ilha das Cabras', 'Ponta das Laranjeiras', 'Taquaras', 'Estaleirinho']
+       and [d['mn'] for d in D['destinos']] == sorted(d['mn'] for d in D['destinos']) and D['destinos'][-1]['mn'] == round(rota['ida_mn'], 1), D['destinos'])
+    ok('as coordenadas só em campo numérico (rota e quadro): nenhum texto do D, da base e das fontes tem lat/lon (a única exceção é snapshot.gps.texto)',
+       not V['COORD_TEXTO'], V['COORD_TEXTO'][:2])
+    # ——— o em() portado contra os números do §1.22 (laço, contadores e tanques; a rota é a do portão manual)
+    P = C.preparar(D)
+    q60, q105 = C.em(P, S60), C.em(P, S105)
+    difs = {c: (q60.get(c), v) for c, v in C8_LACO_60.items() if q60.get(c) != v}
+    difs.update({c + '@105': (q105.get(c), v) for c, v in C8_LACO_105.items() if q105.get(c) != v})
+    ok('em(): 12:01:00 e 12:01:45 = os valores do §1.22 (laço, contadores e tanques: %d campos), com o AVISO do BE só em t = 105' % (len(C8_LACO_60) + len(C8_LACO_105)),
+       not difs and q60['alarmes'] == [] and q105['alarmes'] == [C8_ALARME_105], difs)
+    ok('em(): o timestamp, o estado e a ETA: 12:01:00 → 15:01:00Z; a chegada à base às 12:03 (última perna do circuito, a caminho da barra)',
+       q60['timestamp_utc'] == '2026-09-26T15:01:00Z' and q60['destino'] == 'Barra Sul (base)' and q60['eta'] == '12:03' and q105['eta'] == '12:03'
+       and q60['local'] == 'na saída da Barra Sul, chegando' and q60['wp_proximo'] == 'Barra Sul (saída do Rio Camboriú)', {c: q60[c] for c in ('destino', 'eta', 'local', 'wp_proximo')})
+    a0, a1 = C.em(P, 86399), C.em(P, 0)
+    ok('em(): a virada 06:59:59 → 07:00:00: 474 L (29,6 %), 311,5 mn, horímetros 436,6 · 433,8 · 1.260,4, tanques 63,2 · 41,6 · 26,6, destino a 0,0 mn e ETA 07:00',
+       all(a0[c] == v for c, v in C8_A_ANTES.items()), {c: (a0[c], v) for c, v in C8_A_ANTES.items() if a0[c] != v})
+    ok('em(): às 07:00:00 o dia recomeça: 1.560 L (97,5 %), horímetros 412,6 · 409,8 · 1.236,4, tanques 92 · 8 · 5, destino Estaleirinho e o próximo ponto Ilha das Cabras; a posição é a da base',
+       all(a1[c] == v for c, v in C8_A_DEPOIS.items()) and (a1['lat'], a1['lon']) == (rota['base']['lat'], rota['base']['lon']), {c: (a1[c], v) for c, v in C8_A_DEPOIS.items() if a1[c] != v})
+    ok('em(): o quadro tem exatamente os campos do D.campos (66) e nenhum valor None nem NaN', list(q60) == list(cam) and not [c for c, v in q60.items() if v is None or v != v], list(q60)[:3])
+    # ——— as 575 emendas e a virada em A (EMENDA_ROTA): nenhuma chegada cai no par de segundos consecutivos
+    VD = C.varredura_dia(P)
+    folga = min(min(s % 150, 150 - s % 150) for s, _ in VD['eventos'])
+    ok('EMENDA_ROTA: %d chegadas e trocas de destino no dia (151 pontos e 37 destinos), nenhuma numa das 575 emendas de 150 s (menor folga: %d s) e os passos de 1 s nelas dentro do maior do dia'
+       % (len(VD['eventos']), folga), len(VD['eventos']) >= 180 and folga >= 1 and not V['EMENDA_ROTA'] and len(VD['emendas']) == 575, (len(VD['eventos']), folga))
+    # ——— o dia de bordo (§1.8–§1.10)
+    B = R['diaDeBordo']
+    ok('replay.diaDeBordo: 3 dias, abastecimento das 07:00 (1.086 L, 29,6 → 97,5 %), a nota fiscal CONFERIDA com ref ab-0 e d01 e d02 (4 pessoas a bordo; 1.086 L)',
+       B['dias'] == 3 and B['abastecimento']['h'] == '07:00' and B['abastecimento']['litros'] == 1086 and (B['abastecimento']['nivelAntes'], B['abastecimento']['nivelDepois']) == (29.6, 97.5)
+       and B['documento'] == {'id': 'nf-abast', 'n': 'Nota fiscal do abastecimento', 'cat': 'Notas', 'emitidoHa': 0, 'st': 'CONFERIDA', 'ref': 'ab-0',
+                              'nota': 'abastecimento das 07:00 · sem valores no app', 'fonte': D['docsFonte']}
+       and [x['id'] for x in B['diario']] == ['d01', 'd02'] and '4 pessoas a bordo' in B['diario'][0]['t'] and '1.086 L de diesel' in B['diario'][1]['t']
+       and '97,5 %' in B['diario'][1]['t'] and B['diario'][1]['ref'] == 'ab-0', B['abastecimento'])
+    ok('o arquivo gerado não traz o dia de bordo: abastecimentos [], diário só d03–d09, 7 documentos sem a nota fiscal (a microtarefa do rodapé insere, só com simulacao: true)',
+       D['abastecimentos'] == [] and [x['id'] for x in D['diario']] == ['d03', 'd04', 'd05', 'd06', 'd07', 'd08', 'd09'] and len(D['documentos']) == 7
+       and not any(d['cat'] == 'Notas' for d in D['documentos']))
+    # ——— o snapshot sem null (§1.17)
+    sq = D['snapshot']['quadro']
+    ok('snapshot.quadro: 59 campos do catálogo (sem piloto, destino, distância e ETA, próximo ponto nem alarmes), Fundeado, motores parados, 848 L = (54 + 52) × 8, ancora_estado lançada',
+       len(sq) == 59 and not {'piloto_rumo', 'destino', 'destino_mn', 'wp_proximo', 'wp_mn', 'eta', 'alarmes'} & set(sq) and sq['estado'] == 'Fundeado' and sq['marcha'] == 'neutro'
+       and sq['motor_bb_rpm'] == sq['motor_be_rpm'] == 0 and sq['diesel_litros'] == (sq['diesel_bb_pct'] + sq['diesel_be_pct']) * 8 == 848 and sq['ancora_estado'] == 'lançada'
+       and sq['seakeeper_volante_rpm'] == 8420, (len(sq), sorted(set(cam) - set(sq))))
+    ok('o D.snapshot.quadro e o aninhado dizem o mesmo (horímetros, tanques, porão, vento, ar, água, satélites, posição)',
+       (sq['motor_bb_horimetro_h'], sq['motor_be_horimetro_h'], sq['gerador_horimetro_h']) == (412.6, 409.8, 1236.4)
+       and (sq['tanque_agua_pct'], sq['tanque_cinzas_pct'], sq['tanque_negras_pct']) == tuple(D['snapshot']['tanques'][c] for c in ('agua', 'cinzas', 'negras'))
+       and (sq['porao_bb_nivel'], sq['porao_be_nivel']) == (D['snapshot']['porao']['bb_cm'], D['snapshot']['porao']['be_cm']) and sq['vento_verdadeiro_nos'] == D['snapshot']['vento']
+       and (sq['lat'], sq['lon']) == (D['snapshot']['gps']['lat'], D['snapshot']['gps']['lon']) and sq['gps_satelites'] == D['snapshot']['gps']['satelites'])
+    # ——— as fontes do Drive (pasta 05, 06, 04)
+    F = k['F']
+    serie = next(t for r, t in F.items() if r.endswith('Série do coletor NMEA — 150 s.csv'))
+    linhas = serie.strip().split('\n')
+    formato = next(t for r, t in F.items() if r.endswith('Formato do quadro do coletor.csv'))
+    ok('pasta 05: a série de 150 s (t_s 0–149 + os 28 campos do laço, sem data, lat nem lon) e o formato do quadro (um campo por linha, 66)',
+       len(linhas) == 151 and linhas[0].split(';') == ['t_s'] + [c for c in cam if c in R['chaves']] and linhas[1].split(';')[0] == '0' and linhas[150].split(';')[0] == '149' and all(len(l.split(';')) == 29 for l in linhas)
+       and not {'lat', 'lon', 'timestamp_utc'} & set(linhas[0].split(';')) and len(formato.strip().split('\n')) == 67 and formato.startswith('Campo,Rótulo,Unidade,Casas decimais,Origem'), linhas[:2])
+    aba = next(t for r, t in F.items() if r.endswith('Registro de abastecimento.csv'))
+    dia = next(t for r, t in F.items() if r.endswith('Diário de bordo.csv'))
+    ok('pastas 06 e 04: o abastecimento tem os 3 dias de bordo (0, 1 e 2) com 1.086 L e o diário traz a d01 e a d02 do dia de bordo antes das fixas',
+       len(aba.strip().split('\n')) == 4 and aba.count('1.086') == 3 and '\n0,07:00,' in aba and dia.split('\n')[1].startswith('0,07:00,Navegação') and dia.split('\n')[2].startswith('0,07:00,Combustível'), (aba[:200], dia[:300]))
+    # ——— plantas
+    for nome, o_que, monta, espera in C8_PLANTAS:
+        planta(nome, ' — C8: ' + o_que, monta, espera)
+    # ——— modo real: o gerador não emite rota, destinos, o replay inteiro nem a posição do quadro (§4.3)
+    sim0 = G.SIMULACAO
+    try:
+        G.SIMULACAO = False
+        Dr = G.dados()
+        Vr = C.verifica(Dr, G.base_conhecimento(), G.gera_fontes(Dr), G.saidas(Dr, G.base_conhecimento()), None, None, None, None, CONST)
+    finally:
+        G.SIMULACAO = sim0
+    ok('SIMULACAO = False: o D sai sem rota, destinos, chaves, janelas nem dia de bordo (replay só com limites e alertas), o snapshot.quadro sem lat/lon e nenhuma violação estrutural',
+       'rota' not in Dr and 'destinos' not in Dr and list(Dr['replay']) == ['limites', 'alertas'] and 'lat' not in Dr['snapshot']['quadro'] and 'lat' not in Dr['snapshot']['gps']
+       and Dr['simulacao'] is False and not {n: v for n, v in Vr.items() if v and n != 'TERMOS'}, {n: v[:2] for n, v in Vr.items() if v and n != 'TERMOS'})
+    # ——— o cenário alarme-critico (§3.5): só mudando a constante; o óleo BB ganha aviso → crítico → aviso dentro de 95–120 s
+    cen0 = G.CENARIO
+    try:
+        G.CENARIO = 'alarme-critico'
+        Dc = G.dados()
+        Vc = C.verifica(Dc, G.base_conhecimento(), G.gera_fontes(Dc), G.saidas(Dc, G.base_conhecimento()), None, None, None, None, CONST)
+    finally:
+        G.CENARIO = cen0
+    jc = [(j['id'], j['nivel'], j['ini'], j['fim']) for j in Dc['replay']['janelas']]
+    ok('cenário alarme-critico (desligado): o óleo BB cai a 1,1 bar (aviso → crítico → aviso, id oleo_bb), o aviso do BE continua e nenhuma asserção estrutural reprova',
+       Dc['replay']['cenario'] == 'alarme-critico' and [j[1] for j in jc if j[0] == 'oleo_bb'] == ['aviso', 'critico', 'aviso'] and ('arref_be', 'aviso', 99, 116) in jc
+       and all(95 <= j[2] and j[3] <= 120 for j in jc) and not {n: v for n, v in Vc.items() if v and n != 'TERMOS'}, (jc, {n: v[:2] for n, v in Vc.items() if v and n != 'TERMOS'}))
+    ok('o cenário aviso (o de hoje) não emite nada do crítico: nenhuma janela crítica e nenhum óleo abaixo de 2,4 bar a partir de 1.000 rpm',
+       not [j for j in R['janelas'] if j['nivel'] == 'critico'] and min(R['chaves']['motor_bb_oleo_bar']) >= 2.8)
 
 
 def main():
@@ -2133,6 +2400,7 @@ def main():
         porao_e_lugar()
         seguranca_sem_modelo()
         grafia_seafire()
+        c8_rota_e_replay()
         modelos_sinteticos()
         reprova(tmp)
     print('\n%s — %d falha(s)' % ('OK' if not falhas else 'FALHOU', falhas))

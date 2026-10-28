@@ -34,6 +34,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 import os
 import sys
 import unicodedata
@@ -41,7 +42,7 @@ from datetime import date, timedelta
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI)   # vale também com python -I
-from confere import ConfereFalhou, confere, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
+from confere import ConfereFalhou, arred, confere, deriva_janelas, mn_entre, quadro_laco, rumo_entre, segura  # noqa: E402  (segura: a SEGURANCA_PALAVRAS do §1.5, uma fonte só)
 
 RAIZ = os.path.abspath(os.path.join(AQUI, '..', '..'))
 FONTES_REL = os.path.join('ferramentas', 'demo', 'fontes')   # as fontes do Drive, dentro da pasta de saída
@@ -83,6 +84,8 @@ ARQ = {
     'agenda': 'Agenda preditiva',
     'diario': 'Diário de bordo',
     'snapshot': 'Leitura do coletor NMEA — 26-09-2026 10h12.json',
+    'serie': 'Série do coletor NMEA — 150 s.csv',
+    'formato': 'Formato do quadro do coletor.csv',
     'abast': 'Registro de abastecimento',
     'protocolo': 'Protocolo de emergência — procedimento padrão',
 }
@@ -250,14 +253,41 @@ SNAPSHOT = {
                'nota': 'última leitura com motores ligados'},
     'motores': {'hora': '26/09 09:31', 'estado': 'desligados desde 09:31', 'rpm': [700, 690], 'oleo': [3.4, 3.3],
                 'arref': [79, 78], 'horimetro': [412.6, 409.8], 'marcha': 'neutro'},
-    'gerador': {'estado': 'ligado desde 09:35', 'horas': 1236.4, 'hora': '26/09 10:12'},
-    'seakeeper': {'estado': 'ligado', 'hora': '26/09 10:12'},
-    'porao': None,    # SEM LEITURA: sem sensor de porão no barramento
-    'ancora': None,   # SEM LEITURA: sem sensor de âncora
+    'gerador': {'estado': 'ligado desde 09:35', 'horas': 1236.4, 'kw': 5.6, 'hora': '26/09 10:12'},
+    'seakeeper': {'estado': 'ligado', 'volante_rpm': 8420, 'volante_pct': 100, 'hora': '26/09 10:12'},
+    'porao': {'bb_cm': 1.2, 'be_cm': 0.9, 'ciclos_h': 0},      # §1.17: sem null; os leitores de texto têm a guarda do objeto
+    'ancora': {'estado': 'lançada', 'cabo_m': 30},             # o enum do quadro (ancora_estado), coerente com o fundeio
 }
+# O mesmo instante no formato plano do quadro (§1.17): é o que CapitaoAgora.instante() acha com fonte 'snapshot' (nunca em S1/S2). Motores
+# parados (rpm 0, neutro, Fundeado); sem destino, ETA, próximo ponto, piloto nem alarmes (origem rota ou janela; ausência = sem alarme).
+SNAPSHOT['quadro'] = {
+    'timestamp_utc': '2026-09-26T13:12:00Z', 'lat': GPS['lat'], 'lon': GPS['lon'], 'cog_graus': 71, 'proa_graus': SNAPSHOT['proa'], 'leme_graus': 0,
+    'sog_nos': SNAPSHOT['sog'], 'stw_nos': 0.3, 'profundidade_m': SNAPSHOT['profundidade'],
+    'motor_bb_rpm': 0, 'motor_be_rpm': 0, 'motor_bb_oleo_bar': 0, 'motor_be_oleo_bar': 0, 'motor_bb_arref_c': 54, 'motor_be_arref_c': 53,
+    'motor_bb_carga_pct': 0, 'motor_be_carga_pct': 0, 'marcha': 'neutro', 'consumo_lph': 0,
+    'diesel_litros': SNAPSHOT['diesel']['litros'], 'diesel_bb_pct': SNAPSHOT['diesel']['bb'], 'diesel_be_pct': SNAPSHOT['diesel']['be'],
+    'distancia_mn': 11.6, 'motor_bb_horimetro_h': SNAPSHOT['motores']['horimetro'][0], 'motor_be_horimetro_h': SNAPSHOT['motores']['horimetro'][1],
+    'gerador_ativo': True, 'gerador_kw': SNAPSHOT['gerador']['kw'], 'gerador_horimetro_h': SNAPSHOT['gerador']['horas'],
+    'seakeeper_ativo': True, 'seakeeper_volante_rpm': SNAPSHOT['seakeeper']['volante_rpm'], 'seakeeper_volante_pct': SNAPSHOT['seakeeper']['volante_pct'],
+    'bateria_0_tensao_v': SNAPSHOT['bat24'], 'bateria_1_tensao_v': 27.2, 'bateria_2_tensao_v': SNAPSHOT['bat12'],
+    'tanque_agua_pct': SNAPSHOT['tanques']['agua'], 'tanque_cinzas_pct': SNAPSHOT['tanques']['cinzas'], 'tanque_negras_pct': SNAPSHOT['tanques']['negras'],
+    'porao_bb_nivel': SNAPSHOT['porao']['bb_cm'], 'porao_be_nivel': SNAPSHOT['porao']['be_cm'], 'bomba_porao_ciclos': SNAPSHOT['porao']['ciclos_h'],
+    'ancora_estado': SNAPSHOT['ancora']['estado'], 'ondas_m': 0.5,
+    'vento_verdadeiro_nos': SNAPSHOT['vento'], 'vento_verdadeiro_angulo': SNAPSHOT['ventoDe'], 'vento_aparente_nos': SNAPSHOT['vento'], 'vento_aparente_angulo': -13,
+    'pressao_barometrica_hpa': SNAPSHOT['pressao'], 'temp_ar_externo_c': SNAPSHOT['ar'], 'temp_agua_c': SNAPSHOT['agua'], 'temp_praca_maquinas_c': 38,
+    'jogo_graus': 0.6, 'caimento_graus': 0.4, 'gps_satelites': SNAPSHOT['gps']['satelites'], 'climatizacao_ativa': True,
+    'dessalinizador_ativo': False, 'radar_ativo': False, 'ais_alvos': 3, 'estado': SNAPSHOT['estado'], 'local': 'na ' + SNAPSHOT['local'],
+}
+# §1.12: o consumo dos dois motores por regime e o do gerador (que gira 24 h); a fonte é o guia §10, o mesmo texto de texto_consumo_motores().
+# `periodo` e `desdeAbast` são (L): a forma e os valores de hoje, até a Fase 3 (o cérebro de hoje os lê).
 CONSUMO = {
-    'cruzeiro': {'nos': 18, 'rpm': 2050, 'lph': 68}, 'lenta': {'lph': 6.2},
-    'periodo': '01/08–26/09/2026', 'fonte': 'telemetria · taxa de combustível dos dois motores',
+    'cruzeiro': {'nos': 18, 'rpm': 2050, 'lph': 68}, 'lenta': {'nos': 5, 'rpm': 700, 'lph': 6.2}, 'maxima': {'nos': 26, 'rpm': 2600, 'lph': 111},
+    'gerador_lph': 2.3,
+    'faixas': [{'rpm_de': 600, 'rpm_ate': 1000, 'nome': 'marcha lenta'}, {'rpm_de': 1000, 'rpm_ate': 1500, 'nome': 'deslocamento'},
+               {'rpm_de': 1500, 'rpm_ate': 1800, 'nome': 'transição'}, {'rpm_de': 1800, 'rpm_ate': 2000, 'nome': 'planeio'},
+               {'rpm_de': 2000, 'rpm_ate': 2600, 'nome': 'cruzeiro'}],
+    'fonte': 'Guia de bordo — Motores Cummins §10 · Consumo', 'margemManobra_l': 60,
+    'periodo': '01/08–26/09/2026',
     'desdeAbast': {'litros': 192, 'desde': '12/09/2026', 'horas': '2,8 h de motor por lado'},
 }
 RESERVA = 0.10
@@ -390,8 +420,8 @@ def status_prazo(n):
 
 # ——————————————————————————————— DOCUMENTOS ———————————————————————————————
 # CONTRATO §1.8. Sem valores, sem apólice, licença nem emissor: só o TIE tem número (= embarcacao.registro). A nota fiscal do
-# abastecimento é a de hoje até o C8 (que a leva para replay.diaDeBordo.documento): sem prazo, o `st` CONFERIDA é dela e o rebase
-# omite vence, dn e o st de prazo. `emitido` na base dia de bordo (id 'nf-abast').
+# abastecimento das 07:00 fica em replay.diaDeBordo.documento (C8) e a microtarefa do rodapé a insere por id, só na simulação: sem
+# prazo, o `st` CONFERIDA é dela e o rebase omite vence, dn e o st de prazo; `emitido` na base dia de bordo.
 DOCUMENTOS = [
     {'id': 'tie', 'n': 'Título de Inscrição da Embarcação (TIE)', 'cat': 'Registro', 'venceEm': 646, 'emitidoHa': 1180, 'numero': EMBARCACAO['registro'],
      'nota': 'renovação a cada 5 anos'},
@@ -402,34 +432,25 @@ DOCUMENTOS = [
     {'id': 'gar-eletr', 'n': 'Garantia dos eletrônicos', 'cat': 'Garantias', 'venceEm': 137, 'nota': 'plotters e radar Garmin'},
     {'id': 'doc-epirb', 'n': 'Certificado do EPIRB (bateria e disparador hidrostático)', 'cat': 'Segurança', 'venceEm': 540,
      'nota': 'validade conferida também na etiqueta do equipamento'},
-    # Transição (sai no C8, que a leva para replay.diaDeBordo.documento com ref 'ab-0'): a nota fiscal do abastecimento de 620 L.
-    {'id': 'nf-abast', 'n': 'Nota fiscal do abastecimento', 'cat': 'Notas', 'emitidoHa': 14, 'st': 'CONFERIDA',
-     'nota': 'abastecimento de 620 L · sem valores no app'},
 ]
 
 # ——————————————————————————————— ABASTECIMENTOS ———————————————————————————————
-# Transição (sai no C8): as duas linhas de hoje viram deslocamentos e ficam até a microtarefa do rodapé inserir ab-0…ab-2 (§1.10).
-ABASTECIMENTOS = [
-    {'diasAtras': 14, 'litros': 620, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 65, 'nota': 'NF no Drive'},
-    {'diasAtras': 55, 'litros': 540, 'combustivel': 'diesel', 'local': 'posto da marina · Balneário Camboriú', 'st': 'CONFERIDO', 'nivelDepois': 71, 'nota': 'NF no Drive'},
-]
+# CONTRATO §1.10: o arquivo gerado leva `abastecimentos: []` (a única lista vazia permitida): as 3 linhas do dia de bordo (ab-0…ab-2, às 07:00,
+# no salto do contador) vêm de replay.diaDeBordo pela microtarefa do rodapé, só com simulacao: true. As duas linhas antigas (620 L e
+# 540 L) saíram: contavam outra rotina que a dos contadores.
 
 # ——————————————————————————————— DIÁRIO DE BORDO ———————————————————————————————
 # CONTRATO §1.9: o diário fixo (d03–d09, na base hoje); o rebase escreve `d` e `iso`. Nada descreve emergência (asserção SEM_EMERGENCIA).
 # Pendências abertas: d03, d05, d07; cada uma leva `palavras` = as da tarefa do `ref` (uma fonte só; é por elas que um registro novo
-# cita a pendência). `diasAtras 0 ⇒ h ≤ 07:00`. d01 e d02 (dia de bordo) são os do C8; até lá ficam as duas linhas de hoje, já com
-# deslocamento: a saída (d01, 07:00) e o abastecimento de 620 L (d02).
+# cita a pendência). `diasAtras 0 ⇒ h ≤ 07:00`. d01 (a saída) e d02 (o abastecimento das 07:00) são do dia de bordo: ficam em
+# replay.diaDeBordo.diario (C8) e a microtarefa do rodapé as põe no topo, só na simulação.
 DIARIO = [
-    {'id': 'd01', 'diasAtras': 0, 'h': '07:00', 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
-     't': 'Saída da base com 4 pessoas a bordo. Checklist de saída feito; teste das bombas de porão continua pendente.'},   # transição (C8)
     {'id': 'd03', 'diasAtras': 2, 'h': '17:10', 'sys': 'Manutenção', 'tom': 'warn', 'who': 'técnico', 'pend': True, 'ref': 'gerador-rotor',
      't': 'Inspeção do rotor do gerador não feita no prazo — reagendar; rotor de reserva em falta no estoque.'},
     {'id': 'd04', 'diasAtras': 3, 'h': '19:30', 'sys': 'Motores', 'tom': 'accent', 'who': 'Lucas', 'pend': False, 'ref': 'motores-rotor',
      't': 'Motor BE 1 a 2 °C acima do BB em cruzeiro nos últimos dias, com picos acima de 88 °C — acompanhar; rotor da bomba de água salgada dos motores na agenda.'},
     {'id': 'd05', 'diasAtras': 6, 'h': '11:05', 'sys': 'Equipamentos', 'tom': 'accent', 'who': 'Lucas', 'pend': True, 'ref': 'clima-filtro',
      't': 'Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada).'},
-    {'id': 'd02', 'diasAtras': 14, 'h': '15:40', 'sys': 'Combustível', 'tom': 'ok', 'who': 'Lucas', 'pend': False,
-     't': 'Abastecimento de 620 L de diesel no posto da marina; tanques em ≈ 65 %. NF no Drive.'},   # transição (C8)
     {'id': 'd06', 'diasAtras': 18, 'h': '08:30', 'sys': 'Segurança', 'tom': 'ok', 'who': 'Lucas', 'pend': False, 'ref': 'epirb-teste',
      't': 'Autoteste do EPIRB feito: luz de teste conforme a etiqueta.'},
     {'id': 'd07', 'diasAtras': 21, 'h': '10:00', 'sys': 'Segurança', 'tom': 'crit', 'who': 'técnico', 'pend': True, 'ref': 'porao-teste',
@@ -439,7 +460,7 @@ DIARIO = [
     {'id': 'd09', 'diasAtras': 39, 'h': '09:00', 'sys': 'Documentos', 'tom': 'ok', 'who': 'Lucas', 'pend': False, 'ref': 'laudo',
      't': 'Vistoria anual feita; laudo arquivado no Drive.'},
 ]
-BORDO_DIARIO = ('d01', 'd02')   # linhas do diário contadas no dia de bordo (as outras, em hoje); a mesma lista do rodape.js
+BORDO_DIARIO = ('d01', 'd02')   # linhas do diário contadas no dia de bordo (as outras, em hoje); a mesma lista do rodape.js (hoje só em diaDeBordo)
 
 # ——————————————————————————————— EQUIPE E APOIO ———————————————————————————————
 # CONTRATO §1.11: papéis em lista fechada, sem nome de pessoa ou empresa e sem telefone; nenhum papel diz "autorizada <marca>". `para` e
@@ -522,12 +543,7 @@ def diario_dados():
 
 
 def abastecimentos_dados():
-    out = []
-    for a in ABASTECIMENTOS:
-        x = dict(a)
-        x['d'] = dia_br(-a['diasAtras'])
-        out.append(x)
-    return out
+    return []   # §1.10: as linhas do dia de bordo entram pela microtarefa do rodapé (replay.diaDeBordo), nunca no arquivo gerado
 
 
 def serie24v_dados():
@@ -597,6 +613,31 @@ LIMITES.update({
 })
 
 
+# Passos dos alertas (D.replay.alertas, §1.16): frases do próprio guia de bordo, na seção que o alerta cita (fonte única). As seções
+# que já têm o procedimento (g_motores §4 e §5) entram como estão; nas que só trazem a faixa, o texto do guia ganha uma frase com os
+# mesmos passos (cadeia()). A IDS confere que cada passo está inteiro na seção citada.
+PASSOS_ARREF = ['Reduza para marcha lenta e confira a saída de água pelo escapamento.',
+                'Sem água no escapamento ou com a temperatura ainda subindo: desligue o motor afetado e siga com o outro.',
+                'Com o motor parado, feche a válvula de fundo e confira o filtro de água salgada e o rotor da bomba de água salgada.']
+PASSOS_ROTACAO = ['Reduza o giro para o cruzeiro.', 'Confira o painel dos dois motores.', 'Registre no diário com a hora.']
+PASSOS_PRACA = ['Reduza o giro para o cruzeiro.', 'Confira a ventilação da praça de máquinas.', 'Registre no diário com a hora.']
+PASSOS_BATERIA = ['Confira o carregador de bordo ligado ao gerador ou ao cais.', 'Confira os bornes limpos e apertados.',
+                  'Registre a tensão e a hora no diário.']
+PASSOS_PORAO = ['Confirme a bomba ligada pelo sensor de nível.', 'Acione a bomba no manual.', 'Registre o nível e a hora no diário.']
+PASSOS_SONDA = ['Reduza a velocidade.', 'Confira a carta no plotter.', 'Mude de rumo para águas mais fundas.']
+PASSOS_DIESEL = ['Abasteça antes da próxima saída.', 'Confira a autonomia no app.', 'Registre os litros e o nível no app depois de abastecer.']
+PASSOS_GERADOR = ['Retire cargas no quadro elétrico, uma de cada vez.', 'Deixe a climatização por último.', 'Registre no diário com a hora.']
+PASSOS_VOLANTE = ['Confira o banco de 12 V e o carregador.', 'Espere a indicação do display.', 'Anote a mensagem do display no diário com a hora.']
+PASSOS_AGUA = ['Complete a água doce na marina.', 'Confira o nível no app.', 'Registre no diário com a hora.']
+PASSOS_SERVIDAS = ['Esvazie as servidas na marina.', 'Confira o nível no app.', 'Registre no diário com a hora.']
+
+
+def cadeia(prefixo, passos):
+    """Frase do guia com os passos de um alerta: «Prefixo: passo um; passo dois; passo três.» (cada passo sem o ponto final, a 1ª letra
+    minúscula). A IDS compara sem caixa nem pontuação, por isso o passo do alerta é a frase inteira do guia."""
+    return prefixo + ': ' + '; '.join(x[0].lower() + x[1:].rstrip('.') for x in passos) + '.'
+
+
 def br(x):
     """Número como o guia escreve (pt-BR): 1.000 · 2.600 · 2,4 · 6,0 · 88. O float guarda a casa decimal (6.0 → "6,0")."""
     if isinstance(x, int) and not isinstance(x, bool):
@@ -628,7 +669,8 @@ def texto_faixas_motores():
         corte, br(lenta['normal']['de']), br(lenta['normal']['ate']), corte, br(alta['normal']['de']), br(alta['normal']['ate']),
         br(alta['aviso']['acima']), br(lenta['critico']['abaixo']), corte, br(alta['critico']['abaixo']), corte,
         br(ar['normal']['ate']), br(ARREF_CRUZEIRO_C[0]), br(ARREF_CRUZEIRO_C[1]), br(ar['aviso']['acima']), br(ar['critico']['acima']),
-        br(LIMITES['motor_bb_carga_pct']['aviso']['acima']), br(LIMITES['temp_praca_maquinas_c']['aviso']['acima']))
+        br(LIMITES['motor_bb_carga_pct']['aviso']['acima']), br(LIMITES['temp_praca_maquinas_c']['aviso']['acima'])) + ' ' + cadeia(
+            'Rotação ou carga acima do normal', PASSOS_ROTACAO) + ' ' + cadeia('Praça de máquinas acima do normal', PASSOS_PRACA)
 
 
 def texto_consumo_motores():
@@ -641,44 +683,49 @@ def texto_consumo_motores():
 def texto_potencia_gerador():
     n, kw = _eq('gerador')['nominal'], LIMITES['gerador_kw']['aviso']['acima']
     return ('Potência nominal %s kW (%s Hz, %s rpm). Carga: normal até %s kW; aviso acima de %s kW (%s %% da nominal). Com a '
-            'climatização ligada, o normal é %s a %s kW.') % (br(n['kw']), br(n['hz']), br(n['rpm']), br(kw), br(kw),
-                                                           br(int(round(kw / n['kw'] * 100))), br(GERADOR_CLIMA_KW[0]), br(GERADOR_CLIMA_KW[1]))
+            'climatização ligada, o normal é %s a %s kW. %s') % (br(n['kw']), br(n['hz']), br(n['rpm']), br(kw), br(kw),
+                                                              br(int(round(kw / n['kw'] * 100))), br(GERADOR_CLIMA_KW[0]), br(GERADOR_CLIMA_KW[1]),
+                                                              cadeia('Carga acima do normal', PASSOS_GERADOR))
 
 
 def texto_faixas_volante():
-    return 'Volante: estabiliza a partir de cerca de %s %% da rotação de operação; aviso abaixo de %s %% (sem estabilização).' % (
-        br(_eq('estabilizador')['nominal']['pct_estabiliza']), br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo']))
+    return 'Volante: estabiliza a partir de cerca de %s %% da rotação de operação; aviso abaixo de %s %% (sem estabilização). %s' % (
+        br(_eq('estabilizador')['nominal']['pct_estabiliza']), br(LIMITES['seakeeper_volante_pct']['aviso']['abaixo']),
+        cadeia('Volante abaixo do normal', PASSOS_VOLANTE))
 
 
 def texto_faixas_baterias():
     def banco(L):
         return 'normal de %s a %s V; aviso abaixo de %s V ou acima de %s V; crítico abaixo de %s V' % (
             br(L['normal']['de']), br(L['normal']['ate']), br(L['aviso']['abaixo']), br(L['aviso']['acima']), br(L['critico']['abaixo']))
-    return 'Bancos de 24 V (serviço e partida): %s. Banco de 12 V: %s.' % (banco(LIMITES['bateria_0_tensao_v']), banco(LIMITES['bateria_2_tensao_v']))
+    return 'Bancos de 24 V (serviço e partida): %s. Banco de 12 V: %s. %s' % (banco(LIMITES['bateria_0_tensao_v']), banco(LIMITES['bateria_2_tensao_v']),
+                                                                              cadeia('Tensão fora do normal', PASSOS_BATERIA))
 
 
 def texto_faixas_porao():
     L = LIMITES['porao_bb_nivel']
     return ('Nível normal no poço das bombas: até %s cm; aviso acima de %s cm; crítico acima de %s cm. As bombas ligam sozinhas pelo '
-            'sensor de nível.') % (br(L['normal']['ate']), br(L['aviso']['acima']), br(L['critico']['acima']))
+            'sensor de nível. %s') % (br(L['normal']['ate']), br(L['aviso']['acima']), br(L['critico']['acima']), cadeia('Nível acima do normal', PASSOS_PORAO))
 
 
 def texto_sonda():
     L = LIMITES['profundidade_m']
-    return 'Profundidade mínima de navegação: %s m na sonda (aviso abaixo de %s m; crítico abaixo de %s m).' % (
-        br(L['normal']['de']), br(L['aviso']['abaixo']), br(L['critico']['abaixo']))
+    return 'Profundidade mínima de navegação: %s m na sonda (aviso abaixo de %s m; crítico abaixo de %s m). %s' % (
+        br(L['normal']['de']), br(L['aviso']['abaixo']), br(L['critico']['abaixo']), cadeia('Profundidade abaixo do mínimo', PASSOS_SONDA))
 
 
 def texto_abastecimento():
     L = LIMITES['diesel_litros']
     return ('Diesel: abastecer antes de %s %% do total dos tanques (%s L de %s L); reserva técnica de %s %% (%s L). Depois de abastecer, '
-            'registre os litros e o nível no app.') % (br(DIESEL_AVISO_PCT), br(L['aviso']['abaixo']), br(TANQUES['diesel_l']),
-                                                       br(int(round(RESERVA * 100))), br(L['critico']['abaixo']))
+            'registre os litros e o nível no app. %s') % (br(DIESEL_AVISO_PCT), br(L['aviso']['abaixo']), br(TANQUES['diesel_l']),
+                                                          br(int(round(RESERVA * 100))), br(L['critico']['abaixo']),
+                                                          cadeia('Diesel abaixo do aviso', PASSOS_DIESEL))
 
 
 def texto_tanques():
     return ('Tanques: água doce, aviso abaixo de %s %%; águas cinzas e negras, aviso acima de %s %%. Na marina, antes da saída: água '
-            'completada e servidas esvaziadas.') % (br(LIMITES['tanque_agua_pct']['aviso']['abaixo']), br(LIMITES['tanque_cinzas_pct']['aviso']['acima']))
+            'completada e servidas esvaziadas. %s %s') % (br(LIMITES['tanque_agua_pct']['aviso']['abaixo']), br(LIMITES['tanque_cinzas_pct']['aviso']['acima']),
+                                                          cadeia('Água doce abaixo do aviso', PASSOS_AGUA), cadeia('Servidas acima do aviso', PASSOS_SERVIDAS))
 
 
 # ——————————————————————————————— TEXTOS DE EMERGÊNCIA (CONTRATO §1.3) ———————————————————————————————
@@ -1069,15 +1116,348 @@ PROTOCOLOS = {
 }
 
 
-# ——————————————————————————————— SAÍDA ———————————————————————————————
-def dados():
+# ——————————————————————————————— ROTA, CAMPOS E REPLAY (CONTRATO §1.14–§1.16, §1.22, §2.6, §3) ———————————————————————————————
+# Só na simulação (SIMULACAO = True): com False o gerador não emite rota, histórico simulado nem dia de bordo e o replay sai só com
+# limites e alertas (§4.3). O laço de 150 s, a rota e os contadores são função pura do segundo do dia de bordo (confere.em(), o port do
+# CapitaoReplay.em() da Fase 2); os números abaixo (chaves, ruído, fixos, bases dos contadores) são o que o contrato fixa.
+CENARIO = 'aviso'          # decisão (c): o crítico fica desligado; 'alarme-critico' só mudando esta constante (§3.5)
+ANCORA_HORA = '07:00'      # a âncora do dia de bordo, no fuso da embarcação
+CIRCUITOS_DIA = 19         # primo com as 576 voltas do dia (§1.14): nenhuma chegada cai numa emenda de 150 s
+VOLTAS_DIA = 576           # 86.400 s / 150 s
+DIAS_DE_BORDO = 3          # abastecimentos do dia de bordo na lista (§1.10)
+
+# Rota (§2.6): pontos de mar aberto da Interpraias, SÓ para a navegação simulada (nunca no SOS). Portão manual do C8: cada ponto e cada
+# perna foram conferidos contra a costa de resolução cheia (GSHHG, com as ilhas pequenas) e contra a máscara global de ~1 km, com folga
+# mínima de 0,40 mn de terra (a base, na barra do rio, é a única que toca terra). O contrato partia de pontos que cortavam a Ponta das
+# Laranjeiras (a perna base → Ilha das Cabras e as duas de volta da Ilha das Cabras passavam por terra): a saída da barra é para o norte,
+# por fora da ponta, e os pontos da Ilha das Cabras ficam ao largo dela. (id, nome, rel, perto, lat, lon, prof_m).
+PONTOS_ROTA = [
+    ('base', 'Barra Sul (saída do Rio Camboriú)', 'da Barra Sul', 'na saída da Barra Sul', -26.9985, -48.6160, 8),
+    ('cabras', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9760, -48.5985, 12),
+    ('laranjeiras', 'Ponta das Laranjeiras', 'da Ponta das Laranjeiras', 'ao largo da Ponta das Laranjeiras', -26.9960, -48.5620, 16),
+    ('taquaras', 'Taquaras', 'de Taquaras', 'ao largo de Taquaras', -27.0320, -48.5540, 19),
+    ('estaleirinho', 'Estaleirinho', 'do Estaleirinho', 'ao largo do Estaleirinho', -27.0620, -48.5530, 21),
+    ('pinho', 'Praia do Pinho', 'da Praia do Pinho', 'ao largo da Praia do Pinho', -27.0450, -48.5430, 22),
+    ('laranjeiras_v', 'Laranjeiras', 'de Laranjeiras', 'ao largo de Laranjeiras', -26.9940, -48.5535, 18),
+    ('cabras_v', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9780, -48.5995, 13),
+]
+ROTA_DESTINO = {'id': 'estaleirinho', 'nome': 'Estaleirinho', 'caminho': 'a caminho do Estaleirinho'}
+ROTA_VOLTA = {'nome': 'Barra Sul (base)', 'caminho': 'a caminho da Barra Sul'}
+CORRENTE = {'nos': 0.3, 'para_graus': 200}   # STW e proa (§1.22)
+
+
+# Quadros-chave do laço (§3.1), de 5 em 5 s, t = 0…145 (o segmento 145 → 150 usa o t = 0). Os valores intermediários saem da
+# interpolação e do ruído por hash (§3.2). A ordem das chaves é a da semente do ruído (1100 + posição, fixa).
+ORDEM_LACO = ['motor_bb_rpm', 'motor_be_rpm', 'sog_nos', 'consumo_lph', 'motor_bb_oleo_bar', 'motor_be_oleo_bar', 'motor_bb_arref_c',
+              'motor_be_arref_c', 'motor_bb_carga_pct', 'motor_be_carga_pct', 'gerador_kw', 'bateria_0_tensao_v', 'bateria_1_tensao_v',
+              'bateria_2_tensao_v', 'ondas_m', 'vento_verdadeiro_nos', 'vento_verdadeiro_angulo', 'pressao_barometrica_hpa',
+              'temp_ar_externo_c', 'temp_agua_c', 'porao_bb_nivel', 'porao_be_nivel', 'seakeeper_volante_rpm', 'seakeeper_volante_pct',
+              'jogo_graus', 'caimento_graus', 'temp_praca_maquinas_c', 'leme_graus']
+# Amplitude do ruído por campo (§3.2); a semente de cada um é 1100 + a posição em ORDEM_LACO.
+AMPLITUDE_RUIDO = {'motor_bb_rpm': 6, 'motor_be_rpm': 6, 'sog_nos': 0.1, 'consumo_lph': 0, 'motor_bb_oleo_bar': 0.03, 'motor_be_oleo_bar': 0.03,
+                   'motor_bb_arref_c': 0.1, 'motor_be_arref_c': 0.1, 'motor_bb_carga_pct': 0.6, 'motor_be_carga_pct': 0.6, 'gerador_kw': 0.1,
+                   'bateria_0_tensao_v': 0.02, 'bateria_1_tensao_v': 0.02, 'bateria_2_tensao_v': 0.01, 'ondas_m': 0.05,
+                   'vento_verdadeiro_nos': 0.4, 'vento_verdadeiro_angulo': 2, 'pressao_barometrica_hpa': 0.05, 'temp_ar_externo_c': 0,
+                   'temp_agua_c': 0, 'porao_bb_nivel': 0.1, 'porao_be_nivel': 0.1, 'seakeeper_volante_rpm': 12, 'seakeeper_volante_pct': 0,
+                   'jogo_graus': 0.3, 'caimento_graus': 0.1, 'temp_praca_maquinas_c': 0.2, 'leme_graus': 0.4}
+SEMENTE_PROA, SEMENTE_PROF = 1201, 1202   # ruído da rota (proa e profundidade): usa o segundo absoluto, porque a rota não é periódica em 150 s
+VOLANTE_RPM = 8420    # abaixo da rotação nominal do Seakeeper 3 (8.450 rpm na folha pública do fabricante); com o ruído de 12 rpm: 8.408 a 8.432
+
+
+def _kf(pares):
+    d = dict(pares)
+    assert sorted(d) == list(range(0, 150, 5)), sorted(set(range(0, 150, 5)) - set(d))
+    return [d[t] for t in range(0, 150, 5)]
+
+
+def _sem_menos_zero(v):
+    return v + 0.0 if isinstance(v, float) else v   # −0,0 + 0,0 = 0,0: nunca −0 no dado
+
+
+def chaves_laco():
+    T = list(range(0, 150, 5))
+    lenta, cruz = 700, 2050
+    rpm = _kf([(0, lenta), (5, lenta), (10, lenta + 5), (15, lenta), (20, lenta + 10), (25, 1100), (30, 1400), (35, 1650), (40, 1850), (45, 1980)]
+              + [(t, cruz) for t in range(50, 121, 5)] + [(125, 1450), (130, 950), (135, lenta + 10), (140, lenta + 5), (145, lenta)])
+    K = {'motor_bb_rpm': rpm, 'motor_be_rpm': [r - (10 if r > 1000 else 5) for r in rpm]}
+    sog = {700: 5.0, 705: 5.0, 710: 5.1, 1100: 7.6, 1400: 10.0, 1650: 12.6, 1850: 15.0, 1980: 16.9, 2050: 18.0, 1450: 10.4, 950: 6.6}
+    lph = {700: 6.2, 705: 6.3, 710: 6.4, 1100: 14.0, 1400: 24.0, 1650: 36.0, 1850: 48.0, 1980: 60.0, 2050: 68.0, 1450: 26.0, 950: 10.5}
+    K['sog_nos'] = [sog[r] for r in rpm]
+    K['consumo_lph'] = [lph[r] for r in rpm]
+
+    def oleo(r, b):
+        return b if r <= 720 else round(b + (r - 700) / 1350 * 1.1, 2)
+    K['motor_bb_oleo_bar'] = [oleo(r, 2.8) for r in rpm]
+    K['motor_be_oleo_bar'] = [oleo(r, 2.7) for r in rpm]
+    if CENARIO == 'alarme-critico':   # §3.5: óleo BB em 95/100/105/110/115/120 s, no regime de cruzeiro (aviso abaixo de 2,4; crítico abaixo de 1,4)
+        for t, x in zip(range(95, 121, 5), (3.0, 1.2, 1.1, 1.1, 1.2, 3.0)):
+            K['motor_bb_oleo_bar'][t // 5] = x
+    arref = [round(78 + (r - 700) / 1350 * 4.0, 1) if r > 720 else 78.0 for r in rpm]
+    bb = [arref[(i - 1) % 30] for i in range(30)]   # o líquido esfria e esquenta com atraso de uma chave
+    K['motor_bb_arref_c'] = bb
+    be = list(bb)
+    for t, x in [(95, 86.2), (100, 89.0), (105, 89.6), (110, 89.6), (115, 89.0), (120, 85.8), (125, 82.0)]:   # o AVISO do BE (§3.4: janela de 99 a 116 s)
+        be[t // 5] = x
+    K['motor_be_arref_c'] = be
+    K['motor_bb_carga_pct'] = [10 if r <= 720 else round(10 + (r - 700) / 1350 * 52) for r in rpm]
+    K['motor_be_carga_pct'] = [max(0, c - 1) for c in K['motor_bb_carga_pct']]
+    K['gerador_kw'] = _kf([(t, round(6.0 + 0.3 * math.sin(t / 150 * 2 * math.pi * 3), 1)) for t in T])
+    K['bateria_0_tensao_v'] = [round(27.30 + (r - 700) / 1350 * 0.50, 2) for r in rpm]
+    K['bateria_1_tensao_v'] = [round(27.40 + (r - 700) / 1350 * 0.55, 2) for r in rpm]
+    K['bateria_2_tensao_v'] = [round(13.55 + (r - 700) / 1350 * 0.15, 2) for r in rpm]
+    K['ondas_m'] = [0.7 if x < 10 else 0.8 for x in K['sog_nos']]
+    K['vento_verdadeiro_nos'] = _kf([(t, round(10.5 + 1.2 * math.sin(t / 150 * 2 * math.pi), 1)) for t in T])
+    K['vento_verdadeiro_angulo'] = _kf([(t, round(58 + 4 * math.sin(t / 150 * 2 * math.pi)) % 360) for t in T])
+    K['pressao_barometrica_hpa'] = [1017.1] * 30
+    K['temp_ar_externo_c'] = [22.6] * 30
+    K['temp_agua_c'] = [20.1] * 30
+    K['porao_bb_nivel'] = [1.2] * 30
+    K['porao_be_nivel'] = [0.9] * 30
+    K['seakeeper_volante_rpm'] = [VOLANTE_RPM] * 30
+    K['seakeeper_volante_pct'] = [100] * 30
+    K['jogo_graus'] = _kf([(t, round(0.6 * math.sin(t / 150 * 2 * math.pi * 3), 1)) for t in T])
+    cai = {0: 0.8, 5: 0.8, 10: 0.8, 15: 0.8, 20: 0.9, 25: 2.6, 30: 4.8, 35: 5.1, 40: 4.4, 45: 3.6, 125: 2.4, 130: 1.2, 135: 0.9, 140: 0.8, 145: 0.8}
+    K['caimento_graus'] = _kf([(t, cai.get(t, 3.2)) for t in T])
+    pr = [41 if r <= 720 else round(41 + (r - 700) / 1350 * 5) for r in rpm]
+    K['temp_praca_maquinas_c'] = [pr[(i - 2) % 30] for i in range(30)]
+    K['leme_graus'] = [0.0] * 30   # a base do leme é 0 ± o ruído (0,4°); a rota soma 5 × a taxa de guinada (confere.em)
+    assert list(K) == ORDEM_LACO
+    return {c: [_sem_menos_zero(x) for x in K[c]] for c in ORDEM_LACO}
+
+
+FIXOS = {'marcha': 'avante', 'estado': 'Navegando', 'gerador_ativo': True, 'seakeeper_ativo': True, 'ancora_estado': 'recolhida',
+         'bomba_porao_ciclos': 0, 'gps_satelites': 18, 'climatizacao_ativa': True, 'dessalinizador_ativo': False, 'radar_ativo': True, 'ais_alvos': 4}
+CONTADORES_BASE = {'motor_bb_horimetro_h': 412.6, 'motor_be_horimetro_h': 409.8, 'gerador_horimetro_h': 1236.4, 'diesel_litros': 1560,
+                   'distancia_mn': 0, 'tanque_agua_pct': 92, 'tanque_cinzas_pct': 8, 'tanque_negras_pct': 5}   # na âncora (07:00)
+TAXAS_H = {'tanque_agua_pct': -1.2, 'tanque_cinzas_pct': 1.4, 'tanque_negras_pct': 0.9}   # por hora desde a âncora
+FASES = [{'ini': 0, 'fim': 20, 'nome': 'marcha lenta'}, {'ini': 20, 'fim': 50, 'nome': 'aceleração'}, {'ini': 50, 'fim': 120, 'nome': 'cruzeiro'},
+         {'ini': 120, 'fim': 135, 'nome': 'redução'}, {'ini': 135, 'fim': 150, 'nome': 'marcha lenta'}]
+
+
+def _c(rotulo, origem, un=None, casas=None, **extra):
+    d = {'rotulo': rotulo}
+    if un is not None:
+        d['un'] = un
+    if casas is not None:
+        d['casas'] = casas
+    d['origem'] = origem
+    d.update(extra)
+    return d
+
+
+# Catálogo único do quadro (§1.15, §1.22), na ordem do contrato: uma entrada por campo; `casas` é a fonte única do arredondamento.
+# `sentido` só (e sempre) nos contadores; `mil` = milhar do pt-BR; `ang` = ângulo de 0 a 360 (3 dígitos na tela).
+CAMPOS = {
+    'timestamp_utc': _c('Hora da leitura (UTC)', 'relógio'),
+    'lat': _c('Latitude', 'rota', '°', 5), 'lon': _c('Longitude', 'rota', '°', 5),
+    'cog_graus': _c('Rumo sobre o fundo (COG)', 'rota', '°', 0, ang=True),
+    'proa_graus': _c('Proa', 'derivado', '°', 0, ang=True),
+    'piloto_rumo': _c('Rumo do piloto automático', 'rota', '°', 0, ang=True),
+    'leme_graus': _c('Leme', 'laço', '°', 1, desc='bombordo negativo, boreste positivo'),
+    'sog_nos': _c('Velocidade sobre o fundo (SOG)', 'laço', 'nós', 1),
+    'stw_nos': _c('Velocidade na água (STW)', 'derivado', 'nós', 1),
+    'profundidade_m': _c('Profundidade', 'rota', 'm', 1),
+    'motor_bb_rpm': _c('Rotação do motor BB', 'laço', 'rpm', 0, mil=True), 'motor_be_rpm': _c('Rotação do motor BE', 'laço', 'rpm', 0, mil=True),
+    'motor_bb_oleo_bar': _c('Pressão de óleo BB', 'laço', 'bar', 1), 'motor_be_oleo_bar': _c('Pressão de óleo BE', 'laço', 'bar', 1),
+    'motor_bb_arref_c': _c('Arrefecimento do motor BB', 'laço', '°C', 1), 'motor_be_arref_c': _c('Arrefecimento do motor BE', 'laço', '°C', 1),
+    'motor_bb_carga_pct': _c('Carga do motor BB', 'laço', '%', 0), 'motor_be_carga_pct': _c('Carga do motor BE', 'laço', '%', 0),
+    'marcha': _c('Marcha', 'fixo'),
+    'consumo_lph': _c('Consumo dos dois motores', 'laço', 'L/h', 1),
+    'diesel_litros': _c('Diesel a bordo', 'contador', 'L', 0, sentido=-1, mil=True),
+    'diesel_bb_pct': _c('Tanque de diesel BB', 'derivado', '%', 1), 'diesel_be_pct': _c('Tanque de diesel BE', 'derivado', '%', 1),
+    'distancia_mn': _c('Distância percorrida no dia de bordo', 'contador', 'mn', 1, sentido=1),
+    'motor_bb_horimetro_h': _c('Horímetro do motor BB', 'contador', 'h', 1, sentido=1, mil=True),
+    'motor_be_horimetro_h': _c('Horímetro do motor BE', 'contador', 'h', 1, sentido=1, mil=True),
+    'gerador_ativo': _c('Gerador ligado', 'fixo', 'liga/desliga', 0), 'gerador_kw': _c('Carga do gerador', 'laço', 'kW', 1),
+    'gerador_horimetro_h': _c('Horímetro do gerador', 'contador', 'h', 1, sentido=1, mil=True),
+    'seakeeper_ativo': _c('Estabilizador ligado', 'fixo', 'liga/desliga', 0),
+    'seakeeper_volante_rpm': _c('Volante do estabilizador', 'laço', 'rpm', 0, mil=True),
+    'seakeeper_volante_pct': _c('Volante do estabilizador', 'laço', '%', 0),
+    'bateria_0_tensao_v': _c('Banco de serviço de 24 V', 'laço', 'V', 2), 'bateria_1_tensao_v': _c('Banco de partida de 24 V', 'laço', 'V', 2),
+    'bateria_2_tensao_v': _c('Banco de 12 V', 'laço', 'V', 2),
+    'tanque_agua_pct': _c('Tanque de água doce', 'contador', '%', 1, sentido=-1), 'tanque_cinzas_pct': _c('Tanque de águas cinzas', 'contador', '%', 1, sentido=1),
+    'tanque_negras_pct': _c('Tanque de águas negras', 'contador', '%', 1, sentido=1),
+    'porao_bb_nivel': _c('Nível do porão BB', 'laço', 'cm', 1), 'porao_be_nivel': _c('Nível do porão BE', 'laço', 'cm', 1),
+    'bomba_porao_ciclos': _c('Ciclos das bombas de porão na última hora', 'fixo', 'ciclos', 0),
+    'ancora_estado': _c('Âncora', 'fixo'),
+    'ondas_m': _c('Ondas', 'laço', 'm', 1),
+    'vento_verdadeiro_nos': _c('Vento verdadeiro', 'laço', 'nós', 1),
+    'vento_verdadeiro_angulo': _c('Vento verdadeiro (de onde vem)', 'laço', '°', 0, ang=True, desc='em relação ao norte verdadeiro'),
+    'vento_aparente_nos': _c('Vento aparente', 'derivado', 'nós', 1),
+    'vento_aparente_angulo': _c('Vento aparente (em relação à proa)', 'derivado', '°', 0, desc='de -180 a 180; positivo a boreste'),
+    'pressao_barometrica_hpa': _c('Pressão atmosférica', 'laço', 'hPa', 1, mil=True),
+    'temp_ar_externo_c': _c('Temperatura do ar', 'laço', '°C', 1), 'temp_agua_c': _c('Temperatura da água', 'laço', '°C', 1),
+    'temp_praca_maquinas_c': _c('Temperatura da praça de máquinas', 'laço', '°C', 0),
+    'jogo_graus': _c('Jogo (balanço de bordo a bordo)', 'laço', '°', 1), 'caimento_graus': _c('Caimento (inclinação de proa a popa)', 'laço', '°', 1),
+    'gps_satelites': _c('Satélites do GPS', 'fixo', 'satélites', 0),
+    'climatizacao_ativa': _c('Climatização ligada', 'fixo', 'liga/desliga', 0), 'dessalinizador_ativo': _c('Dessalinizador ligado', 'fixo', 'liga/desliga', 0),
+    'radar_ativo': _c('Radar transmitindo', 'fixo', 'liga/desliga', 0), 'ais_alvos': _c('Alvos do AIS', 'fixo', 'alvos', 0),
+    'estado': _c('Estado', 'fixo'),
+    'local': _c('Onde está', 'rota'),
+    'destino': _c('Destino', 'rota'), 'destino_mn': _c('Distância ao destino', 'rota', 'mn', 1),
+    'wp_proximo': _c('Próximo ponto da rota', 'rota'), 'wp_mn': _c('Distância ao próximo ponto', 'rota', 'mn', 1),
+    'eta': _c('Chegada prevista (hora local)', 'rota'),
+    'alarmes': _c('Alarmes ativos', 'janela'),
+}
+
+# Alertas (§1.16): um id por campo com limite; o nível sai de LIMITES. (id, campo, sistema, lado, título, guia, seção, passos).
+ALERTAS_DEF = [
+    ('arref_bb', 'motor_bb_arref_c', 'motores', 'bb', 'Temperatura do motor BB', 'g_motores', '5 · Temperatura alta', PASSOS_ARREF),
+    ('arref_be', 'motor_be_arref_c', 'motores', 'be', 'Temperatura do motor BE', 'g_motores', '5 · Temperatura alta', PASSOS_ARREF),
+    ('oleo_bb', 'motor_bb_oleo_bar', 'motores', 'bb', 'Pressão de óleo do motor BB', 'g_motores', '4 · Pressão de óleo baixa', TXT_OLEO),
+    ('oleo_be', 'motor_be_oleo_bar', 'motores', 'be', 'Pressão de óleo do motor BE', 'g_motores', '4 · Pressão de óleo baixa', TXT_OLEO),
+    ('rpm_bb', 'motor_bb_rpm', 'motores', 'bb', 'Rotação do motor BB', 'g_motores', '9 · Faixas de operação', PASSOS_ROTACAO),
+    ('rpm_be', 'motor_be_rpm', 'motores', 'be', 'Rotação do motor BE', 'g_motores', '9 · Faixas de operação', PASSOS_ROTACAO),
+    ('carga_bb', 'motor_bb_carga_pct', 'motores', 'bb', 'Carga do motor BB', 'g_motores', '9 · Faixas de operação', PASSOS_ROTACAO),
+    ('carga_be', 'motor_be_carga_pct', 'motores', 'be', 'Carga do motor BE', 'g_motores', '9 · Faixas de operação', PASSOS_ROTACAO),
+    ('praca', 'temp_praca_maquinas_c', 'motores', None, 'Temperatura da praça de máquinas', 'g_motores', '9 · Faixas de operação', PASSOS_PRACA),
+    ('b24s', 'bateria_0_tensao_v', 'eletrico', None, 'Banco de serviço de 24 V', 'g_eletrico', '2 · Faixas', PASSOS_BATERIA),
+    ('b24p', 'bateria_1_tensao_v', 'eletrico', None, 'Banco de partida de 24 V', 'g_eletrico', '2 · Faixas', PASSOS_BATERIA),
+    ('b12', 'bateria_2_tensao_v', 'eletrico', None, 'Banco de 12 V', 'g_eletrico', '2 · Faixas', PASSOS_BATERIA),
+    ('porao_bb', 'porao_bb_nivel', 'porao', 'bb', 'Nível do porão BB', 'g_porao', '2 · Faixas', PASSOS_PORAO),
+    ('porao_be', 'porao_be_nivel', 'porao', 'be', 'Nível do porão BE', 'g_porao', '2 · Faixas', PASSOS_PORAO),
+    ('profundidade', 'profundidade_m', 'eletronicos', None, 'Profundidade', 'g_eletronicos', '8 · Sonda', PASSOS_SONDA),
+    ('diesel', 'diesel_litros', 'tanques', None, 'Diesel a bordo', 'checklist', 'Abastecimento', PASSOS_DIESEL),
+    ('gerador', 'gerador_kw', 'gerador', None, 'Carga do gerador', 'g_gerador', '9 · Potência e carga', PASSOS_GERADOR),
+    ('seakeeper', 'seakeeper_volante_pct', 'estabilizador', None, 'Volante do estabilizador', 'g_seakeeper', '8 · Faixas', PASSOS_VOLANTE),
+    ('agua', 'tanque_agua_pct', 'tanques', None, 'Tanque de água doce', 'checklist', 'Tanques', PASSOS_AGUA),
+    ('cinzas', 'tanque_cinzas_pct', 'tanques', None, 'Tanque de águas cinzas', 'checklist', 'Tanques', PASSOS_SERVIDAS),
+    ('negras', 'tanque_negras_pct', 'tanques', None, 'Tanque de águas negras', 'checklist', 'Tanques', PASSOS_SERVIDAS),
+]
+
+
+def fonte_da_secao(guia, secao):
+    """«Guia de bordo — Motores Cummins §5 · Temperatura alta» (seção numerada) ou «Checklist de bordo § Abastecimento» (sem número)."""
+    return ARQ[guia] + (' §' + secao if secao[:1].isdigit() else ' § ' + secao)
+
+
+def alertas_dados():
+    out = {}
+    for aid, campo, sistema, lado, titulo, guia, secao, passos in ALERTAS_DEF:
+        a = {'campo': campo, 'sistema': sistema}
+        if lado:
+            a['lado'] = lado
+        a.update({'titulo': titulo, 'guia': guia, 'secao': secao, 'passos': list(passos), 'fonte': fonte_da_secao(guia, secao)})
+        out[aid] = a
+    return out
+
+
+def rota_dados(por_volta_mn):
+    """D.rota (§1.14): pernas pré-calculadas (o cliente não recalcula distância), circuito, ida, fator e a conta dos 19 circuitos."""
+    pts = [{'id': i, 'nome': n, 'rel': r, 'perto': pe, 'lat': la, 'lon': lo, 'prof_m': pr} for i, n, r, pe, la, lo, pr in PONTOS_ROTA]
+    pernas, ini = [], 0.0
+    for k, a in enumerate(pts):
+        b = pts[(k + 1) % len(pts)]
+        mn = arred(mn_entre((a['lat'], a['lon']), (b['lat'], b['lon'])), 4)
+        pernas.append({'de': a['id'], 'para': b['id'], 'mn': mn, 'rumo': arred(rumo_entre((a['lat'], a['lon']), (b['lat'], b['lon'])), 2),
+                       'ini_mn': arred(ini, 4)})
+        ini += mn
+    dist = arred(ini, 4)
+    ida = next(p['ini_mn'] for p in pernas if p['de'] == ROTA_DESTINO['id'])
     return {
+        'fonte': 'Plano de navegação de bordo · Barra Sul ⇄ Estaleirinho',
+        'base': pts[0], 'pontos': pts[1:], 'destino': dict(ROTA_DESTINO), 'volta': dict(ROTA_VOLTA), 'pernas': pernas,
+        'distancia_mn': dist, 'ida_mn': ida, 'circuitos_dia': CIRCUITOS_DIA,
+        'fator': arred(CIRCUITOS_DIA * dist / (VOLTAS_DIA * por_volta_mn), 6),   # fecha os 19 circuitos: a posição está na base às 06:59:59
+        'guinada_max_gps': 3, 'corrente': dict(CORRENTE)}
+
+
+def destinos_dados(rota):
+    ini = {p['de']: p['ini_mn'] for p in rota['pernas']}
+    ordem = [('cabras', 'Ilha das Cabras'), ('laranjeiras', 'Ponta das Laranjeiras'), ('taquaras', 'Taquaras'), ('estaleirinho', 'Estaleirinho')]
+    return [{'id': i, 'nome': n, 'mn': arred(ini[i], 1)} for i, n in ordem]
+
+
+_REPLAY = {}
+
+
+def replay_dados():
+    """(replay, rota, campos) do D, calculados uma vez por cenário (o laço de 150 s, as janelas e a rota não mudam entre as chamadas)."""
+    chave = (CENARIO, SIMULACAO, CIRCUITOS_DIA)
+    if chave not in _REPLAY:
+        _REPLAY.clear()
+        _REPLAY[chave] = _replay_dados()
+    return _REPLAY[chave]
+
+
+def _replay_dados():
+    campos = {c: dict(d) for c, d in CAMPOS.items()}
+    alertas = alertas_dados()
+    R = {'duracao': 150, 'passo': 1, 'passo_chave': 5, 'cenario': CENARIO, 'ancora_hora': ANCORA_HORA, 'voltas_fixo': 120}
+    chaves = chaves_laco()
+    R['chaves'] = chaves
+    R['ruido'] = {c: [AMPLITUDE_RUIDO[c], 1100 + ORDEM_LACO.index(c)] for c in ORDEM_LACO}
+    R['ruido']['proa_graus'] = [0.4, SEMENTE_PROA]
+    R['ruido']['profundidade_m'] = [0.2, SEMENTE_PROF]
+    R['fixos'] = dict(FIXOS)
+    Q = [quadro_laco(R, campos, t) for t in range(150)]
+    ger = CONSUMO['gerador_lph']
+    pv = {'diesel_l': arred(sum(q['consumo_lph'] + ger for q in Q) / 3600, 4), 'motores_l': arred(sum(q['consumo_lph'] for q in Q) / 3600, 4),
+          'gerador_l': arred(ger * 150 / 3600, 4), 'distancia_mn': arred(sum(q['sog_nos'] for q in Q) / 3600, 4),
+          'motor_h': arred(150 / 3600, 6), 'gerador_h': arred(150 / 3600, 6)}
+    rota = rota_dados(pv['distancia_mn'])
+    R.update({'velocidade_media_nos': arred(CIRCUITOS_DIA * rota['distancia_mn'] / 24, 4), 'fases': [dict(f) for f in FASES]})
+    R['contadores_base'] = dict(CONTADORES_BASE)
+    R['taxas_h'] = dict(TAXAS_H)
+    R['por_volta'] = pv
+    R['por_dia'] = {'voltas': VOLTAS_DIA, 'diesel_l': arred(VOLTAS_DIA * pv['diesel_l'], 1), 'distancia_mn': arred(VOLTAS_DIA * pv['distancia_mn'], 1),
+                    'motor_h': 24, 'gerador_h': 24}
+    R['diesel_piso_l'] = DIESEL_AVISO_L
+    R['limites'] = LIMITES
+    R['alertas'] = alertas
+    R['janelas'] = deriva_janelas(R, campos)
+    R['diaDeBordo'] = dia_de_bordo(R)
+    return R, rota, campos
+
+
+def dia_de_bordo(R):
+    """replay.diaDeBordo (§1.8–§1.10): o que a microtarefa do rodapé insere só com simulacao: true (abastecimento das 07:00 × 3 dias, d01, d02
+    e a nota fiscal). Litros = o salto do contador na virada (por_dia); nível antes/depois = o diesel % de A − 1 s e de A."""
+    litros = int(math.floor(R['por_dia']['diesel_l'] + 0.5))
+    base = R['contadores_base']['diesel_litros']
+    antes, depois = arred((base - R['por_dia']['diesel_l']) / TANQUES['diesel_l'] * 100, 1), arred(base / TANQUES['diesel_l'] * 100, 1)
+    return {
+        'dias': DIAS_DE_BORDO,
+        'abastecimento': {'h': ANCORA_HORA, 'litros': litros, 'combustivel': 'diesel', 'local': 'posto da marina da base', 'st': 'CONFERIDO',
+                          'nivelAntes': antes, 'nivelDepois': depois, 'nota': 'para a saída das %s · nota fiscal conferida (Documentos)' % ANCORA_HORA},
+        'documento': {'id': 'nf-abast', 'n': 'Nota fiscal do abastecimento', 'cat': 'Notas', 'emitidoHa': 0, 'st': 'CONFERIDA', 'ref': 'ab-0',
+                      'nota': 'abastecimento das %s · sem valores no app' % ANCORA_HORA, 'fonte': DOCS_FONTE},
+        'diario': [
+            {'id': 'd01', 'diasAtras': 0, 'h': ANCORA_HORA, 'sys': 'Navegação', 'tom': 'tele', 'who': 'Lucas', 'pend': False,
+             't': 'Saída da Barra Sul às %s com %d pessoas a bordo: passeio Barra Sul ⇄ Estaleirinho pela Interpraias. Checklist de saída feito; '
+                  'o teste das bombas de porão continua pendente.' % (ANCORA_HORA, EMBARCACAO['pessoasBordo'])},
+            {'id': 'd02', 'diasAtras': 0, 'h': ANCORA_HORA, 'sys': 'Combustível', 'tom': 'ok', 'who': 'Lucas', 'pend': False, 'ref': 'ab-0',
+             't': 'Abastecimento de %s L de diesel no posto da marina da base para a saída das %s, com água completada e servidas esvaziadas; '
+                  'tanques de diesel em %s %%.' % (br(litros), ANCORA_HORA, num_br(depois, 1))}]}
+
+
+# ——————————————————————————————— SAÍDA ———————————————————————————————
+def snapshot_dados():
+    """O snapshot (L, §1.17). Com SIMULACAO = False o repositório público não leva a posição do barco (§4.3): sai a lat/lon do quadro e do gps."""
+    if SIMULACAO:
+        return SNAPSHOT
+    s = dict(SNAPSHOT)
+    s['quadro'] = {k: v for k, v in SNAPSHOT['quadro'].items() if k not in ('lat', 'lon')}
+    s['gps'] = {k: v for k, v in SNAPSHOT['gps'].items() if k in ('satelites',)}
+    return s
+
+
+def dados():
+    R, rota, campos = replay_dados()
+    D = {
         'versao': REF.strftime('%d/%m/%Y'),
         'simulacao': SIMULACAO, 'demo': False,
         'embarcacao': EMBARCACAO, 'posicaoRef': POSICAO_REF, 'mar': MAR,
         'drive': {'raiz': DRIVE, 'pastas': PASTAS, 'arquivos': ARQ},
-        'equipamentos': EQUIPAMENTOS, 'equipNota': EQUIP_NOTA,
-        'snapshot': SNAPSHOT, 'consumo': CONSUMO, 'reserva': RESERVA, 'autonomia': autonomia(), 'serie24v': serie24v_dados(),
+        'equipamentos': EQUIPAMENTOS, 'equipNota': EQUIP_NOTA, 'campos': campos,
+        'snapshot': snapshot_dados(), 'consumo': CONSUMO, 'reserva': RESERVA, 'autonomia': autonomia(),
+    }
+    if SIMULACAO:   # §4.3: com SIMULACAO = False não há rota, destinos, histórico simulado nem dia de bordo, e o replay sai só com limites e alertas
+        D.update({'destinos': destinos_dados(rota), 'rota': rota, 'replay': R})
+    else:
+        D['replay'] = {'limites': R['limites'], 'alertas': R['alertas']}
+    D.update({
+        'serie24v': serie24v_dados(),
         'agenda': agenda_dados(), 'agendaFonte': AGENDA_FONTE, 'tarefasEquipe': tarefas_equipe_dados(),
         'documentos': documentos_dados(), 'docsFonte': DOCS_FONTE,
         'abastecimentos': abastecimentos_dados(), 'abastFonte': ARQ['abast'] + ' · ' + DRIVE + ' › ' + PASTAS['abast'], 'regraAbast': REGRA_ABAST,
@@ -1085,7 +1465,8 @@ def dados():
         'equipe': EQUIPE,
         'faq': faq(), 'guias': FONTE_GUIA,
         'protocolos': PROTOCOLOS,
-    }
+    })
+    return D
 
 
 def serializa(v, nivel=0):
@@ -1227,9 +1608,9 @@ def limpa_fontes(saida, gerados):
     return sorted(apagados)
 
 
-def csv_txt(cab, linhas):
+def csv_txt(cab, linhas, sep=','):
     b = io.StringIO()
-    w = csv.writer(b, lineterminator='\n')
+    w = csv.writer(b, lineterminator='\n', delimiter=sep)
     w.writerow(cab)
     for l in linhas:
         w.writerow(['' if v is None else v for v in l])
@@ -1267,12 +1648,15 @@ def gera_fontes(D):
     F[PASTAS['agenda'] + '/' + ARQ['agenda'] + '.csv'] = csv_txt(
         ['Tarefa', 'Equipamento', 'Responsável', 'Intervalo', 'Última (há N dias)', 'Vence em (dias; negativo = atrasada)', 'Limite de horas'],
         [[t['t'], t['equip'], t['quem'], t['intervalo'], t['ultimaHa'], t['venceEm'], limite_h(t)] for t in AGENDA])
-    F[PASTAS['diario'] + '/' + ARQ['diario'] + '.csv'] = csv_txt(
+    R = D.get('replay') or {}
+    bordo = R.get('diaDeBordo') or {}
+    F[PASTAS['diario'] + '/' + ARQ['diario'] + '.csv'] = csv_txt(   # as linhas do dia de bordo (0) e depois o diário fixo
         [COL_DIA_BORDO, 'Hora', 'Sistema', 'Registro', 'Quem', 'Pendência'],
-        [[e['diasAtras'], e['h'], e['sys'], e['t'], e['who'], 'ABERTA' if e['pend'] else ''] for e in DIARIO])
-    F[PASTAS['abast'] + '/' + ARQ['abast'] + '.csv'] = csv_txt(
+        [[e['diasAtras'], e['h'], e['sys'], e['t'], e['who'], 'ABERTA' if e['pend'] else ''] for e in list(bordo.get('diario') or []) + DIARIO])
+    ab = bordo.get('abastecimento')
+    F[PASTAS['abast'] + '/' + ARQ['abast'] + '.csv'] = csv_txt(   # um por dia de bordo (0, 1 e 2): a lista que a microtarefa do rodapé monta
         [COL_DIA_BORDO, 'Hora', 'Litros', 'Combustível', 'Local', 'Nível depois (%)', 'Situação', 'Observação'],
-        [[a['diasAtras'], a.get('h'), a['litros'], a['combustivel'], a['local'], a['nivelDepois'], a['st'], a['nota']] for a in ABASTECIMENTOS])
+        [[k, ab['h'], br(ab['litros']), ab['combustivel'], ab['local'], ab['nivelDepois'], ab['st'], ab['nota']] for k in range(bordo.get('dias', 0))] if ab else [])
     s = SNAPSHOT
     F[PASTAS['tele'] + '/' + ARQ['snapshot']] = json.dumps({
         'timestamp_utc': '2026-09-26T13:12:00Z', 'lat': s['gps']['lat'], 'lon': s['gps']['lon'], 'sog_nos': s['sog'],
@@ -1281,12 +1665,24 @@ def gera_fontes(D):
         'temp_ar_externo_c': s['ar'], 'temp_agua_c': s['agua'], 'tanque_agua_pct': s['tanques']['agua'],
         'tanque_cinzas_pct': s['tanques']['cinzas'], 'tanque_negras_pct': s['tanques']['negras'],
         'bateria_0_tensao_v': s['bat24'], 'bateria_2_tensao_v': s['bat12'], 'seakeeper_ativo': True,
-        'seakeeper_volante_rpm': None, 'seakeeper_volante_pct': None,
+        'seakeeper_volante_rpm': s['seakeeper']['volante_rpm'], 'seakeeper_volante_pct': s['seakeeper']['volante_pct'],
         'motores_ultima_leitura_ligados': {'hora_local': '2026-09-26T09:31:00-03:00', 'rpm': s['motores']['rpm'], 'oleo_bar': s['motores']['oleo'],
                                            'arrefecimento_c': s['motores']['arref'], 'horimetro_h': s['motores']['horimetro'],
                                            'diesel_pct': [s['diesel']['bb'], s['diesel']['be']]},
         'gerador_horimetro_h': s['gerador']['horas'],
     }, ensure_ascii=False, indent=1) + '\n'
+    if R.get('chaves'):   # a série de 150 s do laço (sem data e sem posição) e o formato do quadro, ambos a partir do D.campos (§1.15, §6.2 C8)
+        C_ = D['campos']
+        cols = [c for c in C_ if c in R['chaves']]
+        Q = [quadro_laco(R, C_, t) for t in range(R['duracao'])]
+        # Ponto e vírgula e vírgula decimal (o CSV do pt-BR): com vírgula entre as colunas, um número curto seguido de um inteiro de 4 dígitos
+        # («5.7,8429») casaria a regex de coordenada da COORD_TEXTO.
+        F[PASTAS['tele'] + '/' + ARQ['serie']] = csv_txt(
+            ['t_s'] + cols, [[t] + [('%.*f' % (C_[c].get('casas', 0), Q[t][c])).replace('.', ',') for c in cols] for t in range(R['duracao'])], sep=';')
+        F[PASTAS['tele'] + '/' + ARQ['formato']] = csv_txt(
+            ['Campo', 'Rótulo', 'Unidade', 'Casas decimais', 'Origem', 'Contador', 'Observação'],
+            [[c, d['rotulo'], d.get('un'), d.get('casas'), d['origem'], {1: 'sobe', -1: 'desce'}.get(d.get('sentido')),
+              d.get('desc') or ('ângulo de 0 a 360 graus' if d.get('ang') else None)] for c, d in C_.items()])
     F[ARQ['leiame'] + '.html'] = '\n'.join([
         '<h1>' + ARQ['leiame'] + '</h1>',
         '<p>Esta pasta é a fonte de dados do app Capitão IA (site estático): guias de bordo, '

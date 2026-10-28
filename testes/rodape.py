@@ -33,8 +33,11 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
   a trava, o rebase forçado) que a conferência tem de acusar; mais a leitura estática do código do rodape.js;
 - as telas com o rodapé (C1, C2, B1, G1, A1, G3, G4): "prazos a partir de" = hoje, sem "falta registrar" vazio, e a A1 sem a data do
   autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4);
-- a G1 (web e app), com a nota fiscal do abastecimento tal como o arquivo gerado a traz hoje e tal como o C8 a entrega (pela microtarefa):
-  situação CONFERIDA, nunca SEM DADOS (CONTRATO §1.8), e sem o bloco FALTA REGISTRAR (revisão do C7).
+- a G1 (web e app), com a nota fiscal do abastecimento tal como o C8 a entrega (pela microtarefa, a partir de replay.diaDeBordo):
+  situação CONFERIDA, nunca SEM DADOS (CONTRATO §1.8), e sem o bloco FALTA REGISTRAR (revisão do C7);
+- C8: o D que o gerador grava já traz o dia de bordo em replay.diaDeBordo (o arquivo tem `abastecimentos: []`, só d03–d09 no diário e
+  7 documentos): a microtarefa o completa, e as listas e os prazos batem com a conta em Python sobre o próprio D gerado; a
+  CapitaoAgora.nivel contra o port em Python (confere.nivel) nos 150 quadros do laço e nos casos de borda do §3.3 (paridade).
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
     python -X utf8 testes/rodape.py
@@ -60,6 +63,7 @@ spec = importlib.util.spec_from_file_location('gerar_demo', os.path.join(RAIZ, '
 sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
 G = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(G)
+import confere as C  # noqa: E402  (o port em Python da nivel e do laço)
 
 falhas = 0
 total = 0
@@ -92,15 +96,16 @@ def ms_de(local):
     return int(local.timestamp() * 1000)
 
 
-# Fixture do dia de bordo (CONTRATO §1.8–§1.10), como o C8 vai gerar: três abastecimentos de 07:00, d01 e d02 no topo e a nota fiscal.
+# Fixture do dia de bordo (CONTRATO §1.8–§1.10) com números de teste (o D que o gerador grava já traz o replay.diaDeBordo de verdade desde o
+# C8; esta fixture o troca por um mínimo, para os testes que contam com valores fixos): três abastecimentos de 07:00, d01 e d02 no topo e a nota fiscal.
 DIA_DE_BORDO = """window.CapitaoDados.replay = { ancora_hora: '07:00', diaDeBordo: { dias: 3,
   abastecimento: { h: '07:00', litros: 1086, combustivel: 'diesel', local: 'posto da marina da base', st: 'CONFERIDO', nivelAntes: 29.6, nivelDepois: 97.5, nota: 'para a saída das 07:00' },
   documento: { id: 'nf-abast', n: 'Nota fiscal do abastecimento', cat: 'Notas', emitidoHa: 0, st: 'CONFERIDA', ref: 'ab-0', nota: 'abastecimento das 07:00', fonte: window.CapitaoDados.docsFonte },
   diario: [ { id: 'd01', diasAtras: 0, h: '07:00', sys: 'Navegação', tom: 'tele', who: 'Lucas', pend: false, t: 'Saída às 07:00 com 4 pessoas a bordo.' },
             { id: 'd02', diasAtras: 0, h: '07:00', sys: 'Combustível', tom: 'ok', who: 'Lucas', pend: false, ref: 'ab-0', t: 'Abastecimento de 1.086 L.' } ] } };"""
-# O arquivo como o C8 o deixa (sem as linhas de transição do C7): abastecimentos vazio, sem a nota fiscal nem a d01/d02 de hoje.
-C8_LIMPO = """(function (D) { D.diario = D.diario.filter(function (x) { return x.id !== 'd01' && x.id !== 'd02'; });
-  D.documentos = D.documentos.filter(function (x) { return x.id !== 'nf-abast'; }); D.abastecimentos = []; })(window.CapitaoDados);"""
+# Linhas "velhas" no arquivo (como o C7 as deixava): a microtarefa as substitui por id, sem duplicar.
+TRANSICAO = """(function (D) { D.diario.unshift({ id: 'd01', diasAtras: 0, h: '07:00', sys: 'Navegação', tom: 'tele', who: 'Lucas', pend: false, t: 'Saída da base com 4 pessoas a bordo.' });
+  D.documentos.push({ id: 'nf-abast', n: 'Nota fiscal do abastecimento', cat: 'Notas', emitidoHa: 14, st: 'CONFERIDA', nota: 'abastecimento antigo' }); })(window.CapitaoDados);"""
 GETTER = """window.__lidas = 0; (function () { var v = window.CapitaoDados.simulacao; Object.defineProperty(window.CapitaoDados, 'simulacao',
   { get: function () { window.__lidas++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); })();"""
 # Leitura de teste para o SOS recusar (revisão do C7): enquanto não havia fonte nenhuma (sem CapitaoReplay, sem coletor, sem D.snapshot.quadro),
@@ -196,20 +201,22 @@ def esperado(local):
     ag.sort(key=lambda x: (x[3], x[0]))
     te = [[t['id'], (hoje + timedelta(days=t['venceEm'])).isoformat(), t['venceEm'], G.status_prazo(t['venceEm'])['st'],
            G.status_prazo(t['venceEm'])['rot'], G.status_prazo(t['venceEm'])['tom']] for t in G.TAREFAS_EQUIPE]
+    bordo_d = G.dados()['replay']['diaDeBordo']   # o que a microtarefa insere (replay.diaDeBordo)
     docs = []
-    for x in G.DOCUMENTOS:
+    for x in list(G.DOCUMENTOS) + [bordo_d['documento']]:
         base = bordo if x['id'] == 'nf-abast' else hoje
         docs.append([x['id'], br(base - timedelta(days=x['emitidoHa'])) if 'emitidoHa' in x else None,
                      br(hoje + timedelta(days=x['venceEm'])) if 'venceEm' in x else None, x.get('venceEm'),
                      G.status_doc(x['venceEm']) if 'venceEm' in x else x['st']])
-    seg = G.segundos_do_diario(G.DIARIO, lambda x: 'b' if x['id'] in G.BORDO_DIARIO else 'h')
+    linhas = list(bordo_d['diario']) + list(G.DIARIO)   # d01 e d02 no topo, depois o diário fixo
+    seg = G.segundos_do_diario(linhas, lambda x: 'b' if x['id'] in G.BORDO_DIARIO else 'h')
     di = []
-    for x, s in zip(G.DIARIO, seg):
+    for x, s_ in zip(linhas, seg):
         base = bordo if x['id'] in G.BORDO_DIARIO else hoje
         d = base - timedelta(days=x['diasAtras'])
-        di.append([x['id'], dm(d), '%sT%s:%02d-03:00' % (d.isoformat(), x['h'], s)])
+        di.append([x['id'], dm(d), '%sT%s:%02d-03:00' % (d.isoformat(), x['h'], s_)])
     return {'versao': br(hoje), 'agenda': ag, 'tarefas': te, 'docs': docs, 'diario': di,
-            'abast': [[None, a['diasAtras'], br(bordo - timedelta(days=a['diasAtras']))] for a in G.ABASTECIMENTOS],
+            'abast': [['ab-%d' % k, k, br(bordo - timedelta(days=k))] for k in range(bordo_d['dias'])],
             'serie': [dm(bordo - timedelta(days=s['diasAtras'])) for s in G.SERIE_24V]}
 
 
@@ -221,8 +228,7 @@ def limpa(estado):
 
 
 def sem_nulos(x, caminho=''):
-    """Os null, '', NaN e listas vazias do D (menos a lista de abastecimentos, que é a única que pode ser vazia; o D.snapshot tem os
-    null do C8 e fica de fora até lá)."""
+    """Os null, '', NaN e listas vazias do D (menos a lista de abastecimentos, que é a única que pode ser vazia no arquivo gerado)."""
     out = []
     if x is None:
         out.append(caminho)
@@ -231,8 +237,6 @@ def sem_nulos(x, caminho=''):
             out.append(caminho + " = ''")
     elif isinstance(x, dict):
         for k, v in x.items():
-            if caminho == '' and k == 'snapshot':
-                continue
             out += sem_nulos(v, caminho + '.' + k)
     elif isinstance(x, list):
         if not x and caminho != '.abastecimentos':
@@ -259,7 +263,7 @@ def relogio_e_listas(b):
         e = limpa(e)
         for k in ('versao', 'agenda', 'tarefas', 'docs', 'diario', 'serie'):
             ok('%s: %s igual à conta em Python' % (nome, k), e[k] == esp[k], [(a, b2) for a, b2 in zip(e[k], esp[k]) if a != b2][:3] if isinstance(e[k], list) else (e[k], esp[k]))
-        ok('%s: abastecimentos com o d do dia de bordo' % nome, [[a[1], a[2]] for a in e['abast']] == [[a[1], a[2]] for a in esp['abast']], e['abast'])
+        ok('%s: abastecimentos ab-0…ab-2 com o d do dia de bordo' % nome, e['abast'] == esp['abast'], e['abast'])
         ag = e['agenda']
         ok('%s: 14 tarefas, 3 atrasadas, ordem por dn' % nome, len(ag) == 14 and sum(1 for t in ag if t[3] < 0) == 3 and [t[3] for t in ag] == sorted(t[3] for t in ag),
            [(t[0], t[3]) for t in ag])
@@ -287,14 +291,17 @@ def idempotencia(b):
       for (const k of [3, 40, -10, 0]) { A.rebase(t + k * dia, true); snaps.push(JSON.stringify(D.snapshot) === window.__snap0); }
       const depois = JSON.stringify([D.agenda.map((x) => x.vence), D.diario.map((x) => x.iso)]);
       A.rebase(t + 3 * dia, true); const mudou = JSON.stringify([D.agenda.map((x) => x.vence), D.diario.map((x) => x.iso)]);
-      return { a, f, idem: s0 === s1 && s1 === s2, reserva: window.__reserva === s0, mesmos: Object.keys(refs).every((k) => D[k] === refs[k]), snaps,
+      // a única diferença entre o D que o gerador gravou (a reserva) e o de depois do rodapé é o dia de bordo que a microtarefa insere (§4.1)
+      const sem = JSON.parse(s0); sem.abastecimentos = []; sem.diario = sem.diario.filter((x) => x.id !== 'd01' && x.id !== 'd02');
+      sem.documentos = sem.documentos.filter((x) => x.id !== 'nf-abast');
+      return { a, f, idem: s0 === s1 && s1 === s2, reserva: window.__reserva === JSON.stringify(sem), mesmos: Object.keys(refs).every((k) => D[k] === refs[k]), snaps,
                igual: antes === depois, mudou: mudou !== antes, d: JSON.parse(JSON.stringify(D)) }; }""")
-    ok('rebase na REF: o D inteiro igual ao que o gerador gravou (reserva, byte a byte)', r['reserva'])
+    ok('rebase na REF: o D inteiro igual ao que o gerador gravou (reserva, byte a byte), fora o dia de bordo que a microtarefa insere', r['reserva'])
     ok('rebase 2× = 1×: o segundo devolve false, o forçado true, e o D não muda', r['a'] is False and r['f'] is True and r['idem'])
     ok('as listas do D são as mesmas (===) depois de rebases em outros dias; as datas mudam e voltam', r['mesmos'] and r['mudou'] and r['igual'])
     ok('o D.snapshot não muda (nem um byte) depois de rebases em +3, +40, −10 e 0 dias', all(r['snaps']), r['snaps'])
     nulos = sem_nulos(r['d'])
-    ok('nenhum null, \'\' ou lista vazia no D depois do rebase (fora o D.snapshot, do C8)', not nulos, nulos[:5])
+    ok('nenhum null, \'\' ou lista vazia no D depois do rebase e da microtarefa (o snapshot sem null desde o C8)', not nulos, nulos[:5])
     ok('sem erro de script', not pg.erros, pg.erros)
     pg.context.close()
     print('Port do status_prazo e do status dos documentos contra o do gerador')
@@ -360,7 +367,7 @@ def dia_de_bordo(b):
       diario: D.diario.slice(0, 3).map((x) => [x.id, x.d, x.iso]), nf: D.documentos.filter((x) => x.id === 'nf-abast').map((x) => [x.ref || null, x.emitido, x.dn === undefined, x.vence === undefined, x.st]),
       ids: D.diario.map((x) => x.id), t0: D.diario[0].t, lidas: window.__lidas, lidasReplay: window.__lidasReplay, inst: window.CapitaoAgora.instante(),
       fontes: [!!window.CapitaoReplay, !!(window.CapitaoDados.snapshot && window.CapitaoDados.snapshot.quadro), !!(window.CapitaoTelemetria && window.CapitaoTelemetria.atual && window.CapitaoTelemetria.atual())], versao: D.versao, atrasadas: D.agenda.filter((t) => t.dn < 0).length }; }"""
-    pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO + GETTER)
+    pg = abre(b, local, antes=DIA_DE_BORDO + GETTER)
     r = pg.evaluate(LISTAS)
     ok('simulacao true: ab-0…ab-2 em abastecimentos, com diasAtras 0, 1 e 2 e h 07:00', [a[0] for a in r['ab']] == ['ab-0', 'ab-1', 'ab-2'] and [a[1] for a in r['ab']] == [0, 1, 2]
        and all(a[3] == '07:00' and a[4] == 1086 for a in r['ab']), r['ab'])
@@ -369,16 +376,17 @@ def dia_de_bordo(b):
        r['ids'][:3] == ['d01', 'd02', 'd03'] and len(r['ids']) == len(set(r['ids'])) and r['diario'][0][2] == '%sT07:00:01-03:00' % bordo.isoformat()
        and r['diario'][1][2] == '%sT07:00:00-03:00' % bordo.isoformat() and r['diario'][0][1] == dm(bordo), r['diario'])
     ok('a nota fiscal do dia de bordo entra por id (uma só, com ref ab-0 e o emitido do dia de bordo, sem vence nem dn)', r['nf'] == [['ab-0', br(bordo), True, True, 'CONFERIDA']], r['nf'])
-    ok('fora do SOS a flag é lida (o getter conta ≥ 1: o teste do SOS vale) e o instante sem fonte é null', r['lidas'] >= 1 and r['inst'] is None, (r['lidas'], r['inst']))
+    ok('fora do SOS a flag é lida (o getter conta ≥ 1: o teste do SOS vale) e, sem replay nem coletor, o instante é o da reserva (snapshot.quadro)',
+       r['lidas'] >= 1 and r['inst'] is not None and r['inst']['fonte'] == 'snapshot', (r['lidas'], r['inst'] and r['inst']['fonte']))
     ok('sem erro de script', not pg.erros, pg.erros)
     pg.context.close()
-    pg = abre(b, local, antes=DIA_DE_BORDO)
+    pg = abre(b, local, antes=TRANSICAO + DIA_DE_BORDO)
     r = pg.evaluate(LISTAS)
-    ok('sobre as linhas de transição do C7 a microtarefa substitui por id, sem duplicar (d01, d02 e a nota fiscal), e ab-0…ab-2 vão para o topo',
+    ok('sobre linhas velhas no arquivo (d01 e a nota fiscal) a microtarefa substitui por id, sem duplicar, e ab-0…ab-2 vão para o topo',
        len(r['ids']) == len(set(r['ids'])) and r['ids'][0] == 'd01' and r['t0'].startswith('Saída às 07:00') and [a[0] for a in r['ab'][:3]] == ['ab-0', 'ab-1', 'ab-2'] and len(r['nf']) == 1
        and r['nf'][0][0] == 'ab-0', (r['ids'], r['ab'][:3], r['nf']))
     pg.context.close()
-    pg = abre(b, local, antes=C8_LIMPO + DIA_DE_BORDO, depois='window.CapitaoDados.simulacao = false;')
+    pg = abre(b, local, antes=DIA_DE_BORDO, depois='window.CapitaoDados.simulacao = false;')
     r = pg.evaluate(LISTAS)
     ok('simulacao = false no fim do arquivo: nenhuma linha do dia de bordo (abastecimentos vazio, o diário começa na d03, sem nota fiscal)',
        r['ab'] == [] and r['ids'][0] == 'd03' and r['nf'] == [], (r['ab'], r['ids'][:3], r['nf']))
@@ -386,7 +394,7 @@ def dia_de_bordo(b):
     pg.context.close()
     # Revisão do C7: com as três fontes de leitura à mão e o D.replay contado, o SOS tem de recusar todas. Só a guarda /SOS-/ do instante()
     # devolve null aqui (a mutação "sem a guarda" devolvia o replay, o coletor ou a reserva com posição); o controle fora do SOS usa a mesma fixture.
-    fixture = C8_LIMPO + DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
+    fixture = DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
     for nome, caminho, extra in (('S1-SOS-Web', '/S1-SOS-Web.dc.html', ''), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html', ''),
                                  ('rota mínima /SOS-teste.html', '/SOS-teste.html', FONTE_COLETOR)):
         pg = abre(b, local, antes=fixture + extra, caminho=caminho)
@@ -417,10 +425,10 @@ def sem_escrita_no_aparelho(b):
     olhava o Storage (três mutantes sobreviviam). Aqui o contador do abre() separa as escritas do rodapé (pilha no capitao-dados.js)."""
     print('O rodapé não grava no aparelho (localStorage, sessionStorage, indexedDB): na carga, no uso e nos mutantes que gravam')
     local = datetime(2026, 10, 27, 12, 0, tzinfo=BR)
-    fixture = C8_LIMPO + DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
+    fixture = DIA_DE_BORDO + GETTER + GETTER_REPLAY + FONTE_REPLAY + FONTE_RESERVA
     DIAS = [3, 40, -10, 0]
     for nome, caminho, antes, sessao in (('rota mínima, fora do SOS (o dia de bordo entra pela microtarefa)', '/rodape.html', fixture + FONTE_COLETOR, False),
-                                         ('A1-Ponte-Web (tela de verdade, com sessão)', '/A1-Ponte-Web.dc.html', C8_LIMPO + DIA_DE_BORDO, True),
+                                         ('A1-Ponte-Web (tela de verdade, com sessão)', '/A1-Ponte-Web.dc.html', DIA_DE_BORDO, True),
                                          ('S1-SOS-Web', '/S1-SOS-Web.dc.html', fixture, False), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html', fixture, False),
                                          ('rota mínima /SOS-teste.html', '/SOS-teste.html', fixture + FONTE_COLETOR, False)):
         pg = abre(b, local, antes=antes, caminho=caminho, sessao=sessao)
@@ -566,7 +574,10 @@ def instante_e_trava(b):
     ok('coletor real (sem simulado): fonte coletor, "coletor NMEA · ao vivo 12:01:SS" e a leitura nunca é presa (22,6)',
        i['fonte'] == 'coletor' and i['fonteTxt'] == 'coletor NMEA · ao vivo ' + i['hora'] and i['hora'].startswith('12:01:') and i['q']['temp_ar_externo_c'] == 22.6 and 'seg' not in i, i)
     pg.evaluate("() => { delete window.CapitaoTelemetria; delete window.CapitaoReplay; }")
-    ok('sem nenhuma fonte (e sem quadro de reserva): null, sem erro', I() is None and not pg.erros, pg.erros)
+    ok('sem replay nem coletor, o instante é o do D.snapshot.quadro que o gerador grava (C8): fonte snapshot, 848 L, ÚLTIMA LEITURA 26/09 10:12',
+       (lambda i: i['fonte'] == 'snapshot' and i['q']['diesel_litros'] == 848 and i['selo']['texto'] == 'ÚLTIMA LEITURA · 26/09 10:12')(I()), pg.erros)
+    pg.evaluate("() => { delete window.CapitaoDados.snapshot.quadro; }")
+    ok('sem nenhuma fonte (nem quadro de reserva): null, sem erro', I() is None and not pg.erros, pg.erros)
     pg.evaluate("""() => { window.CapitaoDados.snapshot.quadro = { timestamp_utc: '2026-09-26T13:12:00Z', diesel_litros: 848, temp_ar_externo_c: 22.6, temp_agua_c: 20.1 }; }""")
     i = I()
     ok('reserva do D.snapshot.quadro: fonte snapshot, hora 10:12:00 do fuso, "leitura de 26/09 10:12" e selo ÚLTIMA LEITURA',
@@ -576,7 +587,9 @@ def instante_e_trava(b):
     ok('sem erro de script', not pg.erros, pg.erros)
     pg.context.close()
     pg = abre(b, local)
-    ok('o instante sem a reserva do C8 e sem replay é null (sem erro)', pg.evaluate("() => window.CapitaoAgora.instante()") is None and not pg.erros, pg.erros)
+    i = pg.evaluate("() => { const i = window.CapitaoAgora.instante(); return i && JSON.parse(JSON.stringify(i)); }")
+    ok('sem replay e sem coletor, o instante vem da reserva do D.snapshot.quadro do C8 (fonte snapshot, ÚLTIMA LEITURA 26/09 10:12, sem erro)',
+       i and i['fonte'] == 'snapshot' and i['selo'] == {'tom': 'warn', 'texto': 'ÚLTIMA LEITURA · 26/09 10:12'} and i['q']['diesel_litros'] == 848 and not pg.erros, (i, pg.erros))
     pg.context.close()
 
 
@@ -599,6 +612,62 @@ def formatadores(b):
     ok('campo: pelo catálogo (casas, mil, ang); texto como veio; null se falta; sem catálogo, inteiro', r['campo'] == ['1.017,1', '2049', '059', None, 'avante', None, '7'], r['campo'])
     ok('fuso e deslocamento (America/Sao_Paulo, −180 min)', r['fuso'] == 'America/Sao_Paulo' and r['off'] == -180, (r['fuso'], r['off']))
     ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+
+
+def casos_nivel(D):
+    """(campo, q) para a paridade da nivel: os 150 quadros do laço (cada campo com limite) e os casos de borda do §3.3 de cada limite (valor =
+    limite → o normal; limite ± 1 unidade da última casa → o nível de fora; rpm 999 e 1.000 nos regimes do óleo; o ativo_se desligado → null)."""
+    R, cam = D['replay'], D['campos']
+    out = [(c, C.quadro_laco(R, cam, t)) for t in range(R['duracao']) for c in R['limites']]
+    for campo, L in R['limites'].items():
+        un = 10 ** -C.casas_de(cam, campo)
+        a = L.get('ativo_se') or {}
+        for Rg in L.get('regimes') or [L]:
+            base = {}
+            if a.get('campo'):
+                base[a['campo']] = a['acima'] + 1 if 'acima' in a else a['igual']
+            if 'rpm_campo' in Rg:
+                base[Rg['rpm_campo']] = Rg['rpm_ate'] - 1 if 'rpm_ate' in Rg else Rg.get('rpm_de', 0)
+                if a.get('campo') == Rg['rpm_campo'] and 'acima' in a and base[Rg['rpm_campo']] <= a['acima']:
+                    base[Rg['rpm_campo']] = a['acima'] + 1
+            for k in ('normal', 'aviso', 'critico'):
+                for lim in (Rg.get(k) or {}).values():
+                    for v in (lim, lim - un, lim + un):
+                        out.append((campo, dict(base, **{campo: round(v, 6)})))
+        for rpm in (0, 999, 1000):   # a fronteira dos regimes e o motor parado
+            for Rg in L.get('regimes') or []:
+                out.append((campo, {Rg['rpm_campo']: rpm, campo: 3.0}))
+        if a.get('campo'):
+            off = a['acima'] if 'acima' in a else (not a['igual'])   # ativo_se desligado: não avalia
+            out.append((campo, {a['campo']: off, campo: 0}))
+        out.append((campo, {}))   # campo ausente: não avalia
+        out.append((campo, {campo: None}))
+    return out
+
+
+def paridade_nivel(b):
+    print('CapitaoAgora.nivel() contra o port em Python (confere.nivel): nos 150 quadros do laço e nos casos de borda do §3.3')
+    D = G.dados()
+    casos = casos_nivel(D)
+    pg = abre(b, datetime(2026, 10, 27, 12, 0, tzinfo=BR))
+    js = pg.evaluate("(casos) => casos.map(([c, q]) => window.CapitaoAgora.nivel(c, q))", casos)
+    py = [C.nivel(D['replay']['limites'], D['campos'], c, q) for c, q in casos]
+    difs = [(c, q, a, e) for (c, q), a, e in zip(casos, js, py) if json.loads(json.dumps(a)) != json.loads(json.dumps(e))]
+    n_av = sum(1 for e in py if e and e['nivel'] == 'aviso')
+    ok('nivel(): JS = Python em %d casos (%d avisos, %d sem avaliação, %d normais)' % (len(casos), n_av, sum(1 for e in py if e is None), sum(1 for e in py if e and e['nivel'] == 'normal')),
+       not difs and len(casos) > 3000 and n_av > 0, difs[:3])
+    # a janela do AVISO de arrefecimento do BE, pelo JS, nos valores do laço: 99 a 116 s (CONTRATO §3.4)
+    jan = [t for t in range(D['replay']['duracao']) if (pg.evaluate("(q) => window.CapitaoAgora.nivel('motor_be_arref_c', q)", C.quadro_laco(D['replay'], D['campos'], t)) or {}).get('nivel') == 'aviso']
+    ok('nivel(): motor_be_arref_c em aviso de 99 a 116 s (18 s contínuos), pelo JS', jan == list(range(99, 117)), jan)
+    ok('nivel(): campo sem limite, quadro ausente e valor que não é número dão null', pg.evaluate(
+        "() => { const n = window.CapitaoAgora.nivel; return [n('lat', { lat: 1 }), n('motor_be_arref_c', null), n('motor_be_arref_c', { motor_be_rpm: 2000, motor_be_arref_c: 'x' })]; }") == [None, None, None])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.context.close()
+    # Em /SOS-/ a nivel não lê o replay (nenhuma leitura de D.replay)
+    pg = abre(b, datetime(2026, 10, 27, 12, 0, tzinfo=BR), antes=GETTER_REPLAY, caminho='/SOS-teste.html')
+    r = pg.evaluate("() => [window.CapitaoAgora.nivel('motor_be_arref_c', { motor_be_rpm: 2000, motor_be_arref_c: 95 }), window.__lidasReplay]")
+    ok('em /SOS-/ a nivel devolve null e nunca lê o D.replay', r == [None, 0], r)
     pg.context.close()
 
 
@@ -635,14 +704,14 @@ def telas(b):
         pg.context.close()
     # Revisão do C7: a nota fiscal do abastecimento (sem prazo, st CONFERIDA, CONTRATO §1.8) caía no grupo SEM DADOS da G1: situação e validade
     # "SEM DADOS", "1 SEM DADOS" no resumo e o bloco FALTA REGISTRAR com a nota. Decisão (b): nenhum selo em dado de bordo. Duas formas: o arquivo
-    # gerado de hoje (a nota em documentos) e a do C8 (a nota entra pela microtarefa, junto com ab-0 e d01/d02): o problema não acaba no C8.
+    # gerado de antes do C8 (a nota em documentos) e a do C8 (a nota entra pela microtarefa, junto com ab-0 e d01/d02): hoje só a segunda existe.
     NF = """() => {
       const nome = 'Nota fiscal do abastecimento', outros = ['Seguro da embarcação', 'Licença de Estação', 'Laudo de vistoria', 'Garantia do estabilizador', 'Certificado do EPIRB'];
       return [...document.querySelectorAll('*')].filter((x) => x.children.length === 0 && x.textContent.trim() === nome).map((e) => {
         while (e.parentElement && !outros.some((o) => e.parentElement.innerText.includes(o))) e = e.parentElement;   // a linha: o maior bloco que só tem esta nota
         return e.innerText; }); }"""
     for tela, app in (('G1-Documentos-Web', False), ('G1-Documentos-Mobile', True)):
-        for modo, antes in (('arquivo gerado', ''), ('forma do C8 (nota fiscal pela microtarefa)', C8_LIMPO + DIA_DE_BORDO)):
+        for modo, antes in (('nota fiscal pela microtarefa, do replay.diaDeBordo gerado', ''),):
             pg = abre(b, local, antes=antes, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
             pg.wait_for_timeout(1800)
             linhas, txt = pg.evaluate(NF), pg.evaluate("() => document.body.innerText")
@@ -665,6 +734,7 @@ def main():
         contagens(b)
         instante_e_trava(b)
         formatadores(b)
+        paridade_nivel(b)
         telas(b)
         b.close()
     print('%d conferências · %d falhas' % (total, falhas))

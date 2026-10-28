@@ -219,7 +219,7 @@ class Component extends DCLogic {
     const geradorAC = () => { const G = S.gerador || {}; linha('Gerador Onan (energia AC)', G.estado ? String(G.estado).split(' ')[0].toUpperCase() : 'SEM LEITURA', (G.estado || SD) + (G.hora ? ' · leitura ' + G.hora : ''), G.estado ? 'ok' : 'ink'); snap(); };
     const GP = S.gps || {};
     linha('GPS', GP.satelites ? GP.satelites + ' satélites' : 'SEM LEITURA', GP.texto || 'posição SEM LEITURA', GP.satelites ? 'tele' : 'ink'); snap();
-    linha('Posição do ferro (âncora)', S.ancora == null ? 'SEM LEITURA' : String(S.ancora), (S.estado || SD) + (S.local ? ' · ' + S.local : ''), 'ink');
+    linha('Posição do ferro (âncora)', S.ancora == null ? 'SEM LEITURA' : typeof S.ancora === 'object' ? String(S.ancora.estado || '').toUpperCase() + (typeof S.ancora.cabo_m === 'number' ? ' · ' + nb(S.ancora.cabo_m, 0) + ' m' : '') : String(S.ancora), (S.estado || SD) + (S.local ? ' · ' + S.local : ''), 'ink');
     linha('MMSI da embarcação (DSC)', E.mmsi || SD, E.mmsiNota || 'MMSI ' + SD, E.mmsi ? 'violeta' : 'ink'); addF(E.fonte);
     agenda(/garmin|fusion|vhf/i);
     docs(/vhf|r[aá]dio/i);

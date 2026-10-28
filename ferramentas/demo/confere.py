@@ -27,11 +27,13 @@ termo delas é impresso nem gravado.
 Também ficam aqui os ports em Python que as asserções e o gerador usam, escritos como no JavaScript:
   - norm/pad/has, emergencia() e oleo() do capitao-brain.js, com a lista SOS ampliada da 1b (PROMPT §2.3);
   - SEGURANCA_PALAVRAS e segura() (§1.5), uma fonte só das listas;
-  - o laço de 150 s (§3.2: chaves, ruído por hash e arredondamento) e a CapitaoAgora.nivel (§3.3). A paridade com o JS é da
-    Fase 2; a rota e os contadores do em() entram no C8 (PORT_ROTA).
+  - o laço de 150 s (§3.2: chaves, ruído por hash e arredondamento), a CapitaoAgora.nivel (§3.3) e o em() inteiro (§1.22, §1.24: laço,
+    rota, contadores, derivados e alarmes, PORT_ROTA, C8). A paridade com o JS é da Fase 2.
 Sem lookbehind nas regex que vão para o JavaScript (estas ficam só no Python).
 """
+import calendar
 import csv
+import datetime
 import hashlib
 import io
 import json
@@ -72,14 +74,8 @@ def em_relatorio(nome, msg):
 # (14 tarefas com deslocamento, sistema e palavras), os documentos (o TIE com id e número), o diário, a equipe e as fontes com prazos
 # relativos (§1.7–§1.9, §1.11, §5): saíram as pendências do NULO (documentos sem prazo omitem vence e dn), REGISTRO, TERCEIROS, IDS,
 # AGENDA e FONTES_RELATIVAS.
-PENDENTES = {
-    'NULO': {
-        'C8': ['snapshot.porao: None', 'snapshot.ancora: None']   # §1.17 sem null; a leitura da pasta 05 é refeita (e renomeada)
-              + ['fontes/05 Telemetria — coletor NMEA/Leitura do coletor NMEA — 26-09-2026 10h12.json:seakeeper_volante_%s: None' % k
-                 for k in ('rpm', 'pct')],
-    },
-}
-COMMITS_PENDENTES = ('C8',)   # o C4 completou a embarcação (§1.2), o C5, os equipamentos e os guias (§1.4, §1.5), o C6, o D.protocolos (§1.3) e o C7, a agenda, os documentos, o diário e as fontes relativas (§1.7–§1.9, §5)
+PENDENTES = {}   # o C8 completou o snapshot (porao, ancora e o volante da leitura da pasta 05, §1.17): nenhuma pendência congelada
+COMMITS_PENDENTES = ()   # o C4 completou a embarcação, o C5 os equipamentos e os guias, o C6 o D.protocolos, o C7 a agenda, os documentos, o diário e as fontes relativas e o C8 o snapshot, a rota e o replay
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
 # Única exceção da varredura de termos na Fase 1 (§1.2): sai na 1b, junto com o campo.
@@ -154,8 +150,11 @@ IDENT_EXIGE_PESSOA = {'caiu', 'cair', 'cai', 'queda', 'vista', 'mar'}
 MINIMO_FAQ = re.compile(r'(?:EM|SF|EP)-\d+|MO-04|EL-01|EL-05|PO-04|AI-02|CK-03')
 # Ocorrências permitidas na pasta do Avanti, por candidato (COLISAO_MODELOS; ok do proprietário, §8.2 ponto 9).
 EXCECOES_MODELO = {'Seakeeper 3': 1}
-# Port da rota e dos contadores do em() (§1.14, §1.22; entra no C8). Sem ele, um D com rota reprova a EMENDA_ROTA.
-PORT_ROTA = None
+# Port do em() (§1.14, §1.22, §1.24; C8): definido mais abaixo (PORT_ROTA = em). Um D com rota que o port não consegue rodar reprova a EMENDA_ROTA.
+
+# O que o replay de uma simulação carrega (§1.16), fora o que a rota e o laço já exigem pelo catálogo.
+REPLAY_CHAVES = ('duracao', 'passo', 'passo_chave', 'cenario', 'ancora_hora', 'voltas_fixo', 'velocidade_media_nos', 'fases', 'chaves', 'ruido', 'fixos',
+                 'contadores_base', 'taxas_h', 'por_volta', 'por_dia', 'diesel_piso_l', 'limites', 'alertas', 'janelas', 'diaDeBordo')
 
 TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 80, 'faq-equipamentos.json': 100}   # KB = 1.024 bytes
 DIAS_MESES_PADRAO = {1: 31, 6: 184, 12: 365}
@@ -503,6 +502,248 @@ def limiares(R):
             for kk in ('de', 'ate', 'abaixo', 'acima') if kk in R[k]]
 
 
+# ——————————————————————————————— port do em() (§1.22, §1.24; C8) ———————————————————————————————
+# O quadro de um segundo do dia de bordo (seg = segundos desde a âncora, 0…86.399): laço de 150 s (§3.2) + rota + contadores +
+# derivados + alarmes. É o que o CapitaoReplay.em() faz no JavaScript (Fase 2; a paridade é testada lá). Função pura de `seg`: sem
+# estado. As contas seguem o texto do contrato; o que ele deixa em aberto, decidido aqui:
+#   - lat e lon andam em linha reta de ponto a ponto, pela fração x/mn da perna (as mn e o rumo de cada perna vêm de D.rota.pernas,
+#     que o cliente não recalcula); a posição ao longo do circuito é s = distância percorrida × fator, módulo o circuito;
+#   - o COG faz um arco de guinada de |Δ|/guinada_max_gps × nós de cruzeiro/3600 mn em volta de cada ponto, centrado nele (função de s);
+#   - o destino, a distância ao destino e a ETA vêm da posição LINEARIZADA (seg × velocidade_media_nos), para o HH:MM não piscar na
+#     volta; a distância ao destino é medida na posição de verdade e nunca fica negativa;
+#   - a ETA arredonda ao minuto mais próximo (o HH:MM de uma chegada às 06:59:59,6 é 07:00, não 06:59);
+#   - o desequilíbrio entre os dois tanques de diesel é de 3 L (diesel_bb_pct = (L/2 + 3)/capacidade do tanque).
+ANCORA_REF_S = calendar.timegm((2026, 9, 26, 10, 0, 0))   # 07:00 de 26/09/2026 em America/Sao_Paulo (UTC−3): âncora de referência dos testes
+DESEQUILIBRIO_DIESEL_L = 3
+
+
+def _wrap(x):
+    return ((x + 540) % 360) - 180
+
+
+def mn_entre(a, b):
+    """Distância em milhas náuticas entre dois pontos (lat, lon): plano local, com o cosseno da latitude média (a escala das pernas da rota)."""
+    la = math.radians((a[0] + b[0]) / 2)
+    return math.hypot((b[1] - a[1]) * 60 * math.cos(la), (b[0] - a[0]) * 60)
+
+
+def rumo_entre(a, b):
+    la = math.radians((a[0] + b[0]) / 2)
+    return (math.degrees(math.atan2((b[1] - a[1]) * math.cos(la), b[0] - a[0])) + 360) % 360
+
+
+def _iso_utc(s):
+    return datetime.datetime.fromtimestamp(s, datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+_PORTS = {}
+
+
+def preparar(D):
+    """Constantes do em() para este D (séries de 150 s do laço, somas acumuladas e arcos da rota), guardadas pelo conteúdo dele."""
+    R, rota, C = D['replay'], D['rota'], D['campos']
+    chave = hashlib.sha1(json.dumps([R, rota, C, (D.get('consumo') or {}), (D.get('embarcacao') or {}).get('tanques')],
+                                    sort_keys=True, default=str).encode('utf-8')).hexdigest()
+    if chave in _PORTS:
+        _PORTS[chave] = _PORTS.pop(chave)   # o mais recente por último
+        return _PORTS[chave]
+    n = R['duracao']
+    Q = [quadro_laco(R, C, t) for t in range(n)]
+    ger = (D.get('consumo') or {}).get('gerador_lph', 0)
+    cumD, cumM = [0.0], [0.0]
+    for q in Q:
+        cumD.append(cumD[-1] + (q['consumo_lph'] + ger) / 3600)
+        cumM.append(cumM[-1] + q['sog_nos'] / 3600)
+    pernas = rota['pernas']
+    g, nos = rota.get('guinada_max_gps') or 3, ((D.get('consumo') or {}).get('cruzeiro') or {}).get('nos', 18)
+    arcos = []
+    for i, p in enumerate(pernas):
+        d = _wrap(p['rumo'] - pernas[i - 1]['rumo'])
+        arcos.append((p['ini_mn'], d, abs(d) / g * nos / 3600, pernas[i - 1]['rumo']))
+    tq = (D.get('embarcacao') or {}).get('tanques') or {}
+    P = {'D': D, 'R': R, 'rota': rota, 'C': C, 'n': n, 'Q': Q, 'cumD': cumD, 'cumM': cumM, 'tot': rota['distancia_mn'], 'ida': rota['ida_mn'],
+         'pontos': {p['id']: p for p in [rota['base']] + list(rota['pontos'])}, 'pernas': pernas, 'arcos': arcos,
+         'alerta_de': {a['campo']: i for i, a in (R.get('alertas') or {}).items()},
+         'tanque_l': tq.get('diesel_l', 0) / (tq.get('diesel_n') or 2), 'passos': None}
+    while len(_PORTS) >= 6:   # poucos na memória: os testes plantam centenas de D, quase todos com a mesma rota e o mesmo replay
+        _PORTS.pop(next(iter(_PORTS)))
+    _PORTS[chave] = P
+    return P
+
+
+def _cog(P, s):
+    """(COG em graus, graus por mn) na posição s do circuito (0 ≤ s < circuito): a perna, ou o arco de guinada em volta do ponto."""
+    tot = P['tot']
+    for ini, d, Lr, prev in P['arcos']:
+        if Lr <= 0:
+            continue
+        for base in (ini, ini + tot, ini - tot):
+            if abs(s - base) < Lr / 2:
+                return (prev + d * ((s - base) + Lr / 2) / Lr) % 360, d / Lr
+    for p in P['pernas']:
+        if p['ini_mn'] <= s < p['ini_mn'] + p['mn']:
+            return p['rumo'], 0.0
+    return P['pernas'][-1]['rumo'], 0.0
+
+
+def em(P, seg, ancora_s=ANCORA_REF_S, com_alarmes=True):
+    """O quadro do segundo `seg` do dia de bordo, na ordem do D.campos (primeiro os campos do catálogo, depois o que sobrar). Sem
+    alarmes (varredura do dia) o campo `alarmes` não é calculado."""
+    R, rota, C, n = P['R'], P['rota'], P['C'], P['n']
+    seg = int(seg)
+    t, v = seg % n, seg // n
+    q0 = P['Q'][t]
+    cb, pv, tx = R['contadores_base'], R['por_volta'], R['taxas_h']
+    cas = lambda c: casas_de(C, c)
+    o = dict(q0)
+    # contadores (valor = base + voltas · por_volta + soma parcial da tabela de 150 s; horímetros e tanques pelo relógio)
+    diesel = cb['diesel_litros'] - (v * pv['diesel_l'] + P['cumD'][t])
+    diesel = max(diesel, R['diesel_piso_l'])
+    dist = cb['distancia_mn'] + v * pv['distancia_mn'] + P['cumM'][t]
+    h = seg / 3600
+    cont = {'diesel_litros': diesel, 'distancia_mn': dist}
+    for c in ('motor_bb_horimetro_h', 'motor_be_horimetro_h', 'gerador_horimetro_h'):
+        cont[c] = cb[c] + h
+    for c, k in tx.items():
+        cont[c] = cb[c] + k * h
+    for c, x in cont.items():
+        o[c] = arred(x, cas(c))
+    cap = P['tanque_l']
+    o['diesel_bb_pct'] = arred((diesel / 2 + DESEQUILIBRIO_DIESEL_L) / cap * 100, cas('diesel_bb_pct'))
+    o['diesel_be_pct'] = arred((diesel / 2 - DESEQUILIBRIO_DIESEL_L) / cap * 100, cas('diesel_be_pct'))
+    # rota: posição, perna e rumo
+    tot, ida_mn = P['tot'], P['ida']
+    s = dist * rota['fator']
+    sm = s % tot
+    pernas = P['pernas']
+    i = next((k for k, p in enumerate(pernas) if sm < p['ini_mn'] + p['mn']), len(pernas) - 1)
+    p = pernas[i]
+    x = min(max(sm - p['ini_mn'], 0.0), p['mn'])
+    a, b = P['pontos'][p['de']], P['pontos'][p['para']]
+    f = x / p['mn']
+    o['lat'] = arred(a['lat'] + (b['lat'] - a['lat']) * f, cas('lat'))
+    o['lon'] = arred(a['lon'] + (b['lon'] - a['lon']) * f, cas('lon'))
+    cog, gpm = _cog(P, sm)
+    sog = q0['sog_nos']
+    cor = rota['corrente']
+    stw = sog - cor['nos'] * math.cos(math.radians(cog - cor['para_graus']))
+    delta = math.degrees(math.asin(cor['nos'] * math.sin(math.radians(cor['para_graus'] - cog)) / stw))
+    amp_p, sem_p = (R.get('ruido') or {}).get('proa_graus', [0, 0])
+    amp_f, sem_f = (R.get('ruido') or {}).get('profundidade_m', [0, 0])
+    proa = (cog - delta + amp_p * ruido(sem_p, seg)) % 360
+    o['cog_graus'] = arred(cog, cas('cog_graus')) % 360
+    o['proa_graus'] = arred(proa, cas('proa_graus')) % 360
+    o['piloto_rumo'] = arred(p['rumo'], cas('piloto_rumo')) % 360
+    o['stw_nos'] = arred(stw, cas('stw_nos'))
+    taxa = gpm * sog / 3600   # graus por segundo
+    o['leme_graus'] = arred(max(-25, min(25, 5 * taxa)) + q0['leme_graus'], cas('leme_graus'))
+    o['profundidade_m'] = arred(a['prof_m'] + (b['prof_m'] - a['prof_m']) * f + amp_f * ruido(sem_f, seg), cas('profundidade_m'))
+    # vento aparente (soma vetorial do vento verdadeiro com o movimento do barco; ângulo relativo à proa, + a boreste)
+    tws, twd = q0['vento_verdadeiro_nos'], q0['vento_verdadeiro_angulo']
+    ax = tws * math.sin(math.radians(twd + 180)) - sog * math.sin(math.radians(cog))
+    ay = tws * math.cos(math.radians(twd + 180)) - sog * math.cos(math.radians(cog))
+    o['vento_aparente_nos'] = arred(math.hypot(ax, ay), cas('vento_aparente_nos'))
+    o['vento_aparente_angulo'] = arred(_wrap((math.degrees(math.atan2(ax, ay)) + 180) % 360 - proa), cas('vento_aparente_angulo'))
+    # destino, distância, próximo ponto e ETA (posição linearizada: o HH:MM é constante em cada perna do circuito)
+    vel = R['velocidade_media_nos']
+    slin = seg * vel / 3600
+    nc = math.floor(slin / tot + 1e-12)
+    vai = (slin - nc * tot) < ida_mn
+    sdest = nc * tot + (ida_mn if vai else tot)
+    o['destino'] = rota['destino']['nome'] if vai else rota['volta']['nome']
+    o['destino_mn'] = arred(max(0.0, sdest - s), cas('destino_mn'))
+    o['wp_proximo'] = b['nome']
+    o['wp_mn'] = arred(max(0.0, p['mn'] - x), cas('wp_mn'))
+    ini_min = int(R.get('ancora_hora', '07:00')[:2]) * 60 + int(R.get('ancora_hora', '07:00')[3:])
+    eta_min = int(math.floor(sdest / (vel / 3600) / 60 + 0.5))
+    o['eta'] = '%02d:%02d' % (((ini_min + eta_min) // 60) % 24, (ini_min + eta_min) % 60)
+    perto = a if x < p['mn'] - x else b
+    id_destino = rota['destino']['id'] if vai else rota['base']['id']
+    caminho = rota['destino']['caminho'] if vai else rota['volta']['caminho']
+    o['local'] = perto['perto'] + (', chegando' if perto['id'] == id_destino else ', ' + caminho)
+    o['timestamp_utc'] = _iso_utc(ancora_s + seg)
+    res = {c: o[c] for c in C if c in o}
+    res.update({c: x_ for c, x_ in o.items() if c not in res})
+    # alarmes (a nivel nos valores mostrados; a janela do id dá o `desde` desta volta)
+    if not com_alarmes:
+        return res
+    lim, por_campo, alertas = R.get('limites') or {}, P['alerta_de'], R.get('alertas') or {}
+    alarmes = []
+    for campo in lim:
+        nv = nivel(lim, C, campo, res)
+        if not nv or nv['nivel'] == 'normal':
+            continue
+        aid = por_campo.get(campo, campo)
+        a_ = alertas.get(aid) or {}
+        al = {'id': aid, 'nivel': nv['nivel']}
+        if a_.get('sistema'):
+            al['sistema'] = a_['sistema']
+        if a_.get('lado'):
+            al['lado'] = a_['lado']
+        j = next((j for j in R.get('janelas') or [] if j.get('id') == aid and j.get('nivel') == nv['nivel'] and j['ini'] <= t <= j['fim']), None)
+        al.update(campo=campo, valor=res[campo], limite=nv['limite'], desde=_iso_utc(ancora_s + v * n + (j['ini'] if j else t)))
+        alarmes.append(al)
+    res['alarmes'] = alarmes
+    return res
+
+
+PORT_ROTA = em
+
+
+def deriva_janelas(R, C):
+    """R.janelas (§1.16): para cada campo de R.limites, os trechos contínuos do laço em que a nivel não é «normal», no valor mostrado
+    (mesmo nivel, mesmo nível de alarme); o id é o do alerta do campo. Ordenadas por início e campo. Só o laço e os fixos (a rota e os
+    contadores nunca cruzam limite no cenário do gerador)."""
+    por_campo = {a['campo']: i for i, a in (R.get('alertas') or {}).items()}
+    Q = [quadro_laco(R, C, t) for t in range(R['duracao'])]
+    out = []
+    for campo in R.get('limites') or {}:
+        nv = [(nivel(R['limites'], C, campo, q) or {}).get('nivel', 'normal') for q in Q]
+        t = 0
+        while t < len(Q):
+            if nv[t] == 'normal':
+                t += 1
+                continue
+            f = t
+            while f + 1 < len(Q) and nv[f + 1] == nv[t]:
+                f += 1
+            out.append({'id': por_campo.get(campo, campo), 'campo': campo, 'nivel': nv[t], 'ini': t, 'fim': f})
+            t = f + 1
+    return sorted(out, key=lambda j: (j['ini'], j['campo']))
+
+
+DISCRETOS = ('destino', 'wp_proximo', 'eta')   # o que não pode mudar na emenda de 150 s
+CAMPOS_PASSO = ('lat', 'lon', 'cog_graus', 'proa_graus', 'piloto_rumo', 'profundidade_m', 'destino_mn', 'wp_mn', 'diesel_litros', 'distancia_mn',
+                'motor_bb_horimetro_h', 'motor_be_horimetro_h', 'gerador_horimetro_h', 'tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct')
+CAMPOS_ANGULO = ('cog_graus', 'proa_graus', 'piloto_rumo')
+
+
+def varredura_dia(P):
+    """Uma passada pelos segundos do dia de bordo (guardada em P): os eventos da rota (troca de ponto, de destino ou de ETA), o maior
+    passo de 1 s de cada campo fora das emendas e dos eventos, o passo e os eventos em cada emenda de 150 s (N·150) e o passo da virada
+    (A − 1 s → A)."""
+    if P['passos'] is not None:
+        return P['passos']
+    n, dia = P['n'], P['n'] * P['R']['por_dia']['voltas']
+    maximos, emendas, eventos = {c: 0.0 for c in CAMPOS_PASSO}, {}, []
+    prev = em(P, 0, com_alarmes=False)
+    for s in range(1, dia):
+        cur = em(P, s, com_alarmes=False)
+        ev = [k for k in DISCRETOS if cur[k] != prev[k]]
+        passo = {c: _passo(cur[c], prev[c], c in CAMPOS_ANGULO) for c in CAMPOS_PASSO}
+        if s % n == 0:
+            emendas[s // n] = (passo, ev)
+        elif ev:
+            eventos.append((s, ev))
+        else:
+            for c, d in passo.items():
+                maximos[c] = max(maximos[c], d)
+        prev = cur
+    a0, a1 = em(P, dia - 1, com_alarmes=False), em(P, 0, com_alarmes=False)
+    P['passos'] = {'max': maximos, 'emendas': emendas, 'eventos': eventos, 'A': {c: _passo(a1[c], a0[c], c in CAMPOS_ANGULO) for c in CAMPOS_PASSO}}
+    return P['passos']
+
+
 # ——————————————————————————————— utilidades ———————————————————————————————
 def junta(cam, k):
     if not cam:
@@ -630,6 +871,21 @@ class Ctx:
         self.trechos = [t for t in (self.base.get('trechos') or []) if isinstance(t, dict)]
         self.itens_faq = [i for i in ((faq or {}).get('itens') or []) if isinstance(i, dict)]
         self._laco = None
+        self._port = None
+
+    def port(self):
+        """(P, None) com o port do em() pronto para este D, ou (None, motivo) se faltar rota ou replay, ou o port não rodar."""
+        if self._port is None:
+            if not (isinstance(self.D.get('rota'), dict) and isinstance(self.R, dict) and self.R.get('chaves')):
+                self._port = (None, 'sem D.rota ou sem D.replay.chaves')
+            else:
+                try:
+                    P = preparar(self.D)
+                    em(P, 0, com_alarmes=False)   # roda uma vez: um campo ou uma chave que falta aparece aqui
+                    self._port = (P, None)
+                except Exception as e:   # KeyError, TypeError, ZeroDivisionError…: o motivo vai na mensagem
+                    self._port = (None, '%s: %s' % (type(e).__name__, e))
+        return self._port
 
     def todos(self, numeros=False):
         """(caminho, texto) de todo valor string do D, da base, do FAQ e das fontes do Drive (com numeros, também os números)."""
@@ -1426,12 +1682,52 @@ def a_ids(X):
                 out.append('diario.%s: pendência sem ref na agenda' % e.get('id', e.get('iso')))
             elif not e.get('palavras') or e.get('palavras') != ref.get('palavras'):
                 out.append('diario.%s.palavras diferentes das da tarefa %s' % (e.get('id', e.get('iso')), ref.get('id')))
+    out += alertas_no_guia(X)
     dbo = (X.R or {}).get('diaDeBordo')
     if isinstance(dbo, dict):
         abs_ = {'ab-%d' % k for k in range(dbo.get('dias', 0))}
         for x in list(dbo.get('diario') or []) + ([dbo['documento']] if isinstance(dbo.get('documento'), dict) else []):
             if 'ref' in x and x['ref'] not in abs_:
                 out.append('replay.diaDeBordo.%s.ref fora de ab-0…ab-%d: %r' % (x.get('id'), dbo.get('dias', 0) - 1, x['ref']))
+    return out
+
+
+def _palavras(t):
+    return ' '.join(re.findall(r'\w+', t.lower()))
+
+
+def alertas_no_guia(X):
+    """replay.alertas (§1.16): o campo está no catálogo e em R.limites; a seção citada existe no guia de bordo (base) e traz inteiros, sem
+    caixa nem pontuação, os passos do alerta; a fonte é «<título do guia> §n · <seção>» (ou «§ <seção>» no checklist, sem número); os dois
+    alertas de óleo levam os passos de protocolos.oleo."""
+    out = []
+    guias = X.D.get('guias') or {}
+    oleo = (X.D.get('protocolos') or {}).get('oleo')
+    for aid, a in ((X.R or {}).get('alertas') or {}).items():
+        if a.get('campo') not in X.campos or a.get('campo') not in X.limites:
+            out.append('replay.alertas.%s.campo %r fora de D.campos ou de replay.limites' % (aid, a.get('campo')))
+        passos = a.get('passos')
+        if not (isinstance(passos, list) and passos and all(isinstance(p, str) and p.strip() for p in passos)):
+            out.append('replay.alertas.%s.passos: lista de textos' % aid)
+            continue
+        if aid.startswith('oleo_') and isinstance(oleo, list) and passos != oleo:
+            out.append('replay.alertas.%s.passos ≠ protocolos.oleo (§1.16)' % aid)
+        tit = guias.get(a.get('guia'))
+        if tit is None:
+            out.append('replay.alertas.%s.guia fora de D.guias: %r' % (aid, a.get('guia')))
+            continue
+        sec = a.get('secao') or ''
+        tr = next((t for t in X.trechos if t.get('fonte') == tit and t.get('secao') == sec), None)
+        if tr is None:
+            out.append('replay.alertas.%s: o guia %r não tem a seção %r' % (aid, tit, sec))
+            continue
+        texto = _palavras(tr.get('texto', ''))
+        for p in passos:
+            if _palavras(p) not in texto:
+                out.append('replay.alertas.%s: o passo %r não está inteiro em %s · %s' % (aid, p, tit, sec))
+        esperado = tit + (' §' + sec if sec[:1].isdigit() else ' § ' + sec)
+        if a.get('fonte') != esperado:
+            out.append('replay.alertas.%s.fonte %r ≠ %r' % (aid, a.get('fonte'), esperado))
     return out
 
 
@@ -1455,6 +1751,8 @@ def a_laco(X):
         if (d.get('origem') == 'contador') != ('sentido' in d) or ('sentido' in d and d['sentido'] not in (1, -1)):
             out.append('campos.%s: sentido (+1/−1) em todo contador e só neles' % c)
     for grupo, origem in (('chaves', 'laço'), ('fixos', 'fixo'), ('contadores_base', 'contador')):
+        if not R.get('chaves'):   # modo real (§4.3): o replay sai só com limites e alertas; o laço, os fixos e os contadores são da simulação
+            break
         dados = set(R.get(grupo) or {})
         cat = {c for c, d in C.items() if d.get('origem') == origem}
         out += ['replay.%s.%s fora de D.campos com origem %s' % (grupo, c, origem) for c in sorted(dados - cat)]
@@ -1465,8 +1763,28 @@ def a_laco(X):
         out += ['snapshot.quadro.%s fora de D.campos' % c for c in sq if c not in C]
         out += ['snapshot.quadro sem %s (só faltam os de origem rota ou janela)' % c for c, d in C.items()
                 if c not in sq and d.get('origem') not in ('rota', 'janela')]
-    if any(d.get('origem') in ('rota', 'derivado', 'relógio', 'janela') for d in C.values()) and PORT_ROTA is None:
-        out.append('quadro ⇔ catálogo nos campos de rota, derivado, relógio e janela: falta o port do em() (C8)')
+    if X.simulacao and any(d.get('origem') in ('rota', 'derivado', 'relógio', 'janela') for d in C.values()):
+        P, erro = X.port()
+        if P is None:
+            out.append('quadro ⇔ catálogo nos campos de rota, derivado, relógio e janela: o port do em() não rodou (%s)' % erro)
+        else:
+            q = PORT_ROTA(P, 0)
+            out += ['em(): o quadro tem %s, que não está em D.campos' % c for c in q if c not in C]
+            out += ['em(): o quadro não tem %s, que está em D.campos' % c for c in C if c not in q]
+            out += ['replay sem %s (§1.16)' % c for c in REPLAY_CHAVES if c not in R]
+    if isinstance(sq, dict):   # §1.17: pela nivel, todo campo do instante guardado dá normal ou não se avalia
+        for c in X.limites:
+            nv = nivel(X.limites, C, c, sq)
+            if nv and nv['nivel'] != 'normal':
+                out.append('snapshot.quadro.%s = %s: nivel %s (o instante guardado só tem campo normal ou que não se avalia)' % (c, sq.get(c), nv['nivel']))
+    if not X.simulacao:   # §4.3: com SIMULACAO = False o gerador não emite rota, histórico simulado, dia de bordo nem a posição do barco
+        if 'rota' in X.D or 'destinos' in X.D:
+            out.append('modo real: D.rota e D.destinos só na simulação (§4.3)')
+        out += ['modo real: replay.%s só na simulação (o replay sai só com limites e alertas, §4.3)' % k for k in (X.R or {}) if k not in ('limites', 'alertas')]
+        if 'historico' in X.D:
+            out.append('modo real: D.historico só na simulação (§4.3)')
+        if isinstance(sq, dict) and ('lat' in sq or 'lon' in sq):
+            out.append('modo real: snapshot.quadro sem posição enquanto o repositório for público (§4.3)')
     return out
 
 
@@ -1600,11 +1918,15 @@ def a_janela(X):
     js = R.get('janelas')
     if not isinstance(js, list):
         return ['replay.janelas ausente (derivadas pelo gerador, §1.16)']
+    por_id = {}
     for j in js:
-        if not (95 <= j.get('ini', -1) <= j.get('fim', -1) <= 120 and j['fim'] - j['ini'] + 1 >= 10):
-            out.append('replay.janelas.%s: precisa ficar em [95, 120] e durar ≥ 10 s (%s–%s)' % (j.get('id'), j.get('ini'), j.get('fim')))
+        por_id.setdefault(j.get('id'), []).append(j)
         if j.get('ini', 0) <= 60 <= j.get('fim', -1):
             out.append('replay.janelas.%s cobre t = 60' % j.get('id'))
+    for i, g in por_id.items():   # no cenário alarme-critico o mesmo id tem aviso → crítico → aviso: a duração é a da união (§3.5)
+        ini, fim = min(j.get('ini', -1) for j in g), max(j.get('fim', -1) for j in g)
+        if not (95 <= ini <= fim <= 120 and fim - ini + 1 >= 10):
+            out.append('replay.janelas.%s: precisa ficar em [95, 120] e durar ≥ 10 s (%s–%s)' % (i, ini, fim))
     if not any(j.get('ini', 0) <= 105 <= j.get('fim', -1) for j in js):
         out.append('nenhuma janela cobre t = 105')
     vistos = set()
@@ -1672,8 +1994,23 @@ def a_emenda_rota(X):
     voltas = ((X.R or {}).get('por_dia') or {}).get('voltas', 576)
     if math.gcd(int(rota.get('circuitos_dia', 0)), int(voltas)) != 1:
         out.append('rota.circuitos_dia %r não é primo com as %d voltas do dia' % (rota.get('circuitos_dia'), voltas))
-    if PORT_ROTA is None:
-        out.append('emendas de 150 s da rota: falta o port do em() (C8)')
+    P, erro = X.port()
+    if P is None:
+        out.append('emendas de 150 s da rota: o port do em() não rodou (%s)' % erro)
+        return out
+    V = varredura_dia(P)
+    n = P['n']
+    hhmmss = lambda seg: '%02d:%02d:%02d' % ((7 + seg // 3600) % 24, (seg % 3600) // 60, seg % 60)
+    for N, (passo, ev) in sorted(V['emendas'].items()):
+        if ev:   # nenhuma chegada (ponto, destino ou ETA) cai no par em(N·150 − 1 s) × em(N·150)
+            out.append('emenda %d (%s): a chegada cai no par de segundos consecutivos (%s mudam)' % (N, hhmmss(N * n), ', '.join(ev)))
+        for c, d in passo.items():
+            if d - V['max'][c] > 1e-9:
+                out.append('emenda %d (%s): %s salta %s, mais que o maior passo de 1 s do dia (%s)' % (N, hhmmss(N * n), c, round(d, 6), round(V['max'][c], 6)))
+    # a virada em A (06:59:59 → 07:00:00): a posição, o rumo e a profundidade são contínuos; saltam só os contadores e os campos da rota que recomeça
+    for c in ('lat', 'lon', 'cog_graus', 'profundidade_m'):
+        if V['A'][c] - V['max'][c] > 1e-9:
+            out.append('virada em A: %s salta %s, mais que o maior passo de 1 s do dia (%s)' % (c, round(V['A'][c], 6), round(V['max'][c], 6)))
     return out
 
 
@@ -1741,6 +2078,33 @@ def a_rota(X):
         a, b = rota.get('circuitos_dia', 0) * rota.get('distancia_mn', 0), pdia * rota.get('fator', 0)
         if abs(a - b) > max(0.2, 1e-3 * b):
             out.append('rota: circuitos_dia × distancia_mn (%.2f) ≠ por_dia × fator (%.2f)' % (a, b))
+        if not (_num(rota.get('fator')) and 0.9 <= rota['fator'] <= 1.0):
+            out.append('rota.fator %r fora de [0,9; 1,0]: a posição anda no máximo o que o odômetro soma (§1.14)' % rota.get('fator'))
+    # as pernas pré-calculadas (o cliente não as recalcula) são as dos pontos: ordem, distância, rumo, início, circuito e ida
+    if len(pernas) != len(pts):
+        out.append('rota.pernas: %d pernas para %d pontos' % (len(pernas), len(pts)))
+    ini = 0.0
+    for i, p in enumerate(pernas[:len(pts)]):
+        a_, b_ = pts[i], pts[(i + 1) % len(pts)]
+        if (p.get('de'), p.get('para')) != (a_.get('id'), b_.get('id')):
+            out.append('rota.pernas[%d] vai de %r para %r, a ordem dos pontos pede %r para %r' % (i, p.get('de'), p.get('para'), a_.get('id'), b_.get('id')))
+            continue
+        pa, pb = (a_.get('lat'), a_.get('lon')), (b_.get('lat'), b_.get('lon'))
+        if not all(_num(x) for x in pa + pb):
+            out.append('rota.%s ou rota.%s sem lat e lon numéricos' % (a_.get('id'), b_.get('id')))
+            continue
+        if not _num(p.get('mn')) or abs(p['mn'] - mn_entre(pa, pb)) > 0.0005:
+            out.append('rota.pernas[%d].mn %r ≠ a distância entre os pontos (%.4f)' % (i, p.get('mn'), mn_entre(pa, pb)))
+        if not _num(p.get('rumo')) or abs(_wrap(p['rumo'] - rumo_entre(pa, pb))) > 0.01:
+            out.append('rota.pernas[%d].rumo %r ≠ o rumo entre os pontos (%.2f)' % (i, p.get('rumo'), rumo_entre(pa, pb)))
+        if not _num(p.get('ini_mn')) or abs(p['ini_mn'] - ini) > 0.0005:
+            out.append('rota.pernas[%d].ini_mn %r ≠ a soma das pernas anteriores (%.4f)' % (i, p.get('ini_mn'), ini))
+        ini += p.get('mn') or 0
+    if not _num(rota.get('distancia_mn')) or abs(rota['distancia_mn'] - ini) > 0.001:
+        out.append('rota.distancia_mn %r ≠ a soma das pernas (%.4f)' % (rota.get('distancia_mn'), ini))
+    ida = next((p.get('ini_mn') for p in pernas if p.get('de') == (rota.get('destino') or {}).get('id')), None)
+    if not _num(rota.get('ida_mn')) or ida is None or abs(rota['ida_mn'] - ida) > 0.0005:
+        out.append('rota.ida_mn %r ≠ a distância da base ao destino (%r)' % (rota.get('ida_mn'), ida))
     return out
 
 
@@ -1765,6 +2129,14 @@ def a_dia_de_bordo(X):
         if _num(pdia) and _num(cap_) and _num(base):
             if ab.get('nivelDepois') != arred(base / cap_ * 100, 1) or ab.get('nivelAntes') != arred((base - pdia) / cap_ * 100, 1):
                 out.append('diaDeBordo.abastecimento: nivelAntes/nivelDepois fora do modelo de 24 h')
+        P, _ = X.port()
+        if P is not None and _num(cap_):   # litros e níveis = o salto do contador entre A − 1 s e A (o abastecimento é o próprio salto, às 07:00)
+            dia = P['n'] * R['por_dia']['voltas']
+            antes, depois = em(P, dia - 1, com_alarmes=False), em(P, 0, com_alarmes=False)
+            if ab.get('litros') != depois['diesel_litros'] - antes['diesel_litros']:
+                out.append('diaDeBordo.abastecimento.litros (%s) ≠ o salto do contador entre A − 1 s e A (%s → %s)' % (ab.get('litros'), antes['diesel_litros'], depois['diesel_litros']))
+            if ab.get('nivelAntes') != arred(antes['diesel_litros'] / cap_ * 100, 1) or ab.get('nivelDepois') != arred(depois['diesel_litros'] / cap_ * 100, 1):
+                out.append('diaDeBordo.abastecimento: nivelAntes/nivelDepois ≠ o diesel % de em(A − 1 s) e de em(A)')
         ids = [x.get('id') for x in dbo.get('diario') or []]
         if ids[:2] != ['d01', 'd02']:
             out.append('diaDeBordo.diario: d01 antes da d02 (iso d01 = âncora + 1 s)')

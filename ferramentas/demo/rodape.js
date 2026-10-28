@@ -126,6 +126,50 @@
       return c && c.ang ? grau3(v) : nb(v, c && typeof c.casas === 'number' ? c.casas : 0, c && c.mil);
     }
 
+    // nivel(campo, q): a regra única do CONTRATO §3.3 sobre D.replay.limites, escrita uma vez aqui e uma vez em Python (confere.nivel, que o
+    // gerador usa nas janelas). {nivel: 'normal' | 'aviso' | 'critico', limite?, regime?} ou null (não avalia). As comparações são estritas e
+    // sobre o valor como a tela mostra (as casas do D.campos); em /SOS-/ não lê o replay.
+    function casasDe(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
+    function numero(x) { return typeof x === 'number' && isFinite(x); }
+    function fora(lim, v) {
+      if (!lim) return null;
+      if (lim.abaixo !== undefined && v < lim.abaixo) return lim.abaixo;
+      if (lim.acima !== undefined && v > lim.acima) return lim.acima;
+      return null;
+    }
+    function nivel(campo, q) {
+      try {
+        if (EM_SOS || !q) return null;
+        var L = D.replay && D.replay.limites && D.replay.limites[campo], a, x, v, R, idx = null, k, g, r, lc, la, o;
+        if (!L) return null;
+        a = L.ativo_se;
+        if (a) {
+          x = q[a.campo];
+          if (a.acima !== undefined) { if (!numero(x) || !(arred(x, casasDe(a.campo)) > a.acima)) return null; }
+          else if (a.igual !== undefined) { if (x !== a.igual) return null; }
+        }
+        v = q[campo];
+        if (!numero(v)) return null;
+        v = arred(v, casasDe(campo));
+        R = L;
+        if (L.regimes) {
+          R = null;
+          for (k = 0; k < L.regimes.length; k++) {
+            g = L.regimes[k]; r = q[g.rpm_campo];
+            if (!numero(r)) continue;
+            r = arred(r, 0);
+            if ((g.rpm_de === undefined || g.rpm_de <= r) && (g.rpm_ate === undefined || r < g.rpm_ate)) { R = g; idx = k; break; }
+          }
+          if (!R) return null;
+        }
+        lc = fora(R.critico, v);
+        la = lc === null ? fora(R.aviso, v) : null;
+        o = lc !== null ? { nivel: 'critico', limite: lc } : la !== null ? { nivel: 'aviso', limite: la } : { nivel: 'normal' };
+        if (idx !== null) o.regime = idx;
+        return o;
+      } catch (e) { return null; }
+    }
+
     // trava do ar e da água: presos na máx/mín de hoje da leitura salva do clima (§2.5 do PROMPT); devolve cópia, a origem não muda
     function copia(o, extra) {
       var c = {}, k;
@@ -216,7 +260,7 @@
       } catch (e) { return null; }
     }
 
-    A.off = off; A.ancora = ancora; A.prazoDe = prazoDe; A.docDe = docDe; A.rebase = rebase; A.trava = trava; A.contagens = contagens; A.instante = instante;
+    A.off = off; A.ancora = ancora; A.prazoDe = prazoDe; A.docDe = docDe; A.rebase = rebase; A.nivel = nivel; A.trava = trava; A.contagens = contagens; A.instante = instante;
     A.fmt = { arred: arred, nb: nb, mil: function (x) { return nb(x, 0, true); }, grau3: grau3, hora: hora, coord: coord, campo: campo };
     rebase(Date.now());
 
