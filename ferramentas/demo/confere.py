@@ -1829,6 +1829,9 @@ def a_laco(X):
             out.append('modo real: D.historico só na simulação (§4.3)')
         if isinstance(sq, dict) and ('lat' in sq or 'lon' in sq):
             out.append('modo real: snapshot.quadro sem posição enquanto o repositório for público (§4.3)')
+        gps = (X.D.get('snapshot') or {}).get('gps')   # §4.3: «emitir snapshot.gps» com posição também é a posição do barco (lat, lon e o texto delas)
+        if isinstance(gps, dict) and {'lat', 'lon', 'texto'} & set(gps):
+            out.append('modo real: snapshot.gps sem lat, lon nem texto enquanto o repositório for público (§4.3)')
         out += ['modo real: %s (as fontes do Drive vão sem posição enquanto o repositório for público, §4.3)' % m for m in posicao_nas_fontes(X.fontes)]
     return out
 
@@ -1968,10 +1971,22 @@ def a_janela(X):
         por_id.setdefault(j.get('id'), []).append(j)
         if j.get('ini', 0) <= 60 <= j.get('fim', -1):
             out.append('replay.janelas.%s cobre t = 60' % j.get('id'))
-    for i, g in por_id.items():   # no cenário alarme-critico o mesmo id tem aviso → crítico → aviso: a duração é a da união (§3.5)
-        ini, fim = min(j.get('ini', -1) for j in g), max(j.get('fim', -1) for j in g)
-        if not (95 <= ini <= fim <= 120 and fim - ini + 1 >= 10):
-            out.append('replay.janelas.%s: precisa ficar em [95, 120] e durar ≥ 10 s (%s–%s)' % (i, ini, fim))
+    # §6.3 JANELA: «cada janela ⊂ [95, 120] e ≥ 10 s». Só o cenário alarme-critico (§3.5) tem aviso → crítico → aviso no MESMO id: ali as
+    # janelas do id têm de ser contíguas (a seguinte começa no segundo depois do fim da anterior) e a duração é a da união. No cenário aviso
+    # (§3.4: «contínua, 18 s») a regra é por janela: uma janela partida em duas curtas (8 s + 3 s) não passa pela soma (revisão do C8).
+    uniao = R.get('cenario') == 'alarme-critico'
+    for i, g in por_id.items():
+        g = sorted(g, key=lambda j: j.get('ini', -1))
+        if uniao:
+            for a, b in zip(g, g[1:]):
+                if b.get('ini', -1) != a.get('fim', -2) + 1:
+                    out.append('replay.janelas.%s: as janelas do mesmo id precisam ser contíguas (%s–%s e %s–%s)' % (i, a.get('ini'), a.get('fim'), b.get('ini'), b.get('fim')))
+            blocos = [(g[0].get('ini', -1), g[-1].get('fim', -1))]
+        else:
+            blocos = [(j.get('ini', -1), j.get('fim', -1)) for j in g]
+        for ini, fim in blocos:
+            if not (95 <= ini <= fim <= 120 and fim - ini + 1 >= 10):
+                out.append('replay.janelas.%s: precisa ficar em [95, 120] e durar ≥ 10 s (%s–%s)' % (i, ini, fim))
     if not any(j.get('ini', 0) <= 105 <= j.get('fim', -1) for j in js):
         out.append('nenhuma janela cobre t = 105')
     vistos = set()
@@ -2288,8 +2303,9 @@ def a_historico(X):
 
 
 def a_coord_texto(X):
-    """Uma violação por ocorrência, como as outras de texto."""
-    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if cam != 'snapshot.gps.texto' for m in R_COORD.finditer(s)]
+    """Uma violação por ocorrência, como as outras de texto. A exceção do snapshot.gps.texto (§1.17: enquanto houver leitor) é só da simulação:
+    no modo real o texto da posição do barco não sai (§4.3)."""
+    return ['%s «%s»' % (cam, trecho(s, m)) for cam, s in X.todos() if (cam != 'snapshot.gps.texto' or not X.simulacao) for m in R_COORD.finditer(s)]
 
 
 def rotulo_fim():

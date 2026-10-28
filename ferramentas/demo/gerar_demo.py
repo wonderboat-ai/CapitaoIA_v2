@@ -623,7 +623,12 @@ PASSOS_ROTACAO = ['Reduza o giro para o cruzeiro.', 'Confira o painel dos dois m
 PASSOS_PRACA = ['Reduza o giro para o cruzeiro.', 'Confira a ventilação da praça de máquinas.', 'Registre no diário com a hora.']
 PASSOS_BATERIA = ['Confira o carregador de bordo ligado ao gerador ou ao cais.', 'Confira os bornes limpos e apertados.',
                   'Registre a tensão e a hora no diário.']
-PASSOS_PORAO = ['Confirme a bomba ligada pelo sensor de nível.', 'Acione a bomba no manual.', 'Registre o nível e a hora no diário.']
+# Revisão do C8: os três passos de antes só mandavam ligar a bomba e anotar no diário, sem a entrada de água nem a escalada que o resto do app trata
+# como padrão (protocolos.alagamento: «procure a entrada… Água subindo mesmo assim: MAYDAY»). O aviso (acima de 5 cm) e o crítico (acima de 10 cm)
+# valem igual. Sem MMSI nem posição; a frase do SOS casa a SEGURANCA_PALAVRAS (alagamento, SOS), então o trecho do guia §2 leva seguranca: true e
+# nunca vai à IA (trecho_seguro).
+PASSOS_PORAO = ['Confirme a bomba ligada pelo sensor de nível.', 'Acione a bomba no manual.', 'Procure a entrada de água.',
+                'Nível subindo com a bomba ligada ou água entrando é alagamento: use o SOS do app.', 'Registre o nível e a hora no diário.']
 PASSOS_SONDA = ['Reduza a velocidade.', 'Confira a carta no plotter.', 'Mude de rumo para águas mais fundas.']
 PASSOS_DIESEL = ['Abasteça antes da próxima saída.', 'Confira a autonomia no app.', 'Registre os litros e o nível no app depois de abastecer.']
 PASSOS_GERADOR = ['Retire cargas no quadro elétrico, uma de cada vez.', 'Deixe a climatização por último.', 'Registre no diário com a hora.']
@@ -1130,16 +1135,19 @@ DIAS_DE_BORDO = 3          # abastecimentos do dia de bordo na lista (§1.10)
 # perna foram conferidos contra a costa de resolução cheia (GSHHG, com as ilhas pequenas) e contra a máscara global de ~1 km, com folga
 # mínima de 0,40 mn de terra (a base, na barra do rio, é a única que toca terra). O contrato partia de pontos que cortavam a Ponta das
 # Laranjeiras (a perna base → Ilha das Cabras e as duas de volta da Ilha das Cabras passavam por terra): a saída da barra é para o norte,
-# por fora da ponta, e os pontos da Ilha das Cabras ficam ao largo dela. (id, nome, rel, perto, lat, lon, prof_m).
+# por fora da ponta. Revisão do C8: os dois pontos «Ilha das Cabras» tinham ido tão ao largo (1,6 mn do polígono da ilha na costa cheia;
+# a ilha fica a ~0,25 km da Praia Central) que o nome mentia; agora ficam a 0,9–1,0 mn dela, a leste, e a Ponta das Laranjeiras (ida e volta) sobe
+# para o norte para as pernas passarem a ≥ 0,50 mn da costa de Laranjeiras. Circuito 16,17 mn, fator 0,9866 (19 circuitos, ≤ 1).
+# (id, nome, rel, perto, lat, lon, prof_m).
 PONTOS_ROTA = [
     ('base', 'Barra Sul (saída do Rio Camboriú)', 'da Barra Sul', 'na saída da Barra Sul', -26.9985, -48.6160, 8),
-    ('cabras', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9760, -48.5985, 12),
-    ('laranjeiras', 'Ponta das Laranjeiras', 'da Ponta das Laranjeiras', 'ao largo da Ponta das Laranjeiras', -26.9960, -48.5620, 16),
+    ('cabras', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9838, -48.6100, 12),
+    ('laranjeiras', 'Ponta das Laranjeiras', 'da Ponta das Laranjeiras', 'ao largo da Ponta das Laranjeiras', -26.9820, -48.5680, 16),
     ('taquaras', 'Taquaras', 'de Taquaras', 'ao largo de Taquaras', -27.0320, -48.5540, 19),
     ('estaleirinho', 'Estaleirinho', 'do Estaleirinho', 'ao largo do Estaleirinho', -27.0620, -48.5530, 21),
     ('pinho', 'Praia do Pinho', 'da Praia do Pinho', 'ao largo da Praia do Pinho', -27.0450, -48.5430, 22),
-    ('laranjeiras_v', 'Laranjeiras', 'de Laranjeiras', 'ao largo de Laranjeiras', -26.9940, -48.5535, 18),
-    ('cabras_v', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9780, -48.5995, 13),
+    ('laranjeiras_v', 'Laranjeiras', 'de Laranjeiras', 'ao largo de Laranjeiras', -26.9810, -48.5740, 18),
+    ('cabras_v', 'Ilha das Cabras', 'da Ilha das Cabras', 'ao largo da Ilha das Cabras', -26.9850, -48.6084, 13),
 ]
 ROTA_DESTINO = {'id': 'estaleirinho', 'nome': 'Estaleirinho', 'caminho': 'a caminho do Estaleirinho'}
 ROTA_VOLTA = {'nome': 'Barra Sul (base)', 'caminho': 'a caminho da Barra Sul'}

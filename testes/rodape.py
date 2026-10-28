@@ -35,6 +35,9 @@ Aqui, com o `Date` congelado por add_init_script (a página abre numa rota míni
   autoteste do EPIRB e da inspeção do sistema fixo (a validade deles só em Equipamentos, Leme e Documentos, CONTRATO §1.4);
 - a G1 (web e app), com a nota fiscal do abastecimento tal como o C8 a entrega (pela microtarefa, a partir de replay.diaDeBordo):
   situação CONFERIDA, nunca SEM DADOS (CONTRATO §1.8), e sem o bloco FALTA REGISTRAR (revisão do C7);
+- revisão do C8 (snapshot_sem_null): B2, F3 (app e web), A1, A2, E1 e G2 abrem com o dado gerado de verdade, sem [object Object] no texto nem nos
+  `title`; a B2 diz «porão: BB 1,2 cm · BE 0,9 cm», as duas F3 «LANÇADA · 30 m» e a G2 tem as 3 linhas de abastecimento (07:00, 1.086 L);
+  provado contra as três guardas de 1 linha tiradas (B2:158, F3-Web:222, F3:216), que antes não tinham teste;
 - C8: o D que o gerador grava já traz o dia de bordo em replay.diaDeBordo (o arquivo tem `abastecimentos: []`, só d03–d09 no diário e
   7 documentos): a microtarefa o completa, e as listas e os prazos batem com a conta em Python sobre o próprio D gerado; a
   CapitaoAgora.nivel contra o port em Python (confere.nivel) nos 150 quadros do laço e nos casos de borda do §3.3 (paridade).
@@ -721,6 +724,40 @@ def telas(b):
                'FALTA REGISTRAR' not in txt and not re.search(r'[1-9]\d*\s+SEM DADOS', txt), [l for l in txt.split('\n') if 'SEM DADOS' in l or 'FALTA' in l][:3])
             ok('%s (%s): sem erro de script' % (tela, modo), not pg.erros, pg.erros)
             pg.context.close()
+    snapshot_sem_null(b, local)
+
+
+# Revisão do C8 (linha C8 do §6.2: «sem [object Object]; G2 com as 3 linhas»). O snapshot sem null deu OBJETO ao porão ({bb_cm, be_cm, ciclos_h}) e à
+# âncora ({estado, cabo_m}); a B2 escrevia 'porão: ' + S.porao e as duas F3 String(S.ancora) ([object Object] na tela). As três guardas de 1 linha
+# (B2:158, F3-Web:222, F3:216) entraram sem teste: tirá-las não acusava nada (53 verificações do verificar.py, 0 falhas). Aqui cada leitor abre com o
+# dado gerado de verdade e o texto da tela e os `title` não têm [object Object]; o valor certo aparece (o objeto virou texto, não sumiu).
+TITULOS = "() => document.body.innerText + '\\n' + [...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join('\\n')"
+SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar)
+    ('B2-Carta-Mobile', True, ('porão: BB 1,2 cm · BE 0,9 cm',)),
+    ('F3-FAQ-Eletronicos', True, ('Posição do ferro (âncora)', 'LANÇADA · 30 m')),
+    ('F3-FAQ-Eletronicos-Web', False, ('Posição do ferro (âncora)', 'LANÇADA · 30 m')),
+    ('A1-Ponte-Web', False, ()),            # A1:328-329, A2:221 e E1:183 já tratavam objeto: ficam sob o mesmo teste
+    ('A2-Ponte-Mobile', True, ()),
+    ('E1-Navegando-Gatilhos', False, ()),
+    ('G2-Abastecimento-Web', False, ('3 registros', '27/10/2026', '26/10/2026', '25/10/2026')),
+)
+
+
+def snapshot_sem_null(b, local):
+    for tela, app, deve in SNAPSHOT_TELAS:
+        pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
+        pg.wait_for_timeout(1800)
+        todo = pg.evaluate(TITULOS)
+        ok('%s: sem erro de script' % tela, not pg.erros, pg.erros)
+        ok('%s: sem [object Object] no texto nem nos title' % tela, '[object Object]' not in todo, [l for l in todo.split('\n') if 'object' in l][:3])
+        if deve:
+            falta = [x for x in deve if x not in todo]
+            ok('%s: mostra %s' % (tela, ' · '.join(deve)), not falta, falta)
+        if tela.startswith('G2'):   # as 3 linhas de abastecimento do dia de bordo (ab-0…ab-2): 07:00, 1.086 L cada, a nota fiscal conferida (§1.9, §1.10)
+            ok('%s: as 3 linhas do histórico, cada uma com 1.086 L e a saída das 07:00' % tela,
+               todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)') == 3 and todo.count('\n1.086 L\n') >= 3,
+               (todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)'), todo.count('\n1.086 L\n')))
+        pg.context.close()
 
 
 def main():

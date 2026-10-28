@@ -58,6 +58,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import math
 import os
 import re
 import subprocess
@@ -2206,7 +2207,28 @@ def c8_com(fn):
 
 
 def c8_escala_ponteiro(D):
-    D['rota']['fator'] = round(D['rota']['fator'] * 1.0001, 6)   # uma chegada ao ponto cai exatamente na emenda N = 72 (10:00:00)
+    """Troca o fator da rota pelo MENOR desvio (6 casas, dentro de [0,9; 1,0]) que põe uma chegada a ponto exatamente num par de segundos de uma emenda
+    N·150: o cruzamento da distância percorrida × fator com o início de uma perna (m circuitos + ini_mn) cai entre N·150 − 1 s e N·150. Revisão do C8: o
+    antigo `fator × 1,0001` era calibrado para a rota de antes da revisão da Ilha das Cabras (caía na emenda 72, 10:00:00) e, com a rota refeita, não cai em
+    emenda nenhuma; a conta agora acompanha a rota, e a amostra continua a ser a única violação da chegada."""
+    R, rota = D['replay'], D['rota']
+    P = C.preparar(D)
+    tot, fator = rota['distancia_mn'], rota['fator']
+    base, volta = R['contadores_base']['distancia_mn'], R['por_volta']['distancia_mn']
+    inicios = [p['ini_mn'] for p in rota['pernas']] + [tot]
+    melhor = None
+    for N in range(1, R['por_dia']['voltas']):
+        depois = base + N * volta                                          # distância em N·150 s
+        antes = base + (N - 1) * volta + P['cumM'][R['duracao'] - 1]       # distância em N·150 − 1 s
+        for m in range(rota['circuitos_dia'] + 1):
+            for x in inicios:
+                B = m * tot + x
+                if B <= 0:
+                    continue
+                f = math.ceil(B / depois * 1e6) / 1e6
+                if 0.9 <= f <= 1.0 and f < B / antes and (melhor is None or abs(f / fator - 1) < melhor[0]):
+                    melhor = (abs(f / fator - 1), f)
+    rota['fator'] = melhor[1]
 
 
 
@@ -2221,8 +2243,9 @@ def c8_pernas(i, **kw):
 POSICAO_KEYS = {'lat', 'lon'}
 
 
-def c8_real(fn):
-    """O D e as fontes de verdade no modo real (SIMULACAO False no gerador), com fn(F) quando r: a planta da posição nas fontes do Drive (§4.3)."""
+def c8_real(fn, alvo='F'):
+    """O D e as fontes de verdade no modo real (SIMULACAO False no gerador), com fn(F) quando r (ou fn(D), com alvo='D'): a planta da posição nas
+    fontes do Drive e em snapshot.gps (§4.3)."""
     def monta(r):
         sim0 = G.SIMULACAO
         try:
@@ -2231,9 +2254,34 @@ def c8_real(fn):
         finally:
             G.SIMULACAO = sim0
         if r:
-            fn(k['F'])
+            fn(k[alvo])
         return k
     return monta
+
+
+def c8_critico(fn):
+    """O D e as fontes do cenário alarme-critico (§3.5; a constante CENARIO do gerador), com fn(D) quando r: a planta das janelas do mesmo id."""
+    def monta(r):
+        cen0 = G.CENARIO
+        try:
+            G.CENARIO = 'alarme-critico'
+            k = hoje()
+        finally:
+            G.CENARIO = cen0
+        if r:
+            fn(k['D'])
+        return k
+    return monta
+
+
+def c8_chave(campo, i, valor, janelas=True):
+    """fn(D): a chave i (t = 5·i) do campo trocada no replay; as janelas derivadas de novo, como o gerador as deriva das chaves (JANELA, §1.16)."""
+    def f(D):
+        R = D['replay']
+        R['chaves'][campo][i] = valor
+        if janelas:
+            R['janelas'] = C.deriva_janelas(R, D['campos'])
+    return f
 
 
 def c8_fonte(sufixo, fn):
@@ -2276,9 +2324,10 @@ C8_PLANTAS = [
     ('LACO', 'rota e destinos com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: D.rota e D.destinos só na simulação'),
     ('LACO', 'replay inteiro com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: replay.chaves só na simulação'),
     ('LACO', 'posição no snapshot.quadro com simulacao false (§4.3)', c8_muda(('simulacao',), False), 'modo real: snapshot.quadro sem posição'),
-    ('EMENDA_ROTA', 'uma chegada ao ponto numa emenda de 150 s (fator × 1,0001)', c8_com(c8_escala_ponteiro), 'emenda 72 (10:00:00): a chegada cai no par de segundos consecutivos'),
+    ('EMENDA_ROTA', 'uma chegada ao ponto numa emenda de 150 s (o fator da rota pelo menor desvio que a põe no par)', c8_com(c8_escala_ponteiro),
+     'a chegada cai no par de segundos consecutivos (wp_proximo mudam)'),
     ('EMENDA_ROTA', 'contador que salta na emenda (a distância por volta dobrada)', c8_com(lambda D: D['replay']['por_volta'].update({'distancia_mn': 1.0816})), 'distancia_mn salta'),
-    ('EMENDA_ROTA', 'a virada em A com a posição saltando (fator × 1,0001)', c8_com(c8_escala_ponteiro), 'virada em A: lat salta'),
+    ('EMENDA_ROTA', 'a virada em A com a posição saltando (o mesmo fator trocado)', c8_com(c8_escala_ponteiro), 'virada em A: lat salta'),
     ('EMENDA_ROTA', 'circuitos_dia 20 (não é primo com as 576 voltas)', c8_muda(('rota', 'circuitos_dia'), 20), 'rota.circuitos_dia 20 não é primo com as 576 voltas do dia'),
     ('EMENDA_ROTA', 'rota sem pernas (o port do em() não roda)', c8_muda(('rota', 'pernas'), []), 'emendas de 150 s da rota: o port do em() não rodou'),
     ('ROTA', 'perna com a distância errada', c8_pernas(2, mn=3.5), 'rota.pernas[2].mn 3.5 ≠ a distância entre os pontos'),
@@ -2303,6 +2352,22 @@ C8_PLANTAS = [
      'nivelAntes/nivelDepois ≠ o diesel % de em(A − 1 s) e de em(A)'),
     ('NULO', 'snapshot.porao None (a pendência do C8 acabou)', c8_muda(('snapshot', 'porao'), None), 'snapshot.porao: None'),
     ('NULO', 'snapshot.ancora None', c8_muda(('snapshot', 'ancora'), None), 'snapshot.ancora: None'),
+    # Revisão do C8 (JANELA, §6.3 «cada janela ⊂ [95, 120] e ≥ 10 s»): o C8 tinha afrouxado a regra para a UNIÃO das janelas do mesmo id (para caber
+    # o aviso → crítico → aviso do §3.5), e um aviso partido em duas janelas curtas passava pela soma. No cenário aviso a regra é por janela; no
+    # alarme-critico, janelas contíguas e a duração da união.
+    ('JANELA', 'aviso partido em duas janelas curtas (o BE a 85,0 °C em t = 110: 99–106 = 8 s e 114–116 = 3 s; a união 99–116 passava)',
+     c8_com(c8_chave('motor_be_arref_c', 22, 85.0)), 'precisa ficar em [95, 120] e durar ≥ 10 s (99–106)'),
+    ('JANELA', 'aviso partido em 10 s + 4 s (o BE a 87,4 °C em t = 110: só a 2ª janela, 113–116, é curta)',
+     c8_com(c8_chave('motor_be_arref_c', 22, 87.4)), 'precisa ficar em [95, 120] e durar ≥ 10 s (113–116)', True),
+    ('JANELA', 'alarme-critico com o óleo BB voltando ao normal em t = 110 (as janelas do mesmo id deixam de ser contíguas: 106–108 e 112–114)',
+     c8_critico(c8_chave('motor_bb_oleo_bar', 22, 3.0)), 'as janelas do mesmo id precisam ser contíguas (106–108 e 112–114)', True),
+    # Revisão do C8 (§4.3 «o gerador recusa snapshot.gps enquanto o repositório for público»): a LACO só olhava o snapshot.quadro e as fontes.
+    ('LACO', 'snapshot.gps com lat e lon no modo real (§4.3)', c8_real(lambda D: D['snapshot']['gps'].update({'lat': -26.993, 'lon': -48.614}), 'D'),
+     'modo real: snapshot.gps sem lat, lon nem texto', True),
+    ('LACO', 'snapshot.gps.texto no modo real (§4.3)', c8_real(lambda D: D['snapshot']['gps'].update({'texto': "26°59,58'S 048°36,84'W"}), 'D'),
+     'modo real: snapshot.gps sem lat, lon nem texto', True),
+    ('COORD_TEXTO', 'snapshot.gps.texto no modo real (a exceção do §1.17 é só da simulação)', c8_real(lambda D: D['snapshot']['gps'].update({'texto': "26°59,58'S 048°36,84'W"}), 'D'),
+     'snapshot.gps.texto'),   # uma violação por ocorrência: a latitude e a longitude do texto são duas
 ]
 
 
@@ -2340,6 +2405,14 @@ def c8_rota_e_replay():
                     'diesel', 'gerador', 'seakeeper', 'agua', 'cinzas', 'negras'] and all(set(a) >= {'campo', 'sistema', 'titulo', 'guia', 'secao', 'passos', 'fonte'} for a in al.values())
        and al['oleo_bb']['passos'] == al['oleo_be']['passos'] == D['protocolos']['oleo'] and len(al['arref_be']['passos']) == 3
        and al['arref_be']['fonte'] == 'Guia de bordo — Motores Cummins §5 · Temperatura alta' and al['arref_be']['lado'] == 'be' and 'lado' not in al['praca'], list(al))
+    # Revisão do C8: os passos do alerta de porão (aviso e crítico) mandam procurar a entrada de água e escalar para o SOS do app, como o
+    # protocolos.alagamento; sem número, MMSI nem posição; o trecho do guia que os repete (§2 · Faixas) leva seguranca: true e nunca vai à IA.
+    pp = al['porao_bb']['passos']
+    t_porao2 = next(t for t in k['B']['trechos'] if t['fonte'] == G.ARQ['g_porao'] and t['secao'].startswith('2 · '))
+    ok('D.replay.alertas.porao_bb/porao_be: os mesmos passos, com «procure a entrada de água» e a escalada «use o SOS do app», sem dígito; o §2 · Faixas do guia leva seguranca e os passos inteiros',
+       pp == al['porao_be']['passos'] and any(p.lower().startswith('procure a entrada') for p in pp) and any('alagamento' in p and 'SOS do app' in p for p in pp)
+       and not any(re.search(r'\d', p) for p in pp) and t_porao2.get('seguranca') is True and all(C._palavras(p) in C._palavras(t_porao2['texto']) for p in pp),
+       (pp, t_porao2))
     ok('D.consumo: lenta 5 nós · 700 rpm · 6,2 L/h, máxima 26 nós · 2.600 rpm · 111 L/h, gerador 2,3 L/h, 5 faixas de rpm, margem de manobra de 60 L e a fonte do guia §10',
        D['consumo']['lenta'] == {'nos': 5, 'rpm': 700, 'lph': 6.2} and D['consumo']['maxima'] == {'nos': 26, 'rpm': 2600, 'lph': 111} and D['consumo']['gerador_lph'] == 2.3
        and [f['nome'] for f in D['consumo']['faixas']] == ['marcha lenta', 'deslocamento', 'transição', 'planeio', 'cruzeiro'] and D['consumo']['margemManobra_l'] == 60
@@ -2353,6 +2426,12 @@ def c8_rota_e_replay():
     ok('D.destinos: Ilha das Cabras, Ponta das Laranjeiras, Taquaras e Estaleirinho, com a distância pela rota a partir da base',
        [d['nome'] for d in D['destinos']] == ['Ilha das Cabras', 'Ponta das Laranjeiras', 'Taquaras', 'Estaleirinho']
        and [d['mn'] for d in D['destinos']] == sorted(d['mn'] for d in D['destinos']) and D['destinos'][-1]['mn'] == round(rota['ida_mn'], 1), D['destinos'])
+    # Revisão do C8: os dois pontos «Ilha das Cabras» tinham ido a 1,6 mn da ilha (a distância de terra é do portão manual, sem teste automático, §2.6);
+    # aqui só o NOME: a ilha (polígono 127530 da costa GSHHG cheia, centro -26,9903 / -48,6270) a menos de 1,2 mn de cada ponto que a nomeia.
+    ilha = (-26.9903, -48.6270)
+    dist_ilha = {p['id']: C.mn_entre(ilha, (p['lat'], p['lon'])) for p in rota['pontos'] if p['nome'] == 'Ilha das Cabras'}
+    ok('D.rota: os dois pontos «Ilha das Cabras» ficam ao largo dela (menos de 1,2 mn do centro da ilha: %s)' % {i: round(d, 2) for i, d in dist_ilha.items()},
+       sorted(dist_ilha) == ['cabras', 'cabras_v'] and all(d < 1.2 for d in dist_ilha.values()), dist_ilha)
     ok('as coordenadas só em campo numérico (rota e quadro): nenhum texto do D, da base e das fontes tem lat/lon (a única exceção é snapshot.gps.texto)',
        not V['COORD_TEXTO'], V['COORD_TEXTO'][:2])
     # ——— o em() portado contra os números do §1.22 (laço, contadores e tanques; a rota é a do portão manual)
@@ -2362,9 +2441,12 @@ def c8_rota_e_replay():
     difs.update({c + '@105': (q105.get(c), v) for c, v in C8_LACO_105.items() if q105.get(c) != v})
     ok('em(): 12:01:00 e 12:01:45 = os valores do §1.22 (laço, contadores e tanques: %d campos), com o AVISO do BE só em t = 105' % (len(C8_LACO_60) + len(C8_LACO_105)),
        not difs and q60['alarmes'] == [] and q105['alarmes'] == [C8_ALARME_105], difs)
-    ok('em(): o timestamp, o estado e a ETA: 12:01:00 → 15:01:00Z; a chegada à base às 12:03 (última perna do circuito, a caminho da barra)',
+    # Revisão do C8 (Ilha das Cabras): com os pontos «Ilha das Cabras» e «Laranjeiras» refeitos no portão (a ilha a 0,9 mn, não a 1,6), a última perna
+    # do circuito ficou mais curta e, às 12:01:00, o ponto nomeado mais perto é o cabras_v: o `local` é o `perto` dele, com o caminho da barra.
+    # A ETA (12:03) e o destino não mudam.
+    ok('em(): o timestamp, o estado e a ETA: 12:01:00 → 15:01:00Z; a chegada à base às 12:03 (última perna do circuito, a caminho da barra, ao largo da ilha)',
        q60['timestamp_utc'] == '2026-09-26T15:01:00Z' and q60['destino'] == 'Barra Sul (base)' and q60['eta'] == '12:03' and q105['eta'] == '12:03'
-       and q60['local'] == 'na saída da Barra Sul, chegando' and q60['wp_proximo'] == 'Barra Sul (saída do Rio Camboriú)', {c: q60[c] for c in ('destino', 'eta', 'local', 'wp_proximo')})
+       and q60['local'] == 'ao largo da Ilha das Cabras, a caminho da Barra Sul' and q60['wp_proximo'] == 'Barra Sul (saída do Rio Camboriú)', {c: q60[c] for c in ('destino', 'eta', 'local', 'wp_proximo')})
     a0, a1 = C.em(P, 86399), C.em(P, 0)
     ok('em(): a virada 06:59:59 → 07:00:00: 474 L (29,6 %), 311,5 mn, horímetros 436,6 · 433,8 · 1.260,4, tanques 63,2 · 41,6 · 26,6, destino a 0,0 mn e ETA 07:00',
        all(a0[c] == v for c, v in C8_A_ANTES.items()), {c: (a0[c], v) for c, v in C8_A_ANTES.items() if a0[c] != v})
@@ -2413,8 +2495,8 @@ def c8_rota_e_replay():
     ok('pastas 06 e 04: o abastecimento tem os 3 dias de bordo (0, 1 e 2) com 1.086 L e o diário traz a d01 e a d02 do dia de bordo antes das fixas',
        len(aba.strip().split('\n')) == 4 and aba.count('1.086') == 3 and '\n0,07:00,' in aba and dia.split('\n')[1].startswith('0,07:00,Navegação') and dia.split('\n')[2].startswith('0,07:00,Combustível'), (aba[:200], dia[:300]))
     # ——— plantas
-    for nome, o_que, monta, espera in C8_PLANTAS:
-        planta(nome, ' — C8: ' + o_que, monta, espera)
+    for nome, o_que, monta, espera, *so in C8_PLANTAS:
+        planta(nome, ' — C8: ' + o_que, monta, espera, so_uma=bool(so and so[0]))
     # ——— modo real: o gerador não emite rota, destinos, o replay inteiro nem a posição do quadro (§4.3)
     sim0 = G.SIMULACAO
     try:
