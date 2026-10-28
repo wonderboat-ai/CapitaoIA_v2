@@ -56,6 +56,9 @@
   14 termos, sem conf, edição nem anexos do Avanti; a 1ª fonte de cada item é o trecho da base do id e todo número do item está nele; EM, SF, EP e CK-03 com seguranca e o rótulo do
   procedimento padrão no fim; a asserção FAQ e as outras que leem o FAQ (TERMOS, NULO, TAMANHO, COORD_TEXTO, GRAFIA_SEAFIRE, CALADO_FORA, ESTABILIZADOR_12V, LOCAL_VOCAB, ROTULO_SEGURANCA,
   SEGURANCA_MARCADA, SEGURANCA_SEM_MODELO, IDS…) com amostras plantadas, e o main() que reprova o FAQ com defeito (sem gravar nada).
+  Revisão do C11: a resposta dos cartões e dos itens de segurança mantém a frase do trecho que escala (MAYDAY) ou condiciona («e há fogo no motor»)
+  — a asserção FAQ reprova a resposta que a corta (EM-04, EM-05, EM-08, SF-01, SF-03, EP-01, EL-05 e PO-04 foram corrigidos) — e os itens do checklist
+  «boa prática» que o app avalia entram no FAQ como ordem de conferência (FAQ_CK_ORDEM), nunca como o estado («Nenhuma tarefa de segurança atrasada»).
 - testes/proibidos.json e proibidos-casos.json são cópias iguais do termos.json e do termos-casos.json (PROMPT §3).
 
     python -X utf8 testes/gerador.py
@@ -3207,6 +3210,31 @@ def c11_faq(tmp):
        [g['termo'] for g in gl] == ['SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 'MOB', 'DSC', 'MMSI', 'EPIRB', 'BB/BE'] and all(list(g) == ['termo', 'texto', 'fonte'] for g in gl)
        and P['mmsiRadio'] in next(g for g in gl if g['termo'] == 'MMSI')['texto'] and not re.search(r'\d{9}', ' '.join(g['texto'] for g in gl))
        and all(next(g for g in gl if g['termo'] == t)['texto'].endswith(C.cap(C.ROTULO) + '.') for t in ('MOB', 'DSC')) and next(g for g in gl if g['termo'] == 'EPIRB')['texto'].endswith(fim))
+    # ——— revisão do C11: a escalada e a condição ficam na resposta; o checklist entra como ordem de conferência ———
+    resp_ = lambda i: faq_it(Q, i)['resposta']
+    ok('revisão do C11: a resposta de segurança mantém o que escala ou condiciona, e não só nos passos (EM-04, EM-05, EM-08, SF-01, SF-03, EP-01, EL-05 e PO-04)',
+       'Se perder de vista: MAYDAY no canal 16' in resp_('EM-04')
+       and all('sozinho e há fogo no motor, use o disparo manual' in resp_(i) and 'Fogo que não apaga: MAYDAY no canal 16' in resp_(i) for i in ('EM-05', 'SF-01'))
+       and 'Fogo pequeno fora do motor: extintor portátil' in resp_('SF-01')
+       and resp_('EM-08').startswith('Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).')
+       and resp_('EP-01').startswith('Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).')
+       and 'Se o fogo voltar, MAYDAY no canal 16' in resp_('SF-03') and 'Depois do alerta, faça o MAYDAY por voz no canal 16' in resp_('EL-05')
+       and 'Água entrando: ligue as bombas de porão' in resp_('PO-04') and 'Água subindo mesmo assim: MAYDAY no canal 16' in resp_('PO-04')
+       and resp_('PO-04') == faq_it(Q, 'EM-06')['resposta'][:len(resp_('PO-04'))] and max(len(x['resposta']) for x in itens if x.get('seguranca')) <= C.SEGURANCA_MAX_LETRAS,
+       [i for i in ('EM-04', 'EM-05', 'EM-08', 'SF-01', 'SF-03', 'EP-01', 'EL-05', 'PO-04') if not C.R_ESCALA.search(resp_(i))])
+    ordem = {x['id']: x for lista in ck.values() for x in lista}
+    ok('revisão do C11: CK-03, CK-04, CK-05 e CK-07 trazem os itens «boa prática» do checklist com verbo de ordem (FAQ_CK_ORDEM, os 12), nunca o texto do ✓ que o app avalia '
+       '(«Nenhuma tarefa de segurança atrasada», «Nenhum alerta ativo no painel», «Motores desligados»…)',
+       set(G.FAQ_CK_ORDEM) == {i for i, f in C.CK_FONTE.items() if f is None} and len(G.FAQ_CK_ORDEM) == 12
+       and all(G.FAQ_CK_ORDEM[i] != ordem[i]['t'] for i in C.CK_ESTADO) and len(C.CK_ESTADO) == 8
+       and faq_it(Q, 'CK-03')['obs'] == ' '.join(G.FAQ_CK_ORDEM[i] for i in ('s02', 's11', 's12', 's14')) and faq_it(Q, 'CK-04')['obs'] == G.FAQ_CK_ORDEM['c07']
+       and faq_it(Q, 'CK-05')['obs'] == ' '.join(G.FAQ_CK_ORDEM[i] for i in ('a01', 'a02', 'a03', 'a05')) and faq_it(Q, 'CK-05')['atencao'] == G.FAQ_CK_ORDEM['a04']
+       and faq_it(Q, 'CK-07')['obs'] == ' '.join(G.FAQ_CK_ORDEM[i] for i in ('f04', 'f06'))
+       and not [i for i in C.CK_ESTADO for x in itens for k in ('resposta', 'acao', 'atencao', 'senao', 'obs') if ordem[i]['t'] in x.get(k, '')],
+       {i: faq_it(Q, i).get('obs') for i in ('CK-03', 'CK-04', 'CK-05', 'CK-07')})
+    ok('revisão do C11: a "afirmação de estado" que os dados desmentem não está no FAQ: a agenda tem a tarefa de segurança atrasada (porao-teste) e o FAQ manda conferir, não diz que não há',
+       any(a.get('id') == 'porao-teste' and a.get('seguranca') and a.get('st') == 'ATRASADA' for a in D['agenda']) and 'Nenhuma tarefa de segurança atrasada' not in G.gera_faq(Q)
+       and 'Confira na agenda se há tarefa de segurança atrasada.' in faq_it(Q, 'CK-03')['obs'])
     # ——— o gerador ———
     antigo = G.FAQ_TEXTOS['CK-05']['ob']
     G.FAQ_TEXTOS['CK-05']['ob'] = ('ck', 's03')   # o s03 tem seção nos guias (g_motores §1): só os de «boa prática» entram assim
@@ -3224,6 +3252,18 @@ def c11_faq(tmp):
     # ——— amostras plantadas: a FAQ ———
     def it(Q_, i):
         return faq_it(Q_, i)
+
+    def resp(i, velho, novo=''):
+        """Amostra da revisão do C11: a resposta de `i` com `velho` trocado por `novo` (o `velho` tem de estar lá: a amostra nunca é vazia)."""
+        def muda_resp(D_, B_, Q_):
+            x = it(Q_, i)
+            assert velho in x['resposta'], (i, velho)
+            x['resposta'] = x['resposta'].replace(velho, novo, 1)
+        return muda_resp
+
+    def com_obs(i, extra):
+        """Amostra da revisão do C11: o `obs` de `i` com a frase do checklist `extra` (o texto do item do checklist que o app avalia, como era antes)."""
+        return lambda D_, B_, Q_: it(Q_, i).update({'obs': it(Q_, i)['obs'] + ' ' + extra})
     A = [
         ('chave `conf` num item (o chip de confiabilidade do Avanti)', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'conf': 'alta'}), 'chave de conf'),
         ('chave `lacuna` num item', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'lacuna': 'falta o manual'}), 'chave de lacuna'),
@@ -3276,6 +3316,41 @@ def c11_faq(tmp):
         ('MOB do glossário sem o rótulo', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'MOB').update({'texto': 'Homem ao mar.'}), 'glossario.MOB.texto: sem o rótulo'),
         ('EPIRB do glossário sem a nota da etiqueta', lambda D_, B_, Q_: next(g for g in Q_['glossario'] if g['termo'] == 'EPIRB').update({'texto': 'Radiobaliza. ' + C.cap(C.ROTULO) + '.'}),
          'glossario.EPIRB.texto: sem o rótulo e a nota da etiqueta'),
+        # ——— revisão do C11: a resposta (lida inteira pela tela e pela voz) mantém a frase que escala (MAYDAY) ou condiciona («e há fogo no motor») ———
+        ('EM-04 (homem ao mar) sem «Se perder de vista: MAYDAY…» na resposta',
+         resp('EM-04', ' Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB lida no plotter.'), 'faq:EM-04.resposta: corta a frase do trecho de origem que escala ou condiciona «Se perder de vista'),
+        ('EM-05 (incêndio) sem a condição «e há fogo no motor» antes do disparo manual',
+         resp('EM-05', 'sozinho e há fogo no motor,', 'sozinho,'), 'faq:EM-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Se o sistema não disparou sozinho e há fogo'),
+        ('EM-05 sem «Fogo que não apaga: MAYDAY…»', resp('EM-05', ' Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.'),
+         'faq:EM-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Fogo que não apaga'),
+        ('SF-01 sem a condição «e há fogo no motor» (descarregaria o sistema só pelo alarme)', resp('SF-01', 'sozinho e há fogo no motor,', 'sozinho,'),
+         'faq:SF-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Se o sistema não disparou sozinho e há fogo'),
+        ('SF-01 sem «Fogo que não apaga: MAYDAY…»', resp('SF-01', ' Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.'),
+         'faq:SF-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Fogo que não apaga'),
+        ('SF-03 sem «se o fogo voltar, MAYDAY…» (a oração depois do ponto e vírgula)', resp('SF-03', ' Se o fogo voltar, MAYDAY no canal 16.'),
+         'faq:SF-03.resposta: corta a frase do trecho de origem que escala ou condiciona «se o fogo voltar, MAYDAY'),
+        ('EM-08 (EPIRB) sem «Só em perigo grave e iminente, depois do MAYDAY»', resp('EM-08', 'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). '),
+         'faq:EM-08.resposta: corta a frase do trecho de origem que escala ou condiciona «Só em perigo grave e iminente'),
+        ('EP-01 sem «Só em perigo grave e iminente, depois do MAYDAY»', resp('EP-01', 'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). '),
+         'faq:EP-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Só em perigo grave e iminente'),
+        ('PO-04 só com a 1ª frase (sem «Água subindo mesmo assim: MAYDAY…»)', resp('PO-04', ' Água subindo mesmo assim: MAYDAY no canal 16.'),
+         'faq:PO-04.resposta: corta a frase do trecho de origem que escala ou condiciona «Água subindo mesmo assim'),
+        ('EM-06 sem «Água subindo mesmo assim: MAYDAY…»', resp('EM-06', ' Água subindo mesmo assim: MAYDAY no canal 16.'),
+         'faq:EM-06.resposta: corta a frase do trecho de origem que escala ou condiciona «Água subindo mesmo assim'),
+        ('EL-05 (DISTRESS) sem «Depois do alerta, faça o MAYDAY por voz»', resp('EL-05', ' Depois do alerta, faça o MAYDAY por voz no canal 16.'),
+         'faq:EL-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Depois do alerta, faça o MAYDAY'),
+        ('EM-01 (roteiro) sem a palavra MAYDAY na resposta', resp('EM-01', 'fale MAYDAY três vezes', 'fale três vezes'),
+         'faq:EM-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Diga devagar'),
+        # ——— revisão do C11: o checklist entra como ordem de conferência, nunca como o estado que o app avalia ———
+        ('CK-03 com «Nenhuma tarefa de segurança atrasada.» (o porao-teste está atrasado na agenda)', com_obs('CK-03', 'Nenhuma tarefa de segurança atrasada.'),
+         'faq:CK-03.obs: repete o item s12 do checklist'),
+        ('CK-03 com «Nenhum alerta ativo no painel.» (o laço tem AVISO)', com_obs('CK-03', 'Nenhum alerta ativo no painel.'), 'faq:CK-03.obs: repete o item s02 do checklist'),
+        ('CK-03 com «Documentos em dia (TIE, seguro, Licença de Estação).»', com_obs('CK-03', 'Documentos em dia (TIE, seguro, Licença de Estação).'),
+         'faq:CK-03.obs: repete o item s11 do checklist'),
+        ('CK-05 com «Motores desligados.» (estado atual com o barco navegando)', com_obs('CK-05', 'Motores desligados.'), 'faq:CK-05.obs: repete o item a01 do checklist'),
+        ('CK-05 com «Nível de diesel anotado antes.»', com_obs('CK-05', 'Nível de diesel anotado antes.'), 'faq:CK-05.obs: repete o item a03 do checklist'),
+        ('CK-07 com «Maré e vento conferidos (previsão da Marinha).»', com_obs('CK-07', 'Maré e vento conferidos (previsão da Marinha).'), 'faq:CK-07.obs: repete o item f06 do checklist'),
+        ('CK-07 com «Motores em neutro e deriva conferida.»', com_obs('CK-07', 'Motores em neutro e deriva conferida.'), 'faq:CK-07.obs: repete o item f04 do checklist'),
     ]
     for o_que, muda_, espera in A:
         c11_planta('FAQ', o_que, muda_, espera)
@@ -3338,6 +3413,10 @@ def c11_faq(tmp):
     for n_, (nome, muda_, esperado) in enumerate((('número novo num passo', lambda Q_: it(Q_, 'MO-02')['passos'].append('Repita 7 vezes.'), 'FAQ'),
                                                   ('chave `conf` no item', lambda Q_: it(Q_, 'MO-01').update({'conf': 'alta'}), 'FAQ'),
                                                   ('EM-01 sem seguranca (SEGURANCA_MARCADA)', lambda Q_: it(Q_, 'EM-01').pop('seguranca'), 'SEGURANCA_MARCADA'),
+                                                  ('EM-04 sem a escalada «Se perder de vista: MAYDAY…» na resposta (revisão do C11)',
+                                                   lambda Q_: it(Q_, 'EM-04').update({'resposta': it(Q_, 'EM-04')['resposta'].replace(' Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB lida no plotter.', '')}), 'FAQ'),
+                                                  ('CK-03 com o texto do ✓ «Nenhuma tarefa de segurança atrasada.» (revisão do C11)',
+                                                   lambda Q_: it(Q_, 'CK-03').update({'obs': it(Q_, 'CK-03')['obs'] + ' Nenhuma tarefa de segurança atrasada.'}), 'FAQ'),
                                                   ('preço no item (a DINHEIRO reprova já; a TERMOS em relatório, não)',
                                                    lambda Q_: it(Q_, 'MO-01').update({'resposta': it(Q_, 'MO-01')['resposta'] + ' Custa R$ 9,90.'}), 'TERMOS'),
                                                   ('«DEMO» no item (relatório: não reprova, grava)', None, None))):

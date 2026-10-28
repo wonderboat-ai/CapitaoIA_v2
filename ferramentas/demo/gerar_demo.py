@@ -1128,6 +1128,9 @@ def faq():
 #     guia de bordo gerado, um nível só não informa nada (decisão 8 do §8.2). Fica só o glossário;
 #   - seguranca: true no item cujo trecho de origem tem, ou cujo texto casa a SEGURANCA_PALAVRAS (nada com seguranca vai à IA, F30);
 #   - EM, SF e EP só com o procedimento padrão rotulado, sem fabricante, modelo, validade, posição, pessoas nem lugar (§1.6).
+#   - a `resposta` (que a tela e a voz leem inteira) mantém, do trecho de origem, toda frase que condiciona ou escala («e há fogo no motor»,
+#     «Se perder de vista: MAYDAY…»): a asserção FAQ reprova a resposta que corta uma frase com MAYDAY ou «há fogo»;
+#   - os itens do checklist sem seção nos guias entram como ordem de conferência (FAQ_CK_ORDEM), nunca como o estado que o app avalia.
 FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
              ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
              ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))
@@ -1143,13 +1146,30 @@ FAQ_SECOES = (('Emergência', ('EM',)), ('Motores', ('MO',)), ('Gerador e energi
 FAQ_PROTOCOLO = {'SF-01': 'Incêndio · Seafire', 'EP-01': 'EPIRB', 'EP-03': 'EPIRB', 'EL-05': 'DSC', 'PO-04': 'Água entrando'}
 FAQ_BOA_PRATICA = 'Checklist de bordo · itens sem seção nos guias de bordo (boa prática)'
 FAQ_AGENDA = 'Datas e situação de cada tarefa: veja a agenda de manutenção do app.'
+# Os itens do checklist «sem seção nos guias» (boa prática) como o FAQ os diz. No checklist (D.checklists) são o rótulo de um ✓ que o app avalia
+# («Nenhum alerta ativo no painel.»); solto no FAQ, o mesmo texto vira uma afirmação sobre o estado do barco que o dado de bordo pode desmentir
+# (o laço tem AVISO, a agenda tem a tarefa de segurança atrasada). Aqui cada um é uma ordem de conferência ou de ação, com verbo; o a04 já é ordem.
+FAQ_CK_ORDEM = {
+    's02': 'Confira que não há alerta ativo no painel.',
+    's11': 'Confira que os documentos estão em dia (TIE, seguro, Licença de Estação).',
+    's12': 'Confira na agenda se há tarefa de segurança atrasada.',
+    's14': 'Recolha cabos e defensas depois de largar.',
+    'c07': 'Deixe cabos e defensas prontos antes de atracar.',
+    'a01': 'Desligue os motores.',
+    'a02': 'Desligue o gerador.',
+    'a03': 'Anote o nível de diesel antes.',
+    'a04': 'Sem fumar a bordo; extintor portátil à mão.',
+    'a05': 'Use o bocal certo (diesel) e feche a tampa do tanque depois.',
+    'f04': 'Deixe os motores em neutro e confira se o barco está derivando.',   # «confira a deriva» casaria a SOS « a deriva »: seguranca no CK-07
+    'f06': 'Confira a maré e o vento (previsão da Marinha).',
+}
 FAQ_EQUIP_EM = {'EM-01': 'Rádios VHF', 'EM-02': 'Rádios VHF', 'EM-03': 'Rádios VHF', 'EM-04': 'Plotters', 'EM-05': 'Sistema fixo de supressão de incêndio',
                 'EM-06': 'Bombas de porão', 'EM-07': 'Protocolo de emergência', 'EM-08': 'EPIRB', 'EM-09': 'Salvatagem'}
 
 
 def _f(t, q, v, r, a=None, p=None, at=None, se=None, ob=None, ver=(), eq=None):
     """A especificação de um item: titulo, pergunta, as 3 variantes, resposta, acao e o resto. r, at, se e ob: texto, índice de frase da
-    seção ou lista deles (juntos por espaço); ('ck', ids…) = o texto do item do checklist. p: None = as frases que r, at e se não usaram,
+    seção ou lista deles (juntos por espaço); ('ck', ids…) = o item do checklist como ordem (FAQ_CK_ORDEM). p: None = as frases que r, at e se não usaram,
     [] = sem passo a passo, ou a lista de frases (índice ou texto)."""
     return dict(t=t, q=q, v=list(v), r=r, a=a, p=p, at=at, se=se, ob=ob, ver=tuple(ver), eq=eq)
 
@@ -1175,12 +1195,13 @@ FAQ_TEXTOS = {
     'EM-04': _f('Homem ao mar (MOB)', 'O que faço quando alguém cai na água?',
                 ['pessoa caiu do barco', 'homem ao mar: primeiros passos', 'como recuperar quem caiu'],
                 'Grite HOMEM AO MAR e o lado, jogue a boia ou qualquer objeto que flutue, aponte sem perder de vista e marque MOB no plotter. '
-                'Volte devagar, com o motor em neutro perto da pessoa.',
+                'Volte devagar, com o motor em neutro perto da pessoa. Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB lida no plotter.',
                 a='Grite HOMEM AO MAR, jogue a boia e aponte sem perder de vista.', p=list(TXT_MOB), ver=('EL-01', 'EM-01')),
     'EM-05': _f('Incêndio a bordo', 'O que faço se houver fogo a bordo?',
                 ['fogo no motor', 'alarme do sistema fixo de incêndio', 'como usar o extintor portátil no fogo'],
                 'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
-                'sozinho, use o disparo manual. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
+                'sozinho e há fogo no motor, use o disparo manual. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para '
+                'a saída. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
                 a='Desligue motores e gerador e corte a ventilação do motor.', p=list(TXT_SEAFIRE), ver=('SF-01', 'SF-03', 'EM-01')),
     'EM-06': _f('Água entrando no barco', 'O que faço se estiver entrando água?',
                 ['alagamento no porão', 'a bomba de porão não dá conta', 'nível do porão subindo'],
@@ -1194,8 +1215,8 @@ FAQ_TEXTOS = {
                    'Leve o EPIRB e o VHF portátil.', 'Embarque na balsa sem pular na água.'], ver=('EM-01', 'EM-08', 'EM-09')),
     'EM-08': _f('EPIRB (radiobaliza): acionar', 'Quando e como aciono o EPIRB?',
                 ['como disparar a radiobaliza', 'acionar a baliza de emergência', 'EPIRB em perigo grave'],
-                'Acione conforme a etiqueta do equipamento, com a antena para cima e céu aberto, e leve o EPIRB para a balsa ou mantenha-o '
-                'flutuando preso por um cabo. Disparo por engano: desligue e avise no canal 16.',
+                'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). Acione conforme a etiqueta do equipamento, com a antena para cima '
+                'e céu aberto, e leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Disparo por engano: desligue e avise no canal 16.',
                 a='Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).', p=list(TXT_EPIRB), ver=('EP-01', 'EP-03', 'EM-01')),
     'EM-09': _f('Salvatagem: coletes, balsa e extintores', 'Onde estão os coletes, a balsa e os extintores?',
                 ['equipamentos de salvatagem do barco', 'quantos coletes preciso levar', 'onde ficam os sinalizadores'],
@@ -1345,7 +1366,7 @@ FAQ_TEXTOS = {
                 a='Rádio fixo em escuta permanente no canal 16.', ver=('EL-05', 'CK-02'), eq=equip_de('vhf')),
     'EL-05': _f('Rádio VHF: botão DISTRESS (DSC)', 'Para que serve o botão DISTRESS do rádio?',
                 ['alerta DSC do rádio VHF', 'identificação do rádio no alerta de socorro', 'depois do botão DISTRESS, o que faço'],
-                [0], a='Depois do DISTRESS, faça o MAYDAY por voz no canal 16.', p=[1], ver=('EM-03', 'EM-01'), eq=equip_de('vhf')),
+                [0, 1], a='Depois do DISTRESS, faça o MAYDAY por voz no canal 16.', p=[1], ver=('EM-03', 'EM-01'), eq=equip_de('vhf')),
     'EL-06': _f('Áudio Fusion: parear o celular', 'Como pareio o celular no som do barco?',
                 ['Bluetooth do Fusion', 'conectar o celular ao áudio', 'volume por zona do áudio'],
                 'No controle Fusion, escolha a fonte Bluetooth, deixe o celular visível e selecione o Fusion na lista de Bluetooth do celular.',
@@ -1389,7 +1410,7 @@ FAQ_TEXTOS = {
                 p=['Acione cada bomba no manual.', 'Confira a saída pelo casco e o alarme do painel.', 'Registre o teste no diário.'], ver=('PO-01', 'CK-02')),
     'PO-04': _f('Água entrando: bombas de porão', 'Entrou água no barco, o que faço?',
                 ['alagamento no porão', 'água subindo no porão', 'bomba de porão sem dar conta'],
-                [0], p=['Ligue as bombas de porão no manual.', 'Procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que puder.', 1],
+                [0, 1], p=['Ligue as bombas de porão no manual.', 'Procure a entrada (válvulas de fundo, mangueiras, eixos) e feche o que puder.', 1],
                 ver=('EM-06', 'PO-02')),
     # ——— Guincho e âncora ———
     'AN-01': _f('Lançar a âncora', 'Como lanço a âncora?',
@@ -1441,7 +1462,8 @@ FAQ_TEXTOS = {
     'SF-01': _f('Fogo a bordo: sistema fixo de incêndio', 'O que faço em caso de fogo no motor?',
                 ['alarme do sistema fixo de incêndio', 'fogo no motor', 'quando usar o extintor portátil'],
                 'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
-                'sozinho, use o disparo manual.',
+                'sozinho e há fogo no motor, use o disparo manual. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para '
+                'a saída. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
                 a='Desligue motores e gerador e corte a ventilação do motor.', ver=('EM-05', 'SF-02', 'SF-03')),
     'SF-02': _f('Disparo manual do sistema fixo', 'Como uso o disparo manual do sistema fixo?',
                 ['sistema fixo não disparou sozinho', 'acionar o disparo manual de incêndio', 'disparo manual com o motor desligado'],
@@ -1450,7 +1472,7 @@ FAQ_TEXTOS = {
     'SF-03': _f('Depois do disparo do sistema fixo', 'O sistema fixo disparou, o que faço depois?',
                 ['sistema fixo descarregou', 'quando abrir o acesso ao motor', 'recarga do sistema fixo'],
                 'Depois do disparo, confirme motores, gerador e ventilação desligados e não abra o acesso ao motor; espere o tempo indicado na '
-                'etiqueta do sistema.',
+                'etiqueta do sistema. Se o fogo voltar, MAYDAY no canal 16.',
                 a='Não abra o acesso ao motor: espere o tempo da etiqueta do sistema.',
                 p=['Confirme motores, gerador e ventilação desligados.', 'Não abra o acesso ao motor.',
                    'Espere o tempo indicado na etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão.',
@@ -1460,9 +1482,9 @@ FAQ_TEXTOS = {
     # ——— EPIRB ———
     'EP-01': _f('Acionar o EPIRB', 'Como aciono o EPIRB?',
                 ['disparar a radiobaliza', 'EPIRB: antena para cima e céu aberto', 'levar o EPIRB para a balsa'],
-                'Acione conforme a etiqueta do equipamento, com a antena para cima e céu aberto, só em perigo grave e iminente e depois do '
-                'MAYDAY (ou sem rádio).',
-                a='Só em perigo grave e iminente, depois do MAYDAY.', p=[1, 2, 3], ver=('EM-08', 'EP-03')),
+                'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). Acione conforme a etiqueta do equipamento, com a antena para '
+                'cima e céu aberto.',
+                a='Só em perigo grave e iminente, depois do MAYDAY.', ver=('EM-08', 'EP-03')),
     'EP-02': _f('Teste da baliza (EPIRB)', 'Como testo o EPIRB?',
                 ['autoteste da radiobaliza', 'o teste do EPIRB envia alerta', 'bateria e disparador hidrostático'],
                 'Faça o autoteste conforme a etiqueta; o teste não envia alerta.',
@@ -1549,7 +1571,7 @@ def _sem_fim(txt):
 
 
 def _faq_texto(x, fr, ck):
-    """Campo do FAQ: o texto, a frase de índice N da seção, ('ck', ids…) = o texto dos itens do checklist, ou uma lista deles (juntos por espaço)."""
+    """Campo do FAQ: o texto, a frase de índice N da seção, ('ck', ids…) = os itens do checklist como ordem (FAQ_CK_ORDEM), ou uma lista deles (juntos por espaço)."""
     if x is None:
         return None
     if isinstance(x, int):
@@ -1557,7 +1579,7 @@ def _faq_texto(x, fr, ck):
     if isinstance(x, str):
         return x
     if x and x[0] == 'ck':
-        return ' '.join(ck[i]['t'] for i in x[1:])
+        return ' '.join(FAQ_CK_ORDEM[ck[i]['id']] for i in x[1:])
     return ' '.join(_faq_texto(i, fr, ck) for i in x)
 
 

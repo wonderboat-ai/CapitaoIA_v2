@@ -3360,6 +3360,27 @@ FAQ_GLOSSARIO = ('SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 
 FAQ_GLOSSARIO_ROTULO = ('MOB', 'DSC')   # os termos de segurança levam o rótulo do procedimento padrão (o EPIRB, também a nota da etiqueta)
 R_NUMERO = re.compile(r'\d+(?:[.,]\d+)*')   # 2.050 · 6,0 · 12 · 16: o número como o guia escreve
 R_FONTE = re.compile(r'(.+?) §\s*(.+)')     # «<título> §<n> · <seção>» (numerada) ou «<título> § <seção>» (sem número)
+# Revisão do C11 (a tela e a voz leem a `resposta` inteira): a frase do trecho de origem que escala («MAYDAY») ou condiciona («e há fogo no motor»)
+# não pode ficar só nos passos. «MAYDAY, MAYDAY, MAYDAY» é o roteiro do EM-01, que a resposta diz em prosa e os passos repetem letra por letra.
+R_ESCALA = re.compile(r'MAYDAY|há fogo')
+ROTEIRO_MAYDAY = 'MAYDAY, MAYDAY, MAYDAY'
+# Revisão do C11: os itens «boa prática» que o app avalia sozinho (✓ automático: alertas, documentos, tarefas de segurança, motores e gerador desligados,
+# nível anotado, deriva, maré e vento). No checklist são o rótulo do ✓; no FAQ viram ordem de conferência, porque o mesmo texto solto afirma um estado
+# que o dado de bordo desmente («Nenhuma tarefa de segurança atrasada» com o porao-teste atrasado; «Nenhum alerta ativo» com o AVISO do laço).
+CK_ESTADO = tuple(i for i, f in CK_FONTE.items() if f is None and i in CK_AUTO)
+
+
+def _norm_frase(txt):
+    return re.sub(r'\s+', ' ', str(txt)).strip().lower()
+
+
+def _frases(txt):
+    return [c.strip() for c in re.split(r'(?<=[.!?])\s+(?=[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ])', str(txt)) if c.strip()]
+
+
+def _clausulas(txt):
+    """As frases de um trecho e, dentro delas, as orações separadas por «;» (o fim do trecho de segurança tem a escalada depois do ponto e vírgula)."""
+    return [o.strip() for f in _frases(txt) for o in re.split(r';\s+', f) if o.strip()]
 
 
 def _resolve_fonte(texto, por_trecho):
@@ -3379,6 +3400,8 @@ def a_faq(X):
       - item com as chaves do contrato na ordem, 3 variantes diferentes, fontes só dos 3 tipos, `emerg` só nos EM, `ver` com ids que existem;
       - a 1ª fonte é a seção da base daquele id (EM-n: a do protocolo), e todo número do item está no texto dessa seção (nada de número novo);
       - `seguranca` em todo item cujo trecho de origem tem; a resposta termina com o rótulo que o trecho termina e, com seguranca, tem até 800 letras;
+      - a resposta mantém toda frase ou oração do trecho de origem com MAYDAY ou «há fogo» (a escalada e a condição), não só os passos;
+      - o checklist: nenhum texto do FAQ repete o item «boa prática» que o app avalia (CK_ESTADO): vira ordem de conferência, não afirmação de estado;
       - os cartões EM passam as regras do D.protocolos (sem bar, %, nós, graus, pessoas, lugar, fabricante, modelo nem dado do barco);
       - o glossário: os 14 termos, MMSI com o texto MMSI_RADIO e os de segurança com o rótulo."""
     Q = X.faq
@@ -3516,8 +3539,24 @@ def a_faq(X):
             out.append('%s: a resposta não termina com o rótulo que o trecho de origem termina «%s»' % (cam, fim[-60:]))
         if not fim and ROTULO.lower() in str(it.get('resposta', '')).lower():   # o rótulo abre frase com maiúscula no fim do texto
             out.append('%s: rótulo do procedimento padrão numa resposta cujo trecho de origem não o tem' % cam)
+        # ——— a escalada e a condição do trecho ficam na resposta (e nos passos, quando o item tem) ———
+        resp_n = _norm_frase(it.get('resposta', ''))
+        for c in _clausulas(t.get('texto', '')):
+            if R_ESCALA.search(c) and ('mayday' if ROTEIRO_MAYDAY in c else _norm_frase(c).rstrip('.!?;: ')) not in resp_n:
+                out.append('%s.resposta: corta a frase do trecho de origem que escala ou condiciona «%s» (a tela e a voz leem a resposta inteira; ela mantém toda frase com MAYDAY ou «há fogo»)' % (cam, c[:90]))
         if it.get('seguranca') is True and len(str(it.get('resposta', ''))) > SEGURANCA_MAX_LETRAS:   # como o trecho (SEGURANCA_CURTA): a tela e a voz leem a resposta inteira
             out.append('%s.resposta: %d letras com seguranca (máximo %d: a tela e a voz leem inteira, com o rótulo no fim)' % (cam, len(it['resposta']), SEGURANCA_MAX_LETRAS))
+    # ——— o checklist no FAQ: ordem de conferência, não o estado que o app avalia ———
+    estado = {_norm_frase(x['t']).rstrip('.'): x['id'] for lista in ((X.D.get('checklists') or {}).get('itens') or {}).values() if isinstance(lista, list)
+              for x in lista if isinstance(x, dict) and x.get('id') in CK_ESTADO and isinstance(x.get('t'), str)}
+    for it in itens:
+        if isinstance(it, dict):
+            for c, txt in textos(it, 'faq:%s' % it.get('id')):
+                if c.split('.')[-1].split('[')[0] in ('id', 'ver', 'fontes', 'equip', 'tipo', 'texto', 'secao') or '.fontes[' in c or '.ver[' in c:
+                    continue
+                for f in _frases(txt):   # a frase inteira, letra por letra: a mesma palavra dentro de outra frase («motores e gerador desligados») não é a cópia
+                    if _norm_frase(f).rstrip('.') in estado:
+                        out.append('%s: repete o item %s do checklist, que o app avalia sozinho (✓ automático): no FAQ ele vira ordem de conferência, não a afirmação do estado «%s»' % (c, estado[_norm_frase(f).rstrip('.')], f[:90]))
     # ——— cartões EM: as regras do D.protocolos ———
     out += _regras_protocolo(X, [(c, s) for it in itens if isinstance(it, dict) and str(it.get('id', '')).startswith('EM-')
                                  for c, s in textos(it, 'faq:%s' % it.get('id')) if not re.search(r'\.(?:id|ver\[\d+\]|fontes\[\d+\]\.\w+|secao|equip)$', c)])
