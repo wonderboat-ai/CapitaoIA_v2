@@ -2697,6 +2697,10 @@ def c9_historico():
     c9_planta('desvio sem variação (tudo 0: o gráfico de 30 D e 1 A sairia reto)', lambda D: D['historico']['desvios']['pressao_barometrica_hpa'].update({'d': [0] * 183}),
               'desvios.pressao_barometrica_hpa sem variação')
     c9_planta('escala zero', lambda D: D['historico']['desvios']['temp_agua_c'].update({'escala': 0}), 'desvios.temp_agua_c.escala precisa ser inteiro positivo')
+    # (revisão do C9, §6.3 «sem NaN», «métricas ⊂ D.campos», «so150 ⊂ grupos de métricas»): as três checagens do confere.py tinham a linha e nenhuma planta
+    c9_planta('NaN num desvio', c9_d_de('vento_verdadeiro_nos', 5, float('nan')), 'com valor não finito', True)
+    c9_planta('métrica fora do catálogo (xyz no grupo vento)', lambda D: D['historico']['metricas']['vento'].append('xyz'), "'xyz' fora de D.campos", True)
+    c9_planta('so150 com grupo que não existe (zzz)', lambda D: D['historico']['so150'].append('zzz'), "'zzz' fora das métricas", True)
     c9_planta('curva do ano com 72 pontos', lambda D: D['historico']['sazonal']['temp_agua_c']['d'].pop(), 'sazonal.temp_agua_c sem 73 pontos')
     c9_planta('curva do ano do ar plana (30 D e 1 A sairiam retos)', lambda D: D['historico']['sazonal']['temp_ar_externo_c'].update({'d': [0] * 72 + [1]}), 'varia só 0.1 °C no ano')
     c9_planta('curva do ano do hemisfério norte (máximo em meados de julho)',
