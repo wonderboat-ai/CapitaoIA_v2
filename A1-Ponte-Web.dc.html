@@ -325,8 +325,9 @@ class Component extends DCLogic {
       { n: 'Motores', v: Array.isArray(M.rpm) ? 'BB · BE · ' + (M.hora ? M.hora.slice(-5) : SD) : null, tip: cap(M.estado || '') },
       { n: 'Gerador', v: GE.estado ? liga(GE.estado) + ' · ' + (GE.hora ? GE.hora.slice(-5) : SD) : null },
       { n: 'Seakeeper', v: SK.estado ? liga(SK.estado) + ' · ' + (SK.hora ? SK.hora.slice(-5) : SD) : null },
-      { n: 'Porão', v: S.porao == null ? null : num(S.porao) ? nb(S.porao) : 'na rede', tip: 'Nenhum sensor de porão na rede no snapshot' },
-      { n: 'Âncora', v: S.ancora == null ? null : num(S.ancora) ? nb(S.ancora) : 'na rede', tip: 'Nenhum sensor de âncora na rede no snapshot' }
+      // porão e âncora são objetos no snapshot ({bb_cm, be_cm, ciclos_h} e {estado, cabo_m}): o chip mostra o valor, e a dica "Nenhum sensor" só vale sem leitura
+      { n: 'Porão', v: S.porao == null ? null : num(S.porao) ? nb(S.porao) : num(S.porao.bb_cm) && num(S.porao.be_cm) ? 'BB ' + nb(S.porao.bb_cm) + ' · BE ' + nb(S.porao.be_cm) + ' cm' : 'na rede', tip: S.porao == null ? 'Nenhum sensor de porão na rede no snapshot' : '' },
+      { n: 'Âncora', v: S.ancora == null ? null : num(S.ancora) ? nb(S.ancora) : S.ancora.estado ? String(S.ancora.estado) + (num(S.ancora.cabo_m) ? ' · ' + nb(S.ancora.cabo_m, 0) + ' m' : '') : 'na rede', tip: S.ancora == null ? 'Nenhum sensor de âncora na rede no snapshot' : '' }
     ].map((s) => {
       const ok = s.v != null;
       return Object.assign(s, { v: ok ? s.v : SL, tip: s.tip || (ok ? s.n + ' na rede · snapshot ' + quando : s.n + ': ' + SL),

@@ -718,17 +718,55 @@ CAMPOS_PASSO = ('lat', 'lon', 'cog_graus', 'proa_graus', 'piloto_rumo', 'profund
 CAMPOS_ANGULO = ('cog_graus', 'proa_graus', 'piloto_rumo')
 
 
+def hora_do_dia(R, seg):
+    """HH:MM:SS (relógio de bordo) do segundo `seg` do dia de bordo, contado da `ancora_hora` do replay (07:00 se faltar)."""
+    h, m = ((R or {}).get('ancora_hora') or '07:00').split(':')[:2]
+    t = int(h) * 3600 + int(m) * 60 + int(seg)
+    return '%02d:%02d:%02d' % ((t // 3600) % 24, (t % 3600) // 60, t % 60)
+
+
 def varredura_dia(P):
     """Uma passada pelos segundos do dia de bordo (guardada em P): os eventos da rota (troca de ponto, de destino ou de ETA), o maior
-    passo de 1 s de cada campo fora das emendas e dos eventos, o passo e os eventos em cada emenda de 150 s (N·150) e o passo da virada
-    (A − 1 s → A)."""
+    passo de 1 s de cada campo fora das emendas e dos eventos, o passo e os eventos em cada emenda de 150 s (N·150), o passo da virada
+    (A − 1 s → A) e, nos campos de limite que o laço de 150 s não cobre (contador, tanque, profundidade: a rota e os contadores andam o
+    dia inteiro), o nível de cada segundo pela `nivel` portada: `limites[campo]` = {nivel: (segundo, valor)} para o primeiro segundo em
+    aviso e o primeiro em crítico, e `perto` = (segundo, valor, limite) do primeiro valor a menos de 0,05 de um limite do regime em vigor
+    (JANELA e FIO, §6.3: «todo valor por segundo»)."""
     if P['passos'] is not None:
         return P['passos']
     n, dia = P['n'], P['n'] * P['R']['por_dia']['voltas']
     maximos, emendas, eventos = {c: 0.0 for c in CAMPOS_PASSO}, {}, []
+    lim, C = P['R'].get('limites') or {}, P['C']
+    dia_lim = [c for c in lim if c not in (P['R'].get('chaves') or {})]   # os de laço (periódicos em 150 s) são da a_janela e da a_fio
+    niveis = {c: {'niveis': {}, 'perto': None} for c in dia_lim}
+    # o que a `nivel` lê além do valor do campo (ativo_se e o rpm dos regimes): o resultado só muda quando o valor ou uma dessas entradas muda,
+    # e só o primeiro segundo de cada resultado é guardado, então o segundo que repete a entrada anterior não precisa reavaliar (contador e
+    # tanque mudam a cada dezenas de segundos; sem isto a varredura do dia custava 6 s a mais por D)
+    dep = {c: [x for x in ([(lim[c].get('ativo_se') or {}).get('campo')] + [g.get('rpm_campo') for g in lim[c].get('regimes') or []]) if x] for c in dia_lim}
+    visto = {}
+
+    def limites_em(seg, q):
+        for c in dia_lim:
+            chave = (q.get(c),) + tuple(q.get(x) for x in dep[c])
+            if visto.get(c) == chave:
+                continue
+            visto[c] = chave
+            nv = nivel(lim, C, c, q)
+            if nv is None:
+                continue
+            d = niveis[c]
+            if nv['nivel'] != 'normal':
+                d['niveis'].setdefault(nv['nivel'], (seg, q[c]))
+            if d['perto'] is None:
+                v = arred(q[c], casas_de(C, c))
+                perto = [x for x in limiares(regime_de(lim[c], nv)) if round(abs(v - x), 9) < 0.05]
+                if perto:
+                    d['perto'] = (seg, v, perto[0])
     prev = em(P, 0, com_alarmes=False)
+    limites_em(0, prev)
     for s in range(1, dia):
         cur = em(P, s, com_alarmes=False)
+        limites_em(s, cur)
         ev = [k for k in DISCRETOS if cur[k] != prev[k]]
         passo = {c: _passo(cur[c], prev[c], c in CAMPOS_ANGULO) for c in CAMPOS_PASSO}
         if s % n == 0:
@@ -740,7 +778,8 @@ def varredura_dia(P):
                 maximos[c] = max(maximos[c], d)
         prev = cur
     a0, a1 = em(P, dia - 1, com_alarmes=False), em(P, 0, com_alarmes=False)
-    P['passos'] = {'max': maximos, 'emendas': emendas, 'eventos': eventos, 'A': {c: _passo(a1[c], a0[c], c in CAMPOS_ANGULO) for c in CAMPOS_PASSO}}
+    P['passos'] = {'max': maximos, 'emendas': emendas, 'eventos': eventos, 'A': {c: _passo(a1[c], a0[c], c in CAMPOS_ANGULO) for c in CAMPOS_PASSO},
+                   'limites': niveis}
     return P['passos']
 
 
@@ -2007,6 +2046,17 @@ def a_janela(X):
             if n == 'critico' and R.get('cenario') == 'aviso' and (c, 'crit') not in vistos:
                 vistos.add((c, 'crit'))
                 out.append('%s crítico em t = %d com o cenário aviso' % (c, t))
+    # O dia de bordo inteiro (§6.3 «fora das janelas, todo valor por segundo dentro do normal»; PROMPT §2.4: o replay só gera o AVISO planejado).
+    # O laço acima só cobre os 150 s: os contadores (diesel e os três tanques) e a profundidade da rota andam as 24 h, e uma taxa por hora mexida
+    # (cinzas a 3,5 %/h passava de 80 % às 03:35) ou um tanque de partida alto não acusava nada. As janelas só existem para o laço
+    # (deriva_janelas): contador e rota fora do normal em qualquer segundo reprovam.
+    P, _ = X.port()
+    if P is not None:
+        for c, d in sorted(varredura_dia(P)['limites'].items()):
+            for n in ('aviso', 'critico'):
+                if n in d['niveis']:
+                    seg, v = d['niveis'][n]
+                    out.append('%s = %s às %s do dia de bordo (%s) fora das janelas' % (c, v, hora_do_dia(R, seg), n))
     return out
 
 
@@ -2024,6 +2074,13 @@ def a_fio(X):
             if perto:
                 vistos.add(c)
                 out.append('%s = %s em t = %d, a menos de 0,05 do limite %s' % (c, v, t, perto[0]))
+    # O dia de bordo inteiro (contador, tanque e profundidade; o laço de 150 s acima não os cobre): o primeiro segundo a menos de 0,05 de um limite.
+    P, _ = X.port()
+    if P is not None:
+        for c, d in sorted(varredura_dia(P)['limites'].items()):
+            if d['perto'] and c not in vistos:
+                seg, v, lim = d['perto']
+                out.append('%s = %s às %s do dia de bordo, a menos de 0,05 do limite %s' % (c, v, hora_do_dia(X.R, seg), lim))
     return out
 
 
@@ -2060,7 +2117,7 @@ def a_emenda_rota(X):
         return out
     V = varredura_dia(P)
     n = P['n']
-    hhmmss = lambda seg: '%02d:%02d:%02d' % ((7 + seg // 3600) % 24, (seg % 3600) // 60, seg % 60)
+    hhmmss = lambda seg: hora_do_dia(X.R, seg)
     for N, (passo, ev) in sorted(V['emendas'].items()):
         if ev:   # nenhuma chegada (ponto, destino ou ETA) cai no par em(N·150 − 1 s) × em(N·150)
             out.append('emenda %d (%s): a chegada cai no par de segundos consecutivos (%s mudam)' % (N, hhmmss(N * n), ', '.join(ev)))

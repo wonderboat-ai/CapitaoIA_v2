@@ -2361,6 +2361,24 @@ C8_PLANTAS = [
      c8_com(c8_chave('motor_be_arref_c', 22, 87.4)), 'precisa ficar em [95, 120] e durar ≥ 10 s (113–116)', True),
     ('JANELA', 'alarme-critico com o óleo BB voltando ao normal em t = 110 (as janelas do mesmo id deixam de ser contíguas: 106–108 e 112–114)',
      c8_critico(c8_chave('motor_bb_oleo_bar', 22, 3.0)), 'as janelas do mesmo id precisam ser contíguas (106–108 e 112–114)', True),
+    # Revisão do C8 (JANELA e FIO, §6.3 «todo valor por segundo»): as duas só varriam os 150 s do laço, e os contadores (diesel e os três tanques) e a
+    # profundidade da rota andam as 24 h do dia de bordo. Uma taxa por hora, um tanque de partida ou um ponto da rota mexidos passavam sem acusar nada
+    # (o dado de hoje estava limpo, mas nada o segurava). Agora a varredura do dia (varredura_dia) avalia a nivel portada em cada segundo.
+    ('JANELA', 'tanque de cinzas a 3,5 %/h (passa de 80 % às 03:35 do dia de bordo, sem janela)', c8_muda(('replay', 'taxas_h', 'tanque_cinzas_pct'), 3.5),
+     'tanque_cinzas_pct = 80.1 às 03:35:09 do dia de bordo (aviso) fora das janelas', True),
+    ('JANELA', 'tanque de água a -4,0 %/h (desce de 15 % às 02:15 e chega a negativo)', c8_muda(('replay', 'taxas_h', 'tanque_agua_pct'), -4.0),
+     'tanque_agua_pct = 14.9 às 02:15:46 do dia de bordo (aviso) fora das janelas', True),
+    ('JANELA', 'tanque de negras saindo da âncora com 75 % (passa de 80 % no meio da manhã)', c8_muda(('replay', 'contadores_base', 'tanque_negras_pct'), 75),
+     'tanque_negras_pct = 80.1 às 12:36:40 do dia de bordo (aviso) fora das janelas', True),
+    ('JANELA', 'diesel saindo da âncora com 600 L e piso de 100 L (cruza 400 L e depois 160 L: aviso e crítico)',
+     c8_com(lambda D: (D['replay']['contadores_base'].__setitem__('diesel_litros', 600), D['replay'].__setitem__('diesel_piso_l', 100))),
+     'diesel_litros = 399.0 às 11:26:03 do dia de bordo (aviso) fora das janelas'),
+    ('JANELA', 'ponto da rota a 2,5 m de profundidade (a sonda desce de 3,0 m na perna)', c8_com(lambda D: D['rota']['pontos'][0].__setitem__('prof_m', 2.5)),
+     'profundidade_m = 2.8 às 07:04:02 do dia de bordo (aviso) fora das janelas', True),
+    ('FIO', 'diesel chegando ao piso de 400 L (1.560 → 900 L na âncora: o contador encosta no limite às 18:01)', c8_muda(('replay', 'contadores_base', 'diesel_litros'), 900),
+     'diesel_litros = 400.0 às 18:01:58 do dia de bordo, a menos de 0,05 do limite 400', True),
+    ('FIO', 'tanque de cinzas fechando o dia em 80,0 % (46,38 % na âncora: o último minuto encosta no limite sem passar)',
+     c8_muda(('replay', 'contadores_base', 'tanque_cinzas_pct'), 46.38), 'tanque_cinzas_pct = 80.0 às 06:58:43 do dia de bordo, a menos de 0,05 do limite 80', True),
     # Revisão do C8 (§4.3 «o gerador recusa snapshot.gps enquanto o repositório for público»): a LACO só olhava o snapshot.quadro e as fontes.
     ('LACO', 'snapshot.gps com lat e lon no modo real (§4.3)', c8_real(lambda D: D['snapshot']['gps'].update({'lat': -26.993, 'lon': -48.614}), 'D'),
      'modo real: snapshot.gps sem lat, lon nem texto', True),
@@ -2399,6 +2417,12 @@ def c8_rota_e_replay():
        and R['por_dia'] == {'voltas': 576, 'diesel_l': 1086.2, 'distancia_mn': 311.5, 'motor_h': 24, 'gerador_h': 24} and R['diesel_piso_l'] == 400, (R['por_volta'], R['por_dia']))
     ok('D.replay.janelas derivadas pelo gerador: uma só, arref_be (motor_be_arref_c) em aviso de 99 a 116 s',
        R['janelas'] == [{'id': 'arref_be', 'campo': 'motor_be_arref_c', 'nivel': 'aviso', 'ini': 99, 'fim': 116}], R['janelas'])
+    # Revisão do C8: JANELA e FIO varrem as 24 h do dia de bordo (varredura_dia) nos 5 campos de limite que o laço de 150 s não cobre; hoje todos no normal
+    P, erro_p = C.Ctx(D, {}, {}, {}).port()
+    dia = C.varredura_dia(P)['limites'] if P else {}
+    ok('JANELA e FIO varrem o dia de bordo inteiro (86.400 s) em diesel_litros, profundidade_m e nos três tanques: nenhum aviso nem crítico, nenhum valor a menos de 0,05 de um limite',
+       sorted(dia) == ['diesel_litros', 'profundidade_m', 'tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct']
+       and all(not d['niveis'] and d['perto'] is None for d in dia.values()) and R['duracao'] * R['por_dia']['voltas'] == 86400, (erro_p, dia))
     al = R['alertas']
     ok('D.replay.alertas: 21 ids do §1.16, cada um com campo, sistema, título, guia, seção, passos e fonte; óleo = protocolos.oleo; arref_be com os 3 passos do §5',
        list(al) == ['arref_bb', 'arref_be', 'oleo_bb', 'oleo_be', 'rpm_bb', 'rpm_be', 'carga_bb', 'carga_be', 'praca', 'b24s', 'b24p', 'b12', 'porao_bb', 'porao_be', 'profundidade',

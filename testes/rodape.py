@@ -732,19 +732,25 @@ def telas(b):
 # (B2:158, F3-Web:222, F3:216) entraram sem teste: tirá-las não acusava nada (53 verificações do verificar.py, 0 falhas). Aqui cada leitor abre com o
 # dado gerado de verdade e o texto da tela e os `title` não têm [object Object]; o valor certo aparece (o objeto virou texto, não sumiu).
 TITULOS = "() => document.body.innerText + '\\n' + [...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join('\\n')"
-SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar)
+SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar[, o que não pode aparecer em texto nem em title])
     ('B2-Carta-Mobile', True, ('porão: BB 1,2 cm · BE 0,9 cm',)),
     ('F3-FAQ-Eletronicos', True, ('Posição do ferro (âncora)', 'LANÇADA · 30 m')),
     ('F3-FAQ-Eletronicos-Web', False, ('Posição do ferro (âncora)', 'LANÇADA · 30 m')),
-    ('A1-Ponte-Web', False, ()),            # A1:328-329, A2:221 e E1:183 já tratavam objeto: ficam sob o mesmo teste
+    ('A1-Ponte-Web', False, ('BB 1,2 · BE 0,9 cm', 'lançada · 30 m'), ('Nenhum sensor',)),   # A1:328-329 já tratavam objeto no valor mas a dica fixa dizia «Nenhum sensor» ao lado de «na rede»
     ('A2-Ponte-Mobile', True, ()),
     ('E1-Navegando-Gatilhos', False, ()),
     ('G2-Abastecimento-Web', False, ('3 registros', '27/10/2026', '26/10/2026', '25/10/2026')),
 )
 
 
+# Revisão do C8 (A1): o chip Porão e o Âncora do Mapa de sensores trocaram de «SEM LEITURA» para «na rede» quando o snapshot ganhou o objeto, mas a dica (`title`) era
+# fixa na linha («Nenhum sensor de porão na rede no snapshot»), ao lado de «na rede» e de um ponto verde; o chip também perdia o valor. O teste olhava só o
+# [object Object] e não via a contradição. Aqui cada chip: o valor no texto, a dica sem «Nenhum sensor».
+CHIPS_A1 = """() => [...document.querySelectorAll('[title]')].filter((e) => /^(Porão|Âncora)\\b/.test(e.innerText.trim())).map((e) => [e.innerText.replace(/\\s+/g, ' ').trim(), e.getAttribute('title')])"""
+
+
 def snapshot_sem_null(b, local):
-    for tela, app, deve in SNAPSHOT_TELAS:
+    for tela, app, deve, *resto in SNAPSHOT_TELAS:
         pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
         pg.wait_for_timeout(1800)
         todo = pg.evaluate(TITULOS)
@@ -753,6 +759,14 @@ def snapshot_sem_null(b, local):
         if deve:
             falta = [x for x in deve if x not in todo]
             ok('%s: mostra %s' % (tela, ' · '.join(deve)), not falta, falta)
+        if resto and resto[0]:
+            tem = [x for x in resto[0] if x in todo]
+            ok('%s: sem %s no texto nem nos title' % (tela, ' · '.join('«%s»' % x for x in resto[0])), not tem, [l for l in todo.split('\n') if any(x in l for x in tem)][:3])
+        if tela == 'A1-Ponte-Web':
+            chips = pg.evaluate(CHIPS_A1)
+            ok('%s: os chips Porão e Âncora mostram o valor (BB 1,2 · BE 0,9 cm; lançada · 30 m) e a dica não diz «Nenhum sensor»' % tela,
+               len(chips) == 2 and 'BB 1,2 · BE 0,9 cm' in chips[0][0] and 'lançada · 30 m' in chips[1][0] and not any('Nenhum sensor' in t for _, t in chips)
+               and all(' na rede · ' in t for _, t in chips), chips)
         if tela.startswith('G2'):   # as 3 linhas de abastecimento do dia de bordo (ab-0…ab-2): 07:00, 1.086 L cada, a nota fiscal conferida (§1.9, §1.10)
             ok('%s: as 3 linhas do histórico, cada uma com 1.086 L e a saída das 07:00' % tela,
                todo.count('para a saída das 07:00 · nota fiscal conferida (Documentos)') == 3 and todo.count('\n1.086 L\n') >= 3,
