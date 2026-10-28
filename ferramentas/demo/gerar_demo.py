@@ -1178,9 +1178,9 @@ FAQ_TEXTOS = {
     # ——— Emergência: cartões EM (o texto é o do D.protocolos; o rótulo do procedimento padrão vem no fim da resposta) ———
     'EM-01': _f('MAYDAY: pedido de socorro pelo rádio', 'Como faço um pedido de socorro (MAYDAY) pelo rádio?',
                 ['chamada de socorro no canal 16', 'o que falar no MAYDAY', 'como chamar socorro no VHF'],
-                'No canal 16 do VHF, fale MAYDAY três vezes e o nome da embarcação três vezes; depois o MMSI do rádio de bordo (etiqueta / '
-                'Licença de Estação), a posição lida no plotter, a natureza do perigo, as pessoas a bordo (conte agora) e o auxílio '
-                'necessário. Termine com CÂMBIO e repita até ter resposta.',
+                'Só em perigo grave e iminente. No canal 16 do VHF, fale MAYDAY três vezes e o nome da embarcação três vezes; depois o MMSI do '
+                'rádio de bordo (etiqueta / Licença de Estação), a posição lida no plotter, a natureza do perigo, as pessoas a bordo (conte agora) '
+                'e o auxílio necessário. Termine com CÂMBIO e repita até ter resposta.',
                 a='VHF no canal 16: MAYDAY três vezes, depois o roteiro.', p=list(TXT_ROTEIRO), at='Só em perigo grave e iminente.',
                 se='Sem resposta: repita a chamada até ter resposta.', ver=('EM-03', 'EM-04', 'EL-04')),
     'EM-02': _f('PAN-PAN: urgência sem perigo imediato de vida', 'Quando uso o PAN-PAN em vez do MAYDAY?',
@@ -1200,8 +1200,9 @@ FAQ_TEXTOS = {
     'EM-05': _f('Incêndio a bordo', 'O que faço se houver fogo a bordo?',
                 ['fogo no motor', 'alarme do sistema fixo de incêndio', 'como usar o extintor portátil no fogo'],
                 'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
-                'sozinho e há fogo no motor, use o disparo manual. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para '
-                'a saída. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
+                'sozinho e há fogo no motor, use o disparo manual. Não abra o acesso ao motor depois da descarga: espere o tempo indicado na '
+                'etiqueta do sistema e o motor esfriar. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para a saída. '
+                'Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
                 a='Desligue motores e gerador e corte a ventilação do motor.', p=list(TXT_SEAFIRE), ver=('SF-01', 'SF-03', 'EM-01')),
     'EM-06': _f('Água entrando no barco', 'O que faço se estiver entrando água?',
                 ['alagamento no porão', 'a bomba de porão não dá conta', 'nível do porão subindo'],
@@ -1216,7 +1217,8 @@ FAQ_TEXTOS = {
     'EM-08': _f('EPIRB (radiobaliza): acionar', 'Quando e como aciono o EPIRB?',
                 ['como disparar a radiobaliza', 'acionar a baliza de emergência', 'EPIRB em perigo grave'],
                 'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). Acione conforme a etiqueta do equipamento, com a antena para cima '
-                'e céu aberto, e leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Disparo por engano: desligue e avise no canal 16.',
+                'e céu aberto, e leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Não desligue até o resgate. Disparo por engano: '
+                'desligue e avise no canal 16.',
                 a='Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).', p=list(TXT_EPIRB), ver=('EP-01', 'EP-03', 'EM-01')),
     'EM-09': _f('Salvatagem: coletes, balsa e extintores', 'Onde estão os coletes, a balsa e os extintores?',
                 ['equipamentos de salvatagem do barco', 'quantos coletes preciso levar', 'onde ficam os sinalizadores'],
@@ -1249,7 +1251,7 @@ FAQ_TEXTOS = {
     'MO-05': _f('Temperatura alta no motor', 'O motor esquentou demais, o que faço?',
                 ['alarme de temperatura do motor', 'arrefecimento do motor subindo', 'motor superaquecendo'],
                 'Reduza para marcha lenta e confira a saída de água pelo escapamento. Se não sair água ou a temperatura continuar subindo, '
-                'desligue o motor afetado e siga com o outro.',
+                'desligue o motor afetado e siga com o outro. Nunca abra a tampa do arrefecimento com o motor quente.',
                 a='Marcha lenta e saída de água pelo escapamento.', p=[0, 2], at=3, se=1, ver=('MO-09', 'GE-05')),
     'MO-06': _f('Desligar os motores depois de navegar', 'Quanto tempo deixo o motor em marcha lenta antes de desligar?',
                 ['esfriar o motor antes de parar', 'posso desligar o motor logo ao chegar', 'marcha lenta antes de desligar'],
@@ -1270,7 +1272,7 @@ FAQ_TEXTOS = {
     'GE-01': _f('Antes de ligar o gerador', 'O que olho no gerador antes de ligar?',
                 ['verificação do gerador antes da partida', 'gerador parado: o que checar', 'óleo e filtro de água salgada do gerador'],
                 'Com o gerador parado, confira o nível de óleo e o líquido de arrefecimento, abra a válvula de fundo da entrada de água salgada e '
-                'veja se o filtro de água salgada está limpo.',
+                'veja se o filtro de água salgada está limpo. Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.',
                 a='Óleo, arrefecimento, válvula de fundo aberta e filtro limpo.', ver=('GE-02', 'CK-01')),
     'GE-02': _f('Ligar o gerador', 'Como ligo o gerador?',
                 ['dar partida no gerador', 'passar as cargas para o gerador', 'ligar a climatização depois do gerador'],
@@ -1287,7 +1289,8 @@ FAQ_TEXTOS = {
                 a='Retire as cargas, deixe esfriar e pressione PARADA.', ver=('GE-02', 'CK-04')),
     'GE-05': _f('Alarme de alta temperatura do gerador', 'O gerador deu alarme de temperatura alta, o que faço?',
                 ['gerador esquentando', 'alarme de temperatura no gerador', 'gerador superaquecido'],
-                'Desligue o gerador, verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller) e registre o alarme no diário.',
+                'Desligue o gerador, verifique a válvula de fundo, o filtro de água salgada e o rotor (impeller) e registre o alarme no diário. '
+                'Nunca abra a tampa do arrefecimento com o motor quente.',
                 a='Desligue o gerador.', p=[0, 1, 3], at=2, ver=('GE-03', 'MO-05')),
     'GE-06': _f('Alarme de baixa pressão de óleo do gerador', 'O gerador deu alarme de pressão de óleo, o que faço?',
                 ['gerador sem pressão de óleo', 'alarme de óleo no gerador', 'nível de óleo do gerador'],
@@ -1403,7 +1406,8 @@ FAQ_TEXTOS = {
     'PO-01': _f('Como funcionam as bombas de porão', 'As bombas de porão ligam sozinhas?',
                 ['sensor de nível do porão', 'ciclos das bombas de porão', 'bombas automáticas de BB e BE'], [0, 1], p=[], ver=('PO-02', 'PO-03')),
     'PO-02': _f('Nível normal do porão', 'Qual o nível normal de água no porão?',
-                ['nível do poço das bombas', 'alarme de nível do porão', 'porão acima do normal'], [0, 1], p=[], se=2, ver=('PO-04', 'EM-06')),
+                ['nível do poço das bombas', 'alarme de nível do porão', 'porão acima do normal'],
+                [0, 1, 'Nível subindo com a bomba ligada ou água entrando é alagamento: use o SOS do app.'], p=[], se=2, ver=('PO-04', 'EM-06')),
     'PO-03': _f('Teste mensal das bombas de porão', 'Como testo as bombas de porão?',
                 ['acionar a bomba de porão no manual', 'teste mensal do porão', 'alarme do painel do porão'],
                 'Uma vez por mês, acione cada bomba no manual e registre o teste no diário.',
@@ -1462,17 +1466,19 @@ FAQ_TEXTOS = {
     'SF-01': _f('Fogo a bordo: sistema fixo de incêndio', 'O que faço em caso de fogo no motor?',
                 ['alarme do sistema fixo de incêndio', 'fogo no motor', 'quando usar o extintor portátil'],
                 'Fogo no motor ou alarme do sistema fixo: desligue motores e gerador, corte a ventilação do motor e, se o sistema não disparou '
-                'sozinho e há fogo no motor, use o disparo manual. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para '
-                'a saída. Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
+                'sozinho e há fogo no motor, use o disparo manual. Não abra o acesso ao motor depois da descarga: espere o tempo indicado na '
+                'etiqueta do sistema e o motor esfriar. Fogo pequeno fora do motor: extintor portátil na base das chamas, de costas para a saída. '
+                'Fogo que não apaga: MAYDAY no canal 16 e prepare o abandono.',
                 a='Desligue motores e gerador e corte a ventilação do motor.', ver=('EM-05', 'SF-02', 'SF-03')),
     'SF-02': _f('Disparo manual do sistema fixo', 'Como uso o disparo manual do sistema fixo?',
                 ['sistema fixo não disparou sozinho', 'acionar o disparo manual de incêndio', 'disparo manual com o motor desligado'],
-                [0], a='Motores e gerador desligados, ventilação cortada e disparo manual.',
-                p=['Desligue motores e gerador.', 'Corte a ventilação do motor.', 'Use o disparo manual.'], ver=('SF-01', 'SF-03')),
+                [0], a='Só se o sistema não acionou sozinho e há fogo no motor: motores e gerador desligados, ventilação cortada e disparo manual.',
+                p=['Desligue motores e gerador.', 'Corte a ventilação do motor.', 'Se o sistema não acionou sozinho e há fogo no motor, use o disparo manual.'],
+                ver=('SF-01', 'SF-03')),
     'SF-03': _f('Depois do disparo do sistema fixo', 'O sistema fixo disparou, o que faço depois?',
                 ['sistema fixo descarregou', 'quando abrir o acesso ao motor', 'recarga do sistema fixo'],
                 'Depois do disparo, confirme motores, gerador e ventilação desligados e não abra o acesso ao motor; espere o tempo indicado na '
-                'etiqueta do sistema. Se o fogo voltar, MAYDAY no canal 16.',
+                'etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão. Se o fogo voltar, MAYDAY no canal 16.',
                 a='Não abra o acesso ao motor: espere o tempo da etiqueta do sistema.',
                 p=['Confirme motores, gerador e ventilação desligados.', 'Não abra o acesso ao motor.',
                    'Espere o tempo indicado na etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão.',
@@ -1483,8 +1489,8 @@ FAQ_TEXTOS = {
     'EP-01': _f('Acionar o EPIRB', 'Como aciono o EPIRB?',
                 ['disparar a radiobaliza', 'EPIRB: antena para cima e céu aberto', 'levar o EPIRB para a balsa'],
                 'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio). Acione conforme a etiqueta do equipamento, com a antena para '
-                'cima e céu aberto.',
-                a='Só em perigo grave e iminente, depois do MAYDAY.', ver=('EM-08', 'EP-03')),
+                'cima e céu aberto. Leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo. Não desligue até o resgate.',
+                a='Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).', ver=('EM-08', 'EP-03')),
     'EP-02': _f('Teste da baliza (EPIRB)', 'Como testo o EPIRB?',
                 ['autoteste da radiobaliza', 'o teste do EPIRB envia alerta', 'bateria e disparador hidrostático'],
                 'Faça o autoteste conforme a etiqueta; o teste não envia alerta.',

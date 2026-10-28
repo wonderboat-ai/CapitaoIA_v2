@@ -3360,10 +3360,17 @@ FAQ_GLOSSARIO = ('SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 
 FAQ_GLOSSARIO_ROTULO = ('MOB', 'DSC')   # os termos de segurança levam o rótulo do procedimento padrão (o EPIRB, também a nota da etiqueta)
 R_NUMERO = re.compile(r'\d+(?:[.,]\d+)*')   # 2.050 · 6,0 · 12 · 16: o número como o guia escreve
 R_FONTE = re.compile(r'(.+?) §\s*(.+)')     # «<título> §<n> · <seção>» (numerada) ou «<título> § <seção>» (sem número)
-# Revisão do C11 (a tela e a voz leem a `resposta` inteira): a frase do trecho de origem que escala («MAYDAY») ou condiciona («e há fogo no motor»)
-# não pode ficar só nos passos. «MAYDAY, MAYDAY, MAYDAY» é o roteiro do EM-01, que a resposta diz em prosa e os passos repetem letra por letra.
-R_ESCALA = re.compile(r'MAYDAY|há fogo')
+# Revisão do C11 (a tela e a voz leem a `resposta` inteira): a frase do trecho de origem que escala («MAYDAY»), condiciona («e há fogo no motor»),
+# proíbe («Não abra o acesso ao motor…», «Não desligue até o resgate», «Nunca abra a tampa…»), libera com cautela («e só então libere o acesso, com o
+# extintor portátil à mão»), manda ventilar por «cheiro de combustível», manda usar o «SOS do app» ou limita o uso («Só em perigo grave e iminente»)
+# não pode ficar só nos passos, na `atencao` ou no `senao`. Os «^» valem para a oração (ela abre com o Não/Nunca/Só em perigo, não o tem no meio).
+# «MAYDAY, MAYDAY, MAYDAY» é o roteiro do EM-01, que a resposta diz em prosa e os passos repetem letra por letra.
+R_ESCALA = re.compile(r'MAYDAY|há fogo|^(?:não|nunca)\b|\bsó então\b|cheiro de combustível|SOS do app|^só em perigo', re.I)
 ROTEIRO_MAYDAY = 'MAYDAY, MAYDAY, MAYDAY'
+# A ação que o trecho só manda fazer COM a condição («Se o sistema não disparou sozinho e há fogo no motor, use o disparo manual»): a condição vai junto
+# dela em todo campo que a manda fazer (acao, passos, atencao, senao, obs), senão quem lê só o passo a passo ou a linha de ação descarrega o sistema fixo
+# sem fogo. A ação é o fim da oração depois da vírgula («disparo manual»: as 2 últimas palavras) e a condição, a parte «há fogo no motor».
+R_CONDICIONADA = re.compile(r'(?P<cond>há fogo[^,;:.]*),\s+(?P<acao>[^,;.]+)', re.I)
 # Revisão do C11: os itens «boa prática» que o app avalia sozinho (✓ automático: alertas, documentos, tarefas de segurança, motores e gerador desligados,
 # nível anotado, deriva, maré e vento). No checklist são o rótulo do ✓; no FAQ viram ordem de conferência, porque o mesmo texto solto afirma um estado
 # que o dado de bordo desmente («Nenhuma tarefa de segurança atrasada» com o porao-teste atrasado; «Nenhum alerta ativo» com o AVISO do laço).
@@ -3400,7 +3407,10 @@ def a_faq(X):
       - item com as chaves do contrato na ordem, 3 variantes diferentes, fontes só dos 3 tipos, `emerg` só nos EM, `ver` com ids que existem;
       - a 1ª fonte é a seção da base daquele id (EM-n: a do protocolo), e todo número do item está no texto dessa seção (nada de número novo);
       - `seguranca` em todo item cujo trecho de origem tem; a resposta termina com o rótulo que o trecho termina e, com seguranca, tem até 800 letras;
-      - a resposta mantém toda frase ou oração do trecho de origem com MAYDAY ou «há fogo» (a escalada e a condição), não só os passos;
+      - a resposta mantém toda frase ou oração do trecho de origem que escala (MAYDAY), condiciona («há fogo»), proíbe («Não…», «Nunca…»), libera com
+        cautela («só então»), manda ventilar («cheiro de combustível»), manda usar o «SOS do app» ou limita o uso («Só em perigo…»), não só os passos;
+      - a ação que a base só manda fazer com condição («disparo manual» só com «há fogo no motor») leva a condição em resposta, acao, atencao, senao,
+        obs e no passo a passo (no passo ou antes dele);
       - o checklist: nenhum texto do FAQ repete o item «boa prática» que o app avalia (CK_ESTADO): vira ordem de conferência, não afirmação de estado;
       - os cartões EM passam as regras do D.protocolos (sem bar, %, nós, graus, pessoas, lugar, fabricante, modelo nem dado do barco);
       - o glossário: os 14 termos, MMSI com o texto MMSI_RADIO e os de segurança com o rótulo."""
@@ -3422,6 +3432,13 @@ def a_faq(X):
     if Q.get('total') != len(itens) or not isinstance(Q.get('total'), int):
         out.append('faq.total: %r ≠ %d itens' % (Q.get('total'), len(itens)))
     por_trecho = {(t.get('fonte'), t.get('secao')): t for t in X.trechos}
+    # As ações que a base só manda fazer com uma condição («há fogo no motor» → «disparo manual»), de qualquer trecho: {2 últimas palavras da ação: condição}.
+    condicionadas = {}
+    for t in X.trechos:
+        for c in _clausulas(t.get('texto', '')):
+            m = R_CONDICIONADA.search(c)
+            if m:
+                condicionadas[' '.join(_norm_frase(m.group('acao')).split()[-2:])] = _norm_frase(m.group('cond'))
     # ——— ids ———
     ids = [i.get('id') if isinstance(i, dict) else None for i in itens]
     out += ['faq.itens: id repetido %r' % i for i, n in Counter(ids).items() if n > 1]
@@ -3543,7 +3560,18 @@ def a_faq(X):
         resp_n = _norm_frase(it.get('resposta', ''))
         for c in _clausulas(t.get('texto', '')):
             if R_ESCALA.search(c) and ('mayday' if ROTEIRO_MAYDAY in c else _norm_frase(c).rstrip('.!?;: ')) not in resp_n:
-                out.append('%s.resposta: corta a frase do trecho de origem que escala ou condiciona «%s» (a tela e a voz leem a resposta inteira; ela mantém toda frase com MAYDAY ou «há fogo»)' % (cam, c[:90]))
+                out.append('%s.resposta: corta a frase do trecho de origem que escala ou condiciona «%s» (a tela e a voz leem a resposta inteira; ela mantém toda frase do trecho que escala, condiciona, proíbe ou libera com cautela)' % (cam, c[:90]))
+        # ——— a ação condicionada vai com a condição em todo campo que a manda fazer (a F6 e a voz leem a linha de ação e o passo a passo, não só a resposta) ———
+        for acao_c, cond_c in condicionadas.items():
+            for campo in ('resposta', 'acao', 'atencao', 'senao', 'obs'):
+                txt_c = _norm_frase(it.get(campo, ''))
+                if acao_c in txt_c and cond_c not in txt_c:
+                    out.append('%s.%s: manda fazer «%s» sem a condição «%s» do trecho de origem (a F6 e a voz leem este campo sozinho) «%s»' % (cam, campo, acao_c, cond_c, str(it[campo])[:90]))
+            antes = ''   # no passo a passo a condição pode vir num passo anterior (a lista se lê em ordem)
+            for k, passo in enumerate(it.get('passos') or []):
+                antes += ' ' + _norm_frase(passo)
+                if acao_c in _norm_frase(passo) and cond_c not in antes:
+                    out.append('%s.passos[%d]: manda fazer «%s» sem a condição «%s» no passo nem antes dele «%s»' % (cam, k, acao_c, cond_c, str(passo)[:90]))
         if it.get('seguranca') is True and len(str(it.get('resposta', ''))) > SEGURANCA_MAX_LETRAS:   # como o trecho (SEGURANCA_CURTA): a tela e a voz leem a resposta inteira
             out.append('%s.resposta: %d letras com seguranca (máximo %d: a tela e a voz leem inteira, com o rótulo no fim)' % (cam, len(it['resposta']), SEGURANCA_MAX_LETRAS))
     # ——— o checklist no FAQ: ordem de conferência, não o estado que o app avalia ———

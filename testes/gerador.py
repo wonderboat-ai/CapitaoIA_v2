@@ -3222,6 +3222,40 @@ def c11_faq(tmp):
        and 'Água entrando: ligue as bombas de porão' in resp_('PO-04') and 'Água subindo mesmo assim: MAYDAY no canal 16' in resp_('PO-04')
        and resp_('PO-04') == faq_it(Q, 'EM-06')['resposta'][:len(resp_('PO-04'))] and max(len(x['resposta']) for x in itens if x.get('seguranca')) <= C.SEGURANCA_MAX_LETRAS,
        [i for i in ('EM-04', 'EM-05', 'EM-08', 'SF-01', 'SF-03', 'EP-01', 'EL-05', 'PO-04') if not C.R_ESCALA.search(resp_(i))])
+    # ——— 2ª revisão do C11: proibição, cautela, ventilação, SOS do app e a ação condicionada ———
+    frase = lambda i, f: f.lower() in resp_(i).lower()   # o EM-08 diz «…e leve o EPIRB…» no meio da frase
+    ok('2ª revisão do C11: a resposta mantém a proibição «Não abra o acesso ao motor depois da descarga…» (EM-05, SF-01), «Não desligue até o resgate» (EM-08, EP-01), '
+       '«Nunca abra a tampa do arrefecimento…» (MO-05, GE-05) e a cautela «e só então libere o acesso, com o extintor portátil à mão» (SF-03)',
+       all(frase(i, 'Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.') for i in ('EM-05', 'SF-01'))
+       and all(frase(i, 'Leve o EPIRB para a balsa ou mantenha-o flutuando preso por um cabo.') and frase(i, 'Não desligue até o resgate.') for i in ('EM-08', 'EP-01'))
+       and all(frase(i, 'Nunca abra a tampa do arrefecimento com o motor quente.') for i in ('MO-05', 'GE-05'))
+       and frase('SF-03', 'não abra o acesso ao motor; espere o tempo indicado na etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão'),
+       {i: resp_(i)[:120] for i in ('EM-05', 'SF-01', 'EM-08', 'EP-01', 'MO-05', 'GE-05', 'SF-03')})
+    ok('2ª revisão do C11: a resposta do GE-01 manda ventilar «se houver cheiro de combustível», a do PO-02 manda usar o SOS do app no alagamento e a do EM-01 abre com «Só em perigo grave e iminente»',
+       frase('GE-01', 'Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.')
+       and frase('PO-02', 'Nível subindo com a bomba ligada ou água entrando é alagamento: use o SOS do app.') and resp_('EM-01').startswith('Só em perigo grave e iminente. ')
+       and faq_it(Q, 'EM-01')['atencao'] == 'Só em perigo grave e iminente.')
+    ok('2ª revisão do C11: a linha de ação do EP-01 diz «(ou sem rádio)» como a do EM-08, e as respostas de segurança seguem até %d letras (a maior: %d)' % (
+        C.SEGURANCA_MAX_LETRAS, max(len(x['resposta']) for x in itens if x.get('seguranca'))),
+       faq_it(Q, 'EP-01')['acao'] == faq_it(Q, 'EM-08')['acao'] == 'Só em perigo grave e iminente, depois do MAYDAY (ou sem rádio).'
+       and max(len(x['resposta']) for x in itens if x.get('seguranca')) <= C.SEGURANCA_MAX_LETRAS)
+    sf2, em5 = faq_it(Q, 'SF-02'), faq_it(Q, 'EM-05')
+    cond = 'há fogo no motor'
+    ok('2ª revisão do C11: o disparo manual só aparece com a condição «e há fogo no motor» — SF-02 (resposta, linha de ação e último passo), EM-05 (passo 2) e SF-01; '
+       'nenhum campo de nenhum item manda usá-lo sem ela',
+       cond in sf2['resposta'] and cond in sf2['acao'] and cond in sf2['passos'][2] and 'disparo manual' in sf2['passos'][2] and cond in em5['passos'][1]
+       and sf2['acao'].startswith('Só se o sistema não acionou sozinho e há fogo no motor:')
+       and not [m for m in C.a_faq(C.Ctx(D, B, c['F'], {}, Q)) if 'manda fazer' in m]
+       and sorted(x['id'] for x in itens if 'disparo manual' in ' '.join(str(v) for k, v in x.items() if k not in ('variantes', 'ver'))) == ['EM-05', 'SF-01', 'SF-02'],
+       sorted(x['id'] for x in itens if 'disparo manual' in ' '.join(str(v) for k, v in x.items() if k not in ('variantes', 'ver'))))
+
+    def condicao_antes(Q_):
+        # a condição num passo ANTERIOR ao do disparo manual vale (a lista se lê em ordem); o passo sozinho, não
+        x = faq_it(Q_, 'SF-02')
+        x['passos'] = ['Só se o sistema não acionou sozinho e há fogo no motor.', 'Desligue motores e gerador.', 'Corte a ventilação do motor.', 'Use o disparo manual.']
+        return [m for m in C.a_faq(C.Ctx(D, B, c['F'], {}, Q_)) if 'manda fazer' in m]
+    Qc = copy.deepcopy(Q)
+    ok('2ª revisão do C11 (sem falso positivo): com a condição num passo antes de «Use o disparo manual.», a asserção FAQ não acusa', condicao_antes(Qc) == [], condicao_antes(Qc))
     ordem = {x['id']: x for lista in ck.values() for x in lista}
     ok('revisão do C11: CK-03, CK-04, CK-05 e CK-07 trazem os itens «boa prática» do checklist com verbo de ordem (FAQ_CK_ORDEM, os 12), nunca o texto do ✓ que o app avalia '
        '(«Nenhuma tarefa de segurança atrasada», «Nenhum alerta ativo no painel», «Motores desligados»…)',
@@ -3341,6 +3375,39 @@ def c11_faq(tmp):
          'faq:EL-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Depois do alerta, faça o MAYDAY'),
         ('EM-01 (roteiro) sem a palavra MAYDAY na resposta', resp('EM-01', 'fale MAYDAY três vezes', 'fale três vezes'),
          'faq:EM-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Diga devagar'),
+        # ——— 2ª revisão do C11: a proibição, a cautela de liberar, a ventilação e o SOS do app também ficam na resposta; a ação condicionada leva a condição ———
+        ('EM-01 (MAYDAY) sem «Só em perigo grave e iminente.» na resposta', resp('EM-01', 'Só em perigo grave e iminente. '),
+         'faq:EM-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Só em perigo grave e iminente.'),
+        ('EM-05 sem «Não abra o acesso ao motor depois da descarga…»', resp('EM-05', ' Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.'),
+         'faq:EM-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Não abra o acesso ao motor depois da descarga'),
+        ('SF-01 sem «Não abra o acesso ao motor depois da descarga…»', resp('SF-01', ' Não abra o acesso ao motor depois da descarga: espere o tempo indicado na etiqueta do sistema e o motor esfriar.'),
+         'faq:SF-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Não abra o acesso ao motor depois da descarga'),
+        ('SF-03 sem «não abra o acesso ao motor» (a oração entre «;»)', resp('SF-03', ' e não abra o acesso ao motor;', ';'),
+         'faq:SF-03.resposta: corta a frase do trecho de origem que escala ou condiciona «não abra o acesso ao motor»'),
+        ('SF-03 sem «e só então libere o acesso, com o extintor portátil à mão»', resp('SF-03', ' e só então libere o acesso, com o extintor portátil à mão'),
+         'faq:SF-03.resposta: corta a frase do trecho de origem que escala ou condiciona «espere o tempo indicado na etiqueta do sistema e só então'),
+        ('EM-08 (EPIRB) sem «Não desligue até o resgate.» (a resposta traz só «Disparo por engano: desligue…»)', resp('EM-08', ' Não desligue até o resgate.'),
+         'faq:EM-08.resposta: corta a frase do trecho de origem que escala ou condiciona «Não desligue até o resgate.'),
+        ('EP-01 sem «Não desligue até o resgate.»', resp('EP-01', ' Não desligue até o resgate.'),
+         'faq:EP-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Não desligue até o resgate.'),
+        ('GE-01 sem a ventilação «se houver cheiro de combustível»', resp('GE-01', ' Ligue a ventilação do compartimento por alguns minutos se houver cheiro de combustível.'),
+         'faq:GE-01.resposta: corta a frase do trecho de origem que escala ou condiciona «Ligue a ventilação do compartimento'),
+        ('PO-02 sem «é alagamento: use o SOS do app»', resp('PO-02', ' Nível subindo com a bomba ligada ou água entrando é alagamento: use o SOS do app.'),
+         'faq:PO-02.resposta: corta a frase do trecho de origem que escala ou condiciona «nível subindo com a bomba ligada'),
+        ('MO-05 sem «Nunca abra a tampa do arrefecimento com o motor quente.»', resp('MO-05', ' Nunca abra a tampa do arrefecimento com o motor quente.'),
+         'faq:MO-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Nunca abra a tampa'),
+        ('GE-05 sem «Nunca abra a tampa do arrefecimento com o motor quente.»', resp('GE-05', ' Nunca abra a tampa do arrefecimento com o motor quente.'),
+         'faq:GE-05.resposta: corta a frase do trecho de origem que escala ou condiciona «Nunca abra a tampa'),
+        ('SF-02 com a linha de ação sem a condição (só «disparo manual»)', lambda D_, B_, Q_: it(Q_, 'SF-02').update({'acao': 'Motores e gerador desligados, ventilação cortada e disparo manual.'}),
+         'faq:SF-02.acao: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
+        ('SF-02 com o último passo «Use o disparo manual.» e nenhum passo antes com a condição', lambda D_, B_, Q_: it(Q_, 'SF-02')['passos'].__setitem__(2, 'Use o disparo manual.'),
+         'faq:SF-02.passos[2]: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
+        ('EM-05 com o passo do disparo manual sem a condição', lambda D_, B_, Q_: it(Q_, 'EM-05')['passos'].__setitem__(1, 'Use o disparo manual.'),
+         'faq:EM-05.passos[1]: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
+        ('EM-05 com o disparo manual na `atencao`, sem a condição', lambda D_, B_, Q_: it(Q_, 'EM-05').update({'atencao': 'Use o disparo manual.'}),
+         'faq:EM-05.atencao: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
+        ('SF-01 com a resposta mandando o disparo manual sem a condição', resp('SF-01', 'se o sistema não disparou sozinho e há fogo no motor, use o disparo manual', 'use o disparo manual'),
+         'faq:SF-01.resposta: manda fazer «disparo manual» sem a condição «há fogo no motor»'),
         # ——— revisão do C11: o checklist entra como ordem de conferência, nunca como o estado que o app avalia ———
         ('CK-03 com «Nenhuma tarefa de segurança atrasada.» (o porao-teste está atrasado na agenda)', com_obs('CK-03', 'Nenhuma tarefa de segurança atrasada.'),
          'faq:CK-03.obs: repete o item s12 do checklist'),
@@ -3415,6 +3482,10 @@ def c11_faq(tmp):
                                                   ('EM-01 sem seguranca (SEGURANCA_MARCADA)', lambda Q_: it(Q_, 'EM-01').pop('seguranca'), 'SEGURANCA_MARCADA'),
                                                   ('EM-04 sem a escalada «Se perder de vista: MAYDAY…» na resposta (revisão do C11)',
                                                    lambda Q_: it(Q_, 'EM-04').update({'resposta': it(Q_, 'EM-04')['resposta'].replace(' Se perder de vista: MAYDAY no canal 16 com a posição da marca MOB lida no plotter.', '')}), 'FAQ'),
+                                                  ('SF-02 com a linha de ação do disparo manual sem a condição (2ª revisão do C11)',
+                                                   lambda Q_: it(Q_, 'SF-02').update({'acao': 'Use o disparo manual.'}), 'FAQ'),
+                                                  ('EP-01 sem «Não desligue até o resgate.» na resposta (2ª revisão do C11)',
+                                                   lambda Q_: it(Q_, 'EP-01').update({'resposta': it(Q_, 'EP-01')['resposta'].replace(' Não desligue até o resgate.', '')}), 'FAQ'),
                                                   ('CK-03 com o texto do ✓ «Nenhuma tarefa de segurança atrasada.» (revisão do C11)',
                                                    lambda Q_: it(Q_, 'CK-03').update({'obs': it(Q_, 'CK-03')['obs'] + ' Nenhuma tarefa de segurança atrasada.'}), 'FAQ'),
                                                   ('preço no item (a DINHEIRO reprova já; a TERMOS em relatório, não)',
