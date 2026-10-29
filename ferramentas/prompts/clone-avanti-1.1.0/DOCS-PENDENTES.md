@@ -144,6 +144,15 @@ do relato; confira com grep antes de editar.
 - Fase 3 (cérebro, janela de emergência): o `alerta` da CONVERSA e o `emergenciaAte` leem a chave `sos`; as frases novas desta revisão chegam a eles pela mesma `emergencia()`. A rota `base` com `seguranca` não liga a janela: se a Fase 3 quiser ligá-la também (trecho de segurança no topo), a decisão é dela
 - Manual-Capitao-IA.dc.html e guia-rapido/: nada novo nesta revisão
 
+## Fase 2 motor do replay (revisão)
+
+- CLAUDE.md › Estrutura: linha nova do `capitao-replay.js` (motor da reprodução, sem VERSAO própria, global `CapitaoReplay` separado do `CapitaoTelemetria`; API do §1.24; eventos `'capitao-telemetria'` a cada 1 s, `'capitao-alerta'` e `'capitao-rebase'`; congelamento por `localStorage 'capitao.replay.fixo'` e `#replay=<s>`; o gancho de teste `capitao.replay.sobre`, que também obedece ao cenário: crítico só com `cenario: 'alarme-critico'`; sai em `/SOS-/` e com `D.simulacao !== true`). A linha do `capitao-telemetria.js` («ao vivo via proxy, **desligado**») ganha `atual()` = proxy real recente ou o quadro do replay com `simulado: true`, e `fonte()` = `'coletor' | 'replay' | null`
+- CLAUDE.md › Estrutura, `*.dc.html` e `sw.js`: o `<script src="./capitao-replay.js">` fica logo depois do `capitao-dados.js` nas telas fora do SOS, e o arquivo está no `CORE` do `sw.js`; S1/S2 não o carregam
+- CLAUDE.md › Privacidade (e `dados.html`): a cópia de dados deixa de fora todo `capitao.replay.*` (por prefixo), não só o `capitao.replay.fixo`
+- CLAUDE.md › Testes locais: `python -X utf8 testes/replay.py [--dia]` (motor: paridade com o `confere.em()` segundo a segundo, também com dado plantado — vento cruzando o norte e diesel no piso —, emendas, fases, alarmes, relógio, eventos, virada com a página oculta, modo real inerte, séries e 13 mutantes que o teste tem de acusar); o `verificar.py dados` confere que `capitao.replay.*` não vai no arquivo nem volta da restauração
+- README.md: tabela de arquivos (`capitao-replay.js`) e a linha de testes (`replay.py`); Manual-Capitao-IA.dc.html e guia-rapido/: nada novo nesta revisão
+- ferramentas/prompts/clone-avanti-1.1.0/CONTRATO-DADOS.md, §6.6: os dois estados transitórios da Fase 2 (o quadro do replay passando por «ao vivo» / «coletor NMEA» até a Fase 3, a P2B e a Fase 4; a moldura que remonta o HTML a cada segundo até a P2B) já estão registrados lá
+
 ## Fora das funções
 
 - MAPA.md: as evidências sobre o CDN do `sw.js` (linhas 29, 88 e 726) e o "React do unpkg" ficaram históricas: o MAPA é da 1.0.9 e não se reescreve.

@@ -15,12 +15,16 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
   não mudam; a única descontinuidade é a virada das 07:00 (contadores, tanques e a rota que recomeça), com posição e COG contínuos;
 - contadores sem voltar (`D.campos[c].sentido`), fora do par A − 1 s × A, que tem de saltar;
 - alarme só na janela do gerador (99–116 s), sempre AVISO, com `desde` da janela; `alarmes()`, `janela()`; o cenário `aviso` nunca devolve
-  crítico (com os limites adulterados) e o `alarme-critico` devolve;
+  crítico (com os limites adulterados, e também com a lista literal do gancho `capitao.replay.sobre`) e o `alarme-critico` devolve;
+- as fronteiras das fases (`fase()` e `t()` em t = 0, 19, 20, 49, 50, 119, 120, 134, 135, 149 e em cada um dos 150 segundos) contra o D.replay.fases;
+- paridade com DADO PLANTADO (§6.5): o vento verdadeiro cruzando o norte (o arco mais curto dos ângulos) e o diesel perto do piso (`diesel_piso_l`),
+  injetados no D antes do replay e comparados com o `confere.em()` do mesmo D plantado;
 - sincronia entre duas abas e entre dois aparelhos (o mesmo segundo dá o mesmo quadro) e a fase que continua pelo relógio ao trocar de página;
 - `fixar('60')` = 12:01:00 (voltas_fixo), `fixar(60)`, '60@K', `fixar(null)`, `#replay=`, o localStorage `capitao.replay.fixo` e o `capitao.replay.sobre`
   (só com o instante fixado, só no instante fixado); o rodapé refaz os prazos para o dia do instante fixado (entre 00:00 e 07:00, "ontem 12:01");
 - eventos: `capitao-telemetria` a cada 1 s alinhado ao segundo, pausado com document.hidden e com tique imediato na volta à frente;
-  `capitao-alerta` (inicio, nivel, fim); `capitao-rebase` na virada das 07:00 e da meia-noite (com o Date congelado); um timer só por página;
+  `capitao-alerta` (inicio, nivel, fim); `capitao-rebase` na virada das 07:00 e da meia-noite (com o Date congelado), inclusive na página que
+  carregou OCULTA antes da virada e só depois voltou à frente; um timer só por página;
 - isolamento: o replay não é o `CapitaoTelemetria`; `atual()` e `fonte()` (coletor real recente × replay × null); o D.snapshot nem um byte diferente;
   a âncora é a `CapitaoAgora.ancora` (a mesma, sem cópia); falha → null e o instante() cai no snapshot sem mutá-lo;
 - S1/S2 (e uma rota /SOS-): sem CapitaoReplay, `CapitaoAgora.instante()` null, nenhum tique, nenhuma leitura de D.simulacao nem de D.replay;
@@ -35,13 +39,17 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
 - o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
 - o desempenho da moldura (o `<capitao-theme-toggle>` e o avatar não recriados, `fit()` ≤ 2 vezes, nenhuma long task > 50 ms em 10 s): é da P2B;
-- a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4).
+- a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4);
+- o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
+  CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() —, a P2B e a Fase 4): lá entra a conferência de que nenhum texto diz «coletor NMEA»
+  quando `CapitaoTelemetria.fonte()` é 'replay'.
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
     python -X utf8 testes/replay.py            os testes de sempre (~1,5 min)
     python -X utf8 testes/replay.py --dia      mais a paridade dos 86.400 segundos do dia de bordo contra o confere.em() (~4 min a mais)
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
+import copy
 import json
 import os
 import random
@@ -271,6 +279,76 @@ def a_volta(b):
        abs(P['cumD'][150] - R_['por_volta']['diesel_l']) < 6e-5 and abs(P['cumM'][150] - R_['por_volta']['distancia_mn']) < 6e-5, (P['cumD'][150], P['cumM'][150], R_['por_volta']))
     ok('timestamp_utc = o instante pedido (o segundo inteiro, ISO com Z)', js['o']['0']['timestamp_utc'] == datetime.fromtimestamp(js['anc'] // 1000, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
        js['o']['0']['timestamp_utc'])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+    paridade_plantada(b)
+
+
+# O dado de hoje não cobre dois comportamentos que o motor tem de ter: o único ângulo com chaves (vento verdadeiro, de 54 a 62) nunca cruza 360 e o diesel
+# termina o dia em 473,8 L, acima do piso de 400 L. Aqui o D é plantado (as chaves do vento cruzam o norte várias vezes; a base do diesel fica a 5 L do piso)
+# e o motor é comparado com o confere.em() do MESMO D plantado.
+VENTO_CRUZA = [355, 357, 359, 1, 3, 5, 3, 1, 359, 357, 355, 353, 351, 349, 351, 353, 355, 357, 359, 1, 3, 5, 7, 9, 7, 5, 3, 1, 359, 357]
+
+
+def paridade_plantada(b):
+    print('Paridade com dado plantado: o vento cruzando o norte (arco mais curto) e o diesel no piso')
+    ch = D['replay']['chaves']['vento_verdadeiro_angulo']
+    piso = D['replay']['diesel_piso_l']
+    assert len(VENTO_CRUZA) == len(ch) and D['campos']['vento_verdadeiro_angulo'].get('ang') is True
+    D2 = copy.deepcopy(D)
+    D2['replay']['chaves']['vento_verdadeiro_angulo'] = VENTO_CRUZA
+    D2['replay']['contadores_base']['diesel_litros'] = piso + 5
+    P2 = C.preparar(D2)
+    inj = ('window.CapitaoDados.replay.chaves.vento_verdadeiro_angulo = %s; window.CapitaoDados.replay.contadores_base.diesel_litros = %s;'
+           % (json.dumps(VENTO_CRUZA), piso + 5))
+    pg = abre(b, depois=inj)
+    segs = sorted(set(list(range(0, 700)) + [n * 150 + d for n in range(1, 40) for d in (-1, 0)] + [3000, 5000, 20000, 43200, 86398, 86399]))
+    js = pg.evaluate("""(segs) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), o = {};
+      segs.forEach((s) => { o[s] = R.em(anc + s * 1000); }); return { anc, o }; }""", segs)
+    exatas, tol = [], []
+    for s in segs:
+        e, a = compara(js['o'][str(s)], C.em(P2, s, ancora_s=js['anc'] // 1000), 'seg=%d' % s)
+        exatas += e
+        tol += a
+    ok('paridade com o D plantado: %d segundos (0…699, as emendas dos 40 primeiros laços e o resto do dia) iguais ao confere.em() do mesmo D (%d na tolerância)' % (len(segs), len(tol)),
+       exatas == [], exatas[:4])
+    vento = [js['o'][str(s)]['vento_verdadeiro_angulo'] for s in range(0, 150)]
+    passo = [abs((vento[(i + 1) % 150] - vento[i] + 540) % 360 - 180) for i in range(150)]
+    ok('o vento cruza o norte pelo arco mais curto: sempre em [0, 360), passa de 359 para 0 e o maior passo de 1 s é %.0f° (pelo arco longo seria ~40°)' % max(passo),
+       all(0 <= v < 360 for v in vento) and any(v >= 358 for v in vento) and any(v <= 2 for v in vento) and max(passo) <= 6, (vento[8:20], max(passo)))
+    dies = [js['o'][str(s)]['diesel_litros'] for s in segs]
+    achou = next(i for i, d in enumerate(dies) if d == piso)
+    ok('o diesel para no piso de %d L: começa em %s, nunca fica abaixo dele, chega nele pelo seg %d e continua nele no fim do dia (%s L)' % (piso, dies[0], segs[achou], dies[-1]),
+       dies[0] == piso + 5 and min(dies) == piso and achou > 0 and all(d == piso for d in dies[achou:]) and dies[-1] == piso, (dies[:3], min(dies), dies[-3:]))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+# ——— 1b. as fases pelo relógio, nas fronteiras ———
+FASE_JS = r"""() => { const R = window.CapitaoReplay, A = window.CapitaoAgora, base = A.ancora(Date.now()) + 120 * 150 * 1000, o = { por: [] };
+  for (let t = 0; t < 150; t++) { const ms = base + t * 1000, f = R.fase(ms); o.por.push({ t: R.t(ms), nome: f && f.nome, ini: f && f.ini, fim: f && f.fim }); }
+  const prox = R.fase(base + 150 * 1000), ant = R.fase(base - 1000);
+  o.prox = { t: R.t(base + 150 * 1000), nome: prox && prox.nome, ini: prox && prox.ini }; o.ant = { t: R.t(base - 1000), nome: ant && ant.nome, ini: ant && ant.ini };
+  o.semArg = R.fase().nome === R.fase(Date.now()).nome; o.ruim = [R.fase('x'), R.fase(NaN), R.t('x')];
+  return o; }"""
+
+
+def a_fase(b):
+    print('fase() e t() nas fronteiras das fases (D.replay.fases)')
+    pg = abre(b)
+    r = pg.evaluate(FASE_JS)
+    fs = D['replay']['fases']
+
+    def esperada(t):
+        return next(f for f in fs if f['ini'] <= t < f['fim'])
+    ruins = [(t, x) for t, x in enumerate(r['por']) if x['t'] != t or x['nome'] != esperada(t)['nome'] or x['ini'] != esperada(t)['ini'] or x['fim'] != esperada(t)['fim']]
+    ok('fase() e t() batem com o D.replay.fases em cada um dos 150 segundos (fim exclusivo: t = %s mudam de fase)' % ', '.join(str(f['ini']) for f in fs[1:]), ruins == [], ruins[:3])
+    borda = {t: r['por'][t]['nome'] for t in (0, 19, 20, 49, 50, 119, 120, 134, 135, 149)}
+    ok('as fronteiras: 19 é %s e 20 é %s; 49 é %s e 50 é %s; 119 é %s e 120 é %s; 134 é %s e 135 é %s; 149 é %s'
+       % (borda[19], borda[20], borda[49], borda[50], borda[119], borda[120], borda[134], borda[135], borda[149]),
+       [borda[t] for t in (19, 20, 49, 50, 119, 120, 134, 135, 149)] == ['marcha lenta', 'aceleração', 'aceleração', 'cruzeiro', 'cruzeiro', 'redução', 'redução', 'marcha lenta', 'marcha lenta'], borda)
+    ok('a volta seguinte recomeça em t = 0 (marcha lenta, ini 0) e o segundo antes dela é t = 149', r['prox'] == {'t': 0, 'nome': 'marcha lenta', 'ini': 0} and r['ant'] == {'t': 149, 'nome': 'marcha lenta', 'ini': 135}, (r['prox'], r['ant']))
+    ok('fase() sem argumento é a de agora; argumento que não é instante devolve null', r['semArg'] is True and r['ruim'] == [None, None, None], r['ruim'])
     ok('sem erro de script', not pg.erros, pg.erros)
     fecha(pg)
 
@@ -533,6 +611,27 @@ def a_fixar(b):
        r['q']['sog_nos'] == 0 and r['q']['estado'] == 'Fundeado' and r['q']['alarmes'] == [] and r['i'] == 'Fundeado' and r['idem'], r['q'])
     ok('o \'sobre\' vale só no instante fixado: um segundo depois o quadro é o do replay', r['outro']['sog_nos'] > 0 and r['outro']['estado'] == 'Navegando', r['outro']['sog_nos'])
     fecha(pg)
+    # a lista literal do 'sobre' também obedece ao cenário: fora do 'alarme-critico' nunca sai crítico (decisão c), nem em alarmes(), nem no quadro, nem no evento
+    crit = {'id': 'arref_be', 'nivel': 'critico', 'campo': 'motor_be_arref_c', 'valor': 120, 'limite': 100, 'desde': 'x'}
+    SOBRE_CRIT = json.dumps({'alarmes': [crit, dict(crit, id='arref_bb', nivel='CRITICO'), 7, None, 'x']})
+    LE_CRIT = """() => { const R = window.CapitaoReplay, fases = (n) => window.__ev.filter((e) => e.n === n).map((e) => e.d.fase + ':' + e.d.alarme.id + ':' + e.d.alarme.nivel);
+      const T = R.fixo(); return { cen: window.CapitaoDados.replay.cenario, fixo: T !== null, al: R.alarmes(), q: R.quadro().alarmes, em: R.em(T).alarmes, tele: window.__ev.filter((e) => e.n === 'capitao-telemetria').map((e) => e.d.alarmes),
+        alertas: fases('capitao-alerta') }; }"""
+    pg = abre(b, init="localStorage.setItem('capitao.replay.fixo', '60'); localStorage.setItem('capitao.replay.sobre', %s);" % json.dumps(SOBRE_CRIT))
+    pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_CRIT)
+    niveis = [x['nivel'] for x in r['al'] + r['q'] + r['em']] + [x['nivel'] for t in r['tele'] for x in (t or [])] + [a.split(':')[2] for a in r['alertas']]
+    ok('\'sobre\' com alarme crítico (e \'CRITICO\') e cenario \'aviso\': alarmes(), quadro(), em() e o evento \'capitao-alerta\' só têm AVISO; os itens que não são objeto saem',
+       r['cen'] == 'aviso' and r['fixo'] and niveis != [] and set(niveis) == {'aviso'} and [x['id'] for x in r['al']] == ['arref_be', 'arref_bb'] and r['al'] == r['q'] == r['em']
+       and r['alertas'] == ['inicio:arref_be:aviso', 'inicio:arref_bb:aviso'], r)
+    fecha(pg)
+    pg = abre(b, init="localStorage.setItem('capitao.replay.fixo', '60'); localStorage.setItem('capitao.replay.sobre', %s);" % json.dumps(SOBRE_CRIT),
+              depois="window.CapitaoDados.replay.cenario = 'alarme-critico';")
+    pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_CRIT)
+    ok('controle: no cenario \'alarme-critico\' (só no gerador; aqui injetado) o crítico do \'sobre\' passa, e o \'CRITICO\' escrito à mão também segue como veio',
+       r['cen'] == 'alarme-critico' and [x['nivel'] for x in r['al']] == ['critico', 'CRITICO'] and r['alertas'] == ['inicio:arref_be:critico', 'inicio:arref_bb:CRITICO'], r)
+    fecha(pg)
     # entre 00:00 e 07:00 o instante congelado é "ontem 12:01" e os prazos acompanham (CONTRATO §4.1)
     madrugada = datetime(2026, 10, 27, 3, 0, tzinfo=BR)
     pg = abre(b, local=madrugada)
@@ -626,6 +725,28 @@ def eventos_virada(b):
         ok('virada %s: o rodapé refez o relógio (%s de %s para %s)%s' % (nome, chave, antes['r'][chave], depois['r'][chave], ', os abastecimentos e a versão' if chave == 'hoje' else ' e os abastecimentos'),
            antes['r'][chave] != depois['r'][chave] and (chave == 'hoje' and antes['versao'] != depois['versao'] or chave == 'diaBordo' and antes['ab'] != depois['ab']), (antes, depois))
         ok('virada %s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
+OCULTA = "window.__oculto = true; Object.defineProperty(document, 'hidden', { configurable: true, get: () => !!window.__oculto });"
+
+
+def eventos_virada_oculta(b):
+    print('Eventos: a página que carrega OCULTA antes da virada e só depois volta à frente também rebaseia')
+    de = datetime(2026, 10, 27, 6, 55, 0, tzinfo=BR)
+    for nome, init, para, vira in (('carregada oculta às 06:55, visível às 07:10', OCULTA, datetime(2026, 10, 27, 7, 10, 0, tzinfo=BR), True),
+                                   ('carregada visível às 06:55 e vista às 07:10 (controle)', '', datetime(2026, 10, 27, 7, 10, 0, tzinfo=BR), True),
+                                   ('carregada oculta às 06:55, visível às 06:58 (sem virada)', OCULTA, datetime(2026, 10, 27, 6, 58, 0, tzinfo=BR), False)):
+        pg = abre(b, local=de, init=init)
+        pg.wait_for_timeout(1500)
+        antes = pg.evaluate("() => ({ diaBordo: window.CapitaoAgora.relogio.diaBordo, n: window.__conta('capitao-rebase'), tele: window.__conta('capitao-telemetria') })")
+        pg.evaluate("(ms) => { window.__T0 = ms; window.__oculto = false; document.dispatchEvent(new Event('visibilitychange')); }", int(para.timestamp() * 1000))
+        pg.wait_for_timeout(1600)
+        depois = pg.evaluate("() => ({ diaBordo: window.CapitaoAgora.relogio.diaBordo, ab: window.CapitaoDados.abastecimentos[0].d, n: window.__conta('capitao-rebase'), hora: window.CapitaoAgora.instante().hora })")
+        ok('%s: diaBordo %s → %s, \'capitao-rebase\' %d → %d' % (nome, antes['diaBordo'], depois['diaBordo'], antes['n'], depois['n']),
+           antes['diaBordo'] == '26/10/2026' and depois['diaBordo'] == ('27/10/2026' if vira else '26/10/2026') and depois['n'] - antes['n'] == (1 if vira else 0)
+           and (init == '' or antes['tele'] == 0), (antes, depois))
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
         fecha(pg)
 
 
@@ -966,6 +1087,18 @@ MUTANTES = [
     ('a saída em /SOS- removida (o S1 passaria a ter CapitaoReplay)', [("if (EM_SOS || window.CapitaoReplay) return;", "if (window.CapitaoReplay) return;")], lambda b: no_sos(b, so_s1=True)),
     ('o D.simulacao ignorado (o modo real andaria)', [("if (!d || d.simulacao !== true || !d.replay", "if (!d || !d.replay")], modo_real_inicial),
     ('em() que devolve o D.snapshot.quadro quando falha', [("function em(ms) { try { return quadroEm(ms, true); }", "function em(ms) { try { return quadroEm(ms, true) || window.CapitaoDados.snapshot.quadro; }")], isolamento_falha),
+    ('a interpolação dos ângulos sem o arco mais curto (o vento que cruza o norte daria a volta ao contrário)',
+     [("(pmod(b - a + 540, 360) - 180) * f", "(b - a) * f")], a_volta),
+    ('o piso do diesel removido (o dia acabaria abaixo da reserva)',
+     [("Math.max(cb.diesel_litros - (v * pv.diesel_l + p.cumD[t]), R.diesel_piso_l || 0)", "cb.diesel_litros - (v * pv.diesel_l + p.cumD[t])")], a_volta),
+    ('a fronteira das fases inclusiva (t = 20, 50, 120 e 135 cairiam na fase anterior)',
+     [("fs[i].ini <= t && t < fs[i].fim", "fs[i].ini <= t && t <= fs[i].fim")], a_fase),
+    ('o gancho \'sobre\' sem a trava do cenário (a lista literal levaria o crítico)',
+     [("if (p.R.cenario !== 'alarme-critico') a.nivel = 'aviso';", "")], a_fixar),
+    ('a virada comparada só com o tique visível anterior (a página que carregou oculta não rebasearia)',
+     [("if (ls(function () { return Ag().rebase(ms); })) emite('capitao-rebase', { ms: ms });",
+       "var anc0 = ancoraDe(ms); if (window.__ultAnc != null && anc0 !== window.__ultAnc) { ls(function () { Ag().rebase(ms); }); emite('capitao-rebase', { ms: ms }); } window.__ultAnc = anc0;")],
+     eventos_virada_oculta),
 ]
 
 
@@ -997,6 +1130,7 @@ def main():
     with sync_playwright() as p:
         browser = p.chromium.launch(channel=CANAL, headless=True)
         a_volta(browser)
+        a_fase(browser)
         o_dia(browser)
         a_alarmes(browser)
         sincronia(browser)
@@ -1006,6 +1140,7 @@ def main():
         eventos_timer(browser)
         eventos_alertas(browser)
         eventos_virada(browser)
+        eventos_virada_oculta(browser)
         isolamento(browser)
         isolamento_falha(browser)
         no_sos(browser)

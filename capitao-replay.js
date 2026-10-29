@@ -34,8 +34,9 @@
 
    Eventos (window): 'capitao-telemetria' a cada 1 s, alinhado ao segundo, pausado com document.hidden e com tique imediato na volta à frente
    (detail = o quadro, com simulado: true); 'capitao-alerta' {fase: 'inicio' | 'nivel' | 'fim', alarme}; 'capitao-rebase' {ms} na virada das
-   07:00 ou da meia-noite e em fixar(). O 1º tique de cada página sai já na carga, antes de qualquer ouvinte: quem ouve lê o estado ao montar
-   (alarmes(), quadro()) e depois acompanha os eventos. O replay só emite evento: NUNCA abre SOS/C3, troca de tela, fala nem grava.
+   07:00 ou da meia-noite (também na página que carregou oculta e só depois voltou à frente) e em fixar(). O 1º tique de cada página sai já na
+   carga, antes de qualquer ouvinte: quem ouve lê o estado ao montar (alarmes(), quadro()) e depois acompanha os eventos. O replay só emite
+   evento: NUNCA abre SOS/C3, troca de tela, fala nem grava.
 
    Travas: em /SOS-/ o arquivo sai sem definir nada; com D.simulacao !== true tudo é inerte (null, nenhum evento, nenhum timer); nunca lança
    erro (falhou → null, e quem chama cai no D.snapshot); nunca lê, devolve nem muta o D.snapshot; um timer só por página. */
@@ -264,14 +265,14 @@
     var e = especificacao(x), anc = e ? ancoraDe(Date.now()) : null, T, A = Ag();
     if (!e || anc === null) return null;
     T = anc + (e.k * DURACAO + e.s) * 1000;
-    fixoMs = T; marca(T);
+    fixoMs = T;
     if (persistir) ls(function () { localStorage.setItem(CHAVE_FIXO, e.texto); });
     ls(function () { A.rebase(T, true); });
     emite('capitao-rebase', { ms: T });
     return T;
   }
   function solta() {
-    fixoMs = null; marca(Date.now());
+    fixoMs = null;
     ls(function () { localStorage.removeItem(CHAVE_FIXO); });
     ls(function () { Ag().rebase(Date.now(), true); });
     emite('capitao-rebase', { ms: Date.now() });
@@ -293,12 +294,23 @@
     s = segDe(ms);
     if (!s) return null;
     res = calc(p, s.seg, s.anc, comAlarmes);
-    if (fixoMs !== null && Math.floor(ms / 1000) === Math.floor(fixoMs / 1000) && (so = sobre())) for (k in so) if (Object.prototype.hasOwnProperty.call(so, k) && k !== '__proto__') res[k] = so[k];
+    if (fixoMs !== null && Math.floor(ms / 1000) === Math.floor(fixoMs / 1000) && (so = sobre())) for (k in so) if (Object.prototype.hasOwnProperty.call(so, k) && k !== '__proto__' && k !== 'alarmes') res[k] = so[k];
     if (comAlarmes) {
       res.alarmes = alarmesDe(p, res, s.seg % p.n, Math.floor(s.seg / p.n), s.anc);
-      if (so && Array.isArray(so.alarmes)) res.alarmes = so.alarmes;
+      if (so && Array.isArray(so.alarmes)) res.alarmes = soAviso(p, so.alarmes);   // a lista literal do 'sobre' (vazia vale: suprime o alarme) passa pela mesma trava
     }
     return res;
+  }
+  // o gancho 'sobre' não fura a decisão (c): fora do cenário 'alarme-critico' todo alarme dele é AVISO, qualquer que seja o `nivel` escrito; só objetos entram
+  function soAviso(p, lista) {
+    var out = [], i, a;
+    for (i = 0; i < lista.length; i++) {
+      if (!lista[i] || typeof lista[i] !== 'object') continue;
+      a = copia(lista[i]);
+      if (p.R.cenario !== 'alarme-critico') a.nivel = 'aviso';
+      out.push(a);
+    }
+    return out;
   }
   function em(ms) { try { return quadroEm(ms, true); } catch (e) { return null; } }
   function quadro(t) {
@@ -507,10 +519,8 @@
   }
 
   // ——— tique de 1 s, alertas e virada ———
-  var meu = (window.__capitaoReplayGen = (window.__capitaoReplayGen || 0) + 1), timer = 0, vivos = null, ultimaAnc = null, ultimoDia = null;
+  var meu = (window.__capitaoReplayGen = (window.__capitaoReplayGen || 0) + 1), timer = 0, vivos = null;
   function atual() { return window.__capitaoReplayGen === meu; }   // uma recarga do arquivo na mesma página deixa só o timer da cópia nova
-  function diaDe(ms) { return Math.floor((ms + Ag().off(ms) * 60000) / MS_DIA); }
-  function marca(ms) { try { ultimaAnc = ancoraDe(ms); ultimoDia = diaDe(ms); } catch (e) {} }   // o tique só reconhece virada de verdade, não a troca de instante de fixar()
   function agenda(ms) {
     clearTimeout(timer); clearTimeout(window.__capitaoReplayTimer);
     timer = window.__capitaoReplayTimer = setTimeout(tique, ms);
@@ -539,13 +549,11 @@
       clearTimeout(timer);
       if (!ativo()) { timer = 0; iniciado = false; return; }   // inerte (D.simulacao mudou): para; o próximo uso da API religa
       if (!document.hidden) {
-        var ms = agoraMs(), q = quadroEm(ms, true), anc = ancoraDe(ms), dia = diaDe(ms);
+        var ms = agoraMs(), q = quadroEm(ms, true);
         if (q) {
-          if (ultimaAnc !== null && (anc !== ultimaAnc || dia !== ultimoDia)) {   // virada das 07:00 ou da meia-noite
-            ls(function () { Ag().rebase(ms); });
-            emite('capitao-rebase', { ms: ms });
-          }
-          ultimaAnc = anc; ultimoDia = dia;
+          // virada das 07:00 ou da meia-noite: o rebase é idempotente e só devolve true quando o dia de bordo ou o dia mudou. Vale também para a
+          // página que carregou oculta e só agora volta à frente (nenhum estado do tique anterior) e para o fixar(), que já refez o rodapé
+          if (ls(function () { return Ag().rebase(ms); })) emite('capitao-rebase', { ms: ms });
           var detalhe = copia(q); detalhe.simulado = true;
           emite('capitao-telemetria', detalhe);
           alertasDiff(q.alarmes || []);

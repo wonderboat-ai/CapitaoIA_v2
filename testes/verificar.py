@@ -1032,6 +1032,9 @@ def feita(dia):
 SEGREDOS = {'capitao.ia.chave.v1': 'segredo-teste-ia', 'capitao.ia.url.v1': 'segredo-teste-url', 'capitao.telemetria.chave.v1': 'segredo-teste-tele',
             'capitao.voz.chave.v1': 'segredo-teste-voz', 'capitao.login.tentativas.v1': json.dumps({'n': 2, 'ate': 0, 'ult': 1, 'm': 'segredo-teste-login'}),
             'capitao.telemetria.ultima.v1': json.dumps({'pos': 'segredo-teste-posicao'}), 'capitao.clima.v1': json.dumps({'dia': 'segredo-teste-clima'})}
+# Cópia de trabalho do replay (o instante congelado e o gancho de teste do quadro): `capitao.replay.*` nunca vai no arquivo nem volta da
+# restauração (CONTRATO §1.25: restaurar um instante fixado congelaria o app). O motor cria as duas; o dados.html tira o prefixo inteiro.
+REPLAY_FORA = {'capitao.replay.fixo': '60@120', 'capitao.replay.sobre': json.dumps({'sog_nos': 0, 'estado': 'Fundeado', 'alarmes': []})}
 GRAVA_LS = "(o) => Object.keys(o).forEach((k) => localStorage.setItem(k, o[k]))"
 LE_LS = "() => Object.fromEntries(Object.keys(localStorage).sort().map((k) => [k, localStorage.getItem(k)]))"
 
@@ -1078,14 +1081,14 @@ def teste_dados(b):
         # escuro e os segredos.
         p = res['baixar'] = []
         pg.goto(BASE + 'dados.html', wait_until='load')
-        pg.evaluate(GRAVA_LS, dict(SEGREDOS, **{'capitao.diario.v1': json.dumps([L_B, L_A]), 'capitao.executado.v1': json.dumps({'t1': feita(20)}),
+        pg.evaluate(GRAVA_LS, dict(SEGREDOS, **REPLAY_FORA, **{'capitao.diario.v1': json.dumps([L_B, L_A]), 'capitao.executado.v1': json.dumps({'t1': feita(20)}),
                                              'capitao.docs.v1': json.dumps([D_B, D_A]), 'capitao.abast.v1': json.dumps([N_B, N_A]),
                                              'capitao.equipe.v1': json.dumps({'fones': {'Marinheiro': 'tel-teste-1'}, 'convites': []}), 'capitao.tema.v1': 'escuro'}))
         pg.reload(wait_until='load')
         pg.wait_for_timeout(300)
         lista = pg.inner_text('#lista')
         if 'Diário de bordo · 2 linhas' not in lista or 'Documentos enviados · 2 documentos' not in lista \
-                or 'Abastecimentos enviados · 2 abastecimentos' not in lista or 'segredo' in lista or 'sessao' in lista:
+                or 'Abastecimentos enviados · 2 abastecimentos' not in lista or 'segredo' in lista or 'sessao' in lista or 'replay' in lista:
             p.append('lista do aparelho: %r' % lista)
         with pg.expect_download() as dl:
             pg.click('#baixar')
@@ -1098,7 +1101,7 @@ def teste_dados(b):
         if pac.get('app') != 'Capitão IA' or pac.get('formato') != 1 or not pac.get('versao'): p.append('cabeçalho do pacote: %r' % {k: pac.get(k) for k in ('app', 'formato', 'versao')})
         esperadas = ['capitao.abast.v1', 'capitao.diario.v1', 'capitao.docs.v1', 'capitao.equipe.v1', 'capitao.executado.v1', 'capitao.tema.v1']
         if sorted(pac.get('dados', {})) != esperadas: p.append('chaves no arquivo %s (esperado %s)' % (sorted(pac.get('dados', {})), esperadas))
-        vazou = [x for x in ['capitao.sessao', 'segredo-teste', 'capitao.login', 'capitao.ia.', 'capitao.telemetria', 'capitao.voz', 'capitao.clima'] if x in texto]
+        vazou = [x for x in ['capitao.sessao', 'segredo-teste', 'capitao.login', 'capitao.ia.', 'capitao.telemetria', 'capitao.voz', 'capitao.clima', 'capitao.replay'] if x in texto]
         if vazou: p.append('o arquivo leva o que nunca vai: %s' % vazou)
         if json.loads(pac['dados'].get('capitao.diario.v1', 'null')) != [L_B, L_A]: p.append('diário no arquivo diferente do aparelho')
         if json.loads(pac['dados'].get('capitao.docs.v1', 'null')) != [D_B, D_A] or json.loads(pac['dados'].get('capitao.abast.v1', 'null')) != [N_B, N_A]:
@@ -1177,9 +1180,10 @@ def teste_dados(b):
         # 5) Arquivo montado à mão com sessão de outro usuário e outra chave da IA: só a linha D entra.
         p = res['segredo no arquivo'] = []
         mao = {'app': 'Capitão IA', 'formato': 1, 'dados': {'capitao.sessao.v1': json.dumps({'u': 'demo', 'em': 1, 'exp': 9e15}),
-               'capitao.ia.chave.v1': 'chave-do-arquivo', 'capitao.login.tentativas.v1': '{}', 'capitao.diario.v1': linhas}}
+               'capitao.ia.chave.v1': 'chave-do-arquivo', 'capitao.login.tentativas.v1': '{}', 'capitao.diario.v1': linhas,
+               'capitao.replay.fixo': '5', 'capitao.replay.sobre': json.dumps({'sog_nos': 99}), 'capitao.replay.outra': 'x'}}
         r = escolhe({'name': 'copia.json', 'mimeType': 'application/json', 'buffer': json.dumps(mao).encode('utf-8')})
-        if not r['previa'] or 'sess' in r['resumo'].lower() or 'chave' in r['resumo'].lower(): p.append('prévia: %r' % r['resumo'])
+        if not r['previa'] or 'sess' in r['resumo'].lower() or 'chave' in r['resumo'].lower() or 'replay' in r['resumo'].lower(): p.append('prévia: %r' % r['resumo'])
         restaura()
         tudo = ls()
         # Antes a linha sem âncora no aparelho ia para o fim ([C, B, A, D]); D (23/10) é a mais nova e o app lê a lista com a mais
@@ -1188,6 +1192,8 @@ def teste_dados(b):
         if tudo.get('capitao.ia.chave.v1') != SEGREDOS['capitao.ia.chave.v1'] or '"lucas"' not in (tudo.get('capitao.sessao.v1') or '') \
                 or tudo.get('capitao.login.tentativas.v1') != SEGREDOS['capitao.login.tentativas.v1']:
             p.append('sessão, tentativas ou chave da IA vieram do arquivo')
+        if any(tudo.get(k) != v for k, v in REPLAY_FORA.items()) or 'capitao.replay.outra' in tudo:
+            p.append('o replay (capitao.replay.*) veio do arquivo: %r' % {k: v for k, v in tudo.items() if k.startswith('capitao.replay')})
 
         # 6) Item que o app não lê (capitao-brain.js: diário sem t, documento sem n, Executado sem d/t, telefone que não é texto,
         # convite sem nome) nunca entra no registro: sozinho, nada a restaurar e nada muda; ao lado de uma linha boa, só ela entra.

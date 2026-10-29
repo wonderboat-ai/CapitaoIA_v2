@@ -104,13 +104,15 @@ input[type=file] { display: none; }
   var APP = 'Capitão IA', FORMATO = 1, MAX = 4 * 1024 * 1024;
   var NOME = /^capitao\.[a-z0-9._-]+$/;
   // Nunca no arquivo nem na restauração: login, chaves de acesso e endereços de teste dos proxies, a última leitura do coletor
-  // (tem a posição do barco) e o que é cópia de trabalho do aparelho (previsão e maré salvas, frase sorteada, replay congelado).
+  // (tem a posição do barco) e o que é cópia de trabalho do aparelho (previsão e maré salvas, frase sorteada). O replay (capitao.replay.fixo
+  // e .sobre, e qualquer chave que ele ganhe) sai pelo prefixo: restaurar um instante fixado congelaria o app (CONTRATO §1.25).
   var FORA = ['capitao.sessao.v1', 'capitao.login.tentativas.v1', 'capitao.ia.chave.v1', 'capitao.ia.url.v1',
     'capitao.telemetria.chave.v1', 'capitao.telemetria.url.v1', 'capitao.telemetria.ultima.v1', 'capitao.voz.chave.v1', 'capitao.voz.url.v1',
-    'capitao.clima.v1', 'capitao.mare.v1', 'capitao.saudacao.v1', 'capitao.replay.fixo'];
+    'capitao.clima.v1', 'capitao.mare.v1', 'capitao.saudacao.v1'];
+  var PREFIXO_FORA = 'capitao.replay.';
   // Chave nova com nome de segredo também fica fora, mesmo sem estar na lista.
   var SEGREDO = /\.(sessao|login|chave|senha|token|segredo|url)(\.|$)/;
-  function fora(k) { return !NOME.test(k) || FORA.indexOf(k) >= 0 || SEGREDO.test(k); }
+  function fora(k) { return !NOME.test(k) || FORA.indexOf(k) >= 0 || SEGREDO.test(k) || k.indexOf(PREFIXO_FORA) === 0; }
   function obj(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
   function txt(x) { return typeof x === 'string'; }
   // quando = a hora de uma linha, para a ordem da lista (mais nova primeiro, como o app grava com unshift); null = sem hora.
