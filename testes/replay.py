@@ -36,6 +36,12 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
   atributo: só se escreve quando o valor mudou); a moldura mostra o `CapitaoMoldura.leitura()` do tique, e o estado montado aos poucos (LED que vira, selo DEMO que entra e sai,
   título e href do topo) é igual ao de uma moldura montada do zero naquele estado; Main, H2 e E1 só dão setState quando o texto exibido muda (o React.Component.prototype.setState
   contado: livre, nunca mais que um por tique; instante fixado, nenhum); 6 mutantes da P2B que esses testes têm de acusar;
+- a API de alertas (capitao-alertas.js; P2C, F05; CONTRATO §1.24): a lista vem do `alarmes()` do replay e do catálogo `D.replay.alertas`, só dentro da janela de 99 a 116 s, um id por
+  campo, com o nível, o limite e o valor da `CapitaoAgora.nivel` (a lista é exatamente os campos fora do normal, segundo a segundo, em 3 voltas do dia); crítico só no cenário
+  `alarme-critico`, com a ordem (crítico antes de aviso, o mais antigo primeiro) e a contagem, e aviso → crítico → aviso no mesmo id, com valores plantados pelo gancho `sobre`; o
+  formato do alerta e a cópia que ninguém mexe no D; anunciado UMA vez por id por sessão (`sessionStorage`, recarga, sessão nova, storage negado, cheio e com lixo, id inválido);
+  acompanha o evento `capitao-alerta` e não emite o seu; modo real inerte (a flag lida a cada chamada, e mesmo com um replay que mente); lista suja do replay; nunca lança; sem efeito
+  colateral (fala, janela, endereço, localStorage, diário); S1/S2 e rotas /SOS- sem a API; 4 telas de verdade; o código (sem avaliar limite, sem evento nem timer); 10 mutantes;
 - S1/S2 (e uma rota /SOS-): sem CapitaoReplay, `CapitaoAgora.instante()` null, nenhum tique, nenhuma leitura de D.simulacao nem de D.replay;
 - modo real inerte (`simulacao = false` no fim do capitao-dados.js, e a flag mudando com a página aberta): nada anda, `em()` null, nenhum evento;
 - histórico: `serie()` das cinco janelas sem NaN, o último ponto = o quadro, o serrote do diesel = as linhas de abastecimento, a curva do ano do
@@ -49,7 +55,7 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
 - a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
 - o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
-- a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4);
+- a faixa de alerta, a lista da Ponte, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (Fases 3 e 4; a API que elas vão ler, o capitao-alertas.js, é da P2C e está coberta acima);
 - o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
   CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() — e a Fase 4: a P2B só trocou a mecânica da moldura, os textos e rótulos ficam para elas): lá entra a conferência de que nenhum texto diz «coletor NMEA»
   quando `CapitaoTelemetria.fonte()` é 'replay'.
@@ -1374,6 +1380,434 @@ def telas(b):
         fecha(pg)
 
 
+# ——— 12b. a API de alertas (capitao-alertas.js; P2C, F05; CONTRATO §1.16 e §1.24) ———
+# A página mínima carrega o dados, o replay e os alertas na ordem das telas (o alertas logo depois do replay).
+HTML_ALERTAS = ('<!doctype html><meta charset="utf-8"><title>alertas</title><script src="/capitao-dados.js"></script><script src="/capitao-replay.js"></script>'
+                '<script src="/capitao-alertas.js"></script><script src="/capitao-telemetria.js"></script>')
+ESPERA_AL = '() => window.CapitaoAlertas && window.CapitaoAgora && window.CapitaoAgora.relogio'
+CHAVE_ANUNCIADOS = 'capitao.alertas.anunciados'
+CHAVES_ALERTA = {'id', 'nivel', 'rotulo', 'cor', 'rgb', 'sistema', 'lado', 'campo', 'titulo', 'valor', 'limite', 'un', 'valorTxt', 'limiteTxt', 'texto', 'desde', 'desdeMs', 'hora', 'seg',
+                 'guia', 'secao', 'fonte', 'passos', 'detalhe'}
+
+
+def abre_al(b, **kw):
+    kw.setdefault('html', HTML_ALERTAS)
+    kw.setdefault('espera', ESPERA_AL)
+    return abre(b, **kw)
+
+
+def init_fixo(x='105', sobre=None):
+    """Script de página que congela o instante (e, se houver, planta valores no quadro pelo gancho 'sobre')."""
+    s = "localStorage.setItem('capitao.replay.fixo', %s);" % json.dumps(x)
+    if sobre is not None:
+        s += " localStorage.setItem('capitao.replay.sobre', %s);" % json.dumps(json.dumps(sobre))
+    return s
+
+
+ALERTAS_VOLTA_JS = r"""() => {
+  const R = window.CapitaoReplay, A = window.CapitaoAgora, AL = window.CapitaoAlertas, lim = window.CapitaoDados.replay.limites, anc = A.ancora(Date.now()), o = { voltas: [] };
+  for (const K of [0, 120, 575]) {   // a 1ª volta do dia (07:00), uma do meio e a última
+    const base = anc + K * 150 * 1000, v = { K, itens: [] };
+    for (let t = 0; t < 150; t++) {
+      const ms = base + t * 1000, l = AL.ativos(ms), q = R.em(ms), alm = R.alarmes(ms), c = AL.contagem(ms), tc = AL.tocando(ms), p = l.length ? AL.porId(l[0].id, ms) : null;
+      const fora = Object.keys(lim).filter((cp) => { const n = A.nivel(cp, q); return n && n.nivel !== 'normal'; }).sort();
+      v.itens.push({ t, ids: l.map((x) => x.id), niveis: l.map((x) => x.nivel), campos: l.map((x) => x.campo).sort(), fora,
+        nivelPelaAgora: l.every((x) => { const n = A.nivel(x.campo, q); return !!n && n.nivel === x.nivel && n.limite === x.limite && q[x.campo] === x.valor; }),
+        igualAoReplay: l.length === alm.length && l.every((x) => { const a = alm.find((y) => y.id === x.id); return !!a && a.nivel === x.nivel && a.valor === x.valor && a.limite === x.limite && a.desde === x.desde
+          && a.campo === x.campo && a.sistema === x.sistema && (a.lado || '') === (x.lado || ''); }),
+        tc: tc && tc.id, p: p && p.id === l[0].id, c });
+    }
+    o.voltas.push(v);
+  }
+  return o;
+}"""
+
+ALERTAS_ITEM_JS = r"""() => {
+  const R = window.CapitaoReplay, AL = window.CapitaoAlertas, T = R.fixar('105'), a = AL.ativos()[0], b = AL.porId('arref_be'), c = AL.tocando(), d = AL.ativos(T), copia = JSON.parse(JSON.stringify(a));
+  a.passos.push('x'); a.passos[0] = 'trocado'; a.titulo = 'x'; a.nivel = 'critico';
+  const depois = AL.ativos()[0], cat = window.CapitaoDados.replay.alertas.arref_be;
+  return { T, a: copia, chaves: Object.keys(copia).sort(), igual: [b, c, d[0]].every((x) => JSON.stringify(x) === JSON.stringify(copia)), n: d.length,
+    semAlias: JSON.stringify(depois) === JSON.stringify(copia) && cat.passos.length === copia.passos.length && cat.passos[0] === copia.passos[0] && cat.titulo === copia.titulo };
+}"""
+
+
+def a_alertas_volta(b):
+    print('Alertas: só dentro da janela do alarme, um id por campo, nível pela CapitaoAgora.nivel, igual ao alarmes() do replay')
+    pg = abre_al(b)
+    r = pg.evaluate(ALERTAS_VOLTA_JS)
+    dentro = set(range(JANELA_INI, JANELA_FIM + 1))
+    ids_catalogo = D['replay']['alertas']
+    ok('3 voltas do dia (a 1ª, a 121ª e a última): ativos() tem alerta exatamente nos segundos %d a %d da janela do gerador, e fora dela é []' % (JANELA_INI, JANELA_FIM),
+       all({i['t'] for i in v['itens'] if i['ids']} == dentro and all(i['ids'] == [] for i in v['itens'] if i['t'] not in dentro) for v in r['voltas']),
+       [sorted({i['t'] for i in v['itens'] if i['ids']})[:3] for v in r['voltas']])
+    ok('dentro da janela o alerta é um só, o arref_be (campo motor_be_arref_c); tocando() é ele e porId() acha o mesmo; fora, tocando() é null',
+       all(i['ids'] == ['arref_be'] and i['campos'] == ['motor_be_arref_c'] and i['tc'] == 'arref_be' and i['p'] is True for v in r['voltas'] for i in v['itens'] if i['t'] in dentro)
+       and all(i['tc'] is None for v in r['voltas'] for i in v['itens'] if i['t'] not in dentro), None)
+    ok('um id por campo em todos os 450 segundos (sem id repetido) e o catálogo D.replay.alertas tem um id por campo, o mesmo conjunto de campos do D.replay.limites',
+       all(len(set(i['ids'])) == len(i['ids']) for v in r['voltas'] for i in v['itens'])
+       and len({a['campo'] for a in ids_catalogo.values()}) == len(ids_catalogo) and {a['campo'] for a in ids_catalogo.values()} == set(D['replay']['limites']),
+       (len(ids_catalogo), len(D['replay']['limites'])))
+    ok('o nível, o limite e o valor de cada alerta são os da CapitaoAgora.nivel sobre o mesmo quadro, em todos os 450 segundos; com o cenário aviso nenhum é crítico',
+       all(i['nivelPelaAgora'] for v in r['voltas'] for i in v['itens']) and all(n == 'aviso' for v in r['voltas'] for i in v['itens'] for n in i['niveis']),
+       [(v['K'], i['t']) for v in r['voltas'] for i in v['itens'] if not i['nivelPelaAgora']][:3])
+    ok('a lista é exatamente os campos que a nivel() põe fora do normal (nem a mais, nem a menos), segundo a segundo',
+       all(i['campos'] == i['fora'] for v in r['voltas'] for i in v['itens']), [(v['K'], i['t'], i['campos'], i['fora']) for v in r['voltas'] for i in v['itens'] if i['campos'] != i['fora']][:3])
+    ok('cada alerta é o alarme do replay (id, nivel, campo, sistema, lado, valor, limite e desde iguais ao alarmes() do mesmo instante)', all(i['igualAoReplay'] for v in r['voltas'] for i in v['itens']))
+    ok('contagem(): total 1, aviso 1, crítico 0, maior \'aviso\' dentro da janela; zeros e maior null fora',
+       all(i['c'] == {'total': 1, 'aviso': 1, 'critico': 0, 'maior': 'aviso'} for v in r['voltas'] for i in v['itens'] if i['t'] in dentro)
+       and all(i['c'] == {'total': 0, 'aviso': 0, 'critico': 0, 'maior': None} for v in r['voltas'] for i in v['itens'] if i['t'] not in dentro))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+    print('Alertas: o conteúdo de cada alerta (catálogo + alarme), em 12:01:45')
+    pg = abre_al(b)
+    r = pg.evaluate(ALERTAS_ITEM_JS)
+    cat = D['replay']['alertas']['arref_be']
+    ini = r['T'] - 6000
+    a = r['a']
+    esperado = {'id': 'arref_be', 'nivel': 'aviso', 'rotulo': 'AVISO', 'sistema': 'motores', 'lado': 'be', 'campo': 'motor_be_arref_c', 'titulo': cat['titulo'], 'valor': 89.6, 'limite': 88, 'un': '°C',
+                'valorTxt': '89,6 °C', 'limiteTxt': '88 °C', 'texto': cat['titulo'] + ': 89,6 °C (acima de 88 °C)', 'desdeMs': ini,
+                'desde': datetime.fromtimestamp(ini / 1000, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), 'hora': datetime.fromtimestamp(ini / 1000, BR).strftime('%H:%M:%S'), 'seg': 6,
+                'guia': cat['guia'], 'secao': cat['secao'], 'fonte': cat['fonte'], 'passos': cat['passos'], 'detalhe': 'C3-Leme-Alerta.dc.html#alarme=arref_be'}
+    dif = {k: (a.get(k), v) for k, v in esperado.items() if a.get(k) != v}
+    ok('fixado em 12:01:45: título, valor 89,6 °C acima de 88 °C, início 12:01:39 há 6 s, guia, seção, fonte e passos do catálogo, link para a C3 (#alarme=arref_be)', dif == {}, dif)
+    ok('as cores são os tokens do tema (--cap-warn e --cap-rgb) e o rótulo é AVISO; a lista de chaves do alerta é a do contrato (lado só quando se aplica)',
+       a['cor'] == 'var(--cap-warn, #f0a63a)' and a['rgb'] == 'var(--cap-warn-rgb, 240,166,58)' and set(r['chaves']) == CHAVES_ALERTA, (a['cor'], set(r['chaves']) ^ CHAVES_ALERTA))
+    ok('ativos(), ativos(fixo), porId() e tocando() devolvem o mesmo alerta, e o texto, a hora e os passos não têm os termos proibidos (coordenada nem existe: as chaves são só as do contrato)',
+       r['igual'] and r['n'] == 1 and not re.search(r'simula|demo|fict[ií]cio|roteiro|la[cç]o|150 s|snapshot', a['texto'] + a['hora'] + ' '.join(a['passos']), re.I), r['n'])
+    ok('quem recebe o alerta recebe uma cópia: mexer nos passos, no título ou no nível não mexe no D.replay.alertas nem no alerta seguinte', r['semAlias'] is True)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+def a_alertas_varios(b):
+    print('Alertas: vários ao mesmo tempo (valores plantados): um id por campo, ordem e nível; aviso → crítico → aviso no mesmo id')
+    plantado = {'diesel_litros': 100, 'tanque_agua_pct': 10, 'porao_bb_nivel': 12, 'bateria_2_tensao_v': 11.0, 'motor_bb_oleo_bar': 0.5}
+    JS = r"""() => { const R = window.CapitaoReplay, A = window.CapitaoAgora, AL = window.CapitaoAlertas, q = R.quadro(), l = AL.ativos(), lim = {};
+      l.forEach((x) => { lim[x.id] = x.limite; });
+      return { cen: window.CapitaoDados.replay.cenario, ids: l.map((x) => x.id), niveis: l.map((x) => x.nivel), rot: l.map((x) => x.rotulo), lim,
+        nv: l.map((x) => { const n = A.nivel(x.campo, q); return n && n.nivel; }), nvLim: l.map((x) => { const n = A.nivel(x.campo, q); return n && n.limite; }),
+        campoDoCatalogo: l.every((x) => window.CapitaoDados.replay.alertas[x.id].campo === x.campo), c: AL.contagem(), tc: AL.tocando() && AL.tocando().id,
+        semLado: l.filter((x) => !('lado' in x)).map((x) => x.id), lado: l.filter((x) => 'lado' in x).map((x) => x.id + ':' + x.lado),
+        texto: Object.fromEntries(l.map((x) => [x.id, x.texto])), cor: Object.fromEntries(l.map((x) => [x.id, x.cor])) }; }"""
+    pg = abre_al(b, init=init_fixo('105', plantado))
+    r = pg.evaluate(JS)
+    ok('cenário aviso, 5 valores plantados (e o arref_be da janela): 6 alertas, todos AVISO; o mais antigo (arref_be, 12:01:39) primeiro e os demais por id',
+       r['cen'] == 'aviso' and r['ids'] == ['arref_be', 'agua', 'b12', 'diesel', 'oleo_bb', 'porao_bb'] and set(r['niveis']) == {'aviso'} and set(r['rot']) == {'AVISO'}, r)
+    ok('o crítico que a nivel() acha nos plantados (diesel, porão, óleo, 12 V) vira AVISO no cenário aviso, com o limite do aviso (400 L, 5 cm, 2,4 bar, 12,2 V); o resto é o nível da nivel()',
+       r['nv'] == ['aviso', 'aviso', 'critico', 'critico', 'critico', 'critico'] and r['lim'] == {'arref_be': 88, 'agua': 15, 'b12': 12.2, 'diesel': 400, 'oleo_bb': 2.4, 'porao_bb': 5}, (r['nv'], r['lim']))
+    ok('contagem() com 6 avisos: total 6, aviso 6, crítico 0, maior \'aviso\'; tocando() é o arref_be', r['c'] == {'total': 6, 'aviso': 6, 'critico': 0, 'maior': 'aviso'} and r['tc'] == 'arref_be', (r['c'], r['tc']))
+    ok('o id é do catálogo e o campo dele é o do alerta; lado só nos motores/porão com lado (BB/BE), e o texto leva o valor e o limite como a tela mostra',
+       r['campoDoCatalogo'] and sorted(r['semLado']) == ['agua', 'b12', 'diesel'] and sorted(r['lado']) == ['arref_be:be', 'oleo_bb:bb', 'porao_bb:bb']
+       and r['texto']['diesel'] == 'Diesel a bordo: 100 L (abaixo de 400 L)' and r['texto']['agua'] == 'Tanque de água doce: 10,0 % (abaixo de 15 %)'
+       and r['texto']['porao_bb'].endswith(': 12,0 cm (acima de 5 cm)'), r['texto'])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+    pg = abre_al(b, init=init_fixo('105', plantado), depois="window.CapitaoDados.replay.cenario = 'alarme-critico';")
+    r = pg.evaluate(JS)
+    ok('cenário alarme-critico (só no gerador; aqui injetado): o crítico passa — b12, diesel, oleo_bb e porao_bb (por id) antes dos avisos arref_be (o mais antigo) e agua',
+       r['cen'] == 'alarme-critico' and r['ids'] == ['b12', 'diesel', 'oleo_bb', 'porao_bb', 'arref_be', 'agua'] and r['niveis'] == ['critico'] * 4 + ['aviso'] * 2
+       and r['rot'] == ['CRÍTICO'] * 4 + ['AVISO'] * 2, r)
+    ok('no cenário crítico o nível e o limite de cada alerta são os da CapitaoAgora.nivel, sem rebaixar', r['niveis'] == r['nv'] and [r['lim'][i] for i in r['ids']] == r['nvLim'], (r['niveis'], r['nv']))
+    ok('contagem() = total 6, aviso 2, crítico 4, maior \'critico\'; tocando() é o primeiro crítico (b12); a cor do crítico é --cap-crit e a do aviso --cap-warn',
+       r['c'] == {'total': 6, 'aviso': 2, 'critico': 4, 'maior': 'critico'} and r['tc'] == 'b12'
+       and r['cor']['b12'] == 'var(--cap-crit, #ff3b30)' and r['cor']['agua'] == 'var(--cap-warn, #f0a63a)', (r['c'], r['tc'], r['cor']))
+    r = pg.evaluate(r"""() => { const AL = window.CapitaoAlertas, set = (v) => { localStorage.setItem('capitao.replay.sobre', JSON.stringify({ diesel_litros: v })); const a = AL.porId('diesel'); return a && [a.nivel, a.id, a.rotulo]; };
+      return [set(300), set(100), set(300), set(500)]; }""")
+    ok('o mesmo id muda de nível com o valor: diesel aviso (300 L) → crítico (100 L) → aviso (300 L) → sem alerta (500 L)',
+       r == [['aviso', 'diesel', 'AVISO'], ['critico', 'diesel', 'CRÍTICO'], ['aviso', 'diesel', 'AVISO'], None], r)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+def a_alertas_uma_vez(b):
+    print('Alertas: anunciados uma vez por id por sessão (sessionStorage, sempre em try/catch), com o estado exposto pela API')
+    JS = r"""() => { const R = window.CapitaoReplay, AL = window.CapitaoAlertas, o = {};
+      o.antes = [AL.anunciado('arref_be'), AL.novos().map((x) => x.id)];
+      o.a1 = AL.anunciar('arref_be'); o.a2 = AL.anunciar('arref_be');
+      o.depois = [AL.anunciado('arref_be'), AL.novos().map((x) => x.id), AL.ativos().map((x) => x.id)];
+      o.chave = sessionStorage.getItem('capitao.alertas.anunciados');
+      o.ruins = [AL.anunciar('nao_existe'), AL.anunciar('constructor'), AL.anunciar('__proto__'), AL.anunciar('toString'), AL.anunciar(5), AL.anunciar(null), AL.anunciar(''), AL.anunciar({}), AL.anunciar(['arref_be']),
+        AL.anunciado('nao_existe'), AL.anunciado('constructor'), AL.anunciado(7), AL.anunciado(undefined)];
+      o.chaveRuins = sessionStorage.getItem('capitao.alertas.anunciados');
+      R.fixar('60'); o.fora = [AL.ativos().length, AL.anunciado('arref_be'), AL.anunciar('arref_be')];
+      R.fixar('105'); o.volta = [AL.anunciar('arref_be'), AL.novos().length, AL.anunciado('arref_be')];
+      o.outro = [AL.anunciar('agua'), AL.anunciar('agua'), AL.anunciado('agua')];
+      o.fim = sessionStorage.getItem('capitao.alertas.anunciados');
+      return o; }"""
+    pg = abre_al(b, init=init_fixo('105'))
+    r = pg.evaluate(JS)
+    ok('1ª vez: anunciado() false e novos() com o arref_be; anunciar() true uma vez e false na seguinte; depois anunciado() true, novos() vazio e o alerta segue ativo',
+       r['antes'] == [False, ['arref_be']] and r['a1'] is True and r['a2'] is False and r['depois'] == [True, [], ['arref_be']], r)
+    ok('o estado fica no sessionStorage \'%s\' = {"arref_be": true}' % CHAVE_ANUNCIADOS, json.loads(r['chave']) == {'arref_be': True}, r['chave'])
+    ok('id que não existe, \'constructor\', \'__proto__\', \'toString\', número, null, vazio e objeto: anunciar() false, anunciado() false, o sessionStorage não muda e nada lança',
+       r['ruins'] == [False] * 13 and r['chaveRuins'] == r['chave'], (r['ruins'], r['chaveRuins']))
+    ok('sair da janela (12:01:00) e voltar (12:01:45) não anuncia de novo: anunciado() continua true, anunciar() false e novos() vazio',
+       r['fora'] == [0, True, False] and r['volta'] == [False, 0, True], (r['fora'], r['volta']))
+    ok('outro id do catálogo (agua) anuncia uma vez e entra no mesmo mapa', r['outro'] == [True, False, True] and json.loads(r['fim']) == {'arref_be': True, 'agua': True}, (r['outro'], r['fim']))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    pg.reload()
+    pg.wait_for_function(ESPERA_AL)
+    r = pg.evaluate("() => { const AL = window.CapitaoAlertas; return { a: AL.anunciado('arref_be'), n: AL.novos().length, again: AL.anunciar('arref_be'), chave: sessionStorage.getItem('capitao.alertas.anunciados') }; }")
+    ok('depois de recarregar a página (mesma sessão do navegador): o arref_be segue anunciado, novos() vazio e anunciar() false', r['a'] is True and r['n'] == 0 and r['again'] is False and json.loads(r['chave']) == {'arref_be': True, 'agua': True}, r)
+    fecha(pg)
+    pg = abre_al(b, init=init_fixo('105'))   # contexto novo = sessão nova (aba nova, sessionStorage vazio)
+    r = pg.evaluate("() => { const AL = window.CapitaoAlertas; return [AL.anunciado('arref_be'), AL.anunciar('arref_be')]; }")
+    ok('numa sessão nova (contexto novo, sessionStorage vazio) o arref_be volta a ser anunciável: false e depois true', r == [False, True], r)
+    fecha(pg)
+
+    # sessionStorage negado, cheio ou com lixo: a API não lança e segue funcionando
+    NEGADO = "Object.defineProperty(window, 'sessionStorage', { get() { throw new Error('negado'); }, configurable: true });"
+    pg = abre_al(b, init=init_fixo('105') + NEGADO)
+    r = pg.evaluate("() => { const AL = window.CapitaoAlertas; try { return [AL.anunciado('arref_be'), AL.anunciar('arref_be'), AL.anunciar('arref_be'), AL.anunciado('arref_be'), AL.novos().length, AL.ativos().length]; } catch (e) { return String(e); } }")
+    ok('sessionStorage que lança no acesso: anunciar() true uma vez e false depois (vale a memória da página), anunciado() true, novos() vazio, sem lançar', r == [False, True, False, True, 0, 1], r)
+    ok('sessionStorage negado: sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+    CHEIO = ("const si = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'capitao.alertas.anunciados') throw new Error('cheio'); return si.apply(this, arguments); };")
+    pg = abre_al(b, init=init_fixo('105') + CHEIO)
+    r = pg.evaluate("() => { const AL = window.CapitaoAlertas; return [AL.anunciar('arref_be'), AL.anunciar('arref_be'), AL.anunciado('arref_be'), sessionStorage.getItem('capitao.alertas.anunciados')]; }")
+    ok('sessionStorage que não grava (cheio): anunciar() true uma vez e false depois, pela memória da página; nada foi gravado', r == [True, False, True, None], r)
+    fecha(pg)
+    for lixo, esperado in (('["arref_be"]', 'lista'), ('[1,2', 'JSON quebrado'), ('"arref_be"', 'texto'), ('null', 'null'), ('{"arref_be":"sim","agua":true}', 'valor que não é true')):
+        pg = abre_al(b, init=init_fixo('105') + "sessionStorage.setItem('capitao.alertas.anunciados', %s);" % json.dumps(lixo))
+        r = pg.evaluate("() => { const AL = window.CapitaoAlertas; return [AL.anunciado('arref_be'), AL.anunciado('agua'), AL.anunciar('arref_be'), AL.anunciar('arref_be')]; }")
+        ok('sessionStorage com lixo (%s: %s) vale como vazio, sem lançar: arref_be não está anunciado, anunciar() true e depois false%s' % (esperado, lixo, ' (agua true segue anunciado)' if 'agua' in lixo else ''),
+           r == [False, 'agua' in lixo, True, False], r)
+        fecha(pg)
+
+
+def a_alertas_eventos(b):
+    print('Alertas: a API acompanha o evento \'capitao-alerta\' do replay (não há evento próprio)')
+    pg = abre_al(b)
+    r = pg.evaluate(r"""() => { const R = window.CapitaoReplay, AL = window.CapitaoAlertas, vistos = [];
+      R.fixar('60');   // sai do que o relógio real tenha acabado de emitir (a página pode ter carregado dentro da janela)
+      window.addEventListener('capitao-alerta', (e) => { const t = AL.tocando(); vistos.push({ fase: e.detail.fase, id: e.detail.alarme.id, naApi: !!AL.porId(e.detail.alarme.id), total: AL.contagem().total, tocando: t && t.id }); });
+      R.fixar('105'); R.fixar('105'); R.fixar('125'); return vistos; }""")
+    ok('inicio do arref_be: no mesmo instante a API já tem o alerta (porId, total 1, tocando); fim: a API já não tem (porId false, total 0, tocando null); nenhum outro evento',
+       r == [{'fase': 'inicio', 'id': 'arref_be', 'naApi': True, 'total': 1, 'tocando': 'arref_be'}, {'fase': 'fim', 'id': 'arref_be', 'naApi': False, 'total': 0, 'tocando': None}], r)
+    r = pg.evaluate("() => ({ proprios: window.__ev.filter((e) => /alertas/.test(e.n)).length, nomes: [...new Set(window.__ev.map((e) => e.n))] })")
+    ok('a API não emite evento nenhum (só os do replay: capitao-telemetria, capitao-alerta e capitao-rebase)', r['proprios'] == 0 and set(r['nomes']) <= {'capitao-telemetria', 'capitao-alerta', 'capitao-rebase'}, r)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+def a_alertas_sem_efeito(b):
+    print('Alertas: nunca fala, grava, abre janela nem troca de tela; só escreve no sessionStorage, na chave dos anunciados')
+    pg = abre_al(b, init=init_fixo('105'))
+    r = pg.evaluate(r"""() => { const AL = window.CapitaoAlertas, cont = { fala: 0, abre: 0, push: 0, replace: 0 }, ps = history.pushState, rs = history.replaceState, wo = window.open;
+      try { speechSynthesis.speak = function () { cont.fala++; }; } catch (e) {}
+      window.open = function () { cont.abre++; return null; };
+      history.pushState = function () { cont.push++; return ps.apply(history, arguments); }; history.replaceState = function () { cont.replace++; return rs.apply(history, arguments); };
+      const ls = () => JSON.stringify(Object.assign({}, localStorage)), antes = ls(), href = location.href, tit = document.title, nos = document.body ? document.body.childElementCount : 0;
+      AL.ativo(); AL.ativos(); AL.porId('arref_be'); AL.tocando(); AL.contagem(); AL.novos(); AL.anunciar('arref_be'); AL.anunciar('agua'); AL.anunciado('arref_be');
+      return { cont, ls: ls() === antes, href: location.href === href, titulo: document.title === tit, nos: (document.body ? document.body.childElementCount : 0) === nos, ss: Object.keys(sessionStorage), diario: localStorage.getItem('capitao.diario.v1') }; }""")
+    ok('usar toda a API não fala (speechSynthesis.speak), não abre janela, não troca de endereço (pushState, replaceState, href), não mexe no título nem no corpo da página',
+       r['cont'] == {'fala': 0, 'abre': 0, 'push': 0, 'replace': 0} and r['href'] and r['titulo'] and r['nos'], r)
+    ok('não grava no localStorage (o diário nem existe) e o único sessionStorage escrito é o dos anunciados', r['ls'] and r['diario'] is None and r['ss'] == [CHAVE_ANUNCIADOS], r)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+STUB_JS = r"""(alarmes) => { window.CapitaoReplay = { ativo: () => true, agora: () => Date.now(), alarmes: () => alarmes }; return window.CapitaoAlertas.ativos().map((x) => [x.id, x.nivel, x.titulo, x.passos.length]); }"""
+
+
+def a_alertas_real(b):
+    print('Alertas: modo real inerte (simulacao = false), com a flag lida a cada chamada, mesmo com um replay que mente')
+    INERTE = r"""() => { const AL = window.CapitaoAlertas;
+      return { ativo: AL.ativo(), ativos: AL.ativos(), ativos150: AL.ativos(Date.now()), porId: AL.porId('arref_be'), tocando: AL.tocando(), contagem: AL.contagem(), novos: AL.novos(), anunciado: AL.anunciado('arref_be'),
+        anunciar: AL.anunciar('arref_be'), ss: Object.keys(sessionStorage), nivel: Object.keys(AL.NIVEL) }; }"""
+    pg = abre_al(b, depois='window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(INERTE)
+    ok('simulacao = false: ativo() false, ativos() [], porId() e tocando() null, contagem() zerada, novos() [], anunciado() e anunciar() false, nada gravado no sessionStorage',
+       r['ativo'] is False and r['ativos'] == [] and r['ativos150'] == [] and r['porId'] is None and r['tocando'] is None and r['contagem'] == {'total': 0, 'aviso': 0, 'critico': 0, 'maior': None}
+       and r['novos'] == [] and r['anunciado'] is False and r['anunciar'] is False and r['ss'] == [] and r['nivel'] == ['aviso', 'critico'], r)
+    alarme = {'id': 'arref_be', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'be', 'campo': 'motor_be_arref_c', 'valor': 89.6, 'limite': 88, 'desde': '2026-10-29T15:01:39Z'}
+    r = pg.evaluate(STUB_JS, [alarme])
+    ok('simulacao = false com um CapitaoReplay que diz estar ativo e devolve um alarme: a API continua inerte (a flag é lida por ela mesma, não só pelo replay) e anunciar() não grava',
+       r == [] and pg.evaluate("() => [window.CapitaoAlertas.anunciar('arref_be'), Object.keys(sessionStorage)]") == [False, []], r)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+    pg = abre_al(b, init=init_fixo('105'))
+    pg.evaluate("() => { window.CapitaoDados.simulacao = false; }")
+    r = pg.evaluate(INERTE)
+    ok('a flag desligada com a página aberta: a API fica inerte na próxima chamada', r['ativo'] is False and r['ativos'] == [] and r['tocando'] is None and r['anunciar'] is False and r['ss'] == [], r)
+    r = pg.evaluate("() => { window.CapitaoDados.simulacao = true; const AL = window.CapitaoAlertas; return [AL.ativo(), AL.ativos().map((x) => x.id), AL.tocando() && AL.tocando().id]; }")
+    ok('ligada de novo, a API volta sozinha (sem recarregar): o arref_be de 12:01:45', r == [True, ['arref_be'], 'arref_be'], r)
+    fecha(pg)
+
+
+def a_alertas_replay_mentiroso(b):
+    print('Alertas: o que o replay devolve passa por filtro (id repetido, nível desconhecido, item que não é objeto, alerta fora do catálogo)')
+    base = {'sistema': 'motores', 'lado': 'be', 'campo': 'motor_be_arref_c', 'valor': 89.6, 'limite': 88, 'desde': '2026-10-29T15:01:39Z'}
+    pg = abre_al(b)
+    sujo = [None, 7, 'x', [], {}, {'id': 5, 'nivel': 'aviso'}, {'id': '', 'nivel': 'aviso'}, dict(base, id='arref_be', nivel='normal'), dict(base, id='arref_be', nivel='constructor'), dict(base, id='arref_be', nivel='toString'),
+            dict(base, id='arref_be', nivel='aviso')]
+    r = pg.evaluate(STUB_JS, sujo)
+    ok('lista suja do replay (null, número, texto, vazio, id que não é texto, nível normal/constructor/toString): só o aviso válido sobra, com título e passos do catálogo',
+       r == [['arref_be', 'aviso', D['replay']['alertas']['arref_be']['titulo'], len(D['replay']['alertas']['arref_be']['passos'])]], r)
+    pg2 = abre_al(b)
+    for ordem in ('aviso,critico', 'critico,aviso'):
+        niveis = ordem.split(',')
+        r = pg2.evaluate(STUB_JS, [dict(base, id='arref_be', nivel=n) for n in niveis])
+        ok('o mesmo id duas vezes na lista do replay (%s): fica um só, o mais grave (crítico)' % ordem, [x[:2] for x in r] == [['arref_be', 'critico']], r)
+    r = pg2.evaluate(STUB_JS, [dict(base, id='zzz', nivel='aviso', desde='x'), dict(base, id='arref_be', nivel='aviso')])
+    ok('alarme fora do catálogo não some (o catálogo é detalhe, não filtro): entra depois do que tem início válido', [x[:2] for x in r] == [['arref_be', 'aviso'], ['zzz', 'aviso']], r)
+    r = pg2.evaluate(r"""() => { const AL = window.CapitaoAlertas, z = AL.porId('zzz'); return { titulo: z.titulo, passos: z.passos, seg: z.seg, desdeMs: z.desdeMs, hora: z.hora, anuncia: AL.anunciar('zzz'), de_novo: AL.anunciar('zzz') }; }""")
+    ok('o alerta fora do catálogo tem o título do campo, passos [], desde inválido (desdeMs null, hora vazia, seg 0) e pode ser anunciado uma vez (id ativo agora)',
+       r == {'titulo': D['campos']['motor_be_arref_c']['rotulo'], 'passos': [], 'seg': 0, 'desdeMs': None, 'hora': '', 'anuncia': True, 'de_novo': False}, r)
+    r = pg2.evaluate(STUB_JS, [dict(base, id='__proto__', nivel='aviso')])
+    r2 = pg2.evaluate("() => { const AL = window.CapitaoAlertas; return [AL.anunciar('__proto__'), AL.anunciar('__proto__'), AL.anunciado('__proto__'), AL.porId('__proto__') !== null, JSON.parse(sessionStorage.getItem('capitao.alertas.anunciados')).hasOwnProperty('__proto__')]; }")
+    ok('um id \'__proto__\' vindo do replay é chave comum (nada de protótipo): sai na lista, anunciar() true e depois false, e fica gravado no mapa', [x[:2] for x in r] == [['__proto__', 'aviso']] and r2 == [True, False, True, True, True], (r, r2))
+    ok('sem erro de script', not pg.erros and not pg2.erros, pg.erros + pg2.erros)
+    fecha(pg)
+    fecha(pg2)
+
+
+LANCA_AL_JS = r"""() => {
+  const AL = window.CapitaoAlertas, nomes = ['ativo', 'ativos', 'porId', 'tocando', 'contagem', 'anunciado', 'anunciar', 'novos'];
+  const lixo = [undefined, null, NaN, Infinity, -Infinity, -1, 0, 1e300, 'x', '', {}, [], true, function () {}, Symbol('s'), new Date(NaN), { valueOf() { throw new Error('boom'); } }, { toString() { throw new Error('boom'); } }];
+  const lancou = []; let chamadas = 0;
+  for (const n of nomes) for (const a of lixo) for (const b of lixo) { chamadas++; try { AL[n](a, b); } catch (e) { lancou.push(n + ' ' + e); } }
+  return { lancou: lancou.slice(0, 5), chamadas, ok: AL.ativos().length };
+}"""
+
+
+def a_alertas_nunca_lanca(b):
+    print('Alertas: nunca lança erro (argumentos absurdos, dado e peças quebrados)')
+    pg = abre_al(b, init=init_fixo('105'))
+    r = pg.evaluate(LANCA_AL_JS)
+    ok('%d chamadas com argumentos absurdos (undefined, NaN, Infinity, 1e300, texto, objeto, Symbol, valueOf que lança…): nenhuma lançou e a API segue dando o alerta' % r['chamadas'], r['lancou'] == [] and r['ok'] == 1, r)
+    r = pg.evaluate(r"""() => { const AL = window.CapitaoAlertas, R = window.CapitaoReplay, A = window.CapitaoAgora, D = window.CapitaoDados, o = {}, tenta = (n, g) => { try { o[n] = g(); } catch (e) { o[n] = 'LANÇOU ' + e; } };
+      const al = R.alarmes; R.alarmes = function () { throw new Error('quebrou'); }; tenta('alarmesLanca', () => [AL.ativos(), AL.tocando(), AL.contagem().total]); R.alarmes = al;
+      const fm = A.fmt; A.fmt = undefined; tenta('semFmt', () => { const x = AL.ativos()[0]; return [x.valorTxt, x.hora, x.texto]; }); A.fmt = fm;
+      const cat = D.replay.alertas; D.replay.alertas = undefined; tenta('semCatalogo', () => { const x = AL.ativos()[0]; return [x.id, x.titulo, x.passos.length]; }); D.replay.alertas = cat;
+      const cp = D.campos; D.campos = undefined; tenta('semCampos', () => { const x = AL.ativos(); return x.length; }); D.campos = cp;
+      tenta('normal', () => AL.ativos().length); return o; }""")
+    ok('replay.alarmes() que lança: ativos() [], tocando() null, contagem() zerada, sem lançar', r['alarmesLanca'] == [[], None, 0], r['alarmesLanca'])
+    ok('CapitaoAgora.fmt ausente: o alerta sai com o número cru e sem a hora (o texto é o que dá), sem lançar',
+       isinstance(r['semFmt'], list) and r['semFmt'][0] == '89.6 °C' and r['semFmt'][1] == '' and r['semFmt'][2].startswith('Temperatura do motor BE: 89.6 °C (acima de 88 °C)'), r['semFmt'])
+    ok('D.replay.alertas ausente: o alerta sai com o rótulo do campo e sem passos; D.campos ausente: não lança', isinstance(r['semCatalogo'], list) and r['semCatalogo'][2] == 0 and not isinstance(r['semCampos'], str) and r['normal'] == 1, (r['semCatalogo'], r['semCampos']))
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
+def a_alertas_sos(b, so_s1=False):
+    print('S1/S2 e rotas /SOS-: sem CapitaoAlertas, nenhuma leitura de D.simulacao nem de D.replay')
+    for nome, caminho in (('S1-SOS-Web', '/S1-SOS-Web.dc.html'), ('S2-SOS-Mobile', '/S2-SOS-Mobile.dc.html'))[:1 if so_s1 else 2]:
+        pg = abre(b, caminho=caminho, antes=GETTER + GETTER_REPLAY)
+        pg.wait_for_timeout(1500)
+        r = pg.evaluate("() => ({ alertas: typeof window.CapitaoAlertas, replay: typeof window.CapitaoReplay, lidas: window.__lidas, lidasReplay: window.__lidasReplay })")
+        ok('%s: CapitaoAlertas não existe (a tela nem carrega o arquivo), D.simulacao e D.replay nunca lidos' % nome, r['alertas'] == 'undefined' and r['replay'] == 'undefined' and r['lidas'] == 0 and r['lidasReplay'] == 0, r)
+        pg.add_script_tag(url=BASE + '/capitao-alertas.js')
+        r = pg.evaluate("() => ({ alertas: typeof window.CapitaoAlertas, lidas: window.__lidas, lidasReplay: window.__lidasReplay })")
+        ok('%s: nem o arquivo carregado à força define o CapitaoAlertas, e nada é lido' % nome, r == {'alertas': 'undefined', 'lidas': 0, 'lidasReplay': 0}, r)
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+    if so_s1:
+        return
+    pg = abre(b, caminho='/SOS-teste.html', html=HTML_ALERTAS, antes=GETTER + GETTER_REPLAY, espera='() => window.CapitaoAgora && window.CapitaoAgora.relogio')
+    pg.wait_for_timeout(1500)
+    r = pg.evaluate("() => ({ alertas: typeof window.CapitaoAlertas, replay: typeof window.CapitaoReplay, lidas: window.__lidas, lidasReplay: window.__lidasReplay })")
+    ok('rota mínima /SOS-teste.html com o replay e os alertas no <head>: nenhum dos dois é definido e nada é lido', r == {'alertas': 'undefined', 'replay': 'undefined', 'lidas': 0, 'lidasReplay': 0}, r)
+    fecha(pg)
+    pg = abre(b, html=HTML_ALERTAS, antes=GETTER + GETTER_REPLAY, espera=ESPERA_AL)
+    r = pg.evaluate("() => { const AL = window.CapitaoAlertas; AL.ativos(); return { alertas: typeof AL, lidas: window.__lidas, lidasReplay: window.__lidasReplay }; }")
+    ok('controle fora do SOS (a mesma página com outro nome): a API existe e lê D.simulacao e D.replay (≥ 1) quando usada', r['alertas'] == 'object' and r['lidas'] >= 1 and r['lidasReplay'] >= 1, r)
+    fecha(pg)
+
+
+def a_alertas_telas(b):
+    print('Alertas nas telas de verdade (com sessão, instante fixado em #replay=105): a API existe e dá o alerta; sem erro de script')
+    for nome, vp in (('A1-Ponte-Web', {'width': 1440, 'height': 900}), ('H2-Home-Mobile', {'width': 390, 'height': 844}), ('C3-Leme-Alerta', {'width': 390, 'height': 844}), ('Manual-Capitao-IA', {'width': 1440, 'height': 900})):
+        pg = abre(b, caminho='/%s.dc.html#replay=105' % nome, sessao=True, viewport=vp, espera='() => window.CapitaoAlertas')
+        pg.wait_for_timeout(1200)
+        r = pg.evaluate("() => { const AL = window.CapitaoAlertas, t = AL.tocando(); return { ativo: AL.ativo(), id: t && t.id, nivel: t && t.nivel, total: AL.contagem().total, replay: typeof window.CapitaoReplay, url: location.pathname }; }")
+        ok('%s: CapitaoAlertas existe e dá o AVISO do arref_be às 12:01:45 (total 1); a tela não trocou de endereço' % nome,
+           r['ativo'] and r['id'] == 'arref_be' and r['nivel'] == 'aviso' and r['total'] == 1 and r['url'] == '/%s.dc.html' % nome, r)
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
+def codigo_alertas():
+    print('O arquivo capitao-alertas.js: sem lookbehind, sem snapshot, sem avaliar limite, sem evento nem timer; nas 34 telas e no CORE do sw.js')
+    src = le('capitao-alertas.js')
+    cod = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
+    cod = re.sub(r'(?m)^\s*//.*$|\s//\s.*$', '', cod)
+    ok('sem lookbehind (?<…) e sem \\w para palavra em português', '(?<' not in src and '\\w' not in src)
+    ok('o código (fora dos comentários) não menciona snapshot: nunca o lê', not re.search(r'snapshot', cod, re.I), re.findall(r'.{20}snapshot.{20}', cod, re.I)[:2])
+    ok('não depende do capitao-brain.js nem do CapitaoTelemetria, e não se registra como CapitaoTelemetria ou CapitaoReplay',
+       not re.search(r'CapitaoBrain|capitao-brain|CapitaoTelemetria|window\s*\.\s*CapitaoReplay\s*=', cod), re.findall(r'.{15}(?:CapitaoBrain|CapitaoTelemetria).{15}', cod)[:2])
+    ok('não avalia limite: não lê D.replay.limites nem chama a CapitaoAgora.nivel (o nível vem do alarmes() do replay, que já usou a nivel)', not re.search(r'limites|\.\s*nivel\s*\(|A\.nivel|CapitaoAgora\s*\.\s*nivel', cod), re.findall(r'.{15}limites.{15}', cod)[:2])
+    ok('sem evento nem timer próprios (addEventListener, dispatchEvent, CustomEvent, setTimeout, setInterval): o replay basta', not re.search(r'addEventListener|dispatchEvent|CustomEvent|setTimeout|setInterval|requestAnimationFrame|MutationObserver', cod))
+    ok('só emite dado: nada que troque de tela, abra janela, fale, grave o diário ou chame o SOS (location=, window.open, speechSynthesis, capitao-voz, addDiario, markExec, S1/S2-SOS, history.pushState)',
+       not re.search(r'location\s*(\.\s*(href|assign|replace|reload)|=)|window\s*\.\s*open|speechSynthesis|capitao-voz|addDiario|markExec|S1-SOS|S2-SOS|history\s*\.\s*(push|replace)State|document\s*\.\s*(write|createElement|body)', cod),
+       re.findall(r'.{15}(?:location|window\s*\.\s*open|speechSynthesis|addDiario|SOS).{15}', cod)[:3])
+    ok('escreve só no sessionStorage, uma chamada de setItem, na chave dos anunciados; não toca o localStorage', len(re.findall(r'setItem', cod)) == 1 and re.findall(r"'(capitao\.[a-z.]+)'", cod) == [CHAVE_ANUNCIADOS]
+       and 'localStorage' not in cod and 'removeItem' not in cod, (re.findall(r'setItem', cod), re.findall(r"'(capitao\.[a-z.]+)'", cod)))
+    ok('sem VERSAO própria (acompanha o capitao-dados.js)', 'VERSAO' not in cod)
+    ok('sai em /SOS- antes de definir qualquer coisa, e a flag D.simulacao é lida só dentro de ativo() (a cada chamada), nunca na carga',
+       re.search(r"EM_SOS = /SOS-/\.test\(location\.pathname\)", cod) is not None and 'if (EM_SOS || window.CapitaoAlertas) return;' in cod and cod.count('simulacao') == 1
+       and re.search(r'function ativo\(\) \{[^}]*simulacao === true', cod) is not None)
+    sw = le('sw.js')
+    ok('sw.js: ./capitao-alertas.js no CORE, logo depois do ./capitao-replay.js', "'./capitao-replay.js', './capitao-alertas.js'," in sw)
+    m = re.search(r'const TELAS = \[(.*?)\];', sw, re.S)
+    telas_ = re.findall(r"'([^']+)'", m.group(1))
+    erradas, sem_sos = [], []
+    for t in telas_:
+        h = le(t + '.dc.html')
+        if t.startswith(('S1-', 'S2-')):
+            if 'capitao-alertas' in h:
+                sem_sos.append(t)
+            continue
+        i, j, k, f = h.find('<script src="./capitao-dados.js">'), h.find('<script src="./capitao-replay.js">'), h.find('<script src="./capitao-alertas.js">'), h.find('<script src="./support.js">')
+        if h.count('capitao-alertas.js') != 1 or not (0 <= i < j < k < f) or not re.search(r'<script src="\./capitao-replay\.js"></script>\r?\n<script src="\./capitao-alertas\.js"></script>', h):
+            erradas.append(t)
+    ok('as %d telas fora do SOS têm o <script src="./capitao-alertas.js"> uma vez, na linha seguinte ao capitao-replay.js (depois do capitao-dados.js e antes do support.js)' % (len(telas_) - 2), erradas == [], erradas)
+    ok('S1 e S2 não carregam o capitao-alertas.js', sem_sos == [], sem_sos)
+    fora = [a for a in ('index.html', 'login.html', 'dados.html') if 'capitao-alertas' in le(a)]
+    ok('index.html, login.html e dados.html (fora das TELAS: não leem alerta) não carregam a API', fora == [], fora)
+
+
+# P2C: defeitos plantados no capitao-alertas.js; cada um tem de ser acusado pelo teste que cuida dele.
+MUTANTES_AL = [
+    ('a saída em /SOS- removida (o S1 carregado à força passaria a ter CapitaoAlertas)', [("if (EM_SOS || window.CapitaoAlertas) return;", "if (window.CapitaoAlertas) return;")], lambda b: a_alertas_sos(b, so_s1=True)),
+    ('o D.simulacao ignorado na própria API (um replay que mente alimentaria o modo real)', [("return !!(d && d.simulacao === true && d.replay && R && R.ativo());", "return !!(d && d.replay && R && R.ativo());")], a_alertas_real),
+    ('a lista sem o filtro de nível desconhecido (\'normal\', \'constructor\' derrubariam a lista inteira)', [(" || !dono(NIVEL, al.nivel)) continue;", ") continue;")], a_alertas_replay_mentiroso),
+    ('o id repetido sem escolher o mais grave (o último vence)', [("if (!dono(por, al.id) || NIVEL[a.nivel].peso > NIVEL[por[al.id].nivel].peso) por[al.id] = a;", "por[al.id] = a;")], a_alertas_replay_mentiroso),
+    ('a ordem invertida (aviso antes de crítico)', [("return NIVEL[y.nivel].peso - NIVEL[x.nivel].peso ||", "return NIVEL[x.nivel].peso - NIVEL[y.nivel].peso ||")], a_alertas_varios),
+    ('os passos sem cópia (quem recebe o alerta mexeria no catálogo do D)', [("a.passos = e && Array.isArray(e.passos) ? e.passos.slice() : [];", "a.passos = e && Array.isArray(e.passos) ? e.passos : [];")], a_alertas_volta),
+    ('anunciar() sem conferir se já foi anunciado (anunciaria toda vez)', [("if (!ativo() || !conhecido(id) || anunciado(id)) return false;", "if (!ativo() || !conhecido(id)) return false;")], a_alertas_uma_vez),
+    ('anunciar() sem conferir o id (qualquer texto entraria no sessionStorage)', [("if (!ativo() || !conhecido(id) || anunciado(id)) return false;", "if (!ativo() || typeof id !== 'string' || anunciado(id)) return false;")], a_alertas_uma_vez),
+    ('sem a memória da página quando o sessionStorage nega (a faixa anunciaria a cada tique)', [("catch (e) { memoria[id] = true; }", "catch (e) {}")], a_alertas_uma_vez),
+    ('o limite do alerta tirado do valor em vez do alarme (a nivel() deixaria de ser a fonte)', [("a.valor = al.valor; a.limite = al.limite;", "a.valor = al.valor; a.limite = al.valor;")], a_alertas_volta),
+]
+
+
+def mutantes_alertas(b):
+    global MUT_ARQ, CAPTURA
+    print('Mutantes da API de alertas (P2C): cada defeito plantado tem de ser acusado pelo teste que cuida dele')
+    src = le('capitao-alertas.js')
+    for nome, trocas, teste in MUTANTES_AL:
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            ok('mutante «%s»: o trecho está uma vez no capitao-alertas.js' % nome, False, faltam)
+            continue
+        MUT_ARQ, CAPTURA, caiu = {'capitao-alertas.js': trocas}, [], ''
+        sai = sys.stdout
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            try:
+                teste(b)
+            except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
+                caiu = 'o teste caiu: %s' % str(e).splitlines()[0][:160]
+        finally:
+            sys.stdout.close()
+            sys.stdout = sai
+            achados, MUT_ARQ, CAPTURA = CAPTURA, None, None
+        ok('mutante: %s — acusado (%d conferência(s) falham)' % (nome, len(achados)), len(achados) > 0 and not caiu, caiu or achados)
+
+
 # ——— 13. mutantes: o teste acusa o motor quebrado ———
 # Cada mutante troca um trecho do capitao-replay.js servido ao navegador; o teste que cuida daquilo tem de falhar (senão ele poderia passar no vácuo).
 MUTANTES = [
@@ -1523,8 +1957,20 @@ def main():
         gating(browser)
         codigo()
         telas(browser)
+        a_alertas_volta(browser)
+        a_alertas_varios(browser)
+        a_alertas_uma_vez(browser)
+        a_alertas_eventos(browser)
+        a_alertas_sem_efeito(browser)
+        a_alertas_real(browser)
+        a_alertas_replay_mentiroso(browser)
+        a_alertas_nunca_lanca(browser)
+        a_alertas_sos(browser)
+        a_alertas_telas(browser)
+        codigo_alertas()
         mutantes(browser)
         mutantes_arq(browser)
+        mutantes_alertas(browser)
         browser.close()
     print('%d conferências · %d falhas' % (total, falhas))
     sys.exit(1 if falhas else 0)
