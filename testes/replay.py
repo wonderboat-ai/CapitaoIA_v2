@@ -34,6 +34,8 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
 - modo real inerte (`simulacao = false` no fim do capitao-dados.js, e a flag mudando com a página aberta): nada anda, `em()` null, nenhum evento;
 - histórico: `serie()` das cinco janelas sem NaN, o último ponto = o quadro, o serrote do diesel = as linhas de abastecimento, a curva do ano do
   ar e da água (30 D e 1 A não saem retos), a trava de máx/mín do dia; `porFaixa()`, `resumo()` (≤ 300 letras, sem coordenadas, sem os termos do §3);
+- D.replay PARCIAL (chave, rota, tanque, velocidade ou contador ausente; chave curta; ETA infinita): a tabela se recusa na carga (`ativo()` false, tudo null, nenhum tique, o
+  `instante()` cai no snapshot) e, com o D em uso quebrado depois da carga, a guarda de cada saída (quadro, contadores, consumo por faixa, série) devolve null, nunca NaN/Infinity;
 - nunca lança erro (argumentos absurdos, D quebrado, localStorage que lança); desempenho do `em()`; o código (sem lookbehind, sem snapshot, sem
   `window.CapitaoTelemetria =`); as 34 telas com o <script> no lugar certo, S1/S2 sem ele, e o CORE do sw.js.
 
@@ -41,7 +43,8 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
 - a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
 - o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
-- o desempenho da moldura (o `<capitao-theme-toggle>` e o avatar não recriados, `fit()` ≤ 2 vezes, nenhuma long task > 50 ms em 10 s): é da P2B;
+- o desempenho da moldura nas 30 telas que importam `capitao-cabecalho`, `capitao-faixa` ou `capitao-topo-app` (o `<capitao-theme-toggle>` e o avatar não recriados, `fit()` ≤ 2 vezes,
+  nenhuma long task > 50 ms e o foco do teclado mantido, em 10 s a 360×640 nas de app e a 1440×900 nas web): é da P2B (CONTRATO §6.6); hoje o disparo de 1 s remonta o HTML da moldura;
 - a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4);
 - o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
   CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() —, a P2B e a Fase 4): lá entra a conferência de que nenhum texto diz «coletor NMEA»
@@ -525,14 +528,18 @@ def sincronia(b):
 
 FIXAR_JS = r"""() => {
   const R = window.CapitaoReplay, A = window.CapitaoAgora, D = window.CapitaoDados, anc = A.ancora(Date.now()), o = {};
+  // a chamada SEM argumento lê o instante fixado: contadores(), janela(id) e porFaixa() iguais às de contadoresEm/janela/porFaixa do fixo(), e diferentes das do relógio
+  const J = JSON.stringify, semArg = () => { const T = R.fixo(), jn = R.janela('arref_be'); return { cont: R.contadores() !== null && J(R.contadores()) === J(R.contadoresEm(T)),
+    jan: jn !== null && J(jn) === J(R.janela('arref_be', T)), ativa: jn && jn.ativo, faixa: R.porFaixa() !== null && J(R.porFaixa()) === J(R.porFaixa(T)),
+    real: J(R.contadoresEm(Date.now())) !== J(R.contadoresEm(T)) && J(R.porFaixa(Date.now())) !== J(R.porFaixa(T)) }; };
   const le = () => ({ fixo: R.fixo(), agora: R.agora(), hora: A.fmt.hora(R.agora(), true), t: R.t(), fase: R.fase().nome, ls: localStorage.getItem('capitao.replay.fixo'),
                       relogio: A.relogio.ms, q: R.quadro(), inst: (() => { const i = A.instante(); return { fonte: i.fonte, hora: i.hora, seg: i.seg, rpm: A.fmt.campo(i.q, 'motor_bb_rpm') }; })() });
   window.__ev.length = 0;
-  o.t60 = R.fixar('60'); o.s60 = le(); o.ev60 = window.__ev.map((e) => e.n);
+  o.t60 = R.fixar('60'); o.s60 = le(); o.ev60 = window.__ev.map((e) => e.n); o.sem60 = semArg();
   o.t60n = R.fixar(60); o.n60 = R.fixo();
   o.t60k = R.fixar('60@120'); o.k60 = R.fixo();
-  o.t10 = R.fixar('60@10'); o.s10 = le();
-  window.__ev.length = 0; o.t105 = R.fixar('105'); o.s105 = le(); o.ev105 = window.__ev.map((e) => e.n);
+  o.t10 = R.fixar('60@10'); o.s10 = le(); o.sem10 = semArg();
+  window.__ev.length = 0; o.t105 = R.fixar('105'); o.s105 = le(); o.ev105 = window.__ev.map((e) => e.n); o.sem105 = semArg();
   o.q105 = R.quadro(105); o.q60 = R.quadro(60); o.emT = JSON.stringify(R.em(R.fixo())) === JSON.stringify(R.quadro());
   o.qt = JSON.stringify(R.quadro(30)) === JSON.stringify(R.em(R.fixo() - 75000));
   o.ruim = [R.fixar('abc'), R.fixar({}), R.fixar(NaN), R.fixar(Infinity), R.fixar('60@'), R.fixar(1e12), R.fixar('9@99999999')]; o.depoisRuim = R.fixo();
@@ -570,6 +577,9 @@ def a_fixar(b):
        s['hora'] == '12:01:45' and s['q']['motor_be_arref_c'] == 89.6 and len(s['q']['alarmes']) == 1 and s['q']['alarmes'][0]['desde'] == datetime.fromtimestamp((r['anc'] + (D['replay']['voltas_fixo'] * VOLTA + 99) * 1000) / 1000, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
        and 'capitao-alerta' in r['ev105'], (s['hora'], s['q']['alarmes'], r['ev105']))
     ok('quadro(t) com o instante fixado: a volta fixada (contadores e rota dela); quadro() = em(fixo()); quadro(30) = em(T − 75 s)', r['emT'] is True and r['qt'] is True and r['q105'] == r['s105']['q'], (r['emT'], r['qt']))
+    ok('fixado, contadores(), janela(id) e porFaixa() SEM argumento leem o instante fixado (iguais às chamadas com fixo(); o relógio daria outro dia) em 12:01:00, 07:26:00 e 12:01:45; a janela do arref_be está ativa só às 12:01:45',
+       all(r[k]['cont'] and r[k]['jan'] and r[k]['faixa'] for k in ('sem60', 'sem10', 'sem105')) and sum(1 for k in ('sem60', 'sem10', 'sem105') if r[k]['real']) >= 2
+       and r['sem105']['ativa'] is True and r['sem60']['ativa'] is False and r['sem10']['ativa'] is False, (r['sem60'], r['sem10'], r['sem105']))
     ok('fixar com argumento inválido (\'abc\', {}, NaN, Infinity, \'60@\', 1e12, \'9@99999999\') não muda nada e não lança; fixar() sem argumento devolve o fixo atual',
        all(x is None for x in r['ruim']) and r['depoisRuim'] == r['t105'] and r['semArg'] == r['t105'], (r['ruim'], r['depoisRuim'], r['semArg']))
     ok('fixar(null) solta: fixo() null, a chave do localStorage some, agora() volta ao relógio, o rodapé refaz com Date.now() e sai \'capitao-rebase\'',
@@ -1014,6 +1024,62 @@ def nunca_lanca(b):
     fecha(pg)
 
 
+# ——— 10b. D.replay parcial: null, nunca NaN, Infinity nem texto vazio ———
+# Cada buraco entra no capitao-dados.js antes do replay carregar (`depois=`): a tabela se recusa na carga (ativo() false), tudo devolve null e o instante() cai
+# no D.snapshot (que o motor nunca devolve). Os de depois da carga mexem no D em uso (o objeto é o mesmo) e só a guarda de cada saída os pega.
+PARCIAIS = [
+    ('sem replay.chaves', 'delete window.CapitaoDados.replay.chaves;'),
+    ('sem chaves.sog_nos (o SOG alimenta a distância, a rota e o vento aparente)', 'delete window.CapitaoDados.replay.chaves.sog_nos;'),
+    ('sem chaves.consumo_lph (o diesel)', 'delete window.CapitaoDados.replay.chaves.consumo_lph;'),
+    ('sem chaves.leme_graus', 'delete window.CapitaoDados.replay.chaves.leme_graus;'),
+    ('sem chaves.vento_verdadeiro_nos (o vento aparente)', 'delete window.CapitaoDados.replay.chaves.vento_verdadeiro_nos;'),
+    ('sem chaves.motor_bb_rpm (campo do catálogo sem chave: nenhum NaN, só um campo a menos)', 'delete window.CapitaoDados.replay.chaves.motor_bb_rpm;'),
+    ('chaves.sog_nos com 20 quadros-chave em vez de 30 (finitos, mas a volta não fecha)', 'window.CapitaoDados.replay.chaves.sog_nos.length = 20;'),
+    ('chaves.sog_nos com um valor que não é número', "window.CapitaoDados.replay.chaves.sog_nos[7] = 'x';"),
+    ('sem contadores_base.diesel_litros', 'delete window.CapitaoDados.replay.contadores_base.diesel_litros;'),
+    ('sem velocidade_media_nos', 'delete window.CapitaoDados.replay.velocidade_media_nos;'),
+    ('velocidade_media_nos = 0 (a ETA seria infinita: texto não vazio, mas inválido)', 'window.CapitaoDados.replay.velocidade_media_nos = 0;'),
+    ('sem rota.fator', 'delete window.CapitaoDados.rota.fator;'),
+    ('sem rota.distancia_mn', 'delete window.CapitaoDados.rota.distancia_mn;'),
+    ('sem rota.corrente', 'delete window.CapitaoDados.rota.corrente;'),
+    ('perna que aponta para um ponto que não existe', "window.CapitaoDados.rota.pernas[0].para = 'nenhum';"),
+    ("ponto da rota sem o campo `perto` (o local seria o texto «undefined, chegando»: texto não vazio, mas inválido)", 'delete window.CapitaoDados.rota.base.perto;'),
+    ('sem embarcacao.tanques (os percentuais do diesel dariam Infinity)', 'delete window.CapitaoDados.embarcacao.tanques;'),
+]
+LE_PARCIAL = r"""() => { const R = window.CapitaoReplay, T = window.CapitaoTelemetria, ms = Date.now(), nul = (x) => x === null;
+  return { ativo: R.ativo(), q: nul(R.quadro()), q60: nul(R.quadro(60)), em: nul(R.em(ms)), c: nul(R.contadores()), ce: nul(R.contadoresEm(ms)), al: nul(R.alarmes()), f: nul(R.fase()),
+    t: nul(R.t()), r: nul(R.resumo()), s: nul(R.serie('sog_nos', '150S')) && nul(R.serie('bateria_0_tensao_v', '1D')), pf: nul(R.porFaixa()), fixar: nul(R.fixar('60')), fixo: nul(R.fixo()),
+    atual: nul(T.atual()), fonte: nul(T.fonte()), inst: window.CapitaoAgora.instante().fonte, tele: window.__conta('capitao-telemetria') }; }"""
+# depois da carga: o D em uso fica incompleto (a tabela já existe); só a guarda de cada saída pega. Cada caso diz o que tem de ser null e o que segue vivo.
+POS_CARGA = [
+    ('rota.fator apagado: o quadro, o resumo e a série (que leem o quadro) dão null; os contadores e o consumo por faixa não dependem da rota e seguem', 'delete D.rota.fator;',
+     {'em': True, 'r': True, 's': True, 'cont': False, 'pf': False}),
+    ('contadores_base.motor_bb_horimetro_h apagado: os contadores, o quadro e a série dão null (contadoresEm tem a guarda própria)', 'delete D.replay.contadores_base.motor_bb_horimetro_h;',
+     {'em': True, 'cont': True, 's': True}),
+    ("consumo.gerador_lph = texto: o consumo por faixa dá null e o quadro segue", "D.consumo.gerador_lph = 'x';", {'pf': True, 'em': False, 'cont': False, 's': False}),
+    ('historico.n apagado: a série das janelas longas dá null (NaN no desvio) e o quadro segue', 'delete D.historico.n;', {'s': True, 'em': False, 'cont': False, 'pf': False}),
+]
+LE_POS = r"""(mut) => { const D = window.CapitaoDados, R = window.CapitaoReplay; R.quadro(); (new Function('D', mut))(D);
+  const ms = Date.now(), nul = (x) => x === null; return { em: nul(R.em(ms)), q: nul(R.quadro()), r: nul(R.resumo()), cont: nul(R.contadores()), s: nul(R.serie('bateria_0_tensao_v', '1D')), pf: nul(R.porFaixa()), ativo: R.ativo() }; }"""
+
+
+def d_parcial(b):
+    print('D.replay parcial: tabela recusada (ativo() false), tudo null, o instante() cai no snapshot; e, depois da carga, a guarda de cada saída')
+    for i, (nome, inj) in enumerate(PARCIAIS):
+        pg = abre(b, depois=inj)
+        if i == 0:
+            pg.wait_for_timeout(1300)   # inerte: nem o tique de 1 s sai
+        r = pg.evaluate(LE_PARCIAL)
+        nulos = [k for k in ('q', 'q60', 'em', 'c', 'ce', 'al', 'f', 't', 'r', 's', 'pf', 'fixar', 'fixo', 'atual', 'fonte') if r[k] is not True]
+        ok('D.replay parcial — %s: ativo() false; quadro/quadro(60)/em/contadores/alarmes/fase/t/resumo/serie/porFaixa/fixar/atual/fonte = null; o instante() cai no snapshot; nenhum tique' % nome,
+           r['ativo'] is False and nulos == [] and r['inst'] == 'snapshot' and r['tele'] == 0 and not pg.erros, (r, pg.erros))
+        fecha(pg)
+    for nome, mut, esperado in POS_CARGA:
+        pg = abre(b)
+        r = pg.evaluate(LE_POS, mut)
+        ok('depois da carga — %s' % nome, r['ativo'] is True and all(r[k] is v for k, v in esperado.items()) and not pg.erros, (r, pg.erros))
+        fecha(pg)
+
 # ——— 11. desempenho e código ———
 def desempenho(b):
     print('Desempenho do em() e das séries')
@@ -1106,6 +1172,21 @@ MUTANTES = [
      [("if (ls(function () { return Ag().rebase(ms); })) emite('capitao-rebase', { ms: ms });",
        "var anc0 = ancoraDe(ms); if (window.__ultAnc != null && anc0 !== window.__ultAnc) { ls(function () { Ag().rebase(ms); }); emite('capitao-rebase', { ms: ms }); } window.__ultAnc = anc0;")],
      eventos_virada_oculta),
+    ('contadores() sem argumento no relógio em vez do instante fixado (o "faltam N h" das tarefas leria o dia real)',
+     [("function contadores(ms) { ms = msDe(ms);", "function contadores(ms) { ms = ms === undefined || ms === null ? Date.now() : ms;")], a_fixar),
+    ('janela() sem argumento no relógio em vez do instante fixado (o NORMALIZADO da C3 leria o dia real)',
+     [("      ms = msDe(ms);\n      if (!p || ms === null) return null;\n      G = Object", "      ms = ms === undefined || ms === null ? Date.now() : ms;\n      if (!p || ms === null) return null;\n      G = Object")], a_fixar),
+    ('porFaixa() sem argumento no relógio em vez do instante fixado (o consumo por faixa leria o dia real)',
+     [("      ms = msDe(ms);\n      if (!p || !fs || ms === null) return null;", "      ms = ms === undefined || ms === null ? Date.now() : ms;\n      if (!p || !fs || ms === null) return null;")], a_fixar),
+    ('a prova de vida da tabela removida (o D parcial montaria a tabela e só a guarda de cada saída pegaria o NaN, com ativo() true)', [("return prova(p) ? p : null;", "return p;")], d_parcial),
+    ('os 30 quadros-chave por campo não conferidos (chave curta: finita, mas a volta não fecha)', [("|| R.chaves[ch[i]].length !== nChave) return null;", ") return null;")], d_parcial),
+    ('a ETA HH:MM fora da prova (velocidade 0 dá ETA infinita: texto não vazio, inválido)', [("textoRuim(o) || !/^\\d\\d:\\d\\d$/.test(o.eta)", "textoRuim(o)")], d_parcial),
+    ('o texto «undefined»/«NaN» fora da prova (o local da rota sairia como «undefined, chegando»)',
+     [("|| textoRuim(o) ||", "||")], d_parcial),
+    ('o quadro sem a guarda de número finito (NaN/Infinity sairiam do em() e do quadro())', [("    if (!sadio(res)) return null;\n", "")], d_parcial),
+    ('os contadores sem a guarda de número finito', [("return sadio(v) ? v : null;", "return v;")], d_parcial),
+    ('o consumo por faixa sem a guarda de número finito', [("for (i = 0; i < out.length; i++) if (!sadio(out[i])) return null;\n", "")], d_parcial),
+    ('a série das janelas longas sem a guarda de ponto finito', [("      return pontosOk(pts);\n    } catch (e) { return null; }", "      return pts;\n    } catch (e) { return null; }")], d_parcial),
 ]
 
 
@@ -1158,6 +1239,7 @@ def main():
         historico(browser)
         faixas_e_resumo(browser)
         nunca_lanca(browser)
+        d_parcial(browser)
         desempenho(browser)
         codigo()
         telas(browser)

@@ -39,7 +39,9 @@
    evento: NUNCA abre SOS/C3, troca de tela, fala nem grava.
 
    Travas: em /SOS-/ o arquivo sai sem definir nada; com D.simulacao !== true tudo é inerte (null, nenhum evento, nenhum timer); nunca lança
-   erro (falhou → null, e quem chama cai no D.snapshot); nunca lê, devolve nem muta o D.snapshot; um timer só por página. */
+   erro (falhou → null, e quem chama cai no D.snapshot); nunca lê, devolve nem muta o D.snapshot; um timer só por página.
+   D.replay incompleto (chave, rota, tanque, velocidade ou contador ausente; chave com ≠ 30 quadros-chave) recusa a tabela na carga (prova(), ~1 ms): o motor fica
+   inerte (ativo() false) e nenhum quadro, contador, consumo por faixa ou série sai com NaN, Infinity ou texto vazio (sadio()): é null. */
 (function () {
   var EM_SOS = false;
   try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
@@ -53,6 +55,29 @@
   function D() { return window.CapitaoDados || null; }
   function Ag() { var A = window.CapitaoAgora; return A && typeof A.ancora === 'function' && typeof A.nivel === 'function' ? A : null; }
   function num(x) { return typeof x === 'number' && isFinite(x); }
+  // número finito, texto não vazio ou booleano em todo campo: é o que um quadro ou um contador do replay pode ter. D.replay parcial (chave, rota, tanque,
+  // velocidade ou contador ausente) dá NaN, Infinity ou undefined; isso nunca sai (o chamador recebe null e cai no D.snapshot).
+  function sadio(o) {
+    var k, v;
+    for (k in o) {
+      if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+      v = o[k];
+      if (typeof v === 'number') { if (!isFinite(v)) return false; }
+      else if (typeof v === 'string') { if (v === '') return false; }
+      else if (typeof v !== 'boolean') return false;
+    }
+    return true;
+  }
+  function textoRuim(o) {   // «undefined», «NaN» ou «[object …]» escrito dentro de um texto (um nome de ponto que falta vira «undefined, chegando»)
+    var k;
+    for (k in o) if (typeof o[k] === 'string' && /\bundefined\b|\bNaN\b|\[object /.test(o[k])) return true;
+    return false;
+  }
+  function pontosOk(pts) {   // série: ms, v, min e max finitos em todos os pontos
+    var i, x;
+    for (i = 0; i < pts.length; i++) { x = pts[i]; if (!x || !num(x.ms) || !num(x.v) || !num(x.min) || !num(x.max)) return null; }
+    return pts;
+  }
   function pmod(x, m) { var r = x % m; return r !== 0 && (r < 0) !== (m < 0) ? r + m : r; }   // o % do Python (sinal do divisor)
   function arred(x, c) { var p = Math.pow(10, c || 0), v = Math.floor(x * p + 0.5) / p; return v === 0 ? 0 : v; }   // como a tela mostra, sem -0
   function iso(ms) { return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
@@ -87,12 +112,15 @@
   var P = null, falhou = null;   // tabela montada e a referência do D.replay que falhou (para não remontar à toa)
   function monta(d) {
     var R = d.replay, rota = d.rota, C = d.campos, cons = d.consumo || {}, n = R.duracao, ch = Object.keys(R.chaves || {}), fx = R.fixos || {};
-    var Q = [], cumD = [0], cumM = [0], ger = cons.gerador_lph || 0, t, i, q, k, pernas, arcos = [], g, nos, pontos = {}, alertaDe = {}, tq, ids;
+    var Q = [], cumD = [0], cumM = [0], ger = cons.gerador_lph || 0, t, i, q, k, pernas, arcos = [], g, nos, pontos = {}, alertaDe = {}, tq, ids, passo = R.passo_chave || 5, nChave = n / passo, p;
     if (n !== DURACAO || !rota || !rota.pernas || !rota.pernas.length || !C || !R.contadores_base || !R.por_volta || !R.taxas_h) return null;
+    if (nChave !== Math.floor(nChave) || !ch.length) return null;
+    for (i = 0; i < ch.length; i++) if (!Array.isArray(R.chaves[ch[i]]) || R.chaves[ch[i]].length !== nChave) return null;   // 30 quadros-chave por campo, nem mais nem menos
     for (t = 0; t < n; t++) {
       q = {};
       for (i = 0; i < ch.length; i++) q[ch[i]] = laco(R, C, ch[i], t);
       for (k in fx) if (Object.prototype.hasOwnProperty.call(fx, k)) q[k] = fx[k];
+      if (!sadio(q)) return null;   // quadro-chave com NaN, texto vazio ou campo sem valor: tabela recusada
       Q.push(q);
       cumD.push(cumD[t] + (q.consumo_lph + ger) / 3600);
       cumM.push(cumM[t] + q.sog_nos / 3600);
@@ -108,9 +136,23 @@
     ids = Object.keys(R.alertas || {});
     for (i = 0; i < ids.length; i++) alertaDe[R.alertas[ids[i]].campo] = ids[i];
     tq = (d.embarcacao && d.embarcacao.tanques) || {};
-    return { R: R, rota: rota, C: C, consumo: d.consumo, n: n, Q: Q, cumD: cumD, cumM: cumM, tot: rota.distancia_mn, ida: rota.ida_mn, pontos: pontos,
-             pernas: pernas, arcos: arcos, alertaDe: alertaDe, tanqueL: (tq.diesel_l || 0) / (tq.diesel_n || 2), ordem: Object.keys(C),
-             grupos: gruposJanela(R), stats: {}, faixas: null };
+    p = { R: R, rota: rota, C: C, consumo: d.consumo, n: n, Q: Q, cumD: cumD, cumM: cumM, tot: rota.distancia_mn, ida: rota.ida_mn, pontos: pontos,
+          pernas: pernas, arcos: arcos, alertaDe: alertaDe, tanqueL: (tq.diesel_l || 0) / (tq.diesel_n || 2), ordem: Object.keys(C),
+          grupos: gruposJanela(R), stats: {}, faixas: null };
+    return prova(p) ? p : null;
+  }
+  // prova de vida, uma vez na carga (~1 ms): 5 segundos da volta e um a cada 30 min do dia dão quadros sadios (só número finito, texto não vazio), com ETA HH:MM,
+  // sem «undefined» nem «NaN» nos textos e o catálogo inteiro (os 150 quadros-chave já foram conferidos um a um em monta). Qualquer buraco do D.replay, da rota ou da embarcação recusa a tabela
+  // (o motor fica inerte) em vez de soltar NaN depois.
+  function prova(p) {
+    var segs = [0, 37, 74, 111, p.n - 1, MS_DIA / 1000 - 1], t, i, o = null, k;
+    for (t = p.n; t < MS_DIA / 1000; t += 1800) segs.push(t);
+    for (i = 0; i < segs.length; i++) {
+      o = calc(p, segs[i], 0);
+      if (!sadio(o) || textoRuim(o) || !/^\d\d:\d\d$/.test(o.eta)) return false;
+    }
+    for (k in p.C) if (k !== 'alarmes' && !(k in o)) return false;
+    return true;
   }
   // janelas de alarme por id, juntando as contíguas (aviso → crítico → aviso do cenário 'alarme-critico' é um alarme só)
   function gruposJanela(R) {
@@ -294,6 +336,7 @@
     s = segDe(ms);
     if (!s) return null;
     res = calc(p, s.seg, s.anc, comAlarmes);
+    if (!sadio(res)) return null;
     if (fixoMs !== null && Math.floor(ms / 1000) === Math.floor(fixoMs / 1000) && (so = sobre())) for (k in so) if (Object.prototype.hasOwnProperty.call(so, k) && k !== '__proto__' && k !== 'alarmes') res[k] = so[k];
     if (comAlarmes) {
       res.alarmes = alarmesDe(p, res, s.seg % p.n, Math.floor(s.seg / p.n), s.anc);
@@ -333,10 +376,12 @@
   }
   function contadoresEm(ms) {
     try {
-      var p = tabela(), s;
+      var p = tabela(), s, v;
       if (!p || !num(ms)) return null;
       s = segDe(ms);
-      return s ? contSeg(p, s.seg).val : null;
+      if (!s) return null;
+      v = contSeg(p, s.seg).val;
+      return sadio(v) ? v : null;
     } catch (e) { return null; }
   }
   function contadores(ms) { ms = msDe(ms); return ms === null ? null : contadoresEm(ms); }
@@ -397,7 +442,7 @@
   // do instante (voltas inteiras + parte da volta atual), pelas mesmas somas dos contadores; o gerador entra à parte (consumo.gerador_lph)
   function porFaixa(ms) {
     try {
-      var p = tabela(), fs = p && p.consumo && p.consumo.faixas, s, t, v, i, k, q, r, ger = (p && p.consumo && p.consumo.gerador_lph) || 0;
+      var p = tabela(), fs = p && p.consumo && p.consumo.faixas, s, t, v, i, k, q, r, out, ger = (p && p.consumo && p.consumo.gerador_lph) || 0;
       ms = msDe(ms);
       if (!p || !fs || ms === null) return null;
       s = segDe(ms);
@@ -416,12 +461,14 @@
         for (i = 0; i < fs.length; i++) p.faixas[i].seg = p.faixas[i].cumS[p.n];
       }
       t = s.seg % p.n; v = Math.floor(s.seg / p.n);
-      return fs.map(function (f, j) {
+      out = fs.map(function (f, j) {
         var F = p.faixas[j], segs = v * F.seg + F.cumS[t], litros = v * F.cumL[p.n] + F.cumL[t];
         return { nome: f.nome, rpm_de: f.rpm_de, rpm_ate: f.rpm_ate, seg: F.seg, pct: arred(F.seg / p.n * 100, 1),
                  lph: F.seg ? arred(F.cumL[p.n] / (F.seg / 3600), 1) : 0, litros_volta: arred(F.cumL[p.n], 3),
                  horas: arred(segs / 3600, 2), litros: arred(litros, 1), gerador_litros: arred(ger * segs / 3600, 1) };
       });
+      for (i = 0; i < out.length; i++) if (!sadio(out[i])) return null;
+      return out;
     } catch (e) { return null; }
   }
 
@@ -514,7 +561,7 @@
         }
         pts.push({ ms: fim, v: v, min: mn, max: mx });
       }
-      return pts;
+      return pontosOk(pts);
     } catch (e) { return null; }
   }
 
