@@ -140,11 +140,13 @@ button, select { font: inherit; }
           </div>
 
           <span style="flex-grow: 1;"></span>
-          <div style="box-sizing: border-box; padding: 12px 16px; margin-right: 100px; background: var(--cap-card, #0d1329); border: 1px dashed var(--cap-dash, #34406a); border-radius: 18px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
-            <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">FALTA REGISTRAR</span>
-            <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{falta}}</span>
-            <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{faltaFonte}}</span>
-          </div>
+          <sc-if value="{{temFalta}}" hint-placeholder-val="{{false}}">
+            <div style="box-sizing: border-box; padding: 12px 16px; margin-right: 100px; background: var(--cap-card, #0d1329); border: 1px dashed var(--cap-dash, #34406a); border-radius: 18px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+              <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">FALTA REGISTRAR</span>
+              <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{falta}}</span>
+              <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{faltaFonte}}</span>
+            </div>
+          </sc-if>
         </section>
       </div>
     </main>
@@ -218,8 +220,9 @@ class Component extends DCLogic {
     const DOC = 'M6 3h8l4 4v14H6z M14 3v4h4';
     const base = (D.documentos || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: x.vence || null, dn: typeof x.dn === 'number' ? x.dn : null, st0: x.st, nota: x.nota || '', fonte: D.docsFonte || x.fonte || 'SEM DADOS', envio: false }));
     const envios = (s.envios || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: null, dn: null, st0: 'A CONFERIR', nota: 'enviado ' + (x.dd || 'data SEM DADOS') + ' · ' + (x.s || 'tamanho SEM DADOS') + ' · o arquivo ficou no aparelho — conferir e arquivar o original no Drive', fonte: (x.fonte || 'enviado no app') + (x.dd ? ' · ' + x.dd : ''), envio: true, chave: x.n + '|' + x.dd + '|' + x.s }));
-    const grupo = (x) => (x.dn != null ? (x.dn < 0 ? 'vencido' : x.dn <= 90 ? 'venc90' : 'emdia') : x.st0 === 'A CONFERIR' ? 'conferir' : 'semdados');
-    const sit = (x) => ({ vencido: 'VENCIDO', venc90: 'VENCE EM ' + x.dn + ' D', emdia: 'EM DIA', conferir: 'A CONFERIR', semdados: 'SEM DADOS' })[grupo(x)];
+    const grupo = (x) => (x.dn != null ? (x.dn < 0 ? 'vencido' : x.dn <= 90 ? 'venc90' : 'emdia') : x.st0 === 'A CONFERIR' ? 'conferir' : x.st0 === 'CONFERIDA' ? 'emdia' : 'semdados');
+    // nota fiscal CONFERIDA (sem prazo, CONTRATO §1.8): conta como em dia, com a própria situação e sem o selo SEM DADOS
+    const sit = (x) => (x.dn == null && x.st0 === 'CONFERIDA' ? 'CONFERIDA' : { vencido: 'VENCIDO', venc90: 'VENCE EM ' + x.dn + ' D', emdia: 'EM DIA', conferir: 'A CONFERIR', semdados: 'SEM DADOS' }[grupo(x)]);
     const tom = (x) => { const g = grupo(x); return g === 'vencido' ? 'crit' : g === 'venc90' ? (x.dn <= 30 ? 'warn' : x.dn <= 60 ? 'tele' : 'accent') : g === 'emdia' ? 'ok' : g === 'conferir' ? 'violeta' : 'neutro'; };
     // vence primeiro: com data (menor prazo antes) · depois A CONFERIR (envio mais novo antes) · por fim SEM DADOS
     const peso = (x) => (x.dn != null ? x.dn : x.st0 === 'A CONFERIR' ? 1e6 : 2e6);
@@ -256,7 +259,7 @@ class Component extends DCLogic {
       rows: lista.map((x) => {
         const c = TOM[tom(x)], novo = x.envio && x.chave === s.novo;
         return { n: x.n, cat: x.cat, nota: x.nota || '—', ico: this.ico(ICON[x.cat] || DOC, 17, 1.7, c[0]), wash: c[1], tone: c[0], st: sit(x),
-          validade: x.vence || (x.envio ? 'a conferir' : 'SEM DADOS'), valTone: x.vence ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', dd: x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D-' + x.dn) : '',
+          validade: x.vence || (x.envio ? 'a conferir' : x.st0 === 'CONFERIDA' ? 'sem prazo' : 'SEM DADOS'), valTone: x.vence ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', dd: x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D-' + x.dn) : '',
           fonte: 'Fonte: ' + x.fonte, temAsk: !x.envio, ask: 'Main.dc.html#q=' + encodeURIComponent('Situação e vencimento do documento: ' + x.n), askLabel: 'Perguntar sobre: ' + x.n,
           novo: novo ? 'sim' : 'nao', line: novo ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.60)' : 'transparent' };
       }),
@@ -269,7 +272,7 @@ class Component extends DCLogic {
       envioFonte: 'Fonte: envios deste aparelho (' + envios.length + ') · nada vai ao servidor',
       proximos: proximos, verVencendo: setSit('venc90'), vencAtivo: s.sit === 'venc90', vencGo: s.sit === 'venc90' ? 'filtro ativo' : 'Filtrar ›',
       proxFonte: 'Fonte: ' + curtoF,
-      falta: nSD.map((x) => curto(x.n) + ' — ' + (x.nota || 'SEM DADOS')).join(' · ') || 'nada',
+      falta: nSD.map((x) => curto(x.n) + ' — ' + (x.nota || 'SEM DADOS')).join(' · '), temFalta: nSD.length > 0,
       faltaFonte: 'Fonte: ' + curtoF
     };
   }

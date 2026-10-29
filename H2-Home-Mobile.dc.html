@@ -300,7 +300,7 @@ class Component extends DCLogic {
           entrega(fin, true);
         }
       }, () => entrega(local(''), true));
-    }, 650);
+    }, this.state.conversa ? 0 : 650); // na CONVERSA por voz, sem a pausa visual de 0,65 s: a pergunta ouvida sai na hora (a resposta é a mesma); texto, VOZ→TEXTO e atalhos mantêm a pausa
     this._pend = (this._pend || []).concat([t]);
   }
   // Últimas mensagens antes da pergunta (até 6), para a IA entender continuações: "e o gerador?", "e amanhã?".
@@ -372,7 +372,7 @@ class Component extends DCLogic {
       { short: 'GERADOR', n: '2 · GERADOR', s: 'Gerador Onan (modelo SEM DADOS) — ligar · desligar · alarmes' + (atr(tarefa('gerador-rotor')) ? ' · rotor em atraso' : ''), href: 'F4-FAQ-Gerador.dc.html', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tone: 'var(--cap-warn, #f0a63a)', ctone: atr(tarefa('gerador-rotor')) ? crit : st('gerador') },
       { short: 'CLIMA', n: '3 · CLIMATIZAÇÃO', s: 'Climatização (fabricante SEM DADOS) — ligar · alarme de fluxo · filtros' + (atr(tarefa('clima-filtro')) ? ' · filtro em atraso' : ''), href: 'F5-FAQ-Climatizacao.dc.html', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tone: 'var(--cap-tele, #00f4fd)', ctone: atr(tarefa('clima-filtro')) ? crit : st('climatizacao') },
       { short: 'SEAKEEPER', n: '4 · ESTABILIZADOR', s: 'Seakeeper (modelo SEM DADOS) — ligar antes de sair · desligar ao atracar', href: 'F2-FAQ-Estabilizador.dc.html', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tone: 'var(--cap-ok, #34c77a)', ctone: st('estabilizador') },
-      { short: 'ELETRÔN.', n: '5 · ELETRÔNICOS', s: 'Garmin · Fusion · VHF 315 — plotter · piloto · rádio · áudio', href: 'F3-FAQ-Eletronicos.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)', ctone: st('eletronicos') }
+      { short: 'ELETRÔN.', n: '5 · ELETRÔNICOS', s: 'Garmin · Fusion · Icom — plotter · piloto · rádio · áudio', href: 'F3-FAQ-Eletronicos.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)', ctone: st('eletronicos') }
     ].map((b) => Object.assign(b, { ico: this.ico(b.d, 26, 1.7, b.tone) }));
   }
   renderVals() {
@@ -402,7 +402,7 @@ class Component extends DCLogic {
     return {
       sweep: fx.sweep, led: vivo ? fx.ledVivo : fx.ledSnap,
       liveTip: vivo ? 'Telemetria ao vivo' : 'Telemetria ao vivo desligada — snapshot' + (D.demo ? ' de demonstração' : '') + ' de ' + (S.quando || 'SEM DADOS'),
-      demo: D.demo ? 'DEMO · DADOS FICTÍCIOS' : 'SNAPSHOT ' + (S.quando || ''), demoTip: D.aviso || '',
+      demo: D.demo ? 'DEMO · DADOS FICTÍCIOS' : 'ÚLTIMA LEITURA · ' + (S.quando ? (S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : 'SEM DADOS'), demoTip: D.aviso || '',
       idle: !chatting, chatting: chatting, thinking: s.thinking,
       pensandoTxt: s.iaN > 0 ? 'CONSULTANDO A IA DE BORDO…' : 'CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS…',
       attachment: !!att,

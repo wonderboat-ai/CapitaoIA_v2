@@ -64,7 +64,9 @@ button { font: inherit; }
       </div>
     </sc-for>
     <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
-      <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+      <sc-if value="{{temFalta}}" hint-placeholder-val="{{false}}">
+        <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+      </sc-if>
       <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
     </div>
   </div>
@@ -133,8 +135,8 @@ class Component extends DCLogic {
           done: !!e, notDone: !e, onDone: () => this.markDone(t), ariaDone: 'Marcar como executado: ' + t.t, canUndo: !!e && s.last === t.id, onUndo: () => this.undo(t),
           dd: e ? 'EXECUTADO ' + e.d : t.dn < 0 ? (-t.dn) + (t.dn === -1 ? ' dia atrás' : ' dias atrás') : 'D-' + t.dn + ' · ' + t.vence.slice(0, 5), chipTone: e ? 'var(--cap-ok, #34c77a)' : c[0], chipWash: e ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)' : c[1] };
       }),
-      falta: (D.agendaFalta || []).join(' · ') || 'nada',
-      fonte: 'Fonte: ' + (D.agendaFonte || 'SEM DADOS') + ' · prazos a partir de ' + (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS')
+      falta: (D.agendaFalta || []).join(' · '), temFalta: !!(D.agendaFalta || []).length,
+      fonte: 'Fonte: ' + (D.agendaFonte || 'SEM DADOS') + ' · prazos a partir de ' + (D.versao || (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS'))
     };
   }
 }

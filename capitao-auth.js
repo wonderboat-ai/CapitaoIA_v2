@@ -15,10 +15,13 @@
   var ITER = 210000;
   var USUARIOS = {
     lucas: { nome: 'Lucas', completo: 'Lucas Araújo', ini: 'LA', papel: 'proprietário', sal: 'EKrlCoN+cQlXyjhXlmd6Zw==', hash: 's+iHyh01QjnN1ZqdV7UOWm+b/y6xlP91Sfxv6/fHV1Y=' },
-    // Convidado da demonstração (clientes): fora da lista da embarcação. Sai antes de dados reais.
-    demo: { nome: 'Demo', completo: 'Demo', ini: 'DM', papel: 'convidado (demonstração)', convidado: true, sal: 'Ld3f017FocIdWkRPdUwRdg==', hash: 'v4KQ4hLEowmd7cyGWtrc7QAW0tU0s8IDQW0ENip3+kw=' }
+    // Convidado (clientes; decisão k da 1.1.0): a chave continua "demo" (é o que se digita), o nome exibido é Convidado.
+    // Fora da lista da embarcação. Sai antes de dados reais.
+    demo: { nome: 'Convidado', completo: 'Convidado', ini: 'CV', papel: 'convidado', convidado: true, sal: 'Ld3f017FocIdWkRPdUwRdg==', hash: 'v4KQ4hLEowmd7cyGWtrc7QAW0tU0s8IDQW0ENip3+kw=' }
   };
   var DONO = 'lucas';
+  // Outros nomes que levam à mesma chave: quem lê "Convidado" no botão e digita o nome também entra.
+  var APELIDOS = { convidado: 'demo' };
 
   var K = 'capitao.sessao.v1', KT = 'capitao.login.tentativas.v1';
   var DIA = 86400000, LONGA = 30 * DIA, CURTA = 12 * 3600000;
@@ -45,6 +48,13 @@
     return s;
   }
   function limpar() { try { localStorage.removeItem(K); } catch (e) {} }
+
+  // Usuário digitado → chave: sem espaços nas pontas, minúsculas, sem acento, só a 1ª palavra ("Lucas Araújo" → lucas),
+  // e o apelido ("Convidado" → demo). O botão do login põe a chave no campo; o nome fica só no texto do botão.
+  function idDe(login) {
+    var id = String(login || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/)[0] || '';
+    return Object.prototype.hasOwnProperty.call(APELIDOS, id) ? APELIDOS[id] : id;
+  }
 
   function publico(id) {
     var u = USUARIOS[id]; if (!u) return null;
@@ -98,7 +108,7 @@
   function entrar(login, senha, manter) {
     var ate = bloqueadoAte();
     if (ate) return Promise.resolve({ ok: false, motivo: 'bloqueado', ate: ate });
-    var id = String(login || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/\s+/)[0] || '';
+    var id = idDe(login);
     var u = Object.prototype.hasOwnProperty.call(USUARIOS, id) ? USUARIOS[id] : null;
     var subtle = window.crypto && window.crypto.subtle;
     if (!subtle || !window.TextEncoder) return Promise.resolve({ ok: false, motivo: 'navegador' });
@@ -175,7 +185,7 @@
   }
 
   function logado() { return !!lerSessao(); }
-  window.CapitaoAuth = { VERSAO: VERSAO, CREDITO: CREDITO, usuario: usuario, nome: nome, lista: lista, logado: logado, entrar: entrar, sair: sair, destinoSeguro: destinoSeguro, bloqueadoAte: bloqueadoAte, ehLogin: ehLogin, livre: livre, noEditor: noEditor, frase: frase, periodo: periodo, FRASES: FRASES };
+  window.CapitaoAuth = { VERSAO: VERSAO, CREDITO: CREDITO, usuario: usuario, nome: nome, lista: lista, idDe: idDe, logado: logado, entrar: entrar, sair: sair, destinoSeguro: destinoSeguro, bloqueadoAte: bloqueadoAte, ehLogin: ehLogin, livre: livre, noEditor: noEditor, frase: frase, periodo: periodo, FRASES: FRASES };
 
   // Porta: sem sessão → login, antes de qualquer desenho.
   if (!ehLogin() && !livre() && !noEditor() && !lerSessao()) { paraLogin(); return; }
@@ -212,7 +222,7 @@
     render() { var t = periodo(); if (this.textContent !== t) this.textContent = t; }
   });
 
-  // <capitao-rodape> — versão, selo DEMO, usuário (com Sair) e crédito. Quebra em linhas no celular.
+  // <capitao-rodape> — versão, usuário (com Sair) e crédito; nenhum selo (decisão b da 1.1.0). Quebra em linhas no celular.
   if (!customElements.get('capitao-rodape')) customElements.define('capitao-rodape', class extends HTMLElement {
     connectedCallback() { if (!this._b) this.build(); this._on = this.render.bind(this); window.addEventListener('capitao-sessao', this._on); this.render(); }
     disconnectedCallback() { window.removeEventListener('capitao-sessao', this._on); }
@@ -221,12 +231,6 @@
       this.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:center;column-gap:14px;row-gap:2px;box-sizing:border-box;width:100%;min-height:32px;padding:3px 16px calc(3px + env(safe-area-inset-bottom, 0px));font:500 11px/1.5 "Nimbus Sans","Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:0.06em;color:var(--cap-ink4, #7985a6);text-align:center;';
       var d = document;
       var ver = d.createElement('span'); ver.textContent = 'Capitão IA · v' + VERSAO.v + ' · ' + VERSAO.data;
-      var D = window.CapitaoDados;
-      var demo = null;
-      if (D && D.demo) {
-        demo = d.createElement('span'); demo.textContent = D.selo || 'DEMO · DADOS FICTÍCIOS'; demo.title = D.aviso || '';
-        demo.style.cssText = 'font-weight:700;letter-spacing:0.12em;color:var(--cap-violeta, #b45cff);';
-      }
       var quem = d.createElement('span'); quem.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
       var nomeEl = d.createElement('b'); nomeEl.style.cssText = 'font-weight:700;color:var(--cap-ink3, #97a3c0);';
       var btn = d.createElement('button'); btn.type = 'button'; btn.textContent = 'Sair';
@@ -234,14 +238,20 @@
       btn.addEventListener('click', sair);
       quem.appendChild(nomeEl); quem.appendChild(btn);
       var cred = d.createElement('span'); cred.textContent = CREDITO;
-      this.appendChild(ver); if (demo) this.appendChild(demo); this.appendChild(quem); this.appendChild(cred);
-      // Só nas telas iniciais (web e app): ícone discreto para baixar o Guia rápido em PDF.
+      this.appendChild(ver); this.appendChild(quem); this.appendChild(cred);
+      // Só nas telas iniciais (web e app): ícones discretos para baixar o Guia rápido em PDF e para os Dados do aparelho
+      // (dados.html: baixar uma cópia do que está guardado aqui e restaurar).
       if (/(^|\/)(Main|H2-Home-Mobile)\.dc\.html$/.test(location.pathname)) {
         var guia = d.createElement('a'); guia.href = 'Guia-Rapido-Capitao-IA.pdf'; guia.setAttribute('download', 'Guia-Rapido-Capitao-IA.pdf');
         guia.title = 'Baixar o Guia rápido (PDF)'; guia.setAttribute('aria-label', 'Baixar o Guia rápido em PDF');
         guia.style.cssText = 'display:inline-flex;align-items:center;gap:5px;color:inherit;text-decoration:none;min-height:26px;opacity:0.85;';
         guia.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M12 4v11 M7 10l5 5 5-5 M5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Guia</span>';
         this.appendChild(guia);
+        var dados = d.createElement('a'); dados.href = 'dados.html';
+        dados.title = 'Dados do aparelho: baixar uma cópia e restaurar'; dados.setAttribute('aria-label', 'Dados do aparelho: baixar uma cópia e restaurar');
+        dados.style.cssText = guia.style.cssText;
+        dados.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3z M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Dados</span>';
+        this.appendChild(dados);
       }
       this._b = btn; this._n = nomeEl; this._q = quem;
     }

@@ -12,7 +12,10 @@
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
-  var E = D.embarcacao || {}, S = D.snapshot || {}, AUT = D.autonomia || {}, CON = D.consumo || {};
+  // No SOS (S1 e S2 carregam este cérebro para gravar no diário e ler os telefones do aparelho), o snapshot fica vazio: nada do dado
+  // gerado da embarcação sai de lá (PROMPT §2.1; CONTRATO §1.3). Em /SOS-/ nada aqui lê o snapshot, o replay nem o MMSI gerado.
+  var EM_SOS = false; try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
+  var E = D.embarcacao || {}, S = EM_SOS ? {} : (D.snapshot || {}), AUT = D.autonomia || {}, CON = D.consumo || {};
   var DEMO = D.demo ? ' (DEMO)' : '';
   var DEMO_ = D.demo ? ' DEMO' : ''; // dentro de parênteses: "(snapshot DEMO 26/09 10:12)", sem parêntese aninhado
   var SD = 'SEM DADOS';
@@ -106,10 +109,12 @@
   };
   function guia(k) { return (D.guias && D.guias[k]) || SD; }
   function equip(id) { return (D.equipamentos || []).filter(function (e) { return e.id === id; })[0] || null; }
-  // "Gerador Onan · modelo SEM DADOS" — sempre fabricante e modelo, com o que faltar marcado
+  // "Gerador Onan QD 9" — sempre fabricante e modelo, com o que faltar marcado; o fabricante não se repete quando o modelo já começa
+  // por ele ("Estabilizador giroscópico Seakeeper 3", não "Seakeeper Seakeeper 3"), como o equip_de do gerador
   function fabMod(id) {
     var e = equip(id); if (!e) return SD;
-    return e.nome + ' ' + (e.fabricante || '(fabricante ' + SD + ')') + (e.modelo ? ' ' + e.modelo : ' · modelo ' + SD);
+    var f = e.fabricante, m = e.modelo;
+    return e.nome + (f && m && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? '' : ' ' + (f || '(fabricante ' + SD + ')')) + (m ? ' ' + m : ' · modelo ' + SD);
   }
   function agenda() { return D.agenda || []; }
   function atrasadas() { return agenda().filter(function (t) { return t.dn < 0; }); }
@@ -120,10 +125,254 @@
 
   // Frase normalizada com espaço nas pontas (palavra inteira = ' x ').
   function pad(s) { return ' ' + norm(s).replace(/[?!.,;:()"“”]+/g, ' ').replace(/\s+/g, ' ').trim() + ' '; }
+  // Lista SOS: a de antes mais a ampliação da 1b (PROMPT §2.3; frases de queda de pessoa, perda de governo e água a bordo que a revisão do C5
+  // mediu indo à IA, contra a trava "emergência local, nunca na IA"). UMA lista só com a SEGURANCA_PALAVRAS do gerador
+  // (ferramentas/demo/confere.py): o testes/cerebro.py confere que as duas são iguais.
   var SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos ', 'socorro', 'naufrag', 'caiu no mar', 'caiu ao mar', 'caiu na agua', 'pessoa na agua', 'alguem na agua', 'crianca na agua', 'afogad', 'afogand',
-    'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao', 'colidi', 'abalroa', 'encalh', 'explos',
-    'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas', 'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado'];
-  function emergencia(q) { return has(q, SOS) || (has(q, ['fumaca']) && !has(q, ['escap'])); } // fumaça no escapamento é do motor, não SOS
+    'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao', 'colidi', 'abalro', 'encalh', 'explos',
+    'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas', 'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
+    // 1b (PROMPT §2.3)
+    'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu',
+    'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
+    'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
+    // 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, perda de governo, eixo e mangueira (as frases ficam por inteiro:
+    // ' entrou agua ' não pega "entrou aguardando"). A batida ("bateu em…") saiu da lista: ' bateu em ' pegava "bateu em 3 bar"; ver SOS_REGEX, abaixo.
+    'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'pulou da lancha', 'de vista na agua',
+    'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo',
+    // 1b, §8.2 item 11 (o subconjunto sem "sem governo" e "água subindo", que pegariam "sem governo federal" e a temperatura da água)
+    'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
+    'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou',
+    // 1b, revisão da revisão: as formas vizinhas que ainda iam à IA. Pessoa que cai (o presente, "pro mar", "para quem caiu"), água a bordo e perda de
+    // governo ou eixo. "pro mar" sozinho não entra ("vamos pro mar"): só com o verbo, "caiu pro mar". "pessoa ao mar" fica de fora, como estava.
+    ' cai na agua', ' cai no mar', ' cai ao mar', ' cai do barco', ' cai da lancha', 'caiu pro mar', 'caiu pra agua', 'caiu para o mar', 'caiu para a agua', ' para quem caiu', ' de quem caiu', ' ate quem caiu',
+    'gente ao mar', 'passageiro ao mar', 'marinheiro ao mar', 'vitima ao mar', 'filho ao mar', 'filha ao mar',
+    'agua subindo no porao', 'agua subiu no porao', 'porao subindo', 'bomba do porao nao para', 'bomba nao da conta', 'bombas nao dao conta',
+    'bomba sem dar conta', 'bombas sem dar conta', 'porao nao da conta', 'porao sem dar conta',
+    'perdemos o leme', 'leme nao responde', 'leme partiu', 'eixo partiu', 'partiu o eixo',
+    // 1b, segunda revisão: as formas-espelho que ainda iam à IA. Governo e eixo («quebrou o leme», «leme quebrado»), casco furado, rachado ou aberto,
+    // fundo tocado, mais de uma pessoa na água («caíram na água», «caímos do barco»), sangue e hemorragia (o sangramento técnico, «do ar», «do
+    // combustível», fica na regex abaixo), fogo sem a palavra fogo (chamas, labaredas, faísca, curto-circuito, cheiro de plástico ou fio queimado)
+    'quebrou o leme', 'quebramos o leme', 'quebrei o leme', 'partiu o leme', 'rompeu o leme', 'leme rompeu', 'leme quebrad', 'leme partid',
+    'rompeu o eixo', 'furou o casco', 'furaram o casco', 'casco furou', 'casco furad', 'casco rachou', 'casco rachad', 'rachou o casco', 'casco trincou', 'trincou o casco',
+    'cairam na agua', 'cairam no mar', 'cairam ao mar', 'cairam do barco', 'cairam da lancha', 'caimos na agua', 'caimos no mar', 'caimos do barco', 'caimos da lancha',
+    'hemorrag', 'labared', 'faisc', ' chamas ', 'curto circuito', 'curto-circuito', 'cheiro de queima', 'plastico derretid', 'fumeg', 'dor no peito',
+    'sem leme', 'helice quebrou', 'quebrou a helice', 'perdemos a helice', 'perdi a helice', 'helice soltou', 'helice partiu',
+    // 1b, quarta revisão: a vizinhança das frases pedidas que ainda ia à IA. Perigo e risco de vida; quem se afoga, não respira, tem parada cardíaca, fratura,
+    // ferimento ou passa mal (quebrar, cortar e queimar o corpo, engasgo e «não respira» ficam na regex, com o sujeito: «o motor engasgou» e «o respiro do
+    // tanque não respira» são do motor); explosão; perda de governo ou de propulsão; combustível e gás que vazam (a ordem inversa das frases acima)
+    ' em perigo ', 'perigo de vida', 'risco de vida', 'perigo de morte', 'risco de morte', 'perdidos no mar', 'perdido no mar',
+    'se afogou', 'se afogaram', 'afogou se', 'afogaram se', 'afogou-se', 'afogaram-se', 'parou de respirar', 'parar de respirar', 'sem respirar', 'dificuldade para respirar', 'dificuldade de respirar', 'dificuldade em respirar', 'nao consegue respirar',
+    'parada cardi', 'ataque cardi', 'crise cardi', 'ataque do coracao', 'enfart', ' avc ', 'sufoc', 'fratur', 'ferimento', 'hipotermi', 'anafil', 'passando mal', 'passou mal',
+    'mal subito', 'desacordad', 'corte profundo', 'corte feio', 'cortou fundo',
+    'explod', 'perda de governo', 'perda do governo', 'perda de propulsao', 'perdemos a propulsao', 'perdi a propulsao', 'sem propulsao', ' derivamos ', 'quem caiu',
+    ' diesel vazando', ' combustivel vazando', 'gas vazando', 'diesel esta vazando', 'combustivel esta vazando', 'gas esta vazando', 'vazou diesel', 'vazou combustivel', 'vazou gas',
+    'diesel no porao', 'combustivel no porao', 'gas no porao', 'cheiro de gasolina'];
+  // Frases com contexto, que a lista de palavras não alcança sem pegar o resto: "meu filho está na água", "o passageiro caiu", "alguém foi jogado ao
+  // mar", "o barco está tomando água", "bateu numa pedra" (e não "bateu em 3 bar"), "ele está sangrando" (e não "sangrando o ar do sistema").
+  // Segunda revisão da 1b: o que a regex alcança vem de LISTA POSITIVA (o que foi atingido: pedra, cais, outro barco, o casco, "nós"; quem está no
+  // barco ou na água), nunca de "qualquer coisa menos unidade": «o consumo bateu num recorde», «a pressão bateu num valor alto» e «o dessalinizador
+  // está fazendo água» são leitura e equipamento, não emergência. As frases fracas ("bateu forte", "em cheio", "em mim") só valem com o barco,
+  // alguém ou ninguém de sujeito (BATE_INI); o casco, o banco e o fundo levam a guarda GUARDA_BATE: onda, vento, chuva, ponteiro, nível, pix ou valor de sujeito não é batida. O que a regex não alcança fica local por outro caminho ou vai ao guia: o
+  // sangramento do ar e do combustível, a água do dessalinizador e do ar-condicionado, a água no tanque de água doce.
+  // As fontes (`source`) são iguais às do gerador (confere.py: SOS_REGEX): o testes/cerebro.py confere. Sem lookbehind (Safari antigo).
+  var PESSOA = '(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homem|homens|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?|cara|rapaz|moco|moca)';
+  // parente, amigo e quem está a bordo pelo papel: «meu marido caiu na água», «o pai caiu», «perdi o meu amigo de vista». Sem «capitão» (é o nome do app)
+  var PARENTE = '(?:idos[oa]s?|amig[oa]s?|colegas?|maes?|pai|marido|esposa|esposo|namorad[oa]s?|irma[o]?|irmaos|netos?|netas?|sobrinh[oa]s?|hospedes?|convidad[oa]s?|mergulhador(?:es)?|nadador(?:es)?|comandante|skipper|vizinh[oa]s?)';
+  var DET = '(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*';
+  var NO_MAR = '(?:no mar|na agua|pro mar|para o mar|pra agua|ao mar)';   // «ao mar» (4ª revisão da 1b): «mulher ao mar», «o tripulante foi ao mar»
+  var FORA = '(?:ao mar|no mar|na agua|pro mar|pra agua|para o mar|para fora|pela borda)';
+  var CAIU = '(?:cai|caiu|cairam|caem|caindo|pulou|pularam|sumiu|sumiram|desapareceu|desapareceram)';
+  var BARCOS = '(?:barco|lancha|embarcacao|iate|bote|veleiro|jet ski|jetski|navio|rebocador|traineira|catamara|escuna|canoa|caiaque|semirrigido)';
+  var PARTES = '(?:casco|popa|proa|costado|quilha|helice|leme|bombordo|boreste)';
+  var VERBO_BATIDA = '(?:bateu|batemos|bati|bateram|batendo|(?:acabamos|acabei|acabaram|acabou) de bater)';
+  var BATE_ADV = '(?:(?:forte|feio|de lado|de frente|de proa|de popa|de raspao|de leve|em cheio|com forca) )*';
+  var BATE_EM = '(?:em|n[oa]s?|nu(?:m|ma|ns|mas)) (?:(?:o|a|os|as|um|uma|outro|outra|outros|outras|nosso|nossa|nossos|nossas|meu|minha|esse|essa|aquele|aquela|mesmo|mesma) )*(?:[a-z]+ )?';
+  var BATE_COM = '(?:com (?:(?:o|a|um|uma|nosso|nossa|meu|minha) )*(?:' + BARCOS + '|' + PARTES + ')(?: [a-z0-9]+){0,2} )?';
+  var DURO_MAR = '(?:pedras?|rochas?|rochedos?|lajes?|baixios?|recifes?|corais?|troncos?|toras?|baleias?|destrocos|containers?)';
+  var DURO = '(?:pedras?|rochas?|rochedos?|lajes?|baixios?|cais|troncos?|toras?|piers?|recifes?|costao|ilhas?|muros?|docas?|estacas?|boias?|areia|corais?|pontes?|containers?|objetos?|madeiras?|tocos?|baleias?|destrocos|naufragio)';
+  var NAO_BARCO = '(?:ondas?|marolas?|banzeiros?|ressacas?|ventos?|rajadas?|chuvas?|mar|agua|espuma|respingos?|sol|luz|coracao|portas?|janelas?|escotilhas?|tampas?|toldo|bimini|relogio|sino|portao|previsao|palpite|aposta|calculo|estimativa|meta|resultado|nivel|tanques?|ponteiro|medidor|indicador|display|contador|consumo|pressao|temperatura|bateria|tensao|rotacao|horimetro|valor|saldo|pagamento|pix|transferencia|boleto|dinheiro|deposito|salario|conta|fatura|cartao|cheque|fornecedor)';
+  var GUARDA_BATE = '^(?!.* ' + NAO_BARCO + ' (?:[a-z0-9]+ ){0,2}(?:bateu|bateram|batendo|batem|bate) ).* ';
+  var BATE_FRACO = '(?:forte|feio|de lado|de frente|de proa|de popa|de raspao|de leve)';
+  // as frases fracas («bateu forte», «bateu em cheio», «bateu em mim») só valem sem sujeito ou com o barco, alguém, «ele» ou «nós» («a gente») de sujeito:
+  // «o motor bateu forte» (batendo pino), «o preço bateu em cheio» e «o vento bateu em mim» não são batida
+  var BATE_INI = '^ (?:(?:ai|agora|la|acabou de|acabaram de|acho que|parece que|entao|olha|gente) )*(?:(?:(?:o|a|um|uma|nosso|nossa|outro|outra|esse|essa|aquele|aquela) )*(?:' + BARCOS + '|alguem|ele|ela|eles|elas|isso|nos)(?: [a-z0-9]+){0,5} )?';
+  var SUJ_BARCO = '(?:barco|lancha|casco|embarcacao|iate|bote|veleiro|porao|estamos|nos)';
+  // Guardas de água a bordo (revisão da revisão da 1b): LOCAIS, presas ao verbo, não à frase inteira. Quem relata alagamento cita o que molhou («entrou água no
+  // barco e molhou o celular», «estamos fazendo água e a geladeira parou»): uma palavra de contexto em qualquer lugar da frase não pode calar o SOS.
+  // (1) o equipamento que «faz água» é o SUJEITO do verbo, logo antes dele («a geladeira está fazendo água», «o ar-condicionado do barco faz água»); a geladeira
+  // que parou numa oração e o barco que faz água na outra é alagamento.
+  var EQUIP_AGUA = '(?:dessalin[a-z]*|ar condicionado|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*|ar|geladeira|frigobar|freezer|bebedouro|purificador|chuveiro|torneira|ducha|pia|ralo|sanitario|banheiro|lavabo|gelo)';
+  var VERBO_AGUA = '(?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar|pegando|pega|pegou|pegar)';
+  var SEM_EQUIP_AGUA = '^(?!.* ' + EQUIP_AGUA + '(?: d[oae]s? [a-z0-9]+(?: d[oae]s? [a-z0-9]+)?)?(?: (?:esta|estao|ta|tao|vai|ficou|comecou a|continua|ainda|agora|so|tambem))* ' + VERBO_AGUA + ' ).* ';
+  // (2) a água que não é a do casco vem logo DEPOIS da palavra «água» («água doce», «água no ouvido», «na bota», «no tanque de água», «na geladeira»)
+  var AGUA_FIM = '(?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\\b)';
+  var AGUA_ENTRA_FIM = '(?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada)\\b)(?!(?:n[oa]s?|em|pel[oa]s?|dentro d[oa]s?) (?:olhos?|ouvidos?|nariz|boca|botas?|sapatos?|tanques? de agua|celular|telefone|geladeira|frigobar|freezer|pia|chuveiro|torneira|filtro|purificador|bebedouro|garrafa|copo|mala|mochila|bolsa|dessalin[a-z]*|ar condicionado|ar-condicionado|climatiza[a-z]*) )';
+  // «a temperatura da água subindo no barco» (e a pressão, a salinidade, a vazão) é leitura, não alagamento
+  var SEM_MEDIDA_AGUA = '^(?!.* (?:temperatura|pressao|salinidade|vazao|fluxo) d[ae] agua ).* ';
+  var LUGAR_BORDO = '(?:barco|lancha|embarcacao|casco|porao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas|iate|bote|veleiro)';
+  // a âncora (o ferro, a poita, a corrente, a sonda, o ponteiro) que «toca o fundo» ou «raspa numa pedra» é fundeio de rotina, não batida do barco
+  var SEM_ANCORA = '^(?!.* (?:ancoras?|ferro|poita|corrente|amarra|cabo|chumbo|prumo|sonda|ecobatimetro|ponteiro|mergulhador|ancorote)(?: [a-z0-9]+){0,3} (?:tocou|tocaram|raspou|esbarrou|encostou) ).* ';
+  // a mangueira de uso (lavagem, chuveiro, pia, ar-condicionado…) traz o uso JUNTO da palavra «mangueira» (local, não a frase inteira: «a mangueira de combustível estourou e molhou a pia» é emergência)
+  var MANGUEIRA_USO = '(?:lavagem|lavar|chuveiro|ducha|pia|torneira|jardim|piscina|geladeira|frigobar|bebedouro|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*)';
+  // sangramento técnico (o ar, o combustível, as linhas, o sistema…) não é ferimento: «sangrando o ar do sistema», «sangramento do combustível»
+  var TECNICO = '(?:(?:o|a|os|as|um|uma|do|da|dos|das|no|na) )?(?:ar|combustivel|diesel|sistema|linhas?|bombas?|circuito|filtros?|racor|arrefecimento|freios?|radiador|tubulacao|injetor[a-z]*|bicos?|pre-?filtros?|respiro|aquecedor|turbo|embreagem|direcao|reversor|atuador|cilindro|tanques?|separador|decantador|motor|motores|gerador|hidraulic[a-z]*|oleo|cano|tubo|valvulas?|mangueiras?)';
+  var ALVO_FOGO = '(?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|isolamento|resistencia)';
+  // 1b, quarta revisão: o corpo de quem quebra, corta, queima ou prende (sem «cabeça»: «queimar a cabeça» é pensar demais) e o sujeito de quem se engasga ou não respira
+  var CORPO = '(?:bracos?|pernas?|maos?|dedos?|costelas?|nariz|ombros?|joelhos?|tornozelos?|pulsos?|punhos?|claviculas?|bacia|coluna|pescoco|dentes?|rosto|testa|barriga|olhos?|pele|costas|antebraco|lingua|boca|garganta|pes?)';
+  var POSSE = '(?:(?:o|a|os|as|meu|minha|seu|sua|um|uma|nosso|nossa) )*';
+  // o «braço» (e o «pé», a «mão») de uma peça de bordo não é o de uma pessoa: «quebrou o braço do guincho»
+  var PECA = '(?!d[oae]s? (?:guincho|limpador|radar|guindaste|davit|mesa|cadeira|banco|tripe|suporte|apoio|lanterna|mastro|ancora|piloto|motor|porta|escotilha|antena|toldo|bimini|sofa|gaveta|armario|cabo|leme|gerador|painel|plotter) )';
+  var ELE = '(?:' + PESSOA + '|' + PARENTE + '|ele|ela|eles|elas|ninguem|bebe)';
+  var SOS_REGEX_FONTES = [
+    ' ' + PESSOA + '(?: (?:esta|estao|ta|tao|foi|foram|ficou|ficaram))? ' + NO_MAR + ' ',
+    ' (?:' + PESSOA + ' ' + CAIU + '|' + CAIU + ' ' + DET + PESSOA + '|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PESSOA +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)' +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + PESSOA + ' de vista|' + PESSOA + ' (?:que|q) ' + CAIU + ') ',
+    ' (?:' + PARENTE + ' ' + CAIU + ' (?:na agua|no mar|ao mar|do barco|da lancha|da embarcacao|pro mar|para o mar|pra agua|para fora|fora)|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PARENTE +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + PARENTE + ' de vista|' + PARENTE + ' (?:que|q) ' + CAIU +
+      '|' + PARENTE + ' (?:esta|estao|ta|tao|foi|foram|ficou|ficaram) ' + NO_MAR + ') ',
+    ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
+    ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
+    // água a bordo: o barco ou "nós" fazendo/tomando água, ou «fazendo água» sem sujeito (não a água doce, quente ou potável; não o equipamento que faz água: a guarda
+    // olha só o sujeito do verbo, nunca a frase inteira)
+    SEM_EQUIP_AGUA + SUJ_BARCO + '(?: [a-z0-9]+){0,3} ' + VERBO_AGUA + ' (?:muita |bastante |demais )?agua ' + AGUA_FIM,
+    SEM_EQUIP_AGUA + 'estou(?: [a-z0-9]+){0,2} (?:fazendo|fazer) (?:muita |bastante |demais )?agua ' + AGUA_FIM,
+    SEM_EQUIP_AGUA + 'fazendo (?:muita |bastante )?agua ' + AGUA_FIM + '(?!(?:de|na boca)\\b)(?!n[oa]s? (?:pia|chuveiro|banheiro|lavabo|sanitario|torneira|ducha|ralo|geladeira|frigobar|freezer|copa) )',
+    ' fazendo agua (?:no|na|pelo|pela|pelos|pelas|em) (?:porao|casco|fundo|quilha|popa|proa|costado|eixo|helice|leme|casa de maquinas|sala de maquinas|praca de maquinas|passa casco|passacasco|valvula|gaveta) ',
+    ' (?:entrou|comecou a entrar|comecando a entrar|voltou a entrar|comecaram a entrar) (?:muita |bastante |mais )?agua ' + AGUA_ENTRA_FIM,
+    ' agua (?:entrou|comecou a entrar|comecou a subir) ' + AGUA_ENTRA_FIM,
+    ' agua (?:(?:esta|ta|vem|continua|segue|estava|tava) )?(?:a )?entrando ' + AGUA_ENTRA_FIM,
+    ' entrando (?:(?:muita|bastante|tanta|mais) )+agua ' + AGUA_ENTRA_FIM,
+    ' (?:nao|n) (?:para|parou) de entrar agua ',
+    ' agua (?:nao|n) (?:para|parou) de entrar ',
+    SEM_MEDIDA_AGUA + 'agua (?:esta |ta )?(?:subindo|subiu|sobe|enchendo|encheu) (?:(?:rapido|rapidamente|muito|bem|bastante|demais|mais) )*(?:no|na|dentro d[oa]|em) (?:barco|lancha|embarcacao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    ' (?:tem|ha|tinha|temos) agua dentro d[oa] (?:barco|lancha|embarcacao|casco|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    ' ' + LUGAR_BORDO + '(?: (?:esta|ta|ficou|foi|vai|comecou a))? (?:cheio|cheia|enchendo|encheu|encher) (?:de|com) agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada)\\b)',
+    // porão (PROMPT §2.2: o relato do porão é sos): cheio, enchendo, alagando ou subindo com «está/tá» no meio; a água que sobe ou entra no porão; a bomba que não para ou não dá conta;
+    // o alarme do porão que disparou (relato; «testar o alarme de porão» e «nível normal do porão» seguem a rota do porão)
+    ' porao (?:esta |ta |continua |vai |ja |ficou |foi )?(?:cheio|cheia|enchendo|encheu|alagando|alagado|alagou|subindo|subiu|inundado|inundou|transbordando|transbordou) ',
+    ' agua (?:esta |ta |vem )?(?:subindo|entrando|enchendo|vazando|aparecendo|surgindo|brotando) (?:no|pelo|pelos|dentro d[oa]|do) porao ',
+    ' bombas? (?:de |do |da )?porao (?:(?:nao|n) (?:esta |estao |ta |tao )?(?:para|param|parando|desliga|desligam|desligando|da conta|dao conta|dando conta|consegue|conseguem|conseguindo|segura|seguram|vence|vencem|aguenta|aguentam)|(?:esta|estao|ta|tao) (?:ligad[oa]s?|funcionando|trabalhando|rodando|acionad[oa]s?) (?:direto|sem parar|o tempo todo|toda hora|toda a hora)) ',
+    // (4ª revisão: até 3 palavras entre «alarme» e «porão» — «alarme de nível do porão», «alarme do painel do porão» —, e o alarme que tocou NO porão)
+    ' (?:alarme|alerta|sirene)(?: [a-z0-9]+){0,3} porao (?:disparou|tocou|soou|acendeu|acionou|ativou|(?:esta|ta) (?:tocando|soando|disparando|disparado|aceso)|tocando|soando|disparando) ',
+    ' (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:o |um |a )?(?:alarme|alerta|sirene)(?: [a-z0-9]+){0,3} porao ',
+    ' (?:alarme|alerta|sirene) (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:no|do|na|dentro d[oa]) porao ',
+    // a frase inteira «alarme do porão» (quem digita só o substantivo): relato, local
+    '^ (?:(?:o|um|esse|aquele) )?alarme (?:d[eoa]s? )(?:bombas? (?:d[eo] )?)?porao $',
+    // o barco que toca o fundo (a âncora, o ferro, a poita, a corrente e a sonda tocam o fundo no fundeio: SEM_ANCORA)
+    SEM_ANCORA + '(?:tocou|tocamos|toquei|tocaram|raspou|raspamos|raspei|encostou|encostamos|encostei) (?:o|no) fundo ',
+    // batida: o que foi atingido vem de lista positiva (coisa dura, outro barco, o casco, "nós")
+    ' ' + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + DURO + ' ',
+    SEM_ANCORA + '(?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei|encostou|encostamos|encostei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
+    // o barco que está em cima da pedra e a batida que vem aí («vamos bater», «vamos bater numa pedra», «prestes a colidir»)
+    ' (?:estamos|ficamos|paramos|fiquei|parei|ficou|parou) (?:em cima d[eao]|sobre|em|n[oa]s?|nu(?:m|ma)) (?:(?:um|uma|o|a|essa|aquela) )*(?:pedras?|rochas?|rochedos?|lajes?|baixios?) ',
+    ' (?:vamos|vai|iremos) bater (?:(?:forte|feio|em cheio) )?(?:em|n[oa]s?|nu(?:m|ma|ns|mas)) (?:(?:o|a|um|uma|outro|outra|essa|aquela) )*(?:' + DURO + '|' + BARCOS + '|' + PARTES + ') ',
+    '^ (?:(?:ai|gente|socorro|cuidado|meu deus|nossa) )*(?:vamos|vai) bater(?: (?:forte|feio))? $',
+    ' (?:prestes a|quase) (?:colidir|encalhar|afundar|naufragar|virar|alagar) ',
+    GUARDA_BATE + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + '(?:' + BARCOS + '|' + PARTES + '|bancos?|fundo|algo|alguma coisa|alguem) ',
+    BATE_INI + VERBO_BATIDA + '(?: ' + BATE_FRACO + ')* (?:em nos|em mim|na gente|em cheio) ',
+    ' (?:batemos|bati)(?: (?:' + BATE_FRACO + '|em cheio))* $',
+    BATE_INI + '(?:bateu|bateram)(?: ' + BATE_FRACO + ')+ $',
+    ' (?:atingid|colhid|prensad)[oa]s? por (?:(?:um|uma|o|a|outro|outra) )*(?:' + BARCOS + '|raio) ',
+    // ferimento: sangramento, sangrar, sangue (o técnico, "do ar" e "do combustível", não)
+    ' sangramento (?!' + TECNICO + ' )',
+    ' sangr(?:a|ando|ou|am|aram|ava|avam) (?!' + TECNICO + ' )',
+    ' (?:parar de|para de|pare de|parou de|comecou a|continua a|continuou a|voltou a) sangrar ',
+    ' sangrar (?:muito|sem parar|bastante|demais) ',
+    '^(?!.* (?:tipo|exame|exames|doacao|doar|doador|teste|testes|pressao|laboratorio|azul) )(?!.* sangue frio ).* sangue ',
+    // casco aberto («rombo no casco», «o casco está furado», «rachadura no casco») e pancada na cabeça
+    ' rombo (?:no|na) (?:casco|barco|lancha|embarcacao|costado|proa|popa|fundo|quilha) ',
+    ' casco (?:esta |ta |ficou |foi )?(?:furad[oa]|rachad[oa]|trincad[oa]|rompid[oa]|aberto|amassad[oa]|danificad[oa]) ',
+    ' (?:rachadura|trinca|fissura|buraco|furo|rasgo) (?:no|na) (?:casco|costado|quilha|popa|proa) ',
+    ' (?:bateu|bati|bateram|batemos) (?:com )?(?:a|na|no|o) (?:cabeca|nuca|testa) ',
+    // fogo sem a palavra "fogo": chama, queimando o motor ou o painel, choque no painel
+    ' (?:uma|vi|vimos|vejo|surgiu|apareceu|saindo|sai|saiu|tem|temos|ha|tinha|teve|pegou|pegando|muita|alguma) chama (?!(?:d[eoa]|n[oa]) (?:fogao|fogareiro|churrasqueira|cooktop|isqueiro|vela|piloto|macarico) )',
+    ' chama (?:n[oa]s?|d[oa]s?|em|pel[oa]s?) (?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|geladeira|barco|lancha|casco|cozinha|cabine|camarote|praca de maquinas|sala de maquinas|casa de maquinas|popa|proa|conves|iate|veleiro|bote|lixeira) ',
+    ' (?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|barco|lancha|cozinha|fogao|casco|compressor|bomba|inversor|carregador|tomada|geladeira|cabine|camarote|praca de maquinas|sala de maquinas|casa de maquinas|isolamento|resistencia|ar condicionado)(?: [a-z0-9]+){0,2} queimando (?!(?:oleo|diesel|combustivel|muito|pouco|mais|menos|litros?|[0-9]+) )',
+    ' queimando (?:(?:o|os|a|as) )?' + ALVO_FOGO + ' ',
+    ' (?:levou|tomou|tomei|levei|levando|tomando) (?:um |o )?choque ',
+    ' (?:tomada|painel|quadro|cabo|fio|fios|bateria|carregador|inversor|casco|corrimao|motor|gerador|torneira|chuveiro|pia|geladeira|barco|lancha|agua|cais|pier)(?: [a-z0-9]+){0,2} (?:dando|deu|da) (?:um |o )?choque ',
+    ' choque (?:no|na|do|da|de|pelo|pela) (?:painel|quadro|cabo|fio|fios|bateria|baterias|barco|motor|gerador|tomada|inversor|carregador|casco|agua|mar) ',
+    ' cheiro (?:de |do |da |no |na )?(?:[a-z]+ ){0,2}queimad[oa]s? ',
+    // mangueira que estoura, solta ou fura (não a de lavagem, a do chuveiro nem a do ar-condicionado); eixo que quebra
+    ' mangueira(?: (?!' + MANGUEIRA_USO + ' )[a-z0-9-]+){0,4} (?:estourou|estourada|soltou|rompeu|rompida|furou|furada|partiu|rasgou) ',
+    ' (?:estourou|soltou|rompeu|furou|partiu|rasgou) (?:a|uma|essa|aquela|nossa|minha) mangueira (?!(?:(?:d[eoa]s?|para|pra) )?' + MANGUEIRA_USO + ' )',
+    ' eixo(?: [a-z0-9]+){0,6} (?:quebrou|quebrado|quebrada|partido|rompeu|empenou) ',
+    ' eixo(?: [a-z0-9]+){0,3} partiu ',
+    ' eixo(?: [a-z0-9]+){0,3} (?:soltou|solto|solta|travou|travado|travada|emperrou|emperrado|emperrada|entortou|torto|empenado|empenada|rachou) ',
+    // leme com palavras no meio («o leme do barco quebrou», «o leme da lancha travou agora») e o leme perdido («perdi totalmente o leme»)
+    ' leme(?: [a-z0-9]+){0,5} (?:quebrou|quebrado|quebrada|partido|partida|rompeu|rompido|rompida|travou|travado|travada|soltou) ',
+    ' leme(?: [a-z0-9]+){0,3} partiu ',
+    ' leme(?: [a-z0-9]+){0,3} (?:emperrou|emperrado|emperrada|preso|presa|caiu|saiu|desprendeu|falhou|bloqueou|bloqueado|bloqueada|enroscou|enroscado|enroscada|sumiu) ',
+    ' helice(?: [a-z0-9]+){0,3} (?:enroscou|enroscada|enroscado|travou|travada|travado|soltou|solta|solto|quebrou|quebrada|quebrado|partiu|partida|partido|emperrou|emperrada|emperrado|bloqueou|bloqueada|bloqueado|perdeu|danificou|danificada|danificado|amassou|amassada|amassado|entortou|entortada|entortado) ',
+    ' (?:perdi|perdemos) (?:(?:totalmente|completamente|de vez|agora|todo|toda|todos|o|a|os|as|dois|duas|ambos) )*(?:leme|governo|controle do leme|comando do leme|controle do barco|controle da lancha|controle da embarcacao|direcao|timao|propulsao|motor|motores|helice|helices) ',
+    // o barco que não obedece ao leme, que não governa, que está sem controle; os dois motores que pararam; o vento ou a corrente que levam o barco às pedras
+    ' (?:nao|n) (?:obedece|responde|reage|atende) (?:mais )?(?:ao |a |o |no |na )?(?:leme|timao|direcao|governo) ',
+    ' (?:nao|n) (?:governa|governando|governou|esta governando) ',
+    ' (?:estamos|ficamos|barco|lancha|embarcacao|iate|bote|nos)(?: (?:esta|ta|ficou))? (?:totalmente |completamente )?(?:sem controle|fora de controle|descontrolad[oa]s?) (?!remoto|d[oa] (?:ar|tv|som))',
+    ' (?:os )?(?:dois|2|ambos os|ambos|todos os) motores (?:pararam|apagaram|morreram|falharam|travaram|pifaram) ',
+    ' (?:estamos|ficamos|estou|fiquei) derivando ',
+    ' (?:vento|corrente|correnteza|mare|mar|ondas?|deriva)(?: [a-z0-9]+){0,3} (?:levando|levou|jogando|jogou|empurrando|empurrou|arrastando|arrastou|joga|leva|empurra|arrasta) (?:(?:nos|a gente|o barco|a lancha|a embarcacao) )?(?:para|pra|contra) (?:as |a |os )?(?:pedras?|rochas?|costao|laje|lajes|recifes?|rebentacao|arrebentacao|baixios?) ',
+    // água que entra no presente («entra água pelo casco») e a baliza disparada pela frente do verbo («disparou a baliza», «acionei a baliza»)
+    ' entra agua (?:pel[oa]s?|por|no|na|em) (?:casco|barco|lancha|porao|cabine|fundo|quilha|popa|proa|costado|eixo|helice|leme|vigia|escotilha|janela|sala de maquinas|casa de maquinas|praca de maquinas|todo lado|todos os lados|tudo) ',
+    // 1b, quarta revisão. O corpo: quebrar, luxar, cortar, queimar, esmagar, prender («quebrou o braço», «cortou a mão feio», «queimou a mão no escapamento», «prendeu a mão
+    // no cabo»), o membro que fica quebrado, cortado ou queimado, e quem foi atingido («o cabo estourou e acertou alguém»)
+    ' (?:quebrou|quebrei|quebraram|fraturou|fraturei|luxou|luxei|deslocou|desloquei|cortou|cortei|cortaram|queimou|queimei|queimaram|esmagou|esmagaram|amassou|prendeu|arrancou) ' + POSSE + CORPO + ' ' + PECA,
+    ' ' + CORPO + '(?: (?:esta|estao|ta|tao|ficou|ficaram|foi|foram))? (?:quebrad[oa]s?|fraturad[oa]s?|luxad[oa]s?|deslocad[oa]s?|cortad[oa]s?|queimad[oa]s?|esmagad[oa]s?|prensad[oa]s?) ',
+    ' (?:acertou|atingiu|esmagou|prendeu|machucou) ' + POSSE + '(?:alguem|pessoa|tripulante|passageiro|marinheiro|crianca|homem|mulher|cara|filho|filha) ',
+    ' (?:me queimei|se cortou|me cortei) ',
+    // quem se engasga e quem não respira (o sujeito é pessoa: «o motor engasgou» e «o respiro do tanque não respira» são do motor)
+    ' ' + ELE + ' (?:(?:esta|estao|ta|tao|se) )*engasg(?:ad[oa]s?|ou|ando|aram) ',
+    ' ' + ELE + '(?: [a-z]+)? (?:nao|n) (?:(?:esta|estao|ta|tao|consegue|conseguem) )?(?:respira|respirando|respirar) ',
+    // combustível e gás: o tanque, a linha ou o vazamento por dentro («o tanque de diesel está vazando», «vazamento no tanque de diesel», «cheiro forte de gás»); o tanque
+    // de água doce que vaza não entra
+    ' tanque d[eo] (?:diesel|combustivel)(?: [a-z0-9]+){0,3} (?:vazando|vazou|vaza|furou|furado|furada|rachou|rachado|rachada|trincou|trincado|trincada|rompeu|rompido|rompida) ',
+    ' vazamento (?:no|na|nos|nas|do|da|dos|das|de|em)(?: [a-z0-9]+){0,3} (?:diesel|combustivel|gas|gasolina) ',
+    ' cheiro (?:(?:forte|muito|intenso|estranho|esquisito|ruim) )+(?:de |do |da )?(?:gas|diesel|combustivel|gasolina|queimado|fumaca) ',
+    // pedido de ajuda urgente («preciso de ajuda urgente», «preciso urgente de ajuda»)
+    ' (?:ajuda|socorro|auxilio|resgate)(?: [a-z]+){0,2} urgente ',
+    ' urgente(?: [a-z]+){0,2} (?:ajuda|socorro|auxilio|resgate) '
+  ];
+  var SOS_REGEX = SOS_REGEX_FONTES.map(function (f) { return new RegExp(f); });
+  // "a gente" é "nós", não a pessoa de "gente na água"/"gente cai": troca por "nos" antes de conferir
+  function emergencia(q) {
+    q = q.split(' a gente ').join(' nos ');
+    return has(q, SOS) || SOS_REGEX.some(function (r) { return r.test(q); }) || (has(q, ['fumaca']) && !has(q, ['escap'])); // fumaça no escapamento é do motor, não SOS
+  }
+  // Rota salvatagem (PROMPT §2.3): ' boia ' só sem as palavras de boia de sinalização (amarra, poita, canal, baliza, cardinal, luz) nem de boia de
+  // nível ou de âncora (revisão da 1b: a boia do porão, a do tanque e a de ancoragem não são salvatagem); "extintor" aqui sem fogo, fumaça nem
+  // incêndio (com eles a SOS já respondeu, acima). ' colete ' e ' balsa ' com espaços: "coletei os dados" e "o bálsamo" não são salvatagem.
+  var SALVATAGEM = [' colete ', ' coletes ', 'salva-vida', 'salva vida', ' balsa ', ' balsas ', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete', 'pirotecn', 'facho', 'salvatagem',
+    'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv', ' plb ', ' sart '];
+  var BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz', 'nivel', 'porao', 'bomba', 'tanque', 'vaso', 'sanitario', 'combustivel', 'sensor', 'chave', 'ancor', 'fundei'];
+  function salvatagem(q) { return has(q, SALVATAGEM) || (q.indexOf(' boia ') !== -1 && !has(q, BOIA_FORA)) || q.indexOf('extintor') !== -1; }
+  // EPIRB (rota epirb): a baliza que disparou e o disparador hidrostático são do EPIRB, local, nunca da IA (a pergunta do botão da G1 do
+  // certificado, "…disparador hidrostático", vai antes, para o docsvenc)
+  var EPIRB_PALAVRAS = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico'];
+  // «a baliza do barco disparou sozinha», «a baliza ativou», «a baliza foi acionada»: a baliza (o EPIRB) com até 3 palavras antes do verbo. «Baliza» sozinha é sinalização.
+  // A fonte é a mesma do gerador (confere.py: EPIRB_REGEX); o testes/cerebro.py compara.
+  var EPIRB_REGEX_FONTE = ' (?:baliza(?: [a-z0-9]+){0,3} (?:disparou|disparada|disparado|disparando|ativou|ativada|ativado|ativando|acionou|acionada|acionado|acionando)|(?:disparou|ativou|acionou|disparei|ativei|acionei|disparamos|ativamos|acionamos) (?:a |essa |aquela )?baliza) ';
+  var EPIRB_REGEX = new RegExp(EPIRB_REGEX_FONTE);
+  function epirbRelato(q) { return has(q, EPIRB_PALAVRAS) || EPIRB_REGEX.test(q); }
+  // O sistema fixo que disparou ou descarregou (1b, §6.6 do contrato): "sistema fixo", "descarga do sistema", "depois do disparo", "descarreg…",
+  // "depois da descarga", "disparou o sistema" e "sistema … disparou/disparo". Revisão da 1b: essas palavras sozinhas pegavam o alarme do porão,
+  // o Seakeeper, o arrefecimento, a descarga do vaso e "descarregar as compras", e mandavam desligar motores e gerador. Agora (1) "sistema fixo"
+  // vale sempre; (2) "o sistema disparou/descarregou", com a palavra colada ao "o sistema", é o fixo; (3) as demais só junto de uma âncora de
+  // combate a incêndio (extinção, casa ou praça de máquinas, compartimento ou acesso ao motor). Fora a eletricidade: a bateria
+  // que descarregou, o disjuntor do sistema elétrico que disparou, o carregador, o som e o plotter não são o Seafire.
+  var ELETRICO = ['bateria', 'carregador', 'pilha', 'celular', 'tensao', 'volt', 'eletric', 'disjuntor', 'inversor', 'tomada', 'amper', ' som ', 'audio', 'musica',
+    'bluetooth', 'plotter', 'radar', 'wifi', 'internet', 'climatiza', 'condicionado'];
+  // (incêndio, supressão e Seafire já têm rota própria antes, na route(): aqui só o que ainda precisa de âncora)
+  var FOGO_ANCORA = ['extin', 'maquinas', 'compartimento do motor', 'compartimento dos motores', 'compartimento de motor', 'acesso ao motor', 'abrir o motor', 'abrir o acesso'];
+  var FOGO_GATILHO = ['descarga do sistema', 'depois do disparo', 'descarreg', 'depois da descarga', 'disparou o sistema'];
+  var SISTEMA_SOZINHO = / o sistema (?:ja |todo |inteiro )?(?:disparou|disparado|descarregou|descarregado) /; // "o sistema…": "alarme de sistema disparou" e "o alarme do sistema disparou" não
+  var DISPARO_SISTEMA = / sistema(?: [a-z0-9]+){0,6} (?:disparou|disparo|disparar|disparado) /;
+  function seafireDisparo(q) {
+    if (q.indexOf('sistema fixo') !== -1) return true;
+    if (has(q, ELETRICO)) return false;
+    if (SISTEMA_SOZINHO.test(q)) return true;
+    return has(q, FOGO_ANCORA) && (has(q, FOGO_GATILHO) || DISPARO_SISTEMA.test(q));
+  }
   // Óleo: 1 = queda/alarme relatado (passo a passo); 2 = só pergunta de pressão (leitura); 0 = outro assunto.
   // Exige "óleo" na frase (nunca "pressão baixa" sozinha: barômetro, água, chuveiro). Conservador: pressão do óleo sem ser pergunta simples
   // (qual/como/normal/faixa…) já é relato → passo a passo. Porão/vazamento só saem daqui sem pressão/alarme/luz; gerador, só sem "motor".
@@ -199,15 +448,44 @@
 
   var P = D.protocolos || {};
   var ROTULO = P.rotulo || 'procedimento padrão — confirmar com o protocolo de bordo';
-  var MMSI = E.mmsi ? 'MMSI ' + E.mmsi + (E.mmsiNota ? ' (' + E.mmsiNota + ')' : '') : 'MMSI ' + SD;
+  // MMSI_RADIO (PROMPT §2.2): em todo texto de emergência e de rádio o MMSI é o da etiqueta do rádio (Licença de Estação); o número do
+  // cadastro do app (E.mmsi) só na Embarcação, nos Documentos, na F3 e no `## Embarcação` da ficha — lido na hora (mmsiNum), nunca na carga,
+  // porque o SOS carrega este arquivo. Indicativo: o da Licença de Estação, nunca gerado.
+  var MMSI_RADIO = P.mmsiRadio || 'MMSI do rádio de bordo (etiqueta / Licença de Estação)';
+  var INDICATIVO = P.indicativo || 'o da Licença de Estação (no rádio)';
+  function mmsiNum() { return E.mmsi ? 'MMSI ' + E.mmsi : 'MMSI ' + SD; }
+  // Os passos vêm do D.protocolos (fonte única do SOS, dos guias e dos cartões): mob, seafire.passos, epirb.passos, oleo. Nada de posição,
+  // rumo, SOG, ETA, pessoas a bordo do quadro, MMSI gerado, modelo, validade nem lugar de equipamento de salvatagem (trava 17).
+  var NOTA_ETIQUETA = (P.seafire && P.seafire.nota) || (P.epirb && P.epirb.nota) || 'modelo, validade e acionamento: veja a etiqueta do equipamento';
+  function passosDe(x) { return (x && x.passos) || []; }
+  function maius1(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function numerados(xs, ini) { return xs.map(function (t, i) { return ((ini || 1) + i) + '. ' + t; }).join('\n'); }
+  var MOB = P.mob || [], SEAFIRE_PASSOS = passosDe(P.seafire), EPIRB_PASSOS = passosDe(P.epirb);
   // Passos do SOS: resposta sos e, inteiros, no registro de diário que cita emergência. Chat nunca grava sozinho — só "registre no diário…".
-  // Posição do MAYDAY é a do plotter na hora da chamada — o GPS do snapshot é só o último fix.
-  var SOS_PASSOS = 'Ordem (' + ROTULO + '):\n1. VHF canal 16 · MAYDAY — nome ×3, ' + MMSI + ', posição lida no plotter, perigo, pessoas a bordo, auxílio\n2. Homem ao mar: grite e aponte, jogue a boia, marque MOB no plotter Garmin, volte com o motor em neutro perto da pessoa\n3. Incêndio · Seafire: ' + SD + ' — procedimento do sistema não carregado\n4. EPIRB: ' + SD + ' — modelo, localização e acionamento não carregados';
-  // Passos da pressão de óleo baixa: resposta oleo e, inteiros, no registro de diário que relata queda/alarme de pressão.
-  var OLEO_PASSOS = '1. Reduza para marcha lenta e observe se a pressão sobe.\n2. Compare BB e BE no mesmo giro — só um lado baixo aponta o motor.\n3. Com o motor parado: procure vazamento e confira o nível de óleo.\n4. Persistindo: desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.';
+  // Posição do MAYDAY é a do plotter na hora da chamada. Seafire e EPIRB: só o procedimento padrão, com a etiqueta do equipamento.
+  var SOS_PASSOS = 'Ordem (' + ROTULO + '):\n1. VHF canal 16 · MAYDAY — nome ×3, ' + MMSI_RADIO + ', posição lida no plotter, perigo, pessoas a bordo (conte agora), auxílio\n2. Homem ao mar: ' + MOB.join(' ') +
+    '\n3. Incêndio · Seafire: ' + [SEAFIRE_PASSOS[0], SEAFIRE_PASSOS[4]].filter(Boolean).join(' ') + '\n4. EPIRB: ' + (EPIRB_PASSOS[0] || '');
+  // O que a ficha da IA leva da emergência: a ordem e o MMSI do rádio, sem os passos (emergência não vai à IA; os passos estão nas respostas
+  // locais, na tela SOS e nos guias). Mantém a ficha dentro do teto de 9.800 letras do contrato (§6.1).
+  var SOS_FICHA = 'Ordem (' + ROTULO + '): 1. VHF canal 16 · MAYDAY com o ' + MMSI_RADIO + ' e a posição lida no plotter; 2. homem ao mar; 3. incêndio · Seafire; 4. EPIRB. Os passos estão nas respostas locais (sos, seafire, epirb), na tela SOS e nos guias; emergência não vai à IA.';
+  // Passos da pressão de óleo baixa: resposta oleo e, inteiros, no registro de diário que relata queda/alarme de pressão. Sem leitura do quadro.
+  var OLEO_PASSOS = numerados(P.oleo || []);
+  // O passo do relato (4ª revisão da 1b; PROMPT §2.2: o relato de água a bordo e do porão vai para `sos` COM o passo a passo): água entrando, porão cheio, casco aberto →
+  // protocolos.alagamento; abandono → protocolos.abandono. Texto fixo do gerador (sem nível, ciclo nem leitura), antes da ordem geral. A água em que a pessoa cai («caiu na água»)
+  // não é água a bordo; combustível ou gás no porão não manda ligar as bombas.
+  var AGUA_BORDO = / (?:alagad|alagand|alagament|inundad|inundand|inundac|afund|naufrag|rombo)| porao |(?:entrando|entrou|entra|entrada de|subindo|subiu|sobe|enchendo|encheu|fazendo|faz|fez|tomando|toma|tomou|pegando|puxando|cheio de|cheia de|vazando) (?:(?:muita|bastante|demais|mais) )*agua | agua (?:(?:esta|ta|vem|continua|segue) )?(?:entrando|entrou|entra|subindo|subiu|sobe|enchendo|encheu|vazando)|casco (?:esta |ta |ficou |foi )?(?:furad|rachad|trincad|rompid|abert|amassad|danificad)|(?:furou|furaram|rachou|trincou|rompeu) o casco /;
+  function sosEspecifico(q) {
+    var s = pad(q), out = [];
+    if (s.indexOf('abandon') !== -1 && P.abandono && P.abandono[0]) out.push(P.abandono[0]);
+    if (AGUA_BORDO.test(s) && !has(s, ['diesel', 'combustivel', 'gasolina', ' gas ', ' oleo']) && P.alagamento && P.alagamento[0]) out.push(P.alagamento[0]);
+    return out;
+  }
   // Base completa externa (NotebookLM) não configurada nesta embarcação: o fallback leva a pendência e FAQ.
   var BASE = null;
-  var GRAVAR_AGORA = 'Para gravar posição e hora: toque em DIÁRIO DE BORDO ou diga “registre posição e hora”.';
+  // Texto de emergência não manda gravar o resumo da telemetria (nada de posição, rumo nem velocidade do quadro): o relato vai em palavras, a posição se lê no plotter.
+  var GRAVAR_AGORA = 'Para registrar no diário: diga “registre no diário…” e o que aconteceu; a posição, leia no plotter.';
+  var LOCAL_PLACA = 'no local da placa de salvatagem e do plano de segurança de bordo — confira na saída';   // a frase da salvatagem (protocolos.salvatagem), sem lugar inventado
+  var LOCAL_PLANO = 'no local indicado no plano de segurança de bordo — confira na saída';
   function resumoAgora() {
     return SNAP.local + ' · ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + SNAP.motores + ' · gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h) · Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' · banco 24 V ' + nb(S.bat24, 2) + ' V · vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ') — snapshot' + DEMO_ + ' ' + SNAP.quando + '.';
   }
@@ -221,11 +499,24 @@
     });
     return { agora: C.metro(x), prox: prox };
   }
+  // Previsão de hoje do cabeçalho (capitao-clima.js: ECMWF via Open-Meteo, mundo real — nunca o snapshot), com a fonte e a hora da
+  // leitura (sem rede, a da cópia salva do dia). null = sem leitura de hoje neste aparelho (as telas de pergunta livre carregam o
+  // capitao-clima.js: Main, H2 e B3). O vento previsto é informação com fonte: o app não tem limite de vento para dizer se é
+  // seguro sair. Direção por extenso (o TTS lê "NE" como "né").
+  var RUMO_NOME = { N: 'norte', NE: 'nordeste', E: 'leste', SE: 'sudeste', S: 'sul', SW: 'sudoeste', W: 'oeste', NW: 'noroeste' };
+  function previsao() {
+    var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
+    if (!c || typeof c.max !== 'number' || typeof c.min !== 'number') return null;
+    var n0 = function (x) { return typeof x === 'number' && isFinite(x) ? String(Math.round(x)) : null; }, dr = RUMO_NOME[C.rumo ? C.rumo(c.dir) : ''] || '';
+    var vento = n0(c.vento) ? 'vento até ' + n0(c.vento) + ' nós' + (dr ? ' de ' + dr : '') + (n0(c.raj) ? ', rajadas até ' + n0(c.raj) + ' nós' + (c.rajModelo ? ' (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' : '') : ', rajadas ' + SD) : 'vento ' + SD;
+    return { temp: 'máx ' + n0(c.max) + '° · mín ' + n0(c.min) + '°', vento: vento, fonte: C.fonte ? C.fonte(c) : 'Open-Meteo' };
+  }
+  function windy() { var C = window.CapitaoClima; return { l: 'Abrir o windy.com', href: (C && C.WINDY) || 'https://www.windy.com/', ext: true }; }
 
   var ANSWERS = {
     // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
     // que soava como se a pergunta fosse ignorada — fala o que o Capitão faz.
-    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + ' · ' + (D.selo || ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
+    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + (D.selo ? ' · ' + D.selo : ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
     // Grava as palavras do usuário; sem texto (ou atalho DIÁRIO DE BORDO) grava o resumo da telemetria. commit:false (veio de link) não grava.
     diario: function (p, ctx, q) {
       var n = now(), grava = !ctx || ctx.commit !== false, nota = notaDoUsuario(q);
@@ -236,10 +527,16 @@
         if (grava) addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' });
         return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']])) };
       }
-      var t = resumoAgora();
       var al = junto && emergencia(pad(nota)), pr = junto && oleo(pad(nota)) === 1;
       var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
       var acoes = (al ? [['Abrir SOS', 'sos']] : []).concat(pr ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]);
+      if (al || pr) {
+        // «registre posição e hora, tem fogo no motor» (PROMPT §2.2, diário com alerta): a linha e a resposta NÃO usam o resumoAgora() (nada de coordenada, SOG, proa nem
+        // leitura do quadro): a hora da linha, «posição: ler no plotter» no lugar da posição pedida, e os passos
+        if (grava) addDiario({ sys: 'Diário', t: nota + ' · posição: ler no plotter', who: quem(), src: 'chat · voz/texto' });
+        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
+      }
+      var t = resumoAgora();
       if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + DEMO : 'atalho · telemetria' + DEMO });
       return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n' + (junto ? '“' + nota + '”\n' : '') + t + '\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário.\n' + (junto ? '“' + nota + '”\n' : '') + 'Resumo: ' + t + '\n' + como + ', ou toque no atalho DIÁRIO DE BORDO.') + passos, src: FT.tele + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
     },
@@ -248,13 +545,14 @@
       var ress = [];
       if (porao && porao.dn < 0) ress.push('(segurança): teste das bombas de porão e alarmes ' + prazoTxt(porao) + ' — acione cada bomba manualmente antes de largar.');
       at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });
-      ress.push('Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
-      return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]) };
+      var pv = previsao();
+      ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.' : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
+      return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
     destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + Math.floor(AUT.mn / 2) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: telemetria' + DEMO + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
     manutencao: function (p) {
       var at = atrasadas(), prox = agenda().filter(function (t) { return t.dn >= 0; }).slice(0, 3), oleoM = tarefa('motores-oleo');
-      return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(oleoM.horas.faltam) + ' h.' : '') + '\nFalta registrar: ' + (D.agendaFalta || []).join(' · ') + '.', src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
+      return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(oleoM.horas.faltam) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
     autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de 10 %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: telemetria' + DEMO + ' (taxa de combustível dos dois motores, ' + CON.periodo + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
     mare: function (p) {
@@ -263,13 +561,15 @@
       return { text: 'Maré agora ' + m.agora + ' em relação ao nível médio do mar (Balneário Camboriú).\nPróximas horas: ' + m.prox.join(' · ') + '.\nÉ modelo (≈ 8 km), não a tábua oficial da Marinha — não use para passar em canal raso. Corrente: ' + SD + '.', src: 'Fonte: Open-Meteo Marine (sea_level_height_msl) · posição de referência ' + ((D.posicaoRef && D.posicaoRef.fonte) || ''), actions: act(p, [['Clima', askHref(p, 'Clima')]]) };
     },
     clima: function (p) {
-      var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
-      return { text: (c ? 'Hoje em Balneário Camboriú: máx ' + Math.round(c.max) + '° · mín ' + Math.round(c.min) + '° (ECMWF via Open-Meteo).' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\nPrevisão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.', src: 'Fonte: Open-Meteo (ECMWF) · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) };
+      var pv = previsao();
+      return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
-    canal16: function (p) { return { text: 'VHF canal 16 (156,800 MHz) — socorro, urgência e chamada.\n' + MMSI + ' · indicativo ' + (E.indicativo || SD) + ' · rádios VHF 315 (fabricante ' + SD + ').\nRoteiro MAYDAY (' + ROTULO + '), só em perigo grave e iminente:\nMAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — ' + MMSI + ' — POSIÇÃO: LEIA NO PLOTTER AGORA (último fix ' + SNAP.pos + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ') — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal e MMSI informados pelo proprietário', actions: act(p, [['Abrir SOS', 'sos']]) }; },
-    checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência (precisa de AC).\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    canal16: function (p) {
+      return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\n' + (P.panpan || 'Urgência sem perigo de vida: PAN-PAN ×3.'), src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
+    },
+    checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
-    consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.', src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', ''), actions: act(p, [['Abastecimento', 'abast']]) }; },
+    consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', ''), actions: act(p, [['Abastecimento', 'abast']]) }; },
     tanques: function (p) { return { text: 'Tanques (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• água doce ' + nb(T.agua) + ' %\n• águas cinzas ' + nb(T.cinzas) + ' %\n• águas negras ' + nb(T.negras) + ' %\n• diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.', src: FT.tele + ' (diesel ' + (DI.hora || '') + ')', actions: act(p, [['Telemetria', 'console']]) }; },
     contatos: function (p) {
       var eq = D.equipe || {}, per = eq.perfis || [], ap = eq.apoio || [], f = loadEquipe().fones, cad = Object.keys(f).length;
@@ -296,26 +596,35 @@
     },
     posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · snapshot' + DEMO_ + ' ' + SNAP.quando + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
     docsvenc: function (p) {
-      var ds = (D.documentos || []), com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
+      // Documento ligado a um equipamento de segurança (o certificado do EPIRB): sem a data nem o D-n; a etiqueta do equipamento vale (1b, trava 17)
+      var seg = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };
+      var todos = (D.documentos || []), segDocs = todos.filter(seg), ds = todos.filter(function (d) { return !seg(d); });
+      var com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
       var vence = com.filter(function (d) { return d.dn <= 90; }), dia = com.filter(function (d) { return d.dn > 90; }), sem = ds.filter(function (d) { return d.st === SD; }), conf = ds.filter(function (d) { return /A CONF/.test(d.st); });
-      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
+      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
     },
     horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros (motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + '):\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (D-' + o.dn + ') ou ' + o.horas.limite + ' h — faltam ' + nb(o.horas.faltam) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (D-' + rv.dn + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
     motores: function (p) { var e = equip('motores'); return { text: 'Motores ' + (e && e.qtd ? e.qtd + ' × ' : '') + 'Volvo Penta' + (e && e.lados ? ' (' + e.lados + ')' : '') + ' · modelo ' + SD + '.\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarme.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h · troca de óleo ' + prazoTxt(tarefa('motores-oleo')) + ' ou 450 h.\nPartida, aquecimento e parada: ' + guia('g_motores') + '. Faixas oficiais: manual do fabricante — modelo ' + SD + '.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
-    estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\n• Só acelera com AC (gerador ou cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nTempo de aceleração e códigos de alarme: MANUAL NO DRIVE (modelo ' + SD + ').' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
+    estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\n• Funciona no banco de 12 V: acelera com o banco carregado (carregador ligado ao gerador ou ao cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nTempo de aceleração e códigos de alarme: MANUAL NO DRIVE (modelo ' + SD + ').' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
     climatizacao: function (p) { var f = tarefa('clima-filtro'); return { text: 'Climatização · fabricante e modelo ' + SD + '.\n' + (f ? 'Filtro de água salgada: limpeza ' + prazoTxt(f) + ' — e há fluxo fraco na cabine de proa desde 20/09 (diário).\n' : '') + 'Ligar: válvula de fundo aberta e filtro limpo → bomba de água salgada → controle da cabine.\nAlarme de fluxo: quase sempre falta de água salgada (filtro sujo, válvula fechada, bomba desligada).', src: 'Fonte: ' + guia('g_clima') + ' · ' + FT.agenda.replace('Fonte: ', '') + ' · ' + FT.diario.replace('Fonte: ', '') + ' 20/09', actions: act(p, [['Passo a passo', 'f5']]) }; },
-    eletronicos: function (p) { var c = tarefa('garmin-cartas'); return { text: 'Eletrônicos Garmin · áudio Fusion · rádios VHF 315 — modelos ' + SD + '.\n• Homem ao mar: função MOB do plotter Garmin marca a posição.\n• Piloto automático: em espera antes de manobrar na marina.\n• VHF: canal 16 em escuta; o DSC só identifica o barco com o MMSI programado.' + (c ? '\nCartas desatualizadas (diário 28/08) — atualização ' + prazoTxt(c) + '.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
+    eletronicos: function (p) { var c = tarefa('garmin-cartas'); return { text: [fabMod('eletronicos'), min1(fabMod('audio')), min1(fabMod('vhf'))].join(' · ') + '.\n• Homem ao mar: função MOB do plotter Garmin marca a posição.\n• Piloto automático: em espera antes de manobrar na marina.\n• VHF: canal 16 em escuta; o DSC só identifica o barco com o MMSI programado.' + (c ? '\nCartas desatualizadas (diário 28/08) — atualização ' + prazoTxt(c) + '.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
     audio: function (p) { return { text: 'Áudio Fusion · modelo ' + SD + '.\nParear: fonte Bluetooth no controle Fusion → aparelho visível → selecione o Fusion na lista de Bluetooth do celular. Volume ajustado por zona.', src: 'Fonte: ' + guia('g_eletronicos') + ' §6', actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
     dessalinizador: function (p) { return { text: SD + ' — dessalinizador não consta na lista de equipamentos.\nSe houver a bordo, envie a foto da etiqueta (modelo e número de série) para catalogar.', src: 'Fonte: Inventário de bordo' + DEMO + ' — equipamento não listado', actions: act(p, [['Enviar foto', A(p, 'home') + '#mode=foto']]) }; },
     eletrico: function (p) { var ser = D.serie24v || [], mn = Math.min.apply(null, ser.map(function (x) { return x.min; })), mx = Math.max.apply(null, ser.map(function (x) { return x.max; })), b = tarefa('baterias'); return { text: 'Banco 24 V: ' + nb(S.bat24, 2) + ' V (' + (G.estado ? 'gerador ' + G.estado : '') + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ')' + (ser.length ? ' · 7 dias entre ' + nb(mn) + ' e ' + nb(mx) + ' V' : '') + '.\nBanco 12 V: ' + nb(S.bat12, 2) + ' V.' + (b ? '\n' + b.t + ': ' + prazoTxt(b) + ' (' + b.quem + ').' : ''), src: FT.tele + ' · série 24 V · 7 dias · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Telemetria', 'console']]) }; },
-    epirb: function (p) { return { text: 'EPIRB: ' + SD + ' — modelo, localização a bordo, acionamento e validade da bateria não foram carregados.\nEnvie a foto da etiqueta e do certificado para completar o SOS.\n' + MMSI + '.', src: 'Fonte: Inventário de bordo' + DEMO + ' · ' + FT.proto.replace('Fonte: ', '') + ' (EPIRB: ' + SD + ')', actions: act(p, [['Abrir SOS', 'sos'], ['Documentos', 'docs']]) }; },
-    seafire: function (p) { return { text: 'Sistema de incêndio Seafire: ' + SD + ' — localização, acionamento automático ou manual e tempo de espera não foram carregados.\nEm incêndio agora: abra o SOS e chame no canal 16.\nEnvie o manual ou o protocolo de bordo do Seafire para completar o passo a passo.', src: 'Fonte: Inventário de bordo' + DEMO + ' · ' + FT.proto.replace('Fonte: ', '') + ' (Seafire: ' + SD + ')', actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    // epirb e seafire (trava 17): só o procedimento padrão do D.protocolos, com a etiqueta do equipamento; fabricante, modelo, validade e lugar a bordo
+    // não aparecem aqui (só em Equipamentos, Leme e Documentos). A 1ª linha é a instrução de segurança; a conversa toda é lida (FALA_INTEIRA).
+    epirb: function (p) { return { text: 'EPIRB — ' + min1(EPIRB_PASSOS[0] || '') + '\n' + numerados(EPIRB_PASSOS.slice(1), 2) + '\n' + maius1(NOTA_ETIQUETA) + ' (' + ROTULO + ').\nOnde fica: ' + LOCAL_PLACA + '.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    seafire: function (p) { return { text: 'Seafire — ' + (SEAFIRE_PASSOS[0] || '') + '\n' + numerados(SEAFIRE_PASSOS.slice(1), 2) + '\n' + maius1(NOTA_ETIQUETA) + ' (' + ROTULO + ').\nOnde fica: ' + LOCAL_PLANO + '.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    // Salvatagem (PROMPT §2.3): o texto fixo do D.protocolos, sem número de pessoas, sem lugar (paiol, armário, proa, popa) e sem IA
+    salvatagem: function (p) { return { fala: P.salvatagem || '', text: (P.salvatagem || '') + '\n(' + ROTULO + ')', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Checklist de saída', 'checklist']]) }; },
     // sos/óleo não gravam nada: pergunta informativa não vira linha permanente. Gravar = atalho DIÁRIO DE BORDO ou "registre posição e hora".
-    sos: function (p) { return { text: 'Emergência — abra o SOS. ' + SOS_PASSOS + '\n' + GRAVAR_AGORA, src: FT.proto + ' · Seafire e EPIRB: ' + SD, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
-    oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\nNo snapshot' + DEMO_ + ' de ' + SNAP.quando + ' os motores estão desligados; última leitura com motores ligados ' + (M.hora || SD) + ' (marcha lenta, neutro): óleo ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar, sem alarme.\nFaixa normal: manual do fabricante — modelo ' + SD + '.\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4 · ' + SNAP.fonte, actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
+    sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS.' + (esp.length ? '\n' + esp.join('\n') + '\n' : ' ') + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
+    oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4', actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
     oleoLeitura: function (p) { return { text: 'Motores desligados no snapshot' + DEMO_ + ' de ' + SNAP.quando + '. Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar · ' + (M.rpm ? M.rpm.join('/') : '—') + ' rpm em neutro · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · sem alarme.\nFaixa normal: manual Volvo Penta — modelo ' + SD + '.\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) }; },
     ancora: function (p) { return { text: 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.\n' + (S.estado || SD) + ' · ' + (S.local || SD) + ' · ' + SNAP.pos + ' · profundidade ' + nb(S.profundidade) + ' m (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nAlarme de âncora: ative no plotter e defina o raio conforme o cabo lançado e o espaço de giro.', src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
-    manual: function (p) { var g = D.guias || {}; return { text: 'Guias de bordo carregados' + DEMO + ' — orientação genérica, não substituem o manual do fabricante:\n' + ['g_gerador', 'g_seakeeper', 'g_clima', 'g_eletronicos', 'g_motores', 'checklist'].map(function (k) { return '• ' + (g[k] || SD); }).join('\n') + '\nManuais dos fabricantes: ' + SD + ' (modelos não informados). Seafire e EPIRB: ' + SD + '.', src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
+    // sai a lista fixa de 6 com "modelos não informados" e "Seafire e EPIRB: SEM DADOS", que a ficha mandava ao lado do ## Equipamentos.
+    manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + DEMO + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     diarioLer: function (p) {
       var mine = loadDiario(), fonte = diarioFonte();
       var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
@@ -359,6 +668,13 @@
     };
   });
 
+  // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
+  // Revisão 7 do C5: "esgoto" saiu. "Bomba de esgoto" também é a de esgotamento do porão em português de bordo, e "a bomba de esgoto não
+  // para" é relato de água a bordo: tem de seguir a rota 'porao' (local, sem IA), não ir à nuvem. "Água doce" saiu por ser código morto
+  // (a rota 'tanques', mais acima, já pega a pergunta). Quem fica tem guia na base (por si ou por sinônimo: impelidor = impeller/rotor) ou é
+  // outra bomba sem relação com o porão (circulação, resfriamento, pressurização): essas vão ao guia ou à IA, e não à resposta do porão.
+  var OUTRA_BOMBA = ['salgada', 'rotor', 'impeller', 'impelidor', 'circulacao', 'arrefecimento', 'refrigeracao', 'resfriamento', 'climatiza', 'condicionado', 'gerador', ' onan ',
+    'motor', 'seakeeper', 'estabilizador', 'giroscop', 'piloto', 'hidraulic', 'dessaliniz', 'lavagem', 'pressuriz', 'oleo', 'pressao'];
   var EQUIP = ['seakeeper', 'estabilizador', 'climatiza', 'ar condicionado', 'ar-condicionado', 'gerador', ' onan ', 'piloto', 'plotter', 'radar', 'garmin', ' vhf', ' ais ', 'epirb', 'fusion', 'audio', 'dessaliniz', 'bomba', 'porao', 'casco', 'anodo', 'zinco', 'bateria', 'tensao', 'tensoes', 'seafire', 'volvo'];
   // "diagnóstico", "status da IA", "teste da IA", "a IA está ligada?" — a frase inteira, para não pegar pergunta comum.
   var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda |rode |mostrar |mostra |mostre |me mostra |me mostre |me da |ver )?(?:o |um )?diagnostico(?: da ia| do app| do aplicativo| do capitao| completo)?|(?:qual e |qual )?(?:o )?(?:status|estado) (?:da ia|do app|do aplicativo)|teste da ia|testar a ia|testa a ia|teste a ia|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:(?:esta|ta) )?(?:ligada|funcionando|ativa|ativada|on)|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:nao )?(?:(?:esta|ta) )?(?:funciona|funcionando|responde|respondendo)) $/;
@@ -372,6 +688,14 @@
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
     if (ol) return ol === 1 ? 'oleo' : 'oleoLeitura';
+    // "Situação e vencimento do documento: <nome>" é a pergunta do botão "Perguntar sobre" da G1 (web e app): papelada, seja qual for o nome.
+    // Com o doc-epirb (C7, "Certificado do EPIRB…") ela caía na rota `epirb` (a resposta do procedimento e, depois da 1b, a que liga a
+    // conversa em emergência por 15 min: um toque na papelada abriria o modo emergência). Vem depois da emergência e do óleo (segurança
+    // acima de tudo) e antes de qualquer rota de assunto. Pergunta digitada com "EPIRB" segue a rota do EPIRB.
+    if (/^ situacao e vencimento do documento /.test(q)) return 'docsvenc';
+    // Salvatagem (PROMPT §2.3): colete, balsa, boia, sinalizador, extintor sem fogo… logo depois da emergência e do óleo, antes das rotas de
+    // assunto (epirb, seafire, canal16): resposta fixa, local, sem número de pessoas e sem lugar a bordo
+    if (salvatagem(q)) return 'salvatagem';
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     if (has(q, ['telemetria', 'leituras', 'sensores', 'como esta o barco', 'estado do barco', 'status do barco'])) return 'telemetria';
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
@@ -389,13 +713,20 @@
     if (has(q, ['tanque', 'agua doce', 'cinzas', 'negras'])) return 'tanques';
     // "próxima revisão" sem equipamento = motores; com equipamento, a rota dele (Seakeeper, climatização, gerador…)
     if (has(q, ['horimetro', 'horas de motor', 'horas do motor', 'horas dos motores']) || (has(q, ['proxima revisao']) && !has(q, EQUIP))) return 'horimetros';
-    if (has(q, ['epirb', 'radiobaliza'])) return 'epirb';
-    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'extintor', 'sistema de incendio'])) return 'seafire';
+    if (epirbRelato(q)) return 'epirb';
+    // "supressão" (PROMPT §2.3): é o nome do Seafire nos dados ("sistema fixo de supressão", sem "incêndio", que abriria o SOS). 1b: o sistema
+    // fixo que disparou ou descarregou também é do Seafire (o "não abra o acesso ao motor" e o desligamento são os passos de protocolos.seafire);
+    // "extintor" saiu daqui para a salvatagem (sem fogo) ou para a SOS (com fogo)
+    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual']) || seafireDisparo(q)) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
     if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
     if (has(q, ['contato', 'telefone', 'equipe', 'oficina', 'quem chamar', 'tecnico de bordo', 'marina da base'])) return 'contatos';
-    if (has(q, ['porao', 'bomba'])) return 'porao';
+    // "bomba" sozinha é a de porão. Com o nome de outra bomba (água salgada, rotor, impeller, climatização, gerador, motor, estabilizador…) a
+    // pergunta segue a rota do outro assunto ou o guia dele: "como trocar o rotor da bomba de água salgada" é o g_motores §7, e a resposta
+    // pronta do porão ("Teste de bombas de porão e alarmes… SEM LEITURA") não responde. (Revisão 6 do C5: o trechoServe barra o guia de outro
+    // equipamento quando a chave é 'porao'; antes do C5, e na revisão 4, a pergunta ia ao guia certo.)
+    if (has(q, ['porao']) || (has(q, ['bomba']) && !has(q, OUTRA_BOMBA))) return 'porao';
     if (has(q, ['gerador', ' onan '])) return 'gerador';
     if (has(q, ['quantas horas'])) return 'horimetros';
     if (has(q, ['estabilizador', 'seakeeper'])) return 'estabilizador';
@@ -412,23 +743,35 @@
       if (has(q, ['casco', 'anodo', 'zinco'])) return 'manutencao';
       if (has(q, ['bateria', 'tensao', 'tensoes'])) return 'eletrico';
     }
+    // "bateria de partida" é o banco de baterias (g_eletrico §1), não a partida do motor (revisão 6 do C5: caía na resposta pronta dos motores)
+    if (has(q, ['bateria']) && has(q, ['partida']) && !has(q, ['motor', 'volvo', 'penta'])) return 'eletrico';
     if (has(q, ['motor', 'partida', 'volvo', 'penta', ' revisao'])) return 'motores';
     if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
     if (has(q, ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'])) return 'posicao';
+    // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?", "previsão de rajada"),
+    // e depois das rotas de equipamento. "Hoje"/"agora" sozinhos não bastam: relato ("pegamos uma rajada agora e o barco adernou",
+    // "a rajada de hoje arrancou o toldo", "a âncora garrou com a rajada"), pessoa em risco e limite do barco seguem o equipamento ou a IA.
+    if (has(q, [' rajada']) && (RAJADA_SO.test(q) || has(q, ['previs', 'vai ter rajada', 'tem rajada', ' ha rajada', 'havera rajada', 'como estao as rajadas', 'como esta a rajada', 'como vao estar as rajadas']))
+      && !has(q, RAJADA_RELATO)) return 'clima';
     if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce']) || SOBRE.test(q)) return 'saudacao';
     return 'fallback';
   }
   // Pergunta sobre o próprio Capitão IA, com os jeitos comuns de digitar e falar: "Oque você faz?", "o que vc sabe", "quem é vc",
   // "como você funciona", "pra que serve".
   var SOBRE = / (?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu) (?:faz|sabe|pode|consegue|responde)| quem (?:e|eh) (?:voce|vc|tu) | quem (?:voce|vc) e | como (?:voce|vc) funciona| como (?:funciona|uso|usar) (?:o |este |esse )?(?:app|aplicativo|capitao)| (?:para|pra) que (?:voce |vc )?serve/;
+  // Só a palavra: "rajada?", "e as rajadas?", "rajada máxima".
+  var RAJADA_SO = /^ (?:e )?(?:as? )?rajadas?(?: maximas?)? $/;
+  // Relato, pessoa em risco ou limite do barco junto de "rajada": nunca a previsão do dia.
+  var RAJADA_RELATO = ['aguent', 'suport', 'resist', 'limite', 'derrub', 'quebr', 'rasg', 'arrebent', 'arranc', 'voou', 'apag', 'deslig', 'virou',
+    'adern', 'caiu', 'feri', 'machuc', 'pegamos', 'pegou', 'bateu', 'jogou', 'garr', 'alguem', 'tripulante', 'pessoa', 'o que faco', 'entrando'];
 
   var CANON = {}; ALL.forEach(function (x) { CANON[x.id] = norm(x.q).trim(); });
 
   // ——— Base de conhecimento de bordo (base-conhecimento.json) ———
   // Trechos dos guias de bordo (hoje, DEMO). Quando a resposta pronta não tem o dado, o chat e a voz buscam aqui
   // (BM25 com sinônimos PT/EN) e respondem com o trecho e a fonte. Carrega em segundo plano; funciona offline (cache do SW).
-  var KB = { docs: null, carregando: false, df: {}, media: 1 };
+  var KB = { docs: null, carregando: false, df: {}, media: 1, nomes: {} };
   var PARADAS = ' a o e as os um uma uns umas de da do das dos em no na nos nas por para pra com sem se que qual quais quando como onde quanto quantos quantas e ou ao aos a is the of to and in on for with is are be it this that from at by an or eu voce vc me meu minha tem ter tenho ha esta estao fica ser sao era foi faz fazer posso pode sobre mais muito barco embarcacao capitao demo nao isso aqui registre registra registrar anote anota anotar grave gravar diario '.split(' ').reduce(function (m, w) { if (w) m[w] = 1; return m; }, {});
   var SINONIMOS = {
     gerador: ['onan', 'generator', 'genset'], estabilizador: ['seakeeper', 'gyro', 'giroscopio', 'stabilizer', 'volante'], giroscopio: ['seakeeper', 'gyro', 'estabilizador'],
@@ -441,27 +784,86 @@
     radar: ['garmin'], plotter: ['garmin', 'chartplotter'], som: ['fusion', 'audio'], audio: ['fusion', 'som'], radio: ['vhf'], vhf: ['radio', 'dsc'], ligar: ['partida', 'start', 'ligue'],
     partida: ['ligar', 'start'], desligar: ['parada', 'stop', 'parar', 'desligue'], manutencao: ['maintenance', 'revisao', 'agenda'], revisao: ['manutencao', 'service'], limpeza: ['limpe', 'cleaning'],
     capacidade: ['capacity', 'litros', 'volume'], superaquecer: ['temperatura', 'overheat', 'arrefecimento'], superaquecimento: ['temperatura', 'overheat', 'arrefecimento'], esquentando: ['temperatura', 'arrefecimento'],
-    parear: ['emparelhar', 'pairing', 'conectar', 'bluetooth'], emparelhar: ['parear', 'bluetooth'], alarm: ['alarme'], lubrificante: ['oil', 'oleo'], tanque: ['tank'], mob: ['homem', 'mar'], homem: ['mob']
+    parear: ['emparelhar', 'pairing', 'conectar', 'bluetooth'], emparelhar: ['parear', 'bluetooth'], alarm: ['alarme'], lubrificante: ['oil', 'oleo'], tanque: ['tank'], mob: ['homem', 'mar'], homem: ['mob'],
+    // Revisão 4 do C5: "quando trocar o óleo do motor?" achava só o §4 (pressão de óleo baixa) e não a agenda "Troca de óleo e filtros" (§7);
+    // "botão distress" é o DSC do rádio e "o sistema descarregou" é o §3 "Depois da descarga" (a identidade do trecho de segurança,
+    // abaixo, é o título dele). As chaves são a raiz() da palavra: distres = raiz('distress').
+    trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga'],
+    // 1b (PROMPT §2.3): "baliza" é o EPIRB e "testar a baliza" é o teste dele (o §2 do g_epirb traz «teste» e «baliza»)
+    baliza: ['epirb', 'radiobaliza']
   };
+  // "testar" é "teste" só junto de baliza/EPIRB (o g_epirb §2 traz «teste» e «baliza»). Em geral não: "como testar as bombas de porão" voltava do g_porao §3
+  // à resposta pronta do porão, local, e passou a ir à IA (revisão da 1b).
+  var SINONIMOS_BALIZA = { testar: ['teste', 'autoteste'] };
+  var BALIZA_RAIZES = {}; ['baliza', 'epirb', 'radiobaliza'].forEach(function (w) { BALIZA_RAIZES[raiz(w)] = 1; });
+  // Baliza de sinalização não é o EPIRB (revisão da 1b, 4ª): com «canal», «cardinal», «lateral», «farol», «luz», «barra», «entrada», «piscando» ou «boia» na pergunta e sem palavra que
+  // só o EPIRB tem (epirb, radiobaliza, autoteste, hidrostático, 406), o guia do EPIRB sai da busca. Sem isto, «por que a baliza do canal está piscando?» devolvia o «Disparo por engano:
+  // desligue e avise no canal 16» (o sinônimo baliza→epirb e o «canal» fechavam os 60 %) e, por ser trecho de segurança, barrava a IA, que sabe de balizamento.
+  var RAIZ_BALIZA = raiz('baliza');
+  var SINAL_RAIZES = {}; ['canal', 'cardinal', 'lateral', 'farol', 'luz', 'barra', 'entrada', 'piscando', 'boia', 'boias', 'balizamento', 'balizar'].forEach(function (w) { SINAL_RAIZES[raiz(w)] = 1; });
+  var EPIRB_SO = {}; ['epirb', 'radiobaliza', 'autoteste', 'hidrostatico', '406'].forEach(function (w) { EPIRB_SO[raiz(w)] = 1; });
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
+  // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
+  // as demais palavras de até 2 letras seguem fora.
+  // "ar condicionado" vale pela palavra "condicionado" (sinônimo de climatização): o "ar" sozinho puxaria o §4 "Fluxo de ar fraco".
   function tokens(t) {
-    return norm(t).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && !PARADAS[w] && (w.length > 2 || /\d/.test(w)); }).map(raiz);
+    return norm(t).replace(/\bar[\s-]+condicionado\b/g, 'condicionado').replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && !PARADAS[w] && (w.length > 2 || w === 'ar' || /\d/.test(w)); }).map(raiz);
   }
+  // Frases fixas que ficam no texto do trecho mas não entram no índice (revisão 3 do C5): o rótulo do procedimento padrão e a
+  // nota da etiqueta (CONTRATO §1.5), no fim de todo trecho de g_seafire, g_epirb, Salvatagem e protocolo, e o "do equipamento"
+  // depois de "etiqueta" (o equipamento do trecho já está na fonte). Repetidas em trechos curtos, punham o g_epirb §4 no topo de
+  // "quais equipamentos tem a bordo?" e de "modelo dos equipamentos", e o trecho de segurança do topo barrava a IA.
+  // (NOTA_ETIQUETA vem do D.protocolos, acima: o SOS carrega este arquivo e não lê o D.equipamentos; o gerador prende as duas notas iguais.)
+  var FORA_DO_INDICE = [ROTULO, NOTA_ETIQUETA].map(function (f) { return norm(f); });
+  function indexavel(t) {
+    t = norm(t);
+    FORA_DO_INDICE.forEach(function (f) { t = t.split(f).join(' '); });
+    return t.replace(/\betiqueta do equipamento\b/g, 'etiqueta');
+  }
+  // Identidade do trecho de segurança (revisão 4 do C5): as palavras da fonte, do equipamento e do título da seção, menos as que só
+  // dizem "guia", "protocolo", "sistema" ou "depois" ("sistema fixo" pesa pelo "fixo"; "como ligar o sistema de ventilação" não é o
+  // Seafire). O trecho de segurança (g_seafire, g_epirb, protocolo, §4 dos motores e do porão…) só entra na busca se a pergunta nomeia
+  // o assunto dele. Sem isso, os passos dele (desligue motores e gerador, corte a ventilação, não abra o acesso ao motor, depois da
+  // descarga) casavam perguntas comuns ("como desligar a ventilação", "como religar o gerador depois de desligar"), mostravam o
+  // procedimento de incêndio e, por ser de segurança, barravam a IA (pedeIA).
+  // Palavras de acionamento (revisão 5 do C5): o trecho do protocolo que descreve uma situação (homem ao mar, pane) também é nomeado pelas
+  // palavras com que a pessoa conta essa situação e que não estão no título ("caiu", "sem governo"); o gerador as põe em `ident`.
+  // Revisão 6 do C5: "caiu" é o uso comum para disjuntor, energia e sinal ("o plotter caiu, como resolver" devolvia o protocolo de homem
+  // ao mar, sem IA). O `ident` que conta uma pessoa em risco só vale junto de uma palavra de pessoa (`identCom`: pessoa, quem, alguém,
+  // homem, tripulante…); sozinho, "caiu" não nomeia o trecho.
+  // "manual" (título "Disparo manual") e "mar" ("Homem ao mar") são palavras comuns demais para nomear: "onde fica o manual do motor"
+  // devolvia o disparo manual do Seafire e "tem vista para o mar?", o homem ao mar. "disparo" e "homem" continuam nomeando; "pessoa ao
+  // mar" é o `ident` do protocolo com `identCom`.
+  // Revisão 7 do C5: a identidade depende do guia. Num guia TODO de segurança (g_seafire, g_epirb, protocolo: todo trecho da fonte tem
+  // `seguranca`) o equipamento é o assunto, e fonte, equip e título nomeiam o trecho. Num guia MISTO (o §4 dos motores e do porão, o §1 e o
+  // §5 dos eletrônicos, o §2 do AIS, o checklist de saída) a seção de segurança é uma entre várias: o nome do equipamento não a nomeia, só o
+  // título dela, sem o nome do equipamento. Antes, "onde fica o plotter", "como ver o radar" e "como ver o garmin" (o equip do g_eletronicos
+  // traz Garmin, Fusion e Icom) devolviam o §1 "Plotter: homem ao mar", e "onde fica o motor", o §4 da pressão de óleo, com `seguranca`:
+  // trecho de segurança no topo barra a IA, e a fala lê o trecho inteiro.
+  var IDENT_GENERICAS = {}; tokens('guia bordo depois caso antes sistema procedimento padrao confirmar protocolo emergencia manual mar').forEach(function (w) { IDENT_GENERICAS[w] = 1; });
   function carregaBase() {
     if (KB.docs || KB.carregando || !window.fetch) return;
     KB.carregando = true;
     fetch('./base-conhecimento.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
       var lista = j && j.trechos; if (!lista || !lista.length) return;
-      var soma = 0, df = {};
+      var soma = 0, df = {}, nomes = {}, todoSeguro = {};
+      lista.forEach(function (d) { if (todoSeguro[d.fonte] !== 0) todoSeguro[d.fonte] = d.seguranca ? 1 : 0; });
       lista.forEach(function (d) {
-        var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + d.texto + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
+        var sec = d.secao || '', tf = {}, tk = tokens(sec + ' ' + sec + ' ' + sec + ' ' + indexavel(d.texto) + ' ' + (d.fonte || '') + ' ' + (d.equip || ''));
         d._lista = /invent[aá]rio|cat[aá]logo|[íi]ndice/i.test(d.fonte || '');
+        d._eq = {}; tokens((d.fonte || '') + ' ' + (d.equip || '')).forEach(function (w) { if (!IDENT_GENERICAS[w] && !/^\d/.test(w)) { d._eq[w] = 1; nomes[w] = 1; } });
+        d._id = {};
+        if (todoSeguro[d.fonte]) tokens((d.fonte || '') + ' ' + (d.equip || '') + ' ' + sec).forEach(function (w) { if (!IDENT_GENERICAS[w]) d._id[w] = 1; });
+        else tokens(sec).forEach(function (w) { if (!IDENT_GENERICAS[w] && !d._eq[w]) d._id[w] = 1; });
+        // `ident` = palavras de acionamento (valem mesmo as genéricas, como "mar" em "pessoa ao mar"); com `identCom`, só junto de uma delas na pergunta
+        d._ia = {}; tokens(d.ident || '').forEach(function (w) { d._ia[w] = 1; });
+        d._ic = null; if (d.identCom) { d._ic = {}; tokens(d.identCom).forEach(function (w) { d._ic[w] = 1; }); }
         d._en = (' ' + d.texto.toLowerCase() + ' ').split(/\b(?:the|and|with|to|of|is|are|your|from)\b/).length > 6;
         tk.forEach(function (w) { tf[w] = (tf[w] || 0) + 1; });
         Object.keys(tf).forEach(function (w) { df[w] = (df[w] || 0) + 1; });
         d._tf = tf; d._n = tk.length; soma += tk.length;
       });
-      KB.df = df; KB.media = soma / lista.length; KB.docs = lista;
+      KB.df = df; KB.media = soma / lista.length; KB.nomes = nomes; KB.docs = lista;
     }).catch(function () {}).then(function () { KB.carregando = false; });
   }
   // Devolve até n trechos { d, nota } ou [] se nada for relevante o bastante.
@@ -471,10 +873,13 @@
     var qs = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k; });
     if (!qs.length) return [];
     // cada palavra da pergunta vira um grupo (ela + sinônimos); o trecho precisa cobrir a maioria dos grupos
-    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; (SINONIMOS[w] || []).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
+    var daBaliza = qs.some(function (w) { return BALIZA_RAIZES[w]; });
+    var sinalizacao = daBaliza && qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; }), fonteEpirb = guia('g_epirb');
+    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; ((sinalizacao && w === RAIZ_BALIZA) ? [] : (SINONIMOS[w] || (daBaliza && SINONIMOS_BALIZA[w]) || [])).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
     var N = KB.docs.length, k1 = 1.2, b = 0.75, res = [], proc = PROCEDIMENTO.test(' ' + norm(q) + ' ');
     KB.docs.forEach(function (d) {
-      var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0;
+      if (sinalizacao && d.fonte === fonteEpirb) return; // baliza de sinalização: o guia do EPIRB não responde (e «baliza» não vira «epirb», abaixo)
+      var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0, nomeia = !d.seguranca, aciona = false;
       grupos.forEach(function (g) {
         var melhor = 0;
         for (var w in g) {
@@ -482,9 +887,14 @@
           var idf = Math.log(1 + (N - KB.df[w] + 0.5) / (KB.df[w] + 0.5));
           melhor = Math.max(melhor, g[w] * idf * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d._n / KB.media)));
           if (secao.indexOf(' ' + w + ' ') !== -1) naSecao++;
+          if (d._id[w]) nomeia = true;
+          if (d._ia[w]) aciona = true;
         }
         if (melhor > 0) { bateu++; nota += melhor; }
       });
+      // palavra de acionamento ("caiu", "pane"): nomeia o trecho; se ele pede uma palavra de pessoa, a pergunta tem de trazê-la
+      if (aciona && (!d._ic || qs.some(function (w) { return d._ic[w]; }))) nomeia = true;
+      if (!nomeia) return; // trecho de segurança que a pergunta não nomeia (identidade, acima)
       if (naSecao >= grupos.length) nota *= 1.6; // o título da seção cobre a pergunta inteira
       if (d._lista && proc) nota *= 0.45;
       if (nota > 0 && bateu >= Math.min(2, grupos.length) && bateu >= Math.ceil(grupos.length * 0.6)) res.push({ d: d, nota: nota });
@@ -499,13 +909,52 @@
     var c = t.slice(0, max), m = c.match(/^[\s\S]*[.!?;](?=\s)/);
     return (m && m[0].length > max * 0.5 ? m[0] : c.slice(0, c.lastIndexOf(' ')) + '…');
   }
+  var MAX_SEGURANCA = 1500;
   var GENERICAS = { gerador: 1, motores: 1, audio: 1, estabilizador: 1, eletronicos: 1, climatizacao: 1, dessalinizador: 1, eletrico: 1, porao: 1, ancora: 1, manual: 1, clima: 0 };
   var ESPECIFICA = /\b(como|trocar|troca|substitu\w*|parear|pareamento|conectar|codigo|codigos|alarme|alarmes|erro|falha|falhas|defeito|superaquec\w*|oleo|filtro|impeller|impelidor|rotor|capacidade|litros|pressao|temperatura|onde fica|localiza\w*|procedimento|passo|reset\w*|calibr\w*|configur\w*|limp\w*|intervalo|torque|especifica\w*|viscosidade|bluetooth|dsc|mob|zinco|anodo|fusivel|disjuntor|fluxo)\b/;
-  function respostaBase(q, p) {
+  // Resposta pronta de equipamento × trecho do guia (revisão 5 do C5). A resposta pronta (GENERICAS) só cede ao trecho do topo quando ele é
+  // do assunto perguntado. Com os 91 trechos, "como ligar o plotter" trazia o "Ligar e transmitir" do radar ("ligue o radar pelo plotter"),
+  // "como ligar o sistema de som" o §1 dos bancos de bateria ("sistema" e "ligar", por sinônimo de "partida") e "como funciona o sistema
+  // elétrico" o §3 de verificação. Três condições:
+  //  (1) o guia é um dos do equipamento da resposta (FAMILIA; sem entrada, qualquer guia);
+  //  (2) se a pergunta diz o nome de algum equipamento (palavra exata da fonte ou do equip de algum trecho: "plotter" não vale por
+  //      "garmin"), o trecho é de um equipamento que ela nomeia (na fonte, no equip ou no título da seção);
+  //  (3) a pergunta traz algo além do nome do equipamento: uma palavra, ou sinônimo, que está no título ou no texto ("funciona" só vale
+  //      se o título do trecho for o funcionamento).
+  // Vale o 1º dos 3 trechos da busca que passa nas três; nenhum passa, fica a resposta pronta, como antes do C5. O trecho de segurança que
+  // abre a busca (a pergunta o nomeia) não passa por aqui, e a pergunta sem resposta pronta (fallback) também não.
+  // (a âncora também é do g_eletronicos: o alarme de âncora está no plotter, §3)
+  var FAMILIA = { gerador: ['g_gerador'], motores: ['g_motores'], estabilizador: ['g_seakeeper'], climatizacao: ['g_clima'], dessalinizador: ['g_dessalinizador'],
+    eletrico: ['g_eletrico'], porao: ['g_porao'], ancora: ['g_ancora', 'g_eletronicos'], audio: ['g_eletronicos'], eletronicos: ['g_eletronicos', 'g_piloto', 'g_radar', 'g_ais'] };
+  var SEM_ASSUNTO = {}; tokens('funciona funcionamento').forEach(function (w) { SEM_ASSUNTO[w] = 1; });
+  function trechoServe(key, q, d) {
+    var fam = FAMILIA[key];
+    if (fam && !fam.some(function (g) { return d.fonte === guia(g); })) return false;
+    var ws = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !IDENT_GENERICAS[w]; });
+    var nomes = ws.filter(function (w) { return KB.nomes[w]; });
+    var secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '); // o título também nomeia ("Piloto automático" no g_eletronicos §2)
+    if (nomes.length && !nomes.some(function (w) { return d._eq[w] || secao.indexOf(' ' + w + ' ') !== -1; })) return false;
+    // palavra que é nome do equipamento do trecho (ela ou um sinônimo dela está na fonte ou no equip: "ar" e "condicionado" são a
+    // "climatização"; "som" é o "Fusion") não conta como assunto
+    var nome = function (w) { return d._eq[w] || (SINONIMOS[w] || []).some(function (x) { return d._eq[raiz(x)]; }); };
+    // "funciona" só conta como assunto se o título do trecho for o funcionamento ("Funcionamento" do porão); as outras, no título ou no texto
+    return ws.some(function (w) {
+      if (nome(w)) return false;
+      if (SEM_ASSUNTO[w]) return secao.indexOf(' funcionamento ') !== -1;
+      return d._tf[w] || (SINONIMOS[w] || []).some(function (x) { return d._tf[raiz(x)]; });
+    });
+  }
+  function respostaBase(q, p, key) {
     var hits = buscaBase(q, 3); if (!hits.length) return null;
-    var h = hits[0].d, outros = hits.slice(1).filter(function (x) { return x.d.fonte !== h.fonte || x.d.secao !== h.secao; });
-    var text = trechoCurto(h.texto) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
-    return { text: text, src: 'Fonte: ' + citaFonte(h) + ' — base de conhecimento de bordo' + (h.equip ? ' · ' + h.equip : ''), actions: act(p, [['FAQ de bordo', 'faq']]), ref: citaFonte(h), ingles: !!h._en };
+    // com resposta pronta (key), vale o 1º dos 3 trechos que serve ao assunto; o de segurança do topo (a pergunta o nomeia) passa direto
+    var topo = !key || hits[0].d.seguranca ? hits[0] : hits.filter(function (x) { return trechoServe(key, q, x.d); })[0];
+    if (!topo) return null;
+    var h = topo.d, outros = hits.filter(function (x) { return x !== topo && (x.d.fonte !== h.fonte || x.d.secao !== h.secao); });
+    // Trecho de segurança sai inteiro, com o rótulo do procedimento padrão e a nota da etiqueta no fim (CONTRATO §1.5): o corte de
+    // 480 letras tirava os dois do §1 e do protocolo do Seafire (560) e a nota do §3 (492). O gerador limita esses trechos a 800.
+    var text = trechoCurto(h.texto, h.seguranca ? MAX_SEGURANCA : 480) + (outros.length ? '\nVeja também: ' + outros.map(function (x) { return citaFonte(x.d); }).join(' · ') : '');
+    // seguranca: o trecho do topo é de segurança (EPIRB, Seafire, salvatagem, protocolo…; o gerador marca) — o pedeIA não chama a IA
+    return { text: text, src: 'Fonte: ' + citaFonte(h) + ' — base de conhecimento de bordo' + (h.equip ? ' · ' + h.equip : ''), actions: act(p, [['FAQ de bordo', 'faq']]), ref: citaFonte(h), ingles: !!h._en, seguranca: !!h.seguranca };
   }
   if (window.requestIdleCallback) requestIdleCallback(carregaBase, { timeout: 4000 }); else setTimeout(carregaBase, 1500);
 
@@ -519,7 +968,7 @@
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
-    if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
+    if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     a.key = key;
     return a;
   }
@@ -529,15 +978,22 @@
   // próprio app que vai além do cumprimento. Emergência, óleo, registro no diário e respostas prontas ficam 100% no aparelho:
   // rápidas, offline e com a fonte. "Oi", "bom dia, capitão" também — a saudação pronta basta e não gasta a cota.
   var SO_OI = /^(?: (?:oi|ola|opa|e ai|eai|hey|hello|hi|alo|bom dia|boa tarde|boa noite|tudo bem|tudo bom|td bem|beleza|capitao|ia))+ $/;
+  // Trecho de segurança no topo (a.seguranca, do respostaBase) nunca vai à IA: fica o trecho local, com a fonte (PROMPT §2.3).
+  // Revisão do C5: vale qualquer que seja a chave. A tela manda junto o buscaBase(q, 3), e uma saudação com assunto ("como você me
+  // ajuda com o teste da baliza?") levava o g_epirb §2 no topo; o respostaBase só marca a chave base.
   function pedeIA(a, q) {
     var k = a && a.key;
+    if (a && a.seguranca) return false;
+    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;
+    var topo = String(q || '').trim() ? buscaBase(q, 1)[0] : null;
+    if (topo && topo.d.seguranca) return false;
     if (k === 'fallback' || k === 'base') return true;
-    return k === 'saudacao' && !!String(q || '').trim() && !SO_OI.test(pad(q));
+    return !!String(q || '').trim() && !SO_OI.test(pad(q));
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
   var SOBRE_APP = [
     'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com a fonte.',
-    'Responde sobre: telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado), manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo), passo a passo dos equipamentos (gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin, áudio Fusion, rádios VHF 315, motores Volvo Penta) e checklist de saída e chegada.',
+    'Responde sobre: telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado), manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo), passo a passo dos equipamentos (gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin, áudio Fusion, rádios VHF Icom, motores Volvo Penta) e checklist de saída e chegada.',
     'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela: toque no núcleo para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
     'Registrar no diário: dizer ou digitar "registre no diário …" (o chat só grava com esse comando; o diário só cresce, nada se apaga). O atalho DIÁRIO DE BORDO grava o resumo da telemetria.',
     'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16.',
@@ -562,8 +1018,8 @@
     var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
     out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
     out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
-    out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + MMSI + ' · indicativo ' + (E.indicativo || SD) + '\n(Fonte: ' + (E.fonte || SD) + ')');
-    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
+    out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + mmsiNum() + ' (cadastro do app) · indicativo: ' + INDICATIVO + '\n(Fonte: ' + (E.fonte || SD) + ')');
+    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { if (e.seguranca) return '• ' + e.nome + ': ' + (e.nota || NOTA_ETIQUETA); return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
     if (fichaResumida(q, a)) {
       out.push('## Ficha resumida\nEsta pergunta veio só com o resumo acima (sobre o app e o barco) e, se houver, os trechos do guia. Telemetria, manutenção, documentos, diário e equipe não vieram: para um dado desses, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
       return out.join('\n\n');
@@ -580,11 +1036,11 @@
     bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p); });
     bloco('Equipe e contatos', function () { return ANSWERS.contatos(p); });
     bloco('Clima e maré', function () {
-      var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null, m = mareTexto();
-      return { text: (c ? 'Hoje em Balneário Camboriú: máx ' + Math.round(c.max) + '° · mín ' + Math.round(c.min) + '° (ECMWF).' : 'Previsão do dia: ' + SD + ' (sem internet e sem leitura salva).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\nPrevisão de vento e mar para navegar: ' + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: Open-Meteo (ECMWF e Marine) na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
+      var pv = previsao(), m = mareTexto();
+      return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
-    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_PASSOS + '\n(' + FT.proto + ')');
+    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');
     return out.join('\n\n');
   }
 
@@ -921,6 +1377,9 @@
     if (a && typeof a === 'object' && a.fala) return a.fala; // resposta que já traz a fala certa (saudação vinda de pergunta)
     var t = a && typeof a === 'object' ? a.text : a;
     if (a && a.key && FALA_INTEIRA[a.key]) return String(t || '');
+    // Trecho de segurança da base (Seafire, EPIRB, salvatagem, protocolo…): o trecho inteiro, com o rótulo e a nota da etiqueta
+    // (sem a linha "Veja também"). Antes, a fala parava na 2ª frase e perdia o "não abra o acesso ao motor" e o rótulo.
+    if (a && a.key === 'base' && a.seguranca && typeof t === 'string') return t.split(/\n+/)[0].trim();
     if (a && a.key === 'base' && a.ingles) return 'Está no ' + String(a.ref || 'manual').replace(/, p\. /, ', página ').replace(/ · .*$/, '') + ', em inglês. Mostrei o trecho na tela.';
     // Tira parênteses da fala, inclusive aninhados: "(… snapshot (DEMO) …)" sai inteiro, sem sobra.
     var semPar = function (s) { var a; do { a = s; s = s.replace(/\s*\([^()]*\)/g, ''); } while (s !== a); return s.replace(/\s*[()]/g, ''); };
@@ -948,6 +1407,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+    LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

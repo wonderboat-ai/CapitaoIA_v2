@@ -1,0 +1,15 @@
+Tarefa,Equipamento,Responsável,Intervalo,Última (há N dias),Vence em (dias; negativo = atrasada),Limite de horas
+Teste das bombas de porão e alarmes,Bombas de porão Rule 2000,técnico,mensal,56,-25,
+Limpeza do filtro de água salgada da climatização,Climatização Webasto FCF Platinum,marina,mensal,47,-16,
+Inspeção do rotor (impeller) do gerador,Gerador Onan QD 9,técnico,12 meses,367,-2,
+Limpeza de casco e troca de anodos,Casco,marina,6 meses,175,9,
+Autoteste do EPIRB e validade conferida na etiqueta,EPIRB,Lucas,mensal,18,13,
+Troca de óleo e filtros dos motores,Motores Cummins QSB6.7 305,oficina de motores,12 meses ou 450 h (o que vier antes),348,17,450 h
+Revisão do gerador: óleo e filtros,Gerador Onan QD 9,técnico,12 meses ou 1.300 h,341,24,1.300 h
+Anodo do trocador de calor do estabilizador,Estabilizador Seakeeper 3,técnico,6 meses,149,35,
+Troca do rotor da bomba de água salgada dos motores,Motores Cummins QSB6.7 305,oficina de motores,12 meses,324,41,
+Verificação do banco de baterias e conexões,Baterias Victron Energy (24 V e 12 V),técnico,6 meses,134,50,
+Atualização de cartas e software dos eletrônicos,Plotters Garmin GPSMAP 1243xsv,Lucas,12 meses,299,66,
+Revisão anual da climatização,Climatização Webasto FCF Platinum,marina,12 meses,279,86,
+Revisão anual dos motores,Motores Cummins QSB6.7 305,oficina de motores,12 meses,253,112,
+Inspeção anual do sistema fixo de supressão,Sistema fixo de supressão de incêndio,técnico,12 meses,225,140,
