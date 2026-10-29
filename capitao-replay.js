@@ -32,9 +32,10 @@
    (só vale nesta carga, não vai para o localStorage; #replay=sair solta). 'capitao.replay.sobre' (JSON parcial mesclado ao quadro) só vale
    com o instante fixado, no próprio instante fixado: é o gancho de teste da troca NAVEGANDO → FUNDEADO da E1.
 
-   Eventos (window): 'capitao-telemetria' a cada 1 s, alinhado ao segundo, pausado com document.hidden e com tique imediato na volta à
-   frente (detail = o quadro, com simulado: true); 'capitao-alerta' {fase: 'inicio' | 'nivel' | 'fim', alarme}; 'capitao-rebase' {ms} na
-   virada das 07:00 ou da meia-noite e em fixar(). O replay só emite evento: NUNCA abre SOS/C3, troca de tela, fala nem grava.
+   Eventos (window): 'capitao-telemetria' a cada 1 s, alinhado ao segundo, pausado com document.hidden e com tique imediato na volta à frente
+   (detail = o quadro, com simulado: true); 'capitao-alerta' {fase: 'inicio' | 'nivel' | 'fim', alarme}; 'capitao-rebase' {ms} na virada das
+   07:00 ou da meia-noite e em fixar(). O 1º tique de cada página sai já na carga, antes de qualquer ouvinte: quem ouve lê o estado ao montar
+   (alarmes(), quadro()) e depois acompanha os eventos. O replay só emite evento: NUNCA abre SOS/C3, troca de tela, fala nem grava.
 
    Travas: em /SOS-/ o arquivo sai sem definir nada; com D.simulacao !== true tudo é inerte (null, nenhum evento, nenhum timer); nunca lança
    erro (falhou → null, e quem chama cai no D.snapshot); nunca lê, devolve nem muta o D.snapshot; um timer só por página. */
@@ -162,7 +163,7 @@
 
   // ——— o quadro de um segundo do dia de bordo (port de confere.em) ———
   function calc(p, seg, anc, comAlarmes) {
-    var R = p.R, rota = p.rota, C = p.C, n = p.n, t = seg % n, v = Math.floor(seg / n), q0 = p.Q[t], o = copia(q0), k, c;
+    var R = p.R, rota = p.rota, C = p.C, n = p.n, t = seg % n, q0 = p.Q[t], o = copia(q0), k, c;
     var cs = contSeg(p, seg), diesel = cs.bruto.diesel_litros, dist = cs.bruto.distancia_mn;
     var cas = function (nome) { return casasDe(C, nome); };
     for (k in cs.val) o[k] = cs.val[k];
@@ -238,7 +239,7 @@
   }
 
   // ——— relógio e congelamento ———
-  var fixoMs = null, fixoSpec = null, iniciado = false;
+  var fixoMs = null, iniciado = false;
   function agoraMs() { return fixoMs !== null && ativo() ? fixoMs : Date.now(); }
   function ancoraDe(ms) { var a = Ag(), r = a ? a.ancora(ms) : NaN; return num(r) ? r : null; }
   function segDe(ms) {   // segundo do dia de bordo (0…86.399) e a âncora desse dia
@@ -263,14 +264,14 @@
     var e = especificacao(x), anc = e ? ancoraDe(Date.now()) : null, T, A = Ag();
     if (!e || anc === null) return null;
     T = anc + (e.k * DURACAO + e.s) * 1000;
-    fixoMs = T; fixoSpec = e.texto; marca(T);
+    fixoMs = T; marca(T);
     if (persistir) ls(function () { localStorage.setItem(CHAVE_FIXO, e.texto); });
     ls(function () { A.rebase(T, true); });
     emite('capitao-rebase', { ms: T });
     return T;
   }
   function solta() {
-    fixoMs = null; fixoSpec = null; marca(Date.now());
+    fixoMs = null; marca(Date.now());
     ls(function () { localStorage.removeItem(CHAVE_FIXO); });
     ls(function () { Ag().rebase(Date.now(), true); });
     emite('capitao-rebase', { ms: Date.now() });
@@ -292,7 +293,7 @@
     s = segDe(ms);
     if (!s) return null;
     res = calc(p, s.seg, s.anc, comAlarmes);
-    if (fixoMs !== null && Math.floor(ms / 1000) === Math.floor(fixoMs / 1000) && (so = sobre())) for (k in so) if (Object.prototype.hasOwnProperty.call(so, k)) res[k] = so[k];
+    if (fixoMs !== null && Math.floor(ms / 1000) === Math.floor(fixoMs / 1000) && (so = sobre())) for (k in so) if (Object.prototype.hasOwnProperty.call(so, k) && k !== '__proto__') res[k] = so[k];
     if (comAlarmes) {
       res.alarmes = alarmesDe(p, res, s.seg % p.n, Math.floor(s.seg / p.n), s.anc);
       if (so && Array.isArray(so.alarmes)) res.alarmes = so.alarmes;
@@ -335,7 +336,7 @@
       var p = tabela(), s, G, t, base, k, g;
       ms = msDe(ms);
       if (!p || ms === null) return null;
-      G = p.grupos[id];
+      G = Object.prototype.hasOwnProperty.call(p.grupos, id) ? p.grupos[id] : null;
       s = segDe(ms);
       if (!G || !G.length || !s) return null;
       t = s.seg % p.n; base = s.anc + Math.floor(s.seg / p.n) * p.n * 1000;
@@ -529,7 +530,10 @@
     }
     vivos = novo;
   }
+  var emTique = false;
   function tique() {
+    if (emTique) return;   // um ouvinte que chama fixar() de dentro do evento não reentra: o próximo tique (≤ 1 s) alcança
+    emTique = true;
     try {
       if (!atual()) return;
       clearTimeout(timer);
@@ -549,6 +553,7 @@
       }
       agenda(1000 - (Date.now() % 1000) + 2);   // alinhado ao segundo
     } catch (e) { try { agenda(1000); } catch (x) {} }
+    finally { emTique = false; }
   }
   function aoVoltar() {
     if (!atual()) { document.removeEventListener('visibilitychange', aoVoltar); return; }

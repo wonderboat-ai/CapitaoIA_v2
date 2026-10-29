@@ -200,7 +200,7 @@ class Component extends DCLogic {
         sub: r && r.ok ? 'Gravado às ' + r.t + ' · toque de novo = linha nova' : 'Grava posição e hora no diário de bordo', subTone: r && r.ok ? ok : 'var(--cap-ink2, #b1bdd6)',
         aria: 'Registrar posição e hora no diário de bordo' },
       conf: conf,
-      especificado: 'o conjunto de botões muda sozinho com a telemetria (navegando × atracado) — ' + (v ? 'telemetria ao vivo ligada, mas a troca automática ainda não está ativa nesta demonstração.' : 'inativo sem telemetria ao vivo.'),
+      especificado: 'o conjunto de botões muda sozinho com a telemetria (navegando × atracado) — ' + (v ? 'telemetria ao vivo ligada, mas a troca automática ainda não está ativa.' : 'inativo sem telemetria ao vivo.'),
       especFonte: 'Fonte: especificação do modo navegação · telemetria: ' + (v ? 'coletor NMEA ao vivo' : 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'))
     };
   }

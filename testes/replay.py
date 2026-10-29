@@ -6,10 +6,10 @@ O motor é a função pura `em(ms)` do instante absoluto (laço de 150 s + rota 
 não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade):
 
 - t de 0 a 149 (`quadro(t)`): todos os campos finitos, sem -0, com o número de casas do D.campos, e o quadro ⇔ catálogo nos dois sentidos;
-- paridade Python × JS (§6.5): `quadro(t)` t = 0…149, uma amostra do dia, as 1.152 pontas das 576 emendas e as pontas da âncora, campo a campo
-  contra `confere.em()` (o port que o gerador usa), recalculado aqui em Python a partir do D.replay; os 86.400 segundos do dia conferem fora
-  deste teste (dev). Seno, cosseno, asen e atan2 do V8 e do CPython podem diferir de 1 ulp: só nos campos derivados deles (TRIG) aceita-se 1 unidade
-  da última casa, e o teste conta quantos usaram a tolerância;
+- paridade Python × JS (§6.5): `quadro(t)` t = 0…149, uma amostra do dia, as 1.150 pontas das 575 emendas e as pontas da âncora, campo a campo
+  contra `confere.em()` (o port que o gerador usa; o gerador não exporta os 150 quadros, então a conta é refeita aqui em Python, com a mesma
+  fórmula e a partir do D.replay do capitao-dados.js); os 86.400 segundos do dia conferem com `--dia`. Seno, cosseno, asen e atan2 do V8 e do
+  CPython podem diferir de 1 ulp: só nos campos derivados deles (TRIG) aceita-se 1 unidade da última casa, e o teste conta quantos a usaram;
 - emenda: o laço (|v(149) − v(0)| ≤ o maior passo de 1 s da volta, por campo do laço) e, no dia inteiro, as 575 emendas de 150 s fora da âncora
   (segundos consecutivos, `em(N·150 − 1 s)` × `em(N·150)`): nenhum campo numérico passa do maior passo de 1 s do dia, e destino, próximo ponto e ETA
   não mudam; a única descontinuidade é a virada das 07:00 (contadores, tanques e a rota que recomeça), com posição e COG contínuos;
@@ -38,7 +38,8 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4).
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
-    python -X utf8 testes/replay.py
+    python -X utf8 testes/replay.py            os testes de sempre (~1,5 min)
+    python -X utf8 testes/replay.py --dia      mais a paridade dos 86.400 segundos do dia de bordo contra o confere.em() (~4 min a mais)
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
 import json
@@ -240,6 +241,34 @@ def a_volta(b):
         tol += a
     ok('paridade: %d segundos do dia (amostra, as 1.150 pontas das emendas e as pontas da âncora) iguais ao confere.em() (%d na tolerância)' % (len(segs), len(tol)),
        exatas == [], exatas[:4])
+    if '--dia' in sys.argv:   # opcional (~4 min): os 86.400 segundos do dia de bordo, em blocos, contra o confere.em()
+        exatas, tol, n = [], [], 0
+        for ini in range(0, 86400, 3000):
+            blocos = pg.evaluate("""([ini, fim]) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), o = [];
+              for (let s = ini; s < fim; s++) o.push(R.em(anc + s * 1000)); return { anc, o }; }""", [ini, min(ini + 3000, 86400)])
+            for k, q in enumerate(blocos['o']):
+                e, a = compara(q, C.em(P, ini + k, ancora_s=blocos['anc'] // 1000), 'seg=%d' % (ini + k))
+                exatas += e
+                tol += a
+                n += 1
+        ok('paridade (--dia): os %d segundos do dia de bordo iguais ao confere.em() (%d na tolerância)' % (n, len(tol)), exatas == [] and n == 86400, exatas[:4])
+    # contadores: contadoresEm(ms) são os campos de origem contador do quadro; o último segundo do dia = a base + o consumo do dia (§6.5)
+    cont = [c for c, d in D['campos'].items() if d.get('origem') == 'contador']
+    rc = pg.evaluate("""(cont) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), ms = anc + 1234 * 1000, e = R.em(ms), c = R.contadoresEm(ms), c2 = R.contadores(ms), fim = R.contadoresEm(anc + 86399 * 1000);
+      return { chaves: Object.keys(c).sort(), iguais: cont.every((k) => c[k] === e[k] && c2[k] === e[k]), fim, ini: R.contadoresEm(anc), agora: Object.keys(R.contadores()).length }; }""", cont)
+    ok('contadoresEm(ms) = os %d campos de origem contador do D.campos, com os mesmos valores do quadro; contadores() sem argumento é o de agora' % len(cont),
+       rc['chaves'] == sorted(cont) and rc['iguais'] and rc['agora'] == len(cont), (rc['chaves'], cont))
+    R_, base, dia = D['replay'], D['replay']['contadores_base'], D['replay']['por_dia']
+    esperado = {'diesel_litros': base['diesel_litros'] - dia['diesel_l'], 'distancia_mn': base['distancia_mn'] + dia['distancia_mn'], 'motor_bb_horimetro_h': base['motor_bb_horimetro_h'] + dia['motor_h'],
+                'motor_be_horimetro_h': base['motor_be_horimetro_h'] + dia['motor_h'], 'gerador_horimetro_h': base['gerador_horimetro_h'] + dia['gerador_h']}
+    for c, k in R_['taxas_h'].items():
+        esperado[c] = base[c] + k * 24
+    ruim = {c: (rc['fim'][c], round(v, 3)) for c, v in esperado.items() if abs(rc['fim'][c] - v) > (1.0 if c == 'diesel_litros' else 0.15)}
+    ok('contadoresEm(A + 576·150 s − 1 s) = a base + o consumo de um dia (por_dia; ±1 L e ±0,15 de arredondamento): diesel %s L, %s mn, horímetros %s h'
+       % (rc['fim']['diesel_litros'], rc['fim']['distancia_mn'], rc['fim']['motor_bb_horimetro_h']), ruim == {}, ruim)
+    ok('às 07:00:00 os contadores são os da base (1.560 L, 0 mn, horímetros e tanques de contadores_base)', all(rc['ini'][c] == C.arred(base[c], C.casas_de(D['campos'], c)) for c in base), rc['ini'])
+    ok('a soma de 150 s da tabela = por_volta (diesel %.4f L e %.4f mn, 4 casas)' % (P['cumD'][150], P['cumM'][150]),
+       abs(P['cumD'][150] - R_['por_volta']['diesel_l']) < 6e-5 and abs(P['cumM'][150] - R_['por_volta']['distancia_mn']) < 6e-5, (P['cumD'][150], P['cumM'][150], R_['por_volta']))
     ok('timestamp_utc = o instante pedido (o segundo inteiro, ISO com Z)', js['o']['0']['timestamp_utc'] == datetime.fromtimestamp(js['anc'] // 1000, timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
        js['o']['0']['timestamp_utc'])
     ok('sem erro de script', not pg.erros, pg.erros)
@@ -327,7 +356,7 @@ ALARMES_JS = r"""() => {
   const R = window.CapitaoReplay, A = window.CapitaoAgora, D = window.CapitaoDados, anc = A.ancora(Date.now()), base = anc + 120 * 150 * 1000, o = {};
   o.a105 = R.alarmes(base + 105000); o.a60 = R.alarmes(base + 60000); o.igual = JSON.stringify(R.alarmes(base + 105000)) === JSON.stringify(R.em(base + 105000).alarmes);
   o.j105 = R.janela('arref_be', base + 105000); o.j116 = R.janela('arref_be', base + 116000); o.j117 = R.janela('arref_be', base + 117000);
-  o.j10 = R.janela('arref_be', base + 10000); o.j99 = R.janela('arref_be', base + 99000); o.j98 = R.janela('arref_be', base + 98000); o.nada = R.janela('nao_existe', base);
+  o.j10 = R.janela('arref_be', base + 10000); o.j99 = R.janela('arref_be', base + 99000); o.j98 = R.janela('arref_be', base + 98000); o.nada = R.janela('nao_existe', base); o.proto = [R.janela('constructor', base), R.janela('toString', base), R.janela('__proto__', base)];
   o.base = base; o.iso = (ms) => new Date(ms).toISOString();
   // adultera o limite do crítico (o gerador do cenário aviso não o emite): o cliente só avisa
   const L = D.replay.limites.motor_be_arref_c, antes = JSON.stringify(L), c0 = D.replay.cenario;
@@ -356,9 +385,9 @@ def a_alarmes(b):
     ok('janela(): ativa em 99 e em 105 (desde o segundo 99, ate null) e em 116; em 117 já normalizada (ate = 117 s)',
        r['j105'] == {'ativo': True, 'desde': base + 99000, 'ate': None} and r['j99']['ativo'] is True and r['j116']['ativo'] is True and r['j116']['ate'] is None
        and r['j117'] == {'ativo': False, 'desde': base + 99000, 'ate': base + 117000}, (r['j105'], r['j116'], r['j117']))
-    ok('janela() antes da janela da volta (t = 10 e 98) devolve a da volta anterior; id que não existe dá null',
+    ok('janela() antes da janela da volta (t = 10 e 98) devolve a da volta anterior; id que não existe (ou \'constructor\', \'toString\') dá null',
        r['j10'] == {'ativo': False, 'desde': base - 150000 + 99000, 'ate': base - 150000 + 117000} and r['j98']['ativo'] is False and r['j98']['desde'] == base - 150000 + 99000
-       and r['nada'] is None, (r['j10'], r['j98'], r['nada']))
+       and r['nada'] is None and r['proto'] == [None, None, None], (r['j10'], r['j98'], r['nada'], r['proto']))
     ok('cenário aviso, mesmo com o limite do crítico adulterado (acima de 85): nunca devolve crítico, e o limite do alarme é o do aviso (88)',
        r['avisoNiveis'] == ['aviso'] and r['avisoLimite105'] == 88, (r['avisoNiveis'], r['avisoLimite105']))
     ok('cenário alarme-critico (só no gerador; aqui adulterado): o crítico passa, com o limite dele', r['critico105'] == ['critico', 85], r['critico105'])
@@ -887,6 +916,9 @@ def codigo():
     ok('não escreve fora das duas chaves do replay (capitao.replay.fixo e .sobre) e só o fixo é gravado', set(re.findall(r"'(capitao\.[a-z.]+)'", codigo_)) == {'capitao.replay.fixo', 'capitao.replay.sobre'}
        and len(re.findall(r'setItem', codigo_)) == 1, set(re.findall(r"'(capitao\.[a-z.]+)'", codigo_)))
     ok('sem VERSAO própria (acompanha o capitao-dados.js)', 'VERSAO' not in codigo_)
+    ok('só emite evento: nada que troque de tela, abra janela, fale, grave o diário ou chame o SOS/C3 (location, window.open, speechSynthesis, capitao-voz, addDiario, markExec, sos)',
+       not re.search(r'location\s*(\.\s*(href|assign|replace|reload)|=)|window\s*\.\s*open|speechSynthesis|capitao-voz|addDiario|markExec|S1-SOS|S2-SOS|C3-Leme|history\s*\.\s*(push|replace)State', codigo_),
+       re.findall(r'.{15}(?:location|window\s*\.\s*open|speechSynthesis|addDiario|SOS|C3-Leme).{15}', codigo_)[:3])
     sw = le('sw.js')
     m = re.search(r'const TELAS = \[(.*?)\];', sw, re.S)
     telas = re.findall(r"'([^']+)'", m.group(1))
