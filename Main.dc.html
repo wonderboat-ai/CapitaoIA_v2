@@ -179,7 +179,9 @@ class Component extends DCLogic {
     // ENCERRAR no overlay de voz (capitao-voz.js): desliga a conversa ou o voz→texto em andamento.
     this._onEncerra = () => { if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
     window.addEventListener('capitao-voz-encerrar', this._onEncerra);
-    this._onTele = () => this.setState({ vivo: Date.now() });
+    // A cada tique da telemetria (replay ou coletor): redesenha só se o TEXTO que a tela exibe a partir dela (a leitura() da faixa) mudou. O setState refaz a
+    // tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa.
+    this._onTele = () => { const k = JSON.stringify(this.leitura()); if (k !== this._leitK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._onTele);
     this.whenBrain(() => { this.setState({ atalhos: window.CapitaoBrain.loadShortcuts() }); this.handleHash(); });
   }
@@ -409,6 +411,7 @@ class Component extends DCLogic {
     const chatting = s.thread.length > 0 || s.thinking;
     const att = s.attachment;
     const L = this.leitura();
+    this._leitK = JSON.stringify(L); // o que a faixa exibe agora: o ouvinte da telemetria só chama setState se mudar
     const modeBase = { tone: 'var(--cap-ink2, #b1bdd6)', bg: 'var(--cap-elev, #131a33)', line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)' };
     const on = { tone: 'var(--cap-accent, #00a1fe)', bg: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)', line: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' };
     const hot = { tone: 'var(--cap-crit, #ff3b30)', bg: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)', line: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' };

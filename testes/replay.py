@@ -30,6 +30,12 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
   carregou OCULTA antes da virada e só depois voltou à frente; um timer só por página;
 - isolamento: o replay não é o `CapitaoTelemetria`; `atual()` e `fonte()` (coletor real recente × replay × null); o D.snapshot nem um byte diferente;
   a âncora é a `CapitaoAgora.ancora` (a mesma, sem cópia); falha → null e o instante() cai no snapshot sem mutá-lo;
+- a moldura em nós Text (P2B; PROMPT Fase 2 «Desempenho», CONTRATO §6.6): em 10 s de replay, a 360×640 nas telas de app e a 1440×900 nas web (3 telas por padrão: A2, A1 e E1; as
+  30 com `--moldura`), o `<capitao-theme-toggle>` e o avatar são o mesmo nó (isSameNode), o foco do teclado fica no botão do tema, o `fit()` roda no máximo 2 vezes, nenhuma long task
+  passa de 50 ms e nenhuma mutação childList entra na moldura (só troca de caractere dos textos que mudaram); com o instante fixado, 3 tiques não mexem em nada (nem um caractere ou
+  atributo: só se escreve quando o valor mudou); a moldura mostra o `CapitaoMoldura.leitura()` do tique, e o estado montado aos poucos (LED que vira, selo DEMO que entra e sai,
+  título e href do topo) é igual ao de uma moldura montada do zero naquele estado; Main, H2 e E1 só dão setState quando o texto exibido muda (o React.Component.prototype.setState
+  contado: livre, nunca mais que um por tique; instante fixado, nenhum); 6 mutantes da P2B que esses testes têm de acusar;
 - S1/S2 (e uma rota /SOS-): sem CapitaoReplay, `CapitaoAgora.instante()` null, nenhum tique, nenhuma leitura de D.simulacao nem de D.replay;
 - modo real inerte (`simulacao = false` no fim do capitao-dados.js, e a flag mudando com a página aberta): nada anda, `em()` null, nenhum evento;
 - histórico: `serie()` das cinco janelas sem NaN, o último ponto = o quadro, o serrote do diesel = as linhas de abastecimento, a curva do ano do
@@ -43,16 +49,15 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
 - a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
 - o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
-- o desempenho da moldura nas 30 telas que importam `capitao-cabecalho`, `capitao-faixa` ou `capitao-topo-app` (o `<capitao-theme-toggle>` e o avatar não recriados, `fit()` ≤ 2 vezes,
-  nenhuma long task > 50 ms e o foco do teclado mantido, em 10 s a 360×640 nas de app e a 1440×900 nas web): é da P2B (CONTRATO §6.6); hoje o disparo de 1 s remonta o HTML da moldura;
 - a faixa de alerta, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (P2C, Fases 3 e 4);
 - o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
-  CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() —, a P2B e a Fase 4): lá entra a conferência de que nenhum texto diz «coletor NMEA»
+  CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() — e a Fase 4: a P2B só trocou a mecânica da moldura, os textos e rótulos ficam para elas): lá entra a conferência de que nenhum texto diz «coletor NMEA»
   quando `CapitaoTelemetria.fonte()` é 'replay'.
 
 Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
-    python -X utf8 testes/replay.py            os testes de sempre (~1,5 min)
+    python -X utf8 testes/replay.py            os testes de sempre (~5 min)
     python -X utf8 testes/replay.py --dia      mais a paridade dos 86.400 segundos do dia de bordo contra o confere.em() (~4 min a mais)
+    python -X utf8 testes/replay.py --moldura mais o desempenho da moldura nas 30 telas que a importam (3 por vez, ~4 min a mais)
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
 import copy
@@ -77,6 +82,7 @@ falhas = 0
 total = 0
 CAPTURA = None   # lista, no modo mutante: o ok() só anota o que falhou (o motor está quebrado de propósito)
 MUT = None       # [(trecho, no lugar)] do capitao-replay.js servido ao navegador, no modo mutante
+MUT_ARQ = None   # {arquivo: [(trecho, no lugar)]}: o mesmo para outros arquivos do site (a moldura, uma tela) nos mutantes da P2B
 
 
 def ok(nome, cond, info=''):
@@ -166,6 +172,16 @@ def abre(b, caminho='/replay.html', html=HTML, init='', antes='', depois='', loc
                 corpo = corpo.replace(trecho, novo, 1)
             route.fulfill(response=r, body=corpo)
         ctx.route('**/capitao-replay.js', replay_mutante)
+    def troca_em(trocas):   # uma função por arquivo (o Playwright passa (route, request) ao tratador: nada de argumento padrão)
+        def mutante_arq(route):
+            r = route.fetch()
+            corpo = r.text()
+            for trecho, novo in trocas:
+                corpo = corpo.replace(trecho, novo, 1)
+            route.fulfill(response=r, body=corpo)
+        return mutante_arq
+    for arq, trocas in (MUT_ARQ or {}).items():
+        ctx.route('**/' + arq, troca_em(trocas))
     rota = caminho.split('#')[0]   # o endereço do pedido não leva o hash
     if rota.endswith('.html') and not rota.endswith('.dc.html'):
         ctx.route('**' + rota, lambda route: route.fulfill(body=html, content_type='text/html; charset=utf-8'))
@@ -1129,6 +1145,221 @@ def codigo():
     ok('index.html, login.html e dados.html (fora das TELAS: não leem o quadro) não carregam o motor', fora == [], fora)
 
 
+# ——— 11b. a moldura em nós Text e o setState só ao mudar (P2B; PROMPT Fase 2 «Desempenho», CONTRATO §6.6) ———
+# O disparo de 1 s do motor só é barato se a moldura (cabeçalho, faixa e topo do app) trocar o TEXTO dos nós que já tem (noTexto.data = valor), e só quando
+# o valor mudou. Refazer o innerHTML a cada tique recria o <capitao-theme-toggle> e o avatar (o foco do teclado se perde), dispara o fit() do capitao-app.js
+# (o MutationObserver de childList) e enche a página de mutações. Main, H2 e E1 só dão setState quando o texto exibido muda.
+# Instrumentação (init script, antes de qualquer script da página): PerformanceObserver 'longtask', contagem das execuções do fit() (o requestAnimationFrame
+# da função de nome `fit`), dos tiques do motor e das chamadas do setState do React (o React.Component.prototype.setState, que o __setLogicState do support.js
+# chama a cada setState de uma tela; o window.React é um acessor que troca o método no 1º get com o Component pronto).
+MOLDURA_JS = """(function () {
+  window.__lt = []; window.__fit = 0; window.__sets = 0; window.__ticks = 0;
+  try { new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { window.__lt.push({ ini: e.startTime, dur: e.duration }); }); }).observe({ type: 'longtask', buffered: true }); } catch (e) {}
+  var raf = window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame = function (cb) { return raf(cb && cb.name === 'fit' ? function (t) { window.__fit++; return cb(t); } : cb); };
+  window.addEventListener('capitao-telemetria', function () { window.__ticks++; });
+  var ouv = new Set(), add = window.addEventListener, rem = window.removeEventListener;   // os ouvintes do tique em uso (viva/morta da moldura não podem vazar)
+  window.addEventListener = function (tp, f, o) { if (tp === 'capitao-telemetria') ouv.add(f); return add.call(this, tp, f, o); };
+  window.removeEventListener = function (tp, f, o) { if (tp === 'capitao-telemetria') ouv.delete(f); return rem.call(this, tp, f, o); };
+  window.__ouvintes = function () { return ouv.size; };
+  var R, pronto = false;   // o UMD do React 18 faz `factory(global.React = {})`: o acessor recebe o objeto vazio, que só se enche depois; o setState se troca no 1º get com o Component pronto
+  function troca() { if (pronto || !R || !R.Component) return; pronto = true; var P = R.Component.prototype, o = P.setState; P.setState = function () { window.__sets++; return o.apply(this, arguments); }; }
+  Object.defineProperty(window, 'React', { configurable: true, get: function () { troca(); return R; }, set: function (v) { R = v; } });
+})();"""
+ESPERA_MOLDURA = "() => document.querySelector('capitao-theme-toggle button') && window.CapitaoReplay"
+MOLDURA_SEL = 'capitao-cabecalho,capitao-faixa,capitao-topo-app'
+# começa a medir: guarda os nós, põe o foco no botão do tema e liga o observador de mutações
+MOLDURA_INICIA = """() => {
+  const q = (s) => document.querySelector(s), mold = Array.from(document.querySelectorAll('%s'));
+  const tog = q('capitao-theme-toggle'), btn = tog && tog.querySelector('button'), ava = q('capitao-cabecalho a[aria-label^="Perfil"], capitao-topo-app a[aria-label^="Perfil"]');
+  const m = window.__m = { tog, btn, ava, mold, ini: performance.now(), child: 0, dados: 0, texto0: mold.map((e) => e.innerText).join('|') };
+  if (btn) btn.focus();
+  window.__fit = 0; window.__ticks = 0; window.__sets = 0;
+  m.mo = new MutationObserver((rs) => rs.forEach((r) => { if (!mold.some((e) => e.contains(r.target))) return; if (r.type === 'childList') m.child++; else m.dados++; }));
+  m.mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+  return { n: mold.length, tags: mold.map((e) => e.tagName.toLowerCase()), foco: document.activeElement === btn };
+}""" % MOLDURA_SEL
+MOLDURA_FIM = """() => {
+  const m = window.__m, q = (s) => document.querySelector(s), lt = window.__lt.filter((e) => e.ini >= m.ini).map((e) => Math.round(e.dur));
+  m.mo.disconnect();
+  return { tog: !!m.tog && m.tog.isConnected && m.tog.isSameNode(q('capitao-theme-toggle')), ava: !!m.ava && m.ava.isConnected && m.ava.isSameNode(q('capitao-cabecalho a[aria-label^="Perfil"], capitao-topo-app a[aria-label^="Perfil"]')),
+    foco: !!m.btn && document.activeElement === m.btn, fit: window.__fit, ticks: window.__ticks, lt, child: m.child, dados: m.dados,
+    mudou: m.texto0 !== Array.from(document.querySelectorAll('%s')).map((e) => e.innerText).join('|'), erros: window.__erros || [] };
+}""" % MOLDURA_SEL
+# o texto da moldura no instante do tique (o ouvinte do teste roda depois do da moldura) contra o leitura() dela
+MOLDURA_TEXTO = """() => new Promise((res) => { window.addEventListener('capitao-telemetria', function f() { window.removeEventListener('capitao-telemetria', f);
+  const L = window.CapitaoMoldura.leitura(), txt = (s) => Array.from(document.querySelectorAll(s)).map((e) => e.innerText).join('\\n'), led = document.querySelector('capitao-topo-app [role=img]');
+  res({ L, cab: txt('capitao-cabecalho'), faixa: txt('capitao-faixa'), rotulo: led ? led.getAttribute('aria-label') : null, titulo: led ? led.title : null }); }); })"""
+# instante fixado: o quadro não muda, então 3 tiques não podem mexer em nada da moldura (nem um caractere, atributo ou nó)
+MOLDURA_PARADA = """() => { const m = window.__m; m.parada = 0; m.mo2 = new MutationObserver((rs) => { m.parada += rs.length; });
+  m.mold.forEach((e) => m.mo2.observe(e, { childList: true, subtree: true, characterData: true, attributes: true })); window.__ticks = 0; return true; }"""
+
+
+def telas_moldura():
+    """As 30 telas que importam a moldura (todas menos Main, H2, C3, Manual e S1/S2), com a largura do $preview: 1440 = web (1440×900), o resto = app (360×640)."""
+    out = []
+    for arq in sorted(f for f in os.listdir(RAIZ) if f.endswith('.dc.html')):
+        h = le(arq)
+        if not re.search(r'component-from-global-scope="capitao-(cabecalho|faixa|topo-app)"', h):
+            continue
+        w = int(re.search(r'\$preview.{0,12}?width.{0,6}?(\d+)', h).group(1))
+        out.append((arq[:-len('.dc.html')], 1440 if w >= 1000 else 360, 900 if w >= 1000 else 640))
+    return out
+
+
+def moldura_lote(b, itens, segundos=10):
+    """Abre todas as telas do lote ao mesmo tempo (um contexto cada), deixa 3,5 s assentar e mede `segundos` s de replay."""
+    pgs = [(nome, abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera=ESPERA_MOLDURA)) for nome, w, h in itens]
+    pgs[0][1].wait_for_timeout(3500)
+    ini = {nome: pg.evaluate(MOLDURA_INICIA) for nome, pg in pgs}
+    pgs[0][1].wait_for_timeout(segundos * 1000)
+    fim = {nome: pg.evaluate(MOLDURA_FIM) for nome, pg in pgs}
+    txt = {nome: pg.evaluate(MOLDURA_TEXTO) for nome, pg in pgs}
+    for nome, pg in pgs:   # parado: o instante fixado em 60 s; o 1º tique já atualiza, os 3 seguintes não podem mudar nada
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+    pgs[0][1].wait_for_timeout(1700)
+    for nome, pg in pgs:
+        pg.evaluate(MOLDURA_PARADA)
+    pgs[0][1].wait_for_timeout(3300)
+    parada = {nome: pg.evaluate("() => ({ n: window.__m.parada, ticks: window.__ticks })") for nome, pg in pgs}
+    erros = {nome: list(pg.erros) for nome, pg in pgs}
+    for nome, pg in pgs:
+        fecha(pg)
+    return {nome: dict(ini=ini[nome], fim=fim[nome], txt=txt[nome], parada=parada[nome], erros=erros[nome]) for nome, _, _ in itens}
+
+
+def confere_moldura(nome, w, r, segundos=10):
+    ini, fim, txt, parada = r['ini'], r['fim'], r['txt'], r['parada']
+    rot = '%s (%d×%d)' % (nome, w, 900 if w >= 1000 else 640)
+    ok('%s: a moldura tem %s e o motor tiquetou (%d tiques em %d s)' % (rot, '+'.join(ini['tags']), fim['ticks'], segundos), ini['n'] >= 1 and fim['ticks'] >= segundos - 2, (ini, fim['ticks']))
+    ok('%s: o <capitao-theme-toggle> é o mesmo nó (isSameNode, ainda conectado) do início ao fim' % rot, fim['tog'], fim)
+    ok('%s: o avatar é o mesmo nó do início ao fim' % rot, fim['ava'], fim)
+    ok('%s: o foco do teclado fica no botão do tema (activeElement)' % rot, ini['foco'] and fim['foco'], (ini, fim))
+    ok('%s: o fit() roda no máximo 2 vezes em %d s (rodou %d)' % (rot, segundos, fim['fit']), fim['fit'] <= 2, fim['fit'])
+    ok('%s: nenhuma long task passa de 50 ms (%s)' % (rot, ('maior ' + str(max(fim['lt'])) + ' ms em ' + str(len(fim['lt']))) if fim['lt'] else '0 long tasks'), all(d <= 50 for d in fim['lt']), fim['lt'])
+    ok('%s: nenhuma mutação childList dentro da moldura em %d s (só texto: %d trocas de caractere)' % (rot, segundos, fim['dados']), fim['child'] == 0, fim)
+    ok('%s: a moldura acompanha o motor (o texto mudou em %d s ou é o rótulo do minuto)' % (rot, segundos), fim['mudou'] or w < 1000, fim)
+    L = txt['L']
+    if w >= 1000:
+        faltam = [f for f in L['faixa'] if f[0] + ' ' + f[1] not in txt['faixa']]
+        ok('%s: a faixa mostra o leitura() do tique, item a item (%d itens) e o cabeçalho a posição e o rótulo' % (rot, len(L['faixa'])),
+           not faltam and L['pos'] in txt['cab'] and L['rotulo'] in txt['cab'], (faltam, L['pos'], L['rotulo'], txt['cab'][:200]))
+    else:
+        ok('%s: o rótulo do LED (aria-label e title) é o leitura() do tique: «%s»' % (rot, L['rotulo']), txt['rotulo'] == L['rotulo'] and txt['titulo'] == L['rotulo'], txt)
+    ok('%s: com o instante fixado, 3 tiques não mexem em nada da moldura (0 mutações; tiques: %d)' % (rot, parada['ticks']), parada['n'] == 0 and parada['ticks'] >= 3, parada)
+    ok('%s: sem erro de script' % rot, not r['erros'], r['erros'])
+
+
+def moldura(b):
+    todas = '--moldura' in sys.argv
+    itens = telas_moldura() if todas else [t for t in telas_moldura() if t[0] in ('A2-Ponte-Mobile', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos')]
+    print('Moldura em nós Text, em 10 s de replay (%s)' % ('as %d telas com moldura' % len(itens) if todas else '3 telas: A2 em 360×640, A1 em 1440×900 e E1; todas as 30 com --moldura'))
+    if todas:
+        ok('são 30 as telas que importam a moldura (A1–A3, B1–B3, C1, C2, E1, E2, F1–F5, G1–G4 e H3, web e app)', len(itens) == 30, [t[0] for t in itens])
+    larg = {n: w for n, w, _ in itens}
+    for i in range(0, len(itens), 3):   # 3 telas por vez: abre ao mesmo tempo, mas sem passar dos núcleos da máquina (a long task mede a tela, não a fila)
+        lote = itens[i:i + 3]
+        for nome, r in moldura_lote(b, lote).items():
+            confere_moldura(nome, larg[nome], r)
+
+
+# O estado montado aos poucos (tiques, LED que vira, selo DEMO que entra e sai, título e href do topo) tem de ser IGUAL ao de uma moldura montada do zero naquele estado:
+# o innerHTML (sem o marcador data-cpm) e o style do elemento. O instante fica fixado em 60 s para o quadro não mudar entre as duas montagens.
+MOLDURA_ESTADOS = """async () => {
+  const D = window.CapitaoDados, M = window.CapitaoMoldura, sel = 'capitao-cabecalho,capitao-faixa,capitao-topo-app', limpa = (h) => h.replace(/ data-cpm="[^"]*"/g, '');
+  const tog = document.querySelector('capitao-theme-toggle'), caixa = document.createElement('div'), out = [];
+  caixa.style.cssText = 'position:fixed;left:-9999px;top:0;width:1440px'; document.body.appendChild(caixa);
+  const confere = (rot) => { const r = { rot, vivo: M.leitura().vivo, tags: {} }; document.querySelectorAll(sel).forEach((real) => {
+      const tag = real.tagName.toLowerCase(), f = document.createElement(tag); ['titulo', 'voltar'].forEach((a) => { if (real.hasAttribute(a)) f.setAttribute(a, real.getAttribute(a)); });
+      caixa.appendChild(f);
+      const a = limpa(real.innerHTML), b = limpa(f.innerHTML); let i = 0; while (i < a.length && a[i] === b[i]) i++;
+      r.tags[tag] = a === b && real.getAttribute('style') === f.getAttribute('style') ? 'igual' : 'difere em ' + i + ': «' + a.slice(Math.max(0, i - 40), i + 80) + '» × «' + b.slice(Math.max(0, i - 40), i + 80) + '»';
+      const led = real.querySelector('[role=img]'); r.demo = r.demo || /DEMO/.test(real.innerText); r.texto = (r.texto || '') + real.innerText + (led ? ' ' + led.getAttribute('aria-label') : ''); caixa.removeChild(f); });
+    r.mesmoToggle = tog.isConnected && tog.isSameNode(document.querySelector('capitao-theme-toggle')); out.push(r); };
+  const avisa = () => window.dispatchEvent(new CustomEvent('capitao-sessao'));
+  await new Promise((r) => setTimeout(r, 1300)); confere('replay (ao vivo)');
+  D.simulacao = false; avisa(); confere('sem replay (leitura fixa)');
+  D.demo = true; D.aviso = 'aviso de teste'; avisa(); confere('leitura fixa com D.demo');
+  D.simulacao = true; avisa(); confere('replay com D.demo');
+  D.demo = false; delete D.aviso; avisa(); confere('replay sem D.demo');
+  const snap = D.snapshot; D.snapshot = null; D.simulacao = false; avisa(); confere('sem dado nenhum (sem replay e sem snapshot)');
+  D.snapshot = snap; D.simulacao = true; avisa(); confere('de volta ao replay');
+  const topo = document.querySelector('capitao-topo-app');
+  if (topo) { topo.setAttribute('titulo', 'Outro título'); topo.setAttribute('voltar', 'A1-Ponte-Web.dc.html'); confere('título e href do topo trocados'); out[out.length - 1].topo = { texto: topo.innerText, href: topo.querySelector('a[aria-label=Voltar]').getAttribute('href') }; }
+  // ouvintes: ligar e desligar várias instâncias (e religar a mesma) não pode vazar nem duplicar
+  const n0 = window.__ouvintes(), ouv = { n0 }, f1 = document.createElement('capitao-faixa'), f2 = document.createElement('capitao-faixa'), c1 = document.createElement('capitao-cabecalho');
+  caixa.appendChild(f1); caixa.appendChild(f2); caixa.appendChild(c1); ouv.tres = window.__ouvintes();
+  caixa.removeChild(f2); ouv.duas = window.__ouvintes(); caixa.removeChild(f1); caixa.removeChild(c1); ouv.zero = window.__ouvintes();
+  caixa.appendChild(f1); ouv.religada = window.__ouvintes(); const L = M.leitura(); ouv.textoReligada = f1.innerText.indexOf(L.faixa[0][0] + ' ' + L.faixa[0][1]) >= 0;
+  caixa.removeChild(f1); ouv.fim = window.__ouvintes(); out.push({ ouv });
+  document.body.removeChild(caixa); return out;
+}"""
+
+
+def moldura_estados(b):
+    print('Moldura: o estado montado aos poucos é igual ao montado do zero (replay, leitura fixa, selo DEMO, título do topo)')
+    for nome, w, h in (('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 360, 640)):
+        pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS + "\ntry { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {}", viewport={'width': w, 'height': h}, espera=ESPERA_MOLDURA)
+        pg.wait_for_timeout(2500)
+        for e in pg.evaluate(MOLDURA_ESTADOS):
+            if 'ouv' in e:
+                o = e['ouv']
+                ok('%s: ouvintes do tique: 3 instâncias ligadas somam 3, desligadas voltam a %d, religar uma soma 1 (e ela mostra a faixa), no fim %d (sem vazar nem duplicar)' % (nome, o['n0'], o['fim']),
+                   o['tres'] == o['n0'] + 3 and o['duas'] == o['n0'] + 2 and o['zero'] == o['n0'] and o['religada'] == o['n0'] + 1 and o['fim'] == o['n0'] and (o['textoReligada'] or w < 1000), o)
+                continue
+            rot = '%s · %s' % (nome, e['rot'])
+            ok('%s: %s' % (rot, ' · '.join('%s %s' % (t, 'igual' if v == 'igual' else 'DIFERE') for t, v in e['tags'].items())), all(v == 'igual' for v in e['tags'].values()), e['tags'])
+            ok('%s: o <capitao-theme-toggle> continua o mesmo nó' % rot, e['mesmoToggle'], e)
+            if e['rot'] == 'replay (ao vivo)':
+                ok('%s: LED ao vivo, sem selo DEMO' % rot, e['vivo'] is True and not e['demo'], e)
+            if e['rot'] == 'sem replay (leitura fixa)':
+                ok('%s: LED de leitura fixa (vivo false), sem selo' % rot, e['vivo'] is False and not e['demo'], e)
+            if e['rot'] == 'leitura fixa com D.demo' and w >= 1000:   # só o cabeçalho e a faixa da web têm o selo; o topo do app não
+                ok('%s: o selo DEMO entrou (cabeçalho e faixa mostram DEMO)' % rot, e['demo'] is True, e)
+            if e['rot'] == 'replay sem D.demo':
+                ok('%s: o selo DEMO saiu' % rot, e['demo'] is False, e)
+            if e['rot'].startswith('sem dado nenhum'):
+                ok('%s: sem dado, o texto mostra «—» ou SEM DADOS e nunca NaN, undefined nem [object' % rot, ('—' in e['texto'] or 'SEM DADOS' in e['texto']) and not re.search(r'NaN|undefined|\[object', e['texto']), e['texto'])
+            if e['rot'].startswith('título'):
+                ok('%s: o título e o voltar do topo acompanham os atributos' % rot, e['topo']['texto'].split('\n')[0].strip() == 'Outro título' and e['topo']['href'] == 'A1-Ponte-Web.dc.html', e['topo'])
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
+# Main, H2 e E1 se redesenham a cada setState (o __setLogicState do support.js sempre troca o __v): só dão setState quando o texto exibido muda.
+GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegando-Gatilhos', 360, 640))
+
+
+def gating(b, telas=GATING_TELAS, livre_ms=8000):
+    print('Main, H2 e E1: setState só quando o texto exibido muda')
+    pgs = [(nome, abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
+           for nome, w, h in telas]
+    pgs[0][1].wait_for_timeout(3500)
+    for nome, pg in pgs:
+        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
+    pgs[0][1].wait_for_timeout(livre_ms)
+    livre = {nome: pg.evaluate("() => ({ sets: window.__sets, ticks: window.__ticks })") for nome, pg in pgs}
+    for nome, pg in pgs:
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+    pgs[0][1].wait_for_timeout(1800)
+    for nome, pg in pgs:
+        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
+    pgs[0][1].wait_for_timeout(3300)
+    for nome, pg in pgs:
+        f = pg.evaluate("""() => { const v = window.CapitaoTelemetria.atual(), nb = (x) => x.toFixed(1).replace('.', ','), t = document.body.innerText;
+          return { sets: window.__sets, ticks: window.__ticks, sog: nb(v.sog_nos), temSog: t.indexOf(nb(v.sog_nos)) >= 0 }; }""")
+        l = livre[nome]
+        ok('%s: livre, %d setState em %d tiques (nunca mais que um por tique)' % (nome, l['sets'], l['ticks']), l['ticks'] >= livre_ms // 1000 - 2 and l['sets'] <= l['ticks'], l)
+        if nome.startswith('H2'):
+            ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
+        ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
+        if not nome.startswith('H2'):
+            ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
+        ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
+    for nome, pg in pgs:
+        fecha(pg)
+
+
 # ——— 12. as telas de verdade ———
 def telas(b):
     print('Telas de verdade (com sessão): o motor carrega, anda e não dá erro de script')
@@ -1190,6 +1421,52 @@ MUTANTES = [
 ]
 
 
+# P2B: os mesmos defeitos plantados na moldura e nas telas; cada um tem de ser acusado pelo teste de desempenho (uma tela só, janela curta).
+A2 = ('A2-Ponte-Mobile', 360, 640)
+MUTANTES_ARQ = [
+    ('a moldura escrevendo o nó de texto sem comparar (o mesmo valor também gera mutação de caractere)', 'capitao-moldura.js',
+     [("function poe(t, v) { if (t.data !== v) t.data = v; }", "function poe(t, v) { t.data = v; }")], 'moldura'),
+    ('a moldura escrevendo o atributo sem comparar (o aria-label do LED a cada tique)', 'capitao-moldura.js',
+     [("function atr(e, k, v) { if (e.getAttribute(k) !== v) e.setAttribute(k, v); }", "function atr(e, k, v) { e.setAttribute(k, v); }")], 'moldura'),
+    ('o tique refazendo o HTML da moldura (o botão do tema e o avatar recriados, o fit() a cada segundo)', 'capitao-moldura.js',
+     [("el._on = function () { el.atualiza(); };", "el._on = function () { if (el.monta) el.monta(leitura()); el.atualiza(); };")], 'moldura'),
+    ('o LED trocado a cada tique em vez de só quando vira', 'capitao-moldura.js',
+     [("if (this._vivo !== L.vivo) { this._vivo = L.vivo; troca(n.led.firstElementChild, led(L.vivo, 7)); }", "{ this._vivo = L.vivo; troca(n.led.firstElementChild, led(L.vivo, 7)); }")], 'moldura'),
+    ('a Main dando setState a cada tique, sem comparar o texto da faixa', 'Main.dc.html',
+     [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
+    ('a H2 dando setState a cada tique, sem comparar o LED', 'H2-Home-Mobile.dc.html',
+     [("if (k !== this._vivoK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
+]
+
+
+def mutantes_arq(b):
+    global MUT_ARQ, CAPTURA
+    print('Mutantes da moldura e das telas (P2B): cada defeito plantado tem de ser acusado pelo teste de desempenho')
+    for nome, arq, trocas, qual in MUTANTES_ARQ:
+        src = le(arq)
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            ok('mutante «%s»: o trecho está uma vez no %s' % (nome, arq), False, faltam)
+            continue
+        MUT_ARQ, CAPTURA, caiu = {arq: trocas}, [], ''
+        sai = sys.stdout
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            try:
+                if qual == 'moldura':
+                    for n_, r_ in moldura_lote(b, [A2], segundos=5).items():
+                        confere_moldura(n_, A2[1], r_, segundos=5)
+                else:
+                    gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
+            except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
+                caiu = 'o teste caiu: %s' % str(e).splitlines()[0][:160]
+        finally:
+            sys.stdout.close()
+            sys.stdout = sai
+            achados, MUT_ARQ, CAPTURA = CAPTURA, None, None
+        ok('mutante: %s — acusado (%d conferência(s) falham)' % (nome, len(achados)), len(achados) > 0 and not caiu, caiu or achados)
+
+
 def mutantes(b):
     global MUT, CAPTURA, TOL_TRIG
     print('Mutantes do motor: cada defeito plantado tem de ser acusado pelo teste que cuida dele (paridade sempre exata, sem a tolerância do CAPITAO_TOL_TRIG)')
@@ -1241,9 +1518,13 @@ def main():
         nunca_lanca(browser)
         d_parcial(browser)
         desempenho(browser)
+        moldura(browser)
+        moldura_estados(browser)
+        gating(browser)
         codigo()
         telas(browser)
         mutantes(browser)
+        mutantes_arq(browser)
         browser.close()
     print('%d conferências · %d falhas' % (total, falhas))
     sys.exit(1 if falhas else 0)

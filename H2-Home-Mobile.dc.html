@@ -179,7 +179,9 @@ class Component extends DCLogic {
     // ENCERRAR no overlay de voz (capitao-voz.js): desliga a conversa ou o voz→texto em andamento.
     this._onEncerra = () => { if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
     window.addEventListener('capitao-voz-encerrar', this._onEncerra);
-    this._onTele = () => this.setState({ vivo: Date.now() });
+    // A cada tique da telemetria (replay ou coletor): redesenha só se o que a tela exibe a partir dela mudou. Aqui é só o LED e a dica (vivo ou não): o setState
+    // refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa.
+    this._onTele = () => { const k = this.vivoTele(); if (k !== this._vivoK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._onTele);
     this.whenBrain(() => { this.setState({ atalhos: window.CapitaoBrain.loadShortcuts() }); this.handleHash(); });
   }
@@ -376,10 +378,13 @@ class Component extends DCLogic {
       { short: 'ELETRÔN.', n: '5 · ELETRÔNICOS', s: 'Garmin · Fusion · Icom — plotter · piloto · rádio · áudio', href: 'F3-FAQ-Eletronicos.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)', ctone: st('eletronicos') }
     ].map((b) => Object.assign(b, { ico: this.ico(b.d, 26, 1.7, b.tone) }));
   }
+  // Há quadro de telemetria agora (replay ou coletor recente)? É a única coisa que a H2 exibe a partir dela (LED e dica).
+  vivoTele() { const T = window.CapitaoTelemetria; return !!(T && T.atual && T.atual()); }
   renderVals() {
     const s = this.state;
-    const D = window.CapitaoDados || {}, S = D.snapshot || {}, T = window.CapitaoTelemetria;
-    const vivo = !!(T && T.atual && T.atual());
+    const D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const vivo = this.vivoTele();
+    this._vivoK = vivo; // o que o LED exibe agora: o ouvinte da telemetria só chama setState se mudar
     const atalhos = (s.atalhos || this.FALLBACK).slice(0, 8);
     const chatting = s.thread.length > 0 || s.thinking;
     const att = s.attachment;
