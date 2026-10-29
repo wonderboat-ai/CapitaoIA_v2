@@ -319,14 +319,24 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
        # 1b (PROMPT §2.3)
        'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', 'sangra',
        'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
-       'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas']
+       'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
+       # 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, colisão, perda de governo, eixo e mangueira que a revisão mediu indo à
+       # IA na nuvem, contra a trava §2.3 (emergência local). As frases ficam por inteiro: ' bateu em ' com espaços nas pontas não pega
+       # "bateu o horário"; ' entrou agua ' não pega "entrou aguardando".
+       'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
+       ' entrou agua ', ' fazendo agua ', ' bateu em ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
+       # 1b, §8.2 item 11: o subconjunto sem «sem governo» (pegaria «sem governo federal») e «água subindo» (pegaria a temperatura da água)
+       'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
+       'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou']
 # Rota salvatagem (PROMPT §2.3): ' boia ' sem as palavras de boia de sinalização; "extintor" só sem fogo (na rota) e sempre aqui.
 SALVATAGEM = ['colete', 'salva-vida', 'salva vida', 'balsa', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete',
               'pirotecn', 'facho', 'salvatagem', 'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv',
               ' plb ', ' sart ']
 BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz']
-SEGURANCA_EXTRA = ['epirb', 'radiobaliza', 'baliza', 'seafire', 'supressao', 'mayday', 'distress', ' dsc ', 'pan-pan', 'pan pan',
-                   'homem ao mar']
+# Rota epirb do cérebro (a baliza que disparou e o disparador hidrostático são do EPIRB; a pergunta do botão da G1 do certificado vai antes, ao
+# docsvenc): ficam FORA da SOS porque o nome do certificado do EPIRB traz "disparador hidrostático" (o docsvenc não pode virar emergência).
+EPIRB = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico']
+SEGURANCA_EXTRA = EPIRB + ['baliza', 'seafire', 'supressao', 'mayday', 'distress', ' dsc ', 'pan-pan', 'pan pan', 'homem ao mar']
 
 
 def emergencia(q):

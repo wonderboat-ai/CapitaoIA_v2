@@ -287,7 +287,7 @@ A rota do contrato (15,42 mn, fator 0,9407) mudou no portão manual: os pontos d
 
 **Fase 1b — SOS fora da simulação**
 - [ ] S1/S2: GPS do aparelho, `MMSI_RADIO`, sem REG/selo/snapshot, clima só real; F04 (grava só na ação)
-- [ ] Cérebro: `SOS_PASSOS`, `sos`, `canal16`, `epirb`, `seafire`, lista `SOS`, `salvatagem`
+- [x] Cérebro (commit «SOS fora da simulação (Fase 1b): cérebro de emergência»): `SOS_PASSOS`/`sos`/`canal16`/`epirb`/`seafire`/`oleo` leem só o `D.protocolos` (MMSI do rádio de bordo, indicativo da Licença, Seafire e EPIRB no procedimento padrão com a etiqueta; sem leitura do quadro); rota `salvatagem`; lista `SOS` ampliada (PROMPT §2.3 + as frases da revisão do C5 + o subconjunto do §8.2 item 11, sem «sem governo» e «água subindo»); `baliza disparou` e `disparador hidrostático` na rota `epirb` (não na `SOS`: o certificado do EPIRB da G1 tem «disparador hidrostático» e tem de seguir `docsvenc`); o sistema fixo que disparou ou descarregou é a rota `seafire`; `SINONIMOS` baliza/testar; ficha sem fabricante e modelo de EPIRB e Seafire, `docsvenc` sem a data do `doc-epirb`; `S` vazio em `/SOS-/`; as listas do cérebro iguais às do gerador (testadas)
 - [ ] Conferência Playwright + `verificar.py S1-SOS-Web S2-SOS-Mobile --offline`
 
 **Fase 2 — `capitao-replay.js`**

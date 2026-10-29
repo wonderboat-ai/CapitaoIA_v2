@@ -12,7 +12,10 @@
   var norm = function (s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
   var has = function (q, list) { return list.some(function (k) { return q.indexOf(k) !== -1; }); };
   var D = window.CapitaoDados || {};
-  var E = D.embarcacao || {}, S = D.snapshot || {}, AUT = D.autonomia || {}, CON = D.consumo || {};
+  // No SOS (S1 e S2 carregam este cérebro para gravar no diário e ler os telefones do aparelho), o snapshot fica vazio: nada do dado
+  // gerado da embarcação sai de lá (PROMPT §2.1; CONTRATO §1.3). Em /SOS-/ nada aqui lê o snapshot, o replay nem o MMSI gerado.
+  var EM_SOS = false; try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
+  var E = D.embarcacao || {}, S = EM_SOS ? {} : (D.snapshot || {}), AUT = D.autonomia || {}, CON = D.consumo || {};
   var DEMO = D.demo ? ' (DEMO)' : '';
   var DEMO_ = D.demo ? ' DEMO' : ''; // dentro de parênteses: "(snapshot DEMO 26/09 10:12)", sem parêntese aninhado
   var SD = 'SEM DADOS';
@@ -122,10 +125,44 @@
 
   // Frase normalizada com espaço nas pontas (palavra inteira = ' x ').
   function pad(s) { return ' ' + norm(s).replace(/[?!.,;:()"“”]+/g, ' ').replace(/\s+/g, ' ').trim() + ' '; }
+  // Lista SOS: a de antes mais a ampliação da 1b (PROMPT §2.3; frases de queda de pessoa, perda de governo e água a bordo que a revisão do C5
+  // mediu indo à IA, contra a trava "emergência local, nunca na IA"). UMA lista só com a SEGURANCA_PALAVRAS do gerador
+  // (ferramentas/demo/confere.py): o testes/cerebro.py confere que as duas são iguais.
   var SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos ', 'socorro', 'naufrag', 'caiu no mar', 'caiu ao mar', 'caiu na agua', 'pessoa na agua', 'alguem na agua', 'crianca na agua', 'afogad', 'afogand',
     'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao', 'colidi', 'abalroa', 'encalh', 'explos',
-    'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas', 'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado'];
+    'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas', 'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
+    // 1b (PROMPT §2.3)
+    'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', 'sangra',
+    'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
+    'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
+    // 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, colisão, perda de governo, eixo e mangueira (as frases ficam por
+    // inteiro: ' bateu em ' com espaços nas pontas não pega "bateu o horário"; ' entrou agua ' não pega "entrou aguardando")
+    'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
+    ' entrou agua ', ' fazendo agua ', ' bateu em ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
+    // 1b, §8.2 item 11 (o subconjunto sem "sem governo" e "água subindo", que pegariam "sem governo federal" e a temperatura da água)
+    'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
+    'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou'];
   function emergencia(q) { return has(q, SOS) || (has(q, ['fumaca']) && !has(q, ['escap'])); } // fumaça no escapamento é do motor, não SOS
+  // Rota salvatagem (PROMPT §2.3): ' boia ' só sem as palavras de boia de sinalização (amarra, poita, canal, baliza, cardinal, luz);
+  // "extintor" aqui sem fogo, fumaça nem incêndio (com eles a SOS já respondeu, acima).
+  var SALVATAGEM = ['colete', 'salva-vida', 'salva vida', 'balsa', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete', 'pirotecn', 'facho', 'salvatagem',
+    'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv', ' plb ', ' sart '];
+  var BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz'];
+  function salvatagem(q) { return has(q, SALVATAGEM) || (q.indexOf(' boia ') !== -1 && !has(q, BOIA_FORA)) || q.indexOf('extintor') !== -1; }
+  // EPIRB (rota epirb): a baliza que disparou e o disparador hidrostático são do EPIRB, local, nunca da IA (a pergunta do botão da G1 do
+  // certificado, "…disparador hidrostático", vai antes, para o docsvenc)
+  var EPIRB_PALAVRAS = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico'];
+  // O sistema fixo que disparou ou descarregou (1b, §6.6 do contrato): "sistema fixo", "descarga do sistema", "depois do disparo", "descarreg…",
+  // "depois da descarga", "disparou o sistema" e "sistema … disparou/disparo". Fora a eletricidade e os outros sistemas: a bateria que descarregou,
+  // o disjuntor do sistema elétrico que disparou, o carregador, o som e o plotter não são o Seafire. "Sistema fixo" vale sempre.
+  var ELETRICO = ['bateria', 'carregador', 'pilha', 'celular', 'tensao', 'volt', 'eletric', 'disjuntor', 'inversor', 'tomada', 'amper', ' som ', 'audio', 'musica',
+    'bluetooth', 'plotter', 'radar', 'wifi', 'internet', 'climatiza', 'condicionado'];
+  var DISPARO_SISTEMA = / sistema(?: [a-z0-9]+){0,6} (?:disparou|disparo|disparar|disparado) /;
+  function seafireDisparo(q) {
+    if (q.indexOf('sistema fixo') !== -1) return true;
+    if (has(q, ELETRICO)) return false;
+    return has(q, ['descarga do sistema', 'depois do disparo', 'descarreg', 'depois da descarga', 'disparou o sistema']) || DISPARO_SISTEMA.test(q);
+  }
   // Óleo: 1 = queda/alarme relatado (passo a passo); 2 = só pergunta de pressão (leitura); 0 = outro assunto.
   // Exige "óleo" na frase (nunca "pressão baixa" sozinha: barômetro, água, chuveiro). Conservador: pressão do óleo sem ser pergunta simples
   // (qual/como/normal/faixa…) já é relato → passo a passo. Porão/vazamento só saem daqui sem pressão/alarme/luz; gerador, só sem "motor".
@@ -201,15 +238,34 @@
 
   var P = D.protocolos || {};
   var ROTULO = P.rotulo || 'procedimento padrão — confirmar com o protocolo de bordo';
-  var MMSI = E.mmsi ? 'MMSI ' + E.mmsi + (E.mmsiNota ? ' (' + E.mmsiNota + ')' : '') : 'MMSI ' + SD;
+  // MMSI_RADIO (PROMPT §2.2): em todo texto de emergência e de rádio o MMSI é o da etiqueta do rádio (Licença de Estação); o número do
+  // cadastro do app (E.mmsi) só na Embarcação, nos Documentos, na F3 e no `## Embarcação` da ficha — lido na hora (mmsiNum), nunca na carga,
+  // porque o SOS carrega este arquivo. Indicativo: o da Licença de Estação, nunca gerado.
+  var MMSI_RADIO = P.mmsiRadio || 'MMSI do rádio de bordo (etiqueta / Licença de Estação)';
+  var INDICATIVO = P.indicativo || 'o da Licença de Estação (no rádio)';
+  function mmsiNum() { return E.mmsi ? 'MMSI ' + E.mmsi : 'MMSI ' + SD; }
+  // Os passos vêm do D.protocolos (fonte única do SOS, dos guias e dos cartões): mob, seafire.passos, epirb.passos, oleo. Nada de posição,
+  // rumo, SOG, ETA, pessoas a bordo do quadro, MMSI gerado, modelo, validade nem lugar de equipamento de salvatagem (trava 17).
+  var NOTA_ETIQUETA = (P.seafire && P.seafire.nota) || (P.epirb && P.epirb.nota) || 'modelo, validade e acionamento: veja a etiqueta do equipamento';
+  function passosDe(x) { return (x && x.passos) || []; }
+  function maius1(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function numerados(xs, ini) { return xs.map(function (t, i) { return ((ini || 1) + i) + '. ' + t; }).join('\n'); }
+  var MOB = P.mob || [], SEAFIRE_PASSOS = passosDe(P.seafire), EPIRB_PASSOS = passosDe(P.epirb);
   // Passos do SOS: resposta sos e, inteiros, no registro de diário que cita emergência. Chat nunca grava sozinho — só "registre no diário…".
-  // Posição do MAYDAY é a do plotter na hora da chamada — o GPS do snapshot é só o último fix.
-  var SOS_PASSOS = 'Ordem (' + ROTULO + '):\n1. VHF canal 16 · MAYDAY — nome ×3, ' + MMSI + ', posição lida no plotter, perigo, pessoas a bordo, auxílio\n2. Homem ao mar: grite e aponte, jogue a boia, marque MOB no plotter Garmin, volte com o motor em neutro perto da pessoa\n3. Incêndio · Seafire: ' + SD + ' — procedimento do sistema não carregado\n4. EPIRB: ' + SD + ' — modelo, localização e acionamento não carregados';
-  // Passos da pressão de óleo baixa: resposta oleo e, inteiros, no registro de diário que relata queda/alarme de pressão.
-  var OLEO_PASSOS = '1. Reduza para marcha lenta e observe se a pressão sobe.\n2. Compare BB e BE no mesmo giro — só um lado baixo aponta o motor.\n3. Com o motor parado: procure vazamento e confira o nível de óleo.\n4. Persistindo: desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.';
+  // Posição do MAYDAY é a do plotter na hora da chamada. Seafire e EPIRB: só o procedimento padrão, com a etiqueta do equipamento.
+  var SOS_PASSOS = 'Ordem (' + ROTULO + '):\n1. VHF canal 16 · MAYDAY — nome ×3, ' + MMSI_RADIO + ', posição lida no plotter, perigo, pessoas a bordo (conte agora), auxílio\n2. Homem ao mar: ' + MOB.join(' ') +
+    '\n3. Incêndio · Seafire: ' + [SEAFIRE_PASSOS[0], SEAFIRE_PASSOS[4]].filter(Boolean).join(' ') + '\n4. EPIRB: ' + (EPIRB_PASSOS[0] || '');
+  // O que a ficha da IA leva da emergência: a ordem e o MMSI do rádio, sem os passos (emergência não vai à IA; os passos estão nas respostas
+  // locais, na tela SOS e nos guias). Mantém a ficha dentro do teto de 9.800 letras do contrato (§6.1).
+  var SOS_FICHA = 'Ordem (' + ROTULO + '): 1. VHF canal 16 · MAYDAY com o ' + MMSI_RADIO + ' e a posição lida no plotter; 2. homem ao mar; 3. incêndio · Seafire; 4. EPIRB. Os passos estão nas respostas locais (sos, seafire, epirb), na tela SOS e nos guias; emergência não vai à IA.';
+  // Passos da pressão de óleo baixa: resposta oleo e, inteiros, no registro de diário que relata queda/alarme de pressão. Sem leitura do quadro.
+  var OLEO_PASSOS = numerados(P.oleo || []);
   // Base completa externa (NotebookLM) não configurada nesta embarcação: o fallback leva a pendência e FAQ.
   var BASE = null;
-  var GRAVAR_AGORA = 'Para gravar posição e hora: toque em DIÁRIO DE BORDO ou diga “registre posição e hora”.';
+  // Texto de emergência não manda gravar o resumo da telemetria (nada de posição, rumo nem velocidade do quadro): o relato vai em palavras, a posição se lê no plotter.
+  var GRAVAR_AGORA = 'Para registrar no diário: diga “registre no diário…” e o que aconteceu; a posição, leia no plotter.';
+  var LOCAL_PLACA = 'no local da placa de salvatagem e do plano de segurança de bordo — confira na saída';   // a frase da salvatagem (protocolos.salvatagem), sem lugar inventado
+  var LOCAL_PLANO = 'no local indicado no plano de segurança de bordo — confira na saída';
   function resumoAgora() {
     return SNAP.local + ' · ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + SNAP.motores + ' · gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h) · Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' · banco 24 V ' + nb(S.bat24, 2) + ' V · vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ') — snapshot' + DEMO_ + ' ' + SNAP.quando + '.';
   }
@@ -282,7 +338,9 @@
       var pv = previsao();
       return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
-    canal16: function (p) { return { text: 'VHF canal 16 (156,800 MHz) — socorro, urgência e chamada.\n' + MMSI + ' · indicativo ' + (E.indicativo || SD) + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '), só em perigo grave e iminente:\nMAYDAY, MAYDAY, MAYDAY — AQUI É CAPITÃO IA, CAPITÃO IA, CAPITÃO IA — ' + MMSI + ' — POSIÇÃO: LEIA NO PLOTTER AGORA (último fix ' + SNAP.pos + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ') — NATUREZA DO PERIGO — PESSOAS A BORDO — AUXÍLIO NECESSÁRIO — CÂMBIO.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal e MMSI informados pelo proprietário', actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    canal16: function (p) {
+      return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
+    },
     checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
     consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', ''), actions: act(p, [['Abastecimento', 'abast']]) }; },
@@ -312,9 +370,12 @@
     },
     posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · snapshot' + DEMO_ + ' ' + SNAP.quando + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
     docsvenc: function (p) {
-      var ds = (D.documentos || []), com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
+      // Documento ligado a um equipamento de segurança (o certificado do EPIRB): sem a data nem o D-n; a etiqueta do equipamento vale (1b, trava 17)
+      var seg = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };
+      var todos = (D.documentos || []), segDocs = todos.filter(seg), ds = todos.filter(function (d) { return !seg(d); });
+      var com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
       var vence = com.filter(function (d) { return d.dn <= 90; }), dia = com.filter(function (d) { return d.dn > 90; }), sem = ds.filter(function (d) { return d.st === SD; }), conf = ds.filter(function (d) { return /A CONF/.test(d.st); });
-      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
+      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
     },
     horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros (motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + '):\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (D-' + o.dn + ') ou ' + o.horas.limite + ' h — faltam ' + nb(o.horas.faltam) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (D-' + rv.dn + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
     motores: function (p) { var e = equip('motores'); return { text: 'Motores ' + (e && e.qtd ? e.qtd + ' × ' : '') + 'Volvo Penta' + (e && e.lados ? ' (' + e.lados + ')' : '') + ' · modelo ' + SD + '.\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarme.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h · troca de óleo ' + prazoTxt(tarefa('motores-oleo')) + ' ou 450 h.\nPartida, aquecimento e parada: ' + guia('g_motores') + '. Faixas oficiais: manual do fabricante — modelo ' + SD + '.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
@@ -324,11 +385,15 @@
     audio: function (p) { return { text: 'Áudio Fusion · modelo ' + SD + '.\nParear: fonte Bluetooth no controle Fusion → aparelho visível → selecione o Fusion na lista de Bluetooth do celular. Volume ajustado por zona.', src: 'Fonte: ' + guia('g_eletronicos') + ' §6', actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
     dessalinizador: function (p) { return { text: SD + ' — dessalinizador não consta na lista de equipamentos.\nSe houver a bordo, envie a foto da etiqueta (modelo e número de série) para catalogar.', src: 'Fonte: Inventário de bordo' + DEMO + ' — equipamento não listado', actions: act(p, [['Enviar foto', A(p, 'home') + '#mode=foto']]) }; },
     eletrico: function (p) { var ser = D.serie24v || [], mn = Math.min.apply(null, ser.map(function (x) { return x.min; })), mx = Math.max.apply(null, ser.map(function (x) { return x.max; })), b = tarefa('baterias'); return { text: 'Banco 24 V: ' + nb(S.bat24, 2) + ' V (' + (G.estado ? 'gerador ' + G.estado : '') + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ')' + (ser.length ? ' · 7 dias entre ' + nb(mn) + ' e ' + nb(mx) + ' V' : '') + '.\nBanco 12 V: ' + nb(S.bat12, 2) + ' V.' + (b ? '\n' + b.t + ': ' + prazoTxt(b) + ' (' + b.quem + ').' : ''), src: FT.tele + ' · série 24 V · 7 dias · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Telemetria', 'console']]) }; },
-    epirb: function (p) { return { text: 'EPIRB: ' + SD + ' — modelo, localização a bordo, acionamento e validade da bateria não foram carregados.\nEnvie a foto da etiqueta e do certificado para completar o SOS.\n' + MMSI + '.', src: 'Fonte: Inventário de bordo' + DEMO + ' · ' + FT.proto.replace('Fonte: ', '') + ' (EPIRB: ' + SD + ')', actions: act(p, [['Abrir SOS', 'sos'], ['Documentos', 'docs']]) }; },
-    seafire: function (p) { return { text: 'Sistema de incêndio Seafire: ' + SD + ' — localização, acionamento automático ou manual e tempo de espera não foram carregados.\nEm incêndio agora: abra o SOS e chame no canal 16.\nEnvie o manual ou o protocolo de bordo do Seafire para completar o passo a passo.', src: 'Fonte: Inventário de bordo' + DEMO + ' · ' + FT.proto.replace('Fonte: ', '') + ' (Seafire: ' + SD + ')', actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    // epirb e seafire (trava 17): só o procedimento padrão do D.protocolos, com a etiqueta do equipamento; fabricante, modelo, validade e lugar a bordo
+    // não aparecem aqui (só em Equipamentos, Leme e Documentos). A 1ª linha é a instrução de segurança; a conversa toda é lida (FALA_INTEIRA).
+    epirb: function (p) { return { text: 'EPIRB — ' + min1(EPIRB_PASSOS[0] || '') + '\n' + numerados(EPIRB_PASSOS.slice(1), 2) + '\n' + maius1(NOTA_ETIQUETA) + ' (' + ROTULO + ').\nOnde fica: ' + LOCAL_PLACA + '.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    seafire: function (p) { return { text: 'Seafire — ' + (SEAFIRE_PASSOS[0] || '') + '\n' + numerados(SEAFIRE_PASSOS.slice(1), 2) + '\n' + maius1(NOTA_ETIQUETA) + ' (' + ROTULO + ').\nOnde fica: ' + LOCAL_PLANO + '.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) }; },
+    // Salvatagem (PROMPT §2.3): o texto fixo do D.protocolos, sem número de pessoas, sem lugar (paiol, armário, proa, popa) e sem IA
+    salvatagem: function (p) { return { fala: P.salvatagem || '', text: (P.salvatagem || '') + '\n(' + ROTULO + ')', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Checklist de saída', 'checklist']]) }; },
     // sos/óleo não gravam nada: pergunta informativa não vira linha permanente. Gravar = atalho DIÁRIO DE BORDO ou "registre posição e hora".
-    sos: function (p) { return { text: 'Emergência — abra o SOS. ' + SOS_PASSOS + '\n' + GRAVAR_AGORA, src: FT.proto + ' · Seafire e EPIRB: ' + SD, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
-    oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\nNo snapshot' + DEMO_ + ' de ' + SNAP.quando + ' os motores estão desligados; última leitura com motores ligados ' + (M.hora || SD) + ' (marcha lenta, neutro): óleo ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar, sem alarme.\nFaixa normal: manual do fabricante — modelo ' + SD + '.\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4 · ' + SNAP.fonte, actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
+    sos: function (p) { return { text: 'Emergência — abra o SOS. ' + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
+    oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4', actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
     oleoLeitura: function (p) { return { text: 'Motores desligados no snapshot' + DEMO_ + ' de ' + SNAP.quando + '. Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar · ' + (M.rpm ? M.rpm.join('/') : '—') + ' rpm em neutro · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · sem alarme.\nFaixa normal: manual Volvo Penta — modelo ' + SD + '.\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) }; },
     ancora: function (p) { return { text: 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.\n' + (S.estado || SD) + ' · ' + (S.local || SD) + ' · ' + SNAP.pos + ' · profundidade ' + nb(S.profundidade) + ' m (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nAlarme de âncora: ative no plotter e defina o raio conforme o cabo lançado e o espaço de giro.', src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
     // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
@@ -402,6 +467,9 @@
     // conversa em emergência por 15 min: um toque na papelada abriria o modo emergência). Vem depois da emergência e do óleo (segurança
     // acima de tudo) e antes de qualquer rota de assunto. Pergunta digitada com "EPIRB" segue a rota do EPIRB.
     if (/^ situacao e vencimento do documento /.test(q)) return 'docsvenc';
+    // Salvatagem (PROMPT §2.3): colete, balsa, boia, sinalizador, extintor sem fogo… logo depois da emergência e do óleo, antes das rotas de
+    // assunto (epirb, seafire, canal16): resposta fixa, local, sem número de pessoas e sem lugar a bordo
+    if (salvatagem(q)) return 'salvatagem';
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     if (has(q, ['telemetria', 'leituras', 'sensores', 'como esta o barco', 'estado do barco', 'status do barco'])) return 'telemetria';
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
@@ -419,9 +487,11 @@
     if (has(q, ['tanque', 'agua doce', 'cinzas', 'negras'])) return 'tanques';
     // "próxima revisão" sem equipamento = motores; com equipamento, a rota dele (Seakeeper, climatização, gerador…)
     if (has(q, ['horimetro', 'horas de motor', 'horas do motor', 'horas dos motores']) || (has(q, ['proxima revisao']) && !has(q, EQUIP))) return 'horimetros';
-    if (has(q, ['epirb', 'radiobaliza'])) return 'epirb';
-    // "supressão" (PROMPT §2.3): é o nome do Seafire nos dados ("sistema fixo de supressão", sem "incêndio", que abriria o SOS)
-    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'extintor', 'sistema de incendio', 'supressao'])) return 'seafire';
+    if (has(q, EPIRB_PALAVRAS)) return 'epirb';
+    // "supressão" (PROMPT §2.3): é o nome do Seafire nos dados ("sistema fixo de supressão", sem "incêndio", que abriria o SOS). 1b: o sistema
+    // fixo que disparou ou descarregou também é do Seafire (o "não abra o acesso ao motor" e o desligamento são os passos de protocolos.seafire);
+    // "extintor" saiu daqui para a salvatagem (sem fogo) ou para a SOS (com fogo)
+    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao']) || seafireDisparo(q)) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
     if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
@@ -492,7 +562,9 @@
     // Revisão 4 do C5: "quando trocar o óleo do motor?" achava só o §4 (pressão de óleo baixa) e não a agenda "Troca de óleo e filtros" (§7);
     // "botão distress" é o DSC do rádio e "o sistema descarregou" é o §3 "Depois da descarga" (a identidade do trecho de segurança,
     // abaixo, é o título dele). As chaves são a raiz() da palavra: distres = raiz('distress').
-    trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga']
+    trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga'],
+    // 1b (PROMPT §2.3): "baliza" é o EPIRB e "testar a baliza" é o teste dele (o §2 do g_epirb traz «teste» e «baliza»)
+    baliza: ['epirb', 'radiobaliza'], testar: ['teste', 'autoteste']
   };
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
   // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
@@ -505,7 +577,7 @@
   // nota da etiqueta (CONTRATO §1.5), no fim de todo trecho de g_seafire, g_epirb, Salvatagem e protocolo, e o "do equipamento"
   // depois de "etiqueta" (o equipamento do trecho já está na fonte). Repetidas em trechos curtos, punham o g_epirb §4 no topo de
   // "quais equipamentos tem a bordo?" e de "modelo dos equipamentos", e o trecho de segurança do topo barrava a IA.
-  var NOTA_ETIQUETA = (equip('epirb') || {}).nota || 'modelo, validade e acionamento: veja a etiqueta do equipamento';
+  // (NOTA_ETIQUETA vem do D.protocolos, acima: o SOS carrega este arquivo e não lê o D.equipamentos; o gerador prende as duas notas iguais.)
   var FORA_DO_INDICE = [ROTULO, NOTA_ETIQUETA].map(function (f) { return norm(f); });
   function indexavel(t) {
     t = norm(t);
@@ -707,8 +779,8 @@
     var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
     out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
     out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
-    out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + MMSI + ' · indicativo ' + (E.indicativo || SD) + '\n(Fonte: ' + (E.fonte || SD) + ')');
-    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
+    out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + mmsiNum() + ' (cadastro do app) · indicativo: ' + INDICATIVO + '\n(Fonte: ' + (E.fonte || SD) + ')');
+    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { if (e.seguranca) return '• ' + e.nome + ': ' + (e.nota || NOTA_ETIQUETA); return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
     if (fichaResumida(q, a)) {
       out.push('## Ficha resumida\nEsta pergunta veio só com o resumo acima (sobre o app e o barco) e, se houver, os trechos do guia. Telemetria, manutenção, documentos, diário e equipe não vieram: para um dado desses, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
       return out.join('\n\n');
@@ -729,7 +801,7 @@
       return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
-    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_PASSOS + '\n(' + FT.proto + ')');
+    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');
     return out.join('\n\n');
   }
 
@@ -1096,6 +1168,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, MMSI: MMSI, ROTULO: ROTULO };
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+    LISTAS: { SOS: SOS.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice() }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

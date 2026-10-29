@@ -903,7 +903,7 @@ GUIAS = {
         'titulo': ARQ['g_eletronicos'], 'pasta': 'manuais', 'equip': equip_de('eletronicos', 'audio', 'vhf'), 'seg': {'1', '5'},
         'secoes': [
             ('1 · Plotter: homem ao mar', 'Ao ver alguém cair na água, acione a função MOB do plotter: a posição fica marcada e o plotter mostra o rumo de volta. Siga o protocolo de emergência (homem ao mar).'),
-            ('2 · Piloto automático', 'Deixe o piloto automático em espera (standby) antes de manobrar na marina e sempre que houver gente na água. Engate só em área livre, com a rota conferida no plotter.'),
+            ('2 · Piloto automático', 'Deixe o piloto automático em espera (standby) antes de manobrar na marina e diante de qualquer risco a bordo. Engate só em área livre, com a rota conferida no plotter.'),
             ('3 · Alarme de âncora', 'Ao fundear, ative o alarme de âncora no plotter e defina o raio conforme a corrente lançada. O contador de corrente mostra os metros lançados no controle do guincho.'),
             ('4 · Rádio VHF: escuta', 'Mantenha o canal 16 em escuta permanente no rádio fixo. A dupla escuta acompanha o canal 16 e um canal de trabalho ao mesmo tempo. Deixe o rádio portátil carregado e pronto para uso.'),
             ('5 · Rádio VHF: DSC', TXT_DSC),
@@ -951,7 +951,7 @@ GUIAS = {
         'titulo': ARQ['g_piloto'], 'pasta': 'manuais', 'equip': equip_de('piloto'),
         'secoes': [
             ('1 · Engatar', 'Engate o piloto no controle do posto de comando, com o rumo conferido no plotter e área livre à frente.'),
-            ('2 · Espera ao manobrar', 'Em manobra, na marina e sempre que houver gente na água, deixe o piloto em espera (standby).'),
+            ('2 · Espera ao manobrar', 'Em manobra, na marina e diante de qualquer risco a bordo, deixe o piloto em espera (standby).'),
             ('3 · Assumir no timão', 'Para assumir, aperte espera e governe pelo timão. O piloto comanda a direção hidráulica por uma bomba própria.'),
             ('4 · Alarmes', 'Alarme de desvio de rumo ou da direção: assuma no timão, ponha em espera e confira o rumo no plotter. Registre no diário com a hora.'),
         ],
@@ -1441,7 +1441,7 @@ FAQ_TEXTOS = {
                 p=['Engate o piloto no controle do posto de comando.', 'Confira o rumo no plotter.', 'Confira que a área à frente está livre.'],
                 ver=('PI-02', 'EL-02')),
     'PI-02': _f('Piloto em espera ao manobrar', 'Quando deixo o piloto em espera?',
-                ['piloto em standby', 'piloto na marina', 'piloto com gente na água'], [0], p=[]),
+                ['piloto em standby', 'piloto na marina', 'piloto em situação de risco'], [0], p=[]),
     'PI-03': _f('Assumir o leme no timão', 'Como assumo o leme com o piloto ligado?',
                 ['sair do piloto automático', 'governar pelo timão', 'direção hidráulica do piloto'], [0], p=[], ob=1),
     'PI-04': _f('Alarmes do piloto automático', 'O piloto deu alarme de desvio de rumo, o que faço?',

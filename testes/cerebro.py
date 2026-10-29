@@ -12,9 +12,15 @@ Uso (com o site servido em http://127.0.0.1:8765):
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
 import json
+import os
 import re
 import sys
 from playwright.sync_api import sync_playwright
+
+# A 1b prende as listas de emergência do cérebro às do gerador (ferramentas/demo/confere.py: SOS, SALVATAGEM, BOIA_FORA, EPIRB), que também
+# marcam o `seguranca` dos trechos e dos itens do FAQ, e as 8 regex do termos.json sobre as respostas de emergência.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ferramentas', 'demo'))
+import confere  # noqa: E402
 
 BASE = 'http://127.0.0.1:8765/'
 CANAL = 'msedge'
@@ -56,7 +62,8 @@ CASOS = [
     ('o piloto automático não segura com rajada', 'eletronicos'), ('o motor apagou na rajada hoje', 'motores'),
     ('a rajada rasgou o toldo', 'fallback'), ('qual a rajada máxima que o barco aguenta?', 'fallback'),
     # "hoje"/"agora" sozinhos não fazem de "rajada" uma pergunta de previsão: relato e pessoa em risco seguem a IA (revisão da F13)
-    ('pegamos uma rajada agora e o barco adernou', 'fallback'), ('rajada derrubou alguém no mar agora', 'fallback'),
+    # 1b: «adernou» entrou na lista SOS (PROMPT §2.3); o que o caso protege continua (relato com «rajada» nunca vira a previsão do dia, `clima`)
+    ('pegamos uma rajada agora e o barco adernou', 'sos'), ('rajada derrubou alguém no mar agora', 'fallback'),
     ('a rajada de hoje arrancou o toldo', 'fallback'), ('há rajada forte entrando, o que faço?', 'fallback'),
     ('quanto tempo dura uma rajada?', 'fallback'), ('tem rajada hoje?', 'clima'), ('qual a previsão de rajada para amanhã?', 'clima'),
     # C5 (CONTRATO §6.2): com os 91 trechos dos 16 guias, pergunta fora do barco continua sem trecho (nenhum guia tem "lais")
@@ -64,7 +71,8 @@ CASOS = [
     # Revisão do C5: trecho de segurança no topo (g_epirb, g_seafire, protocolo §DSC) responde local e não vai à IA (PEDE_IA False,
     # PROMPT §2.3); "supressão" é a rota seafire (§2.3); as perguntas dos cartões da F1 ao chat (Seafire, AIS e guincho, CONTRATO §1.4)
     # caem na chave do equipamento ou no guia, nunca no SOS, no roteiro MAYDAY (canal16) nem na maré.
-    ('teste da baliza', 'base'), ('como acionar o disparo manual do sistema fixo?', 'base'), ('supressão', 'seafire'), ('botão distress', 'base'),
+    # 1b: o sistema fixo («sistema fixo», «descarga do sistema», «depois do disparo»…) é a rota `seafire`, com os passos de protocolos.seafire
+    ('teste da baliza', 'base'), ('como acionar o disparo manual do sistema fixo?', 'seafire'), ('supressão', 'seafire'), ('botão distress', 'base'),
     # Revisão 2 do C5: o cartão do guincho perguntava "guincho da âncora Lewmar", que caía na resposta pronta "ancora" (com a posição
     # do snapshot e o texto antigo do §3): agora pergunta o procedimento e cai no g_ancora. Radar e piloto: a resposta pronta dos
     # eletrônicos não fala deles; a pergunta de procedimento cai no guia de cada um (CONTRATO §1.4).
@@ -73,8 +81,10 @@ CASOS = [
     # Revisão 2 do C5: saudação com assunto de segurança (o g_epirb §2 no topo do buscaBase, que a tela manda à IA) fica no aparelho;
     # depois do disparo do sistema fixo, o trecho do topo manda não abrir o acesso ao motor (nunca o "use o disparo manual").
     ('como você me ajuda com o teste da baliza?', 'saudacao'), ('o que você sabe sobre o teste da baliza?', 'saudacao'),
-    ('o que fazer depois do disparo do sistema fixo', 'base'), ('o sistema fixo disparou', 'base'), ('o sistema fixo descarregou', 'base'),
-    ('alarme do sistema fixo', 'base'),
+    # 1b (CONTRATO §6.2, «os casos do disparo passam à chave seafire»): os mesmos casos, agora na rota `seafire`, que traz o «não abra o acesso ao
+    # motor» e o desligamento de motores, gerador e ventilação (ver a verificação «1b: depois do disparo…» mais abaixo)
+    ('o que fazer depois do disparo do sistema fixo', 'seafire'), ('o sistema fixo disparou', 'seafire'), ('o sistema fixo descarregou', 'seafire'),
+    ('alarme do sistema fixo', 'seafire'),
     # Revisão 3 do C5: pergunta genérica sobre os equipamentos volta ao fallback (a IA responde com o "## Equipamentos" da ficha).
     # O rótulo e a nota da etiqueta, no fim de todo trecho de segurança, punham o g_epirb §4 no topo e barravam a IA; o índice
     # da busca não os conta mais (o texto do trecho fica igual).
@@ -90,7 +100,7 @@ CASOS = [
     ('como religar o motor depois de desligar', 'base'), ('quando trocar o óleo do motor?', 'base'),
     ('como esfriar o motor', 'base'), ('como esfriar o motor depois de navegar', 'base'), ('como esfriar o motor depois de navegar rápido', 'base'),
     # o que continua local: a pergunta nomeia o assunto (o sistema fixo, a baliza, o DSC)
-    ('o sistema descarregou', 'base'), ('o sistema fixo disparou sozinho', 'base'), ('distress', 'base'), ('como usar o botão distress', 'base'),
+    ('o sistema descarregou', 'seafire'), ('o sistema fixo disparou sozinho', 'seafire'), ('distress', 'base'), ('como usar o botão distress', 'base'),
     # Revisão 5 do C5: a resposta pronta de equipamento (GENERICAS) só cede ao trecho do guia quando ele é do assunto perguntado
     # (trechoServe: guia do equipamento, nome que a pergunta diz, algo além do nome). Com os 91 trechos, "como ligar o plotter" trazia o
     # "Ligar e transmitir" do radar, "como ligar o sistema de som" o §1 dos bancos de bateria, "como funciona o sistema elétrico" o §3 de
@@ -111,7 +121,8 @@ CASOS = [
     # a pessoa a conta (`ident`: caiu, vista, pane, governo…). Antes da revisão 4 o trecho vinha de qualquer palavra dele; depois, só
     # pelo título, e estas perguntas, com as palavras do próprio trecho, iam à IA. ("ferido" também é do PAN-PAN, mas a 1b manda
     # ` ferid` para o SOS: fica de fora daqui para o caso não mudar de chave.)
-    ('pessoa caiu da lancha', 'base'), ('não vejo a pessoa que caiu', 'base'), ('perdemos de vista quem caiu', 'base'),
+    # 1b: «caiu da lancha» entrou na lista SOS (a revisão do C5 mediu «pessoa caiu da lancha» indo à IA): a chave passa de `base` a `sos`, ainda local
+    ('pessoa caiu da lancha', 'sos'), ('não vejo a pessoa que caiu', 'base'), ('perdemos de vista quem caiu', 'base'),
     ('sem governo', 'base'), ('barco sem governo', 'base'), ('pane no barco', 'base'),
     # as palavras de acionamento não abrem o trecho em pergunta comum: o assunto da pergunta tem de ser o do trecho
     ('o parafuso caiu', 'fallback'), ('quantas pessoas a bordo', 'fallback'), ('a pessoa da marina', 'fallback'), ('o governo federal', 'fallback'),
@@ -127,7 +138,9 @@ CASOS = [
     ('como ligar a bomba da climatização', 'base'), ('como desligar a bomba da climatização', 'base'), ('como trocar o rotor da bomba do gerador', 'base'),
     ('como trocar a bomba de óleo', 'base'), ('a bomba de circulação', 'fallback'),
     # (revisão 7: "como ligar as bombas de porão" já não traz o §4 "Água entrando" ao topo; fica a resposta pronta do porão, local como antes)
-    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'porao'), ('como ligar as bombas de porão', 'porao'),
+    # (1b: «testar» é sinônimo de «teste» (PROMPT §2.3, para «como testar a baliza?»): «como testar as bombas de porão» passa da resposta pronta ao
+    # g_porao §3 · Teste mensal, o trecho certo do guia; as outras duas seguem na resposta pronta)
+    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'base'), ('como ligar as bombas de porão', 'porao'),
     ('como trocar a bateria de partida', 'base'), ('como verificar a bateria de partida', 'base'), ('bateria de partida', 'eletrico'),
     ('o motor não pega, a bateria de partida está fraca', 'motores'),
     ('o disjuntor caiu, qual o procedimento', 'fallback'), ('a bateria caiu, procedimento', 'eletrico'), ('o gerador caiu, procedimento', 'gerador'),
@@ -137,8 +150,8 @@ CASOS = [
     ('tem vista para o mar?', 'fallback'), ('qual a vista do mar', 'fallback'), ('a temperatura do mar caiu', 'fallback'),
     ('pessoa ao mar', 'base'),
     # as quatro perguntas de religar depois do disparo e o alarme de âncora ficam no trecho de segurança / no plotter (seção na verificação)
-    ('como religar o gerador depois que o sistema fixo disparou', 'base'), ('como ligar o gerador depois do disparo do sistema fixo', 'base'),
-    ('o sistema fixo disparou, como religo o gerador?', 'base'), ('como abrir o motor depois que o sistema fixo disparou', 'base'),
+    ('como religar o gerador depois que o sistema fixo disparou', 'seafire'), ('como ligar o gerador depois do disparo do sistema fixo', 'seafire'),
+    ('o sistema fixo disparou, como religo o gerador?', 'seafire'), ('como abrir o motor depois que o sistema fixo disparou', 'seafire'),
     # Revisão 7 do C5 (achados da revisão 6). (1) A identidade do trecho de segurança num guia MISTO (o §4 dos motores e do porão, o §1 e o §5
     # dos eletrônicos, o §2 do AIS, o checklist) é só o título dele, sem o nome do equipamento: o equip do g_eletronicos traz Garmin, Fusion e
     # Icom, e "onde fica o plotter", "como ver o radar" ou "como ver o garmin" abriam o §1 "Plotter: homem ao mar" (e "onde fica o motor", o
@@ -164,6 +177,36 @@ CASOS = [
     # fogo", "procedimento padrão"/"protocolo de bordo"/"confirmar" não são o protocolo de emergência, "depois" não é o "Depois da descarga"
     ('em caso de alarme', 'fallback'), ('em caso de falha do motor', 'motores'), ('qual o procedimento padrão', 'fallback'),
     ('qual o protocolo de bordo', 'fallback'), ('confirmar com o protocolo de bordo', 'fallback'), ('confirmar protocolo', 'fallback'),
+    # ——— 1b (PROMPT §2.3, trava «emergência local, nunca na IA»; CONTRATO §8.2 item 11): as frases que a revisão do C5 mediu indo à IA na nuvem
+    # (fallback, PEDE_IA True) entram na lista SOS — e na SEGURANCA_PALAVRAS do gerador, a mesma lista (conferida mais abaixo). «tem gente na água»
+    # caía no g_piloto (a regra do piloto em espera). Cada uma é `sos` e fica no aparelho.
+    ('caiu do barco', 'sos'), ('caiu da lancha', 'sos'), ('tem gente na água', 'sos'), ('gente na água', 'sos'), ('homem na água', 'sos'),
+    ('tripulante na água', 'sos'), ('pessoa na água', 'sos'), ('pulou do barco', 'sos'), ('perdemos de vista na água', 'sos'),
+    ('entrou água no motor', 'sos'), ('entrou água', 'sos'), ('estamos fazendo água', 'sos'), ('o barco bateu em uma pedra', 'sos'),
+    ('bateu em outro barco', 'sos'), ('perdi o leme', 'sos'), ('o leme quebrou', 'sos'), ('o eixo quebrou', 'sos'), ('quebrou o eixo', 'sos'),
+    ('a mangueira estourou', 'sos'),
+    # o subconjunto do §8.2 item 11 (sem «sem governo», que pegaria «sem governo federal», nem «água subindo», que pegaria a temperatura da água)
+    ('alguém caiu', 'sos'), ('caiu alguém', 'sos'), ('a criança caiu', 'sos'), ('o tripulante caiu', 'sos'), ('tripulante ao mar', 'sos'),
+    ('criança ao mar', 'sos'), ('alguém ao mar', 'sos'), ('alguém foi ao mar', 'sos'), ('perdi o governo', 'sos'), ('perdemos o governo', 'sos'),
+    ('estamos sem governo', 'sos'), ('o leme travou', 'sos'),
+    # a baliza que disparou e o disparador hidrostático são do EPIRB (rota `epirb`), não da lista SOS: o nome do certificado do EPIRB
+    # («…disparador hidrostático») é a pergunta do botão da G1, que tem de continuar `docsvenc`
+    ('a baliza disparou', 'epirb'), ('o que é o disparador hidrostático?', 'epirb'), ('como testar a baliza?', 'base'), ('onde fica a baliza', 'base'),
+    # o que NÃO vira SOS: o «caiu» das coisas, a vista do mar, o piloto em espera, o «bateu» do horário, o governo federal, a temperatura da água
+    ('o disjuntor caiu', 'fallback'), ('tem vista para o mar', 'fallback'), ('o piloto em espera', 'eletronicos'),
+    ('bateu o horário do abastecimento', 'autonomia'), ('sem governo federal', 'fallback'), ('a temperatura da água está subindo', 'base'),
+    # Seafire depois do disparo: «sistema fixo», «descarga do sistema», «depois do disparo», «descarreg…», «depois da descarga», «disparou o sistema» e
+    # «sistema … disparou»; a bateria que descarregou, o disjuntor e o som que disparou não são o Seafire
+    ('disparou o sistema da casa de máquinas', 'seafire'), ('quanto tempo esperar para abrir a praça de máquinas depois da descarga', 'seafire'),
+    ('o sistema fixo da praça de máquinas', 'seafire'), ('a bateria descarregou', 'eletrico'), ('o disjuntor do sistema elétrico disparou', 'eletrico'),
+    ('o sistema de som disparou o alarme', 'audio'),
+    # salvatagem (PROMPT §2.3): resposta fixa, sem lugar e sem número de pessoas; «extintor» com fogo é SOS; a boia de sinalização não é salvatagem
+    ('onde ficam os coletes?', 'salvatagem'), ('quantos coletes salva-vidas tem?', 'salvatagem'), ('como usar a balsa', 'salvatagem'),
+    ('sinalizadores vencidos?', 'salvatagem'), ('onde fica o extintor', 'salvatagem'), ('onde fica a boia circular', 'salvatagem'),
+    ('quais equipamentos de segurança tem a bordo?', 'salvatagem'), ('extintor com fogo na cozinha', 'sos'), ('luz da boia', 'fallback'),
+    ('boia de amarração', 'fallback'),
+    # MMSI do rádio de bordo em todo texto de rádio: o número do cadastro do app não sai nestas respostas (verificação «1b: emergência…»)
+    ('qual o MMSI do barco?', 'canal16'),
 ]
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
@@ -224,6 +267,14 @@ PEDE_IA = {
     'a bomba de circulação não funciona': True, 'bomba de lavagem': True, 'como funciona a bomba de porão': True,
     'em caso de alarme': True, 'em caso de falha do motor': False, 'qual o procedimento padrão': True, 'qual o protocolo de bordo': True,
     'confirmar com o protocolo de bordo': True, 'confirmar protocolo': True,
+    # 1b: emergência, EPIRB, Seafire, salvatagem e canal 16 nunca vão à IA; o que não é emergência continua indo
+    'caiu do barco': False, 'tem gente na água': False, 'entrou água no motor': False, 'o barco bateu em uma pedra': False, 'perdi o leme': False,
+    'o eixo quebrou': False, 'a mangueira estourou': False, 'alguém caiu': False, 'estamos sem governo': False, 'o leme travou': False,
+    'a baliza disparou': False, 'o que é o disparador hidrostático?': False, 'como testar a baliza?': False, 'onde fica a baliza': False,
+    'o disjuntor caiu': True, 'tem vista para o mar': True, 'sem governo federal': True, 'a temperatura da água está subindo': True,
+    'disparou o sistema da casa de máquinas': False, 'quanto tempo esperar para abrir a praça de máquinas depois da descarga': False,
+    'onde ficam os coletes?': False, 'sinalizadores vencidos?': False, 'onde fica o extintor': False, 'extintor com fogo na cozinha': False,
+    'qual o MMSI do barco?': False, 'luz da boia': True, 'boia de amarração': True,
 }
 
 
@@ -309,8 +360,9 @@ def main():
             const esfriar = ['como esfriar o motor', 'como esfriar o motor depois de navegar', 'como esfriar o motor depois de navegar rápido']
               .filter((q) => { const x = h(q); return x.fonte !== D.guias.g_motores || x.secao !== '6 · Parada'; });
             const dsc = ['botão distress', 'como usar o botão distress', 'distress'].filter((q) => !resp(q).seguranca);
-            const inteira = ['sistema fixo em caso de alarme', 'o sistema fixo descarregou', 'o sistema fixo disparou', 'o que fazer depois do disparo do sistema fixo',
-              'alarme do sistema fixo', 'teste da baliza', 'botão distress'].map((q) => { const a = resp(q), x = h(q), t = (x.texto || '').replace(/\\s+/g, ' ').trim();
+            // (1b: as perguntas do sistema fixo passaram à rota `seafire`, conferida inteira na verificação «1b: seafire» abaixo; ficam as que
+            // seguem no trecho de segurança da base)
+            const inteira = ['teste da baliza', 'botão distress', 'como testar a baliza?'].map((q) => { const a = resp(q), x = h(q), t = (x.texto || '').replace(/\\s+/g, ' ').trim();
                 const comNota = [D.guias.g_seafire, D.guias.g_epirb].indexOf(x.fonte) !== -1, fim = comNota ? rot + ' ' + nota : rot;
                 return { q, seg: !!a.seguranca, tela: a.text.split('\\n')[0] === t, voz: B.falaCurta(a) === t, fim: t.slice(-fim.length) === fim, letras: t.length }; })
               .filter((r) => !(r.seg && r.tela && r.voz && r.fim));
@@ -328,7 +380,8 @@ def main():
               .filter(([q, ok]) => !ok).map(([q, ok, sec]) => q + ' → ' + sec);
             const climaSec = [h('como ligar o ar').secao, h('como desligar o ar').secao];
             const protocolo = (qs, sec) => qs.filter((q) => { const a = resp(q), x = h(q); return !(a.key === 'base' && a.seguranca && x.fonte === D.guias.protocolo && x.secao === sec); });
-            const mob = protocolo(['pessoa caiu da lancha', 'não vejo a pessoa que caiu', 'perdemos de vista quem caiu', 'perdi a pessoa de vista', 'a pessoa que caiu sumiu'], 'Homem ao mar');
+            // (1b: «pessoa caiu da lancha» saiu desta lista: «caiu da lancha» é da lista SOS e a chave passou a `sos`, ver as verificações «1b» abaixo)
+            const mob = protocolo(['não vejo a pessoa que caiu', 'perdemos de vista quem caiu', 'perdi a pessoa de vista', 'a pessoa que caiu sumiu'], 'Homem ao mar');
             const pan = protocolo(['sem governo', 'barco sem governo', 'pane no barco'], 'PAN-PAN');
             const guia = ['como funciona o piloto automático', 'alarme de âncora'].map((q) => h(q).fonte === D.guias.g_eletronicos);
             // o trecho mostrado é do guia do equipamento perguntado (a.ref começa pela fonte), não o do topo da busca, que era de outro
@@ -353,8 +406,11 @@ def main():
               desligar: onde(['como desligar a bomba de água salgada', 'como desligar a bomba da climatização'], 'g_clima', '5 · Desligar'),
               gerador: onde(['como trocar o rotor da bomba do gerador'], 'g_gerador', '7 · Manutenção na agenda'),
               bancos: onde(['como trocar a bateria de partida', 'como verificar a bateria de partida'], 'g_eletrico', '1 · Bancos'),
-              disparo: onde(['como religar o gerador depois que o sistema fixo disparou', 'como ligar o gerador depois do disparo do sistema fixo',
-                'o sistema fixo disparou, como religo o gerador?', 'como abrir o motor depois que o sistema fixo disparou'], 'g_seafire', '3 · Depois da descarga', true),
+              // 1b: depois do disparo do sistema fixo a chave é `seafire` (os passos de protocolos.seafire: desligar motores, gerador e ventilação, e
+              // «não abra o acesso ao motor»), não mais o trecho §3 da base; o trecho do topo da busca (rev2) continua sendo o §3 do g_seafire
+              disparo: ['como religar o gerador depois que o sistema fixo disparou', 'como ligar o gerador depois do disparo do sistema fixo',
+                'o sistema fixo disparou, como religo o gerador?', 'como abrir o motor depois que o sistema fixo disparou']
+                .filter((q) => { const a = resp(q); return !(a.key === 'seafire' && a.text.indexOf('Não abra o acesso ao motor') !== -1 && !a.seguranca); }).map((q) => q + ' → ' + resp(q).key),
               ancora: onde(['alarme de âncora', 'como fundear'], 'g_eletronicos', '3 · Alarme de âncora'),
               arLigar: onde(['como ligar o ar condicionado'], 'g_clima', '1 · Ligar'),
               arFiltro: onde(['trocar o filtro do ar condicionado'], 'g_clima', '3 · Alarme de fluxo'),
@@ -407,7 +463,7 @@ def main():
              not (rev6['rotor'] or rev6['alarme'] or rev6['ligar'] or rev6['desligar'] or rev6['gerador']),
              (rev6['rotor'], rev6['alarme'], rev6['ligar'], rev6['desligar'], rev6['gerador'])),
             ('revisão 6 do C5: "como trocar/verificar a bateria de partida" vai ao g_eletrico §1 · Bancos, não à resposta pronta dos motores', not rev6['bancos'], rev6['bancos']),
-            ('revisão 6 do C5: depois do disparo do sistema fixo, religar o gerador ou abrir o motor traz o g_seafire §3 (trecho de segurança, sem IA), não a resposta pronta',
+            ('revisão 6 do C5 (1b: rota seafire): depois do disparo do sistema fixo, religar o gerador ou abrir o motor traz os passos do Seafire ("não abra o acesso ao motor"), sem IA, não a resposta pronta',
              not rev6['disparo'], rev6['disparo']),
             ('revisão 6 do C5: "alarme de âncora" e "como fundear" mostram o g_eletronicos §3 (alarme no plotter), não o contador de corrente nem o recolher do guincho', not rev6['ancora'], rev6['ancora']),
             ('revisão 6 do C5: "como ligar o ar condicionado" é a Climatização §1 e "trocar o filtro do ar condicionado" o §3 (o "ar" solto puxava o §4 "Fluxo de ar fraco")',
@@ -465,6 +521,7 @@ def main():
         if '-v' in sys.argv:
             print(f)
         falhas += agenda_sem_falta(pg)
+        falhas += emergencia_1b(pg, res)
         falhas += perguntas_da_g1(pg)
         falhas += consumo_sem_abastecimentos(b)
         # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
@@ -483,6 +540,113 @@ def main():
                 print('\n## ' + r['q'] + ' → ' + r['key'] + '\n' + r['text'] + '\n' + r['src'] + '\n[voz] ' + r['curta'])
         b.close()
     sys.exit(1 if falhas else 0)
+
+
+# ——————————————————————————————— 1b: emergência do cérebro (PROMPT §2.2, §2.3; CONTRATO §1.3, §1.5, §1.8, §6.2 «1b») ———————————————————————————————
+# As respostas de emergência (sos, oleo, canal16, epirb, seafire, salvatagem e o diário com alerta) leem só o D.protocolos: o MMSI é o do rádio
+# de bordo (nunca o número do cadastro), o indicativo é o da Licença de Estação, o Seafire e o EPIRB são o procedimento padrão com a etiqueta do
+# equipamento (sem fabricante, modelo, validade nem lugar), e nenhuma traz posição, rumo, SOG, ETA, pessoas a bordo, leitura do quadro, SEM DADOS
+# nem "último fix". As listas SOS, salvatagem, boia e EPIRB do cérebro são as do gerador (ferramentas/demo/confere.py), que marcam o `seguranca` dos
+# trechos e dos itens do FAQ: uma fonte de verdade por lista, sem cópia que divirja.
+EM_PERGUNTAS = {
+    'sos': 'MAYDAY, homem ao mar!', 'oleo': 'pressão de óleo baixa no motor BB', 'canal16': 'roteiro do canal 16', 'rmmsi': 'qual o MMSI do barco?',
+    'epirb': 'onde fica o EPIRB?', 'seafire': 'onde fica o seafire', 'disparo': 'o sistema fixo disparou', 'salvatagem': 'onde ficam os coletes?',
+    'queda': 'tem gente na água', 'diario': 'registre no diário: homem ao mar',
+}
+EM_JS = """(qs) => { const B = window.CapitaoBrain, D = window.CapitaoDados, out = {};
+  Object.keys(qs).forEach((k) => { const a = B.answer(qs[k], { platform: 'app', commit: false }); out[k] = { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, qs[k]) }; });
+  const doc = (D.documentos || []).filter((d) => d.id === 'doc-epirb')[0] || {}, g1 = 'Situação e vencimento do documento: ' + (doc.n || ''),
+    docs = B.answer('documentos vencendo', { platform: 'app', commit: false }), g1r = B.answer(g1, { platform: 'app', commit: false }), f = B.ficha('app', 'o que você sabe sobre o seguro?', null),
+    eq = (D.equipamentos || []).filter((e) => e.seguranca).map((e) => ({ id: e.id, fabricante: e.fabricante, modelo: e.modelo, nota: e.nota })),
+    bloco = (t) => { const i = f.indexOf('## ' + t); return i < 0 ? '' : f.slice(i, f.indexOf('\\n## ', i + 5) < 0 ? undefined : f.indexOf('\\n## ', i + 5)); };
+  out.doc = { vence: doc.vence, n: doc.n, id: doc.id, docs: docs.text, g1: { key: g1r.key, text: g1r.text }, ficha: f, equipamentos: bloco('Equipamentos'), embarcacao: bloco('Embarcação'), emergencia: bloco('Emergência') };
+  out.eq = eq; out.P = D.protocolos; out.listas = B.LISTAS;
+  out.mmsi = D.embarcacao.mmsi;
+  return out; }"""
+EM_EMERG = """(ps) => { const B = window.CapitaoBrain; return ps.map((p) => [p, B.emergencia(p)]); }"""
+
+
+def emergencia_1b(pg, res):
+    falhas = 0
+    x = pg.evaluate(EM_JS, EM_PERGUNTAS)
+    P, L = x['P'], x['listas']
+    T = confere.carrega_termos()
+    rot = re.compile(re.escape(confere.ROTULO), re.I)
+    chaves = ('sos', 'oleo', 'canal16', 'rmmsi', 'epirb', 'seafire', 'disparo', 'salvatagem', 'queda', 'diario')
+    esperadas = {'sos': 'sos', 'oleo': 'oleo', 'canal16': 'canal16', 'rmmsi': 'canal16', 'epirb': 'epirb', 'seafire': 'seafire', 'disparo': 'seafire',
+                 'salvatagem': 'salvatagem', 'queda': 'sos', 'diario': 'diario'}
+    erros = []
+    for k in chaves:
+        r = x[k]
+        txt = r['text'] + '\n' + r['fala']
+        if r['key'] != esperadas[k]: erros.append('%s: chave %s' % (k, r['key']))
+        if r['ia']: erros.append('%s: vai à IA' % k)
+        if '710123456' in txt or str(x['mmsi']) in txt: erros.append('%s: traz o número do cadastro do MMSI' % k)
+        for rx, nome in ((re.compile(r'SEM DADOS|SEM LEITURA|último fix|snapshot|SNAPSHOT'), 'SEM DADOS/último fix/snapshot'), (confere.R_COORD, 'coordenada'),
+                         (confere.R_EMERG_PROTOCOLO, 'MMSI/posição/rumo/ETA/pessoas (R_EMERG)'), (re.compile(r'\d\s*bar\b|\d\s*%|\d+\s*(?:rpm|°C)'), 'leitura do quadro')):
+            m = rx.search(rot.sub(' ', txt))
+            if m: erros.append('%s: %s «%s»' % (k, nome, m.group(0)))
+        # as 8 regex do termos.json (menos a ANEXO) sobre o texto, com o rótulo do procedimento padrão (EXCEÇÃO do §3) tirado
+        for nome, rx in T.items():
+            if nome == 'ANEXO': continue
+            m = rx.search(rot.sub(' ', txt))
+            if m: erros.append('%s: %s «%s»' % (k, nome, m.group(0)))
+    falhas += conta('1b: respostas de emergência (sos, oleo, canal16, mmsi, epirb, seafire, disparo, salvatagem, queda, diário com alerta): chave certa, no aparelho, sem o MMSI gerado, sem SEM DADOS, sem último fix, sem coordenada, sem leitura do quadro, nas 8 regex do termos.json', not erros, erros)
+    # 1ª linha = a instrução de segurança; MMSI do rádio; indicativo da Licença; etiqueta do equipamento
+    mm, ind, nota, rotulo = P['mmsiRadio'], P['indicativo'], P['seafire']['nota'], P['rotulo']
+    l1 = lambda k: x[k]['text'].split('\n')[0]
+    falhas += conta('1b: sos e canal16 abrem com a instrução e dizem o MMSI do rádio de bordo (etiqueta / Licença de Estação); canal16 o indicativo da Licença de Estação e o roteiro do protocolos, sem "SEM DADOS"',
+                    l1('sos').startswith('Emergência — abra o SOS.') and mm in x['sos']['text'] and l1('canal16').startswith('Em perigo grave e iminente: MAYDAY no canal 16')
+                    and mm in x['canal16']['text'] and ind in x['canal16']['text'] and ' — '.join(P['roteiro']) in x['canal16']['text'] and mm in x['rmmsi']['text'] and 'SEM DADOS' not in x['canal16']['text'],
+                    (l1('sos'), l1('canal16'), x['canal16']['text'][:300]))
+    falhas += conta('1b: sos traz a nota da etiqueta ("modelo, validade e acionamento: veja a etiqueta do equipamento") e os passos do MOB do protocolos; o diário com alerta traz os passos com o MMSI do rádio',
+                    nota in x['sos']['text'] and all(m in x['sos']['text'] for m in P['mob']) and 'Se a emergência é agora: abra o SOS.' in x['diario']['text'] and mm in x['diario']['text'],
+                    (x['sos']['text'][-300:], x['diario']['text'][-300:]))
+    ep, sf = P['epirb']['passos'], P['seafire']['passos']
+    falhas += conta('1b: epirb e seafire: todos os passos do protocolos, o rótulo do procedimento padrão e a etiqueta do equipamento; voz inteira (FALA_INTEIRA); 1ª linha é o primeiro passo',
+                    all(t in x['epirb']['text'] for t in ep[1:]) and (ep[0][0].lower() + ep[0][1:]) in x['epirb']['text'] and all(t in x['seafire']['text'] for t in sf) and rotulo in x['epirb']['text'] and rotulo in x['seafire']['text']
+                    and nota.capitalize() in x['epirb']['text'] and nota.capitalize() in x['seafire']['text'] and x['epirb']['fala'] == x['epirb']['text'] and x['seafire']['fala'] == x['seafire']['text']
+                    and l1('epirb').startswith('EPIRB — ' + ep[0][0].lower() + ep[0][1:]) and l1('seafire') == 'Seafire — ' + sf[0], (x['epirb']['text'][:200], x['seafire']['text'][:200]))
+    falhas += conta('1b: depois do disparo do sistema fixo (rota seafire): "não abra o acesso ao motor" e desligar motores, gerador e ventilação, na tela e na voz; o Seafire não traz fabricante, modelo, validade nem lugar',
+                    all(t in x['disparo']['text'] and t in x['disparo']['fala'] for t in ('Não abra o acesso ao motor', 'desligue motores e gerador e corte a ventilação')) and x['disparo']['key'] == 'seafire', x['disparo']['text'][:200])
+    falhas += conta('1b: oleo: os 4 passos do protocolos.oleo, sem leitura do quadro (nada de bar, rpm, snapshot nem "motores desligados"); a leitura fica no oleoLeitura',
+                    all(t in x['oleo']['text'] for t in P['oleo']) and 'confira o manômetro agora' in x['oleo']['text'] and not re.search(r'snapshot|motores desligados|\d\s*bar', x['oleo']['text']), x['oleo']['text'])
+    falhas += conta('1b: salvatagem: o texto fixo do protocolos, igual, na tela e na voz inteira; sem número de pessoas e sem lugar (paiol, armário, proa, popa)',
+                    x['salvatagem']['text'].startswith(P['salvatagem']) and x['salvatagem']['fala'] == P['salvatagem'] and not re.search(r'paiol|arm[aá]rio|cabine|\bproa\b|\bpopa\b', x['salvatagem']['text'], re.I),
+                    (x['salvatagem']['text'], x['salvatagem']['fala']))
+    # as listas do cérebro são as do gerador (uma fonte de verdade por lista), e o port da emergencia() dá o mesmo resultado
+    iguais = [(n, a, b) for n, a, b in (('SOS', L['SOS'], confere.SOS), ('SALVATAGEM', L['SALVATAGEM'], confere.SALVATAGEM), ('BOIA_FORA', L['BOIA_FORA'], confere.BOIA_FORA),
+                                          ('EPIRB', L['EPIRB'], confere.EPIRB)) if a != b]
+    falhas += conta('1b: as listas SOS, salvatagem, boia fora e EPIRB do cérebro são iguais às do gerador (confere.py), na mesma ordem', not iguais,
+                    [(n, [t for t in a if t not in b], [t for t in b if t not in a]) for n, a, b in iguais])
+    fora = [t for t in confere.SOS + confere.SALVATAGEM + confere.EPIRB if not confere.segura(t.strip())]
+    falhas += conta('1b: toda palavra da lista SOS, da salvatagem e do EPIRB faz o gerador marcar `seguranca` (a SEGURANCA_PALAVRAS é a mesma lista)', not fora, fora)
+    qs = [q for q, _ in CASOS] + ['o sistema de som disparou o alarme', 'o disjuntor caiu', 'a água subindo no porão', 'o barco bateu em 3 nós', 'quanto custa a diária']
+    ps = [confere.pad(q) for q in qs]
+    dif = [(p, a) for p, a in pg.evaluate(EM_EMERG, ps) if bool(a) != bool(confere.emergencia(p))]
+    falhas += conta('1b: a emergencia() do cérebro e a do gerador dão o mesmo resultado nas %d perguntas dos casos' % len(ps), not dif, dif[:5])
+    # papelada do EPIRB sem a data (CONTRATO §1.8): docsvenc, a pergunta da G1 do certificado e a ficha dizem a etiqueta, nunca a data
+    d = x['doc']
+    falhas += conta('1b: docsvenc, a pergunta da G1 do certificado do EPIRB e a ficha não trazem a data do doc-epirb e dizem "veja a etiqueta do equipamento"',
+                    d['vence'] and d['vence'] not in d['docs'] and d['vence'] not in d['g1']['text'] and d['vence'] not in d['ficha'] and d['g1']['key'] == 'docsvenc'
+                    and nota in d['docs'] and nota in d['g1']['text'], (d['vence'], d['docs'][-260:]))
+    ide = [e for e in x['eq'] if e['id'] in ('epirb', 'seafire')]
+    nomes = [t for e in ide for t in (e['fabricante'], e['modelo']) if t and t != 'Seafire']
+    falhas += conta('1b: a ficha (## Equipamentos) mostra a nota da etiqueta no lugar de fabricante e modelo do EPIRB e do Seafire; ## Embarcação diz o MMSI do cadastro do app e o indicativo da Licença; ## Emergência tem o MMSI do rádio e não o número',
+                    len(ide) == 2 and not [t for t in nomes if t in d['equipamentos']] and d['equipamentos'].count(nota) == 2 and 'MMSI ' + x['mmsi'] + ' (cadastro do app)' in d['embarcacao']
+                    and 'indicativo: ' + ind in d['embarcacao'] and mm in d['emergencia'] and x['mmsi'] not in d['emergencia'], (nomes, d['equipamentos'][:300], d['embarcacao'][-200:]))
+    # a ficha de hoje + cada resposta de emergência do TERMOS: o mesmo conjunto de regex já foi aplicado acima; aqui a ficha inteira, sem o número do MMSI fora de ## Embarcação
+    fora_emb = d['ficha'].replace(d['embarcacao'], ' ')
+    falhas += conta('1b: o número do MMSI do cadastro só aparece em ## Embarcação da ficha', x['mmsi'] not in fora_emb, [l for l in fora_emb.split('\n') if x['mmsi'] in l][:2])
+    print('1b: emergência do cérebro: %d falhas' % falhas)
+    return falhas
+
+
+def conta(nome, cond, extra=''):
+    if cond:
+        return 0
+    print('FALHA', nome, extra)
+    return 1
 
 
 # Revisão do C7 (CONTRATO §1.7, §6.2): o D.agendaFalta saiu do dado gerado e a resposta `manutencao` (que é também o bloco `## Manutenção` da
