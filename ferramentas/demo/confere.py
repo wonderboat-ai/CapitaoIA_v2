@@ -323,7 +323,7 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
        # 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, perda de governo, eixo e mangueira que a revisão mediu indo à
        # IA na nuvem, contra a trava §2.3 (emergência local). As frases ficam por inteiro: ' entrou agua ' não pega "entrou aguardando".
        # A batida («bateu em…») saiu da lista: ' bateu em ' pegava «bateu em 3 bar»; ver SOS_REGEX.
-       'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
+       'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'pulou da lancha', 'de vista na agua',
        'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo',
        # 1b, §8.2 item 11: o subconjunto sem «sem governo» (pegaria «sem governo federal») e «água subindo» (pegaria a temperatura da água)
        'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
@@ -340,7 +340,6 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
        # combustível», fica na regex abaixo), fogo sem a palavra fogo (chamas, labaredas, faísca, curto-circuito, cheiro de plástico ou fio queimado)
        'quebrou o leme', 'quebramos o leme', 'quebrei o leme', 'partiu o leme', 'rompeu o leme', 'leme rompeu', 'leme quebrad', 'leme partid',
        'rompeu o eixo', 'furou o casco', 'furaram o casco', 'casco furou', 'casco furad', 'casco rachou', 'casco rachad', 'rachou o casco', 'casco trincou', 'trincou o casco',
-       'tocou o fundo', 'tocamos o fundo', 'tocou no fundo', 'tocamos no fundo',
        'cairam na agua', 'cairam no mar', 'cairam ao mar', 'cairam do barco', 'cairam da lancha', 'caimos na agua', 'caimos no mar', 'caimos do barco', 'caimos da lancha',
        'hemorrag', 'labared', 'faisc', ' chamas ', 'curto circuito', 'curto-circuito', 'cheiro de queima', 'plastico derretid', 'fumeg', 'dor no peito',
        'sem leme', 'helice quebrou', 'quebrou a helice', 'perdemos a helice', 'perdi a helice', 'helice soltou', 'helice partiu']
@@ -352,7 +351,7 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
 # água» são leitura e equipamento, não emergência. As frases fracas («bateu forte», «em cheio», «em mim») só valem com o barco,
 # alguém ou ninguém de sujeito (BATE_INI); o casco, o banco e o fundo levam a guarda GUARDA_BATE: onda, vento, chuva, ponteiro, nível, pix ou valor de sujeito não é batida. O que a regex não alcança fica local por outro caminho ou vai ao guia: o sangramento do ar e do
 # combustível, a água do dessalinizador e do ar-condicionado, a água no tanque de água doce.
-PESSOA = r'(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homens?|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?|cara|rapaz|moco|moca)'
+PESSOA = r'(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homem|homens|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?|cara|rapaz|moco|moca)'
 # parente, amigo e quem está a bordo pelo papel: «meu marido caiu na água», «o pai caiu», «perdi o meu amigo de vista». Sem «capitão» (é o nome do app)
 PARENTE = r'(?:idos[oa]s?|amig[oa]s?|colegas?|maes?|pai|marido|esposa|esposo|namorad[oa]s?|irma[o]?|irmaos|netos?|netas?|sobrinh[oa]s?|hospedes?|convidad[oa]s?|mergulhador(?:es)?|nadador(?:es)?|comandante|skipper|vizinh[oa]s?)'
 DET = r'(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*'
@@ -374,9 +373,23 @@ BATE_FRACO = r'(?:forte|feio|de lado|de frente|de proa|de popa|de raspao|de leve
 # «o motor bateu forte» (batendo pino), «o preço bateu em cheio» e «o vento bateu em mim» não são batida
 BATE_INI = r'^ (?:(?:ai|agora|la|acabou de|acabaram de|acho que|parece que|entao|olha|gente) )*(?:(?:(?:o|a|um|uma|nosso|nossa|outro|outra|esse|essa|aquele|aquela) )*(?:' + BARCOS + r'|alguem|ele|ela|eles|elas|isso|nos)(?: [a-z0-9]+){0,5} )?'
 SUJ_BARCO = r'(?:barco|lancha|casco|embarcacao|iate|bote|veleiro|porao|estamos|nos)'
-SEM_EQUIP_AGUA = r'^(?!.*(?:dessalin|condicionad|climatiz))(?!.* (?:geladeira|frigobar|freezer|bebedouro|purificador|chuveiro|torneira|ducha|pia|ralo|sanitario|banheiro|lavabo|gelo) ).* '
-SEM_AGUA_DOCE = r'^(?!.* (?:tanques? de agua|doce|potavel|olhos?|ouvidos?|nariz|boca|botas?|sapatos?|celular|telefone|geladeira|frigobar|freezer|pia|chuveiro|torneira|filtro|purificador|bebedouro|garrafa|copo|mala|mochila|bolsa) )(?!.*(?:dessalin|condicionad|climatiz)).* '
-SEM_MANGUEIRA_DE_USO = r'^(?!.* (?:lavagem|lavar|chuveiro|ducha|pia|torneira|jardim|piscina|geladeira|frigobar|bebedouro) )(?!.*condicionad).* '
+# Guardas de água a bordo (revisão da revisão da 1b): LOCAIS, presas ao verbo, não à frase inteira. Quem relata alagamento cita o que molhou («entrou água no barco e
+# molhou o celular», «estamos fazendo água e a geladeira parou»): uma palavra de contexto em qualquer lugar da frase não pode calar o SOS.
+# (1) o equipamento que «faz água» é o SUJEITO do verbo, logo antes dele («a geladeira está fazendo água», «o ar-condicionado do barco faz água»); a geladeira
+# que parou numa oração e o barco que faz água na outra é alagamento.
+EQUIP_AGUA = r'(?:dessalin[a-z]*|ar condicionado|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*|ar|geladeira|frigobar|freezer|bebedouro|purificador|chuveiro|torneira|ducha|pia|ralo|sanitario|banheiro|lavabo|gelo)'
+VERBO_AGUA = r'(?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar)'
+SEM_EQUIP_AGUA = r'^(?!.* ' + EQUIP_AGUA + r'(?: d[oae]s? [a-z0-9]+(?: d[oae]s? [a-z0-9]+)?)?(?: (?:esta|estao|ta|tao|vai|ficou|comecou a|continua|ainda|agora|so|tambem))* ' + VERBO_AGUA + r' ).* '
+# (2) a água que não é a do casco vem logo DEPOIS da palavra «água» («água doce», «água no ouvido», «na bota», «no tanque de água», «na geladeira»)
+AGUA_FIM = r'(?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\b)'
+AGUA_ENTRA_FIM = r'(?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada)\b)(?!(?:n[oa]s?|em|pel[oa]s?|dentro d[oa]s?) (?:olhos?|ouvidos?|nariz|boca|botas?|sapatos?|tanques? de agua|celular|telefone|geladeira|frigobar|freezer|pia|chuveiro|torneira|filtro|purificador|bebedouro|garrafa|copo|mala|mochila|bolsa|dessalin[a-z]*|ar condicionado|ar-condicionado|climatiza[a-z]*) )'
+# «a temperatura da água subindo no barco» (e a pressão, a salinidade, a vazão) é leitura, não alagamento
+SEM_MEDIDA_AGUA = r'^(?!.* (?:temperatura|pressao|salinidade|vazao|fluxo) d[ae] agua ).* '
+LUGAR_BORDO = r'(?:barco|lancha|embarcacao|casco|porao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas|iate|bote|veleiro)'
+# a âncora (o ferro, a poita, a corrente, a sonda, o ponteiro) que «toca o fundo» ou «raspa numa pedra» é fundeio de rotina, não batida do barco
+SEM_ANCORA = r'^(?!.* (?:ancoras?|ferro|poita|corrente|amarra|cabo|chumbo|prumo|sonda|ecobatimetro|ponteiro|mergulhador|ancorote)(?: [a-z0-9]+){0,3} (?:tocou|tocaram|raspou|esbarrou) ).* '
+# a mangueira de uso (lavagem, chuveiro, pia, ar-condicionado…) traz o uso JUNTO da palavra «mangueira» (local, não a frase inteira: «a mangueira de combustível estourou e molhou a pia» é emergência)
+MANGUEIRA_USO = r'(?:lavagem|lavar|chuveiro|ducha|pia|torneira|jardim|piscina|geladeira|frigobar|bebedouro|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*)'
 # sangramento técnico (o ar, o combustível, as linhas, o sistema…) não é ferimento: «sangrando o ar do sistema», «sangramento do combustível»
 TECNICO = r'(?:(?:o|a|os|as|um|uma|do|da|dos|das|no|na) )?(?:ar|combustivel|diesel|sistema|linhas?|bombas?|circuito|filtros?|racor|arrefecimento|freios?|radiador|tubulacao|injetor[a-z]*|bicos?|pre-?filtros?|respiro|aquecedor|turbo|embreagem|direcao|reversor|atuador|cilindro|tanques?|separador|decantador|motor|motores|gerador|hidraulic[a-z]*|oleo|cano|tubo|valvulas?|mangueiras?)'
 ALVO_FOGO = r'(?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|isolamento|resistencia)'
@@ -388,17 +401,34 @@ SOS_REGEX_FONTES = [
     '|' + PARENTE + ' (?:esta|estao|ta|tao|foi|foram|ficou|ficaram) ' + NO_MAR + ') ',
     ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
     ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
-    # água a bordo: o barco ou «nós» fazendo/tomando água (não a água doce, quente ou potável; não o dessalinizador nem o ar-condicionado)
-    SEM_EQUIP_AGUA + SUJ_BARCO + r'(?: [a-z0-9]+){0,3} (?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar) (?:muita |bastante |demais )?agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\b)',
-    SEM_EQUIP_AGUA + r'estou(?: [a-z0-9]+){0,2} (?:fazendo|fazer) (?:muita |bastante |demais )?agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\b)',
+    # água a bordo: o barco ou «nós» fazendo/tomando água, ou «fazendo água» sem sujeito (não a água doce, quente ou potável; não o equipamento que faz água: a guarda
+    # olha só o sujeito do verbo, nunca a frase inteira)
+    SEM_EQUIP_AGUA + SUJ_BARCO + '(?: [a-z0-9]+){0,3} ' + VERBO_AGUA + ' (?:muita |bastante |demais )?agua ' + AGUA_FIM,
+    SEM_EQUIP_AGUA + r'estou(?: [a-z0-9]+){0,2} (?:fazendo|fazer) (?:muita |bastante |demais )?agua ' + AGUA_FIM,
+    SEM_EQUIP_AGUA + 'fazendo (?:muita |bastante )?agua ' + AGUA_FIM + r'(?!(?:de|na boca)\b)(?!n[oa]s? (?:pia|chuveiro|banheiro|lavabo|sanitario|torneira|ducha|ralo|geladeira|frigobar|freezer|copa) )',
     ' fazendo agua (?:no|na|pelo|pela|pelos|pelas|em) (?:porao|casco|fundo|quilha|popa|proa|costado|eixo|helice|leme|casa de maquinas|sala de maquinas|praca de maquinas|passa casco|passacasco|valvula|gaveta) ',
-    SEM_AGUA_DOCE + '(?:entrou|comecou a entrar|comecando a entrar|voltou a entrar|comecaram a entrar) (?:muita |bastante |mais )?agua ',
-    SEM_AGUA_DOCE + 'agua (?:entrou|comecou a entrar|comecou a subir) ',
-    SEM_AGUA_DOCE + 'agua (?:esta |ta )?(?:subindo|subiu|sobe|enchendo|encheu) (?:rapido |rapidamente |muito )?(?:no|na|dentro d[oa]|em) (?:barco|lancha|embarcacao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
-    SEM_AGUA_DOCE + '(?:tem|ha|tinha|temos) agua dentro d[oa] (?:barco|lancha|embarcacao|casco|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    ' (?:entrou|comecou a entrar|comecando a entrar|voltou a entrar|comecaram a entrar) (?:muita |bastante |mais )?agua ' + AGUA_ENTRA_FIM,
+    ' agua (?:entrou|comecou a entrar|comecou a subir) ' + AGUA_ENTRA_FIM,
+    ' agua (?:(?:esta|ta|vem|continua|segue|estava|tava) )?(?:a )?entrando ' + AGUA_ENTRA_FIM,
+    ' (?:nao|n) (?:para|parou) de entrar agua ',
+    ' agua (?:nao|n) (?:para|parou) de entrar ',
+    SEM_MEDIDA_AGUA + 'agua (?:esta |ta )?(?:subindo|subiu|sobe|enchendo|encheu) (?:(?:rapido|rapidamente|muito|bem|bastante|demais|mais) )*(?:no|na|dentro d[oa]|em) (?:barco|lancha|embarcacao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    ' (?:tem|ha|tinha|temos) agua dentro d[oa] (?:barco|lancha|embarcacao|casco|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    ' ' + LUGAR_BORDO + '(?: (?:esta|ta|ficou|foi|vai|comecou a))? (?:cheio|cheia|enchendo|encheu|encher) (?:de|com) agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada)' + r'\b)',
+    # porão (PROMPT §2.2: o relato do porão é sos): cheio, enchendo, alagando ou subindo com «está/tá» no meio; a água que sobe ou entra no porão; a bomba que não para ou não dá conta;
+    # o alarme do porão que disparou (relato; «testar o alarme de porão» e «nível normal do porão» seguem a rota do porão)
+    ' porao (?:esta |ta |continua |vai |ja |ficou |foi )?(?:cheio|cheia|enchendo|encheu|alagando|alagado|alagou|subindo|subiu|inundado|inundou|transbordando|transbordou) ',
+    ' agua (?:esta |ta |vem )?(?:subindo|entrando|enchendo|vazando|aparecendo|surgindo|brotando) (?:no|pelo|pelos|dentro d[oa]|do) porao ',
+    ' bombas? (?:de |do |da )?porao (?:(?:nao|n) (?:esta |estao |ta |tao )?(?:para|param|parando|desliga|desligam|desligando|da conta|dao conta|dando conta|consegue|conseguem|conseguindo|segura|seguram|vence|vencem|aguenta|aguentam)|(?:esta|estao|ta|tao) (?:ligad[oa]s?|funcionando|trabalhando|rodando|acionad[oa]s?) (?:direto|sem parar|o tempo todo|toda hora|toda a hora)) ',
+    ' (?:alarme|alerta|sirene) (?:d[eoa] |das? |dos? )?(?:bombas? (?:d[eo] )?)?porao (?:disparou|tocou|soou|acendeu|acionou|ativou|(?:esta|ta) (?:tocando|soando|disparando|disparado|aceso)|tocando|soando|disparando) ',
+    ' (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:o |um |a )?(?:alarme|alerta|sirene) (?:d[eoa] |das? |dos? )?(?:bombas? (?:d[eo] )?)?porao ',
+    # a frase inteira «alarme do porão» (quem digita só o substantivo): relato, local
+    '^ (?:(?:o|um|esse|aquele) )?alarme (?:d[eoa]s? )(?:bombas? (?:d[eo] )?)?porao $',
+    # o barco que toca o fundo (a âncora, o ferro, a poita, a corrente e a sonda tocam o fundo no fundeio: SEM_ANCORA)
+    SEM_ANCORA + '(?:tocou|tocamos|toquei|tocaram) (?:o|no) fundo ',
     # batida: o que foi atingido vem de lista positiva (coisa dura, outro barco, o casco, «nós»)
     ' ' + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + DURO + ' ',
-    ' (?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
+    SEM_ANCORA + '(?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
     GUARDA_BATE + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + '(?:' + BARCOS + '|' + PARTES + '|bancos?|fundo|algo|alguma coisa|alguem) ',
     BATE_INI + VERBO_BATIDA + '(?: ' + BATE_FRACO + ')* (?:em nos|em mim|na gente|em cheio) ',
     ' (?:batemos|bati)(?: (?:' + BATE_FRACO + '|em cheio))* $',
@@ -424,9 +454,16 @@ SOS_REGEX_FONTES = [
     ' choque (?:no|na|do|da|de|pelo|pela) (?:painel|quadro|cabo|fio|fios|bateria|baterias|barco|motor|gerador|tomada|inversor|carregador|casco|agua|mar) ',
     ' cheiro (?:de |do |da |no |na )?(?:[a-z]+ ){0,2}queimad[oa]s? ',
     # mangueira que estoura, solta ou fura (não a de lavagem, a do chuveiro nem a do ar-condicionado); eixo que quebra
-    SEM_MANGUEIRA_DE_USO + 'mangueira(?: [a-z0-9]+){0,4} (?:estourou|estourada|soltou|rompeu|rompida|furou|furada|partiu|rasgou) ',
-    SEM_MANGUEIRA_DE_USO + '(?:estourou|soltou|rompeu|furou|partiu|rasgou) (?:a|uma|essa|aquela|nossa|minha) mangueira ',
-    ' eixo(?: [a-z0-9]+){0,3} (?:quebrou|quebrado|quebrada|partiu|partido|rompeu|empenou) ',
+    ' mangueira(?: (?!' + MANGUEIRA_USO + ' )[a-z0-9-]+){0,4} (?:estourou|estourada|soltou|rompeu|rompida|furou|furada|partiu|rasgou) ',
+    ' (?:estourou|soltou|rompeu|furou|partiu|rasgou) (?:a|uma|essa|aquela|nossa|minha) mangueira (?!(?:(?:d[eoa]s?|para|pra) )?' + MANGUEIRA_USO + ' )',
+    ' eixo(?: [a-z0-9]+){0,6} (?:quebrou|quebrado|quebrada|partido|rompeu|empenou) ',
+    ' eixo(?: [a-z0-9]+){0,3} partiu ',
+    # leme com palavras no meio («o leme do barco quebrou», «o leme da lancha travou agora») e o leme perdido («perdi totalmente o leme»)
+    ' leme(?: [a-z0-9]+){0,5} (?:quebrou|quebrado|quebrada|partido|partida|rompeu|rompido|rompida|travou|travado|travada|soltou) ',
+    ' leme(?: [a-z0-9]+){0,3} partiu ',
+    ' (?:perdi|perdemos) (?:(?:totalmente|completamente|de vez|agora|todo|toda|o|a|os|as) )*(?:leme|governo|controle do leme|comando do leme) ',
+    # água que entra no presente («entra água pelo casco») e a baliza disparada pela frente do verbo («disparou a baliza», «acionei a baliza»)
+    ' entra agua (?:pel[oa]s?|por|no|na|em) (?:casco|barco|lancha|porao|cabine|fundo|quilha|popa|proa|costado|eixo|helice|leme|vigia|escotilha|janela|sala de maquinas|casa de maquinas|praca de maquinas|todo lado|todos os lados|tudo) ',
 ]
 SOS_REGEX = [re.compile(f) for f in SOS_REGEX_FONTES]
 # Rota salvatagem (PROMPT §2.3): ' boia ' sem as palavras de boia de sinalização; "extintor" só sem fogo (na rota) e sempre aqui.
@@ -437,6 +474,9 @@ BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz', 'nivel', '
 # Rota epirb do cérebro (a baliza que disparou e o disparador hidrostático são do EPIRB; a pergunta do botão da G1 do certificado vai antes, ao
 # docsvenc): ficam FORA da SOS porque o nome do certificado do EPIRB traz "disparador hidrostático" (o docsvenc não pode virar emergência).
 EPIRB = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico']
+# «a baliza do barco disparou sozinha», «a baliza ativou», «a baliza foi acionada»: a baliza (o EPIRB) com até 3 palavras antes do verbo. «Baliza» sozinha é sinalização.
+# Mesma fonte do capitao-brain.js (EPIRB_REGEX_FONTE); o testes/cerebro.py compara. O `seguranca` dos textos já vem de «baliza» na SEGURANCA_EXTRA.
+EPIRB_REGEX = ' (?:baliza(?: [a-z0-9]+){0,3} (?:disparou|disparada|disparado|disparando|ativou|ativada|ativado|ativando|acionou|acionada|acionado|acionando)|(?:disparou|ativou|acionou|disparei|ativei|acionei|disparamos|ativamos|acionamos) (?:a |essa |aquela )?baliza) '
 SEGURANCA_EXTRA = EPIRB + ['baliza', 'seafire', 'supressao', 'mayday', 'distress', ' dsc ', 'pan-pan', 'pan pan', 'homem ao mar']
 
 

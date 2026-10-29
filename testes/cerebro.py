@@ -225,7 +225,7 @@ CASOS = [
     ('sangrando o ar do sistema', 'fallback'), ('sangra o ar da bomba', 'porao'), ('Qual o nível normal do porão?', 'porao'),
     ('o motor está tomando água do mar', 'motores'), ('o passageiro perdeu o voo', 'fallback'), ('o mar está calmo hoje', 'fallback'),
     # (5) rota seafire: o «sistema … disparou» e «descarreg…» só com âncora de incêndio; o alarme do porão, o Seakeeper, o arrefecimento, o vaso, as compras não
-    ('o sistema de bombas de porão disparou', 'porao'), ('o sistema do porão disparou', 'porao'), ('o sistema de alarme do porão disparou', 'porao'),
+    ('o sistema de bombas de porão disparou', 'porao'), ('o sistema do porão disparou', 'porao'), ('o sistema de alarme do porão disparou', 'sos'),  # 1b (revisão 3): o alarme do porão que disparou é relato de alagamento, não o Seafire nem a rota do porão
     ('o sistema do seakeeper disparou o alarme', 'estabilizador'), ('o gerador descarregou', 'gerador'),
     ('o alarme do sistema de arrefecimento disparou', 'fallback'), ('o sistema hidráulico disparou o alarme de pressão', 'fallback'),
     ('o sistema do guincho disparou', 'fallback'), ('o sistema de esgoto disparou', 'fallback'), ('o sistema de alarme disparou', 'fallback'),
@@ -304,6 +304,46 @@ CASOS = [
     ('o motor está queimando óleo', 'base'), ('estamos queimando 40 litros por hora', 'consumo'), ('lâmpada queimada', 'fallback'), ('a chama do fogão está azul', 'fallback'),
     ('choque térmico', 'fallback'), ('o preço deu um choque', 'fallback'), ('rombo no orçamento', 'fallback'),
     ('fomos abordados pela Marinha', 'fallback'), ('fomos atingidos por uma rajada', 'fallback'),
+    # ——— 1b, terceira revisão (achados da revisão do commit 0285bba): as formas curtas e as formas com «está/tá» que iam à IA ou à resposta de rotina ———
+    # (1) «fazendo água» sem sujeito: quem está em pânico digita a forma curta. A guarda do equipamento (geladeira, dessalinizador, ar-condicionado…) olha só o sujeito do verbo
+    ('fazendo água', 'sos'), ('fazendo agua!', 'sos'), ('tá fazendo água', 'sos'), ('ta fazendo agua', 'sos'), ('está fazendo água', 'sos'), ('ele tá fazendo água', 'sos'),
+    ('ela está fazendo água', 'sos'), ('fazendo água, o que faço?', 'sos'), ('tá fazendo água demais', 'sos'),
+    ('fazendo água potável', 'fallback'), ('fazendo água doce', 'tanques'), ('fazendo água na boca', 'fallback'), ('o bebedouro está fazendo água', 'fallback'),
+    ('a máquina de gelo está fazendo água', 'fallback'), ('o dessalinizador do barco está fazendo água', 'dessalinizador'), ('o ar está fazendo água', 'base'),
+    # (2) a guarda não vale para a frase inteira: quem relata alagamento cita o que molhou (celular, geladeira, filtro, gelo)
+    ('entrou água no barco e molhou o celular', 'sos'), ('entrou água no barco e a geladeira parou', 'sos'), ('entrou água no barco, o filtro de água está encharcado', 'sos'),
+    ('estamos fazendo água e a geladeira parou', 'sos'), ('o barco está fazendo água e o gelo acabou', 'sos'), ('a água subiu muito rápido no barco e o celular molhou', 'sos'),
+    ('a geladeira parou, estamos fazendo água', 'sos'), ('o ar condicionado parou e estamos fazendo água', 'sos'), ('o dessalinizador parou e o barco está fazendo água', 'sos'),
+    ('entrou água na bota', 'fallback'), ('a temperatura da água subindo no barco', 'base'),
+    # (3) a água a bordo nas formas comuns: «está entrando», «não para de entrar», «enchendo/cheio de água»
+    ('a água está entrando', 'sos'), ('a água tá entrando', 'sos'), ('a água está entrando pelo casco', 'sos'), ('a água está entrando no casco', 'sos'), ('a água não para de entrar', 'sos'),
+    ('não para de entrar água', 'sos'), ('o barco está enchendo de água', 'sos'), ('o barco está cheio de água', 'sos'), ('barco cheio de água', 'sos'), ('lancha encheu de água', 'sos'),
+    ('a cabine está cheia de água', 'sos'), ('o barco está cheio de água doce', 'tanques'),
+    # (4) o relato do porão com «está/tá», a bomba que não para e o alarme que disparou (PROMPT §2.2: vai para sos, com o passo a passo); a pergunta neutra segue a rota do porão
+    ('o porão está cheio de água', 'sos'), ('a água está subindo no porão', 'sos'), ('a água está entrando no porão', 'sos'), ('o porão está enchendo', 'sos'),
+    ('o nível do porão está subindo', 'sos'), ('bombas de porão não param', 'sos'), ('a bomba de porão não está dando conta', 'sos'), ('o porão está cheio', 'sos'),
+    ('o porão tá cheio', 'sos'), ('o alarme do porão disparou', 'sos'), ('alarme de porão', 'sos'), ('o alarme de porão tocou', 'sos'), ('disparou o alarme do porão', 'sos'),
+    ('o alarme do porão está tocando', 'sos'), ('alarme da bomba de porão soou', 'sos'),
+    ('como testo as bombas de porão', 'porao'), ('testar o alarme de porão', 'base'), ('como funciona o alarme do porão', 'base'), ('o que fazer quando o alarme do porão tocar', 'base'),
+    ('alarme do painel do porão', 'base'), ('a bomba de porão não está ligando', 'porao'), ('a água do tanque acabou', 'tanques'),
+    # (5) o eixo com palavras no meio e a baliza do EPIRB que disparou, ativou ou foi acionada (a «baliza» sozinha é sinalização)
+    ('o eixo da hélice de bombordo quebrou agora mesmo', 'sos'), ('o eixo do motor de boreste quebrou', 'sos'),
+    ('a baliza do barco disparou sozinha', 'epirb'), ('a baliza ativou', 'epirb'), ('a baliza foi acionada', 'epirb'), ('a baliza disparou sozinha', 'epirb'),
+    ('baliza cardinal', 'fallback'), ('a baliza de canal', 'base'), ('o eixo estava bom quando o barco partiu', 'fallback'), ('o eixo da hélice está ok', 'fallback'),
+    # (6) «tocou o fundo»: o barco toca o fundo (SOS); a âncora, o ferro, a poita e a sonda tocam o fundo no fundeio (rotina)
+    ('a âncora tocou o fundo', 'ancora'), ('a âncora tocou no fundo', 'ancora'), ('quando a âncora tocou no fundo quantos metros de cabo eu solto?', 'ancora'),
+    ('o ferro já tocou no fundo', 'ancora'), ('a poita tocou o fundo', 'fallback'), ('a sonda tocou o fundo', 'fallback'), ('o mergulhador tocou o fundo', 'fallback'),
+    ('a âncora raspou numa pedra', 'ancora'), ('a âncora esbarrou numa pedra', 'ancora'),
+    ('o barco tocou o fundo', 'sos'), ('a quilha tocou o fundo', 'sos'), ('o barco raspou numa pedra', 'sos'),
+    # (7) a guarda da mangueira de uso também é local: a de combustível que estoura e molha a pia é emergência; a de lavagem e a do ar-condicionado não
+    ('a mangueira de combustível estourou e molhou a pia', 'sos'), ('a mangueira de água salgada soltou e o chuveiro parou', 'sos'),
+    ('rompeu a mangueira do escapamento, a geladeira desligou', 'sos'), ('a mangueira de lavagem estourou e a pia entupiu', 'fallback'),
+    # (8) o leme e a baliza com uma palavra a mais, a água que entra no presente, quem pula do barco e o «homem» (a PESSOA tinha «homens?», que não pega «homem»)
+    ('o leme do barco quebrou', 'sos'), ('o leme da lancha travou agora', 'sos'), ('perdi totalmente o leme', 'sos'), ('o leme está com folga', 'fallback'),
+    ('o leme do barco precisa de graxa', 'fallback'), ('como ajustar o leme', 'fallback'),
+    ('ele pulou da lancha', 'sos'), ('pulou da lancha', 'sos'), ('caiu um homem do barco', 'sos'), ('o homem caiu na água', 'sos'), ('o homem da marina chegou', 'fallback'),
+    ('entra água pelo casco', 'sos'), ('entra água no tanque de água doce', 'tanques'),
+    ('disparou a baliza', 'epirb'), ('disparou a baliza do barco', 'epirb'), ('acionei a baliza', 'epirb'),
 ]
 # As chaves de emergência (§2.3 do PROMPT): nunca vão à IA na nuvem, qualquer que seja a pergunta
 CHAVES_LOCAIS = ('sos', 'epirb', 'seafire', 'salvatagem', 'canal16', 'oleo')
@@ -375,6 +415,13 @@ PEDE_IA = {
     'onde ficam os coletes?': False, 'sinalizadores vencidos?': False, 'onde fica o extintor': False, 'extintor com fogo na cozinha': False,
     'qual o MMSI do barco?': False, 'luz da boia': True, 'boia de amarração': True,
 }
+# 1b, terceira revisão: toda frase nova do bloco acima que espera chave de emergência (sos, epirb…) fica no aparelho (PEDE_IA False), e a rotina ao lado vai à IA
+# só quando é conversa de fallback (trava §2.3: emergência local, nunca na nuvem)
+_REV3 = CASOS[[q for q, _ in CASOS].index('fazendo água'):]
+PEDE_IA.update({q: False for q, k in _REV3 if k in CHAVES_LOCAIS})
+PEDE_IA.update({'fazendo água potável': True, 'fazendo água na boca': True, 'o bebedouro está fazendo água': True, 'a máquina de gelo está fazendo água': True,
+                'baliza cardinal': True, 'a poita tocou o fundo': True, 'a sonda tocou o fundo': True, 'o mergulhador tocou o fundo': True,
+                'o eixo estava bom quando o barco partiu': True, 'o eixo da hélice está ok': True, 'entrou água na bota': True})
 
 
 def main():
@@ -720,10 +767,30 @@ def emergencia_1b(pg, res):
     falhas += conta('1b: salvatagem: o texto fixo do protocolos, igual, na tela e na voz inteira; sem número de pessoas e sem lugar (paiol, armário, proa, popa)',
                     x['salvatagem']['text'].startswith(P['salvatagem']) and x['salvatagem']['fala'] == P['salvatagem'] and not re.search(r'paiol|arm[aá]rio|cabine|\bproa\b|\bpopa\b', x['salvatagem']['text'], re.I),
                     (x['salvatagem']['text'], x['salvatagem']['fala']))
+    # 1b (revisão 3, PROMPT §2.2 «Diário com alerta»): o pedido «posição e hora, <alerta>» (ramo `junto` do ANSWERS.diario) também NÃO usa o resumoAgora(): a linha gravada e a
+    # resposta levam a hora, «posição: ler no plotter» e os passos, sem coordenada, SOG, proa, snapshot nem leitura do quadro (antes gravava o resumo inteiro com a posição do barco)
+    dj = pg.evaluate("""() => { const B = window.CapitaoBrain; localStorage.clear();
+      return ['registre no diário a posição, tem fogo no motor', 'anote posição e hora, pressão de óleo baixa no motor BB', 'registre no diário posição e hora, homem ao mar'].map((q) => {
+        const antes = B.loadDiario().length, a = B.answer(q, { platform: 'app' }), l = B.loadDiario();
+        return { q, key: a.key, text: a.text, src: a.src, ia: B.pedeIA(a, q), novas: l.length - antes, linha: l.length > antes ? l[0].t : '' }; }); }""")
+    err_dj = []
+    for r in dj:
+        txt = r['text'] + '\n' + r['linha']
+        if r['key'] != 'diario' or r['ia'] or r['novas'] != 1: err_dj.append('%s: chave %s, ia %s, linhas novas %s' % (r['q'], r['key'], r['ia'], r['novas']))
+        if 'posição: ler no plotter' not in r['linha'] or 'osição: ler no plotter' not in r['text']: err_dj.append('%s: sem «posição: ler no plotter» na linha e na resposta' % r['q'])
+        for rx, nome in ((confere.R_COORD, 'coordenada'), (re.compile(r'SOG|\bproa\b|snapshot|SNAPSHOT|SEM DADOS|SEM LEITURA|motores desligados|\d\s*rpm|\d\s*bar\b|banco 24|vento'), 'leitura do quadro')):
+            m = rx.search(txt)
+            if m: err_dj.append('%s: %s «%s»' % (r['q'], nome, m.group(0)))
+        if 'tem fogo' in r['q'] or 'homem ao mar' in r['q']:
+            if mm not in r['text'] or 'Se a emergência é agora: abra o SOS.' not in r['text']: err_dj.append('%s: sem a instrução do SOS e o MMSI do rádio' % r['q'])
+        else:
+            if not all(t in r['text'] for t in P['oleo']): err_dj.append('%s: sem os passos de pressão de óleo' % r['q'])
+    falhas += conta('1b (revisão 3): diário com alerta no ramo «posição e hora, <alerta>» (fogo, homem ao mar, pressão de óleo): a linha gravada e a resposta não trazem coordenada, SOG, proa nem leitura do quadro; levam «posição: ler no plotter» e os passos', not err_dj and len(dj) == 3, err_dj or dj)
     # as listas do cérebro são as do gerador (uma fonte de verdade por lista), e o port da emergencia() dá o mesmo resultado
     iguais = [(n, a, b) for n, a, b in (('SOS', L['SOS'], confere.SOS), ('SOS_REGEX', L['SOS_REGEX'], confere.SOS_REGEX_FONTES), ('SALVATAGEM', L['SALVATAGEM'], confere.SALVATAGEM),
-                                          ('BOIA_FORA', L['BOIA_FORA'], confere.BOIA_FORA), ('EPIRB', L['EPIRB'], confere.EPIRB)) if a != b]
-    falhas += conta('1b: as listas SOS, as frases com contexto (SOS_REGEX, texto a texto), salvatagem, boia fora e EPIRB do cérebro são iguais às do gerador (confere.py), na mesma ordem', not iguais,
+                                          ('BOIA_FORA', L['BOIA_FORA'], confere.BOIA_FORA), ('EPIRB', L['EPIRB'], confere.EPIRB),
+                                          ('EPIRB_REGEX', [L['EPIRB_REGEX']], [confere.EPIRB_REGEX])) if a != b]
+    falhas += conta('1b: as listas SOS, as frases com contexto (SOS_REGEX, texto a texto), salvatagem, boia fora, EPIRB e a regex da baliza do cérebro são iguais às do gerador (confere.py), na mesma ordem', not iguais,
                     [(n, [t for t in a if t not in b], [t for t in b if t not in a]) for n, a, b in iguais])
     fora = [t for t in confere.SOS + confere.SALVATAGEM + confere.EPIRB if not confere.segura(t.strip())]
     falhas += conta('1b: toda palavra da lista SOS, da salvatagem e do EPIRB faz o gerador marcar `seguranca` (a SEGURANCA_PALAVRAS é a mesma lista)', not fora, fora)
@@ -810,6 +877,41 @@ def grades_2a_revisao(pg):
          , True),
         ('a mangueira de uso (lavagem, chuveiro, pia, ar-condicionado)',
          ['a mangueira de lavagem estourou', 'a mangueira do chuveiro soltou', 'a mangueira da pia furou', 'a mangueira do ar condicionado soltou', 'a mangueira de lavar o convés rompeu'], False),
+        # 1b (revisão 3): as guardas de água são LOCAIS (presas ao verbo), não da frase inteira
+        ('relato de alagamento que cita o que molhou ou parou (celular, geladeira, filtro, gelo, pia, chuveiro, dessalinizador, ar-condicionado)',
+         [f % x for f in ('entrou água no barco e %s', 'estamos fazendo água e %s', 'o barco está fazendo água e %s', 'a água está entrando e %s', 'o porão está cheio e %s',
+                          '%s, estamos fazendo água', '%s e entrou água no barco')
+          for x in ('molhou o celular', 'a geladeira parou', 'o filtro de água encharcou', 'o gelo acabou', 'a pia entupiu', 'o chuveiro parou', 'o dessalinizador desligou',
+                    'o ar condicionado caiu', 'o freezer desarmou')], True),
+        ('o equipamento que «faz água» é o sujeito do verbo (bebedouro, purificador, máquina de gelo, torneira, pia, ralo, sanitário, ar): rotina, não alagamento',
+         ['%s %s' % (sj, f) for sj in ('o bebedouro', 'o purificador', 'a máquina de gelo', 'a torneira', 'a pia', 'o ralo', 'o sanitário', 'o ar', 'o freezer', 'o frigobar',
+                                       'o dessalinizador do barco', 'o ar condicionado da cabine do barco')
+          for f in ('está fazendo água', 'tá fazendo água', 'faz água', 'começou a fazer água', 'ainda está fazendo água')], False),
+        ('«fazendo água» que não é o casco: água doce, quente, potável, mineral, para o café, na boca, de coco',
+         ['fazendo água %s' % x for x in ('doce', 'quente', 'potável', 'mineral', 'gelada', 'para o café', 'com gelo', 'na boca', 'de coco', 'na pia', 'no chuveiro')], False),
+        ('«fazendo água» sem sujeito (a forma curta de quem está em pânico)',
+         ['fazendo água', 'tá fazendo água', 'ta fazendo agua', 'está fazendo água', 'ele tá fazendo água', 'ela está fazendo água', 'fazendo muita água', 'tá fazendo água demais',
+          'fazendo água pelo casco', 'fazendo água no porão', 'fazendo água!'], True),
+        ('o relato do porão com «está/tá» (cheio, enchendo, subindo, alagando), a água que sobe ou entra no porão, a bomba que não para e o alarme que disparou',
+         ['o porão %s %s' % (a, b) for a in ('está', 'tá', 'continua', 'ficou') for b in ('cheio', 'enchendo', 'alagando', 'subindo')]
+         + ['a água %s %s no porão' % (a, b) for a in ('está', 'tá', 'vem') for b in ('subindo', 'entrando', 'enchendo')]
+         + ['a bomba de porão %s' % x for x in ('não para', 'não está dando conta', 'não dá conta', 'está ligada direto', 'não desliga')]
+         + ['as bombas de porão %s' % x for x in ('não param', 'não estão dando conta', 'estão funcionando sem parar')]
+         + ['%s %s' % (a, b) for a in ('o alarme do porão', 'o alarme de porão', 'o alarme da bomba de porão') for b in ('disparou', 'tocou', 'soou', 'acendeu', 'está tocando', 'tá soando')]
+         + ['alarme do porão', 'alarme de porão', 'disparou o alarme do porão'], True),
+        ('o porão e o alarme em pergunta ou rotina (nível normal, testar o alarme, como funciona, alarme do painel, bomba que não liga, luz do porão)',
+         ['qual o nível normal do porão', 'testar o alarme de porão', 'como funciona o alarme do porão', 'o que fazer quando o alarme do porão tocar', 'alarme do painel do porão',
+          'alarme de nível do porão', 'a bomba de porão não está ligando', 'a luz do porão acendeu', 'o alarme do porão está ligado?', 'o alarme do porão está ativado',
+          'como testo as bombas de porão', 'nível do porão normal'], False),
+        ('o barco que toca o fundo (sos) e a âncora, o ferro, a poita, a corrente e a sonda que tocam o fundo no fundeio (rotina)',
+         ['o barco tocou o fundo', 'a quilha tocou o fundo', 'tocamos o fundo', 'tocou no fundo', 'a lancha tocou no fundo', 'a hélice tocou o fundo'], True),
+        ('a âncora, o ferro, a poita, o chumbo e a sonda que tocam o fundo ou raspam numa pedra',
+         ['%s %s' % (sj, v) for sj in ('a âncora', 'o ferro', 'a poita', 'o chumbo', 'a sonda', 'o prumo', 'o mergulhador') for v in ('tocou o fundo', 'tocou no fundo', 'raspou numa pedra', 'esbarrou numa pedra')]
+         + ['quando a âncora tocou no fundo, quantos metros de cabo eu solto?', 'o ferro já tocou no fundo'], False),
+        ('o eixo e o leme com palavras no meio do relato (quebrou, partiu, travou)',
+         ['o eixo %s quebrou' % x for x in ('da hélice', 'da hélice de bombordo', 'do motor de boreste', 'do barco', 'da hélice de bombordo agora mesmo', 'principal')]
+         + ['o leme %s' % x for x in ('do barco quebrou', 'da lancha travou agora', 'quebrou de vez', 'partiu', 'travou')]
+         + ['perdi totalmente o leme', 'perdemos o governo'], True),
         ('fogo sem a palavra «fogo»',
          ['chamas no motor', 'tem chamas na cozinha', 'labaredas', 'uma chama no painel', 'faíscas no quadro', 'o cabo faiscou', 'curto circuito', 'curto-circuito no painel',
           'cheiro de plástico queimado', 'cheiro de fio queimado', 'queimando o painel', 'o motor está queimando', 'o painel está queimando', 'choque no painel',
