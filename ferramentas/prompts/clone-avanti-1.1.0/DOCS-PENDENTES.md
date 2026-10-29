@@ -113,6 +113,13 @@ do relato; confira com grep antes de editar.
 - guia-rapido/Guia-Rapido-Capitao-IA.html:292-293 (cartões «3 · Incêndio · Seafire» e «4 · EPIRB» com SEM DADOS): o procedimento padrão; a página EMERGÊNCIA lê o `D.protocolos`; a captura `sos-app.jpg` (S2 do app) muda com o botão do GPS: regerar o PDF (`python ferramentas/guia/gerar_guia.py`)
 - integracoes/: nada (o SOS não usa telemetria, replay nem IA)
 
+## 1b SOS fora da simulação (revisão)
+
+- CLAUDE.md › Estrutura, linha do `capitao-brain.js`: a lista `SOS` agora tem uma parte em regex com contexto (`SOS_REGEX`: pessoa no mar ou que cai, «bateu numa pedra» e não «bateu em 3 bar», «tomando água», «sangrando» e não «sangrando o ar»), exportada em `LISTAS.SOS_REGEX` e igual à do gerador (`confere.SOS_REGEX_FONTES`, o `cerebro.py` compara texto a texto); «a gente» vira «nos» antes da conferência (não é a pessoa de «gente na água»). A rota `seafire` só pega «descarreg…», «depois da descarga», «descarga do sistema», «disparou o sistema» e «sistema … disparou» junto de uma âncora de combate a incêndio (sistema fixo, casa ou praça de máquinas, compartimento ou acesso ao motor, extinção) ou com «o sistema» colado ao verbo; a `salvatagem` tem ` colete `, ` balsa ` com espaços e a `BOIA_FORA` ganhou boia de nível, porão, bomba, tanque, vaso, sensor, chave e âncora; «testar» é sinônimo de «teste» só junto de baliza/EPIRB
+- CLAUDE.md › Testes locais, linha do `cerebro.py`: o bloco «FAQ de segurança» (pergunta e variantes de todos os cartões de emergência e segurança abrem no aparelho, nunca na IA; a pergunta de rotina não casa a lista SOS) e as provas de cada palavra da `BOIA_FORA` e de cada unidade do «bateu em um <unidade>»
+- ferramentas/prompts/clone-avanti-1.1.0/CONTRATO-DADOS.md, §6.2 (linha 1b) e §6.6 (os parágrafos de «sistema … disparou/descarreg…» das linhas ~1280 e ~1318): a rota `seafire` desses gatilhos exige a âncora de incêndio (a 1ª versão da 1b mandava o alarme do porão, o Seakeeper e a descarga do vaso para o procedimento de incêndio); «como testar as bombas de porão» continua na resposta pronta do porão (o sinônimo testar → teste ficou restrito à baliza); a pergunta de PO-02 é «Qual o nível normal do porão?» e a variante de SF-03 «quando abrir o acesso ao motor depois do disparo»
+- Manual-Capitao-IA.dc.html e guia-rapido/: nada novo nesta revisão
+
 ## Fora das funções
 
 - MAPA.md: as evidências sobre o CDN do `sw.js` (linhas 29, 88 e 726) e o "React do unpkg" ficaram históricas: o MAPA é da 1.0.9 e não se reescreve.

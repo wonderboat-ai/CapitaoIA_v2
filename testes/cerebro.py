@@ -62,8 +62,10 @@ CASOS = [
     ('o piloto automático não segura com rajada', 'eletronicos'), ('o motor apagou na rajada hoje', 'motores'),
     ('a rajada rasgou o toldo', 'fallback'), ('qual a rajada máxima que o barco aguenta?', 'fallback'),
     # "hoje"/"agora" sozinhos não fazem de "rajada" uma pergunta de previsão: relato e pessoa em risco seguem a IA (revisão da F13)
-    # 1b: «adernou» entrou na lista SOS (PROMPT §2.3); o que o caso protege continua (relato com «rajada» nunca vira a previsão do dia, `clima`)
-    ('pegamos uma rajada agora e o barco adernou', 'sos'), ('rajada derrubou alguém no mar agora', 'fallback'),
+    # 1b: «adernou» entrou na lista SOS (PROMPT §2.3); o que o caso protege continua (relato com «rajada» nunca vira a previsão do dia, `clima`).
+    # Revisão da 1b: «rajada derrubou alguém no mar» era `fallback` (IA na nuvem), caso antigo da F13 que contradizia a trava «emergência local,
+    # nunca na IA» (§2.3): pessoa no mar é `sos`, ainda sem previsão (nunca `clima`)
+    ('pegamos uma rajada agora e o barco adernou', 'sos'), ('rajada derrubou alguém no mar agora', 'sos'),
     ('a rajada de hoje arrancou o toldo', 'fallback'), ('há rajada forte entrando, o que faço?', 'fallback'),
     ('quanto tempo dura uma rajada?', 'fallback'), ('tem rajada hoje?', 'clima'), ('qual a previsão de rajada para amanhã?', 'clima'),
     # C5 (CONTRATO §6.2): com os 91 trechos dos 16 guias, pergunta fora do barco continua sem trecho (nenhum guia tem "lais")
@@ -138,9 +140,10 @@ CASOS = [
     ('como ligar a bomba da climatização', 'base'), ('como desligar a bomba da climatização', 'base'), ('como trocar o rotor da bomba do gerador', 'base'),
     ('como trocar a bomba de óleo', 'base'), ('a bomba de circulação', 'fallback'),
     # (revisão 7: "como ligar as bombas de porão" já não traz o §4 "Água entrando" ao topo; fica a resposta pronta do porão, local como antes)
-    # (1b: «testar» é sinônimo de «teste» (PROMPT §2.3, para «como testar a baliza?»): «como testar as bombas de porão» passa da resposta pronta ao
-    # g_porao §3 · Teste mensal, o trecho certo do guia; as outras duas seguem na resposta pronta)
-    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'base'), ('como ligar as bombas de porão', 'porao'),
+    # (1b: «testar» é sinônimo de «teste» (PROMPT §2.3) só junto de baliza/EPIRB, para «como testar a baliza?». A 1ª versão da 1b o fazia em toda
+    # pergunta e «como testar as bombas de porão» saía da resposta pronta (local) para o g_porao §3 e para a IA; a revisão restringiu o sinônimo ao
+    # contexto da baliza e a pergunta voltou à resposta pronta do porão, como antes da 1b)
+    ('bombas de porão', 'porao'), ('como testar as bombas de porão', 'porao'), ('como testar a bomba de porão', 'porao'), ('como ligar as bombas de porão', 'porao'),
     ('como trocar a bateria de partida', 'base'), ('como verificar a bateria de partida', 'base'), ('bateria de partida', 'eletrico'),
     ('o motor não pega, a bateria de partida está fraca', 'motores'),
     ('o disjuntor caiu, qual o procedimento', 'fallback'), ('a bateria caiu, procedimento', 'eletrico'), ('o gerador caiu, procedimento', 'gerador'),
@@ -195,6 +198,49 @@ CASOS = [
     # o que NÃO vira SOS: o «caiu» das coisas, a vista do mar, o piloto em espera, o «bateu» do horário, o governo federal, a temperatura da água
     ('o disjuntor caiu', 'fallback'), ('tem vista para o mar', 'fallback'), ('o piloto em espera', 'eletronicos'),
     ('bateu o horário do abastecimento', 'autonomia'), ('sem governo federal', 'fallback'), ('a temperatura da água está subindo', 'base'),
+    # ——— 1b, revisão da revisão (achados da revisão do commit 57d7ce4) ———
+    # (1) «bateu em» é batida só com coisa dura ou com «um/uma/outro/outra/algo» e «num/numa»; «bateu em <número ou unidade>» é leitura, nunca SOS
+    # (antes, ' bateu em ' pegava a pressão do óleo, o consumo, o tanque e o horímetro, e a Fase 3 ligaria a janela de emergência a cada um)
+    ('batemos em uma pedra', 'sos'), ('o barco bateu numa pedra', 'sos'), ('bateu num banco de areia', 'sos'), ('bateu na pedra', 'sos'),
+    ('o barco bateu no cais', 'sos'), ('bati em um tronco', 'sos'),
+    ('a pressão do óleo bateu em 3 bar', 'oleo'), ('o consumo bateu em 40 litros por hora', 'consumo'), ('o tanque bateu em 50%', 'tanques'),
+    ('o horímetro bateu em 1000 horas', 'horimetros'), ('quando o gerador bateu em 1200 horas', 'gerador'), ('a temperatura bateu em 90 graus', 'fallback'),
+    ('o relógio bateu em meia noite', 'fallback'), ('o vento bateu em 20 nós', 'clima'), ('a bateria bateu em 12 volts', 'eletrico'),
+    ('o horário bateu em 10h', 'fallback'), ('a conta bateu em 500', 'fallback'), ('o consumo bateu em um litro por hora', 'consumo'),
+    ('a onda bateu no casco', 'fallback'),
+    # (2) pessoa no mar, a água entrando e o governo, nas formas vizinhas das pedidas (iam à IA): sos, local
+    ('tem alguém no mar', 'sos'), ('tem gente no mar', 'sos'), ('um tripulante está no mar', 'sos'), ('pessoa no mar', 'sos'), ('criança no mar', 'sos'),
+    ('caiu pro mar', 'sos'), ('alguém pulou na água', 'sos'), ('meu filho está na água', 'sos'), ('perdemos um tripulante', 'sos'),
+    ('entrou muita água no barco', 'sos'), ('a água entrou no casco', 'sos'), ('estamos tomando água', 'sos'), ('o barco está tomando água', 'sos'),
+    ('perdemos o leme', 'sos'), ('o leme não responde', 'sos'), ('o eixo partiu', 'sos'),
+    # (3) as perguntas e variantes do FAQ de segurança (a verificação do FAQ, mais abaixo, percorre todas): queda, alagamento, disparo manual
+    ('O que faço quando alguém cai na água?', 'sos'), ('alguém cai na água', 'sos'), ('cai gente do barco', 'sos'), ('rumo de volta para quem caiu', 'sos'),
+    ('o passageiro caiu', 'sos'), ('marinheiro na água', 'sos'), ('vítima na água', 'sos'), ('alguém foi jogado ao mar', 'sos'), ('sumiu um tripulante', 'sos'),
+    ('perdi de vista o meu filho', 'sos'), ('a gente caiu na água', 'sos'),
+    ('nível do porão subindo', 'sos'), ('água subindo no porão', 'sos'), ('a bomba de porão não dá conta', 'sos'), ('bomba de porão sem dar conta', 'sos'),
+    ('a bomba do porão não para', 'sos'), ('disparo manual com o motor desligado', 'seafire'), ('quando abrir o acesso ao motor depois do disparo', 'seafire'),
+    ('ele está sangrando muito', 'sos'),
+    # (4) o que NÃO vira SOS (as formas vizinhas das de cima, de rotina): a gente, pro mar, sangrar o diesel, coletei, bálsamo, o nível normal do porão
+    ('a gente cai fora do porto às 10h', 'fallback'), ('vamos pro mar amanhã', 'fallback'), ('como sangrar o combustível do motor', 'autonomia'),
+    ('sangrando o ar do sistema', 'fallback'), ('sangra o ar da bomba', 'porao'), ('Qual o nível normal do porão?', 'porao'),
+    ('o motor está tomando água do mar', 'motores'), ('o passageiro perdeu o voo', 'fallback'), ('o mar está calmo hoje', 'fallback'),
+    # (5) rota seafire: o «sistema … disparou» e «descarreg…» só com âncora de incêndio; o alarme do porão, o Seakeeper, o arrefecimento, o vaso, as compras não
+    ('o sistema de bombas de porão disparou', 'porao'), ('o sistema do porão disparou', 'porao'), ('o sistema de alarme do porão disparou', 'porao'),
+    ('o sistema do seakeeper disparou o alarme', 'estabilizador'), ('o gerador descarregou', 'gerador'),
+    ('o alarme do sistema de arrefecimento disparou', 'fallback'), ('o sistema hidráulico disparou o alarme de pressão', 'fallback'),
+    ('o sistema do guincho disparou', 'fallback'), ('o sistema de esgoto disparou', 'fallback'), ('o sistema de alarme disparou', 'fallback'),
+    ('alarme de sistema disparou', 'fallback'), ('o sistema de arrefecimento disparou', 'fallback'), ('o sistema de navegação disparou', 'fallback'),
+    ('o sistema de direção disparou', 'fallback'), ('o sistema de ancoragem disparou', 'fallback'), ('descarregar as compras do barco', 'fallback'),
+    ('descarreguei os cartões', 'fallback'), ('depois da descarga do vaso sanitário', 'fallback'), ('depois da descarga do banheiro', 'base'),
+    ('o sistema disparou', 'seafire'), ('o sistema da casa de máquinas disparou', 'seafire'), ('o sistema descarregou depois do incêndio', 'sos'),
+    ('o sistema da bomba disparou', 'porao'), ('o sistema da âncora disparou', 'ancora'), ('o sistema do motor disparou', 'motores'),
+    ('o motor descarregou', 'motores'), ('o sistema do gerador disparou', 'gerador'), ('o sistema do estabilizador descarregou', 'estabilizador'),
+    ('o sistema de extinção disparou', 'seafire'), ('quanto esperar para abrir o motor depois da descarga', 'seafire'),
+    ('depois da descarga no compartimento do motor', 'seafire'), ('abrir o acesso depois da descarga', 'seafire'),
+    # (6) rota salvatagem: a boia de nível (porão, tanque, bomba), a de ancoragem, «coletei» e «bálsamo» não são salvatagem
+    ('a boia do porão está travada', 'porao'), ('a boia da bomba de porão não sobe', 'porao'), ('a boia de nível da bomba', 'porao'),
+    ('boia de nível do tanque', 'tanques'), ('a boia do tanque de combustível', 'autonomia'), ('a boia de ancoragem', 'fallback'),
+    ('coletei os dados', 'fallback'), ('o bálsamo', 'fallback'), ('jogue a boia na água', 'salvatagem'), ('onde ficam os coletes', 'salvatagem'),
     # Seafire depois do disparo: «sistema fixo», «descarga do sistema», «depois do disparo», «descarreg…», «depois da descarga», «disparou o sistema» e
     # «sistema … disparou»; a bateria que descarregou, o disjuntor e o som que disparou não são o Seafire
     ('disparou o sistema da casa de máquinas', 'seafire'), ('quanto tempo esperar para abrir a praça de máquinas depois da descarga', 'seafire'),
@@ -208,6 +254,8 @@ CASOS = [
     # MMSI do rádio de bordo em todo texto de rádio: o número do cadastro do app não sai nestas respostas (verificação «1b: emergência…»)
     ('qual o MMSI do barco?', 'canal16'),
 ]
+# As chaves de emergência (§2.3 do PROMPT): nunca vão à IA na nuvem, qualquer que seja a pergunta
+CHAVES_LOCAIS = ('sos', 'epirb', 'seafire', 'salvatagem', 'canal16', 'oleo')
 # IA na nuvem (quando a tela chama a IA, com o aparelho ativado): SEM DADOS, trecho do guia e pergunta sobre o app — nunca
 # emergência, óleo, registro no diário, resposta pronta ou só um cumprimento.
 PEDE_IA = {
@@ -297,6 +345,8 @@ def main():
             fonte = bool(r['src']) and r['src'].startswith('Fonte')
             semdados = r['key'] != 'fallback' or 'SEM DADOS' in r['text']
             ia = r['q'] not in PEDE_IA or r['ia'] == PEDE_IA[r['q']]
+            # trava §2.3 (revisão da 1b): caso que espera chave de emergência fica no aparelho, esteja ou não no PEDE_IA
+            ia = ia and (r['esperado'] not in CHAVES_LOCAIS or r['ia'] is False)
             if not (ok and fonte and semdados and ia):
                 falhas += 1
                 print('FALHA', json.dumps({k: r[k] for k in ('q', 'esperado', 'key', 'ia', 'src')}, ensure_ascii=False))
@@ -522,6 +572,7 @@ def main():
             print(f)
         falhas += agenda_sem_falta(pg)
         falhas += emergencia_1b(pg, res)
+        falhas += faq_de_seguranca(pg)
         falhas += perguntas_da_g1(pg)
         falhas += consumo_sem_abastecimentos(b)
         # sem o capitao-clima.js (página acima): previsão SEM DADOS, nenhum vento previsto inventado
@@ -564,6 +615,10 @@ EM_JS = """(qs) => { const B = window.CapitaoBrain, D = window.CapitaoDados, out
   out.mmsi = D.embarcacao.mmsi;
   return out; }"""
 EM_EMERG = """(ps) => { const B = window.CapitaoBrain; return ps.map((p) => [p, B.emergencia(p)]); }"""
+
+
+# as palavras que a BOIA_FORA tem de ter: as seis do PROMPT §2.3 e as da revisão da 1b (a boia de nível do porão e do tanque, o sensor e a chave de boia, a de ancoragem)
+BOIA_FORA_ESPERADA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz', 'nivel', 'porao', 'bomba', 'tanque', 'vaso', 'sanitario', 'combustivel', 'sensor', 'chave', 'ancor', 'fundei']
 
 
 def emergencia_1b(pg, res):
@@ -615,9 +670,9 @@ def emergencia_1b(pg, res):
                     x['salvatagem']['text'].startswith(P['salvatagem']) and x['salvatagem']['fala'] == P['salvatagem'] and not re.search(r'paiol|arm[aá]rio|cabine|\bproa\b|\bpopa\b', x['salvatagem']['text'], re.I),
                     (x['salvatagem']['text'], x['salvatagem']['fala']))
     # as listas do cérebro são as do gerador (uma fonte de verdade por lista), e o port da emergencia() dá o mesmo resultado
-    iguais = [(n, a, b) for n, a, b in (('SOS', L['SOS'], confere.SOS), ('SALVATAGEM', L['SALVATAGEM'], confere.SALVATAGEM), ('BOIA_FORA', L['BOIA_FORA'], confere.BOIA_FORA),
-                                          ('EPIRB', L['EPIRB'], confere.EPIRB)) if a != b]
-    falhas += conta('1b: as listas SOS, salvatagem, boia fora e EPIRB do cérebro são iguais às do gerador (confere.py), na mesma ordem', not iguais,
+    iguais = [(n, a, b) for n, a, b in (('SOS', L['SOS'], confere.SOS), ('SOS_REGEX', L['SOS_REGEX'], confere.SOS_REGEX_FONTES), ('SALVATAGEM', L['SALVATAGEM'], confere.SALVATAGEM),
+                                          ('BOIA_FORA', L['BOIA_FORA'], confere.BOIA_FORA), ('EPIRB', L['EPIRB'], confere.EPIRB)) if a != b]
+    falhas += conta('1b: as listas SOS, as frases com contexto (SOS_REGEX, texto a texto), salvatagem, boia fora e EPIRB do cérebro são iguais às do gerador (confere.py), na mesma ordem', not iguais,
                     [(n, [t for t in a if t not in b], [t for t in b if t not in a]) for n, a, b in iguais])
     fora = [t for t in confere.SOS + confere.SALVATAGEM + confere.EPIRB if not confere.segura(t.strip())]
     falhas += conta('1b: toda palavra da lista SOS, da salvatagem e do EPIRB faz o gerador marcar `seguranca` (a SEGURANCA_PALAVRAS é a mesma lista)', not fora, fora)
@@ -638,6 +693,19 @@ def emergencia_1b(pg, res):
     # a ficha de hoje + cada resposta de emergência do TERMOS: o mesmo conjunto de regex já foi aplicado acima; aqui a ficha inteira, sem o número do MMSI fora de ## Embarcação
     fora_emb = d['ficha'].replace(d['embarcacao'], ' ')
     falhas += conta('1b: o número do MMSI do cadastro só aparece em ## Embarcação da ficha', x['mmsi'] not in fora_emb, [l for l in fora_emb.split('\n') if x['mmsi'] in l][:2])
+    # Cada palavra de unidade do «bateu em um/uma/num/numa <unidade>» e cada palavra da BOIA_FORA tem a sua prova (uma palavra tirada da lista tem de reprovar
+    # aqui, não só nas frases dos casos): a leitura nunca é batida; a boia de nível, de ancoragem, do porão e do tanque nunca é salvatagem
+    unidades = ['bar', 'litro', 'litros', 'milhão', 'grau', 'graus', 'volt', 'volts', 'hora', 'horas', 'minuto', 'minutos', 'segundo', 'segundos', 'dia', 'dias',
+                'metro', 'metros', 'nós', 'onda', 'ondas', 'marola', 'rajada', 'rajadas']
+    ps = [confere.pad('o contador bateu %s %s' % (art, u)) for u in unidades for art in ('em um', 'em uma', 'num', 'numa')]
+    batidas = [p for p, a in pg.evaluate(EM_EMERG, ps) if a]
+    controle = [p for p, a in pg.evaluate(EM_EMERG, [confere.pad(q) for q in ('o barco bateu em uma pedra', 'bateu num banco de areia', 'bateu em outro barco')]) if not a]
+    falhas += conta('1b (revisão): «bateu em um/uma/num/numa <unidade, onda ou rajada>» nunca é emergência (%d frases) e a batida em pedra, banco e outro barco é' % len(ps), not batidas and not controle, (batidas[:3], controle))
+    boias = pg.evaluate("""(ws) => { const B = window.CapitaoBrain; return ws.map((w) => [w, B.answer('a boia ' + w + ' está travada', { platform: 'app', commit: false }).key]).concat([['', B.answer('a boia está travada', { platform: 'app', commit: false }).key]]); }""", BOIA_FORA_ESPERADA)
+    ruins = [(w, k) for w, k in boias if (k == 'salvatagem') != (w == '')]
+    faltam = [w for w in BOIA_FORA_ESPERADA if w not in L['BOIA_FORA']]
+    falhas += conta('1b (revisão): cada palavra da BOIA_FORA (as da PROMPT §2.3 e as da revisão: boia de nível, porão, bomba, tanque, vaso, sensor, chave, âncora) tira a «boia» da salvatagem (%d palavras) e a «boia» sozinha continua sendo salvatagem' % len(BOIA_FORA_ESPERADA),
+                    not ruins and not faltam, (ruins, faltam))
     print('1b: emergência do cérebro: %d falhas' % falhas)
     return falhas
 
@@ -647,6 +715,41 @@ def conta(nome, cond, extra=''):
         return 0
     print('FALHA', nome, extra)
     return 1
+
+
+# Revisão da 1b: o FAQ de segurança (faq-equipamentos.json) pergunta do jeito do cartão, e o cartão tem de abrir no aparelho. O C5 só media as frases que a
+# revisão lhe passou; esta percorre a `pergunta` e as `variantes` de TODOS os itens de emergência e de segurança do FAQ (cartões EM, MO-04, PO-04, EL-01,
+# EL-05, SF e EP): chave de segurança (sos, epirb, seafire, salvatagem, canal16, oleo, ou um trecho `base` com seguranca) e nunca a IA (§2.3).
+# Os itens de segurança de rotina (GE-01, PO-02, AI-02, CK-03, CK-05) só perguntam o que a tela do FAQ pergunta: a `pergunta` não vai à IA e não casa a lista
+# SOS (PO-02 perguntava «nível normal de água no porão», frase da lista SOS, e abriria a resposta de emergência). Uma pergunta de rotina nunca é emergência.
+FAQ_SEGURANCA = ('MO-04', 'PO-04', 'EL-01', 'EL-05', 'SF-01', 'SF-02', 'SF-03', 'SF-04', 'EP-01', 'EP-02', 'EP-03', 'EP-04')   # além dos `emerg` (EM-01…EM-09)
+FAQ_ROTINA_SEGURA = ('GE-01', 'PO-02', 'AI-02', 'CK-03', 'CK-05')
+# a `pergunta` que é emergência de propósito, fora os `emerg`: alagamento, homem ao mar, fogo no motor e a inspeção do «sistema fixo de incêndio» (a palavra
+# «incêndio» é da lista SOS desde antes da 1b; a Fase 3 decide se a pergunta de inspeção abre a janela de emergência)
+FAQ_PERGUNTA_EMERGENCIA = ('PO-04', 'EL-01', 'SF-01', 'SF-04')
+FAQ_JS = """(qs) => { const B = window.CapitaoBrain;
+  return qs.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { q, key: a.key, seg: !!a.seguranca, ia: B.pedeIA(a, q) }; }); }"""
+
+
+def faq_de_seguranca(pg):
+    falhas = 0
+    faq = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'faq-equipamentos.json'), encoding='utf-8'))['itens']
+    em = [i for i in faq if i.get('emerg')] + [i for i in faq if i['id'] in FAQ_SEGURANCA]
+    qs = [(i['id'], q) for i in em for q in [i['pergunta']] + i.get('variantes', [])]
+    r = pg.evaluate(FAQ_JS, [q for _, q in qs])
+    ruins = [(iid, x['q'], x['key'], x['ia']) for (iid, _), x in zip(qs, r) if not ((x['key'] in CHAVES_LOCAIS or (x['key'] == 'base' and x['seg'])) and x['ia'] is False)]
+    falhas += conta('1b (revisão): a pergunta e as variantes dos %d itens de emergência e segurança do FAQ (%d frases) abrem no aparelho: chave de segurança ou trecho com seguranca, nunca a IA'
+                    % (len(em), len(qs)), len(em) >= 20 and not ruins, ruins)
+    rot = [i for i in faq if i['id'] in FAQ_ROTINA_SEGURA]
+    rr = pg.evaluate(FAQ_JS, [i['pergunta'] for i in rot])
+    emerg = dict(pg.evaluate(EM_EMERG, [confere.pad(i['pergunta']) for i in faq]))
+    ruins = [(i['id'], x['key'], x['ia']) for i, x in zip(rot, rr) if x['ia'] is not False or x['key'] in ('sos', 'oleo')]
+    falhas += conta('1b (revisão): a pergunta dos itens de segurança de rotina (GE-01, PO-02, AI-02, CK-03, CK-05) fica no aparelho e não abre a resposta de emergência (sos nem óleo)', len(rot) == 5 and not ruins, ruins)
+    dentro = sorted(i['id'] for i in faq if not i.get('emerg') and emerg[confere.pad(i['pergunta'])])
+    falhas += conta('1b (revisão): fora os cartões `emerg`, só %s têm a `pergunta` na lista SOS (a pergunta de rotina nunca é emergência: PO-02 é «nível normal do porão»)' % ', '.join(FAQ_PERGUNTA_EMERGENCIA),
+                    set(dentro) <= set(FAQ_PERGUNTA_EMERGENCIA), dentro)
+    print('FAQ de segurança (pergunta e variantes no aparelho): %d falhas' % falhas)
+    return falhas
 
 
 # Revisão do C7 (CONTRATO §1.7, §6.2): o D.agendaFalta saiu do dado gerado e a resposta `manutencao` (que é também o bloco `## Manutenção` da

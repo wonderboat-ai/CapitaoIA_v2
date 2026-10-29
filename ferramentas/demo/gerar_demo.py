@@ -1406,7 +1406,7 @@ FAQ_TEXTOS = {
     # ——— Bombas de porão ———
     'PO-01': _f('Como funcionam as bombas de porão', 'As bombas de porão ligam sozinhas?',
                 ['sensor de nível do porão', 'ciclos das bombas de porão', 'bombas automáticas de BB e BE'], [0, 1], p=[], ver=('PO-02', 'PO-03')),
-    'PO-02': _f('Nível normal do porão', 'Qual o nível normal de água no porão?',
+    'PO-02': _f('Nível normal do porão', 'Qual o nível normal do porão?',   # sem «água no porão»: a frase é da lista SOS (relato) e abriria a resposta de emergência (revisão da 1b)
                 ['nível do poço das bombas', 'alarme de nível do porão', 'porão acima do normal'],
                 [0, 1, 'Nível subindo com a bomba ligada ou água entrando é alagamento: use o SOS do app.'], p=[], se=2, ver=('PO-04', 'EM-06')),
     'PO-03': _f('Teste mensal das bombas de porão', 'Como testo as bombas de porão?',
@@ -1477,7 +1477,7 @@ FAQ_TEXTOS = {
                 p=['Desligue motores e gerador.', 'Corte a ventilação do motor.', 'Se o sistema não acionou sozinho e há fogo no motor, use o disparo manual.'],
                 ver=('SF-01', 'SF-03')),
     'SF-03': _f('Depois do disparo do sistema fixo', 'O sistema fixo disparou, o que faço depois?',
-                ['sistema fixo descarregou', 'quando abrir o acesso ao motor', 'recarga do sistema fixo'],
+                ['sistema fixo descarregou', 'quando abrir o acesso ao motor depois do disparo', 'recarga do sistema fixo'],
                 'Depois do disparo, confirme motores, gerador e ventilação desligados e não abra o acesso ao motor; espere o tempo indicado na '
                 'etiqueta do sistema e só então libere o acesso, com o extintor portátil à mão. Se o fogo voltar, MAYDAY no canal 16.',
                 a='Não abra o acesso ao motor: espere o tempo da etiqueta do sistema.',

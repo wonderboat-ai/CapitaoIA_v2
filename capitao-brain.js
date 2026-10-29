@@ -132,36 +132,80 @@
     'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao', 'colidi', 'abalroa', 'encalh', 'explos',
     'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas', 'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
     // 1b (PROMPT §2.3)
-    'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', 'sangra',
+    'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', ' com sangramento', ' tem sangramento',
     'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
     'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
-    // 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, colisão, perda de governo, eixo e mangueira (as frases ficam por
-    // inteiro: ' bateu em ' com espaços nas pontas não pega "bateu o horário"; ' entrou agua ' não pega "entrou aguardando")
+    // 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, perda de governo, eixo e mangueira (as frases ficam por inteiro:
+    // ' entrou agua ' não pega "entrou aguardando"). A batida ("bateu em…") saiu da lista: ' bateu em ' pegava "bateu em 3 bar"; ver SOS_REGEX, abaixo.
     'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
-    ' entrou agua ', ' fazendo agua ', ' bateu em ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
+    ' entrou agua ', ' fazendo agua ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
     // 1b, §8.2 item 11 (o subconjunto sem "sem governo" e "água subindo", que pegariam "sem governo federal" e a temperatura da água)
     'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
-    'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou'];
-  function emergencia(q) { return has(q, SOS) || (has(q, ['fumaca']) && !has(q, ['escap'])); } // fumaça no escapamento é do motor, não SOS
-  // Rota salvatagem (PROMPT §2.3): ' boia ' só sem as palavras de boia de sinalização (amarra, poita, canal, baliza, cardinal, luz);
-  // "extintor" aqui sem fogo, fumaça nem incêndio (com eles a SOS já respondeu, acima).
-  var SALVATAGEM = ['colete', 'salva-vida', 'salva vida', 'balsa', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete', 'pirotecn', 'facho', 'salvatagem',
+    'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou',
+    // 1b, revisão da revisão: as formas vizinhas que ainda iam à IA. Pessoa que cai (o presente, "pro mar", "para quem caiu"), água a bordo e perda de
+    // governo ou eixo. "pro mar" sozinho não entra ("vamos pro mar"): só com o verbo, "caiu pro mar". "pessoa ao mar" fica de fora, como estava.
+    ' cai na agua', ' cai no mar', ' cai ao mar', ' cai do barco', ' cai da lancha', 'caiu pro mar', 'caiu pra agua', 'caiu para o mar', 'caiu para a agua', ' para quem caiu', ' de quem caiu', ' ate quem caiu',
+    'gente ao mar', 'passageiro ao mar', 'marinheiro ao mar', 'vitima ao mar', 'filho ao mar', 'filha ao mar',
+    ' entrou muita agua', ' agua entrou ', 'agua subindo no porao', 'agua subiu no porao', 'porao subindo', 'bomba do porao nao para', 'bomba nao da conta', 'bombas nao dao conta',
+    'bomba sem dar conta', 'bombas sem dar conta', 'porao nao da conta', 'porao sem dar conta',
+    'perdemos o leme', 'leme nao responde', 'leme partiu', 'eixo partiu', 'partiu o eixo'];
+  // Frases com contexto, que a lista de palavras não alcança sem pegar o resto: "meu filho está na água", "o passageiro caiu", "alguém foi jogado ao
+  // mar", "o barco está tomando água", "bateu numa pedra" (e não "bateu em 3 bar"), "ele está sangrando" (e não "sangrando o ar do sistema").
+  // As fontes (`source`) são iguais às do gerador (confere.py: SOS_REGEX): o testes/cerebro.py confere. Sem lookbehind (Safari antigo).
+  var PESSOA = '(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homens?|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?)';
+  var DET = '(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*';
+  var NO_MAR = '(?:no mar|na agua|pro mar|para o mar|pra agua)';
+  var FORA = '(?:ao mar|no mar|na agua|pro mar|pra agua|para o mar|para fora|pela borda)';
+  var CAIU = '(?:cai|caiu|cairam|caem|caindo|pulou|pularam|sumiu|sumiram|desapareceu|desapareceram)';
+  var VERBO_BATIDA = '(?:bateu|batemos|bati|bateram)';
+  // "bateu em 3 bar" / "…em 50%" / "…em meia-noite" não é batida: depois de "em um/uma/outro/…" ou "num/numa" não pode vir unidade, onda ou rajada;
+  // depois de "em/no/na" (com ou sem artigo) só coisa dura (pedra, cais, banco, tronco…)
+  var UNIDADE = '(?:bar|litros?|milh\\w*|graus?|volts?|horas?|minutos?|segundos?|dias?|metros?|nos|ondas?|marolas?|rajadas?)';
+  var SOS_REGEX_FONTES = [
+    ' ' + PESSOA + '(?: (?:esta|estao|ta|tao|foi|foram|ficou|ficaram))? ' + NO_MAR + ' ',
+    ' (?:' + PESSOA + ' ' + CAIU + '|' + CAIU + ' ' + DET + PESSOA + '|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PESSOA +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)) ',
+    ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
+    ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
+    ' (?:(?:barco|lancha|casco|embarcacao|iate|bote)(?: esta| ta)?|estamos) tomando agua ',
+    ' ' + VERBO_BATIDA + ' (?:em (?:um|uma|outro|outra|algo|alguma|alguem)|num|numa) (?!' + UNIDADE + '\\b)',
+    ' ' + VERBO_BATIDA + ' (?:em|n[oa]s?)(?: (?:o|a|os|as))? (?:pedras?|rochas?|cais|bancos?|troncos?|piers?|recifes?|fundo|costao|ilhas?|muros?|docas?|estacas?|boias?|areia|corais?|pontes?|containers?|objeto|madeiras?|tocos?) ',
+    ' sangr(?:a|ando|ou|am|aram)\\b(?! (?:o|a|os|as|um|uma|ar|combustivel|diesel|sistema|linhas?|bomba|bombas|circuito)\\b)'
+  ];
+  var SOS_REGEX = SOS_REGEX_FONTES.map(function (f) { return new RegExp(f); });
+  // "a gente" é "nós", não a pessoa de "gente na água"/"gente cai": troca por "nos" antes de conferir
+  function emergencia(q) {
+    q = q.split(' a gente ').join(' nos ');
+    return has(q, SOS) || SOS_REGEX.some(function (r) { return r.test(q); }) || (has(q, ['fumaca']) && !has(q, ['escap'])); // fumaça no escapamento é do motor, não SOS
+  }
+  // Rota salvatagem (PROMPT §2.3): ' boia ' só sem as palavras de boia de sinalização (amarra, poita, canal, baliza, cardinal, luz) nem de boia de
+  // nível ou de âncora (revisão da 1b: a boia do porão, a do tanque e a de ancoragem não são salvatagem); "extintor" aqui sem fogo, fumaça nem
+  // incêndio (com eles a SOS já respondeu, acima). ' colete ' e ' balsa ' com espaços: "coletei os dados" e "o bálsamo" não são salvatagem.
+  var SALVATAGEM = [' colete ', ' coletes ', 'salva-vida', 'salva vida', ' balsa ', ' balsas ', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete', 'pirotecn', 'facho', 'salvatagem',
     'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv', ' plb ', ' sart '];
-  var BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz'];
+  var BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz', 'nivel', 'porao', 'bomba', 'tanque', 'vaso', 'sanitario', 'combustivel', 'sensor', 'chave', 'ancor', 'fundei'];
   function salvatagem(q) { return has(q, SALVATAGEM) || (q.indexOf(' boia ') !== -1 && !has(q, BOIA_FORA)) || q.indexOf('extintor') !== -1; }
   // EPIRB (rota epirb): a baliza que disparou e o disparador hidrostático são do EPIRB, local, nunca da IA (a pergunta do botão da G1 do
   // certificado, "…disparador hidrostático", vai antes, para o docsvenc)
   var EPIRB_PALAVRAS = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico'];
   // O sistema fixo que disparou ou descarregou (1b, §6.6 do contrato): "sistema fixo", "descarga do sistema", "depois do disparo", "descarreg…",
-  // "depois da descarga", "disparou o sistema" e "sistema … disparou/disparo". Fora a eletricidade e os outros sistemas: a bateria que descarregou,
-  // o disjuntor do sistema elétrico que disparou, o carregador, o som e o plotter não são o Seafire. "Sistema fixo" vale sempre.
+  // "depois da descarga", "disparou o sistema" e "sistema … disparou/disparo". Revisão da 1b: essas palavras sozinhas pegavam o alarme do porão,
+  // o Seakeeper, o arrefecimento, a descarga do vaso e "descarregar as compras", e mandavam desligar motores e gerador. Agora (1) "sistema fixo"
+  // vale sempre; (2) "o sistema disparou/descarregou", com a palavra colada ao "o sistema", é o fixo; (3) as demais só junto de uma âncora de
+  // combate a incêndio (extinção, casa ou praça de máquinas, compartimento ou acesso ao motor). Fora a eletricidade: a bateria
+  // que descarregou, o disjuntor do sistema elétrico que disparou, o carregador, o som e o plotter não são o Seafire.
   var ELETRICO = ['bateria', 'carregador', 'pilha', 'celular', 'tensao', 'volt', 'eletric', 'disjuntor', 'inversor', 'tomada', 'amper', ' som ', 'audio', 'musica',
     'bluetooth', 'plotter', 'radar', 'wifi', 'internet', 'climatiza', 'condicionado'];
+  // (incêndio, supressão e Seafire já têm rota própria antes, na route(): aqui só o que ainda precisa de âncora)
+  var FOGO_ANCORA = ['extin', 'maquinas', 'compartimento do motor', 'compartimento dos motores', 'compartimento de motor', 'acesso ao motor', 'abrir o motor', 'abrir o acesso'];
+  var FOGO_GATILHO = ['descarga do sistema', 'depois do disparo', 'descarreg', 'depois da descarga', 'disparou o sistema'];
+  var SISTEMA_SOZINHO = / o sistema (?:ja |todo |inteiro )?(?:disparou|disparado|descarregou|descarregado) /; // "o sistema…": "alarme de sistema disparou" e "o alarme do sistema disparou" não
   var DISPARO_SISTEMA = / sistema(?: [a-z0-9]+){0,6} (?:disparou|disparo|disparar|disparado) /;
   function seafireDisparo(q) {
     if (q.indexOf('sistema fixo') !== -1) return true;
     if (has(q, ELETRICO)) return false;
-    return has(q, ['descarga do sistema', 'depois do disparo', 'descarreg', 'depois da descarga', 'disparou o sistema']) || DISPARO_SISTEMA.test(q);
+    if (SISTEMA_SOZINHO.test(q)) return true;
+    return has(q, FOGO_ANCORA) && (has(q, FOGO_GATILHO) || DISPARO_SISTEMA.test(q));
   }
   // Óleo: 1 = queda/alarme relatado (passo a passo); 2 = só pergunta de pressão (leitura); 0 = outro assunto.
   // Exige "óleo" na frase (nunca "pressão baixa" sozinha: barômetro, água, chuveiro). Conservador: pressão do óleo sem ser pergunta simples
@@ -491,7 +535,7 @@
     // "supressão" (PROMPT §2.3): é o nome do Seafire nos dados ("sistema fixo de supressão", sem "incêndio", que abriria o SOS). 1b: o sistema
     // fixo que disparou ou descarregou também é do Seafire (o "não abra o acesso ao motor" e o desligamento são os passos de protocolos.seafire);
     // "extintor" saiu daqui para a salvatagem (sem fogo) ou para a SOS (com fogo)
-    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao']) || seafireDisparo(q)) return 'seafire';
+    if (has(q, ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual']) || seafireDisparo(q)) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
     if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
@@ -564,8 +608,12 @@
     // abaixo, é o título dele). As chaves são a raiz() da palavra: distres = raiz('distress').
     trocar: ['troca', 'substituir'], troca: ['trocar'], distres: ['dsc'], descarregou: ['descarga'],
     // 1b (PROMPT §2.3): "baliza" é o EPIRB e "testar a baliza" é o teste dele (o §2 do g_epirb traz «teste» e «baliza»)
-    baliza: ['epirb', 'radiobaliza'], testar: ['teste', 'autoteste']
+    baliza: ['epirb', 'radiobaliza']
   };
+  // "testar" é "teste" só junto de baliza/EPIRB (o g_epirb §2 traz «teste» e «baliza»). Em geral não: "como testar as bombas de porão" voltava do g_porao §3
+  // à resposta pronta do porão, local, e passou a ir à IA (revisão da 1b).
+  var SINONIMOS_BALIZA = { testar: ['teste', 'autoteste'] };
+  var BALIZA_RAIZES = {}; ['baliza', 'epirb', 'radiobaliza'].forEach(function (w) { BALIZA_RAIZES[raiz(w)] = 1; });
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
   // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
   // as demais palavras de até 2 letras seguem fora.
@@ -637,7 +685,8 @@
     var qs = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k; });
     if (!qs.length) return [];
     // cada palavra da pergunta vira um grupo (ela + sinônimos); o trecho precisa cobrir a maioria dos grupos
-    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; (SINONIMOS[w] || []).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
+    var daBaliza = qs.some(function (w) { return BALIZA_RAIZES[w]; });
+    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; (SINONIMOS[w] || (daBaliza && SINONIMOS_BALIZA[w]) || []).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
     var N = KB.docs.length, k1 = 1.2, b = 0.75, res = [], proc = PROCEDIMENTO.test(' ' + norm(q) + ' ');
     KB.docs.forEach(function (d) {
       var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0, nomeia = !d.seguranca, aciona = false;
@@ -1169,6 +1218,6 @@
   }
 
   window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
-    LISTAS: { SOS: SOS.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice() }, emergencia: emergencia };
+    LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice() }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

@@ -317,22 +317,51 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
        'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas',
        'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
        # 1b (PROMPT §2.3)
-       'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', 'sangra',
+       'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', ' com sangramento', ' tem sangramento',
        'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
        'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
-       # 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, colisão, perda de governo, eixo e mangueira que a revisão mediu indo à
-       # IA na nuvem, contra a trava §2.3 (emergência local). As frases ficam por inteiro: ' bateu em ' com espaços nas pontas não pega
-       # "bateu o horário"; ' entrou agua ' não pega "entrou aguardando".
+       # 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, perda de governo, eixo e mangueira que a revisão mediu indo à
+       # IA na nuvem, contra a trava §2.3 (emergência local). As frases ficam por inteiro: ' entrou agua ' não pega "entrou aguardando".
+       # A batida («bateu em…») saiu da lista: ' bateu em ' pegava «bateu em 3 bar»; ver SOS_REGEX.
        'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
-       ' entrou agua ', ' fazendo agua ', ' bateu em ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
+       ' entrou agua ', ' fazendo agua ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
        # 1b, §8.2 item 11: o subconjunto sem «sem governo» (pegaria «sem governo federal») e «água subindo» (pegaria a temperatura da água)
        'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
-       'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou']
+       'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou',
+       # 1b, revisão da revisão: as formas vizinhas que ainda iam à IA. Pessoa que cai (o presente, «pro mar», «para quem caiu»), água a bordo e perda de
+       # governo ou eixo. «pro mar» sozinho não entra («vamos pro mar»): só com o verbo, «caiu pro mar». «pessoa ao mar» fica de fora, como estava.
+       ' cai na agua', ' cai no mar', ' cai ao mar', ' cai do barco', ' cai da lancha', 'caiu pro mar', 'caiu pra agua', 'caiu para o mar', 'caiu para a agua', ' para quem caiu', ' de quem caiu', ' ate quem caiu',
+       'gente ao mar', 'passageiro ao mar', 'marinheiro ao mar', 'vitima ao mar', 'filho ao mar', 'filha ao mar',
+       ' entrou muita agua', ' agua entrou ', 'agua subindo no porao', 'agua subiu no porao', 'porao subindo', 'bomba do porao nao para', 'bomba nao da conta', 'bombas nao dao conta',
+       'bomba sem dar conta', 'bombas sem dar conta', 'porao nao da conta', 'porao sem dar conta',
+       'perdemos o leme', 'leme nao responde', 'leme partiu', 'eixo partiu', 'partiu o eixo']
+# Frases com contexto, que a lista de palavras não alcança sem pegar o resto («meu filho está na água», “o passageiro caiu”, «alguém foi jogado ao mar»,
+# «o barco está tomando água», «bateu numa pedra» e não «bateu em 3 bar», «ele está sangrando» e não «sangrando o ar do sistema»). As fontes são IGUAIS às
+# do capitao-brain.js (o testes/cerebro.py compara texto a texto): mudar uma, mudar a outra.
+PESSOA = r'(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homens?|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?)'
+DET = r'(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*'
+NO_MAR = r'(?:no mar|na agua|pro mar|para o mar|pra agua)'
+FORA = r'(?:ao mar|no mar|na agua|pro mar|pra agua|para o mar|para fora|pela borda)'
+CAIU = r'(?:cai|caiu|cairam|caem|caindo|pulou|pularam|sumiu|sumiram|desapareceu|desapareceram)'
+VERBO_BATIDA = r'(?:bateu|batemos|bati|bateram)'
+UNIDADE = r'(?:bar|litros?|milh\w*|graus?|volts?|horas?|minutos?|segundos?|dias?|metros?|nos|ondas?|marolas?|rajadas?)'
+SOS_REGEX_FONTES = [
+    ' ' + PESSOA + r'(?: (?:esta|estao|ta|tao|foi|foram|ficou|ficaram))? ' + NO_MAR + ' ',
+    ' (?:' + PESSOA + ' ' + CAIU + '|' + CAIU + ' ' + DET + PESSOA + '|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PESSOA +
+    '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)) ',
+    ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
+    ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
+    ' (?:(?:barco|lancha|casco|embarcacao|iate|bote)(?: esta| ta)?|estamos) tomando agua ',
+    ' ' + VERBO_BATIDA + ' (?:em (?:um|uma|outro|outra|algo|alguma|alguem)|num|numa) (?!' + UNIDADE + r'\b)',
+    ' ' + VERBO_BATIDA + ' (?:em|n[oa]s?)(?: (?:o|a|os|as))? (?:pedras?|rochas?|cais|bancos?|troncos?|piers?|recifes?|fundo|costao|ilhas?|muros?|docas?|estacas?|boias?|areia|corais?|pontes?|containers?|objeto|madeiras?|tocos?) ',
+    r' sangr(?:a|ando|ou|am|aram)\b(?! (?:o|a|os|as|um|uma|ar|combustivel|diesel|sistema|linhas?|bomba|bombas|circuito)\b)',
+]
+SOS_REGEX = [re.compile(f) for f in SOS_REGEX_FONTES]
 # Rota salvatagem (PROMPT §2.3): ' boia ' sem as palavras de boia de sinalização; "extintor" só sem fogo (na rota) e sempre aqui.
-SALVATAGEM = ['colete', 'salva-vida', 'salva vida', 'balsa', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete',
+SALVATAGEM = [' colete ', ' coletes ', 'salva-vida', 'salva vida', ' balsa ', ' balsas ', 'bote salva', 'boia circular', 'boia salva', 'sinalizador', 'foguete',
               'pirotecn', 'facho', 'salvatagem', 'equipamento de seguranca', 'equipamentos de seguranca', 'kit de seguranca', 'sobreviv',
               ' plb ', ' sart ']
-BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz']
+BOIA_FORA = ['amarra', 'poita', 'canal', 'baliza', 'cardinal', 'luz', 'nivel', 'porao', 'bomba', 'tanque', 'vaso', 'sanitario', 'combustivel', 'sensor', 'chave', 'ancor', 'fundei']
 # Rota epirb do cérebro (a baliza que disparou e o disparador hidrostático são do EPIRB; a pergunta do botão da G1 do certificado vai antes, ao
 # docsvenc): ficam FORA da SOS porque o nome do certificado do EPIRB traz "disparador hidrostático" (o docsvenc não pode virar emergência).
 EPIRB = ['epirb', 'radiobaliza', 'baliza disparou', 'disparador hidrostatico']
@@ -340,8 +369,9 @@ SEGURANCA_EXTRA = EPIRB + ['baliza', 'seafire', 'supressao', 'mayday', 'distress
 
 
 def emergencia(q):
-    """q já passado pelo pad(). Fumaça no escapamento é do motor, não SOS."""
-    return has(q, SOS) or (has(q, ['fumaca']) and not has(q, ['escap']))
+    """q já passado pelo pad(). Fumaça no escapamento é do motor, não SOS. «a gente» é «nós», não a pessoa de «gente na água» (como o cérebro)."""
+    q = q.replace(' a gente ', ' nos ')
+    return has(q, SOS) or any(r.search(q) for r in SOS_REGEX) or (has(q, ['fumaca']) and not has(q, ['escap']))
 
 
 OLEO_QUEDA = re.compile(r' (?:baix|abaixo|cai |caiu|caind|cair|qued|alarm|alert|luz|acend|acesa|sem |zer|perd|despenc|sum|diminu|oscil'
