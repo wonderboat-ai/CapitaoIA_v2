@@ -50,6 +50,11 @@ motorizacao e o motor do embarcacao do capitao-dados.js (sem distinguir maiúscu
 no texto visível, no title, no aria-label, no alt e no href — na tela fechada, com o roteiro MAYDAY aberto e com cada cartão de
 protocolo aberto (a tela volta ao estado inicial); o D tem de ter esses campos e o roteiro e todos os cartões têm de abrir (senão a
 conferência não vale). A base entra na 1b, que a tira do cabeçalho da S1.
+1b (SOS fora da simulação, PROMPT §2.1): a mesma leitura do SOS (achados_texto_sos) agora também recusa a base, o MMSI de 9 dígitos, coordenada,
+snapshot.local e snapshot.estado, a palavra snapshot, SOG/PROA com número, fabricante e modelo de equipamento e SEM DADOS/DEMO/A CONFERIR/«último fix»
+(o chip do clima da S1 fica de fora: é a previsão real, com o teste da F13). A F3 (web e app) diz «MMSI (cadastro do app)» e a nota «No MAYDAY e no DSC:
+MMSI do rádio de bordo», nunca «MMSI SEM DADOS» nem «MMSI da embarcação (DSC)». O teste do dados.html cria a linha do SOS tocando no MAYDAY (F04: abrir a
+tela não grava). A conferência sem login, sem rede, com GPS e por ação é o testes/sos.py.
 Equipamento de segurança fora de Equipamentos, Leme e Documentos (CONTRATO-DADOS §1.4, C5): na F1 (web e app) e na E2, nenhum
 modelo nem fabricante do EPIRB e do Seafire no texto visível e nos atributos (na E2 também com cada sistema e cada sintoma
 escolhidos; o fabricante fica de fora quando é o próprio nome do sistema, o id: "Seafire"), nenhum link do chat (#q=) com o
@@ -144,7 +149,7 @@ MEDE_DADOS = """() => {
 FUNDO = {'escuro': 'rgb(5, 8, 22)', 'claro': 'rgb(243, 246, 252)'}
 # Texto escrito no código da tela que casa com rx, no texto visível, no title, no aria-label e no alt. O que vem do
 # capitao-dados.js fica de fora até o gerador trocar os rótulos (títulos, fontes e regraAbast já sem "(DEMO)" desde o C2; as
-# notas e os textos dos guias nos commits seguintes do gerador, mmsiNota e o "no barco real" do guia na 1b): o casamento é do D
+# notas e os textos dos guias nos commits seguintes do gerador; o mmsiNota saiu na 1b): o casamento é do D
 # quando ele e os 10 caracteres antes (ou os 10 depois) estão num texto do D. Casamento sem 10 caracteres de nenhum lado (o chip
 # "PRONTO · DEMO") conta como do código.
 FORA_DO_D = r"""((rx) => {
@@ -206,21 +211,25 @@ CHECA = """() => {
 # Revisão do C4: o roteiro MAYDAY (<sc-if value="{{mayday}}">) e os passos de cada cartão (<sc-if value="{{p.open}}">) só existem
 # no DOM depois do toque, e o roteiro é o texto lido no rádio, onde uma identificação gerada entraria primeiro. TEXTOS_SOS lê a tela
 # fechada, com o roteiro aberto e com cada cartão aberto (um de cada vez, que a tela só abre um), e devolve a tela ao estado
-# inicial; sem abrir o roteiro e todos os cartões, a conferência não vale. A 1b reaproveita os textos (MMSI, coordenada, modelo).
+# inicial; sem abrir o roteiro e todos os cartões, a conferência não vale. A 1b reaproveita os textos (MMSI, coordenada, modelo, base).
 # Revisão 2 do C4: e o fabricante, o modelo, a marca, o rotulo, a motorizacao e o motor (confere.barco_sos, a regra do gerador
 # sobre o protocolos, tirada do próprio D). Sem os números (ano, dimensões, tanques): a tela do SOS mostra o clima real, e uma
-# ondulação de "1,1 m" seria o calado; no protocolos, que é só texto gerado, o gerador confere os números também. Sem a base até
-# a 1b, que a tira do cabeçalho da S1 (CONTRATO §1.2) e acrescenta aqui.
+# ondulação de "1,1 m" seria o calado; no protocolos, que é só texto gerado, o gerador confere os números também. A base entrou na 1b,
+# que a tirou do cabeçalho da S1 (CONTRATO §1.2).
 # Revisão 3 do C4: D.simulacao vai junto (TEXTOS_SOS devolve `simulacao`). Na simulação, o D tem de trazer os cinco campos da
 # embarcação (confere.falta_barco_sos); no modo real (simulacao false, CONTRATO §4.2), None é SEM DADOS e a conferência vale só
 # para o campo que existe, como a_embarcacao e a_registro no gerador.
 TELAS_SOS = ('S1-SOS-Web', 'S2-SOS-Mobile')
 TEXTOS_SOS = r"""async () => {
-  const D = window.CapitaoDados || {}, E = D.embarcacao || {}, barco = {}; ['nome', 'registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao'].forEach((k) => { if (typeof E[k] === 'string') barco[k] = E[k]; });
+  // __dadosCru: o contador de leituras do sos.py guarda o D cru aqui (a leitura do próprio teste não conta como a do SOS)
+  const D = window.__dadosCru || window.CapitaoDados || {}, E = D.embarcacao || {}, S0 = D.snapshot || {}, barco = {}; ['nome', 'registro', 'fabricante', 'modelo', 'rotulo', 'motorizacao', 'base'].forEach((k) => { if (typeof E[k] === 'string') barco[k] = E[k]; });
   const textos = [];
   const le = () => {
     textos.push(document.body ? document.body.innerText : '');
-    document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => ['title', 'aria-label', 'alt', 'href'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }));
+    // O chip do clima (<capitao-hora-clima>, só na S1) é a previsão real do Open-Meteo na posição de referência, com o teste próprio
+    // (teste_clima, F13): os title dele ("Previsão de hoje em Balneário Camboriú…", "…SEM DADOS…") e o link do windy.com (coordenada da
+    // referência) não são o dado do barco e ficam de fora desta leitura. Texto visível e atributos do resto da tela entram.
+    document.querySelectorAll('[title],[aria-label],[alt],[href]').forEach((e) => { if (e.closest('capitao-hora-clima')) return; ['title', 'aria-label', 'alt', 'href'].forEach((a) => { const v = e.getAttribute(a); if (v) textos.push(v); }); });
   };
   const ate = async (cond) => { for (let i = 0; i < 50 && !cond(); i++) await new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 30))); return cond(); };
   // o botão do MAYDAY (o da sirene também tem aria-pressed, mas tem aria-label e não diz MAYDAY)
@@ -244,7 +253,8 @@ TEXTOS_SOS = r"""async () => {
   const m1 = may();
   if (m1 && m1.getAttribute('aria-pressed') === 'true') m1.click();
   const inicial = await ate(() => may() && may().getAttribute('aria-pressed') !== 'true' && !cartoes().some((x) => x.getAttribute('aria-expanded') === 'true'));
-  return { barco: barco, simulacao: D.simulacao, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial };
+  return { barco: barco, simulacao: D.simulacao, texto: textos.join('\n'), roteiro: roteiro, cartoes: n, abertos: abertos, inicial: inicial,
+           equip: (D.equipamentos || []).map((e) => ({ id: e.id, fabricante: e.fabricante, modelo: e.modelo })), snap: { local: S0.local, estado: S0.estado } };
 }"""
 
 
@@ -260,21 +270,54 @@ def textos_sos(pg):
     return r, prob
 
 
+R_NOVE_DIGITOS = re.compile(r'\b\d{9}\b')
+R_SOG_PROA = re.compile(r'\b(?:SOG|PROA|COG|ETA)\b[^\n]{0,12}\d', re.I)
+R_ROTULO_SOS = re.compile(r'SEM DADOS|\bDEMO\b|A CONFERIR|A CONFIRMAR|[uú]ltimo fix', re.I)
+
+
+def achados_texto_sos(txt, E, equip, snap, coord_aparelho=None):
+    """O que o texto visível e os atributos de S1/S2 não podem ter (PROMPT §2.1 e a conferência da 1b; CONTRATO §1.3, §6.2): {regra: [achados]},
+    cada regra vazia quando a tela está limpa. 9 dígitos (MMSI), coordenada (a R_COORD do gerador; com `coord_aparelho`, só ela é permitida: a do
+    GPS do celular), snapshot.local e snapshot.estado, a palavra snapshot, SOG/PROA/COG/ETA com número, o registro e o resto do dado gerado da
+    embarcação (confere.barco_sos com a base, sem os números: a tela mostra o clima real), fabricante e modelo de equipamento (o nome do próprio
+    sistema, como «Seafire», é o id e fica) e os rótulos que o SOS nunca tem (SEM DADOS, DEMO, A CONFERIR, «último fix»)."""
+    def com_contexto(rx, t):
+        return [t[max(0, m.start() - 30):m.end() + 30].replace('\n', ' | ') for m in rx.finditer(t)]
+    t_coord = txt.replace(coord_aparelho, ' ') if coord_aparelho else txt
+    ntxt = confere.norm(txt)
+    snap_val = [k for k, v in (snap or {}).items() if isinstance(v, str) and v.strip() and v.lower() in txt.lower()]
+    barco = ['%s %r' % (c, t) for c, t, _ in confere.acha_barco(txt, E, confere.barco_sos(E, numeros=False))]
+    if re.search(r'(?:^|[^A-Za-zÀ-ÿ])REG\.', txt): barco.append('"REG."')
+    equipamentos = [x for e in (equip or []) for x in (e.get('fabricante'), e.get('modelo')) if x and confere.norm(x) != confere.norm(e.get('id', '')) and confere.norm(x) in ntxt]
+    return {'9 dígitos (MMSI)': com_contexto(R_NOVE_DIGITOS, txt), 'coordenada': [m.group(0) for m in confere.R_COORD.finditer(t_coord)],
+            'snapshot.local/.estado': snap_val, 'a palavra snapshot': ['snapshot'] if 'snapshot' in txt.lower() else [], 'SOG/PROA/COG/ETA com número': com_contexto(R_SOG_PROA, txt),
+            'dado gerado da embarcação': barco, 'fabricante/modelo de equipamento': equipamentos, 'SEM DADOS/DEMO/A CONFERIR/último fix': com_contexto(R_ROTULO_SOS, txt)}
+
+
 def problemas_barco_sos(pg):
-    """S1/S2 (trava §2.1): nem "REG." nem dado gerado da embarcação além do nome (confere.barco_sos sem os números e sem a base:
-    registro, fabricante, modelo, marca, rotulo, motorizacao e motor) na tela, também no roteiro MAYDAY e nos passos de cada
-    cartão; na simulação, sem esses campos no D a conferência não vale; no modo real (D.simulacao false), o campo None é SEM
-    DADOS e só o que existe se confere (confere.falta_barco_sos)."""
+    """S1/S2 (trava §2.1 e a conferência da 1b): nem "REG." nem dado gerado da embarcação além do nome (confere.barco_sos sem os números, com a
+    base: registro, fabricante, modelo, marca, rotulo, motorizacao, motor e base), nem MMSI de 9 dígitos, coordenada, snapshot.local/.estado,
+    "snapshot", SOG/PROA com número, fabricante ou modelo de equipamento, SEM DADOS/DEMO/A CONFERIR/«último fix», na tela fechada, no roteiro MAYDAY
+    e nos passos de cada cartão (achados_texto_sos); na simulação, sem os campos da embarcação no D a conferência não vale; no modo real
+    (D.simulacao false), o campo None é SEM DADOS e só o que existe se confere (confere.falta_barco_sos)."""
     r, prob = textos_sos(pg)
     E = r['barco']
     falta = confere.falta_barco_sos(E, r.get('simulacao'))
     if falta: prob.append('D sem embarcacao.%s: a conferência do dado da embarcação no SOS não vale' % ', '.join(falta))
-    achados = []
-    for campo, txt, _ in confere.acha_barco(r['texto'], E, confere.barco_sos(E, numeros=False, base=False)):
-        a = '%s %r' % (campo, txt)
-        if a not in achados: achados.append(a)
-    if re.search(r'(?:^|[^A-Za-zÀ-ÿ])REG\.', r['texto']): achados.append('"REG."')
-    if achados: prob.append('SOS mostra ' + ' e '.join(achados) + ' (trava §2.1: só o nome da embarcação)')
+    for regra, achados in achados_texto_sos(r['texto'], E, r['equip'], r['snap']).items():
+        if achados: prob.append('SOS mostra %s: %s (trava §2.1: só o nome da embarcação e o protocolos)' % (regra, '; '.join(map(str, achados[:3]))))
+    return prob
+
+
+# F3 (eletrônicos): o número do MMSI é o do cadastro do app e a nota diz que no MAYDAY e no DSC vale o do rádio de bordo (1b; PROMPT §2.2,
+# CONTRATO §1.2): o rótulo «MMSI (cadastro do app)» no lugar de «MMSI da embarcação (DSC)», nunca «MMSI SEM DADOS».
+def problemas_f3_mmsi(pg):
+    t = pg.evaluate("() => document.body.innerText")
+    prob = []
+    if 'MMSI (cadastro do app)' not in t: prob.append('F3 sem o rótulo «MMSI (cadastro do app)»')
+    if 'No MAYDAY e no DSC: MMSI do rádio de bordo (etiqueta / Licença de Estação)' not in t: prob.append('F3 sem a nota «No MAYDAY e no DSC: MMSI do rádio de bordo (etiqueta / Licença de Estação)»')
+    for ruim in ('MMSI SEM DADOS', 'MMSI da embarcação (DSC)'):
+        if ruim in t: prob.append('F3 ainda diz «%s»' % ruim)
     return prob
 
 
@@ -499,6 +542,7 @@ def main():
                     # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
                     if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
                     if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
+                    if tela.startswith('F3-FAQ-Eletronicos'): prob += problemas_f3_mmsi(pg)
                     if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
                     if not tela.startswith('Manual-'): prob += problemas_validade(pg, tela)
                     if fotos:
@@ -1235,6 +1279,9 @@ def teste_dados(b):
         p = res['posição no arquivo e aviso'] = []
         sos = tela('S1-SOS-Web.dc.html')
         sos.wait_for_timeout(500)
+        # F04 (1b): a tela do SOS só grava na ação (MAYDAY, MOB ou ligar), não ao abrir; o toque no roteiro do MAYDAY cria a linha que a cópia leva
+        sos.locator('button[aria-pressed]:not([aria-label])', has_text='MAYDAY').first.click()
+        sos.wait_for_function("() => JSON.parse(localStorage.getItem('capitao.diario.v1') || '[]').some((x) => /^SOS acionado/.test(x.t || ''))", timeout=8000)
         sos.close()
         pg.reload(wait_until='load')
         linha = [x for x in (diario() or []) if str(x.get('t', '')).startswith('SOS acionado')]

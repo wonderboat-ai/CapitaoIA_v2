@@ -24,7 +24,6 @@ window.CapitaoDados = {
   "base": "Balneário Camboriú (SC)",
   "fuso": "America/Sao_Paulo",
   "mmsi": "710123456",
-  "mmsiNota": "fictício · demonstração",
   "fonte": "cadastro da embarcação no app (proprietário)"
  },
  "posicaoRef": {

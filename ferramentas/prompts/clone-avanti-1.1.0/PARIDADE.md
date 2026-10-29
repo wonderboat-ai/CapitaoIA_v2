@@ -282,13 +282,13 @@ A rota do contrato (15,42 mn, fator 0,9407) mudou no portão manual: os pontos d
 - [x] Prazos relativos + rebase no rodapé do `capitao-dados.js` (C7, `ferramentas/demo/rodape.js`)
 - [x] Histórico (séries da F07), ROTA, `D.replay`; FAQ gerado (F10), itens dos checklists (F09), peças (F22), posições dos sensores (F08) (C8 a C11)
 - [x] Fontes do Drive sem rótulo; determinismo provado (2 rodadas e a árvore sem diferença); lista da decisão (e) nesta PARIDADE.md (§9.1) e os 10 pontos do §8.2 do contrato, resolvidos pelo orquestrador com a proposta do contrato (§9.2) (C12)
-- [x] A varredura de termos (as 8 regex do `termos.json`) **reprova o gerador** desde o C12; a única exceção é `embarcacao.mmsiNota`, que sai na 1b
+- [x] A varredura de termos (as 8 regex do `termos.json`) **reprova o gerador** desde o C12; a única exceção era `embarcacao.mmsiNota`, que saiu na 1b (sem exceção de campo desde então)
 - Fica para as fases seguintes (contrato §6.6): a 1b (SOS fora da simulação, `mmsiNota`, ponto 11 do §8.2) e, nas Fases 2 a 4, os leitores que ainda leem a forma antiga (L); a documentação (README, Manual, Guia e PDF, `CLAUDE.md`) é da Fase 8 (`DOCS-PENDENTES.md`).
 
 **Fase 1b — SOS fora da simulação**
-- [ ] S1/S2: GPS do aparelho, `MMSI_RADIO`, sem REG/selo/snapshot, clima só real; F04 (grava só na ação)
+- [x] S1/S2 (commit «SOS fora da simulação (Fase 1b): S1, S2, F04 e F3»): posição = GPS do aparelho (botão MOSTRAR GPS DO CELULAR, ou a permissão já concedida; precisão pior que 100 m: «PRECISÃO BAIXA… LEIA NO PLOTTER», sem coordenada; sem GPS: «POSIÇÃO: LEIA NO PLOTTER»), `MMSI_RADIO` do `D.protocolos`, Seafire e EPIRB de `D.protocolos` (procedimento padrão e etiqueta), sem `capitao-telemetria.js`, base, REG, selo, faixa do snapshot nem VHF antigo; clima só real; F04: a linha do diário só na ação (MAYDAY, MOB ou ligar), 1× a cada 10 min, dizendo o que foi tocado, sem `sim`; F3 web e app com «MMSI (cadastro do app)»; o `embarcacao.mmsiNota` e a exceção do C12 saíram
 - [x] Cérebro (commit «SOS fora da simulação (Fase 1b): cérebro de emergência»): `SOS_PASSOS`/`sos`/`canal16`/`epirb`/`seafire`/`oleo` leem só o `D.protocolos` (MMSI do rádio de bordo, indicativo da Licença, Seafire e EPIRB no procedimento padrão com a etiqueta; sem leitura do quadro); rota `salvatagem`; lista `SOS` ampliada (PROMPT §2.3 + as frases da revisão do C5 + o subconjunto do §8.2 item 11, sem «sem governo» e «água subindo»); `baliza disparou` e `disparador hidrostático` na rota `epirb` (não na `SOS`: o certificado do EPIRB da G1 tem «disparador hidrostático» e tem de seguir `docsvenc`); o sistema fixo que disparou ou descarregou é a rota `seafire`; `SINONIMOS` baliza/testar; ficha sem fabricante e modelo de EPIRB e Seafire, `docsvenc` sem a data do `doc-epirb`; `S` vazio em `/SOS-/`; as listas do cérebro iguais às do gerador (testadas)
-- [ ] Conferência Playwright + `verificar.py S1-SOS-Web S2-SOS-Mobile --offline`
+- [x] Conferência Playwright (`testes/sos.py`: sem login, `localStorage` vazio, online e offline, com e sem GPS, por ação, com o contador de leituras do `D`) + `verificar.py S1-SOS-Web S2-SOS-Mobile F3-FAQ-Eletronicos F3-FAQ-Eletronicos-Web --offline`
 
 **Fase 2 — `capitao-replay.js`**
 - [ ] API, âncora 07:00, eventos, congelamento, isolamento; `capitao-alertas.js` (F05) sobre os alarmes do replay

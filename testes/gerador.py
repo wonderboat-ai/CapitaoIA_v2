@@ -10,7 +10,7 @@
 - confere(): cada asserção da §6.3 acusa uma amostra plantada (a violação nova aparece), e mais as amostras extras dos achados
   da revisão do C3 (EXTRAS). Nas estruturais, a violação plantada fica fora das pendências congeladas (PENDENTES) e reprova o
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
-  reprova como as outras desde o C12 (as 8 regex; a única exceção é o campo embarcacao.mmsiNota, até a 1b). Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
+  reprova como as outras desde o C12 (as 8 regex; sem exceção de campo desde a 1b, que tirou o embarcacao.mmsiNota). Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
   modelo congelado (como o do VHF antigo, até o C5) por outro da lista, que reprova (modelos_sinteticos).
 - C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
@@ -276,12 +276,13 @@ def copias():
     ok('as 8 regex no Python dão os %d casos' % (sum(len(v) for v in casos['barra'].values()) + len(casos['passa'])), not erros and len(T) == 8, erros[:3])
     # C12 (CONTRATO §6.2): do C3 ao C11 este teste prendia a divisão das 8 regex em "reprova já" (PESSOAIS, DINHEIRO, LOCAL_SEGURANCA) e
     # "relatório até o C12" (as outras cinco). Com o C12 não há mais relatório: o modo sumiu do confere.py (RELATORIO, TERMOS_JA_REPROVAM e
-    # em_relatorio()), as 8 do termos.json reprovam, e a única exceção é o caminho exato do campo mmsiNota, até a 1b.
+    # em_relatorio()), as 8 do termos.json reprovam, e a única exceção era o caminho exato do campo mmsiNota, que a 1b tirou.
     ok('TERMOS (C12): as 8 regex do termos.json reprovam o gerador; o modo "relatório" não existe mais no confere.py',
        set(T) == {'ROTULOS', 'AUTENTICIDADE', 'DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA', 'VAZIOS', 'VISIVEL', 'ANEXO'}
        and not any(hasattr(C, n) for n in ('RELATORIO', 'TERMOS_JA_REPROVAM', 'em_relatorio')), sorted(T))
-    ok('TERMOS (C12): a única exceção da varredura é embarcacao.mmsiNota, que sai na 1b',
-       C.EXCECAO_TERMOS == {'embarcacao.mmsiNota': '1b'}, C.EXCECAO_TERMOS)
+    # 1b: a exceção da varredura (o campo embarcacao.mmsiNota, a única do C12) saiu com o campo; a F3 lê protocolos.mmsiRotulo e mmsiRadio.
+    ok('TERMOS (1b): a varredura não tem mais exceção de campo (o embarcacao.mmsiNota saiu, a F3 lê o protocolos)',
+       C.EXCECAO_TERMOS == {}, C.EXCECAO_TERMOS)
 
 
 # ——————————————————————————————— amostras plantadas ———————————————————————————————
@@ -2158,7 +2159,7 @@ def reprova(tmp):
                                      ('TERMOS', lambda D: D, 1, rotulo_base, ' (ROTULOS: «SEM DADOS» na base)'),
                                      ('TERMOS', lambda D: D, 1, None, ' (ROTULOS: «DEMO» no nome do arquivo de uma fonte do Drive)', nome_fonte),
                                      ('TERMOS', no_diario(' Os dados são fictícios.'), 1, None, ' (AUTENTICIDADE: «os dados são fictícios» no diário)'),
-                                     ('TERMOS', fonte_fict, 1, None, ' (AUTENTICIDADE: «dados fictícios» em embarcacao.fonte, ao lado da exceção do mmsiNota)'),
+                                     ('TERMOS', fonte_fict, 1, None, ' (AUTENTICIDADE: «dados fictícios» em embarcacao.fonte)'),
                                      ('TERMOS', no_diario(' Combustível: n/d.'), 1, None, ' (VAZIOS: «n/d» no diário)'),
                                      ('TERMOS', no_diario(' Veja o snapshot.'), 1, None, ' (VISIVEL: «snapshot» no diário)'),
                                      ('TERMOS', no_diario(' Foto A CONFERIR.'), 1, None, ' (ANEXO: «A CONFERIR» no diário)'),
@@ -2209,27 +2210,26 @@ def reprova(tmp):
 
 def c12_termos(tmp):
     """C12 (CONTRATO §6.2, «Gerador: fontes do Drive, varredura obrigatória e PARIDADE»): a varredura de termos reprova o gerador, com uma
-    exceção só, embarcacao.mmsiNota (até a 1b); as fontes do Drive (conteúdo e nome de arquivo) passam nas 8 regex, também na árvore gravada
+    exceção só, embarcacao.mmsiNota, que a 1b tirou (o teste do campo, abaixo, prova que o dado não o tem e que a exceção por caminho não existe
+    mais); as fontes do Drive (conteúdo e nome de arquivo) passam nas 8 regex, também na árvore gravada
     (o «grep final» do §3 em ferramentas/demo/fontes/**, sem lookahead de ripgrep: as regex do proibidos.json, cada uma com a sua flag)."""
-    print('C12: varredura de termos obrigatória, exceção só do mmsiNota e grep final das fontes do Drive')
+    print('C12 (e 1b): varredura de termos obrigatória, sem exceção de campo, e grep final das fontes do Drive')
     k = hoje()
     ctx = lambda D, F=None: C.Ctx(D, k['B'], F if F is not None else k['F'], {})
-    ok('TERMOS: o dado de hoje (D, base e fontes, conteúdo e nome de arquivo) passa nas 8 regex, só com a exceção do mmsiNota',
-       not C.a_termos(ctx(k['D'])) and 'mmsiNota' in k['D']['embarcacao'], C.a_termos(ctx(k['D']))[:3])
-    nota = k['D']['embarcacao']['mmsiNota']
-    # a exceção vale pelo CAMINHO exato: o mesmo texto noutro campo é acusado, e o campo da exceção aceita qualquer texto até a 1b
+    ok('TERMOS: o dado de hoje (D, base e fontes, conteúdo e nome de arquivo) passa nas 8 regex, sem exceção de campo e sem o mmsiNota (1b)',
+       not C.a_termos(ctx(k['D'])) and 'mmsiNota' not in k['D']['embarcacao'] and not C.EXCECAO_TERMOS, C.a_termos(ctx(k['D']))[:3])
+    # 1b: o campo saiu e a exceção por caminho também. Um texto de selo no mesmo campo, que a exceção do C12 deixava passar, agora é acusado;
+    # e o texto antigo do campo, posto noutro lugar, também
     D = copy.deepcopy(k['D'])
-    D['embarcacao']['outraNota'] = nota
+    D['embarcacao']['mmsiNota'] = 'fictício · demonstração'
     V = C.a_termos(ctx(D))
-    ok('TERMOS: o texto do mmsiNota noutro campo (embarcacao.outraNota) é acusado: a exceção é por caminho, não por texto',
+    ok('TERMOS: embarcacao.mmsiNota com o texto antigo («fictício · demonstração») é acusado: a exceção do C12 não existe mais',
+       len(V) == 1 and V[0].startswith('AUTENTICIDADE: embarcacao.mmsiNota «'), V[:3])
+    D = copy.deepcopy(k['D'])
+    D['embarcacao']['outraNota'] = 'fictício · demonstração'
+    V = C.a_termos(ctx(D))
+    ok('TERMOS: o mesmo texto noutro campo (embarcacao.outraNota) também é acusado',
        len(V) == 1 and V[0].startswith('AUTENTICIDADE: embarcacao.outraNota «'), V[:3])
-    D = copy.deepcopy(k['D'])
-    D['embarcacao']['mmsiNota'] = 'DEMO · SEM DADOS'
-    ok('TERMOS: o campo embarcacao.mmsiNota é a única exceção (aceita até «DEMO · SEM DADOS» enquanto existir; a 1b tira o campo e a linha)',
-       not C.a_termos(ctx(D)), C.a_termos(ctx(D))[:3])
-    D = copy.deepcopy(k['D'])
-    D['embarcacao'].pop('mmsiNota')
-    ok('TERMOS: sem o campo mmsiNota (como fica na 1b) o dado continua passando', not C.a_termos(ctx(D)), C.a_termos(ctx(D))[:3])
     # o nome do arquivo de uma fonte é varrido (a pasta e o arquivo vão para o Drive); a página com o mesmo nome limpo passa
     F = dict(k['F'])
     rel = next(r for r in sorted(F) if r.endswith('Checklist de bordo.html'))
@@ -2263,9 +2263,9 @@ def c12_termos(tmp):
     finally:
         os.environ.update(opcionais)
     saida = o.getvalue() + e.getvalue()
-    ok('main() de hoje: devolve 0, grava, e o resumo da confere() diz que toda asserção reprova, com a varredura de termos em 0 e a exceção do mmsiNota',
+    ok('main() de hoje: devolve 0, grava, e o resumo da confere() diz que toda asserção reprova, com a varredura de termos em 0 e nenhuma exceção (1b)',
        rc == 0 and os.path.isfile(os.path.join(pasta, 'capitao-dados.js')) and 'todas reprovam o gerador' in saida and '0 falhas' in saida
-       and 'varredura de termos: 0 violação(ões) · exceção: embarcacao.mmsiNota' in saida and 'em relatório' not in saida, (rc, saida[-400:]))
+       and 'varredura de termos: 0 violação(ões) · exceção: nenhuma' in saida and 'em relatório' not in saida, (rc, saida[-400:]))
 
 
 # ——————————————————————————————— C8 (CONTRATO §1.14–§1.17, §1.22, §3, §4.1) ———————————————————————————————

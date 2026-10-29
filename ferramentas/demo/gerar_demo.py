@@ -28,7 +28,7 @@ Uso: python -X utf8 ferramentas/demo/gerar_demo.py [--saida <pasta>] [--detalhe]
   --detalhe  lista cada violação das asserções, com o commit da pendência ou [NOVA].
 Antes de gravar, confere() (ferramentas/demo/confere.py, CONTRATO-DADOS §6.3) roda as asserções: uma com violação fora das
 pendências congeladas (PENDENTES), ou com uma pendência que não ocorre mais, reprova o gerador e nada é gravado. Desde o C12 isso vale
-também para a varredura de termos (as 8 regex do termos.json; a única exceção é o campo embarcacao.mmsiNota, até a 1b). Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
+também para a varredura de termos (as 8 regex do termos.json, sem exceção de campo desde a 1b). Opcionais, só com contagens: CAPITAO_LISTAS_PRIVADAS (pasta com valores.txt e
 modelos-avanti.txt) e CAPITAO_AVANTI (pasta do Avanti, só leitura). Determinístico: nenhuma data ou hora do sistema.
 """
 import argparse
@@ -172,7 +172,6 @@ EMBARCACAO = {
     'base': 'Balneário Camboriú (SC)',
     'fuso': 'America/Sao_Paulo',
     'mmsi': '710123456',
-    'mmsiNota': 'fictício · demonstração',   # sai na 1b (a F3 passa a ler protocolos.mmsiRotulo e protocolos.mmsiRadio)
     'fonte': 'cadastro da embarcação no app (proprietário)',
 }
 EMBARCACAO['rotulo'] = rotulo_de(EMBARCACAO)

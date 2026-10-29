@@ -18,7 +18,7 @@ qualquer ordem (§2.2/§2.3) na LOCAL_VOCAB (salvatagem_e_lugar: a LOCAL_SEGURAN
 
 confere() imprime o resumo e reprova o gerador (nada é gravado) se uma asserção falhar. Desde o C12 (§6.2) a varredura de termos
 reprova como as outras: as 8 regex do termos.json sobre todo valor do D, da base, do FAQ e das fontes do Drive (conteúdo e nome de
-arquivo), com uma exceção só, o campo embarcacao.mmsiNota (EXCECAO_TERMOS), que sai na 1b. Antes do C12 (C3 a C11) só PESSOAIS,
+arquivo), sem exceção de campo desde a 1b (o embarcacao.mmsiNota, a única, saiu: a F3 lê protocolos.mmsiRotulo e protocolos.mmsiRadio). Antes do C12 (C3 a C11) só PESSOAIS,
 DINHEIRO e LOCAL_SEGURANCA reprovavam; as outras cinco ficavam em relatório. As violações que dependem de um commit futuro
 podem ser congeladas por caminho na PENDENTES, cada uma com o commit que a tira: qualquer outra reprova, e uma pendência que não
 ocorre mais também (o commit que completa o dado tira a linha dela). Hoje a PENDENTES está vazia.
@@ -53,7 +53,7 @@ RODAPE = os.path.join(AQUI, 'rodape.js')                       # rodapé do capi
 
 # ——————————————————————————————— modo de cada asserção ———————————————————————————————
 # §6.2 C12: todas as asserções reprovam o gerador, a varredura de termos inclusive (a TERMOS, em relatório do C3 ao C11, passou a
-# reprovar com as oito regex; a única exceção é o campo da EXCECAO_TERMOS). Não há mais modo "relatório".
+# reprovar com as oito regex; sem exceção de campo desde a 1b: a EXCECAO_TERMOS ficou vazia). Não há mais modo "relatório".
 # Violações de hoje que dependem do dado do C8, congeladas por caminho (não pela asserção inteira): cada uma com o commit
 # que completa o dado. Uma violação fora desta lista reprova o gerador; um padrão que não casa mais nada também, para a lista
 # não esconder a volta do defeito (o commit que completa o dado tira a linha dele). Cada padrão vale para UMA violação: o texto
@@ -70,9 +70,9 @@ PENDENTES = {}   # o C8 completou o snapshot (porao, ancora e o volante da leitu
 COMMITS_PENDENTES = ()   # o C4 completou a embarcação, o C5 os equipamentos e os guias, o C6 o D.protocolos, o C7 a agenda, os documentos, o diário e as fontes relativas e o C8 o snapshot, a rota e o replay
 # Asserções que só rodam com uma fonte opcional do ambiente: sem ela, a pendência delas não é "velha".
 OPCIONAIS = {'MODELOS_AVANTI': 'listas', 'COLISAO_MODELOS': 'avanti'}
-# Única exceção da varredura de termos na Fase 1 (§1.2, C12): o caminho exato do campo, até a 1b, que tira o campo (a F3 passa a ler
-# protocolos.mmsiRotulo e protocolos.mmsiRadio) e esta linha no mesmo commit. Nenhuma outra: o testes/gerador.py prende o conjunto.
-EXCECAO_TERMOS = {'embarcacao.mmsiNota': '1b'}
+# Exceções da varredura de termos por caminho exato de campo (§1.2): vazia desde a 1b, que tirou o embarcacao.mmsiNota (a única, do C12
+# à 1b; a F3 passou a ler protocolos.mmsiRotulo e protocolos.mmsiRadio). Nenhuma outra: o testes/gerador.py prende o conjunto.
+EXCECAO_TERMOS = {}
 # Textos fixos (PROMPT §2.3, §3; CONTRATO §1.3, §1.4): a referência é daqui, nunca do dado que está sendo conferido. O rótulo é a
 # EXCEÇÃO do §3 na varredura de termos; tirado do D, um termo posto no próprio rótulo sumiria de todo o dado.
 ROTULO = 'procedimento padrão — confirmar com o protocolo de bordo'
@@ -1010,7 +1010,7 @@ def equip_salvatagem(termos):
 def a_termos(X):
     """As 8 regex do termos.json (cada uma com a sua flag) sobre todo valor string do D, da base, do FAQ e das fontes do Drive, e sobre
     o nome de cada arquivo das fontes (pasta e arquivo: vai com o nome para o Drive). Reprova o gerador desde o C12 (§6.2): a exceção é
-    só o campo da EXCECAO_TERMOS e o rótulo do procedimento padrão (EXCEÇÃO do §3)."""
+    só o rótulo do procedimento padrão (EXCEÇÃO do §3) e, por caminho de campo, a EXCECAO_TERMOS (vazia desde a 1b)."""
     rot = re.compile(re.escape(ROTULO), re.I)   # a EXCEÇÃO do §3 é o texto fixo, nunca o protocolos.rotulo do dado
     out = []
     # (caminho, texto): o nome do arquivo entra com o mesmo caminho do conteúdo, mais « (nome do arquivo)»; o conteúdo já vai em todos()

@@ -102,6 +102,17 @@ do relato; confira com grep antes de editar.
 - README.md:19 (Acesso: 'Sair: no rodapé…') e README.md:38-49 ('O que dá para fazer', especialmente a :49 'Personalização por aparelho'): não há Dados do aparelho (baixar uma cópia JSON e restaurar sem apagar nada; o arquivo fica com a pessoa e leva telefones da Equipe, contatos de convite e posições gravadas no diário).
 - Manual-Capitao-IA.dc.html:75 (Sair no rodapé) e guia-rapido/Guia-Rapido-Capitao-IA.html:124 (card 'Sair e segurança'): não falam do link Dados no rodapé nem da cópia e da restauração. O PDF Guia-Rapido-Capitao-IA.pdf terá de ser regerado (python ferramentas/guia/gerar_guia.py).
 
+## 1b SOS fora da simulação
+
+- README.md:45 (item SOS: «canal 16 com roteiro MAYDAY, homem ao mar, incêndio (Seafire: SEM DADOS) e EPIRB (SEM DADOS)»): passa a ser o procedimento padrão do Seafire e do EPIRB (com «modelo, validade e acionamento: veja a etiqueta do equipamento»), o MMSI do rádio de bordo (etiqueta / Licença de Estação), a posição = GPS do aparelho (botão MOSTRAR GPS DO CELULAR; sem GPS, «POSIÇÃO: LEIA NO PLOTTER») e a linha no diário só na ação (MAYDAY, MOB ou ligar; 1× a cada 10 min, dizendo o que foi tocado)
+- README.md, tabela de versões (linha da 1.1.0, Fase 8): SOS fora da simulação, GPS do aparelho, F04, rota `salvatagem`, lista SOS ampliada
+- CLAUDE.md › Estrutura, linha do `capitao-brain.js`: rota `salvatagem` (texto fixo do `D.protocolos`), `sos`/`canal16`/`epirb`/`seafire`/`oleo` lendo só o `D.protocolos` (MMSI do rádio, sem leitura do quadro), o sistema fixo que disparou como rota `seafire`, `LISTAS` exportada (SOS, salvatagem, boia, EPIRB: iguais às do gerador, testadas), snapshot vazio em `/SOS-/` e o `## Equipamentos` da ficha com a nota da etiqueta no lugar de fabricante e modelo do EPIRB e do Seafire
+- CLAUDE.md › Testes locais: falta `python -X utf8 testes/sos.py [--so-offline | --sem-offline]` (S1 e S2 sem login e com o `localStorage` vazio, online e offline: texto e atributos sem MMSI de 9 dígitos, coordenada, snapshot, SOG/PROA, registro, base, fabricante e modelo; GPS do aparelho; F04 por ação; nenhuma leitura de `D.simulacao`/`snapshot`/`replay`/`rota`/`campos`/`equipamentos`/`guias` nem de `embarcacao.{registro, mmsi, base, modelo, fabricante}`), e a linha do `cerebro.py` (listas iguais às do gerador, bloco «1b: emergência do cérebro») e a do `verificar.py` (`achados_texto_sos`, F3 com «MMSI (cadastro do app)»)
+- CLAUDE.md › Decisão 1.1.0, linha 7 («posição = GPS do aparelho ou LEIA NO PLOTTER»): já vale; a Fase 8 só confirma
+- Manual-Capitao-IA.dc.html: slide «15 SOS» (`:208` nas notas e `:216` «Seafire e EPIRB: SEM DADOS»; `:217` «grava uma linha no diário por acionamento» passa a «só na ação: MAYDAY, MOB ou ligar»), `:167` («Falta registrar: EPIRB e Seafire (SEM DADOS)»), `:178` («TIE e certificado do EPIRB: SEM DADOS»), `:202` («EPIRB e Seafire: SEM DADOS») e `:267` («MMSI e indicativo do registro, Seafire e EPIRB»)
+- guia-rapido/Guia-Rapido-Capitao-IA.html:292-293 (cartões «3 · Incêndio · Seafire» e «4 · EPIRB» com SEM DADOS): o procedimento padrão; a página EMERGÊNCIA lê o `D.protocolos`; a captura `sos-app.jpg` (S2 do app) muda com o botão do GPS: regerar o PDF (`python ferramentas/guia/gerar_guia.py`)
+- integracoes/: nada (o SOS não usa telemetria, replay nem IA)
+
 ## Fora das funções
 
 - MAPA.md: as evidências sobre o CDN do `sw.js` (linhas 29, 88 e 726) e o "React do unpkg" ficaram históricas: o MAPA é da 1.0.9 e não se reescreve.
