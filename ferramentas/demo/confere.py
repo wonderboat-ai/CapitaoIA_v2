@@ -313,18 +313,18 @@ def has(q, lista):
 SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos ', 'socorro', 'naufrag', 'caiu no mar', 'caiu ao mar',
        'caiu na agua', 'pessoa na agua', 'alguem na agua', 'crianca na agua', 'afogad', 'afogand',
        'afund', 'entrando agua', 'agua entrando', 'entrada de agua', 'alagad', 'alagand', 'inundad', 'inundand', 'abandon', 'colisao',
-       'colidi', 'abalroa', 'encalh', 'explos',
+       'colidi', 'abalro', 'encalh', 'explos',
        'vazamento de combustivel', 'vazando combustivel', 'vazamento de diesel', 'vazando diesel', 'vazamento de gas', 'vazando gas',
        'cheiro de combustivel', 'cheiro de diesel', 'cheiro de gas', 'cheiro de queimado',
        # 1b (PROMPT §2.3)
-       'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu', ' com sangramento', ' tem sangramento',
+       'alagament', 'afogament', 'inundac', 'adernand', 'adernad', 'adernou', 'emborc', ' ferid', 'machuc', 'se feriu',
        'desmai', 'inconscien', 'infart', 'convuls', 'queimadura', 'choque eletric', 'agua no porao', 'porao cheio', 'porao enchendo',
        'bomba de porao nao para', 'barco virou', 'virou o barco', ' a deriva ', 'monoxido', 'alarme de gas',
        # 1b, revisão do C5: pessoa na água ou fora do barco, água entrando, perda de governo, eixo e mangueira que a revisão mediu indo à
        # IA na nuvem, contra a trava §2.3 (emergência local). As frases ficam por inteiro: ' entrou agua ' não pega "entrou aguardando".
        # A batida («bateu em…») saiu da lista: ' bateu em ' pegava «bateu em 3 bar»; ver SOS_REGEX.
        'caiu do barco', 'caiu da lancha', 'gente na agua', 'homem na agua', 'tripulante na agua', 'pulou do barco', 'de vista na agua',
-       ' entrou agua ', ' fazendo agua ', 'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo', 'mangueira estourou',
+       'perdi o leme', 'leme quebrou', 'eixo quebrou', 'quebrou o eixo',
        # 1b, §8.2 item 11: o subconjunto sem «sem governo» (pegaria «sem governo federal») e «água subindo» (pegaria a temperatura da água)
        'alguem caiu', 'caiu alguem', 'crianca caiu', 'tripulante caiu', 'tripulante ao mar', 'crianca ao mar', 'alguem ao mar', 'alguem foi ao mar',
        'perdi o governo', 'perdemos o governo', 'estamos sem governo', 'leme travou',
@@ -332,29 +332,101 @@ SOS = ['mayday', 'emergenc', 'incendio', ' fogo', 'homem ao mar', ' mob ', ' sos
        # governo ou eixo. «pro mar» sozinho não entra («vamos pro mar»): só com o verbo, «caiu pro mar». «pessoa ao mar» fica de fora, como estava.
        ' cai na agua', ' cai no mar', ' cai ao mar', ' cai do barco', ' cai da lancha', 'caiu pro mar', 'caiu pra agua', 'caiu para o mar', 'caiu para a agua', ' para quem caiu', ' de quem caiu', ' ate quem caiu',
        'gente ao mar', 'passageiro ao mar', 'marinheiro ao mar', 'vitima ao mar', 'filho ao mar', 'filha ao mar',
-       ' entrou muita agua', ' agua entrou ', 'agua subindo no porao', 'agua subiu no porao', 'porao subindo', 'bomba do porao nao para', 'bomba nao da conta', 'bombas nao dao conta',
+       'agua subindo no porao', 'agua subiu no porao', 'porao subindo', 'bomba do porao nao para', 'bomba nao da conta', 'bombas nao dao conta',
        'bomba sem dar conta', 'bombas sem dar conta', 'porao nao da conta', 'porao sem dar conta',
-       'perdemos o leme', 'leme nao responde', 'leme partiu', 'eixo partiu', 'partiu o eixo']
+       'perdemos o leme', 'leme nao responde', 'leme partiu', 'eixo partiu', 'partiu o eixo',
+       # 1b, segunda revisão: as formas-espelho que ainda iam à IA. Governo e eixo («quebrou o leme», «leme quebrado»), casco furado, rachado ou aberto,
+       # fundo tocado, mais de uma pessoa na água («caíram na água», «caímos do barco»), sangue e hemorragia (o sangramento técnico, «do ar», «do
+       # combustível», fica na regex abaixo), fogo sem a palavra fogo (chamas, labaredas, faísca, curto-circuito, cheiro de plástico ou fio queimado)
+       'quebrou o leme', 'quebramos o leme', 'quebrei o leme', 'partiu o leme', 'rompeu o leme', 'leme rompeu', 'leme quebrad', 'leme partid',
+       'rompeu o eixo', 'furou o casco', 'furaram o casco', 'casco furou', 'casco furad', 'casco rachou', 'casco rachad', 'rachou o casco', 'casco trincou', 'trincou o casco',
+       'tocou o fundo', 'tocamos o fundo', 'tocou no fundo', 'tocamos no fundo',
+       'cairam na agua', 'cairam no mar', 'cairam ao mar', 'cairam do barco', 'cairam da lancha', 'caimos na agua', 'caimos no mar', 'caimos do barco', 'caimos da lancha',
+       'hemorrag', 'labared', 'faisc', ' chamas ', 'curto circuito', 'curto-circuito', 'cheiro de queima', 'plastico derretid', 'fumeg', 'dor no peito',
+       'sem leme', 'helice quebrou', 'quebrou a helice', 'perdemos a helice', 'perdi a helice', 'helice soltou', 'helice partiu']
 # Frases com contexto, que a lista de palavras não alcança sem pegar o resto («meu filho está na água», “o passageiro caiu”, «alguém foi jogado ao mar»,
 # «o barco está tomando água», «bateu numa pedra» e não «bateu em 3 bar», «ele está sangrando» e não «sangrando o ar do sistema»). As fontes são IGUAIS às
 # do capitao-brain.js (o testes/cerebro.py compara texto a texto): mudar uma, mudar a outra.
-PESSOA = r'(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homens?|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?)'
+# Segunda revisão da 1b: o que a regex alcança vem de LISTA POSITIVA (o que foi atingido: pedra, cais, outro barco, o casco, «nós»; quem está no barco ou
+# na água), nunca de «qualquer coisa menos unidade»: «o consumo bateu num recorde», «a pressão bateu num valor alto» e «o dessalinizador está fazendo
+# água» são leitura e equipamento, não emergência. As frases fracas («bateu forte», «em cheio», «em mim») só valem com o barco,
+# alguém ou ninguém de sujeito (BATE_INI); o casco, o banco e o fundo levam a guarda GUARDA_BATE: onda, vento, chuva, ponteiro, nível, pix ou valor de sujeito não é batida. O que a regex não alcança fica local por outro caminho ou vai ao guia: o sangramento do ar e do
+# combustível, a água do dessalinizador e do ar-condicionado, a água no tanque de água doce.
+PESSOA = r'(?:alguem|gente|pessoas?|criancas?|tripulantes?|passageir[oa]s?|marinheiros?|homens?|mulher(?:es)?|vitimas?|filh[oa]s?|menin[oa]s?|cara|rapaz|moco|moca)'
+# parente, amigo e quem está a bordo pelo papel: «meu marido caiu na água», «o pai caiu», «perdi o meu amigo de vista». Sem «capitão» (é o nome do app)
+PARENTE = r'(?:idos[oa]s?|amig[oa]s?|colegas?|maes?|pai|marido|esposa|esposo|namorad[oa]s?|irma[o]?|irmaos|netos?|netas?|sobrinh[oa]s?|hospedes?|convidad[oa]s?|mergulhador(?:es)?|nadador(?:es)?|comandante|skipper|vizinh[oa]s?)'
 DET = r'(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*'
 NO_MAR = r'(?:no mar|na agua|pro mar|para o mar|pra agua)'
 FORA = r'(?:ao mar|no mar|na agua|pro mar|pra agua|para o mar|para fora|pela borda)'
 CAIU = r'(?:cai|caiu|cairam|caem|caindo|pulou|pularam|sumiu|sumiram|desapareceu|desapareceram)'
-VERBO_BATIDA = r'(?:bateu|batemos|bati|bateram)'
-UNIDADE = r'(?:bar|litros?|milh\w*|graus?|volts?|horas?|minutos?|segundos?|dias?|metros?|nos|ondas?|marolas?|rajadas?)'
+BARCOS = r'(?:barco|lancha|embarcacao|iate|bote|veleiro|jet ski|jetski|navio|rebocador|traineira|catamara|escuna|canoa|caiaque|semirrigido)'
+PARTES = r'(?:casco|popa|proa|costado|quilha|helice|leme|bombordo|boreste)'
+VERBO_BATIDA = r'(?:bateu|batemos|bati|bateram|batendo|(?:acabamos|acabei|acabaram|acabou) de bater)'
+BATE_ADV = r'(?:(?:forte|feio|de lado|de frente|de proa|de popa|de raspao|de leve|em cheio|com forca) )*'
+BATE_EM = r'(?:em|n[oa]s?|nu(?:m|ma|ns|mas)) (?:(?:o|a|os|as|um|uma|outro|outra|outros|outras|nosso|nossa|nossos|nossas|meu|minha|esse|essa|aquele|aquela|mesmo|mesma) )*(?:[a-z]+ )?'
+BATE_COM = r'(?:com (?:(?:o|a|um|uma|nosso|nossa|meu|minha) )*(?:' + BARCOS + '|' + PARTES + r')(?: [a-z0-9]+){0,2} )?'
+DURO_MAR = r'(?:pedras?|rochas?|rochedos?|lajes?|baixios?|recifes?|corais?|troncos?|toras?|baleias?|destrocos|containers?)'
+DURO = r'(?:pedras?|rochas?|rochedos?|lajes?|baixios?|cais|troncos?|toras?|piers?|recifes?|costao|ilhas?|muros?|docas?|estacas?|boias?|areia|corais?|pontes?|containers?|objetos?|madeiras?|tocos?|baleias?|destrocos|naufragio)'
+NAO_BARCO = r'(?:ondas?|marolas?|banzeiros?|ressacas?|ventos?|rajadas?|chuvas?|mar|agua|espuma|respingos?|sol|luz|coracao|portas?|janelas?|escotilhas?|tampas?|toldo|bimini|relogio|sino|portao|previsao|palpite|aposta|calculo|estimativa|meta|resultado|nivel|tanques?|ponteiro|medidor|indicador|display|contador|consumo|pressao|temperatura|bateria|tensao|rotacao|horimetro|valor|saldo|pagamento|pix|transferencia|boleto|dinheiro|deposito|salario|conta|fatura|cartao|cheque|fornecedor)'
+GUARDA_BATE = r'^(?!.* ' + NAO_BARCO + r' (?:[a-z0-9]+ ){0,2}(?:bateu|bateram|batendo|batem|bate) ).* '
+BATE_FRACO = r'(?:forte|feio|de lado|de frente|de proa|de popa|de raspao|de leve)'
+# as frases fracas («bateu forte», «bateu em cheio», «bateu em mim») só valem sem sujeito ou com o barco, alguém, «ele» ou «nós» («a gente») de sujeito:
+# «o motor bateu forte» (batendo pino), «o preço bateu em cheio» e «o vento bateu em mim» não são batida
+BATE_INI = r'^ (?:(?:ai|agora|la|acabou de|acabaram de|acho que|parece que|entao|olha|gente) )*(?:(?:(?:o|a|um|uma|nosso|nossa|outro|outra|esse|essa|aquele|aquela) )*(?:' + BARCOS + r'|alguem|ele|ela|eles|elas|isso|nos)(?: [a-z0-9]+){0,5} )?'
+SUJ_BARCO = r'(?:barco|lancha|casco|embarcacao|iate|bote|veleiro|porao|estamos|nos)'
+SEM_EQUIP_AGUA = r'^(?!.*(?:dessalin|condicionad|climatiz))(?!.* (?:geladeira|frigobar|freezer|bebedouro|purificador|chuveiro|torneira|ducha|pia|ralo|sanitario|banheiro|lavabo|gelo) ).* '
+SEM_AGUA_DOCE = r'^(?!.* (?:tanques? de agua|doce|potavel|olhos?|ouvidos?|nariz|boca|botas?|sapatos?|celular|telefone|geladeira|frigobar|freezer|pia|chuveiro|torneira|filtro|purificador|bebedouro|garrafa|copo|mala|mochila|bolsa) )(?!.*(?:dessalin|condicionad|climatiz)).* '
+SEM_MANGUEIRA_DE_USO = r'^(?!.* (?:lavagem|lavar|chuveiro|ducha|pia|torneira|jardim|piscina|geladeira|frigobar|bebedouro) )(?!.*condicionad).* '
+# sangramento técnico (o ar, o combustível, as linhas, o sistema…) não é ferimento: «sangrando o ar do sistema», «sangramento do combustível»
+TECNICO = r'(?:(?:o|a|os|as|um|uma|do|da|dos|das|no|na) )?(?:ar|combustivel|diesel|sistema|linhas?|bombas?|circuito|filtros?|racor|arrefecimento|freios?|radiador|tubulacao|injetor[a-z]*|bicos?|pre-?filtros?|respiro|aquecedor|turbo|embreagem|direcao|reversor|atuador|cilindro|tanques?|separador|decantador|motor|motores|gerador|hidraulic[a-z]*|oleo|cano|tubo|valvulas?|mangueiras?)'
+ALVO_FOGO = r'(?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|isolamento|resistencia)'
 SOS_REGEX_FONTES = [
     ' ' + PESSOA + r'(?: (?:esta|estao|ta|tao|foi|foram|ficou|ficaram))? ' + NO_MAR + ' ',
     ' (?:' + PESSOA + ' ' + CAIU + '|' + CAIU + ' ' + DET + PESSOA + '|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PESSOA +
     '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)) ',
+    ' (?:' + PARENTE + ' ' + CAIU + ' (?:na agua|no mar|ao mar|do barco|da lancha|da embarcacao|pro mar|para o mar|pra agua|para fora|fora)|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PARENTE +
+    '|' + PARENTE + ' (?:esta|estao|ta|tao|foi|foram|ficou|ficaram) ' + NO_MAR + ') ',
     ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
     ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
-    ' (?:(?:barco|lancha|casco|embarcacao|iate|bote)(?: esta| ta)?|estamos) tomando agua ',
-    ' ' + VERBO_BATIDA + ' (?:em (?:um|uma|outro|outra|algo|alguma|alguem)|num|numa) (?!' + UNIDADE + r'\b)',
-    ' ' + VERBO_BATIDA + ' (?:em|n[oa]s?)(?: (?:o|a|os|as))? (?:pedras?|rochas?|cais|bancos?|troncos?|piers?|recifes?|fundo|costao|ilhas?|muros?|docas?|estacas?|boias?|areia|corais?|pontes?|containers?|objeto|madeiras?|tocos?) ',
-    r' sangr(?:a|ando|ou|am|aram)\b(?! (?:o|a|os|as|um|uma|ar|combustivel|diesel|sistema|linhas?|bomba|bombas|circuito)\b)',
+    # água a bordo: o barco ou «nós» fazendo/tomando água (não a água doce, quente ou potável; não o dessalinizador nem o ar-condicionado)
+    SEM_EQUIP_AGUA + SUJ_BARCO + r'(?: [a-z0-9]+){0,3} (?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar) (?:muita |bastante |demais )?agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\b)',
+    SEM_EQUIP_AGUA + r'estou(?: [a-z0-9]+){0,2} (?:fazendo|fazer) (?:muita |bastante |demais )?agua (?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\b)',
+    ' fazendo agua (?:no|na|pelo|pela|pelos|pelas|em) (?:porao|casco|fundo|quilha|popa|proa|costado|eixo|helice|leme|casa de maquinas|sala de maquinas|praca de maquinas|passa casco|passacasco|valvula|gaveta) ',
+    SEM_AGUA_DOCE + '(?:entrou|comecou a entrar|comecando a entrar|voltou a entrar|comecaram a entrar) (?:muita |bastante |mais )?agua ',
+    SEM_AGUA_DOCE + 'agua (?:entrou|comecou a entrar|comecou a subir) ',
+    SEM_AGUA_DOCE + 'agua (?:esta |ta )?(?:subindo|subiu|sobe|enchendo|encheu) (?:rapido |rapidamente |muito )?(?:no|na|dentro d[oa]|em) (?:barco|lancha|embarcacao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    SEM_AGUA_DOCE + '(?:tem|ha|tinha|temos) agua dentro d[oa] (?:barco|lancha|embarcacao|casco|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
+    # batida: o que foi atingido vem de lista positiva (coisa dura, outro barco, o casco, «nós»)
+    ' ' + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + DURO + ' ',
+    ' (?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
+    GUARDA_BATE + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + '(?:' + BARCOS + '|' + PARTES + '|bancos?|fundo|algo|alguma coisa|alguem) ',
+    BATE_INI + VERBO_BATIDA + '(?: ' + BATE_FRACO + ')* (?:em nos|em mim|na gente|em cheio) ',
+    ' (?:batemos|bati)(?: (?:' + BATE_FRACO + '|em cheio))* $',
+    BATE_INI + '(?:bateu|bateram)(?: ' + BATE_FRACO + ')+ $',
+    ' (?:atingid|colhid|prensad)[oa]s? por (?:(?:um|uma|o|a|outro|outra) )*(?:' + BARCOS + '|raio) ',
+    # ferimento: sangramento, sangrar, sangue (o técnico, «do ar» e «do combustível», não)
+    ' sangramento (?!' + TECNICO + ' )',
+    ' sangr(?:a|ando|ou|am|aram|ava|avam) (?!' + TECNICO + ' )',
+    ' (?:parar de|para de|pare de|parou de|comecou a|continua a|continuou a|voltou a) sangrar ',
+    ' sangrar (?:muito|sem parar|bastante|demais) ',
+    '^(?!.* (?:tipo|exame|exames|doacao|doar|doador|teste|testes|pressao|laboratorio|azul) )(?!.* sangue frio ).* sangue ',
+    # casco aberto («rombo no casco», «o casco está furado», «rachadura no casco») e pancada na cabeça
+    ' rombo (?:no|na) (?:casco|barco|lancha|embarcacao|costado|proa|popa|fundo|quilha) ',
+    ' casco (?:esta |ta |ficou |foi )?(?:furad[oa]|rachad[oa]|trincad[oa]|rompid[oa]|aberto|amassad[oa]|danificad[oa]) ',
+    ' (?:rachadura|trinca|fissura|buraco|furo|rasgo) (?:no|na) (?:casco|costado|quilha|popa|proa) ',
+    ' (?:bateu|bati|bateram|batemos) (?:com )?(?:a|na|no|o) (?:cabeca|nuca|testa) ',
+    # fogo sem a palavra «fogo»: chama, queimando o motor ou o painel, choque no painel
+    ' (?:uma|vi|vimos|vejo|surgiu|apareceu|saindo|sai|saiu) chama ',
+    ' (?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|barco|lancha|cozinha|fogao|casco|compressor|bomba|inversor|carregador|tomada|geladeira|cabine|camarote|praca de maquinas|sala de maquinas|casa de maquinas|isolamento|resistencia|ar condicionado)(?: [a-z0-9]+){0,2} queimando (?!(?:oleo|diesel|combustivel|muito|pouco|mais|menos|litros?|[0-9]+) )',
+    ' queimando (?:(?:o|os|a|as) )?' + ALVO_FOGO + ' ',
+    ' (?:levou|tomou|tomei|levei|levando|tomando) (?:um |o )?choque ',
+    ' (?:tomada|painel|quadro|cabo|fio|fios|bateria|carregador|inversor|casco|corrimao|motor|gerador|torneira|chuveiro|pia|geladeira|barco|lancha|agua|cais|pier)(?: [a-z0-9]+){0,2} (?:dando|deu|da) (?:um |o )?choque ',
+    ' choque (?:no|na|do|da|de|pelo|pela) (?:painel|quadro|cabo|fio|fios|bateria|baterias|barco|motor|gerador|tomada|inversor|carregador|casco|agua|mar) ',
+    ' cheiro (?:de |do |da |no |na )?(?:[a-z]+ ){0,2}queimad[oa]s? ',
+    # mangueira que estoura, solta ou fura (não a de lavagem, a do chuveiro nem a do ar-condicionado); eixo que quebra
+    SEM_MANGUEIRA_DE_USO + 'mangueira(?: [a-z0-9]+){0,4} (?:estourou|estourada|soltou|rompeu|rompida|furou|furada|partiu|rasgou) ',
+    SEM_MANGUEIRA_DE_USO + '(?:estourou|soltou|rompeu|furou|partiu|rasgou) (?:a|uma|essa|aquela|nossa|minha) mangueira ',
+    ' eixo(?: [a-z0-9]+){0,3} (?:quebrou|quebrado|quebrada|partiu|partido|rompeu|empenou) ',
 ]
 SOS_REGEX = [re.compile(f) for f in SOS_REGEX_FONTES]
 # Rota salvatagem (PROMPT §2.3): ' boia ' sem as palavras de boia de sinalização; "extintor" só sem fogo (na rota) e sempre aqui.

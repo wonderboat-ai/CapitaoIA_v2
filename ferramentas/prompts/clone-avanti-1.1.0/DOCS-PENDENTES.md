@@ -120,6 +120,12 @@ do relato; confira com grep antes de editar.
 - ferramentas/prompts/clone-avanti-1.1.0/CONTRATO-DADOS.md, §6.2 (linha 1b) e §6.6 (os parágrafos de «sistema … disparou/descarreg…» das linhas ~1280 e ~1318): a rota `seafire` desses gatilhos exige a âncora de incêndio (a 1ª versão da 1b mandava o alarme do porão, o Seakeeper e a descarga do vaso para o procedimento de incêndio); «como testar as bombas de porão» continua na resposta pronta do porão (o sinônimo testar → teste ficou restrito à baliza); a pergunta de PO-02 é «Qual o nível normal do porão?» e a variante de SF-03 «quando abrir o acesso ao motor depois do disparo»
 - Manual-Capitao-IA.dc.html e guia-rapido/: nada novo nesta revisão
 
+## 1b SOS fora da simulação (revisão 2)
+
+- CLAUDE.md › Estrutura, linha do `capitao-brain.js` (a mesma frase do `SOS_REGEX`): a regex de emergência vem de LISTA POSITIVA, nunca de «qualquer coisa menos unidade». Batida = o que foi atingido (coisa dura: pedra, cais, tronco, ilha…; outro barco, o casco, a proa; «nós», «mim», «a gente») ou o «bateu forte / em cheio / de lado» sem sujeito ou com o barco, alguém ou «nós» de sujeito; onda, vento, chuva, ponteiro, nível, pix ou valor de sujeito, não. Água a bordo = o barco ou «nós» fazendo, tomando ou começando a deixar entrar água (não o dessalinizador, o ar-condicionado, a geladeira, a água doce, quente ou potável, o tanque de água, o olho, o ouvido). Ferimento = sangramento, sangrar e sangue de pessoa, hemorragia (o sangramento do ar, do combustível, das linhas e do sistema, não). Fogo sem a palavra fogo = chamas, labaredas, faísca, curto-circuito, cheiro de plástico ou fio queimado, «queimando o motor», choque no painel. Casco furado, rachado ou aberto, leme, eixo e hélice quebrados, mangueira que estoura, solta ou fura (menos a de lavagem e a do chuveiro), pessoa de parentesco ou «dois» que caem na água, «fomos atingidos por outro barco». Mudar a regex = mudar `capitao-brain.js` e `confere.py` juntos (o `cerebro.py` compara texto a texto) e regerar
+- CLAUDE.md › Testes locais, linha do `cerebro.py`: as grades da revisão 2 («1b (revisão 2)»: 13 grades de frases que são e que não são emergência, com a mesma `emergencia()` no cérebro e no gerador) e os 150 casos novos do bloco «segunda revisão da 1b»
+- Manual-Capitao-IA.dc.html e guia-rapido/: nada novo nesta revisão
+
 ## Fora das funções
 
 - MAPA.md: as evidências sobre o CDN do `sw.js` (linhas 29, 88 e 726) e o "React do unpkg" ficaram históricas: o MAPA é da 1.0.9 e não se reescreve.

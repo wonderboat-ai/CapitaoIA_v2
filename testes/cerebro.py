@@ -253,6 +253,57 @@ CASOS = [
     ('boia de amarração', 'fallback'),
     # MMSI do rádio de bordo em todo texto de rádio: o número do cadastro do app não sai nestas respostas (verificação «1b: emergência…»)
     ('qual o MMSI do barco?', 'canal16'),
+    # ——— 1b, segunda revisão (achados da revisão do commit 13de688): a regex de emergência vem de LISTA POSITIVA, não de «qualquer coisa menos unidade» ———
+    # (1) «bateu em um/uma/num/numa <qualquer coisa>» era SOS (a 6ª regex só excluía a unidade): leitura, pico, valor, limite, recorde e média são telemetria
+    ('o consumo bateu em um valor alto', 'consumo'), ('a temperatura bateu em um pico de 90 graus', 'fallback'), ('a pressão do óleo bateu em um patamar baixo', 'oleo'),
+    ('o vento bateu em um pico de 30 nós', 'clima'), ('a bateria bateu em um mínimo de 24 volts', 'eletrico'), ('o horímetro bateu em uma marca de 1200 horas', 'horimetros'),
+    ('a rotação bateu em um limite', 'motores'), ('o nível do tanque bateu num valor baixo', 'tanques'), ('bateu num limite', 'fallback'),
+    ('o consumo bateu num recorde', 'consumo'), ('o motor bateu num limite de horas', 'motores'), ('o gerador bateu numa média alta', 'gerador'),
+    ('bateu num valor', 'fallback'), ('a pressão bateu num valor alto', 'fallback'), ('bateu num pico', 'fallback'),
+    # o «bateu forte / em cheio / em mim» de quem não é o barco, e o que bate no fundo ou no banco sem ser casco nem sandbank
+    ('o motor bateu forte', 'motores'), ('o preço bateu em cheio', 'fallback'), ('a previsão bateu em cheio', 'clima'), ('a vela bateu forte', 'fallback'),
+    ('o vento bateu forte', 'clima'), ('o vento bateu em mim', 'clima'), ('o ponteiro bateu no fundo', 'fallback'), ('o nível do tanque bateu no fundo', 'tanques'),
+    ('o pix bateu no banco', 'fallback'), ('o dinheiro bateu no banco', 'fallback'), ('a vela bateu no mastro', 'fallback'), ('o sino bateu', 'fallback'),
+    ('o relógio bateu 12 horas', 'fallback'),
+    # (2) a colisão em que a própria lancha é atingida, e a batida com outro barco, o casco e «nós» (iam à IA)
+    ('batemos na lancha ao lado', 'sos'), ('a lancha bateu na nossa popa', 'sos'), ('alguém bateu no nosso barco', 'sos'), ('bateram no nosso barco', 'sos'),
+    ('bateram no nosso casco', 'sos'), ('bateu em mim', 'sos'), ('bateu em cheio na pedra', 'sos'), ('bateu em cheio', 'sos'), ('bateu forte no casco', 'sos'),
+    ('um barco bateu em nós', 'sos'), ('bateram em nós', 'sos'), ('bateu na gente', 'sos'), ('o outro barco bateu na gente', 'sos'), ('bateu no nosso barco', 'sos'),
+    ('bateu no casco', 'sos'), ('bateu no barco', 'sos'), ('bateu forte', 'sos'), ('batemos', 'sos'), ('bateu de lado', 'sos'), ('bateu na proa', 'sos'),
+    ('um jet ski bateu em nós', 'sos'), ('bati com o barco numa pedra', 'sos'), ('raspamos numa pedra', 'sos'), ('estamos batendo nas pedras', 'sos'),
+    ('acabamos de bater numa pedra', 'sos'), ('um barco nos abalroou', 'sos'), ('fomos abalroados', 'sos'), ('fomos atingidos por outro barco', 'sos'),
+    ('tocou o fundo', 'sos'), ('tocamos o fundo', 'sos'), ('ele bateu a cabeça no mastro', 'sos'),
+    # (3) casco, leme, eixo, hélice e mangueira nas formas-espelho das pedidas (iam à IA ou à rota do equipamento)
+    ('furou o casco', 'sos'), ('rombo no casco', 'sos'), ('casco rachou', 'sos'), ('o casco está furado', 'sos'), ('rachadura no casco', 'sos'),
+    ('quebrou o leme', 'sos'), ('leme quebrado', 'sos'), ('sem leme', 'sos'), ('o eixo do motor quebrou', 'sos'), ('a hélice quebrou', 'sos'), ('perdemos a hélice', 'sos'),
+    ('estourou a mangueira', 'sos'), ('estourou uma mangueira', 'sos'), ('a mangueira de água salgada estourou', 'sos'), ('a mangueira do escapamento estourou', 'sos'),
+    ('a mangueira de combustível estourou', 'sos'), ('a mangueira do motor estourou', 'sos'), ('a mangueira de água estourou', 'sos'), ('a mangueira soltou', 'sos'),
+    ('rompeu a mangueira', 'sos'), ('a mangueira furou', 'sos'),
+    ('a mangueira de lavagem estourou', 'fallback'), ('a mangueira do chuveiro soltou', 'fallback'), ('validade das mangueiras', 'fallback'),
+    # (4) água a bordo: o barco fazendo ou tomando água e a água que começa a entrar; o equipamento que «faz água» e a água doce não
+    ('o barco está fazendo muita água', 'sos'), ('a lancha começou a fazer água', 'sos'), ('começou a entrar água no barco', 'sos'), ('está começando a entrar água', 'sos'),
+    ('o barco começou a tomar água', 'sos'), ('a água está subindo no barco', 'sos'), ('tem água dentro do barco', 'sos'), ('a água entrou no casco', 'sos'),
+    ('estou fazendo água', 'sos'), ('estou tomando água', 'fallback'), ('estou fazendo água doce', 'tanques'),
+    ('o dessalinizador está fazendo água', 'dessalinizador'), ('dessalinizador fazendo água doce', 'tanques'), ('o dessalinizador está fazendo água potável', 'dessalinizador'),
+    ('o ar condicionado está fazendo água', 'climatizacao'), ('o ar-condicionado está fazendo água no chão', 'climatizacao'), ('estou fazendo agua quente', 'fallback'),
+    ('fazendo água potável', 'fallback'), ('a geladeira está fazendo água', 'fallback'), ('a água entrou no tanque de água doce', 'tanques'),
+    ('entrou água no tanque de água doce', 'tanques'), ('entrou água no ouvido', 'fallback'), ('por onde a água entra no motor?', 'motores'),
+    # (5) pessoa na água ou fora do barco, em número ou por parentesco
+    ('caíram na água', 'sos'), ('dois caíram do barco', 'sos'), ('caímos do barco', 'sos'), ('meu marido caiu na água', 'sos'), ('tem um cara na água', 'sos'),
+    ('o pai caiu na água', 'sos'), ('perdi de vista o meu marido', 'sos'), ('o Capitão IA caiu', 'fallback'), ('meu pai no mar pescando', 'fallback'),
+    # (6) ferimento: sangramento, sangrar, sangue e hemorragia (o sangramento técnico, do ar, do combustível, das linhas, segue local por outra rota)
+    ('ele não para de sangrar', 'sos'), ('como estancar um sangramento', 'sos'), ('sangramento no braço', 'sos'), ('ele tem um sangramento forte', 'sos'),
+    ('um sangramento no pé', 'sos'), ('sangrou o dedo', 'sos'), ('muito sangue', 'sos'), ('hemorragia', 'sos'), ('sangue na mão', 'sos'), ('dor no peito', 'sos'),
+    ('como sangrar o ar do sistema de combustível', 'autonomia'), ('sangrar o filtro de diesel', 'autonomia'), ('sangramento do ar da bomba de combustível', 'autonomia'),
+    ('sangramento do respiro do tanque', 'tanques'), ('sangrando o bico injetor', 'fallback'), ('doação de sangue', 'fallback'), ('mantenha o sangue frio', 'fallback'),
+    # (7) fogo sem a palavra «fogo»: chamas, labaredas, faísca, curto-circuito, cheiro de plástico ou fio queimado, choque no painel (a rota do motor ou a do quadro
+    # elétrico respondia «sem alarme»); queimar óleo ou combustível, lâmpada queimada e a chama do fogão não são
+    ('chamas no motor', 'sos'), ('queimando o motor', 'sos'), ('tem chamas na cozinha', 'sos'), ('labaredas', 'sos'), ('cheiro de plástico queimado', 'sos'),
+    ('curto circuito no painel', 'sos'), ('choque no painel', 'sos'), ('faíscas no quadro elétrico', 'sos'), ('cheiro de fio queimado', 'sos'),
+    ('o painel está fumegando', 'sos'), ('ele levou um choque', 'sos'), ('a tomada está dando choque', 'sos'),
+    ('o motor está queimando óleo', 'base'), ('estamos queimando 40 litros por hora', 'consumo'), ('lâmpada queimada', 'fallback'), ('a chama do fogão está azul', 'fallback'),
+    ('choque térmico', 'fallback'), ('o preço deu um choque', 'fallback'), ('rombo no orçamento', 'fallback'),
+    ('fomos abordados pela Marinha', 'fallback'), ('fomos atingidos por uma rajada', 'fallback'),
 ]
 # As chaves de emergência (§2.3 do PROMPT): nunca vão à IA na nuvem, qualquer que seja a pergunta
 CHAVES_LOCAIS = ('sos', 'epirb', 'seafire', 'salvatagem', 'canal16', 'oleo')
@@ -701,12 +752,79 @@ def emergencia_1b(pg, res):
     batidas = [p for p, a in pg.evaluate(EM_EMERG, ps) if a]
     controle = [p for p, a in pg.evaluate(EM_EMERG, [confere.pad(q) for q in ('o barco bateu em uma pedra', 'bateu num banco de areia', 'bateu em outro barco')]) if not a]
     falhas += conta('1b (revisão): «bateu em um/uma/num/numa <unidade, onda ou rajada>» nunca é emergência (%d frases) e a batida em pedra, banco e outro barco é' % len(ps), not batidas and not controle, (batidas[:3], controle))
+    falhas += grades_2a_revisao(pg)
     boias = pg.evaluate("""(ws) => { const B = window.CapitaoBrain; return ws.map((w) => [w, B.answer('a boia ' + w + ' está travada', { platform: 'app', commit: false }).key]).concat([['', B.answer('a boia está travada', { platform: 'app', commit: false }).key]]); }""", BOIA_FORA_ESPERADA)
     ruins = [(w, k) for w, k in boias if (k == 'salvatagem') != (w == '')]
     faltam = [w for w in BOIA_FORA_ESPERADA if w not in L['BOIA_FORA']]
     falhas += conta('1b (revisão): cada palavra da BOIA_FORA (as da PROMPT §2.3 e as da revisão: boia de nível, porão, bomba, tanque, vaso, sensor, chave, âncora) tira a «boia» da salvatagem (%d palavras) e a «boia» sozinha continua sendo salvatagem' % len(BOIA_FORA_ESPERADA),
                     not ruins and not faltam, (ruins, faltam))
     print('1b: emergência do cérebro: %d falhas' % falhas)
+    return falhas
+
+
+# Segunda revisão da 1b: a regex de emergência vem de lista positiva. Cada grade combina o que a frase tem de variar e prova os dois lados (o que é emergência
+# e o que é leitura, equipamento ou outro assunto): uma palavra tirada de uma lista reprova aqui, não só nas frases soltas dos CASOS.
+def grades_2a_revisao(pg):
+    falhas = 0
+    nao_barco = ['o consumo', 'a temperatura', 'a pressão do óleo', 'o vento', 'a bateria', 'o horímetro', 'a rotação', 'o nível do tanque', 'o motor', 'o gerador',
+                 'a tensão', 'o contador', 'o preço', 'a previsão', 'o sensor', 'a onda', 'a chuva', 'o sol', 'a porta', 'a vela', 'o ponteiro']
+    abstratos = ['valor', 'pico', 'patamar', 'recorde', 'limite', 'marca', 'mínimo', 'máximo', 'nível', 'ponto', 'meta', 'média', 'total', 'número', 'degrau', 'teto',
+                 'piso', 'regime', 'ritmo', 'estado', 'modo', 'padrão', 'alvo', 'índice', 'intervalo', 'platô']
+    barcos = ['o barco', 'a lancha', 'o iate', 'o veleiro', 'um barco', 'uma lancha', 'outro barco', 'a lancha ao lado', 'o jet ski', 'o outro barco', 'alguém', 'a gente']
+    # (nome, frases, é emergência?)
+    G = [
+        ('«bateu em um/uma/num/numa <valor, pico, limite…>»', ['%s bateu %s %s' % (sj, art, a) for sj in nao_barco[:12] for a in abstratos
+                                                                for art in ('em um', 'em uma', 'num', 'numa')], False),
+        ('«bateu forte / em cheio / de lado / em mim / na gente» com sujeito que não é o barco (motor, preço, vento, onda, vela…)',
+         ['%s bateu %s' % (sj, f) for sj in nao_barco for f in ('forte', 'em cheio', 'de lado', 'em mim', 'na gente', 'em nós')], False),
+        ('«bateu no casco / no fundo / no banco» com sujeito de onda, vento, nível, ponteiro, pix ou dinheiro',
+         ['%s bateu %s' % (sj, f) for sj in ('a onda', 'as ondas', 'o vento', 'a rajada', 'a marola', 'o nível do tanque', 'o ponteiro', 'o pix', 'o dinheiro', 'o pagamento')
+          for f in ('no casco', 'no fundo', 'no banco', 'na proa')], False),
+        ('«bateu forte / de lado / em cheio / em nós / na gente / no casco» com o barco, outra lancha ou «alguém» de sujeito, e a primeira pessoa («batemos», «bati»)',
+         ['%s bateu %s' % (sj, f) for sj in barcos for f in ('forte', 'de lado', 'em cheio', 'em nós', 'na gente', 'em mim', 'no casco', 'na proa')]
+         + ['batemos', 'bati', 'batemos forte', 'bati de lado', 'batemos em cheio', 'bati com o barco numa pedra', 'batemos com o casco numa pedra'], True),
+        ('o equipamento que «faz água» (dessalinizador, geladeira, ar-condicionado, freezer, chuveiro) e a água doce, quente ou potável',
+         ['%s %s' % (sj, f) for sj in ('o dessalinizador', 'a geladeira', 'o ar condicionado', 'o freezer', 'o chuveiro', 'o ar-condicionado do barco')
+          for f in ('está fazendo água', 'faz água', 'começou a fazer água', 'está fazendo água doce')]
+         + ['estou fazendo água quente', 'estamos fazendo água potável', 'o barco está fazendo água doce', 'o barco tomou água doce no píer', 'estou tomando água',
+            'estou fazendo água quente para o café'], False),
+        ('o barco ou «nós» fazendo, tomando ou começando a deixar entrar água',
+         ['%s %s' % (sj, f) for sj in ('o barco', 'a lancha', 'o iate', 'o casco', 'estamos') for f in ('está fazendo água', 'começou a fazer água', 'está fazendo muita água', 'está tomando água',
+                                                                                                            'começou a tomar água')]
+         + ['começou a entrar água no barco', 'entrou água no motor', 'a água entrou no casco', 'fazendo água pelo casco', 'fazendo água no porão', 'estou fazendo água',
+            'estou fazendo muita água'], True),
+        ('sangramento técnico (o ar, o combustível, o filtro, as linhas, o sistema, a bomba, o bico, o freio)',
+         ['%s %s' % (v, o) for v in ('sangrar', 'sangrando', 'sangra', 'sangrou') for o in ('o ar', 'o combustível', 'o filtro', 'as linhas',
+          'o sistema', 'a bomba', 'o circuito', 'o racor', 'o bico injetor', 'o freio', 'o ar do sistema de combustível', 'o diesel', 'o óleo')]
+         + ['sangramento %s' % o for o in ('do ar', 'do combustível', 'do filtro', 'das linhas', 'do sistema', 'da bomba', 'do circuito', 'do racor', 'do bico injetor', 'do freio',
+                                         'do ar do sistema de combustível', 'do diesel', 'do óleo')]
+         + ['como sangrar o motor', 'sangrar o ar do circuito de arrefecimento', 'passo a passo para sangrar o sistema hidráulico'], False),
+        ('ferimento: sangrando, sangrou, sangramento, não para de sangrar, sangue e hemorragia',
+         ['ele está sangrando', 'ela sangrou muito', 'sangrou o dedo', 'sangrando na cabeça', 'o braço sangra', 'sangramento no braço', 'sangramento forte', 'não para de sangrar',
+          'continua sangrando', 'parou de sangrar', 'sangrar muito', 'muito sangue', 'tem sangue no chão', 'hemorragia', 'ele teve uma hemorragia'], True),
+        ('água doce, olhos, ouvido, bota, celular ou tanque de água que «recebem» água: não é água entrando no casco',
+         ['entrou água no ouvido', 'entrou água no olho', 'entrou água na bota', 'entrou água no celular', 'entrou água no tanque de água doce', 'a água entrou no tanque de água potável',
+          'a água do ar condicionado entrou na cabine', 'a água entra pelo filtro de água salgada', 'entrou água na geladeira'], False),
+        ('mangueira que estoura, solta, rompe ou fura (menos a de lavagem, do chuveiro e do ar-condicionado)',
+         [f % m for f in ('a mangueira %s estourou', 'a mangueira %s soltou', 'rompeu a mangueira %s', 'a mangueira %s furou', 'estourou a mangueira %s') for m in ('', 'do motor', 'de combustível', 'de água salgada', 'do escapamento')]
+         , True),
+        ('a mangueira de uso (lavagem, chuveiro, pia, ar-condicionado)',
+         ['a mangueira de lavagem estourou', 'a mangueira do chuveiro soltou', 'a mangueira da pia furou', 'a mangueira do ar condicionado soltou', 'a mangueira de lavar o convés rompeu'], False),
+        ('fogo sem a palavra «fogo»',
+         ['chamas no motor', 'tem chamas na cozinha', 'labaredas', 'uma chama no painel', 'faíscas no quadro', 'o cabo faiscou', 'curto circuito', 'curto-circuito no painel',
+          'cheiro de plástico queimado', 'cheiro de fio queimado', 'queimando o painel', 'o motor está queimando', 'o painel está queimando', 'choque no painel',
+          'ele levou um choque', 'a tomada está dando choque', 'o painel está fumegando'], True),
+        ('queimar óleo ou combustível, lâmpada queimada, chama do fogão, choque térmico e choque de preço',
+         ['o motor está queimando óleo', 'estamos queimando 40 litros por hora', 'queimando muito diesel', 'lâmpada queimada', 'a chama do fogão está azul', 'choque térmico',
+          'o preço deu um choque', 'o fusível queimou', 'o motor de partida queimou'], False),
+    ]
+    todas = [confere.pad(q) for _, qs, _ in G for q in qs]
+    r = {p: a for p, a in pg.evaluate(EM_EMERG, todas)}
+    for nome, qs, esperado in G:
+        ruins = [q for q in qs if bool(r[confere.pad(q)]) != esperado]
+        falhas += conta('1b (revisão 2): %s: %s (%d frases)' % (nome, 'é emergência' if esperado else 'não é emergência', len(qs)), not ruins, ruins[:6])
+    dif = [q for _, qs, _ in G for q in qs if bool(r[confere.pad(q)]) != bool(confere.emergencia(confere.pad(q)))]
+    falhas += conta('1b (revisão 2): a emergencia() do cérebro e a do gerador dão o mesmo resultado nas %d frases das grades' % len(todas), not dif, dif[:6])
     return falhas
 
 
