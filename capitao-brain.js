@@ -156,7 +156,17 @@
     'rompeu o eixo', 'furou o casco', 'furaram o casco', 'casco furou', 'casco furad', 'casco rachou', 'casco rachad', 'rachou o casco', 'casco trincou', 'trincou o casco',
     'cairam na agua', 'cairam no mar', 'cairam ao mar', 'cairam do barco', 'cairam da lancha', 'caimos na agua', 'caimos no mar', 'caimos do barco', 'caimos da lancha',
     'hemorrag', 'labared', 'faisc', ' chamas ', 'curto circuito', 'curto-circuito', 'cheiro de queima', 'plastico derretid', 'fumeg', 'dor no peito',
-    'sem leme', 'helice quebrou', 'quebrou a helice', 'perdemos a helice', 'perdi a helice', 'helice soltou', 'helice partiu'];
+    'sem leme', 'helice quebrou', 'quebrou a helice', 'perdemos a helice', 'perdi a helice', 'helice soltou', 'helice partiu',
+    // 1b, quarta revisão: a vizinhança das frases pedidas que ainda ia à IA. Perigo e risco de vida; quem se afoga, não respira, tem parada cardíaca, fratura,
+    // ferimento ou passa mal (quebrar, cortar e queimar o corpo, engasgo e «não respira» ficam na regex, com o sujeito: «o motor engasgou» e «o respiro do
+    // tanque não respira» são do motor); explosão; perda de governo ou de propulsão; combustível e gás que vazam (a ordem inversa das frases acima)
+    ' em perigo ', 'perigo de vida', 'risco de vida', 'perigo de morte', 'risco de morte', 'perdidos no mar', 'perdido no mar',
+    'se afogou', 'se afogaram', 'afogou se', 'afogaram se', 'afogou-se', 'afogaram-se', 'parou de respirar', 'parar de respirar', 'sem respirar', 'dificuldade para respirar', 'dificuldade de respirar', 'dificuldade em respirar', 'nao consegue respirar',
+    'parada cardi', 'ataque cardi', 'crise cardi', 'ataque do coracao', 'enfart', ' avc ', 'sufoc', 'fratur', 'ferimento', 'hipotermi', 'anafil', 'passando mal', 'passou mal',
+    'mal subito', 'desacordad', 'corte profundo', 'corte feio', 'cortou fundo',
+    'explod', 'perda de governo', 'perda do governo', 'perda de propulsao', 'perdemos a propulsao', 'perdi a propulsao', 'sem propulsao', ' derivamos ', 'quem caiu',
+    ' diesel vazando', ' combustivel vazando', 'gas vazando', 'diesel esta vazando', 'combustivel esta vazando', 'gas esta vazando', 'vazou diesel', 'vazou combustivel', 'vazou gas',
+    'diesel no porao', 'combustivel no porao', 'gas no porao', 'cheiro de gasolina'];
   // Frases com contexto, que a lista de palavras não alcança sem pegar o resto: "meu filho está na água", "o passageiro caiu", "alguém foi jogado ao
   // mar", "o barco está tomando água", "bateu numa pedra" (e não "bateu em 3 bar"), "ele está sangrando" (e não "sangrando o ar do sistema").
   // Segunda revisão da 1b: o que a regex alcança vem de LISTA POSITIVA (o que foi atingido: pedra, cais, outro barco, o casco, "nós"; quem está no
@@ -169,7 +179,7 @@
   // parente, amigo e quem está a bordo pelo papel: «meu marido caiu na água», «o pai caiu», «perdi o meu amigo de vista». Sem «capitão» (é o nome do app)
   var PARENTE = '(?:idos[oa]s?|amig[oa]s?|colegas?|maes?|pai|marido|esposa|esposo|namorad[oa]s?|irma[o]?|irmaos|netos?|netas?|sobrinh[oa]s?|hospedes?|convidad[oa]s?|mergulhador(?:es)?|nadador(?:es)?|comandante|skipper|vizinh[oa]s?)';
   var DET = '(?:(?:um|uma|o|a|os|as|meu|minha|nosso|nossa|esse|essa) )*';
-  var NO_MAR = '(?:no mar|na agua|pro mar|para o mar|pra agua)';
+  var NO_MAR = '(?:no mar|na agua|pro mar|para o mar|pra agua|ao mar)';   // «ao mar» (4ª revisão da 1b): «mulher ao mar», «o tripulante foi ao mar»
   var FORA = '(?:ao mar|no mar|na agua|pro mar|pra agua|para o mar|para fora|pela borda)';
   var CAIU = '(?:cai|caiu|cairam|caem|caindo|pulou|pularam|sumiu|sumiram|desapareceu|desapareceram)';
   var BARCOS = '(?:barco|lancha|embarcacao|iate|bote|veleiro|jet ski|jetski|navio|rebocador|traineira|catamara|escuna|canoa|caiaque|semirrigido)';
@@ -192,7 +202,7 @@
   // (1) o equipamento que «faz água» é o SUJEITO do verbo, logo antes dele («a geladeira está fazendo água», «o ar-condicionado do barco faz água»); a geladeira
   // que parou numa oração e o barco que faz água na outra é alagamento.
   var EQUIP_AGUA = '(?:dessalin[a-z]*|ar condicionado|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*|ar|geladeira|frigobar|freezer|bebedouro|purificador|chuveiro|torneira|ducha|pia|ralo|sanitario|banheiro|lavabo|gelo)';
-  var VERBO_AGUA = '(?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar)';
+  var VERBO_AGUA = '(?:fazendo|faz|fez|fazer|tomando|toma|tomou|tomar|puxando|puxou|puxar|pegando|pega|pegou|pegar)';
   var SEM_EQUIP_AGUA = '^(?!.* ' + EQUIP_AGUA + '(?: d[oae]s? [a-z0-9]+(?: d[oae]s? [a-z0-9]+)?)?(?: (?:esta|estao|ta|tao|vai|ficou|comecou a|continua|ainda|agora|so|tambem))* ' + VERBO_AGUA + ' ).* ';
   // (2) a água que não é a do casco vem logo DEPOIS da palavra «água» («água doce», «água no ouvido», «na bota», «no tanque de água», «na geladeira»)
   var AGUA_FIM = '(?!(?:doce|potavel|quente|fria|gelada|mineral|filtrada|com|para|pro|pra)\\b)';
@@ -201,17 +211,25 @@
   var SEM_MEDIDA_AGUA = '^(?!.* (?:temperatura|pressao|salinidade|vazao|fluxo) d[ae] agua ).* ';
   var LUGAR_BORDO = '(?:barco|lancha|embarcacao|casco|porao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas|iate|bote|veleiro)';
   // a âncora (o ferro, a poita, a corrente, a sonda, o ponteiro) que «toca o fundo» ou «raspa numa pedra» é fundeio de rotina, não batida do barco
-  var SEM_ANCORA = '^(?!.* (?:ancoras?|ferro|poita|corrente|amarra|cabo|chumbo|prumo|sonda|ecobatimetro|ponteiro|mergulhador|ancorote)(?: [a-z0-9]+){0,3} (?:tocou|tocaram|raspou|esbarrou) ).* ';
+  var SEM_ANCORA = '^(?!.* (?:ancoras?|ferro|poita|corrente|amarra|cabo|chumbo|prumo|sonda|ecobatimetro|ponteiro|mergulhador|ancorote)(?: [a-z0-9]+){0,3} (?:tocou|tocaram|raspou|esbarrou|encostou) ).* ';
   // a mangueira de uso (lavagem, chuveiro, pia, ar-condicionado…) traz o uso JUNTO da palavra «mangueira» (local, não a frase inteira: «a mangueira de combustível estourou e molhou a pia» é emergência)
   var MANGUEIRA_USO = '(?:lavagem|lavar|chuveiro|ducha|pia|torneira|jardim|piscina|geladeira|frigobar|bebedouro|[a-z]*-?condicionad[a-z]*|climatiza[a-z]*)';
   // sangramento técnico (o ar, o combustível, as linhas, o sistema…) não é ferimento: «sangrando o ar do sistema», «sangramento do combustível»
   var TECNICO = '(?:(?:o|a|os|as|um|uma|do|da|dos|das|no|na) )?(?:ar|combustivel|diesel|sistema|linhas?|bombas?|circuito|filtros?|racor|arrefecimento|freios?|radiador|tubulacao|injetor[a-z]*|bicos?|pre-?filtros?|respiro|aquecedor|turbo|embreagem|direcao|reversor|atuador|cilindro|tanques?|separador|decantador|motor|motores|gerador|hidraulic[a-z]*|oleo|cano|tubo|valvulas?|mangueiras?)';
   var ALVO_FOGO = '(?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|isolamento|resistencia)';
+  // 1b, quarta revisão: o corpo de quem quebra, corta, queima ou prende (sem «cabeça»: «queimar a cabeça» é pensar demais) e o sujeito de quem se engasga ou não respira
+  var CORPO = '(?:bracos?|pernas?|maos?|dedos?|costelas?|nariz|ombros?|joelhos?|tornozelos?|pulsos?|punhos?|claviculas?|bacia|coluna|pescoco|dentes?|rosto|testa|barriga|olhos?|pele|costas|antebraco|lingua|boca|garganta|pes?)';
+  var POSSE = '(?:(?:o|a|os|as|meu|minha|seu|sua|um|uma|nosso|nossa) )*';
+  // o «braço» (e o «pé», a «mão») de uma peça de bordo não é o de uma pessoa: «quebrou o braço do guincho»
+  var PECA = '(?!d[oae]s? (?:guincho|limpador|radar|guindaste|davit|mesa|cadeira|banco|tripe|suporte|apoio|lanterna|mastro|ancora|piloto|motor|porta|escotilha|antena|toldo|bimini|sofa|gaveta|armario|cabo|leme|gerador|painel|plotter) )';
+  var ELE = '(?:' + PESSOA + '|' + PARENTE + '|ele|ela|eles|elas|ninguem|bebe)';
   var SOS_REGEX_FONTES = [
     ' ' + PESSOA + '(?: (?:esta|estao|ta|tao|foi|foram|ficou|ficaram))? ' + NO_MAR + ' ',
     ' (?:' + PESSOA + ' ' + CAIU + '|' + CAIU + ' ' + DET + PESSOA + '|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PESSOA +
-      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)) ',
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + '(?:tripulantes?|marinheiros?|criancas?|filh[oa]s?|menin[oa]s?)' +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + PESSOA + ' de vista|' + PESSOA + ' (?:que|q) ' + CAIU + ') ',
     ' (?:' + PARENTE + ' ' + CAIU + ' (?:na agua|no mar|ao mar|do barco|da lancha|da embarcacao|pro mar|para o mar|pra agua|para fora|fora)|(?:perdi|perdemos|perdeu|perderam) de vista ' + DET + PARENTE +
+      '|(?:perdi|perdemos|perdeu|perderam) ' + DET + PARENTE + ' de vista|' + PARENTE + ' (?:que|q) ' + CAIU +
       '|' + PARENTE + ' (?:esta|estao|ta|tao|foi|foram|ficou|ficaram) ' + NO_MAR + ') ',
     ' (?:derrubou|jogou|empurrou|arrastou|derrubaram|jogaram|empurraram) ' + DET + PESSOA + ' ' + FORA + ' ',
     ' ' + PESSOA + ' (?:foi|foram) (?:jogad[oa]s?|derrubad[oa]s?|arrastad[oa]s?|empurrad[oa]s?) ' + FORA + ' ',
@@ -224,6 +242,7 @@
     ' (?:entrou|comecou a entrar|comecando a entrar|voltou a entrar|comecaram a entrar) (?:muita |bastante |mais )?agua ' + AGUA_ENTRA_FIM,
     ' agua (?:entrou|comecou a entrar|comecou a subir) ' + AGUA_ENTRA_FIM,
     ' agua (?:(?:esta|ta|vem|continua|segue|estava|tava) )?(?:a )?entrando ' + AGUA_ENTRA_FIM,
+    ' entrando (?:(?:muita|bastante|tanta|mais) )+agua ' + AGUA_ENTRA_FIM,
     ' (?:nao|n) (?:para|parou) de entrar agua ',
     ' agua (?:nao|n) (?:para|parou) de entrar ',
     SEM_MEDIDA_AGUA + 'agua (?:esta |ta )?(?:subindo|subiu|sobe|enchendo|encheu) (?:(?:rapido|rapidamente|muito|bem|bastante|demais|mais) )*(?:no|na|dentro d[oa]|em) (?:barco|lancha|embarcacao|cabine|salao|camarote|sala de maquinas|casa de maquinas|praca de maquinas) ',
@@ -234,15 +253,22 @@
     ' porao (?:esta |ta |continua |vai |ja |ficou |foi )?(?:cheio|cheia|enchendo|encheu|alagando|alagado|alagou|subindo|subiu|inundado|inundou|transbordando|transbordou) ',
     ' agua (?:esta |ta |vem )?(?:subindo|entrando|enchendo|vazando|aparecendo|surgindo|brotando) (?:no|pelo|pelos|dentro d[oa]|do) porao ',
     ' bombas? (?:de |do |da )?porao (?:(?:nao|n) (?:esta |estao |ta |tao )?(?:para|param|parando|desliga|desligam|desligando|da conta|dao conta|dando conta|consegue|conseguem|conseguindo|segura|seguram|vence|vencem|aguenta|aguentam)|(?:esta|estao|ta|tao) (?:ligad[oa]s?|funcionando|trabalhando|rodando|acionad[oa]s?) (?:direto|sem parar|o tempo todo|toda hora|toda a hora)) ',
-    ' (?:alarme|alerta|sirene) (?:d[eoa] |das? |dos? )?(?:bombas? (?:d[eo] )?)?porao (?:disparou|tocou|soou|acendeu|acionou|ativou|(?:esta|ta) (?:tocando|soando|disparando|disparado|aceso)|tocando|soando|disparando) ',
-    ' (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:o |um |a )?(?:alarme|alerta|sirene) (?:d[eoa] |das? |dos? )?(?:bombas? (?:d[eo] )?)?porao ',
+    // (4ª revisão: até 3 palavras entre «alarme» e «porão» — «alarme de nível do porão», «alarme do painel do porão» —, e o alarme que tocou NO porão)
+    ' (?:alarme|alerta|sirene)(?: [a-z0-9]+){0,3} porao (?:disparou|tocou|soou|acendeu|acionou|ativou|(?:esta|ta) (?:tocando|soando|disparando|disparado|aceso)|tocando|soando|disparando) ',
+    ' (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:o |um |a )?(?:alarme|alerta|sirene)(?: [a-z0-9]+){0,3} porao ',
+    ' (?:alarme|alerta|sirene) (?:disparou|tocou|soou|acendeu|acionou|ativou) (?:no|do|na|dentro d[oa]) porao ',
     // a frase inteira «alarme do porão» (quem digita só o substantivo): relato, local
     '^ (?:(?:o|um|esse|aquele) )?alarme (?:d[eoa]s? )(?:bombas? (?:d[eo] )?)?porao $',
     // o barco que toca o fundo (a âncora, o ferro, a poita, a corrente e a sonda tocam o fundo no fundeio: SEM_ANCORA)
-    SEM_ANCORA + '(?:tocou|tocamos|toquei|tocaram) (?:o|no) fundo ',
+    SEM_ANCORA + '(?:tocou|tocamos|toquei|tocaram|raspou|raspamos|raspei|encostou|encostamos|encostei) (?:o|no) fundo ',
     // batida: o que foi atingido vem de lista positiva (coisa dura, outro barco, o casco, "nós")
     ' ' + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + DURO + ' ',
-    SEM_ANCORA + '(?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
+    SEM_ANCORA + '(?:raspou|raspamos|raspei|esbarrou|esbarramos|esbarrei|tocou|tocamos|toquei|encostou|encostamos|encostei) ' + BATE_ADV + BATE_COM + BATE_EM + DURO_MAR + ' ',
+    // o barco que está em cima da pedra e a batida que vem aí («vamos bater», «vamos bater numa pedra», «prestes a colidir»)
+    ' (?:estamos|ficamos|paramos|fiquei|parei|ficou|parou) (?:em cima d[eao]|sobre|em|n[oa]s?|nu(?:m|ma)) (?:(?:um|uma|o|a|essa|aquela) )*(?:pedras?|rochas?|rochedos?|lajes?|baixios?) ',
+    ' (?:vamos|vai|iremos) bater (?:(?:forte|feio|em cheio) )?(?:em|n[oa]s?|nu(?:m|ma|ns|mas)) (?:(?:o|a|um|uma|outro|outra|essa|aquela) )*(?:' + DURO + '|' + BARCOS + '|' + PARTES + ') ',
+    '^ (?:(?:ai|gente|socorro|cuidado|meu deus|nossa) )*(?:vamos|vai) bater(?: (?:forte|feio))? $',
+    ' (?:prestes a|quase) (?:colidir|encalhar|afundar|naufragar|virar|alagar) ',
     GUARDA_BATE + VERBO_BATIDA + ' ' + BATE_ADV + BATE_COM + BATE_EM + '(?:' + BARCOS + '|' + PARTES + '|bancos?|fundo|algo|alguma coisa|alguem) ',
     BATE_INI + VERBO_BATIDA + '(?: ' + BATE_FRACO + ')* (?:em nos|em mim|na gente|em cheio) ',
     ' (?:batemos|bati)(?: (?:' + BATE_FRACO + '|em cheio))* $',
@@ -260,7 +286,8 @@
     ' (?:rachadura|trinca|fissura|buraco|furo|rasgo) (?:no|na) (?:casco|costado|quilha|popa|proa) ',
     ' (?:bateu|bati|bateram|batemos) (?:com )?(?:a|na|no|o) (?:cabeca|nuca|testa) ',
     // fogo sem a palavra "fogo": chama, queimando o motor ou o painel, choque no painel
-    ' (?:uma|vi|vimos|vejo|surgiu|apareceu|saindo|sai|saiu) chama ',
+    ' (?:uma|vi|vimos|vejo|surgiu|apareceu|saindo|sai|saiu|tem|temos|ha|tinha|teve|pegou|pegando|muita|alguma) chama (?!(?:d[eoa]|n[oa]) (?:fogao|fogareiro|churrasqueira|cooktop|isqueiro|vela|piloto|macarico) )',
+    ' chama (?:n[oa]s?|d[oa]s?|em|pel[oa]s?) (?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|compressor|inversor|carregador|tomada|geladeira|barco|lancha|casco|cozinha|cabine|camarote|praca de maquinas|sala de maquinas|casa de maquinas|popa|proa|conves|iate|veleiro|bote|lixeira) ',
     ' (?:motor|motores|painel|quadro|fio|fios|cabo|cabos|bateria|baterias|gerador|barco|lancha|cozinha|fogao|casco|compressor|bomba|inversor|carregador|tomada|geladeira|cabine|camarote|praca de maquinas|sala de maquinas|casa de maquinas|isolamento|resistencia|ar condicionado)(?: [a-z0-9]+){0,2} queimando (?!(?:oleo|diesel|combustivel|muito|pouco|mais|menos|litros?|[0-9]+) )',
     ' queimando (?:(?:o|os|a|as) )?' + ALVO_FOGO + ' ',
     ' (?:levou|tomou|tomei|levei|levando|tomando) (?:um |o )?choque ',
@@ -272,12 +299,39 @@
     ' (?:estourou|soltou|rompeu|furou|partiu|rasgou) (?:a|uma|essa|aquela|nossa|minha) mangueira (?!(?:(?:d[eoa]s?|para|pra) )?' + MANGUEIRA_USO + ' )',
     ' eixo(?: [a-z0-9]+){0,6} (?:quebrou|quebrado|quebrada|partido|rompeu|empenou) ',
     ' eixo(?: [a-z0-9]+){0,3} partiu ',
+    ' eixo(?: [a-z0-9]+){0,3} (?:soltou|solto|solta|travou|travado|travada|emperrou|emperrado|emperrada|entortou|torto|empenado|empenada|rachou) ',
     // leme com palavras no meio («o leme do barco quebrou», «o leme da lancha travou agora») e o leme perdido («perdi totalmente o leme»)
     ' leme(?: [a-z0-9]+){0,5} (?:quebrou|quebrado|quebrada|partido|partida|rompeu|rompido|rompida|travou|travado|travada|soltou) ',
     ' leme(?: [a-z0-9]+){0,3} partiu ',
-    ' (?:perdi|perdemos) (?:(?:totalmente|completamente|de vez|agora|todo|toda|o|a|os|as) )*(?:leme|governo|controle do leme|comando do leme) ',
+    ' leme(?: [a-z0-9]+){0,3} (?:emperrou|emperrado|emperrada|preso|presa|caiu|saiu|desprendeu|falhou|bloqueou|bloqueado|bloqueada|enroscou|enroscado|enroscada|sumiu) ',
+    ' helice(?: [a-z0-9]+){0,3} (?:enroscou|enroscada|enroscado|travou|travada|travado|soltou|solta|solto|quebrou|quebrada|quebrado|partiu|partida|partido|emperrou|emperrada|emperrado|bloqueou|bloqueada|bloqueado|perdeu|danificou|danificada|danificado|amassou|amassada|amassado|entortou|entortada|entortado) ',
+    ' (?:perdi|perdemos) (?:(?:totalmente|completamente|de vez|agora|todo|toda|todos|o|a|os|as|dois|duas|ambos) )*(?:leme|governo|controle do leme|comando do leme|controle do barco|controle da lancha|controle da embarcacao|direcao|timao|propulsao|motor|motores|helice|helices) ',
+    // o barco que não obedece ao leme, que não governa, que está sem controle; os dois motores que pararam; o vento ou a corrente que levam o barco às pedras
+    ' (?:nao|n) (?:obedece|responde|reage|atende) (?:mais )?(?:ao |a |o |no |na )?(?:leme|timao|direcao|governo) ',
+    ' (?:nao|n) (?:governa|governando|governou|esta governando) ',
+    ' (?:estamos|ficamos|barco|lancha|embarcacao|iate|bote|nos)(?: (?:esta|ta|ficou))? (?:totalmente |completamente )?(?:sem controle|fora de controle|descontrolad[oa]s?) (?!remoto|d[oa] (?:ar|tv|som))',
+    ' (?:os )?(?:dois|2|ambos os|ambos|todos os) motores (?:pararam|apagaram|morreram|falharam|travaram|pifaram) ',
+    ' (?:estamos|ficamos|estou|fiquei) derivando ',
+    ' (?:vento|corrente|correnteza|mare|mar|ondas?|deriva)(?: [a-z0-9]+){0,3} (?:levando|levou|jogando|jogou|empurrando|empurrou|arrastando|arrastou|joga|leva|empurra|arrasta) (?:(?:nos|a gente|o barco|a lancha|a embarcacao) )?(?:para|pra|contra) (?:as |a |os )?(?:pedras?|rochas?|costao|laje|lajes|recifes?|rebentacao|arrebentacao|baixios?) ',
     // água que entra no presente («entra água pelo casco») e a baliza disparada pela frente do verbo («disparou a baliza», «acionei a baliza»)
-    ' entra agua (?:pel[oa]s?|por|no|na|em) (?:casco|barco|lancha|porao|cabine|fundo|quilha|popa|proa|costado|eixo|helice|leme|vigia|escotilha|janela|sala de maquinas|casa de maquinas|praca de maquinas|todo lado|todos os lados|tudo) '
+    ' entra agua (?:pel[oa]s?|por|no|na|em) (?:casco|barco|lancha|porao|cabine|fundo|quilha|popa|proa|costado|eixo|helice|leme|vigia|escotilha|janela|sala de maquinas|casa de maquinas|praca de maquinas|todo lado|todos os lados|tudo) ',
+    // 1b, quarta revisão. O corpo: quebrar, luxar, cortar, queimar, esmagar, prender («quebrou o braço», «cortou a mão feio», «queimou a mão no escapamento», «prendeu a mão
+    // no cabo»), o membro que fica quebrado, cortado ou queimado, e quem foi atingido («o cabo estourou e acertou alguém»)
+    ' (?:quebrou|quebrei|quebraram|fraturou|fraturei|luxou|luxei|deslocou|desloquei|cortou|cortei|cortaram|queimou|queimei|queimaram|esmagou|esmagaram|amassou|prendeu|arrancou) ' + POSSE + CORPO + ' ' + PECA,
+    ' ' + CORPO + '(?: (?:esta|estao|ta|tao|ficou|ficaram|foi|foram))? (?:quebrad[oa]s?|fraturad[oa]s?|luxad[oa]s?|deslocad[oa]s?|cortad[oa]s?|queimad[oa]s?|esmagad[oa]s?|prensad[oa]s?) ',
+    ' (?:acertou|atingiu|esmagou|prendeu|machucou) ' + POSSE + '(?:alguem|pessoa|tripulante|passageiro|marinheiro|crianca|homem|mulher|cara|filho|filha) ',
+    ' (?:me queimei|se cortou|me cortei) ',
+    // quem se engasga e quem não respira (o sujeito é pessoa: «o motor engasgou» e «o respiro do tanque não respira» são do motor)
+    ' ' + ELE + ' (?:(?:esta|estao|ta|tao|se) )*engasg(?:ad[oa]s?|ou|ando|aram) ',
+    ' ' + ELE + '(?: [a-z]+)? (?:nao|n) (?:(?:esta|estao|ta|tao|consegue|conseguem) )?(?:respira|respirando|respirar) ',
+    // combustível e gás: o tanque, a linha ou o vazamento por dentro («o tanque de diesel está vazando», «vazamento no tanque de diesel», «cheiro forte de gás»); o tanque
+    // de água doce que vaza não entra
+    ' tanque d[eo] (?:diesel|combustivel)(?: [a-z0-9]+){0,3} (?:vazando|vazou|vaza|furou|furado|furada|rachou|rachado|rachada|trincou|trincado|trincada|rompeu|rompido|rompida) ',
+    ' vazamento (?:no|na|nos|nas|do|da|dos|das|de|em)(?: [a-z0-9]+){0,3} (?:diesel|combustivel|gas|gasolina) ',
+    ' cheiro (?:(?:forte|muito|intenso|estranho|esquisito|ruim) )+(?:de |do |da )?(?:gas|diesel|combustivel|gasolina|queimado|fumaca) ',
+    // pedido de ajuda urgente («preciso de ajuda urgente», «preciso urgente de ajuda»)
+    ' (?:ajuda|socorro|auxilio|resgate)(?: [a-z]+){0,2} urgente ',
+    ' urgente(?: [a-z]+){0,2} (?:ajuda|socorro|auxilio|resgate) '
   ];
   var SOS_REGEX = SOS_REGEX_FONTES.map(function (f) { return new RegExp(f); });
   // "a gente" é "nós", não a pessoa de "gente na água"/"gente cai": troca por "nos" antes de conferir
@@ -416,6 +470,16 @@
   var SOS_FICHA = 'Ordem (' + ROTULO + '): 1. VHF canal 16 · MAYDAY com o ' + MMSI_RADIO + ' e a posição lida no plotter; 2. homem ao mar; 3. incêndio · Seafire; 4. EPIRB. Os passos estão nas respostas locais (sos, seafire, epirb), na tela SOS e nos guias; emergência não vai à IA.';
   // Passos da pressão de óleo baixa: resposta oleo e, inteiros, no registro de diário que relata queda/alarme de pressão. Sem leitura do quadro.
   var OLEO_PASSOS = numerados(P.oleo || []);
+  // O passo do relato (4ª revisão da 1b; PROMPT §2.2: o relato de água a bordo e do porão vai para `sos` COM o passo a passo): água entrando, porão cheio, casco aberto →
+  // protocolos.alagamento; abandono → protocolos.abandono. Texto fixo do gerador (sem nível, ciclo nem leitura), antes da ordem geral. A água em que a pessoa cai («caiu na água»)
+  // não é água a bordo; combustível ou gás no porão não manda ligar as bombas.
+  var AGUA_BORDO = / (?:alagad|alagand|alagament|inundad|inundand|inundac|afund|naufrag|rombo)| porao |(?:entrando|entrou|entra|entrada de|subindo|subiu|sobe|enchendo|encheu|fazendo|faz|fez|tomando|toma|tomou|pegando|puxando|cheio de|cheia de|vazando) (?:(?:muita|bastante|demais|mais) )*agua | agua (?:(?:esta|ta|vem|continua|segue) )?(?:entrando|entrou|entra|subindo|subiu|sobe|enchendo|encheu|vazando)|casco (?:esta |ta |ficou |foi )?(?:furad|rachad|trincad|rompid|abert|amassad|danificad)|(?:furou|furaram|rachou|trincou|rompeu) o casco /;
+  function sosEspecifico(q) {
+    var s = pad(q), out = [];
+    if (s.indexOf('abandon') !== -1 && P.abandono && P.abandono[0]) out.push(P.abandono[0]);
+    if (AGUA_BORDO.test(s) && !has(s, ['diesel', 'combustivel', 'gasolina', ' gas ', ' oleo']) && P.alagamento && P.alagamento[0]) out.push(P.alagamento[0]);
+    return out;
+  }
   // Base completa externa (NotebookLM) não configurada nesta embarcação: o fallback leva a pendência e FAQ.
   var BASE = null;
   // Texto de emergência não manda gravar o resumo da telemetria (nada de posição, rumo nem velocidade do quadro): o relato vai em palavras, a posição se lê no plotter.
@@ -501,7 +565,7 @@
       return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
     canal16: function (p) {
-      return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\nUrgência sem perigo de vida: PAN-PAN ×3.', src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
+      return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\n' + (P.panpan || 'Urgência sem perigo de vida: PAN-PAN ×3.'), src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
     },
     checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
@@ -554,7 +618,7 @@
     // Salvatagem (PROMPT §2.3): o texto fixo do D.protocolos, sem número de pessoas, sem lugar (paiol, armário, proa, popa) e sem IA
     salvatagem: function (p) { return { fala: P.salvatagem || '', text: (P.salvatagem || '') + '\n(' + ROTULO + ')', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Checklist de saída', 'checklist']]) }; },
     // sos/óleo não gravam nada: pergunta informativa não vira linha permanente. Gravar = atalho DIÁRIO DE BORDO ou "registre posição e hora".
-    sos: function (p) { return { text: 'Emergência — abra o SOS. ' + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
+    sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS.' + (esp.length ? '\n' + esp.join('\n') + '\n' : ' ') + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
     oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4', actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
     oleoLeitura: function (p) { return { text: 'Motores desligados no snapshot' + DEMO_ + ' de ' + SNAP.quando + '. Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar · ' + (M.rpm ? M.rpm.join('/') : '—') + ' rpm em neutro · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · sem alarme.\nFaixa normal: manual Volvo Penta — modelo ' + SD + '.\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) }; },
     ancora: function (p) { return { text: 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.\n' + (S.estado || SD) + ' · ' + (S.local || SD) + ' · ' + SNAP.pos + ' · profundidade ' + nb(S.profundidade) + ' m (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nAlarme de âncora: ative no plotter e defina o raio conforme o cabo lançado e o espaço de giro.', src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
@@ -732,6 +796,12 @@
   // à resposta pronta do porão, local, e passou a ir à IA (revisão da 1b).
   var SINONIMOS_BALIZA = { testar: ['teste', 'autoteste'] };
   var BALIZA_RAIZES = {}; ['baliza', 'epirb', 'radiobaliza'].forEach(function (w) { BALIZA_RAIZES[raiz(w)] = 1; });
+  // Baliza de sinalização não é o EPIRB (revisão da 1b, 4ª): com «canal», «cardinal», «lateral», «farol», «luz», «barra», «entrada», «piscando» ou «boia» na pergunta e sem palavra que
+  // só o EPIRB tem (epirb, radiobaliza, autoteste, hidrostático, 406), o guia do EPIRB sai da busca. Sem isto, «por que a baliza do canal está piscando?» devolvia o «Disparo por engano:
+  // desligue e avise no canal 16» (o sinônimo baliza→epirb e o «canal» fechavam os 60 %) e, por ser trecho de segurança, barrava a IA, que sabe de balizamento.
+  var RAIZ_BALIZA = raiz('baliza');
+  var SINAL_RAIZES = {}; ['canal', 'cardinal', 'lateral', 'farol', 'luz', 'barra', 'entrada', 'piscando', 'boia', 'boias', 'balizamento', 'balizar'].forEach(function (w) { SINAL_RAIZES[raiz(w)] = 1; });
+  var EPIRB_SO = {}; ['epirb', 'radiobaliza', 'autoteste', 'hidrostatico', '406'].forEach(function (w) { EPIRB_SO[raiz(w)] = 1; });
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
   // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
   // as demais palavras de até 2 letras seguem fora.
@@ -804,9 +874,11 @@
     if (!qs.length) return [];
     // cada palavra da pergunta vira um grupo (ela + sinônimos); o trecho precisa cobrir a maioria dos grupos
     var daBaliza = qs.some(function (w) { return BALIZA_RAIZES[w]; });
-    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; (SINONIMOS[w] || (daBaliza && SINONIMOS_BALIZA[w]) || []).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
+    var sinalizacao = daBaliza && qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; }), fonteEpirb = guia('g_epirb');
+    var grupos = qs.map(function (w) { var g = {}; g[w] = 1; ((sinalizacao && w === RAIZ_BALIZA) ? [] : (SINONIMOS[w] || (daBaliza && SINONIMOS_BALIZA[w]) || [])).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
     var N = KB.docs.length, k1 = 1.2, b = 0.75, res = [], proc = PROCEDIMENTO.test(' ' + norm(q) + ' ');
     KB.docs.forEach(function (d) {
+      if (sinalizacao && d.fonte === fonteEpirb) return; // baliza de sinalização: o guia do EPIRB não responde (e «baliza» não vira «epirb», abaixo)
       var nota = 0, bateu = 0, secao = d._sec || (d._sec = ' ' + tokens(d.secao || '').join(' ') + ' '), naSecao = 0, nomeia = !d.seguranca, aciona = false;
       grupos.forEach(function (g) {
         var melhor = 0;

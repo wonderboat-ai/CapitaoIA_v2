@@ -124,7 +124,9 @@ CASOS = [
     # pelo título, e estas perguntas, com as palavras do próprio trecho, iam à IA. ("ferido" também é do PAN-PAN, mas a 1b manda
     # ` ferid` para o SOS: fica de fora daqui para o caso não mudar de chave.)
     # 1b: «caiu da lancha» entrou na lista SOS (a revisão do C5 mediu «pessoa caiu da lancha» indo à IA): a chave passa de `base` a `sos`, ainda local
-    ('pessoa caiu da lancha', 'sos'), ('não vejo a pessoa que caiu', 'base'), ('perdemos de vista quem caiu', 'base'),
+    # 1b, quarta revisão: «a pessoa que caiu» e «quem caiu» também são pessoa na água (a revisão mediu «ninguém consegue ver a pessoa que caiu» indo à IA): a chave passa de `base` a
+    # `sos`, ainda local. O trecho do protocolo segue sendo o topo da busca (a verificação das revisões 5 e 6 do C5 abaixo confere a identidade dele pelo buscaBase).
+    ('pessoa caiu da lancha', 'sos'), ('não vejo a pessoa que caiu', 'sos'), ('perdemos de vista quem caiu', 'sos'),
     ('sem governo', 'base'), ('barco sem governo', 'base'), ('pane no barco', 'base'),
     # as palavras de acionamento não abrem o trecho em pergunta comum: o assunto da pergunta tem de ser o do trecho
     ('o parafuso caiu', 'fallback'), ('quantas pessoas a bordo', 'fallback'), ('a pessoa da marina', 'fallback'), ('o governo federal', 'fallback'),
@@ -151,7 +153,9 @@ CASOS = [
     ('a energia caiu', 'fallback'), ('o wifi caiu', 'fallback'), ('a tensão caiu', 'eletrico'), ('caiu a chave no mar', 'fallback'),
     ('onde fica o manual do motor', 'manual'), ('como acho o manual do motor', 'manual'), ('onde fica o manual', 'manual'),
     ('tem vista para o mar?', 'fallback'), ('qual a vista do mar', 'fallback'), ('a temperatura do mar caiu', 'fallback'),
-    ('pessoa ao mar', 'base'),
+    # 1b, quarta revisão: «pessoa ao mar» é o mesmo que «homem ao mar», «criança ao mar» e «tripulante ao mar» (todos `sos`): a base não abre a janela de emergência da Fase 3
+    # (`sos`, `oleo`, `canal16`, `epirb`, `seafire`), e a pessoa na água é a emergência que mais precisa dela. Local nos dois casos (PEDE_IA False).
+    ('pessoa ao mar', 'sos'),
     # as quatro perguntas de religar depois do disparo e o alarme de âncora ficam no trecho de segurança / no plotter (seção na verificação)
     ('como religar o gerador depois que o sistema fixo disparou', 'seafire'), ('como ligar o gerador depois do disparo do sistema fixo', 'seafire'),
     ('o sistema fixo disparou, como religo o gerador?', 'seafire'), ('como abrir o motor depois que o sistema fixo disparou', 'seafire'),
@@ -329,7 +333,9 @@ CASOS = [
     # (5) o eixo com palavras no meio e a baliza do EPIRB que disparou, ativou ou foi acionada (a «baliza» sozinha é sinalização)
     ('o eixo da hélice de bombordo quebrou agora mesmo', 'sos'), ('o eixo do motor de boreste quebrou', 'sos'),
     ('a baliza do barco disparou sozinha', 'epirb'), ('a baliza ativou', 'epirb'), ('a baliza foi acionada', 'epirb'), ('a baliza disparou sozinha', 'epirb'),
-    ('baliza cardinal', 'fallback'), ('a baliza de canal', 'base'), ('o eixo estava bom quando o barco partiu', 'fallback'), ('o eixo da hélice está ok', 'fallback'),
+    # 1b, quarta revisão: a baliza de canal é sinalização, não o EPIRB. O sinônimo baliza→epirb (PROMPT §2.3) e o «canal» fechavam os 60 % da busca no «Disparo por engano: desligue e avise
+    # no canal 16» (de segurança: trecho no topo barra a IA, que sabe de balizamento); agora, com palavra de sinalização e sem palavra só do EPIRB, a busca não traz o guia do EPIRB.
+    ('baliza cardinal', 'fallback'), ('a baliza de canal', 'fallback'), ('o eixo estava bom quando o barco partiu', 'fallback'), ('o eixo da hélice está ok', 'fallback'),
     # (6) «tocou o fundo»: o barco toca o fundo (SOS); a âncora, o ferro, a poita e a sonda tocam o fundo no fundeio (rotina)
     ('a âncora tocou o fundo', 'ancora'), ('a âncora tocou no fundo', 'ancora'), ('quando a âncora tocou no fundo quantos metros de cabo eu solto?', 'ancora'),
     ('o ferro já tocou no fundo', 'ancora'), ('a poita tocou o fundo', 'fallback'), ('a sonda tocou o fundo', 'fallback'), ('o mergulhador tocou o fundo', 'fallback'),
@@ -344,6 +350,40 @@ CASOS = [
     ('ele pulou da lancha', 'sos'), ('pulou da lancha', 'sos'), ('caiu um homem do barco', 'sos'), ('o homem caiu na água', 'sos'), ('o homem da marina chegou', 'fallback'),
     ('entra água pelo casco', 'sos'), ('entra água no tanque de água doce', 'tanques'),
     ('disparou a baliza', 'epirb'), ('disparou a baliza do barco', 'epirb'), ('acionei a baliza', 'epirb'),
+    # ——— 1b, quarta revisão (achados da revisão do commit a237ba8): a vizinhança das frases pedidas que ainda ia à IA na nuvem (fallback, PEDE_IA True) ou à resposta de rotina ———
+    # (1) perigo, água a bordo, encalhe e batida que vem aí
+    ('estamos em perigo', 'sos'), ('estou em perigo', 'sos'), ('estamos em perigo de vida', 'sos'), ('risco de vida', 'sos'), ('corremos risco de vida', 'sos'),
+    ('preciso de ajuda urgente', 'sos'), ('preciso urgente de ajuda', 'sos'), ('estamos perdidos no mar', 'sos'),
+    ('o barco está pegando água', 'sos'), ('estamos pegando água', 'sos'), ('tá entrando muita água', 'sos'), ('está entrando muita água no barco', 'sos'),
+    ('vamos bater', 'sos'), ('vamos bater numa pedra', 'sos'), ('o barco raspou no fundo', 'sos'), ('encostamos numa pedra', 'sos'), ('estamos em cima de uma pedra', 'sos'),
+    # (2) pessoa na água ou perdida de vista, na ordem «perdi X de vista» e com «foi ao mar»
+    ('mulher ao mar', 'sos'), ('o marinheiro foi ao mar', 'sos'), ('tripulante foi ao mar', 'sos'), ('meu amigo foi ao mar', 'sos'), ('ele se afogou', 'sos'),
+    ('perdi o mergulhador de vista', 'sos'), ('perdi meu amigo de vista', 'sos'), ('perdemos a mulher de vista', 'sos'), ('perdi a pessoa de vista', 'sos'),
+    ('perdemos o homem de vista', 'sos'), ('ninguém consegue ver a pessoa que caiu', 'sos'),
+    # (3) saúde: respiração, coração, fratura, corte, engasgo, queimadura, ser atingido por um cabo
+    ('ele parou de respirar', 'sos'), ('ela não respira', 'sos'), ('ele não está respirando', 'sos'), ('ela não está respirando', 'sos'), ('ataque cardíaco a bordo', 'sos'),
+    ('parada cardíaca', 'sos'), ('enfarte', 'sos'), ('fratura exposta', 'sos'), ('corte profundo no braço', 'sos'), ('cortou a mão feio', 'sos'), ('quebrou o braço', 'sos'),
+    ('ele está engasgado', 'sos'), ('queimou a mão no escapamento', 'sos'), ('pessoa passando mal no barco', 'sos'), ('cabo estourou e acertou alguém', 'sos'),
+    ('prendeu a mão no cabo', 'sos'),
+    # (4) fogo sem a palavra e explosão
+    ('tem chama no painel', 'sos'), ('tem chama na cozinha', 'sos'), ('explodiu o motor', 'sos'),
+    # (5) governo, propulsão, leme, hélice e eixo
+    ('o leme emperrou', 'sos'), ('leme preso', 'sos'), ('o leme caiu', 'sos'), ('o leme saiu', 'sos'), ('perda de governo', 'sos'), ('o barco não obedece ao leme', 'sos'),
+    ('perdemos a propulsão', 'sos'), ('sem propulsão', 'sos'), ('estamos sem propulsão e sem governo', 'sos'), ('estamos sem controle', 'sos'), ('hélice quebrada', 'sos'),
+    ('a hélice enroscou numa rede', 'sos'), ('o eixo soltou', 'sos'), ('os dois motores pararam e estamos indo para as pedras', 'sos'), ('vento nos levando para as pedras', 'sos'),
+    # (6) combustível e gás, na ordem inversa das frases que já estavam na lista
+    ('o diesel está vazando', 'sos'), ('tem diesel vazando', 'sos'), ('combustível vazando', 'sos'), ('tem diesel vazando no porão', 'sos'), ('tem combustível no porão', 'sos'),
+    ('diesel no porão', 'sos'), ('vazamento no tanque de diesel', 'sos'), ('o tanque de diesel está vazando', 'sos'), ('gás vazando', 'sos'), ('cheiro forte de gás', 'sos'),
+    # (7) o alarme de nível do porão que disparou é relato de alagamento (sos), não a rotina do porão
+    ('o alarme de nível do porão disparou', 'sos'), ('o alarme de nível do porão está tocando', 'sos'), ('o alarme do painel do porão disparou', 'sos'),
+    ('disparou o alarme de nível do porão', 'sos'), ('o alarme disparou no porão', 'sos'),
+    # o que NÃO vira SOS (a rotina ao lado: o «caiu» das coisas, o motor que engasga, o tanque de água doce, a conversa)
+    ('o motor engasgou', 'motores'), ('cortou a energia', 'fallback'), ('queimou o fusível', 'fallback'), ('quebrou o braço do guincho', 'fallback'),
+    ('vamos bater um papo', 'fallback'), ('tem chama no fogão?', 'fallback'), ('o tanque de água doce está vazando', 'tanques'), ('o tanque está vazando', 'tanques'),
+    ('zona de perigo da carta', 'fallback'), ('trocar a hélice', 'fallback'), ('o leme está pesado', 'fallback'), ('estamos indo para as pedras de Cabeçudas', 'fallback'),
+    ('estou pegando água no cais', 'fallback'), ('perdi o controle remoto', 'fallback'), ('estamos sem controle remoto', 'fallback'), ('os dois motores desligaram', 'motores'),
+    ('por que a baliza do canal está piscando?', 'fallback'), ('a baliza do canal está apagada', 'fallback'), ('baliza lateral verde', 'fallback'),
+    ('a baliza de entrada da barra está apagada', 'fallback'),
 ]
 # As chaves de emergência (§2.3 do PROMPT): nunca vão à IA na nuvem, qualquer que seja a pergunta
 CHAVES_LOCAIS = ('sos', 'epirb', 'seafire', 'salvatagem', 'canal16', 'oleo')
@@ -409,6 +449,7 @@ PEDE_IA = {
     # 1b: emergência, EPIRB, Seafire, salvatagem e canal 16 nunca vão à IA; o que não é emergência continua indo
     'caiu do barco': False, 'tem gente na água': False, 'entrou água no motor': False, 'o barco bateu em uma pedra': False, 'perdi o leme': False,
     'o eixo quebrou': False, 'a mangueira estourou': False, 'alguém caiu': False, 'estamos sem governo': False, 'o leme travou': False,
+    'a baliza de canal': True, 'baliza do canal': True, 'a baliza do canal está apagada': True,
     'a baliza disparou': False, 'o que é o disparador hidrostático?': False, 'como testar a baliza?': False, 'onde fica a baliza': False,
     'o disjuntor caiu': True, 'tem vista para o mar': True, 'sem governo federal': True, 'a temperatura da água está subindo': True,
     'disparou o sistema da casa de máquinas': False, 'quanto tempo esperar para abrir a praça de máquinas depois da descarga': False,
@@ -419,6 +460,10 @@ PEDE_IA = {
 # só quando é conversa de fallback (trava §2.3: emergência local, nunca na nuvem)
 _REV3 = CASOS[[q for q, _ in CASOS].index('fazendo água'):]
 PEDE_IA.update({q: False for q, k in _REV3 if k in CHAVES_LOCAIS})
+PEDE_IA.update({q: True for q in ('cortou a energia', 'queimou o fusível', 'quebrou o braço do guincho', 'vamos bater um papo', 'tem chama no fogão?', 'zona de perigo da carta',
+                                  'trocar a hélice', 'o leme está pesado', 'estamos indo para as pedras de Cabeçudas', 'estou pegando água no cais', 'perdi o controle remoto',
+                                  'estamos sem controle remoto', 'por que a baliza do canal está piscando?', 'a baliza do canal está apagada', 'baliza lateral verde',
+                                  'a baliza de entrada da barra está apagada')})
 PEDE_IA.update({'fazendo água potável': True, 'fazendo água na boca': True, 'o bebedouro está fazendo água': True, 'a máquina de gelo está fazendo água': True,
                 'baliza cardinal': True, 'a poita tocou o fundo': True, 'a sonda tocou o fundo': True, 'o mergulhador tocou o fundo': True,
                 'o eixo estava bom quando o barco partiu': True, 'o eixo da hélice está ok': True, 'entrou água na bota': True})
@@ -527,9 +572,10 @@ def main():
             const clima = ['como ligar o ar', 'como ligar o ar condicionado', 'como desligar o ar'].map((q) => [q, h(q).fonte === D.guias.g_clima, h(q).secao])
               .filter(([q, ok]) => !ok).map(([q, ok, sec]) => q + ' → ' + sec);
             const climaSec = [h('como ligar o ar').secao, h('como desligar o ar').secao];
-            const protocolo = (qs, sec) => qs.filter((q) => { const a = resp(q), x = h(q); return !(a.key === 'base' && a.seguranca && x.fonte === D.guias.protocolo && x.secao === sec); });
+            // (1b, quarta revisão: «a pessoa que caiu» e «quem caiu» passaram a `sos`; o buscaBase segue nomeando o trecho do protocolo, que é o que esta verificação protege, e a resposta é local)
+            const protocolo = (qs, sec, chaves) => qs.filter((q) => { const a = resp(q), x = h(q); return !(((a.key === 'base' && a.seguranca) || (chaves || []).indexOf(a.key) !== -1) && x.fonte === D.guias.protocolo && x.secao === sec); });
             // (1b: «pessoa caiu da lancha» saiu desta lista: «caiu da lancha» é da lista SOS e a chave passou a `sos`, ver as verificações «1b» abaixo)
-            const mob = protocolo(['não vejo a pessoa que caiu', 'perdemos de vista quem caiu', 'perdi a pessoa de vista', 'a pessoa que caiu sumiu'], 'Homem ao mar');
+            const mob = protocolo(['não vejo a pessoa que caiu', 'perdemos de vista quem caiu', 'perdi a pessoa de vista', 'a pessoa que caiu sumiu'], 'Homem ao mar', ['sos']);
             const pan = protocolo(['sem governo', 'barco sem governo', 'pane no barco'], 'PAN-PAN');
             const guia = ['como funciona o piloto automático', 'alarme de âncora'].map((q) => h(q).fonte === D.guias.g_eletronicos);
             // o trecho mostrado é do guia do equipamento perguntado (a.ref começa pela fonte), não o do topo da busca, que era de outro
@@ -542,7 +588,7 @@ def main():
         # partida nos bancos; depois do disparo do sistema fixo, o §3 do Seafire (com seguranca: sem ele, o gerador/motores respondiam
         # com a resposta pronta); o alarme de âncora e o "como fundear" no plotter (g_eletronicos §3), não no contador de corrente nem no
         # recolher do guincho; "ar condicionado" na Climatização §1 e §3 (o "ar" solto puxava o §4 "Fluxo de ar fraco"); pessoa ao mar no protocolo.
-        rev6 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados;
+        rev6 = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados, h = (q) => (B.buscaBase(q, 1)[0] || {}).d || {};
             const resp = (q) => B.answer(q, { platform: 'app', commit: false });
             const onde = (qs, g, sec, seg) => qs.filter((q) => { const a = resp(q); return !(a.key === 'base' && a.ref === D.guias[g] + ' · §' + sec && !!a.seguranca === !!seg); })
               .map((q) => q + ' → ' + resp(q).key + ' ' + resp(q).ref);
@@ -562,7 +608,9 @@ def main():
               ancora: onde(['alarme de âncora', 'como fundear'], 'g_eletronicos', '3 · Alarme de âncora'),
               arLigar: onde(['como ligar o ar condicionado'], 'g_clima', '1 · Ligar'),
               arFiltro: onde(['trocar o filtro do ar condicionado'], 'g_clima', '3 · Alarme de fluxo'),
-              mar: onde(['pessoa ao mar', 'pessoa ao mar, o que faço'], 'protocolo', 'Homem ao mar', true) }; }""")
+              // 1b, quarta revisão: «pessoa ao mar» é `sos` (local, com os passos do MOB); o buscaBase segue nomeando o trecho do protocolo, que é o que esta verificação protege
+              mar: ['pessoa ao mar', 'pessoa ao mar, o que faço'].filter((q) => { const a = resp(q), x = h(q); return !((a.key === 'sos' || (a.key === 'base' && a.seguranca)) && x.fonte === D.guias.protocolo && x.secao === 'Homem ao mar' && x.seguranca); })
+                .map((q) => q + ' → ' + resp(q).key + ' ' + h(q).secao) }; }""")
         # Revisão 7 do C5: (a) pergunta que só diz o nome do equipamento (plotter, radar, Garmin, Icom, Fusion, som, áudio, motor) nunca traz
         # trecho de segurança ao topo nem à resposta, e o que vai ao guia ou à IA não é barrado por `seguranca`; (b) num guia misto o título
         # do trecho de segurança ainda o nomeia (a pressão de óleo baixa, a água entrando, o DSC, a identificação do AIS, o "antes de largar");
@@ -616,7 +664,7 @@ def main():
             ('revisão 6 do C5: "alarme de âncora" e "como fundear" mostram o g_eletronicos §3 (alarme no plotter), não o contador de corrente nem o recolher do guincho', not rev6['ancora'], rev6['ancora']),
             ('revisão 6 do C5: "como ligar o ar condicionado" é a Climatização §1 e "trocar o filtro do ar condicionado" o §3 (o "ar" solto puxava o §4 "Fluxo de ar fraco")',
              not (rev6['arLigar'] or rev6['arFiltro']), (rev6['arLigar'], rev6['arFiltro'])),
-            ('revisão 6 do C5: "pessoa ao mar" traz o protocolo de homem ao mar, com seguranca (o "mar" sozinho não nomeia, o identCom "pessoa" sim)', not rev6['mar'], rev6['mar']),
+            ('revisão 6 do C5: "pessoa ao mar" nomeia o protocolo de homem ao mar na busca, com seguranca (o "mar" sozinho não nomeia, o identCom "pessoa" sim), e a resposta é local (sos)', not rev6['mar'], rev6['mar']),
             ('revisão 5 do C5: "como ligar o ar", "…o ar condicionado" e "…desligar o ar" têm a Climatização no topo (§1 Ligar e §5 Desligar)',
              not rev5['clima'] and rev5['climaSec'] == ['1 · Ligar', '5 · Desligar'], (rev5['clima'], rev5['climaSec'])),
             ('revisão 5 do C5: homem ao mar e PAN-PAN escritos com as palavras do trecho (caiu, vista, governo, pane) trazem o protocolo, com seguranca, e não vão à IA',
@@ -820,6 +868,7 @@ def emergencia_1b(pg, res):
     controle = [p for p, a in pg.evaluate(EM_EMERG, [confere.pad(q) for q in ('o barco bateu em uma pedra', 'bateu num banco de areia', 'bateu em outro barco')]) if not a]
     falhas += conta('1b (revisão): «bateu em um/uma/num/numa <unidade, onda ou rajada>» nunca é emergência (%d frases) e a batida em pedra, banco e outro barco é' % len(ps), not batidas and not controle, (batidas[:3], controle))
     falhas += grades_2a_revisao(pg)
+    falhas += grades_4a_revisao(pg)
     boias = pg.evaluate("""(ws) => { const B = window.CapitaoBrain; return ws.map((w) => [w, B.answer('a boia ' + w + ' está travada', { platform: 'app', commit: false }).key]).concat([['', B.answer('a boia está travada', { platform: 'app', commit: false }).key]]); }""", BOIA_FORA_ESPERADA)
     ruins = [(w, k) for w, k in boias if (k == 'salvatagem') != (w == '')]
     faltam = [w for w in BOIA_FORA_ESPERADA if w not in L['BOIA_FORA']]
@@ -928,6 +977,119 @@ def grades_2a_revisao(pg):
     dif = [q for _, qs, _ in G for q in qs if bool(r[confere.pad(q)]) != bool(confere.emergencia(confere.pad(q)))]
     falhas += conta('1b (revisão 2): a emergencia() do cérebro e a do gerador dão o mesmo resultado nas %d frases das grades' % len(todas), not dif, dif[:6])
     return falhas
+
+
+# Quarta revisão da 1b (achados da revisão do commit a237ba8): as mesmas grades por classe, agora com a vizinhança das frases pedidas (perigo, água a bordo, encalhe,
+# pessoa na água, saúde, fogo, governo e propulsão, combustível e gás, alarme do porão). Cada grade prova os dois lados: a frase de emergência abre o `sos` e a de rotina ao
+# lado (o motor que engasga, o tanque de água doce, a conversa, o controle remoto) não. Uma palavra tirada de uma lista ou uma guarda tirada de uma regex reprova aqui.
+def grades_4a_revisao(pg):
+    falhas = 0
+    G = [
+        ('perigo, risco de vida e pedido de ajuda urgente', ['estamos em perigo', 'estou em perigo', 'estamos em perigo de vida', 'risco de vida', 'corremos risco de vida',
+         'perigo de morte', 'risco de morte', 'preciso de ajuda urgente', 'preciso urgente de ajuda', 'socorro urgente', 'estamos perdidos no mar'], True),
+        ('perigo e risco que não são de vida (carta, clima, navegação noturna)', ['zona de perigo da carta', 'perigo isolado no canal', 'qual o perigo de navegar à noite',
+         'qual o risco de chuva hoje', 'a tarefa é urgente', 'manutenção urgente do gerador'], False),
+        ('água a bordo: «pegando água», «entrando muita água»', ['o barco está pegando água', 'a lancha pegou água', 'estamos pegando água', 'tá entrando muita água',
+         'está entrando muita água no barco', 'está entrando bastante água', 'entrando muita água'], True),
+        ('pegar água do cais, do tanque ou para o gelo', ['estou pegando água no cais', 'estamos pegando água doce', 'estamos pegando água para o gelo', 'pegando água mineral',
+         'vou pegar água no tanque'], False),
+        ('encalhe, fundo, pedra e batida que vem aí', ['vamos bater', 'vamos bater!', 'vamos bater numa pedra', 'vamos bater no cais', 'vamos bater em outro barco', 'ai vamos bater',
+         'o barco raspou no fundo', 'raspamos no fundo', 'encostamos no fundo', 'encostamos numa pedra', 'raspou numa laje', 'estamos em cima de uma pedra', 'ficamos numa laje',
+         'estamos sobre uma pedra', 'prestes a colidir', 'quase encalhar'], True),
+        ('bater papo, foto, martelo ou recorde; a âncora, o ferro e o mergulhador que raspam ou encostam no fundo', ['vamos bater um papo', 'vamos bater uma foto', 'vamos bater o martelo',
+         'vamos bater o recorde', 'a âncora raspou no fundo', 'a sonda raspou no fundo', 'o mergulhador encostou no fundo', 'a poita encostou no fundo', 'a corrente encostou no fundo',
+         'estamos nos corais', 'estamos num recife de coral'], False),
+        ('pessoa ao mar, perdida de vista, afogada ou «a pessoa que caiu»', ['mulher ao mar', 'pessoa ao mar', 'criança ao mar', 'o marinheiro foi ao mar', 'tripulante foi ao mar',
+         'meu amigo foi ao mar', 'o pai foi ao mar', 'ele se afogou', 'ela se afogou', 'dois se afogaram', 'perdi o mergulhador de vista', 'perdi meu amigo de vista',
+         'perdemos a mulher de vista', 'perdi a pessoa de vista', 'perdemos o homem de vista', 'perdi o meu marido de vista', 'ninguém consegue ver a pessoa que caiu',
+         'não vejo o amigo que caiu', 'não vejo quem caiu'], True),
+        ('perder de vista o barco, a marina ou o celular; ir ao mar', ['perdi o celular de vista', 'perdemos o barco de vista', 'perdemos a marina de vista', 'a pessoa da marina foi embora',
+         'vamos ao mar amanhã', 'o barco foi ao mar', 'a gente foi ao mar ontem'], False),
+        ('saúde: respirar, coração, fratura, corte, queimadura, engasgo, mal-estar e quem foi atingido', ['ele parou de respirar', 'ela não respira', 'ele não está respirando',
+         'a pessoa não respira', 'ele ainda não respira', 'meu filho não respira', 'ataque cardíaco a bordo', 'ataque cardíaco', 'parada cardíaca', 'enfarte', 'ele teve um enfarte',
+         'fratura exposta', 'corte profundo no braço', 'cortou a mão feio', 'ela cortou o pé', 'quebrou o braço', 'ela quebrou a perna', 'o braço está quebrado', 'ele está engasgado',
+         'a criança está engasgada', 'ele engasgou com a comida', 'queimou a mão no escapamento', 'queimei a mão', 'pessoa passando mal no barco', 'ele passou mal', 'hipotermia',
+         'cabo estourou e acertou alguém', 'o cabo atingiu um tripulante', 'prendeu a mão no cabo', 'esmagou o dedo', 'dificuldade para respirar', 'ele está inconsciente'], True),
+        ('o motor que engasga, o tanque que não respira, cortar a energia ou o combustível, queimar fusível, lâmpada ou motor, quebrar uma peça, o braço do guincho',
+         ['o motor engasgou', 'o motor está engasgando', 'o respiro do tanque não respira', 'o tanque não respira', 'cortou a energia', 'cortou o motor', 'cortou o combustível',
+          'queimou o fusível', 'a lâmpada queimou', 'queimou o motor de partida', 'quebrou o suporte da tela', 'quebrou a tampa do tanque', 'quebrou o braço do guincho',
+          'quebrou o braço do limpador', 'esmagou a lata', 'atingiu a meta', 'acertou o rumo', 'acertou a posição', 'prendeu o cabo na cleat'], False),
+        ('fogo sem a palavra e explosão', ['tem chama no painel', 'tem chama na cozinha', 'temos chama no motor', 'chama no painel', 'chama na praça de máquinas', 'vi um barco com chama no casco',
+         'explodiu o motor', 'vai explodir', 'explosão no motor'], True),
+        ('chama do fogão, de vela ou de isqueiro', ['tem chama no fogão?', 'a chama do fogão está azul', 'tem chama de vela', 'a chama do isqueiro', 'sem chama no fogareiro'], False),
+        ('leme, hélice e eixo que emperram, soltam, enroscam ou caem; perda de governo ou de propulsão; barco que não obedece ou está sem controle; motores que pararam; deriva para as pedras',
+         ['o leme emperrou', 'leme preso', 'o leme caiu', 'o leme saiu', 'o leme do barco falhou', 'perda de governo', 'perda de propulsão', 'perdemos a propulsão', 'sem propulsão',
+          'estamos sem propulsão e sem governo', 'o barco não obedece ao leme', 'o barco não governa', 'estamos sem controle', 'o barco está sem controle', 'a lancha ficou fora de controle',
+          'hélice quebrada', 'a hélice enroscou', 'a hélice enroscou numa rede', 'a hélice travou', 'o eixo soltou', 'o eixo travou', 'perdemos os dois motores', 'perdi a direção',
+          'os dois motores pararam', 'os 2 motores apagaram', 'ambos os motores falharam', 'vento nos levando para as pedras', 'a correnteza está nos levando para as pedras',
+          'a maré está nos jogando contra as rochas', 'estamos derivando'], True),
+        ('leme pesado ou com folga, hélice a trocar, eixo lubrificado, controle remoto, um motor desligado, a corrente que leva para o sul, as pedras de passeio',
+         ['o leme está pesado', 'o leme está com folga', 'trocar a hélice', 'a hélice está limpa', 'a hélice nova chegou', 'o eixo está lubrificado', 'estamos sem controle remoto',
+          'perdi o controle remoto', 'perdi o controle do ar', 'o ar está sem controle remoto', 'perdemos o sinal do GPS', 'os dois motores desligaram', 'os motores estão desligados',
+          'a corrente nos leva para o sul', 'estamos indo para as pedras de Cabeçudas', 'o vento está forte'], False),
+        ('combustível e gás que vazam (a ordem inversa) ou estão no porão', ['o diesel está vazando', 'tem diesel vazando', 'combustível vazando', 'o combustível está vazando',
+         'tem diesel vazando no porão', 'tem combustível no porão', 'diesel no porão', 'combustível no porão', 'vazamento no tanque de diesel', 'vazamento na linha de combustível',
+         'o tanque de diesel está vazando', 'o tanque de combustível está furado', 'gás vazando', 'o gás está vazando', 'cheiro forte de gás', 'cheiro muito forte de diesel',
+         'cheiro estranho de combustível', 'cheiro de gasolina'], True),
+        ('o tanque de água doce que vaza, o diesel no tanque, o consumo, o gás do fogão, o preço do combustível', ['o tanque de água doce está vazando', 'o tanque de água está vazando',
+         'diesel no tanque', 'o consumo de diesel está alto', 'o gás do fogão acabou', 'quanto custa o combustível no cais', 'como sangrar o combustível do motor', 'o cheiro do café'], False),
+        ('o alarme de nível do porão que disparou ou está tocando (até 3 palavras entre «alarme» e «porão»)', ['o alarme de nível do porão disparou', 'o alarme de nível do porão está tocando',
+         'o alarme do painel do porão disparou', 'o alarme da bomba de porão soou', 'disparou o alarme de nível do porão', 'tocou o alarme do painel do porão', 'o alarme disparou no porão',
+         'o alarme tocou no porão'], True),
+        ('o alarme do porão em pergunta ou rotina (ativado, ligado, testar, como funciona, qual)', ['o alarme do porão está ativado', 'o alarme de nível do porão está ligado?',
+         'testar o alarme de nível do porão', 'como funciona o alarme do painel do porão', 'qual o alarme de nível do porão', 'como testo o alarme do painel do porão'], False),
+    ]
+    todas = [confere.pad(q) for _, qs, _ in G for q in qs]
+    r = {p: a for p, a in pg.evaluate(EM_EMERG, todas)}
+    for nome, qs, esperado in G:
+        ruins = [q for q in qs if bool(r[confere.pad(q)]) != esperado]
+        falhas += conta('1b (quarta revisão): %s: %s (%d frases)' % (nome, 'é emergência' if esperado else 'não é emergência', len(qs)), not ruins, ruins[:6])
+    dif = [q for _, qs, _ in G for q in qs if bool(r[confere.pad(q)]) != bool(confere.emergencia(confere.pad(q)))]
+    falhas += conta('1b (quarta revisão): a emergencia() do cérebro e a do gerador dão o mesmo resultado nas %d frases das grades' % len(todas), not dif, dif[:6])
+    # as frases de emergência da grade abrem no aparelho: a chave é `sos` e a IA não é chamada (a trava §2.3, na ponta que o usuário toca)
+    pos = [q for _, qs, e in G if e for q in qs]
+    resp = pg.evaluate("""(qs) => { const B = window.CapitaoBrain; return qs.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return [q, a.key, B.pedeIA(a, q)]; }); }""", pos)
+    ruins = [(q, k, ia) for q, k, ia in resp if k != 'sos' or ia]
+    falhas += conta('1b (quarta revisão): as %d frases de emergência das grades abrem a resposta `sos` e não vão à IA' % len(pos), not ruins, ruins[:6])
+    # PROMPT §2.2: o relato de água a bordo, de porão e de abandono vai para `sos` COM o passo a passo (protocolos.alagamento / abandono), antes da ordem geral; o resto, não
+    sos = pg.evaluate("""() => { const B = window.CapitaoBrain, P = window.CapitaoDados.protocolos, out = {};
+      ['o barco está pegando água', 'tá entrando muita água', 'o porão está cheio', 'o alarme de nível do porão disparou', 'a bomba de porão não para', 'furou o casco',
+       'preciso abandonar o barco', 'vamos abandonar o barco, o porão está cheio', 'tem diesel no porão', 'cheiro forte de gás', 'alguém caiu na água',
+       'MAYDAY, homem ao mar!', 'tem fogo no motor', 'ele parou de respirar']
+        .forEach((q) => { const a = B.answer(q, { platform: 'app', commit: false }); out[q] = { key: a.key, text: a.text, fala: B.falaCurta(a), l1: a.text.split('\\n')[0] }; });
+      const pp = B.answer('como faço um PAN-PAN?', { platform: 'app', commit: false }), c16 = B.answer('roteiro do canal 16', { platform: 'app', commit: false });
+      return { out, alag: P.alagamento[0], aband: P.abandono[0], panpan: P.panpan, pp: { key: pp.key, text: pp.text }, c16: { key: c16.key, text: c16.text } }; }""")
+    O = sos['out']
+    com_alag = ['o barco está pegando água', 'tá entrando muita água', 'o porão está cheio', 'o alarme de nível do porão disparou', 'a bomba de porão não para', 'furou o casco',
+                'vamos abandonar o barco, o porão está cheio']
+    com_aband = ['preciso abandonar o barco', 'vamos abandonar o barco, o porão está cheio']
+    ruins = []
+    for q, o in O.items():
+        if o['key'] != 'sos': ruins.append('%s: chave %s' % (q, o['key']))
+        if not o['l1'].startswith('Emergência — abra o SOS.'): ruins.append('%s: 1ª linha %r' % (q, o['l1']))
+        if (sos['alag'] in o['text']) != (q in com_alag): ruins.append('%s: %s o passo do alagamento' % (q, 'sem' if q in com_alag else 'com'))
+        if (sos['aband'] in o['text']) != (q in com_aband): ruins.append('%s: %s o passo do abandono' % (q, 'sem' if q in com_aband else 'com'))
+        if q in com_alag + com_aband and (sos['alag'] in o['text'] or sos['aband'] in o['text']) and o['text'].index('Ordem (') < max(o['text'].find(sos['alag']), o['text'].find(sos['aband'])):
+            ruins.append('%s: o passo do relato vem depois da ordem geral' % q)
+        if confere.R_COORD.search(o['text']) or re.search(r'SEM DADOS|snapshot|\d\s*(?:bar|rpm|°C)', o['text']): ruins.append('%s: coordenada, SEM DADOS ou leitura do quadro' % q)
+    falhas += conta('1b (quarta revisão): o relato de água a bordo, do porão, do casco e de abandono abre o `sos` com o passo do protocolos (alagamento, abandono) logo depois da instrução, antes da '
+                    'ordem geral; combustível no porão, gás, pessoa na água, fogo e saúde não levam o passo do alagamento (não se bombeia diesel); nada de coordenada nem leitura do quadro',
+                    not ruins and len(O) == 14, ruins)
+    # a baliza de sinalização não é o EPIRB (achado da revisão: «por que a baliza do canal está piscando?» devolvia o «Disparo por engano… avise no canal 16» e barrava a IA): com palavra de
+    # sinalização e sem palavra só do EPIRB a busca não traz o guia do EPIRB nem a seção EPIRB do protocolo; com «teste», «onde fica», «epirb» ou «autoteste», traz
+    bal = pg.evaluate("""() => { const B = window.CapitaoBrain, f = (q) => B.buscaBase(q, 3).map((x) => x.d.fonte + ' · ' + x.d.secao);
+      return { sinal: ['por que a baliza do canal está piscando?', 'baliza do canal', 'a baliza do canal está piscando', 'baliza cardinal', 'luz da baliza', 'a baliza de entrada da barra', 'o teste da baliza do canal', 'teste da luz da baliza'].map((q) => [q, f(q)]),
+               epirb: ['teste da baliza', 'como testar a baliza?', 'onde fica a baliza', 'a baliza do epirb', 'autoteste da baliza no canal 16', 'epirb no canal 16'].map((q) => [q, f(q)[0] || '']) }; }""")
+    ruins = [(q, t) for q, t in bal['sinal'] if [x for x in t if 'EPIRB' in x]] + [(q, t) for q, t in bal['epirb'] if not t.startswith('Guia de bordo — EPIRB')]
+    falhas += conta('1b (quarta revisão): baliza de sinalização (canal, cardinal, luz, barra, piscando) não traz o EPIRB na busca; teste, «onde fica», epirb e autoteste da baliza trazem', not ruins, ruins)
+    # protocolos.panpan é lido: a rota do canal 16 (onde «PAN-PAN» cai) o traz inteiro, no lugar da frase solta
+    falhas += conta('1b (quarta revisão): «PAN-PAN» e o roteiro do canal 16 trazem o protocolos.panpan, inteiro, e o roteiro MAYDAY continua', sos['pp']['key'] == 'canal16' and sos['panpan'] in sos['pp']['text']
+                    and sos['panpan'] in sos['c16']['text'] and ' — '.join(PROTOCOLOS_ROTEIRO(pg)) in sos['c16']['text'], (sos['pp']['key'], sos['pp']['text'][-200:]))
+    return falhas
+
+
+def PROTOCOLOS_ROTEIRO(pg):
+    return pg.evaluate("() => window.CapitaoDados.protocolos.roteiro")
 
 
 def conta(nome, cond, extra=''):
