@@ -8,8 +8,11 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
 - t de 0 a 149 (`quadro(t)`): todos os campos finitos, sem -0, com o número de casas do D.campos, e o quadro ⇔ catálogo nos dois sentidos;
 - paridade Python × JS (§6.5): `quadro(t)` t = 0…149, uma amostra do dia, as 1.150 pontas das 575 emendas e as pontas da âncora, campo a campo
   contra `confere.em()` (o port que o gerador usa; o gerador não exporta os 150 quadros, então a conta é refeita aqui em Python, com a mesma
-  fórmula e a partir do D.replay do capitao-dados.js); os 86.400 segundos do dia conferem com `--dia`. Seno, cosseno, asen e atan2 do V8 e do
-  CPython podem diferir de 1 ulp: só nos campos derivados deles (TRIG) aceita-se 1 unidade da última casa, e o teste conta quantos a usaram;
+  fórmula e a partir do D.replay do capitao-dados.js); os 86.400 segundos do dia conferem com `--dia`. A paridade é EXATA, campo a campo: nem 1 unidade
+  da última casa passa (um proa sem o ruído de 0,4° ou um COG fora por 0,5° mexem 1 unidade em alguns segundos, com `casas` 0 e 1, e a tolerância
+  antiga os aceitava). Seno, cosseno, asen e atan2 do V8 e do CPython dão o mesmo resultado nesta máquina. Em outra máquina, se o libm derivar 1 ulp,
+  `CAPITAO_TOL_TRIG=1` volta a aceitar 1 unidade da última casa SÓ nos campos TRIG, conta os usos no texto da conferência; nos mutantes a tolerância
+  fica sempre desligada;
 - emenda: o laço (|v(149) − v(0)| ≤ o maior passo de 1 s da volta, por campo do laço) e, no dia inteiro, as 575 emendas de 150 s fora da âncora
   (segundos consecutivos, `em(N·150 − 1 s)` × `em(N·150)`): nenhum campo numérico passa do maior passo de 1 s do dia, e destino, próximo ponto e ETA
   não mudam; a única descontinuidade é a virada das 07:00 (contadores, tanques e a rota que recomeça), com posição e COG contínuos;
@@ -206,20 +209,28 @@ VOLTA_JS = r"""() => {
            tipos: q[0] && { alarmes: Array.isArray(q[0].alarmes), simulado: 'simulado' in q[0] } };
 }"""
 TRIG = ('proa_graus', 'stw_nos', 'vento_aparente_nos', 'vento_aparente_angulo', 'leme_graus')   # derivados de sin, cos, asin, atan2 e hypot
+TOL_TRIG = os.environ.get('CAPITAO_TOL_TRIG') == '1'   # só por escolha explícita (outra máquina com libm que deriva 1 ulp); o padrão é a paridade exata
+TOL_USOS = []   # (contexto, campo, py, js) das diferenças de 1 unidade aceitas com CAPITAO_TOL_TRIG=1
 
 
 def compara(js, py, nome_ctx):
-    """Diferenças entre o quadro do JS e o do Python: (exatas, dentro da tolerância de 1 unidade da última casa nos derivados trigonométricos)."""
-    exatas, tol = [], []
+    """Diferenças entre o quadro do JS e o do Python, campo a campo: [(contexto, campo, py, js)]. Exata: nem 1 unidade da última casa passa.
+    Com CAPITAO_TOL_TRIG=1 (escolha explícita) e só nos campos TRIG, 1 unidade da última casa vai para TOL_USOS em vez de reprovar."""
+    exatas = []
     for k in set(py) | set(js):
         a, b = py.get(k, '<falta>'), js.get(k, '<falta>')
         if a == b:
             continue
-        if k in TRIG and isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and abs(a - b) <= 1.0001 * 10 ** (-C.casas_de(D['campos'], k)):
-            tol.append((nome_ctx, k, a, b))
+        if TOL_TRIG and k in TRIG and isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and abs(a - b) <= 1.0001 * 10 ** (-C.casas_de(D['campos'], k)):
+            TOL_USOS.append((nome_ctx, k, a, b))
         else:
             exatas.append((nome_ctx, k, a, b))
-    return exatas, tol
+    return exatas
+
+
+def sufixo_tol():
+    """Vazio no padrão (paridade exata); com CAPITAO_TOL_TRIG=1, diz quantas diferenças de 1 unidade foram aceitas até agora."""
+    return ' [CAPITAO_TOL_TRIG=1: %d diferença(s) de 1 unidade aceitas até aqui]' % len(TOL_USOS) if TOL_TRIG else ''
 
 
 def a_volta(b):
@@ -231,35 +242,29 @@ def a_volta(b):
     ok('quadro ⇔ catálogo (D.campos) nos dois sentidos, e o simulado: true não está no em()', r['soNoQuadro'] == [] and r['soNoCatalogo'] == [] and r['tipos'] == {'alarmes': True, 'simulado': False},
        (r['soNoQuadro'], r['soNoCatalogo'], r['tipos']))
     anc_s = r['anc'] // 1000
-    exatas, tol = [], []
+    exatas = []
     for t in range(VOLTA):
-        e, a = compara(r['q'][t], C.em(P, r['ini'] + t, ancora_s=anc_s), 't=%d' % t)
-        exatas += e
-        tol += a
-    ok('paridade: quadro(t) = confere.em() campo a campo, t = 0…149 (%d usaram a tolerância de 1 unidade nos derivados trigonométricos)' % len(tol), exatas == [], exatas[:4])
+        exatas += compara(r['q'][t], C.em(P, r['ini'] + t, ancora_s=anc_s), 't=%d' % t)
+    ok('paridade exata: quadro(t) = confere.em() campo a campo, t = 0…149, nenhuma diferença nem de 1 unidade da última casa' + sufixo_tol(), exatas == [], exatas[:4])
     # uma amostra do dia, as pontas das 576 emendas e as da âncora (segundos absolutos do dia de bordo)
     random.seed(7)
     segs = sorted(set(random.sample(range(150, 86400), 1200) + [n * 150 + d for n in range(1, 576) for d in (-1, 0)] + [0, 1, 86398, 86399]))
     js = pg.evaluate("""(segs) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), o = {};
       segs.forEach((s) => { o[s] = R.em(anc + s * 1000); }); return { anc, o }; }""", segs)
-    exatas, tol = [], []
+    exatas = []
     for s in segs:
-        e, a = compara(js['o'][str(s)], C.em(P, s, ancora_s=js['anc'] // 1000), 'seg=%d' % s)
-        exatas += e
-        tol += a
-    ok('paridade: %d segundos do dia (amostra, as 1.150 pontas das emendas e as pontas da âncora) iguais ao confere.em() (%d na tolerância)' % (len(segs), len(tol)),
+        exatas += compara(js['o'][str(s)], C.em(P, s, ancora_s=js['anc'] // 1000), 'seg=%d' % s)
+    ok('paridade exata: %d segundos do dia (amostra, as 1.150 pontas das emendas e as pontas da âncora) iguais ao confere.em()' % len(segs) + sufixo_tol(),
        exatas == [], exatas[:4])
     if '--dia' in sys.argv:   # opcional (~4 min): os 86.400 segundos do dia de bordo, em blocos, contra o confere.em()
-        exatas, tol, n = [], [], 0
+        exatas, n = [], 0
         for ini in range(0, 86400, 3000):
             blocos = pg.evaluate("""([ini, fim]) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), o = [];
               for (let s = ini; s < fim; s++) o.push(R.em(anc + s * 1000)); return { anc, o }; }""", [ini, min(ini + 3000, 86400)])
             for k, q in enumerate(blocos['o']):
-                e, a = compara(q, C.em(P, ini + k, ancora_s=blocos['anc'] // 1000), 'seg=%d' % (ini + k))
-                exatas += e
-                tol += a
+                exatas += compara(q, C.em(P, ini + k, ancora_s=blocos['anc'] // 1000), 'seg=%d' % (ini + k))
                 n += 1
-        ok('paridade (--dia): os %d segundos do dia de bordo iguais ao confere.em() (%d na tolerância)' % (n, len(tol)), exatas == [] and n == 86400, exatas[:4])
+        ok('paridade exata (--dia): os %d segundos do dia de bordo iguais ao confere.em()' % n + sufixo_tol(), exatas == [] and n == 86400, exatas[:4])
     # contadores: contadoresEm(ms) são os campos de origem contador do quadro; o último segundo do dia = a base + o consumo do dia (§6.5)
     cont = [c for c, d in D['campos'].items() if d.get('origem') == 'contador']
     rc = pg.evaluate("""(cont) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), ms = anc + 1234 * 1000, e = R.em(ms), c = R.contadoresEm(ms), c2 = R.contadores(ms), fim = R.contadoresEm(anc + 86399 * 1000);
@@ -305,12 +310,10 @@ def paridade_plantada(b):
     segs = sorted(set(list(range(0, 700)) + [n * 150 + d for n in range(1, 40) for d in (-1, 0)] + [3000, 5000, 20000, 43200, 86398, 86399]))
     js = pg.evaluate("""(segs) => { const R = window.CapitaoReplay, anc = window.CapitaoAgora.ancora(Date.now()), o = {};
       segs.forEach((s) => { o[s] = R.em(anc + s * 1000); }); return { anc, o }; }""", segs)
-    exatas, tol = [], []
+    exatas = []
     for s in segs:
-        e, a = compara(js['o'][str(s)], C.em(P2, s, ancora_s=js['anc'] // 1000), 'seg=%d' % s)
-        exatas += e
-        tol += a
-    ok('paridade com o D plantado: %d segundos (0…699, as emendas dos 40 primeiros laços e o resto do dia) iguais ao confere.em() do mesmo D (%d na tolerância)' % (len(segs), len(tol)),
+        exatas += compara(js['o'][str(s)], C.em(P2, s, ancora_s=js['anc'] // 1000), 'seg=%d' % s)
+    ok('paridade exata com o D plantado: %d segundos (0…699, as emendas dos 40 primeiros laços e o resto do dia) iguais ao confere.em() do mesmo D' % len(segs) + sufixo_tol(),
        exatas == [], exatas[:4])
     vento = [js['o'][str(s)]['vento_verdadeiro_angulo'] for s in range(0, 150)]
     passo = [abs((vento[(i + 1) % 150] - vento[i] + 540) % 360 - 180) for i in range(150)]
@@ -1087,6 +1090,10 @@ MUTANTES = [
     ('a saída em /SOS- removida (o S1 passaria a ter CapitaoReplay)', [("if (EM_SOS || window.CapitaoReplay) return;", "if (window.CapitaoReplay) return;")], lambda b: no_sos(b, so_s1=True)),
     ('o D.simulacao ignorado (o modo real andaria)', [("if (!d || d.simulacao !== true || !d.replay", "if (!d || !d.replay")], modo_real_inicial),
     ('em() que devolve o D.snapshot.quadro quando falha', [("function em(ms) { try { return quadroEm(ms, true); }", "function em(ms) { try { return quadroEm(ms, true) || window.CapitaoDados.snapshot.quadro; }")], isolamento_falha),
+    ('a proa sem o ruído de 0,4° (só mexe 1 unidade em alguns segundos: a paridade exata acusa, a tolerância de 1 unidade não acusava)',
+     [("var proa = pmod(cog - delta + rp[0] * ruido(rp[1], seg), 360);", "var proa = pmod(cog - delta, 360);")], a_volta),
+    ('o vento aparente com o COG fora por 0,5° (1 unidade da última casa em alguns segundos: a tolerância de 1 unidade não acusava)',
+     [("sog * Math.cos(cog * RAD);\n    o.vento_aparente_nos", "sog * Math.cos((cog + 0.5) * RAD);\n    o.vento_aparente_nos")], a_volta),
     ('a interpolação dos ângulos sem o arco mais curto (o vento que cruza o norte daria a volta ao contrário)',
      [("(pmod(b - a + 540, 360) - 180) * f", "(b - a) * f")], a_volta),
     ('o piso do diesel removido (o dia acabaria abaixo da reserva)',
@@ -1103,9 +1110,10 @@ MUTANTES = [
 
 
 def mutantes(b):
-    global MUT, CAPTURA
-    print('Mutantes do motor: cada defeito plantado tem de ser acusado pelo teste que cuida dele')
+    global MUT, CAPTURA, TOL_TRIG
+    print('Mutantes do motor: cada defeito plantado tem de ser acusado pelo teste que cuida dele (paridade sempre exata, sem a tolerância do CAPITAO_TOL_TRIG)')
     src = le('capitao-replay.js')
+    tol_antes, TOL_TRIG = TOL_TRIG, False   # a tolerância opcional nunca esconde um defeito plantado
     for nome, trocas, teste in MUTANTES:
         faltam = [t for t, _ in trocas if src.count(t) != 1]
         if faltam:
@@ -1124,6 +1132,7 @@ def mutantes(b):
             sys.stdout = sai
             achados, MUT, CAPTURA = CAPTURA, None, None
         ok('mutante: %s — acusado (%d conferência(s) falham)' % (nome, len(achados)), len(achados) > 0, achados)
+    TOL_TRIG = tol_antes
 
 
 def main():
