@@ -71,7 +71,8 @@
   function now() { var d = new Date(); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return { d: p(d.getDate()) + '/' + p(d.getMonth() + 1), t: p(d.getHours()) + ':' + p(d.getMinutes()), iso: d.toISOString() }; }
   // Diário: só cresce. Linhas do app (localStorage, mais nova primeiro) + linhas da fonte (Diário de bordo DEMO no Drive).
   function loadDiario() { var v = read(K.diario, []); return Array.isArray(v) ? v.filter(function (e) { return e && typeof e.t === 'string'; }) : []; }
-  function addDiario(e) { var n = now(); var list = loadDiario(); var entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e); list.unshift(entry); write(K.diario, list); return entry; }
+  function addDiario(e) { return congela(function () { return addDiario1(e); }); }
+  function addDiario1(e) { var n = now(); var list = loadDiario(); var entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e); list.unshift(entry); write(K.diario, list); return entry; }
   function diarioFonte() { return (D.diario || []).map(function (x) { return { d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: (D.diarioFonte || 'diário') }; }); }
   function loadExec() { var v = read(K.exec, {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
   function markExec(task) { var m = loadExec(); m[task] = now(); write(K.exec, m); return m; }
@@ -90,7 +91,7 @@
   function grau3(x) { return typeof x === 'number' ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : '—'; }
   function horas(x) { if (typeof x !== 'number' || !isFinite(x)) return '—'; var s = x.toFixed(1).split('.'); return mil(+s[0]) + ',' + s[1]; }
   var M = S.motores || {}, G = S.gerador || {}, DI = S.diesel || {}, T = S.tanques || {};
-  var SNAP = {
+  function montaSnap() { return {
     quando: S.quando || SD, hora: S.hora || '', dia: S.dia || '',
     pos: S.gps && S.gps.texto ? S.gps.texto : 'posição SEM LEITURA',
     local: (S.estado || SD) + ' · ' + (S.local || SD),
@@ -98,7 +99,8 @@
     dieselHora: (DI.nota || 'última leitura') + ' · ' + (DI.hora || SD),
     motores: M.rpm ? 'motores ' + (M.estado || 'desligados') + ' — última leitura com motores ligados ' + M.hora + ' (marcha lenta, ' + (M.marcha || 'neutro') + '): ' + M.rpm.join('/') + ' rpm · óleo ' + M.oleo.map(function (x) { return nb(x); }).join('/') + ' bar · arrefecimento ' + M.arref.join('/') + ' °C' : 'motores: ' + SD,
     fonte: 'coletor NMEA' + DEMO + ' · snapshot ' + (S.quando || SD)
-  };
+  }; }
+  var SNAP = montaSnap();
   var FT = {
     tele: 'Fonte: ' + SNAP.fonte,
     agenda: 'Fonte: ' + (D.agendaFonte || 'agenda de manutenção'),
@@ -107,6 +109,205 @@
     diario: 'Fonte: ' + (D.diarioFonte || 'diário de bordo'),
     proto: 'Fonte: ' + ((D.protocolos && D.protocolos.fonte) || 'protocolo de emergência')
   };
+  // ——— O instante (CONTRATO §1.23, §1.24; PROMPT Fase 3 «Instante») ———
+  // Um instante por pergunta. B.instante() é o do CapitaoAgora (rodapé do capitao-dados.js) com `tend` e `txt` (a tendência dos últimos 30 s e o texto
+  // único de cada medida) quando o rodapé ainda não os traz. Fica congelado no começo da chamada mais externa de answer, ficha, answerAttachment,
+  // resumoAgora e addDiario e é solto num finally (também com exceção); as chamadas aninhadas (answer → ANSWERS → ficha → …) usam o mesmo. A resposta
+  // que sai de uma pergunta leva o instante dela (`_inst`, fora do JSON): a ficha(p, q, a) e o resumoAgora(a) da MESMA pergunta o reaproveitam, mesmo que o
+  // relógio tenha andado entre uma chamada e outra. O cérebro deixou de ler o D.snapshot na carga: S, AUT, CON, M, G, DI, T, SNAP e FT.tele são refeitos
+  // a cada pergunta por recarrega(), do quadro do instante (replay ou coletor) ou, sem quadro vivo, do D.snapshot aninhado como na 1.0.9 (modo real com
+  // simulacao false, tela sem replay): o caminho null → SEM DADOS segue intacto. Em /SOS-/ o instante é nulo antes de qualquer leitura.
+  var CONG = { n: 0, inst: null }, CACHE = { base: null, inst: null }, VIVAS = { replay: 1, coletor: 1 };
+  var S0 = S, AUT0 = AUT, CON0 = CON;
+  function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
+  function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
+  function sinal(x, c) { var A = window.CapitaoAgora, v = A.fmt.arred(x, c); return (v > 0 ? '+' : v < 0 ? '−' : '') + A.fmt.nb(Math.abs(v), c); }
+  // tendência dos últimos 30 s (CONTRATO §1.23): q(ms) − q(ms − 30 s) do replay, com as casas do D.campos; o diesel é a soma do consumo dos motores e do gerador
+  // no mesmo trecho (o quadro arredonda os litros, e em 30 s o consumo fica abaixo de 1 L: 1 casa). Na virada das 07:00 o diesel sai (o abastecimento
+  // atravessaria os 30 s); sem replay (coletor sem histórico, reserva) não há tendência.
+  var TEND_CAMPOS = ['motor_bb_rpm', 'motor_be_rpm', 'motor_bb_oleo_bar', 'motor_be_oleo_bar', 'motor_bb_arref_c', 'motor_be_arref_c', 'sog_nos'];
+  function tendencia(i) {
+    var R = window.CapitaoReplay, A = window.CapitaoAgora, o = {}, agora, antes, s = 0, k, q, n = 0;
+    if (i.fonte !== 'replay' || !R || typeof R.em !== 'function' || !A || !A.fmt) return undefined;
+    try {
+      agora = R.em(i.ms); antes = R.em(i.ms - 30000);
+      if (!agora || !antes) return undefined;
+      TEND_CAMPOS.forEach(function (c) { if (typeof agora[c] === 'number' && typeof antes[c] === 'number') { o[c] = A.fmt.arred(agora[c] - antes[c], casas(c)); n++; } });
+      if (i.ms - 30000 >= A.ancora(i.ms)) {
+        for (k = 1; k <= 30; k++) { q = R.em(i.ms - k * 1000); if (!q || typeof q.consumo_lph !== 'number') { s = null; break; } s += (q.consumo_lph + ((D.consumo && D.consumo.gerador_lph) || 0)) / 3600; }
+        if (s !== null) { o.diesel_litros = A.fmt.arred(-s, 1); n++; }
+      }
+      return n ? o : undefined;
+    } catch (e) { return undefined; }
+  }
+  // "a 0,5 mn da Barra Sul, chegando": a posição relativa, só com a simulação e só dos pontos com fonte (a rota gerada); nunca coordenada
+  function relativaDe(q) {
+    var R = D.rota, A = window.CapitaoAgora, pts, wp = null, k, volta, dest, caminho;
+    if (D.simulacao !== true || !R || !R.base || typeof q.wp_proximo !== 'string' || typeof q.wp_mn !== 'number') return null;
+    pts = [R.base].concat(R.pontos || []);
+    for (k = 0; k < pts.length; k++) if (pts[k] && pts[k].nome === q.wp_proximo) { wp = pts[k]; break; }
+    if (!wp || !wp.rel) return null;
+    volta = !!(R.volta && q.destino === R.volta.nome); dest = !volta && !!(R.destino && q.destino === R.destino.nome);
+    caminho = volta ? R.volta.caminho : dest ? R.destino.caminho : null;
+    if (!caminho) return null;
+    return 'a ' + A.fmt.nb(q.wp_mn, casas('wp_mn')) + ' mn ' + wp.rel + ', ' + ((volta ? wp.id === 'base' : wp.nome === R.destino.nome) ? 'chegando' : caminho);
+  }
+  // alarmes do instante: pela CapitaoAlertas quando existe (a lista única da faixa, da C3 e do chat); sem ela, os do próprio quadro
+  function alarmesTxt(i) {
+    var AL = window.CapitaoAlertas, lista = null, q = i.q.alarmes, A = window.CapitaoAgora, ale = (D.replay && D.replay.alertas) || {};
+    try { if (AL && typeof AL.ativos === 'function') lista = AL.ativos(i.ms); } catch (e) {}
+    if (Array.isArray(lista)) return lista.length ? lista.map(function (a) { return a.rotulo + ': ' + a.texto; }).join(' · ') : 'nenhum alarme ativo';
+    if (!Array.isArray(q) || !q.length) return 'nenhum alarme ativo';
+    return q.map(function (a) {
+      var c = D.campos && D.campos[a.campo], un = c && c.un ? ' ' + c.un : '', ti = (ale[a.id] && ale[a.id].titulo) || (c && c.rotulo) || a.id;
+      return (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ': ' + ti + ' ' + A.fmt.nb(a.valor, casas(a.campo)) + un + ' (limite ' + A.fmt.nb(a.limite, casas(a.campo)) + un + ')';
+    }).join(' · ');
+  }
+  // O texto único de cada medida (CONTRATO §1.23: Main, A1, E1, HUD, answer('telemetria') e `## Navegação agora` mostram este). Só o que o quadro tem; sem coordenada.
+  function textos(i) {
+    var A = window.CapitaoAgora, F = A.fmt, q = i.q, t = {}, c = i.calc || {}, cp = function (n) { return F.campo(q, n); };
+    var com = function (v, suf) { return v === null ? null : v + (suf || ''); };
+    var par = function (a, b, suf) { var x = cp(a), y = cp(b); return x !== null && y !== null ? 'BB ' + x + ' · BE ' + y + suf : null; };
+    var lig = function (v) { return v === true ? 'ligado' : v === false ? 'desligado' : null; };
+    var lado = function (v) { return typeof v === 'number' ? (v < 0 ? ' por bombordo' : v > 0 ? ' por boreste' : '') : ''; };
+    var ang = function (n) { var v = cp(n); return v === null ? null : v + '°'; };
+    var duo = function (a, b, suf) { var x = cp(a), y = cp(b); return x !== null && y !== null ? x + ' / ' + y + suf : null; };
+    t.hora = i.hora;
+    t.sog = com(cp('sog_nos'), ' nós'); t.stw = com(cp('stw_nos'), ' nós');
+    t.rumo = ang('cog_graus'); t.proa = ang('proa_graus'); t.piloto = ang('piloto_rumo');
+    t.leme = typeof q.leme_graus === 'number' ? (F.arred(q.leme_graus, 1) === 0 ? 'no centro' : F.nb(Math.abs(q.leme_graus), 1) + '° a ' + (q.leme_graus < 0 ? 'bombordo' : 'boreste')) : null;
+    t.prof = com(cp('profundidade_m'), ' m');
+    t.rpm = par('motor_bb_rpm', 'motor_be_rpm', ' rpm'); t.oleo = par('motor_bb_oleo_bar', 'motor_be_oleo_bar', ' bar');
+    t.arref = par('motor_bb_arref_c', 'motor_be_arref_c', ' °C'); t.carga = par('motor_bb_carga_pct', 'motor_be_carga_pct', ' %');
+    t.consumo = com(cp('consumo_lph'), ' L/h');
+    t.diesel = cp('diesel_litros') !== null ? cp('diesel_litros') + ' L' + (typeof c.diesel_pct === 'number' ? ' (' + F.nb(c.diesel_pct, 1) + ' %)' : '') : null;
+    t.dieselLados = cp('diesel_bb_pct') !== null && cp('diesel_be_pct') !== null ? 'BB ' + cp('diesel_bb_pct') + ' % · BE ' + cp('diesel_be_pct') + ' %' : null;
+    t.distancia = com(cp('distancia_mn'), ' mn');
+    t.horimetros = [['motor BB ', 'motor_bb_horimetro_h'], ['motor BE ', 'motor_be_horimetro_h'], ['gerador ', 'gerador_horimetro_h']].filter(function (x) { return cp(x[1]) !== null; })
+      .map(function (x) { return x[0] + cp(x[1]) + ' h'; }).join(' · ') || null;
+    t.gerador = lig(q.gerador_ativo) ? lig(q.gerador_ativo) + (q.gerador_ativo && cp('gerador_kw') !== null ? ' · ' + cp('gerador_kw') + ' kW' : '') + (cp('gerador_horimetro_h') !== null ? ' · ' + cp('gerador_horimetro_h') + ' h' : '') : null;
+    t.seakeeper = lig(q.seakeeper_ativo) ? lig(q.seakeeper_ativo) + (q.seakeeper_ativo && cp('seakeeper_volante_rpm') !== null ? ' · volante ' + cp('seakeeper_volante_rpm') + ' rpm' + (cp('seakeeper_volante_pct') !== null ? ' (' + cp('seakeeper_volante_pct') + ' %)' : '') : '') : null;
+    t.b24 = cp('bateria_0_tensao_v') !== null ? 'serviço ' + cp('bateria_0_tensao_v') + ' V' + (cp('bateria_1_tensao_v') !== null ? ' · partida ' + cp('bateria_1_tensao_v') + ' V' : '') : null;
+    t.b12 = com(cp('bateria_2_tensao_v'), ' V');
+    t.tanques = [['água doce ', 'tanque_agua_pct'], ['cinzas ', 'tanque_cinzas_pct'], ['negras ', 'tanque_negras_pct']].filter(function (x) { return cp(x[1]) !== null; })
+      .map(function (x) { return x[0] + cp(x[1]) + ' %'; }).join(' · ') || null;
+    t.porao = cp('porao_bb_nivel') !== null && cp('porao_be_nivel') !== null ? 'BB ' + cp('porao_bb_nivel') + ' cm · BE ' + cp('porao_be_nivel') + ' cm' + (typeof q.bomba_porao_ciclos === 'number' ? ' · ' + q.bomba_porao_ciclos + (q.bomba_porao_ciclos === 1 ? ' ciclo' : ' ciclos') + ' da bomba na última hora' : '') : null;
+    t.ancora = typeof q.ancora_estado === 'string' ? q.ancora_estado : null;
+    t.vento = cp('vento_verdadeiro_nos') !== null && cp('vento_verdadeiro_angulo') !== null ? cp('vento_verdadeiro_nos') + ' nós de ' + cp('vento_verdadeiro_angulo') + '°' : null;
+    t.ventoAp = cp('vento_aparente_nos') !== null && typeof q.vento_aparente_angulo === 'number' ? cp('vento_aparente_nos') + ' nós a ' + Math.abs(F.arred(q.vento_aparente_angulo, 0)) + '°' + lado(q.vento_aparente_angulo) : null;
+    t.ondas = com(cp('ondas_m'), ' m'); t.pressao = com(cp('pressao_barometrica_hpa'), ' hPa');
+    t.ar = com(cp('temp_ar_externo_c'), ' °C'); t.agua = com(cp('temp_agua_c'), ' °C'); t.praca = com(cp('temp_praca_maquinas_c'), ' °C');
+    t.inclinacao = cp('jogo_graus') !== null && cp('caimento_graus') !== null ? 'jogo ' + cp('jogo_graus') + '° · caimento ' + cp('caimento_graus') + '°' : null;
+    t.local = typeof q.local === 'string' ? q.local : null;
+    t.destino = typeof q.destino === 'string' ? q.destino + (cp('destino_mn') !== null ? ' a ' + cp('destino_mn') + ' mn' : '') : null;
+    t.wp = typeof q.wp_proximo === 'string' ? q.wp_proximo + (cp('wp_mn') !== null ? ' a ' + cp('wp_mn') + ' mn' : '') : null;
+    t.eta = typeof q.eta === 'string' ? q.eta : null;
+    t.alarmes = alarmesTxt(i);
+    t.relativa = relativaDe(q);
+    t.autonomia = c.autonomia ? '≈ ' + F.nb(c.autonomia.horas, 1) + ' h · ≈ ' + c.autonomia.mn + ' mn a ' + ((D.consumo && D.consumo.cruzeiro && D.consumo.cruzeiro.nos) || '—') + ' nós, com reserva de ' + Math.round((typeof D.reserva === 'number' ? D.reserva : 0.1) * 100) + ' %' : null;
+    t.desdeAbast = c.desdeAbast ? '≈ ' + F.nb(c.desdeAbast.litros, 0, true) + ' L desde o abastecimento de ' + String(c.desdeAbast.desde || '').slice(0, 5) + (c.desdeAbast.h ? ' às ' + c.desdeAbast.h : '') : null;
+    if (i.tend) {
+      var d = i.tend, p = [];
+      if ('motor_bb_rpm' in d && 'motor_be_rpm' in d) p.push('rpm BB ' + sinal(d.motor_bb_rpm, 0) + ' · BE ' + sinal(d.motor_be_rpm, 0));
+      if ('motor_bb_oleo_bar' in d && 'motor_be_oleo_bar' in d) p.push('óleo ' + sinal(d.motor_bb_oleo_bar, 1) + ' / ' + sinal(d.motor_be_oleo_bar, 1) + ' bar');
+      if ('motor_bb_arref_c' in d && 'motor_be_arref_c' in d) p.push('arrefecimento ' + sinal(d.motor_bb_arref_c, 1) + ' / ' + sinal(d.motor_be_arref_c, 1) + ' °C');
+      if ('sog_nos' in d) p.push('SOG ' + sinal(d.sog_nos, 1) + ' nós');
+      if ('diesel_litros' in d) p.push('diesel ' + sinal(d.diesel_litros, 1) + ' L');
+      t.tend = p.length ? 'últimos 30 s: ' + p.join(' · ') : null;
+    }
+    // resumo (diário e contexto da IA): até 300 letras, sem coordenadas; o «sem posição» não leva o local (as exceções da decisão (g))
+    var resumo = function (comLocal) {
+      var estado = typeof q.estado === 'string' ? q.estado : '', itens = [], fim = ' — ' + i.hora + '.', s, ale = t.alarmes && t.alarmes.indexOf('nenhum') !== 0 ? t.alarmes : null;
+      itens.push(comLocal && t.local ? (estado ? estado + ' ' : '') + t.local : estado);
+      if (t.sog) itens.push('SOG ' + t.sog);
+      if (t.proa) itens.push('proa ' + t.proa);
+      if (t.rpm) itens.push('motores ' + t.rpm);
+      if (ale) itens.push(ale);
+      if (t.diesel) itens.push('diesel ' + t.diesel);
+      if (t.oleo) itens.push('óleo ' + t.oleo);
+      if (t.arref) itens.push('arrefecimento ' + t.arref);
+      if (t.vento) itens.push('vento ' + t.vento);
+      if (t.gerador) itens.push('gerador ' + t.gerador.split(' · ')[0]);
+      if (t.seakeeper) itens.push('Seakeeper ' + t.seakeeper.split(' · ')[0]);
+      if (cp('bateria_0_tensao_v') !== null) itens.push('banco 24 V ' + cp('bateria_0_tensao_v') + ' V');
+      s = '';
+      itens.filter(Boolean).forEach(function (x) { if ((s ? s + ' · ' + x : x).length + fim.length <= 300) s = s ? s + ' · ' + x : x; });
+      return s + fim;
+    };
+    t.resumo = resumo(true); t.resumoSemPosicao = resumo(false);
+    Object.keys(t).forEach(function (k) { if (t[k] === null || t[k] === undefined) delete t[k]; });
+    return t;
+  }
+  // O rodapé guarda o objeto por segundo; a cópia com `tend` e `txt` também (o objeto do rodapé fica como está, outras telas o leem)
+  function enriquece(i) {
+    var c = {}, k, t;
+    if (i.txt) return i;   // o rodapé já traz o texto do instante (a mesma fonte das telas): vale o dele
+    if (CACHE.base === i) return CACHE.inst;
+    for (k in i) if (Object.prototype.hasOwnProperty.call(i, k)) c[k] = i[k];
+    if (c.tend === undefined && (t = tendencia(c))) c.tend = t;
+    c.txt = textos(c);
+    CACHE.base = i; CACHE.inst = c;
+    return c;
+  }
+  // sem o CapitaoAgora (ou sem quadro nele): a reserva, como antes da 1.1.0 (o D.snapshot aninhado), com fonte `snapshot`
+  function instanteReserva() { var sn = D.snapshot || {}; return { ms: Date.now(), q: sn.quadro || null, fonte: 'snapshot', fonteTxt: sn.fonte || '', hora: sn.hora || '', hhmm: sn.hora || '' }; }
+  function lerInstante() {
+    var A, i;
+    if (EM_SOS) return null;   // o SOS não tem instante: nem quadro, nem resumo, nem posição (a guarda é a do rodapé; aqui antes de qualquer leitura)
+    try {
+      A = window.CapitaoAgora; i = A && typeof A.instante === 'function' ? A.instante() : null;
+      if (!i || typeof i !== 'object' || !i.q || typeof i.q !== 'object') return instanteReserva();
+      if (i.fonte === 'replay' && D.simulacao !== true) return instanteReserva();   // o rodapé guarda 1 s: a flag pode ter virado depois
+      return enriquece(i);
+    } catch (e) { return null; }
+  }
+  function instante() { try { return CONG.n ? CONG.inst : lerInstante(); } catch (e) { return null; } }
+  // Congela UM instante na chamada mais externa (`de`: o da resposta que a ficha ou o resumo acompanham) e o solta no finally, também com exceção
+  function congela(f, de) {
+    if (CONG.n === 0) { CONG.inst = de || lerInstante(); try { recarrega(CONG.inst); } catch (e) { recarrega(null); } }
+    CONG.n++;
+    try { return f(); } finally { if (--CONG.n === 0) CONG.inst = null; }
+  }
+  function troca(alvo, novo) { var k; for (k in alvo) if (Object.prototype.hasOwnProperty.call(alvo, k)) delete alvo[k]; for (k in novo) if (Object.prototype.hasOwnProperty.call(novo, k)) alvo[k] = novo[k]; }
+  // Refaz o que o cérebro lia uma vez na carga. Quadro vivo (replay ou coletor): a forma aninhada de antes, preenchida do quadro do instante;
+  // senão o D.snapshot (1.0.9). Em /SOS-/ o S0 é vazio.
+  function recarrega(i) {
+    var v = i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null, q, t, A, cap, lig, ab;
+    if (!v) {
+      S = S0; AUT = AUT0; CON = CON0;
+      M = S.motores || {}; G = S.gerador || {}; DI = S.diesel || {}; T = S.tanques || {};
+      troca(SNAP, montaSnap()); FT.tele = 'Fonte: ' + SNAP.fonte;
+      return;
+    }
+    q = v.q; t = v.txt; A = window.CapitaoAgora; cap = E.tanques && E.tanques.diesel_l; lig = q.motor_bb_rpm > 0 || q.motor_be_rpm > 0;
+    S = { quando: v.hora, hora: v.hora, dia: '', estado: q.estado, local: q.local,
+      gps: { lat: q.lat, lon: q.lon, texto: typeof q.lat === 'number' && typeof q.lon === 'number' ? A.fmt.coord(q.lat, q.lon) : 'posição ' + SD, satelites: q.gps_satelites },
+      sog: q.sog_nos, proa: q.proa_graus, profundidade: q.profundidade_m, vento: q.vento_verdadeiro_nos, ventoDe: q.vento_verdadeiro_angulo, pressao: q.pressao_barometrica_hpa,
+      ar: q.temp_ar_externo_c, agua: q.temp_agua_c, bat24: q.bateria_0_tensao_v, bat12: q.bateria_2_tensao_v,
+      tanques: { agua: q.tanque_agua_pct, cinzas: q.tanque_cinzas_pct, negras: q.tanque_negras_pct },
+      diesel: { bb: q.diesel_bb_pct, be: q.diesel_be_pct, litros: q.diesel_litros, capacidade: cap, tanques: E.tanques && E.tanques.diesel_n ? E.tanques.diesel_n + ' × ' + Math.round(cap / E.tanques.diesel_n) + ' L' : '', hora: v.hora, nota: 'leitura' },
+      motores: { hora: v.hora, estado: lig ? 'ligados' : 'desligados', rpm: [A.fmt.campo(q, 'motor_bb_rpm'), A.fmt.campo(q, 'motor_be_rpm')], oleo: [q.motor_bb_oleo_bar, q.motor_be_oleo_bar], arref: [A.fmt.campo(q, 'motor_bb_arref_c'), A.fmt.campo(q, 'motor_be_arref_c')],
+        horimetro: [q.motor_bb_horimetro_h, q.motor_be_horimetro_h], marcha: q.marcha },
+      gerador: { estado: q.gerador_ativo ? 'ligado' : 'desligado', horas: q.gerador_horimetro_h, kw: q.gerador_kw, hora: v.hora },
+      seakeeper: { estado: q.seakeeper_ativo ? 'ligado' : 'desligado', volante_rpm: q.seakeeper_volante_rpm, volante_pct: q.seakeeper_volante_pct, hora: v.hora },
+      porao: { bb_cm: q.porao_bb_nivel, be_cm: q.porao_be_nivel, ciclos_h: q.bomba_porao_ciclos }, ancora: { estado: q.ancora_estado } };
+    M = S.motores; G = S.gerador; DI = S.diesel; T = S.tanques;
+    AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : AUT0;
+    ab = v.calc && v.calc.desdeAbast;
+    CON = ab ? Object.assign({}, CON0, { desdeAbast: { litros: ab.litros, desde: ab.desde, horas: ab.h ? 'desde as ' + ab.h : '' } }) : CON0;
+    troca(SNAP, { quando: v.hora, hora: v.hora, dia: '', pos: S.gps.texto, local: (q.estado || SD) + ' · ' + (q.local || SD),
+      diesel: 'BB ' + nb(q.diesel_bb_pct) + ' % · BE ' + nb(q.diesel_be_pct) + ' % (≈ ' + mil(q.diesel_litros) + ' L de ' + mil(cap) + ')',
+      dieselHora: DI.nota + ' · ' + DI.hora,
+      motores: 'motores ' + M.estado + ' — ' + (t.rpm || '—') + ' · óleo ' + (t.oleo || '—') + ' · arrefecimento ' + (t.arref || '—'),
+      fonte: v.fonteTxt });
+    FT.tele = 'Fonte: ' + SNAP.fonte;
+  }
+  // a fonte do instante nas respostas de dado de bordo que não passam pelo FT.tele: «telemetria ao vivo · hora» (ou a do coletor), no lugar do «telemetria» do snapshot
+  function tele() { return vivo() ? SNAP.fonte : 'telemetria' + DEMO; }
+  function comTele() { return vivo() ? ' · ' + SNAP.fonte : ''; }
+  // quanto falta para o limite de horas da tarefa: o do instante (os horímetros andam) ou, sem quadro vivo, o da agenda
+  function faltam(t) { var i = vivo(), f = i && i.calc && i.calc.faltam && i.calc.faltam[t.id]; return typeof f === 'number' ? f : t.horas.faltam; }
+
   function guia(k) { return (D.guias && D.guias[k]) || SD; }
   function equip(id) { return (D.equipamentos || []).filter(function (e) { return e.id === id; })[0] || null; }
   // "Gerador Onan QD 9" — sempre fabricante e modelo, com o que faltar marcado; o fabricante não se repete quando o modelo já começa
@@ -486,8 +687,18 @@
   var GRAVAR_AGORA = 'Para registrar no diário: diga “registre no diário…” e o que aconteceu; a posição, leia no plotter.';
   var LOCAL_PLACA = 'no local da placa de salvatagem e do plano de segurança de bordo — confira na saída';   // a frase da salvatagem (protocolos.salvatagem), sem lugar inventado
   var LOCAL_PLANO = 'no local indicado no plano de segurança de bordo — confira na saída';
-  function resumoAgora() {
+  function resumoLegado() {
     return SNAP.local + ' · ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + SNAP.motores + ' · gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h) · Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' · banco 24 V ' + nb(S.bat24, 2) + ' V · vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ') — snapshot' + DEMO_ + ' ' + SNAP.quando + '.';
+  }
+  // O resumo do instante (CONTRATO §1.23): até 300 letras, sem coordenadas. Com `{ semPosicao: true }` sem o lugar (as exceções da decisão (g)); com a resposta da
+  // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/: a instrução do plotter, nunca quadro. Sem quadro vivo (modo real), o resumo de antes do snapshot.
+  function resumoAgora(x) {
+    return congela(function () {
+      var i = vivo();
+      if (EM_SOS) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';
+      if (i) return x && x.semPosicao ? i.txt.resumoSemPosicao : i.txt.resumo;
+      return resumoLegado();
+    }, x && x._inst);
   }
   function mareTexto() {
     var C = window.CapitaoClima; var x = C && C.mareAgora ? C.mareAgora() : null;
@@ -549,12 +760,12 @@
       ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.' : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
       return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
-    destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + Math.floor(AUT.mn / 2) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: telemetria' + DEMO + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
+    destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + Math.floor(AUT.mn / 2) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: ' + tele() + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
     manutencao: function (p) {
       var at = atrasadas(), prox = agenda().filter(function (t) { return t.dn >= 0; }).slice(0, 3), oleoM = tarefa('motores-oleo');
-      return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(oleoM.horas.faltam) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
+      return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
-    autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de 10 %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: telemetria' + DEMO + ' (taxa de combustível dos dois motores, ' + CON.periodo + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
+    autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de 10 %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + CON.periodo + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
     mare: function (p) {
       var m = mareTexto();
       if (!m) return { text: 'SEM DADOS de maré agora: sem internet e sem leitura salva neste aparelho.\nO app usa o modelo do Open-Meteo Marine na posição de referência (Balneário Camboriú) — não é a tábua oficial da Marinha (DHN).', src: 'Fonte: nenhuma disponível agora — Open-Meteo Marine sem resposta', actions: act(p, [['Registrar pendência', 'diario']]) };
@@ -567,9 +778,9 @@
     canal16: function (p) {
       return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\n' + (P.panpan || 'Urgência sem perigo de vida: PAN-PAN ×3.'), src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
     },
-    checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
-    consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', ''), actions: act(p, [['Abastecimento', 'abast']]) }; },
+    consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + CON.desdeAbast.litros + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', '') + comTele(), actions: act(p, [['Abastecimento', 'abast']]) }; },
     tanques: function (p) { return { text: 'Tanques (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• água doce ' + nb(T.agua) + ' %\n• águas cinzas ' + nb(T.cinzas) + ' %\n• águas negras ' + nb(T.negras) + ' %\n• diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.', src: FT.tele + ' (diesel ' + (DI.hora || '') + ')', actions: act(p, [['Telemetria', 'console']]) }; },
     contatos: function (p) {
       var eq = D.equipe || {}, per = eq.perfis || [], ap = eq.apoio || [], f = loadEquipe().fones, cad = Object.keys(f).length;
@@ -579,8 +790,8 @@
       var pend = pendencias(), app = loadDiario().filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
       return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
-    porao: function (p) { var t = tarefa('porao-teste'); return { text: 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nSem sensor de porão no barramento NMEA — SEM LEITURA.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + ' · coletor NMEA' + DEMO + ' (sem sentença de porão)', actions: act(p, [['Manutenção', 'manut']]) }; },
-    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(rv.horas.faltam) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + ' · horímetro na telemetria' + DEMO, actions: act(p, [['Passo a passo', 'f4']]) }; },
+    porao: function (p) { var t = tarefa('porao-teste'); return { text: 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nSem sensor de porão no barramento NMEA — SEM LEITURA.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + (vivo() ? ' · ' + SNAP.fonte : ' · coletor NMEA' + DEMO + ' (sem sentença de porão)'), actions: act(p, [['Manutenção', 'manut']]) }; },
+    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(faltam(rv)) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetro: ' + SNAP.fonte : ' · horímetro na telemetria' + DEMO), actions: act(p, [['Passo a passo', 'f4']]) }; },
     telemetria: function (p) {
       var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {};
       return { text: 'Snapshot' + DEMO + ' de ' + SNAP.quando + ': ' + min1(SNAP.local) + '. Telemetria ao vivo desligada.'
@@ -603,7 +814,7 @@
       var vence = com.filter(function (d) { return d.dn <= 90; }), dia = com.filter(function (d) { return d.dn > 90; }), sem = ds.filter(function (d) { return d.st === SD; }), conf = ds.filter(function (d) { return /A CONF/.test(d.st); });
       return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
     },
-    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros (motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + '):\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (D-' + o.dn + ') ou ' + o.horas.limite + ' h — faltam ' + nb(o.horas.faltam) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (D-' + rv.dn + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
+    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros (motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + '):\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (D-' + o.dn + ') ou ' + o.horas.limite + ' h — faltam ' + nb(faltam(o)) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (D-' + rv.dn + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
     motores: function (p) { var e = equip('motores'); return { text: 'Motores ' + (e && e.qtd ? e.qtd + ' × ' : '') + 'Volvo Penta' + (e && e.lados ? ' (' + e.lados + ')' : '') + ' · modelo ' + SD + '.\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarme.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h · troca de óleo ' + prazoTxt(tarefa('motores-oleo')) + ' ou 450 h.\nPartida, aquecimento e parada: ' + guia('g_motores') + '. Faixas oficiais: manual do fabricante — modelo ' + SD + '.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
     estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\n• Funciona no banco de 12 V: acelera com o banco carregado (carregador ligado ao gerador ou ao cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nTempo de aceleração e códigos de alarme: MANUAL NO DRIVE (modelo ' + SD + ').' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
     climatizacao: function (p) { var f = tarefa('clima-filtro'); return { text: 'Climatização · fabricante e modelo ' + SD + '.\n' + (f ? 'Filtro de água salgada: limpeza ' + prazoTxt(f) + ' — e há fluxo fraco na cabine de proa desde 20/09 (diário).\n' : '') + 'Ligar: válvula de fundo aberta e filtro limpo → bomba de água salgada → controle da cabine.\nAlarme de fluxo: quase sempre falta de água salgada (filtro sujo, válvula fechada, bomba desligada).', src: 'Fonte: ' + guia('g_clima') + ' · ' + FT.agenda.replace('Fonte: ', '') + ' · ' + FT.diario.replace('Fonte: ', '') + ' 20/09', actions: act(p, [['Passo a passo', 'f5']]) }; },
@@ -648,23 +859,24 @@
     fallback: function (p) { return { text: 'Não encontrei esse dado nas fontes de bordo — telemetria, agenda, documentos, diário e guias de bordo. SEM DADOS.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.', src: 'Fonte: nenhuma — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
   };
 
-  // ——— Telemetria ao vivo (capitao-telemetria.js) ———
-  // Com o coletor conectado e a leitura com menos de 10 min, posição, tanques, tempo, baterias e Seakeeper saem da leitura real;
-  // sem isso (padrão de hoje), as respostas continuam com o snapshot do capitao-dados.js.
-  function vivo() { var TL = window.CapitaoTelemetria; return TL && TL.atual ? TL.atual() : null; }
+  // ——— Telemetria ao vivo ———
+  // Com quadro vivo no instante (o do replay ou o do coletor, capitao-telemetria.js), posição, tanques, tempo, baterias e Seakeeper saem da leitura do
+  // instante e a fonte é a dele (`fonteTxt`: «telemetria ao vivo · hora» para o replay, «coletor NMEA · ao vivo hora» só para o coletor de verdade). O resto
+  // das respostas de dado de bordo lê o mesmo instante por S, M, G, DI, T, SNAP, AUT e CON (recarrega). Sem quadro vivo (modo real sem coletor, tela sem
+  // replay) valem os textos do snapshot, como antes. Fora daqui, por decisão: sos, canal16, epirb, seafire, salvatagem, mmsi e óleo nunca leem o quadro.
   var VIVO = {
-    posicao: function (v) { var TL = window.CapitaoTelemetria; return { text: TL.posicao(v) + (v.sog_nos < 0.5 ? ' · parado' : '') + '\nSOG ' + nb(v.sog_nos) + ' nós · proa ' + grau3(v.proa_graus) + ' · ' + nb(v.gps_satelites, 0) + ' satélites · profundidade ' + nb(v.profundidade_m) + ' m · ao vivo ' + TL.hora(v) + '.' }; },
-    tanques: function (v) { return { text: 'Tanques agora:\n• água doce ' + nb(v.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(v.tanque_cinzas_pct) + ' %' + (v.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(v.tanque_negras_pct) + ' %' + (v.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
-    clima: function (v, base) { return { text: 'Agora a bordo (ao vivo ' + window.CapitaoTelemetria.hora(v) + '):\n• vento verdadeiro ' + nb(v.vento_verdadeiro_nos) + ' nós de ' + grau3(v.vento_verdadeiro_angulo) + '\n• barômetro ' + nb(v.pressao_barometrica_hpa, 0) + ' hPa\n• ar ' + nb(v.temp_ar_externo_c) + ' °C · água ' + nb(v.temp_agua_c) + ' °C\n' + base.text.split('\n')[0] }; },
-    eletrico: function (v, base) { return { text: 'Baterias agora: banco 24 V ' + nb(v.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(v.bateria_2_tensao_v, 2) + ' V (ao vivo ' + window.CapitaoTelemetria.hora(v) + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
-    estabilizador: function (v, base) { return { text: 'Seakeeper agora: ' + (v.seakeeper_ativo ? 'LIGADO' + (typeof v.seakeeper_volante_rpm === 'number' ? ' · volante ' + nb(v.seakeeper_volante_rpm, 0) + ' rpm (' + nb(v.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + window.CapitaoTelemetria.hora(v) + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
+    posicao: function (i) { var q = i.q; return { text: SNAP.pos + (q.sog_nos < 0.5 ? ' · parado' : '') + '\nSOG ' + nb(q.sog_nos) + ' nós · proa ' + grau3(q.proa_graus) + ' · ' + nb(q.gps_satelites, 0) + ' satélites · profundidade ' + nb(q.profundidade_m) + ' m · ao vivo ' + i.hora + '.' }; },
+    tanques: function (i) { var q = i.q; return { text: 'Tanques agora:\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
+    clima: function (i, base) { var q = i.q; return { text: 'Agora a bordo (ao vivo ' + i.hora + '):\n• vento verdadeiro ' + nb(q.vento_verdadeiro_nos) + ' nós de ' + grau3(q.vento_verdadeiro_angulo) + '\n• barômetro ' + nb(q.pressao_barometrica_hpa, 0) + ' hPa\n• ar ' + nb(q.temp_ar_externo_c) + ' °C · água ' + nb(q.temp_agua_c) + ' °C\n' + base.text.split('\n')[0] }; },
+    eletrico: function (i, base) { var q = i.q; return { text: 'Baterias agora: banco 24 V ' + nb(q.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(q.bateria_2_tensao_v, 2) + ' V (ao vivo ' + i.hora + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
+    estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + nb(q.seakeeper_volante_rpm, 0) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
   };
   Object.keys(VIVO).forEach(function (k) {
     var pronta = ANSWERS[k]; if (!pronta) return;
     ANSWERS[k] = function (p, ctx, q) {
-      var base = pronta(p, ctx, q), v = vivo(); if (!v) return base;
-      var r = VIVO[k](v, base);
-      return { text: r.text, src: 'Fonte: coletor NMEA · ao vivo ' + window.CapitaoTelemetria.hora(v), actions: base.actions };
+      var base = pronta(p, ctx, q), i = vivo(); if (!i) return base;
+      var r = VIVO[k](i, base);
+      return { text: r.text, src: 'Fonte: ' + i.fonteTxt, actions: base.actions };
     };
   });
 
@@ -958,7 +1170,7 @@
   }
   if (window.requestIdleCallback) requestIdleCallback(carregaBase, { timeout: 4000 }); else setTimeout(carregaBase, 1500);
 
-  function answer(q, ctx) {
+  function responde(q, ctx) {
     ctx = ctx || {};
     var p = ctx.platform || 'web';
     var key = null;
@@ -972,6 +1184,9 @@
     a.key = key;
     return a;
   }
+  // a resposta leva o instante dela (fora do JSON): a ficha(p, q, a) e o resumoAgora(a) da MESMA pergunta o reaproveitam
+  function marca(a) { if (a && typeof a === 'object') { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} } return a; }
+  function answer(q, ctx) { return congela(function () { return marca(responde(q, ctx)); }); }
 
   // ——— IA na nuvem (capitao-ia.js) ———
   // Quando a tela chama a IA: sem resposta pronta (SEM DADOS), trecho do guia (a IA responde a partir dele) ou pergunta sobre o
@@ -1001,7 +1216,8 @@
     'Regra da casa: nada inventado. Cada número vem com a fonte; sem fonte = SEM DADOS; sensor ausente = SEM LEITURA; foto ou nota = A CONFERIR / A CONFIRMAR.'
   ];
   function agoraBR() {
-    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }
+    var ms = CONG.inst && CONG.inst.ms;   // a hora da ficha é a do instante da pergunta (a mesma da telemetria)
+    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(typeof ms === 'number' ? new Date(ms) : new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }
   }
   // Coordenadas não saem do aparelho (posição do barco só depois do login no servidor).
   function semCoord(s) { return String(s || '').replace(/\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]\s*\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]/g, '(coordenadas só na tela do app)'); }
@@ -1012,7 +1228,8 @@
   // seguro?") ou trecho do guia ("quando foi a última troca de óleo?"), a completa: a resumida tirava o dado pedido (1.0.7).
   var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
   function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
-  function ficha(p, q, a) {
+  function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }
+  function ficha1(p, q, a) {
     p = p || 'app';
     var out = [];
     var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
@@ -1045,7 +1262,8 @@
   }
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
-  function answerAttachment(kind, file, ctx) {
+  function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }
+  function anexo1(kind, file, ctx) {
     var p = (ctx && ctx.platform) || 'web';
     var name = file && file.name ? file.name : (kind === 'video' ? 'vídeo' : 'foto');
     var kb = file && file.size ? Math.round(file.size / 1024) + ' KB' : '';
@@ -1407,7 +1625,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

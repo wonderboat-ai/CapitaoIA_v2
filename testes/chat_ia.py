@@ -26,6 +26,10 @@ from playwright.sync_api import sync_playwright
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capitao-ia.js'), encoding='utf-8').read()).group(1)
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
+# Fase 3 (P3A, PROMPT Fase 7 «Mudanças nos testes»: «:254 ("≈ 11,2 h") com o quadro congelado»): a autonomia da resposta lê o instante do
+# replay. Congelado em 12:01:00 (fixar('60')), são 1.333 L menos a reserva de 10 %: 17,6 h a 18 nós (CapitaoAgora.instante().calc).
+REPLAY_FIXO = "(() => { try { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {} })()"
+AUTONOMIA = '≈ 17,6 h'
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 TEXTO_IA = 'Resposta simulada da IA: segure PARTIDA até o motor pegar.'
 # Contrato C2: o título do guia perdeu o "(DEMO)" (Decisão 1.1.0, b); o Worker devolve a fonte do trecho que o app mandou.
@@ -130,6 +134,7 @@ def main():
                 ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900},
                                     user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
                 ctx.add_init_script(SESSAO)
+                ctx.add_init_script(REPLAY_FIXO)
                 ctx.add_init_script(VOZ_FALSA)
                 ctx.add_init_script(ESPIA_ROSTO)
                 pg = ctx.new_page()
@@ -255,7 +260,7 @@ def main():
                 espera_resposta()
                 pg.wait_for_function("() => /IA respondeu: qual o calado/.test(document.body.innerText)", timeout=10000)
                 t = pg.evaluate('() => document.body.innerText')
-                i1, i2, i3 = t.find('IA respondeu: qual o calado do barco?'), t.find('\nautonomia\n'), t.find('≈ 11,2 h')
+                i1, i2, i3 = t.find('IA respondeu: qual o calado do barco?'), t.find('\nautonomia\n'), t.find(AUTONOMIA)
                 ok(tela + ': resposta da IA entra logo depois da pergunta dela (ordem pergunta › resposta mantida)', -1 < i1 < i2 < i3, (i1, i2, i3))
 
                 # CONVERSA por voz: a pergunta falada vai para a IA e a resposta falada é a da IA (o núcleo fica em PROCESSANDO).
