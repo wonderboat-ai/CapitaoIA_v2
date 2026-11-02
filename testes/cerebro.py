@@ -1468,6 +1468,13 @@ def grupo_forma(b, muta, ped):
                 [k for k in CHAVES_TXT if not (i['txt'] and isinstance(i['txt'].get(k), str) and i['txt'][k].strip())])
         ped('forma: horímetros — «faltam» sai do instante (32,4 h dos motores e 58,6 h do gerador às 12:01:00), não da agenda (37,4 h e 63,6 h)', 'faltam 32,4 h' in f['horimetros'] and 'faltam 58,6 h' in f['gerador'] and '37,4' not in f['horimetros'], (f['horimetros'][-160:], f['gerador'][-80:]))
         ped('forma: autonomia — horas e milhas do instante (≈ 17,6 h · ≈ 318 mn, calc.autonomia), não as do snapshot (11,2 h)', '≈ 17,6 h · ≈ 318 mn a 18 nós' in f['autonomia'] and '11,2' not in f['autonomia'], f['autonomia'][:160])
+        # PROMPT §3 (a lista única): a fonte, o selo e o texto do instante não casam nenhuma das regex (as 8 do termos.json, menos o ANEXO). Vale também
+        # para o «ao vivo» da fonte do replay: o §6.6 do contrato diz «sem coletor NMEA nem ao vivo», o §1.23 «telemetria ao vivo · hora»; nenhuma regex pega «ao vivo»
+        for rot, i in (('12:01:00', f['a60']), ('12:01:45', f['a105'])):
+            if i and i['txt']:
+                texto = '\n'.join([i['fonteTxt'], i['selo']['texto']] + [v for v in i['txt'].values() if isinstance(v, str)])
+                achados = [(n, m.group(0)) for n, rx in confere.carrega_termos().items() if n != 'ANEXO' for m in [rx.search(texto)] if m]
+                ped('forma %s: fonte, selo e txt do instante fora das regex do termos.json' % rot, not achados, achados)
         a, c = f['a60'], f['a105']
         if a and a['txt']:
             ped('forma: o texto único do §1.23 (rpm, sog, diesel) é o do contrato', (a['txt']['rpm'], a['txt']['sog'], a['txt']['diesel']) == ('BB 2.049 · BE 2.038 rpm', '18,1 nós', '1.333 L (83,3 %)'), (a['txt']['rpm'], a['txt']['sog'], a['txt']['diesel']))
@@ -1553,6 +1560,18 @@ def grupo_real(b, muta, ped):
         dif = [r[0] for r, s in zip(x['respostas'], y['respostas']) if r != s]
         ped('real: as %d respostas (texto, fonte e fala), a ficha e o resumo são os de antes (iguais aos da página sem o replay)' % len(casos), not dif and x['ficha'] == y['ficha'] and x['resumo'] == y['resumo'], dif[:3])
         tel = [r[2] for r in y['respostas'] if r[1] == 'telemetria']
+        # sem o CapitaoAgora (o rodapé do capitao-dados.js falhou ou a tela não o tem): a reserva, fonte `snapshot`, e as respostas são as da página sem replay
+        sa = pagina(b, extra=';delete window.CapitaoAgora;', scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
+        sr = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
+        try:
+            for pg in (sa, sr):
+                pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+            ja, jr = sa.evaluate(JS_REAL, casos), sr.evaluate(JS_REAL, casos)
+            ped('real: sem o CapitaoAgora o instante do cérebro é a reserva (fonte snapshot, nunca nulo fora do SOS)', ja['fonte'] == 'snapshot' and ja['txt'] is False, (ja['fonte'], ja['txt']))
+            dif2 = [r[0] for r, s in zip(ja['respostas'], jr['respostas']) if r != s]
+            ped('real: sem o CapitaoAgora as respostas e a ficha são as de antes da 1.1.0', not dif2 and ja['ficha'] == jr['ficha'], dif2[:3])
+        finally:
+            sa.ctx.close(); sr.ctx.close()
         ped('real: o cérebro do modo real segue no snapshot de 26/09 («Snapshot de 26/09/2026 10:12», fundeado)', tel and '26/09/2026 10:12' in tel[0] and 'undeado' in y['resumo'], (tel[:1], y['resumo'][:120]))
     finally:
         sem.ctx.close(); com.ctx.close()
@@ -1577,6 +1596,7 @@ MUTANTES_3A = [
     ('a fronteira da virada (30 s depois da âncora) sem o diesel', "      if (i.ms - 30000 >= A.ancora(i.ms)) {", "      if (i.ms - 30000 > A.ancora(i.ms)) {", ('virada',)),
     ('o resumo leva a coordenada', "      if (t.sog) itens.push('SOG ' + t.sog);", "      if (t.sog) itens.push('SOG ' + t.sog + ' ' + A.fmt.coord(q.lat, q.lon));", ('resumo',)),
     ('o modo real lê o quadro da reserva como se fosse vivo', "    var v = i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null, q, t, A, cap, lig, ab;", "    var v = i && i.q && i.txt ? i : null, q, t, A, cap, lig, ab;", ('real',)),
+    ('sem o CapitaoAgora o instante some em vez de cair na reserva', "      if (!i || typeof i !== 'object' || !i.q || typeof i.q !== 'object') return instanteReserva();", "      if (!i || typeof i !== 'object' || !i.q || typeof i.q !== 'object') return null;", ('real',)),
     ('o faltam das tarefas por horas fica o da agenda', "  function faltam(t) { var i = vivo(), f = i && i.calc && i.calc.faltam && i.calc.faltam[t.id]; return typeof f === 'number' ? f : t.horas.faltam; }", "  function faltam(t) { return t.horas.faltam; }", ('forma',)),
     ('a autonomia fica a do snapshot', "AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : AUT0;", "AUT = AUT0;", ('forma',)),
 ]
