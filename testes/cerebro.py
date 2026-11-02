@@ -466,7 +466,8 @@ PEDE_IA.update({q: True for q in ('cortou a energia', 'queimou o fusível', 'que
                                   'a baliza de entrada da barra está apagada')})
 # as respostas de dado de bordo que leem o quadro (uma pergunta de cada, todas em CASOS)
 FONTE_DO_INSTANTE = ['Telemetria agora', 'posição agora', 'nível dos tanques', 'clima e vento', 'bateria 24 v', 'estabilizador Seakeeper', 'motores volvo penta',
-                     'qual a pressão do óleo?', 'horímetros', 'é seguro sair hoje?', 'âncora garrando?', 'autonomia', 'quantas horas tem o gerador']
+                     'qual a pressão do óleo?', 'horímetros', 'é seguro sair hoje?', 'âncora garrando?', 'autonomia', 'quantas horas tem o gerador',
+                     'consumo de diesel', 'checklist de saída', 'para onde vamos hoje?', 'bombas de porão']
 PEDE_IA.update({'fazendo água potável': True, 'fazendo água na boca': True, 'o bebedouro está fazendo água': True, 'a máquina de gelo está fazendo água': True,
                 'baliza cardinal': True, 'a poita tocou o fundo': True, 'a sonda tocou o fundo': True, 'o mergulhador tocou o fundo': True,
                 'o eixo estava bom quando o barco partiu': True, 'o eixo da hélice está ok': True, 'entrou água na bota': True})
@@ -482,7 +483,7 @@ def main():
         pg.goto(BASE + 'base-conhecimento.json')  # mesma origem, sem a porta de login
         # Fase 3 (PROMPT Fase 3 «Instante», Fase 7 «Mudanças nos testes»): a página é a da Main e da H2 (dados, replay, telemetria, cérebro) com o
         # instante congelado em 12:01:00 (fixar('60')): os números são os mesmos em toda a execução. O replay anda com a flag lida a cada chamada.
-        for arq in ('capitao-dados.js', 'capitao-replay.js', 'capitao-telemetria.js'):
+        for arq in ('capitao-dados.js', 'capitao-replay.js', 'capitao-alertas.js', 'capitao-telemetria.js'):   # a ordem do <head> da Main e da H2
             pg.add_script_tag(url=BASE + arq)
         pg.evaluate("() => window.CapitaoReplay.fixar('60')")
         pg.add_script_tag(url=BASE + 'capitao-brain.js')
@@ -732,7 +733,8 @@ def main():
         sem_fonte = [q for q in FONTE_DO_INSTANTE if 'telemetria ao vivo · 12:01:00' not in por_q[q]['src']]
         falhas += conta('instante (P3A): a fonte das respostas de dado de bordo é a do instante («telemetria ao vivo · 12:01:00»)', not sem_fonte, (len(sem_fonte), [(q, por_q[q]['src'][:90]) for q in sem_fonte][:6]))
         # (o texto fixo «motores desligados», «sem alarme» e «Telemetria ao vivo desligada» das respostas é da reescrita das respostas, P3B; aqui, data e estado do snapshot)
-        presas = [q for q in FONTE_DO_INSTANTE if re.search(r'26/09|undeado', por_q[q]['text'])]
+        # (o período do consumo observado, 01/08–26/09/2026, é história do barco, não o instante do snapshot: sai antes da conferência)
+        presas = [q for q in FONTE_DO_INSTANTE if re.search(r'26/09|undeado', por_q[q]['text'].replace('01/08–26/09/2026', ''))]
         falhas += conta('instante (P3A): nenhuma resposta de dado de bordo fica presa ao snapshot de 26/09 (data nem «fundeado»)', not presas, (len(presas), presas[:6]))
         falhas += agenda_sem_falta(pg)
         falhas += emergencia_1b(pg, res)
@@ -1337,6 +1339,8 @@ def perguntas_da_g1(pg):
 # instante; duas perguntas seguidas em segundos diferentes veem instantes diferentes; em /SOS-/ não há instante (nem o resumo); com simulacao false
 # (ou sem replay) o cérebro é o de antes da 1.1.0 (D.snapshot, fonte «snapshot»). A fonte de uma resposta com quadro do replay é a `fonteTxt` do
 # instante, nunca «coletor NMEA».
+# uma pergunta de cada chave do PROMPT §2.2 (sos, canal16, epirb, seafire, salvatagem e o MMSI, que responde na canal16), tirada dos CASOS
+PERGUNTAS_2_2 = ['MAYDAY, homem ao mar!', 'roteiro do canal 16', 'onde fica o EPIRB?', 'onde fica o seafire', 'jogue a boia na água', 'qual o MMSI do barco?']
 CHAVES_INSTANTE = ('ms', 'q', 'fonte', 'fonteTxt', 'selo', 'hora', 'hhmm', 'seg', 'fase', 'calc', 'tend', 'txt')
 CHAVES_TXT = ('hora', 'sog', 'stw', 'rumo', 'proa', 'piloto', 'leme', 'prof', 'rpm', 'oleo', 'arref', 'carga', 'consumo', 'diesel', 'dieselLados', 'distancia',
               'horimetros', 'gerador', 'seakeeper', 'b24', 'b12', 'tanques', 'porao', 'ancora', 'vento', 'ventoAp', 'ondas', 'pressao', 'ar', 'agua', 'praca',
@@ -1358,8 +1362,13 @@ SEM_SIMULACAO = ';window.CapitaoDados.simulacao = false;'
 HTML_SOS = '<!doctype html><meta charset="utf-8"><title>SOS</title>'
 
 
-def pagina(b, extra='', scripts=('capitao-dados.js', 'capitao-replay.js', 'capitao-telemetria.js', 'capitao-brain.js'), caminho='base-conhecimento.json', fixo='60', muta=None):
-    """Página da Main e da H2 (dados, replay, telemetria, cérebro) com o instante fixado em `fixo`. `extra` é acrescentado ao fim do capitao-dados.js (a
+# a ordem do <head> da Main e da H2 (o capitao-alertas.js entra entre o replay e a telemetria); SEM_ALERTAS prova o ramo de reserva do cérebro (tela sem o script)
+SCRIPTS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-alertas.js', 'capitao-telemetria.js', 'capitao-brain.js')
+SCRIPTS_SEM_ALERTAS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-telemetria.js', 'capitao-brain.js')
+
+
+def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None):
+    """Página da Main e da H2 (dados, replay, alertas, telemetria, cérebro) com o instante fixado em `fixo`. `extra` é acrescentado ao fim do capitao-dados.js (a
     injeção do teste do modo real e as fontes de leitura do SOS). `muta` = (trecho, troca): o cérebro mutante dos testes que provam que a conferência
     acusa. Em `caminho` com /SOS-/ a página é vazia e o replay de verdade sai sozinho."""
     ctx = b.new_context(service_workers='block')
@@ -1386,12 +1395,16 @@ def pagina(b, extra='', scripts=('capitao-dados.js', 'capitao-replay.js', 'capit
 
 
 # B.instante() nos dois instantes do contrato (§1.22, §1.23): o objeto, o texto único (rpm, sog, diesel), a tendência
-JS_FORMA = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, out = {};
+JS_FORMA = """([qs, fontes]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, out = {};
   const forma = (x) => { R.fixar(x); const i = B.instante(); return i && { chaves: Object.keys(i), fonte: i.fonte, hora: i.hora, hhmm: i.hhmm, seg: i.seg, fase: i.fase && i.fase.nome,
     fonteTxt: i.fonteTxt, selo: i.selo, tend: i.tend, txt: i.txt, rpm: i.q.motor_bb_rpm, ms: i.ms }; };
-  out.a60 = forma('60'); out.a105 = forma('105'); R.fixar('60');
+  out.a60 = forma('60'); out.a105 = forma('105');
   const op = { platform: 'app', commit: false };
+  out.aut105 = B.answer('autonomia', op).text; out.con105 = B.answer('consumo de diesel', op).text; R.fixar('60');
   out.horimetros = B.answer('horímetros', op).text; out.autonomia = B.answer('autonomia', op).text; out.gerador = B.answer('quantas horas tem o gerador', op).text;
+  out.manutencao = B.answer('próximas manutenções', op).text; out.tanques = B.answer('nível dos tanques', op).text; out.consumo = B.answer('consumo de diesel', op).text;
+  out.emerg = qs.map((q) => { const a = B.answer(q, op); return [q, a.key, a.src, a.text, B.falaCurta(a)]; });
+  out.fontes = fontes.map((q) => [q, B.answer(q, op).src]);
   return out; }"""
 
 # um instante por pergunta: quantas leituras do CapitaoAgora cada chamada externa faz, o relógio que anda no meio (a ficha e o contexto da MESMA pergunta
@@ -1410,6 +1423,9 @@ JS_UMA = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, A =
   const a2 = B.answer('telemetria', op), f3 = B.ficha('app', 'telemetria', a2), r3 = B.resumoAgora();
   const bloco = (f) => f.slice(f.indexOf('## Telemetria'), f.indexOf('## Manutenção')), agora = (f) => f.slice(f.indexOf('## Agora'), f.indexOf('## Sobre o app'));
   out.mesmo = { vivo: v1.src, a1: a1.src, f2: bloco(f2), g2: agora(f2), r2, nF2, nR2, a2: a2.src, f3: bloco(f3), g3: agora(f3), r3 };
+  R.fixar('60'); const x1 = B.answerAttachment('foto', { name: 'b.jpg', size: 1024 }, op); R.fixar('0@121');   // o anexo leva o instante dele, como a resposta
+  const [nFx, fx] = c(() => B.ficha('app', 'telemetria', x1));
+  out.anexo = { n: nFx, b: bloco(fx), g: agora(fx) };
   let lancou = false; R.fixar('60');
   try { B.answer('x', { get platform() { throw new Error('x'); } }); } catch (e) { lancou = true; }
   const b1 = B.answer('telemetria', op); R.fixar('0@121'); const b2 = B.answer('telemetria', op); R.fixar('60');
@@ -1435,10 +1451,11 @@ JS_SOS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, A = 
 # modo real: as respostas de TODAS as perguntas, a ficha e o instante (comparados com a página sem replay, igual a antes da 1.1.0)
 JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, i = B.instante();
   return { respostas: casos.map(([q]) => { const a = B.answer(q, { platform: 'app', commit: false }); return [q, a.key, a.text, a.src, B.falaCurta(a)]; }),
-           ficha: B.ficha('app'), resumo: B.resumoAgora(), fonte: i && i.fonte, tend: i && i.tend, txt: i && !!i.txt, replayAtivo: !!(R && R.ativo()) }; }"""
+           ficha: B.ficha('app'), resumo: B.resumoAgora(), sem: B.resumoAgora({ semPosicao: true }), estado: B.DADOS.snapshot.estado, local: B.DADOS.snapshot.local,
+           fonte: i && i.fonte, tend: i && i.tend, txt: i && !!i.txt, replayAtivo: !!(R && R.ativo()) }; }"""
 
 
-def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real')):
+def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -1453,7 +1470,7 @@ def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', '
 def grupo_forma(b, muta, ped):
     pg = pagina(b, muta=muta)
     try:
-        f = pg.evaluate(JS_FORMA)
+        f = pg.evaluate(JS_FORMA, [PERGUNTAS_2_2, FONTE_DO_INSTANTE])
         for rot, i, tend, txt_tend, hora, seg in (('12:01:00', f['a60'], TEND_60, TXT_TEND_60, '12:01:00', 60), ('12:01:45', f['a105'], TEND_105, TXT_TEND_105, '12:01:45', 105)):
             if not i:
                 ped('forma %s: B.instante() nulo' % rot, False)
@@ -1466,8 +1483,20 @@ def grupo_forma(b, muta, ped):
             ped('forma %s: txt com as 43 chaves do §1.23, todas texto não vazio, sem NaN, undefined nem null' % rot,
                 i['txt'] and all(isinstance(i['txt'].get(k), str) and i['txt'][k].strip() and not re.search(r'NaN|undefined|null', i['txt'][k]) for k in CHAVES_TXT),
                 [k for k in CHAVES_TXT if not (i['txt'] and isinstance(i['txt'].get(k), str) and i['txt'][k].strip())])
+        sem_fonte = [q for q, src in f['fontes'] if 'telemetria ao vivo · 12:01:00' not in src]
+        ped('forma: toda resposta de dado de bordo (%d perguntas) cita a fonte do instante («telemetria ao vivo · 12:01:00»)' % len(f['fontes']), not sem_fonte and len(f['fontes']) == len(FONTE_DO_INSTANTE), sem_fonte)
         ped('forma: horímetros — «faltam» sai do instante (32,4 h dos motores e 58,6 h do gerador às 12:01:00), não da agenda (37,4 h e 63,6 h)', 'faltam 32,4 h' in f['horimetros'] and 'faltam 58,6 h' in f['gerador'] and '37,4' not in f['horimetros'], (f['horimetros'][-160:], f['gerador'][-80:]))
         ped('forma: autonomia — horas e milhas do instante (≈ 17,6 h · ≈ 318 mn, calc.autonomia), não as do snapshot (11,2 h)', '≈ 17,6 h · ≈ 318 mn a 18 nós' in f['autonomia'] and '11,2' not in f['autonomia'], f['autonomia'][:160])
+        # (a data do abastecimento anda com o dia de hoje; os litros e a hora da âncora são os do instante)
+        ped('forma: «desde o abastecimento» da autonomia e do consumo vem do calc do instante (≈ 227 L desde as 07:00 às 12:01:00, ≈ 228 L às 12:01:45), não da agenda (≈ 192 L)',
+            re.search(r'Consumido desde o abastecimento de \d\d/\d\d: ≈ 227 L \(desde as 07:00\)', f['autonomia']) and re.search(r'\nDesde o abastecimento de \d\d/\d\d: ≈ 227 L \(desde as 07:00\)', f['consumo'])
+            and re.search(r'abastecimento de \d\d/\d\d: ≈ 228 L \(desde as 07:00\)', f['aut105']) and re.search(r'abastecimento de \d\d/\d\d: ≈ 228 L \(desde as 07:00\)', f['con105']) and '192' not in f['autonomia'] + f['consumo'],
+            (f['autonomia'][-110:], f['consumo'][-170:], f['aut105'][-80:]))
+        ped('forma: manutenção — o «faltam» da troca de óleo sai do instante (32,4 h), não da agenda (37,4 h)', 'faltam 32,4 h' in f['manutencao'] and '37,4' not in f['manutencao'], f['manutencao'][-120:])
+        ped('forma: tanques — a hora da leitura do diesel é a do instante (leitura · 12:01:00)', 'leitura · 12:01:00' in f['tanques'], f['tanques'][-80:])
+        # as seis chaves do §2.2 não leem o quadro: nem a fonte do instante (telemetria, ao vivo, a hora) na fonte, no texto ou na fala (a 10 do CLAUDE.md)
+        emerg = [(q, k, src) for q, k, src, texto, fala in f['emerg'] if re.search(r'telemetria|ao vivo|coletor|\b12:0\d', src + ' ' + texto + ' ' + fala, re.I)]
+        ped('forma: sos, canal16, epirb, seafire, salvatagem e MMSI não citam o instante na fonte, no texto nem na fala', not emerg and [k for q, k, *_ in f['emerg']] == ['sos', 'canal16', 'epirb', 'seafire', 'salvatagem', 'canal16'], (emerg, [k for q, k, *_ in f['emerg']]))
         # PROMPT §3 (a lista única): a fonte, o selo e o texto do instante não casam nenhuma das regex (as 8 do termos.json, menos o ANEXO). Vale também
         # para o «ao vivo» da fonte do replay: o §6.6 do contrato diz «sem coletor NMEA nem ao vivo», o §1.23 «telemetria ao vivo · hora»; nenhuma regex pega «ao vivo»
         for rot, i in (('12:01:00', f['a60']), ('12:01:45', f['a105'])):
@@ -1499,6 +1528,8 @@ def grupo_uma(b, muta, ped):
         ped('uma: o «## Agora» da ficha do mesmo instante diz a hora dele (12:01), não a do relógio', re.search(r'\b12:01\b', m['g2']) and not re.search(r'\b12:02\b', m['g2']), m['g2'])
         ped('uma: a pergunta seguinte (outro segundo) vê o instante novo na resposta, na ficha, no «## Agora» e no resumo',
             '12:02:30' in m['a2'] and '12:02:30' in m['f3'] and '12:02:30' in m['r3'] and re.search(r'\b12:02\b', m['g3']), (m['a2'], m['g3'], m['r3'][-60:]))
+        ped('uma: a ficha da resposta de um anexo fica no instante dele (12:01:00, sem ler o instante de novo), como a da resposta de texto',
+            u['anexo']['n'] == 0 and '12:01:00' in u['anexo']['b'] and '12:02:30' not in u['anexo']['b'] and re.search(r'\b12:01\b', u['anexo']['g']) and not re.search(r'\b12:02\b', u['anexo']['g']), u['anexo'])
         s = u['solta']
         ped('uma: a exceção solta o instante (a pergunta seguinte lê o relógio, não o da que falhou)', s['lancou'] and '12:01:00' in s['b1'] and '12:02:30' in s['b2'] and s['depois'] == '12:01:00', s)
     finally:
@@ -1548,6 +1579,15 @@ def grupo_sos(b, muta, ped):
             pg.ctx.close()
 
 
+def resumo_real(ped, nome, r):
+    """Sem quadro vivo, B.resumoAgora() (o do diário e o do contexto da IA) vem do D.snapshot: até 300 letras, nunca coordenada (§2.8, os dois modos);
+    com {semPosicao: true} (as exceções da decisão (g)) também não leva o lugar."""
+    ped('real (%s): o resumo tem até 300 letras, com o instante do snapshot, e não leva coordenada (graus-minutos nem decimal)' % nome,
+        0 < len(r['resumo']) <= 300 and 0 < len(r['sem']) <= 300 and not confere.R_COORD.search(r['resumo']) and not confere.R_COORD.search(r['sem']) and '26/09/2026 10:12' in r['resumo'] and '26/09/2026 10:12' in r['sem']
+        and not re.search(r'26[.,°]\d|48[.,°]\d', r['resumo'] + r['sem']), (len(r['resumo']), len(r['sem']), r['resumo']))
+    ped('real (%s): o resumo leva o lugar e o «sem posição» não leva (só o estado)' % nome, r['local'] in r['resumo'] and r['local'] not in r['sem'] and r['estado'] in r['sem'] and r['sem'] != r['resumo'], (r['local'], r['sem']))
+
+
 def grupo_real(b, muta, ped):
     casos = [[q, k] for q, k in CASOS]
     sem = pagina(b, extra=SEM_SIMULACAO, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
@@ -1558,7 +1598,8 @@ def grupo_real(b, muta, ped):
         x, y = sem.evaluate(JS_REAL, casos), com.evaluate(JS_REAL, casos)
         ped('real: com simulacao false o replay não anda e o instante é a reserva (D.snapshot), sem tendência nem texto do quadro', y['fonte'] == 'snapshot' and y['tend'] is None and not y['replayAtivo'], (y['fonte'], y['tend'], y['replayAtivo']))
         dif = [r[0] for r, s in zip(x['respostas'], y['respostas']) if r != s]
-        ped('real: as %d respostas (texto, fonte e fala), a ficha e o resumo são os de antes (iguais aos da página sem o replay)' % len(casos), not dif and x['ficha'] == y['ficha'] and x['resumo'] == y['resumo'], dif[:3])
+        ped('real: as %d respostas (texto, fonte e fala) e a ficha são os de antes (iguais aos da página sem o replay)' % len(casos), not dif and x['ficha'] == y['ficha'] and x['resumo'] == y['resumo'] and x['sem'] == y['sem'], dif[:3])
+        resumo_real(ped, 'simulacao false', y)
         tel = [r[2] for r in y['respostas'] if r[1] == 'telemetria']
         # sem o CapitaoAgora (o rodapé do capitao-dados.js falhou ou a tela não o tem): a reserva, fonte `snapshot`, e as respostas são as da página sem replay
         sa = pagina(b, extra=';delete window.CapitaoAgora;', scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
@@ -1570,14 +1611,199 @@ def grupo_real(b, muta, ped):
             ped('real: sem o CapitaoAgora o instante do cérebro é a reserva (fonte snapshot, nunca nulo fora do SOS)', ja['fonte'] == 'snapshot' and ja['txt'] is False, (ja['fonte'], ja['txt']))
             dif2 = [r[0] for r, s in zip(ja['respostas'], jr['respostas']) if r != s]
             ped('real: sem o CapitaoAgora as respostas e a ficha são as de antes da 1.1.0', not dif2 and ja['ficha'] == jr['ficha'], dif2[:3])
+            resumo_real(ped, 'sem o CapitaoAgora', ja)
+            resumo_real(ped, 'tela sem replay', jr)
         finally:
             sa.ctx.close(); sr.ctx.close()
         ped('real: o cérebro do modo real segue no snapshot de 26/09 («Snapshot de 26/09/2026 10:12», fundeado)', tel and '26/09/2026 10:12' in tel[0] and 'undeado' in y['resumo'], (tel[:1], y['resumo'][:120]))
     finally:
         sem.ctx.close(); com.ctx.close()
 
+# o texto único do alarme (§1.23): o da CapitaoAlertas («rótulo: título: valor (acima de limite)»), o mesmo com ou sem o script na tela
+ALARMES = {'60': 'nenhum alarme ativo', '100': 'AVISO: Temperatura do motor BE: 89,0 °C (acima de 88 °C)', '105': 'AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)',
+           '115': 'AVISO: Temperatura do motor BE: 89,0 °C (acima de 88 °C)', '120': 'nenhum alarme ativo'}
+JS_ALARMES = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, AL = window.CapitaoAlertas, out = { alertas: !!AL };
+  let chamadas = 0, msAl = null;
+  if (AL) { const orig = AL.ativos; AL.ativos = function (m) { chamadas++; msAl = m; return orig.apply(this, arguments); }; }
+  out.xs = xs.map((x) => { R.fixar(x); chamadas = 0; msAl = null; const i = B.instante(); return { x, ms: i.ms, alarmes: i.txt.alarmes, resumo: i.txt.resumo, chamadas, msAl }; });
+  return out; }"""
+ALERTAS_FALSO = ";window.CapitaoAlertas = { ativos: function (ms) { return [{ rotulo: 'CRÍTICO', texto: 'Teste X ' + ms }]; } };"
+ALERTAS_QUE_LANCA = ";window.CapitaoAlertas = { ativos: function () { throw new Error('alertas'); } };"
 
-GRUPOS_3A = {'forma': grupo_forma, 'uma': grupo_uma, 'resumo': grupo_resumo, 'virada': grupo_virada, 'sos': grupo_sos, 'real': grupo_real}
+
+def grupo_alarmes(b, muta, ped):
+    # a página da Main e da H2 (com o capitao-alertas.js): a fonte é a CapitaoAlertas, com o ms do instante; a reserva (tela sem o script) diz o mesmo texto
+    for nome, kw in (('com o capitao-alertas.js', {}), ('sem o capitao-alertas.js (reserva)', {'scripts': SCRIPTS_SEM_ALERTAS})):
+        pg = pagina(b, muta=muta, **kw)
+        try:
+            r = pg.evaluate(JS_ALARMES, list(ALARMES))
+            ped('alarmes (%s): o script está (ou não) na tela como se espera' % nome, r['alertas'] == (not kw), r['alertas'])
+            for x in r['xs']:
+                ped('alarmes (%s) %s: txt.alarmes é exatamente «%s»' % (nome, x['x'], ALARMES[x['x']]), x['alarmes'] == ALARMES[x['x']], x['alarmes'])
+                if x['alarmes'] != 'nenhum alarme ativo':
+                    ped('alarmes (%s) %s: o resumo (diário e contexto da IA) leva o alarme e tem até 300 letras' % (nome, x['x']), ALARMES[x['x']] in x['resumo'] and len(x['resumo']) <= 300, (len(x['resumo']), x['resumo']))
+                if r['alertas']:
+                    ped('alarmes (%s) %s: o cérebro pergunta à CapitaoAlertas uma vez, com o ms do instante' % (nome, x['x']), x['chamadas'] == 1 and x['msAl'] == x['ms'], (x['chamadas'], x['msAl'], x['ms']))
+        finally:
+            pg.ctx.close()
+    # a CapitaoAlertas manda: o que ela devolve é o texto (e o ms é o do instante); se ela lança, vale o quadro, com o mesmo molde
+    pg = pagina(b, extra=ALERTAS_FALSO, muta=muta)
+    try:
+        r = pg.evaluate(JS_ALARMES, ['105'])['xs'][0]
+        ped('alarmes (alertas falso): txt.alarmes é o que a CapitaoAlertas devolve, chamada com o ms do instante', r['alarmes'] == 'CRÍTICO: Teste X %d' % r['ms'] and 'CRÍTICO: Teste X' in r['resumo'], (r['alarmes'], r['ms']))
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, extra=ALERTAS_QUE_LANCA, muta=muta)
+    try:
+        r = pg.evaluate(JS_ALARMES, ['105'])['xs'][0]
+        ped('alarmes (alertas que lança): o cérebro não quebra e usa os alarmes do quadro, no mesmo molde', r['alarmes'] == ALARMES['105'], r['alarmes'])
+    finally:
+        pg.ctx.close()
+
+
+# chamadas aninhadas (answer → addDiario → …): UMA leitura do instante por pergunta, mesmo com o relógio andando 10 s depois de cada leitura
+JS_ANINHADAS = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, A = window.CapitaoAgora, out = {};
+  let n = 0, seg = 60; const orig = A.instante;
+  A.instante = function () { n++; const r = orig.apply(this, arguments); seg += 10; R.fixar(String(seg)); return r; };
+  const roda = (nome, f) => { localStorage.clear(); n = 0; seg = 60; R.fixar('60'); const r = f(); out[nome] = { n, r }; };
+  const op = { platform: 'app', commit: true };
+  roda('registro', () => B.answer('Registre no diário: saída com 4 pessoas', op).text);
+  roda('resumo', () => { const a = B.answer('Registre no diário o resumo da navegação de agora e confirme.', op); return [a.text, a.src, B.loadDiario()[0].t]; });
+  roda('anexo', () => B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, op).text);
+  roda('video', () => B.answerAttachment('video', { name: 'a.mp4', size: 2048 }, op).text);
+  roda('diarioAdd', () => B.addDiario({ t: 'teste', src: 'teste' }).t);
+  A.instante = orig; R.fixar('60'); return out; }"""
+
+
+def grupo_aninhadas(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        u = pg.evaluate(JS_ANINHADAS)
+        ped('aninhadas: cada pergunta (registro, resumo, foto, vídeo, addDiario) lê o instante UMA vez, mesmo com o relógio andando', {k: v['n'] for k, v in u.items()} == {'registro': 1, 'resumo': 1, 'anexo': 1, 'video': 1, 'diarioAdd': 1}, {k: v['n'] for k, v in u.items()})
+        txt = ' '.join(u['resumo']['r'])
+        ped('aninhadas: a resposta do resumo, a fonte e a linha do diário ficam no instante da pergunta (12:01:00), não no de uma segunda leitura (12:01:10)',
+            '12:01:00' in u['resumo']['r'][0] and '12:01:00' in u['resumo']['r'][1] and '12:01:00' in u['resumo']['r'][2] and '12:01:10' not in txt and '12:01:20' not in txt, u['resumo']['r'])
+    finally:
+        pg.ctx.close()
+
+
+# vivo → reserva → vivo na MESMA página (D.simulacao vira false e volta): o cérebro refaz S, AUT e CON de cada instante, sem sobra do anterior
+JS_TRANSICAO = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, op = { platform: 'app', commit: false }, out = {};
+  R.fixar('60');
+  const le = () => ({ aut: B.answer('autonomia', op).text, hor: B.answer('horímetros', op).text, con: B.answer('consumo de diesel', op).text, tel: B.answer('telemetria', op).text,
+                      src: B.answer('autonomia', op).src, fonte: B.instante().fonte });
+  out.vivo1 = le(); D.simulacao = false; out.reserva = le(); D.simulacao = true; out.vivo2 = le();
+  return out; }"""
+
+
+def grupo_transicao(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        t = pg.evaluate(JS_TRANSICAO)
+        v1, rs, v2 = t['vivo1'], t['reserva'], t['vivo2']
+        ped('transição: ao vivo, com a flag ligada', v1['fonte'] == 'replay' and '≈ 17,6 h' in v1['aut'] and 'faltam 32,4 h' in v1['hor'] and '≈ 227 L' in v1['con'] and 'ao vivo' in v1['src'], (v1['fonte'], v1['aut'][:60], v1['src']))
+        ped('transição: com simulacao false a MESMA página volta ao D.snapshot (11,2 h, 37,4 h, 192 L, 26/09 10:12), sem sobra do quadro vivo',
+            rs['fonte'] == 'snapshot' and '≈ 11,2 h' in rs['aut'] and '17,6' not in rs['aut'] and 'faltam 37,4 h' in rs['hor'] and '32,4' not in rs['hor'] and '≈ 192 L' in rs['con'] and '227' not in rs['con'] + rs['aut']
+            and '26/09/2026 10:12' in rs['tel'] and 'ao vivo' not in rs['src'], (rs['fonte'], rs['aut'][:90], rs['hor'][-60:], rs['con'][-120:], rs['tel'][:50], rs['src']))
+        ped('transição: com a flag de volta, as respostas voltam a ser as do instante', v2['aut'] == v1['aut'] and v2['hor'] == v1['hor'] and v2['con'] == v1['con'] and v2['tel'] == v1['tel'] and v2['src'] == v1['src'], (v2['aut'][:60], v1['aut'][:60]))
+    finally:
+        pg.ctx.close()
+
+
+# um coletor de verdade (quadro sem `simulado`): a fonte dele («coletor NMEA · ao vivo hora»), sem tendência (o histórico é do replay) e os números DELE
+JS_COLETOR = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, out = {};
+  R.fixar('60');
+  const q = Object.assign({}, R.em(R.agora()), { sog_nos: 7.3, diesel_litros: 900, diesel_bb_pct: 56.2, diesel_be_pct: 56.3 }); delete q.simulado;
+  window.CapitaoTelemetria = { atual: () => q };
+  const i = B.instante();
+  out.i = { fonte: i.fonte, fonteTxt: i.fonteTxt, tend: i.tend === undefined ? null : i.tend, txtTend: i.txt.tend === undefined ? null : i.txt.tend, selo: i.selo.texto };
+  out.r = ['Telemetria agora', 'posição agora', 'autonomia', 'nível dos tanques', 'clima e vento', 'consumo de diesel', 'horímetros', 'estabilizador Seakeeper'].map((k) => { const a = B.answer(k, op); return [k, a.text, a.src]; });
+  // 12:01:45: o replay tem o AVISO da temperatura do motor BE (CapitaoAlertas), o quadro do coletor não traz alarme nenhum: o texto é o do quadro dele
+  R.fixar('105'); const q2 = Object.assign({}, R.em(R.agora()), { alarmes: [] }); delete q2.simulado; window.CapitaoTelemetria = { atual: () => q2 };
+  const j = B.instante(); out.alarmes = { fonte: j.fonte, txt: j.txt.alarmes, resumo: j.txt.resumo };
+  // a posição relativa («a 0,5 mn da Barra Sul») é só da simulação: um coletor com a flag desligada não a leva, mesmo com wp_proximo no quadro
+  R.fixar('60'); const q3 = Object.assign({}, R.em(R.agora())); delete q3.simulado; window.CapitaoDados.simulacao = false; window.CapitaoTelemetria = { atual: () => q3 };
+  const k = B.instante(); out.relativa = { fonte: k.fonte, rel: k.txt.relativa === undefined ? null : k.txt.relativa, wp: q3.wp_proximo };
+  window.CapitaoDados.simulacao = true;
+  return out; }"""
+
+
+def grupo_coletor(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        c = pg.evaluate(JS_COLETOR)
+        i = c['i']
+        ped('coletor: o instante é do coletor, com a fonte «coletor NMEA · ao vivo hora» e sem tendência (o histórico é só do replay)',
+            i['fonte'] == 'coletor' and i['fonteTxt'] == 'coletor NMEA · ao vivo 12:01:00' and i['tend'] is None and i['txtTend'] is None, i)
+        r = {k: (t, s) for k, t, s in c['r']}
+        ped('coletor: toda resposta de dado de bordo cita a fonte do coletor e nenhuma a do replay', all('coletor NMEA · ao vivo 12:01:00' in s and 'telemetria ao vivo' not in s for k, (t, s) in r.items()), [(k, s[:70]) for k, (t, s) in r.items() if 'coletor NMEA · ao vivo 12:01:00' not in s])
+        ped('coletor: o alarme é o do quadro dele (nenhum), não o da CapitaoAlertas, que é a do replay', c['alarmes']['fonte'] == 'coletor' and c['alarmes']['txt'] == 'nenhum alarme ativo' and 'AVISO' not in c['alarmes']['resumo'], c['alarmes'])
+        ped('coletor: sem a simulação (flag desligada) o quadro do coletor não leva a posição relativa à rota', c['relativa']['fonte'] == 'coletor' and c['relativa']['wp'] and c['relativa']['rel'] is None, c['relativa'])
+        ped('coletor: os números são os do quadro dele (SOG 7,3, 900 L), não os do replay (18,1; 1.333 L)', 'SOG 7,3' in r['posição agora'][0] and '≈ 900 L' in r['autonomia'][0] and '1.333' not in r['autonomia'][0] + r['nível dos tanques'][0] and '900 L' in r['Telemetria agora'][0], (r['posição agora'][0][:90], r['autonomia'][0][:150]))
+    finally:
+        pg.ctx.close()
+
+
+# a recarrega() lança (aqui, o formatador de coordenadas): o instante VIVO não pode ficar valendo com os dados do snapshot de volta
+JS_FALHA = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, A = window.CapitaoAgora, op = { platform: 'app', commit: false }, out = {};
+  R.fixar('60'); const orig = A.fmt.coord; A.fmt.coord = function () { throw new Error('coord'); };
+  try {
+    out.r = ['posição agora', 'autonomia', 'Telemetria agora', 'nível dos tanques', 'horímetros', 'clima e vento'].map((k) => { const a = B.answer(k, op); return [k, a.text, a.src]; });
+    out.ficha = B.ficha('app', 'telemetria', null); out.resumo = B.resumoAgora();
+  } finally { A.fmt.coord = orig; }
+  out.depois = B.answer('autonomia', op).text;
+  return out; }"""
+
+
+def grupo_falha(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        f = pg.evaluate(JS_FALHA)
+        r = {k: (t, s) for k, t, s in f['r']}
+        # («Telemetria ao vivo desligada», fixo no texto da resposta `telemetria`, é da reescrita da P3B: aqui a fonte e a hora do instante)
+        fixo = 'Telemetria ao vivo desligada'
+        presos = [k for k, (t, s) in r.items() if re.search(r'ao vivo|12:01', t.replace(fixo, '') + ' ' + s)]
+        ped('falha: se a recarrega lança, nenhuma resposta (texto nem fonte) diz «ao vivo» nem leva a hora do instante com dado de 26/09', not presos and '≈ 11,2 h' in r['autonomia'][0] and '26°59' in r['posição agora'][0], (presos, r['posição agora'][1], r['autonomia'][1][:60]))
+        ped('falha: a ficha e o resumo do mesmo caso também voltam ao snapshot', '12:01:00' not in f['resumo'] and 'snapshot' in f['resumo'] and 'ao vivo ·' not in f['ficha'] and '12:01:00' not in f['ficha'], (f['resumo'][-80:]))
+        ped('falha: passada a falha, a pergunta seguinte volta ao instante', '≈ 17,6 h' in f['depois'], f['depois'][:60])
+    finally:
+        pg.ctx.close()
+
+
+# modo real com um coletor de quadro PARCIAL (GPS, vento, tanques; nada de motor, gerador, Seakeeper nem diesel): sensor ausente não vira «desligado»,
+# nem leva a autonomia do snapshot de 26/09 com a fonte do coletor (decisão 6: com simulacao false volta a regra «Nada inventado»)
+JS_PARCIAL = """(casos) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false };
+  window.CapitaoTelemetria = { atual: () => ({ timestamp_utc: '2026-11-02T15:01:00Z', lat: -26.99, lon: -48.61, sog_nos: 0.2, gps_satelites: 11, vento_verdadeiro_nos: 9.5, vento_verdadeiro_angulo: 120,
+                                               tanque_agua_pct: 80, tanque_cinzas_pct: 10, tanque_negras_pct: 12, gerador_horimetro_h: 1240.5, motor_bb_horimetro_h: 417.6, motor_be_horimetro_h: 414.8 }) };
+  const i = B.instante(), periodo = B.DADOS.consumo.periodo;
+  return { fonte: i.fonte, fonteTxt: i.fonteTxt, periodo, r: casos.map(([q]) => { const a = B.answer(q, op); return [q, a.key, a.text.split(periodo).join(''), a.src.split(periodo).join('')]; }) }; }"""
+DADO_DE_BORDO = ['motores volvo penta', 'Telemetria agora', 'quantas horas tem o gerador', 'estabilizador Seakeeper', 'autonomia', 'é seguro sair hoje?', 'para onde vamos hoje?',
+                 'consumo de diesel', 'nível dos tanques', 'horímetros', 'posição agora', 'clima e vento', 'bateria 24 v', 'âncora garrando?']
+
+
+def grupo_parcial(b, muta, ped):
+    pg = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        x = pg.evaluate(JS_PARCIAL, [[q, k] for q, k in CASOS])
+        ped('parcial: o instante é o do coletor', x['fonte'] == 'coletor' and x['fonteTxt'].startswith('coletor NMEA · ao vivo '), (x['fonte'], x['fonteTxt']))
+        r = {q: (k, t, s) for q, k, t, s in x['r']}
+        # (o «desligado» fixo de oleoLeitura e de «Telemetria ao vivo desligada» é do texto da resposta, que a P3B reescreve: aqui só o que vem do dado)
+        sem_dado = [(q, re.findall(r'.{0,40}(?:desligad[oa]s?|11,2|202 mn|≈ 192 L|26/09).{0,30}', t)[:2]) for q, (k, t, s) in r.items()
+                    if q in DADO_DE_BORDO and re.search(r'desligad[oa]s?|11,2|202 mn|≈ 192 L|26/09', t.replace('Telemetria ao vivo desligada', ''))]
+        ped('parcial: sensor ausente não vira «desligado», nem sai a autonomia de 11,2 h, os 192 L ou a data 26/09 do snapshot nas respostas de dado de bordo', not sem_dado, sem_dado[:4])
+        quebradas = [(q, re.findall(r'.{0,30}(?:undefined|NaN|\bnull\b|sEM DADOS).{0,20}', t + ' | ' + s)[:1]) for q, (k, t, s) in r.items() if re.search(r'undefined|NaN|\bnull\b|sEM DADOS', t + ' ' + s)]
+        ped('parcial: nenhuma das %d respostas tem undefined, NaN, null nem «sEM DADOS»' % len(r), not quebradas, quebradas[:4])
+        ped('parcial: o que o coletor tem aparece (SOG, vento, tanques) e o que falta é SEM DADOS ou SEM LEITURA',
+            '9,5' in r['clima e vento'][1] and '80' in r['nível dos tanques'][1] and 'SEM' in r['autonomia'][1] and 'SEM' in r['motores volvo penta'][1] and ('SEM LEITURA' in r['estabilizador Seakeeper'][1] or 'SEM DADOS' in r['estabilizador Seakeeper'][1]),
+            (r['autonomia'][1][:130], r['motores volvo penta'][1][:100], r['estabilizador Seakeeper'][1][:100]))
+    finally:
+        pg.ctx.close()
+
+
+
+GRUPOS_3A = {'forma': grupo_forma, 'uma': grupo_uma, 'resumo': grupo_resumo, 'virada': grupo_virada, 'sos': grupo_sos, 'real': grupo_real, 'alarmes': grupo_alarmes,
+             'aninhadas': grupo_aninhadas, 'transicao': grupo_transicao, 'coletor': grupo_coletor, 'falha': grupo_falha, 'parcial': grupo_parcial}
 
 
 # Mutantes do cérebro (cada um tem de ser acusado por `confere_instante` nos grupos indicados): (nome, trecho único do capitao-brain.js, troca, grupos)
@@ -1598,7 +1824,37 @@ MUTANTES_3A = [
     ('o modo real lê o quadro da reserva como se fosse vivo', "    var v = i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null, q, t, A, cap, lig, ab;", "    var v = i && i.q && i.txt ? i : null, q, t, A, cap, lig, ab;", ('real',)),
     ('sem o CapitaoAgora o instante some em vez de cair na reserva', "      if (!i || typeof i !== 'object' || !i.q || typeof i.q !== 'object') return instanteReserva();", "      if (!i || typeof i !== 'object' || !i.q || typeof i.q !== 'object') return null;", ('real',)),
     ('o faltam das tarefas por horas fica o da agenda', "  function faltam(t) { var i = vivo(), f = i && i.calc && i.calc.faltam && i.calc.faltam[t.id]; return typeof f === 'number' ? f : t.horas.faltam; }", "  function faltam(t) { return t.horas.faltam; }", ('forma',)),
-    ('a autonomia fica a do snapshot', "AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : AUT0;", "AUT = AUT0;", ('forma',)),
+    ('a autonomia fica a do snapshot', "AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : { horas: null, mn: SD, lenta: SD };", "AUT = AUT0;", ('forma',)),
+    # —— revisão da P3A ——
+    ('o «desde o abastecimento» fica o da agenda (CON = CON0)', "    CON = Object.assign({}, CON0, { desdeAbast: ab ?", "    CON = CON0; var xx = ({ desdeAbast: ab ?", ('forma',)),
+    ('a fonte do instante some do consumo e do checklist (comTele vazio)', "  function comTele() { return vivo() ? ' · ' + SNAP.fonte : ''; }", "  function comTele() { return ''; }", ('forma',)),
+    ('o «faltam» da manutenção volta ao da agenda', "' h — faltam ' + nb(faltam(oleoM)) + ' h.'", "' h — faltam ' + nb(oleoM.horas.faltam) + ' h.'", ('forma',)),
+    ('a hora da leitura do diesel some (DI.hora vazio)', "hora: v.hora, nota: 'leitura' } : { capacidade: cap, tanques: dieselN },", "hora: '', nota: 'leitura' } : { capacidade: cap, tanques: dieselN },", ('forma',)),
+    ('canal16 cita a telemetria na fonte (FT.tele)', "src: FT.proto + ' · canal 16 e MMSI do rádio de bordo'", "src: FT.tele + ' · canal 16 e MMSI do rádio de bordo'", ('forma',)),
+    ('o anexo não leva o instante dele (answerAttachment sem marca)', "return congela(function () { return marca(anexo1(kind, file, ctx)); }); }", "return congela(function () { return anexo1(kind, file, ctx); }); }", ('uma',)),
+    ('cada chamada aninhada lê o instante de novo (CONG.n === 0 → true)', "    if (CONG.n === 0) {\n      CONG.inst = de || lerInstante();", "    if (true) {\n      CONG.inst = de || lerInstante();", ('aninhadas',)),
+    ('a reserva não repõe o S (S = S0)', "      S = S0; AUT = AUT0; CON = CON0;", "      AUT = AUT0; CON = CON0;", ('transicao',)),
+    ('a reserva não repõe a autonomia (AUT = AUT0)', "      S = S0; AUT = AUT0; CON = CON0;", "      S = S0; CON = CON0;", ('transicao',)),
+    ('a reserva não repõe o consumo (CON = CON0)', "      S = S0; AUT = AUT0; CON = CON0;", "      S = S0; AUT = AUT0;", ('transicao',)),
+    ('a tendência sem a guarda do replay (um coletor ganharia tendência)', "    if (i.fonte !== 'replay' || !R || typeof R.em !== 'function' || !A || !A.fmt) return undefined;", "    if (!R || typeof R.em !== 'function' || !A || !A.fmt) return undefined;", ('coletor',)),
+    ('o VIVO escreve a fonte do replay para o coletor', "      return { text: r.text, src: 'Fonte: ' + i.fonteTxt, actions: base.actions };", "      return { text: r.text, src: 'Fonte: telemetria ao vivo · ' + i.hora, actions: base.actions };", ('coletor',)),
+    ('a posição relativa sai sem a simulação (relativaDe sem a guarda da flag)', "    if (D.simulacao !== true || !R || !R.base ||", "    if (!R || !R.base ||", ('coletor',)),
+    ('o alarme de um quadro de coletor vem da CapitaoAlertas (do replay)', "try { if (i.fonte === 'replay' && AL &&", "try { if (AL &&", ('coletor',)),
+    ('a recarrega que lança deixa o instante vivo', "catch (e) { CONG.inst = EM_SOS ? null : instanteReserva(); try { recarrega(null); } catch (e2) {} }", "catch (e) { try { recarrega(null); } catch (e2) {} }", ('falha',)),
+    ('a recarrega que lança sobe para a pergunta (sem try/catch)', "      try { recarrega(CONG.inst); } catch (e) { CONG.inst = EM_SOS ? null : instanteReserva(); try { recarrega(null); } catch (e2) {} }", "      recarrega(CONG.inst);", ('falha',)),
+    ('o resumo sem quadro vivo leva a coordenada', "[semLocal ? (S.estado || '') : SNAP.local,", "[semLocal ? (S.estado || '') : SNAP.local + ' · ' + SNAP.pos,", ('real',)),
+    ('o resumo sem quadro vivo ignora o semPosicao', "      return resumoReserva(!!(x && x.semPosicao));", "      return resumoReserva(false);", ('real',)),
+    ('o resumo sem quadro vivo passa de 300 letras', "if (x && (r ? r + ' · ' + x : x).length + fim.length <= 300) r =", "if (x) r =", ('real',)),
+    ('o alarme ignora a CapitaoAlertas', "    try { if (i.fonte === 'replay' && AL && typeof AL.ativos === 'function') lista = AL.ativos(i.ms); } catch (e) {}", "", ('alarmes',)),
+    ('o alarme pergunta à CapitaoAlertas de outro instante (sem o ms)', "lista = AL.ativos(i.ms);", "lista = AL.ativos();", ('alarmes',)),
+    ('o alarme da CapitaoAlertas perde o rótulo', "return a.rotulo + ': ' + a.texto;", "return a.texto;", ('alarmes',)),
+    ('o molde do alarme de reserva diz «limite»', "' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + lt + un + ')'", "' (limite ' + lt + un + ')'", ('alarmes',)),
+    ('o Seakeeper sem leitura vira «desligado»', "(typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ?", "(q.seakeeper_ativo ?", ('parcial',)),
+    ('o gerador sem leitura vira «desligado»', "estado: bool(q.gerador_ativo) ? (q.gerador_ativo ? 'ligado' : 'desligado') : undefined, horas:", "estado: q.gerador_ativo ? 'ligado' : 'desligado', horas:", ('parcial',)),
+    ('a autonomia do quadro parcial fica a do snapshot', ": { horas: null, mn: SD, lenta: SD };", ": AUT0;", ('parcial',)),
+    ('o «desde o abastecimento» do quadro parcial fica o da agenda', ": { litros: SD, desde: '—', horas: SD } });", ": CON0.desdeAbast });", ('parcial',)),
+    ('os motores sem leitura viram «motores undefined»', "      motores: temRpm ? 'motores ' + M.estado", "      motores: true ? 'motores ' + M.estado", ('parcial',)),
+    ('o destinos divide a autonomia que não existe', "(typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD)", "Math.floor(AUT.mn / 2)", ('parcial',)),
 ]
 
 

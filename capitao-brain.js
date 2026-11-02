@@ -152,15 +152,19 @@
     if (!caminho) return null;
     return 'a ' + A.fmt.nb(q.wp_mn, casas('wp_mn')) + ' mn ' + wp.rel + ', ' + ((volta ? wp.id === 'base' : wp.nome === R.destino.nome) ? 'chegando' : caminho);
   }
-  // alarmes do instante: pela CapitaoAlertas quando existe (a lista única da faixa, da C3 e do chat); sem ela, os do próprio quadro
+  // alarmes do instante: o texto único é o da CapitaoAlertas (a lista da faixa, da C3 e do chat: «AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)») quando
+  // a tela a traz e o quadro é o do replay (os alarmes dela são os do replay); sem ela, os do próprio quadro, no MESMO molde (rótulo: título: valor (acima|abaixo de limite)),
+  // para o texto não mudar conforme o script carregado. O limite leva as casas que ele tem (88, não 88,0), como na CapitaoAlertas.
+  function decimais(x) { var t = String(x), k = t.indexOf('.'); return k < 0 ? 0 : Math.min(t.length - k - 1, 3); }
   function alarmesTxt(i) {
-    var AL = window.CapitaoAlertas, lista = null, q = i.q.alarmes, A = window.CapitaoAgora, ale = (D.replay && D.replay.alertas) || {};
-    try { if (AL && typeof AL.ativos === 'function') lista = AL.ativos(i.ms); } catch (e) {}
+    var AL = window.CapitaoAlertas, lista = null, q = i.q.alarmes, F = window.CapitaoAgora.fmt, ale = (D.replay && D.replay.alertas) || {};
+    try { if (i.fonte === 'replay' && AL && typeof AL.ativos === 'function') lista = AL.ativos(i.ms); } catch (e) {}
     if (Array.isArray(lista)) return lista.length ? lista.map(function (a) { return a.rotulo + ': ' + a.texto; }).join(' · ') : 'nenhum alarme ativo';
     if (!Array.isArray(q) || !q.length) return 'nenhum alarme ativo';
     return q.map(function (a) {
-      var c = D.campos && D.campos[a.campo], un = c && c.un ? ' ' + c.un : '', ti = (ale[a.id] && ale[a.id].titulo) || (c && c.rotulo) || a.id;
-      return (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ': ' + ti + ' ' + A.fmt.nb(a.valor, casas(a.campo)) + un + ' (limite ' + A.fmt.nb(a.limite, casas(a.campo)) + un + ')';
+      var c = D.campos && D.campos[a.campo], un = c && c.un ? ' ' + c.un : '', ml = !!(c && c.mil), ti = (ale[a.id] && ale[a.id].titulo) || (c && c.rotulo) || a.id;
+      var vt = F.nb(a.valor, casas(a.campo), ml), lt = F.nb(a.limite, decimais(a.limite), ml);
+      return (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ': ' + ti + (vt ? ': ' + vt + un + (lt ? ' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + lt + un + ')' : '') : '');
     }).join(' · ');
   }
   // O texto único de cada medida (CONTRATO §1.23: Main, A1, E1, HUD, answer('telemetria') e `## Navegação agora` mostram este). Só o que o quadro tem; sem coordenada.
@@ -264,7 +268,11 @@
   function instante() { try { return CONG.n ? CONG.inst : lerInstante(); } catch (e) { return null; } }
   // Congela UM instante na chamada mais externa (`de`: o da resposta que a ficha ou o resumo acompanham) e o solta no finally, também com exceção
   function congela(f, de) {
-    if (CONG.n === 0) { CONG.inst = de || lerInstante(); try { recarrega(CONG.inst); } catch (e) { recarrega(null); } }
+    if (CONG.n === 0) {
+      CONG.inst = de || lerInstante();
+      // se a recarrega lança, os dados voltam ao snapshot E o instante também (a reserva): nada de «ao vivo» com o dado de 26/09
+      try { recarrega(CONG.inst); } catch (e) { CONG.inst = EM_SOS ? null : instanteReserva(); try { recarrega(null); } catch (e2) {} }
+    }
     CONG.n++;
     try { return f(); } finally { if (--CONG.n === 0) CONG.inst = null; }
   }
@@ -280,25 +288,32 @@
       return;
     }
     q = v.q; t = v.txt; A = window.CapitaoAgora; cap = E.tanques && E.tanques.diesel_l; lig = q.motor_bb_rpm > 0 || q.motor_be_rpm > 0;
+    // quadro parcial (um coletor sem o motor, o gerador, o Seakeeper ou o diesel): o que o quadro não traz fica sem valor (SEM DADOS na resposta), nunca «desligado»
+    // nem o dado do snapshot de 26/09 com a fonte do coletor. Com o quadro cheio do replay nada muda.
+    var tem = function (x) { return typeof x === 'number' && isFinite(x); }, bool = function (x) { return typeof x === 'boolean'; };
+    var temRpm = tem(q.motor_bb_rpm) || tem(q.motor_be_rpm), temHor = tem(q.motor_bb_horimetro_h) || tem(q.motor_be_horimetro_h), temDie = tem(q.diesel_bb_pct) || tem(q.diesel_be_pct) || tem(q.diesel_litros);
+    var dieselN = E.tanques && E.tanques.diesel_n ? E.tanques.diesel_n + ' × ' + Math.round(cap / E.tanques.diesel_n) + ' L' : '';
     S = { quando: v.hora, hora: v.hora, dia: '', estado: q.estado, local: q.local,
       gps: { lat: q.lat, lon: q.lon, texto: typeof q.lat === 'number' && typeof q.lon === 'number' ? A.fmt.coord(q.lat, q.lon) : 'posição ' + SD, satelites: q.gps_satelites },
       sog: q.sog_nos, proa: q.proa_graus, profundidade: q.profundidade_m, vento: q.vento_verdadeiro_nos, ventoDe: q.vento_verdadeiro_angulo, pressao: q.pressao_barometrica_hpa,
       ar: q.temp_ar_externo_c, agua: q.temp_agua_c, bat24: q.bateria_0_tensao_v, bat12: q.bateria_2_tensao_v,
       tanques: { agua: q.tanque_agua_pct, cinzas: q.tanque_cinzas_pct, negras: q.tanque_negras_pct },
-      diesel: { bb: q.diesel_bb_pct, be: q.diesel_be_pct, litros: q.diesel_litros, capacidade: cap, tanques: E.tanques && E.tanques.diesel_n ? E.tanques.diesel_n + ' × ' + Math.round(cap / E.tanques.diesel_n) + ' L' : '', hora: v.hora, nota: 'leitura' },
-      motores: { hora: v.hora, estado: lig ? 'ligados' : 'desligados', rpm: [A.fmt.campo(q, 'motor_bb_rpm'), A.fmt.campo(q, 'motor_be_rpm')], oleo: [q.motor_bb_oleo_bar, q.motor_be_oleo_bar], arref: [A.fmt.campo(q, 'motor_bb_arref_c'), A.fmt.campo(q, 'motor_be_arref_c')],
-        horimetro: [q.motor_bb_horimetro_h, q.motor_be_horimetro_h], marcha: q.marcha },
-      gerador: { estado: q.gerador_ativo ? 'ligado' : 'desligado', horas: q.gerador_horimetro_h, kw: q.gerador_kw, hora: v.hora },
-      seakeeper: { estado: q.seakeeper_ativo ? 'ligado' : 'desligado', volante_rpm: q.seakeeper_volante_rpm, volante_pct: q.seakeeper_volante_pct, hora: v.hora },
+      diesel: temDie ? { bb: q.diesel_bb_pct, be: q.diesel_be_pct, litros: q.diesel_litros, capacidade: cap, tanques: dieselN, hora: v.hora, nota: 'leitura' } : { capacidade: cap, tanques: dieselN },
+      motores: temRpm || temHor ? { hora: v.hora, estado: temRpm ? (lig ? 'ligados' : 'desligados') : undefined, rpm: temRpm ? [A.fmt.campo(q, 'motor_bb_rpm'), A.fmt.campo(q, 'motor_be_rpm')] : undefined,
+        oleo: temRpm ? [q.motor_bb_oleo_bar, q.motor_be_oleo_bar] : undefined, arref: temRpm ? [A.fmt.campo(q, 'motor_bb_arref_c'), A.fmt.campo(q, 'motor_be_arref_c')] : undefined,
+        horimetro: temHor ? [q.motor_bb_horimetro_h, q.motor_be_horimetro_h] : undefined, marcha: q.marcha } : {},
+      gerador: bool(q.gerador_ativo) || tem(q.gerador_horimetro_h) ? { estado: bool(q.gerador_ativo) ? (q.gerador_ativo ? 'ligado' : 'desligado') : undefined, horas: q.gerador_horimetro_h, kw: q.gerador_kw, hora: v.hora } : {},
+      seakeeper: bool(q.seakeeper_ativo) ? { estado: q.seakeeper_ativo ? 'ligado' : 'desligado', volante_rpm: q.seakeeper_volante_rpm, volante_pct: q.seakeeper_volante_pct, hora: v.hora } : {},
       porao: { bb_cm: q.porao_bb_nivel, be_cm: q.porao_be_nivel, ciclos_h: q.bomba_porao_ciclos }, ancora: { estado: q.ancora_estado } };
     M = S.motores; G = S.gerador; DI = S.diesel; T = S.tanques;
-    AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : AUT0;
+    // autonomia e «desde o abastecimento» são contas do diesel do instante (calc); sem o diesel no quadro, SEM DADOS (e não a conta do snapshot)
+    AUT = v.calc && v.calc.autonomia ? { horas: v.calc.autonomia.horas, mn: v.calc.autonomia.mn, lenta: v.calc.autonomia.lenta } : { horas: null, mn: SD, lenta: SD };
     ab = v.calc && v.calc.desdeAbast;
-    CON = ab ? Object.assign({}, CON0, { desdeAbast: { litros: ab.litros, desde: ab.desde, horas: ab.h ? 'desde as ' + ab.h : '' } }) : CON0;
-    troca(SNAP, { quando: v.hora, hora: v.hora, dia: '', pos: S.gps.texto, local: (q.estado || SD) + ' · ' + (q.local || SD),
-      diesel: 'BB ' + nb(q.diesel_bb_pct) + ' % · BE ' + nb(q.diesel_be_pct) + ' % (≈ ' + mil(q.diesel_litros) + ' L de ' + mil(cap) + ')',
-      dieselHora: DI.nota + ' · ' + DI.hora,
-      motores: 'motores ' + M.estado + ' — ' + (t.rpm || '—') + ' · óleo ' + (t.oleo || '—') + ' · arrefecimento ' + (t.arref || '—'),
+    CON = Object.assign({}, CON0, { desdeAbast: ab ? { litros: ab.litros, desde: ab.desde, horas: ab.h ? 'desde as ' + ab.h : '' } : { litros: SD, desde: '—', horas: SD } });
+    troca(SNAP, { quando: v.hora, hora: v.hora, dia: '', pos: S.gps.texto, local: q.estado || q.local ? (q.estado || SD) + ' · ' + (q.local || SD) : 'estado e local: ' + SD,
+      diesel: temDie ? 'BB ' + nb(q.diesel_bb_pct) + ' % · BE ' + nb(q.diesel_be_pct) + ' % (≈ ' + mil(q.diesel_litros) + ' L de ' + mil(cap) + ')' : SD,
+      dieselHora: temDie ? DI.nota + ' · ' + DI.hora : SD,
+      motores: temRpm ? 'motores ' + M.estado + ' — ' + (t.rpm || '—') + ' · óleo ' + (t.oleo || '—') + ' · arrefecimento ' + (t.arref || '—') : 'motores: ' + SD,
       fonte: v.fonteTxt });
     FT.tele = 'Fonte: ' + SNAP.fonte;
   }
@@ -687,17 +702,23 @@
   var GRAVAR_AGORA = 'Para registrar no diário: diga “registre no diário…” e o que aconteceu; a posição, leia no plotter.';
   var LOCAL_PLACA = 'no local da placa de salvatagem e do plano de segurança de bordo — confira na saída';   // a frase da salvatagem (protocolos.salvatagem), sem lugar inventado
   var LOCAL_PLANO = 'no local indicado no plano de segurança de bordo — confira na saída';
-  function resumoLegado() {
-    return SNAP.local + ' · ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + SNAP.motores + ' · gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h) · Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' · banco 24 V ' + nb(S.bat24, 2) + ' V · vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ') — snapshot' + DEMO_ + ' ' + SNAP.quando + '.';
+  // O resumo sem quadro vivo (modo real, tela sem replay ou sem CapitaoAgora): o do snapshot de antes, mas SEM a posição (nunca coordenada em resumo: o diário e o
+  // contexto da IA usam este texto) e com até 300 letras: o item que não cabe sai inteiro, a fonte («snapshot … hora») fica. `semLocal`: só o estado, sem o lugar.
+  function resumoReserva(semLocal) {
+    var fim = ' — snapshot' + DEMO_ + ' ' + SNAP.quando + '.', r = '';
+    [semLocal ? (S.estado || '') : SNAP.local, 'SOG ' + nb(S.sog) + ' nó', 'proa ' + grau3(S.proa), SNAP.motores, 'diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ')',
+      'gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h)', 'Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD), 'banco 24 V ' + nb(S.bat24, 2) + ' V',
+      'vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe)].forEach(function (x) { if (x && (r ? r + ' · ' + x : x).length + fim.length <= 300) r = r ? r + ' · ' + x : x; });
+    return r + fim;
   }
   // O resumo do instante (CONTRATO §1.23): até 300 letras, sem coordenadas. Com `{ semPosicao: true }` sem o lugar (as exceções da decisão (g)); com a resposta da
-  // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/: a instrução do plotter, nunca quadro. Sem quadro vivo (modo real), o resumo de antes do snapshot.
+  // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/: a instrução do plotter, nunca quadro. Sem quadro vivo (modo real), o do snapshot, sem coordenada.
   function resumoAgora(x) {
     return congela(function () {
       var i = vivo();
       if (EM_SOS) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';
       if (i) return x && x.semPosicao ? i.txt.resumoSemPosicao : i.txt.resumo;
-      return resumoLegado();
+      return resumoReserva(!!(x && x.semPosicao));
     }, x && x._inst);
   }
   function mareTexto() {
@@ -760,7 +781,7 @@
       ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.' : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
       return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
-    destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + Math.floor(AUT.mn / 2) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: ' + tele() + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
+    destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: ' + tele() + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
     manutencao: function (p) {
       var at = atrasadas(), prox = agenda().filter(function (t) { return t.dn >= 0; }).slice(0, 3), oleoM = tarefa('motores-oleo');
       return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
@@ -869,7 +890,7 @@
     tanques: function (i) { var q = i.q; return { text: 'Tanques agora:\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
     clima: function (i, base) { var q = i.q; return { text: 'Agora a bordo (ao vivo ' + i.hora + '):\n• vento verdadeiro ' + nb(q.vento_verdadeiro_nos) + ' nós de ' + grau3(q.vento_verdadeiro_angulo) + '\n• barômetro ' + nb(q.pressao_barometrica_hpa, 0) + ' hPa\n• ar ' + nb(q.temp_ar_externo_c) + ' °C · água ' + nb(q.temp_agua_c) + ' °C\n' + base.text.split('\n')[0] }; },
     eletrico: function (i, base) { var q = i.q; return { text: 'Baterias agora: banco 24 V ' + nb(q.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(q.bateria_2_tensao_v, 2) + ' V (ao vivo ' + i.hora + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
-    estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + nb(q.seakeeper_volante_rpm, 0) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
+    estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + nb(q.seakeeper_volante_rpm, 0) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
   };
   Object.keys(VIVO).forEach(function (k) {
     var pronta = ANSWERS[k]; if (!pronta) return;
