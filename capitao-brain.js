@@ -1,11 +1,12 @@
 /* Capitão IA — cérebro: atalhos, diário, respostas canônicas, base de bordo e voz.
-   Os dados vêm de capitao-dados.js (window.CapitaoDados) — hoje a embarcação de DEMONSTRAÇÃO, com dados fictícios
-   rotulados e a fonte de cada um (Drive › Capitão IA v2). Nada inventado aqui: sem dado → SEM DADOS; sensor ausente →
-   SEM LEITURA; manual não confirmado → MANUAL NO DRIVE; foto/nota → A CONFERIR / A CONFIRMAR.
+   Os dados vêm de capitao-dados.js (window.CapitaoDados), com a fonte de cada um (Drive › Capitão IA v2), e do quadro do instante (CapitaoAgora.instante():
+   replay, coletor ou snapshot). Com D.simulacao true as respostas saem completas, com número e hora e sem rótulo de dado ausente; com simulacao false volta a
+   regra «Nada inventado»: sem dado → SEM DADOS; sensor ausente → SEM LEITURA (o caminho null do dado não se apaga). Foto e nota viram linha A CONFIRMAR no diário.
+   Tempo e maré são do mundo real (Open-Meteo); sem conexão, a frase do PROMPT §2.5.
    Pipeline: answer(q, ctx) → route(q) (emergência e óleo no topo) → ANSWERS[chave] { text, src, actions }
-             → buscaBase(q) (BM25 com sinônimos PT/EN sobre base-conhecimento.json) → SEM DADOS.
-   IA na nuvem (capitao-ia.js, ligada na demonstração): as telas de chat chamam a IA quando pedeIA(a, q) — SEM DADOS local,
-   trecho do guia ou pergunta sobre o próprio app —, mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
+             → buscaBase(q) (BM25 com sinônimos PT/EN sobre base-conhecimento.json) → fallback (a IA na nuvem, quando liga).
+   IA na nuvem (capitao-ia.js): as telas de chat chamam a IA quando pedeIA(a, q) — pergunta sem rota, trecho do guia ou pergunta sobre o próprio app —,
+   mandando a ficha(): o que o app sabe agora, cada bloco com a fonte.
    Emergência, óleo, registro no diário e respostas prontas ficam no aparelho. */
 (function () {
   var VERSAO = '1.0.9'; // = VERSAO do capitao-auth.js e do capitao-ia.js (o capitao-app.js recarrega se vierem misturados)
@@ -16,9 +17,11 @@
   // gerado da embarcação sai de lá (PROMPT §2.1; CONTRATO §1.3). Em /SOS-/ nada aqui lê o snapshot, o replay nem o MMSI gerado.
   var EM_SOS = false; try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
   var E = D.embarcacao || {}, S = EM_SOS ? {} : (D.snapshot || {}), AUT = D.autonomia || {}, CON = D.consumo || {};
-  var DEMO = D.demo ? ' (DEMO)' : '';
-  var DEMO_ = D.demo ? ' DEMO' : ''; // dentro de parênteses: "(snapshot DEMO 26/09 10:12)", sem parêntese aninhado
-  var SD = 'SEM DADOS';
+  var SD = 'SEM DADOS', SL = 'SEM LEITURA';
+  // Decisão 6: a simulação é a flag gerada D.simulacao, lida a cada chamada (nunca guardada na carga) e nunca no SOS. A flag antiga D.demo só põe o rótulo (DEMO) de antes sem a simulação.
+  function sim() { return !EM_SOS && D.simulacao === true; }
+  function demo() { return D.demo && !sim() ? ' (DEMO)' : ''; }
+  function demo_() { return D.demo && !sim() ? ' DEMO' : ''; }   // dentro de parênteses: "(leitura DEMO 26/09 10:12)", sem parêntese aninhado
 
   var HREF = {
     web: { home: 'Main.dc.html', console: 'A1-Ponte-Web.dc.html', gestao: 'B1-Carta-Web.dc.html', manut: 'C1-Leme-Web.dc.html', docs: 'G1-Documentos-Web.dc.html', abast: 'G2-Abastecimento-Web.dc.html', diario: 'G3-Diario-Web.dc.html', equipe: 'G4-Equipe-Web.dc.html', faq: 'F1-FAQ-Hub-Web.dc.html', f2: 'F2-FAQ-Estabilizador-Web.dc.html', f3: 'F3-FAQ-Eletronicos-Web.dc.html', f4: 'F4-FAQ-Gerador-Web.dc.html', f5: 'F5-FAQ-Climatizacao-Web.dc.html', sos: 'S1-SOS-Web.dc.html', atalhos: 'H3-Atalhos-Editar-Web.dc.html' },
@@ -99,8 +102,8 @@
     local: (S.estado || SD) + ' · ' + (S.local || SD),
     diesel: DI.bb != null ? 'BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % (≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ')' : SD,
     dieselHora: (DI.nota || 'última leitura') + ' · ' + (DI.hora || SD),
-    motores: M.rpm ? 'motores ' + (M.estado || 'desligados') + ' — última leitura com motores ligados ' + M.hora + ' (marcha lenta, ' + (M.marcha || 'neutro') + '): ' + M.rpm.join('/') + ' rpm · óleo ' + M.oleo.map(function (x) { return nb(x); }).join('/') + ' bar · arrefecimento ' + M.arref.join('/') + ' °C' : 'motores: ' + SD,
-    fonte: 'coletor NMEA' + DEMO + ' · snapshot ' + (S.quando || SD)
+    motores: M.rpm ? 'motores ' + (M.estado || 'desligados') + ' — última leitura com motores ligados ' + M.hora + ' (' + (M.marcha || 'neutro') + '): ' + M.rpm.join('/') + ' rpm · óleo ' + M.oleo.map(function (x) { return nb(x); }).join('/') + ' bar · arrefecimento ' + M.arref.join('/') + ' °C' : 'motores: ' + SD,
+    fonte: 'coletor NMEA' + demo() + ' · leitura de ' + (S.quando || SD)
   }; }
   var SNAP = montaSnap();
   var FT = {
@@ -326,7 +329,7 @@
     FT.tele = 'Fonte: ' + SNAP.fonte;
   }
   // a fonte do instante nas respostas de dado de bordo que não passam pelo FT.tele: «telemetria ao vivo · hora» (ou a do coletor), no lugar do «telemetria» do snapshot
-  function tele() { return vivo() ? SNAP.fonte : 'telemetria' + DEMO; }
+  function tele() { return vivo() ? SNAP.fonte : 'telemetria' + demo(); }
   function comTele() { return vivo() ? ' · ' + SNAP.fonte : ''; }
   // quanto falta para o limite de horas da tarefa: o do instante (os horímetros andam) ou, sem quadro vivo, o da agenda
   function faltam(t) { var i = vivo(), f = i && i.calc && i.calc.faltam && i.calc.faltam[t.id]; return typeof f === 'number' ? f : t.horas.faltam; }
@@ -340,10 +343,33 @@
     var f = e.fabricante, m = e.modelo;
     return e.nome + (f && m && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? '' : ' ' + (f || '(fabricante ' + SD + ')')) + (m ? ' ' + m : ' · modelo ' + SD);
   }
-  function agenda() { return D.agenda || []; }
-  function atrasadas() { return agenda().filter(function (t) { return t.dn < 0; }); }
-  function tarefa(id) { return agenda().filter(function (t) { return t.id === id; })[0] || null; }
-  function prazoTxt(t) { return t ? (t.dn < 0 ? 'em atraso há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') : 'D-' + t.dn + ' · ' + t.vence.slice(0, 5)) : SD; }
+  // ——— Prazos em tempo de execução (P3B) ———
+  // O dn (dias até o vencimento; negativo = atrasado) é contado da DATA de vencimento contra o dia do INSTANTE no fuso do barco, nunca do dn que o dado traz: o
+  // rebase do rodapé o refaz ao carregar e na virada do dia, e uma tela aberta desde ontem sem o replay ficaria um dia atrás. A classificação é a do
+  // CapitaoAgora.prazoDe; a tarefa executada (capitao.executado.v1) sai da agenda, como na contagem das telas; a tarefa de um equipamento de segurança (EPIRB,
+  // Seafire) vai sem a data e sem o D-n: a nota da etiqueta (CONTRATO §1.4, §6.6 «Revisão do C7»).
+  function msAgora() { var i = CONG.inst; return i && typeof i.ms === 'number' ? i.ms : Date.now(); }
+  function diaDe(ms) { var A = window.CapitaoAgora, o = -180; try { if (A && typeof A.off === 'function') o = A.off(ms); } catch (e) {} return Math.floor((ms + o * 60000) / 86400000); }
+  function diaData(s) {   // 'dd/mm/aaaa' ou 'aaaa-mm-dd' → dia desde 1970; NaN se não for data
+    var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s || ''), n = null;
+    if (m) n = [m[3], m[2], m[1]]; else if ((m = /^(\d{4})-(\d\d)-(\d\d)/.exec(s || ''))) n = [m[1], m[2], m[3]];
+    return n ? Math.floor(Date.UTC(+n[0], +n[1] - 1, +n[2]) / 86400000) : NaN;
+  }
+  function dnDe(x) { var n = x ? diaData(x.vence) - diaDe(msAgora()) : NaN; return isNaN(n) ? (x && typeof x.dn === 'number' ? x.dn : NaN) : n; }
+  function prazoSt(n) { var A = window.CapitaoAgora; try { if (A && typeof A.prazoDe === 'function') return A.prazoDe(n); } catch (e) {} return { st: n < 0 ? 'ATRASADA' : 'EM DIA' }; }
+  function atrasadaN(n) { return !isNaN(n) && prazoSt(n).st === 'ATRASADA'; }
+  function seg(t) { var e = t && equip(t.sistema); return !!(e && e.seguranca); }
+  function agenda() { var ex = loadExec(); return (D.agenda || []).filter(function (t) { return !ex[t.id]; }).sort(function (a, b) { return (dnDe(a) - dnDe(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); }); }
+  function atrasadas() { return agenda().filter(function (t) { return atrasadaN(dnDe(t)); }); }
+  function tarefa(id) { return (D.agenda || []).filter(function (t) { return t.id === id; })[0] || null; }
+  function prazoTxt(t) {
+    if (!t) return SD;
+    var f = loadExec()[t.id], n = dnDe(t);
+    if (f) return 'executado em ' + f.d + ' às ' + f.t;
+    if (isNaN(n)) return SD;
+    if (atrasadaN(n)) return 'em atraso há ' + (-n) + (n === -1 ? ' dia' : ' dias');
+    return seg(t) ? NOTA_ETIQUETA : 'D-' + n + ' · ' + String(t.vence).slice(0, 5);
+  }
   function min1(s) { s = String(s || ''); return s.charAt(0).toLowerCase() + s.slice(1); }
   function pendencias() { return diarioFonte().filter(function (x) { return x.pend; }); }
 
@@ -713,7 +739,7 @@
   // O resumo sem quadro vivo (modo real, tela sem replay ou sem CapitaoAgora): o do snapshot de antes, mas SEM a posição (nunca coordenada em resumo: o diário e o
   // contexto da IA usam este texto) e com até 300 letras: o item que não cabe sai inteiro, a fonte («snapshot … hora») fica. `semLocal`: só o estado, sem o lugar.
   function resumoReserva(semLocal) {
-    var fim = ' — snapshot' + DEMO_ + ' ' + SNAP.quando + '.', r = '';
+    var fim = ' — leitura' + demo_() + ' de ' + SNAP.quando + '.', r = '';
     [semLocal ? (S.estado || '') : SNAP.local, 'SOG ' + nb(S.sog) + ' nó', 'proa ' + grau3(S.proa), SNAP.motores, 'diesel ' + SNAP.diesel + ' (' + SNAP.dieselHora + ')',
       'gerador ' + (G.estado || SD) + ' (' + horas(G.horas) + ' h)', 'Seakeeper ' + ((S.seakeeper && S.seakeeper.estado) || SD), 'banco 24 V ' + nb(S.bat24, 2) + ' V',
       'vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe)].forEach(function (x) { if (x && (r ? r + ' · ' + x : x).length + fim.length <= 300) r = r ? r + ' · ' + x : x; });
@@ -755,10 +781,41 @@
   }
   function windy() { var C = window.CapitaoClima; return { l: 'Abrir o windy.com', href: (C && C.WINDY) || 'https://www.windy.com/', ext: true }; }
 
+  // ——— O que as respostas de dado de bordo dizem (P3B) ———
+  // Com D.simulacao true nenhuma resposta traz rótulo de dado ausente (SEM DADOS, SEM LEITURA, MANUAL NO DRIVE, A CADASTRAR, "snapshot"): o dado vem do quadro do
+  // instante (recarrega) e a hora dele está na resposta. O caminho null do dado fica: um campo que falta no cadastro ou na leitura segue dizendo SEM DADOS / SEM LEITURA
+  // (decisão 6), e com simulacao false o cérebro lê o snapshot e a regra «Nada inventado» volta inteira. Tempo e maré são do mundo real (PROMPT §2.5): previsão de
+  // vento e maré do Open-Meteo com a hora da leitura; sem conexão, a frase do §2.5. Vento e ondas do quadro vão como «a bordo agora» e não entram na decisão de sair.
+  function quando() { return vivo() ? 'ao vivo ' + SNAP.quando : 'leitura de ' + SNAP.quando; }   // «ao vivo 12:01:00» · «leitura de 26/09/2026 10:12»
+  function cap1(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function reservaPct() { return Math.round((typeof D.reserva === 'number' ? D.reserva : 0.1) * 100); }
+  function limitesDe(campo) { var L = D.replay && D.replay.limites; return L && L[campo] ? L[campo] : null; }
+  // a faixa normal da pressão do óleo para esse giro, do D.replay.limites (a do guia dos motores §9): «de 2,4 a 6,0 bar a partir de 1.000 rpm»
+  function faixaOleo(rpm) {
+    var L = limitesDe('motor_bb_oleo_bar'), r = L && L.regimes, k, x, n;
+    if (!r || typeof rpm !== 'number') return '';
+    for (k = 0; k < r.length; k++) {
+      x = r[k];
+      if ((x.rpm_ate == null || rpm <= x.rpm_ate) && (x.rpm_de == null || rpm >= x.rpm_de) && (n = x.normal)) return 'de ' + nb(n.de) + ' a ' + nb(n.ate) + ' bar ' + (x.rpm_de != null ? 'a partir de ' + mil(x.rpm_de) + ' rpm' : 'abaixo de ' + mil(x.rpm_ate) + ' rpm') + ' (' + L.fonte + ')';
+    }
+    return '';
+  }
+  // a hora (HH:MM) no fuso do barco, e a da última leitura salva do tempo ou da maré (de qualquer dia: capitao.clima.v1 e capitao.mare.v1 guardam o `em`), ou '' se o aparelho nunca leu
+  function fmtHM(ms) { var A = window.CapitaoAgora; try { if (A && A.fmt && typeof A.fmt.hora === 'function') return A.fmt.hora(ms); } catch (e) {} var d = new Date(ms); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+  function ultimaLeitura() { var ms = 0; ['capitao.clima.v1', 'capitao.mare.v1'].forEach(function (k) { var v = read(k, null); if (v && typeof v.em === 'number' && isFinite(v.em) && v.em > ms) ms = v.em; }); return ms ? fmtHM(ms) : ''; }
+  // sem conexão e sem leitura de hoje: a frase do §2.5 (a única de tempo e maré que não é leitura)
+  function semConexao() { var h = ultimaLeitura(); return 'Previsão e maré: sem conexão agora' + (h ? ' (última às ' + h + ')' : '') + ' — confira o boletim da Marinha antes de sair.'; }
+  var MAR_SIM = ' · ondas: o app não tem previsão de mar — confira a previsão da Marinha antes de sair.';
+  // a situação de bordo sem posição, para as respostas que a decisão (g) manda levar (tempo e maré sem conexão, contatos, fallback, anexos)
+  function linhaBordo() { return (vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ') + resumoAgora({ semPosicao: true }); }
+  function poraoTxt() { var PO = S.porao || {}; return typeof PO.bb_cm === 'number' && typeof PO.be_cm === 'number' ? 'BB ' + nb(PO.bb_cm) + ' cm · BE ' + nb(PO.be_cm) + ' cm' + (typeof PO.ciclos_h === 'number' ? ' · ' + (PO.ciclos_h ? PO.ciclos_h + (PO.ciclos_h === 1 ? ' ciclo' : ' ciclos') : 'nenhum ciclo') + ' da bomba na última hora' : '') : null; }
+  // «Motores Cummins QSB6.7 305 · 2 unidades (BB e BE)»: do cadastro (D.equipamentos), nunca um fabricante fixo no código
+  function motoresTxt() { var e = equip('motores'); return fabMod('motores') + (e && e.qtd ? ' · ' + e.qtd + (e.qtd === 1 ? ' unidade' : ' unidades') : '') + (e && e.lados ? ' (' + e.lados + ')' : ''); }
+
   var ANSWERS = {
     // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
     // que soava como se a pergunta fosse ignorada — fala o que o Capitão faz.
-    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + (D.selo ? ' · ' + D.selo : ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
+    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria ao vivo, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo && !sim() ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + (D.selo && !sim() ? ' · ' + D.selo : ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
     // Grava as palavras do usuário; sem texto (ou atalho DIÁRIO DE BORDO) grava o resumo da telemetria. commit:false (veio de link) não grava.
     diario: function (p, ctx, q) {
       var n = now(), grava = !ctx || ctx.commit !== false, nota = notaDoUsuario(q);
@@ -779,80 +836,129 @@
         return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
       }
       var t = resumoAgora();
-      if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + DEMO : 'atalho · telemetria' + DEMO });
+      if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });
       return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n' + (junto ? '“' + nota + '”\n' : '') + t + '\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário.\n' + (junto ? '“' + nota + '”\n' : '') + 'Resumo: ' + t + '\n' + como + ', ou toque no atalho DIÁRIO DE BORDO.') + passos, src: FT.tele + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
     },
+    // Seguro para sair: as ressalvas (segurança primeiro), os alarmes do quadro e a previsão REAL de vento (§2.5); o vento e as ondas do quadro vão como «a bordo agora» e
+    // não entram na decisão. O app não tem limite de vento com fonte: ele não diz «não» pelo vento. Alarme crítico ativo diz «Não».
     seguro: function (p) {
-      var at = atrasadas(), porao = tarefa('porao-teste');
-      var ress = [];
-      if (porao && porao.dn < 0) ress.push('(segurança): teste das bombas de porão e alarmes ' + prazoTxt(porao) + ' — acione cada bomba manualmente antes de largar.');
+      var at = atrasadas(), porao = tarefa('porao-teste'), i = vivo(), s = sim(), ress = [], pv = previsao(), primeiraSeg = false;
+      var crit = !!(i && Array.isArray(i.q.alarmes) && i.q.alarmes.some(function (a) { return a.nivel === 'critico'; })), al = i && i.txt.alarmes && i.txt.alarmes.indexOf('nenhum') !== 0 ? i.txt.alarmes : null;
+      if (porao && at.indexOf(porao) !== -1) { primeiraSeg = true; ress.push('(segurança): teste das bombas de porão e alarmes ' + prazoTxt(porao) + ' — acione cada bomba manualmente antes de largar.'); }
       at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });
-      var pv = previsao();
-      ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.' : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
-      return { text: 'Sim, com ' + ress.length + ' ressalvas — a primeira é de segurança.\n• Condições a bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '): vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de 10 %.\n' + ress.map(function (r, i) { return '• Ressalva ' + (i + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarmes.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
+      if (al) ress.push('Alarme ativo a bordo agora: ' + al + '.');
+      ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + (s ? MAR_SIM : ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.') : s ? semConexao() : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
+      return { text: (crit ? 'Não saia agora: há alarme crítico ativo (' + al + '), com ' + ress.length + (ress.length === 1 ? ' ressalva.' : ' ressalvas.') : 'Sim, com ' + ress.length + (ress.length === 1 ? ' ressalva' : ' ressalvas') + (primeiraSeg ? ' — a primeira é de segurança.' : '.')) + '\n• Condições a bordo ' + (i ? 'agora (' + SNAP.quando + ')' : 'na ' + quando()) + ': vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + (i && i.txt.ondas ? ' · ondas ' + i.txt.ondas : '') + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de ' + reservaPct() + ' %.\n' + ress.map(function (r, k) { return '• Ressalva ' + (k + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + cap1(SNAP.motores) + (i ? ' · alarmes: ' + i.txt.alarmes : '') + '.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
-    destinos: function (p) { return { text: 'SEM DADOS de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nAlcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + CON.cruzeiro.nos + ' nós, reserva de 10 %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.', src: 'Fonte: ' + tele() + ' · consumo observado ' + (CON.periodo || '') + ' · roteiros: nenhum', actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) }; },
+    // Destinos: a rota em andamento (destino, distância e ETA do quadro) e os destinos da base com tempo e diesel (a 18 nós, 68 L/h do guia dos motores §10); o juízo
+    // compara a ida e volta com o diesel a bordo menos a reserva e a margem de manobra
+    destinos: function (p) {
+      var i = vivo(), q = i && i.q, t = i && i.txt, c = CON.cruzeiro || {}, lista = D.destinos || [], R = D.rota, nos = c.nos, lph = c.lph, margem = typeof CON.margemManobra_l === 'number' ? CON.margemManobra_l : 0;
+      var emRota = !!(t && t.destino && t.eta), util = typeof DI.litros === 'number' ? DI.litros * (1 - (typeof D.reserva === 'number' ? D.reserva : 0.1)) - margem : null;
+      var cab = emRota ? 'Indo para ' + t.destino + ', chegada prevista às ' + t.eta + ' — ' + i.hora + '.' : 'Alcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + nos + ' nós, reserva de ' + reservaPct() + ' %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.';
+      var tempo = function (h) { var m = Math.round(h * 60); return m >= 60 ? Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2) + ' min' : m + ' min'; };
+      var ls = lista.map(function (d, k) {
+        var h = nos > 0 ? d.mn / nos : null, l = h != null && lph > 0 ? Math.round(h * lph) : null, iv = l != null ? 2 * l : null;
+        return (k + 1) + '. ' + d.nome + ' — ≈ ' + nb(d.mn) + ' mn' + (h != null ? ' · ≈ ' + tempo(h) : '') + (l != null ? ' · ≈ ' + l + ' L' : '') + (iv != null && util != null ? '; ida e volta ≈ ' + iv + ' L — ' + (iv <= util ? 'cabe no diesel a bordo' : 'pede abastecer antes') : '');
+      });
+      var fonte = 'Fonte: ' + tele() + ' · ' + (R && R.fonte ? R.fonte : 'rotas: nenhuma') + ' · ' + (vivo() ? CON.fonte : 'consumo observado ' + (CON.periodo || ''));
+      if (!lista.length) return { text: cab + (emRota ? '' : '\n' + SD + ' de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.'), src: fonte, actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) };
+      return { text: cab + '\nDestinos a partir ' + ((R && R.base && R.base.rel) || 'da base') + ', a ' + nos + ' nós (' + lph + ' L/h), só ida:\n' + ls.join('\n') + '\nDistâncias pela rota planejada — confirme a rota no plotter.', src: fonte, actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) };
+    },
+    // Manutenção: as atrasadas (a mais atrasada primeiro) e as 3 próximas, com o prazo contado do dia do instante; a tarefa de um equipamento de segurança (EPIRB, Seafire)
+    // vai sem a data (a nota da etiqueta). A tarefa executada (Executado) sai.
     manutencao: function (p) {
-      var at = atrasadas(), prox = agenda().filter(function (t) { return t.dn >= 0; }).slice(0, 3), oleoM = tarefa('motores-oleo');
-      return { text: 'Atrasadas (' + at.length + '):\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') + '\nPróximas:\n' + prox.map(function (t) { return '• D-' + t.dn + ' · ' + t.vence.slice(0, 5) + ' — ' + t.t + ' (' + t.quem + ')'; }).join('\n') + (oleoM && oleoM.horas ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + agenda().length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
+      var at = atrasadas(), prox = agenda().filter(function (t) { return !atrasadaN(dnDe(t)); }).slice(0, 3), oleoM = tarefa('motores-oleo'), i = vivo();
+      var linha = function (t) { return seg(t) ? '• ' + t.t + ' (' + t.quem + ') — ' + NOTA_ETIQUETA : '• ' + prazoTxt(t) + ' — ' + t.t + ' (' + t.quem + ')'; };
+      return { text: (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !loadExec()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
-    autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de 10 %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + CON.periodo + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
+    autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de ' + reservaPct() + ' %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + (vivo() ? CON.fonte : CON.periodo) + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
+    // Maré: do mundo real (Open-Meteo Marine, modelo, não a tábua da Marinha). Sem conexão e sem leitura salva: a frase do §2.5 e a situação de bordo (decisão (g)).
     mare: function (p) {
-      var m = mareTexto();
-      if (!m) return { text: 'SEM DADOS de maré agora: sem internet e sem leitura salva neste aparelho.\nO app usa o modelo do Open-Meteo Marine na posição de referência (Balneário Camboriú) — não é a tábua oficial da Marinha (DHN).', src: 'Fonte: nenhuma disponível agora — Open-Meteo Marine sem resposta', actions: act(p, [['Registrar pendência', 'diario']]) };
-      return { text: 'Maré agora ' + m.agora + ' em relação ao nível médio do mar (Balneário Camboriú).\nPróximas horas: ' + m.prox.join(' · ') + '.\nÉ modelo (≈ 8 km), não a tábua oficial da Marinha — não use para passar em canal raso. Corrente: ' + SD + '.', src: 'Fonte: Open-Meteo Marine (sea_level_height_msl) · posição de referência ' + ((D.posicaoRef && D.posicaoRef.fonte) || ''), actions: act(p, [['Clima', askHref(p, 'Clima')]]) };
+      var m = mareTexto(), s = sim();
+      if (!m) return s ? { text: semConexao() + '\nO app usa o modelo do Open-Meteo Marine na posição de referência (Balneário Camboriú) — não é a tábua oficial da Marinha (DHN).\n' + linhaBordo(), src: 'Fonte: nenhuma leitura de maré neste aparelho — Open-Meteo Marine sem resposta', actions: act(p, [['Registrar pendência', 'diario']]) }
+        : { text: 'SEM DADOS de maré agora: sem internet e sem leitura salva neste aparelho.\nO app usa o modelo do Open-Meteo Marine na posição de referência (Balneário Camboriú) — não é a tábua oficial da Marinha (DHN).', src: 'Fonte: nenhuma disponível agora — Open-Meteo Marine sem resposta', actions: act(p, [['Registrar pendência', 'diario']]) };
+      return { text: 'Maré agora ' + m.agora + ' em relação ao nível médio do mar (Balneário Camboriú).\nPróximas horas: ' + m.prox.join(' · ') + '.\nÉ modelo (≈ 8 km), não a tábua oficial da Marinha — não use para passar em canal raso. ' + (s ? 'Corrente: o modelo traz só a altura da maré.' : 'Corrente: ' + SD + '.'), src: 'Fonte: Open-Meteo Marine (sea_level_height_msl) · posição de referência ' + ((D.posicaoRef && D.posicaoRef.fonte) || ''), actions: act(p, [['Clima', askHref(p, 'Clima')]]) };
     },
+    // Clima: a previsão do dia REAL (§2.5) e, à parte, o vento, a pressão, o ar, a água e as ondas «a bordo agora». Sem a leitura de hoje, a frase do §2.5 e a situação de bordo.
     clima: function (p) {
-      var pv = previsao();
-      return { text: (pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\nLeitura de bordo (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água do mar ' + nb(S.agua) + ' °C\n' + (pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.'), src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
+      var pv = previsao(), s = sim(), i = vivo(), q = i && i.q;
+      var cab = pv ? 'Hoje em Balneário Camboriú: ' + pv.temp + ' · ' + pv.vento + ' (previsão ' + pv.fonte + ').' : s ? semConexao() + '\n' + linhaBordo() : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).';
+      var bordo = (i ? 'A bordo agora (' + SNAP.quando + '):' : 'Última leitura de bordo (' + SNAP.quando + '):') + '\n• vento verdadeiro ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + '\n• barômetro ' + nb(S.pressao, 0) + ' hPa\n• ar ' + nb(S.ar) + ' °C · água ' + nb(S.agua) + ' °C' + (i && q && typeof q.ondas_m === 'number' ? '\n• ondas ' + i.txt.ondas : '');
+      var fim = s ? 'Para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : pv ? 'Previsão do mar (ondas): ' + SD + ' no app — para navegar, consulte a meteorologia marinha da Marinha do Brasil.' : 'Previsão de vento e mar para navegar: ' + SD + ' no app — consulte a meteorologia marinha da Marinha do Brasil.';
+      return { text: cab + '\n' + bordo + '\n' + fim, src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte + ' · ' : s ? '' : 'previsão Open-Meteo: sem leitura de hoje neste aparelho · ') + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]).concat(pv ? [windy()] : []) };
     },
     canal16: function (p) {
       return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\n' + (P.panpan || 'Urgência sem perigo de vida: PAN-PAN ×3.'), src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
     },
-    checklist: function (p) { var porao = tarefa('porao-teste'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (tarefa('clima-filtro') && tarefa('clima-filtro').dn < 0 ? ' (limpeza ' + prazoTxt(tarefa('clima-filtro')) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && porao.dn < 0 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\nAmarração e fechamento: A CONFIRMAR (sem checklist oficial do estaleiro).', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    // Checklist de saída: o que está catalogado nos guias; o último item é o «antes de largar» do guia (salvatagem conforme a placa, previsão do dia)
+    checklist: function (p) { var porao = tarefa('porao-teste'), cl = tarefa('clima-filtro'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (cl && atrasadas().indexOf(cl) !== -1 ? ' (limpeza ' + prazoTxt(cl) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && atrasadas().indexOf(porao) !== -1 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\n7. Antes de largar: coletes, um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem; previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
-    consumo: function (p) { var ab = D.abastecimentos || []; return { text: 'Consumo observado (telemetria' + DEMO + ' ' + CON.periodo + '):\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', '') + comTele(), actions: act(p, [['Abastecimento', 'abast']]) }; },
-    tanques: function (p) { return { text: 'Tanques (snapshot' + DEMO_ + ' ' + SNAP.quando + '):\n• água doce ' + nb(T.agua) + ' %\n• águas cinzas ' + nb(T.cinzas) + ' %\n• águas negras ' + nb(T.negras) + ' %\n• diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.', src: FT.tele + ' (diesel ' + (DI.hora || '') + ')', actions: act(p, [['Telemetria', 'console']]) }; },
-    contatos: function (p) {
+    consumo: function (p) { var ab = D.abastecimentos || [], i = vivo(); return { text: (i ? 'Consumo agora (' + i.hora + '): ' + (i.txt.consumo || SD) + ' nos dois motores.' : 'Consumo observado (telemetria' + demo() + ' ' + CON.periodo + '):') + '\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', '') + comTele(), actions: act(p, [['Abastecimento', 'abast']]) }; },
+    tanques: function (p) { return { text: 'Tanques (' + quando() + '):\n• água doce ' + nb(T.agua) + ' %\n• águas cinzas ' + nb(T.cinzas) + ' %\n• águas negras ' + nb(T.negras) + ' %\n• diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.', src: FT.tele + ' (diesel ' + (DI.hora || '') + ')', actions: act(p, [['Telemetria', 'console']]) }; },
+    // Contatos: quem chamar. Os telefones ficam só neste aparelho (Equipe). Exceção da decisão (g): leva a situação de bordo sem posição.
+    contatos: function (p, ctx) {
       var eq = D.equipe || {}, per = eq.perfis || [], ap = eq.apoio || [], f = loadEquipe().fones, cad = Object.keys(f).length;
-      return { text: 'Acesso total: ' + per.map(function (x) { return x.nome + ' (' + x.papel + ')'; }).join(' · ') + '.\nApoio: ' + ap.map(function (a) { return min1(a.papel) + (a.para ? ' (' + a.para + ')' : ''); }).join(' · ') + '.\nTelefones: ' + (cad ? cad + ' cadastrado(s) neste aparelho — abra Equipe para ligar.' : 'A CADASTRAR em Equipe (ficam só neste aparelho).'), src: 'Fonte: cadastro da equipe' + DEMO + ' · telefones do aparelho', actions: act(p, [['Equipe e contatos', 'equipe']]) };
+      return { text: 'Acesso total: ' + per.map(function (x) { return x.nome + ' (' + x.papel + ')'; }).join(' · ') + '.\nApoio: ' + ap.map(function (a) { return min1(a.papel) + (a.para ? ' (' + a.para + ')' : ''); }).join(' · ') + '.\nTelefones: ' + (cad ? cad + ' cadastrado(s) neste aparelho — abra Equipe para ligar.' : 'ficam só neste aparelho (Equipe): cadastre ali para ligar direto.') + (ctx && ctx.semBordo ? '' : '\n' + linhaBordo()), src: 'Fonte: cadastro da equipe' + demo() + ' · telefones do aparelho', actions: act(p, [['Equipe e contatos', 'equipe']]) };
     },
     anomalias: function (p) {
       var pend = pendencias(), app = loadDiario().filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
       return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
-    porao: function (p) { var t = tarefa('porao-teste'); return { text: 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nSem sensor de porão no barramento NMEA — SEM LEITURA.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + (vivo() ? ' · ' + SNAP.fonte : ' · coletor NMEA' + DEMO + ' (sem sentença de porão)'), actions: act(p, [['Manutenção', 'manut']]) }; },
-    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(faltam(rv)) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetro: ' + SNAP.fonte : ' · horímetro na telemetria' + DEMO), actions: act(p, [['Passo a passo', 'f4']]) }; },
+    // Porão: o nível das bombas no quadro, a faixa do guia e o teste mensal; sem o dado do porão, SEM LEITURA (o caminho null)
+    porao: function (p) {
+      var t = tarefa('porao-teste'), niv = poraoTxt(), L = limitesDe('porao_bb_nivel'), ate = L && L.normal && typeof L.normal.ate === 'number' ? L.normal.ate : null, e = equip('porao');
+      return { text: (niv ? 'Porão ' + (vivo() ? 'às ' + SNAP.quando : 'na ' + quando()) + ': nível ' + niv + (ate != null ? ' (normal até ' + nb(ate, 0) + ' cm)' : '') + '.' : 'Sem sensor de porão no barramento NMEA — SEM LEITURA.') + '\n' + (e ? fabMod('porao') + ': ligam sozinhas pelo sensor de nível (' + guia('g_porao') + ' §1–2).\n' : '') + 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut']]) };
+    },
+    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + (typeof G.kw === 'number' ? ' · ' + nb(G.kw) + ' kW' : '') + ' · ' + quando() + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(faltam(rv)) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetro: ' + SNAP.fonte : ' · horímetro na telemetria' + demo()), actions: act(p, [['Passo a passo', 'f4']]) }; },
+    // Telemetria: a situação (1ª linha) e o que o quadro do instante tem; porão e âncora do quadro (o dado que falta segue SEM LEITURA); os alarmes do instante
     telemetria: function (p) {
-      var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {};
-      return { text: 'Snapshot' + DEMO + ' de ' + SNAP.quando + ': ' + min1(SNAP.local) + '. Telemetria ao vivo desligada.'
-        + '\n• Posição ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · profundidade ' + nb(S.profundidade) + ' m'
+      var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {}, i = vivo(), t = i && i.txt, po = poraoTxt(), AN = S.ancora || {};
+      var cab = i ? cap1(i.q.estado || 'Navegando') + (t.local ? ' ' + t.local : '') + (t.sog ? ', a ' + t.sog : '') + (t.rpm ? ', com os motores a ' + t.rpm : '') + ' — ' + i.hora + '.' : 'Leitura de ' + SNAP.quando + ': ' + min1(SNAP.local) + '.';
+      return { text: cab
+        + '\n• Posição ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nós · proa ' + grau3(S.proa) + ' · profundidade ' + nb(S.profundidade) + ' m'
         + '\n• Vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · pressão ' + nb(S.pressao, 0) + ' hPa · ar ' + nb(S.ar) + ' °C · mar ' + nb(S.agua) + ' °C'
         + '\n• Baterias 24 V ' + nb(S.bat24, 2) + ' V · 12 V ' + nb(S.bat12, 2) + ' V'
         + '\n• Tanques: água doce ' + nb(T.agua) + ' % · cinzas ' + nb(T.cinzas) + ' % · negras ' + nb(T.negras) + ' %'
         + '\n• Diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora
         + '\n• ' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1)
         + '\n• Gerador ' + (G.estado || SD) + ' · ' + (G.horas != null ? horas(G.horas) + ' h' : 'horímetro ' + SD) + ' · Seakeeper ' + (K.estado || SD)
-        + '\n• Porão e âncora: SEM LEITURA.',
+        + '\n• Porão ' + (po || 'SEM LEITURA') + ' · âncora ' + (AN.estado ? AN.estado + (typeof AN.cabo_m === 'number' ? ', ' + mil(AN.cabo_m) + ' m de corrente' : '') : 'SEM LEITURA')
+        + (i ? '\n• Alarmes: ' + t.alarmes + (t.tend ? '\n• Tendência — ' + t.tend : '') : ''),
         src: FT.tele, actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
     },
-    posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nó · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · snapshot' + DEMO_ + ' ' + SNAP.quando + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
+    posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nós · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · ' + quando() + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
+    // Documentos: o prazo contado do dia do instante; o documento de um equipamento de segurança (o certificado do EPIRB) sem a data, com a nota da etiqueta; a linha do que
+    // falta (SEM DADOS) só existe quando há documento sem dado
     docsvenc: function (p) {
-      // Documento ligado a um equipamento de segurança (o certificado do EPIRB): sem a data nem o D-n; a etiqueta do equipamento vale (1b, trava 17)
-      var seg = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };
-      var todos = (D.documentos || []), segDocs = todos.filter(seg), ds = todos.filter(function (d) { return !seg(d); });
-      var com = ds.filter(function (d) { return d.dn != null; }).sort(function (a, b) { return a.dn - b.dn; });
-      var vence = com.filter(function (d) { return d.dn <= 90; }), dia = com.filter(function (d) { return d.dn > 90; }), sem = ds.filter(function (d) { return d.st === SD; }), conf = ds.filter(function (d) { return /A CONF/.test(d.st); });
-      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (D-' + d.dn + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
+      var segd = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };
+      var todos = (D.documentos || []), segDocs = todos.filter(segd), ds = todos.filter(function (d) { return !segd(d); });
+      var com = ds.filter(function (d) { return !isNaN(dnDe(d)); }).sort(function (a, b) { return dnDe(a) - dnDe(b); });
+      var vence = com.filter(function (d) { return dnDe(d) <= 90; }), dia = com.filter(function (d) { return dnDe(d) > 90; }), sem = ds.filter(function (d) { return d.st === SD; }), conf = ds.filter(function (d) { return /A CONF/.test(d.st); });
+      var prazo = function (d) { var n = dnDe(d); return n < 0 ? 'VENCIDO há ' + (-n) + (n === -1 ? ' dia' : ' dias') : 'D-' + n; };
+      return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (' + prazo(d) + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.' + (sem.length ? '\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
     },
-    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros (motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + '):\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (D-' + o.dn + ') ou ' + o.horas.limite + ' h — faltam ' + nb(faltam(o)) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (D-' + rv.dn + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
-    motores: function (p) { var e = equip('motores'); return { text: 'Motores ' + (e && e.qtd ? e.qtd + ' × ' : '') + 'Volvo Penta' + (e && e.lados ? ' (' + e.lados + ')' : '') + ' · modelo ' + SD + '.\n' + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + ' · sem alarme.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h · troca de óleo ' + prazoTxt(tarefa('motores-oleo')) + ' ou 450 h.\nPartida, aquecimento e parada: ' + guia('g_motores') + '. Faixas oficiais: manual do fabricante — modelo ' + SD + '.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
-    estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\n• Funciona no banco de 12 V: acelera com o banco carregado (carregador ligado ao gerador ou ao cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nTempo de aceleração e códigos de alarme: MANUAL NO DRIVE (modelo ' + SD + ').' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
-    climatizacao: function (p) { var f = tarefa('clima-filtro'); return { text: 'Climatização · fabricante e modelo ' + SD + '.\n' + (f ? 'Filtro de água salgada: limpeza ' + prazoTxt(f) + ' — e há fluxo fraco na cabine de proa desde 20/09 (diário).\n' : '') + 'Ligar: válvula de fundo aberta e filtro limpo → bomba de água salgada → controle da cabine.\nAlarme de fluxo: quase sempre falta de água salgada (filtro sujo, válvula fechada, bomba desligada).', src: 'Fonte: ' + guia('g_clima') + ' · ' + FT.agenda.replace('Fonte: ', '') + ' · ' + FT.diario.replace('Fonte: ', '') + ' 20/09', actions: act(p, [['Passo a passo', 'f5']]) }; },
-    eletronicos: function (p) { var c = tarefa('garmin-cartas'); return { text: [fabMod('eletronicos'), min1(fabMod('audio')), min1(fabMod('vhf'))].join(' · ') + '.\n• Homem ao mar: função MOB do plotter Garmin marca a posição.\n• Piloto automático: em espera antes de manobrar na marina.\n• VHF: canal 16 em escuta; o DSC só identifica o barco com o MMSI programado.' + (c ? '\nCartas desatualizadas (diário 28/08) — atualização ' + prazoTxt(c) + '.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
-    audio: function (p) { return { text: 'Áudio Fusion · modelo ' + SD + '.\nParear: fonte Bluetooth no controle Fusion → aparelho visível → selecione o Fusion na lista de Bluetooth do celular. Volume ajustado por zona.', src: 'Fonte: ' + guia('g_eletronicos') + ' §6', actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
-    dessalinizador: function (p) { return { text: SD + ' — dessalinizador não consta na lista de equipamentos.\nSe houver a bordo, envie a foto da etiqueta (modelo e número de série) para catalogar.', src: 'Fonte: Inventário de bordo' + DEMO + ' — equipamento não listado', actions: act(p, [['Enviar foto', A(p, 'home') + '#mode=foto']]) }; },
-    eletrico: function (p) { var ser = D.serie24v || [], mn = Math.min.apply(null, ser.map(function (x) { return x.min; })), mx = Math.max.apply(null, ser.map(function (x) { return x.max; })), b = tarefa('baterias'); return { text: 'Banco 24 V: ' + nb(S.bat24, 2) + ' V (' + (G.estado ? 'gerador ' + G.estado : '') + ' · snapshot' + DEMO_ + ' ' + SNAP.quando + ')' + (ser.length ? ' · 7 dias entre ' + nb(mn) + ' e ' + nb(mx) + ' V' : '') + '.\nBanco 12 V: ' + nb(S.bat12, 2) + ' V.' + (b ? '\n' + b.t + ': ' + prazoTxt(b) + ' (' + b.quem + ').' : ''), src: FT.tele + ' · série 24 V · 7 dias · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Telemetria', 'console']]) }; },
+    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros ' + (vivo() ? 'às ' + SNAP.quando + ' (motores ' + (M.estado || SD) + ')' : '(motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + ')') + ':\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (' + prazoTxt(o).split(' · ')[0] + ') ou ' + o.horas.limite + ' h — faltam ' + nb(faltam(o)) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (' + prazoTxt(rv).split(' · ')[0] + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
+    // Motores: o cadastro (fabricante e modelo de D.equipamentos), o estado e os números do instante, os alarmes do quadro e a troca de óleo pela agenda (data ou horas)
+    motores: function (p) { var o = tarefa('motores-oleo'), i = vivo(); return { text: (i ? 'Motores ' + (M.estado || SD) + ' às ' + i.hora + ': ' + (i.txt.rpm || '—') + ' · alarmes: ' + i.txt.alarmes + '.\n' : '') + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + '.\n' + motoresTxt() + '.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h' + (o ? ' · troca de óleo ' + prazoTxt(o) + (o.horas ? ' ou ' + o.horas.limite + ' h' : '') : '') + '.\nPartida, aquecimento e parada: ' + guia('g_motores') + ' §1–3 e §6. Faixas de operação: §9.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
+    estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (' + quando() + ').\n• Funciona no banco de 12 V: acelera com o banco carregado (carregador ligado ao gerador ou ao cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nAceleração do volante e mensagens do display: ' + guia('g_seakeeper') + ' §2 e §6.' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
+    climatizacao: function (p) {
+      var f = tarefa('clima-filtro'), i = vivo(), d = (D.diario || []).filter(function (x) { return f && x.ref === f.id; })[0];
+      return { text: fabMod('climatizacao') + (i && typeof i.q.climatizacao_ativa === 'boolean' ? (i.q.climatizacao_ativa ? ' ligada' : ' desligada') + ' às ' + i.hora : '') + '.\n' + (f ? 'Filtro de água salgada: limpeza ' + prazoTxt(f) + '.' + (d ? ' Diário de ' + d.d + ': ' + d.t : '') + '\n' : '') + 'Ligar: válvula de fundo aberta e filtro limpo → bomba de água salgada → controle da cabine.\nAlarme de fluxo: quase sempre falta de água salgada (filtro sujo, válvula fechada, bomba desligada).', src: 'Fonte: ' + guia('g_clima') + ' · ' + FT.agenda.replace('Fonte: ', '') + (d ? ' · ' + FT.diario.replace('Fonte: ', '') + ' ' + d.d : ''), actions: act(p, [['Passo a passo', 'f5']]) };
+    },
+    // Eletrônicos: o cadastro (plotters, áudio, rádios, piloto, radar, AIS) e o guia de cada um; o piloto e o radar têm o guia deles. Radar e AIS do instante.
+    eletronicos: function (p) {
+      var c = tarefa('garmin-cartas'), i = vivo(), q = i && i.q;
+      var est = i ? ' Às ' + i.hora + ': radar ' + (q.radar_ativo ? 'ligado' : 'desligado') + (typeof q.ais_alvos === 'number' ? ' · AIS com ' + q.ais_alvos + (q.ais_alvos === 1 ? ' alvo' : ' alvos') : '') + '.' : '';
+      return { text: [fabMod('eletronicos'), min1(fabMod('audio')), min1(fabMod('vhf'))].join(' · ') + '.' + est + '\n• Homem ao mar: função MOB do plotter Garmin marca a posição.\n• ' + fabMod('piloto') + ': em espera antes de manobrar na marina (' + guia('g_piloto') + ' §1–3).\n• ' + fabMod('radar') + ': ligar e transmitir, zona de guarda e uso com neblina (' + guia('g_radar') + ' §1–3).\n• VHF: canal 16 em escuta; o DSC só identifica o barco com o MMSI programado no rádio.' + (c ? '\nAtualização de cartas e software dos eletrônicos: ' + prazoTxt(c) + '.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['FAQ eletrônicos', 'f3']]) };
+    },
+    audio: function (p) { var e = equip('audio'); return { text: fabMod('audio') + (e && e.nominal && e.nominal.zonas ? ' · ' + e.nominal.zonas + ' zonas' : '') + '.\nParear: fonte Bluetooth no controle Fusion → aparelho visível → selecione o Fusion na lista de Bluetooth do celular. Volume ajustado por zona.', src: 'Fonte: ' + guia('g_eletronicos') + ' §6', actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
+    dessalinizador: function (p) {
+      var e = equip('dessalinizador'), i = vivo();
+      if (!e) return { text: SD + ' — dessalinizador não consta na lista de equipamentos.\nSe houver a bordo, envie a foto da etiqueta (modelo e número de série) para catalogar.', src: 'Fonte: Inventário de bordo' + demo() + ' — equipamento não listado', actions: act(p, [['Enviar foto', A(p, 'home') + '#mode=foto']]) };
+      return { text: fabMod('dessalinizador') + (i && typeof i.q.dessalinizador_ativo === 'boolean' ? (i.q.dessalinizador_ativo ? ' ligado' : ' desligado') + ' às ' + i.hora : '') + (e.nominal && e.nominal.lph ? ' · produção nominal ' + e.nominal.lph + ' L/h' : '') + '.\nLigar, produção e lavagem: ' + guia('g_dessalinizador') + ' §1–3 — descarte a água dos primeiros minutos depois de ligar.', src: 'Fonte: ' + guia('g_dessalinizador') + ' · ' + (e.fonte || 'Inventário de bordo'), actions: act(p, [['FAQ de bordo', 'faq']]) };
+    },
+    eletrico: function (p) { var ser = D.serie24v || [], mn = Math.min.apply(null, ser.map(function (x) { return x.min; })), mx = Math.max.apply(null, ser.map(function (x) { return x.max; })), b = tarefa('baterias'); return { text: 'Banco 24 V: ' + nb(S.bat24, 2) + ' V (' + (G.estado ? 'gerador ' + G.estado + ' · ' : '') + quando() + ')' + (ser.length ? ' · 7 dias entre ' + nb(mn) + ' e ' + nb(mx) + ' V' : '') + '.\nBanco 12 V: ' + nb(S.bat12, 2) + ' V.' + (b ? '\n' + b.t + ': ' + prazoTxt(b) + ' (' + b.quem + ').' : ''), src: FT.tele + ' · série 24 V · 7 dias · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Telemetria', 'console']]) }; },
     // epirb e seafire (trava 17): só o procedimento padrão do D.protocolos, com a etiqueta do equipamento; fabricante, modelo, validade e lugar a bordo
     // não aparecem aqui (só em Equipamentos, Leme e Documentos). A 1ª linha é a instrução de segurança; a conversa toda é lida (FALA_INTEIRA).
     epirb: function (p) { return { text: 'EPIRB — ' + min1(EPIRB_PASSOS[0] || '') + '\n' + numerados(EPIRB_PASSOS.slice(1), 2) + '\n' + maius1(NOTA_ETIQUETA) + ' (' + ROTULO + ').\nOnde fica: ' + LOCAL_PLACA + '.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) }; },
@@ -862,11 +968,21 @@
     // sos/óleo não gravam nada: pergunta informativa não vira linha permanente. Gravar = atalho DIÁRIO DE BORDO ou "registre posição e hora".
     sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS.' + (esp.length ? '\n' + esp.join('\n') + '\n' : ' ') + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
     oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4', actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
-    oleoLeitura: function (p) { return { text: 'Motores desligados no snapshot' + DEMO_ + ' de ' + SNAP.quando + '. Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + (M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—') + ' bar · ' + (vivo() ? vivo().txt.rpm || '— rpm' : (M.rpm ? M.rpm.join('/') : '—') + ' rpm') + ' em neutro · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · sem alarme.\nFaixa normal: manual Volvo Penta — modelo ' + SD + '.\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) }; },
-    ancora: function (p) { return { text: 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.\n' + (S.estado || SD) + ' · ' + (S.local || SD) + ' · ' + SNAP.pos + ' · profundidade ' + nb(S.profundidade) + ' m (snapshot' + DEMO_ + ' ' + SNAP.quando + ').\nAlarme de âncora: ative no plotter e defina o raio conforme o cabo lançado e o espaço de giro.', src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) }; },
+    // Pressão do óleo (pergunta neutra): a leitura do quadro de agora, a faixa normal do guia dos motores §9 e o passo para o relato (a leitura nunca vai no relato de falha)
+    oleoLeitura: function (p) {
+      var i = vivo(), rpm = (vivo() ? vivo().txt.rpm || '— rpm' : (M.rpm ? M.rpm.join('/') : '—') + ' rpm'), fx = faixaOleo(i ? i.q.motor_bb_rpm : (M.rpm && typeof M.rpm[0] === 'number' ? M.rpm[0] : null));
+      var ol = M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—', ar = M.arref ? M.arref.join('/') : '—';
+      return { text: (i ? 'Pressão do óleo agora (' + i.hora + '): ' + (i.txt.oleo || '—') + ', com os motores a ' + rpm + '.\nArrefecimento ' + (i.txt.arref || '—') + ' · alarmes: ' + i.txt.alarmes + '.' : 'Motores ' + (M.estado || SD) + ' (' + quando() + '). Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + ol + ' bar · ' + rpm + (M.marcha ? ' em ' + M.marcha : '') + ' · arrefecimento ' + ar + ' °C.') + (fx ? '\nFaixa normal: ' + fx + '.' : '') + '\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) };
+    },
+    // Âncora: o estado do quadro e o contador de corrente do guincho (guia de eletrônicos §3 e do guincho §1); sem o dado da âncora, SEM LEITURA (o caminho null)
+    ancora: function (p) {
+      var AN = S.ancora || {}, i = vivo(), prof = S.profundidade, rec = AN.estado === 'recolhida', e = equip('ancora');
+      var l1 = AN.estado ? 'Âncora ' + AN.estado + (rec ? ', sem corrente lançada no contador do guincho' : typeof AN.cabo_m === 'number' ? ', com ' + mil(AN.cabo_m) + ' m de corrente no contador do guincho' : '') + ' — ' + quando() + '.' : 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.';
+      return { text: l1 + '\n' + (S.estado || SD) + ' · ' + ((i && i.txt.relativa) || S.local || SD) + ' · profundidade ' + nb(prof) + ' m (' + quando() + ').\nAlarme de âncora: ative no plotter e defina o raio conforme a corrente lançada; o contador de corrente mostra os metros lançados no controle do guincho (' + guia('g_eletronicos') + ' §3).' + (rec && typeof prof === 'number' ? '\nPara fundear aqui: lance de 3 a 5 vezes a profundidade (' + guia('g_ancora') + ' §1), de ' + Math.round(3 * prof) + ' a ' + Math.round(5 * prof) + ' m de corrente.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + (e ? guia('g_ancora') + ' · ' : '') + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) };
+    },
     // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
     // sai a lista fixa de 6 com "modelos não informados" e "Seafire e EPIRB: SEM DADOS", que a ficha mandava ao lado do ## Equipamentos.
-    manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + DEMO + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
+    manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + demo() + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     diarioLer: function (p) {
       var mine = loadDiario(), fonte = diarioFonte();
       var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
@@ -876,7 +992,7 @@
     // Diagnóstico deste aparelho: versões, internet, IA na nuvem e chave (só o tamanho). A tela de chat acrescenta o teste da
     // chave no servidor (CapitaoIA.testar), que não gasta a cota da IA.
     diagnostico: function (p) {
-      var AU = window.CapitaoAuth, IA = window.CapitaoIA, app = AU && AU.VERSAO ? AU.VERSAO.v : SD, cli = IA ? (IA.VERSAO || 'antigo, sem versão') : 'não usado nesta tela (fica na tela inicial)';
+      var AU = window.CapitaoAuth, IA = window.CapitaoIA, app = AU && AU.VERSAO ? AU.VERSAO.v : 'não carregado nesta tela', cli = IA ? (IA.VERSAO || 'antigo, sem versão') : 'não usado nesta tela (fica na tela inicial)';
       var sw = !!(window.navigator && navigator.serviceWorker && navigator.serviceWorker.controller);
       var linhas = ['Diagnóstico do Capitão IA neste aparelho:', '• Versões: app ' + app + ' · cérebro ' + VERSAO + ' · cliente da IA ' + cli];
       if (app !== VERSAO || (IA && cli !== VERSAO)) linhas.push('• ATENÇÃO: arquivos de versões diferentes — feche o app por completo e abra de novo.');
@@ -887,20 +1003,20 @@
       var fala = (linhaIA ? linhaIA.replace(/^•\s*/, '') + '.' : 'Nesta tela a IA na nuvem não é carregada: ela fica na tela inicial.') + (app !== VERSAO || (IA && cli !== VERSAO) ? ' Atenção: arquivos de versões diferentes, feche o app e abra de novo.' : '');
       return { text: linhas.join('\n'), fala: fala, src: 'Fonte: este aparelho' + (IA && IA.testar ? ' · teste da chave no servidor, sem gastar a cota da IA' : ''), actions: act(p, [['Ativar IA na nuvem', IA ? '#ia=ativar' : A(p, 'home') + '#ia=ativar']]) };
     },
-    fallback: function (p) { return { text: 'Não encontrei esse dado nas fontes de bordo — telemetria, agenda, documentos, diário e guias de bordo. SEM DADOS.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.', src: 'Fonte: nenhuma — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
+    // Sem rota (pergunta fora das fontes de bordo): o fallback não diz SEM DADOS (decisão 5) e leva a situação de bordo sem posição (a IA responde por cima, quando liga)
+    fallback: function (p) { return { text: 'Isso não está nas fontes de bordo que o app consulta — telemetria, agenda, documentos, diário e guias de bordo.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.\n' + linhaBordo(), src: 'Fonte: fontes de bordo consultadas' + (vivo() ? ' às ' + vivo().hora : '') + ' — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
   };
 
   // ——— Telemetria ao vivo ———
-  // Com quadro vivo no instante (o do replay ou o do coletor, capitao-telemetria.js), posição, tanques, tempo, baterias e Seakeeper saem da leitura do
-  // instante e a fonte é a dele (`fonteTxt`: «telemetria ao vivo · hora» para o replay, «coletor NMEA · ao vivo hora» só para o coletor de verdade). O resto
-  // das respostas de dado de bordo lê o mesmo instante por S, M, G, DI, T, SNAP, AUT e CON (recarrega). Sem quadro vivo (modo real sem coletor, tela sem
-  // replay) valem os textos do snapshot, como antes. Fora daqui, por decisão: sos, canal16, epirb, seafire, salvatagem, mmsi e óleo nunca leem o quadro.
+  // Com quadro vivo no instante (o do replay ou o do coletor, capitao-telemetria.js), posição, tanques, baterias e Seakeeper saem da leitura do instante e a fonte
+  // é a dele (`fonteTxt`: «telemetria ao vivo · hora» para o replay, «coletor NMEA · ao vivo hora» só para o coletor de verdade). O resto das respostas de dado de
+  // bordo lê o mesmo instante por S, M, G, DI, T, SNAP, AUT e CON (recarrega). Sem quadro vivo (modo real sem coletor, tela sem replay) valem os textos do snapshot,
+  // como antes. Fora daqui, por decisão: sos, canal16, epirb, seafire, salvatagem, mmsi e óleo nunca leem o quadro.
   var VIVO = {
     posicao: function (i) { var q = i.q; return { text: SNAP.pos + (q.sog_nos < 0.5 ? ' · parado' : '') + '\nSOG ' + nb(q.sog_nos) + ' nós · proa ' + grau3(q.proa_graus) + ' · ' + nb(q.gps_satelites, 0) + ' satélites · profundidade ' + nb(q.profundidade_m) + ' m · ao vivo ' + i.hora + '.' }; },
     tanques: function (i) { var q = i.q; return { text: 'Tanques agora:\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
-    clima: function (i, base) { var q = i.q; return { text: 'Agora a bordo (ao vivo ' + i.hora + '):\n• vento verdadeiro ' + nb(q.vento_verdadeiro_nos) + ' nós de ' + grau3(q.vento_verdadeiro_angulo) + '\n• barômetro ' + nb(q.pressao_barometrica_hpa, 0) + ' hPa\n• ar ' + nb(q.temp_ar_externo_c) + ' °C · água ' + nb(q.temp_agua_c) + ' °C\n' + base.text.split('\n')[0] }; },
     eletrico: function (i, base) { var q = i.q; return { text: 'Baterias agora: banco 24 V ' + nb(q.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(q.bateria_2_tensao_v, 2) + ' V (ao vivo ' + i.hora + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
-    estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + nb(q.seakeeper_volante_rpm, 0) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
+    estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + mil(q.seakeeper_volante_rpm) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
   };
   Object.keys(VIVO).forEach(function (k) {
     var pronta = ANSWERS[k]; if (!pronta) return;
@@ -910,6 +1026,9 @@
       return { text: r.text, src: 'Fonte: ' + i.fonteTxt, actions: base.actions };
     };
   });
+  // as chaves de ANSWERS (o teste varre uma pergunta de cada) e as que não levam a hora do instante na fonte (emergência, diagnóstico, saudação, checklists, registro)
+  var CHAVES = Object.keys(ANSWERS);
+  var SEM_HORA_NA_FONTE = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, checklist: 1, checklistChegada: 1, diario: 1 };
 
   // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
   // Revisão 7 do C5: "esgoto" saiu. "Bomba de esgoto" também é a de esgotamento do porão em português de bordo, e "a bomba de esgoto não
@@ -1210,6 +1329,8 @@
     if (!ANSWERS[key]) key = 'fallback';
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
+    // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
+    if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
     if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     a.key = key;
@@ -1237,15 +1358,19 @@
     return !!String(q || '').trim() && !SO_OI.test(pad(q));
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
-  var SOBRE_APP = [
-    'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com a fonte.',
-    'Responde sobre: telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado), manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo), passo a passo dos equipamentos (gerador Onan, estabilizador Seakeeper, climatização, eletrônicos Garmin, áudio Fusion, rádios VHF Icom, motores Volvo Penta) e checklist de saída e chegada.',
-    'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela: toque no núcleo para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
+  // A frase padrão de quem pergunta se os dados ou o barco são reais (decisão (f); PROMPT §2.6): a resposta da rota sobreDados (P3C) e o fecho do «Sobre o app» da ficha,
+  // que o SISTEMA da IA manda usar. Nunca afirma que é real.
+  var SOBRE_DADOS = 'Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.';
+  // (uma função: o SOS carrega este arquivo e não lê o D.equipamentos, nem na carga)
+  function sobreApp() { return [
+    'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com o número, a hora e a fonte.',
+    'Responde sobre: telemetria ao vivo do coletor NMEA de bordo (posição, rumo, velocidade, motores, óleo, arrefecimento, tanques, baterias, gerador, Seakeeper, porão, âncora), alarmes e a situação agora, manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, destinos e hora de chegada, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo, tempo real), passo a passo dos equipamentos (' + (D.equipamentos || []).filter(function (e) { return !e.seguranca && e.id !== 'eletrico'; }).map(function (e) { return min1(e.nome + (e.fabricante ? ' ' + e.fabricante : '')); }).join(', ') + ') e checklist de saída e chegada.',
+    'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela, com o núcleo de anéis e o ∞ ao centro: toque nele para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
     'Registrar no diário: dizer ou digitar "registre no diário …" (o chat só grava com esse comando; o diário só cresce, nada se apaga). O atalho DIÁRIO DE BORDO grava o resumo da telemetria.',
-    'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16.',
+    'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16. Posição, rumo e velocidade na emergência: leia no plotter.',
     'Telas: Console (telemetria), Carta (gestão), Leme (manutenção), Documentos, Abastecimento, Diário, Equipe, FAQ de bordo por equipamento, SOS.',
-    'Regra da casa: nada inventado. Cada número vem com a fonte; sem fonte = SEM DADOS; sensor ausente = SEM LEITURA; foto ou nota = A CONFERIR / A CONFIRMAR.'
-  ];
+    'Sobre os dados: ' + SOBRE_DADOS
+  ]; }
   function agoraBR() {
     var ms = CONG.inst && CONG.inst.ms;   // a hora da ficha é a do instante da pergunta (a mesma da telemetria)
     try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(typeof ms === 'number' ? new Date(ms) : new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }
@@ -1264,10 +1389,10 @@
     p = p || 'app';
     var out = [], emergencia = emerg(a);   // resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Horímetros, Autonomia e consumo)
     var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return; try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
-    out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
-    out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
+    out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo && !sim() ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
+    out.push('## Sobre o app\n' + sobreApp().join('\n'));
     out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + mmsiNum() + ' (cadastro do app) · indicativo: ' + INDICATIVO + '\n(Fonte: ' + (E.fonte || SD) + ')');
-    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { if (e.seguranca) return '• ' + e.nome + ': ' + (e.nota || NOTA_ETIQUETA); return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + DEMO + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
+    out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { if (e.seguranca) return '• ' + e.nome + ': ' + (e.nota || NOTA_ETIQUETA); return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + demo() + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
     if (fichaResumida(q, a)) {
       out.push('## Ficha resumida\nEsta pergunta veio só com o resumo acima (sobre o app e o barco) e, se houver, os trechos do guia. Telemetria, manutenção, documentos, diário e equipe não vieram: para um dado desses, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
       return out.join('\n\n');
@@ -1282,10 +1407,13 @@
     bloco('Documentos', function () { return ANSWERS.docsvenc(p); });
     bloco('Pendências', function () { return ANSWERS.anomalias(p); });
     bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p); });
-    bloco('Equipe e contatos', function () { return ANSWERS.contatos(p); });
+    bloco('Equipe e contatos', function () { return ANSWERS.contatos(p, { semBordo: true }); });   // (a situação de bordo da resposta não vai na ficha: o bloco Telemetria já a traz, e a ficha de emergência não leva o quadro)
     bloco('Clima e maré', function () {
-      var pv = previsao(), m = mareTexto();
-      return { text: (pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).') + '\n' + (m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).') + '\n' + (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.', src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
+      var pv = previsao(), m = mareTexto(), s = sim();
+      var l1 = pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.temp + ' · ' + pv.vento + '. O app não tem limite de vento para dizer se é seguro sair.' : s ? semConexao() : 'Previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho).';
+      var l2 = m ? 'Maré agora ' + m.agora + ' em relação ao nível médio do mar · próximas horas: ' + m.prox.join(' · ') + ' — modelo, não a tábua oficial da Marinha (DHN).' : s ? (pv ? 'Maré: sem conexão agora — confira a tábua da Marinha (DHN) antes de sair.' : '') : 'Maré: ' + SD + ' agora (Open-Meteo Marine sem resposta).';
+      var l3 = s ? 'Ondas: o app não tem previsão de mar — meteorologia marinha da Marinha do Brasil.' : (pv ? 'Previsão do mar (ondas): ' : 'Previsão de vento e mar para navegar: ') + SD + ' no app — meteorologia marinha da Marinha do Brasil.';
+      return { text: l1 + (l2 ? '\n' + l2 : '') + '\n' + l3, src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
     out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');
@@ -1300,8 +1428,8 @@
     var kb = file && file.size ? Math.round(file.size / 1024) + ' KB' : '';
     var n = now(), grava = !ctx || ctx.commit !== false, nao = 'não anexei ao diário (pedido vindo de link).';
     if (grava) addDiario({ sys: 'Equipamentos', tone: 'var(--cap-accent, #00a1fe)', t: (kind === 'video' ? 'Vídeo' : 'Foto') + ' anexada pelo chat: ' + name + (kb ? ' (' + kb + ')' : '') + ' — identificação A CONFIRMAR.', who: quem(), src: 'app · ' + kind });
-    if (kind === 'video') return { key: 'video', text: 'Vídeo recebido (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nO som e o comportamento não são analisados automaticamente: ' + (grava ? 'anexei ao diário como anomalia A CONFIRMAR, com o estado do snapshot' + DEMO_ + ' (' + SNAP.local.toLowerCase() + ' · motores desligados · gerador ligado).' : nao) + '\nDescreva em uma frase o que você viu ou ouviu — respondo com o que verificar primeiro.', src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario']]) };
-    return { key: 'foto', text: 'Foto recebida (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nA leitura da imagem não é automática: ' + (grava ? 'anexei ao diário como A CONFIRMAR.' : nao) + ' Para etiqueta ou tela de alarme, digite o modelo/código que aparece e eu localizo o guia; para nota fiscal, registre em Abastecimento (fica A CONFIRMAR).', src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario'], ['Documentos', 'docs']]) };
+    if (kind === 'video') return { key: 'video', text: 'Vídeo recebido (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nO som e o comportamento não são analisados automaticamente: ' + (grava ? 'anexei ao diário como anomalia A CONFIRMAR.' : nao) + '\n' + linhaBordo() + '\nDescreva em uma frase o que você viu ou ouviu — respondo com o que verificar primeiro.', src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario']]) };
+    return { key: 'foto', text: 'Foto recebida (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nA leitura da imagem não é automática: ' + (grava ? 'anexei ao diário como A CONFIRMAR.' : nao) + ' Para etiqueta ou tela de alarme, digite o modelo/código que aparece e eu localizo o guia; para nota fiscal, registre em Abastecimento (fica A CONFIRMAR).\n' + linhaBordo(), src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario'], ['Documentos', 'docs']]) };
   }
 
   function safeDecode(s) { try { return decodeURIComponent(String(s).replace(/\+/g, '%20')); } catch (e) { return String(s); } }
@@ -1556,7 +1684,7 @@
   // contato = celular com DDD (8–15 dígitos; sem +55 assume Brasil) ou e-mail. Retorna { href, canal, contato } ou null se inválido.
   function linkConvite(nome, contato, acesso) {
     var c = String(contato || '').trim(), url = location.href.replace(/[^\/]*$/, '') + 'login.html';
-    var msg = 'Olá, ' + nome + '! Você foi convidado(a) para o Capitão IA — embarcação ' + (E.nome || 'Capitão IA') + (D.demo ? ' (demonstração)' : '') + ', acesso ' + (acesso || 'total') + '.\nEntre por: ' + url + '\nO usuário e a senha são passados pelo proprietário.';
+    var msg = 'Olá, ' + nome + '! Você foi convidado(a) para o Capitão IA — embarcação ' + (E.nome || 'Capitão IA') + (D.demo && !sim() ? ' (demonstração)' : '') + ', acesso ' + (acesso || 'total') + '.\nEntre por: ' + url + '\nO usuário e a senha são passados pelo proprietário.';
     if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c)) return { canal: 'e-mail', contato: c, href: 'mailto:' + encodeURIComponent(c) + '?subject=' + encodeURIComponent('Convite · Capitão IA') + '&body=' + encodeURIComponent(msg) };
     if (!/^\+?[\d ().-]+$/.test(c)) return null;
     var d = c.replace(/\D/g, ''); if (d.length < 10 || d.length > 15) return null;
@@ -1656,7 +1784,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
