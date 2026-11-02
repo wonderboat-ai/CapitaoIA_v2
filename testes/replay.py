@@ -41,7 +41,7 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
   `alarme-critico`, com a ordem (crítico antes de aviso, o mais antigo primeiro) e a contagem, e aviso → crítico → aviso no mesmo id, com valores plantados pelo gancho `sobre`; o
   formato do alerta e a cópia que ninguém mexe no D; anunciado UMA vez por id por sessão (`sessionStorage`, recarga, sessão nova, storage negado, cheio e com lixo, id inválido);
   acompanha o evento `capitao-alerta` e não emite o seu; modo real inerte (a flag lida a cada chamada, e mesmo com um replay que mente); lista suja do replay; nunca lança; sem efeito
-  colateral (fala, janela, endereço, localStorage, diário); S1/S2 e rotas /SOS- sem a API; 4 telas de verdade; o código (sem avaliar limite, sem evento nem timer); 10 mutantes;
+  colateral (fala, janela, endereço, localStorage, diário); S1/S2 e rotas /SOS- sem a API; 4 telas de verdade; o código (sem avaliar limite, sem evento nem timer); o `ms` de ativos/porId/tocando/contagem/novos com o instante fixado do outro lado da janela (nos dois sentidos, sem depender do relógio real); 14 mutantes;
 - S1/S2 (e uma rota /SOS-): sem CapitaoReplay, `CapitaoAgora.instante()` null, nenhum tique, nenhuma leitura de D.simulacao nem de D.replay;
 - modo real inerte (`simulacao = false` no fim do capitao-dados.js, e a flag mudando com a página aberta): nada anda, `em()` null, nenhum evento;
 - histórico: `serie()` das cinco janelas sem NaN, o último ponto = o quadro, o serrote do diesel = as linhas de abastecimento, a curva do ano do
@@ -1577,6 +1577,39 @@ def a_alertas_uma_vez(b):
         fecha(pg)
 
 
+def a_alertas_ms(b):
+    """O parâmetro `ms` (CONTRATO §1.24) de ativos, porId, tocando, contagem e novos. O instante fica FIXADO e o `ms` aponta para o outro lado da janela: sem o `ms` a API
+    olha o instante fixado, com ele olha o `ms`. Em nenhum dos dois sentidos o resultado pode vir do relógio real (a janela de 99 a 116 s cobre ~12 % do ciclo)."""
+    print('Alertas: o ms de ativos(), porId(), tocando(), contagem() e novos() vale o instante pedido, nos dois sentidos, com o instante fixado do outro lado da janela')
+    JS = r"""(delta) => { const R = window.CapitaoReplay, AL = window.CapitaoAlertas, fx = R.agora(), ms = fx + delta, ids = (l) => l.map((x) => x.id), nenhum = { total: 0, aviso: 0, critico: 0, maior: null };
+      const a = AL.porId('arref_be', ms), t = AL.tocando(ms), semMs = AL.porId('arref_be');
+      return { fx, ms, fixo: R.fixo(),
+        semMs: { ativos: ids(AL.ativos()), porId: semMs && semMs.id, tocando: AL.tocando() && AL.tocando().id, contagem: AL.contagem(), novos: ids(AL.novos()) },
+        comMs: { ativos: ids(AL.ativos(ms)), porId: a && [a.id, a.nivel, a.seg], tocando: t && t.id, contagem: AL.contagem(ms), novos: ids(AL.novos(ms)), outro: AL.porId('agua', ms) },
+        nenhum };
+    }"""
+    pg = abre_al(b, init=init_fixo('60'))   # fixado em 12:01:00, fora da janela; o ms é 12:01:45, dentro dela (o arref_be começou em 12:01:39: seg 6)
+    r = pg.evaluate(JS, 45000)
+    ok('instante fixado em 12:01:00 (fora da janela): sem ms nada está ativo (ativos [], porId e tocando null, contagem zerada, novos [])',
+       r['fixo'] == r['fx'] and r['semMs'] == {'ativos': [], 'porId': None, 'tocando': None, 'contagem': r['nenhum'], 'novos': []}, (r['fixo'], r['fx'], r['semMs']))
+    ok('com ms = 12:01:45 (dentro da janela) o arref_be está ativo: ativos(ms), porId(id, ms) (aviso, há 6 s), tocando(ms), contagem(ms) total 1 e novos(ms); outro id (agua) continua null',
+       r['comMs'] == {'ativos': ['arref_be'], 'porId': ['arref_be', 'aviso', 6], 'tocando': 'arref_be', 'contagem': {'total': 1, 'aviso': 1, 'critico': 0, 'maior': 'aviso'}, 'novos': ['arref_be'], 'outro': None}, r['comMs'])
+    r2 = pg.evaluate("() => { const AL = window.CapitaoAlertas, ids = (l) => l.map((x) => x.id), ms = window.CapitaoReplay.agora() + 45000; return { anuncia: AL.anunciar('arref_be'), novosMs: ids(AL.novos(ms)), ativosMs: ids(AL.ativos(ms)), novos: ids(AL.novos()) }; }")
+    ok('depois de anunciar(), novos(ms) fica vazio e ativos(ms) segue com o arref_be (anunciar não depende do instante: vale pelo id do catálogo)',
+       r2 == {'anuncia': True, 'novosMs': [], 'ativosMs': ['arref_be'], 'novos': []}, r2)
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+    pg = abre_al(b, init=init_fixo('105'))   # fixado em 12:01:45, dentro da janela; o ms é 12:01:00, fora dela
+    r = pg.evaluate(JS, -45000)
+    ok('instante fixado em 12:01:45 (dentro da janela): sem ms o arref_be está ativo (ativos, porId, tocando, contagem e novos)',
+       r['semMs'] == {'ativos': ['arref_be'], 'porId': 'arref_be', 'tocando': 'arref_be', 'contagem': {'total': 1, 'aviso': 1, 'critico': 0, 'maior': 'aviso'}, 'novos': ['arref_be']}, r['semMs'])
+    ok('com ms = 12:01:00 (fora da janela) nada está ativo: ativos(ms) [], porId(id, ms) e tocando(ms) null, contagem(ms) zerada, novos(ms) []',
+       r['comMs'] == {'ativos': [], 'porId': None, 'tocando': None, 'contagem': r['nenhum'], 'novos': [], 'outro': None}, r['comMs'])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
 def a_alertas_eventos(b):
     print('Alertas: a API acompanha o evento \'capitao-alerta\' do replay (não há evento próprio)')
     pg = abre_al(b)
@@ -1781,6 +1814,11 @@ MUTANTES_AL = [
     ('anunciar() sem conferir o id (qualquer texto entraria no sessionStorage)', [("if (!ativo() || !conhecido(id) || anunciado(id)) return false;", "if (!ativo() || typeof id !== 'string' || anunciado(id)) return false;")], a_alertas_uma_vez),
     ('sem a memória da página quando o sessionStorage nega (a faixa anunciaria a cada tique)', [("catch (e) { memoria[id] = true; }", "catch (e) {}")], a_alertas_uma_vez),
     ('o limite do alerta tirado do valor em vez do alarme (a nivel() deixaria de ser a fonte)', [("a.valor = al.valor; a.limite = al.limite;", "a.valor = al.valor; a.limite = al.valor;")], a_alertas_volta),
+    # o parâmetro `ms`: cada função que o repassa a ativos() tem de ser acusada SEM depender do relógio real (a_alertas_ms fixa o instante do outro lado da janela)
+    ('porId() sem repassar o ms (olharia o instante fixado/agora em vez do pedido)', [("if (typeof id !== 'string') return null;\n      var l = ativos(ms), i;", "if (typeof id !== 'string') return null;\n      var l = ativos(), i;")], a_alertas_ms),
+    ('novos() sem repassar o ms (a lista dos não anunciados sairia do instante errado)', [("return ativos(ms).filter(function (a) { return !anunciado(a.id); });", "return ativos().filter(function (a) { return !anunciado(a.id); });")], a_alertas_ms),
+    ('tocando() sem repassar o ms (a faixa mostraria o alerta do instante errado)', [("return ativos(ms)[0] || null;", "return ativos()[0] || null;")], a_alertas_ms),
+    ('contagem() sem repassar o ms (o total sairia do instante errado)', [("var l = ativos(ms), i;\n      for (i = 0; i < l.length; i++) { o.total++;", "var l = ativos(), i;\n      for (i = 0; i < l.length; i++) { o.total++;")], a_alertas_ms),
 ]
 
 
@@ -1960,6 +1998,7 @@ def main():
         a_alertas_volta(browser)
         a_alertas_varios(browser)
         a_alertas_uma_vez(browser)
+        a_alertas_ms(browser)
         a_alertas_eventos(browser)
         a_alertas_sem_efeito(browser)
         a_alertas_real(browser)
