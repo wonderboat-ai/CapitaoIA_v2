@@ -370,7 +370,8 @@
     if (atrasadaN(n)) return 'em atraso há ' + (-n) + (n === -1 ? ' dia' : ' dias');
     return seg(t) ? NOTA_ETIQUETA : 'D-' + n + ' · ' + String(t.vence).slice(0, 5);
   }
-  function min1(s) { s = String(s || ''); return s.charAt(0).toLowerCase() + s.slice(1); }
+  // 1ª letra minúscula no meio da frase, menos a sigla («AIS (classe B)» não vira «aIS»)
+  function min1(s) { s = String(s || ''); return /^[A-ZÀ-Ý]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1); }
   function pendencias() { return diarioFonte().filter(function (x) { return x.pend; }); }
 
   // Frase normalizada com espaço nas pontas (palavra inteira = ' x ').
@@ -775,8 +776,10 @@
   function previsao() {
     var C = window.CapitaoClima, c = C && C.clima ? C.clima() : null;
     if (!c || typeof c.max !== 'number' || typeof c.min !== 'number') return null;
-    var n0 = function (x) { return typeof x === 'number' && isFinite(x) ? String(Math.round(x)) : null; }, dr = RUMO_NOME[C.rumo ? C.rumo(c.dir) : ''] || '';
-    var vento = n0(c.vento) ? 'vento até ' + n0(c.vento) + ' nós' + (dr ? ' de ' + dr : '') + (n0(c.raj) ? ', rajadas até ' + n0(c.raj) + ' nós' + (c.rajModelo ? ' (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' : '') : ', rajadas ' + SD) : 'vento ' + SD;
+    var n0 = function (x) { return typeof x === 'number' && isFinite(x) ? String(Math.round(x)) : null; }, dr = RUMO_NOME[C.rumo ? C.rumo(c.dir) : ''] || '', s = sim();
+    // a leitura do dia pode vir sem a rajada ou sem o vento (o Open-Meteo não trouxe): com simulacao true a frase só não diz o que a leitura não tem (sem SEM DADOS, decisão 3);
+    // com simulacao false volta a regra «Nada inventado» (rajadas SEM DADOS · vento SEM DADOS)
+    var vento = n0(c.vento) ? 'vento até ' + n0(c.vento) + ' nós' + (dr ? ' de ' + dr : '') + (n0(c.raj) ? ', rajadas até ' + n0(c.raj) + ' nós' + (c.rajModelo ? ' (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' : '') : s ? '' : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;
     return { temp: 'máx ' + n0(c.max) + '° · mín ' + n0(c.min) + '°', vento: vento, fonte: C.fonte ? C.fonte(c) : 'Open-Meteo' };
   }
   function windy() { var C = window.CapitaoClima; return { l: 'Abrir o windy.com', href: (C && C.WINDY) || 'https://www.windy.com/', ext: true }; }
@@ -789,7 +792,7 @@
   function quando() { return vivo() ? 'ao vivo ' + SNAP.quando : 'leitura de ' + SNAP.quando; }   // «ao vivo 12:01:00» · «leitura de 26/09/2026 10:12»
   function cap1(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
   function reservaPct() { return Math.round((typeof D.reserva === 'number' ? D.reserva : 0.1) * 100); }
-  function limitesDe(campo) { var L = D.replay && D.replay.limites; return L && L[campo] ? L[campo] : null; }
+  function limitesDe(campo) { if (EM_SOS) return null; var L = D.replay && D.replay.limites; return L && L[campo] ? L[campo] : null; }   // (no SOS nada lê o D.replay: CONTRATO §6.5)
   // a faixa normal da pressão do óleo para esse giro, do D.replay.limites (a do guia dos motores §9): «de 2,4 a 6,0 bar a partir de 1.000 rpm»
   function faixaOleo(rpm) {
     var L = limitesDe('motor_bb_oleo_bar'), r = L && L.regimes, k, x, n;
@@ -815,7 +818,7 @@
   var ANSWERS = {
     // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
     // que soava como se a pergunta fosse ignorada — fala o que o Capitão faz.
-    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria ao vivo, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo && !sim() ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + (D.selo && !sim() ? ' · ' + D.selo : ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
+    saudacao: function (p, ctx, q) { return { fala: q && !SO_OI.test(pad(q)) ? 'Respondo sobre telemetria, manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento, sempre citando a fonte.' : '', text: 'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. ' + (window.CapitaoAuth && window.CapitaoAuth.frase ? window.CapitaoAuth.frase() : '') + '\nRespondo sobre telemetria' + (sim() ? ' ao vivo' : '') + ', manutenção, documentos, abastecimento, diário de bordo e os passos de cada equipamento — sempre citando a fonte.' + (D.demo && !sim() ? '\n' + (D.selo || 'DEMO') + ': esta embarcação é de demonstração.' : ''), src: FT.tele + (D.selo && !sim() ? ' · ' + D.selo : ''), actions: act(p, [['Console completo', 'console'], ['FAQ de bordo', 'faq']]) }; },
     // Grava as palavras do usuário; sem texto (ou atalho DIÁRIO DE BORDO) grava o resumo da telemetria. commit:false (veio de link) não grava.
     diario: function (p, ctx, q) {
       var n = now(), grava = !ctx || ctx.commit !== false, nota = notaDoUsuario(q);
@@ -853,7 +856,7 @@
     // Destinos: a rota em andamento (destino, distância e ETA do quadro) e os destinos da base com tempo e diesel (a 18 nós, 68 L/h do guia dos motores §10); o juízo
     // compara a ida e volta com o diesel a bordo menos a reserva e a margem de manobra
     destinos: function (p) {
-      var i = vivo(), q = i && i.q, t = i && i.txt, c = CON.cruzeiro || {}, lista = D.destinos || [], R = D.rota, nos = c.nos, lph = c.lph, margem = typeof CON.margemManobra_l === 'number' ? CON.margemManobra_l : 0;
+      var i = vivo(), q = i && i.q, t = i && i.txt, c = CON.cruzeiro || {}, lista = D.destinos || [], R = EM_SOS ? null : D.rota, nos = c.nos, lph = c.lph, margem = typeof CON.margemManobra_l === 'number' ? CON.margemManobra_l : 0;
       var emRota = !!(t && t.destino && t.eta), util = typeof DI.litros === 'number' ? DI.litros * (1 - (typeof D.reserva === 'number' ? D.reserva : 0.1)) - margem : null;
       var cab = emRota ? 'Indo para ' + t.destino + ', chegada prevista às ' + t.eta + ' — ' + i.hora + '.' : 'Alcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + nos + ' nós, reserva de ' + reservaPct() + ' %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.';
       var tempo = function (h) { var m = Math.round(h * 60); return m >= 60 ? Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2) + ' min' : m + ' min'; };
@@ -1362,15 +1365,21 @@
   // que o SISTEMA da IA manda usar. Nunca afirma que é real.
   var SOBRE_DADOS = 'Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.';
   // (uma função: o SOS carrega este arquivo e não lê o D.equipamentos, nem na carga)
-  function sobreApp() { return [
-    'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com o número, a hora e a fonte.',
-    'Responde sobre: telemetria ao vivo do coletor NMEA de bordo (posição, rumo, velocidade, motores, óleo, arrefecimento, tanques, baterias, gerador, Seakeeper, porão, âncora), alarmes e a situação agora, manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, destinos e hora de chegada, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo, tempo real), passo a passo dos equipamentos (' + (D.equipamentos || []).filter(function (e) { return !e.seguranca && e.id !== 'eletrico'; }).map(function (e) { return min1(e.nome + (e.fabricante ? ' ' + e.fabricante : '')); }).join(', ') + ') e checklist de saída e chegada.',
-    'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela, com o núcleo de anéis e o ∞ ao centro: toque nele para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
-    'Registrar no diário: dizer ou digitar "registre no diário …" (o chat só grava com esse comando; o diário só cresce, nada se apaga). O atalho DIÁRIO DE BORDO grava o resumo da telemetria.',
-    'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16. Posição, rumo e velocidade na emergência: leia no plotter.',
-    'Telas: Console (telemetria), Carta (gestão), Leme (manutenção), Documentos, Abastecimento, Diário, Equipe, FAQ de bordo por equipamento, SOS.',
-    'Sobre os dados: ' + SOBRE_DADOS
-  ]; }
+  function sobreApp() {
+    var sm = sim(), eqs = (D.equipamentos || []).filter(function (e) { return !e.seguranca && e.id !== 'eletrico'; }).map(function (e) { return min1(e.nome + (e.fabricante ? ' ' + e.fabricante : '')); }).join(', ');
+    return [
+      'O Capitão IA é o assistente de bordo desta embarcação: um app no celular e no computador, em português, que responde sempre com ' + (sm ? 'o número, a hora e a fonte.' : 'a fonte.'),
+      // com simulacao false volta o «Sobre o app» da 1.0.9: o snapshot do coletor (ao vivo só com o coletor ligado) e a regra da casa «Nada inventado» (decisão 6)
+      'Responde sobre: ' + (sm ? 'telemetria ao vivo do coletor NMEA de bordo (posição, rumo, velocidade, motores, óleo, arrefecimento, tanques, baterias, gerador, Seakeeper, porão, âncora), alarmes e a situação agora, manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, destinos e hora de chegada, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo, tempo real)'
+        : 'telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado), manutenção e agenda (atrasadas, próximas, horímetros), documentos e vencimentos, abastecimento, consumo e autonomia, diário de bordo (ler e registrar), equipe e contatos, clima e maré na posição de referência (Open-Meteo)')
+        + ', passo a passo dos equipamentos (' + eqs + ') e checklist de saída e chegada.',
+      'Jeitos de perguntar: digitar; VOZ→TEXTO (a fala vira texto); CONVERSA (voz contínua, sem tocar na tela, com o núcleo de anéis e o ∞ ao centro: toque nele para interromper, ENCERRAR para sair); FOTO e VÍDEO (não saem do aparelho e entram no diário como A CONFIRMAR); atalhos de um toque na home, editáveis em EDITAR ATALHOS.',
+      'Registrar no diário: dizer ou digitar "registre no diário …" (o chat só grava com esse comando; o diário só cresce, nada se apaga). O atalho DIÁRIO DE BORDO grava o resumo da telemetria.',
+      'Emergência: botão SOS em todas as telas — abre sem login e sem internet; VHF canal 16. Posição, rumo e velocidade na emergência: leia no plotter.',
+      'Telas: Console (telemetria), Carta (gestão), Leme (manutenção), Documentos, Abastecimento, Diário, Equipe, FAQ de bordo por equipamento, SOS.',
+      sm ? 'Sobre os dados: ' + SOBRE_DADOS : 'Regra da casa: nada inventado. Cada número vem com a fonte; sem fonte = SEM DADOS; sensor ausente = SEM LEITURA; foto ou nota = A CONFERIR / A CONFIRMAR.'
+    ];
+  }
   function agoraBR() {
     var ms = CONG.inst && CONG.inst.ms;   // a hora da ficha é a do instante da pergunta (a mesma da telemetria)
     try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(typeof ms === 'number' ? new Date(ms) : new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }

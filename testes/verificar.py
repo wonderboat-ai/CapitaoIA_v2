@@ -16,7 +16,7 @@ referência (nova aba, noopener), nada cortado nem sobreposto no cabeçalho (web
 temas); sem rede e sem leitura do dia, "—" (nunca o vento do snapshot); sem rede com a leitura salva de hoje, ela com a hora dela;
 rajada que o ECMWF não trouxe vem do melhor modelo, dito no title. Na B3-Carta-Resposta (responde ali mesmo, sem o cabeçalho do
 clima), a leitura de hoje salva entra no clima e no "seguro para sair?" como na home, com fonte, hora e o windy.com em nova aba;
-sem ela, SEM DADOS e nenhum vento previsto.
+sem ela, a frase do §2.5 (sem conexão agora) e nenhum vento previsto.
 Ícones dos atalhos do app instalado (paridade Avanti 1.24.0, desenho próprio), em toda rodada menos a --so-offline (é o manifest,
 não uma tela): cada shortcut tem ícone any e maskable; cada src responde 200 e o PNG tem o tamanho declarado (cabeçalho lido com
 struct, sem Pillow); desenho centrado e, no maskable, fundo inteiro e desenho dentro da zona segura de 80 %.
@@ -810,7 +810,7 @@ def teste_clima(b, tela):
 
 def teste_resposta_clima(b, tela):
     """Previsão do dia na resposta de uma tela sem o cabeçalho do clima (B3): a leitura salva de hoje (capitao.clima.v1, como o
-    capitao-clima.js grava) entra no clima e no "seguro para sair?", com fonte e hora; sem ela, SEM DADOS. Open-Meteo fora (abort)."""
+    capitao-clima.js grava) entra no clima e no "seguro para sair?", com fonte e hora; sem ela, a frase do §2.5 (sem conexão agora). Open-Meteo fora (abort)."""
     movel = eh_app(tela)
     prob = []
     pg0 = b.new_page()
@@ -847,8 +847,9 @@ def teste_resposta_clima(b, tela):
                 if r['windy'] != [[WINDY_REF, '_blank', 'noopener']]:
                     prob.append(tag + ': atalho do windy.com fora do esperado: %s' % r['windy'])
             else:
-                if 'SEM DADOS' not in t or 'vento até' in t or 'rajadas até' in t or r['windy']:
-                    prob.append(tag + ': inventou vento ou perdeu o SEM DADOS: ' + t[:300].replace('\n', ' / '))
+                # Fase 3 (P3B), PROMPT §2.5: sem leitura de hoje a resposta diz a frase de tempo e maré sem conexão (a exceção escrita), nunca SEM DADOS nem vento inventado
+                if 'Previsão e maré: sem conexão agora' not in t or 'confira o boletim da Marinha antes de sair' not in t or 'vento até' in t or 'rajadas até' in t or r['windy']:
+                    prob.append(tag + ': inventou vento ou perdeu a frase de «sem conexão» do §2.5: ' + t[:300].replace('\n', ' / '))
             if 'sem internet e sem leitura salva' in t:
                 prob.append(tag + ': diz "sem internet" sem saber (o Open-Meteo nem foi consultado)')
     return prob

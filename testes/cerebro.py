@@ -1236,10 +1236,18 @@ def vento_do_dia(b):
     forte = pg.evaluate(RESPOSTAS)
     pg.evaluate(SEMEIA, {'desloca': 0, 'max': 27.4, 'min': 18.2, 'modelo': 'ECMWF'})  # leitura do dia sem o vento
     semv = pg.evaluate(RESPOSTAS)
+    pg.evaluate(SEMEIA, {'desloca': 0, 'max': 27.4, 'min': 18.2, 'vento': 12.3, 'dir': 48, 'modelo': 'ECMWF'})  # leitura do dia sem a rajada (nem do melhor modelo)
+    semr = pg.evaluate(RESPOSTAS)
+    pg.evaluate("() => { window.CapitaoDados.simulacao = false; }")   # decisão 6: com simulacao false a regra «Nada inventado» volta, e o que a leitura não traz é SEM DADOS
+    semr_real = pg.evaluate(RESPOSTAS)
+    pg.evaluate(SEMEIA, {'desloca': 0, 'max': 27.4, 'min': 18.2, 'modelo': 'ECMWF'})
+    semv_real = pg.evaluate(RESPOSTAS)
+    pg.evaluate("() => { window.CapitaoDados.simulacao = true; }")
     hora_s = pg.evaluate(SEMEIA, {'desloca': -86400e3, 'max': 30, 'min': 20, 'vento': 25, 'raj': 33, 'dir': 180, 'modelo': 'ECMWF'})  # só a de ontem
     sem = pg.evaluate(RESPOSTAS)
     windy = [x for x in com['clima']['acoes'] if x.get('ext') and x.get('href', '').startswith('https://www.windy.com/')]
     linha1 = lambda r: r['text'].split('\n')[0]
+    tudo = lambda r: [r['clima']['text'], r['clima']['src'], r['clima']['voz'], r['seguro']['text'], r['seguro']['src'], r['seguro']['voz'], r['bloco']]   # texto, fonte, fala e ficha
     for nome, cond, extra in [
         ('clima com a previsão: 1ª linha (a falada) com máx/mín, vento, rajada, direção, fonte e hora', linha1(com['clima']).startswith('Hoje em Balneário Camboriú: máx 27° · mín 18° · ' + VENTO) and fonte in linha1(com['clima']) and VENTO in com['clima']['voz'], linha1(com['clima'])),
         ('clima: fonte com o modelo e a hora da leitura; toque abre o windy.com (nova aba)', ('previsão ' + fonte) in com['clima']['src'] and len(windy) == 1, (com['clima']['src'], com['clima']['acoes'])),
@@ -1247,7 +1255,14 @@ def vento_do_dia(b):
         ('seguro para sair: vento previsto com fonte e hora, ondas sem previsão no app + "confira a previsão da Marinha antes de sair"', (VENTO + MAR) in com['seguro']['text'] and fonte in com['seguro']['text'] and ('previsão ' + fonte) in com['seguro']['src'], com['seguro']['text'][-260:]),
         ('seguro para sair: o vento previsto não muda a decisão (sem limite de vento inventado)', linha1(com['seguro']) == linha1(sem['seguro']), (linha1(com['seguro']), linha1(sem['seguro']))),
         ('seguro para sair com vento forte (45/60 kn): a previsão aparece com a fonte, a decisão não muda e nenhum limite é inventado', ('vento até 45 nós de sudoeste, rajadas até 60 nós' + MAR) in forte['seguro']['text'] and ('lida às ' + hora_f) in forte['seguro']['text'] and linha1(forte['seguro']) == linha1(sem['seguro']) and linha1(forte['seguro']).startswith('Sim, com ') and not [x for x in LIMITE if x in forte['seguro']['text'].lower()], (linha1(forte['seguro']), [x for x in LIMITE if x in forte['seguro']['text'].lower()])),
-        ('leitura do dia sem o vento: seguro com vento SEM DADOS (o dado que a leitura não traz) e ondas sem previsão no app, nada inventado', ('vento SEM DADOS' + MAR) in semv['seguro']['text'] and 'vento até' not in semv['seguro']['text'] and linha1(semv['seguro']) == linha1(sem['seguro']), semv['seguro']['text'][-200:]),
+        # Fase 3 (revisão da P3B; PROMPT §3, decisão 3): com simulacao true a leitura do dia que vem sem o vento ou sem a rajada (o Open-Meteo não trouxe) não escreve SEM DADOS no
+        # clima, no seguro para sair, na fala nem na ficha da IA: só não diz o que a leitura não tem. Nada inventado: nenhum vento nem rajada que a leitura não traga.
+        ('leitura do dia sem o vento: seguro com «sem previsão de vento nesta leitura» (nada inventado, sem SEM DADOS) e ondas sem previsão no app', ('sem previsão de vento nesta leitura' + MAR) in semv['seguro']['text'] and 'vento até' not in semv['seguro']['text'] and linha1(semv['seguro']) == linha1(sem['seguro']), semv['seguro']['text'][-200:]),
+        ('leitura do dia sem o vento: clima, seguro, ficha e fala (simulacao true) não casam ROTULOS nem VAZIOS e não inventam vento', not [n for n in ('ROTULOS', 'VAZIOS') for t in tudo(semv) if RX[n].search(t)] and 'sem previsão de vento nesta leitura' in semv['clima']['text'] and 'sem previsão de vento nesta leitura' in semv['bloco'] and all('vento até' not in t and 'rajadas até' not in t for t in tudo(semv)), (semv['clima']['text'][:200], semv['bloco'][:200])),
+        ('leitura do dia sem a rajada: o vento sem «rajadas» (clima, seguro, ficha e fala), sem SEM DADOS e sem rajada inventada', not [n for n in ('ROTULOS', 'VAZIOS') for t in tudo(semr) if RX[n].search(t)] and 'rajada' not in ' '.join(tudo(semr)).lower() and linha1(semr['clima']).startswith('Hoje em Balneário Camboriú: máx 27° · mín 18° · vento até 12 nós de nordeste (previsão ') and ('vento até 12 nós de nordeste' + MAR) in semr['seguro']['text'] and 'vento até 12 nós de nordeste' in semr['clima']['voz'], (linha1(semr['clima']), semr['seguro']['text'][-200:])),
+        # com simulacao false volta a regra «Nada inventado» (decisão 6): o que a leitura não traz é SEM DADOS
+        ('simulacao false, leitura do dia sem o vento: vento SEM DADOS no clima, no seguro e na ficha (a regra «Nada inventado» volta)', 'vento SEM DADOS' in linha1(semv_real['clima']) and ('vento SEM DADOS' + ' · mar (ondas): SEM DADOS no app') in semv_real['seguro']['text'] and 'vento SEM DADOS' in semv_real['bloco'] and 'sem previsão de vento nesta leitura' not in semv_real['clima']['text'] + semv_real['seguro']['text'], (linha1(semv_real['clima']), semv_real['seguro']['text'][-200:])),
+        ('simulacao false, leitura do dia sem a rajada: «rajadas SEM DADOS» no clima, no seguro e na ficha', 'vento até 12 nós de nordeste, rajadas SEM DADOS' in linha1(semr_real['clima']) and 'vento até 12 nós de nordeste, rajadas SEM DADOS' in semr_real['seguro']['text'] and 'rajadas SEM DADOS' in semr_real['bloco'], (linha1(semr_real['clima']), semr_real['seguro']['text'][-200:])),
         ('ficha da IA: vento previsto com fonte e hora, sem limite inventado e sem coordenadas', VENTO in com['bloco'] and fonte in com['bloco'] and 'não tem limite de vento' in com['bloco'] and not confere.R_COORD.search(com['ficha']) and 'windy.com/' not in com['ficha'], com['bloco'][:300]),
         ('rajada que o ECMWF não trouxe: vem do melhor modelo do Open-Meteo, dito na resposta', 'rajadas até 21 nós (rajada do melhor modelo do Open-Meteo; o ECMWF não trouxe)' in raj['clima']['text'] and ('lida às ' + hora_r) in raj['clima']['text'], linha1(raj['clima'])),
         # Fase 3 (P3B, §2.5): sem a leitura de hoje, a frase do §2.5 com a hora da última leitura salva (a de ontem) no lugar do SEM DADOS
@@ -1481,10 +1496,11 @@ JS_VIRADA = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay
     return { x, hora: i.hora, tend: i.tend, txtTend: i.txt.tend, texto: t.join('\\n') }; }); }"""
 
 # o SOS: sem instante em nenhuma das três fontes (replay, coletor, D.snapshot.quadro à mão); o resumo é o plotter; a linha do SOS não leva quadro
-JS_SOS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, A = window.CapitaoAgora;
+JS_SOS = """(qs) => { const B = window.CapitaoBrain, D = window.CapitaoDados, A = window.CapitaoAgora;
   const e = B.addDiario({ t: 'MAYDAY teste', src: 'web · SOS · MAYDAY' }), op = { platform: 'app', commit: false };
-  const r = { b: B.instante(), a: A.instante(), resumo: B.resumoAgora(), sem: B.resumoAgora({ semPosicao: true }), plotter: D.protocolos.plotter, entrada: e, guardada: B.loadDiario()[0],
-              texto: [B.answer('telemetria', op).text, B.answer('posição agora', op).text, B.answer('é seguro sair hoje?', op).text, B.ficha('app'), B.ficha('app', 'telemetria', B.answer('telemetria', op))].join('\\n') };
+  const todas = qs.map((q) => { const a = B.answer(q, op); return a.text + '\\n' + a.src + '\\n' + B.falaCurta(a); });   // UMA pergunta de CADA chave de ANSWERS na página do SOS (revisão da P3B: oleoLeitura, porão e destinos liam D.replay e D.rota)
+  const r = { b: B.instante(), a: A.instante(), resumo: B.resumoAgora(), sem: B.resumoAgora({ semPosicao: true }), plotter: D.protocolos.plotter, entrada: e, guardada: B.loadDiario()[0], n: qs.length,
+              texto: [B.answer('telemetria', op).text, B.answer('posição agora', op).text, B.answer('é seguro sair hoje?', op).text, B.ficha('app'), B.ficha('app', 'telemetria', B.answer('telemetria', op))].concat(todas).join('\\n') };
   r.lidas = Object.assign({}, window.__lidas); return r; }"""
 
 # modo real: as respostas de TODAS as perguntas, a ficha e o instante (comparados com a página sem replay, igual a antes da 1.1.0)
@@ -1610,9 +1626,9 @@ def grupo_sos(b, muta, ped):
     for nome, extra in FONTES_SOS.items():
         pg = pagina(b, extra=extra + GETTERS_SOS, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
         try:
-            s = pg.evaluate(JS_SOS)
-            ped('sos (%s): nenhuma leitura de D.simulacao, D.replay, D.snapshot, D.rota nem D.campos (carga, instante, resumo, diário, resposta e ficha)' % nome,
-                {'simulacao', 'replay', 'snapshot'} <= set(s['lidas']) and all(v == 0 for v in s['lidas'].values()), s['lidas'])
+            s = pg.evaluate(JS_SOS, list(PERGUNTA_CHAVE.values()))
+            ped('sos (%s): nenhuma leitura de D.simulacao, D.replay, D.snapshot, D.rota nem D.campos (carga, instante, resumo, diário, ficha e uma resposta de CADA chave de ANSWERS)' % nome,
+                {'simulacao', 'replay', 'snapshot', 'rota'} <= set(s['lidas']) and s['n'] == len(PERGUNTA_CHAVE) and all(v == 0 for v in s['lidas'].values()), (s['n'], s['lidas']))
             ped('sos (%s): o resumo sem posição também é o do plotter' % nome, s['sem'] == s['plotter'], s['sem'])
             ped('sos (%s): o instante do cérebro é nulo, como o do rodapé' % nome, s['b'] is None and s['a'] is None, (s['b'], s['a']))
             ped('sos (%s): o resumo é o do plotter, sem quadro' % nome, s['resumo'] == s['plotter'] and 'LEIA NO PLOTTER' in s['resumo'], s['resumo'])
@@ -2060,11 +2076,11 @@ PERGUNTA_CHAVE = {
 # as chaves cuja resposta não traz a hora do instante: emergência (nada do quadro), diagnóstico (do aparelho), a saudação e os checklists (texto de guia)
 SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'checklist', 'checklistChegada')
 # as respostas cujos números mudam de 12:01:00 para 12:01:45 (vento, SOG, rpm, arrefecimento, volante, tensão, nível do porão, distância do destino, diesel)
-MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora')
+MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora', 'consumo', 'autonomia')
 VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'DINHEIRO')
 JS_ROTULOS = """([xs, qs]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay;
   return { chaves: B.CHAVES || null, r: xs.map((x) => { R.fixar(x); const i = B.instante();
-    return { x, hora: i.hora, r: Object.keys(qs).map((k) => { const a = B.answer(qs[k], { platform: 'app', commit: false }); return [k, a.key, a.text, a.src, B.falaCurta(a)]; }) }; }) }; }"""
+    return { x, hora: i.hora, consumo: i.txt.consumo, aut: i.calc && i.calc.autonomia, r: Object.keys(qs).map((k) => { const a = B.answer(qs[k], { platform: 'app', commit: false }); return [k, a.key, a.text, a.src, B.falaCurta(a)]; }) }; }) }; }"""
 
 
 def sem_hora(s):
@@ -2101,6 +2117,16 @@ def grupo_rotulos(b, muta, ped):
         ped('rotulos: toda resposta de dado de bordo (fora %s) traz número e a hora do instante (12:01:00 e 12:01:45)' % ', '.join(SEM_HORA), not sem, sem)
         igual = [k for (k, _, ta, sa, _), (_, _, tc, sc, _) in zip(a['r'], c['r']) if k in MUDAM and sem_hora(ta + sa) == sem_hora(tc + sc)]
         ped('rotulos: os números mudam entre 12:01:00 e 12:01:45 onde devem (%s)' % ', '.join(MUDAM), not igual, igual)
+        # revisão da P3B: o consumo e a autonomia são os do instante (txt.consumo e calc.autonomia, recalculados), em 12:01:00 e em 12:01:45; nenhum valor fixo no código
+        ruins = []
+        for x in out['r']:
+            por = {k: t for k, _, t, _, _ in x['r']}
+            if ('Consumo agora (%s): %s nos dois motores.' % (x['hora'], x['consumo'])) not in por['consumo']:
+                ruins.append((x['hora'], 'consumo', x['consumo'], por['consumo'][:90]))
+            quer = '≈ %s h · ≈ %d mn a ' % (('%.1f' % x['aut']['horas']).replace('.', ','), x['aut']['mn'])
+            if quer not in por['autonomia']:
+                ruins.append((x['hora'], 'autonomia', quer, por['autonomia'][:90]))
+        ped('rotulos: o consumo agora e a autonomia (horas e milhas) da resposta são os do instante (txt.consumo e calc.autonomia), nos dois instantes', not ruins, ruins)
         fixas = [k for (k, _, ta, sa, _), (_, _, tc, sc, _) in zip(a['r'], c['r']) if k in SEM_HORA and ta != tc]
         ped('rotulos: a emergência, o diagnóstico, a saudação e os checklists não mudam com o instante', not fixas, fixas)
     finally:
@@ -2131,7 +2157,7 @@ JS_MODOS = """(qs) => { const B = window.CapitaoBrain; const out = {};
   out.ficha = B.ficha('app'); return out; }"""
 PERGUNTAS_MODOS = {'porao': 'bombas de porão', 'ancora': 'âncora garrando?', 'motores': 'motores', 'climatizacao': 'climatização', 'dessalinizador': 'dessalinizador',
                    'destinos': 'para onde vamos hoje?', 'seguro': 'é seguro sair hoje?', 'mare': 'maré agora', 'clima': 'clima e vento', 'telemetria': 'Telemetria agora',
-                   'fallback': 'como se faz um nó lais de guia?'}
+                   'fallback': 'como se faz um nó lais de guia?', 'contatos': 'quem chamar da equipe?', 'saudacao': 'oi'}
 
 
 def grupo_modos(b, muta, ped):
@@ -2155,6 +2181,23 @@ def grupo_modos(b, muta, ped):
             ('modos (simulacao false): a ficha traz o SEM DADOS do dado que falta', 'SEM DADOS' in r['ficha'] or 'SEM LEITURA' in r['ficha'], len(r['ficha'])),
         ]:
             ped(nome, cond, extra)
+        sobre = r['ficha'][r['ficha'].find('## Sobre o app'):r['ficha'].find('## Embarcação')]
+        # revisão da P3B (decisão 6): com simulacao false o «Sobre o app» que vai para a IA volta ao da 1.0.9: a regra da casa «Nada inventado», o snapshot do coletor, e nada de
+        # «embarcação de apresentação», «roteiro» nem «mudam a cada segundo»
+        ped('modos (simulacao false): o «Sobre o app» da ficha volta a «Regra da casa: nada inventado» (SEM DADOS, SEM LEITURA, A CONFERIR / A CONFIRMAR), sem a frase de sobreDados',
+            'Regra da casa: nada inventado' in sobre and 'sem fonte = SEM DADOS; sensor ausente = SEM LEITURA' in sobre and SOBRE_DADOS not in sobre and 'apresentação' not in sobre and 'roteiro' not in sobre and 'a cada segundo' not in sobre, sobre[-420:])
+        ped('modos (simulacao false): o «Sobre o app» fala do snapshot do coletor (ao vivo só com o coletor ligado), sem «telemetria ao vivo do coletor», e responde «com a fonte»',
+            'telemetria (snapshot do coletor NMEA; ao vivo quando o coletor estiver ligado)' in sobre and 'telemetria ao vivo' not in sobre and 'que responde sempre com a fonte.' in sobre and 'destinos e hora de chegada' not in sobre, sobre[:700])
+        ped('modos (simulacao false): a saudação não fala de telemetria ao vivo', 'Respondo sobre telemetria, manutenção' in t('saudacao') and 'ao vivo' not in t('saudacao'), t('saudacao'))
+        ped('modos (simulacao false): os contatos abrem a situação com «Última situação de bordo:» (a leitura do coletor, não o quadro vivo)', 'Última situação de bordo: ' in t('contatos') and 'Situação de bordo agora' not in t('contatos'), t('contatos')[-300:])
+    finally:
+        pg.ctx.close()
+    # os dados de verdade do snapshot (sem os nulos): a âncora lançada com o contador de corrente lido, no modo real
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO)
+    try:
+        r = pg.evaluate(JS_MODOS, {'ancora': 'âncora garrando?', 'telemetria': 'Telemetria agora'})
+        ped('modos (simulacao false, dados do snapshot): a âncora lançada diz os metros de corrente do contador do guincho, na âncora e na telemetria',
+            r['ancora'][1].startswith('Âncora lançada, com 30 m de corrente no contador do guincho — leitura de ') and 'âncora lançada, 30 m de corrente' in r['telemetria'][1] and 'SEM LEITURA' not in r['ancora'][1], (r['ancora'][1][:160], r['telemetria'][1][-200:]))
     finally:
         pg.ctx.close()
     # os mesmos nulos com simulacao true: o texto vem do quadro do replay (porão, âncora, destino, previsão) e só o que o dado de cadastro não tem segue SEM DADOS
@@ -2184,10 +2227,13 @@ def numeros_de_prazo(texto):
     return [int(x) for x in re.findall(r'em atraso há (\d+) dias?', texto)], [int(x) for x in re.findall(r'\bD-(\d+)\b', texto)]
 
 
+DOC_VENCIDO = ";window.CapitaoDados.documentos.push({ id: 'lic-teste', n: 'Licença vencida de teste', cat: 'Licenças', vence: '01/01/2026', st: 'VENCIDO' });"
+
+
 def grupo_prazos(b, muta, ped):
     DIAS = 3
-    base = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None)
-    desl = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None)
+    base = pagina(b, extra=DOC_VENCIDO, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None)
+    desl = pagina(b, extra=DOC_VENCIDO, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None)
     try:
         agora = desl.evaluate("() => Date.now()")
         # o relógio do aparelho anda 3 dias DEPOIS da carga (o rodapé não refaz os prazos): quem lê o dn do dado fica no dia da carga
@@ -2209,11 +2255,18 @@ def grupo_prazos(b, muta, ped):
             ped('prazos (%s): a tarefa do EPIRB vai sem a data e sem o D-n, com a nota da etiqueta do equipamento' % nome,
                 len(ep) == 1 and not re.search(r'\d\d/\d\d|\bD-\d', ep[0]) and 'veja a etiqueta do equipamento' in ep[0], ep)
         ped('prazos: a tarefa que não é de equipamento de segurança leva a data (limpeza de casco: D-n · dd/mm)', re.search(r'D-\d+ · \d\d/\d\d — Limpeza de casco', x['man']) is not None, x['man'][-300:])
+        # revisão da P3B: a primeira ressalva é a de segurança (o porão) enquanto o teste está atrasado; o Executado tira a frase
+        ped('prazos: o seguro para sair diz «a primeira é de segurança» com o teste do porão atrasado', 'a primeira é de segurança.' in x['seguro'].split('\n')[0], x['seguro'].split('\n')[0])
+        # o documento vencido (a data no passado): «VENCIDO há N dias» contado do dia do instante, e cresce 3 dias na página deslocada
+        vx, vy = re.findall(r'Licença vencida de teste — 01/01/2026 \(VENCIDO há (\d+) dias\)', x['docs']), re.findall(r'Licença vencida de teste — 01/01/2026 \(VENCIDO há (\d+) dias\)', y['docs'])
+        ped('prazos: o documento vencido diz «VENCIDO há N dias» contado do dia do instante (3 dias depois, N + 3)', len(vx) == 1 and len(vy) == 1 and int(vx[0]) > 300 and int(vy[0]) == int(vx[0]) + DIAS, (vx, vy, x['docs'][:300]))
         # Executado: sai das atrasadas e dos números do seguro, do checklist e das pendências
         e = base.evaluate(EXECUTA)
         ped('prazos (Executado): a tarefa executada sai da lista (2 atrasadas, não 3), do seguro e do checklist; a pergunta do porão diz que foi executada',
             numeros_de_prazo(e['man'])[0] and len(numeros_de_prazo(e['man'])[0]) == 2 and 'Atrasadas (2)' in e['man'] and 'Teste das bombas' not in e['man']
             and len(numeros_de_prazo(e['seguro'])[0]) == 2 and 'Atrasadas na agenda: 2' in e['anom'] and 'executado' in e['porao'], (e['man'][:120], e['anom'][-60:], e['porao'][:120]))
+        ped('prazos (Executado): depois do teste do porão o seguro para sair não diz mais «a primeira é de segurança» (as ressalvas que sobram, 2 atrasadas e a previsão, não são de segurança)',
+            'a primeira é de segurança' not in e['seguro'] and e['seguro'].startswith('Sim, com 3 ressalvas.'), e['seguro'][:140])
     finally:
         base.ctx.close(); desl.ctx.close()
 
@@ -2272,6 +2325,23 @@ def grupo_tempo(b, muta, ped):
             t['clima']['text'].startswith('Hoje em Balneário Camboriú: máx 27° · mín 18° · vento até 12 nós de nordeste, rajadas até 19 nós') and SEM_CONEXAO not in t['clima']['text'] and 'SEM DADOS' not in t['clima']['text'], t['clima']['text'][:260])
         ped('tempo (seguro com a leitura de hoje): a previsão real e as ondas «o app não tem previsão de mar», sem SEM DADOS e sem a frase de «sem conexão»',
             ('rajadas até 19 nós' + MAR) in t['seguro']['text'] and SEM_CONEXAO not in t['seguro']['text'] and 'SEM DADOS' not in t['seguro']['text'], t['seguro']['text'][-300:])
+        # revisão da P3B (decisão 3, PROMPT §3): a leitura do dia que vem SEM A RAJADA ou SEM O VENTO (o Open-Meteo não trouxe) não escreve SEM DADOS com simulacao true — nem no clima, no seguro,
+        # na fala nem na ficha da IA —; com simulacao false volta a regra «Nada inventado» (rajadas SEM DADOS · vento SEM DADOS)
+        bloco_clima = lambda f: f[f.find('## Clima e maré'):f.find('\n## ', f.find('## Clima e maré') + 5)]
+        for rot, c, quer, real in (('sem a rajada', {'desloca': 0, 'max': 27.4, 'min': 18.2, 'vento': 12.3, 'dir': 48, 'modelo': 'ECMWF'}, 'vento até 12 nós de nordeste', 'vento até 12 nós de nordeste, rajadas SEM DADOS'),
+                                   ('sem o vento', {'desloca': 0, 'max': 27.4, 'min': 18.2, 'modelo': 'ECMWF'}, 'sem previsão de vento nesta leitura', 'vento SEM DADOS')):
+            pg.evaluate(SEMEIA, dict(c))
+            t = pg.evaluate(JS_TEMPO)
+            todos = [t[k][c2] for k in ('clima', 'seguro') for c2 in ('text', 'src', 'fala')] + [bloco_clima(t['ficha'])]
+            ruim = [n for n in ('ROTULOS', 'VAZIOS') for x in todos if RX[n].search(x)]
+            ped('tempo (leitura do dia %s, simulacao true): clima, seguro, fala e ficha dizem «%s» sem SEM DADOS e sem inventar a parte que falta' % (rot, quer),
+                not ruim and quer in t['clima']['text'] and quer in t['seguro']['text'] and quer in bloco_clima(t['ficha']) and quer in t['clima']['fala'] + t['clima']['text'].split('\n')[0]
+                and (rot != 'sem a rajada' or 'rajada' not in ' '.join(todos).lower()) and (rot != 'sem o vento' or all('vento até' not in x for x in todos)), (ruim, t['clima']['text'][:200]))
+            pg.evaluate("() => { window.CapitaoDados.simulacao = false; }")
+            t = pg.evaluate(JS_TEMPO)
+            ped('tempo (leitura do dia %s, simulacao false): a regra «Nada inventado» volta, «%s» no clima, no seguro e na ficha' % (rot, real),
+                real in t['clima']['text'] and real in t['seguro']['text'] and real in bloco_clima(t['ficha']), (t['clima']['text'][:200], t['seguro']['text'][-200:]))
+            pg.evaluate("() => { window.CapitaoDados.simulacao = true; }")
         # maré salva (série de hora em hora em volta de agora): a maré do modelo, sem «Corrente: SEM DADOS»
         pg.evaluate("""() => { const t0 = Math.floor(Date.now() / 3600e3) * 3600e3, s = []; for (let h = -3; h <= 30; h++) s.push([t0 + h * 3600e3, 0.3 + 0.2 * Math.sin(h / 2)]);
           localStorage.setItem('capitao.mare.v1', JSON.stringify({ em: Date.now() - 600e3, serie: s })); }""")
@@ -2293,7 +2363,7 @@ JS_TEXTOS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, o
   const f = B.ficha('app'), sobre = f.slice(f.indexOf('## Sobre o app'), f.indexOf('## Embarcação'));
   return { tx: i.txt, motores: r('motores').text, oleoL: r('qual a pressão do óleo?').text, clima: r('climatização').text, eletr: r('plotter garmin').text, audio: r('áudio fusion').text,
     dessal: r('dessalinizador').text, docs: r('documentos vencendo').text, contatos: r('quem chamar da equipe?').text, destinos: r('para onde vamos hoje?'), ancora: r('âncora garrando?'),
-    porao: r('bombas de porão').text, fallback: r('como se faz um nó lais de guia?'), foto: B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app' }).text,
+    porao: r('bombas de porão').text, chk: r('checklist de saída').text, saud: r('oi').text, fallback: r('como se faz um nó lais de guia?'), foto: B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app' }).text,
     video: B.answerAttachment('video', { name: 'a.mp4', size: 4096 }, { platform: 'app' }).text, sobre, sobreDados: B.SOBRE_DADOS || null, estab: r('estabilizador Seakeeper').text,
     convite: (B.linkConvite('Ana', '+55 47 99999-0000', 'total') || {}).href || '', cons: r('consumo de diesel').text, aut: r('autonomia').text, hor: r('horímetros').text,
     diaMotor: D.diario.filter((x) => x.ref === 'clima-filtro').map((x) => x.d + '|' + x.t), eqs: D.equipamentos.map((e) => [e.id, e.fabricante, e.modelo]),
@@ -2323,6 +2393,10 @@ def grupo_textos(b, muta, ped):
             x['tx']['oleo'] in x['oleoL'] and x['tx']['rpm'] in x['oleoL'] and x['tx']['hora'] in x['oleoL'] and 'desligados' not in x['oleoL'] and 'última leitura' not in x['oleoL'], x['oleoL'][:300])
         ped('textos: a climatização leva fabricante e modelo do cadastro e o registro do diário da própria tarefa (nenhum «desde 20/09» fixo)',
             'Climatização Webasto FCF Platinum' in x['clima'] and '20/09' not in x['clima'] and bool(x['diaMotor']) and x['diaMotor'][0].split('|')[0] in x['clima'], (x['clima'][:300], x['diaMotor']))
+        ped('textos: o checklist de saída traz o item 7 (coletes, um por pessoa; balsa, boia e extintores conforme a placa de salvatagem; previsão consultada) sem lugar de equipamento e sem A CONFIRMAR',
+            '7. Antes de largar: coletes, um por pessoa' in x['chk'] and 'conforme a placa de salvatagem' in x['chk'] and 'confira o boletim da Marinha antes de sair' in x['chk'] and not RX['LOCAL_SEGURANCA'].search(x['chk']) and 'A CONFIRMAR' not in x['chk'], x['chk'][-420:])
+        ped('textos: os contatos abrem a situação de bordo com «Situação de bordo agora:» (o quadro está vivo)', ('Situação de bordo agora: ' + x['tx']['resumoSemPosicao']) in x['contatos'] and 'Última situação de bordo' not in x['contatos'], x['contatos'][-300:])
+        ped('textos: a saudação fala da telemetria ao vivo (simulacao true)', 'Respondo sobre telemetria ao vivo, manutenção' in x['saud'], x['saud'])
         ped('textos: os eletrônicos citam o guia do piloto e o do radar (Raymarine, Garmin GMR) e a atualização de cartas pelo prazo (nenhum «diário 28/08» fixo)',
             'Guia de bordo — Piloto automático Raymarine' in x['eletr'] and 'Guia de bordo — Radar Garmin' in x['eletr'] and 'GMR 24 xHD3' in x['eletr'] and '28/08' not in x['eletr'] and re.search(r'D-\d+ · \d\d/\d\d', x['eletr']) is not None, x['eletr'][:420])
         reg = x['reg']
@@ -2364,6 +2438,8 @@ def grupo_textos(b, muta, ped):
                 not re.search(r'motores desligados|gerador ligado\)|snapshot', x[k]) and x['tx']['resumoSemPosicao'] in x[k] and 'A CONFIRMAR' in x[k], x[k][:360])
         ped('textos: o «Sobre o app» da ficha não diz «nada inventado» nem os rótulos, fala da telemetria ao vivo, da CONVERSA e traz a frase de sobreDados da decisão (f)',
             'nada inventado' not in x['sobre'].lower() and not re.search(r'SEM DADOS|SEM LEITURA|MANUAL NO DRIVE', x['sobre']) and 'telemetria ao vivo' in x['sobre'] and 'CONVERSA' in x['sobre'] and SOBRE_DADOS in x['sobre'], x['sobre'])
+        ped('textos: o «Sobre o app» lista os equipamentos do cadastro e a sigla do AIS fica inteira (nenhum «aIS»)',
+            'AIS (classe B) em-trak' in x['sobre'] and not re.search(r'\b[a-z][A-Z]{2}', x['sobre']) and 'motores Zeta' in x['sobre'], x['sobre'][:900])
         ped('textos: o cérebro exporta a frase de sobreDados (B.SOBRE_DADOS = a da decisão (f))', x['sobreDados'] == SOBRE_DADOS, x['sobreDados'])
         ped('textos: o convite não diz «demonstração» com simulacao true', 'demonstra' not in x['convite'].lower() and len(x['convite']) > 20, x['convite'][:200])
         ped('textos: o consumo e a autonomia não citam o período fixo da leitura antiga (01/08–26/09/2026)', '01/08–26/09' not in x['cons'] + x['aut'] + x['hor'], (x['cons'][:200], x['aut'][-200:]))
@@ -2524,6 +2600,34 @@ MUTANTES_3B = [
     ('o cérebro não exporta B.CHAVES', r"CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS,", r"SOBRE_DADOS: SOBRE_DADOS,", ('rotulos',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3B
+
+# Mutantes da revisão da P3B: o consumo e a autonomia do instante, o item 7 do checklist, a primeira ressalva do seguro, o documento vencido, os dois prefixos da situação de bordo, a âncora do
+# modo real, o «Sobre o app» e a saudação dos dois modos, a sigla do AIS, a previsão parcial (sem rajada, sem vento) nos dois modos e as leituras do SOS (D.replay, D.rota)
+MUTANTES_3B_REV = [
+    ('o consumo agora vira um valor fixo', r"(i.txt.consumo || SD)", r"'0 L/h'", ('rotulos',)),
+    ('a autonomia da resposta fica a do snapshot (AUT0)', r"'≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a '", r"'≈ ' + nb(AUT0.horas) + ' h · ≈ ' + AUT0.mn + ' mn a '", ('rotulos',)),
+    ('o checklist de saída perde o item 7 (coletes, balsa, boia, extintores, previsão)', r"\n7. Antes de largar: coletes, um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem; previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.'", r"'", ('textos',)),
+    ('o seguro para sair sempre diz «a primeira é de segurança»', r"(primeiraSeg ? ' — a primeira é de segurança.' : '.')", r"(true ? ' — a primeira é de segurança.' : '.')", ('prazos',)),
+    ('o documento vencido perde o «VENCIDO há»', r"return n < 0 ? 'VENCIDO há ' + (-n)", r"return n < 0 ? 'vencido ' + (-n)", ('prazos',)),
+    ('a situação de bordo sempre diz «Última situação de bordo»', r"(vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ')", r"'Última situação de bordo: '", ('textos',)),
+    ('a situação de bordo sempre diz «Situação de bordo agora»', r"(vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ')", r"'Situação de bordo agora: '", ('modos',)),
+    ('a âncora do modo real perde os metros de corrente do contador', r"', com ' + mil(AN.cabo_m) + ' m de corrente no contador do guincho'", r"''", ('modos',)),
+    ('a telemetria do modo real perde os metros de corrente da âncora', r"', ' + mil(AN.cabo_m) + ' m de corrente'", r"''", ('modos',)),
+    ('o «Sobre o app» do modo real traz a frase de sobreDados', r"sm ? 'Sobre os dados: ' + SOBRE_DADOS :", r"true ? 'Sobre os dados: ' + SOBRE_DADOS :", ('modos',)),
+    ('o «Sobre o app» do modo real fala da telemetria ao vivo do coletor', r"'Responde sobre: ' + (sm ? 'telemetria ao vivo", r"'Responde sobre: ' + (true ? 'telemetria ao vivo", ('modos',)),
+    ('o «Sobre o app» do modo real responde «com o número, a hora e a fonte»', r"(sm ? 'o número, a hora e a fonte.' : 'a fonte.')", r"'o número, a hora e a fonte.'", ('modos',)),
+    ('o «Sobre o app» da simulação volta à regra «Nada inventado»', r"sm ? 'Sobre os dados: ' + SOBRE_DADOS : 'Regra da casa", r"false ? 'Sobre os dados: ' + SOBRE_DADOS : 'Regra da casa", ('textos',)),
+    ('a saudação do modo real fala da telemetria ao vivo', r"'\nRespondo sobre telemetria' + (sim() ? ' ao vivo' : '')", r"'\nRespondo sobre telemetria' + ' ao vivo'", ('modos',)),
+    ('a saudação da simulação perde a telemetria ao vivo', r"'\nRespondo sobre telemetria' + (sim() ? ' ao vivo' : '')", r"'\nRespondo sobre telemetria' + ''", ('textos',)),
+    ('a sigla do AIS perde a maiúscula (min1 baixa sempre)', r"return /^[A-ZÀ-Ý]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1); }", r"return s.charAt(0).toLowerCase() + s.slice(1); }", ('textos',)),
+    ('a rajada ausente volta a «rajadas SEM DADOS» na simulação', r"') : s ? '' : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", r"') : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", ('tempo',)),
+    ('o vento ausente volta a «vento SEM DADOS» na simulação', r"') : s ? '' : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", r"') : s ? '' : ', rajadas ' + SD) : 'vento ' + SD;", ('tempo',)),
+    ('o modo real perde o «rajadas SEM DADOS»', r"') : s ? '' : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", r"') : '') : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", ('tempo',)),
+    ('o modo real perde o «vento SEM DADOS»', r"') : s ? '' : ', rajadas ' + SD) : s ? 'sem previsão de vento nesta leitura' : 'vento ' + SD;", r"') : s ? '' : ', rajadas ' + SD) : 'sem previsão de vento nesta leitura';", ('tempo',)),
+    ('a pressão do óleo no SOS lê o D.replay (limitesDe sem a guarda)', r"function limitesDe(campo) { if (EM_SOS) return null; var L", r"function limitesDe(campo) { var L", ('sos',)),
+    ('os destinos no SOS leem a D.rota', r"R = EM_SOS ? null : D.rota,", r"R = D.rota,", ('sos',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV
 
 
 def instante_3a(b):
