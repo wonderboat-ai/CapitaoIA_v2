@@ -121,6 +121,12 @@
   // simulacao false, tela sem replay): o caminho null → SEM DADOS segue intacto. Em /SOS-/ o instante é nulo antes de qualquer leitura.
   var CONG = { n: 0, inst: null }, CACHE = { base: null, inst: null }, VIVAS = { replay: 1, coletor: 1 };
   var S0 = S, AUT0 = AUT, CON0 = CON;
+  // As chaves cuja resposta não lê o quadro (CLAUDE.md 10; PROMPT §2.2, §2.3): sos, canal16, epirb, seafire, salvatagem, mmsi e o `oleo` (queda ou alarme: relato de falha
+  // não recebe leitura; a leitura fica no oleoLeitura). A resposta delas NÃO leva o instante (`_inst` tem o quadro, com lat e lon), o resumoAgora(a) delas é a instrução do
+  // plotter e a ficha(p, q, a) sai sem os blocos do quadro (QUADRO): a trava é da API, não de cada chamador (a IA, o diário, a CONVERSA).
+  var EMERG = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };
+  var QUADRO = { 'Telemetria': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
+  function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
   function sinal(x, c) { var A = window.CapitaoAgora, v = A.fmt.arred(x, c); return (v > 0 ? '+' : v < 0 ? '−' : '') + A.fmt.nb(Math.abs(v), c); }
@@ -714,8 +720,10 @@
     return r + fim;
   }
   // O resumo do instante (CONTRATO §1.23): até 300 letras, sem coordenadas. Com `{ semPosicao: true }` sem o lugar (as exceções da decisão (g)); com a resposta da
-  // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/: a instrução do plotter, nunca quadro. Sem quadro vivo (modo real), o do snapshot, sem coordenada.
+  // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/ e com a resposta de uma chave de emergência (EMERG): a instrução do plotter, nunca quadro. Sem quadro vivo
+  // (modo real), o do snapshot, sem coordenada.
   function resumoAgora(x) {
+    if (emerg(x)) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';
     return congela(function () {
       var i = vivo();
       if (EM_SOS) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';
@@ -1208,7 +1216,7 @@
     return a;
   }
   // a resposta leva o instante dela (fora do JSON): a ficha(p, q, a) e o resumoAgora(a) da MESMA pergunta o reaproveitam
-  function marca(a) { if (a && typeof a === 'object') { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} } return a; }
+  function marca(a) { if (a && typeof a === 'object' && !emerg(a)) { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} } return a; }
   function answer(q, ctx) { return congela(function () { return marca(responde(q, ctx)); }); }
 
   // ——— IA na nuvem (capitao-ia.js) ———
@@ -1254,8 +1262,8 @@
   function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }
   function ficha1(p, q, a) {
     p = p || 'app';
-    var out = [];
-    var bloco = function (titulo, f) { try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
+    var out = [], emergencia = emerg(a);   // resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Horímetros, Autonomia e consumo)
+    var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return; try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
     out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
     out.push('## Sobre o app\n' + SOBRE_APP.join('\n'));
     out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + mmsiNum() + ' (cadastro do app) · indicativo: ' + INDICATIVO + '\n(Fonte: ' + (E.fonte || SD) + ')');

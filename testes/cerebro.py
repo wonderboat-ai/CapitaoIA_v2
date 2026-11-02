@@ -1339,8 +1339,11 @@ def perguntas_da_g1(pg):
 # instante; duas perguntas seguidas em segundos diferentes veem instantes diferentes; em /SOS-/ não há instante (nem o resumo); com simulacao false
 # (ou sem replay) o cérebro é o de antes da 1.1.0 (D.snapshot, fonte «snapshot»). A fonte de uma resposta com quadro do replay é a `fonteTxt` do
 # instante, nunca «coletor NMEA».
-# uma pergunta de cada chave do PROMPT §2.2 (sos, canal16, epirb, seafire, salvatagem e o MMSI, que responde na canal16), tirada dos CASOS
-PERGUNTAS_2_2 = ['MAYDAY, homem ao mar!', 'roteiro do canal 16', 'onde fica o EPIRB?', 'onde fica o seafire', 'jogue a boia na água', 'qual o MMSI do barco?']
+# uma pergunta de cada chave do PROMPT §2.2 (sos, canal16, epirb, seafire, salvatagem, o MMSI, que responde na canal16, e o `oleo`: queda ou alarme), tirada dos CASOS
+PERGUNTAS_2_2 = ['MAYDAY, homem ao mar!', 'roteiro do canal 16', 'onde fica o EPIRB?', 'onde fica o seafire', 'jogue a boia na água', 'qual o MMSI do barco?',
+                'alarme de óleo acendeu', 'pressão de óleo baixa no motor BB']   # (as duas últimas: `oleo`, relato de falha sem leitura do quadro, PROMPT §2.2)
+CHAVES_2_2 = ['sos', 'canal16', 'epirb', 'seafire', 'salvatagem', 'canal16', 'oleo', 'oleo']   # a chave de cada pergunta acima (o MMSI responde na canal16)
+CHAVES_EMERGENCIA = ('sos', 'oleo', 'canal16', 'epirb', 'seafire', 'salvatagem', 'mmsi')   # as chaves cuja resposta não leva o instante (CLAUDE.md 10; PROMPT §2.2, §2.3)
 CHAVES_INSTANTE = ('ms', 'q', 'fonte', 'fonteTxt', 'selo', 'hora', 'hhmm', 'seg', 'fase', 'calc', 'tend', 'txt')
 CHAVES_TXT = ('hora', 'sog', 'stw', 'rumo', 'proa', 'piloto', 'leme', 'prof', 'rpm', 'oleo', 'arref', 'carga', 'consumo', 'diesel', 'dieselLados', 'distancia',
               'horimetros', 'gerador', 'seakeeper', 'b24', 'b12', 'tanques', 'porao', 'ancora', 'vento', 'ventoAp', 'ondas', 'pressao', 'ar', 'agua', 'praca',
@@ -1363,6 +1366,27 @@ GETTERS_SOS = """window.__lidas = {}; (function () { var D = window.CapitaoDados
   Object.defineProperty(D, k, { get: function () { window.__lidas[k]++; return v; }, set: function (x) { v = x; }, configurable: true, enumerable: true }); }); })();""" % json.dumps(list(LEIDAS_SOS))
 INSTANTES_RESUMO = ('0@0', '10@0', '20@0', '29@0', '60', '105', '120', '149@575')
 SEM_SIMULACAO = ';window.CapitaoDados.simulacao = false;'
+# o relógio da página parado em `ms` (Date.now e new Date() sem argumento). O `## Agora` da ficha da reserva (simulacao false ou sem replay) usa o minuto do relógio, e duas
+# páginas de uma comparação passam pelo virar do minuto de vez em quando (≈ 0,5 % de cada par): o teste do modo real as para DE PROPÓSITO em minutos diferentes
+# (18:09:59,9 e 18:10:00,1 de 02/11/2026 em Brasília), e a comparação tira o bloco do relógio
+VIRADA_DO_MINUTO = 1793653799900
+RELOGIO = """;(function () { var RD = Date, T = %d; function FD() { var a = [].slice.call(arguments); if (!(this instanceof FD)) return new RD(T).toString();
+  return a.length ? new (Function.prototype.bind.apply(RD, [null].concat(a)))() : new RD(T); }
+  FD.prototype = RD.prototype; FD.now = function () { return T; }; FD.UTC = RD.UTC; FD.parse = RD.parse; window.Date = FD; })();"""
+
+
+def relogio(ms):
+    return RELOGIO % ms
+
+
+def sem_agora(ficha):
+    """(ficha sem o bloco «## Agora», o bloco): o relógio da ficha é do aparelho e muda entre duas páginas; o resto é o que se compara."""
+    m = re.search(r'## Agora\n(.*?)\n\n', ficha, re.S)
+    return (ficha.replace(m.group(0), '', 1) if m else ficha), (m.group(1) if m else None)
+
+
+def agora_ok(bloco):
+    return bool(bloco) and re.search(r'\d\d/\d\d/\d{4}, \d\d:\d\d \(horário de Brasília\)', bloco) is not None
 HTML_SOS = '<!doctype html><meta charset="utf-8"><title>SOS</title>'
 
 
@@ -1460,7 +1484,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
            fonte: i && i.fonte, tend: i && i.tend, txt: i && !!i.txt, replayAtivo: !!(R && R.ativo()) }; }"""
 
 
-def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca')):
+def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -1499,9 +1523,10 @@ def grupo_forma(b, muta, ped):
             (f['autonomia'][-110:], f['consumo'][-170:], f['aut105'][-80:]))
         ped('forma: manutenção — o «faltam» da troca de óleo sai do instante (32,4 h), não da agenda (37,4 h)', 'faltam 32,4 h' in f['manutencao'] and '37,4' not in f['manutencao'], f['manutencao'][-120:])
         ped('forma: tanques — a hora da leitura do diesel é a do instante (leitura · 12:01:00)', 'leitura · 12:01:00' in f['tanques'], f['tanques'][-80:])
-        # as seis chaves do §2.2 não leem o quadro: nem a fonte do instante (telemetria, ao vivo, a hora) na fonte, no texto ou na fala (a 10 do CLAUDE.md)
+        # as chaves do §2.2 e o `oleo` (relato de falha: só os passos, a leitura fica no oleoLeitura) não leem o quadro: nem a fonte do instante (telemetria, ao vivo,
+        # a hora) na fonte, no texto ou na fala (a 10 do CLAUDE.md)
         emerg = [(q, k, src) for q, k, src, texto, fala in f['emerg'] if re.search(r'telemetria|ao vivo|coletor|\b12:0\d', src + ' ' + texto + ' ' + fala, re.I)]
-        ped('forma: sos, canal16, epirb, seafire, salvatagem e MMSI não citam o instante na fonte, no texto nem na fala', not emerg and [k for q, k, *_ in f['emerg']] == ['sos', 'canal16', 'epirb', 'seafire', 'salvatagem', 'canal16'], (emerg, [k for q, k, *_ in f['emerg']]))
+        ped('forma: sos, canal16, epirb, seafire, salvatagem, MMSI e óleo (queda ou alarme) não citam o instante na fonte, no texto nem na fala', not emerg and [k for q, k, *_ in f['emerg']] == CHAVES_2_2, (emerg, [k for q, k, *_ in f['emerg']]))
         # PROMPT §3 (a lista única): a fonte, o selo e o texto do instante não casam nenhuma das regex (as 8 do termos.json, menos o ANEXO). Vale também
         # para o «ao vivo» da fonte do replay: o §6.6 do contrato diz «sem coletor NMEA nem ao vivo», o §1.23 «telemetria ao vivo · hora»; nenhuma regex pega «ao vivo»
         for rot, i in (('12:01:00', f['a60']), ('12:01:45', f['a105'])):
@@ -1598,27 +1623,31 @@ def resumo_real(ped, nome, r):
 
 def grupo_real(b, muta, ped):
     casos = [[q, k] for q, k in CASOS]
-    sem = pagina(b, extra=SEM_SIMULACAO, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
-    com = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    sem = pagina(b, extra=SEM_SIMULACAO + relogio(VIRADA_DO_MINUTO), scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
+    com = pagina(b, extra=SEM_SIMULACAO + relogio(VIRADA_DO_MINUTO + 200), muta=muta)
     try:
         for pg in (sem, com):
             pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         x, y = sem.evaluate(JS_REAL, casos), com.evaluate(JS_REAL, casos)
         ped('real: com simulacao false o replay não anda e o instante é a reserva (D.snapshot), sem tendência nem texto do quadro', y['fonte'] == 'snapshot' and y['tend'] is None and not y['replayAtivo'], (y['fonte'], y['tend'], y['replayAtivo']))
         dif = [r[0] for r, s in zip(x['respostas'], y['respostas']) if r != s]
-        ped('real: as %d respostas (texto, fonte e fala) e a ficha são os de antes (iguais aos da página sem o replay)' % len(casos), not dif and x['ficha'] == y['ficha'] and x['resumo'] == y['resumo'] and x['sem'] == y['sem'], dif[:3])
+        fx, ax = sem_agora(x['ficha']); fy, ay = sem_agora(y['ficha'])
+        ped('real: as %d respostas (texto, fonte e fala) e a ficha (fora do relógio do «## Agora») são os de antes (iguais aos da página sem o replay)' % len(casos),
+            not dif and fx == fy and x['resumo'] == y['resumo'] and x['sem'] == y['sem'], dif[:3])
+        ped('real: a ficha abre com o «## Agora» (dia e hora de Brasília) nas duas páginas', agora_ok(ax) and agora_ok(ay), (ax, ay))
         resumo_real(ped, 'simulacao false', y)
         tel = [r[2] for r in y['respostas'] if r[1] == 'telemetria']
         # sem o CapitaoAgora (o rodapé do capitao-dados.js falhou ou a tela não o tem): a reserva, fonte `snapshot`, e as respostas são as da página sem replay
-        sa = pagina(b, extra=';delete window.CapitaoAgora;', scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
-        sr = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
+        sa = pagina(b, extra=';delete window.CapitaoAgora;' + relogio(VIRADA_DO_MINUTO), scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
+        sr = pagina(b, extra=relogio(VIRADA_DO_MINUTO + 200), scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, muta=muta)
         try:
             for pg in (sa, sr):
                 pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
             ja, jr = sa.evaluate(JS_REAL, casos), sr.evaluate(JS_REAL, casos)
             ped('real: sem o CapitaoAgora o instante do cérebro é a reserva (fonte snapshot, nunca nulo fora do SOS)', ja['fonte'] == 'snapshot' and ja['txt'] is False, (ja['fonte'], ja['txt']))
             dif2 = [r[0] for r, s in zip(ja['respostas'], jr['respostas']) if r != s]
-            ped('real: sem o CapitaoAgora as respostas e a ficha são as de antes da 1.1.0', not dif2 and ja['ficha'] == jr['ficha'], dif2[:3])
+            fa, aa = sem_agora(ja['ficha']); fr, ar = sem_agora(jr['ficha'])
+            ped('real: sem o CapitaoAgora as respostas e a ficha (fora do relógio do «## Agora») são as de antes da 1.1.0', not dif2 and fa == fr and agora_ok(aa) and agora_ok(ar), (dif2[:3], aa, ar))
             resumo_real(ped, 'sem o CapitaoAgora', ja)
             resumo_real(ped, 'tela sem replay', jr)
         finally:
@@ -1947,16 +1976,63 @@ def grupo_marca(b, muta, ped):
                 ped('marca (%s) «%s»: o instante da resposta (_inst) fica fora das chaves, do for-in, do JSON, da cópia e do clone' % (nome, o['nome']),
                     '_inst' not in o['chaves'] and '_inst' not in o['forin'] and '_inst' not in o['json'] and not re.search(r'"(?:lat|lon|q|ms)"\s*:', o['json']) and not o['copia'] and not o['espalha'] and not o['dentro'] and '_inst' not in o['clone'],
                     (o['chaves'], o['json'][:120]))
-                if o['nome'] != 'MAYDAY, homem ao mar!':   # (a resposta do SOS não precisa do instante: a ficha dela não lê o quadro)
+                if o['nome'] != 'MAYDAY, homem ao mar!':
                     ped('marca (%s) «%s»: o objeto ainda é legível pela ficha (a._inst existe)' % (nome, o['nome']), o['inst'], o['inst'])
+                else:   # a resposta de emergência não leva o instante: a ficha e o resumo dela não leem o quadro (grupo emerg), e o `_inst` tem lat e lon
+                    ped('marca (%s) «%s»: a resposta do SOS não leva o instante (_inst)' % (nome, o['nome']), not o['inst'], o['inst'])
         finally:
             pg.ctx.close()
 
 
 
+# A API da resposta de emergência (CLAUDE.md 10; PROMPT §2.2): `B.answer` de uma chave de emergência não leva o instante (`_inst` tem o quadro e a posição) e o
+# `resumoAgora(a)` e a `ficha(p, q, a)` que recebem essa resposta não leem o quadro, nem com o relógio andando depois da resposta (12:02:30). Os chamadores
+# (a IA, o diário, a CONVERSA) não precisam lembrar da trava: a API a cumpre. Uma resposta de dado de bordo segue com o instante dela (o controle).
+JS_EMERG = """(qs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, op = { platform: 'app', commit: false };
+  const titulos = (f) => (f.match(/^## .*$/mg) || []).map((t) => t.slice(3));
+  const um = (q) => { R.fixar('60'); const a = B.answer(q, op); R.fixar('0@121');
+    const r = B.resumoAgora(a), f = B.ficha('app', q, a), x = B.resumoAgora({ key: a.key }), y = B.ficha('app', q, { key: a.key });
+    R.fixar('60'); return { q, key: a.key, inst: a._inst !== undefined, json: JSON.stringify(a), resumo: r, ficha: f, titulos: titulos(f), resumoMao: x, fichaMao: y }; };
+  const out = { emerg: qs.map(um), plotter: D.protocolos.plotter };
+  R.fixar('60'); const t = B.answer('telemetria', op); R.fixar('0@121');
+  out.controle = { key: t.key, inst: t._inst !== undefined, resumo: B.resumoAgora(t), ficha: B.ficha('app', 'telemetria', t), titulos: titulos(B.ficha('app', 'telemetria', t)) };
+  R.fixar('60'); out.sem = { resumo: B.resumoAgora(), ficha: B.ficha('app'), titulos: titulos(B.ficha('app')) };
+  return out; }"""
+QUADRO_DA_FICHA = ('Telemetria', 'Horímetros', 'Autonomia e consumo')   # os blocos da ficha que leem o quadro do instante (navegação, motores, diesel)
+NAVEGACAO = re.compile(r'\bSOG\b|\bproa \d|\d rpm|Motores (?:ligados|desligados)|\bETA\b|Snapshot de \d')
+
+
+def grupo_emerg(b, muta, ped):
+    for nome, kw in (('replay', {}), ('modo real', {'extra': SEM_SIMULACAO})):
+        pg = pagina(b, muta=muta, **kw)
+        try:
+            e = pg.evaluate(JS_EMERG, PERGUNTAS_2_2)
+            ped('emerg (%s): as perguntas cobrem sos, canal16, epirb, seafire, salvatagem e oleo' % nome,
+                [r['key'] for r in e['emerg']] == CHAVES_2_2 and all(r['key'] in CHAVES_EMERGENCIA for r in e['emerg']), [r['key'] for r in e['emerg']])
+            for r in e['emerg']:
+                rot = 'emerg (%s) «%s» (%s)' % (nome, r['q'], r['key'])
+                ped(rot + ': a resposta não leva o instante (_inst com o quadro e a posição)', not r['inst'] and not re.search(r'"(?:lat|lon|q|ms)"\s*:', r['json']), r['json'][:120])
+                for rotulo, resumo in (('resumoAgora(a)', r['resumo']), ('resumoAgora({ key })', r['resumoMao'])):
+                    ped(rot + ': %s é a instrução do plotter, sem quadro (nem com o relógio andando)' % rotulo,
+                        resumo == e['plotter'] and 'LEIA NO PLOTTER' in resumo and not NAVEGACAO.search(resumo) and not confere.R_COORD.search(resumo), resumo[:160])
+                for rotulo, ficha, titulos in (('ficha(p, q, a)', r['ficha'], r['titulos']), ('ficha(p, q, { key })', r['fichaMao'], None)):
+                    ts = titulos if titulos is not None else re.findall(r'^## (.*)$', ficha, re.M)
+                    ped(rot + ': %s sai sem os blocos do quadro (Telemetria, Horímetros, Autonomia e consumo) e sem navegação, e segue com o resto' % rotulo,
+                        not set(QUADRO_DA_FICHA) & set(ts) and not NAVEGACAO.search(ficha) and not confere.R_COORD.search(ficha)
+                        and {'Agora', 'Embarcação', 'Manutenção', 'Emergência'} <= set(ts), (ts, NAVEGACAO.search(ficha) and NAVEGACAO.search(ficha).group(0)))
+            # o controle: uma resposta de dado de bordo segue com o instante e com o quadro (a trava é só das chaves de emergência)
+            c = e['controle']
+            ped('emerg (%s): o controle (telemetria) leva o instante, o resumo do quadro e os blocos do quadro na ficha' % nome,
+                c['key'] == 'telemetria' and c['inst'] and c['resumo'] != e['plotter'] and ('SOG' in c['resumo'] or nome == 'modo real') and set(QUADRO_DA_FICHA) <= set(c['titulos']) and bool(NAVEGACAO.search(c['ficha'])), (c['key'], c['inst'], c['resumo'][:80], c['titulos']))
+            ped('emerg (%s): sem resposta, resumoAgora() e ficha() seguem completos (o quadro)' % nome,
+                e['sem']['resumo'] != e['plotter'] and set(QUADRO_DA_FICHA) <= set(e['sem']['titulos']), (e['sem']['resumo'][:80], e['sem']['titulos']))
+        finally:
+            pg.ctx.close()
+
+
 GRUPOS_3A = {'forma': grupo_forma, 'uma': grupo_uma, 'resumo': grupo_resumo, 'virada': grupo_virada, 'sos': grupo_sos, 'real': grupo_real, 'alarmes': grupo_alarmes,
              'aninhadas': grupo_aninhadas, 'transicao': grupo_transicao, 'coletor': grupo_coletor, 'falha': grupo_falha, 'parcial': grupo_parcial,
-             'numeros': grupo_numeros, 'ligados': grupo_ligados, 'coordenada': grupo_coordenada, 'marca': grupo_marca}
+             'numeros': grupo_numeros, 'ligados': grupo_ligados, 'coordenada': grupo_coordenada, 'marca': grupo_marca, 'emerg': grupo_emerg}
 
 
 # Mutantes do cérebro (cada um tem de ser acusado por `confere_instante` nos grupos indicados): (nome, trecho único do capitao-brain.js, troca, grupos)
@@ -2030,6 +2106,16 @@ MUTANTES_3A = [
     ('o instante lê D.simulacao antes da guarda do SOS', "  function lerInstante() {\n    var A, i;\n", "  function lerInstante() {\n    var A, i, _x = D.simulacao;\n", ('sos',)),
     ('o resumo do SOS lê D.replay', "      if (EM_SOS) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';", "      if (EM_SOS) { var _y = D.replay; return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER'; }", ('sos',)),
     ('o cérebro lê D.snapshot na carga do SOS', "S = EM_SOS ? {} : (D.snapshot || {}),", "S = (D.snapshot, EM_SOS ? {} : (D.snapshot || {})),", ('sos',)),
+    # —— revisão da P3A (3): o óleo não cita o instante; a API da resposta de emergência (_inst, resumoAgora(a), ficha(p, q, a)) ——
+    ('o óleo (queda ou alarme) cita o instante na fonte (comTele)', "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4'", "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4' + comTele()", ('forma',)),
+    ('o óleo (queda ou alarme) cita o instante na fonte (FT.tele)', "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4'", "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: FT.tele + ' · ' + guia('g_motores') + ' §4'", ('forma',)),
+    ('a resposta de emergência leva o instante (marca sem a guarda)', "function marca(a) { if (a && typeof a === 'object' && !emerg(a)) {", "function marca(a) { if (a && typeof a === 'object') {", ('emerg', 'marca')),
+    ('o resumoAgora(a) de emergência devolve o quadro', "    if (emerg(x)) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';\n", "", ('emerg',)),
+    ('a ficha(p, q, a) de emergência leva o Telemetria', "    var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return;", "    var bloco = function (titulo, f) { if (false) return;", ('emerg',)),
+    ('a ficha(p, q, a) de emergência leva só o Telemetria (a guarda esquece o Horímetros)', "var QUADRO = { 'Telemetria': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };", "var QUADRO = { 'Telemetria': 1, 'Autonomia e consumo': 1 };", ('emerg',)),
+    ('a guarda de emergência esquece o óleo', "var EMERG = { sos: 1, oleo: 1, canal16: 1,", "var EMERG = { sos: 1, canal16: 1,", ('emerg', 'forma')),
+    ('a guarda de emergência esquece o seafire', "epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };", "epirb: 1, salvatagem: 1, mmsi: 1 };", ('emerg',)),
+    ('a guarda de emergência vale para qualquer chave (EMERG[a.key] sem === 1)', "return !!a && typeof a === 'object' && EMERG[a.key] === 1; }", "return !!a && typeof a === 'object'; }", ('emerg', 'uma')),
 ]
 
 
@@ -2041,7 +2127,12 @@ def instante_3a(b):
         print('FALHA instante (P3A):', r)
     print('instante (P3A): %d falhas' % falhas)
     vivos = []
+    corpo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'capitao-brain.js'), encoding='utf-8').read()
     for nome, trecho, troca, grupos in MUTANTES_3A:
+        if corpo.count(trecho) != 1:   # um mutante cujo trecho saiu do cérebro não troca nada (e a rota da página falharia): é defeito do teste, não mutante acusado
+            vivos.append(nome)
+            print('FALHA mutante sem o trecho (uma vez) no cérebro:', nome)
+            continue
         if not confere_instante(b, muta=(trecho, troca), grupos=grupos):
             vivos.append(nome)
             print('FALHA mutante do instante NÃO acusado:', nome)
