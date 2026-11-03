@@ -490,8 +490,10 @@ ROTAS_P3C = [
     # posição: «onde estamos», «rumo», «COG», «quantos nós»
     ('onde estamos?', 'posicao', False), ('qual o rumo?', 'posicao', False), ('qual o COG?', 'posicao', False), ('quantos nós estamos fazendo?', 'posicao', False), ('qual o rumo sobre o fundo?', 'posicao', False),
     # profundidade (só a leitura: o alarme, a mínima e o relato seguem o guia ou a IA)
+    # Fase 3 (P3E, F10): «sonda mostrando pouca profundidade» é uma variante literal do item EL-08 do FAQ (água rasa): sem resposta pronta nem trecho do guia, o chat responde pelo item
+    # (faqEquip, ainda com PEDE_IA true: não é de segurança); antes era `fallback`. Nunca é a leitura calma da profundidade (o que o caso protege).
     ('qual a profundidade?', 'profundidade', False), ('qual a profundidade aqui?', 'profundidade', False), ('quanto fundo tem aqui?', 'profundidade', False), ('leituras da profundidade', 'profundidade', False),
-    ('profundidade mínima na sonda', 'base', True), ('qual a profundidade mínima para navegar?', 'base', True), ('alarme de profundidade da sonda', 'base', True), ('sonda mostrando pouca profundidade', 'fallback', True),
+    ('profundidade mínima na sonda', 'base', True), ('qual a profundidade mínima para navegar?', 'base', True), ('alarme de profundidade da sonda', 'base', True), ('sonda mostrando pouca profundidade', 'faqEquip', True),
     ('como instalar o transdutor de profundidade', 'fallback', True), ('profundidade mínima para fundear', 'ancora', False),
     # ETA, distância e waypoint; «quanto falta» só junto de chegar, chegada, destino, waypoint, ponto, ETA ou o nome de um ponto da rota
     ('qual a hora de chegada?', 'eta', False), ('quanto falta para chegar?', 'eta', False), ('quanto falta para o destino?', 'eta', False), ('qual o próximo waypoint?', 'eta', False), ('qual a distância até o destino?', 'eta', False),
@@ -1714,7 +1716,7 @@ SEMENTE_CLIMA = """
 """
 
 
-def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None, relogio_ms=None, clima=False):
+def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None, relogio_ms=None, clima=False, aborta=()):
     """Página da Main e da H2 (dados, replay, alertas, telemetria, cérebro) com o instante fixado em `fixo`. `extra` é acrescentado ao fim do capitao-dados.js (a
     injeção do teste do modo real e as fontes de leitura do SOS). `muta` = (trecho, troca): o cérebro mutante dos testes que provam que a conferência
     acusa. Em `caminho` com /SOS-/ a página é vazia e o replay de verdade sai sozinho. `relogio_ms`: o relógio do aparelho parado nesse instante ANTES de qualquer
@@ -1726,6 +1728,8 @@ def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo=
         k = scripts.index('capitao-brain.js') if 'capitao-brain.js' in scripts else len(scripts)
         scripts = scripts[:k] + ('capitao-clima.js',) + scripts[k:]
     ctx = b.new_context(service_workers='block')
+    for padrao in aborta:   # arquivos que a página nem chega a pedir (a rede cortada ANTES do cérebro carregar): `aborta=('**/faq-equipamentos.json',)`
+        ctx.route(padrao, lambda rt: rt.abort('internetdisconnected'))
     if clima:
         ctx.route('https://*.open-meteo.com/**', lambda rt: rt.abort('internetdisconnected'))
     ctx.route('**/capitao-dados.js', acrescenta(extra))
@@ -1816,7 +1820,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -5154,6 +5158,144 @@ MUTANTES_3E_F09 = [
     ('p3e checklist: o SOS lê os tipos', "function checkTipos() { return EM_SOS || !D.checklists", "function checkTipos() { return !D.checklists", ('checklist',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F09
+
+# —— F10: o FAQ dos equipamentos no chat ——
+FAQ_JSON = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'faq-equipamentos.json'), encoding='utf-8'))
+# as 8 frases do próprio FAQ (pergunta ou variante) que nenhuma resposta pronta nem trecho do guia responde (iam à IA): agora o item, com o código e a fonte
+FAQ_TIPADAS = [('água rasa: o que faço', 'EL-08'), ('sonda mostrando pouca profundidade', 'EL-08'), ('conferência anual do guincho', 'AN-04'), ('Como vejo os outros barcos pelo AIS?', 'AI-01'),
+               ('transponder só recebendo', 'AI-03'), ('boletim da Marinha antes de sair', 'CK-03'), ('O que faço ao chegar na marina?', 'CK-04'), ('Quando completo a água e esvazio as servidas?', 'CK-06')]
+# o que o FAQ NÃO toma: a resposta pronta, o trecho do guia, a pergunta de uma palavra, a genérica sem item, a de náutica geral (essas seguem como antes)
+FAQ_NAO = [('como se faz um nó lais de guia?', 'fallback'), ('como silenciar o alarme?', 'fallback'), ('como ligar o gerador?', 'base'), ('gerador', 'gerador'), ('como abrir a ventilação', 'fallback'),
+           ('o alarme disparou', 'fallback'), ('como desligar o sistema', 'fallback'), ('quando trocar o óleo do motor?', 'base'), ('alarme de fluxo da climatização', 'base'),
+           ('boletim', 'fallback'), ('autoteste', 'fallback'), ('em caso de alarme', 'fallback'), ('o que fazer em caso de alarme', 'fallback'), ('a baliza de canal', 'fallback'), ('baliza do canal', 'fallback'),
+           ('a baliza do canal está apagada', 'fallback'), ('o que faço com o alarme?', 'fallback'), ('o que faço com a pressão?', 'fallback')]   # (as duas últimas: pergunta genérica, o 1º item empata com o de outra seção — o alarme do piloto e o da climatização — e fica com a IA)   # (as duas últimas famílias: a palavra genérica «caso» não abre o item do fogo e a baliza de sinalização não é o EPIRB)   # (uma palavra só: «boletim» e «autoteste» casariam o CK-03 e o EP-02 se a busca aceitasse uma palavra)
+JS_FAQ = """async () => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; const ok = await B.carregaFaq(), d = B.faqDados();
+  const out = { ok, pronto: B.faqPronto(), total: d.itens.length, id1: B.faqItem('MO-02'), nulos: [B.faqItem('XX-99'), B.faqItem(5), B.faqItem(null), B.faqItem()] };
+  out.todos = d.itens.map((it) => { const a = B.answer('qualquer pergunta', Object.assign({ faq: it.id }, op));
+    return { id: it.id, key: a.key, faq: a.faq, emerg: a.emerg, seguranca: a.seguranca, text: a.text, src: a.src, acoes: a.actions, ia: B.pedeIA(a, 'qualquer pergunta'), fala: B.falaCurta(a), hora: a.hora || null, ficha: it.emerg || it.id === 'MO-02' ? B.ficha('app', 'qualquer pergunta', a) : null }; });
+  out.tipadas = FQ.map((q) => { const a = B.answer(q, op); return [q, a.key, a.faq || null, B.pedeIA(a, q), a.text.split('\\n')[0], a.src, B.falaCurta(a)]; });
+  out.nao = FN.map((q) => { const a = B.answer(q, op); return [q, a.key, a.faq || null]; });
+  out.frases = []; d.itens.forEach((it) => [it.pergunta].concat(it.variantes).forEach((q) => { const a = B.answer(q, op); if (a.key === 'faqEquip') out.frases.push([it.id, q, a.faq]); }));
+  out.id = [B.answer('x', Object.assign({ faq: 'MO-02', id: 'checklist' }, op)).key, B.answer('MAYDAY', Object.assign({ faq: 'MO-02' }, op)).faq, B.answer('checklist de saída', Object.assign({ faq: 'XX-99' }, op)).key, B.answer('checklist de saída', Object.assign({ faq: 5 }, op)).key];
+  return out; }""".replace('FQ', json.dumps([q for q, _ in FAQ_TIPADAS], ensure_ascii=False)).replace('FN', json.dumps([q for q, _ in FAQ_NAO], ensure_ascii=False))
+
+
+def texto_faq(it):
+    passos = it.get('passos', [])
+    t = it['resposta']
+    if passos:
+        t += '\n' + '\n'.join('%d. %s' % (i + 1, x) for i, x in enumerate(passos[:8])) + ('\n… mais %d passos no FAQ (%s).' % (len(passos) - 8, it['id']) if len(passos) > 8 else '')
+    if it.get('atencao'):
+        t += '\nAtenção: ' + it['atencao']
+    if it.get('senao'):
+        t += '\nSe não resolver: ' + it['senao']
+    if it.get('obs'):
+        t += '\nObservação: ' + it['obs']
+    return t
+
+
+def grupo_faq(b, muta, ped):
+    itens = FAQ_JSON['itens']
+    por = {it['id']: it for it in itens}
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        x = pg.evaluate(JS_FAQ)
+        ped('faq: o cérebro carrega o faq-equipamentos.json (91 itens) e dá o item pelo código; código que não existe, número e vazio devolvem null',
+            x['ok'] is True and x['pronto'] is True and x['total'] == 91 == len(itens) and x['id1'] == por['MO-02'] and x['nulos'] == [None] * 4, (x['ok'], x['total'], x['nulos']))
+        ped('faq: 91 itens, 26 de segurança (os 9 cartões EM e os outros do contrato §1.6) e 9 de emergência', sum(1 for i in itens if i.get('seguranca')) == 26 and sum(1 for i in itens if i.get('emerg')) == 9, (sum(1 for i in itens if i.get('seguranca')), sum(1 for i in itens if i.get('emerg'))))
+        ruins = []
+        for r in x['todos']:
+            it = por[r['id']]
+            fs = [f['texto'] for f in it.get('fontes', [])]
+            esp_src = 'Fonte: FAQ dos equipamentos ' + it['id'] + (' · ' + ' · '.join(fs) if fs else '')
+            if not (r['key'] == 'faqEquip' and r['faq'] == it['id'] and r['text'] == texto_faq(it) and r['src'] == esp_src and r['seguranca'] == bool(it.get('seguranca')) and r['emerg'] == bool(it.get('emerg'))
+                    and any(a['l'] == 'FAQ de bordo' for a in r['acoes']) and any(a['l'] == 'Abrir SOS' for a in r['acoes']) == bool(it.get('emerg'))):
+                ruins.append((r['id'], 'forma'))
+            if r['ia'] != (not it.get('seguranca')):
+                ruins.append((r['id'], 'ia', r['ia']))
+        ped('faq: o item pedido pelo código (ctx.faq) é o item: key faqEquip, o código, a resposta, os passos (até 8), a atenção e a fonte com o código; só o cartão de emergência tem o botão do SOS', not ruins, ruins[:5])
+        seg = [r for r in x['todos'] if por[r['id']].get('seguranca')]
+        ped('faq: os 26 itens de segurança e os 9 cartões de emergência NUNCA vão à IA (pedeIA false); os outros 65, sim (como o trecho do guia)', len(seg) == 26 and all(r['ia'] is False for r in seg) and all(r['ia'] is True for r in x['todos'] if not por[r['id']].get('seguranca')), [r['id'] for r in seg if r['ia']][:5])
+        # o cartão de emergência: a resposta de emergência não leva o quadro (a ficha sai sem a Telemetria, a Navegação, os Horímetros e a Autonomia), nem a hora, e a fala é a resposta inteira (a 1ª linha)
+        em = [r for r in x['todos'] if por[r['id']].get('emerg')]
+        ped('faq: o cartão de emergência (EM-01…09) é resposta de emergência: a ficha sai sem o quadro e sem hora, e a fala é a 1ª linha inteira (a resposta toda, com o rótulo do procedimento padrão), sem a hora do instante',
+            len(em) == 9 and all(r['ficha'] and '## Telemetria' not in r['ficha'] and '## Navegação agora' not in r['ficha'] and '## Horímetros' not in r['ficha'] and r['hora'] is None and r['fala'] == por[r['id']]['resposta']
+                                 and 'procedimento padrão — confirmar com o protocolo de bordo' in r['fala'].lower().replace('procedimento padrão', 'procedimento padrão') for r in em), [r['id'] for r in em if '## Telemetria' in (r['ficha'] or '')])
+        mo = next(r for r in x['todos'] if r['id'] == 'MO-02')
+        ped('faq: o item comum (MO-02) leva a ficha completa e a hora do instante como os outros; a fala é a 1ª linha (a resposta), sem a hora', '## Telemetria' in mo['ficha'] and mo['hora'] == '12:01:00' and mo['fala'].startswith(por['MO-02']['resposta'][:60]) and '12:01:00' not in mo['fala'], (mo['hora'], mo['fala'][:80]))
+        ruim = []
+        for r in x['todos']:
+            tudo = r['text'] + '\n' + r['src'] + '\n' + r['fala']
+            m = [(n, k.group(0)) for n in VARREDURA for k in [RX[n].search(tudo)] if k]
+            if m or confere.R_COORD.search(tudo) or '710123456' in tudo or re.search(r'último fix|R\$', tudo):
+                ruim.append((r['id'], m))
+        ped('faq: nenhuma das 91 respostas casa as regex do §3 (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL, DINHEIRO), nem coordenada, MMSI do cadastro, «último fix» ou R$', not ruim, ruim[:4])
+        # a pergunta digitada: só o que nada mais responde (o fallback) e casa bem de perto com UM item
+        ruins = [(q, esp, k, f, ia) for (q, esp), (_, k, f, ia, *_) in zip(FAQ_TIPADAS, x['tipadas']) if not (k == 'faqEquip' and f == esp and ia == (not por[esp].get('seguranca')))]
+        ped('faq: as %d frases do FAQ que iam à IA (sem resposta pronta nem trecho do guia) agora têm o item certo, com o código; o de segurança (CK-03) fica no aparelho' % len(FAQ_TIPADAS), not ruins, ruins)
+        for (q, esp), (_, k, f, ia, linha1, src, fala) in zip(FAQ_TIPADAS, x['tipadas']):
+            it = por[esp]
+            if not (linha1 == it['resposta'] and src.startswith('Fonte: FAQ dos equipamentos %s · ' % esp) and fala):
+                ruins.append((q, linha1[:60], src[:60]))
+        ped('faq: a 1ª linha da resposta digitada é a resposta do item e a fonte começa com «FAQ dos equipamentos <código> · <guia § seção>»', not ruins, ruins)
+        ruins = [(q, esp, k, f) for (q, esp), (_, k, f) in zip(FAQ_NAO, x['nao']) if k != esp or f is not None]
+        ped('faq: o FAQ não toma o que já responde (resposta pronta, trecho do guia) nem a pergunta de uma palavra, a genérica ou a de náutica geral (%d perguntas)' % len(FAQ_NAO), not ruins, ruins)
+        ped('faq: nas %d frases do próprio FAQ (pergunta e variantes), toda resposta que vem do FAQ traz o código do PRÓPRIO item' % (len(itens) * 4), len(x['frases']) == 8 and all(i == f for i, q, f in x['frases']), x['frases'])
+        ped('faq: o código vence a resposta pronta pedida (ctx.id não); com «MAYDAY» no texto o item pedido é o item; código inexistente ou número cai na rota normal',
+            x['id'][0] != 'faqEquip' and x['id'][1] == 'MO-02' and x['id'][2] == 'checklist' and x['id'][3] == 'checklist', x['id'])
+    finally:
+        pg.ctx.close()
+    # sem o arquivo (rede cortada): nada muda, nada lança
+    pg = pagina(b, muta=muta, aborta=('**/faq-equipamentos.json',))
+    try:
+        r = pg.evaluate("""async () => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; const ok = await B.carregaFaq();
+          return { ok, pronto: B.faqPronto(), a: B.answer('água rasa: o que faço', op).key, b: B.answer('x', Object.assign({ faq: 'MO-02' }, op)).key, item: B.faqItem('MO-02'), busca: B.faqBusca('água rasa o que faço', 3) }; }""")
+        ped('faq (sem o arquivo): carregaFaq devolve false e o chat segue como antes (fallback na pergunta, nada no código), sem erro', r['ok'] is False and r['pronto'] is False and r['a'] == 'fallback' and r['b'] == 'fallback' and r['item'] is None and r['busca'] == [], r)
+    finally:
+        pg.ctx.close()
+    # modo real: o FAQ não depende da simulação (a mesma resposta)
+    pg = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    try:
+        r = pg.evaluate("""async () => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; await B.carregaFaq(); await new Promise((ok) => { B.carregaBase(); setTimeout(ok, 800); }); const a = B.answer('sonda mostrando pouca profundidade', op);
+          return { key: a.key, faq: a.faq, text: a.text, src: a.src }; }""")
+        ped('faq (simulacao false): a mesma resposta, com o código e a fonte', r['key'] == 'faqEquip' and r['faq'] == 'EL-08' and r['text'] == texto_faq(por['EL-08']), r)
+    finally:
+        pg.ctx.close()
+    # o SOS: o arquivo nem é pedido, e o código não abre o FAQ
+    pg = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+    try:
+        pedidos = []
+        pg.on('request', lambda rq: pedidos.append(rq.url) if 'faq-equipamentos' in rq.url else None)
+        r = pg.evaluate("""async () => { const B = window.CapitaoBrain; await new Promise((ok) => setTimeout(ok, 1500)); const ok = await B.carregaFaq();
+          return { ok, pronto: B.faqPronto(), k: B.answer('x', { platform: 'app', commit: false, faq: 'MO-02' }).key, item: B.faqItem('MO-02'), busca: B.faqBusca('água rasa o que faço') }; }""")
+        ped('faq (SOS): o arquivo não é pedido, o código não abre o item e a busca é vazia', not pedidos and r['ok'] is False and r['pronto'] is False and r['k'] != 'faqEquip' and r['item'] is None and r['busca'] == [], (pedidos, r))
+    finally:
+        pg.ctx.close()
+    # offline: o arquivo está no CORE do service worker (a instalação o guarda) e o site o serve
+    sw = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'sw.js'), encoding='utf-8').read()
+    core = sw[sw.index('const CORE = ['):sw.index('].concat(TELAS')]
+    ped("faq: './faq-equipamentos.json' está no CORE do sw.js (abre offline depois da instalação)", "'./faq-equipamentos.json'" in core and "'./base-conhecimento.json'" in core, '')
+
+
+GRUPOS_3A['faq'] = grupo_faq
+MUTANTES_3E_F10 = [
+    ('p3e faq: o item de segurança do FAQ vai à IA', "    if (a && a.seguranca) return false;\n    if (k !== 'fallback'", "    if (a && a.seguranca && a.key !== 'faqEquip') return false;\n    if (k !== 'fallback'", ('faq',)),
+    ('p3e faq: o cartão de emergência do FAQ leva o quadro na ficha', " || (a.key === 'faqEquip' && a.emerg === true));", ");", ('faq',)),
+    ('p3e faq: o FAQ responde também no lugar do trecho do guia', "    if (key === 'fallback') { var fq = null;", "    if (key === 'fallback' || key === 'base') { var fq = null;", ('faq',)),
+    ('p3e faq: a cobertura solta toma a pergunta genérica', "if (!r || r.cobre < 1 || r.principal < 1 || r.titulo < 0.6) return null;", "if (!r || r.cobre < 0.34 || r.principal < 0.34 || r.titulo < 0.2) return null;", ('faq',)),
+    ('p3e faq: o empate de seções não barra', "if (rs.length > 1 && rs[1].nota > r.nota * 0.85 && rs[1].it.secao !== r.it.secao) return null;", "", ('faq',)),
+    ('p3e faq: a fonte sem o código do item', "src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length", "src: 'Fonte: FAQ dos equipamentos' + (fs.length", ('faq',)),
+    ('p3e faq: o código pedido (ctx.faq) é ignorado', "    if (typeof ctx.faq === 'string' && !ctx.id) { var fi = faqItem(ctx.faq); if (fi) return faqResposta(fi, p); }\n", "", ('faq',)),
+    ('p3e faq: o SOS busca o arquivo', "if (EM_SOS || !window.fetch) return Promise.resolve(false);\n    if (FAQ.itens)", "if (!window.fetch) return Promise.resolve(false);\n    if (FAQ.itens)", ('faq',)),
+    # (a guarda de EM_SOS no faqItem é a 2ª trava, atrás da do carregaFaq: no SOS o arquivo nunca carrega, então tirá-la sozinha não muda nada — mutante equivalente, fora)
+    ('p3e faq: a fala do item de segurança sai cortada', "if (a && (a.key === 'base' || a.key === 'faqEquip') && a.seguranca", "if (a && (a.key === 'base') && a.seguranca", ('faq',)),
+    ('p3e faq: a pergunta de uma palavra busca', "    if (qs.length < 2) return [];\n", "    if (qs.length < 1) return [];\n", ('faq',)),
+    ('p3e faq: a palavra genérica da identidade conta («em caso de alarme» abre o item do fogo)', "return a.indexOf(w) === k && !IDENT_GENERICAS[w]; });\n    if (qs.length < 2) return [];", "return a.indexOf(w) === k; });\n    if (qs.length < 2) return [];", ('faq',)),
+    ('p3e faq: a baliza do canal vira o EPIRB', "      if (sinal && /EPIRB/.test(it.equip || '')) return;\n", "", ('faq',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F10
+
 
 
 

@@ -137,7 +137,7 @@
   // plotter e a ficha(p, q, a) sai sem os blocos do quadro (QUADRO): a trava é da API, não de cada chamador (a IA, o diário, a CONVERSA).
   var EMERG = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };
   var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
-  function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }
+  function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }   // (o cartão EM-01…09 do FAQ também: sem quadro, sem hora, encerra o contexto)
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
   // O sinal «+» colado a «55» e a mais um dígito («+551» rpm) é o prefixo de telefone da regex PESSOAIS do §3 (`\+55\s?\d`): só nesse caso um espaço fino separa o sinal do número (+ 551),
@@ -1123,8 +1123,8 @@
   function ctxAuto() { var i = vivo(); return i ? { i: i, q: i.q, t: i.txt } : null; }
   function nv(x, campo) { var A = window.CapitaoAgora; try { var n = A.nivel(campo, x.q); return n ? n.nivel : null; } catch (e) { return null; } }
   function docsComPrazo() {
-    var segd = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };   // a validade de equipamento de segurança vai pela etiqueta, sem data
-    return (D.documentos || []).filter(function (d) { return !segd(d) && !isNaN(dnDe(d)); }).sort(function (a, b) { return dnDe(a) - dnDe(b); });
+    var daEtiqueta = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca === true && e.validade === d.id; }); };   // a validade de equipamento de segurança vai pela etiqueta, sem data
+    return (D.documentos || []).filter(function (d) { return !daEtiqueta(d) && !isNaN(dnDe(d)); }).sort(function (a, b) { return dnDe(a) - dnDe(b); });
   }
   var AUTO = {
     tempo: function () {
@@ -2221,10 +2221,96 @@
   }
   if (window.requestIdleCallback) requestIdleCallback(carregaBase, { timeout: 4000 }); else setTimeout(carregaBase, 1500);
 
+  // ——— FAQ dos equipamentos (F10; CONTRATO §1.6) ———
+  // faq-equipamentos.json (gerado; 91 itens: os 9 cartões de emergência EM-01…09 e uma pergunta por seção dos guias) responde no chat com o CÓDIGO do item e a fonte dele. Três jeitos de chegar:
+  //  (1) o item pedido pelo código (`ctx.faq`: o toque numa pergunta do FAQ, F6 na Fase 4): sempre o item, qualquer que seja o texto;
+  //  (2) a pergunta digitada ou falada que NENHUMA resposta pronta nem trecho do guia responde (o `fallback`) e que casa, bem de perto, com um item: o item no lugar da IA;
+  //  (3) nunca no lugar do que já responde (a resposta pronta, o trecho do guia, a emergência): essas rotas seguem como estavam.
+  // O cartão de emergência (`emerg`) e todo item com `seguranca: true` é procedimento padrão: nunca vai à IA (pedeIA false) e a resposta de emergência não leva o quadro. O arquivo entra no CORE do sw.js
+  // (abre offline). Sem o arquivo (rede, SOS), nada muda: o chat segue como antes. No SOS ele nem é pedido.
+  var FAQ = { dados: null, itens: null, idx: null, df: {}, media: 1, carregando: null };
+  function indexaFaq(lista) {
+    var idx = {}, df = {}, soma = 0;
+    lista.forEach(function (it) {
+      var tf = {}, n = 0, campo = function (txt, peso, so) {
+        tokens(txt).forEach(function (w) { tf[w] = (tf[w] || 0) + peso; n++; if (so) so[w] = 1; });
+      }, t = {}, r = {};
+      campo((it.titulo || '') + ' ' + (it.pergunta || '') + ' ' + (it.variantes || []).join(' ') + ' ' + (it.equip || ''), 3, t);
+      campo((it.resposta || '') + ' ' + (it.acao || ''), 2, r);
+      campo((it.passos || []).join(' ') + ' ' + (it.atencao || '') + ' ' + (it.senao || '') + ' ' + (it.obs || ''), 1, null);
+      Object.keys(tf).forEach(function (w) { df[w] = (df[w] || 0) + 1; });
+      idx[it.id] = { tf: tf, n: n, t: t, r: r }; soma += n;
+    });
+    FAQ.idx = idx; FAQ.df = df; FAQ.media = soma / lista.length;
+  }
+  // Promise: true quando o arquivo está carregado (uma busca só; sem rede devolve false e a próxima pergunta tenta de novo). No SOS nunca busca.
+  function carregaFaq() {
+    if (EM_SOS || !window.fetch) return Promise.resolve(false);
+    if (FAQ.itens) return Promise.resolve(true);
+    if (FAQ.carregando) return FAQ.carregando;
+    FAQ.carregando = fetch('./faq-equipamentos.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+      if (!j || !Array.isArray(j.itens) || !j.itens.length) return false;
+      indexaFaq(j.itens); FAQ.dados = j; FAQ.itens = j.itens;
+      return true;
+    }).catch(function () { return false; }).then(function (ok) { FAQ.carregando = null; return ok; });
+    return FAQ.carregando;
+  }
+  function faqItem(id) { var l = FAQ.itens; if (EM_SOS || !l || typeof id !== 'string') return null; return l.filter(function (it) { return it.id === id; })[0] || null; }
+  // até n itens { it, nota, cobre, titulo, principal } (BM25 com os sinônimos da base): cobre = a fração das palavras da pergunta que o item tem; titulo = as que estão no título, na pergunta, nas
+  // variantes ou no equipamento; principal = essas ou na resposta e na ação. Pergunta de uma palavra só não busca (é vaga: «gerador» tem a rota dele).
+  function faqBusca(q, n) {
+    var qs, grupos, N, daBaliza, sinal, k1 = 1.2, b = 0.75, res = [];
+    if (EM_SOS) return [];
+    if (!FAQ.itens) { carregaFaq(); return []; }
+    // sem as palavras genéricas da identidade da base («em CASO de alarme», «antes», «depois», «padrão», «protocolo»…): elas não dizem de que assunto a pergunta é, e «caso de alarme» abriria o item do fogo
+    qs = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !IDENT_GENERICAS[w]; });
+    if (qs.length < 2) return [];
+    // a baliza de sinalização («a baliza do canal está apagada») não é o EPIRB, como na busca da base: sem a palavra que só o EPIRB tem, o item do EPIRB sai e «baliza» não vira «epirb»
+    daBaliza = qs.some(function (w) { return BALIZA_RAIZES[w]; });
+    sinal = daBaliza && qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; });
+    grupos = qs.map(function (w) { var g = {}; g[w] = 1; ((sinal && w === RAIZ_BALIZA) ? [] : (SINONIMOS[w] || (daBaliza && SINONIMOS_BALIZA[w]) || [])).forEach(function (x) { x = raiz(x); if (!g[x]) g[x] = 0.6; }); return g; });
+    N = FAQ.itens.length;
+    FAQ.itens.forEach(function (it) {
+      var d = FAQ.idx[it.id], nota = 0, cobre = 0, titulo = 0, principal = 0;
+      if (sinal && /EPIRB/.test(it.equip || '')) return;
+      grupos.forEach(function (g) {
+        var melhor = 0, tem = false, noT = false, noP = false, w, f;
+        for (w in g) {
+          f = d.tf[w]; if (!f) continue;
+          tem = true; if (d.t[w]) { noT = true; noP = true; } if (d.r[w]) noP = true;
+          melhor = Math.max(melhor, g[w] * Math.log(1 + (N - FAQ.df[w] + 0.5) / (FAQ.df[w] + 0.5)) * (f * (k1 + 1)) / (f + k1 * (1 - b + b * d.n / FAQ.media)));
+        }
+        if (tem) { cobre++; nota += melhor; } if (noT) titulo++; if (noP) principal++;
+      });
+      if (nota > 0) res.push({ it: it, nota: nota, cobre: cobre / grupos.length, titulo: titulo / grupos.length, principal: principal / grupos.length });
+    });
+    res.sort(function (x, y) { return y.nota - x.nota; });
+    return res.slice(0, n || 3);
+  }
+  // O texto do item: a resposta (a 1ª linha, a falada; o cartão de emergência já traz o rótulo do procedimento padrão), os passos, a atenção, «se não resolver» e a observação; a fonte com o código.
+  function faqResposta(it, p) {
+    var passos = it.passos || [], max = 8, fs = (it.fontes || []).map(function (f) { return f.texto; });
+    var text = it.resposta + (passos.length ? '\n' + passos.slice(0, max).map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + (passos.length > max ? '\n… mais ' + (passos.length - max) + ' passos no FAQ (' + it.id + ').' : '') : '')
+      + (it.atencao ? '\nAtenção: ' + it.atencao : '') + (it.senao ? '\nSe não resolver: ' + it.senao : '') + (it.obs ? '\nObservação: ' + it.obs : '');
+    return { key: 'faqEquip', text: text, src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length ? ' · ' + fs.join(' · ') : ''), actions: act(p, [['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])),
+      faq: it.id, emerg: !!it.emerg, seguranca: !!it.seguranca, ref: fs[0] || '' };
+  }
+  // A pergunta que casa BEM de perto com UM item: todas as palavras dela estão no item, a maioria no título, na pergunta ou nas variantes, e todas no título ou na resposta; e o 2º colocado, de
+  // outra seção, não empata (pergunta genérica como «como silenciar o alarme?» fica com a IA). null = nenhum.
+  function respostaFaq(q, p) {
+    var rs = faqBusca(q, 3), r = rs[0];
+    if (!r || r.cobre < 1 || r.principal < 1 || r.titulo < 0.6) return null;
+    if (rs.length > 1 && rs[1].nota > r.nota * 0.85 && rs[1].it.secao !== r.it.secao) return null;
+    return faqResposta(r.it, p);
+  }
+  if (!EM_SOS) { if (window.requestIdleCallback) requestIdleCallback(carregaFaq, { timeout: 6000 }); else setTimeout(carregaFaq, 2500); }
+
   function responde(q, ctx) {
     ctx = ctx || {};
     var p = ctx.platform || 'web';
     var key = null;
+    // F10 (1): o item do FAQ pedido pelo código (o toque numa pergunta do FAQ): é o item, qualquer que seja o texto da pergunta
+    if (typeof ctx.faq === 'string' && !ctx.id) { var fi = faqItem(ctx.faq); if (fi) return faqResposta(fi, p); }
     if (ctx.id && ANSWERS[ctx.id] && (!String(q || '').trim() || norm(q).trim() === CANON[ctx.id])) key = ctx.id;
     if (!key) key = route(q);
     if (!ANSWERS[key]) key = 'fallback';
@@ -2234,6 +2320,8 @@
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
     if (key === 'fallback' || (GENERICAS[key] && (ESPECIFICA.test(' ' + norm(q) + ' ') || (key === 'ais' && !AIS_STATUS.test(' ' + norm(q) + ' '))))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
+    // F10 (2): sem resposta pronta e sem trecho do guia (o fallback, que iria à IA), a pergunta que casa bem de perto com um item do FAQ é respondida por ele
+    if (key === 'fallback') { var fq = null; try { fq = respostaFaq(q, p); } catch (e) {} if (fq) { a = fq; key = 'faqEquip'; } }
     a.key = key;
     return a;
   }
@@ -2316,10 +2404,10 @@
   function pedeIA(a, q) {
     var k = a && a.key;
     if (a && a.seguranca) return false;
-    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;
+    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip') return false;
     var topo = String(q || '').trim() ? buscaBase(q, 1)[0] : null;
     if (topo && topo.d.seguranca) return false;
-    if (k === 'fallback' || k === 'base') return true;
+    if (k === 'fallback' || k === 'base' || k === 'faqEquip') return true;   // (o item de segurança do FAQ já saiu acima: a.seguranca)
     return !!String(q || '').trim() && !SO_OI.test(pad(q));
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
@@ -2846,7 +2934,7 @@
     if (a && a.key && FALA_INTEIRA[a.key]) return String(t || '');
     // Trecho de segurança da base (Seafire, EPIRB, salvatagem, protocolo…): o trecho inteiro, com o rótulo e a nota da etiqueta
     // (sem a linha "Veja também"). Antes, a fala parava na 2ª frase e perdia o "não abra o acesso ao motor" e o rótulo.
-    if (a && a.key === 'base' && a.seguranca && typeof t === 'string') return t.split(/\n+/)[0].trim();
+    if (a && (a.key === 'base' || a.key === 'faqEquip') && a.seguranca && typeof t === 'string') return t.split(/\n+/)[0].trim();
     if (a && a.key === 'base' && a.ingles) return 'Está no ' + String(a.ref || 'manual').replace(/, p\. /, ', página ').replace(/ · .*$/, '') + ', em inglês. Mostrei o trecho na tela.';
     // Tira parênteses da fala, inclusive aninhados: "(… snapshot (DEMO) …)" sai inteiro, sem sobra.
     var semPar = function (s) { var a; do { a = s; s = s.replace(/\s*\([^()]*\)/g, ''); } while (s !== a); return s.replace(/\s*[()]/g, ''); };
@@ -2872,7 +2960,7 @@
   // fonte ganha «Às HH:MM:SS.» no fim. Ficam de fora as respostas sem dado do quadro ou com a hora própria: as de emergência e as chaves de SEM_HORA_NA_FONTE, as do tempo e da maré (hora da leitura
   // do mundo real, §2.5), a lista da equipe, as perguntas de fora do barco e sobre os dados, o fallback, o trecho do guia e as do cadastro sem quadro (áudio, guias). A hora é a do instante da
   // PRÓPRIA resposta (`a.hora`, posta pelo answer()): a fala é montada depois, com o relógio já andado, e a tela copia a resposta antes de falar.
-  var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1 };
+  var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, faqEquip: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1 };
   function comHoraNaFala(a, t) {
     var h = a && typeof a === 'object' && typeof a.hora === 'string' ? a.hora : '';
     if (!sim() || !/^\d\d:\d\d:\d\d$/.test(h) || !a.key || SEM_HORA_NA_FONTE[a.key] || FALA_SEM_HORA[a.key] || !t || /\d\d:\d\d:\d\d/.test(t)) return t;
@@ -2934,7 +3022,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

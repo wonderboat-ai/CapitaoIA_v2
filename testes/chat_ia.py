@@ -228,6 +228,19 @@ def main():
                 ok(tela + ': só um "oi" não chama a IA (saudação pronta)', n == 0 and 'Capitão IA online' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('Oque você faz?')
                 ok(tela + ': "Oque você faz?" chama a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
+                # Fase 3 (P3E, F10): o FAQ dos equipamentos responde no chat o que nenhuma resposta pronta nem trecho do guia responde, com o código do item e a fonte. O item de segurança (CK-03)
+                # fica no aparelho (nunca à IA); o item comum (EL-08) vai à IA como o trecho do guia e, sem a chave, mostra o item
+                def faq_pronto():
+                    pg.evaluate("() => window.CapitaoBrain.carregaFaq()")
+                abre(True, 'ok'); faq_pronto()
+                t, n, _ = envia('boletim da Marinha antes de sair')
+                ok(tela + ': o item de segurança do FAQ (CK-03) responde no aparelho, com o código e a fonte, sem chamar a IA', n == 0 and 'FAQ dos equipamentos CK-03' in t and 'Antes de largar: um colete por pessoa' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                abre(True, 'ok'); faq_pronto()
+                t, n, _ = envia('sonda mostrando pouca profundidade')
+                ok(tela + ': o item comum do FAQ (EL-08) chama a IA 1 vez como o trecho do guia e mostra a resposta dela', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
+                abre(False, 'ok'); faq_pronto()
+                t, n, _ = envia('sonda mostrando pouca profundidade')
+                ok(tela + ': sem a CHAVE_APP o item do FAQ (EL-08) fica na tela, com o código e a fonte, e nada vai à rede', n == 0 and 'FAQ dos equipamentos EL-08' in t and 'Profundidade mínima de navegação' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
                 # Fase 3 (P3C), PROMPT Fase 7 «Mudanças nos testes»: o «calado» passou a ter dado (rota embarcacao, resposta local); o gatilho «sem resposta pronta → IA» é uma
                 # pergunta de náutica geral sem rota (cai em fallback, pedeIA true). Vale em todos os usos abaixo (SEM DADOS da IA, sem chave, ordem da resposta, CONVERSA e erro).
                 t, n, _ = digita('como se faz um nó lais de guia?')
