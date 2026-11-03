@@ -362,10 +362,15 @@
   function agenda() { var ex = loadExec(); return (D.agenda || []).filter(function (t) { return !ex[t.id]; }).sort(function (a, b) { return (dnDe(a) - dnDe(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); }); }
   function atrasadas() { return agenda().filter(function (t) { return atrasadaN(dnDe(t)); }); }
   function tarefa(id) { return (D.agenda || []).filter(function (t) { return t.id === id; })[0] || null; }
+  // «executada em 03/11 às 00:38» (a troca, a limpeza, a revisão, a inspeção) ou «executado em …» (o teste, o anodo): o gênero é o do título da tarefa; sem Executado, null
+  function execTxt(t) {
+    var f = t && loadExec()[t.id];
+    return f ? (/^(troca|inspecao|limpeza|revisao|atualizacao|verificacao|manutencao|calibragem|calibracao)\b/.test(norm(t.t || '')) ? 'executada' : 'executado') + ' em ' + f.d + ' às ' + f.t : null;
+  }
   function prazoTxt(t) {
     if (!t) return SD;
-    var f = loadExec()[t.id], n = dnDe(t);
-    if (f) return 'executado em ' + f.d + ' às ' + f.t;
+    var ex = execTxt(t), n = dnDe(t);
+    if (ex) return ex;
     if (isNaN(n)) return SD;
     if (atrasadaN(n)) return 'em atraso há ' + (-n) + (n === -1 ? ' dia' : ' dias');
     return seg(t) ? NOTA_ETIQUETA : 'D-' + n + ' · ' + String(t.vence).slice(0, 5);
@@ -848,8 +853,8 @@
       var at = atrasadas(), porao = tarefa('porao-teste'), i = vivo(), s = sim(), ress = [], pv = previsao(), primeiraSeg = false;
       var crit = !!(i && Array.isArray(i.q.alarmes) && i.q.alarmes.some(function (a) { return a.nivel === 'critico'; })), al = i && i.txt.alarmes && i.txt.alarmes.indexOf('nenhum') !== 0 ? i.txt.alarmes : null;
       if (porao && at.indexOf(porao) !== -1) { primeiraSeg = true; ress.push('(segurança): teste das bombas de porão e alarmes ' + prazoTxt(porao) + ' — acione cada bomba manualmente antes de largar.'); }
+      if (al) ress.push('Alarme ativo a bordo agora: ' + al + '.');   // logo depois da de segurança: a fala lê as primeiras ressalvas e o alarme ativo não pode ficar de fora
       at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });
-      if (al) ress.push('Alarme ativo a bordo agora: ' + al + '.');
       ress.push(pv ? 'Previsão de hoje em Balneário Camboriú (' + pv.fonte + '): ' + pv.vento + (s ? MAR_SIM : ' · mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.') : s ? semConexao() : 'Sem previsão de vento e mar carregada (' + SD + ') — confira a previsão da Marinha antes de sair.');
       return { text: (crit ? 'Não saia agora: há alarme crítico ativo (' + al + '), com ' + ress.length + (ress.length === 1 ? ' ressalva.' : ' ressalvas.') : 'Sim, com ' + ress.length + (ress.length === 1 ? ' ressalva' : ' ressalvas') + (primeiraSeg ? ' — a primeira é de segurança.' : '.')) + '\n• Condições a bordo ' + (i ? 'agora (' + SNAP.quando + ')' : 'na ' + quando()) + ': vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + (i && i.txt.ondas ? ' · ondas ' + i.txt.ondas : '') + ' · barômetro ' + nb(S.pressao, 0) + ' hPa · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · banco 24 V ' + nb(S.bat24, 2) + ' V.\n• Diesel ≈ ' + mil(DI.litros) + ' L (' + SNAP.diesel.split(' (')[0] + ') → ≈ ' + nb(AUT.horas) + ' h a ' + ((CON.cruzeiro && CON.cruzeiro.nos) || '—') + ' nós com reserva de ' + reservaPct() + ' %.\n' + ress.map(function (r, k) { return '• Ressalva ' + (k + 1) + (r.charAt(0) === '(' ? ' ' : ': ') + r; }).join('\n') + '\n' + cap1(SNAP.motores) + (i ? ' · alarmes: ' + i.txt.alarmes : '') + '.', src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', '') + (pv ? ' · previsão ' + pv.fonte : ''), actions: act(p, [['Ver manutenção', 'manut'], ['Checklist de saída', askHref(p, 'Checklist de saída')]]).concat(pv ? [windy()] : []) };
     },
@@ -858,15 +863,19 @@
     destinos: function (p) {
       var i = vivo(), q = i && i.q, t = i && i.txt, c = CON.cruzeiro || {}, lista = D.destinos || [], R = EM_SOS ? null : D.rota, nos = c.nos, lph = c.lph, margem = typeof CON.margemManobra_l === 'number' ? CON.margemManobra_l : 0;
       var emRota = !!(t && t.destino && t.eta), util = typeof DI.litros === 'number' ? DI.litros * (1 - (typeof D.reserva === 'number' ? D.reserva : 0.1)) - margem : null;
-      var cab = emRota ? 'Indo para ' + t.destino + ', chegada prevista às ' + t.eta + ' — ' + i.hora + '.' : 'Alcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h a ' + nos + ' nós, reserva de ' + reservaPct() + ' %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.';
+      // o cruzeiro (nós e L/h do guia dos motores §10) que falta no dado: com a simulação o trecho some; no modo real é SEM DADOS (nunca «undefined nós»)
+      var nosOk = typeof nos === 'number' && nos > 0, lphOk = typeof lph === 'number' && lph > 0, s = sim();
+      var nosTxt = nosOk ? nos + ' nós' : s ? '' : SD + ' nós', lphTxt = lphOk ? lph + ' L/h' : s ? '' : SD + ' L/h';
+      var vel = nosTxt ? ', a ' + nosTxt + (lphTxt ? ' (' + lphTxt + ')' : '') : lphTxt ? ', ' + lphTxt : '';
+      var cab = emRota ? 'Indo para ' + t.destino + ', chegada prevista às ' + t.eta + ' — ' + i.hora + '.' : 'Alcance com o diesel a bordo: ≈ ' + AUT.mn + ' mn (≈ ' + nb(AUT.horas) + ' h' + (nosTxt ? ' a ' + nosTxt : '') + ', reserva de ' + reservaPct() + ' %) — ida e volta até ≈ ' + (typeof AUT.mn === 'number' ? Math.floor(AUT.mn / 2) : SD) + ' mn da posição atual.';
       var tempo = function (h) { var m = Math.round(h * 60); return m >= 60 ? Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2) + ' min' : m + ' min'; };
       var ls = lista.map(function (d, k) {
-        var h = nos > 0 ? d.mn / nos : null, l = h != null && lph > 0 ? Math.round(h * lph) : null, iv = l != null ? 2 * l : null;
-        return (k + 1) + '. ' + d.nome + ' — ≈ ' + nb(d.mn) + ' mn' + (h != null ? ' · ≈ ' + tempo(h) : '') + (l != null ? ' · ≈ ' + l + ' L' : '') + (iv != null && util != null ? '; ida e volta ≈ ' + iv + ' L — ' + (iv <= util ? 'cabe no diesel a bordo' : 'pede abastecer antes') : '');
+        var h = nosOk ? d.mn / nos : null, l = h != null && lphOk ? Math.round(h * lph) : null, iv = l != null ? 2 * l : null;
+        return (k + 1) + '. ' + d.nome + ' — ≈ ' + nb(d.mn) + ' mn' + (h != null ? ' · ≈ ' + tempo(h) : s ? '' : ' · tempo ' + SD) + (l != null ? ' · ≈ ' + l + ' L' : s ? '' : ' · diesel ' + SD) + (iv != null && util != null ? '; ida e volta ≈ ' + iv + ' L — ' + (iv <= util ? 'cabe no diesel a bordo' : 'pede abastecer antes') : '');
       });
       var fonte = 'Fonte: ' + tele() + ' · ' + (R && R.fonte ? R.fonte : 'rotas: nenhuma') + ' · ' + (vivo() ? CON.fonte : 'consumo observado ' + (CON.periodo || ''));
       if (!lista.length) return { text: cab + (emRota ? '' : '\n' + SD + ' de rotas: nenhum roteiro ou destino cadastrado nas fontes (' + ((D.drive && D.drive.raiz) || 'Drive') + ').\nCadastre os destinos (nome e posição) para eu calcular distância, tempo e diesel de cada um.'), src: fonte, actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) };
-      return { text: cab + '\nDestinos a partir ' + ((R && R.base && R.base.rel) || 'da base') + ', a ' + nos + ' nós (' + lph + ' L/h), só ida:\n' + ls.join('\n') + '\nDistâncias pela rota planejada — confirme a rota no plotter.', src: fonte, actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) };
+      return { text: cab + '\nDestinos a partir ' + ((R && R.base && R.base.rel) || 'da base') + vel + ', só ida:\n' + ls.join('\n') + '\nDistâncias pela rota planejada — confirme a rota no plotter.', src: fonte, actions: act(p, [['Autonomia', askHref(p, 'Autonomia')], ['Registrar pendência', 'diario']]) };
     },
     // Manutenção: as atrasadas (a mais atrasada primeiro) e as 3 próximas, com o prazo contado do dia do instante; a tarefa de um equipamento de segurança (EPIRB, Seafire)
     // vai sem a data (a nota da etiqueta). A tarefa executada (Executado) sai.
@@ -913,7 +922,7 @@
       var t = tarefa('porao-teste'), niv = poraoTxt(), L = limitesDe('porao_bb_nivel'), ate = L && L.normal && typeof L.normal.ate === 'number' ? L.normal.ate : null, e = equip('porao');
       return { text: (niv ? 'Porão ' + (vivo() ? 'às ' + SNAP.quando : 'na ' + quando()) + ': nível ' + niv + (ate != null ? ' (normal até ' + nb(ate, 0) + ' cm)' : '') + '.' : 'Sem sensor de porão no barramento NMEA — SEM LEITURA.') + '\n' + (e ? fabMod('porao') + ': ligam sozinhas pelo sensor de nível (' + guia('g_porao') + ' §1–2).\n' : '') + 'Teste de bombas de porão e alarmes ' + (t ? prazoTxt(t) + ' (agenda: ' + t.quem + ' · ' + t.intervalo + ')' : SD) + '.\nAntes de sair: acione cada bomba manualmente e confira o alarme; registre o resultado no diário.', src: FT.agenda + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut']]) };
     },
-    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + (typeof G.kw === 'number' ? ' · ' + nb(G.kw) + ' kW' : '') + ' · ' + quando() + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(faltam(rv)) + ' h.' : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetro: ' + SNAP.fonte : ' · horímetro na telemetria' + demo()), actions: act(p, [['Passo a passo', 'f4']]) }; },
+    gerador: function (p) { var r = tarefa('gerador-rotor'), rv = tarefa('gerador-revisao'); return { text: fabMod('gerador') + ' · ' + horas(G.horas) + ' h (' + (G.estado || SD) + (typeof G.kw === 'number' ? ' · ' + nb(G.kw) + ' kW' : '') + ' · ' + quando() + ').\nLigar: confira óleo, válvula de fundo e filtro de água salgada → segure PARTIDA → espere tensão e frequência estabilizarem → cargas uma a uma, climatização por último.\nDesligar: retire as cargas, 3 a 5 min sem carga, PARADA.' + (r ? '\n' + r.t + ': ' + prazoTxt(r) + '.' : '') + (rv && rv.horas ? ' Revisão (óleo e filtros): ' + (execTxt(rv) ? execTxt(rv) + '.' : rv.vence + ' ou ' + mil(rv.horas.limite) + ' h — faltam ' + nb(faltam(rv)) + ' h.') : ''), src: 'Fonte: ' + guia('g_gerador') + ' §1–4 · ' + FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetro: ' + SNAP.fonte : ' · horímetro na telemetria' + demo()), actions: act(p, [['Passo a passo', 'f4']]) }; },
     // Telemetria: a situação (1ª linha) e o que o quadro do instante tem; porão e âncora do quadro (o dado que falta segue SEM LEITURA); os alarmes do instante
     telemetria: function (p) {
       var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {}, i = vivo(), t = i && i.txt, po = poraoTxt(), AN = S.ancora || {};
@@ -941,9 +950,9 @@
       var prazo = function (d) { var n = dnDe(d); return n < 0 ? 'VENCIDO há ' + (-n) + (n === -1 ? ' dia' : ' dias') : 'D-' + n; };
       return { text: 'Vencem primeiro:\n' + (vence.length ? vence.map(function (d) { return '• ' + d.n + ' — ' + d.vence + ' (' + prazo(d) + ')'; }).join('\n') : '• nenhum nos próximos 90 dias') + '\nEm dia: ' + dia.map(function (d) { return min1(d.n) + ' até ' + d.vence; }).join(' · ') + '.' + (sem.length ? '\n' + SD + ': ' + sem.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (conf.length ? '\nA CONFERIR: ' + conf.map(function (d) { return d.n; }).join(' · ') + '.' : '') + (segDocs.length ? '\nSegurança: ' + segDocs.map(function (d) { return min1(d.n) + ' — ' + NOTA_ETIQUETA; }).join(' · ') + '.' : ''), src: FT.docs, actions: act(p, [['Documentos', 'docs']]) };
     },
-    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'); return { text: 'Horímetros ' + (vivo() ? 'às ' + SNAP.quando + ' (motores ' + (M.estado || SD) + ')' : '(motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + ')') + ':\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\nPróxima troca de óleo dos motores: ' + (o ? o.vence + ' (' + prazoTxt(o).split(' · ')[0] + ') ou ' + o.horas.limite + ' h — faltam ' + nb(faltam(o)) + ' h; o que vier antes.' : SD) + (rv ? '\nRevisão do gerador: ' + rv.vence + ' (' + prazoTxt(rv).split(' · ')[0] + ') ou ' + mil(rv.horas.limite) + ' h.' : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
+    horimetros: function (p) { var o = tarefa('motores-oleo'), rv = tarefa('gerador-revisao'), oEx = execTxt(o), rvEx = execTxt(rv); return { text: 'Horímetros ' + (vivo() ? 'às ' + SNAP.quando + ' (motores ' + (M.estado || SD) + ')' : '(motores: última leitura ligados ' + (M.hora || SD) + ' · gerador ' + (G.hora || SD) + ')') + ':\n• motor BB ' + horas(M.horimetro && M.horimetro[0]) + ' h\n• motor BE ' + horas(M.horimetro && M.horimetro[1]) + ' h\n• gerador ' + horas(G.horas) + ' h\n' + (oEx ? 'Troca de óleo dos motores: ' + oEx + '.' : 'Próxima troca de óleo dos motores: ' + (o ? o.vence + ' (' + prazoTxt(o).split(' · ')[0] + ') ou ' + o.horas.limite + ' h — faltam ' + nb(faltam(o)) + ' h; o que vier antes.' : SD)) + (rv ? '\nRevisão do gerador: ' + (rvEx ? rvEx + '.' : rv.vence + ' (' + prazoTxt(rv).split(' · ')[0] + ') ou ' + mil(rv.horas.limite) + ' h.') : ''), src: FT.tele + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Manutenção', 'manut']]) }; },
     // Motores: o cadastro (fabricante e modelo de D.equipamentos), o estado e os números do instante, os alarmes do quadro e a troca de óleo pela agenda (data ou horas)
-    motores: function (p) { var o = tarefa('motores-oleo'), i = vivo(); return { text: (i ? 'Motores ' + (M.estado || SD) + ' às ' + i.hora + ': ' + (i.txt.rpm || '—') + ' · alarmes: ' + i.txt.alarmes + '.\n' : '') + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + '.\n' + motoresTxt() + '.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h' + (o ? ' · troca de óleo ' + prazoTxt(o) + (o.horas ? ' ou ' + o.horas.limite + ' h' : '') : '') + '.\nPartida, aquecimento e parada: ' + guia('g_motores') + ' §1–3 e §6. Faixas de operação: §9.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
+    motores: function (p) { var o = tarefa('motores-oleo'), i = vivo(); return { text: (i ? 'Motores ' + (M.estado || SD) + ' às ' + i.hora + ': ' + (i.txt.rpm || '—') + ' · alarmes: ' + i.txt.alarmes + '.\n' : '') + SNAP.motores.charAt(0).toUpperCase() + SNAP.motores.slice(1) + '.\n' + motoresTxt() + '.\nHorímetros BB ' + horas(M.horimetro && M.horimetro[0]) + ' h · BE ' + horas(M.horimetro && M.horimetro[1]) + ' h' + (o ? ' · troca de óleo ' + (execTxt(o) || prazoTxt(o) + (o.horas ? ' ou ' + o.horas.limite + ' h' : '')) : '') + '.\nPartida, aquecimento e parada: ' + guia('g_motores') + ' §1–3 e §6. Faixas de operação: §9.', src: 'Fonte: ' + guia('g_motores') + ' · ' + SNAP.fonte, actions: act(p, [['Manutenção', 'manut'], ['FAQ de bordo', 'faq']]) }; },
     estabilizador: function (p) { var an = tarefa('seakeeper-anodo'); return { text: fabMod('estabilizador') + ' · ' + ((S.seakeeper && S.seakeeper.estado) || SD) + ' (' + quando() + ').\n• Funciona no banco de 12 V: acelera com o banco carregado (carregador ligado ao gerador ou ao cais); estabiliza quando o display indicar pronto.\n• Ao atracar: desligue e mantenha a energia até o volante parar.\n• Nunca faça manutenção com o volante girando.\nAceleração do volante e mensagens do display: ' + guia('g_seakeeper') + ' §2 e §6.' + (an ? '\n' + an.t + ': ' + prazoTxt(an) + '.' : ''), src: 'Fonte: ' + guia('g_seakeeper') + ' §1–6 · ' + FT.agenda.replace('Fonte: ', ''), actions: act(p, [['Passo a passo', 'f2']]) }; },
     climatizacao: function (p) {
       var f = tarefa('clima-filtro'), i = vivo(), d = (D.diario || []).filter(function (x) { return f && x.ref === f.id; })[0];
@@ -1774,10 +1783,16 @@
     var r = semPar(ls[0] || ''), extra = [], lim = 220;
     // Resposta da IA: conversa — a 1ª frase curta ganha a seguinte ("Sou o Capitão IA. Respondo sobre…"), até ~320 letras.
     if (a && a.key === 'ia') { lim = 320; if (ls.length > 1 && r.length < 90 && !/:$/.test(r) && !/^(\d+[.)]|•|-)/.test(ls[1])) r = (/[.!?]$/.test(r) ? r : r + '.') + ' ' + semPar(ls[1]); }
-    if (/ressalva/i.test(r)) extra = ls.filter(function (l) { return /ressalva\s*\d/i.test(l); }).map(function (l) { return item(l).replace(/^ressalva\s*\d+:\s*/i, '').split(' — ')[0]; });
+    var ressalvas = /ressalva/i.test(r), resto = 0;
+    if (ressalvas) extra = ls.filter(function (l) { return /ressalva\s*\d/i.test(l); }).map(function (l) { return item(l).replace(/^ressalva\s*\d+:\s*/i, '').split(' — ')[0]; });
     else if (/:$/.test(r)) { r = r.replace(/:$/, ''); extra = ls.slice(1, 3).filter(function (l) { return /^(\d+[.)]|•|-)/.test(l); }).map(item); }
     extra = extra.map(function (x) { return x.replace(/[\s.;:,]+$/, ''); }).filter(Boolean);
-    if (extra.length) r = r.replace(/[.]$/, '') + ': ' + extra.join('; ') + '.';
+    if (extra.length) {
+      var cab = r.replace(/[.]$/, ''), junta = function () { return cab + ': ' + extra.join('; ') + (resto ? '; e mais ' + resto + (resto === 1 ? ' ressalva' : ' ressalvas') + ' na tela' : '') + '.'; };
+      // as ressalvas que passam do limite ficam na tela, e a fala diz quantas ("com 5 ressalvas" nunca lê 3 sem avisar)
+      while (ressalvas && extra.length > 1 && junta().length > lim) { extra.pop(); resto++; }
+      r = junta();
+    }
     if (r.length > lim) { var m = r.slice(0, lim).match(/^[\s\S]*[.!?;]/); r = m ? m[0].replace(/;$/, '.') : r.slice(0, r.lastIndexOf(' ', lim)) + '.'; }
     return r;
   }

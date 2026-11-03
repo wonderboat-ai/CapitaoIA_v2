@@ -11,6 +11,8 @@ Uso (com o site servido em http://127.0.0.1:8765):
     python testes/cerebro.py
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
+import calendar
+import datetime
 import json
 import os
 import re
@@ -1420,10 +1422,11 @@ SCRIPTS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-alertas.js', 'capit
 SCRIPTS_SEM_ALERTAS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-telemetria.js', 'capitao-brain.js')
 
 
-def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None):
+def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None, relogio_ms=None):
     """Página da Main e da H2 (dados, replay, alertas, telemetria, cérebro) com o instante fixado em `fixo`. `extra` é acrescentado ao fim do capitao-dados.js (a
     injeção do teste do modo real e as fontes de leitura do SOS). `muta` = (trecho, troca): o cérebro mutante dos testes que provam que a conferência
-    acusa. Em `caminho` com /SOS-/ a página é vazia e o replay de verdade sai sozinho."""
+    acusa. Em `caminho` com /SOS-/ a página é vazia e o replay de verdade sai sozinho. `relogio_ms`: o relógio do aparelho parado nesse instante ANTES de qualquer
+    script (o rodapé do capitao-dados.js já refaz os prazos nele)."""
     ctx = b.new_context(service_workers='block')
     ctx.route('**/capitao-dados.js', acrescenta(extra))
     if caminho.endswith('.html'):
@@ -1439,6 +1442,8 @@ def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo=
     pg.erros = []
     pg.on('pageerror', lambda e: pg.erros.append(str(e)))
     pg.goto(BASE + caminho)
+    if relogio_ms is not None:
+        pg.add_script_tag(content=relogio(relogio_ms))
     for arq in scripts:
         if arq == 'capitao-brain.js' and fixo is not None:
             pg.evaluate("(x) => { if (window.CapitaoReplay) window.CapitaoReplay.fixar(x); }", fixo)
@@ -2078,6 +2083,11 @@ SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 
 # as respostas cujos números mudam de 12:01:00 para 12:01:45 (vento, SOG, rpm, arrefecimento, volante, tensão, nível do porão, distância do destino, diesel)
 MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora', 'consumo', 'autonomia')
 VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'DINHEIRO')
+# revisão da P3B (2ª): as DUAS linhas que o atalho do diário grava (o resumo sozinho e a nota com «posição e hora») ficam para sempre no registro (o diário só cresce): sem DEMO na fonte nem no texto com a
+# simulação; com simulacao false e a flag antiga, o (DEMO) de antes na fonte
+JS_DIARIO_ATALHO = """() => { const B = window.CapitaoBrain, op = { platform: 'app' };
+  B.answer('Registre no diário o resumo da navegação de agora e confirme.', op); B.answer('registre no diário a posição e a hora, saída com 4 pessoas', op);
+  return B.loadDiario().map((e) => ({ t: e.t, src: e.src, sys: e.sys })); }"""
 JS_ROTULOS = """([xs, qs]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay;
   return { chaves: B.CHAVES || null, r: xs.map((x) => { R.fixar(x); const i = B.instante();
     return { x, hora: i.hora, consumo: i.txt.consumo, aut: i.calc && i.calc.autonomia, r: Object.keys(qs).map((k) => { const a = B.answer(qs[k], { platform: 'app', commit: false }); return [k, a.key, a.text, a.src, B.falaCurta(a)]; }) }; }) }; }"""
@@ -2138,6 +2148,10 @@ def grupo_rotulos(b, muta, ped):
         varre_rotulos(ped, 'rotulos (D.demo, D.selo e D.aviso ligados com simulacao true)', out)
         ficha = pg.evaluate("() => window.CapitaoBrain.ficha('app')")
         ped('rotulos (D.demo ligado com simulacao true): a ficha não diz DEMO nem o aviso', 'DEMO' not in ficha and 'fictícios' not in ficha, [l for l in ficha.split('\n') if 'DEMO' in l or 'fictícios' in l][:3])
+        linhas = pg.evaluate(JS_DIARIO_ATALHO)
+        ruim = [(l['src'], l['t'][:60]) for l in linhas if any(RX[n].search(l['src'] + '\n' + l['t']) for n in ('ROTULOS', 'VISIVEL')) or 'DEMO' in l['src'] + l['t']]
+        ped('rotulos (D.demo ligado com simulacao true): as duas linhas gravadas pelo atalho do diário (resumo e «posição e hora») ficam sem DEMO e sem rótulo na fonte e no texto',
+            len(linhas) == 2 and {l['src'] for l in linhas} == {'atalho · telemetria', 'chat · voz/texto · telemetria'} and not ruim, (ruim, linhas and [l['src'] for l in linhas]))
     finally:
         pg.ctx.close()
     # com simulacao false a regra antiga volta inteira: D.demo ligado põe o (DEMO) de antes na fonte
@@ -2145,6 +2159,9 @@ def grupo_rotulos(b, muta, ped):
     try:
         t = pg.evaluate("() => { const a = window.CapitaoBrain.answer('Telemetria agora', { platform: 'app', commit: false }); return a.src + '\\n' + a.text; }")
         ped('rotulos (simulacao false com D.demo): o (DEMO) de antes volta (a regra «Nada inventado» fica intacta)', 'DEMO' in t, t[:160])
+        linhas = pg.evaluate(JS_DIARIO_ATALHO)
+        ped('rotulos (simulacao false com D.demo): as duas linhas do atalho do diário voltam a levar o (DEMO) na fonte',
+            len(linhas) == 2 and {l['src'] for l in linhas} == {'atalho · telemetria (DEMO)', 'chat · voz/texto · telemetria (DEMO)'}, [l['src'] for l in linhas])
     finally:
         pg.ctx.close()
 
@@ -2210,6 +2227,31 @@ def grupo_modos(b, muta, ped):
         ped('modos (simulacao true, os mesmos nulos): o modelo que falta no cadastro continua SEM DADOS (o caminho null não se apaga)', 'modelo SEM DADOS' in t('motores'), t('motores')[:160])
     finally:
         pg.ctx.close()
+    modos_cruzeiro(b, muta, ped)
+
+
+def modos_cruzeiro(b, muta, ped):
+    """revisão da P3B (2ª): o consumo de cruzeiro (nós e L/h do guia dos motores §10) que falta no dado. Nunca «undefined nós» nem «NaN»: com simulacao true o trecho «a N nós (L/h)» some;
+    com simulacao false (regra «Nada inventado») o número é SEM DADOS, no cabeçalho e em cada destino."""
+    NULO = ';window.CapitaoDados.consumo.cruzeiro = null;'
+    JS = "() => { const a = window.CapitaoBrain.answer('para onde vamos hoje?', { platform: 'app', commit: false }); return { key: a.key, text: a.text, src: a.src }; }"
+    for rotulo, extra, scripts, fixo, real in (('simulacao true, com o replay (em rota)', NULO, SCRIPTS, '60', False),
+                                               ('simulacao true, sem o replay (o alcance)', NULO, ('capitao-dados.js', 'capitao-brain.js'), None, False),
+                                               ('simulacao false', SEM_SIMULACAO + NULO, SCRIPTS, '60', True)):
+        pg = pagina(b, muta=muta, extra=extra, scripts=scripts, fixo=fixo)
+        try:
+            d = pg.evaluate(JS)
+            t = d['text']
+            ped('modos (cruzeiro null, %s): destinos responde sem «undefined» nem «NaN» e lista os 4 destinos' % rotulo,
+                d['key'] == 'destinos' and not re.search(r'undefined|NaN', t + d['src']) and len(re.findall(r'^\d\. ', t, re.M)) == 4, t[:400])
+            if real:
+                ped('modos (cruzeiro null, %s): SEM DADOS nos nós e nos L/h do cabeçalho e o tempo e o diesel de cada destino' % rotulo,
+                    'a SEM DADOS nós (SEM DADOS L/h), só ida' in t and 'h a SEM DADOS nós, reserva' in t and t.count(' · tempo SEM DADOS · diesel SEM DADOS') == 4, t[:500])
+            else:
+                ped('modos (cruzeiro null, %s): o trecho «a N nós (L/h)» some, sem SEM DADOS e sem tempo nem diesel inventados' % rotulo,
+                    'Destinos a partir da Barra Sul, só ida:' in t and 'SEM DADOS' not in t and not re.search(r' nós|L/h| min\b|≈ \d+ L\b', t), t[:500])
+        finally:
+            pg.ctx.close()
 
 
 # prazos em tempo de execução: o dn de cada tarefa e de cada documento sai da data de vencimento contra o dia do instante (no fuso do barco), não do dn
@@ -2269,6 +2311,100 @@ def grupo_prazos(b, muta, ped):
             'a primeira é de segurança' not in e['seguro'] and e['seguro'].startswith('Sim, com 3 ressalvas.'), e['seguro'][:140])
     finally:
         base.ctx.close(); desl.ctx.close()
+    prazos_executado(b, muta, ped)
+    prazos_absolutos(b, muta, ped)
+
+
+# revisão da P3B (2ª): a troca de óleo, a revisão do gerador e a inspeção do rotor marcadas como Executado (Leme) saem das respostas dos motores, dos horímetros e do gerador:
+# nada de «Próxima troca…», de «ou 450 h — faltam 32,4 h» nem de «(executado em …)» de um ciclo que já acabou; o texto concorda com o gênero da tarefa («troca … executada»)
+JS_EXEC = """() => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }, r = (q) => B.answer(q, op).text, tudo = () => ({ mot: r('motores'), hor: r('horímetros'), ger: r('quantas horas tem o gerador'), man: r('próximas manutenções') });
+  const antes = tudo(); ['motores-oleo', 'gerador-revisao', 'gerador-rotor'].forEach((id) => B.markExec(id)); return { antes, depois: tudo() }; }"""
+EXEC_EM = r'executad[oa] em \d\d/\d\d às \d\d:\d\d'
+
+
+def prazos_executado(b, muta, ped):
+    pg = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None)
+    try:
+        x = pg.evaluate(JS_EXEC)
+        a, d = x['antes'], x['depois']
+        ped('prazos (Executado, controle): sem execução os motores, os horímetros e o gerador dizem a próxima troca, o «ou 450 h» e o «faltam … h»',
+            'troca de óleo D-' in a['mot'] and ' ou 450 h' in a['mot'] and 'Próxima troca de óleo dos motores: ' in a['hor'] and 'faltam' in a['hor'] and 'Revisão (óleo e filtros): ' in a['ger'] and 'faltam' in a['ger'],
+            (a['mot'][-200:], a['hor'][-260:], a['ger'][-200:]))
+        ped('prazos (Executado): os motores dizem «troca de óleo executada em dd/mm às hh:mm.» (feminino), sem o prazo nem o «ou 450 h» do ciclo que acabou',
+            re.search(r'troca de óleo ' + EXEC_EM.replace('executad[oa]', 'executada') + r'\.\n', d['mot']) is not None and ' ou 450 h' not in d['mot'] and 'D-' not in d['mot'].split('Horímetros')[1].split('\n')[0],
+            d['mot'][-260:])
+        ped('prazos (Executado): os horímetros dizem «Troca de óleo dos motores: executada em …» e «Revisão do gerador: executada em …», sem «Próxima troca», sem «faltam» e sem «(executado em …)»',
+            re.search(r'\nTroca de óleo dos motores: ' + EXEC_EM.replace('executad[oa]', 'executada') + r'\.', d['hor']) is not None
+            and re.search(r'\nRevisão do gerador: ' + EXEC_EM.replace('executad[oa]', 'executada') + r'\.', d['hor']) is not None
+            and 'Próxima troca' not in d['hor'] and 'faltam' not in d['hor'] and '(executad' not in d['hor'], d['hor'][-300:])
+        ped('prazos (Executado): o gerador diz «Inspeção do rotor (impeller) do gerador: executada em …» e «Revisão (óleo e filtros): executada em …», sem «faltam» nem o prazo antigo',
+            re.search(r'Inspeção do rotor \(impeller\) do gerador: ' + EXEC_EM.replace('executad[oa]', 'executada') + r'\.', d['ger']) is not None
+            and re.search(r'Revisão \(óleo e filtros\): ' + EXEC_EM.replace('executad[oa]', 'executada') + r'\.', d['ger']) is not None and 'faltam' not in d['ger'] and '1.300 h' not in d['ger'], d['ger'][-300:])
+        ped('prazos (Executado): a manutenção também não lista a troca de óleo, a revisão nem o rotor executados (nem o «Óleo e filtros dos motores: … faltam»)',
+            'Óleo e filtros dos motores' not in d['man'] and 'Troca de óleo e filtros' not in d['man'] and 'rotor (impeller)' not in d['man'], d['man'][:300])
+    finally:
+        pg.ctx.close()
+
+
+# revisão da P3B (2ª): o VALOR ABSOLUTO do prazo e o fuso. Dois instantes em que o dia do barco difere do dia UTC (e do do relógio): (1) o relógio em 02/11/2026 23:30 em Brasília, quando o dia
+# UTC já é 03/11; (2) o relógio em 02/11 12:00 com o replay em 149@575 (06:59:59 de 03/11): o instante do cérebro (B.instante().ms) é de outro dia que o Date.now(). Cada «em atraso há N»,
+# cada «D-n · dd/mm» e cada «VENCIDO há N» é o dn que o rodapé gravou no dado (venceEm, do dia do barco) — e o documento vencido em 01/01/2026 diz o número do calendário
+RELOGIO_23H30 = calendar.timegm((2026, 11, 3, 2, 30, 0)) * 1000    # 02/11/2026 23:30 em Brasília (UTC-3)
+RELOGIO_12H00 = calendar.timegm((2026, 11, 2, 15, 0, 0)) * 1000    # 02/11/2026 12:00 em Brasília
+JS_PRAZOS_ABS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, A = window.CapitaoAgora, op = { platform: 'app', commit: false }, r = (q) => B.answer(q, op).text;
+  const seg = (t) => { const e = D.equipamentos.filter((x) => x.id === t.sistema)[0]; return !!(e && e.seguranca); };
+  const i = B.instante();
+  return { hoje: A.relogio.hoje, utc: new Date().toISOString().slice(0, 10), hora: i && i.hora, segDocs: D.equipamentos.filter((e) => e.seguranca).map((e) => e.validade),
+    agenda: D.agenda.map((t) => ({ id: t.id, t: t.t, equip: t.equip, quem: t.quem, dn: t.dn, vence: t.vence, seg: seg(t) })), docs: D.documentos.map((d) => ({ id: d.id, n: d.n, dn: typeof d.dn === 'number' ? d.dn : null, vence: d.vence })),
+    man: r('próximas manutenções'), docsT: r('documentos vencendo'), seguro: r('é seguro sair hoje?'), chk: r('checklist de saída') }; }"""
+
+
+def esperados_de_prazo(x):
+    """(linhas da manutenção, linhas dos documentos, atrasos): o que a página tem de dizer, calculado do dn que o rodapé gravou no dado (independente do cérebro)."""
+    ag = sorted(x['agenda'], key=lambda t: (t['dn'], t['id']))
+    atras = [t for t in ag if t['dn'] < 0]
+    prox = [t for t in ag if t['dn'] >= 0][:3]
+    nota = 'modelo, validade e acionamento: veja a etiqueta do equipamento'
+    linhas = ['• %s · %s — em atraso há %d %s (%s)' % (t['t'], t['equip'], -t['dn'], 'dia' if t['dn'] == -1 else 'dias', t['quem']) for t in atras]
+    linhas += [('• %s (%s) — %s' % (t['t'], t['quem'], nota)) if t['seg'] else ('• D-%d · %s — %s (%s)' % (t['dn'], t['vence'][:5], t['t'], t['quem'])) for t in prox]
+    docs = ['• %s — %s (%s)' % (d['n'], d['vence'], ('VENCIDO há %d %s' % (-d['dn'], 'dia' if d['dn'] == -1 else 'dias')) if d['dn'] < 0 else 'D-%d' % d['dn'])
+            for d in x['docs'] if d['dn'] is not None and d['dn'] <= 90 and d['id'] not in x['segDocs']]
+    return linhas, docs, atras
+
+
+def confere_absolutos(ped, nome, x, hoje, utc, vencido):
+    linhas, docs, atras = esperados_de_prazo(x)
+    pos = [x['man'].find(l) for l in linhas]
+    ped('prazos (%s): o fuso do teste é o esperado (rodapé em %s, relógio UTC em %s) e há 3 atrasadas e prazos D-n' % (nome, hoje, utc),
+        x['hoje'] == hoje and x['utc'] == utc and len(atras) == 3 and len(linhas) == 6, (x['hoje'], x['utc'], len(atras), len(linhas)))
+    ped('prazos (%s): cada atrasada e cada próxima da manutenção traz EXATAMENTE o dn do dado (em atraso há N · D-n · dd/mm), na ordem' % nome,
+        all(p >= 0 for p in pos) and pos == sorted(pos) and ('Atrasadas (%d)' % len(atras)) in x['man'], [l for l, p in zip(linhas, pos) if p < 0] or x['man'][:300])
+    atraso = lambda t: [int(n) for n in re.findall(r'em atraso há (\d+) dias?', t)]
+    seg_ord = [t for t in atras if t['id'] == 'porao-teste'] + [t for t in atras if t['id'] != 'porao-teste']   # a ressalva de segurança (o porão) vem primeiro
+    chk_ord = [t for i in ('clima-filtro', 'porao-teste') for t in atras if t['id'] == i]                        # itens 3 (climatização) e 5 (porão) do checklist
+    ped('prazos (%s): o seguro para sair (o porão primeiro) e o checklist de saída (itens 3 e 5) contam os atrasos do dado' % nome,
+        atraso(x['seguro']) == [-t['dn'] for t in seg_ord] and atraso(x['chk']) == [-t['dn'] for t in chk_ord], (atraso(x['seguro']), atraso(x['chk']), [-t['dn'] for t in seg_ord], [-t['dn'] for t in chk_ord]))
+    ped('prazos (%s): cada documento que vence em até 90 dias traz o vencimento e o D-n do dado' % nome, all(l in x['docsT'] for l in docs) and len(docs) >= 2, [l for l in docs if l not in x['docsT']] or x['docsT'][:300])
+    ped('prazos (%s): o documento vencido em 01/01/2026 diz «VENCIDO há %d dias» (a conta do calendário: %s)' % (nome, vencido, hoje),
+        ('Licença vencida de teste — 01/01/2026 (VENCIDO há %d dias)' % vencido) in x['docsT'], re.findall(r'Licença vencida[^\n]*', x['docsT']))
+
+
+def prazos_absolutos(b, muta, ped):
+    # (1) o fuso: 23:30 em Brasília de 02/11 (UTC já em 03/11), sem replay (o instante é o Date.now())
+    pg = pagina(b, extra=DOC_VENCIDO, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), fixo=None, relogio_ms=RELOGIO_23H30)
+    try:
+        x = pg.evaluate(JS_PRAZOS_ABS)
+        confere_absolutos(ped, 'fuso: 23:30 de 02/11, UTC em 03/11', x, '02/11/2026', '2026-11-03', (datetime.date(2026, 11, 2) - datetime.date(2026, 1, 1)).days)
+    finally:
+        pg.ctx.close()
+    # (2) o instante do cérebro: o replay em 149@575 (06:59:59 de 03/11) com o relógio em 02/11 12:00: o dia do B.instante().ms não é o do Date.now()
+    pg = pagina(b, extra=DOC_VENCIDO, muta=muta, fixo='149@575', relogio_ms=RELOGIO_12H00)
+    try:
+        x = pg.evaluate(JS_PRAZOS_ABS)
+        ped('prazos (replay em 149@575): o instante do cérebro é 06:59:59', x['hora'] == '06:59:59', x['hora'])
+        confere_absolutos(ped, 'replay 149@575: 06:59:59 de 03/11, relógio em 02/11', x, '03/11/2026', '2026-11-02', (datetime.date(2026, 11, 3) - datetime.date(2026, 1, 1)).days)
+    finally:
+        pg.ctx.close()
 
 
 # tempo e maré são do mundo real (§2.5): sem conexão e sem leitura salva, a frase do §2.5 e a situação de bordo sem posição (decisão (g)); com a leitura de hoje, a previsão
@@ -2366,13 +2502,34 @@ JS_TEXTOS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, o
     porao: r('bombas de porão').text, chk: r('checklist de saída').text, saud: r('oi').text, fallback: r('como se faz um nó lais de guia?'), foto: B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app' }).text,
     video: B.answerAttachment('video', { name: 'a.mp4', size: 4096 }, { platform: 'app' }).text, sobre, sobreDados: B.SOBRE_DADOS || null, estab: r('estabilizador Seakeeper').text,
     convite: (B.linkConvite('Ana', '+55 47 99999-0000', 'total') || {}).href || '', cons: r('consumo de diesel').text, aut: r('autonomia').text, hor: r('horímetros').text,
-    diaMotor: D.diario.filter((x) => x.ref === 'clima-filtro').map((x) => x.d + '|' + x.t), eqs: D.equipamentos.map((e) => [e.id, e.fabricante, e.modelo]),
+    diaMotor: D.diario.filter((x) => x.ref === 'clima-filtro').map((x) => x.d + '|' + x.t), eqs: D.equipamentos.map((e) => [e.id, e.fabricante, e.modelo]), ficha: f,
+    seguranca: D.equipamentos.filter((e) => e.seguranca).map((e) => ({ id: e.id, nome: e.nome, fabricante: e.fabricante, modelo: e.modelo, palavras: e.palavras || [] })),
     reg: D.replay.limites.motor_bb_oleo_bar.regimes[1], reserva: D.reserva, margem: D.consumo.margemManobra_l, nos: D.consumo.cruzeiro.nos, lph: D.consumo.cruzeiro.lph, dest: D.destinos, prof: i.q.profundidade_m }; }"""
 # o alarme ativo (12:01:45: AVISO de arrefecimento) e o crítico de um coletor de verdade: o «seguro para sair» diz «Sim» com a ressalva, e «Não» com o crítico
 JS_ALARME_SEGURO = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, out = {};
-  R.fixar('105'); out.aviso = B.answer('é seguro sair hoje?', op).text;
-  R.fixar('60'); const q = Object.assign({}, R.em(R.agora()), { alarmes: [{ id: 'oleo_bb', nivel: 'critico', sistema: 'motores', lado: 'bb', campo: 'motor_bb_oleo_bar', valor: 0.5, limite: 1.4, desde: '2026-10-27T15:01:00Z' }] }); delete q.simulado;
+  R.fixar('105'); const a105 = B.answer('é seguro sair hoje?', op); out.aviso = a105.text; out.avisoFala = B.falaCurta(a105);
+  R.fixar('60'); const a60 = B.answer('é seguro sair hoje?', op); out.normal = a60.text; out.normalFala = B.falaCurta(a60); const q = Object.assign({}, R.em(R.agora()), { alarmes: [{ id: 'oleo_bb', nivel: 'critico', sistema: 'motores', lado: 'bb', campo: 'motor_bb_oleo_bar', valor: 0.5, limite: 1.4, desde: '2026-10-27T15:01:00Z' }] }); delete q.simulado;
   window.CapitaoTelemetria = { atual: () => q }; R.fixar('61'); out.critico = B.answer('é seguro sair hoje?', op).text; return out; }"""
+JS_TELE = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, out = {};
+  ['60', '105'].forEach((x) => { R.fixar(x); const i = B.instante(); out[x] = { text: B.answer('Telemetria agora', op).text, alarmes: i.txt.alarmes, tend: i.txt.tend }; }); R.fixar('60'); return out; }"""
+
+
+def confere_fala_seguro(texto, fala):
+    """(ok, listadas, mais, n): a fala do «seguro para sair» lê as primeiras ressalvas e diz quantas ficaram na tela; listadas + mais = o n do «com n ressalvas»."""
+    m = re.match(r'Sim, com (\d+) ressalvas?', texto)
+    if not m or ': ' not in fala:
+        return False, 0, 0, None
+    partes = fala[fala.index(': ') + 2:].rstrip('.').split('; ')
+    mais = 0
+    if partes[-1].startswith('e mais '):
+        k = re.fullmatch(r'e mais (\d+) (ressalvas?) na tela', partes[-1])   # «e mais 1 ressalva na tela» / «e mais 3 ressalvas na tela»: o plural concorda com o número
+        if not k or (k.group(2) == 'ressalva') != (k.group(1) == '1'):
+            return False, len(partes) - 1, 0, int(m.group(1))
+        mais = int(k.group(1))
+        partes = partes[:-1]
+    return len(partes) + mais == int(m.group(1)), len(partes), mais, int(m.group(1))
+
+
 SOBRE_DADOS = ('Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. '
                'Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.')
 # o cadastro trocado para provar que o texto sai do dado: outro fabricante e outro modelo dos motores, o limite de horas da troca de óleo
@@ -2426,9 +2583,25 @@ def grupo_textos(b, muta, ped):
         ped('textos: a âncora usa o contador de corrente do guincho (guia de eletrônicos §3), sem SEM LEITURA, e a profundidade do instante',
             'contador de corrente' in a and 'SEM LEITURA' not in a and x['tx']['prof'] in a, a[:420])
         ped('textos: o porão traz o nível do quadro (BB e BE em cm) e a faixa do guia, sem SEM LEITURA', x['tx']['porao'].split(' · ')[0] in x['porao'] and 'SEM LEITURA' not in x['porao'] and 'até 5 cm' in x['porao'], x['porao'][:300])
+        tele = pg.evaluate(JS_TELE)   # antes do JS_ALARME_SEGURO: ele troca o coletor por um com alarme crítico
         al = pg.evaluate(JS_ALARME_SEGURO)
         ped('textos: o alarme do quadro entra no «seguro para sair» como ressalva (AVISO de 12:01:45: Sim, com 5 ressalvas) e o crítico de um coletor diz «Não saia agora»',
             al['aviso'].startswith('Sim, com 5 ressalvas') and 'Alarme ativo a bordo agora: AVISO: Temperatura do motor BE' in al['aviso'] and al['critico'].startswith('Não saia agora: há alarme crítico ativo'), (al['aviso'][:120], al['critico'][:200]))
+        # revisão da P3B (2ª): a fala do «seguro para sair» lê a de segurança e o alarme ativo (as primeiras), e diz quantas ficaram na tela
+        ok, n_lidas, n_mais, n = confere_fala_seguro(al['aviso'], al['avisoFala'])
+        ped('textos: a fala do seguro para sair em 12:01:45 lê a ressalva de segurança e o alarme do quadro («Temperatura do motor BE») e diz quantas ficaram na tela (lidas + «e mais K» = as 5)',
+            ok and 'Temperatura do motor BE' in al['avisoFala'] and al['avisoFala'].startswith('Sim, com 5 ressalvas — a primeira é de segurança: teste das bombas de porão') and 'Alarme ativo a bordo agora' in al['avisoFala'] and n == 5 and n_lidas + n_mais == 5,
+            (al['avisoFala'], n_lidas, n_mais))
+        ok, n_lidas, n_mais, n = confere_fala_seguro(al['normal'], al['normalFala'])
+        ped('textos: a fala do seguro para sair em 12:01:00 (sem alarme) também fecha a conta das ressalvas (lidas + «e mais K» = as 4)', ok and n == 4 and 'Alarme ativo' not in al['normalFala'] and al['normalFala'].startswith('Sim, com 4 ressalvas — a primeira é de segurança: teste das bombas de porão'), (al['normalFala'], n_lidas, n_mais))
+        ped('textos: o alarme ativo é a ressalva 2, logo depois da de segurança (antes das de manutenção)', 'Ressalva 2: Alarme ativo a bordo agora' in al['aviso'] and 'Ressalva 1 (segurança)' in al['aviso'], al['aviso'][:700])
+        for hh, alarme, tend in (('60', 'nenhum alarme ativo', TXT_TEND_60), ('105', 'AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)', TXT_TEND_105)):
+            ped('textos (telemetria às 12:01:%s): as duas últimas linhas são «• Alarmes: …» do quadro e «• Tendência — últimos 30 s: …»' % ('00' if hh == '60' else '45'),
+                tele[hh]['alarmes'] == alarme and tele[hh]['tend'] == tend and tele[hh]['text'].endswith('\n• Alarmes: ' + alarme + '\n• Tendência — ' + tend), tele[hh]['text'][-320:])
+        # revisão da P3B (2ª), trava 17: a ficha inteira (vai à IA em toda pergunta) não traz o fabricante nem o modelo do EPIRB e do Seafire — só Equipamentos, Leme e Documentos
+        vazou = [t for e in x['seguranca'] for t in (e['modelo'], '%s %s' % (e['nome'], e['fabricante']), e['fabricante'] if (e['fabricante'] or '').lower() not in e['palavras'] else None) if t and t.lower() in x['ficha'].lower()]
+        ped('textos: a ficha não traz o fabricante nem o modelo dos equipamentos de segurança (EPIRB: %s; Seafire: %s)' % tuple('%s %s' % (e['fabricante'], e['modelo']) for e in x['seguranca']),
+            len(x['seguranca']) == 2 and all(e['fabricante'] and e['modelo'] for e in x['seguranca']) and not vazou and len(x['ficha']) > 3000, (vazou, len(x['ficha'])))
         ped('textos: o estabilizador não manda para o manual do Drive (nenhum MANUAL NO DRIVE) e cita o guia', 'MANUAL NO DRIVE' not in x['estab'] and 'Guia de bordo — Estabilizador Seakeeper' in x['estab'], x['estab'])
         fb = x['fallback']
         ped('textos: o fallback não diz SEM DADOS nem «Não encontrei esse dado», traz a situação de bordo sem posição com a hora e mantém a fonte',
@@ -2561,7 +2734,7 @@ MUTANTES_3B = [
     ('o seguro para sair diz «mar (ondas): SEM DADOS» na simulação', r"(s ? MAR_SIM : ' · mar (ondas): ' + SD", r"(false ? MAR_SIM : ' · mar (ondas): ' + SD", ('tempo',)),
     ('o dn vem do dado (t.dn), não do dia do instante', r"var n = x ? diaData(x.vence) - diaDe(msAgora()) : NaN; return isNaN(n)", r"var n = NaN; return isNaN(n)", ('prazos',)),
     ('a agenda ignora o Executado', r".filter(function (t) { return !ex[t.id]; }).sort(function (a, b) { return (dnDe(a)", r".filter(function (t) { return true; }).sort(function (a, b) { return (dnDe(a)", ('prazos',)),
-    ('o prazo da tarefa executada não diz «executado»', r"if (f) return 'executado em ' + f.d + ' às ' + f.t;", r"", ('prazos',)),
+    ('o prazo da tarefa executada não diz «executado»', r"if (ex) return ex;", r"", ('prazos',)),
     ('a tarefa do EPIRB e do Seafire vai com a data (seg() sempre falso)', r"function seg(t) { var e = t && equip(t.sistema); return !!(e && e.seguranca); }", r"function seg(t) { return false; }", ('prazos',)),
     ('os documentos escrevem «SEM DADOS: .» com a lista vazia', r"(sem.length ? '\n' + SD + ': ' + sem.map", r"(true ? '\n' + SD + ': ' + sem.map", ('textos', 'rotulos')),
     ('os motores voltam a «Volvo Penta» fixo', r"function motoresTxt() { var e = equip('motores'); return fabMod('motores') +", r"function motoresTxt() { var e = equip('motores'); return 'Motores Volvo Penta' +", ('textos',)),
@@ -2573,7 +2746,7 @@ MUTANTES_3B = [
     ('os eletrônicos citam o guia do radar no lugar do guia do piloto', r"(' + guia('g_piloto') + ' §1–3)", r"(' + guia('g_radar') + ' §1–3)", ('textos',)),
     ('o destino perde a hora de chegada (ETA)', r"', chegada prevista às ' + t.eta + ' — '", r"', chegada prevista' + ' — '", ('textos',)),
     ('o juízo da ida e volta invertido', r"(iv <= util ? 'cabe no diesel a bordo' : 'pede abastecer antes')", r"(iv > util ? 'cabe no diesel a bordo' : 'pede abastecer antes')", ('textos',)),
-    ('o diesel do destino em dobro', r"l = h != null && lph > 0 ? Math.round(h * lph) : null", r"l = h != null && lph > 0 ? Math.round(h * lph * 2) : null", ('textos',)),
+    ('o diesel do destino em dobro', r"l = h != null && lphOk ? Math.round(h * lph) : null", r"l = h != null && lphOk ? Math.round(h * lph * 2) : null", ('textos',)),
     ('a âncora esquece o contador de corrente', r"o contador de corrente mostra os metros lançados no controle do guincho (", r"o controle do guincho (", ('textos',)),
     ('a corrente para fundear em 2 vezes a profundidade', r"Math.round(3 * prof)", r"Math.round(2 * prof)", ('textos',)),
     ('o porão perde a faixa normal do guia', r"(ate != null ? ' (normal até ' + nb(ate, 0) + ' cm)' : '')", r"''", ('textos',)),
@@ -2628,6 +2801,34 @@ MUTANTES_3B_REV = [
     ('os destinos no SOS leem a D.rota', r"R = EM_SOS ? null : D.rota,", r"R = D.rota,", ('sos',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV
+
+# Mutantes da 2ª revisão da P3B: o fuso e o instante dos prazos (valor absoluto), o Executado dos motores, dos horímetros e do gerador
+MUTANTES_3B_REV2 = [
+    ('o dia do prazo é o dia UTC (sem o fuso do barco)', r"return Math.floor((ms + o * 60000) / 86400000); }", r"return Math.floor(ms / 86400000); }", ('prazos',)),
+    ('o dn tem um dia a mais', r"var n = x ? diaData(x.vence) - diaDe(msAgora()) : NaN; return isNaN(n)", r"var n = x ? diaData(x.vence) - diaDe(msAgora()) + 1 : NaN; return isNaN(n)", ('prazos',)),
+    ('o prazo lê o Date.now() e não o instante do cérebro', r"function msAgora() { var i = CONG.inst; return i && typeof i.ms === 'number' ? i.ms : Date.now(); }", r"function msAgora() { return Date.now(); }", ('prazos',)),
+    ('os horímetros ignoram a troca de óleo executada', r"(oEx ? 'Troca de óleo dos motores: ' + oEx + '.' : 'Próxima troca de óleo dos motores: '", r"(false ? 'Troca de óleo dos motores: ' + oEx + '.' : 'Próxima troca de óleo dos motores: '", ('prazos',)),
+    ('os horímetros ignoram a revisão do gerador executada', r"(rvEx ? rvEx + '.' : rv.vence", r"(false ? rvEx + '.' : rv.vence", ('prazos',)),
+    ('os motores ignoram a troca de óleo executada', r"' · troca de óleo ' + (execTxt(o) || prazoTxt(o) + (o.horas ? ' ou '", r"' · troca de óleo ' + (prazoTxt(o) + (o.horas ? ' ou '", ('prazos',)),
+    ('o gerador ignora a revisão executada', r"(execTxt(rv) ? execTxt(rv) + '.' : rv.vence", r"(false ? execTxt(rv) + '.' : rv.vence", ('prazos',)),
+    ('o Executado é sempre masculino («troca executado»)', r"'executada' : 'executado') + ' em '", r"'executado' : 'executado') + ' em '", ('prazos',)),
+    ('a telemetria perde as linhas «Alarmes» e «Tendência»', r"(i ? '\n• Alarmes: ' + t.alarmes + (t.tend ? '\n• Tendência — ' + t.tend : '') : '')", r"''", ('textos',)),
+    ('a telemetria perde só a linha «Tendência»', r"(t.tend ? '\n• Tendência — ' + t.tend : '')", r"''", ('textos',)),
+    ('o «Sobre o app» lista o fabricante do EPIRB e do Seafire (sem o filtro de segurança)', r"return !e.seguranca && e.id !== 'eletrico'; })", r"return e.id !== 'eletrico'; })", ('textos',)),
+    ('o seguro para sair põe o alarme ativo depois das ressalvas de manutenção',
+     "      if (al) ress.push('Alarme ativo a bordo agora: ' + al + '.');   // logo depois da de segurança: a fala lê as primeiras ressalvas e o alarme ativo não pode ficar de fora\n      at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });\n",
+     "      at.filter(function (x) { return x.id !== 'porao-teste'; }).forEach(function (x) { ress.push(x.t + ' — ' + prazoTxt(x) + '.'); });\n      if (al) ress.push('Alarme ativo a bordo agora: ' + al + '.');\n", ('textos',)),
+    ('a fala das ressalvas corta sem dizer «e mais K»', r"while (ressalvas && extra.length > 1 && junta().length > lim) { extra.pop(); resto++; }", r"while (ressalvas && extra.length > 1 && junta().length > lim) { extra.pop(); }", ('textos',)),
+    ('os destinos sem o cruzeiro voltam a escrever «a undefined nós»', r"var vel = nosTxt ? ', a ' + nosTxt + (lphTxt ? ' (' + lphTxt + ')' : '') : lphTxt ? ', ' + lphTxt : '';", r"var vel = ', a ' + nos + ' nós (' + lph + ' L/h)';", ('modos',)),
+    ('os destinos do modo real perdem o SEM DADOS do tempo e do diesel', r"(h != null ? ' · ≈ ' + tempo(h) : s ? '' : ' · tempo ' + SD) + (l != null ? ' · ≈ ' + l + ' L' : s ? '' : ' · diesel ' + SD)", r"(h != null ? ' · ≈ ' + tempo(h) : '') + (l != null ? ' · ≈ ' + l + ' L' : '')", ('modos',)),
+    ('os destinos da simulação escrevem SEM DADOS no tempo e no diesel', r"(h != null ? ' · ≈ ' + tempo(h) : s ? '' : ' · tempo ' + SD) + (l != null ? ' · ≈ ' + l + ' L' : s ? '' : ' · diesel ' + SD)", r"(h != null ? ' · ≈ ' + tempo(h) : ' · tempo ' + SD) + (l != null ? ' · ≈ ' + l + ' L' : ' · diesel ' + SD)", ('modos',)),
+    ('o alcance sem o cruzeiro escreve «a  nós»', r"' h' + (nosTxt ? ' a ' + nosTxt : '') + ', reserva de '", r"' h a ' + nos + ' nós, reserva de '", ('modos',)),
+    ('o atalho do diário grava (DEMO) na fonte da linha permanente', r"src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });", r"src: junto ? 'chat · voz/texto · telemetria' + ' (DEMO)' : 'atalho · telemetria' + ' (DEMO)' });", ('rotulos',)),
+    ('o atalho do diário perde o (DEMO) do modo real', r"src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });", r"src: junto ? 'chat · voz/texto · telemetria' : 'atalho · telemetria' });", ('rotulos',)),
+    ('a fala das ressalvas diz «1 ressalvas» (plural fixo)', r"(resto === 1 ? ' ressalva' : ' ressalvas')", r"' ressalvas'", ('textos',)),
+    ('a fala das ressalvas não corta no limite (lê todas)', r"while (ressalvas && extra.length > 1 && junta().length > lim) { extra.pop(); resto++; }", r"", ('textos',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV2
 
 
 def instante_3a(b):
