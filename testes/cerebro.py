@@ -156,8 +156,8 @@ CASOS = [
     ('o plotter caiu, como resolver', 'eletronicos'), ('o motor caiu, como resolver', 'motores'), ('a conexão do plotter caiu, procedimento', 'eletronicos'),
     ('a energia caiu', 'fallback'), ('o wifi caiu', 'fallback'), ('a tensão caiu', 'eletrico'), ('caiu a chave no mar', 'fallback'),
     ('onde fica o manual do motor', 'manual'), ('como acho o manual do motor', 'manual'), ('onde fica o manual', 'manual'),
-    # (P3C: a temperatura do mar ganhou a rota `temperaturaAgua`; o «caiu» continua não sendo SOS)
-    ('tem vista para o mar?', 'fallback'), ('qual a vista do mar', 'fallback'), ('a temperatura do mar caiu', 'temperaturaAgua'),
+    # (a temperatura do mar que «caiu» é relato, não a pergunta da leitura da água: continua na IA, como antes da P3C)
+    ('tem vista para o mar?', 'fallback'), ('qual a vista do mar', 'fallback'), ('a temperatura do mar caiu', 'fallback'),
     # 1b, quarta revisão: «pessoa ao mar» é o mesmo que «homem ao mar», «criança ao mar» e «tripulante ao mar» (todos `sos`): a base não abre a janela de emergência da Fase 3
     # (`sos`, `oleo`, `canal16`, `epirb`, `seafire`), e a pessoa na água é a emergência que mais precisa dela. Local nos dois casos (PEDE_IA False).
     ('pessoa ao mar', 'sos'),
@@ -436,7 +436,7 @@ PEDE_IA = {
     'como trocar a bateria de partida': True, 'bateria de partida': False,
     'o disjuntor caiu, qual o procedimento': True, 'a bateria caiu, procedimento': False, 'o plotter caiu, como resolver': False,
     'a energia caiu': True, 'o wifi caiu': True, 'caiu a chave no mar': True,
-    'onde fica o manual do motor': False, 'tem vista para o mar?': True, 'qual a vista do mar': True, 'a temperatura do mar caiu': False,
+    'onde fica o manual do motor': False, 'tem vista para o mar?': True, 'qual a vista do mar': True, 'a temperatura do mar caiu': True,
     'pessoa ao mar': False,
     'como religar o gerador depois que o sistema fixo disparou': False, 'o sistema fixo disparou, como religo o gerador?': False,
     # revisão 7 do C5: a resposta pronta e a bomba de esgoto (rota 'porao') ficam no aparelho; o trecho do guia e a pergunta sem resposta vão à IA
@@ -531,6 +531,51 @@ ROTAS_P3C = [
 ]
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C})
+
+# Revisão da P3C: o que as rotas novas roubavam das que já respondiam certo (a chave e o PEDE_IA são os de ANTES da P3C, salvo onde o PROMPT pede a rota nova).
+ROTAS_P3C_REV = [
+    # «situação atual/agora de <assunto>» é do assunto; só a frase inteira é a navegação
+    ('situação atual do gerador', 'gerador', False), ('situação atual dos documentos', 'docsvenc', False), ('situação atual da manutenção', 'manutencao', False), ('situação agora dos tanques', 'tanques', False),
+    ('qual a situação atual do barco?', 'navegacao', False), ('situação de bordo', 'navegacao', False), ('qual é a situação atual?', 'navegacao', False), ('como está a navegação do piloto automático?', 'base', True),
+    # o cadastro do barco não responde pelo comprimento, o fabricante, a ficha, o ano e a lotação de OUTRA coisa a bordo
+    ('quem fabricou o motor', 'motores', False), ('ficha técnica do motor', 'motores', False), ('ano de fabricação do motor', 'motores', False), ('qual o comprimento da corrente da âncora', 'ancora', False),
+    ('qual o comprimento da amarra', 'fallback', True), ('comprimento do cabo de reboque', 'fallback', True), ('quem fabricou o guincho', 'fallback', True), ('lotação do tender', 'fallback', True),
+    ('quantas pessoas cabem no bote', 'fallback', True), ('qual o comprimento da sonda', 'fallback', True), ('quantas pessoas cabem no barco', 'embarcacao', False), ('qual a lotação máxima da lancha', 'embarcacao', False),
+    ('qual o tamanho do barco', 'embarcacao', False), ('qual a largura do barco', 'embarcacao', False), ('quantas pessoas cabem?', 'embarcacao', False), ('quantos a bordo?', 'pessoas', False),
+    # a temperatura do motor é a dos motores principais: a do gerador, do Seakeeper e da climatização é do equipamento
+    ('arrefecimento do gerador', 'gerador', False), ('arrefecimento do Seakeeper', 'estabilizador', False), ('arrefecimento da climatização', 'climatizacao', False), ('como está o arrefecimento do gerador?', 'base', True),
+    ('qual a temperatura do motor do gerador', 'base', True), ('temperatura do motor do Seakeeper', 'base', True), ('temperatura da água do arrefecimento', 'arrefecimento', False), ('temperatura da água do Seakeeper', 'base', True),
+    # o alarme que SOA não é «nenhum alarme ativo»; com o lugar ou o equipamento, a rota dele; o resgate que se espera não é o ETA da rota
+    ('o alarme soando', 'alarmes', False), ('qual alarme está tocando', 'alarmes', False), ('alarmes tocando na cabine', 'climatizacao', False), ('alarme ativo no Seakeeper', 'base', True),
+    ('quanto falta para chegar o resgate', 'fallback', True), ('estamos esperando o resgate, que horas chega', 'fallback', True), ('quando chega o resgate', 'fallback', True),
+    # o ETA/waypoint e a profundidade não são o guia do plotter, o porão, o consumo, o fundeio nem o relato de falha do sensor
+    ('como criar um waypoint no plotter', 'eletronicos', False), ('como criar um waypoint?', 'fallback', True), ('como marcar um waypoint no plotter?', 'eletronicos', False),
+    ('quantas milhas por litro faz o barco', 'fallback', True), ('quantas milhas percorremos por litro?', 'fallback', True), ('quantas milhas por galão', 'fallback', True), ('quantas milhas por hora estamos fazendo', 'posicao', False),
+    ('quantas milhas tem de Camboriú a Itajaí', 'fallback', True), ('quantas milhas faltam para chegar?', 'eta', False), ('qual a profundidade do porão', 'porao', False),
+    ('onde fica o transdutor de profundidade', 'fallback', True), ('o ecobatímetro está com defeito', 'fallback', True), ('quanto de corrente para essa profundidade?', 'ancora', False),
+    ('a âncora aguenta que profundidade?', 'ancora', False), ('qual a profundidade de fundeio?', 'base', True), ('qual a profundidade máxima do fundeio', 'base', True), ('o sensor de profundidade não funciona', 'fallback', True),
+    ('o ecobatímetro está com erro', 'fallback', True), ('profundidade zerada na sonda', 'base', True), ('o transdutor de profundidade quebrou', 'fallback', True), ('o sensor de profundidade está desligado', 'fallback', True),
+    ('a sonda mostra profundidade errada', 'fallback', True), ('qual a profundidade do canal', 'fallback', True), ('profundidade da marina', 'fallback', True),
+    # foraBarco não engole a reversora (câmbio), o balanço (jogo) nem a bolsa estanque; o dinheiro e o esporte seguem fora do barco
+    ('o câmbio está duro', 'fallback', True), ('o câmbio não engata', 'fallback', True), ('a marcha não entra, problema no câmbio', 'fallback', True), ('problema no câmbio', 'fallback', True),
+    ('câmbio, desligo', 'fallback', True), ('troca de câmbio', 'fallback', True), ('o barco está com muito jogo', 'fallback', True), ('qual o jogo do barco agora', 'fallback', True),
+    ('quantos graus de jogo?', 'fallback', True), ('jogo de ferramentas', 'fallback', True), ('bolsa de gelo', 'fallback', True),
+    ('câmbio do dia', 'foraBarco', False), ('câmbio hoje', 'foraBarco', False), ('qual o câmbio do dólar hoje', 'foraBarco', False), ('tem jogo hoje?', 'foraBarco', False), ('a bolsa subiu hoje', 'foraBarco', False),
+    ('bolsa de valores', 'foraBarco', False),
+    # a temperatura do mar que caiu é relato; a água fria é a leitura
+    ('a água do mar está fria', 'temperaturaAgua', False), ('a temperatura da água caiu', 'base', True),
+    # sobreDados: «real»/«de verdade» como medida não é a pergunta sobre os dados; a lancha, o app e o Capitão IA são
+    ('qual o diesel real do barco?', 'autonomia', False), ('qual a profundidade real do barco?', 'profundidade', False), ('qual o calado real do barco?', 'embarcacao', False),
+    ('quanto diesel tem de verdade no barco?', 'autonomia', False), ('qual o estado real do barco', 'fallback', True), ('existe um app de verdade para barcos?', 'fallback', True),
+    ('o app é em tempo real?', 'fallback', True), ('os dados são em tempo real?', 'fallback', True), ('o vento é verdadeiro ou aparente?', 'clima', False), ('o rumo é verdadeiro ou magnético?', 'posicao', False),
+    ('a lancha é real?', 'sobreDados', False), ('você é real?', 'sobreDados', False), ('o Capitão IA é real?', 'sobreDados', False), ('você é uma IA de verdade?', 'sobreDados', False),
+    ('vocês simulam os dados?', 'sobreDados', False), ('esse barco existe de verdade?', 'sobreDados', False), ('a velocidade é real?', 'sobreDados', False), ('o consumo é real?', 'sobreDados', False),
+    ('o diesel é real?', 'sobreDados', False), ('o gerador é de verdade?', 'gerador', False),
+    ('qual o deslocamento do Seakeeper do barco?', 'estabilizador', False), ('qual o comprimento da âncora do barco', 'ancora', False), ('quantas milhas faltam até o limite de alcance?', 'autonomia', False),
+    ('não estou vendo a profundidade', 'fallback', True), ('a temperatura do mar caiu', 'fallback', True),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV})
 
 
 def main():
@@ -2883,7 +2928,7 @@ GRUPOS_3A = {'forma': grupo_forma, 'uma': grupo_uma, 'resumo': grupo_resumo, 'vi
 # sem coordenada e sem sigla solta; a situação de bordo (sem posição) vem na linha seguinte onde a decisão (g) manda (sobreDados, foraBarco). As conferências abaixo reconstroem o texto esperado
 # do próprio instante (i.txt, i.q, o catálogo D.replay.alertas) e do cadastro (D.embarcacao): nenhum número escrito aqui.
 P3C_PERGUNTAS = {
-    'posicao': 'onde estamos?', 'profundidade': 'qual a profundidade?', 'eta': 'qual a hora de chegada?', 'wp': 'qual o próximo waypoint?', 'percorrido': 'distância percorrida hoje', 'alarmes': 'tem algum alarme ativo?',
+    'posicao': 'onde estamos?', 'profundidade': 'qual a profundidade?', 'eta': 'qual a hora de chegada?', 'wp': 'qual o próximo waypoint?', 'percorrido': 'distância percorrida hoje', 'alarmes': 'tem algum alarme ativo?', 'soa': 'o alarme está tocando',
     'arref': 'qual a temperatura do motor?', 'ondas': 'como está o estado do mar?', 'agua': 'qual a temperatura da água?', 'nav': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?',
     'calado': 'qual o calado do barco?', 'compr': 'qual o comprimento?', 'boca': 'qual a boca do barco?', 'lotacao': 'qual a lotação?', 'registro': 'qual o registro do barco?', 'modelo': 'qual o modelo do barco?',
     'dim': 'dimensões do barco', 'mmsi': 'qual o MMSI do barco?', 'ais': 'quantos alvos no AIS?', 'sobre': 'esses dados são reais?', 'fora': 'qual o preço do dólar?',
@@ -2920,9 +2965,10 @@ def grupo_p3c(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         # (1) a chave e o PEDE_IA de cada pergunta: as rotas novas respondem no aparelho e não roubam as vizinhas
-        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3C])
-        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3C, res) if key != esp or ia != ia_esp]
-        ped('p3c: as %d perguntas das rotas novas (e as que elas não podem roubar) caem na chave certa e com o PEDE_IA certo' % len(ROTAS_P3C), not ruins, ruins[:6])
+        todas = ROTAS_P3C + ROTAS_P3C_REV
+        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in todas])
+        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(todas, res) if key != esp or ia != ia_esp]
+        ped('p3c: as %d perguntas das rotas novas (e as que elas não podem roubar) caem na chave certa e com o PEDE_IA certo' % len(todas), not ruins, ruins[:6])
         # (2) as respostas, em 12:01:00 e 12:01:45
         out = pg.evaluate(JS_P3C, [['60', '105', '10@0', '149@575'], P3C_PERGUNTAS])
         E = out['E']
@@ -2954,6 +3000,15 @@ def grupo_p3c(b, muta, ped):
                     and cat['fonte'] in r['alarmes']['src'] and r['alarmes']['fala'] == sem_par(quer[0]), (l('alarmes'), r['alarmes']['acoes']))
             else:
                 ped('p3c %s: sem alarme, a resposta diz «Nenhum alarme ativo às hora.»' % no, l('alarmes') == ['Nenhum alarme ativo às %s.' % h] and r['alarmes']['fala'] == l('alarmes')[0], l('alarmes'))
+            # o alarme que está SOANDO: o app só lê os alarmes do quadro de leitura, então nunca diz «nenhum alarme ativo» (falsa tranquilização): manda conferir o painel dos motores e o plotter primeiro
+            conf = 'Confira também o painel dos motores e o plotter: o app só lê os alarmes do quadro de leitura.'
+            if q['alarmes']:
+                ped('p3c %s: «o alarme está tocando» com alarme no quadro traz o alarme (como a pergunta dos alarmes) e fecha mandando conferir o painel dos motores e o plotter' % no,
+                    l('soa')[0] == 'Há 1 alarme ativo às %s — %s.' % (h, t['alarmes']) and l('soa')[-1] == conf and l('soa')[:-1] == l('alarmes') and 'Nenhum alarme ativo' not in r['soa']['text'], l('soa'))
+            else:
+                ped('p3c %s: «o alarme está tocando» sem alarme no quadro manda conferir o painel dos motores e o plotter e diz que o app só lê os alarmes do quadro, sem «nenhum alarme ativo»' % no,
+                    l('soa') == ['Confira o painel dos motores e o plotter: às %s o quadro de leitura não traz alarme ativo, e o app só lê os alarmes do quadro.' % h] and r['soa']['fala'] == sem_par(l('soa')[0])
+                    and 'Nenhum alarme ativo' not in r['soa']['text'] and r['soa']['ia'] is False, (l('soa'), r['soa']['fala']))
             ate = nbr(out['ate'], 0)
             if q['alarmes']:
                 quer = 'Arrefecimento %s às %s: BE acima de %s °C (AVISO).' % (t['arref'], h, ate)
@@ -3023,7 +3078,8 @@ P3C_DADOS = {'pessoas': 'quantas pessoas a bordo?', 'calado': 'qual o calado do 
 P3C_REAL = {'calado': 'qual o calado do barco?', 'prof': 'qual a profundidade?', 'eta': 'qual a hora de chegada?', 'alarmes': 'tem algum alarme ativo?', 'ondas': 'como está o estado do mar?',
             'arref': 'qual a temperatura do motor?', 'agua': 'qual a temperatura da água?', 'nav': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?', 'sobre': 'esses dados são reais?',
             'posicao': 'onde estamos?', 'fora': 'qual o preço do dólar?', 'mmsi': 'qual o MMSI do barco?', 'ais': 'quantos alvos no AIS?', 'emb': 'dimensões do barco'}
-P3C_SOS = ['qual o calado do barco?', 'dimensões do barco', 'qual o modelo do barco?', 'qual o registro do barco?', 'quantas pessoas a bordo?', 'qual o MMSI do barco?', 'quantos alvos no AIS?', 'qual a profundidade?',
+P3C_SOS = ['qual o calado do barco?', 'dimensões do barco', 'qual o modelo do barco?', 'qual o registro do barco?', 'quantas pessoas a bordo?', 'qual o MMSI do barco?', 'quantos alvos no AIS?', 'tem AIS?', 'qual a profundidade?',
+           'qual a lotação?', 'o alarme está tocando',
            'qual a hora de chegada?', 'tem algum alarme ativo?', 'como está a navegação?', 'onde estamos?', 'esses dados são reais?', 'qual o preço do dólar?', 'qual a temperatura do motor?']
 
 
@@ -3104,6 +3160,15 @@ def grupo_p3c_dados(b, muta, ped):
         todo = '\n'.join(t for _, _, t in r)
         ped('p3c SOS: nenhuma resposta nova do cérebro do SOS traz registro, modelo, fabricante, MMSI do cadastro, pessoas a bordo, leitura do quadro nem coordenada',
             not re.search(r'CIA-23-0417|Marévia|710123456|\b4 pessoas|18,1|1\.333|10,8 m|Barra Sul', todo) and not confere.R_COORD.search(todo), re.findall(r'CIA-23-0417|Marévia|710123456|\b4 pessoas|18,1|1\.333|10,8 m|Barra Sul', todo)[:4])
+        # o cadastro inteiro (modelo, fabricante, registro, MMSI, motorização, as medidas e o fabricante e o modelo de cada equipamento) é o que o SOS nunca devolve: lido da própria página, sem número escrito aqui
+        cad = pg.evaluate("() => ({ E: window.CapitaoDados.embarcacao, eq: (window.CapitaoDados.equipamentos || []).map((e) => [e.nome, e.fabricante, e.modelo]) })")
+        E = cad['E']
+        proibidos = [E[k] for k in ('modelo', 'fabricante', 'registro', 'mmsi', 'motorizacao') if E.get(k)] + ['%s m' % nbr(E[k], 2) for k in ('calado', 'comprimento', 'boca') if isinstance(E.get(k), (int, float))]
+        proibidos += ['%s t' % nbr(E['deslocamento'], 1), '%d pessoas' % E['lotacao']]
+        equips = [x for e in cad['eq'] for x in e[1:] if x and len(x) > 2]   # (o fabricante e o modelo de cada equipamento: o AIS, o Seakeeper… nas respostas do CADASTRO; o nome de um guia ou de um rótulo genérico, como «Seakeeper» na telemetria, não é cadastro)
+        do_cadastro = '\n'.join(t for q, k, t in r if k in ('ais', 'embarcacao', 'mmsi', 'pessoas'))
+        achados = [v for v in proibidos if v in todo] + [v for v in equips if v in do_cadastro]
+        ped('p3c SOS: nenhuma resposta nova do cérebro do SOS traz um valor do cadastro da embarcação, nem o fabricante e o modelo de um equipamento nas respostas do cadastro (o AIS inclusive)', len(proibidos) > 5 and len(equips) > 10 and not achados, achados[:4])
         lidas = pg.evaluate("() => window.__lidas")
         ped('p3c SOS: as respostas novas não leem D.simulacao, D.replay, D.snapshot, D.rota nem D.campos', all(v == 0 for v in lidas.values()) and {'simulacao', 'replay', 'snapshot', 'rota'} <= set(lidas), lidas)
         ped('p3c SOS: a pergunta do MMSI no SOS é só a 1ª linha (o MMSI da etiqueta do rádio), sem o do cadastro', [t for q, k, t in r if k == 'mmsi'][0].split('\n')[0] == 'No MAYDAY e no DSC, use o MMSI da etiqueta do rádio (Licença de Estação).', [t for q, k, t in r if k == 'mmsi'][0][:200])
@@ -3361,7 +3426,6 @@ MUTANTES_3C = [
     ('o foraBarco sem «dolar»', r"var FORA_BARCO = ['dolar', ", r"var FORA_BARCO = [", ('p3c',)),
     ('o foraBarco sem «preco»', r"'bitcoin', 'preco', 'quanto custa'", r"'bitcoin', 'quanto custa'", ('p3c',)),
     ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'foraBarco') return false;", ('p3c',)),
-    ('a sobreDados pega «velocidade real» (sem a limpeza das frases de medida)', r"var s = q.replace(AUT_MEDIDA, ' ');", r"var s = q;", ('p3c',)),
     ('a sobreDados pega o dinheiro e o equipamento (sem a guarda)', r"if (has(q, AUT_FORA) || has(q, EQUIP) || salvatagem(q) || epirbRelato(q)) return false;", r"", ('p3c',)),
     ('a sobreDados sem a forma curta («é de verdade?»)', r"    if (AUT_CURTA.test(q)) return true;", r"", ('p3c',)),
     ('a sobreDados sem «o barco existe»', r"var AUT_EXISTE = [' o barco existe ', ", r"var AUT_EXISTE = [", ('p3c',)),
@@ -3370,16 +3434,16 @@ MUTANTES_3C = [
     ('a chegada pega o alcance em milhas (sem a lista de fora)', r"var ETA_FORA = ['autonomia', 'alcance', ", r"var ETA_FORA = [", ('p3c',)),
     ('a profundidade pega o alarme e a mínima (sem a lista de fora)', r"var PROFUNDIDADE_FORA = ['minim', 'alarme',", r"var PROFUNDIDADE_FORA = ['xminim', 'xalarme',", ('p3c',)),
     ('a posição sem «onde estamos»', r"'onde estou', 'onde estamos', ", r"'onde estou', ", ('p3c',)),
-    ('a posição sem rumo, COG e «quantos nós»', r"' rumo', ' cog ', ' sog ', 'quantos nos', 'velocidade'])) return 'posicao';", r"'velocidade'])) return 'posicao';", ('p3c',)),
+    ('a posição sem rumo, COG e «quantos nós»', r"' rumo', ' cog ', ' sog ', 'quantos nos', 'milhas por hora', 'velocidade'])) return 'posicao';", r"'milhas por hora', 'velocidade'])) return 'posicao';", ('p3c',)),
     ('o alarme sem «tem algum alerta»', r"    new RegExp(' (?:tem|ha|existe|existem|temos) (?:algum |alguns )?(?:alarmes?|alertas?)' + FIM_ALARME + ' $'),", r"", ('p3c',)),
     ('o alarme pega «o alarme disparou»', r"/ alarmes? (?:esta |estao )?(?:tocando|soando) /", r"/ alarmes? (?:esta |estao )?(?:tocando|soando|disparou) /", ('p3c',)),
     ('a temperatura do motor pega o alarme (sem «alarme» na lista de fora)', r"var ARREF_FORA = ['alarme', 'alerta', ", r"var ARREF_FORA = ['xalarme', 'alerta', ", ('p3c',)),
     ('as ondas pegam o relato (sem a lista de fora)', r"if (has(q, ONDAS_PALAVRAS) && !has(q, ONDAS_FORA)) return 'ondas';", r"if (has(q, ONDAS_PALAVRAS)) return 'ondas';", ('p3c',)),
     ('a temperatura da água pega a «subindo» do relato', r"var AGUA_FORA = ['motor', 'arrefec', 'subindo',", r"var AGUA_FORA = ['motor', 'arrefec', 'xsubindo',", ('p3c',)),
     ('a navegação pega «como estamos de diesel» (a forma curta sem o fim ancorado)', r"(?: agora| por ai| a bordo| ai)? $/;", r"(?: agora| por ai| a bordo| ai)?/;", ('p3c',)),
-    ('as pessoas pegam o relato com número', r"if (has(q, PESSOAS_PALAVRAS) && !/\d/.test(q)) return 'pessoas';", r"if (has(q, PESSOAS_PALAVRAS)) return 'pessoas';", ('p3c',)),
+    ('as pessoas pegam o relato com número', r"if (has(q, PESSOAS_PALAVRAS) && !/\d/.test(q) && !has(q, EMB_OUTRA) && !has(q, [' cabem ', ' cabe '])) return 'pessoas';", r"if (has(q, PESSOAS_PALAVRAS) && !has(q, EMB_OUTRA) && !has(q, [' cabem ', ' cabe '])) return 'pessoas';", ('p3c',)),
     ('a embarcação sem «calado»', r"var EMB_PALAVRAS = [' calado', ", r"var EMB_PALAVRAS = [", ('p3c',)),
-    ('a embarcação pega o deslocamento do Seakeeper (sem a guarda do equipamento)', r"if (has(q, EMB_PALAVRAS) && !has(q, EQUIP)) return 'embarcacao';", r"if (has(q, EMB_PALAVRAS)) return 'embarcacao';", ('p3c',)),
+    ('a embarcação pega o deslocamento do Seakeeper (sem a guarda do equipamento)', r"if (!has(q, EMB_PALAVRAS) || has(q, EQUIP) || has(q, EMB_OUTRA)) return false;", r"if (!has(q, EMB_PALAVRAS) || has(q, EMB_OUTRA)) return false;", ('p3c',)),
     ('o AIS de status vai ao guia (sem a lista de status)', r"var AIS_STATUS = /\b(?:quantos?|", r"var AIS_STATUS = /\b(?:xquantos?|", ('p3c',)),
     ('o AIS sai da lista das respostas prontas de equipamento (a pergunta de guia fica na resposta)', r"porao: 1, ancora: 1, ais: 1, manual: 1", r"porao: 1, ancora: 1, manual: 1", ('p3c',)),
     # —— o texto de cada resposta (grupo p3c: o texto esperado do instante) ——
@@ -3425,6 +3489,53 @@ MUTANTES_3C = [
     ('o alarme do quadro sem a CapitaoAlertas perde a hora desde', r"hora: isFinite(ms) ? F.hora(ms, true) : '', passos:", r"hora: '', passos:", ('p3c_dados',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3C
+
+# Revisão da P3C: um mutante por guarda das rotas novas (cada um tem de ser acusado pelo grupo p3c; o do SOS, pelo p3c_dados)
+MUTANTES_3C_REV = [
+    # —— a navegação só é a pergunta inteira ——
+    ('a navegação pega «situação atual do gerador» (a frase solta, sem o fim ancorado)', r"|neste momento|por ai|ai))* $/;", r"|neste momento|por ai|ai))* /;", ('p3c',)),
+    ('a navegação pega o piloto automático (sem a lista de fora)', r"(has(q, NAVEGACAO_PALAVRAS) && !has(q, NAVEGACAO_FORA))", r"has(q, NAVEGACAO_PALAVRAS)", ('p3c',)),
+    # —— o cadastro do barco não responde por outra coisa a bordo ——
+    ('a embarcação pega a âncora do barco (sem a lista de outras coisas)', r"if (!has(q, EMB_PALAVRAS) || has(q, EQUIP) || has(q, EMB_OUTRA)) return false;", r"if (!has(q, EMB_PALAVRAS) || has(q, EQUIP)) return false;", ('p3c',)),
+    ('a embarcação pega o comprimento da sonda (sem a regra do que sobra na pergunta)', r"return q.trim().split(' ').every(function (w) { return EMB_RESTO_OK.indexOf(' ' + w + ' ') !== -1; });", r"return true;", ('p3c',)),
+    ('as pessoas pegam a lotação do bote (sem a guarda)', r" && !has(q, EMB_OUTRA) && !has(q, [' cabem ', ' cabe '])) return 'pessoas';", r") return 'pessoas';", ('p3c',)),
+    # —— a temperatura do motor e da água ——
+    ('a temperatura do motor pega o gerador e o Seakeeper (sem a lista de outros equipamentos)', r"&& !has(q, ARREF_FORA) && !has(q, ARREF_OUTRO); }", r"&& !has(q, ARREF_FORA); }", ('p3c',)),
+    ('a temperatura da água pega a do Seakeeper (sem os equipamentos na lista de fora)', r"].concat(EQUIP, EMB_OUTRA, ['geladeira', 'freezer', 'giroscop', 'escapamento', 'turbo', 'cabine', 'banheiro']);", r"]);", ('p3c',)),
+    ('a temperatura da água pega a que caiu (o relato)', r"'quente demais', 'caiu', 'caindo', ' cai ', 'baixou', 'baixando', 'esfriou', 'esfriando',", r"'quente demais',", ('p3c',)),
+    # —— o alarme que soa e o que tem lugar ——
+    ('o alarme que soa vira «nenhum alarme ativo» (a falsa tranquilização)', r"soa = alarmeSoando(qq || '')", r"soa = false", ('p3c',)),
+    ('o alarme de um lugar ou equipamento volta à rota dos alarmes (sem a lista de fora)', r"|| ALARME_SOANDO.test(q)) && !has(q, ALARME_FORA); }", r"|| ALARME_SOANDO.test(q)); }", ('p3c',)),
+    ('o resgate que se espera vira a chegada da rota', r"'cadastr', 'resgate', 'socorro',", r"'cadastr', 'xresgate', 'socorro',", ('p3c',)),
+    # —— o ETA e a profundidade ——
+    ('o procedimento do waypoint volta à chegada (sem o «como», o «criar»…)', r"'litro', 'galao', 'onde fica', 'botao', 'menu', 'como ', 'criar', 'salvar', 'marcar', 'inserir', 'cadastr',", r"'litro', 'galao',", ('p3c',)),
+    ('as milhas por litro voltam à chegada', r"'litro', 'galao', 'onde fica',", r"'xlitro', 'xgalao', 'onde fica',", ('p3c',)),
+    ('«quantas milhas» sozinho volta a ser a chegada', r"'quantas milhas faltam', 'quantas milhas falta',", r"'quantas milhas', 'quantas milhas faltam', 'quantas milhas falta',", ('p3c',)),
+    ('as milhas por hora saem da posição', r"' cog ', ' sog ', 'quantos nos', 'milhas por hora', 'velocidade'])) return 'posicao';", r"' cog ', ' sog ', 'quantos nos', 'velocidade'])) return 'posicao';", ('p3c',)),
+    ('a profundidade pega a do porão e a do fundeio (sem porão, tanque e fundeio na lista de fora)', r"'porao', 'tanque', 'fundeio',", r"'xporao', 'xtanque', 'xfundeio',", ('p3c',)),
+    ('a profundidade pega a da corrente e da âncora (sem a lista de fora)', r"'corrente', 'ancora', 'aguenta', 'transdutor', 'defeit',", r"'xcorrente', 'xancora', 'xaguenta', 'xtransdutor', 'defeit',", ('p3c',)),
+    ('a profundidade pega o relato de falha do sensor (sem a lista de fora)', r"'falha', 'funcion', 'erro', 'zerad', 'quebr', 'desligad', 'travad', 'errad', 'incorret', 'estranh', 'oscil', 'pulando',", r"'xfalha', 'xfuncion', 'xerro', 'xzerad', 'xquebr', 'xdesligad', 'xtravad', 'xerrad', 'xincorret', 'xestranh', 'xoscil', 'xpulando',", ('p3c',)),
+    ('a profundidade pega a negativa («não estou vendo»)', r"'onde fica', 'nao ',", r"'onde fica',", ('p3c',)),
+    ('a profundidade pega a de outro lugar (sem marina, rio, canal…)', r"' marina', ' rio ', ' canal', ' barra', ' porto', ' praia', ' cais', ' ilha', ' enseada', ' baia'];", r"'xmarina'];", ('p3c',)),
+    # —— o câmbio, o jogo e a bolsa de bordo ——
+    ('o câmbio do barco (a reversora) vira dinheiro', r"(has(q, ['cambio']) && !has(q, CAMBIO_BORDO))", r"has(q, ['cambio'])", ('p3c',)),
+    ('o câmbio sai do foraBarco', r"|| (has(q, ['cambio']) && !has(q, CAMBIO_BORDO))", r"", ('p3c',)),
+    ('o jogo do barco (o balanço) vira esporte', r"(has(q, [' jogo ', ' jogos ']) && !has(q, JOGO_BORDO))", r"has(q, [' jogo ', ' jogos '])", ('p3c',)),
+    ('o jogo sai do foraBarco', r"|| (has(q, [' jogo ', ' jogos ']) && !has(q, JOGO_BORDO))", r"", ('p3c',)),
+    ('a bolsa de bordo vira dinheiro', r"(has(q, ['bolsa']) && !has(q, BOLSA_BORDO))", r"has(q, ['bolsa'])", ('p3c',)),
+    ('a bolsa sai do foraBarco', r"|| (has(q, ['bolsa']) && !has(q, BOLSA_BORDO))", r"", ('p3c',)),
+    # —— a sobreDados: «real» como medida não é a pergunta ——
+    ('a sobreDados pega «diesel real» (o «real» sem o predicado)', r"(has(q, AUT_AMBIGUA) && !has(q, ['aparente', 'magnetic']) && AUT_PREDICADO.test(q))", r"has(q, AUT_AMBIGUA)", ('p3c',)),
+    ('a sobreDados pega «o vento é verdadeiro ou aparente?»', r"!has(q, ['aparente', 'magnetic']) && ", r"", ('p3c',)),
+    ('a sobreDados sem a lancha, o Capitão IA e você como alvo', r"    ' lancha ', ' lanchas ', ' voce ', ' vc ', ' capitao ', ' ia ', ' sistema ',", r"    ' sistema ',", ('p3c',)),
+    ('a sobreDados sem o diesel, a velocidade e o consumo como alvo', "' informacoes ', ' diesel ', ' combustivel ', ' velocidade ', ' rumo ', ' vento ', ' ondas ', ' profundidade ',\n    ' consumo ', ' autonomia ', ' temperatura ', ' calado ', ' horimetros '];", "' informacoes '];", ('p3c',)),
+    ('a sobreDados sem «esse barco existe»', r"' esse barco existe ', ' este barco existe ', ' a lancha existe ', ' essa lancha existe ', ' essa embarcacao existe ', ' existe de verdade ', ' voce existe '];", r"' isso existe '];", ('p3c',)),
+    ('a sobreDados sem «simulam»', r"' simulam ', ' simula ', ' simulou ', ", r"", ('p3c',)),
+    # —— o SOS não lê o cadastro de equipamentos nem o calado ——
+    ('o AIS do SOS lê o cadastro de equipamentos', r"      if (EM_SOS) return { text: 'AIS: os alvos aparecem no plotter, com nome, rumo e velocidade.', src: 'Fonte: Guia de bordo — AIS §1', actions: [] };   // no SOS o cérebro não lê o cadastro de equipamentos nem o quadro" + "\n", r"", ('p3c_dados',)),
+    ('a profundidade do SOS mostra o calado do cadastro', r"cal = EM_SOS ? null : E.calado;", r"cal = E.calado;", ('p3c_dados',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3C_REV
 
 
 def instante_3a(b):
