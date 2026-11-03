@@ -663,6 +663,53 @@ ROTAS_P3C_REV3 = [
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV3]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV3})
 
+# Revisão 4 da P3C. (1) «preço» é palavra inteira: «preconizado» e «precoce» são de bordo, não de dinheiro. (2) A frase de apresentação só responde à pergunta sobre os dados e mais nada (lista branca): o «preciso», o «é sério» e o
+# «é urgente» dentro da pergunta continuam sendo ela; o relato de falha ou de perigo junto dela segue a rota dele. (3) «Correr risco» em toda flexão e o pedido de ajuda no plural ou sem complemento são socorro (rota sos).
+# (4) O AIS só responde a pergunta neutra do status; «o AIS parou» segue o guia ou a IA. (5) A chegada responde a «quando chegamos?», «já chegamos?», «em quanto tempo chegamos?»; «quanto tempo falta?» sozinho segue não sendo a
+# chegada. (6) A profundidade responde «quanto de fundo tem?», «qual o fundo?», «sonda»; a válvula de fundo não. (7) A 1ª linha de «quanto falta para a troca de óleo?» diz o quanto falta; a de «o vento a bordo agora» é o vento do quadro.
+SOBRE_DADOS_SIM_REV4 = [
+    'preciso saber se isso é real', 'eu preciso saber se os dados são reais', 'precisamos saber se o barco é de verdade', 'preciso confirmar: esses dados são simulados?', 'é sério, isso é real?',
+    'é sério que isso é uma simulação?', 'isso é real? é urgente', 'urgente: os dados são reais?', 'os dados são simulados? preciso para o relatório', 'esses dados são reais? preciso decidir se saio',
+    'quero saber se os dados são reais', 'queria saber se isso é real', 'gostaria de saber se o barco é de verdade', 'isso é um ambiente de demonstração?', 'isso não é real, né?', 'estes dados são verdadeiros?']
+ROTAS_P3C_REV4 = [(q, 'sobreDados', False) for q in SOBRE_DADOS_SIM_REV4] + [
+    # «preço» com fronteira de palavra: o intervalo preconizado e o desgaste precoce são de bordo (guia ou IA), não de dinheiro
+    ('qual o intervalo de troca preconizado pelo fabricante?', 'fallback', True), ('desgaste precoce do rotor', 'fallback', True), ('o desgaste precoce do impeller', 'fallback', True),
+    ('falha precoce do alternador', 'fallback', True), ('qual a pressão preconizada dos pneus do bote?', 'fallback', True), ('corrosão precoce no casco', 'fallback', True),
+    ('o filtro está com desgaste precoce', 'fallback', True), ('como evitar falha precoce da hélice', 'fallback', True), ('o que fazer com desgaste precoce das buchas', 'fallback', True),
+    ('quais os preços?', 'foraBarco', False), ('qual o preço do dólar?', 'foraBarco', False), ('preço do bitcoin', 'foraBarco', False), ('qual o preço do diesel hoje?', 'autonomia', False),
+    # a sobreDados não responde a relato de falha ou de perigo (lista branca): a rota do assunto, o guia ou a IA
+    ('o motor parou, os dados são reais?', 'motores', False), ('tem muita água no barco, isso é real?', 'fallback', True), ('o bote virou, isso é real?', 'fallback', True),
+    ('estamos perdidos, isso é real?', 'fallback', True), ('vamos morrer, isso é real?', 'fallback', True), ('pelo amor de Deus, isso é real?', 'fallback', True),
+    ('a situação é grave, os dados são reais?', 'fallback', True), ('tem um problema grave a bordo, isso é real?', 'fallback', True), ('a água está subindo, isso é real?', 'base', False),
+    ('o alarme não para, isso é real?', 'fallback', True), ('não tem mais diesel, os dados são reais?', 'autonomia', False),
+    # socorro: correr risco em toda flexão (com o «de <perigo de bordo>»), o pedido de ajuda no plural ou sem complemento; a rotina e o menu ficam como antes
+    ('estamos correndo risco', 'sos', False), ('o barco corre risco', 'sos', False), ('a lancha corre risco de vida', 'sos', False), ('estamos correndo risco de afundar', 'sos', False),
+    ('o barco corre risco de encalhar', 'sos', False), ('corremos risco de morrer', 'sos', False), ('corremos risco de alagar', 'sos', False), ('o barco corre risco de virar', 'sos', False),
+    ('estamos correndo risco de chuva', 'clima', False), ('o filtro corre risco de entupir', 'fallback', True),
+    ('me ajudem', 'sos', False), ('ajudem', 'sos', False), ('alguém me ajuda', 'sos', False), ('alguém me ajude', 'sos', False), ('pelo amor de Deus, ajuda', 'sos', False),
+    ('ajuda', 'saudacao', True), ('alguém me ajuda a trocar o óleo', 'saudacao', True), ('pelo amor de Deus, qual a temperatura do motor?', 'base', True),
+    # AIS: só a pergunta neutra do status; o relato de falha segue o guia ou a IA, nunca a contagem de alvos
+    ('qual o transponder do AIS?', 'base', True), ('o AIS não funciona', 'fallback', True), ('o AIS parou', 'fallback', True), ('o AIS está desligado', 'fallback', True), ('o AIS apagou', 'fallback', True), ('o AIS está com falha', 'fallback', True),
+    ('sem sinal do AIS', 'fallback', True), ('o AIS não está recebendo nada', 'fallback', True), ('o AIS está ligado?', 'ais', False), ('qual a situação do AIS?', 'ais', False), ('o AIS está funcionando?', 'ais', False),
+    # a chegada em todo jeito natural de perguntar (e o que continua fora dela)
+    ('quando chegamos?', 'eta', False), ('quando vamos chegar?', 'eta', False), ('quando a gente chega?', 'eta', False), ('vamos chegar a que horas?', 'eta', False), ('em quanto tempo chegamos?', 'eta', False),
+    ('falta muito para chegar?', 'eta', False), ('já chegamos?', 'eta', False), ('estamos chegando?', 'eta', False), ('quanto falta pra base?', 'eta', False), ('quanto falta pra marina?', 'eta', False),
+    ('quando chegamos na Barra Sul?', 'eta', False), ('quantas milhas já navegamos?', 'eta', False),
+    ('quanto tempo falta?', 'fallback', True), ('falta muito?', 'base', True), ('quanto falta para a base de dados?', 'fallback', True),
+    ('em que rumo estamos?', 'posicao', False), ('tem onda?', 'ondas', False), ('como estamos indo?', 'navegacao', False),
+    # a profundidade no jeito de bordo (e a válvula de fundo, o fundo do casco e o relato da sonda, que não são ela)
+    ('quanto de fundo tem aqui?', 'profundidade', False), ('quanto de fundo tem?', 'profundidade', False), ('qual o fundo?', 'profundidade', False), ('fundo', 'profundidade', False), ('sonda', 'profundidade', False),
+    ('tem pouco fundo?', 'profundidade', False), ('tem muito fundo aqui?', 'profundidade', False), ('feche a válvula de fundo', 'base', True), ('fundo do casco', 'fallback', True),
+    ('a sonda marca 2 metros', 'base', True),
+    # as horas que faltam (a troca de óleo dos motores); o filtro de água salgada, a revisão anual e o rotor do gerador são de outra tarefa
+    ('quanto falta para trocar o filtro?', 'horimetros', False), ('quanto falta para a troca do óleo do motor?', 'horimetros', False), ('falta muito para a troca de óleo?', 'horimetros', False),
+    ('quanto falta para trocar o filtro de água salgada?', 'base', True), ('quanto falta para a revisão anual dos motores?', 'motores', False), ('quanto falta para o rotor do gerador?', 'base', True),
+    # o vento a bordo (e o relato do vento forte, que segue a previsão primeiro)
+    ('qual o vento a bordo agora?', 'clima', False), ('qual o vento aparente?', 'clima', False), ('o vento está forte agora', 'clima', False), ('qual o vento hoje?', 'clima', False),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV4]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV4})
+
 # O relato com número ou estado NÃO é a pergunta da leitura: nenhuma destas perguntas pode voltar «dentro da faixa normal», «Profundidade de 10,8 m», «Ondas de 0,8 m» nem a água do mar a 20 °C
 # (trava 10: relato de falha sem leitura calma). Vão ao guia, ao fallback, à IA ou à rota do assunto (não importa qual; importa que não seja a leitura).
 RELATOS_P3C = [
@@ -3034,13 +3081,17 @@ P3C_PERGUNTAS = {
     'arref': 'qual a temperatura do motor?', 'ondas': 'como está o estado do mar?', 'agua': 'qual a temperatura da água?', 'nav': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?',
     'calado': 'qual o calado do barco?', 'compr': 'qual o comprimento?', 'boca': 'qual a boca do barco?', 'lotacao': 'qual a lotação?', 'registro': 'qual o registro do barco?', 'modelo': 'qual o modelo do barco?',
     'dim': 'dimensões do barco', 'mmsi': 'qual o MMSI do barco?', 'ais': 'quantos alvos no AIS?', 'sobre': 'esses dados são reais?', 'fora': 'qual o preço do dólar?',
+    # revisão 4: a chegada em outro ponto da rota, as horas que faltam, o vento a bordo e o fundo no jeito de bordo
+    'etaEst': 'quanto falta para o Estaleirinho?', 'etaBarra': 'quanto falta para a Barra Sul?', 'etaCabras': 'quanto falta para a Ilha das Cabras?', 'etaLaranj': 'quanto falta para a Ponta das Laranjeiras?',
+    'etaQuando': 'quando chegamos?', 'faltaOleo': 'quanto falta para a troca de óleo?', 'faltaGer': 'quanto falta para a revisão do gerador?',
+    'vento': 'qual o vento a bordo agora?', 'ventoAp': 'qual o vento aparente?', 'ventoDois': 'o vento é verdadeiro ou aparente?', 'ventoForte': 'o vento está forte agora', 'fundo': 'quanto de fundo tem aqui?',
 }
 JS_P3C = """([xs, qs]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, A = window.CapitaoAgora, op = { platform: 'app', commit: false };
   const r = (q) => { const a = B.answer(q, op); return { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, q), acoes: a.actions || [] }; };
   const ais = (D.equipamentos || []).filter((e) => e.id === 'ais')[0] || {};
   return { E: D.embarcacao, sobre: B.SOBRE_DADOS, ais: [ais.nome, ais.fabricante, ais.modelo].join(' '), cat: (D.replay && D.replay.alertas) || {}, ate: D.replay && D.replay.limites && D.replay.limites.motor_bb_arref_c.normal.ate,
     r: xs.map((x) => { R.fixar(x); const i = B.instante();
-      return { x, hora: i.hora, q: i.q, txt: i.txt, tend: i.tend, campos: { destino_mn: A.fmt.campo(i.q, 'destino_mn'), wp_mn: A.fmt.campo(i.q, 'wp_mn'), distancia_mn: A.fmt.campo(i.q, 'distancia_mn') },
+      return { x, hora: i.hora, q: i.q, txt: i.txt, tend: i.tend, ag: (D.agenda || []).reduce((o, t) => { o[t.id] = { vence: t.vence, limite: t.horas && t.horas.limite }; return o; }, {}), falt: (i.calc && i.calc.faltam) || {}, campos: { destino_mn: A.fmt.campo(i.q, 'destino_mn'), wp_mn: A.fmt.campo(i.q, 'wp_mn'), distancia_mn: A.fmt.campo(i.q, 'distancia_mn') },
                r: Object.keys(qs).reduce((o, k) => { o[k] = r(qs[k]); return o; }, {}) }; }) }; }"""
 JS_P3C_CHAVES = """(casos) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false };
   return casos.map(([q]) => { const a = B.answer(q, op); return [a.key, B.pedeIA(a, q)]; }); }"""
@@ -3071,17 +3122,39 @@ RELATOS_CALMA = ['o motor parou', 'pane no motor', 'a bomba de porão parou', 'a
                  'o alarme disparou sem motivo', 'o motor superaqueceu', 'a pressão do óleo caiu', 'o tender soltou', 'o cabo da âncora arrebentou', 'a corrente da âncora enroscou', 'o bote furou',
                  'o rádio ficou mudo', 'o VHF não transmite', 'a luz de navegação queimou', 'o painel apagou', 'o inversor desarmou', 'o motor BB morreu', 'a bomba do porão não liga',
                  'tem barulho estranho no motor', 'sentimos uma batida no casco', 'o barco encostou no fundo', 'perdemos o motor', 'o motor está engasgando', 'o barco está pesado de popa',
-                 'o diesel está acabando', 'o tanque está vazando', 'o transdutor soltou', 'estamos sem energia', 'o piloto perdeu o rumo', 'o motor travou', 'o rádio caiu', 'o eixo está esquentando']
+                 'o diesel está acabando', 'o tanque está vazando', 'o transdutor soltou', 'estamos sem energia', 'o piloto perdeu o rumo', 'o motor travou', 'o rádio caiu', 'o eixo está esquentando',
+                 # revisão 4: o relato de perigo e o de falha do AIS e dos instrumentos que a lista branca da sobreDados e a do AIS têm de deixar de fora
+                 'tem muita água no barco', 'o bote virou', 'estamos perdidos', 'vamos morrer', 'pelo amor de Deus', 'a situação é grave', 'tem um problema grave a bordo', 'a água está subindo',
+                 'o motor morreu', 'estamos à deriva', 'o barco está afundando', 'estamos encalhados', 'o casco rachou', 'tem fumaça no motor', 'o leme travou', 'perdemos o leme', 'o bote soltou',
+                 'a âncora arrastou', 'não tem mais diesel', 'o diesel acabou', 'o gerador falhou', 'a bateria morreu', 'estamos sem rádio', 'o radar parou', 'o AIS apagou', 'o AIS está desligado',
+                 'sem sinal do AIS', 'o AIS não funciona', 'o AIS está com falha', 'o AIS não está recebendo nada', 'a sonda marca 2 metros', 'a profundidade está caindo', 'o motor está superaquecendo',
+                 'a temperatura do motor está em 110', 'um tripulante caiu', 'alguém está ferido', 'o barco está adernando', 'estamos tomando água', 'o porão está cheio', 'senti um cheiro de queimado',
+                 'tem faísca no painel', 'a hélice quebrou', 'o eixo quebrou', 'o piloto automático falhou', 'o plotter apagou', 'estamos com medo', 'não sei onde estamos', 'o barco está descontrolado',
+                 # (o desgaste precoce e o intervalo preconizado têm o «preco» dentro: nunca são o foraBarco)
+                 'o rotor tem desgaste precoce', 'a falha precoce do alternador', 'o intervalo preconizado já passou']
 CAUDAS_CALMA = ['qual o ETA?', 'quanto falta para chegar?', 'qual o próximo waypoint?', 'quais alarmes ativos?', 'quantas pessoas a bordo?', 'como está a navegação?', 'situação agora', 'qual o calado do barco?',
                 'qual o comprimento do barco?', 'qual o rumo?', 'qual o COG?', 'quantos nós?', 'onde estamos?', 'qual a profundidade?', 'qual a temperatura do motor?', 'como está o mar?',
-                'qual a temperatura da água?', 'qual a distância até o destino?', 'tem algum alarme ativo?', 'qual o MMSI do barco?']
-CALMAS_P3C = ('eta', 'posicao', 'alarmes', 'pessoas', 'navegacao', 'embarcacao', 'profundidade', 'arrefecimento', 'ondas', 'temperaturaAgua')
+                'qual a temperatura da água?', 'qual a distância até o destino?', 'tem algum alarme ativo?', 'qual o MMSI do barco?',
+                # revisão 4: a pergunta sobre os dados (sobreDados), a do AIS e a chegada do jeito de bordo, depois e antes do relato
+                'os dados são reais?', 'isso é real?', 'isso é simulado?', 'é sério, isso é real?', 'qual a situação do AIS?', 'quantos alvos no AIS?', 'quando chegamos?', 'qual o fundo?', 'quanto falta para a troca de óleo?']
+CALMAS_P3C = ('eta', 'posicao', 'alarmes', 'pessoas', 'navegacao', 'embarcacao', 'profundidade', 'arrefecimento', 'ondas', 'temperaturaAgua', 'ais', 'sobreDados', 'horimetros', 'foraBarco')
 RELATO_PARES = [p for r in RELATOS_CALMA for c in CAUDAS_CALMA for p in (r + ', ' + c, c.rstrip('?') + ', ' + r)]
 # Propriedade (revisão 3, socorro): {pedido de ajuda, de risco ou «não é um teste» que a lista SOS não pega} × {pergunta com palavra da rota nova ou da sobreDados}: nunca a leitura calma nem a frase de apresentação
 SOCORRO_FRASES = ['preciso de ajuda', 'estamos em risco', 'isso não é um teste', 'não é brincadeira, preciso de ajuda', 'é sério, preciso de ajuda', 'isso é real, preciso de ajuda', 'preciso de resgate',
                   'necessito de ajuda', 'precisamos de ajuda', 'o barco está em risco', 'não é um teste', 'estou em apuros']
 CAUDAS_SOCORRO = [c for c in CAUDAS_CALMA if 'MMSI' not in c] + ['os dados são reais?', 'isso é real?', 'isso é simulado?', 'quantas pessoas estão a bordo?', 'qual a hora de chegada?', 'qual a posição?']
 SOCORRO_PARES = [p for f in SOCORRO_FRASES for c in CAUDAS_SOCORRO for p in (f + ', ' + c, c.rstrip('?') + ', ' + f)]
+
+
+def nc(s):
+    """O nome sem acento, em minúscula, sem o que vem entre parênteses (a comparação do ponto da rota: «Barra Sul (base)» = «barra sul»)."""
+    import unicodedata
+    t = re.sub(r'\s*\(.*?\)', '', str(s or '')).strip().lower()
+    return ''.join(ch for ch in unicodedata.normalize('NFD', t) if unicodedata.category(ch) != 'Mn')
+
+
+def mil_py(x):
+    return ('%d' % round(x)).replace(',', '') if x < 1000 else '{:,}'.format(int(round(x))).replace(',', '.')
 
 
 def sinal_tend(v):
@@ -3105,7 +3178,7 @@ def grupo_p3c(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         # (1) a chave e o PEDE_IA de cada pergunta: as rotas novas respondem no aparelho e não roubam as vizinhas
-        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3
+        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3 + ROTAS_P3C_REV4
         res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in todas])
         ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(todas, res) if key != esp or ia != ia_esp]
         ped('p3c: as %d perguntas das rotas novas (e as que elas não podem roubar) caem na chave certa e com o PEDE_IA certo' % len(todas), not ruins, ruins[:6])
@@ -3245,6 +3318,32 @@ def grupo_p3c(b, muta, ped):
             ped('p3c %s: a voz de cada rota nova é a 1ª linha da resposta, sem parênteses' % no, not ruins, [(k, r[k]['fala'][:80]) for k in ruins])
             ruins = [k for k, v in r.items() if k not in ('mmsi', 'sobre') and h not in v['text'] + '\n' + v['src']]
             ped('p3c %s: toda resposta nova de dado de bordo traz a hora do instante' % no, not ruins, ruins)
+            # revisão 4 — a chegada em outro ponto: o ponto citado que não é o destino nem o próximo ponto NÃO recebe a chegada de outro lugar; o destino e o próximo ponto seguem a resposta de antes
+            def esperado_eta(alvo, nome):
+                if nc(q['destino']) == alvo:
+                    return 'Chegada prevista em %s às %s, a %s mn — %s.' % (q['destino'], q['eta'], c['destino_mn'], h)
+                if nc(q.get('wp_proximo')) == alvo:
+                    return 'Próximo ponto: %s, a %s mn — %s.' % (q['wp_proximo'], c['wp_mn'], h)
+                return 'O destino agora é %s, com chegada prevista às %s, a %s mn; %s não é o destino nem o próximo ponto — %s.' % (q['destino'], q['eta'], c['destino_mn'], nome, h)
+            ruins = {k: l(k)[0] for k, alvo, nome in (('etaEst', 'estaleirinho', 'Estaleirinho'), ('etaBarra', 'barra sul', 'Barra Sul'), ('etaCabras', 'ilha das cabras', 'Ilha das Cabras'),
+                                                     ('etaLaranj', 'ponta das laranjeiras', 'Ponta das Laranjeiras')) if l(k)[0] != esperado_eta(alvo, nome)
+                     or (l(k)[0].startswith('O destino agora é ') != (l(k)[-1] == 'O app calcula a chegada só no destino e no próximo ponto da rota.'))}
+            ped('p3c %s: «quanto falta para <ponto>?» nunca dá a chegada de OUTRO ponto como se fosse a do citado (o destino e o próximo ponto são os de antes; os demais dizem que não são o destino nem o próximo ponto)' % no, not ruins, ruins)
+            ped('p3c %s: «quando chegamos?» é a chegada prevista (a mesma resposta de «qual a hora de chegada?»)' % no, l('etaQuando')[0] == l('eta')[0] and r['etaQuando']['key'] == 'eta', l('etaQuando'))
+            # revisão 4 — as horas que faltam: a 1ª linha (a falada) diz o quanto falta, com o limite, a data e a hora
+            def faltam_txt(id_, nome):
+                return 'Faltam %s h para %s (limite de %s h) ou até %s, o que vier antes — %s.' % (nbr(x['falt'][id_], 1), nome, mil_py(x['ag'][id_]['limite']), x['ag'][id_]['vence'], h)
+            ped('p3c %s: «quanto falta para a troca de óleo?» abre com as horas que faltam (do instante), o limite, a data e a hora; a revisão do gerador, igual' % no,
+                l('faltaOleo')[0] == faltam_txt('motores-oleo', 'a troca de óleo e filtros dos motores') and r['faltaOleo']['fala'] == sem_par(l('faltaOleo')[0]) and l('faltaOleo')[1].startswith('Horímetros às ')
+                and l('faltaGer')[0] == faltam_txt('gerador-revisao', 'a revisão de óleo e filtros do gerador') and r['faltaGer']['fala'] == sem_par(l('faltaGer')[0]) and r['faltaGer']['key'] == 'gerador',
+                (l('faltaOleo')[:2], l('faltaGer')[:2]))
+            # revisão 4 — o vento a bordo: a 1ª linha é o vento do quadro «a bordo agora», nunca a previsão; a pergunta de previsão (e o relato) seguem a previsão primeiro
+            ped('p3c %s: «o vento a bordo agora» abre com o vento verdadeiro do quadro e a hora (o aparente na linha seguinte); «vento aparente», com o aparente; «verdadeiro ou aparente», com os dois' % no,
+                l('vento')[0] == 'A bordo agora, vento verdadeiro %s — %s.' % (t['vento'], h) and l('vento')[1] == 'Vento aparente %s.' % t['ventoAp'] and r['vento']['fala'] == l('vento')[0]
+                and l('ventoAp')[0] == 'A bordo agora, vento aparente %s — %s.' % (t['ventoAp'], h) and l('ventoAp')[1] == 'Vento verdadeiro %s.' % t['vento']
+                and l('ventoDois')[0] == 'A bordo agora, vento verdadeiro %s e aparente %s — %s.' % (t['vento'], t['ventoAp'], h) and 'Previsão' not in l('vento')[0], (l('vento')[:2], l('ventoAp')[:2], l('ventoDois')[:1]))
+            ped('p3c %s: «o vento está forte agora» (relato) segue a previsão primeiro, não o vento do quadro na 1ª linha' % no, not l('ventoForte')[0].startswith('A bordo agora, vento') and r['ventoForte']['key'] == 'clima', l('ventoForte')[:2])
+            ped('p3c %s: «quanto de fundo tem aqui?» é a profundidade do quadro, com a hora' % no, l('fundo')[0] == l('profundidade')[0] and r['fundo']['key'] == 'profundidade', l('fundo'))
     finally:
         pg.ctx.close()
 
@@ -3609,19 +3708,18 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV3
 MUTANTES_3C = [
     # —— a ordem e os gatilhos (grupo p3c: a tabela ROTAS_P3C) ——
     ('a pergunta do MMSI volta ao canal16', r"if (has(q, ['mmsi'])) return mmsiRota(q);", r"if (has(q, ['mmsi'])) return 'canal16';", ('p3c',)),
-    ('o AIS volta ao canal16 (sem a rota própria)', r"if (has(q, [' ais ']) && !seg) return 'ais';", r"if (has(q, [' ais ']) && !seg) return 'canal16';", ('p3c',)),
+    ('o AIS volta ao canal16 (sem a rota própria)', r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';", r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'canal16';", ('p3c',)),
     ('a sobreDados sai da route()', r"    if (sobreDados(q)) return 'sobreDados';", r"", ('p3c',)),
     ('o foraBarco antes das rotas de bordo («quanto custa o diesel em reais?» deixa de ser o diesel)', r"if (sobreDados(q)) return 'sobreDados';", r"if (sobreDados(q)) return 'sobreDados'; if (has(q, FORA_BARCO)) return 'foraBarco';", ('p3c',)),
-    ('o foraBarco sem «dolar»', r"var FORA_BARCO = ['dolar', ", r"var FORA_BARCO = [", ('p3c',)),
-    ('o foraBarco sem «preco»', r"'bitcoin', 'preco', 'quanto custa'", r"'bitcoin', 'quanto custa'", ('p3c',)),
+    ('o foraBarco sem «dolar»', r"var FORA_BARCO = [' dolar ', ' dolares ', ", r"var FORA_BARCO = [", ('p3c',)),
+    ('o foraBarco sem «preco»', r"' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' bitcoin ', 'quanto custa'", ('p3c',)),
     ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'foraBarco') return false;", ('p3c',)),
-    ('a sobreDados pega o dinheiro e o equipamento (sem a guarda)', r"if (has(q, AUT_FORA) || has(q, EQUIP) || salvatagem(q) || epirbRelato(q) || eqSeg(q)) return false;", r"", ('p3c',)),
     ('a sobreDados sem a forma curta («é de verdade?»)', r"if (AUT_CURTA.test(q) || AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", r"if (AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", ('p3c',)),
     ('a sobreDados sem «o barco existe»', r"var AUT_EXISTE = [' o barco existe ', ", r"var AUT_EXISTE = [", ('p3c',)),
-    ('o horímetro pega a revisão do gerador (sem a guarda do equipamento)', r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && !has(q, EQUIP)) return 'horimetros';", r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor'])) return 'horimetros';", ('p3c',)),
+    ('o horímetro pega a revisão do gerador e o filtro de água salgada (sem a lista branca)', r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && leitura(q, FALTA_TROCA_OK)) return 'horimetros';", r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor'])) return 'horimetros';", ('p3c',)),
     ('«quanto falta» pega a troca de óleo (a chegada sem o «junto de»)', r"!(has(q, FALTA_PALAVRAS) && (has(q, FALTA_JUNTO) || has(q, lugaresRota())))) return false;", r"!has(q, FALTA_PALAVRAS)) return false;", ('p3c',)),
-    ('a chegada pega o alcance em milhas (a lista branca aceita «alcance», «autonomia», «diesel»…)', r"var ETA_OK = NEUTRAS_BASE + 'eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'alcance autonomia diesel barco limite acabar eta chegada", ('p3c',)),
-    ('a profundidade pega o alarme e a mínima (sem a lista de palavras neutras)', r"function profundidadePergunta(q) { return has(q, PROFUNDIDADE_PALAVRAS) && soNeutras(q, PROFUNDIDADE_OK); }", r"function profundidadePergunta(q) { return has(q, PROFUNDIDADE_PALAVRAS); }", ('p3c',)),
+    ('a chegada pega o alcance em milhas (a lista branca aceita «alcance», «autonomia», «diesel»…)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos alcance autonomia diesel barco limite acabar eta chegada", ('p3c',)),
+    ('a profundidade pega o alarme e a mínima (sem a lista de palavras neutras)', r"function profundidadePergunta(q) { return (has(q, PROFUNDIDADE_PALAVRAS) && soNeutras(q, PROFUNDIDADE_OK)) || POUCO_FUNDO.test(q); }", r"function profundidadePergunta(q) { return has(q, PROFUNDIDADE_PALAVRAS) || POUCO_FUNDO.test(q); }", ('p3c',)),
     ('a posição sem «onde estamos»', r"var POSICAO_NOVAS = ['onde estamos', ", r"var POSICAO_NOVAS = [", ('p3c',)),
     ('a posição sem rumo, COG e «quantos nós»', r"' rumo ', ' cog ', ' sog ', ' quantos nos ', 'milhas por hora'];", r"'milhas por hora'];", ('p3c',)),
     ('o alarme sem «tem algum alerta»', r"    new RegExp(' (?:tem|ha|existe|existem|temos) (?:algum |alguns )?(?:alarmes?|alertas?)' + FIM_ALARME + ' $'),", r"", ('p3c',)),
@@ -3694,10 +3792,10 @@ MUTANTES_3C_REV = [
     # —— o alarme que soa e o que tem lugar ——
     ('o alarme que soa vira «nenhum alarme ativo» (a falsa tranquilização)', r"soa = alarmeSoando(qq || '')", r"soa = false", ('p3c',)),
     ('o alarme de um lugar ou equipamento volta à rota dos alarmes (a lista neutra aceita «cabine», «Seakeeper»)', r"var ALARMES_OK = NEUTRAS_BASE + 'alarme alarmes", r"var ALARMES_OK = NEUTRAS_BASE + 'cabine seakeeper climatizacao alarme alarmes", ('p3c',)),
-    ('o resgate que se espera vira a chegada da rota (a lista branca aceita «resgate»)', r"var ETA_OK = NEUTRAS_BASE + 'eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'resgate eta chegada", ('p3c',)),
+    ('o resgate que se espera vira a chegada da rota (a lista branca aceita «resgate»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos resgate eta chegada", ('p3c',)),
     # —— o ETA e a profundidade ——
-    ('o procedimento do waypoint volta à chegada (a lista branca aceita «criar», «marcar», «plotter»…)', r"var ETA_OK = NEUTRAS_BASE + 'eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'um uma criar marcar salvar inserir plotter eta chegada", ('p3c',)),
-    ('as milhas por litro voltam à chegada (a lista branca aceita «litro», «galão»)', r"var ETA_OK = NEUTRAS_BASE + 'eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'litro galao eta chegada", ('p3c',)),
+    ('o procedimento do waypoint volta à chegada (a lista branca aceita «criar», «marcar», «plotter»…)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos um uma criar marcar salvar inserir plotter eta chegada", ('p3c',)),
+    ('as milhas por litro voltam à chegada (a lista branca aceita «litro», «galão»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos litro galao eta chegada", ('p3c',)),
     ('«quantas milhas» sozinho volta a ser a chegada', r"'quantas milhas faltam', 'quantas milhas falta',", r"'quantas milhas', 'quantas milhas faltam', 'quantas milhas falta',", ('p3c',)),
     ('as milhas por hora saem da posição', r"' sog ', ' quantos nos ', 'milhas por hora'];", r"' sog ', ' quantos nos '];", ('p3c',)),
     ('a profundidade pega a do porão e a do fundeio (a lista neutra aceita «porão», «tanque» e «fundeio»)', r"neste nesse momento ponto local lugar metros", r"neste nesse momento ponto local lugar metros porao tanque fundeio", ('p3c',)),
@@ -3714,7 +3812,6 @@ MUTANTES_3C_REV = [
     ('a bolsa sai do foraBarco', r"|| (has(q, ['bolsa']) && !has(q, BOLSA_BORDO))", r"", ('p3c',)),
     # —— a sobreDados: «real» como medida não é a pergunta ——
     ('a sobreDados pega «diesel real» (o «real» sem o predicado)', r"return !medidaAut(q) && (AUT_NOME.test(q) || (has(q, AUT_ALVO) && (AUT_PRED.test(q) || AUT_INV.test(q))));", r"return has(q, AUT_ALVO) && has(q, [' real ', ' reais ', ' de verdade ', ' verdadeir']);", ('p3c',)),
-    ('a sobreDados pega «a velocidade é verdadeira ou aparente?»', r"has(q, ['aparente', 'magnetic', 'dolar', 'euro'])", r"has(q, ['dolar', 'euro'])", ('p3c',)),
     ('a sobreDados sem a lancha, o Capitão IA e você como alvo', r"    ' lancha ', ' lanchas ', ' voce ', ' vc ', ' capitao ', ' ia ', ' sistema ',", r"    ' sistema ',", ('p3c',)),
     ('a sobreDados sem o diesel, a velocidade e o consumo como alvo', "' informacoes ', ' diesel ', ' combustivel ', ' velocidade ', ' rumo ', ' vento ', ' ondas ', ' profundidade ',\n    ' consumo ', ' autonomia ', ' temperatura ', ' calado ', ' horimetros '];", "' informacoes '];", ('p3c',)),
     ('a sobreDados sem «esse barco existe»', r"' esse barco existe ', ' este barco existe ', ' a lancha existe ', ' essa lancha existe ', ' essa embarcacao existe ', ' existe de verdade ', ' voce existe '];", r"' isso existe '];", ('p3c',)),
@@ -3746,7 +3843,6 @@ MUTANTES_3C_REV2 = [
     ('a sobreDados pega «os valores são em reais?» (sem a moeda)', r" | (?:em|de|mil|milhoes de) reais ", r" | (?:xem|de|mil|milhoes de) reais ", ('p3c',)),
     ('a sobreDados pega «o rumo é verdadeiro?» (sem o vento e o rumo verdadeiros)', r"(has(q, [' vento', 'rumo', 'norte', ' proa', ' curso ', 'marcacao']) && has(q, [' verdadeir']))", r"false", ('p3c',)),
     ('a sobreDados pega «o vento é real?» (sem o vento real)', r" || (has(q, [' vento']) && has(q, [' real ', ' reais ']));", r";", ('p3c',)),
-    ('a sobreDados pega «canal 16, os dados são reais?» (sem a guarda do equipamento de segurança)', r"salvatagem(q) || epirbRelato(q) || eqSeg(q)) return false;", r"salvatagem(q) || epirbRelato(q)) return false;", ('p3c',)),
     # —— o MMSI com outro assunto junto ——
     ('o MMSI pega o EPIRB (sem o desvio para a rota epirb)', r"    if (epirbRelato(q) || has(q, ['baliza'])) return 'epirb';" "\n", r"", ('p3c',)),
     ('o MMSI pega a baliza (o desvio só para «epirb»)', r"if (epirbRelato(q) || has(q, ['baliza'])) return 'epirb';", r"if (epirbRelato(q)) return 'epirb';", ('p3c',)),
@@ -3758,9 +3854,7 @@ MUTANTES_3C_REV2 = [
     ('o MMSI mostra o número do cadastro na pergunta de programar', r"cad = !EM_SOS && mmsiNeutra(pq);", r"cad = !EM_SOS;", ('p3c',)),
     ('o MMSI sem a linha do indicativo', r"(ind ? ' Indicativo: ' + INDICATIVO + '.' : '')", r"''", ('p3c',)),
     # —— a pergunta mista é do equipamento de segurança ——
-    ('o AIS pega a pergunta mista do rádio (sem a guarda)', r"if (has(q, [' ais ']) && !seg) return 'ais';", r"if (has(q, [' ais '])) return 'ais';", ('p3c',)),
-    ('a pergunta mista não vê o Seafire (o eqSeg sem a rota seafire)', r"return epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG); }", r"return epirbRelato(q) || has(q, CANAL16_SEG); }", ('p3c',)),
-    ('a pergunta mista não vê o canal 16 (o eqSeg sem o rádio)', r"return epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG); }", r"return epirbRelato(q) || seafirePergunta(q); }", ('p3c',)),
+    ('o AIS pega o relato e a pergunta mista do rádio (sem a lista branca)', r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';", r"if (has(q, [' ais '])) return 'ais';", ('p3c',)),
     ('a pergunta mista não vê o «canal 16»', r"var CANAL16_SEG = ['canal 16', 'pan-pan',", r"var CANAL16_SEG = ['xcanal 16', 'pan-pan',", ('p3c',)),
     ('a pergunta mista não vê o «pan-pan»', r"'canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];", r"'canal 16', 'xpan-pan', 'pan pan', ' dsc', 'distress'];", ('p3c',)),
     ('a pergunta mista não vê o «pan pan»', r"'canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];", r"'canal 16', 'pan-pan', 'xpan pan', ' dsc', 'distress'];", ('p3c',)),
@@ -3794,9 +3888,9 @@ MUTANTES_3C_REV3 = [
     ('o MMSI perde a pergunta neutra (a lista sem «mmsi», «barco», «cadastro»…)', r"'que mmsi barco lancha embarcacao cadastrado cadastrada registrado app aplicativo numero nosso nossa meu minha seu sua indicativo '", r"'que mmsi'", ('p3c',)),
     # —— a leitura calma só responde a pergunta neutra, em cada rota nova ——
     ('a posição pega o relato (as palavras novas sem a lista neutra)', r"(has(q, POSICAO_NOVAS) && leitura(q, POSICAO_OK))", r"has(q, POSICAO_NOVAS)", ('p3c',)),
-    ('a posição pega a definição e o rumo magnético (a lista neutra aceita «significa», «magnético», «milha náutica»)', r"var POSICAO_OK = NEUTRAS_BASE + 'onde estamos", r"var POSICAO_OK = NEUTRAS_BASE + 'significa magnetico nautica uma tem nossos tripulantes onde estamos", ('p3c',)),
+    ('a posição pega a definição e o rumo magnético (a lista neutra aceita «significa», «magnético», «milha náutica»)', r"var POSICAO_OK = NEUTRAS_BASE + 'que estamos onde", r"var POSICAO_OK = NEUTRAS_BASE + 'significa magnetico nautica uma tem nossos tripulantes que estamos onde", ('p3c',)),
     ('a chegada pega o relato e o lugar fora da rota (sem a lista branca)', r"    return leitura(q, ETA_OK + lugaresRota().join(''));", r"    return true;", ('p3c',)),
-    ('a chegada pega o nome de um lugar fora da rota (a lista branca aceita «Itajaí», «costa»)', r"var ETA_OK = NEUTRAS_BASE + 'eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'itajai costa eta chegada", ('p3c',)),
+    ('a chegada pega o nome de um lugar fora da rota (a lista branca aceita «Itajaí», «costa»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada", r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos itajai costa eta chegada", ('p3c',)),
     ('a chegada perde o nome dos pontos da rota (a lista branca sem o D.rota)', r"leitura(q, ETA_OK + lugaresRota().join(''))", r"leitura(q, ETA_OK)", ('p3c',)),
     ('os alarmes pegam o relato (sem a lista branca)', r"|| ALARME_SOANDO.test(q)) && leitura(q, ALARMES_OK); }", r"|| ALARME_SOANDO.test(q)); }", ('p3c',)),
     ('as pessoas pegam o relato (sem a lista branca)', r"if (has(q, PESSOAS_PALAVRAS) && leitura(q, PESSOAS_OK)) return 'pessoas';", r"if (has(q, PESSOAS_PALAVRAS)) return 'pessoas';", ('p3c',)),
@@ -3809,15 +3903,14 @@ MUTANTES_3C_REV3 = [
     ('o pedido de socorro implícito sai da route()', r"    if (socorroImplicito(q)) return 'sos';" "\n", r"", ('p3c',)),
     ('o pedido de socorro sem «estamos em risco»', r"var EM_RISCO = /\b(?:(?:estamos|estou|ficamos)(?: todos)? em (?:risco|apuros)|", r"var EM_RISCO = /\b(?:(?:xestamos|xestou|xficamos)(?: todos)? em (?:risco|apuros)|", ('p3c',)),
     ('o pedido de socorro sem «o barco está em risco»', r"|(?:o barco|a lancha|a embarcacao) (?:esta|ta) em (?:risco|apuros))", r"|(?:xo barco|xa lancha|xa embarcacao) (?:esta|ta) em (?:risco|apuros))", ('p3c',)),
-    ('o pedido de socorro sem «corremos risco»', r"|(?:corremos|corro) risco|", r"|(?:xcorremos|xcorro) risco|", ('p3c',)),
-    ('«em risco de chuva» vira socorro (a regex sem a exceção do «de»)', r"em (?:risco|apuros))\b(?! de (?!vida))/;", r"em (?:risco|apuros))\b/;", ('p3c',)),
-    ('o pedido de socorro sem «isso não é um teste»', r"|| NAO_TESTE.test(q) || EM_RISCO.test(q); }", r"|| EM_RISCO.test(q); }", ('p3c',)),
+    ('o pedido de socorro sem «corremos risco»', r"|(?:corremos|corro|correndo|corre|correm|correu|corriam) risco|", r"|(?:xcorremos|xcorro|xcorrendo|xcorre|xcorrem|xcorreu|xcorriam) risco|", ('p3c',)),
+    ('«em risco de chuva» vira socorro (a regex sem a exceção do «de»)', r"em (?:risco|apuros))\b(?! de (?!(?:vida|afund|naufrag|incend|fogo|colid|colis|encalh|morr|explod|emborc|alag|capot|virar)))/;", r"em (?:risco|apuros))\b/;", ('p3c',)),
+    ('o pedido de socorro sem «isso não é um teste»', r"|| NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA", r"|| EM_RISCO.test(q) || SOCORRO_AJUDA", ('p3c',)),
     ('o pedido de socorro sem «isso é real, preciso de ajuda» (o pedido + a declaração)', r"(SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY)))", r"(SOCORRO_PEDE.test(q) && has(q, DADOS_MAYDAY))", ('p3c',)),
     ('o pedido de socorro sem «preciso de ajuda, qual o ETA?» (o pedido + o dado do MAYDAY)', r"(SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY)))", r"(SOCORRO_PEDE.test(q) && SOCORRO_DECLARA.test(q))", ('p3c',)),
     ('o pedido de ajuda de rotina vira socorro («preciso de ajuda para trocar o óleo»)', r"(SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY)))", r"(SOCORRO_PEDE.test(q))", ('p3c',)),
-    ('a sobreDados responde a quem pede ajuda', r"if (has(q, SOCORRO_VOC) || AUT_SENSOR_DE.test(q) ||", r"if (AUT_SENSOR_DE.test(q) ||", ('p3c',)),
-    ('a sobreDados pega «o alarme de temperatura é real?»', r"if (has(q, SOCORRO_VOC) || AUT_SENSOR_DE.test(q) ||", r"if (has(q, SOCORRO_VOC) ||", ('p3c',)),
-    ('a sobreDados pega «esse alarme é falso?»', r"|| (has(q, AUT_SENSOR) && AUT_FALSO.test(q))) return false;", r") return false;", ('p3c',)),
+    ('a sobreDados pega «o alarme de temperatura é real?»', r"if (AUT_SENSOR_DE.test(q) || (has(q, AUT_SENSOR)", r"if ((has(q, AUT_SENSOR)", ('p3c',)),
+    ('a sobreDados pega «esse alarme é falso?»', r"(has(q, AUT_SENSOR) && AUT_FALSO.test(q)) || !soAutenticidade(q)) return false;", r"!soAutenticidade(q)) return false;", ('p3c',)),
     # —— a sobreDados em mais jeitos de perguntar ——
     ('a sobreDados sem «estão/tá/tão» (a cópula só com «ser»)', r"|parece|parecem|esta|estao|ta|tao|estava|estavam)';", r"|parece|parecem)';", ('p3c',)),
     ('a sobreDados sem a cauda «não é?» («os dados são reais, não é?»)', r"hein|ou nao|nao e|nao))*';", r"hein|ou nao))*';", ('p3c',)),
@@ -3829,6 +3922,63 @@ MUTANTES_3C_REV3 = [
     ('o foraBarco sem «quem ganhou» («quem ganhou o campeonato?»)', r", 'quem venceu', 'quem ganhou'];", r", 'quem venceu'];", ('p3c',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3C_REV3
+
+
+# Revisão 4 da P3C: um mutante por guarda nova (cada um tem de ser acusado pelo grupo p3c)
+MUTANTES_3C_REV4 = [
+    # —— «preço» é palavra inteira ——
+    ('o foraBarco casa «preco» solto (preconizado, precoce)', r"' cotacao ', ' cotacoes ', ' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' cotacao ', ' cotacoes ', ' bitcoin ', 'preco', 'quanto custa'", ('p3c',)),
+    ('o foraBarco sem «preços» (o plural)', r"' preco ', ' precos ', 'quanto custa'", r"' preco ', 'quanto custa'", ('p3c',)),
+    # —— a sobreDados: lista branca ——
+    ('a sobreDados responde ao relato de falha ou de perigo (sem a lista branca)', r"(has(q, AUT_SENSOR) && AUT_FALSO.test(q)) || !soAutenticidade(q)) return false;", r"(has(q, AUT_SENSOR) && AUT_FALSO.test(q))) return false;", ('p3c',)),
+    ('a sobreDados perde o vocabulário do pedido («preciso saber», «é sério», «é urgente»)', r"existe existem preciso precisamos saber confirmar urgente serio relatorio decidir saio quero queria gostaria checar conferir verificar afinal pergunto duvida curiosidade ');", r"existe existem ');", ('p3c',)),
+    ('a sobreDados perde o pedido que vem depois da pergunta («…são reais? preciso decidir se saio»)', r"    q = q.replace(AUT_PEDIDO_FIM, '$1');" + "\n", r"", ('p3c',)),
+    ('a sobreDados aceita o «não» em qualquer lugar («o alarme não para, isso é real?»)', r"existe existem preciso precisamos saber", r"existe existem nao preciso precisamos saber", ('p3c',)),
+    ('a sobreDados perde o «não» das caudas («isso não é real, né?»)', r"var AUT_NAO = / (?:ou )?nao (?:e|eh|sao|foi|era)(?= )| ou nao(?= )| nao $/g;", r"var AUT_NAO = / zzz /g;", ('p3c',)),
+    ('a sobreDados perde as palavras do estado do pedido («ambiente de demonstração»)', r" demonstracao ambiente modo versao apresentacao plataforma programa exemplo treinamento genuino autentico oficial ", r" demonstracao ", ('p3c',)),
+    # —— o pedido de socorro: «correr risco» e «ajudem» ——
+    ('o pedido de socorro só em «corremos/corro risco» (sem «correndo», «corre»…)', r"|(?:corremos|corro|correndo|corre|correm|correu|corriam) risco|", r"|(?:corremos|corro) risco|", ('p3c',)),
+    ('o «risco de <perigo de bordo>» não é socorro («estamos correndo risco de afundar»)', r"(?! de (?!(?:vida|afund|naufrag|incend|fogo|colid|colis|encalh|morr|explod|emborc|alag|capot|virar)))", r"(?! de (?!vida))", ('p3c',)),
+    ('o pedido «ajudem» não é socorro', r"var SOCORRO_AJUDA = /\bajudem\b|", r"var SOCORRO_AJUDA = /\bxajudem\b|", ('p3c',)),
+    ('o pedido «alguém me ajuda» não é socorro', r"|\balguem (?:me |nos )?(?:ajuda|ajude)(?: por favor", r"|\bxalguem (?:me |nos )?(?:ajuda|ajude)(?: por favor", ('p3c',)),
+    ('«alguém me ajuda a trocar o óleo» vira socorro (o pedido sem o fim ancorado)', r"(?: por favor| aqui| agora)? $|\bpelo amor", r"(?: por favor| aqui| agora)?|\bpelo amor", ('p3c',)),
+    ('o pedido «pelo amor de Deus, ajuda» não é socorro', r"|\bpelo amor de deus\b.*\b(?:ajuda|ajudem|ajude|socorro)\b/;", r"/;", ('p3c',)),
+    # —— o AIS: só a pergunta neutra do status ——
+    ('o AIS perde «situação», «status» e «estado» («qual a situação do AIS?»)', r"quantidade quais situacao status estado barco", r"quantidade quais barco", ('p3c',)),
+    ('o AIS aceita o relato de falha (a lista neutra aceita «parou», «não», «funciona»)', r"var AIS_OK = NEUTRAS_BASE + 'ais alvos", r"var AIS_OK = NEUTRAS_BASE + 'parou apagou desligado desligada falha nao funciona sinal sem ais alvos", ('p3c',)),
+    # —— a chegada em todo jeito de perguntar ——
+    ('a chegada perde o «quando» («quando chegamos?»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta", r"var ETA_OK = NEUTRAS_BASE + 'ja muito estamos eta", ('p3c',)),
+    ('a chegada perde «já», «muito» e «estamos» («já chegamos?», «falta muito para chegar?», «estamos chegando?»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta", r"var ETA_OK = NEUTRAS_BASE + 'quando eta", ('p3c',)),
+    ('a chegada perde «vamos chegar a que horas»', r"    'vamos chegar a que horas', 'a que horas vamos chegar',", r"    'a que horas vamos chegar',", ('p3c',)),
+    ('a chegada perde «em quanto tempo chegamos»', r"'em quanto tempo chegamos', 'em quanto tempo vamos chegar',", r"'em quanto tempo vamos chegar',", ('p3c',)),
+    ('a chegada perde «já chegamos» e «estamos chegando»', r"    'ja chegamos', 'estamos chegando'];", r"    ];", ('p3c',)),
+    ('a chegada perde «falta muito» («falta muito para chegar?»)', r"'o que falta para', 'falta muito'];", r"'o que falta para'];", ('p3c',)),
+    ('a chegada perde «base» e «marina» («quanto falta pra base?»)', r"var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta ', ' base ', ' marina '];", r"var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta '];", ('p3c',)),
+    ('a chegada perde «quantas milhas já navegamos»', r"'quantas milhas ja naveg', 'quantas milhas ja percorr', ", r"", ('p3c',)),
+    ('a chegada dá a de outro ponto como se fosse a do citado («quanto falta para o Estaleirinho?»)', r"        else if (nc(cit) !== nc(q.destino)) outro = cit; }", r"        }", ('p3c',)),
+    ('o próximo ponto citado vira «não é o destino nem o próximo ponto»', r"if (nc(cit) === nc(q.wp_proximo) && nc(cit) !== nc(q.destino)) wp = true;", r"", ('p3c',)),
+    ('a chegada em outro ponto perde a explicação (só destino e próximo ponto)', r"+ '\nO app calcula a chegada só no destino e no próximo ponto da rota.'", r"", ('p3c',)),
+    # —— a profundidade no jeito de bordo ——
+    ('a profundidade perde «quanto de fundo», «qual o fundo», «fundo» e «sonda»', r"'agua sob', 'de fundo tem', 'quanto de fundo', 'qual o fundo', ' fundo ', ' sonda '];", r"'agua sob'];", ('p3c',)),
+    ('a profundidade perde «fundo» e «sonda» sozinhos', r"'qual o fundo', ' fundo ', ' sonda '];", r"'qual o fundo'];", ('p3c',)),
+    ('a profundidade perde «tem pouco fundo?»', r"|| POUCO_FUNDO.test(q); }", r"; }", ('p3c',)),
+    ('a profundidade pega a válvula de fundo (a lista neutra aceita «feche», «válvula»)', r"neste nesse momento ponto local lugar metros", r"neste nesse momento ponto local lugar metros feche valvula do casco", ('p3c',)),
+    # —— as horas que faltam ——
+    ('«quanto falta para a troca de óleo?» perde a 1ª linha com as horas que faltam', r"l1 = has(pad(qq || ''), FALTA_PALAVRAS) ? linhaFalta(o, 'a troca de óleo e filtros dos motores') : ''", r"l1 = ''", ('p3c',)),
+    ('«quanto falta para a revisão do gerador?» perde a 1ª linha com as horas que faltam', r"has(sq, ['revisao', 'oleo', 'filtro', 'troca', 'horas']) ? linhaFalta(rv, 'a revisão de óleo e filtros do gerador') : ''", r"has(sq, ['revisao', 'oleo', 'filtro', 'troca', 'horas']) ? '' : ''", ('p3c',)),
+    ('as horas que faltam perdem a data (o que vier antes)', r"(t.vence ? ' ou até ' + t.vence + ', o que vier antes' : '')", r"''", ('p3c',)),
+    ('as horas que faltam perdem o limite', r"' h para ' + nome + ' (limite de ' + mil(t.horas.limite) + ' h)'", r"' h para ' + nome", ('p3c',)),
+    # —— o vento a bordo ——
+    ('«o vento a bordo agora» perde a 1ª linha do quadro (a previsão primeiro)', r"lv = linhasVento(qq, i);", r"lv = '';", ('p3c',)),
+    ('o relato «o vento está forte agora» vira o vento do quadro (sem a lista branca)', r" || !leitura(sq, NEUTRAS_BASE + VENTO_OK_P)) return '';", r") return '';", ('p3c',)),
+    ('«vento aparente» perde o aparente na 1ª linha', r"if (ap && t.ventoAp) return 'A bordo agora, vento aparente '", r"if (false) return 'A bordo agora, vento aparente '", ('p3c',)),
+    ('«verdadeiro ou aparente» perde o par na 1ª linha', r"if (ap && vd && t.ventoAp) return", r"if (false) return", ('p3c',)),
+    # —— posição, ondas e navegação no jeito de bordo ——
+    ('a posição perde «em que rumo estamos?»', r"var POSICAO_OK = NEUTRAS_BASE + 'que estamos onde", r"var POSICAO_OK = NEUTRAS_BASE + 'estamos onde", ('p3c',)),
+    ('as ondas perdem «tem onda?»', r"var ONDAS_PALAVRAS = [' ondas ', ' onda ', 'ondulacao',", r"var ONDAS_PALAVRAS = [' ondas ', 'ondulacao',", ('p3c',)),
+    ('a navegação perde «como estamos indo?»', r"(?:estamos|vamos|estao as coisas|esta tudo)(?: indo)?(?: agora|", r"(?:estamos|vamos|estao as coisas|esta tudo)(?: agora|", ('p3c',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3C_REV4
 
 
 def instante_3a(b):
