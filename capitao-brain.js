@@ -2024,10 +2024,10 @@
     sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS.' + (esp.length ? '\n' + esp.join('\n') + '\n' : ' ') + SOS_PASSOS + '\nSeafire e EPIRB: ' + NOTA_ETIQUETA + '.\n' + GRAVAR_AGORA, src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar no diário', 'diario']]) }; },
     oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4', actions: act(p, [['Registrar no diário', 'diario'], ['Contatos', 'equipe']]) }; },
     // Pressão do óleo (pergunta neutra): a leitura do quadro de agora, a faixa normal do guia dos motores §9 e o passo para o relato (a leitura nunca vai no relato de falha)
-    oleoLeitura: function (p) {
-      var i = vivo(), rpm = (vivo() ? vivo().txt.rpm || '— rpm' : (M.rpm ? M.rpm.join('/') : '—') + ' rpm'), fx = faixaOleo(i ? i.q.motor_bb_rpm : (M.rpm && typeof M.rpm[0] === 'number' ? M.rpm[0] : null));
+    oleoLeitura: function (p, ctx, q) {
+      var i = vivo(), rpm = (vivo() ? vivo().txt.rpm || '— rpm' : (M.rpm ? M.rpm.join('/') : '—') + ' rpm'), fx = faixaOleo(i ? i.q.motor_bb_rpm : (M.rpm && typeof M.rpm[0] === 'number' ? M.rpm[0] : null)), lx = i ? ladoSeguinte(q) : null;
       var ol = M.oleo ? M.oleo.map(function (x) { return nb(x); }).join('/') : '—', ar = M.arref ? M.arref.join('/') : '—';
-      return { text: (i ? 'Pressão do óleo agora (' + i.hora + '): ' + (i.txt.oleo || '—') + ', com os motores a ' + rpm + '.\nArrefecimento ' + (i.txt.arref || '—') + alarmesCl(i, ' · alarmes: ') + '.' : 'Motores ' + (M.estado || SD) + ' (' + quando() + '). Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + ol + ' bar · ' + rpm + (M.marcha ? ' em ' + M.marcha : '') + ' · arrefecimento ' + ar + ' °C.') + (fx ? '\nFaixa normal: ' + fx + '.' : '') + '\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) };
+      return { text: (i ? (lx && campoTxt(i, 'motor_' + lx + '_oleo_bar') !== null ? 'Pressão do óleo do motor ' + lx.toUpperCase() + ' agora (' + i.hora + '): ' + campoTxt(i, 'motor_' + lx + '_oleo_bar') + ' bar, com o motor a ' + (campoTxt(i, 'motor_' + lx + '_rpm') || '—') + ' rpm.' : 'Pressão do óleo agora (' + i.hora + '): ' + (i.txt.oleo || '—') + ', com os motores a ' + rpm + '.') + '\nArrefecimento ' + (i.txt.arref || '—') + alarmesCl(i, ' · alarmes: ') + '.' : 'Motores ' + (M.estado || SD) + ' (' + quando() + '). Pressão do óleo na última leitura com motores ligados ' + (M.hora || SD) + ': ' + ol + ' bar · ' + rpm + (M.marcha ? ' em ' + M.marcha : '') + ' · arrefecimento ' + ar + ' °C.') + (fx ? '\nFaixa normal: ' + fx + '.' : '') + '\nSe cair abaixo da faixa ou o alarme acender, pergunte “pressão de óleo baixa” para o passo a passo.', src: FT.tele + ' · ' + guia('g_motores'), actions: act(p, [['Telemetria', 'console'], ['Pressão baixa: o que fazer', askHref(p, 'Pressão de óleo baixa: o que verificar primeiro?')]]) };
     },
     // Âncora: o estado do quadro e o contador de corrente do guincho (guia de eletrônicos §3 e do guincho §1); sem o dado da âncora, SEM LEITURA (o caminho null)
     ancora: function (p) {
@@ -2113,9 +2113,9 @@
         actions: (link ? [{ l: 'Ver o alerta', href: link }] : []).concat(act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']])) };
     },
     // Temperatura dos motores (o arrefecimento): a leitura, a faixa normal do guia dos motores §9 e a tendência de 30 s; fora da faixa, o alarme e o que verificar primeiro. Sem quadro vivo: a última leitura com motores ligados.
-    arrefecimento: function (p) {
+    arrefecimento: function (p, ctx, q) {
       var i = vivo(), A = window.CapitaoAgora, L = limitesDe('motor_bb_arref_c'), ate = L && L.normal && typeof L.normal.ate === 'number' ? L.normal.ate : null, fx = ate != null ? 'Faixa normal: até ' + nb(ate, 0) + ' °C (' + L.fonte + ').' : '';
-      var ale = catalogoAlertas(), alr, lista, niv, fora = [], tend, l1, pass = '';
+      var ale = catalogoAlertas(), alr, lista, niv, fora = [], tend, l1, pass = '', lx;
       if (!i) {
         return { text: 'Arrefecimento ' + (M.arref ? M.arref.join('/') + ' °C na última leitura com motores ligados ' + (M.hora || SD) + ' (motores ' + (M.estado || SD) + ', ' + quando() + ').' : SL + ' (' + quando() + ').') + (fx ? '\n' + fx : ''),
           src: FT.tele + ' · ' + guia('g_motores') + ' §9', actions: act(p, [['Motores', askHref(p, 'motores')], ['Telemetria', 'console']]) };
@@ -2125,7 +2125,8 @@
         try { niv = A.nivel('motor_' + l + '_arref_c', i.q); } catch (e) { niv = null; }
         if (niv && niv.nivel && niv.nivel !== 'normal') fora.push(l.toUpperCase() + (typeof niv.limite === 'number' ? (v > niv.limite ? ' acima de ' : ' abaixo de ') + nb(niv.limite, 0) + ' °C' : ' fora da faixa') + ' (' + (niv.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ')');
       });
-      l1 = i.txt.arref ? 'Arrefecimento ' + i.txt.arref + ' às ' + i.hora + (fora.length ? ': ' + fora.join(' e ') : ate != null && i.q.motor_bb_rpm > 0 ? ', dentro da faixa normal (até ' + nb(ate, 0) + ' °C)' : '') + '.' : 'O quadro de ' + i.hora + ' não trouxe a temperatura dos motores.';
+      lx = ladoSeguinte(q);
+      l1 = i.txt.arref ? 'Arrefecimento ' + (lx && campoTxt(i, 'motor_' + lx + '_arref_c') !== null ? 'do motor ' + lx.toUpperCase() + ' ' + campoTxt(i, 'motor_' + lx + '_arref_c') + ' °C (o outro lado: ' + (lx === 'be' ? 'BB ' + campoTxt(i, 'motor_bb_arref_c') : 'BE ' + campoTxt(i, 'motor_be_arref_c')) + ' °C)' : i.txt.arref) + ' às ' + i.hora + (fora.length ? ': ' + fora.join(' e ') : ate != null && i.q.motor_bb_rpm > 0 ? ', dentro da faixa normal (até ' + nb(ate, 0) + ' °C)' : '') + '.' : 'O quadro de ' + i.hora + ' não trouxe a temperatura dos motores.';
       tend = i.tend && 'motor_bb_arref_c' in i.tend && 'motor_be_arref_c' in i.tend ? 'Nos últimos 30 s: BB ' + sinal(i.tend.motor_bb_arref_c, 1) + ' · BE ' + sinal(i.tend.motor_be_arref_c, 1) + ' °C.' : '';
       lista = alarmesDetalhe(i) || [];
       alr = lista.filter(function (a) { return /arref/.test(a.campo || a.id || ''); });
@@ -2967,9 +2968,9 @@
   // O mínimo para a fala que só diz o equipamento: a última pergunta e a resposta que o app deu, por 10 min. A resposta local nunca termina em pergunta; a da IA na nuvem pode («Qual equipamento?»),
   // e o cérebro não a vê: a tela a conta com B.conversa(pergunta, texto). «O gerador» depois de «Qual equipamento?» continua a pergunta anterior («como ligar? — o gerador»); sozinha, é a resposta
   // pronta do gerador. NOVA e ENCERRAR zeram (B.limpaConversa). O que o app não grava (commit false, link) e a emergência não entram.
-  var CONV = { q: '', a: '', t: 0, pergunta: false, n: 0 };
+  var CONV = { q: '', a: '', t: 0, pergunta: false, n: 0, reg: false };   // `reg`: a última fala foi um registro (a próxima é assunto novo)
   var CONV_VALE = 10 * 60e3;
-  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1 }; ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
+  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
   function terminaEmPergunta(t) {
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
     return ls.length > 0 && /\?["”')\]]*$/.test(ls[ls.length - 1]);
@@ -2980,7 +2981,7 @@
   function conversa(q, texto) {
     if (EM_SOS || !String(q || '').trim()) return;
     if (perguntaEmerg(q)) { limpaConversa(); return; }
-    CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1 };
+    CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1, reg: false };
   }
   // o vocabulário de equipamento: nome, fabricante, modelo e as palavras do cadastro (D.equipamentos), normalizados
   var NOMEIA_LIGA = ' e eh sao era o a os as um uma uns umas do da dos das de no na nos nas sim nao acho que creio so mesmo isso esse essa este esta ele ela la aqui modelo marca tipo ';
@@ -3003,27 +3004,64 @@
     }
     return tem;
   }
-  // A pergunta que a fala continua, ou null. Só quando a resposta anterior terminou em pergunta, a fala é curta, não é pergunta, nem correção («e o gerador», «não, o gerador»), não é emergência
-  // nem óleo, e a rota dela é a de um equipamento (GENERICAS) — a rota da pergunta anterior não pode ser de emergência nem o registro no diário.
+  // A pergunta que a fala continua, ou null. DUAS formas de continuar:
+  //  (1) F31: a resposta anterior terminou em pergunta, a fala é curta, não é pergunta, nem correção («e o gerador», «não, o gerador»), não é emergência nem óleo, só identifica o equipamento ou a marca e a rota
+  //      dela é a de um equipamento (GENERICAS) — a rota da pergunta anterior não pode ser de emergência nem o registro no diário.
+  //  (2) F18: a fala que CONTINUA o assunto sem repeti-lo — «e boreste?», «e a de serviço?», «e amanhã?», «e o consumo?», «também no gerador?», «boreste?» — logo depois de uma pergunta de dado (10 min, sem registro
+  //      no meio). Sem assunto próprio (a rota dela sozinha é o fallback), a resposta é a da rota da pergunta anterior, com a fala nova («qual a pressão do óleo do motor BB? — e boreste?» → o óleo do BE);
+  //      com assunto próprio («e o consumo?», «e o gerador?») vale a rota dela, e a pergunta junta só serve quando a rota é a mesma (a busca no guia ganha o contexto). A pergunta raiz FICA (a cadeia «e boreste?»,
+  //      «e o BB?» volta sempre à primeira). Emergência, óleo, registro, a fala que é pedido de registro e o que não é dado (saudação, fora do barco, diagnóstico) não continuam nada.
+  var SEG = { raiz: false }, REG_KEYS = { diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1 };
+  var SEGUE_E = /^ (?:e|tambem|mas) /, LADO_SOZINHO = /^ (?:(?:o|a|de|do|da|no|na|pelo|pela) )?(?:motor )?(?:bb|be|bombordo|boreste|estibordo|esquerdo|direito|outro|outra|o outro|a outra) $/;
+  // as palavras de uma fala que só varia o lado, a hora, o dia ou o banco da pergunta anterior («e boreste?», «e amanhã?», «e a de serviço?», «e o outro?»)
+  var SEGUE_OK = ' e tambem mas o a os as um uma de do da dos das no na nos nas em para pra por pelo pela bb be bombordo boreste estibordo esquerdo esquerda direito direita outro outra outros outras ambos ambas lado lados servico partida principal principais amanha ontem hoje agora depois antes semana mes dia noite manha tarde hora horas proximo proxima ultimo ultima mesmo mesma ';
+  var RAIZ_NAO = { fallback: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, foraBarco: 1, sobreDados: 1 };
   function seguimento(q, ctx) {
-    var n, rq, rr;
-    if (EM_SOS || !CONV.q || !CONV.pergunta || Date.now() - CONV.t > CONV_VALE || (ctx && (ctx.id || ctx.commit === false))) return null;
-    n = pad(q);
-    if (n.trim().split(/\s+/).length > 8 || /\?\s*$/.test(String(q)) || /^ (?:e|nao)(?= )/.test(n) || !soNomeia(n) || emergencia(n) || oleo(n) === 1) return null;
-    rq = route(q); rr = route(CONV.q);
-    if (!GENERICAS[rq] || perguntaEmerg(CONV.q) || rr === 'diario' || rr === 'diarioPede' || rr === 'sobreDados' || rr === 'foraBarco') return null;
-    return CONV.q + ' — ' + String(q).trim();
+    var n, rq, rr, w, junto;
+    SEG.raiz = false;
+    if (EM_SOS || !CONV.q || Date.now() - CONV.t > CONV_VALE || (ctx && (ctx.id || ctx.commit === false))) return null;
+    n = pad(q); w = n.trim().split(/\s+/).length;
+    if (CONV.pergunta) {   // (1)
+      if (w > 8 || /\?\s*$/.test(String(q)) || /^ (?:e|nao)(?= )/.test(n) || !soNomeia(n) || emergencia(n) || oleo(n) === 1) return null;
+      rq = route(q); rr = route(CONV.q);
+      if (!GENERICAS[rq] || perguntaEmerg(CONV.q) || rr === 'diario' || rr === 'diarioPede' || rr === 'sobreDados' || rr === 'foraBarco') return null;
+      return CONV.q + ' — ' + String(q).trim();
+    }
+    // (2)
+    if (CONV.reg || w > 8 || !(SEGUE_E.test(n) || LADO_SOZINHO.test(n))) return null;
+    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || perguntaEmerg(CONV.q)) return null;
+    rr = route(CONV.q); if (RAIZ_NAO[rr] === 1) return null;
+    rq = route(q);
+    junto = CONV.q + ' — ' + String(q).trim();
+    if (rq === 'fallback') { if (!soNeutras(n, SEGUE_OK)) return null; SEG.raiz = true; return junto; }   // a fala sem assunto só continua se for POBRE (lado, hora, dia, «o outro»): «e como se faz um nó lais?» é pergunta nova (a IA)
+    return route(junto) === rq ? junto : null;
+  }
+  // O lado que a FALA NOVA pede numa pergunta continuada («… — e boreste?» → 'be'; «… — e o BB?» → 'bb'): só olha depois do último « — », então o lado da pergunta anterior não conta, e a pergunta que
+  // não é continuação (sem « — ») não muda de resposta. Os dois lados juntos ou nenhum → null.
+  function ladoSeguinte(q) {
+    var t = String(q || ''), k = t.lastIndexOf(' — '), n, be, bb;
+    if (k < 0) return null;
+    n = pad(t.slice(k + 3)); be = / (?:boreste|estibordo|be|direito|direita) /.test(n); bb = / (?:bombordo|bb|esquerdo|esquerda) /.test(n);
+    return be && !bb ? 'be' : bb && !be ? 'bb' : null;
+  }
+  // a pergunta e a resposta de antes (a IA e a rota recebem; sem coordenadas), só dentro dos 10 min e fora de pedido de link
+  function anteriorDe(ctx) {
+    if (EM_SOS || !CONV.q || Date.now() - CONV.t > CONV_VALE || (ctx && (ctx.id || ctx.commit === false))) return null;
+    return { p: semCoord(CONV.q), r: semCoord(CONV.a) };
   }
   function answer(q, ctx) {
     return congela(function () {
-      var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), a = marca(responde(junto || q1, ctx, espera));
+      var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), ant = anteriorDe(ctx), a;
+      if (!espera && junto && SEG.raiz) espera = route(CONV.q);   // F18: «e boreste?» não tem assunto: é a rota da pergunta anterior, com a fala nova
+      a = marca(responde(junto || q1, ctx, espera));
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
       // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
       if (!EM_SOS) {
         if (emerg(a)) limpaConversa();
-        else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1 };
+        else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1, reg: REG_KEYS[a.key] === 1 };
       }
+      if (ant && !emerg(a)) { a.anterior = ant; a.junto = junto || ''; }   // F18: a pergunta e a resposta de antes vão com a resposta (a IA recebe; sem coordenadas); `junto` é a pergunta que a rota viu
       acrescentaRelato(a, a.key, String(q1 == null ? '' : q1).trim(), ctx);   // F16: o relato vira proposta (a hora do instante já está na resposta)
       return a;
     });
@@ -3047,6 +3085,13 @@
     if (topo && topo.d.seguranca) return false;
     if (k === 'fallback' || k === 'base' || k === 'faqEquip') return true;   // (o item de segurança do FAQ já saiu acima: a.seguranca)
     return !!String(q || '').trim() && !SO_OI.test(pad(q));
+  }
+  // O histórico que vai à IA (F18, PROMPT §2.8): as últimas 6 mensagens (não vazias) da conversa em {papel, texto}, cada texto SEM coordenadas (o semCoord corta antes do limite de 600 letras, para não deixar meia coordenada). A tela monta a lista (papel 'usuario' | 'capitao', ou role 'user' | 'bot'); aqui só se limpa. O cliente da IA repete o filtro antes de mandar (Fase 6).
+  function historicoIA(msgs) {
+    return (Array.isArray(msgs) ? msgs : []).map(function (m) {
+      var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '';
+      return { papel: bot ? 'capitao' : 'usuario', texto: semCoord(String(t == null ? '' : t)).slice(0, 600) };
+    }).filter(function (m) { return m.texto.trim(); }).slice(-6);
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
   // A frase padrão de quem pergunta se os dados ou o barco são reais (decisão (f); PROMPT §2.6): a resposta da rota sobreDados (P3C) e o fecho do «Sobre o app» da ficha,
@@ -3661,7 +3706,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, perguntaDoBotao: perguntaDoBotao, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, perguntaDoBotao: perguntaDoBotao, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
