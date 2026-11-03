@@ -24,6 +24,9 @@ import urllib.parse
 from playwright.sync_api import sync_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Fase 3 (P3D), PROMPT Fase 7 linha 3 (`:210`): a ficha que vai à IA não leva coordenada pela regex do §2.8 (graus-minutos e decimal; a mesma do cerebro.py e do gerador), e não a posição literal do snapshot
+sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
+import confere  # noqa: E402
 URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capitao-ia.js'), encoding='utf-8').read()).group(1)
 # Fase 3 (P3B): o fallback local não diz mais «Não encontrei esse dado … SEM DADOS» (decisão 5); a conferência «a tela mostra a resposta da IA e não o texto local» passa a procurar o texto novo
 FALLBACK_LOCAL = 'Isso não está nas fontes de bordo'
@@ -218,7 +221,7 @@ def main():
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
                 # 'DEMO' not in f: desde o C2 a ficha não leva o rótulo (Decisão 1.1.0, b); antes exigia 'DEMO' in f
-                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas nem o rótulo DEMO, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' not in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas nem o rótulo DEMO, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' not in f and not confere.R_COORD.search(f) and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')
@@ -229,7 +232,7 @@ def main():
                 # pergunta de náutica geral sem rota (cai em fallback, pedeIA true). Vale em todos os usos abaixo (SEM DADOS da IA, sem chave, ordem da resposta, CONVERSA e erro).
                 t, n, _ = digita('como se faz um nó lais de guia?')
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
-                ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
+                ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and not confere.R_COORD.search(fc), 'pedidos=%d ficha=%d' % (n, len(fc)))
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
                 t, n, _ = digita('qual o calado do barco?')
                 cal = ('%.2f' % pg.evaluate('() => window.CapitaoDados.embarcacao.calado')).replace('.', ',')

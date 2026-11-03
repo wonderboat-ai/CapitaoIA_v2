@@ -74,6 +74,9 @@
   function now() { var d = new Date(); var p = function (n) { return (n < 10 ? '0' : '') + n; }; return { d: p(d.getDate()) + '/' + p(d.getMonth() + 1), t: p(d.getHours()) + ':' + p(d.getMinutes()), iso: d.toISOString() }; }
   // Diário: só cresce. Linhas do app (localStorage, mais nova primeiro) + linhas da fonte (Diário de bordo DEMO no Drive).
   function loadDiario() { var v = read(K.diario, []); return Array.isArray(v) ? v.filter(function (e) { return e && typeof e.t === 'string'; }) : []; }
+  // O diário para LER (respostas, ficha): `ctx.semSim` tira as linhas do aparelho com `sim: true` (gravadas com a simulação ligada; com simulacao false saem da ficha, CLAUDE.md 14). Nunca para gravar:
+  // o addDiario relê o diário inteiro (loadDiario), e o registro só cresce.
+  function lerDiario(ctx) { var v = loadDiario(); return ctx && ctx.semSim ? v.filter(function (e) { return e.sim !== true; }) : v; }
   function addDiario(e) { return congela(function () { return addDiario1(e); }); }
   function addDiario1(e) { var n = now(); var list = loadDiario(); var entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e); list.unshift(entry); write(K.diario, list); return entry; }
   function diarioFonte() { return (D.diario || []).map(function (x) { return { d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: (D.diarioFonte || 'diário') }; }); }
@@ -128,7 +131,7 @@
   // não recebe leitura; a leitura fica no oleoLeitura). A resposta delas NÃO leva o instante (`_inst` tem o quadro, com lat e lon), o resumoAgora(a) delas é a instrução do
   // plotter e a ficha(p, q, a) sai sem os blocos do quadro (QUADRO): a trava é da API, não de cada chamador (a IA, o diário, a CONVERSA).
   var EMERG = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };
-  var QUADRO = { 'Telemetria': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
+  var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
   function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
@@ -918,7 +921,7 @@
       var linha = function (t) { return seg(t) ? '• ' + t.t + ' (' + t.quem + ') — ' + NOTA_ETIQUETA : '• ' + prazoTxt(t) + ' — ' + t.t + ' (' + t.quem + ')'; };
       return { text: (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !loadExec()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
-    autonomia: function (p) { return { text: '≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de ' + reservaPct() + ' %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + (vivo() ? CON.fonte : CON.periodo) + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
+    autonomia: function (p) { return { text: 'Autonomia ≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de ' + reservaPct() + ' %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + (vivo() ? CON.fonte : CON.periodo) + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
     // Maré: do mundo real (Open-Meteo Marine, modelo, não a tábua da Marinha). Sem conexão e sem leitura salva: a frase do §2.5 e a situação de bordo (decisão (g)).
     mare: function (p) {
       var m = mareTexto(), s = sim();
@@ -947,8 +950,8 @@
       var eq = D.equipe || {}, per = eq.perfis || [], ap = eq.apoio || [], f = loadEquipe().fones, cad = Object.keys(f).length;
       return { text: 'Acesso total: ' + per.map(function (x) { return x.nome + ' (' + x.papel + ')'; }).join(' · ') + '.\nApoio: ' + ap.map(function (a) { return min1(a.papel) + (a.para ? ' (' + a.para + ')' : ''); }).join(' · ') + '.\nTelefones: ' + (cad ? cad + ' cadastrado(s) neste aparelho — abra Equipe para ligar.' : 'ficam só neste aparelho (Equipe): cadastre ali para ligar direto.') + (ctx && ctx.semBordo ? '' : '\n' + linhaBordo()), src: 'Fonte: cadastro da equipe' + demo() + ' · telefones do aparelho', actions: act(p, [['Equipe e contatos', 'equipe']]) };
     },
-    anomalias: function (p) {
-      var pend = pendencias(), app = loadDiario().filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
+    anomalias: function (p, ctx) {
+      var pend = pendencias(), app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
       return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
     // Porão: o nível das bombas no quadro, a faixa do guia e o teste mensal; sem o dado do porão, SEM LEITURA (o caminho null)
@@ -1044,11 +1047,13 @@
     // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
     // sai a lista fixa de 6 com "modelos não informados" e "Seafire e EPIRB: SEM DADOS", que a ficha mandava ao lado do ## Equipamentos.
     manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + demo() + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
-    diarioLer: function (p) {
-      var mine = loadDiario(), fonte = diarioFonte();
+    diarioLer: function (p, ctx) {
+      var mine = lerDiario(ctx), fonte = diarioFonte();
       var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
       var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + e.t.slice(0, 110); });
-      return { text: 'Últimos registros do diário de bordo (' + (fonte.length + mine.length) + ' no total · ' + pendencias().length + ' pendências abertas):\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
+      // a 1ª linha é a resposta numa frase falável (quantos registros e quantas pendências); os últimos registros vêm embaixo
+      var tot = fonte.length + mine.length, pe = pendencias().length;
+      return { text: 'Diário de bordo: ' + tot + (tot === 1 ? ' registro' : ' registros') + ' e ' + pe + (pe === 1 ? ' pendência aberta' : ' pendências abertas') + '.\nÚltimos registros:\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
     },
     // Diagnóstico deste aparelho: versões, internet, IA na nuvem e chave (só o tamanho). A tela de chat acrescenta o teste da
     // chave no servidor (CapitaoIA.testar), que não gasta a cota da IA.
@@ -1218,7 +1223,8 @@
   // bordo lê o mesmo instante por S, M, G, DI, T, SNAP, AUT e CON (recarrega). Sem quadro vivo (modo real sem coletor, tela sem replay) valem os textos do snapshot,
   // como antes. Fora daqui, por decisão: sos, canal16, epirb, seafire, salvatagem, mmsi e óleo nunca leem o quadro.
   var VIVO = {
-    tanques: function (i) { var q = i.q; return { text: 'Tanques agora:\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
+    // a 1ª linha é a resposta numa frase falável (diesel, água doce, cinzas e negras, com a hora); as linhas de baixo são o detalhe
+    tanques: function (i) { var q = i.q; return { text: 'Tanques às ' + i.hora + ': ' + (i.txt.diesel ? 'diesel ' + i.txt.diesel + ' · ' : '') + 'água doce ' + nb(q.tanque_agua_pct) + ' % · águas cinzas ' + nb(q.tanque_cinzas_pct) + ' % · águas negras ' + nb(q.tanque_negras_pct) + ' %.\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
     eletrico: function (i, base) { var q = i.q; return { text: 'Baterias agora: banco 24 V ' + nb(q.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(q.bateria_2_tensao_v, 2) + ' V (ao vivo ' + i.hora + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
     estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + mil(q.seakeeper_volante_rpm) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
   };
@@ -1797,7 +1803,60 @@
   }
   // a resposta leva o instante dela (fora do JSON): a ficha(p, q, a) e o resumoAgora(a) da MESMA pergunta o reaproveitam
   function marca(a) { if (a && typeof a === 'object' && !emerg(a)) { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} } return a; }
-  function answer(q, ctx) { return congela(function () { return marca(responde(q, ctx)); }); }
+  // ——— Contexto da conversa (F31; o F18 da P3F o estende) ———
+  // O mínimo para a fala que só diz o equipamento: a última pergunta e a resposta que o app deu, por 10 min. A resposta local nunca termina em pergunta; a da IA na nuvem pode («Qual equipamento?»),
+  // e o cérebro não a vê: a tela a conta com B.conversa(pergunta, texto). «O gerador» depois de «Qual equipamento?» continua a pergunta anterior («como ligar? — o gerador»); sozinha, é a resposta
+  // pronta do gerador. NOVA e ENCERRAR zeram (B.limpaConversa). O que o app não grava (commit false, link) e a emergência não entram.
+  var CONV = { q: '', a: '', t: 0, pergunta: false, n: 0 };
+  var CONV_VALE = 10 * 60e3;
+  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1 }; }
+  function terminaEmPergunta(t) {
+    var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
+    return ls.length > 0 && /\?["”')\]]*$/.test(ls[ls.length - 1]);
+  }
+  function conversa(q, texto) { if (!EM_SOS && String(q || '').trim()) CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1 }; }
+  // o vocabulário de equipamento: nome, fabricante, modelo e as palavras do cadastro (D.equipamentos), normalizados
+  var NOMEIA_LIGA = ' e eh sao era o a os as um uma uns umas do da dos das de no na nos nas sim nao acho que creio so mesmo isso esse essa este esta ele ela la aqui modelo marca tipo ';
+  function vocabEquip() {
+    var v = {};
+    (D.equipamentos || []).forEach(function (e) {
+      [e.nome, e.fabricante, e.modelo].concat(e.palavras || []).forEach(function (x) { norm(x).split(/[^a-z0-9]+/).forEach(function (w) { if (w.length >= 2 && NOMEIA_LIGA.indexOf(' ' + w + ' ') === -1) v[w] = 1; }); });
+    });
+    return v;
+  }
+  // Fala que só identifica o equipamento ou a marca: tirando os artigos, «é/são», «sim/não» e «acho que», sobram nomes de equipamento, marca, modelo ou código (letra com número).
+  // Verbo ou outra palavra = fala com conteúdo próprio.
+  function soNomeia(n) {
+    var ws = n.trim().split(/\s+/), voc = vocabEquip(), tem = false, i, w;
+    for (i = 0; i < ws.length; i++) {
+      w = ws[i];
+      if (NOMEIA_LIGA.indexOf(' ' + w + ' ') !== -1) continue;
+      if (voc[w] || /^(?=[a-z\-]*\d)(?=[\d\-]*[a-z])[a-z\d\-]+$/.test(w) || /^\d+$/.test(w)) { tem = true; continue; }
+      return false;
+    }
+    return tem;
+  }
+  // A pergunta que a fala continua, ou null. Só quando a resposta anterior terminou em pergunta, a fala é curta, não é pergunta, nem correção («e o gerador», «não, o gerador»), não é emergência
+  // nem óleo, e a rota dela é a de um equipamento (GENERICAS) — a rota da pergunta anterior não pode ser de emergência nem o registro no diário.
+  function seguimento(q, ctx) {
+    var n, rq, rr;
+    if (EM_SOS || !CONV.q || !CONV.pergunta || Date.now() - CONV.t > CONV_VALE || (ctx && (ctx.id || ctx.commit === false))) return null;
+    n = pad(q);
+    if (n.trim().split(/\s+/).length > 8 || /\?\s*$/.test(String(q)) || /^ (?:e|nao)(?= )/.test(n) || !soNomeia(n) || emergencia(n) || oleo(n) === 1) return null;
+    rq = route(q); rr = route(CONV.q);
+    if (!GENERICAS[rq] || EMERG[rr] || rr === 'diario' || rr === 'sobreDados' || rr === 'foraBarco') return null;
+    return CONV.q + ' — ' + String(q).trim();
+  }
+  function answer(q, ctx) {
+    return congela(function () {
+      var q1 = corrigeVoz(q), junto = seguimento(q1, ctx), a = marca(responde(junto || q1, ctx));
+      // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
+      if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
+      if (!EM_SOS && !emerg(a) && (!ctx || ctx.commit !== false)) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1 };
+      return a;
+    });
+  }
+
 
   // ——— IA na nuvem (capitao-ia.js) ———
   // Quando a tela chama a IA: sem resposta pronta (SEM DADOS), trecho do guia (a IA responde a partir dele) ou pergunta sobre o
@@ -1841,7 +1900,12 @@
     try { return new Intl.DateTimeFormat('pt-BR', { timeZone: E.fuso || 'America/Sao_Paulo', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(typeof ms === 'number' ? new Date(ms) : new Date()) + ' (horário de Brasília)'; } catch (e) { var n = now(); return n.d + ' ' + n.t; }
   }
   // Coordenadas não saem do aparelho (posição do barco só depois do login no servidor).
-  function semCoord(s) { return String(s || '').replace(/\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]\s*\d{1,3}\s?°\s?\d{1,2}(?:,\d+)?\s?['′]\s?[NSLOEW]/g, '(coordenadas só na tela do app)'); }
+  // PROMPT §2.8 (vale nos dois modos: é privacidade, não simulação): graus-minutos com vírgula ou ponto, com ou sem espaço e sinal (26°59,6'S, -26°59.6', 26°59'S, 26°59'35"S, 26º 59,6),
+  // decimais com 4 ou mais casas (-26.9931) ou em par (-26,993 / -48,614; -26.993,-48.614) — e NUNCA o milhar do pt-BR (1.236,4 h, 1.600 L, 2.050 rpm, 12.000). A mesma regra do R_COORD do
+  // testes/cerebro.py e do gerador (ferramentas/demo/confere.py). O par de coordenadas que o texto traz vira UM aviso só.
+  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}/g;
+  var SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = new RegExp('\\(coordenadas só na tela do app\\)(?:\\s*[,;/·]?\\s*\\(coordenadas só na tela do app\\))+', 'g');
+  function semCoord(s) { return String(s || '').replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
   // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
   // respostas prontas, então a IA e a tela dizem os mesmos números. Sem coordenadas e sem telefones. ~9 mil letras
   // (o proxy aceita até 12 mil). ficha(p, q, a): pergunta pura sobre o próprio app ("o que você faz?") leva só a ficha
@@ -1850,17 +1914,52 @@
   var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
   function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
   function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }
+  // O teto da ficha (letras): o cliente (capitao-ia.js) e os Workers cortam a ficha em 12.000. Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000 (e o cliente e os
+  // Workers acompanham, na Fase 6). Medido na P3D: 11.343 a 11.428 letras nos 150 instantes (a resumida, 3.921 a 3.963), então fica 12.000; o testes/cerebro.py (grupo ficha) cobra a regra:
+  // acima de 11.500 este valor TEM de ser 16.000. Exposto em B.FICHA_MAX. O «## Emergência» fica perto do topo porque o corte do cliente é pelo fim.
+  var FICHA_MAX = 12000;
+  // «## Navegação agora» (PROMPT Fase 3 «ficha()»): a hora e a fase, SOG/STW, rumo/COG e proa, a posição relativa (§2.8: só com a simulação e só dos pontos com fonte, nunca coordenada),
+  // profundidade, vento e mar a bordo, motores (rpm, óleo, arrefecimento, carga), consumo, diesel e autonomia, gerador, Seakeeper, baterias, porão e âncora, os alarmes e a tendência dos
+  // últimos ~30 s. Cada medida é o texto ÚNICO do instante (inst.txt: o mesmo da Main, da A1, do HUD e da answer('telemetria')). Só existe com o quadro vivo (replay ou coletor): sem ele
+  // (modo real sem coletor, a reserva do snapshot) o bloco «Telemetria» já diz a data da última leitura. No modo real o coletor não traz posição relativa, e o bloco vai sem ela.
+  function navegacaoAgora() {
+    var i = vivo(), t = i && i.txt, q = i && i.q, l = [], f = i && i.fase && i.fase.nome, un = function (rot, v) { return v ? rot + ' ' + v : ''; };
+    var junta = function (xs) { var r = xs.filter(Boolean).join(' · '); if (r) l.push(r); };
+    if (!i) return null;
+    junta([cap1(q.estado || 'Navegando') + ' às ' + i.hora, f ? 'fase ' + f : '']);
+    junta([un('SOG', t.sog), un('STW', t.stw), un('rumo (COG)', t.rumo), un('proa', t.proa), un('piloto', t.piloto), un('leme', t.leme), t.relativa, un('destino', t.destino), un('próximo ponto', t.wp), t.eta ? 'chegada prevista às ' + t.eta : '', un('percorrido', t.distancia)]);
+    junta([un('profundidade', t.prof), t.vento ? 'vento a bordo agora ' + t.vento : '', un('vento aparente', t.ventoAp), un('ondas', t.ondas), un('água do mar', t.agua), un('ar', t.ar), un('pressão', t.pressao)]);
+    junta([un('motores', t.rpm), un('óleo', t.oleo), un('arrefecimento', t.arref), un('carga', t.carga), un('praça de máquinas', t.praca)]);
+    junta([un('consumo', t.consumo), un('diesel', t.diesel), un('tanques', t.dieselLados), un('autonomia', t.autonomia)]);
+    junta([t.gerador ? 'gerador ' + t.gerador : '', t.seakeeper ? 'Seakeeper ' + t.seakeeper : '', un('banco 24 V', t.b24), un('banco 12 V', t.b12), un('porão', t.porao), un('âncora', t.ancora)]);
+    junta([t.alarmes ? 'alarmes: ' + t.alarmes : '', t.tend ? 'tendência — ' + t.tend : '']);
+    return l.length ? { text: l.join('\n'), src: 'Fonte: ' + i.fonteTxt } : null;
+  }
+  // A UMA linha de navegação da ficha resumida (< 4.000 letras): o estado e a hora, SOG, rumo, a posição relativa, os motores e os alarmes, com o texto do instante
+  function linhaNavegacao() {
+    var i = vivo(), t = i && i.txt, q = i && i.q, r;
+    if (!i) return null;
+    r = [cap1(q.estado || 'Navegando') + ' às ' + i.hora, t.sog ? 'SOG ' + t.sog : '', t.rumo ? 'rumo (COG) ' + t.rumo : '', t.relativa || '', t.rpm ? 'motores ' + t.rpm : '', t.alarmes ? 'alarmes: ' + t.alarmes : ''].filter(Boolean).join(' · ');
+    return { text: r, src: 'Fonte: ' + i.fonteTxt };
+  }
   function ficha1(p, q, a) {
     p = p || 'app';
-    var out = [], emergencia = emerg(a);   // resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Horímetros, Autonomia e consumo)
+    var out = [], emergencia = emerg(a), resumida = fichaResumida(q, a), semSim = !EM_SOS && D.simulacao === false;
+    // (no SOS nada lê a flag, CONTRATO §1.3) resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Navegação agora, Horímetros, Autonomia e consumo)
     var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return; try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
-    out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo && !sim() ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));
+    out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem());
+    // logo depois do «## Agora»: a navegação de agora (a ficha resumida leva só UMA linha dela, o resumo do instante) e, perto do topo, a emergência (o corte do cliente é pelo fim)
+    if (resumida) bloco('Navegação agora', linhaNavegacao);
+    else {
+      bloco('Navegação agora', navegacaoAgora);
+      out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');
+    }
     out.push('## Sobre o app\n' + sobreApp().join('\n'));
     out.push('## Embarcação\n' + (E.nome || SD) + ' · fabricante e modelo ' + (E.modelo || SD) + ' · registro ' + (E.registro || SD) + ' · proprietário ' + (E.proprietario || SD) + ' · base ' + (E.base || SD) + ' · ' + mmsiNum() + ' (cadastro do app) · indicativo: ' + INDICATIVO + '\n(Fonte: ' + (E.fonte || SD) + ')');
     out.push('## Equipamentos\n' + (D.equipamentos || []).map(function (e) { if (e.seguranca) return '• ' + e.nome + ': ' + (e.nota || NOTA_ETIQUETA); return '• ' + e.nome + ': ' + (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : ''); }).join('\n') + '\n(Fonte: Inventário de bordo' + demo() + (D.equipNota ? ' · ' + D.equipNota : '') + ')');
-    if (fichaResumida(q, a)) {
-      out.push('## Ficha resumida\nEsta pergunta veio só com o resumo acima (sobre o app e o barco) e, se houver, os trechos do guia. Telemetria, manutenção, documentos, diário e equipe não vieram: para um dado desses, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
-      return out.join('\n\n');
+    if (resumida) {
+      out.push('## Ficha resumida\nVeio só o resumo acima e, se houver, os trechos do guia: telemetria, manutenção, documentos, diário e equipe não vieram. Para um desses dados, diga que o app mostra ao perguntar pelo assunto (ex.: "telemetria", "próximas manutenções").');
+      return semCoord(out.join('\n\n'));
     }
     bloco('Telemetria', function () { return ANSWERS.telemetria(p); });
     bloco('Manutenção', function () { return ANSWERS.manutencao(p); });
@@ -1870,8 +1969,8 @@
       return { text: a.text + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (x) { return x.d + ' · ' + mil(x.litros) + ' L de ' + (x.combustivel || 'diesel') + ' · ' + (x.local || SD) + (x.st ? ' · ' + x.st : ''); }).join(' | ') + '.\nRegra: ' + (D.regraAbast || SD) + '.' : ''), src: a.src };
     });
     bloco('Documentos', function () { return ANSWERS.docsvenc(p); });
-    bloco('Pendências', function () { return ANSWERS.anomalias(p); });
-    bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p); });
+    bloco('Pendências', function () { return ANSWERS.anomalias(p, { semSim: semSim }); });   // simulacao false: as linhas do aparelho com `sim: true` (gravadas com a simulação ligada) ficam fora da ficha
+    bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p, { semSim: semSim }); });
     bloco('Equipe e contatos', function () { return ANSWERS.contatos(p, { semBordo: true }); });   // (a situação de bordo da resposta não vai na ficha: o bloco Telemetria já a traz, e a ficha de emergência não leva o quadro)
     bloco('Clima e maré', function () {
       var pv = previsao(), m = mareTexto(), s = sim();
@@ -1881,8 +1980,7 @@
       return { text: l1 + (l2 ? '\n' + l2 : '') + '\n' + l3, src: 'Fonte: ' + (pv ? 'previsão ' + pv.fonte : 'previsão Open-Meteo: sem leitura de hoje neste aparelho') + ' · maré Open-Meteo Marine · na posição de referência · vento, pressão e temperaturas de bordo no bloco Telemetria' };
     });
     bloco('Guias de bordo', function () { return ANSWERS.manual(p); });
-    out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');
-    return out.join('\n\n');
+    return semCoord(out.join('\n\n'));
   }
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
@@ -1919,6 +2017,23 @@
     r.lang = 'pt-BR'; r.interimResults = true; r.continuous = !!(opts && opts.continuous); r.maxAlternatives = 1;
     return r;
   }
+  // ——— TERMOS (PROMPT §3) ———
+  // A lista única de termos: as 8 regex do termos.json (cópia em testes/proibidos.json), com as MESMAS fontes dos Workers e do cliente da IA (Fase 6). Nenhuma usa lookbehind
+  // (iOS < 16.4) nem \w para palavra em português. Exportadas em B.TERMOS (RegExp) e B.TERMOS_FONTES ({ src, flags }: o `.source` do RegExp escapa a «/» e não serve para
+  // comparar as fontes). Aqui valem na trava de voz (só ROTULOS e AUTENTICIDADE, só com D.simulacao true) e são o que as varreduras do teste usam.
+  var TERMOS_FONTES = {
+    ROTULOS: { src: '\\bSEM (?:DADOS|LEITURA)\\b|\\bMANUAL NO DRIVE\\b|\\bDEMO\\b', flags: '' },
+    AUTENTICIDADE: { src: '(?:^|[^A-Za-zÀ-ÿ])(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:fict[ií]ci|simulad|inventad|de demonstra[çc][ãa]o)|dados de teste|fict[ií]ci|inventad[oa]s?(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:barc|embarca[çc]|navega[çc]|viage|rota|cen[áa]ri|agenda|guia|registro|mmsi)[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:simulad|de demonstra[çc][ãa]o|hipot[ée]tic|ilustrativ|de exemplo)|(?:^|[^A-Za-zÀ-ÿ])(?:é|são|foi|está|estão) (?:uma? )?(?:simula[çc][ãa]o|demonstra[çc][ãa]o)(?! d[oa]s? )|n[ãa]o (?:é|são) (?:reais?|verdadeir[A-Za-zÀ-ÿ]*|de verdade)(?![A-Za-zÀ-ÿ])|\\(demonstra[çc][ãa]o\\)|(?:^|[^A-Za-zÀ-ÿ])(?:na|da|para) demonstra[çc][ãa]o(?! d[oa]s? )|(?:^|[^A-Za-zÀ-ÿ])modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)(?![A-Za-zÀ-ÿ])', flags: 'i' },
+    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro', flags: 'i' },
+    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b', flags: 'i' },
+    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )', flags: 'i' },
+    VAZIOS: { src: '\\bn/?d\\b|n[ãa]o (?:informad|dispon[ií]vel|cadastrad)|A CADASTRAR|(?:^|[^A-Za-zÀ-ÿ])a definir(?![A-Za-zÀ-ÿ])|indispon[ií]vel|[:·]\\s*—\\s*(?=[·.,\\n]|$)', flags: '' },
+    VISIVEL: { src: 'snapshot|ao vivo desligad|leitura fixa|modelo de alerta|nada o dispara', flags: 'i' },
+    ANEXO: { src: '(?:^|[^A-Za-zÀ-ÿ])A (?:CONFERIR|CONFIRMAR)(?![A-Za-zÀ-ÿ])', flags: '' }
+  };
+  var TERMOS = {};
+  Object.keys(TERMOS_FONTES).forEach(function (k) { TERMOS[k] = new RegExp(TERMOS_FONTES[k].src, TERMOS_FONTES[k].flags); });
+
   // ---- Voz (conversa ativa) ----
   // falavel(): texto de tela → português falado. Regras em ordem, guiadas pelas tabelas; sem lookbehind (Safari antigo).
   var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
@@ -1926,6 +2041,42 @@
   var LET = 'A-Za-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u00FF', MAI = 'A-Z\\u00C0-\\u00D6\\u00D8-\\u00DE'; // letras latinas (em escape: não quebra se o .js vier sem UTF-8)
   // palavra inteira: o grupo 1 guarda o caractere anterior (reposto como $1)
   function rx(core) { return new RegExp('(^|[^' + LET + '\\d])(?:' + core + ')(?![' + LET + '\\d])', 'g'); }
+  // ——— F31 (PARIDADE, Avanti 1.20.0 e 1.20.2): nomes de equipamento que o reconhecimento de voz erra ———
+  // «ligar o siker» → «ligar o Seakeeper»; «garmim» → «Garmin»; «ploter» → «plotter». A tabela é a dos equipamentos DESTA embarcação: cada linha é um id de D.equipamentos, e o nome certo
+  // vem do cadastro (o fabricante, a 1ª palavra dele) — a embarcação que não tem o equipamento não tem a linha, e a que troca de fabricante troca o nome sem editar o cérebro. As variantes
+  // são as confusões do reconhecedor de cada nome (sem acento ou com), palavra inteira e sem distinguir caixa; o nome certo também entra (a caixa sai como no cadastro). Vale no ditado, no
+  // início do answer() e (a tela) no texto que vai à IA: B.corrigeVoz. Os de segurança (EPIRB, Seafire) usam o nome do sistema, nunca o fabricante.
+  var VOZ_EQUIP = [
+    { id: 'motores', v: 'kamins|camins|comins|cumins|cumis|cummins' },
+    { id: 'gerador', v: 'honan|onã|onam|onan' },
+    { id: 'estabilizador', v: 'siker|seker|sikeeper|seekeeper|sea\\s?keeper|si\\s?keeper|siquer|sikiper|seakeeper' },
+    { id: 'estabilizador', mantem: '(?:estabilizador|giroestabilizador)\\s+', v: 'skip|ski|squip' },
+    { id: 'climatizacao', v: 'vebasto|webasta|vebasta|webasto' },
+    { id: 'eletronicos', v: 'garmim|gármin|garmi|garmin' },
+    { id: 'eletronicos', v: 'polter|poltergein|ploter|plóter|plotter', nome: 'plotter' },
+    { id: 'audio', v: 'fiuchon|fiúchon|fiuchion|fusion' },
+    { id: 'vhf', v: 'aicom|aikom|icom' },
+    { id: 'epirb', v: 'ipirb|ipirbi|epirbe|epirbi|e pirb|epirb', nome: 'EPIRB' },
+    { id: 'seafire', v: 'sea\\s?fire|si\\s?fire|sifaire|sifai|cifire|seafire', nome: 'Seafire' },
+    { id: 'dessalinizador', v: 'shenker|schenquer|chenker|xenquer|schenker' },
+    { id: 'ancora', v: 'leumar|lumar|luomar|leumer|lewmar' },
+    { id: 'piloto', v: 'reimarine|reymarine|rei marine|ray marine|raymarine' },
+    { id: 'ais', v: 'emtrak|em track|em trak|m trak|em-trak' },
+    { id: 'eletrico', v: 'vitron|victor on|victron' }
+  ].map(function (x) {
+    x.re = new RegExp('(^|[^' + LET + '\\d])' + (x.mantem ? '(' + x.mantem + ')' : '') + '(?:' + x.v + ')(?![' + LET + '\\d])', 'gi');
+    return x;
+  });
+  function corrigeVoz(t) {
+    var s = String(t == null ? '' : t), eq;
+    if (!s || EM_SOS) return s;   // (o SOS não lê o D.equipamentos, CONTRATO §1.3)
+    eq = D.equipamentos || [];
+    VOZ_EQUIP.forEach(function (x) {
+      var e = eq.filter(function (y) { return y && y.id === x.id; })[0], nome = x.nome || (e && e.fabricante ? String(e.fabricante).split(' ')[0] : '');
+      if (e && nome) s = s.replace(x.re, '$1' + (x.mantem ? '$2' : '') + nome);
+    });
+    return s;
+  }
   // unidades — só logo depois de número: [símbolo, singular, plural]; as mais longas primeiro
   var UNID = [
     ['km/h', 'quilômetro por hora', 'quilômetros por hora'], ['L/h', 'litro por hora', 'litros por hora'], ['kWh', 'quilowatt-hora', 'quilowatts-hora'],
@@ -1936,15 +2087,20 @@
     ['d', 'dia', 'dias'], ['V', 'volt', 'volts'], ['W', 'watt', 'watts'], ['A(?!\\s+[' + MAI + ']{2})', 'ampère', 'ampères']
   ].map(function (u) { return { re: new RegExp('(^|[^' + LET + '\\d.,])(\\d+(?:[.,]\\d+)*)\\s?(?:' + u[0] + ')(\\+?)(?![' + LET + '\\d])', 'g'), um: u[1], varios: u[2] }; });
   // siglas e abreviações por extenso (palavra inteira, maiúsculas exatas)
+  // F32 (PARIDADE, Avanti 1.13.0): a sigla é dita como se fala a bordo, nunca soletrada (EPIRB = épirbi, MOB = móbi, NMEA = nêmea, kt = nós, hPa = hectopascal, rpm = rotações por
+  // minuto) e as siglas da instrumentação do quadro (SOG, COG, STW, TWS, TWA, TWD, AWA, AWS, HDG, DPT, ETA) saem por extenso. Bombordo e boreste (BB, BE) já existiam.
   var SIGLAS = [
     ['NF-e', 'nota fiscal eletrônica'], ['NF', 'nota fiscal'], ['BB', 'bombordo'], ['BE', 'boreste'], ['SOG', 'velocidade sobre o fundo'],
-    ['COG', 'rumo sobre o fundo'], ['STBY', 'standby'], ['MOB', 'homem ao mar'], ['AC', 'corrente alternada'], ['DC', 'corrente contínua'],
+    ['COG', 'rumo sobre o fundo'], ['STW', 'velocidade na água'], ['TWS', 'velocidade do vento verdadeiro'], ['TWA', 'ângulo do vento verdadeiro'], ['TWD', 'direção do vento verdadeiro'],
+    ['AWA', 'ângulo do vento aparente'], ['AWS', 'velocidade do vento aparente'], ['HDG', 'proa'], ['DPT', 'profundidade'], ['ETA', 'chegada prevista'],
+    ['STBY', 'standby'], ['MOB', 'móbi'], ['EPIRB', 'épirbi'], ['NMEA', 'nêmea'], ['AC', 'corrente alternada'], ['DC', 'corrente contínua'],
+    ['KTS?|kts?|kn', 'nós'], ['km/h', 'quilômetros por hora'], ['hPa', 'hectopascal'], ['kPa', 'quilopascal'], ['rpm', 'rotações por minuto'],
     ['RPM', 'rotação'], ['PAN-PAN', 'pan pan'], ['[Nn][º°]', 'número'], ['IA', 'i a'], ['TIE', 'título de inscrição'], ['máx\\.?', 'máximo'], ['mín\\.?', 'mínimo'],
     ['Sr\\.', 'senhor'], ['Sra\\.', 'senhora'], ['ref\\.', 'referência'], ['cert\\.', 'certificado']
   ].map(function (x) { return [rx(x[0]), '$1' + x[1]]; });
   // símbolos → fala ou pausa
   var SIMB = [
-    [/Rev\. ?(?=\d)/g, 'revisão '], [/§ ?/g, 'seção '], [/(\d)-(?=\d)/g, '$1 '],
+    [/Rev\. ?(?=\d)/g, 'revisão '], [/§ ?/g, 'seção '], [/(\d)-(?=\d)/g, '$1 '], [/−(?=\d)/g, 'menos '],
     [/\s*±\s*/g, ' mais ou menos '], [/\s*[≈~]\s*/g, ' cerca de '], [/\s*≤\s*/g, ' até '], [/\s*≥\s*/g, ' pelo menos '],
     [new RegExp('(\\d)\\s*×\\s*(?=[' + LET + '])', 'g'), '$1 '], [/×\s*(\d+)/g, '$1 vezes'], [/\s*×\s*/g, ' vezes '],
     [/\s+\+\s+/g, ' mais '], [/(^|\s)\+(?=\d)/g, '$1mais '], [/\s*%/g, ' por cento'],
@@ -1953,7 +2109,7 @@
     [new RegExp('([' + LET + '])\\s*/\\s*(?=\\d)', 'g'), '$1 ou '], [/\s*\/\s*/g, ', ']
   ];
   // MAIÚSCULAS de 4+ letras viram minúsculas (senão o TTS soletra), com as palavrinhas do mesmo trecho; siglas lidas como tal ficam.
-  var SIGLA_OK = ' VHF AIS GPS MMSI EPIRB NMEA DHN SOS DSC ';
+  var SIGLA_OK = ' VHF AIS GPS MMSI DHN SOS DSC ';
   var MIUDAS = ' A O E É AS OS DE DA DO DAS DOS EM NA NO NAS NOS AO AOS À ÀS UM UMA SEM COM POR PARA OU QUE SE SÓ JÁ NÃO HÁ ';
   var CAIXA = new RegExp('(^|[^' + LET + '\\d-])([' + MAI + ']+(?: [' + MAI + ']+)*)(?![' + LET + '\\d-])', 'g');
   function minusculas(s) {
@@ -2008,6 +2164,18 @@
       return data ? a + (dd === 1 ? 'primeiro' : dd) + ' de ' + MESES[mm - 1] + (y ? ' de ' + y : '') : m;
     }).replace(new RegExp('(^|[^' + LET + '])(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/(\\d{4})(?!\\d)', 'gi'), function (m, a, me, y) {
       return a + MESES['janfevmarabrmaijunjulagosetoutnovdez'.indexOf(me.toLowerCase()) / 3] + ' de ' + y;
+    });
+    // a hora que fecha a frase depois do travessão («… chegando — 12:01:00.») vira «, às 12:01:00»
+    s = s.replace(/ [—–] (\d{1,2}:\d{2}(?::\d{2})?)(?![\d:])/g, ', às $1');
+    // horário com segundos 12:01:05 → "12 horas, 1 minuto e 5 segundos" (segundos ":00" → "12 horas e 1 minuto"); vem antes do HH:MM, que não pega o que tem ":" depois
+    s = s.replace(/(^|[^\d:,.])(\d{1,2}):(\d{2}):(\d{2})(?!\d|:\d|\.\d)/g, function (m, a, h, mi, se) {
+      var p;
+      h = +h; mi = +mi; se = +se;
+      if (h > 23 || mi > 59 || se > 59) return m;
+      p = [hora(h)];
+      if (mi) p.push(mi + (mi === 1 ? ' minuto' : ' minutos'));
+      if (se) p.push(se + (se === 1 ? ' segundo' : ' segundos'));
+      return a + (p.length === 1 ? p[0] : p.length === 2 ? p[0] + ' e ' + p[1] : p[0] + ', ' + p[1] + ' e ' + p[2]);
     });
     // horário 13:23 / 23h01 (nunca razão) e duração 1 h 10 / 6 h 58 min
     s = s.replace(/(^|[^\d:,.])(\d{1,2})(?::|h)(\d{2})(?:min(?![A-Za-z]))?(?![\d:]|\.\d)/g, function (m, a, h, mi) {
@@ -2104,7 +2272,7 @@
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return null;
     o = o || {};
     var pausa = o.pausa || 2500, feito = false, texto = '', sessao = '', r = null, t = 0, tMax = 0, ouviu = false, rapidas = 0, ini = 0;
-    function atual() { return (texto + ' ' + sessao).replace(/\s+/g, ' ').trim(); }
+    function atual() { return corrigeVoz((texto + ' ' + sessao).replace(/\s+/g, ' ').trim()); }   // F31: «ligar o siker» já sai «ligar o Seakeeper»
     // O Chrome do Android devolve resultados acumulados ("você", "você tem", "você tem banco"…): somar tudo repetia palavras.
     // Cada sessão é remontada do zero a partir de todos os resultados, e um trecho que continua o anterior o substitui.
     function junta(lista, seg) {
@@ -2215,7 +2383,9 @@
   // Fala direta: na voz vai só o essencial (a 1ª linha da resposta, sem fontes); o texto completo fica na tela.
   // Emergência (SOS, pressão de óleo, EPIRB, incêndio) é lida inteira — segurança vem antes da concisão.
   var FALA_INTEIRA = { sos: 1, oleo: 1, epirb: 1, seafire: 1 };
-  function falaCurta(a) {
+  // A fala (PROMPT Fase 3 «Voz»): falaBase() é a 1ª linha da resposta (ou as primeiras ressalvas/itens de uma lista), sem fontes e sem parênteses; falaCurta() a fecha com a hora do
+  // instante, quando a frase não a diz, e passa pela trava de voz. As chaves de FALA_INTEIRA saem sempre inteiras, sem trava e sem hora (segurança vem antes).
+  function falaBase(a) {
     if (a && typeof a === 'object' && a.fala) return a.fala; // resposta que já traz a fala certa (saudação vinda de pergunta)
     var t = a && typeof a === 'object' ? a.text : a;
     if (a && a.key && FALA_INTEIRA[a.key]) return String(t || '');
@@ -2243,6 +2413,39 @@
     if (r.length > lim) { var m = r.slice(0, lim).match(/^[\s\S]*[.!?;]/); r = m ? m[0].replace(/;$/, '.') : r.slice(0, r.lastIndexOf(' ', lim)) + '.'; }
     return r;
   }
+  // A hora na fala (decisão 5: resposta com número e hora). A 1ª linha de uma resposta de dado de bordo diz a hora do instante («às 12:01:00»); a que a traz só entre parênteses (que a fala tira) ou na
+  // fonte ganha «Às HH:MM:SS.» no fim. Ficam de fora as respostas sem dado do quadro ou com a hora própria: as de emergência e as chaves de SEM_HORA_NA_FONTE, as do tempo e da maré (hora da leitura
+  // do mundo real, §2.5), a lista da equipe, as perguntas de fora do barco e sobre os dados, o fallback, o trecho do guia e as do cadastro sem quadro (áudio, guias). A hora é a do instante da
+  // PRÓPRIA resposta (`a.hora`, posta pelo answer()): a fala é montada depois, com o relógio já andado, e a tela copia a resposta antes de falar.
+  var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1 };
+  function comHoraNaFala(a, t) {
+    var h = a && typeof a === 'object' && typeof a.hora === 'string' ? a.hora : '';
+    if (!sim() || !/^\d\d:\d\d:\d\d$/.test(h) || !a.key || SEM_HORA_NA_FONTE[a.key] || FALA_SEM_HORA[a.key] || !t || /\d\d:\d\d:\d\d/.test(t)) return t;
+    // «Pendências abertas: …» → «Pendências abertas, às 12:01:00: …» (a hora na abertura, antes da lista); sem os dois-pontos perto do começo, «… Às 12:01:00.» no fim
+    var k = t.indexOf(': ');
+    if (k > 0 && k < 140) return t.slice(0, k) + ', às ' + h + t.slice(k);
+    return String(t).replace(/[\s.;:,]+$/, '') + '. Às ' + h + '.';
+  }
+  // Trava de voz (só com D.simulacao true): troca o termo que casa ROTULOS ou AUTENTICIDADE (§3) por uma palavra neutra, nunca suprime nem encurta a frase. É a última guarda: as respostas locais já
+  // saem limpas (os testes varrem) e a da IA passa pelo filtro do Worker; aqui pega o que escapou (a nota do diário lida de volta, uma resposta antiga). Não vale para FALA_INTEIRA.
+  var VOZ_TERMOS = [['ROTULOS', function (m) { return /^SEM/.test(m) ? 'sem informação' : /^MANUAL/.test(m) ? 'no guia de bordo' : 'de bordo'; }],
+    ['AUTENTICIDADE', function (m) { return (/^[^A-Za-zÀ-ÿ(]/.test(m) ? m.charAt(0) : '') + (/^\(demonstra/i.test(m) ? 'de bordo' : 'dado de bordo'); }]]
+    .map(function (x) { return [new RegExp(TERMOS_FONTES[x[0]].src, 'g' + TERMOS_FONTES[x[0]].flags), x[1]]; });
+  function travaVoz(t) {
+    var s = String(t == null ? '' : t), k, n;
+    if (!sim()) return s;
+    for (n = 0; n < 4; n++) {
+      var antes = s;
+      for (k = 0; k < VOZ_TERMOS.length; k++) s = s.replace(VOZ_TERMOS[k][0], VOZ_TERMOS[k][1]);
+      if (s === antes) break;
+    }
+    return s;
+  }
+  function falaCurta(a) {
+    var t = falaBase(a);
+    if (a && typeof a === 'object' && a.key && FALA_INTEIRA[a.key] === 1) return t;
+    return travaVoz(comHoraNaFala(a, t));
+  }
   // A tela avisa o núcleo de voz que espera a IA na nuvem: ele fica em PROCESSANDO até a resposta ser falada (sem sumir em 2,5 s).
   function vozPensando(texto) { try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: 'pensando', texto: texto || '', segura: true } })); } catch (e) {} }
 
@@ -2255,7 +2458,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
