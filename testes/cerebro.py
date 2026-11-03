@@ -4063,7 +4063,7 @@ MUTANTES_3A = [
     ('a ficha(p, q, a) de emergência leva só o Telemetria (a guarda esquece o Horímetros)', "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };", "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Autonomia e consumo': 1 };", ('emerg',)),
     ('a guarda de emergência esquece o óleo', "var EMERG = { sos: 1, oleo: 1, canal16: 1,", "var EMERG = { sos: 1, canal16: 1,", ('emerg', 'forma')),
     ('a guarda de emergência esquece o seafire', "epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };", "epirb: 1, salvatagem: 1, mmsi: 1 };", ('emerg',)),
-    ('a guarda de emergência vale para qualquer chave (EMERG[a.key] sem === 1)', "return !!a && typeof a === 'object' && EMERG[a.key] === 1; }", "return !!a && typeof a === 'object'; }", ('emerg', 'uma')),
+    ('a guarda de emergência vale para qualquer chave (EMERG[a.key] sem === 1)', "return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }", "return !!a && typeof a === 'object'; }", ('emerg', 'uma')),   # (P3E, F10: texto novo do emerg(), mesma mutação)
 ]
 
 
@@ -4230,7 +4230,8 @@ MUTANTES_3C = [
     ('o foraBarco antes das rotas de bordo («quanto custa o diesel em reais?» deixa de ser o diesel)', r"if (sobreDados(q)) return 'sobreDados';", r"if (sobreDados(q)) return 'sobreDados'; if (has(q, FORA_BARCO)) return 'foraBarco';", ('p3c',)),
     ('o foraBarco sem «dolar»', r"var FORA_BARCO = [' dolar ', ' dolares ', ", r"var FORA_BARCO = [", ('p3c',)),
     ('o foraBarco sem «preco»', r"' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' bitcoin ', 'quanto custa'", ('p3c',)),
-    ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'foraBarco') return false;", ('p3c',)),
+    # (P3E, F10: o `pedeIA` ganhou o 'faqEquip' na mesma linha; a mutação é a mesma, ancorada no texto novo)
+    ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'foraBarco') return false;", ('p3c',)),
     ('a sobreDados sem a forma curta («é de verdade?»)', r"if (AUT_CURTA.test(q) || AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", r"if (AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", ('p3c',)),
     ('a sobreDados sem «o barco existe»', r"var AUT_EXISTE = [' o barco existe ', ", r"var AUT_EXISTE = [", ('p3c',)),
     ('o horímetro pega a revisão do gerador e o filtro de água salgada (sem a lista branca)', r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && leitura(q, FALTA_TROCA_OK)) return 'horimetros';", r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor'])) return 'horimetros';", ('p3c',)),
@@ -4528,7 +4529,7 @@ MUTANTES_3D = [
     ('o teto da ficha fica nos 12.000 do cliente (a ficha com a previsão e a maré passa de 11.500: a decisão (i) manda 16.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 12000;", ('ficha',)),
     ('o teto da ficha cai abaixo da ficha (8.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 8000;", ('ficha',)),
     ('o cérebro não exporta o teto da ficha', r"FICHA_MAX: FICHA_MAX,", r"", ('ficha',)),
-    ('a ficha completa não é cortada pela fala do sos (a resposta de emergência sem a guarda do EMERG)', r"function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }", r"function emerg(a) { return false; }", ('ficha', 'emerg')),
+    ('a ficha completa não é cortada pela fala do sos (a resposta de emergência sem a guarda do EMERG)', r"function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }", r"function emerg(a) { return false; }", ('ficha', 'emerg')),   # (P3E, F10: o emerg() ganhou o cartão EM do FAQ; mesma mutação, texto novo)
     # —— semCoord (§2.8) ——
     ('o semCoord não tira nada', r"function semCoord(s) { return String(s || '').replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }", r"function semCoord(s) { return String(s || ''); }", ('semcoord', 'ficha')),
     ('o semCoord perde o decimal de 4 casas (-26.9931)', r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]", r"|-?\d{1,3}[.,]\d{3,}\s*[;\/]", ('semcoord',)),
@@ -4576,7 +4577,7 @@ MUTANTES_3D_VOZ = [
     ('a resposta não leva a hora do instante (a cópia da tela perde a fala com hora)', r"if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;", r"", ('voz',)),
     ('a resposta de emergência leva a hora do instante', r"if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;", r"if (a && typeof a === 'object' && sim() && vivo()) a.hora = vivo().hora;", ('voz', 'emerg')),
     ('a fala da resposta do tempo e da maré ganha a hora do instante', r"var FALA_SEM_HORA = { clima: 1, contatos: 1,", r"var FALA_SEM_HORA = { contatos: 1,", ('voz',)),
-    ('a fala de uma chave do cadastro (áudio, guias) ganha a hora', r"base: 1, audio: 1, manual: 1, ia: 1,", r"base: 1, ia: 1,", ('voz',)),
+    ('a fala de uma chave do cadastro (áudio, guias) ganha a hora', r"base: 1, faqEquip: 1, audio: 1, manual: 1, ia: 1,", r"base: 1, faqEquip: 1, ia: 1,", ('voz',)),   # (P3E, F10: a lista ganhou o 'faqEquip'; mesma mutação, texto novo)
     ('a fala do diagnóstico e da saudação ganha a hora do instante', r"|| SEM_HORA_NA_FONTE[a.key] || FALA_SEM_HORA[a.key]", r"|| FALA_SEM_HORA[a.key]", ('voz',)),
     ('a hora entra duas vezes na fala (sem olhar se a frase já a diz)', r"|| !t || /\d\d:\d\d:\d\d/.test(t)) return t;", r"|| !t) return t;", ('voz',)),
     # —— a trava de voz ——
