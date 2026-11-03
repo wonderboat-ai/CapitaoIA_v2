@@ -1816,7 +1816,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -2423,12 +2423,17 @@ PERGUNTA_CHAVE = {
     'sobreDados': 'esses dados são reais?', 'foraBarco': 'qual o preço do dólar?', 'mmsi': 'qual o MMSI do barco?', 'profundidade': 'qual a profundidade?', 'eta': 'qual a hora de chegada?',
     'alarmes': 'tem algum alarme ativo?', 'arrefecimento': 'qual a temperatura do motor?', 'ondas': 'como está o estado do mar?', 'temperaturaAgua': 'qual a temperatura da água?',
     'navegacao': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?', 'embarcacao': 'qual o calado do barco?', 'ais': 'quantos alvos no AIS?',
+    # P3E: as tendências (F11)
+    'preditiva': 'quais as tendências?', 'pecas': 'quais peças temos a bordo?',
+    'checklistFundeio': 'checklist de fundeio', 'checklistAbastecimento': 'checklist de abastecimento',
 }
-# as chaves cuja resposta não traz a hora do instante: emergência (nada do quadro), diagnóstico (do aparelho), a saudação e os checklists (texto de guia)
-SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'checklist', 'checklistChegada')
+# as chaves cuja resposta não traz a hora do instante: emergência (nada do quadro), diagnóstico (do aparelho) e a saudação.
+# Fase 3 (P3E, F09): os checklists saíram daqui — o item conferido pelo quadro muda com o instante («item conferido muda com o replay», PARIDADE F09), então a resposta traz a hora e os números dele
+SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao')
 # as respostas cujos números mudam de 12:01:00 para 12:01:45 (vento, SOG, rpm, arrefecimento, volante, tensão, nível do porão, distância do destino, diesel)
 MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora', 'consumo', 'autonomia',
-         'profundidade', 'eta', 'alarmes', 'arrefecimento', 'navegacao', 'sobreDados', 'foraBarco')   # (P3C: a profundidade, a chegada, os alarmes, o arrefecimento e a navegação mudam de 12:01:00 para 12:01:45; a frase padrão e o «fora do barco» levam a situação de bordo)
+         'profundidade', 'eta', 'alarmes', 'arrefecimento', 'navegacao', 'sobreDados', 'foraBarco', 'preditiva',
+         'checklist', 'checklistChegada', 'checklistFundeio', 'checklistAbastecimento')   # (P3C: a profundidade, a chegada, os alarmes, o arrefecimento e a navegação mudam de 12:01:00 para 12:01:45; a frase padrão e o «fora do barco» levam a situação de bordo)
 VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'DINHEIRO')
 # revisão da P3B (2ª): as DUAS linhas que o atalho do diário grava (o resumo sozinho e a nota com «posição e hora») ficam para sempre no registro (o diário só cresce): sem DEMO na fonte nem no texto com a
 # simulação; com simulacao false e a flag antiga, o (DEMO) de antes na fonte
@@ -2485,7 +2490,7 @@ def grupo_rotulos(b, muta, ped):
                 ruins.append((x['hora'], 'autonomia', quer, por['autonomia'][:90]))
         ped('rotulos: o consumo agora e a autonomia (horas e milhas) da resposta são os do instante (txt.consumo e calc.autonomia), nos dois instantes', not ruins, ruins)
         fixas = [k for (k, _, ta, sa, _), (_, _, tc, sc, _) in zip(a['r'], c['r']) if k in SEM_HORA and ta != tc]
-        ped('rotulos: a emergência, o diagnóstico, a saudação e os checklists não mudam com o instante', not fixas, fixas)
+        ped('rotulos: a emergência, o diagnóstico e a saudação não mudam com o instante (os checklists mudam: F09)', not fixas, fixas)
     finally:
         pg.ctx.close()
     # a flag antiga (D.demo, D.selo, D.aviso) não põe rótulo em resposta nenhuma com simulacao true
@@ -2636,8 +2641,11 @@ def grupo_prazos(b, muta, ped):
         ped('prazos: os documentos também (Seguro D-n cai 3 dias)', dx[1] and dy[1] == [n - DIAS for n in dx[1]], (dx, dy))
         ped('prazos: a lista de atrasadas da manutenção, da ficha e do seguro para sair têm o mesmo número de atrasos na página deslocada',
             numeros_de_prazo(y['ficha'])[0][:3] == ay and len(numeros_de_prazo(y['seguro'])[0]) == 3 and numeros_de_prazo(y['seguro'])[0] == ay, (numeros_de_prazo(y['seguro']), ay))
-        ped('prazos: o checklist de saída (item da climatização e do porão) conta o atraso do dia do instante',
-            numeros_de_prazo(y['chk'])[0] == [n + DIAS for n in numeros_de_prazo(x['chk'])[0]] and len(numeros_de_prazo(x['chk'])[0]) == 2, (numeros_de_prazo(x['chk']), numeros_de_prazo(y['chk'])))
+        # Fase 3 (P3E, F09): o checklist de saída passou a ser o do D.checklists (sem o item da climatização): o atraso que ele conta é o da tarefa de SEGURANÇA atrasada (o teste das bombas de
+        # porão, no item das tarefas de segurança e, com o quadro vivo, também no do porão), e continua contado do dia do instante
+        pz, cx, cy = numeros_de_prazo(x['seguro'])[0][0], numeros_de_prazo(x['chk'])[0], numeros_de_prazo(y['chk'])[0]   # (o porão vem primeiro no seguro para sair)
+        ped('prazos: o checklist de saída (itens do porão e das tarefas de segurança) conta o atraso do dia do instante',
+            cx and cy and set(cx) == {pz} and set(cy) == {pz + DIAS} and len(cx) == len(cy), (cx, cy, pz))
         # a tarefa do EPIRB (equipamento de segurança): sem a data nem o D-n, com a nota da etiqueta
         for nome, t in (('manutenção', x['man']), ('ficha', x['ficha'])):
             ep = [l for l in t.split('\n') if 'Autoteste do EPIRB e validade' in l]
@@ -2741,7 +2749,7 @@ JS_PRAZOS_ABS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDado
   const seg = (t) => { const e = D.equipamentos.filter((x) => x.id === t.sistema)[0]; return !!(e && e.seguranca); };
   const i = B.instante();
   return { hoje: A.relogio.hoje, utc: new Date().toISOString().slice(0, 10), hora: i && i.hora, segDocs: D.equipamentos.filter((e) => e.seguranca).map((e) => e.validade),
-    agenda: D.agenda.map((t) => ({ id: t.id, t: t.t, equip: t.equip, quem: t.quem, dn: t.dn, vence: t.vence, seg: seg(t) })), docs: D.documentos.map((d) => ({ id: d.id, n: d.n, dn: typeof d.dn === 'number' ? d.dn : null, vence: d.vence })),
+    agenda: D.agenda.map((t) => ({ id: t.id, t: t.t, equip: t.equip, quem: t.quem, dn: t.dn, vence: t.vence, seg: seg(t), seguranca: t.seguranca === true })), docs: D.documentos.map((d) => ({ id: d.id, n: d.n, dn: typeof d.dn === 'number' ? d.dn : null, vence: d.vence })),
     man: r('próximas manutenções'), docsT: r('documentos vencendo'), seguro: r('é seguro sair hoje?'), chk: r('checklist de saída') }; }"""
 
 
@@ -2767,9 +2775,10 @@ def confere_absolutos(ped, nome, x, hoje, utc, vencido):
         all(p >= 0 for p in pos) and pos == sorted(pos) and ('Atrasadas (%d)' % len(atras)) in x['man'], [l for l, p in zip(linhas, pos) if p < 0] or x['man'][:300])
     atraso = lambda t: [int(n) for n in re.findall(r'em atraso há (\d+) dias?', t)]
     seg_ord = [t for t in atras if t['id'] == 'porao-teste'] + [t for t in atras if t['id'] != 'porao-teste']   # a ressalva de segurança (o porão) vem primeiro
-    chk_ord = [t for i in ('clima-filtro', 'porao-teste') for t in atras if t['id'] == i]                        # itens 3 (climatização) e 5 (porão) do checklist
-    ped('prazos (%s): o seguro para sair (o porão primeiro) e o checklist de saída (itens 3 e 5) contam os atrasos do dado' % nome,
-        atraso(x['seguro']) == [-t['dn'] for t in seg_ord] and atraso(x['chk']) == [-t['dn'] for t in chk_ord], (atraso(x['seguro']), atraso(x['chk']), [-t['dn'] for t in seg_ord], [-t['dn'] for t in chk_ord]))
+    # Fase 3 (P3E, F09): o checklist de saída passou a ser o do D.checklists: o atraso que ele conta é o da tarefa de segurança (o porão), no item das tarefas de segurança (e no do porão com o quadro vivo)
+    chk_ord = [t for t in atras if t['seguranca']]
+    ped('prazos (%s): o seguro para sair (o porão primeiro) e o checklist de saída (itens do porão e das tarefas de segurança) contam os atrasos do dado' % nome,
+        atraso(x['seguro']) == [-t['dn'] for t in seg_ord] and chk_ord and atraso(x['chk']) and set(atraso(x['chk'])) == {-t['dn'] for t in chk_ord}, (atraso(x['seguro']), atraso(x['chk']), [-t['dn'] for t in seg_ord], [-t['dn'] for t in chk_ord]))
     ped('prazos (%s): cada documento que vence em até 90 dias traz o vencimento e o D-n do dado' % nome, all(l in x['docsT'] for l in docs) and len(docs) >= 2, [l for l in docs if l not in x['docsT']] or x['docsT'][:300])
     ped('prazos (%s): o documento vencido em 01/01/2026 diz «VENCIDO há %d dias» (a conta do calendário: %s)' % (nome, vencido, hoje),
         ('Licença vencida de teste — 01/01/2026 (VENCIDO há %d dias)' % vencido) in x['docsT'], re.findall(r'Licença vencida[^\n]*', x['docsT']))
@@ -2957,8 +2966,10 @@ def grupo_textos(b, muta, ped):
             x['tx']['oleo'] in x['oleoL'] and x['tx']['rpm'] in x['oleoL'] and x['tx']['hora'] in x['oleoL'] and 'desligados' not in x['oleoL'] and 'última leitura' not in x['oleoL'], x['oleoL'][:300])
         ped('textos: a climatização leva fabricante e modelo do cadastro e o registro do diário da própria tarefa (nenhum «desde 20/09» fixo)',
             'Climatização Webasto FCF Platinum' in x['clima'] and '20/09' not in x['clima'] and bool(x['diaMotor']) and x['diaMotor'][0].split('|')[0] in x['clima'], (x['clima'][:300], x['diaMotor']))
-        ped('textos: o checklist de saída traz o item 7 (coletes, um por pessoa; balsa, boia e extintores conforme a placa de salvatagem; previsão consultada) sem lugar de equipamento e sem A CONFIRMAR',
-            '7. Antes de largar: coletes, um por pessoa' in x['chk'] and 'conforme a placa de salvatagem' in x['chk'] and 'confira o boletim da Marinha antes de sair' in x['chk'] and not RX['LOCAL_SEGURANCA'].search(x['chk']) and 'A CONFIRMAR' not in x['chk'], x['chk'][-420:])
+        # Fase 3 (P3E, F09): o checklist de saída é o do D.checklists; o «item 7» de antes é o s13 (a salvatagem) e o s01 (a previsão), cada um com a fonte do guia
+        ped('textos: o checklist de saída traz o item da salvatagem (13: coletes, um por pessoa; balsa, boia e extintores conforme a placa de salvatagem) e o da previsão (1: confira o boletim da Marinha antes de sair), com a fonte, sem lugar de equipamento e sem A CONFIRMAR',
+            '13. • Coletes: um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem. (Checklist de bordo § Saída · antes de largar · FAQ EM-09)' in x['chk'] and '1. • Previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair' in x['chk']
+            and not RX['LOCAL_SEGURANCA'].search(x['chk']) and 'A CONFIRMAR' not in x['chk'], x['chk'][-420:])
         ped('textos: os contatos abrem a situação de bordo com «Situação de bordo agora:» (o quadro está vivo)', ('Situação de bordo agora: ' + x['tx']['resumoSemPosicao']) in x['contatos'] and 'Última situação de bordo' not in x['contatos'], x['contatos'][-300:])
         ped('textos: a saudação fala da telemetria ao vivo (simulacao true)', 'Respondo sobre telemetria ao vivo, manutenção' in x['saud'], x['saud'])
         ped('textos: os eletrônicos citam o guia do piloto e o do radar (Raymarine, Garmin GMR) e a atualização de cartas pelo prazo (nenhum «diário 28/08» fixo)',
@@ -3746,8 +3757,8 @@ GRUPOS_3A['termos'] = grupo_termos
 
 # ——— a voz (PROMPT Fase 3 «Voz»; F31, F32) ———
 # As chaves cuja fala é só a frase (sem a hora do instante): as de FALA_INTEIRA e de emergência, as do (g) (tempo e maré, contatos, fora do barco, sobre os dados, o fallback), o trecho
-# do guia, o cadastro sem quadro (áudio, guias), a saudação, o diagnóstico, os checklists e o registro. As outras são de dado de bordo: a fala traz o número e a hora do instante.
-VOZ_SO_FRASE = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'checklist', 'checklistChegada', 'sobreDados', 'foraBarco', 'fallback', 'mare', 'clima',
+# do guia, o cadastro sem quadro (áudio, guias), a saudação, o diagnóstico e o registro (Fase 3, P3E, F09: os checklists saíram daqui — a fala deles traz a hora do instante). As outras são de dado de bordo: a fala traz o número e a hora do instante.
+VOZ_SO_FRASE = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'sobreDados', 'foraBarco', 'fallback', 'mare', 'clima',
                 'contatos', 'manual', 'audio', 'diario')
 # perguntas que caem numa chave que já tem outra pergunta acima, mas com a 1ª linha própria (a chave `eta` abre com «Percorrido desde as 07:00: …» na pergunta de distância)
 VOZ_EXTRA = {'etaPercorrido': 'quantas milhas percorremos hoje?', 'etaProximoPonto': 'qual o próximo waypoint?', 'situacaoAgora': 'situação agora'}
@@ -4114,7 +4125,8 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3B
 MUTANTES_3B_REV = [
     ('o consumo agora vira um valor fixo', r"(i.txt.consumo || SD)", r"'0 L/h'", ('rotulos',)),
     ('a autonomia da resposta fica a do snapshot (AUT0)', r"'Autonomia ≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a '", r"'Autonomia ≈ ' + nb(AUT0.horas) + ' h · ≈ ' + AUT0.mn + ' mn a '", ('rotulos',)),
-    ('o checklist de saída perde o item 7 (coletes, balsa, boia, extintores, previsão)', r"\n7. Antes de largar: coletes, um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem; previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.'", r"'", ('textos',)),
+    # (P3E, F09: o «item 7» fixo do checklist saiu com a troca pelo D.checklists; o mutante equivalente tira a fonte e o código do FAQ de cada item)
+    ('o checklist de saída perde a fonte do item (o 13 da salvatagem e o 1 da previsão)', "+ por + ' (' + x.fonte + (x.faq ? ' · FAQ ' + x.faq : '') + ')';", "+ por;", ('textos',)),
     ('o seguro para sair sempre diz «a primeira é de segurança»', r"(primeiraSeg ? ' — a primeira é de segurança.' : '.')", r"(true ? ' — a primeira é de segurança.' : '.')", ('prazos',)),
     ('o documento vencido perde o «VENCIDO há»', r"return n < 0 ? 'VENCIDO há ' + (-n)", r"return n < 0 ? 'vencido ' + (-n)", ('prazos',)),
     ('a situação de bordo sempre diz «Última situação de bordo»', r"(vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ')", r"'Última situação de bordo: '", ('textos',)),
@@ -4668,6 +4680,482 @@ MUTANTES_3D_REV = [
     ('a trava troca «não é verdadeira» por «não é» (sem o predicado «de bordo»)', r"return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", r"return ini + x[1] + ' ' + x[2];   // a negação FICA", ('voz',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3D_REV
+
+# ——————————————— Fase 3, P3E: checklists (F09), FAQ (F10), tendências (F11) e peças (F22) ———————————————
+# (PARIDADE F09, F10, F11, F22; CONTRATO §1.6, §1.13, §1.18, §1.20, §1.25.) Só o cérebro: as telas C4, F6 e a aba de peças são da Fase 4. Nenhum texto escrito aqui repete um número do dado:
+# o esperado sai do instante (i.q, i.calc, i.tend) e do cadastro (D.checklists, D.pecas, D.agenda), como nos grupos da P3C.
+
+# —— F11: as tendências ——
+ROTAS_P3E_F11 = [
+    ('quais as tendências?', 'preditiva', False), ('análise preditiva', 'preditiva', False), ('tendências dos motores', 'preditiva', False), ('qual a tendência do óleo?', 'preditiva', False),
+    ('qual a tendência da pressão de óleo?', 'preditiva', False), ('tendência do arrefecimento', 'preditiva', False), ('o barco está perdendo capacidade?', 'preditiva', False),
+    ('tem alguma tendência de queda nas baterias?', 'preditiva', False), ('recomendação da IA', 'preditiva', False),
+    # o que ela não pode roubar: o relato de queda do óleo (segurança, em `oleo`), o vento, a maré, a pressão barométrica, o consumo e o dinheiro seguem as suas rotas
+    ('a pressão do óleo está caindo, qual a tendência?', 'oleo', False), ('qual a tendência do vento?', 'clima', False), ('tendência da maré', 'mare', False),
+    ('tendência da pressão barométrica', 'fallback', True), ('qual a tendência de consumo?', 'consumo', False), ('tendência do dólar', 'foraBarco', False),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F11]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F11})
+JS_PRED = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, Q = 'quais as tendências?';
+  return xs.map((x) => { R.fixar(x); const i = B.instante(), a = B.answer(Q, op);
+    return { x, hora: i.hora, achados: B.preditiva(), key: a.key, texto: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, Q), be: i.q.motor_be_arref_c, bb: i.q.motor_bb_arref_c,
+             tend: i.tend && i.tend.motor_be_arref_c, faltam: i.calc.faltam, alarme: i.q.alarmes && i.q.alarmes[0] && i.q.alarmes[0].desde }; }); }"""
+PRED_ORDEM_60 = ['arref_cruzeiro', 'horas', 'arref_agora', 'oleo_cruzeiro', 'baterias']
+PRED_ORDEM_105 = ['arref_agora', 'arref_cruzeiro', 'horas', 'oleo_cruzeiro', 'baterias']
+
+
+def f1(x):
+    return ('%.1f' % x).replace('.', ',')
+
+
+def hora_alarme(iso):
+    d = datetime.datetime.strptime(iso, '%Y-%m-%dT%H:%M:%SZ') - datetime.timedelta(hours=3)
+    return d.strftime('%H:%M:%S')
+
+
+def grupo_preditiva(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        # (1) as perguntas: a chave e o PEDE_IA (a tendência nunca vai à IA); o relato de queda do óleo segue em `oleo`
+        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3E_F11])
+        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3E_F11, res) if key != esp or ia != ia_esp]
+        ped('preditiva: as %d perguntas de tendência (e as que ela não rouba: relato de óleo, vento, maré, consumo, dinheiro) caem na chave certa, local' % len(ROTAS_P3E_F11), not ruins, ruins[:6])
+        r = pg.evaluate(JS_PRED, ['60', '105'])
+        a60, a105 = r
+        for a, fase in ((a60, 'ok'), (a105, 'atencao')):
+            ids = [x['id'] for x in a['achados']]
+            quer = PRED_ORDEM_60 if fase == 'ok' else PRED_ORDEM_105
+            ped('preditiva t=%s: os achados, do mais grave ao estável (no mesmo nível, o do instante primeiro): %s' % (a['x'], ', '.join(quer)), ids == quer, ids)
+            pesos = {'acao': 3, 'atencao': 2, 'ok': 1}
+            ped('preditiva t=%s: nunca um achado mais estável antes de um mais grave' % a['x'], all(pesos[p['nivel']] >= pesos[q['nivel']] for p, q in zip(a['achados'], a['achados'][1:])), [(x['id'], x['nivel']) for x in a['achados']])
+            ped('preditiva t=%s: cada achado traz id, sistema, nível, rótulo, título, texto e a fonte' % a['x'],
+                all(all(isinstance(x.get(k), str) and x[k] for k in ('id', 'sistema', 'nivel', 'rotulo', 'titulo', 'texto', 'fonte')) for x in a['achados']), a['achados'][:1])
+        por = lambda a: {x['id']: x for x in a['achados']}
+        p60, p105 = por(a60), por(a105)
+        # (2) os três achados do contrato (§1.13): o do histórico e o dos contadores são iguais nos dois instantes; o do instante é o que muda
+        ped('preditiva: o achado do histórico é «Motor BE 2,5 °C acima do BB em cruzeiro, subindo há 60 dias.» (a série de 60 dias e a volta de hoje), igual em 12:01:00 e 12:01:45, em atenção',
+            p60['arref_cruzeiro']['texto'] == 'Motor BE 2,5 °C acima do BB em cruzeiro, subindo há 60 dias.' and p60['arref_cruzeiro'] == p105['arref_cruzeiro'] and p60['arref_cruzeiro']['nivel'] == 'atencao', p60['arref_cruzeiro'])
+        for a in (a60, a105):
+            f = a['faltam']
+            quer = 'Faltam %s h para a troca de óleo e filtros dos motores (limite de 450 h) e %s h para a revisão do gerador (limite de 1.300 h).' % (f1(f['motores-oleo']), f1(f['gerador-revisao']))
+            ped('preditiva t=%s: as horas até a troca de óleo e a revisão do gerador são os contadores do instante (calc.faltam), em atenção' % a['x'], por(a)['horas']['texto'] == quer and por(a)['horas']['nivel'] == 'atencao', (por(a)['horas']['texto'], quer))
+        ped('preditiva: as horas que faltam são iguais nos dois instantes (em 45 s não mudam com 1 casa)', p60['horas']['texto'] == p105['horas']['texto'], (p60['horas']['texto'], p105['horas']['texto']))
+        for a, quente in ((a60, 'normal'), (a105, 'aviso')):
+            lado = 'BE' if a['be'] >= a['bb'] else 'BB'
+            t = a['tend']
+            sg = ('+' if t > 0 else '−' if t < 0 else '') + f1(abs(t))
+            if quente == 'normal':
+                quer = 'Arrefecimento do motor %s agora: %s °C, dentro da faixa normal (até 88 °C); %s °C nos últimos 30 s.' % (lado, f1(a['be'] if lado == 'BE' else a['bb']), sg)
+            else:
+                quer = 'Arrefecimento do motor %s agora: %s °C, acima de 88 °C — AVISO desde %s; %s °C nos últimos 30 s.' % (lado, f1(a['be'] if lado == 'BE' else a['bb']), hora_alarme(a['alarme']), sg)
+            ped('preditiva t=%s: o achado do instante é o arrefecimento do motor agora contra a faixa e a tendência de 30 s (o texto do contrato)' % a['x'], por(a)['arref_agora']['texto'] == quer, (por(a)['arref_agora']['texto'], quer))
+        ped('preditiva: o achado do instante muda entre 12:01:00 (estável) e 12:01:45 (atenção, AVISO desde 12:01:39) e é o único que muda de texto', p60['arref_agora']['texto'] != p105['arref_agora']['texto']
+            and p60['arref_agora']['nivel'] == 'ok' and p105['arref_agora']['nivel'] == 'atencao' and p105['arref_agora']['rotulo'] == 'ATENÇÃO' and 'AVISO desde 12:01:39' in p105['arref_agora']['texto']
+            and all(p60[k]['texto'] == p105[k]['texto'] for k in ('arref_cruzeiro', 'horas', 'oleo_cruzeiro')), (p60['arref_agora']['texto'], p105['arref_agora']['texto']))
+        ped('preditiva: a pressão de óleo em cruzeiro (por motor) e as baterias (30 dias) são estáveis, com os números do histórico e do quadro',
+            re.match(r'^Pressão de óleo em cruzeiro estável há 60 dias: BB \d,\d bar · BE \d,\d bar, com mínimo normal de 2,4 bar\.$', p60['oleo_cruzeiro']['texto']) and p60['oleo_cruzeiro']['nivel'] == 'ok'
+            and re.match(r'^Baterias estáveis nos últimos 30 dias: serviço \d\d,\d\d V · partida \d\d,\d\d V · 12 V \d\d,\d\d V, com variação de até \d,\d V\.$', p60['baterias']['texto']) and p60['baterias']['nivel'] == 'ok', (p60['oleo_cruzeiro']['texto'], p60['baterias']['texto']))
+        # (3) a resposta: a 1ª linha é o achado mais grave com a hora do instante; as demais, um achado por linha com a fonte; local (nunca IA); a fala é a 1ª linha
+        for a in (a60, a105):
+            top = a['achados'][0]
+            ped('preditiva t=%s: a resposta abre com «Tendências às %s: » e o achado mais grave, diz quantos mais há, e é local (nunca à IA)' % (a['x'], a['hora']),
+                a['key'] == 'preditiva' and a['texto'].split('\n')[0] == 'Tendências às %s: %s Mais 4 achados na lista.' % (a['hora'], top['texto']) and a['ia'] is False, (a['key'], a['texto'].split('\n')[0], a['ia']))
+            linhas = a['texto'].split('\n')[1:]
+            ped('preditiva t=%s: uma linha por achado, na ordem, com o rótulo, o sistema e a fonte' % a['x'], len(linhas) == 5 and all(l.startswith('• ' + x['rotulo'] + ' · ' + x['sistema'] + ' — ' + x['texto'] + ' (') and l.endswith(x['fonte'] + ')') for l, x in zip(linhas, a['achados'])), linhas[:2])
+            ped('preditiva t=%s: a fonte cita a regra fixa, o histórico, a agenda e a hora do instante; a fala é a 1ª linha, sem parênteses' % a['x'],
+                a['src'].startswith('Fonte: achados por regra fixa neste aparelho sobre ') and a['hora'] in a['src'] and 'Agenda preditiva' in a['src'] and a['fala'] == a['texto'].split('\n')[0] and '(' not in a['fala'], (a['src'], a['fala']))
+            tudo = a['texto'] + '\n' + a['src'] + '\n' + a['fala']
+            ruim = [(n, m.group(0)) for n in VARREDURA for m in [RX[n].search(tudo)] if m]
+            ped('preditiva t=%s: nenhuma das regex do §3 (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL, DINHEIRO) casa o texto, a fonte nem a fala, e nenhuma coordenada' % a['x'], not ruim and not confere.R_COORD.search(tudo), ruim)
+    finally:
+        pg.ctx.close()
+    # (4) modo real (simulacao false): o replay não anda; só o que vem do histórico e da agenda (sem o instante, sem a volta de hoje, sem as baterias de 30 dias), sem hora, sem rótulo novo
+    pg = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain, a = B.answer('quais as tendências?', { platform: 'app', commit: false }), h = window.CapitaoDados.historico.cruzeiro, m = (k) => h[k].d.slice(-7).reduce((s, x) => s + x, 0) / 7 / h[k].escala;
+          return { ids: B.preditiva().map((x) => [x.id, x.texto]), texto: a.text, key: a.key, src: a.src, dif: m('motor_be_arref_c') - m('motor_bb_arref_c') }; }""")
+        quer = 'Motor BE %s °C acima do BB em cruzeiro, subindo há 60 dias.' % f1(r['dif'])
+        ped('preditiva (simulacao false): só o histórico, o óleo e as horas da agenda (sem o instante nem as baterias de 30 dias), sem a volta de hoje: a diferença é a da última semana do histórico',
+            [x for x, _ in r['ids']] == ['arref_cruzeiro', 'horas', 'oleo_cruzeiro'] and r['ids'][0][1] == quer and r['key'] == 'preditiva' and r['texto'].startswith('Tendências: ' + quer), (quer, r))
+        ped('preditiva (simulacao false): a resposta não tem hora do instante nem «ao vivo»', not re.search(r'\d\d:\d\d:\d\d|ao vivo', r['texto'] + r['src']), r['src'])
+    finally:
+        pg.ctx.close()
+    # (5) o SOS: nenhum achado (nem o histórico nem a agenda) — o SOS não lê dado do barco
+    pg = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+    try:
+        r = pg.evaluate("() => { const B = window.CapitaoBrain, a = B.answer('quais as tendências?', { platform: 'app', commit: false }); return { n: B.preditiva().length, texto: a.text }; }")
+        ped('preditiva (SOS): nenhum achado e nenhum dado do barco na resposta', r['n'] == 0 and not re.search(r'Faltam|BE \d|ATENÇÃO|ESTÁVEL|Motor B', r['texto']), r)
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['preditiva'] = grupo_preditiva
+MUTANTES_3E_F11 = [
+    ('p3e preditiva: o achado do instante sem o AVISO desde', r"if (al && al.hora) desde = ' desde ' + al.hora;", r"if (al && al.hora) desde = '';", ('preditiva',)),
+    ('p3e preditiva: sem ordenar do mais grave ao estável', r"return (PRED_PESO[b.nivel] - PRED_PESO[a.nivel]) || (PRED_ORDEM.indexOf(a.id) - PRED_ORDEM.indexOf(b.id));", r"return (PRED_ORDEM.indexOf(a.id) - PRED_ORDEM.indexOf(b.id));", ('preditiva',)),
+    ('p3e preditiva: a diferença dos motores nunca sobe', r"tend = rumo >= 0.5 ? ', subindo há '", r"tend = rumo >= 99 ? ', subindo há '", ('preditiva',)),
+    ('p3e preditiva: a tendência perde para a leitura do óleo', "    if (tendenciaPergunta(q)) return 'preditiva';\n    if (ol) return 'oleoLeitura';", "    if (ol) return 'oleoLeitura';\n    if (tendenciaPergunta(q)) return 'preditiva';", ('preditiva',)),
+    ('p3e preditiva: o relato de queda do óleo perde para a tendência', "if (ol === 1) return 'oleo';", "if (ol === 1 && !tendenciaPergunta(q)) return 'oleo';", ('preditiva',)),
+    ('p3e preditiva: as horas não leem o contador do instante', "      var f = faltam(t);\n      if (typeof f !== 'number' || !isFinite(f)) return;\n      menor", "      var f = t.horas.faltam;\n      if (typeof f !== 'number' || !isFinite(f)) return;\n      menor", ('preditiva',)),
+    ('p3e preditiva: a volta de hoje não entra (só o histórico)', "hoje = cruzeiroHoje(['motor_bb_arref_c', 'motor_be_arref_c']); n = bb.length;", "hoje = null; n = bb.length;", ('preditiva',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F11
+
+# —— F22: peças e estoque ——
+ROTAS_P3E_F22 = [
+    ('quais peças temos a bordo?', 'pecas', False), ('estoque de peças', 'pecas', False), ('tem rotor sobressalente?', 'pecas', False), ('quais peças estão no mínimo?', 'pecas', False),
+    ('peças da revisão do gerador', 'pecas', False), ('peças para o filtro da climatização', 'pecas', False), ('quantas peças faltam?', 'pecas', False), ('peças do guincho', 'pecas', False),
+    ('peça sobressalente do estabilizador', 'pecas', False), ('quando repor as peças?', 'pecas', False),
+    # o que ela não rouba: reparo e vida útil (o guia ou a IA), a peça que quebrou, o estoque de água
+    ('como trocar a peça do motor', 'base', True), ('peça quebrou', 'fallback', True), ('estoque de água', 'fallback', True), ('tem anodo a bordo?', 'base', True),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F22]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F22})
+K_PECAS_T = 'capitao.pecas.v1'
+JS_PECAS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, op = { platform: 'app', commit: false }, R = window.CapitaoReplay; R.fixar('60');
+  const antes = JSON.stringify(D.pecas), chave = () => localStorage.getItem('capitao.pecas.v1'), movs = () => { const v = JSON.parse(chave() || '{}'); return v.movs || []; }, q = (id) => B.pecas().filter((x) => x.id === id)[0];
+  const out = { base: D.pecas.map((x) => ({ id: x.id, n: x.n, qtd: x.qtd, min: x.min, local: x.local, tarefas: x.tarefas || [] })), ags: D.agenda.map((t) => t.id) };
+  const resp = (p) => { const a = B.answer(p, op); return { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, p) }; };
+  out.lista0 = B.pecas(); out.todas = resp('quais peças temos a bordo?'); out.gerador = resp('peças da revisão do gerador'); out.rotor = resp('tem rotor sobressalente?'); out.guincho = resp('peças do guincho'); out.clima = resp('peças para o filtro da climatização');
+  out.semEscrita = chave() === null;
+  // −1 USADA ×4 no p01 (4 → 0), a 5ª não existe; o Desfazer só da última; o da primeira recusa
+  out.us = []; for (let k = 0; k < 5; k++) out.us.push(B.usaPeca('p01'));
+  out.q1 = q('p01'); out.movs1 = movs();
+  out.desfazAntigo = B.desfazUsoPeca(out.us[0]); out.movsAntigo = movs().length;
+  out.desfaz = B.desfazUsoPeca(out.us[3]); out.movs2 = movs(); out.q2 = q('p01');
+  out.zerada = B.usaPeca('p05'); out.movsZerada = movs().length; out.desconhecida = B.usaPeca('xx'); out.movsDesc = movs().length;
+  out.ajuste = B.ajustaPeca('p02', 7); out.q3 = q('p02'); out.ajRuim = [B.ajustaPeca('p02', -1), B.ajustaPeca('p02', 1000), B.ajustaPeca('p02', 'x'), B.ajustaPeca('p02', 7), B.ajustaPeca('zz', 3)];
+  out.nova = B.addPeca({ n: '  Fusível   10 A ', qtd: '5', min: 2, local: 'armário de ferramentas', obs: 'reserva do painel', tarefas: ['baterias', 'zzz'], pn: 'ABC123', preco: 12 });
+  out.novaRuim = [B.addPeca({ n: '' }), B.addPeca({}), B.addPeca(null)];
+  out.usaNova = out.nova ? B.usaPeca(out.nova.id) : null; out.qNova = out.nova ? q(out.nova.id) : null;
+  out.estado = JSON.parse(chave()); out.depois = JSON.stringify(D.pecas) === antes; out.lista1 = B.pecas();
+  out.respDepois = resp('quais peças temos a bordo?');
+  out.isos = out.estado.movs.map((m) => m.iso);
+  return out; }"""
+
+
+def esperado_peca(x):
+    q, mn = x['qtd'], x['min']
+    nivel = 'zero' if q <= 0 else 'baixa' if mn > 0 and q <= mn else 'ok'
+    st = 'ZERADA' if q <= 0 else 'ABAIXO DO MÍNIMO' if mn > 0 and q < mn else 'NO MÍNIMO' if mn > 0 and q == mn else 'OK'
+    return nivel, st
+
+
+def grupo_pecas(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => { localStorage.removeItem('capitao.pecas.v1'); return new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); }); }")
+        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3E_F22])
+        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3E_F22, res) if key != esp or ia != ia_esp]
+        ped('pecas: as %d perguntas de estoque (e as que ela não rouba: reparo, vida útil, a peça que quebrou, o estoque de água) caem na chave certa; a de estoque é local' % len(ROTAS_P3E_F22), not ruins, ruins[:6])
+        x = pg.evaluate(JS_PECAS)
+        base = {p['id']: p for p in x['base']}
+        # (1) a lista: 12 peças da base com a quantidade da base, o nível e a situação (zerada, abaixo do mínimo, no mínimo); sem código de fabricante, sem R$
+        ped('pecas: a lista sem movimento é a base gerada (12 peças, a quantidade da base) com o nível e a situação de cada uma',
+            len(x['lista0']) == 12 and all(p['qtd'] == base[p['id']]['qtd'] and p['min'] == base[p['id']]['min'] and (p['nivel'], p['st']) == esperado_peca(base[p['id']]) and p['base'] is True for p in x['lista0']), x['lista0'][:2])
+        ped('pecas: o contrato (§1.20): o rotor da bomba de água salgada está em 1 de mínimo 2 (abaixo) e o rotor do gerador em 0 de mínimo 1 (zerada)',
+            (base['p03']['qtd'], base['p03']['min'], base['p05']['qtd'], base['p05']['min']) == (1, 2, 0, 1) and esperado_peca(base['p03']) == ('baixa', 'ABAIXO DO MÍNIMO') and esperado_peca(base['p05']) == ('zero', 'ZERADA'), (base['p03'], base['p05']))
+        zeros = sum(1 for p in x['base'] if esperado_peca(p)[0] == 'zero')
+        baixas = sum(1 for p in x['base'] if esperado_peca(p)[0] == 'baixa')
+        t = x['todas']
+        ps = []
+        if zeros:
+            ps.append('%d %s' % (zeros, 'zerada' if zeros == 1 else 'zeradas'))
+        if baixas:
+            ps.append('%d no mínimo ou abaixo' % baixas)
+        quer = 'Peças a bordo: 12 cadastradas — %s.' % ' e '.join(ps)
+        linhas = t['text'].split('\n')[1:]
+        ordem = {'zero': 0, 'baixa': 1, 'ok': 2}
+        nivs = [esperado_peca(next(p for p in x['base'] if p['n'] == l[2:].split(' · ')[0]))[0] for l in linhas]
+        ped('pecas: a resposta abre com o total e quantas estão zeradas e no mínimo ou abaixo, uma linha por peça, as zeradas e as no mínimo primeiro', t['key'] == 'pecas' and t['text'].split('\n')[0] == quer and len(linhas) == 12 and nivs == sorted(nivs, key=lambda n: ordem[n]), (t['text'].split('\n')[0], quer, nivs))
+        ped('pecas: cada linha traz o nome, a quantidade a bordo, o mínimo e o local; as não-ok trazem a situação; a ZERADA é a do rotor do gerador',
+            all(re.match(r'^• .+ · \d+ a bordo · mínimo \d+ · .+', l) for l in linhas) and any(l.startswith('• Rotor (impeller) do gerador · 0 a bordo') and '— ZERADA' in l for l in linhas), linhas[:2])
+        ped('pecas: a linha da peça ligada a uma tarefa traz a tarefa e o prazo de hoje («para: Troca de óleo e filtros dos motores (D-17 · 20/11)»)',
+            any(l.startswith('• Filtro de óleo do motor') and re.search(r'para: Troca de óleo e filtros dos motores \((?:D-\d+ · \d\d/\d\d|em atraso há \d+ dias?)\)', l) for l in linhas), [l for l in linhas if 'Filtro de óleo do motor' in l])
+        g = x['gerador']
+        ped('pecas: a pergunta que cita a tarefa («peças da revisão do gerador») lista só as peças dela, com a tarefa', g['key'] == 'pecas' and g['text'].split('\n')[0].startswith('Peças para revisão do gerador — óleo e filtros: 1 cadastrada') and len(g['text'].split('\n')) == 2
+            and 'Filtro de óleo do gerador' in g['text'], g['text'][:200])
+        r_ = x['rotor']
+        ped('pecas: a pergunta que cita a peça pelo nome («tem rotor sobressalente?») lista as peças com esse nome (as duas, com a zerada primeiro)',
+            r_['text'].split('\n')[0] == 'Peças com esse nome: 2 cadastradas — 1 zerada e 1 no mínimo ou abaixo.' and r_['text'].split('\n')[1].startswith('• Rotor (impeller) do gerador'), r_['text'][:240])
+        ped('pecas: o nome que nenhuma peça tem («peças do guincho») diz isso e mostra a lista inteira', x['guincho']['text'].startswith('Nenhuma peça cadastrada com esse nome. Peças a bordo: 12 cadastradas'), x['guincho']['text'][:120])
+        ped('pecas: nenhuma peça é de salvatagem nem tem código de fabricante, preço ou R$; a resposta é local (nunca à IA)',
+            not re.search(r'R\$|preço|\bPN\b|código|colete|balsa|extintor|sinalizador', x['todas']['text'] + x['gerador']['text'] + x['rotor']['text']) and not any(r['ia'] for r in (x['todas'], x['gerador'], x['rotor'], x['guincho'], x['clima'])), x['todas']['text'][:80])
+        for r in (x['todas'], x['gerador'], x['rotor']):
+            tudo = r['text'] + '\n' + r['src'] + '\n' + r['fala']
+            ruim = [(n, m.group(0)) for n in VARREDURA for m in [RX[n].search(tudo)] if m]
+            ped('pecas: nenhuma regex do §3 casa o texto, a fonte nem a fala, e a fonte e a fala dizem a hora do instante (12:01:00)', not ruim and not confere.R_COORD.search(tudo) and '12:01:00' in r['src'] + r['fala'] and '(' not in r['fala'], (ruim, r['fala']))
+        ped('pecas: perguntar não grava (o chat só lê): a chave capitao.pecas.v1 continua ausente depois das 5 respostas', x['semEscrita'] is True, '')
+        # (2) −1 USADA: 4 → 0; a 5ª não existe; cada uso é um movimento novo de −1 (sim true na simulação); a base gerada não muda
+        us = x['us']
+        ped('pecas: o −1 USADA tira uma por vez do p01 (4 → 3 → 2 → 1 → 0) e devolve {id, ant, novo, iso}; a 5ª, com a peça zerada, devolve null',
+            [(u['ant'], u['novo']) for u in us[:4]] == [(4, 3), (3, 2), (2, 1), (1, 0)] and all(u['id'] == 'p01' and u['iso'] for u in us[:4]) and us[4] is None, us)
+        ped('pecas: cada −1 USADA é um movimento novo {id, dq: -1, iso, who, sim: true} (4 linhas), com iso único; a quantidade é a da base mais a soma (0, ZERADA)',
+            len(x['movs1']) == 4 and all(m['id'] == 'p01' and m['dq'] == -1 and m['sim'] is True and m['who'] and m['iso'] for m in x['movs1']) and len({m['iso'] for m in x['movs1']}) == 4
+            and x['q1']['qtd'] == 0 and x['q1']['nivel'] == 'zero' and x['q1']['st'] == 'ZERADA', (x['movs1'][:1], x['q1']))
+        ped('pecas: a peça já zerada (p05) e a que não existe não gravam nada (null, sem movimento novo: seguem as 5 linhas)', x['zerada'] is None and x['desconhecida'] is None and x['movsZerada'] == 5 and x['movsDesc'] == 5, (x['zerada'], x['movsZerada']))
+        # (3) Desfazer: um movimento NOVO (+1) e só se a quantidade ainda é a que o −1 deixou; o desfazer de um uso antigo (a quantidade já mudou) recusa
+        ped('pecas: o Desfazer de um −1 antigo (a quantidade já mudou depois dele) recusa e não grava', x['desfazAntigo'] is None and x['movsAntigo'] == 4, (x['desfazAntigo'], x['movsAntigo']))
+        ped('pecas: o Desfazer do último −1 devolve a unidade com um movimento NOVO de +1 (5 linhas, as 4 primeiras iguais), e a quantidade volta a 1',
+            x['desfaz'] and x['desfaz']['qtd'] == 1 and len(x['movs2']) == 5 and x['movs2'][:4] == x['movs1'] and x['movs2'][4]['dq'] == 1 and x['movs2'][4]['id'] == 'p01' and x['q2']['qtd'] == 1, (x['desfaz'], x['movs2'][4:]))
+        ped('pecas: usar ×4 e desfazer 1 soma certo (base 4 + (−1 ×4) + 1 = 1) e a base gerada nunca é mutada', x['q2']['qtd'] == base['p01']['qtd'] + sum(m['dq'] for m in x['movs2'] if m['id'] == 'p01') and x['depois'] is True, (x['q2'], x['depois']))
+        # (4) ajuste (o ✎ da tela): a diferença como movimento; número inválido recusa
+        ped('pecas: o ajuste da quantidade (7) grava a diferença como movimento e recusa -1, 1000, texto, o mesmo número e peça inexistente',
+            x['ajuste'] and x['ajuste']['qtd'] == 7 and x['q3']['qtd'] == 7 and x['ajRuim'] == [None] * 5 and any(m['id'] == 'p02' and m['dq'] == 7 - base['p02']['qtd'] for m in x['estado']['movs']), (x['ajuste'], x['ajRuim']))
+        # (5) + PEÇA: nome limpo, números inteiros, tarefa que existe, sem pn nem valor; fica em `novas`, com o mesmo −1 USADA
+        n = x['nova']
+        ped('pecas: + PEÇA cadastra em `novas` (nome sem espaço dobrado, inteiros, só a tarefa da agenda que existe), sem código de fabricante nem valor, com sim e id que não colide com a base',
+            n and n['n'] == 'Fusível 10 A' and n['qtd'] == 5 and n['min'] == 2 and n['local'] == 'armário de ferramentas' and n['tarefas'] == ['baterias'] and 'pn' not in n and 'preco' not in n and n['sim'] is True and n['id'] not in base
+            and x['estado']['novas'] == [n], n)
+        ped('pecas: + PEÇA sem nome (vazio, objeto vazio, null) não cadastra', x['novaRuim'] == [None] * 3 and len(x['estado']['novas']) == 1, x['novaRuim'])
+        ped('pecas: a peça nova entra na lista (base false) e aceita o −1 USADA (5 → 4)', x['usaNova'] and (x['usaNova']['ant'], x['usaNova']['novo']) == (5, 4) and x['qNova']['qtd'] == 4 and x['qNova']['base'] is False and len(x['lista1']) == 13, (x['usaNova'], x['qNova']))
+        ped('pecas: depois dos usos a resposta já fala da peça zerada do p01 e da nova (13 cadastradas), e o registro só cresceu (os movimentos anteriores intactos)',
+            x['respDepois']['text'].startswith('Peças a bordo: 13 cadastradas') and 'Fusível 10 A · 4 a bordo' in x['respDepois']['text'] and x['estado']['movs'][:5] == x['movs2'], x['respDepois']['text'][:90])
+        ped('pecas: o iso de cada movimento é único (o dados.html soma pelo iso)', len(x['isos']) == len(set(x['isos'])) and len(x['isos']) == len(x['estado']['movs']), x['isos'])
+    finally:
+        pg.ctx.close()
+    # modo real: a linha não leva `sim`; sem a simulação a ficha deixa de fora o que tem sim (semSim); JSON ruim no aparelho vale como vazio
+    pg = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain; localStorage.removeItem('capitao.pecas.v1'); const u = B.usaPeca('p01'), m = JSON.parse(localStorage.getItem('capitao.pecas.v1')).movs[0]; return { u, m, q: B.pecas().filter((x) => x.id === 'p01')[0].qtd }; }""")
+        ped('pecas (simulacao false): o −1 USADA grava a linha sem `sim`', r['u'] and 'sim' not in r['m'] and r['m']['dq'] == -1 and r['q'] == 3, r)
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados; localStorage.removeItem('capitao.pecas.v1'); B.usaPeca('p01'); B.addPeca({ n: 'Peça do teste', qtd: 3 });
+          const com = B.pecas().length, sim = B.pecas().filter((x) => x.id === 'p01')[0].qtd; D.simulacao = false; const sem = B.pecas({ semSim: true }), cheia = B.pecas();
+          return { com, sim, sem: sem.length, qSem: sem.filter((x) => x.id === 'p01')[0].qtd, cheia: cheia.length }; }""")
+        ped('pecas: com simulacao false a ficha (semSim) deixa de fora a peça e o movimento com sim: a quantidade volta a da base; a lista de tela (sem semSim) segue completa', r == {'com': 13, 'sim': 3, 'sem': 12, 'qSem': 4, 'cheia': 13}, r)
+        bons = pg.evaluate("""() => { const B = window.CapitaoBrain, o = [];
+          ['[]', 'null', '"texto"', '{"movs":"x","novas":3}', '{"movs":[null,1,{"id":"p01"},{"id":"p01","dq":"a"}],"novas":[null,{"id":"x"}]}', 'não é json'].forEach((v) => { localStorage.setItem('capitao.pecas.v1', v); o.push([B.pecas().length, B.pecas().filter((x) => x.id === 'p01')[0].qtd]); });
+          return o; }""")
+        ped('pecas: JSON de outra forma ou item sem forma no aparelho vale como vazio (12 peças da base, p01 em 4) e nunca lança', bons == [[12, 4]] * 6, bons)
+    finally:
+        pg.ctx.close()
+    # o SOS: nenhuma peça, nenhuma gravação
+    pg = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+    try:
+        r = pg.evaluate("() => { const B = window.CapitaoBrain; localStorage.removeItem('capitao.pecas.v1'); return { n: B.pecas().length, u: B.usaPeca('p01'), a: B.addPeca({ n: 'x' }), k: localStorage.getItem('capitao.pecas.v1'), t: B.answer('quais peças temos a bordo?', { platform: 'app', commit: false }).text }; }")
+        ped('pecas (SOS): nenhuma peça, o −1 USADA e o + PEÇA não fazem nada e nada é gravado', r['n'] == 0 and r['u'] is None and r['a'] is None and r['k'] is None and 'Rotor' not in r['t'], r)
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['pecas'] = grupo_pecas
+MUTANTES_3E_F22 = [
+    ('p3e pecas: o −1 USADA não grava o movimento', "    m = pecaMov(id, -1);\n    return { id: id, ant: p.qtd, novo: p.qtd - 1, iso: m.iso };", "    m = { iso: 'x' };\n    return { id: id, ant: p.qtd, novo: p.qtd - 1, iso: m.iso };", ('pecas',)),
+    ('p3e pecas: o Desfazer aceita a quantidade que mudou depois', "p.qtd !== u.novo || u.ant === u.novo) return null;", "u.ant === u.novo) return null;", ('pecas',)),
+    ('p3e pecas: a quantidade ignora os movimentos', "(soma[x.id] || 0))), mn =", "0)), mn =", ('pecas',)),
+    ('p3e pecas: a peça no mínimo não conta como baixa', "return q <= 0 ? 'zero' : mn > 0 && q <= mn ? 'baixa' : 'ok'; }", "return q <= 0 ? 'zero' : mn > 0 && q < mn ? 'baixa' : 'ok'; }", ('pecas',)),
+    ('p3e pecas: o −1 USADA deixa a peça zerada ir a menos', "if (!p || !(p.qtd > 0)) return null;\n    m = pecaMov(id, -1);", "if (!p) return null;\n    m = pecaMov(id, -1);", ('pecas',)),
+    ('p3e pecas: as zeradas não vêm primeiro', "var ord = { zero: 0, baixa: 1, ok: 2 }, linha", "var ord = { zero: 2, baixa: 1, ok: 0 }, linha", ('pecas',)),
+    ('p3e pecas: o movimento sem o carimbo sim', "function selaSim() { return sim() ? { sim: true } : {}; }", "function selaSim() { return {}; }", ('pecas',)),
+    ('p3e pecas: o movimento repete o iso', "do { iso = new Date(t++).toISOString(); } while (est.movs.some(function (x) { return x.iso === iso; }));", "iso = new Date(t).toISOString();", ('pecas',)),
+    ('p3e pecas: a rota do estoque sai', "    if (pecasPergunta(q)) return 'pecas';", "", ('pecas',)),
+    ('p3e pecas: o + PEÇA aceita a tarefa que não existe', "Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}", "Array.isArray(c.tarefas) && c.tarefas.length ? { tarefas: c.tarefas.slice(0, 10) } : {}", ('pecas',)),
+    ('p3e pecas: o SOS lê as peças', "    if (EM_SOS) return [];\n    est = pecasEstado();", "    est = pecasEstado();", ('pecas',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F22
+
+# —— F09: checklists guiados ——
+ROTAS_P3E_F09 = [
+    ('checklist de saída', 'checklist', False), ('check list de saída', 'checklist', False), ('lista de verificação antes de sair', 'checklist', False), ('checklist de chegada', 'checklistChegada', False),
+    ('checklist ao atracar', 'checklistChegada', False), ('checklist para chegar na marina', 'checklistChegada', False), ('checklist de fundeio', 'checklistFundeio', False), ('checklist ao fundear', 'checklistFundeio', False),
+    ('lista de verificação de ancoragem', 'checklistFundeio', False), ('checklist de abastecimento', 'checklistAbastecimento', False), ('checklist para abastecer', 'checklistAbastecimento', False),
+    # o que ela não rouba: a pergunta de chegada sem a palavra checklist segue como antes (P3C), a de fundeio sem a palavra checklist é a âncora, o diesel é a autonomia
+    ('previsão de chegada do técnico da oficina', 'checklistChegada', False), ('âncora garrando?', 'ancora', False), ('quanto diesel tem?', 'autonomia', False),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F09]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F09})
+# O estado de cada item `auto` em 12:01:00 (CONTRATO §1.18, «Estado esperado de cada item auto»): ok (✓ pelo quadro), falta (✗), ler (mostra a leitura e pede a conferência); None = item sem verificação automática.
+# Em 12:01:45 só o s02 (alertas) muda: ✗ AVISO do arrefecimento do motor BE.
+EST_60 = {
+    'saida': {'s01': 'ler', 's02': 'ok', 's03': None, 's04': 'ler', 's05': 'ok', 's06': 'ok', 's07': 'ok', 's08': None, 's09': 'ok', 's10': None, 's11': 'ler', 's12': 'falta', 's13': None, 's14': None},
+    'chegada': {'c01': None, 'c02': 'falta', 'c03': 'falta', 'c04': 'falta', 'c05': None, 'c06': 'ok', 'c07': None, 'c08': None},
+    'abastecimento': {'a01': 'falta', 'a02': 'falta', 'a03': 'ok', 'a04': None, 'a05': None, 'a06': None, 'a07': None},
+    'fundeio': {'f01': 'ok', 'f02': None, 'f03': None, 'f04': 'falta', 'f05': None, 'f06': 'ler'},
+}
+EST_105 = {k: dict(v) for k, v in EST_60.items()}
+EST_105['saida']['s02'] = 'falta'
+TIPOS_CK = ['saida', 'chegada', 'abastecimento', 'fundeio']
+CHAVE_CK = {'saida': 'checklist', 'chegada': 'checklistChegada', 'abastecimento': 'checklistAbastecimento', 'fundeio': 'checklistFundeio'}
+PERGUNTA_CK = {'saida': 'checklist de saída', 'chegada': 'checklist de chegada', 'abastecimento': 'checklist de abastecimento', 'fundeio': 'checklist de fundeio'}
+JS_CK = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, op = { platform: 'app', commit: false }, T = ['saida', 'chegada', 'abastecimento', 'fundeio'], P = %s;
+  const pega = (i) => ({ id: i.id, c: i.c, t: i.t, fonte: i.fonte, faq: i.faq || null, link: i.link || null, parcial: !!i.parcial, auto: i.auto, manual: i.manual, anulado: i.anulado, porQuadro: i.porQuadro, feito: i.feito });
+  return { tipos: B.checklistTipos(), dados: D.checklists, r: xs.map((x) => { R.fixar(x); const i = B.instante(), o = { x, hora: i.hora, txt: i.txt, q: { sog: i.q.sog_nos, bb: i.q.diesel_bb_pct }, itens: {}, resp: {} };
+    T.forEach((t) => { o.itens[t] = B.checklistItens(t).map(pega); const a = B.answer(P[t], op); o.resp[t] = { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, P[t]) }; });
+    return o; }) }; }""" % json.dumps(PERGUNTA_CK)
+# (cada quadro adulterado num segundo próprio — 62, 64, 66…: o instante fixado fica guardado por segundo, e o do 60 volta limpo no fim)
+JS_CK_SOBRE = """(sobres) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, T = ['saida', 'chegada', 'abastecimento', 'fundeio'];
+  const r = sobres.map((s, k) => { localStorage.setItem('capitao.replay.sobre', JSON.stringify(s)); R.fixar(String(62 + 2 * k)); const o = {};
+    T.forEach((t) => { o[t] = {}; B.checklistItens(t).forEach((i) => { o[t][i.id] = i.auto && i.auto.estado; }); }); localStorage.removeItem('capitao.replay.sobre'); return o; });
+  R.fixar('60'); return r; }"""
+SOBRE_BOM = {'motor_bb_rpm': 0, 'motor_be_rpm': 0, 'gerador_ativo': False, 'seakeeper_ativo': False, 'sog_nos': 0.2}
+SOBRE_RUIM = {'diesel_bb_pct': 20, 'diesel_litros': 800, 'tanque_agua_pct': 10, 'bateria_0_tensao_v': 23.0, 'profundidade_m': 2.5, 'porao_bb_nivel': 8, 'seakeeper_volante_pct': 70}
+JS_CK_ESCRITA = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados; R.fixar('60'); const op = { platform: 'app', commit: false };
+  localStorage.removeItem('capitao.diario.v1'); localStorage.removeItem('capitao.checklist.v1');
+  const pad = (s) => ' ' + s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/[?!.,;:()"“”]+/g, ' ').replace(/\\s+/g, ' ').trim() + ' ';
+  const n0 = B.loadDiario().length, marcas = JSON.stringify([B.checklistMarca('saida', 's03', true), B.checklistMarca('saida', 's02', 'n'), B.checklistMarca('saida', 'zzz', true), B.checklistMarca('xx', 's03', true), B.checklistMarca('chegada', 'c01', true)]);
+  const it = (t) => B.checklistItens(t).reduce((o, i) => { o[i.id] = i; return o; }, {}), s = it('saida');
+  const o = { n0, marcas, s03: { manual: s.s03.manual, feito: s.s03.feito }, s02: { anulado: s.s02.anulado, feito: s.s02.feito, porQuadro: s.s02.porQuadro, estado: s.s02.auto.estado }, linha: B.checklistLinha('saida'), lido: JSON.parse(localStorage.getItem('capitao.checklist.v1')), n1: B.loadDiario().length };
+  o.resp = B.answer('checklist de saída', op).text.split('\\n').slice(0, 4);
+  o.link = B.checklistConcluir('saida', { commit: false }); o.n2 = B.loadDiario().length;
+  const c = B.checklistConcluir('saida'); o.c = c; o.n3 = B.loadDiario().length; o.entrada = B.loadDiario()[0]; o.depois = JSON.parse(localStorage.getItem('capitao.checklist.v1'));
+  o.volta = B.checklistMarca('chegada', 'c01', false); o.vazio = JSON.parse(localStorage.getItem('capitao.checklist.v1'));
+  o.ruim = B.checklistMarca('desconhecido', 'c01', true); o.semTipo = B.checklistConcluir('desconhecido');
+  localStorage.setItem('capitao.checklist.v1', '[1,2]'); o.lixo1 = [B.checklistItens('saida').length, B.checklistMarcas('saida')];
+  localStorage.setItem('capitao.checklist.v1', 'não é json'); o.lixo2 = [B.checklistItens('saida').length, JSON.stringify(B.checklistMarcas('saida'))];
+  localStorage.setItem('capitao.checklist.v1', JSON.stringify({ saida: { m: 'x' }, chegada: 5 })); o.lixo3 = [B.checklistItens('saida').length, JSON.stringify(B.checklistMarcas('saida')), JSON.stringify(B.checklistMarcas('chegada'))];
+  o.emerg = {}; ['saida', 'chegada', 'abastecimento', 'fundeio'].forEach((t) => { const l = B.checklistLinha(t), todas = D.checklists.itens[t].map((i) => i.c).join(', '), sint = D.checklists.tipos.filter((x) => x.id === t)[0].nome + ' concluído · 0/' + D.checklists.itens[t].length + ' · pendentes: ' + todas;
+    o.emerg[t] = [l.t, sint].map((x) => [B.emergencia(pad(x)), B.route(x), B.answer('registre no diário ' + x, op).text.indexOf('Se a emergência é agora') !== -1]); });
+  return o; }"""
+
+
+def primeira_linha_ck(nome, hora, itens):
+    f = sum(1 for i in itens if i['feito'])
+    nao = [i['c'] for i in itens if not i['feito'] and i['auto'] and i['auto']['estado'] == 'falta']
+    return '%s%s: %d de %d conferidos%s.' % (nome, ' às ' + hora if hora else '', f, len(itens), ('; ' + ('não passou: ' if len(nao) == 1 else 'não passaram: ') + ', '.join(nao)) if nao else '')
+
+
+def linha_item_ck(k, i):
+    m = '✓' if i['feito'] else '✗' if (i['auto'] and i['auto']['estado'] == 'falta') else '•'
+    v = ' — ' + i['auto']['valor'] if i['auto'] else ''
+    t = re.sub(r'\.$', '', i['t']) if v else i['t']
+    return '%d. %s %s%s%s (%s%s)' % (k + 1, m, t, v, ' (conferido por você)' if i['manual'] else '', i['fonte'], ' · FAQ ' + i['faq'] if i['faq'] else '')
+
+
+def grupo_checklist(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => { localStorage.clear(); return new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); }); }")
+        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3E_F09])
+        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3E_F09, res) if key != esp or ia != ia_esp]
+        ped('checklist: as %d perguntas dos 4 checklists (saída, chegada, abastecimento, fundeio — «fundear» e «abastecer» não caem no de saída; «checklist de chegada» e «previsão de chegada…» seguem na rota certa) caem na chave certa, local' % len(ROTAS_P3E_F09), not ruins, ruins[:6])
+        x = pg.evaluate(JS_CK, ['60', '105'])
+        d = x['dados']
+        ped('checklist: B.checklistTipos() são os 4 tipos do D.checklists, na ordem (saída, chegada, abastecimento, fundeio)', [t['id'] for t in x['tipos']] == TIPOS_CK and x['tipos'] == d['tipos'], x['tipos'])
+        a60, a105 = x['r']
+        for a, est in ((a60, EST_60), (a105, EST_105)):
+            for t in TIPOS_CK:
+                itens = a['itens'][t]
+                dados = d['itens'][t]
+                ped('checklist %s t=%s: os itens são os do D.checklists, na ordem, com o rótulo, o texto e a fonte do dado (e o FAQ e o link onde há)' % (t, a['x']),
+                    [i['id'] for i in itens] == [i['id'] for i in dados] and all(i['c'] == o['c'] and i['t'] == o['t'] and i['fonte'] == o['fonte'] and i['faq'] == o.get('faq') and i['link'] == o.get('link') and i['parcial'] == bool(o.get('parcial')) for i, o in zip(itens, dados)), [i['id'] for i in itens])
+                got = {i['id']: (i['auto'] or {}).get('estado') for i in itens}
+                ped('checklist %s t=%s: o estado de cada item automático é o da tabela do contrato (ok ✓, falta ✗, ler = mostra a leitura; sem auto = sem estado)' % (t, a['x']), got == est[t], {k: (v, est[t][k]) for k, v in got.items() if v != est[t][k]})
+                ped('checklist %s t=%s: só o ✓ do app (ok) é conferido; ✗, «ler» e o sem auto não são; nenhum item vem marcado pela pessoa' % (t, a['x']),
+                    all(i['feito'] == ((i['auto'] or {}).get('estado') == 'ok') and i['porQuadro'] == i['feito'] and not i['manual'] and not i['anulado'] for i in itens), [(i['id'], i['feito']) for i in itens][:4])
+                r = a['resp'][t]
+                ped('checklist %s t=%s: a resposta abre com «<nome> às <hora>: N de M conferidos; não passou/passaram: …» (a fala), é local (nunca IA), e leva um item por linha com o marcador, a leitura e a fonte' % (t, a['x']),
+                    r['key'] == CHAVE_CK[t] and r['ia'] is False and r['fala'] == r['text'].split('\n')[0] == primeira_linha_ck(next(tp['nome'] for tp in d['tipos'] if tp['id'] == t), a['hora'], itens)
+                    and r['text'].split('\n')[1:1 + len(itens)] == [linha_item_ck(k, i) for k, i in enumerate(itens)] and r['text'].endswith('• pede a sua conferência a bordo.'), (r['text'].split('\n')[0], primeira_linha_ck('Checklist', a['hora'], itens)))
+                ped('checklist %s t=%s: a fonte cita o checklist de bordo e a telemetria da hora do instante; nenhuma regex do §3 casa o texto, a fonte nem a fala, nem coordenada' % (t, a['x']),
+                    r['src'] == 'Fonte: Checklist de bordo · telemetria ao vivo · ' + a['hora'] and not any(RX[n].search(r['text'] + '\n' + r['src'] + '\n' + r['fala']) for n in VARREDURA) and not confere.R_COORD.search(r['text']), r['src'])
+            # a salvatagem do item s13 não nomeia lugar nem traz o número de pessoas a bordo; o item 13 diz «placa de salvatagem»
+            s13 = a['resp']['saida']['text'].split('\n')[13]
+            ped('checklist saida t=%s: o item da salvatagem (13) manda contar as pessoas e seguir a placa, sem paiol, armário, cabine, proa ou popa e sem o número de pessoas do cadastro' % a['x'],
+                s13.startswith('13. • Coletes: um por pessoa — conte as pessoas a bordo agora') and not re.search(r'paiol|arm[áa]rio|cabine|\bproa\b|\bpopa\b|\b\d+ pessoas', s13), s13)
+        # os valores lidos são os do instante (o texto único de cada medida)
+        for a in (a60, a105):
+            i = {t: {k['id']: k for k in a['itens'][t]} for t in TIPOS_CK}
+            tx = a['txt']
+            ped('checklist t=%s: o diesel, os tanques, as baterias, o Seakeeper e a sonda mostram o texto único do instante (txt.dieselLados, txt.diesel, txt.tanques, txt.b24, txt.b12, txt.seakeeper, txt.prof)' % a['x'],
+                i['saida']['s05']['auto']['valor'] == tx['dieselLados'] + ' — ' + tx['diesel'] and i['abastecimento']['a03']['auto']['valor'] == i['saida']['s05']['auto']['valor'] and i['saida']['s06']['auto']['valor'] == tx['tanques']
+                and i['saida']['s07']['auto']['valor'] == tx['b24'] + ' · 12 V ' + tx['b12'] and i['saida']['s09']['auto']['valor'] == tx['seakeeper'] and i['fundeio']['f01']['auto']['valor'] == tx['prof'] + ' (mínimo 3 m)', a['txt'])
+            ped('checklist t=%s: o que ainda funciona diz o quadro («motores ligados: …», «ainda ligado…», «gerador ligado…», «navegando a …») e o porão traz o nível e o teste das bombas' % a['x'],
+                i['chegada']['c03']['auto']['valor'] == 'motores ligados: ' + tx['rpm'] and i['chegada']['c02']['auto']['valor'] == 'ainda ' + tx['seakeeper'] and i['chegada']['c04']['auto']['valor'] == 'gerador ' + tx['gerador']
+                and i['fundeio']['f04']['auto']['valor'] == 'navegando a ' + tx['sog'] and i['saida']['s04']['auto']['valor'].startswith('nível BB ') and 'teste das bombas em atraso há ' in i['saida']['s04']['auto']['valor']
+                and i['saida']['s12']['auto']['valor'].startswith('teste das bombas de porão e alarmes (em atraso há '), (i['chegada']['c03']['auto'], i['saida']['s04']['auto']))
+        ped('checklist: só o s02 (alertas) muda de estado entre 12:01:00 e 12:01:45: ✓ nenhum alarme ativo → ✗ AVISO do arrefecimento do motor BE (o texto do quadro)',
+            a60['itens']['saida'][1]['auto'] == {'estado': 'ok', 'valor': 'nenhum alarme ativo'} and a105['itens']['saida'][1]['auto'] == {'estado': 'falta', 'valor': 'AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)'} and a105['txt']['alarmes'] == 'AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)'
+            and all({i['id']: (i['auto'] or {}).get('estado') for i in a60['itens'][t]} == {i['id']: (i['auto'] or {}).get('estado') for i in a105['itens'][t]} for t in TIPOS_CK if t != 'saida'), (a60['itens']['saida'][1]['auto'], a105['itens']['saida'][1]['auto']))
+        ped('checklist: a resposta do checklist de saída muda entre os instantes (a 1ª linha e o item 2); a previsão (s01) e a maré (f06) nunca dão ✓ sozinhas',
+            a60['resp']['saida']['text'] != a105['resp']['saida']['text'] and all(i['auto']['estado'] == 'ler' for a in (a60, a105) for i in (a['itens']['saida'][0], a['itens']['fundeio'][5])), '')
+        ped('checklist: o item «parcial» que o quadro só confere em parte (porão s04, documentos s11) nunca é ✓: mostra a leitura e pede a conferência',
+            all(i['auto']['estado'] != 'ok' for a in (a60, a105) for i in (a['itens']['saida'][3], a['itens']['saida'][10])), '')
+        # (sobre o quadro) cada ramo da verificação, com o quadro adulterado pelo gancho de teste do replay (só com o instante fixado)
+        bom, ruim, so_bb, ven = pg.evaluate(JS_CK_SOBRE, [SOBRE_BOM, SOBRE_RUIM, {'diesel_bb_pct': 20}, {'seakeeper_ativo': False}])
+        ped('checklist (quadro adulterado, tudo parado): motores, gerador e Seakeeper desligados dão ✓ na chegada e no abastecimento, e o barco parado dá ✓ na deriva',
+            all(bom['chegada'][k] == 'ok' for k in ('c02', 'c03', 'c04')) and bom['abastecimento']['a01'] == 'ok' and bom['abastecimento']['a02'] == 'ok' and bom['fundeio']['f04'] == 'ok', {t: bom[t] for t in ('chegada', 'abastecimento', 'fundeio')})
+        ped('checklist (quadro adulterado, tudo fora da faixa): o porão alto, o diesel de um lado abaixo de 25 %, a água doce em 10 %, o banco de serviço em 23 V e a sonda em 2,5 m dão ✗; o Seakeeper com o volante em 70 % só pede a conferência',
+            ruim['saida']['s04'] == 'falta' and ruim['saida']['s05'] == 'falta' and ruim['saida']['s06'] == 'falta' and ruim['saida']['s07'] == 'falta' and ruim['saida']['s09'] == 'ler' and ruim['fundeio']['f01'] == 'falta' and ruim['chegada']['c06'] == 'falta', ruim['saida'])
+        ped('checklist (quadro adulterado): o diesel de UM tanque abaixo de 25 % reprova o item mesmo com o total acima do aviso (cada tanque)', so_bb['saida']['s05'] == 'falta' and so_bb['abastecimento']['a03'] == 'falta', so_bb['saida']['s05'])
+        ped('checklist (quadro adulterado): o Seakeeper desligado na saída pede a conferência (ler), não é ✓', ven['saida']['s09'] == 'ler' and ven['chegada']['c02'] == 'ok', (ven['saida']['s09'], ven['chegada']['c02']))
+        # a escrita: as marcas são conveniência (não gravam no diário); CONCLUIR grava UMA linha nova, com sim, e some com as marcas do tipo; recusa tipo e item que não existem; JSON ruim vale como vazio
+        w = pg.evaluate(JS_CK_ESCRITA)
+        marc = json.loads(w['marcas'])
+        ped('checklist (marcas): a marca ✓ da pessoa e a desmarca do ✓ do app ficam em capitao.checklist.v1 por tipo; tipo e item inexistentes recusam (null); marcar não grava no diário',
+            marc[0] == {'s03': 1} and marc[1] == {'s03': 1, 's02': 'n'} and marc[2] is None and marc[3] is None and marc[4] == {'c01': 1} and w['lido']['saida']['m'] == {'s03': 1, 's02': 'n'} and w['lido']['chegada']['m'] == {'c01': 1}
+            and w['n1'] == w['n0'], (marc, w['lido']))
+        ped('checklist (marcas): o item marcado pela pessoa é conferido («conferido por você»); o ✓ do app desmarcado deixa de contar (anulado, não é porQuadro, não é feito) e a resposta mostra os dois',
+            w['s03'] == {'manual': True, 'feito': True} and w['s02'] == {'anulado': True, 'feito': False, 'porQuadro': False, 'estado': 'ok'}
+            and w['resp'][2] == '2. • Nenhum alerta ativo no painel — nenhum alarme ativo (boa prática)'
+            and w['resp'][3] == '3. ✓ Óleo, arrefecimento, correias e válvulas de fundo conferidos com os motores frios. (conferido por você) (Guia de bordo — Motores Cummins §1 · Antes da partida · FAQ MO-01)', (w['s02'], w['resp'][2:]))
+        ln = w['linha']
+        pend = ['previsão', 'alertas', 'porão', 'gerador', 'plotter e VHF', 'documentos', 'tarefas de segurança', 'coletes e salvatagem', 'cabos e defensas']
+        quer = 'Checklist de saída concluído · 5/14 (4 pela telemetria) · pendentes: ' + ', '.join(pend)
+        ped('checklist (linha): «Checklist de saída concluído · 5/14 (4 pela telemetria) · pendentes: …» (5 conferidos: 4 pelo app e o s03 da pessoa; o s02 desmarcado vira pendente)', ln['t'] == quer and ln['feitos'] == 5 and ln['total'] == 14 and ln['porQuadro'] == 4 and ln['pend'] == pend and ln['sys'] == 'Navegação', (ln['t'], quer))
+        ped('checklist (CONCLUIR): grava UMA linha nova no diário (a de saída, sys Navegação, com sim e o texto da linha); o pedido vindo de link (commit false) não grava; as marcas de saída somem e as de chegada ficam',
+            w['link'] is None and w['n2'] == w['n0'] and w['n3'] == w['n0'] + 1 and w['entrada']['t'] == quer and w['entrada']['sys'] == 'Navegação' and w['entrada']['sim'] is True and w['entrada']['who'] and w['entrada']['src'] == 'checklist de bordo · telemetria'
+            and w['c']['entrada'] == w['entrada'] and w['c']['t'] == quer and 'saida' not in w['depois'] and w['depois']['chegada']['m'] == {'c01': 1}, (w['n0'], w['n2'], w['n3'], w['entrada']))
+        ped('checklist (marcas): false volta ao automático (apaga a marca); sem marca nenhuma o tipo continua no registro do aparelho vazio', w['volta'] == {} and w['vazio'].get('chegada', {}).get('m') == {}, (w['volta'], w['vazio']))
+        ped('checklist: tipo que não existe — marca e CONCLUIR devolvem null e não gravam', w['ruim'] is None and w['semTipo'] is None, (w['ruim'], w['semTipo']))
+        ped('checklist: JSON ruim no aparelho (lista, texto, marca que não é mapa, tipo que não é objeto) vale como sem marcas e os 14 itens seguem; nunca lança', w['lixo1'] == [14, {}] and w['lixo2'] == [14, '{}'] and w['lixo3'] == [14, '{}', '{}'], (w['lixo1'], w['lixo2'], w['lixo3']))
+        ped('checklist (CONCLUIR): a linha gravada (e a pior, com todos os rótulos pendentes) de cada tipo não casa a lista SOS, não é o relato de óleo e não vira diário com alerta', all(r == [False, r_[1], False] and r_[1] not in ('sos', 'oleo') for t in TIPOS_CK for r_ in [w['emerg'][t][0], w['emerg'][t][1]] for r in [r_]), w['emerg'])
+    finally:
+        pg.ctx.close()
+    # com a leitura do dia e a maré salvas (o capitao-clima.js da Main e da H2, Open-Meteo real; aqui a cópia plantada): a previsão (s01) e a maré (f06) mostram a leitura e NUNCA dão ✓ sozinhas (§2.5)
+    pg = pagina(b, muta=muta, clima=True)
+    try:
+        r = pg.evaluate("() => { const B = window.CapitaoBrain; return { s01: B.checklistItens('saida')[0].auto, f06: B.checklistItens('fundeio')[5].auto, t: B.answer('checklist de fundeio', { platform: 'app', commit: false }).text }; }")
+        ped('checklist (com a leitura do dia e a maré salvas): a previsão (s01) e a maré (f06) mostram o vento previsto e a maré do modelo e seguem «ler» — nunca ✓ sozinhas',
+            r['s01']['estado'] == 'ler' and r['s01']['valor'].startswith('previsão de hoje: vento até 12 nós de nordeste, rajadas até 21 nós (') and r['f06']['estado'] == 'ler'
+            and r['f06']['valor'].startswith('previsão de hoje: vento até 12 nós de nordeste') and ' · maré agora ' in r['f06']['valor'] and 'modelo, não é a tábua oficial da Marinha' in r['f06']['valor'] and '6. • Maré e vento conferidos' in r['t'], r)
+    finally:
+        pg.ctx.close()
+    # modo real (simulacao false): sem o quadro, o item que precisa dele diz SEM LEITURA (o caminho null); a previsão, os documentos e as tarefas seguem; sem hora; a linha do CONCLUIR sem sim
+    pg = pagina(b, extra=SEM_SIMULACAO, muta=muta)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain, a = B.answer('checklist de saída', { platform: 'app', commit: false }); localStorage.removeItem('capitao.diario.v1'); const c = B.checklistConcluir('saida');
+          return { t: a.text, src: a.src, fala: B.falaCurta(a), itens: B.checklistItens('saida').map((i) => [i.id, i.auto && i.auto.estado]), e: c.entrada, linhas: ['saida', 'chegada', 'abastecimento', 'fundeio'].map((t) => B.checklistLinha(t).t) }; }""")
+        est = dict(r['itens'])
+        ped('checklist (simulacao false): sem o quadro vivo os itens que o precisam voltam a «sem» (SEM LEITURA); previsão, documentos e tarefas seguem; a 1ª linha sem hora e sem «ao vivo»',
+            all(est[k] == 'sem' for k in ('s02', 's04', 's05', 's06', 's07', 's09')) and est['s01'] == 'ler' and est['s11'] == 'ler' and est['s12'] == 'falta' and r['t'].split('\n')[0] == 'Checklist de saída: 0 de 14 conferidos; não passou: tarefas de segurança.'
+            and r['t'].count('SEM LEITURA') >= 6 and not re.search(r'ao vivo|\d\d:\d\d:\d\d', r['t'] + r['src']) and r['src'] == 'Fonte: Checklist de bordo · coletor NMEA · leitura de 26/09/2026 10:12', (r['t'].split('\n')[0], r['src'], est))
+        ped('checklist (simulacao false): CONCLUIR grava a linha sem `sim`, com 0 conferidos e todos os rótulos pendentes que o quadro não confere', 'sim' not in r['e'] and r['e']['t'].startswith('Checklist de saída concluído · 0/14 · pendentes: previsão, alertas'), r['e'])
+    finally:
+        pg.ctx.close()
+    # o SOS: nenhum checklist (o SOS não lê dado do barco)
+    pg = pagina(b, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+    try:
+        r = pg.evaluate("() => { const B = window.CapitaoBrain, a = B.answer('checklist de saída', { platform: 'app', commit: false }); return { tipos: B.checklistTipos(), itens: B.checklistItens('saida'), c: B.checklistConcluir('saida'), t: a.text }; }")
+        ped('checklist (SOS): nenhum tipo, nenhum item, CONCLUIR não grava e a resposta não traz item nenhum', r['tipos'] == [] and r['itens'] == [] and r['c'] is None and 'Previsão' not in r['t'] and 'Nenhum alerta' not in r['t'], r)
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['checklist'] = grupo_checklist
+MUTANTES_3E_F09 = [
+    ('p3e checklist: o s02 confere os alertas sempre ✓', "return a.indexOf('nenhum') === 0 ? R_('ok', 'nenhum alarme ativo') : R_('falta', a);", "return R_('ok', 'nenhum alarme ativo');", ('checklist',)),
+    ('p3e checklist: o item parcial vira ✓', "if (it.parcial && a && a.estado === 'ok') a = R_('ler', a.valor + ' — o resto do item: confira');", "", ('checklist',)),
+    ('p3e checklist: a maré dá ✓ sozinha (o s01 da previsão é parcial e ficaria «ler» de qualquer jeito)', "return R_('ler', [pv ? 'previsão de hoje: '", "return R_('ok', [pv ? 'previsão de hoje: '", ('checklist',)),
+    ('p3e checklist: o CONCLUIR grava duas linhas', "    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", "    addDiario({ sys: ln.sys, t: ln.t, who: quem(), src: 'x' });\n    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", ('checklist',)),
+    ('p3e checklist: o CONCLUIR não apaga as marcas do tipo', "    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", "    return Object.assign({ entrada: e }, ln);", ('checklist',)),
+    ('p3e checklist: a linha do CONCLUIR sem o carimbo sim', "who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') }, selaSim()));", "who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') }, {}));", ('checklist',)),
+    ('p3e checklist: a marca da pessoa não conta', "feito: (ok && !anulado) || manual });", "feito: (ok && !anulado) });", ('checklist',)),
+    ('p3e checklist: o ✓ do app não pode ser desmarcado', "feito: (ok && !anulado) || manual });", "feito: ok || manual });", ('checklist',)),
+    ('p3e checklist: o diesel olha só o total', "nv(x, 'diesel_litros') === 'normal' && q.diesel_bb_pct >= min && q.diesel_be_pct >= min ? 'ok' : 'falta'", "nv(x, 'diesel_litros') === 'normal' ? 'ok' : 'falta'", ('checklist',)),
+    ('p3e checklist: «checklist ao fundear» cai no de saída', "    if (has(q, CHECK_PALAVRAS) && has(q, ['fundei', 'fundear', 'ancorar', 'ancoragem'])) return 'checklistFundeio';\n", "", ('checklist',)),
+    ('p3e checklist: «checklist de abastecimento» cai no de saída', "    if (has(q, CHECK_PALAVRAS) && has(q, ['abastec'])) return 'checklistAbastecimento';\n", "", ('checklist',)),
+    ('p3e checklist: a marca aceita item que não existe', "if (!tp || !checkIds(tp.id).some(function (it) { return it.id === id; })) return null;", "if (!tp) return null;", ('checklist',)),
+    ('p3e checklist: o item sem leitura do quadro vira ✓ (modo real)', "      if (!a) return R_('sem', SL);\n      return a.indexOf('nenhum') === 0", "      if (!a) return R_('ok', SL);\n      return a.indexOf('nenhum') === 0", ('checklist',)),
+    ('p3e checklist: o SOS lê os tipos', "function checkTipos() { return EM_SOS || !D.checklists", "function checkTipos() { return !D.checklists", ('checklist',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F09
+
+
 
 
 def instante_3a(b):

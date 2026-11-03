@@ -864,6 +864,393 @@
   // «Motores Cummins QSB6.7 305 · 2 unidades (BB e BE)»: do cadastro (D.equipamentos), nunca um fabricante fixo no código
   function motoresTxt() { var e = equip('motores'); return fabMod('motores') + (e && e.qtd ? ' · ' + e.qtd + (e.qtd === 1 ? ' unidade' : ' unidades') : '') + (e && e.lados ? ' (' + e.lados + ')' : ''); }
 
+  // ——— Tendências (F11; CONTRATO §1.13, §1.23) ———
+  // Achados por regra fixa, calculados neste aparelho (nenhuma IA, nenhuma rede): o histórico gerado do cruzeiro (D.historico.cruzeiro, 60 dias), a volta de hoje (a média da fase
+  // de cruzeiro do replay), os contadores de horas (calc.faltam do instante) e o próprio instante (o arrefecimento agora contra a faixa e a tendência dos últimos 30 s). Os achados do
+  // histórico e dos contadores são os mesmos em 12:01:00 e em 12:01:45; o do instante é o que muda. Cada achado leva a fonte. Nunca grava, nunca fala sozinho, nunca abre tela.
+  var PRED_PESO = { acao: 3, atencao: 2, ok: 1 };
+  var PRED_ROTULO = { acao: 'AÇÃO', atencao: 'ATENÇÃO', ok: 'ESTÁVEL' };
+  var PRED_ORDEM = ['arref_agora', 'arref_cruzeiro', 'horas', 'oleo_cruzeiro', 'baterias'];   // no mesmo nível, o do instante vem primeiro
+  // a fonte do histórico: com a simulação, o texto único das telas («telemetria»: nunca «coletor NMEA» com o quadro do replay); sem ela, a do próprio dado gerado
+  function histFonte() { return sim() ? 'histórico de telemetria de bordo' : (D.historico && D.historico.fonte) || 'histórico'; }
+  function mediaDe(xs) { var s = 0; xs.forEach(function (x) { s += x; }); return xs.length ? s / xs.length : NaN; }
+  // a série de médias de cruzeiro por dia de bordo (do mais antigo até ontem), já em unidade de medida; null se falta ou não é número
+  function cruzeiroSerie(campo) {
+    var s = D.historico && D.historico.cruzeiro && D.historico.cruzeiro[campo], v;
+    if (EM_SOS || !s || !Array.isArray(s.d) || s.d.length < 14 || !(s.escala > 0)) return null;
+    v = s.d.map(function (x) { return x / s.escala; });
+    return v.every(function (x) { return typeof x === 'number' && isFinite(x); }) ? v : null;
+  }
+  // a média do campo na fase de cruzeiro da volta de hoje (D.replay.fases), pelo mesmo replay das telas; null sem replay
+  function cruzeiroHoje(campos) {
+    var R = window.CapitaoReplay, fs = D.replay && D.replay.fases, f = null, o = {}, n = 0, t, q;
+    if (EM_SOS || !sim() || !R || typeof R.quadro !== 'function' || !Array.isArray(fs)) return null;
+    fs.forEach(function (x) { if (x && x.nome === 'cruzeiro') f = x; });
+    if (!f) return null;
+    try {
+      campos.forEach(function (c) { o[c] = 0; });
+      for (t = f.ini; t < f.fim; t++) {
+        q = R.quadro(t);
+        if (!q) return null;
+        campos.forEach(function (c) { o[c] += q[c]; });
+        n++;
+      }
+    } catch (e) { return null; }
+    if (!n) return null;
+    campos.forEach(function (c) { o[c] /= n; });
+    return campos.every(function (c) { return isFinite(o[c]); }) ? o : null;
+  }
+  // a faixa normal do campo, do D.replay.limites («até 88 °C», «de 24,4 a 29,4 V»); '' se o campo não tem
+  function faixaNormal(campo) {
+    var L = limitesDe(campo), n = L && L.normal, un = L && L.un ? ' ' + L.un : '', d = decimais;
+    if (!n) return '';
+    if (typeof n.de === 'number' && typeof n.ate === 'number') return 'de ' + nb(n.de, d(n.de)) + ' a ' + nb(n.ate, d(n.ate)) + un;
+    if (typeof n.ate === 'number') return 'até ' + nb(n.ate, d(n.ate)) + un;
+    if (typeof n.de === 'number') return 'a partir de ' + nb(n.de, d(n.de)) + un;
+    return '';
+  }
+  // arrefecimento em cruzeiro: a diferença entre os dois motores (hoje, pela volta) e como ela andou nos 60 dias do histórico
+  function achadoArrefCruzeiro() {
+    var bb = cruzeiroSerie('motor_bb_arref_c'), be = cruzeiroSerie('motor_be_arref_c'), hoje, dif, ini, fim, rumo, tend, quente, frio, n, abs;
+    if (!bb || !be || bb.length !== be.length) return null;
+    hoje = cruzeiroHoje(['motor_bb_arref_c', 'motor_be_arref_c']); n = bb.length;
+    dif = bb.map(function (x, k) { return be[k] - x; });
+    ini = mediaDe(dif.slice(0, 7)); fim = hoje ? hoje.motor_be_arref_c - hoje.motor_bb_arref_c : mediaDe(dif.slice(-7));
+    abs = Math.abs(fim); rumo = abs - Math.abs(ini);
+    tend = rumo >= 0.5 ? ', subindo há ' + n + ' dias' : rumo <= -0.5 ? ', caindo há ' + n + ' dias' : ', estável há ' + n + ' dias';
+    quente = fim >= 0 ? 'BE' : 'BB'; frio = fim >= 0 ? 'BB' : 'BE';
+    if (abs < 1) return { id: 'arref_cruzeiro', sistema: 'Motores', nivel: 'ok', titulo: 'Arrefecimento em cruzeiro', texto: 'Os dois motores esfriam igual em cruzeiro: diferença de ' + nb(abs, 1) + ' °C' + tend + '.', fonte: histFonte() + ' · cruzeiro dos últimos ' + n + ' dias' + (hoje ? ' e a volta de hoje' : '') };
+    return { id: 'arref_cruzeiro', sistema: 'Motores', nivel: abs >= 2 || rumo >= 0.5 ? 'atencao' : 'ok', titulo: 'Arrefecimento em cruzeiro', texto: 'Motor ' + quente + ' ' + nb(abs, 1) + ' °C acima do ' + frio + ' em cruzeiro' + tend + '.', fonte: histFonte() + ' · cruzeiro dos últimos ' + n + ' dias' + (hoje ? ' e a volta de hoje' : '') };
+  }
+  // pressão de óleo em cruzeiro, por motor: estável ou caindo contra a primeira semana do histórico; a faixa normal é a do guia (a partir de 1.000 rpm)
+  function achadoOleoCruzeiro() {
+    var bb = cruzeiroSerie('motor_bb_oleo_bar'), be = cruzeiroSerie('motor_be_oleo_bar'), hoje, n, queda, vb, ve, mn, L, k, r;
+    if (!bb || !be) return null;
+    hoje = cruzeiroHoje(['motor_bb_oleo_bar', 'motor_be_oleo_bar']); n = bb.length;
+    queda = Math.max(mediaDe(bb.slice(0, 7)) - mediaDe(bb.slice(-7)), mediaDe(be.slice(0, 7)) - mediaDe(be.slice(-7)));
+    vb = hoje ? hoje.motor_bb_oleo_bar : mediaDe(bb.slice(-7)); ve = hoje ? hoje.motor_be_oleo_bar : mediaDe(be.slice(-7));
+    L = limitesDe('motor_bb_oleo_bar'); r = L && L.regimes; mn = null;
+    if (r) for (k = 0; k < r.length; k++) if (r[k].rpm_de != null && r[k].normal && typeof r[k].normal.de === 'number') mn = r[k].normal.de;
+    return { id: 'oleo_cruzeiro', sistema: 'Motores', nivel: queda >= 0.2 || (mn !== null && Math.min(vb, ve) < mn) ? 'atencao' : 'ok', titulo: 'Pressão de óleo em cruzeiro',
+      texto: 'Pressão de óleo em cruzeiro ' + (queda >= 0.2 ? 'caindo' : 'estável') + ' há ' + n + ' dias: BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar' + (mn !== null ? ', com mínimo normal de ' + nb(mn, 1) + ' bar' : '') + '.',
+      fonte: histFonte() + ' · cruzeiro dos últimos ' + n + ' dias' + (hoje ? ' e a volta de hoje' : '') + (L && L.fonte ? ' · ' + L.fonte : '') };
+  }
+  // os três bancos de baterias nos últimos 30 dias (CapitaoReplay.serie): estáveis ou com queda de 0,3 V ou mais
+  function achadoBaterias() {
+    var R = window.CapitaoReplay, F = window.CapitaoAgora, campos = ['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v'], rot = ['serviço', 'partida', '12 V'], vistos = [], queda = 0, variacao = 0, i = vivo(), L;
+    if (EM_SOS || !sim() || !i || !R || typeof R.serie !== 'function' || !F || !F.fmt) return null;
+    try {
+      campos.forEach(function (c, k) {
+        var s = R.serie(c, '30D', i.ms), v, atual = F.fmt.campo(i.q, c);
+        if (!Array.isArray(s) || s.length < 10 || atual === null) throw new Error('serie');
+        v = s.map(function (p) { return p.v; });
+        queda = Math.max(queda, mediaDe(v.slice(0, 5)) - mediaDe(v.slice(-5)));
+        variacao = Math.max(variacao, Math.max.apply(null, v) - Math.min.apply(null, v));
+        vistos.push(rot[k] + ' ' + atual + ' V');
+      });
+    } catch (e) { return null; }
+    L = limitesDe('bateria_0_tensao_v');
+    return { id: 'baterias', sistema: 'Elétrico', nivel: queda >= 0.3 ? 'atencao' : 'ok', titulo: 'Baterias nos últimos 30 dias',
+      texto: queda >= 0.3 ? 'Banco de baterias caiu ' + nb(queda, 1) + ' V nos últimos 30 dias: ' + vistos.join(' · ') + '.' : 'Baterias estáveis nos últimos 30 dias: ' + vistos.join(' · ') + ', com variação de até ' + nb(variacao, 1) + ' V.',
+      fonte: histFonte() + ' · 30 dias' + (L && L.fonte ? ' · ' + L.fonte : '') };
+  }
+  // horas até a troca de óleo dos motores e a revisão do gerador: os contadores do instante (calc.faltam) ou, sem eles, o que a agenda gerada traz
+  var HORAS_NOME = { 'motores-oleo': 'a troca de óleo e filtros dos motores', 'gerador-revisao': 'a revisão do gerador' };
+  function achadoHoras() {
+    var ts = (D.agenda || []).filter(function (t) { return t.horas && typeof t.horas.limite === 'number' && !execVisivel()[t.id]; }), cl = [], menor = Infinity;
+    if (EM_SOS || !ts.length) return null;
+    ts.forEach(function (t) {
+      var f = faltam(t);
+      if (typeof f !== 'number' || !isFinite(f)) return;
+      menor = Math.min(menor, f);
+      cl.push(nb(f, 1) + ' h para ' + (HORAS_NOME[t.id] || 'a ' + min1(t.t)) + ' (limite de ' + mil(t.horas.limite) + ' h)');
+    });
+    if (!cl.length) return null;
+    return { id: 'horas', sistema: 'Manutenção', nivel: menor <= 10 ? 'acao' : menor <= 50 ? 'atencao' : 'ok', titulo: 'Horas até a revisão', texto: 'Faltam ' + cl.join(' e ') + '.', fonte: FT.agenda.replace('Fonte: ', '') + (vivo() ? ' · horímetros: ' + SNAP.fonte : '') };
+  }
+  // o arrefecimento do motor mais quente AGORA contra a faixa do guia (CapitaoAgora.nivel) e a tendência de 30 s: o único achado que muda de um instante para o outro
+  function achadoArrefAgora() {
+    var i = vivo(), A = window.CapitaoAgora, q = i && i.q, lado, c, v, n, d, tx, al, desde = '', L;
+    if (EM_SOS || !i || !A || !A.fmt || typeof q.motor_be_arref_c !== 'number' || typeof q.motor_bb_arref_c !== 'number') return null;
+    lado = q.motor_be_arref_c >= q.motor_bb_arref_c ? 'BE' : 'BB'; c = lado === 'BE' ? 'motor_be_arref_c' : 'motor_bb_arref_c';
+    n = A.nivel(c, q); v = campoTxt(i, c);
+    if (!n || v === null) return null;
+    tx = i.tend && typeof i.tend[c] === 'number' ? '; ' + sinal(i.tend[c], 1) + ' °C nos últimos 30 s' : '';
+    L = limitesDe(c);
+    if (n.nivel === 'normal') return { id: 'arref_agora', sistema: 'Motores', nivel: 'ok', titulo: 'Arrefecimento agora', texto: 'Arrefecimento do motor ' + lado + ' agora: ' + v + ' °C, dentro da faixa normal (' + faixaNormal(c) + ')' + tx + '.',
+      fonte: i.fonteTxt + ' · ' + (L && L.fonte || '') };
+    al = (alarmesDetalhe(i) || []).filter(function (a) { return a.campo === c; })[0]; if (al && al.hora) desde = ' desde ' + al.hora;
+    d = typeof n.limite === 'number' ? ', ' + (q[c] > n.limite ? 'acima' : 'abaixo') + ' de ' + nb(n.limite, decimais(n.limite)) + ' °C' : '';
+    return { id: 'arref_agora', sistema: 'Motores', nivel: n.nivel === 'critico' ? 'acao' : 'atencao', titulo: 'Arrefecimento agora', texto: 'Arrefecimento do motor ' + lado + ' agora: ' + v + ' °C' + d + ' — ' + (n.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + desde + tx + '.',
+      fonte: i.fonteTxt + ' · ' + (L && L.fonte || '') };
+  }
+  // os achados, do mais grave ao estável (no mesmo nível, PRED_ORDEM); [] sem nenhum dado. Cada chamada refaz (nada fica guardado).
+  function preditivaLista() {
+    return congela(function () {
+      var l = [achadoArrefAgora, achadoArrefCruzeiro, achadoHoras, achadoOleoCruzeiro, achadoBaterias].map(function (f) { try { return f(); } catch (e) { return null; } }).filter(Boolean);
+      l.sort(function (a, b) { return (PRED_PESO[b.nivel] - PRED_PESO[a.nivel]) || (PRED_ORDEM.indexOf(a.id) - PRED_ORDEM.indexOf(b.id)); });
+      return l.map(function (a) { return Object.assign({ rotulo: PRED_ROTULO[a.nivel] }, a); });
+    });
+  }
+  // a pergunta sobre as tendências («quais as tendências?», «análise preditiva»): não é a tendência do vento, da pressão, da maré nem de mercado (esses seguem as suas rotas)
+  var PRED_PALAVRAS = ['preditiv', ' tendencia ', ' tendencias ', 'perdendo capacidade', 'recomendacao da ia', 'recomendacoes da ia'];
+  var PRED_FORA = ['vento', 'barometr', 'atmosfer', ' mare', 'clima', 'chuva', 'previs', 'ondas', 'dolar', 'bolsa', 'mercado', 'preco', 'cotacao', 'bitcoin', 'consumo', 'diesel', 'combustivel'];
+  function tendenciaPergunta(q) { return has(q, PRED_PALAVRAS) && !has(q, PRED_FORA) && !(has(q, ['pressao']) && !has(q, ['oleo'])); }   // («tendência da pressão» sozinha é a barométrica; com o óleo é a do óleo)
+
+  // ——— Peças e estoque (F22; CONTRATO §1.20, §1.25) ———
+  // A base gerada (D.pecas: nome, quantidade, mínimo, local e as tarefas da agenda que usam; sem código de fabricante, sem R$ e sem peça de salvatagem) NUNCA se muta. O que este aparelho faz
+  // fica em capitao.pecas.v1 = { novas: [peças cadastradas aqui], movs: [{ id, dq, iso, who, sim? }] }: a quantidade de uma peça é a da base (ou a da cadastrada) mais a soma dos
+  // movimentos dela. O «−1 USADA» é um movimento de −1; o Desfazer é um movimento NOVO que devolve a unidade (só se ninguém mexeu na quantidade depois). O registro só cresce: nenhuma linha
+  // se apaga nem se reescreve. Só um toque ou um comando explícito grava (as telas chamam usaPeca, desfazUsoPeca, ajustaPeca e addPeca); o chat só lê. Linha gravada com a simulação leva `sim: true`.
+  var K_PECAS = 'capitao.pecas.v1';
+  function selaSim() { return sim() ? { sim: true } : {}; }
+  function pecasEstado() {   // JSON de outra forma vale como vazio (nunca lança)
+    var v = read(K_PECAS, null), o = v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    return {
+      novas: Array.isArray(o.novas) ? o.novas.filter(function (x) { return x && typeof x.id === 'string' && x.id && typeof x.n === 'string' && x.n; }) : [],
+      movs: Array.isArray(o.movs) ? o.movs.filter(function (m) { return m && typeof m.id === 'string' && typeof m.dq === 'number' && isFinite(m.dq); }) : []
+    };
+  }
+  function nivelPeca(q, mn) { return q <= 0 ? 'zero' : mn > 0 && q <= mn ? 'baixa' : 'ok'; }
+  function stPeca(q, mn) { return q <= 0 ? 'ZERADA' : mn > 0 && q < mn ? 'ABAIXO DO MÍNIMO' : mn > 0 && q === mn ? 'NO MÍNIMO' : 'OK'; }
+  // As peças COMO AS RESPOSTAS LEEM: a base mais as cadastradas aqui, com a quantidade já somada. `ctx.semSim` (a ficha com simulacao false) deixa de fora o que tem `sim: true`. No SOS, nada.
+  function pecasLista(ctx) {
+    var est, soma = {}, semSim = !!(ctx && ctx.semSim), base;
+    if (EM_SOS) return [];
+    est = pecasEstado(); base = Array.isArray(D.pecas) ? D.pecas : [];
+    est.movs.forEach(function (m) { if (!(semSim && m.sim === true)) soma[m.id] = (soma[m.id] || 0) + m.dq; });
+    return base.map(function (x) { return Object.assign({}, x, { base: true }); }).concat(est.novas.filter(function (x) { return !(semSim && x.sim === true); }).map(function (x) { return Object.assign({}, x, { base: false }); }))
+      .filter(function (x) { return x && typeof x.n === 'string' && x.n; })
+      .map(function (x) {
+        var q = Math.max(0, Math.round((typeof x.qtd === 'number' && isFinite(x.qtd) ? x.qtd : 0) + (soma[x.id] || 0))), mn = typeof x.min === 'number' && isFinite(x.min) ? x.min : 0;
+        return { id: x.id, n: x.n, qtd: q, min: mn, local: x.local || '', obs: x.obs || '', tarefas: Array.isArray(x.tarefas) ? x.tarefas.slice() : [], base: x.base, nivel: nivelPeca(q, mn), st: stPeca(q, mn) };
+      });
+  }
+  function txtPeca(v, max) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max); }
+  function intPeca(v) { var n = typeof v === 'number' ? v : parseInt(String(v == null ? '' : v).trim(), 10); return typeof n === 'number' && isFinite(n) && n >= 0 && n <= 999 ? Math.round(n) : null; }
+  function pecaMov(id, dq) {   // grava UM movimento novo (iso único: o dados.html soma pelo iso) e devolve a linha
+    var est = pecasEstado(), t = Date.now(), iso, m;
+    do { iso = new Date(t++).toISOString(); } while (est.movs.some(function (x) { return x.iso === iso; }));
+    m = Object.assign({ id: id, dq: dq, iso: iso, who: quem() }, selaSim());
+    est.movs.push(m); write(K_PECAS, est);
+    return m;
+  }
+  // −1 USADA: tira uma do estoque. {id, ant, novo, iso} para o Desfazer; null se a peça não existe ou já está zerada.
+  function usaPeca(id) {
+    var p = pecasLista().filter(function (x) { return x.id === id; })[0], m;
+    if (!p || !(p.qtd > 0)) return null;
+    m = pecaMov(id, -1);
+    return { id: id, ant: p.qtd, novo: p.qtd - 1, iso: m.iso };
+  }
+  // Desfazer: devolve a unidade com um movimento NOVO, e só se a quantidade ainda é a que o −1 deixou (ninguém mexeu depois). Devolve a peça, ou null.
+  function desfazUsoPeca(u) {
+    var p = u && pecasLista().filter(function (x) { return x.id === u.id; })[0];
+    if (!p || typeof u.ant !== 'number' || typeof u.novo !== 'number' || p.qtd !== u.novo || u.ant === u.novo) return null;
+    pecaMov(u.id, u.ant - u.novo);
+    return pecasLista().filter(function (x) { return x.id === u.id; })[0] || null;
+  }
+  // ajuste da quantidade (o ✎ da tela): um movimento com a diferença; null se a peça não existe ou o número não é inteiro de 0 a 999
+  function ajustaPeca(id, qtd) {
+    var p = pecasLista().filter(function (x) { return x.id === id; })[0], n = intPeca(qtd);
+    if (!p || n === null || n === p.qtd) return null;
+    pecaMov(id, n - p.qtd);
+    return pecasLista().filter(function (x) { return x.id === id; })[0] || null;
+  }
+  // + PEÇA: nome (obrigatório), quantas a bordo, mínimo, local, observação e as tarefas da agenda que a usam. Sem código de fabricante nem valor. Devolve a peça cadastrada, ou null.
+  function addPeca(c) {
+    var n = txtPeca(c && c.n, 80), est, ids = {}, id, ag = {}, item;
+    if (EM_SOS || !n) return null;
+    est = pecasEstado();
+    (D.pecas || []).forEach(function (x) { ids[x.id] = 1; }); est.novas.forEach(function (x) { ids[x.id] = 1; }); (D.agenda || []).forEach(function (t) { ag[t.id] = 1; });
+    do { id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4); } while (ids[id]);
+    item = Object.assign({ id: id, n: n, qtd: intPeca(c.qtd) || 0, min: intPeca(c.min) || 0 }, c.local ? { local: txtPeca(c.local, 60) } : {}, c.obs ? { obs: txtPeca(c.obs, 200) } : {},
+      Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}, { iso: new Date().toISOString(), who: quem() }, selaSim());
+    est.novas.push(item); write(K_PECAS, est);
+    return item;
+  }
+  // as tarefas da agenda que a peça serve, com o prazo de hoje («Troca de óleo e filtros dos motores (D-17 · 20/11)»)
+  function tarefasDaPeca(p) { return (p.tarefas || []).map(tarefa).filter(Boolean).map(function (t) { return { id: t.id, n: t.t, prazo: prazoTxt(t) }; }); }
+  // a(s) tarefa(s) da agenda que a pergunta cita pelas palavras dela (D.agenda[].palavras: «rotor do gerador», «filtro da climatizacao»)
+  function tarefasDaPergunta(q) {
+    var n = pad(q);
+    return (D.agenda || []).filter(function (t) { return (t.palavras || []).some(function (w) { w = norm(w).trim(); return w && n.indexOf(' ' + w + ' ') !== -1; }); });
+  }
+  var PECAS_GENERICAS = null;   // (montada na 1ª chamada: o tokens() usa a lista de palavras comuns, definida mais abaixo)
+  // as peças que a pergunta nomeia pelo nome («rotor», «filtro de óleo», «anodo»); [] se a pergunta só diz «peças» (a lista inteira)
+  function pecasDoNome(q, l) {
+    var ws;
+    if (!PECAS_GENERICAS) { PECAS_GENERICAS = {}; tokens('pecas peca sobressalente sobressalentes estoque bordo temos tem tenho quais qual quanto quantas quantos minimo repor reposicao cadastradas cadastro lista precisa precisamos falta faltam faltando acabando acabou abaixo zerada zeradas').forEach(function (w) { PECAS_GENERICAS[w] = 1; }); }
+    ws = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !PECAS_GENERICAS[w]; });
+    if (!ws.length) return { nome: false, lista: [] };
+    return { nome: true, lista: l.filter(function (x) { var nt = tokens(x.n); return ws.some(function (w) { return nt.indexOf(w) !== -1; }); }) };
+  }
+  // «peças» (plural) e «sobressalente» já são a pergunta do estoque; a forma no singular e «estoque» pedem também um verbo ou número de estoque («tem», «quantas», «falta», «a bordo»…)
+  var PECAS_FORTES = [' pecas ', 'sobressalente'];
+  var PECAS_FRACAS = [' peca de ', ' peca a bordo', ' peca para ', ' peca pra ', ' uma peca ', ' a peca ', ' qual peca', ' que peca', ' de peca ', ' da peca ', ' sem peca'];
+  var PECAS_PEDE = [' a bordo', ' estoque', ' temos ', ' tem ', ' ha ', 'quant', 'precis', ' falt', ' repor', 'reposicao', 'cadastr', ' lista', 'minimo', 'acabando', 'zerad', ' quais '];
+  var PECAS_FORA = [' diesel', 'combustivel', 'gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
+    'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', 'apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual', 'onde fica'];
+  var ESTOQUE_OUTRO = ['agua', 'gelo', 'comida', 'bebida', 'mantiment', 'potavel', 'cervej', 'refriger', 'lanche', 'racao'];
+  function pecasPergunta(q) {
+    if (has(q, PECAS_FORA)) return false;
+    return has(q, PECAS_FORTES) || ((has(q, PECAS_FRACAS) || (has(q, [' estoque']) && !has(q, ESTOQUE_OUTRO))) && has(q, PECAS_PEDE));
+  }
+
+  // ——— Checklists guiados (F09; CONTRATO §1.18, §1.25) ———
+  // Os 4 checklists (saída, chegada, abastecimento, fundeio) vêm do D.checklists gerado: cada item tem o rótulo curto (`c`), o texto (`t`), a FONTE (o «Guia de bordo — … §n», o «Checklist de bordo § …»
+  // ou «boa prática») e, onde o quadro do instante permite julgar, uma verificação automática (`auto`): ✓ se o quadro confere (pela CapitaoAgora.nivel sobre as faixas do guia), ✗ se não,
+  // «ler» se o item só mostra a leitura e pede a conferência da pessoa (previsão e maré, que são do mundo real e nunca dão ✓ sozinhas; o item `parcial`, que o quadro só confere em parte), e «sem»
+  // sem leitura (o caminho null do modo real: SEM LEITURA). A pessoa marca ✓ (1) ou desmarca o ✓ do app ('n') em capitao.checklist.v1 = { <tipo>: { m: { <item>: 1 | 'n' }, em } },
+  // que é só conveniência (some ao concluir). CONCLUIR grava UMA linha nova no diário (só com um toque ou um comando; o registro só cresce); a linha não casa a lista SOS nem o relato de óleo.
+  var K_CHECK = 'capitao.checklist.v1';
+  function checkTipos() { return EM_SOS || !D.checklists || !Array.isArray(D.checklists.tipos) ? [] : D.checklists.tipos; }
+  function checkTipo(id) { return checkTipos().filter(function (t) { return t.id === id; })[0] || null; }
+  function checkTodas() { var v = read(K_CHECK, null); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+  function checkMarcas(tipo) { var t = checkTodas()[tipo]; return t && typeof t === 'object' && t.m && typeof t.m === 'object' && !Array.isArray(t.m) ? t.m : {}; }
+  function checkIds(tipo) { var tp = checkTipo(tipo), its = tp && D.checklists.itens && D.checklists.itens[tp.id]; return Array.isArray(its) ? its : []; }
+  // marca (on true = ✓ da pessoa · 'n' = «não conferido», vence o ✓ do app · false = volta ao automático); recusa tipo ou item que não existe
+  function checklistMarca(tipo, id, on) {
+    var tp = checkTipo(tipo), o, t;
+    if (!tp || !checkIds(tp.id).some(function (it) { return it.id === id; })) return null;
+    o = checkTodas(); t = o[tp.id] && typeof o[tp.id] === 'object' ? o[tp.id] : (o[tp.id] = {});
+    t.m = t.m && typeof t.m === 'object' && !Array.isArray(t.m) ? t.m : {}; t.em = t.em || new Date().toISOString();
+    if (on === 'n') t.m[id] = 'n'; else if (on) t.m[id] = 1; else delete t.m[id];
+    write(K_CHECK, o);
+    return checkMarcas(tp.id);
+  }
+  function checklistZera(tipo) { var o = checkTodas(); if (o[tipo] !== undefined) { delete o[tipo]; write(K_CHECK, o); } }
+  var R_ = function (estado, valor) { return { estado: estado, valor: valor }; };
+  function ctxAuto() { var i = vivo(); return i ? { i: i, q: i.q, t: i.txt } : null; }
+  function nv(x, campo) { var A = window.CapitaoAgora; try { var n = A.nivel(campo, x.q); return n ? n.nivel : null; } catch (e) { return null; } }
+  function docsComPrazo() {
+    var segd = function (d) { return (D.equipamentos || []).some(function (e) { return e.seguranca && e.validade === d.id; }); };   // a validade de equipamento de segurança vai pela etiqueta, sem data
+    return (D.documentos || []).filter(function (d) { return !segd(d) && !isNaN(dnDe(d)); }).sort(function (a, b) { return dnDe(a) - dnDe(b); });
+  }
+  var AUTO = {
+    tempo: function () {
+      var pv = previsao();
+      return R_('ler', pv ? 'previsão de hoje: ' + pv.vento + ' (' + pv.fonte + ')' : sim() ? semConexao() : 'previsão do dia: ' + SD + ' (sem leitura de hoje neste aparelho)');
+    },
+    mare: function () {
+      var m = mareTexto(), pv = previsao();
+      if (!m && !pv) return R_('ler', sim() ? semConexao() : 'previsão e maré: ' + SD + ' (sem leitura neste aparelho)');
+      return R_('ler', [pv ? 'previsão de hoje: ' + pv.vento + ' (' + pv.fonte + ')' : '', m ? 'maré agora ' + m.agora + ' em relação ao nível médio do mar (modelo, não é a tábua oficial da Marinha)' : ''].filter(Boolean).join(' · '));
+    },
+    alertas: function (x) {
+      var a = x && x.t.alarmes;
+      if (!a) return R_('sem', SL);
+      return a.indexOf('nenhum') === 0 ? R_('ok', 'nenhum alarme ativo') : R_('falta', a);
+    },
+    porao: function (x) {
+      var bb = x && nv(x, 'porao_bb_nivel'), be = x && nv(x, 'porao_be_nivel'), t = tarefa('porao-teste'), L = limitesDe('porao_bb_nivel'), ate = L && L.normal && typeof L.normal.ate === 'number' ? ' (normal até ' + nb(L.normal.ate, 0) + ' cm)' : '';
+      if (!x || !bb || !be) return R_('sem', SL);
+      var niv = 'nível BB ' + campoTxt(x.i, 'porao_bb_nivel') + ' cm · BE ' + campoTxt(x.i, 'porao_be_nivel') + ' cm' + ate + (t ? ' · teste das bombas ' + prazoTxt(t) : '');
+      return R_(bb === 'normal' && be === 'normal' ? 'ok' : 'falta', niv);
+    },
+    diesel: function (x) {
+      var q = x && x.q, L = limitesDe('diesel_litros'), cap = E.tanques && E.tanques.diesel_l, min = L && L.normal && typeof L.normal.de === 'number' && cap ? L.normal.de / cap * 100 : 25;
+      if (!x || !x.t.dieselLados || typeof q.diesel_bb_pct !== 'number' || typeof q.diesel_be_pct !== 'number') return R_('sem', SL);
+      return R_(nv(x, 'diesel_litros') === 'normal' && q.diesel_bb_pct >= min && q.diesel_be_pct >= min ? 'ok' : 'falta', x.t.dieselLados + (x.t.diesel ? ' — ' + x.t.diesel : ''));
+    },
+    tanques: function (x) {
+      var cs = ['tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct'], ns, ruim;
+      if (!x || !x.t.tanques) return R_('sem', SL);
+      ns = cs.map(function (c) { return nv(x, c); });
+      if (ns.some(function (n) { return n === null; })) return R_('sem', SL);
+      ruim = ['água doce', 'cinzas', 'negras'].filter(function (r, k) { return ns[k] !== 'normal'; });
+      return R_(ruim.length ? 'falta' : 'ok', x.t.tanques + (ruim.length ? ' — fora da faixa: ' + ruim.join(', ') : ''));
+    },
+    baterias: function (x) {
+      var cs = ['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v'], ns;
+      if (!x || !x.t.b24 || !x.t.b12) return R_('sem', SL);
+      ns = cs.map(function (c) { return nv(x, c); });
+      if (ns.some(function (n) { return n === null; })) return R_('sem', SL);
+      return R_(ns.every(function (n) { return n === 'normal'; }) ? 'ok' : 'falta', x.t.b24 + ' · 12 V ' + x.t.b12);
+    },
+    seakeeper: function (x) {
+      if (!x || typeof x.q.seakeeper_ativo !== 'boolean') return R_('sem', SL);
+      if (x.q.seakeeper_ativo && nv(x, 'seakeeper_volante_pct') === 'normal') return R_('ok', x.t.seakeeper);
+      return R_('ler', x.q.seakeeper_ativo ? x.t.seakeeper + ' — espere o display indicar pronto' : 'desligado — ligue com antecedência');
+    },
+    seakeeperOff: function (x) {
+      if (!x || typeof x.q.seakeeper_ativo !== 'boolean') return R_('sem', SL);
+      return x.q.seakeeper_ativo ? R_('falta', 'ainda ' + x.t.seakeeper) : R_('ok', 'desligado');
+    },
+    motoresOff: function (x) {
+      if (!x || typeof x.q.motor_bb_rpm !== 'number' || typeof x.q.motor_be_rpm !== 'number') return R_('sem', SL);
+      return x.q.motor_bb_rpm > 0 || x.q.motor_be_rpm > 0 ? R_('falta', 'motores ligados: ' + x.t.rpm) : R_('ok', 'motores desligados');
+    },
+    geradorOff: function (x) {
+      if (!x || typeof x.q.gerador_ativo !== 'boolean') return R_('sem', SL);
+      return x.q.gerador_ativo ? R_('falta', 'gerador ' + x.t.gerador) : R_('ok', 'gerador desligado');
+    },
+    documentos: function () {
+      var com = docsComPrazo(), venc = com.filter(function (d) { return dnDe(d) < 0; }), pr = com.filter(function (d) { return dnDe(d) >= 0; })[0], n;
+      if (venc.length) return R_('falta', 'vencido: ' + venc.map(function (d) { return d.n + ' (' + d.vence + ')'; }).join('; '));
+      n = pr ? dnDe(pr) : null;
+      return R_('ler', 'nenhum vencido (' + com.length + (com.length === 1 ? ' documento com prazo' : ' documentos com prazo') + ')' + (pr ? '; o mais próximo: ' + pr.n + ', ' + (n === 0 ? 'vence hoje' : 'em ' + n + (n === 1 ? ' dia' : ' dias')) : ''));
+    },
+    tarefas: function () {
+      var at = agenda().filter(function (t) { return t.seguranca === true && atrasadaN(dnDe(t)); });
+      return at.length ? R_('falta', at.map(function (t) { return min1(t.t) + ' (' + prazoTxt(t) + ')'; }).join('; ')) : R_('ok', 'nenhuma tarefa de segurança atrasada');
+    },
+    profundidade: function (x) {
+      var n = x && nv(x, 'profundidade_m'), L = limitesDe('profundidade_m'), mn = L && L.normal && typeof L.normal.de === 'number' ? ' (mínimo ' + nb(L.normal.de, 0) + ' m)' : '';
+      if (!x || !n || !x.t.prof) return R_('sem', SL);
+      return R_(n === 'normal' ? 'ok' : 'falta', x.t.prof + mn);
+    },
+    deriva: function (x) {
+      if (!x || typeof x.q.sog_nos !== 'number' || !x.t.sog) return R_('sem', SL);
+      return x.q.sog_nos < 0.5 ? R_('ok', 'parado: velocidade sobre o fundo ' + x.t.sog) : R_('falta', 'navegando a ' + x.t.sog);
+    }
+  };
+  // o item com a verificação de agora: { …item, auto: {estado, valor} | null, manual, anulado, porQuadro, feito }. O item `parcial` que o quadro confere vira «ler» (a pessoa confere o resto).
+  function checklistItens(tipo) {
+    var tp = checkTipo(tipo);
+    if (!tp) return [];
+    return congela(function () {
+      var x = ctxAuto(), m = checkMarcas(tp.id);
+      return checkIds(tp.id).map(function (it) {
+        var a = null, manual = m[it.id] === 1 || m[it.id] === true, anulado = m[it.id] === 'n', ok;
+        if (it.auto && AUTO[it.auto]) { try { a = AUTO[it.auto](x); } catch (e) { a = R_('sem', SL); } }
+        if (it.parcial && a && a.estado === 'ok') a = R_('ler', a.valor + ' — o resto do item: confira');
+        ok = !!(a && a.estado === 'ok');
+        return Object.assign({}, it, { auto: a, manual: manual, anulado: anulado, porQuadro: ok && !manual && !anulado, feito: (ok && !anulado) || manual });
+      });
+    });
+  }
+  // A linha do diário ao concluir: «Checklist de saída concluído · 9/14 (7 pela telemetria) · pendentes: porão, documentos»
+  function checklistLinha(tipo) {
+    var tp = checkTipo(tipo), l, pq, pend;
+    if (!tp) return null;
+    l = checklistItens(tp.id); pq = l.filter(function (i) { return i.porQuadro; }).length; pend = l.filter(function (i) { return !i.feito; }).map(function (i) { return i.c; });
+    return { tipo: tp.id, sys: tp.sys, feitos: l.length - pend.length, total: l.length, porQuadro: pq, pend: pend,
+      t: tp.nome + ' concluído · ' + (l.length - pend.length) + '/' + l.length + (pq ? ' (' + pq + ' pela telemetria)' : '') + (pend.length ? ' · pendentes: ' + pend.join(', ') : ' · tudo conferido') };
+  }
+  // CONCLUIR: UMA linha nova no diário (a conveniência das marcas some); `ctx.commit === false` (pedido vindo de link) não grava. Devolve { …linha, entrada } ou null.
+  function checklistConcluir(tipo, ctx) {
+    var ln = checklistLinha(tipo), e;
+    if (!ln || (ctx && ctx.commit === false)) return null;
+    e = addDiario(Object.assign({ sys: ln.sys, t: ln.t, who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') }, selaSim()));
+    checklistZera(ln.tipo);
+    return Object.assign({ entrada: e }, ln);
+  }
+  // a resposta do chat: a 1ª linha (a falada) diz quantos itens estão conferidos pelo app ou por você, com a hora do instante, e os que não passaram; depois um item por linha (✓ conferido,
+  // ✗ o app diz que não, • pede a sua conferência), cada um com a fonte e o código do FAQ. O guiado, item a item, é a tela do checklist (Fase 4).
+  function checklistResposta(tipo, p) {
+    var tp = checkTipo(tipo), l = checklistItens(tipo), i = vivo(), f, nao, mais, acoes;
+    if (!tp || !l.length) return { text: 'Esse checklist não está cadastrado neste aparelho.', src: 'Fonte: nenhuma — ' + SD + ' de checklist', actions: act(p, [['FAQ de bordo', 'faq']]) };
+    f = l.filter(function (x) { return x.feito; }).length; nao = l.filter(function (x) { return !x.feito && x.auto && x.auto.estado === 'falta'; }).map(function (x) { return x.c; });
+    acoes = act(p, [['FAQ de bordo', 'faq']].concat(tipo === 'abastecimento' ? [['Abastecimento', 'abast']] : [], tipo === 'chegada' ? [['Fechar no diário', 'diario']] : [['Diário', 'diario']]));
+    mais = l.map(function (x, k) {
+      var m = x.feito ? '✓' : x.auto && x.auto.estado === 'falta' ? '✗' : '•', v = x.auto ? ' — ' + x.auto.valor : '', por = x.manual ? ' (conferido por você)' : '';
+      return (k + 1) + '. ' + m + ' ' + (v ? x.t.replace(/\.$/, '') : x.t) + v + por + ' (' + x.fonte + (x.faq ? ' · FAQ ' + x.faq : '') + ')';
+    });
+    return { text: tp.nome + (i ? ' às ' + i.hora : '') + ': ' + f + ' de ' + l.length + ' conferidos' + (nao.length ? '; ' + (nao.length === 1 ? 'não passou: ' : 'não passaram: ') + nao.join(', ') : '') + '.\n' + mais.join('\n')
+      + '\n✓ o app conferiu pelo quadro de bordo; ✗ o quadro diz que não; • pede a sua conferência a bordo.', src: 'Fonte: ' + (D.checklists.fonte || 'checklist de bordo') + ' · ' + FT.tele.replace('Fonte: ', ''), actions: acoes };
+  }
+  var CHECK_PALAVRAS = ['checklist', 'check list', 'lista de verificac'];
+
   var ANSWERS = {
     // Pergunta sobre o app sem a IA ("o que você faz?"): a voz não repete a abertura ("Capitão IA online. Que precisa?"),
     // que soava como se a pergunta fosse ignorada — fala o que o Capitão faz.
@@ -947,9 +1334,11 @@
     canal16: function (p) {
       return { text: 'Em perigo grave e iminente: MAYDAY no canal 16 (156,800 MHz), em voz alta e devagar, até ter resposta.\n' + MMSI_RADIO + ' · indicativo: ' + INDICATIVO + ' · ' + min1(fabMod('vhf')) + '.\nRoteiro MAYDAY (' + ROTULO + '):\n' + (P.roteiro || []).join(' — ') + '.\n' + (P.panpan || 'Urgência sem perigo de vida: PAN-PAN ×3.'), src: FT.proto + ' · canal 16 e MMSI do rádio de bordo', actions: act(p, [['Abrir SOS', 'sos']]) };
     },
-    // Checklist de saída: o que está catalogado nos guias; o último item é o «antes de largar» do guia (salvatagem conforme a placa, previsão do dia)
-    checklist: function (p) { var porao = tarefa('porao-teste'), cl = tarefa('clima-filtro'); return { text: 'Checklist de saída — do que está catalogado:\n1. Gerador Onan: depois de ligar, confira água no escapamento.\n2. Estabilizador Seakeeper: ligue com antecedência, com o banco de 12 V carregado.\n3. Climatização: filtro de água salgada limpo antes de ligar' + (cl && atrasadas().indexOf(cl) !== -1 ? ' (limpeza ' + prazoTxt(cl) + ')' : '') + '.\n4. Eletrônicos: plotter ligado, piloto em espera até sair da marina, VHF no canal 16.\n5. Bombas de porão: acione cada uma manualmente e confira o alarme' + (porao && atrasadas().indexOf(porao) !== -1 ? ' (teste ' + prazoTxt(porao) + ')' : '') + '.\n6. Diesel BB ' + nb(DI.bb, 0) + ' % · BE ' + nb(DI.be, 0) + ' % — regra: ' + (D.regraAbast || SD) + '.\n7. Antes de largar: coletes, um por pessoa — conte as pessoas a bordo agora; balsa, boia e extintores conforme a placa de salvatagem; previsão do dia consultada (vento e mar) — confira o boletim da Marinha antes de sair.', src: 'Fonte: ' + guia('checklist') + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
-    checklistChegada: function (p) { return { text: 'Checklist de chegada — do que está catalogado:\n1. Piloto em espera antes de manobrar.\n2. Estabilizador: desligar ao atracar e manter energia até o volante parar.\n3. Gerador: retirar cargas, 3 a 5 min sem carga, desligar.\n4. Climatização: desligar e fechar a válvula de fundo se o barco ficar parado.\n5. Fechar a saída no diário: horas, consumo e pendências.', src: 'Fonte: ' + guia('checklist') + ' (Chegada)', actions: act(p, [['Fechar no diário', 'diario']]) }; },
+    // Checklists (F09): os itens do D.checklists, com a fonte e a verificação pelo quadro do instante (checklistResposta)
+    checklist: function (p) { return checklistResposta('saida', p); },
+    checklistChegada: function (p) { return checklistResposta('chegada', p); },
+    checklistFundeio: function (p) { return checklistResposta('fundeio', p); },
+    checklistAbastecimento: function (p) { return checklistResposta('abastecimento', p); },
     consumo: function (p) { var ab = D.abastecimentos || [], i = vivo(); return { text: (i ? 'Consumo agora (' + i.hora + '): ' + (i.txt.consumo || SD) + ' nos dois motores.' : 'Consumo observado (telemetria' + demo() + ' ' + CON.periodo + '):') + '\n• cruzeiro — ' + CON.cruzeiro.lph + ' L/h (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.nos + ' nós, dois motores)\n• marcha lenta — ' + nb(CON.lenta.lph) + ' L/h\nDesde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').' + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (a) { return a.d.slice(0, 5) + ' · ' + mil(a.litros) + ' L'; }).join(' · ') + '.' : ''), src: 'Fonte: ' + CON.fonte + ' · ' + FT.abast.replace('Fonte: ', '') + comTele(), actions: act(p, [['Abastecimento', 'abast']]) }; },
     tanques: function (p) { return { text: 'Tanques (' + quando() + '):\n• água doce ' + nb(T.agua) + ' %\n• águas cinzas ' + nb(T.cinzas) + ' %\n• águas negras ' + nb(T.negras) + ' %\n• diesel ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.', src: FT.tele + ' (diesel ' + (DI.hora || '') + ')', actions: act(p, [['Telemetria', 'console']]) }; },
     // Contatos: quem chamar. Os telefones ficam só neste aparelho (Equipe). Exceção da decisão (g): leva a situação de bordo sem posição.
@@ -960,6 +1349,39 @@
     anomalias: function (p, ctx) {
       var pend = pendencias(), app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
       return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
+    },
+    // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante. Só lê: nada grava, nada abre.
+    preditiva: function (p) {
+      var i = vivo(), l = preditivaLista(), h = i ? ' às ' + i.hora : '', pedem = l.filter(function (a) { return a.nivel !== 'ok'; }).length, hist = histFonte();
+      if (!l.length) return { text: 'Tendências' + h + ': ' + (sim() ? 'o aparelho ainda não tem histórico para calcular.' : SD + ' — sem histórico de cruzeiro neste aparelho.'), src: 'Fonte: nenhuma — sem histórico de cruzeiro neste aparelho', actions: act(p, [['Manutenção', 'manut']]) };
+      return { text: 'Tendências' + h + ': ' + (pedem ? '' : 'nenhuma pede atenção. ') + l[0].texto + (l.length > 1 ? ' Mais ' + (l.length - 1) + (l.length === 2 ? ' achado' : ' achados') + ' na lista.' : '')
+        + '\n' + l.map(function (a) { return '• ' + a.rotulo + ' · ' + a.sistema + ' — ' + a.texto + ' (' + a.fonte + ')'; }).join('\n'),
+        src: 'Fonte: achados por regra fixa neste aparelho sobre ' + hist + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['Console', 'console'], ['Manutenção', 'manut']]) };
+    },
+    // Peças e estoque (F22): a lista (zeradas e no mínimo primeiro), as peças de uma tarefa da agenda ou as que o nome da pergunta cita; só lê, nunca grava (o −1 USADA é da tela)
+    pecas: function (p, ctx, q) {
+      var l = pecasLista(), tf = tarefasDaPergunta(q), acoes = act(p, [['Manutenção', 'manut'], ['Documentos', 'docs']]), src = 'Fonte: estoque de peças a bordo · cadastro do app';
+      var ord = { zero: 0, baixa: 1, ok: 2 }, linha = function (x) {
+        var t = tarefasDaPeca(x);
+        return '• ' + x.n + ' · ' + x.qtd + ' a bordo' + (x.min > 0 ? ' · mínimo ' + x.min : '') + (x.local ? ' · ' + x.local : '') + (x.nivel !== 'ok' ? ' — ' + x.st : '') + (t.length ? ' · para: ' + t.map(function (y) { return y.n + ' (' + y.prazo + ')'; }).join('; ') : '');
+      };
+      var resumo = function (xs) {
+        var z = xs.filter(function (x) { return x.nivel === 'zero'; }).length, b = xs.filter(function (x) { return x.nivel === 'baixa'; }).length, ps = [];
+        if (z) ps.push(z + (z === 1 ? ' zerada' : ' zeradas'));
+        if (b) ps.push(b + ' no mínimo ou abaixo');
+        return ps.length ? ' — ' + ps.join(' e ') + '.' : ', todas acima do mínimo.';
+      };
+      if (!l.length) return { text: 'Não há peças cadastradas neste aparelho ainda — não invento estoque. Cadastre em Documentos: nome, quantas a bordo, mínimo, local e a tarefa da agenda que a usa.', src: 'Fonte: estoque de peças a bordo (vazio)', actions: acoes };
+      if (tf.length) {
+        var ids = tf.map(function (t) { return t.id; }), lig = l.filter(function (x) { return x.tarefas.some(function (t) { return ids.indexOf(t) !== -1; }); }).sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
+        var nomes = tf.map(function (t) { return t.t; }).join(' e ');
+        if (!lig.length) return { text: 'Nenhuma peça cadastrada para ' + min1(nomes) + '. Cadastre em Documentos a peça que ela usa.', src: src + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: acoes };
+        return { text: 'Peças para ' + min1(nomes).replace(/:\s*/g, ' — ') + ': ' + lig.length + (lig.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(lig) + '\n' + lig.map(linha).join('\n'), src: src + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: acoes };
+      }
+      var nm = pecasDoNome(q, l), sai = src + ' · ' + FT.agenda.replace('Fonte: ', '');
+      if (nm.lista.length) { nm.lista.sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; }); return { text: 'Peças com esse nome: ' + nm.lista.length + (nm.lista.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(nm.lista) + '\n' + nm.lista.map(linha).join('\n'), src: sai, actions: acoes }; }
+      var todas = l.slice().sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
+      return { text: (nm.nome ? 'Nenhuma peça cadastrada com esse nome. ' : '') + 'Peças a bordo: ' + l.length + (l.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(l) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };
     },
     // Porão: o nível das bombas no quadro, a faixa do guia e o teste mensal; sem o dado do porão, SEM LEITURA (o caminho null)
     porao: function (p) {
@@ -1495,7 +1917,10 @@
     if (querRegistrar(qRaw, q)) return 'diario';
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
-    if (ol) return ol === 1 ? 'oleo' : 'oleoLeitura';
+    if (ol === 1) return 'oleo';
+    // F11: «qual a tendência do óleo?» é a tendência (o histórico de cruzeiro), não a leitura do manômetro; o relato de queda segue acima, em `oleo`
+    if (tendenciaPergunta(q)) return 'preditiva';
+    if (ol) return 'oleoLeitura';
     // pedido de socorro que a lista SOS não pega («isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco»): a instrução de segurança, local (revisão 3 da P3C)
     if (socorroImplicito(q)) return 'sos';
     // "Situação e vencimento do documento: <nome>" é a pergunta do botão "Perguntar sobre" da G1 (web e app): papelada, seja qual for o nome.
@@ -1517,6 +1942,7 @@
     if (navegacaoPergunta(q)) return 'navegacao';
     if (embarcacaoPergunta(q)) return 'embarcacao';   // «o deslocamento do Seakeeper» e «o registro do EPIRB» são do equipamento
     if (has(q, PESSOAS_PALAVRAS) && leitura(q, PESSOAS_OK)) return 'pessoas';   // «temos 6 pessoas a bordo» é relato (com número), não pergunta
+    if (pecasPergunta(q)) return 'pecas';   // F22: o estoque de peças (a pergunta de reparo, de vida útil ou de código segue o guia ou a IA)
     if (profundidadePergunta(q)) return 'profundidade';   // (a profundidade, o motor, as ondas e a água do mar só respondem a pergunta NEUTRA: o EPIRB, o canal 16 etc. na pergunta já a deixam de fora)
     if (etaPergunta(q)) return 'eta';
     if (alarmesPergunta(q)) return 'alarmes';
@@ -1533,8 +1959,11 @@
     if (ondasPergunta(q)) return 'ondas';
     if (aguaPergunta(q)) return 'temperaturaAgua';
     if (has(q, ['para onde', 'destino', 'passeio', 'onde vamos', 'melhor rota', 'rota para', 'rota ate'])) return 'destinos';
-    if (has(q, ['checklist de chegada', 'chegada'])) return 'checklistChegada';
-    if (has(q, ['checklist', 'check list', ' saida'])) return 'checklist';
+    // F09: os 4 checklists; «fundeio» e «abastecimento» antes da chegada e da saída («checklist ao fundear» não é o de saída)
+    if (has(q, CHECK_PALAVRAS) && has(q, ['fundei', 'fundear', 'ancorar', 'ancoragem'])) return 'checklistFundeio';
+    if (has(q, CHECK_PALAVRAS) && has(q, ['abastec'])) return 'checklistAbastecimento';
+    if (has(q, ['checklist de chegada', 'chegada']) || (has(q, CHECK_PALAVRAS) && has(q, ['atrac', 'chegar']))) return 'checklistChegada';
+    if (has(q, CHECK_PALAVRAS) || has(q, [' saida'])) return 'checklist';
     if (has(q, ['autonomia']) || (has(q, ['alcance']) && !has(q, [' vhf', ' radio', 'radar', ' ais ', 'antena', 'sinal', 'wifi', 'wi-fi', 'bluetooth', 'celular']))) return 'autonomia';
     // "Situação e vencimento do documento: NF de abastecimento…" é documento: a palavra documento/licença/vencimento vence a do combustível
     if (has(q, ['document', 'licenc', 'vencimento']) && has(q, ['consumo', 'l/h', 'litros por hora', 'abastec', 'diesel', 'combustivel', 'nota fiscal', 'nf-e'])) return 'docsvenc';
@@ -2505,7 +2934,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
