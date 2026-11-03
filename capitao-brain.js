@@ -1001,6 +1001,7 @@
   // («tendência de queda / de subida» é o substantivo, a pergunta da tendência; «a temperatura está subindo», «a bateria está caindo» e «queda de tensão» são o relato do sintoma e têm palavra fora da lista: seguem a rota do equipamento, o guia ou a IA)
   var PRED_TENDENCIA_DE = / tendencias? (?:de |a )(?:queda|quedas|subida|subidas) /g;
   function tendenciaPergunta(q) {
+    if (cabecaEmerg(q)) return false;   // (a cabeça de emergência é do equipamento, local: guarda única do topo, antes da lista branca)
     return (has(q, PRED_PALAVRAS) || (has(q, ['perdendo capacidade']) && has(q, ['bateria']))) && leitura(q.replace(PRED_TENDENCIA_DE, ' tendencia '), PRED_OK) && !(has(q, ['pressao']) && !has(q, ['oleo']));
   }
   // O achado que a pergunta nomeia sobe para a 1ª linha (a falada): «qual a tendência do óleo?» abre com a pressão de óleo, não com o motor mais quente. Sem assunto, o mais grave.
@@ -1040,8 +1041,23 @@
         return { id: x.id, n: x.n, qtd: q, min: mn, local: x.local || '', obs: x.obs || '', tarefas: Array.isArray(x.tarefas) ? x.tarefas.slice() : [], base: x.base, nivel: nivelPeca(q, mn), st: stPeca(q, mn) };
       });
   }
+  // O estoque na ficha da IA (bloco «## Peças»): só o que a IA precisa para não inventar — o total e as peças zeradas e no mínimo ou abaixo, com a quantidade a bordo e o mínimo («que peça acabou?»). Sem peça
+  // cadastrada (ou no SOS), sem bloco. `semSim` (simulacao false) deixa de fora o que tem `sim: true`, como a lista.
+  function fichaPecas(semSim) {
+    var l = pecasLista({ semSim: semSim }), ps = l.filter(function (x) { return x.nivel !== 'ok'; }), z = ps.filter(function (x) { return x.nivel === 'zero'; }).length;
+    if (!l.length) return null;
+    return { text: l.length + (l.length === 1 ? ' peça cadastrada' : ' peças cadastradas') + (ps.length ? ' — ' + (z ? z + (z === 1 ? ' zerada' : ' zeradas') + (ps.length > z ? ' e ' : '') : '') + (ps.length > z ? (ps.length - z) + ' no mínimo ou abaixo' : '') + ':\n'
+      + ps.map(function (x) { return '• ' + x.n + ': ' + x.qtd + ' a bordo' + (x.min > 0 ? ', mínimo ' + x.min : '') + ' — ' + x.st; }).join('\n') : ', todas acima do mínimo.'), src: 'Fonte: estoque de peças a bordo · cadastro do app' };
+  }
   function txtPeca(v, max) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max); }
-  function intPeca(v) { var n = typeof v === 'number' ? v : parseInt(String(v == null ? '' : v).trim(), 10); return typeof n === 'number' && isFinite(n) && n >= 0 && n <= 999 ? Math.round(n) : null; }
+  // o inteiro PURO de 0 a 999: o número inteiro, ou o texto de 1 a 3 dígitos (com espaço nas pontas). «1e2», «12abc», «3.7», «1,5», «-1», «0x10», o vazio e o número com fração são recusados (null): o estoque
+  // não se grava com um número que a pessoa não escreveu (o <input type=number> aceita «1e2»)
+  function intPeca(v) {
+    var n = typeof v === 'number' ? v : typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? parseInt(v.trim(), 10) : NaN;
+    return Number.isInteger(n) && n >= 0 && n <= 999 ? n : null;
+  }
+  // a quantidade e o mínimo do + PEÇA são opcionais (sem eles, 0); com um valor que não é inteiro puro, o cadastro todo é recusado
+  function intPecaOpc(v) { return v == null || (typeof v === 'string' && !v.trim()) ? 0 : intPeca(v); }
   function pecaMov(id, dq) {   // grava UM movimento novo (iso único: o dados.html soma pelo iso) e devolve a linha
     var est = pecasEstado(), t = Date.now(), iso, m;
     do { iso = new Date(t++).toISOString(); } while (est.movs.some(function (x) { return x.iso === iso; }));
@@ -1072,12 +1088,14 @@
   }
   // + PEÇA: nome (obrigatório), quantas a bordo, mínimo, local, observação e as tarefas da agenda que a usam. Sem código de fabricante nem valor. Devolve a peça cadastrada, ou null.
   function addPeca(c) {
-    var n = txtPeca(c && c.n, 80), est, ids = {}, id, ag = {}, item;
+    var n = txtPeca(c && c.n, 80), est, ids = {}, id, ag = {}, item, qtd, mn;
     if (EM_SOS || !n) return null;
+    qtd = intPecaOpc(c.qtd); mn = intPecaOpc(c.min);
+    if (qtd === null || mn === null) return null;
     est = pecasEstado();
     (D.pecas || []).forEach(function (x) { ids[x.id] = 1; }); est.novas.forEach(function (x) { ids[x.id] = 1; }); (D.agenda || []).forEach(function (t) { ag[t.id] = 1; });
     do { id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4); } while (ids[id]);
-    item = Object.assign({ id: id, n: n, qtd: intPeca(c.qtd) || 0, min: intPeca(c.min) || 0 }, c.local ? { local: txtPeca(c.local, 60) } : {}, c.obs ? { obs: txtPeca(c.obs, 200) } : {},
+    item = Object.assign({ id: id, n: n, qtd: qtd, min: mn }, c.local ? { local: txtPeca(c.local, 60) } : {}, c.obs ? { obs: txtPeca(c.obs, 200) } : {},
       Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}, { iso: new Date().toISOString(), who: quem() }, selaSim());
     est.novas.push(item); write(K_PECAS, est);
     return item;
@@ -1160,25 +1178,46 @@
     return l.length && !PECAS_ECO_TERMOS.some(function (k) { return TERMOS[k].test(l.join(' ')); }) ? l : [];
   }
   // as peças que a pergunta nomeia pelo nome («rotor», «filtro de óleo», «anodo», «rotor do gerador»): as que casam MAIS palavras do nome ganham («rotores do gerador» é o rotor do gerador, não o filtro do gerador
-  // nem o rotor da bomba); { nome: false } se a pergunta só diz «peças» (a lista inteira); { nome: true, lista: [] } se há nome e nenhuma peça o tem
+  // nem o rotor da bomba); a palavra da pergunta que é o NÚCLEO do nome de alguma peça (a peça: «correia», «rotor», «escova», «filtro») vale 100 e a que não é (o equipamento ou o lugar: «motor», «gerador»,
+  // «estabilizador») vale 1: «tem correia sobressalente para o motor?» é a correia, não o filtro do motor nem o rotor dos motores (o «motor» da pergunta não empata com a peça); «quantos filtros temos?» segue
+  // os 5 (a «tela do filtro» tem «filtro» no nome). { nome: false } se a pergunta só diz «peças» (a lista inteira); { nome: true, lista: [] } se há nome e nenhuma peça o tem
   function pecasDoNome(q, l) {
-    var ws = pecasPalavrasPeca(q), pts, max;
+    var ws = pecasPalavrasPeca(q), pts, max, nucleos, pw;
     if (!ws.length) return { nome: false, palavras: [], lista: [] };
-    pts = l.map(function (x) { var nt = tokens(x.n).map(radicalPeca); return ws.filter(function (w) { return nt.indexOf(w) !== -1; }).length; });
+    nucleos = l.map(function (x) { return nucleoPeca(x.n); });
+    pw = ws.filter(function (w) { return nucleos.some(function (nu) { return nu.indexOf(w) !== -1; }); });
+    pts = l.map(function (x) {
+      var nt = tokens(x.n).map(radicalPeca);
+      return ws.reduce(function (soma, w) { return soma + (nt.indexOf(w) === -1 ? 0 : pw.indexOf(w) !== -1 ? 100 : 1); }, 0);
+    });
     max = Math.max.apply(null, pts.concat(0));
     return { nome: true, palavras: palavrasEscritas(q, ws), lista: max ? l.filter(function (x, k) { return pts[k] === max; }) : [] };
   }
   // «peças» (plural) e «sobressalente» já são a pergunta do estoque; a forma no singular e «estoque» pedem também um verbo ou número de estoque («tem», «quantas», «falta», «a bordo»…)
   var PECAS_FORTES = [' pecas ', 'sobressalente'];
-  var PECAS_FRACAS = [' peca de ', ' peca a bordo', ' peca para ', ' peca pra ', ' uma peca ', ' a peca ', ' qual peca', ' que peca', ' de peca ', ' da peca ', ' sem peca', ' alguma peca '];
-  var PECAS_PEDE = [' a bordo', ' estoque', ' temos ', ' tem ', ' ha ', 'quant', 'precis', ' falt', ' repor', 'reposicao', 'cadastr', ' lista', 'minimo', 'acabando', 'zerad', ' quais '];
+  var PECAS_FRACAS = [' peca de ', ' peca a bordo', ' peca para ', ' peca pra ', ' uma peca ', ' a peca ', ' qual peca', ' que peca', ' de peca ', ' da peca ', ' sem peca', ' alguma peca ',
+    ' peca zerad', ' peca acab', ' peca esgot', ' peca falt', ' peca no minimo', ' peca abaixo'];   // («tem peça zerada?»: a peça no singular sem artigo, com o estado de estoque)
+  var PECAS_PEDE = [' a bordo', ' estoque', ' temos ', ' tem ', ' ha ', 'quant', 'precis', ' falt', ' repor', 'reposicao', 'cadastr', ' lista', 'minimo', 'acabando', 'acabou', 'acabaram', 'esgot', 'zerad', ' quais '];
   // O estoque pelo NOME de uma peça cadastrada, sem a palavra «peça» («tem rotor de reposição?», «quantos filtros de óleo temos?», «temos anodo a bordo?», «falta rotor?»): só com um verbo ou número de
   // estoque junto, e a peça tem de ser o OBJETO do verbo (objetoPeca): «falta fluxo no filtro» e «acabou a luz da tela» são relato de falha. «Tem» e «há» sozinhos não bastam («o motor tem filtro?»): pedem o
   // «a bordo», o «em estoque» ou a reposição. «Preciso/falta repor alguma coisa» é o estoque sem nome.
-  var PECAS_VERBOS_QUANT = ['quanto', 'quanta', 'quantos', 'quantas'], PECAS_VERBOS_TEM = ['temos', 'tenho', 'tem', 'ha'];
+  var PECAS_VERBOS_QUANT = ['quanto', 'quanta', 'quantos', 'quantas'], PECAS_VERBOS_TEM = ['temos', 'tenho', 'tem', 'ha'], PECAS_VERBOS_PRECISA = ['preciso', 'precisamos', 'precisa', 'precisar'];
   var PECAS_VERBOS_FALTA = ['falta', 'faltam', 'faltando', 'acabou', 'acabaram', 'acabando', 'zerou', 'repor', 'repomos', 'reposicao'];
+  // A peça é o SUJEITO e o verbo é de estoque: «o rotor do gerador está zerado?», «por que o rotor do gerador está zerado?», «o filtro de óleo acabou?», «o anodo está no mínimo?». O sujeito é a 1ª palavra depois dos
+  // artigos e do «por que» («o fluxo do filtro está zerado» e «a tela do plotter zerou» são relato de falha: o fluxo e a tela do plotter não são peça cadastrada).
+  var PECAS_SEM_ESTOQUE = / (?:zerad[oa]s?|zerou|acabou|acabaram|esgotad[oa]s?|esgotou|no minimo|abaixo do minimo|em falta|sem estoque) /;
+  var PECAS_ABRE = ' por que porque sera que ja ainda entao e mas ';
+  function sujeitoPeca(q) {
+    var ps = q.trim().split(' '), j = 0, w;
+    while (j < ps.length && (PECAS_ARTIGOS + PECAS_ABRE).indexOf(' ' + ps[j] + ' ') !== -1) j++;
+    w = j < ps.length ? tokens(ps[j])[0] : '';
+    w = w ? radicalPeca(w) : '';
+    return !!w && pecasPalavrasPeca(q).indexOf(w) !== -1 && pecasLista().some(function (x) { return nucleoPeca(x.n).indexOf(w) !== -1; });
+  }
   function pecasNomePede(q) {
     return (/ quant[oa]s? .*\b(?:temos|tem|tenho|ha|sobraram|restam|faltam)\b/.test(q) && objetoPeca(q, PECAS_VERBOS_QUANT))
+      || (PECAS_SEM_ESTOQUE.test(q) && sujeitoPeca(q))
+      || (/ (?:preciso|precisamos|precisa|precisar) /.test(q) && objetoPeca(q, PECAS_VERBOS_PRECISA))
       || (/ (?:temos|tenho|tem|ha) .*(?:a bordo|no barco|na lancha|em estoque|de reposicao|de reserva|de sobressalente)/.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))
       || (/ de (?:reposicao|reserva) /.test(q) && nomeCadastrado(q))
       || (/ (?:falta|faltam|faltando|acabou|acabaram|acabando|zerou|repor|repomos|reposicao) /.test(q) && objetoPeca(q, PECAS_VERBOS_FALTA));
@@ -1186,7 +1225,7 @@
   var PECAS_REPOR = / (?:alguma coisa|algo|o que|quais coisas) (?:para|pra|a|que|tem que|preciso|precisa|precisamos|devo|devemos) repor | (?:preciso|precisamos|precisa|devo|devemos|falta|faltam|tem|temos) (?:que )?repor /;
   // (o reparo, o código, a vida útil, a idade, o preço e a compra não são o estoque: seguem o guia, a rota do dinheiro ou a IA. O diesel e o combustível também, a menos que a pergunta nomeie uma peça
   // cadastrada — «quantos filtros de combustível temos?»)
-  var PECAS_FORA = ['gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
+  var PECAS_FORA = [' acabou de ', ' acabaram de ', 'gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
     'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', 'apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual',
     'quanto tempo', 'desde quando', 'quando troc', 'quando subst', 'ultima troca', 'temos que ', ' tem que ', ' tenho que ', 'quanto falta', ' falta para ', ' faltam para ', 'o que falta para', 'falta muito', 'falta troc', 'faltam troc', 'falta a troca', 'falta fazer', 'falta inspec', 'falta revis',
     ' preco ', ' precos ', ' valor ', ' valores ', 'custa', 'r$', 'comprar', ' compra ', ' compro ', 'cotacao', 'orcamento', ' reais '];
@@ -1194,10 +1233,11 @@
   // quem vende, quem conserta, quem cuida: o telefone, o contato, o CNPJ e o e-mail de oficina, fornecedor e técnico têm a rota dos contatos (rota local, trava 13) ou a IA; a lista de estoque não os responde
   var PECAS_CONTATO = ['telefone', ' fone', 'contato', 'oficina', 'fornecedor', 'cnpj', 'cpf', 'email', 'e-mail', 'whats', 'tecnico', 'quem chamar', 'quem cuida', 'marina da base', 'quem vende', 'quem fornece', 'quem conserta'];
   var ESTOQUE_OUTRO = ['agua', 'gelo', 'comida', 'bebida', 'mantiment', 'potavel', 'cervej', 'refriger', 'lanche', 'racao'];
-  // o equipamento de segurança que as rotas de EMERGÊNCIA mais abaixo (EPIRB, Seafire, canal 16, PAN-PAN, DSC) tomam: a pergunta de peça dele («tem sobressalente do EPIRB?») segue a rota do equipamento (a instrução de segurança, local; trava 10)
-  function equipSegPergunta(q) { return epirbRelato(q) || has(q, ['baliza']) || seafirePergunta(q) || has(q, CANAL16_ROTA); }
+  // (a cabeça de emergência — o EPIRB e a baliza, o Seafire, o canal 16, o PAN-PAN, o DSC, o rádio/VHF, o botão DISTRESS, o MMSI, a salvatagem, o socorro — é do equipamento: «tem sobressalente do EPIRB?» segue a instrução
+  // de segurança, local; trava 10. A guarda é a única do cabecaEmerg, no topo, antes de qualquer outra regra do estoque)
   function pecasPergunta(q) {
-    if (has(q, PECAS_FORA) || has(q, PECAS_CONTATO) || equipSegPergunta(q)) return false;
+    if (cabecaEmerg(q)) return false;
+    if (has(q, PECAS_FORA) || has(q, PECAS_CONTATO)) return false;
     if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;
     if (has(q, PECAS_FORTES) || ((has(q, PECAS_FRACAS) || (has(q, [' estoque']) && !has(q, ESTOQUE_OUTRO))) && has(q, PECAS_PEDE))) return true;
     if (pecasNomePede(q)) return true;
@@ -1363,8 +1403,10 @@
   var SAIDA_NAO_CHECK = ['como foi', 'resumo', 'ontem', 'ultima', 'anterior', 'passada', 'milhas', 'consumo', 'durou', 'quanto tempo', ' gast', 'fizemos', 'percorr', 'hoje cedo', 'amanha', 'vamos de', 'horario', 'que horas',
     ' saida de ar', ' saida de agua', ' saida do escape', ' saida de escape', ' saida de esgoto', ' saida de gas', ' saida de exaust', ' saida do tanque', ' saida da bomba'];
   var CHECK_ANTES = ['antes de largar', 'antes de sair', 'antes de zarpar', 'antes da saida'];
+  // «pronto para sair?», «estamos prontos para largar?», «tudo pronto para zarpar?»: o checklist de saída (não o FAQ do Seakeeper nem o trecho de «antes de largar»); só a pergunta de conferir, neutra
+  var PRONTO_SAIR = / prontos? (?:para|pra) (?:sair|largar|zarpar|a saida|a partida) /;
   function checkSaida(q) {
-    return (has(q, [' saida']) && !has(q, SAIDA_NAO_CHECK)) || has(q, ['pre-saida', 'pre saida']) || (has(q, CHECK_ANTES) && leitura(q, CHECK_ANTES_OK));
+    return (has(q, [' saida']) && !has(q, SAIDA_NAO_CHECK)) || has(q, ['pre-saida', 'pre saida']) || (has(q, CHECK_ANTES) && leitura(q, CHECK_ANTES_OK)) || (PRONTO_SAIR.test(q) && leitura(q, CHECK_ANTES_OK));
   }
 
   var ANSWERS = {
@@ -1509,7 +1551,7 @@
       if (nm.lista.length) { nm.lista.sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; }); return { text: 'Estoque de peças: ' + corpo(nm.lista) + '\n' + nm.lista.map(linha).join('\n'), src: sai, actions: acoes }; }
       var todas = l.slice().sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
       // (a palavra que a pessoa escreveu só é repetida se o app a conhece como coisa de bordo; «peças para o fim de semana» e «resumo das peças» abrem direto com a lista, sem negar nada)
-      return { text: (nm.nome && nm.palavras.length ? 'Nenhuma peça cadastrada com «' + nm.palavras.join(' ') + '» no nome. ' : '') + 'Peças a bordo: ' + l.length + (l.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(l) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };
+      return { text: (nm.nome && nm.palavras.length ? 'Nenhuma peça cadastrada com «' + nm.palavras.join(' ') + '» no nome. ' : '') + 'Peças a bordo: ' + corpo(todas) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };   // (a 1ª linha, a falada, nomeia as zeradas e as no mínimo: «quais estão zeradas?» não responde só a contagem)
     },
     // Porão: o nível das bombas no quadro, a faixa do guia e o teste mensal; sem o dado do porão, SEM LEITURA (o caminho null)
     porao: function (p) {
@@ -1931,7 +1973,7 @@
   var PRED_OK = NEUTRAS_BASE + 'tendencia tendencias preditiva preditivo preditivas preditivos analise analises recomendacao recomendacoes algum alguma alguns algumas estavel estaveis motor motores oleo pressao arrefecimento temperatura bateria baterias banco bancos partida servico horas hora ate revisao troca gerador cruzeiro sistema sistemas geral manutencao barco lancha embarcacao perdendo capacidade sao existem existe bb be bombordo boreste ';
   // (o checklist de saída pelo «antes de largar»: só a pergunta de CONFERIR, neutra — «o que preciso conferir antes de largar?»; «antes de sair, confira o porão» tem palavra fora da lista e segue a rota do porão; 
   // «o que fazer antes de largar» segue o trecho do guia «Saída · antes de largar», como sempre)
-  var CHECK_ANTES_OK = NEUTRAS_BASE + 'que preciso precisamos devo devemos tenho conferir verificar checar revisar lembrar antes largar sair zarpar saida barco lancha embarcacao para pra ';
+  var CHECK_ANTES_OK = NEUTRAS_BASE + 'que preciso precisamos devo devemos tenho conferir verificar checar revisar lembrar antes largar sair zarpar saida barco lancha embarcacao para pra estamos pronto prontos tudo ja ';
   // Pedido de socorro que a lista SOS (a do gerador, que não muda aqui) não pega: «isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco». Vai à rota sos; e a frase de apresentação (sobreDados, lista branca) nunca responde a quem pede ajuda.
   var SOCORRO_PEDE = /\b(?:preciso|precisamos|precisando|necessito|necessitamos) (?:de )?(?:muita )?(?:ajuda|socorro|auxilio|resgate)\b/;
   var SOCORRO_DECLARA = /\b(?:e|eh|era) (?:real|serio|de verdade)\b|\bnao (?:e|eh) (?:um |uma )?(?:teste|brincadeira|treino|exercicio)\b|\bem (?:risco|apuros)\b/;
@@ -1948,8 +1990,39 @@
   var SEAFIRE_PALAVRAS = ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual'];
   function seafirePergunta(q) { return has(q, SEAFIRE_PALAVRAS) || seafireDisparo(q); }
   var CANAL16_SEG = ['canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];   // (o rádio VHF sozinho não entra: «alcance do rádio» não é o roteiro)
-  // o que a route() manda para a rota canal16 (o roteiro MAYDAY): a pergunta de peça do rádio segue essa rota, como antes (equipSegPergunta)
+  // o que a route() manda para a rota canal16 (o roteiro MAYDAY)
   var CANAL16_ROTA = ['canal 16', ' vhf', ' radio', ' dsc', 'pan-pan', 'pan pan'];
+  // ——— A CABEÇA DE EMERGÊNCIA (P3E, revisão 4) ———
+  // UM predicado para tudo o que a route() entrega a uma rota de emergência (EMERG) ou ao trecho de segurança do DSC/da baliza: a lista SOS e o pedido de socorro, o relato de óleo, a salvatagem, o MMSI, o EPIRB
+  // (as palavras e a baliza que disparou), a baliza do EPIRB, o Seafire e TODAS as palavras de CANAL16_SEG e de CANAL16_ROTA. Cada rota nova que lê o quadro ou a lista (os 4 checklists, o estoque de peças, as
+  // tendências, o FAQ no lugar do fallback) abre com ele: a pergunta de cabeça de emergência nunca é delas, é local e não leva posição, rumo, SOG, ETA nem pessoas. O testes/cerebro.py lê estas listas do
+  // próprio arquivo e gera a matriz cabeça × cauda: uma palavra nova aqui passa a ser testada sozinha.
+  // A «baliza» do EPIRB: a palavra sozinha é também a de sinalização («a baliza do canal está apagada», «baliza cardinal»), que não é emergência: com palavra de sinalização e sem palavra só do EPIRB, não conta
+  function balizaEpirb(q) {
+    var qs;
+    if (!has(q, ['baliza'])) return false;
+    qs = tokens(q);
+    return !(qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; }));
+  }
+  function cabecaEmerg(q) {
+    return emergencia(q) || oleo(q) === 1 || socorroImplicito(q) || salvatagem(q) || has(q, ['mmsi']) || epirbRelato(q) || balizaEpirb(q) || seafirePergunta(q) || has(q, CANAL16_SEG) || has(q, CANAL16_ROTA);
+  }
+  // as palavras do documento/licença (a «Licença de Estação» é papelada, não o roteiro MAYDAY): a rota docsvenc as toma antes do rádio, como sempre
+  var DOC_PALAVRAS = ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'];
+  // A rota da cabeça de equipamento de segurança, ANTES de qualquer rota de dado sem lista branca (telemetria, autonomia, consumo, tanques, destinos, clima, maré…): essas levam o quadro (SOG, rumo, ETA,
+  // diesel a «18 nós») e não podem tomar a pergunta do EPIRB, do Seafire, do canal 16, do PAN-PAN, do DSC, do rádio/VHF, nem a do botão DISTRESS e da baliza do EPIRB (que não têm rota própria: seguem o
+  // fallback, onde o trecho de segurança deles responde, local — cabecaSemRota). null = não é cabeça de equipamento.
+  function equipRota(q) {
+    if (epirbRelato(q)) return 'epirb';
+    if (seafirePergunta(q)) return 'seafire';
+    if (has(q, DOC_PALAVRAS)) return null;   // («Licença de Estação do rádio» e «certificado do botão DISTRESS» são papelada: a rota docsvenc, mais abaixo)
+    if (has(q, CANAL16_ROTA)) return 'canal16';
+    if (cabecaSemRota(q) && !SOBRE.test(q) && !has(q, ['ajuda'])) return 'fallback';   // («como você me ajuda com o teste da baliza?» e «o que você sabe sobre o teste da baliza?» são a pergunta sobre o app: a rota delas, a saudação, local pelo pedeIA)
+    return null;
+  }
+  // a pergunta do botão DISTRESS (a palavra de CANAL16_SEG que não é de CANAL16_ROTA: o DSC sem «DSC» na frase) e a da baliza do EPIRB: o que buscar no guia, só pela cabeça («botão distress» e «baliza» dão o
+  // trecho de segurança); '' = não é. (Só vale depois do has(q, CANAL16_ROTA) da equipRota: com «canal 16», «PAN-PAN», «DSC», «VHF» ou «rádio» a rota é a canal16.)
+  function cabecaSemRota(q) { return has(q, CANAL16_SEG) ? 'botao distress' : balizaEpirb(q) ? 'baliza' : ''; }
   // MMSI (CLAUDE.md 8): a pergunta do número do MMSI é a rota mmsi; a que tem outro assunto junto fica com a rota dele: o EPIRB, o Seafire, o roteiro de rádio (canal 16, PAN-PAN, DSC, socorro ou pane) e o vencimento
   // (documento). Assim o 710123456 do cadastro nunca vai para a pergunta do EPIRB nem do rádio, e o procedimento não se perde.
   // (a lista é BRANCA, não negra: nenhum verbo de pôr o número no aparelho, em nenhuma flexão, nem o rádio, o VHF, o AIS ou o plotter estão nela; «que MMSI eu coloco no rádio?» e «como cadastro o MMSI?» ficam só com o da etiqueta. O «por» sai da lista porque é também o «pôr»; o «por favor» sai da pergunta antes de conferir)
@@ -2055,7 +2128,6 @@
     if (ol === 1) return 'oleo';
     // F11: «qual a tendência do óleo?» é a tendência (o histórico de cruzeiro), não a leitura do manômetro; o relato de queda segue acima, em `oleo`
     if (tendenciaPergunta(q)) return 'preditiva';
-    if (ol) return 'oleoLeitura';
     // pedido de socorro que a lista SOS não pega («isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco»): a instrução de segurança, local (revisão 3 da P3C)
     if (socorroImplicito(q)) return 'sos';
     // "Situação e vencimento do documento: <nome>" é a pergunta do botão "Perguntar sobre" da G1 (web e app): papelada, seja qual for o nome.
@@ -2070,6 +2142,9 @@
     if (sobreDados(q)) return 'sobreDados';
     // mmsi (CLAUDE.md 8): a pergunta do MMSI não é o roteiro MAYDAY; a 1ª linha manda usar o MMSI da etiqueta do rádio, a 2ª diz o do cadastro do app
     if (has(q, ['mmsi'])) return mmsiRota(q);
+    // P3E (revisão 4): a cabeça de equipamento de segurança antes de qualquer rota de dado (a pergunta mista é do equipamento, local, sem o quadro: trava 10)
+    var eq = equipRota(q); if (eq) return eq;
+    if (ol) return 'oleoLeitura';   // a leitura calma da pressão de óleo (o relato, ol === 1, já saiu lá em cima): depois da cabeça de equipamento de segurança, que ela não toma («onde fica o EPIRB, qual a pressão do óleo?»)
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
     // «alarme de óleo acendeu» (o óleo vem antes), «temperatura hoje» (o clima) nem «alarme de fluxo da climatização» (a resposta pronta cede ao trecho do guia).
@@ -2094,9 +2169,10 @@
     if (ondasPergunta(q)) return 'ondas';
     if (aguaPergunta(q)) return 'temperaturaAgua';
     if (has(q, ['para onde', 'destino', 'passeio', 'onde vamos', 'melhor rota', 'rota para', 'rota ate'])) return 'destinos';
-    // F09: os 4 checklists; «fundeio» e «abastecimento» antes da chegada e da saída («checklist ao fundear» não é o de saída). A pergunta que nomeia o EPIRB, o Seafire, o canal 16, o PAN-PAN ou o DSC é do
-    // equipamento (a instrução de segurança, local, sem o quadro: trava 10): os checklists, que levam a velocidade e o resto do quadro, não a tomam («checklist de fundeio, onde fica o EPIRB?»)
-    if (!(epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG))) {
+    // F09: os 4 checklists; «fundeio» e «abastecimento» antes da chegada e da saída («checklist ao fundear» não é o de saída). A cabeça de emergência (cabecaEmerg: o EPIRB e a baliza, o Seafire, o canal 16, o
+    // PAN-PAN, o DSC, o rádio/VHF, o botão DISTRESS, o MMSI, a salvatagem, o socorro, o óleo) é do equipamento (a instrução de segurança, local, sem o quadro: trava 10): os checklists, que levam a velocidade e
+    // o resto do quadro, não a tomam («checklist de fundeio, onde fica o EPIRB?»). A guarda é a MESMA das outras rotas novas e fica no topo, antes de qualquer outra regra delas.
+    if (!cabecaEmerg(q)) {
       if (has(q, CHECK_PALAVRAS) && has(q, ['fundei', 'fundear', 'ancorar', 'ancoragem'])) return 'checklistFundeio';
       if (has(q, CHECK_PALAVRAS) && has(q, ['abastec'])) return 'checklistAbastecimento';
       if (has(q, ['checklist de chegada', 'chegada']) || (has(q, CHECK_PALAVRAS) && has(q, ['atrac', 'chegar']))) return 'checklistChegada';
@@ -2116,7 +2192,7 @@
     // "extintor" saiu daqui para a salvatagem (sem fogo) ou para a SOS (com fogo)
     if (seafirePergunta(q)) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
-    if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
+    if (has(q, DOC_PALAVRAS)) return 'docsvenc';
     // o AIS tem a rota dele, antes do canal16 (PROMPT §2.2: a pergunta do AIS não é o roteiro MAYDAY nem liga a conversa em emergência); o MMSI foi para a rota mmsi, acima
     if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';   // (só a pergunta NEUTRA do status; «o AIS parou», «sem sinal do AIS», «AIS desligado» seguem o guia ou a IA, nunca a contagem de alvos)
     if (has(q, CANAL16_ROTA)) return 'canal16';
@@ -2428,7 +2504,9 @@
   // O texto do item: a resposta (a 1ª linha, a falada; o cartão de emergência já traz o rótulo do procedimento padrão), os passos, a atenção, «se não resolver» e a observação; a fonte com o código.
   function faqResposta(it, p) {
     var passos = it.passos || [], max = 8, fs = (it.fontes || []).map(function (f) { return f.texto; });
-    var text = it.resposta + (passos.length ? '\n' + passos.slice(0, max).map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + (passos.length > max ? '\n… mais ' + (passos.length - max) + ' passos no FAQ (' + it.id + ').' : '') : '')
+    // a 1ª linha (a falada) abre com o TÍTULO do item (o assunto, o equipamento): vários itens começam com um verbo sem sujeito («Ligue pelo display…»), e o texto do chat não tem outro cabeçalho. O cartão de
+    // emergência (EM-01…09) não: abre com a instrução de segurança, inteira (trava 10)
+    var text = (it.titulo && !it.emerg ? it.titulo + ' — ' : '') + it.resposta + (passos.length ? '\n' + passos.slice(0, max).map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + (passos.length > max ? '\n… mais ' + (passos.length - max) + ' passos no FAQ (' + it.id + ').' : '') : '')
       + (it.atencao ? '\nAtenção: ' + it.atencao : '') + (it.senao ? '\nSe não resolver: ' + it.senao : '') + (it.obs ? '\nObservação: ' + it.obs : '');
     return { key: 'faqEquip', text: text, src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length ? ' · ' + fs.join(' · ') : ''), actions: act(p, [['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])),
       faq: it.id, emerg: !!it.emerg, seguranca: !!it.seguranca, ref: fs[0] || '' };
@@ -2457,9 +2535,13 @@
     // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
+    var rota0 = key;
     if (key === 'fallback' || (GENERICAS[key] && (ESPECIFICA.test(' ' + norm(q) + ' ') || (key === 'ais' && !AIS_STATUS.test(' ' + norm(q) + ' '))))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
-    // F10 (2): sem resposta pronta e sem trecho do guia (o fallback, que iria à IA), a pergunta que casa bem de perto com um item do FAQ é respondida por ele
-    if (key === 'fallback') { var fq = null; try { fq = respostaFaq(q, p); } catch (e) {} if (fq) { a = fq; key = 'faqEquip'; } }
+    // P3E (revisão 4): a cabeça de segurança sem rota própria (o botão DISTRESS, a baliza do EPIRB) com uma cauda que dilui a busca («o botão DISTRESS, checklist de saída»; ou que puxa um trecho de outro
+    // assunto: «a baliza, nível dos tanques»): o trecho de segurança dela, pela cabeça, local (pedeIA false) — nunca o fallback, que iria à IA na nuvem, nem o trecho da cauda
+    if (rota0 === 'fallback' && (key === 'fallback' || key === 'base') && !a.seguranca) { var cq = cabecaSemRota(pad(q)), kc = null; if (cq) { try { kc = respostaBase(cq, p, null); } catch (e) {} if (kc && kc.seguranca) { a = kc; key = 'base'; } } }
+    // F10 (2): sem resposta pronta e sem trecho do guia (o fallback, que iria à IA), a pergunta que casa bem de perto com um item do FAQ é respondida por ele — menos a de cabeça de emergência (cabecaEmerg), que é do equipamento
+    if (key === 'fallback' && !cabecaEmerg(pad(q))) { var fq = null; try { fq = respostaFaq(q, p); } catch (e) {} if (fq) { a = fq; key = 'faqEquip'; } }
     a.key = key;
     return a;
   }
@@ -2542,6 +2624,7 @@
   function pedeIA(a, q) {
     var k = a && a.key;
     if (a && a.seguranca) return false;
+    if (cabecaEmerg(pad(String(q || '')))) return false;   // P3E (revisão 4): a pergunta de cabeça de emergência é local, qualquer que seja a rota que a tenha tomado (trava 10: nunca na IA)
     if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip') return false;
     var topo = String(q || '').trim() ? buscaBase(q, 1)[0] : null;
     if (topo && topo.d.seguranca) return false;
@@ -2639,6 +2722,7 @@
     }
     bloco('Telemetria', function () { return ANSWERS.telemetria(p); });
     bloco('Manutenção', function () { return ANSWERS.manutencao(p); });
+    bloco('Peças', function () { return fichaPecas(semSim); });
     bloco('Horímetros', function () { return ANSWERS.horimetros(p); });
     bloco('Autonomia e consumo', function () {
       var a = ANSWERS.autonomia(p), ab = D.abastecimentos || [];
