@@ -2057,27 +2057,32 @@
   // palavra inteira: o grupo 1 guarda o caractere anterior (reposto como $1)
   function rx(core) { return new RegExp('(^|[^' + LET + '\\d])(?:' + core + ')(?![' + LET + '\\d])', 'g'); }
   // ——— F31 (PARIDADE, Avanti 1.20.0 e 1.20.2): nomes de equipamento que o reconhecimento de voz erra ———
-  // «ligar o siker» → «ligar o Seakeeper»; «garmim» → «Garmin»; «ploter» → «plotter». A tabela é a dos equipamentos DESTA embarcação: cada linha é um id de D.equipamentos, e o nome certo
-  // vem do cadastro (o fabricante, a 1ª palavra dele) — a embarcação que não tem o equipamento não tem a linha, e a que troca de fabricante troca o nome sem editar o cérebro. As variantes
-  // são as confusões do reconhecedor de cada nome (sem acento ou com), palavra inteira e sem distinguir caixa; o nome certo também entra (a caixa sai como no cadastro). Vale no ditado, no
-  // início do answer() e (a tela) no texto que vai à IA: B.corrigeVoz. Os de segurança (EPIRB, Seafire) usam o nome do sistema, nunca o fabricante.
+  // «ligar o siker» → «ligar o Seakeeper»; «garmim» → «Garmin»; «ploter» → «plotter». Cada linha é um id de D.equipamentos e tem dois donos:
+  //  · o NOME CERTO é do cadastro (o fabricante, a 1ª palavra dele, na caixa dele; EPIRB, Seafire e plotter são o nome do sistema, nunca o fabricante) — a embarcação que não tem o
+  //    equipamento não tem a linha;
+  //  · as VARIANTES (o que o reconhecedor escreve no lugar do nome: sem acento ou com, palavra inteira, sem distinguir caixa; o nome certo também entra) são DESTA embarcação: soam como as
+  //    marcas dela (Cummins, Onan, Seakeeper…) e ficam aqui, não no gerador. O `palavras` do D.equipamentos (CONTRATO §1.4) traz o nome, palavras comuns («motor», «bateria») e só alguns
+  //    erros do ditado, sem marcar quais são erros: tirar a tabela dali trocaria «ligar o motor» por «ligar o Cummins». Por isso a linha de marca leva `marca` (o nome certo, em minúsculas e
+  //    sem acento) e só vale enquanto o cadastro tem essa marca: com outro fabricante ela fica inerte (nunca «cummins» virando o fabricante novo), e o grupo voz do cerebro.py acusa a tabela velha.
+  // PRÓXIMA EMBARCAÇÃO: troque as linhas pelas das marcas dela (docs_pendentes da Fase 3: o gerador passar a marcar as grafias erradas, e esta tabela sair do cérebro).
+  // Vale no ditado, no início do answer() e (a tela) no texto que vai à IA: B.corrigeVoz.
   var VOZ_EQUIP = [
-    { id: 'motores', v: 'kamins|camins|comins|cumins|cumis|cummins' },
-    { id: 'gerador', v: 'honan|onã|onam|onan' },
-    { id: 'estabilizador', v: 'siker|seker|sikeeper|seekeeper|sea\\s?keeper|si\\s?keeper|siquer|sikiper|seakeeper' },
-    { id: 'estabilizador', mantem: '(?:estabilizador|giroestabilizador)\\s+', v: 'skip|ski|squip' },
-    { id: 'climatizacao', v: 'vebasto|webasta|vebasta|webasto' },
-    { id: 'eletronicos', v: 'garmim|gármin|garmi|garmin' },
+    { id: 'motores', marca: 'cummins', v: 'kamins|camins|comins|cumins|cumis|cummins' },
+    { id: 'gerador', marca: 'onan', v: 'honan|onã|onam|onan' },
+    { id: 'estabilizador', marca: 'seakeeper', v: 'siker|seker|sikeeper|seekeeper|sea\\s?keeper|si\\s?keeper|siquer|sikiper|seakeeper' },
+    { id: 'estabilizador', marca: 'seakeeper', mantem: '(?:estabilizador|giroestabilizador)\\s+', v: 'skip|ski|squip' },
+    { id: 'climatizacao', marca: 'webasto', v: 'vebasto|webasta|vebasta|webasto' },
+    { id: 'eletronicos', marca: 'garmin', v: 'garmim|gármin|garmi|garmin' },
     { id: 'eletronicos', v: 'polter|poltergein|ploter|plóter|plotter', nome: 'plotter' },
-    { id: 'audio', v: 'fiuchon|fiúchon|fiuchion|fusion' },
-    { id: 'vhf', v: 'aicom|aikom|icom' },
+    { id: 'audio', marca: 'fusion', v: 'fiuchon|fiúchon|fiuchion|fusion' },
+    { id: 'vhf', marca: 'icom', v: 'aicom|aikom|icom' },
     { id: 'epirb', v: 'ipirb|ipirbi|epirbe|epirbi|e pirb|epirb', nome: 'EPIRB' },
     { id: 'seafire', v: 'sea\\s?fire|si\\s?fire|sifaire|sifai|cifire|seafire', nome: 'Seafire' },
-    { id: 'dessalinizador', v: 'shenker|schenquer|chenker|xenquer|schenker' },
-    { id: 'ancora', v: 'leumar|lumar|luomar|leumer|lewmar' },
-    { id: 'piloto', v: 'reimarine|reymarine|rei marine|ray marine|raymarine' },
-    { id: 'ais', v: 'emtrak|em track|em trak|m trak|em-trak' },
-    { id: 'eletrico', v: 'vitron|victor on|victron' }
+    { id: 'dessalinizador', marca: 'schenker', v: 'shenker|schenquer|chenker|xenquer|schenker' },
+    { id: 'ancora', marca: 'lewmar', v: 'leumar|lumar|luomar|leumer|lewmar' },
+    { id: 'piloto', marca: 'raymarine', v: 'reimarine|reymarine|rei marine|ray marine|raymarine' },
+    { id: 'ais', marca: 'em-trak', v: 'emtrak|em track|em trak|m trak|em-trak' },
+    { id: 'eletrico', marca: 'victron', v: 'vitron|victor on|victron' }
   ].map(function (x) {
     x.re = new RegExp('(^|[^' + LET + '\\d])' + (x.mantem ? '(' + x.mantem + ')' : '') + '(?:' + x.v + ')(?![' + LET + '\\d])', 'gi');
     return x;
@@ -2088,7 +2093,7 @@
     eq = D.equipamentos || [];
     VOZ_EQUIP.forEach(function (x) {
       var e = eq.filter(function (y) { return y && y.id === x.id; })[0], nome = x.nome || (e && e.fabricante ? String(e.fabricante).split(' ')[0] : '');
-      if (e && nome) s = s.replace(x.re, '$1' + (x.mantem ? '$2' : '') + nome);
+      if (e && nome && (!x.marca || norm(nome) === x.marca)) s = s.replace(x.re, '$1' + (x.mantem ? '$2' : '') + nome);
     });
     return s;
   }

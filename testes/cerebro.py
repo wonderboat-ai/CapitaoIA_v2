@@ -3821,19 +3821,33 @@ def grupo_voz(b, muta, ped):
           const h = B.ditado({ pausa: 50, parcial: (t) => got.push('p:' + t), fim: (t) => { got.push('f:' + t); res(got); } });
           window.__sr.onresult({ results: [[{ transcript: 'ligar o siker' }]] }); h.parar(); })""")
         ped('ditado (F31): o ditado entrega o texto parcial e o final com o nome corrigido', d == ['p:ligar o Seakeeper', 'f:ligar o Seakeeper'], d)
+        # a tabela de variantes é DESTA embarcação (o gerador não marca as grafias erradas do `palavras`: docs_pendentes da Fase 3): trocar a marca no cadastro tira a linha de uso, e este teste a acusa
+        MARCAS = ['motores', 'gerador', 'estabilizador', 'climatizacao', 'eletronicos', 'audio', 'vhf', 'dessalinizador', 'ancora', 'piloto', 'ais', 'eletrico']
+        m = pg.evaluate("""(ids) => ids.map((id) => { const e = window.CapitaoDados.equipamentos.filter((x) => x.id === id)[0], n = e ? String(e.fabricante).split(' ')[0] : '';
+          return [id, n, window.CapitaoBrain.corrigeVoz('ligar o ' + n.toUpperCase())]; })""", MARCAS)
+        ruins = [(i, n, o) for i, n, o in m if not n or o != 'ligar o ' + n]
+        ped('ditado (F31): a VOZ_EQUIP acompanha as %d marcas do cadastro (a marca em maiúsculas vira a grafia do cadastro; marca nova no gerador pede a linha dela no cérebro)' % len(MARCAS), not ruins, ruins[:3])
     finally:
         pg.ctx.close()
-    # a tabela vem do cadastro: sem o equipamento a linha some; com outro fabricante o nome certo é o novo
+    # a tabela vem do cadastro: sem o equipamento a linha some; o nome certo é a grafia do cadastro; com OUTRO fabricante a linha de marca fica inerte (nunca «cummins» virando o fabricante novo)
     pg = pagina(b, extra=";window.CapitaoDados.equipamentos = window.CapitaoDados.equipamentos.filter(function (e) { return e.id !== 'estabilizador'; });", muta=muta)
     try:
         sem = pg.evaluate("() => [window.CapitaoBrain.corrigeVoz('ligar o siker'), window.CapitaoBrain.corrigeVoz('garmim')]")
         ped('ditado (F31): a embarcação sem o equipamento não tem a linha dele na tabela («siker» fica) e as outras seguem', sem == ['ligar o siker', 'Garmin'], sem)
     finally:
         pg.ctx.close()
-    pg = pagina(b, extra=";window.CapitaoDados.equipamentos.forEach(function (e) { if (e.id === 'estabilizador') e.fabricante = 'Gyromax Pro'; });", muta=muta)
+    pg = pagina(b, extra=";window.CapitaoDados.equipamentos.forEach(function (e) { if (e.id === 'estabilizador') e.fabricante = 'SEAKEEPER INC'; });", muta=muta)
     try:
-        outro = pg.evaluate("() => window.CapitaoBrain.corrigeVoz('ligar o siker')")
-        ped('ditado (F31): o nome certo é o fabricante do cadastro (a 1ª palavra), não um nome fixo no cérebro', outro == 'ligar o Gyromax', outro)
+        outro = pg.evaluate("() => [window.CapitaoBrain.corrigeVoz('ligar o siker'), window.CapitaoBrain.corrigeVoz('estabilizador skip')]")
+        ped('ditado (F31): o nome certo é o fabricante do cadastro (a 1ª palavra, na caixa dele), não um nome fixo no cérebro', outro == ['ligar o SEAKEEPER', 'estabilizador SEAKEEPER'], outro)
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, extra=";window.CapitaoDados.equipamentos.forEach(function (e) { if (e.id === 'estabilizador') e.fabricante = 'Gyromax Pro'; if (e.id === 'motores') e.fabricante = 'Volvo Penta'; });", muta=muta)
+    try:
+        TEXTOS = ['ligar o siker', 'estabilizador skip', 'ligar o kamins', 'ligar o cummins', 'ligar o motor', 'garmim', 'o ploter', 'o ipirb']
+        outra = pg.evaluate("(ts) => ts.map((t) => window.CapitaoBrain.corrigeVoz(t))", TEXTOS)
+        ped('ditado (F31): com outro fabricante no cadastro as variantes da marca antiga ficam como estão («kamins» nunca vira «Volvo», «siker» nunca vira «Gyromax»); as outras marcas e o nome do sistema (plotter, EPIRB) seguem',
+            outra == ['ligar o siker', 'estabilizador skip', 'ligar o kamins', 'ligar o cummins', 'ligar o motor', 'Garmin', 'o plotter', 'o EPIRB'], outra)
     finally:
         pg.ctx.close()
     # F31: a fala que só diz o equipamento continua a pergunta anterior (só depois de uma resposta que terminou em pergunta, por 10 min)
@@ -4525,7 +4539,10 @@ MUTANTES_3D_VOZ = [
     ('o nome certo é fixo no cérebro («Seakeeper»), não o do cadastro', r"String(e.fabricante).split(' ')[0] : '')", r"'Seakeeper' : '')", ('voz',)),
     ('a tabela ignora qual é o equipamento (pega o 1º do cadastro)', r"return y && y.id === x.id; })[0]", r"return !!y; })[0]", ('voz',)),
     ('a correção vale também no SOS (lê o D.equipamentos)', r"if (!s || EM_SOS) return s;", r"if (!s) return s;", ('voz',)),
-    ('a correção de «estabilizador skip» sai da tabela', r"    { id: 'estabilizador', mantem: '(?:estabilizador|giroestabilizador)\\s+', v: 'skip|ski|squip' },", r"", ('voz',)),
+    ('a correção de «estabilizador skip» sai da tabela', r"    { id: 'estabilizador', marca: 'seakeeper', mantem: '(?:estabilizador|giroestabilizador)\\s+', v: 'skip|ski|squip' },", r"", ('voz',)),
+    ('a linha de marca vale com OUTRO fabricante no cadastro (sem a guarda da marca: «cummins» vira «Volvo»)', r"if (e && nome && (!x.marca || norm(nome) === x.marca)) s = s.replace(", r"if (e && nome) s = s.replace(", ('voz',)),
+    ('a linha do «estabilizador skip» perde a marca (vale com outro fabricante: «estabilizador Gyromax»)', r"{ id: 'estabilizador', marca: 'seakeeper', mantem:", r"{ id: 'estabilizador', mantem:", ('voz',)),
+    ('a tabela do motor perde o nome certo («cummins» em maiúsculas não vira «Cummins»)', r"v: 'kamins|camins|comins|cumins|cumis|cummins' }", r"v: 'kamins|camins|comins|cumins|cumis' }", ('voz',)),
     ('a correção pega pedaço de palavra («sikerinho»)', r"'(?:' + x.v + ')(?![' + LET + '\\d])', 'gi');", r"'(?:' + x.v + ')', 'gi');", ('voz',)),
     ('a correção do EPIRB usa o fabricante (não o nome do sistema)', r"{ id: 'epirb', v: 'ipirb|ipirbi|epirbe|epirbi|e pirb|epirb', nome: 'EPIRB' },", r"{ id: 'epirb', v: 'ipirb|ipirbi|epirbe|epirbi|e pirb|epirb' },", ('voz',)),
     ('o cérebro não exporta a correção do ditado', r"travaVoz: travaVoz, corrigeVoz: corrigeVoz,", r"travaVoz: travaVoz,", ('voz',)),
