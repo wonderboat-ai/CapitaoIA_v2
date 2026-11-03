@@ -328,6 +328,26 @@ def main():
                 f, n = conversa('como se faz um nó lais de guia', modo='erro')
                 ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
 
+                # P3F, F17: registrar pela CONVERSA. O pedido com o texto grava UMA linha e a voz confirma; o «tá bom» seguinte não grava. O pedido cortado pela pausa («registrar no diário que») pergunta o que
+                # registrar, e a PRÓXIMA frase é a linha (o «tá bom» depois não). Nada vai para a rede (o registro é local).
+                def conversa_seq(frases, n_falas):
+                    abre(False)
+                    pg.evaluate("(qs) => { qs.forEach((q) => window.__falas.push(q)); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; window.__n0 = B.loadDiario().length; }", frases)
+                    antes = len(estado['pedidos'])
+                    pg.click(CONVERSA)
+                    try:
+                        pg.wait_for_function('(n) => window.__faladas.length >= n', arg=n_falas, timeout=25000)
+                    except Exception:
+                        pass
+                    pg.wait_for_timeout(400)
+                    r = pg.evaluate('() => ({ f: window.__faladas, linhas: window.CapitaoBrain.loadDiario().slice(0, window.CapitaoBrain.loadDiario().length - window.__n0).map((e) => e.t) })')
+                    pg.keyboard.press('Escape')
+                    return r, len(estado['pedidos']) - antes
+                r, n = conversa_seq(['registre no diário que saímos da marina às sete', 'tá bom'], 3)
+                ok(tela + ': CONVERSA (F17): «registre no diário que…» grava 1 linha com o texto, a voz confirma «Registrado no diário de bordo.» e o «tá bom» seguinte não grava', len(r['f']) >= 3 and r['f'][1] == 'Registrado no diário de bordo.' and r['linhas'] == ['Saímos da marina às sete'], json.dumps(r, ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'o gerador foi ligado às sete', 'tá bom'], 4)
+                ok(tela + ': CONVERSA (F17): o pedido cortado pela pausa pergunta «O que devo registrar no diário?», a próxima frase vira a linha (1) e o «tá bom» depois não grava; nada vai para a rede', len(r['f']) >= 4 and r['f'][1] == 'O que devo registrar no diário?' and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['O gerador foi ligado às sete'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+
                 # Sem a pausa de 0,65 s na CONVERSA (paridade Avanti 1.21.2): a frase final do reconhecedor vai direto ao cérebro;
                 # fora da conversa (VOZ→TEXTO) a pausa visual fica. Medido no navegador (performance.now), do fim do ditado à
                 # chamada do B.answer com a frase: o piso do VOZ→TEXTO é o setTimeout de 0,65 s da tela, que nunca dispara antes

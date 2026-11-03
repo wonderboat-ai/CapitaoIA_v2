@@ -814,6 +814,21 @@
   var REG_SUJEITO = /(?:^| )(?:vou|vamos|vai|tenho que|tem que|temos que|preciso|precisa|precisamos|pediu para|pediu pra|esqueci de|esqueceu de|a gente|ele|ela|eles|elas|eu|o lucas|lucas|o tecnico|a marina)(?= |$)/i;
   var REG_NOME = /(?:^| )(?:[Oo]s?|[Aa]s?) [A-Z][a-z]/, REG_VOCATIVO = /(?:^|\|) (?:o |a )?(?:lucas|capitao) \|$/i;
   var PERGUNTA = /^ (?:onde|quando|quem|como|qual|quais|quanto|quantos|quantas|o que|oque|que|por que|porque|pq|cade|sera|ja|eu ja|voce|voces) /;
+  // Infinitivo NO COMEÇO da frase (F17; «registrar no diário de bordo que hoje eu fiz o update…», dito na conversa por voz, caía na leitura do diário): com «no diário» vale seguido de «que», «:»/«—» ou do
+  // conteúdo; sem «no diário», só com «que» ou «:»/«—» («registrar que a bomba foi testada», «anotar: troca do filtro») — «registrar no Google Agenda», «anotar na agenda…» e «registrar o alarme»
+  // seguem nas rotas deles. gravar/lançar só com «no diário». Não vale: pergunta («Registrar no diário é obrigatório?»), conteúdo que começa por verbo de ligação, palavra de pergunta ou avaliação
+  // («registrar no diário como faz»), nem «é» logo no começo. → 0 = não é pedido · 1 = pedido com o texto · 2 = pedido sem o texto («registrar no diário», «… que» cortado pela pausa da voz).
+  var REG_INF = /^[\s"“”«»]*(?:(?:ok|sim|capit[aã]o|ent[aã]o|agora)[\s,;:.!—–-]+)*(registrar|anotar|gravar|lan[cç]ar)((?:\s+(?:isso|aqui|a[ií]|l[aá]))*)(\s+(?:no|em)\s+(?:o\s+)?di[aá]rio(?:\s+de\s+bordo)?)?(?:\s+(?:isso|aqui|a[ií]|l[aá]))*(?:\s*([:—–-]|,)|\s+(que)(?=\s|$)|(?=\s|$))\s*([\s\S]*)$/;
+  var REG_INF_NAO = /^(?:e|eh|era|foi|sera|seria|serve|servia|funciona|adianta|vale|ajuda|demora|leva|precisa|deve|devo|pode|posso|podemos|tem|da|fica|faz|nao|so|como|onde|quando|qual|quais|quanto|quem|porque|por|pra|para|pelo|pela|tambem|ainda|sempre|direito|certo|errado|chato|facil|dificil|obrigatorio|importante|necessario)(?=\s|$)/;
+  function infinitivoInicio(qRaw) {
+    var s = String(qRaw || '').slice(0, 2000).toLowerCase().replace(/\s+/g, ' ').trim(), m = REG_INF.exec(s), verbo, diario, sep, resto;
+    if (!m || /\?\s*$/.test(s)) return 0;
+    verbo = norm(m[1]); diario = !!m[3]; sep = m[4] || m[5] || ''; resto = m[6].replace(/[\s.!…]+$/, '').trim();
+    if (!diario && (/^(?:gravar|lancar)$/.test(verbo) || !sep || sep === ',')) return 0;   // «gravar um vídeo», «lançar a âncora», «registrar no Google Agenda»
+    if (!resto) return 2;
+    if ((!sep || sep === ',') && (REG_INF_NAO.test(norm(resto)) || /^(?:\S+\s+){0,3}é(?:\s|$)/.test(resto))) return 0;
+    return 1;
+  }
   function querRegistrar(qRaw, q) {
     var raw = String(qRaw || '').slice(0, 2000), pergunta = /\?\s*$/.test(raw), m; // as telas já cortam em 500; teto contra texto enorme
     // sem acento, com a caixa original; pontuação vira fronteira de oração " | "
@@ -826,7 +841,7 @@
       var oracao = (antes + ' ' + m[1]).split('|').pop(), cortesia = /(?:pode|poderia|quero|queria|por favor)[\s|]*$/i.test(antes + ' ' + m[1]);
       if (!inicio && !duro && !mole) continue; // verbo no meio da oração: "vou registrar", "Lucas registra", "esqueci de registrar"
       if (REG_SUJEITO.test(oracao) || REG_NOME.test(oracao) || (duro && REG_VOCATIVO.test(antes))) continue;
-      if (/r$/.test(verbo) && !cortesia) continue; // "Registrar no diário é obrigatório?", "Vamos registrar…"
+      if (/r$/.test(verbo) && !cortesia) { if (inicio && infinitivoInicio(raw)) return true; continue; } // "Registrar no diário é obrigatório?", "Vamos registrar…" (o infinitivo no começo vale: F17)
       if (!diario && !/^(?:registre|registra|anote|anota|anotar)$/.test(verbo)) continue; // "Grave problema no motor", "Lance a âncora"
       if (!inicio && (pergunta || PERGUNTA.test(q) || (!diario && !/^[\s|]*(?:por favor[\s|]*)*$/i.test(resto)))) continue;
       if (pergunta && (!cortesia || /^[\s|]*$/.test(resto))) continue; // "Anota?", "Registra aí?", "Pode anotar isso?"
@@ -857,6 +872,46 @@
     if (!s || RESUMO.test(norm(s).replace(/[.!?;:]+/g, ' ').replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ').trim())) return ''; // "registre o resumo / posição e hora" = atalho
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
+  // Pedido SEM o texto (F17): «registrar no diário que…» cortado pela pausa da voz, «anote no diário:», «registrar no diário». O app pergunta o que registrar e grava a PRÓXIMA frase (ESPERA_REG, 2 min); o
+  // atalho e o «registre no diário» sozinho (imperativo) seguem gravando o resumo da telemetria. A espera vale uma vez: qualquer fala seguinte a consome, e só a que é o texto do registro é gravada.
+  function pedeTexto(q) {
+    var s = String(q || '').trim();
+    if (!s || notaDoUsuario(s)) return false;
+    return infinitivoInicio(s) === 2 || /(?:^|\s)que[\s.…]*$|[:—–-][\s.…]*$/i.test(s);
+  }
+  var ESPERA_REG = null, ESPERA_VALE = 120e3;
+  var CANCELA_REG = /^ (?:(?:nao|ok|nada) )?(?:cancela|cancelar|cancele|cancelado|esquece|esqueca|deixa|deixa pra la|deixa para la|nada|nao|nao precisa|nenhum|nenhuma|desisto) $/;
+  // o reconhecimento («tá bom», «ok», «valeu», «entendi»): nunca vira o texto de um registro nem confirma uma proposta
+  var ACK = /^ (?:sim|nao|ok|okay|obrigad[oa]|valeu|beleza|show|entendi|certo|perfeito|blz|tchau|ate mais|ta bom|ta certo|ta otimo|tudo bem|tranquilo|combinado|fechado|isso|isso mesmo)(?: (?:entendi|obrigad[oa]|valeu|brigad[oa]|capitao))* $/;
+  // A fala depois de «o que devo registrar?»: vira o texto do registro (rota diario), salvo cancelar (relatoCancela, com ctx.espera), pergunta, reconhecimento, outro pedido de registro, emergência (que segue o SOS,
+  // com os passos) ou o botão de uma proposta (a rota dele). null = segue a rota normal. A espera é consumida em toda chamada.
+  function esperaRegistro(q, ctx) {
+    var e = ESPERA_REG, raw, n;
+    ESPERA_REG = null;
+    if (!e || Date.now() - e.t > ESPERA_VALE || (ctx && (ctx.id || ctx.commit === false || ctx.faq))) return null;
+    raw = String(q || '').trim(); n = pad(raw);
+    if (!raw || querRegistrar(raw, n)) return null;
+    if (CANCELA_REG.test(n)) return 'relatoCancela';
+    if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;
+    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n)) return null;
+    return NAO_ESPERA[route(raw)] === 1 ? null : 'diario';
+  }
+  // as rotas de ação e de emergência: a fala que cai nelas, depois do «o que devo registrar?», segue a rota (não vira o texto do registro)
+  // a confirmação falada do registro (F17): «Registrado no diário de bordo.» e, se a nota é de emergência ou de pressão de óleo, a instrução de segurança (a fala não leva só a primeira linha)
+  function falaRegistro(grava, alerta, pressao) {
+    if (!grava) return 'Pedido vindo de link não grava no diário.';
+    return 'Registrado no diário de bordo.' + (alerta ? ' Se a emergência é agora, abra o SOS.' : '') + (pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '');
+  }
+  var RELATO_BTN = /^ (?:(?:sim|ok|pode|por favor) )*(?:registrar|registra|registre|anotar|anota|anote) (?:o |esse |este |um )?relato $/, RELATO_BTN_NAO = /^ (?:(?:nao|ok|por favor) )?(?:nao registrar|nao registra|nao registre|nao anotar|nao anote|cancelar|cancela|cancele) (?:o |esse |este |um )?relato $/;
+  function relatoRota(qRaw, q) {
+    if (RELATO_BTN_NAO.test(q)) return 'relatoCancela';
+    if (RELATO_BTN.test(q)) return 'relatoRegistra';
+    return null;
+  }
+  // a proposta de relato que espera o «registrar» (10 min; F16): vem no commit seguinte, aqui ainda nenhuma
+  var REL = null;
+  function relatoPendente() { return REL && Date.now() < REL.ate ? REL : null; }
+  var NAO_ESPERA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1 };
 
   function A(platform, key) { return (HREF[platform] || HREF.web)[key]; }
   function act(platform, pairs) { return pairs.map(function (p) { return { l: p[0], href: p[1].indexOf('.html') !== -1 || p[1].indexOf('#') === 0 ? p[1] : A(platform, p[1]) }; }); }
@@ -1577,7 +1632,8 @@
       if (nota && !junto) {
         var alerta = emergencia(pad(nota)), pressao = oleo(pad(nota)) === 1; // relato de emergência / pressão de óleo: grava a nota e traz os passos
         if (grava) addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' });
-        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']])) };
+        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']])),
+          fala: falaRegistro(grava, alerta, pressao) };
       }
       var al = junto && emergencia(pad(nota)), pr = junto && oleo(pad(nota)) === 1;
       var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
@@ -1586,11 +1642,30 @@
         // «registre posição e hora, tem fogo no motor» (PROMPT §2.2, diário com alerta): a linha e a resposta NÃO usam o resumoAgora() (nada de coordenada, SOG, proa nem
         // leitura do quadro): a hora da linha, «posição: ler no plotter» no lugar da posição pedida, e os passos
         if (grava) addDiario({ sys: 'Diário', t: nota + ' · posição: ler no plotter', who: quem(), src: 'chat · voz/texto' });
-        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
+        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr) };
       }
       var t = resumoAgora();
       if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });
-      return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n' + (junto ? '“' + nota + '”\n' : '') + t + '\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário.\n' + (junto ? '“' + nota + '”\n' : '') + 'Resumo: ' + t + '\n' + como + ', ou toque no atalho DIÁRIO DE BORDO.') + passos, src: FT.tele + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes) };
+      return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n' + (junto ? '“' + nota + '”\n' : '') + t + '\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário.\n' + (junto ? '“' + nota + '”\n' : '') + 'Resumo: ' + t + '\n' + como + ', ou toque no atalho DIÁRIO DE BORDO.') + passos, src: FT.tele + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr) };
+    },
+    // «O que devo registrar?» (F17): o pedido sem o texto; a próxima frase é gravada (ou «cancelar»). Pedido vindo de link não grava, então não arma a espera.
+    diarioPede: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]);
+      if (grava) ESPERA_REG = { t: Date.now() };
+      return grava ? { text: 'O que devo registrar no diário de bordo? Diga ou digite o texto agora — a próxima frase é gravada (ou diga “cancelar”).', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'O que devo registrar no diário?' }
+        : { text: 'Não registrado — pedido vindo de link não grava no diário.\nPara registrar, diga ou digite aqui “registre no diário…” seguido do texto.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Pedido vindo de link não grava no diário.' };
+    },
+    // «registrar o relato» / «sim, registra» depois da proposta do relato (F16): confirma a proposta que espera (1 linha); sem proposta, diz que não há
+    relatoRegistra: function (p, ctx) {
+      var rp = relatoPendente(), abrir = act(p, [['Abrir diário', 'diario']]);
+      if (!rp) return { text: 'Não há relato esperando para registrar. Para registrar, diga “registre no diário…” seguido do texto.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando para registrar.' };
+      return { text: 'Não há relato esperando para registrar.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando para registrar.' };
+    },
+    // «não registrar» / «cancelar» (F16, F17): descarta o que espera (a proposta do relato recusa, 0 linhas) ou a espera do «o que devo registrar?»: nada é gravado
+    relatoCancela: function (p, ctx) {
+      var abrir = act(p, [['Abrir diário', 'diario']]);
+      if (ctx && ctx.espera) return { text: 'Certo — nada registrado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Certo, nada registrado.' };
+      return { text: 'Não há relato esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando; nada foi registrado.' };
     },
     // Seguro para sair: as ressalvas (segurança primeiro), os alarmes do quadro e a previsão REAL de vento (§2.5); o vento e as ondas do quadro vão como «a bordo agora» e
     // não entram na decisão. O app não tem limite de vento com fonte: ele não diz «não» pelo vento. Alarme crítico ativo diz «Não».
@@ -2001,7 +2076,7 @@
   // AIS: a pergunta de status («quantos alvos?», «tem AIS?», «está ligado?») fica na resposta pronta; qualquer outra (modo silencioso, identificação, alvos no plotter) vai ao trecho do g_ais quando ele serve
   var AIS_STATUS = /\b(?:quantos?|quantas?|quais|tem|temos|ha|algum|alguns|agora|ligado|ligada|funcionando|recebendo|vendo)\b/;
   // (a maré é do mundo real, §2.5: a hora dela é a da leitura salva, «lida às HH:MM» na fonte; o instante do replay nunca entra na fonte da maré)
-  var SEM_HORA_NA_FONTE = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, checklist: 1, checklistChegada: 1, diario: 1, mare: 1 };
+  var SEM_HORA_NA_FONTE = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, checklist: 1, checklistChegada: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, mare: 1 };
   SEM_HORA_NA_FONTE.sobreDados = 1;   // (a frase padrão e a fonte «este aparelho · modo de apresentação» não levam o «consultado às»)
 
   // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
@@ -2298,7 +2373,9 @@
     var q = pad(qRaw);
     if (!q.trim()) return 'saudacao';
     if (DIAGNOSTICO.test(semVocativo(q))) return 'diagnostico';
-    if (querRegistrar(qRaw, q)) return 'diario';
+    // os botões da proposta do relato («registrar o relato», «não registrar o relato»): depois do diagnóstico, antes de qualquer pedido de registro; a emergência e o óleo vêm antes de tudo
+    if (!emergencia(q) && oleo(q) !== 1) { var rel = relatoRota(qRaw, q); if (rel) return rel; }
+    if (querRegistrar(qRaw, q)) return pedeTexto(qRaw) ? 'diarioPede' : 'diario';
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
     if (ol === 1) return 'oleo';
@@ -2700,13 +2777,14 @@
   }
   if (!EM_SOS) { if (window.requestIdleCallback) requestIdleCallback(carregaFaq, { timeout: 6000 }); else setTimeout(carregaFaq, 2500); }
 
-  function responde(q, ctx) {
+  function responde(q, ctx, espera) {
     ctx = ctx || {};
     var p = ctx.platform || 'web';
     var key = null;
+    if (espera) { key = espera; if (espera === 'relatoCancela') ctx = Object.assign({}, ctx, { espera: true }); }   // F17: a fala depois de «o que devo registrar?» (a espera foi consumida em answer)
     // F10 (1): o item do FAQ pedido pelo código (o toque numa pergunta do FAQ): é o item, qualquer que seja o texto da pergunta
     if (typeof ctx.faq === 'string' && !ctx.id) { var fi = faqItem(ctx.faq); if (fi) return faqResposta(fi, p); }
-    if (ctx.id && ANSWERS[ctx.id] && (!String(q || '').trim() || norm(q).trim() === CANON[ctx.id])) key = ctx.id;
+    if (!key && ctx.id && ANSWERS[ctx.id] && (!String(q || '').trim() || norm(q).trim() === CANON[ctx.id])) key = ctx.id;
     if (!key) key = route(q);
     if (!ANSWERS[key]) key = 'fallback';
     var a;
@@ -2735,7 +2813,7 @@
   // pronta do gerador. NOVA e ENCERRAR zeram (B.limpaConversa). O que o app não grava (commit false, link) e a emergência não entram.
   var CONV = { q: '', a: '', t: 0, pergunta: false, n: 0 };
   var CONV_VALE = 10 * 60e3;
-  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1 }; }
+  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1 }; ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
   function terminaEmPergunta(t) {
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
     return ls.length > 0 && /\?["”')\]]*$/.test(ls[ls.length - 1]);
@@ -2777,12 +2855,12 @@
     n = pad(q);
     if (n.trim().split(/\s+/).length > 8 || /\?\s*$/.test(String(q)) || /^ (?:e|nao)(?= )/.test(n) || !soNomeia(n) || emergencia(n) || oleo(n) === 1) return null;
     rq = route(q); rr = route(CONV.q);
-    if (!GENERICAS[rq] || perguntaEmerg(CONV.q) || rr === 'diario' || rr === 'sobreDados' || rr === 'foraBarco') return null;
+    if (!GENERICAS[rq] || perguntaEmerg(CONV.q) || rr === 'diario' || rr === 'diarioPede' || rr === 'sobreDados' || rr === 'foraBarco') return null;
     return CONV.q + ' — ' + String(q).trim();
   }
   function answer(q, ctx) {
     return congela(function () {
-      var q1 = corrigeVoz(q), junto = seguimento(q1, ctx), a = marca(responde(junto || q1, ctx));
+      var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), a = marca(responde(junto || q1, ctx, espera));
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
       // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
@@ -3364,7 +3442,7 @@
   // fonte ganha «Às HH:MM:SS.» no fim. Ficam de fora as respostas sem dado do quadro ou com a hora própria: as de emergência e as chaves de SEM_HORA_NA_FONTE, as do tempo e da maré (hora da leitura
   // do mundo real, §2.5), a lista da equipe, as perguntas de fora do barco e sobre os dados, o fallback, o trecho do guia e as do cadastro sem quadro (áudio, guias). A hora é a do instante da
   // PRÓPRIA resposta (`a.hora`, posta pelo answer()): a fala é montada depois, com o relógio já andado, e a tela copia a resposta antes de falar.
-  var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, faqEquip: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1 };
+  var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, faqEquip: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1 };
   function comHoraNaFala(a, t) {
     var h = a && typeof a === 'object' && typeof a.hora === 'string' ? a.hora : '';
     if (!sim() || !/^\d\d:\d\d:\d\d$/.test(h) || !a.key || SEM_HORA_NA_FONTE[a.key] || FALA_SEM_HORA[a.key] || !t || /\d\d:\d\d:\d\d/.test(t)) return t;
