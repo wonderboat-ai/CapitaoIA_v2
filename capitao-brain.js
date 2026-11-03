@@ -135,7 +135,9 @@
   function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
-  function sinal(x, c) { var A = window.CapitaoAgora, v = A.fmt.arred(x, c); return (v > 0 ? '+' : v < 0 ? '−' : '') + A.fmt.nb(Math.abs(v), c); }
+  // O sinal «+» colado a «55» e a mais um dígito («+551» rpm) é o prefixo de telefone da regex PESSOAIS do §3 (`\+55\s?\d`): só nesse caso um espaço fino separa o sinal do número (+ 551),
+  // que a fala lê igual («mais 551») e a regex deixa passar. Todos os outros valores seguem o molde do contrato (+644, +0,5, −0,5).
+  function sinal(x, c) { var A = window.CapitaoAgora, v = A.fmt.arred(x, c), n = A.fmt.nb(Math.abs(v), c); return (v > 0 ? '+' + (/^55\d/.test(n) ? '\u2009' : '') : v < 0 ? '−' : '') + n; }
   // tendência dos últimos 30 s (CONTRATO §1.23): q(ms) − q(ms − 30 s) do replay, com as casas do D.campos; o diesel é a soma do consumo dos motores e do gerador
   // no mesmo trecho (o quadro arredonda os litros, e em 30 s o consumo fica abaixo de 1 L: 1 casa). Na virada das 07:00 o diesel sai (o abastecimento
   // atravessaria os 30 s); sem replay (coletor sem histórico, reserva) não há tendência.
@@ -1814,7 +1816,14 @@
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
     return ls.length > 0 && /\?["”')\]]*$/.test(ls[ls.length - 1]);
   }
-  function conversa(q, texto) { if (!EM_SOS && String(q || '').trim()) CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1 }; }
+  // A pergunta de emergência (SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio): ela e a resposta dela nunca entram no contexto, e ENCERRAM o que havia (a fala «o gerador» depois de
+  // «mayday» é a resposta pronta do gerador, nunca a continuação da pergunta de antes da emergência).
+  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || EMERG[route(q)] === 1); }
+  function conversa(q, texto) {
+    if (EM_SOS || !String(q || '').trim()) return;
+    if (perguntaEmerg(q)) { limpaConversa(); return; }
+    CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1 };
+  }
   // o vocabulário de equipamento: nome, fabricante, modelo e as palavras do cadastro (D.equipamentos), normalizados
   var NOMEIA_LIGA = ' e eh sao era o a os as um uma uns umas do da dos das de no na nos nas sim nao acho que creio so mesmo isso esse essa este esta ele ela la aqui modelo marca tipo ';
   function vocabEquip() {
@@ -1844,7 +1853,7 @@
     n = pad(q);
     if (n.trim().split(/\s+/).length > 8 || /\?\s*$/.test(String(q)) || /^ (?:e|nao)(?= )/.test(n) || !soNomeia(n) || emergencia(n) || oleo(n) === 1) return null;
     rq = route(q); rr = route(CONV.q);
-    if (!GENERICAS[rq] || EMERG[rr] || rr === 'diario' || rr === 'sobreDados' || rr === 'foraBarco') return null;
+    if (!GENERICAS[rq] || perguntaEmerg(CONV.q) || rr === 'diario' || rr === 'sobreDados' || rr === 'foraBarco') return null;
     return CONV.q + ' — ' + String(q).trim();
   }
   function answer(q, ctx) {
@@ -1852,7 +1861,11 @@
       var q1 = corrigeVoz(q), junto = seguimento(q1, ctx), a = marca(responde(junto || q1, ctx));
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
-      if (!EM_SOS && !emerg(a) && (!ctx || ctx.commit !== false)) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1 };
+      // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
+      if (!EM_SOS) {
+        if (emerg(a)) limpaConversa();
+        else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1 };
+      }
       return a;
     });
   }
@@ -1914,10 +1927,12 @@
   var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
   function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
   function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }
-  // O teto da ficha (letras): o cliente (capitao-ia.js) e os Workers cortam a ficha em 12.000. Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000 (e o cliente e os
-  // Workers acompanham, na Fase 6). Medido na P3D: 11.343 a 11.428 letras nos 150 instantes (a resumida, 3.921 a 3.963), então fica 12.000; o testes/cerebro.py (grupo ficha) cobra a regra:
-  // acima de 11.500 este valor TEM de ser 16.000. Exposto em B.FICHA_MAX. O «## Emergência» fica perto do topo porque o corte do cliente é pelo fim.
-  var FICHA_MAX = 12000;
+  // O teto da ficha (letras). Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000. Medida nos 150 instantes do laço e em 4 instantes de cada uma das 576 voltas do dia:
+  // 11.339 a 11.483 letras sem a previsão e a maré (a página sem o capitao-clima.js), 11.616 a 11.760 COM elas (o app real sempre as tem: o capitao-clima.js grava a leitura do dia e a série da maré) e
+  // até 12.171 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js: `.slice(0, 12000)`) e os dois Workers cortam a ficha em 12.000
+  // PELO FIM (Clima e maré e Guias de bordo caem primeiro) e sobem juntos para 16.000 na Fase 6: este valor é o que eles têm de acompanhar. O testes/cerebro.py (grupo ficha) cobra a regra: acima
+  // de 11.500 este valor TEM de ser 16.000. Exposto em B.FICHA_MAX. O «## Emergência» fica perto do topo porque o corte do cliente é pelo fim.
+  var FICHA_MAX = 16000;
   // «## Navegação agora» (PROMPT Fase 3 «ficha()»): a hora e a fase, SOG/STW, rumo/COG e proa, a posição relativa (§2.8: só com a simulação e só dos pontos com fonte, nunca coordenada),
   // profundidade, vento e mar a bordo, motores (rpm, óleo, arrefecimento, carga), consumo, diesel e autonomia, gerador, Seakeeper, baterias, porão e âncora, os alarmes e a tendência dos
   // últimos ~30 s. Cada medida é o texto ÚNICO do instante (inst.txt: o mesmo da Main, da A1, do HUD e da answer('telemetria')). Só existe com o quadro vivo (replay ou coletor): sem ele
@@ -2177,8 +2192,8 @@
       if (se) p.push(se + (se === 1 ? ' segundo' : ' segundos'));
       return a + (p.length === 1 ? p[0] : p.length === 2 ? p[0] + ' e ' + p[1] : p[0] + ', ' + p[1] + ' e ' + p[2]);
     });
-    // horário 13:23 / 23h01 (nunca razão) e duração 1 h 10 / 6 h 58 min
-    s = s.replace(/(^|[^\d:,.])(\d{1,2})(?::|h)(\d{2})(?:min(?![A-Za-z]))?(?![\d:]|\.\d)/g, function (m, a, h, mi) {
+    // horário 13:23 / 23h01 (nunca razão: 3:00:15:20 fica) e duração 1 h 10 / 6 h 58 min; o «:» de pontuação depois da hora («desde as 07:00: 65 milhas») não impede a leitura
+    s = s.replace(/(^|[^\d:,.])(\d{1,2})(?::|h)(\d{2})(?:min(?![A-Za-z]))?(?!\d|:\d|\.\d)/g, function (m, a, h, mi) {
       h = +h; mi = +mi;
       return h > 23 || mi > 59 ? m : a + hora(h) + (mi ? ' e ' + mi + (mi === 1 ? ' minuto' : ' minutos') : '');
     }).replace(/ às ([01] hora)(?!s)/g, ' à $1').replace(/(^|[^\d,.])(\d+) ?h ?(\d{1,2})(?: ?min(?![A-Za-z])|(?![\d,.:\/]\d|\d| ?[A-Za-z%°]))/g, function (m, a, h, mi) {
@@ -2426,20 +2441,41 @@
     if (k > 0 && k < 140) return t.slice(0, k) + ', às ' + h + t.slice(k);
     return String(t).replace(/[\s.;:,]+$/, '') + '. Às ' + h + '.';
   }
-  // Trava de voz (só com D.simulacao true): troca o termo que casa ROTULOS ou AUTENTICIDADE (§3) por uma palavra neutra, nunca suprime nem encurta a frase. É a última guarda: as respostas locais já
+  // Trava de voz (só com D.simulacao true): troca o termo que casa ROTULOS ou AUTENTICIDADE (§3) por uma expressão neutra, nunca suprime nem encurta a frase. É a última guarda: as respostas locais já
   // saem limpas (os testes varrem) e a da IA passa pelo filtro do Worker; aqui pega o que escapou (a nota do diário lida de volta, uma resposta antiga). Não vale para FALA_INTEIRA.
-  var VOZ_TERMOS = [['ROTULOS', function (m) { return /^SEM/.test(m) ? 'sem informação' : /^MANUAL/.test(m) ? 'no guia de bordo' : 'de bordo'; }],
-    ['AUTENTICIDADE', function (m) { return (/^[^A-Za-zÀ-ÿ(]/.test(m) ? m.charAt(0) : '') + (/^\(demonstra/i.test(m) ? 'de bordo' : 'dado de bordo'); }]]
-    .map(function (x) { return [new RegExp(TERMOS_FONTES[x[0]].src, 'g' + TERMOS_FONTES[x[0]].flags), x[1]]; });
+  // A troca é da PALAVRA inteira do termo («fictícios» → «de bordo», nunca «dado de bordoos»): o casamento da AUTENTICIDADE termina no radical (fict[ií]ci, simulad, inventad…), então o regex da trava
+  // (só aqui no cérebro; TERMOS_FONTES fica como no §3) o estende até o fim da palavra e aos adjetivos coordenados («fictícios e simulados»). O substantivo («dados», «leituras») e o caractere que
+  // antecede o termo ficam; «de bordo» não varia com o gênero nem com o número. O que não é adjetivo (é uma simulação, na demonstração, modo demo, não são reais) mantém o verbo ou a preposição.
+  var VOZ_LET = 'A-Za-zÀ-ÿ', VOZ_NEUTRO = 'de bordo';
+  var VOZ_ADJ = '(?:fict[ií]ci|simulad|inventad|hipot[ée]tic|ilustrativ)[' + VOZ_LET + ']*';
+  var VOZ_ADJS = VOZ_ADJ + '(?:\\s*(?:,|e|ou)\\s+' + VOZ_ADJ + ')*';
+  var VOZ_FIM_TERMO = new RegExp(VOZ_ADJS + '$|de (?:demonstra[çc][ãa]o|exemplo)$', 'i');
+  function vozMaiuscula(t, de) { return /^[A-ZÀ-Ý]/.test(de) ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+  function neutraAutenticidade(m) {
+    var ini, r, x;
+    if (/^\(demonstra/i.test(m)) return VOZ_NEUTRO;
+    ini = /^[^A-Za-zÀ-ÿ]/.test(m) ? m.charAt(0) : ''; r = m.slice(ini.length);
+    if (/^modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)$/i.test(r)) return ini + r.slice(0, 4) + ' ' + VOZ_NEUTRO;
+    if ((x = /^(é|são|foi|está|estão) (?:uma? )?(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
+    if ((x = /^n[ãa]o (é|são) /i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
+    if ((x = /^(na|da|para) demonstra[çc][ãa]o$/i.exec(r))) return ini + vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1]);
+    if ((x = /^(dados) de teste$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
+    x = VOZ_FIM_TERMO.exec(r);
+    return ini + (x ? r.slice(0, x.index) : '') + VOZ_NEUTRO;
+  }
+  var VOZ_TERMOS = [
+    [new RegExp(TERMOS_FONTES.ROTULOS.src, 'g' + TERMOS_FONTES.ROTULOS.flags), function (m) { return /^SEM/.test(m) ? 'sem informação' : /^MANUAL/.test(m) ? 'no guia de bordo' : VOZ_NEUTRO; }],
+    [new RegExp('(?:' + TERMOS_FONTES.AUTENTICIDADE.src + ')[' + VOZ_LET + ']*(?:\\s*(?:,|e|ou)\\s+' + VOZ_ADJ + ')*', 'g' + TERMOS_FONTES.AUTENTICIDADE.flags), neutraAutenticidade]];
   function travaVoz(t) {
-    var s = String(t == null ? '' : t), k, n;
+    var s = String(t == null ? '' : t), k, n, orig = s;
     if (!sim()) return s;
     for (n = 0; n < 4; n++) {
       var antes = s;
       for (k = 0; k < VOZ_TERMOS.length; k++) s = s.replace(VOZ_TERMOS[k][0], VOZ_TERMOS[k][1]);
       if (s === antes) break;
     }
-    return s;
+    // (só no que a trava trocou) duas trocas seguidas dão «de bordo de bordo» / «de bordo e de bordo»: uma só
+    return s === orig ? s : s.replace(/\bde bordo(?:\s+(?:e\s+)?de bordo)+/gi, VOZ_NEUTRO);
   }
   function falaCurta(a) {
     var t = falaBase(a);

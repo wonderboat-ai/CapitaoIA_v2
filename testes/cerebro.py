@@ -959,9 +959,10 @@ def main():
              not [n for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL') if RX[n].search(f)] and not re.search(r'SEM DADOS|SEM LEITURA|MANUAL NO DRIVE|fict[ií]ci|simulad', f),
              [(n, RX[n].search(f).group(0)) for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL') if RX[n].search(f)] + re.findall(r'.{20}(?:SEM DADOS|SEM LEITURA|MANUAL NO DRIVE).{20}', f)[:4]),
             # Fase 3 (P3B), PROMPT Fase 7 linha 3 (`:102`): o teto de 10.000 sobe para o do proxy (12.000), porque o «Sobre o app» e a telemetria completos passaram de 10.000 (10.351).
-            # P3D: com o «## Navegação agora» a ficha mede 11.3 a 11.4 mil letras (150 instantes, grupo ficha); a decisão (i) (até 16.000 se passar de ~11.500) está em B.FICHA_MAX,
-            # e o grupo ficha cobra a regra
-            ('ficha entre 3.000 e o teto da ficha (B.FICHA_MAX: 12.000 até 11.500 letras, 16.000 acima)', 3000 <= len(f) <= fmax and fmax == (16000 if len(f) > 11500 else 12000), (len(f), fmax)),
+            # P3D (revisão): esta página NÃO carrega o capitao-clima.js (a ficha mede 11,3 mil, com o «## Clima e maré» na frase curta «sem conexão»); no app de verdade, com a previsão e a maré,
+            # ela passa de 11.500 e a decisão (i) manda 16.000. A regra do teto (16.000 acima de ~11.500) é cobrada no grupo ficha, que mede COM a previsão, a maré e o diário do aparelho;
+            # aqui a ficha só tem de caber no teto exposto em B.FICHA_MAX, que nunca é menor que os 12.000 do cliente.
+            ('ficha entre 3.000 e o teto da ficha (B.FICHA_MAX, de 12.000 a 16.000; a regra da decisão (i) está no grupo ficha, medida com a previsão e a maré)', 3000 <= len(f) <= fmax and fmax in (12000, 16000), (len(f), fmax)),
             ('voz da resposta da IA: 1ª frase curta + a seguinte, sem a fonte', voz == 'Sou o Capitão IA. Respondo sobre telemetria, manutenção e documentos, sempre com a fonte.', voz),
             # C5 (CONTRATO §1.5): com os 91 trechos, o g_gerador §2 · Ligar continua o 1º trecho de "como ligar o gerador?" (é a fonte
             # do FONTE_IA do chat_ia.py); a troca de óleo do motor sai da agenda dos motores e a do rotor, do gerador.
@@ -1019,6 +1020,7 @@ def main():
                 falhas += 1
                 print('FALHA sem previsão carregada, %r inventou vento ou perdeu a frase do §2.5: %s' % (q, t[:200]))
         falhas += vento_do_dia(b)
+        falhas += ficha_com_clima(b)
         falhas += instante_3a(b)
         if erros:
             falhas += 1
@@ -1397,6 +1399,19 @@ def conta(nome, cond, extra=''):
     return 1
 
 
+def ficha_com_clima(b):
+    """A ficha da página do app de verdade: com o capitao-clima.js e a leitura do dia e a maré salvas (o bloco «## Clima e maré» inteiro), no relógio de agora. Decisão (i) do CLAUDE.md:
+    passando de ~11.500 letras o teto exposto em B.FICHA_MAX é 16.000. (A página do main() não carrega o capitao-clima.js e mede menos; o grupo ficha mede os 2.454 instantes.)"""
+    pg = pagina(b, clima=True)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain, q = 'como se faz um nó lais de guia?', f = B.ficha('app', q, B.answer(q, { platform: 'app', commit: false }));
+          return { n: f.length, max: B.FICHA_MAX, clima: f.indexOf('ECMWF via Open-Meteo, lida às') > 0 && f.indexOf('Maré agora') > 0 }; }""")
+    finally:
+        pg.ctx.close()
+    return conta('ficha com a previsão e a maré: o bloco «Clima e maré» inteiro, entre 3.000 e B.FICHA_MAX, e a decisão (i) (16.000 se passa de ~11.500, senão 12.000)',
+                 r['clima'] and 3000 <= r['n'] <= r['max'] and r['max'] == (16000 if r['n'] > 11500 else 12000) and r['n'] > 11500, r)
+
+
 # Revisão da 1b: o FAQ de segurança (faq-equipamentos.json) pergunta do jeito do cartão, e o cartão tem de abrir no aparelho. O C5 só media as frases que a
 # revisão lhe passou; esta percorre a `pergunta` e as `variantes` de TODOS os itens de emergência e de segurança do FAQ (cartões EM, MO-04, PO-04, EL-01,
 # EL-05, SF e EP): chave de segurança (sos, epirb, seafire, salvatagem, canal16, oleo, ou um trecho `base` com seguranca) e nunca a IA (§2.3).
@@ -1689,12 +1704,30 @@ SCRIPTS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-alertas.js', 'capit
 SCRIPTS_SEM_ALERTAS = ('capitao-dados.js', 'capitao-replay.js', 'capitao-telemetria.js', 'capitao-brain.js')
 
 
-def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None, relogio_ms=None):
+# A leitura do dia e a maré que o capitao-clima.js grava no app de verdade (capitao.clima.v1 e capitao.mare.v1), plantadas ANTES do script dele: a ficha da IA fica com o bloco «## Clima e maré»
+# inteiro (e não com a frase curta «sem conexão» que a página sem ele diz). Mesma forma do SEMEIA (dia no fuso do barco, `em` 2 h atrás, 48° = NE) e a série horária de 48 pontos.
+SEMENTE_CLIMA = """
+;(function () { try { var f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }), t0 = Math.floor(Date.now() / 3600e3) * 3600e3 - 6 * 3600e3, serie = [], k;
+  for (k = 0; k < 48; k++) serie.push([t0 + k * 3600e3, Math.round(40 * Math.sin(k / 2)) / 100]);
+  localStorage.setItem('capitao.clima.v1', JSON.stringify({ dia: f.format(new Date()), em: Date.now() - 2 * 3600e3, max: 27.4, min: 18.2, vento: 12.3, raj: 21.2, dir: 48, modelo: 'ECMWF' }));
+  localStorage.setItem('capitao.mare.v1', JSON.stringify({ em: Date.now() - 3600e3, serie: serie })); } catch (e) {} })();
+"""
+
+
+def pagina(b, extra='', scripts=SCRIPTS, caminho='base-conhecimento.json', fixo='60', muta=None, relogio_ms=None, clima=False):
     """Página da Main e da H2 (dados, replay, alertas, telemetria, cérebro) com o instante fixado em `fixo`. `extra` é acrescentado ao fim do capitao-dados.js (a
     injeção do teste do modo real e as fontes de leitura do SOS). `muta` = (trecho, troca): o cérebro mutante dos testes que provam que a conferência
     acusa. Em `caminho` com /SOS-/ a página é vazia e o replay de verdade sai sozinho. `relogio_ms`: o relógio do aparelho parado nesse instante ANTES de qualquer
-    script (o rodapé do capitao-dados.js já refaz os prazos nele)."""
+    script (o rodapé do capitao-dados.js já refaz os prazos nele). `clima`: a página da Main e da H2 de verdade, com o capitao-clima.js e a leitura do dia e a maré salvas
+    (a rede do Open-Meteo fica fora: a leitura é a plantada)."""
+    if clima:
+        extra = extra + SEMENTE_CLIMA
+        scripts = tuple(a for a in scripts if a != 'capitao-clima.js')
+        k = scripts.index('capitao-brain.js') if 'capitao-brain.js' in scripts else len(scripts)
+        scripts = scripts[:k] + ('capitao-clima.js',) + scripts[k:]
     ctx = b.new_context(service_workers='block')
+    if clima:
+        ctx.route('https://*.open-meteo.com/**', lambda rt: rt.abort('internetdisconnected'))
     ctx.route('**/capitao-dados.js', acrescenta(extra))
     if caminho.endswith('.html'):
         ctx.route('**/' + caminho, lambda rt: rt.fulfill(body=HTML_SOS, content_type='text/html; charset=utf-8'))
@@ -3491,6 +3524,16 @@ JS_FICHA = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay,
     return { x, hora: i.hora, fase: i.fase && i.fase.nome, txt: i.txt, f: B.ficha('app', '%s', a), r: B.ficha('app', '%s', m), tele: tel.text, sos: B.ficha('app', 'homem ao mar', sos), sosKey: sos.key }; }) }; }""" % (PERGUNTA_FICHA, PERGUNTA_META, PERGUNTA_FICHA, PERGUNTA_META)
 
 
+# os instantes da medida: os 150 do laço (a volta do contrato) e 4 instantes de cada uma das 576 voltas do dia (a posição pela rota muda a cada volta: o trecho, o destino e os alarmes mudam o texto; a
+# ficha resumida chega a 3.992 letras na volta 2, instante 100)
+ESPECS_FICHA = [str(x) for x in range(150)] + ['%d@%d' % (x, k) for k in range(576) for x in (0, 40, 100, 149)]
+# o tamanho da ficha nos instantes de ESPECS_FICHA (completa e resumida) e o bloco «## Clima e maré» dela; o diário do aparelho com 3 linhas longas (o pior caso do «## Diário de bordo» e das «## Pendências»)
+JS_FICHA_TAM = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false };
+  for (let k = 0; k < 3; k++) B.addDiario({ t: 'Pendência anotada no diário do aparelho ' + k + ': conferir a troca do filtro de óleo do gerador e o cabo da bomba de porão com o técnico, na marina, antes da próxima saída.' });
+  return { max: B.FICHA_MAX, xs: xs.map((x) => { R.fixar(String(x)); const a = B.answer('%s', op), m = B.answer('%s', op), f = B.ficha('app', '%s', a), r = B.ficha('app', '%s', m), i = f.indexOf('## Clima e maré'), c = f.slice(i, f.indexOf('\\n## ', i + 5));
+    return [f.length, r.length, { n: c.length, previsao: c.indexOf('ECMWF via Open-Meteo, lida às') > 0, mare: c.indexOf('Maré agora') > 0 }]; }) }; }""" % (PERGUNTA_FICHA, PERGUNTA_META, PERGUNTA_FICHA, PERGUNTA_META)
+
+
 def bloco_ficha(f, titulo):
     """O texto do bloco «## titulo» da ficha (sem o título), ou None."""
     m = re.search(r'^## ' + re.escape(titulo) + r'\n(.*?)(?:\n\n## |\Z)', f, re.S | re.M)
@@ -3523,10 +3566,21 @@ def grupo_ficha(b, muta, ped):
             rs = r['r']; tr = re.findall(r'^## (.*)$', rs, re.M); nr = bloco_ficha(rs, 'Navegação agora') or ''
             ped(rot + ': a ficha resumida leva SÓ uma linha de navegação (o estado, a hora, SOG, rumo, motores, alarmes) e fica abaixo de 4.000 letras', tr == ORDEM_RESUMIDA and len(rs) < 4000 and len([l for l in nr.split('\n') if l and not l.startswith('(Fonte')]) == 1 and ('Navegando às ' + r['hora']) in nr and r['txt']['sog'] in nr and r['txt']['rpm'] in nr, (tr, len(rs), nr[:120]))
             ped(rot + ': a ficha da resposta de emergência (sos) sai sem o quadro (nem a navegação) e com a emergência', r['sosKey'] == 'sos' and 'Navegação agora' not in re.findall(r'^## (.*)$', r['sos'], re.M) and not [k for k in ('Telemetria', 'Horímetros', 'Autonomia e consumo') if '## ' + k in r['sos']] and '## Emergência' in r['sos'] and 'Agora' in r['sos'], re.findall(r'^## (.*)$', r['sos'], re.M))
-        mx = max(tam)
-        # decisão (i) do CLAUDE.md: a ficha vai até 16.000 se passar de ~11.500 (o cliente e os Workers cortam em 12.000 até a Fase 6); a constante fica exposta em B.FICHA_MAX
-        ped('tamanho da ficha: entre 3.000 e B.FICHA_MAX (%d) nos %d instantes (máx. %d)' % (x['max'], len(tam), mx), all(3000 <= n <= x['max'] for n in tam), tam)
-        ped('tamanho da ficha (decisão (i)): B.FICHA_MAX é 16.000 se a ficha passa de ~11.500 e 12.000 se não (máx. %d)' % mx, x['max'] == (16000 if mx > 11500 else 12000), (x['max'], tam))
+        ped('tamanho da ficha (página sem o capitao-clima.js): nunca passa de B.FICHA_MAX (%d) nos %d instantes (máx. %d); a medida que vale é a de baixo, com a previsão e a maré' % (x['max'], len(tam), max(tam)), all(3000 <= n <= x['max'] for n in tam), tam)
+    finally:
+        pg.ctx.close()
+    # O tamanho que vale (decisão (i) do CLAUDE.md: a ficha vai até 16.000 se passar de ~11.500): o do app de verdade, com o capitao-clima.js e a leitura do dia e a maré salvas (o bloco
+    # «## Clima e maré» inteiro, não a frase curta «sem conexão» da página sem ele) e o diário do aparelho no pior caso (3 linhas longas, que também entram nas pendências), nos 150 instantes
+    # do laço e na pior segunda-feira (o nome do dia mais longo, na ficha resumida). A constante fica exposta em B.FICHA_MAX; o cliente (12.000) e os Workers sobem a 16.000 na Fase 6.
+    pg = pagina(b, muta=muta, clima=True, relogio_ms=RELOGIO_12H00)
+    try:
+        t = pg.evaluate(JS_FICHA_TAM, ESPECS_FICHA)
+        cheias, resumidas, climas = [r[0] for r in t['xs']], [r[1] for r in t['xs']], [r[2] for r in t['xs']]
+        mx = max(cheias)
+        ped('tamanho da ficha: a ficha completa tem o bloco «## Clima e maré» inteiro (previsão do dia com fonte e hora + maré), não a frase curta «sem conexão»', all(c['previsao'] and c['mare'] and c['n'] > 450 for c in climas), climas[:2])
+        ped('tamanho da ficha: entre 3.000 e B.FICHA_MAX (%d) nos %d instantes (as 576 voltas do dia), com a previsão, a maré e o diário do aparelho (máx. %d, mín. %d)' % (t['max'], len(cheias), mx, min(cheias)), all(3000 <= n <= t['max'] for n in cheias), (min(cheias), mx))
+        ped('tamanho da ficha (decisão (i)): B.FICHA_MAX é 16.000 se a ficha passa de ~11.500 e 12.000 se não (máx. %d com a previsão e a maré)' % mx, t['max'] == (16000 if mx > 11500 else 12000) and mx > 11500, (t['max'], mx))
+        ped('tamanho da ficha: a ficha resumida (pergunta pura sobre o app) fica abaixo de 4.000 letras em todos eles, numa segunda-feira (o nome do dia mais longo; máx. %d)' % max(resumidas), max(resumidas) < 4000 and min(resumidas) > 1500, (min(resumidas), max(resumidas)))
     finally:
         pg.ctx.close()
     # o selo e o aviso da flag antiga nunca entram na ficha (nem sem a simulação); a sessão do convidado
@@ -3615,6 +3669,23 @@ def grupo_termos(b, muta, ped):
         ped('TERMOS: nenhuma frase da lista «passa» casa regex alguma (fora a ANEXO)', not r['passa'], r['passa'][:3])
         corpo = pg.evaluate("() => fetch('capitao-brain.js').then((r) => r.text())")   # (o texto que a página recebe: com o mutante, o mutante)
         ped('TERMOS: o cérebro não usa lookbehind (iOS < 16.4)', '(?<' not in corpo, '(?<')
+        # a varredura dos 150 instantes do laço (e de 3 instantes de 72 das 576 voltas do dia): os 7 termos que valem para texto de bordo (a ANEXO é do anexo) em cada medida do inst.txt, no texto, na fonte,
+        # na fala e na fala lida de cada pergunta (as 50 chaves e as extras da voz) e na ficha, mais a coordenada (§2.8: só na tela; o texto da resposta a leva) no inst.txt, na fala e na ficha. Um número
+        # do quadro que tropeça numa regex (a tendência +551 rpm era o prefixo de telefone +55 da PESSOAIS) só aparece em UM instante: a varredura de 2 instantes não pega.
+        achados = pg.evaluate("""([xs, qs]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, out = [], RX = {};
+          Object.keys(B.TERMOS_FONTES).forEach((k) => { if (k !== 'ANEXO') RX[k] = new RegExp(B.TERMOS_FONTES[k].src, B.TERMOS_FONTES[k].flags); });
+          const ach = (x, onde, t, coord) => { if (typeof t !== 'string') return; Object.keys(RX).forEach((k) => { const m = RX[k].exec(t); if (m) out.push([x, onde, k, m[0], t.slice(Math.max(0, m.index - 30), m.index + 40)]); });
+            if (coord && B.semCoord(t) !== t) out.push([x, onde, 'COORDENADA', '', t.slice(0, 70)]); };   // (§2.8, a regra do R_COORD do gerador: coordenada só na tela; nenhuma no inst.txt, na fala nem na ficha)
+          xs.forEach((x) => { R.fixar(String(x)); const i = B.instante();
+            Object.keys(i.txt).forEach((k) => ach(x, 'txt.' + k, i.txt[k], true));
+            qs.forEach((q) => { const a = B.answer(q, op), f = B.falaCurta(a); ach(x, 'texto «' + q + '»', a.text, false); ach(x, 'fonte «' + q + '»', a.src, false); ach(x, 'fala «' + q + '»', f, true); ach(x, 'lida «' + q + '»', B.falavel(f), true); });
+            ach(x, 'ficha', B.ficha('app', 'telemetria', B.answer('telemetria', op)), true); });
+          return out; }""", [ESPECS_FICHA[:150] + ['%d@%d' % (x, k) for k in range(0, 576, 8) for x in (0, 62, 100)], list(PERGUNTAS_VOZ.values())])
+        ped('TERMOS: nos 150 instantes do laço e em 216 outros (as voltas do dia) nenhum dos 7 termos nem coordenada casa no inst.txt, nas respostas (texto, fonte, fala e fala lida) das %d perguntas nem na ficha' % len(PERGUNTAS_VOZ), not achados, achados[:3])
+        t62 = pg.evaluate("""() => { const R = window.CapitaoReplay, B = window.CapitaoBrain; R.fixar('62'); const i = B.instante(), a = B.answer('telemetria agora', { platform: 'app', commit: false });
+          R.fixar('60'); const j = B.instante(); return { tend: i.txt.tend, bb: i.tend.motor_bb_rpm, pessoais: B.TERMOS.PESSOAIS.test(i.txt.tend), tela: a.text.indexOf(i.txt.tend) > 0, j: j.txt.tend }; }""")
+        ped('TERMOS: a tendência de 12:01:02 (rpm BB +551) leva um espaço fino depois do sinal, a regex PESSOAIS (+55 e um dígito = telefone) não casa e a resposta «telemetria» diz o mesmo texto; o molde do contrato (+644) não muda',
+            t62['bb'] == 551 and 'rpm BB +\u2009551 · BE +548' in t62['tend'] and not t62['pessoais'] and t62['tela'] and t62['j'].startswith('últimos 30 s: rpm BB +644 · BE +648 · '), t62)
     finally:
         pg.ctx.close()
 
@@ -3627,7 +3698,10 @@ GRUPOS_3A['termos'] = grupo_termos
 # do guia, o cadastro sem quadro (áudio, guias), a saudação, o diagnóstico, os checklists e o registro. As outras são de dado de bordo: a fala traz o número e a hora do instante.
 VOZ_SO_FRASE = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'checklist', 'checklistChegada', 'sobreDados', 'foraBarco', 'fallback', 'mare', 'clima',
                 'contatos', 'manual', 'audio', 'diario')
-VOZ_COM_HORA = [k for k in PERGUNTA_CHAVE if k not in VOZ_SO_FRASE]
+# perguntas que caem numa chave que já tem outra pergunta acima, mas com a 1ª linha própria (a chave `eta` abre com «Percorrido desde as 07:00: …» na pergunta de distância)
+VOZ_EXTRA = {'etaPercorrido': 'quantas milhas percorremos hoje?', 'etaProximoPonto': 'qual o próximo waypoint?', 'situacaoAgora': 'situação agora'}
+PERGUNTAS_VOZ = dict(PERGUNTA_CHAVE, **VOZ_EXTRA)
+VOZ_COM_HORA = [k for k in PERGUNTAS_VOZ if k not in VOZ_SO_FRASE]
 # as siglas que a fala diz por extenso (F32): nenhuma pode sobrar na fala de uma resposta
 SIGLAS_FALADAS = ('BB', 'BE', 'SOG', 'COG', 'STW', 'TWS', 'TWA', 'TWD', 'AWA', 'AWS', 'HDG', 'DPT', 'ETA', 'MOB', 'EPIRB', 'NMEA', 'RPM', 'STBY')
 FALAVEL_CASOS = [
@@ -3640,6 +3714,11 @@ FALAVEL_CASOS = [
     ('DPT 10,8 m', 'profundidade 10 vírgula 8 metros'), ('STW 17,8 nós', 'velocidade na água 17 vírgula 8 nós'), ('ETA 12:03', 'chegada prevista 12 horas e 3 minutos'),
     ('COG 207°', 'rumo sobre o fundo 207 graus'), ('SOG 18,1 nós', 'velocidade sobre o fundo 18 vírgula 1 nós'), ('1.017,1 hPa', '1.017 vírgula 1 hectopascais'), ('1 hPa', '1 hectopascal'),
     ('27,79 V', '27 vírgula 79 volts'), ('2.049 rpm', '2.049 rotações por minuto'), ('rpm BB +644 · BE +648', 'rotações por minuto bombordo mais 644, boreste mais 648'),
+    # a hora seguida de «:» de pontuação (a 1ª linha da resposta «quantas milhas percorremos hoje?») é lida; o «:» da relação 3:00:15:20 não é hora
+    ('desde as 07:00: 65,1 mn', 'desde as 7 horas: 65 vírgula 1 milhas náuticas'), ('Percorrido desde as 07:00: 65,1 mn · velocidade 18,1 nós — 12:01:00.', 'Percorrido desde as 7 horas: 65 vírgula 1 milhas náuticas, velocidade 18 vírgula 1 nós, às 12 horas e 1 minuto.'),
+    ('sábado 07:00: tudo', 'sábado 7 horas: tudo'), ('às 07:00:10: ok', 'às 7 horas e 10 segundos: ok'), ('das 07:00 às 12:30: fora', 'das 7 horas às 12 horas e 30 minutos: fora'),
+    # o sinal «+» e o número separados por um espaço fino (+ 551 rpm: o «+55» colado a um dígito é o prefixo de telefone da regex PESSOAIS) leem igual ao +644
+    ('rpm BB +\u2009551 · BE +548', 'rotações por minuto bombordo mais 551, boreste mais 548'),
     ('diesel −0,5 L', 'diesel menos 0 vírgula 5 litros'), ('18 kts', '18 nós'), ('18 KTS', '18 nós'), ('vento em KT', 'vento em nós'), ('5 kn', '5 nós'), ('BB 2.049 · BE 2.038 rpm', 'bombordo 2.049, boreste 2.038 rotações por minuto'),
 ]
 JS_VOZ_UNIDADE = "(cs) => cs.map(([e]) => window.CapitaoBrain.falavel(e))"
@@ -3656,7 +3735,7 @@ def grupo_voz(b, muta, ped):
         ruins = [(e, o, esp) for (e, esp), o in zip(FALAVEL_CASOS, r) if o != esp]
         ped('voz (F32): %d leituras de sigla, unidade e hora (EPIRB = épirbi, MOB = móbi, TWS, AWA, HDG, DPT, STW, ETA, COG, hectopascal, volts, rotações por minuto, 12:01:05)' % len(FALAVEL_CASOS), not ruins, ruins[:3])
         # a fala de cada chave, em dois instantes (a hora e os números mudam)
-        x = pg.evaluate(JS_VOZ_CHAVES, [['60', '105'], PERGUNTA_CHAVE])
+        x = pg.evaluate(JS_VOZ_CHAVES, [['60', '105'], PERGUNTAS_VOZ])
         for inst in x:
             for k, key, fala, fal, texto in inst['r']:
                 rot = 'voz t=%s «%s»' % (inst['x'], k)
@@ -3681,24 +3760,47 @@ def grupo_voz(b, muta, ped):
         ped('voz: a tela copia a resposta (Object.assign) antes de falar e a fala ainda diz a hora do instante dela', r2['copia'].count('12:01:00') == 1, r2['copia'])
     finally:
         pg.ctx.close()
-    # a trava de voz: só com a simulação; troca o termo, não suprime nem encurta; as chaves de FALA_INTEIRA saem sempre inteiras
+    # a trava de voz: só com a simulação; troca o termo (a palavra inteira, nunca um pedaço colado: «dado de bordoos»), não suprime nem encurta; as chaves de FALA_INTEIRA saem sempre inteiras
     ENTRADAS = ["Os dados são fictícios e o gerador está SEM LEITURA. Veja o guia DEMO do motor.", "Estes valores não são reais, mas a pressão do óleo é 3,9 bar. Manual: MANUAL NO DRIVE.",
                 "Na demonstração o MMSI é fictício; o rpm é 2.049.", "O dado SEM DADOS do porão (agenda de demonstração) vem depois.", "Os dados são fictícios e simulados."]
+    # a fala (falaCurta, chave `ia`: a 1ª frase e a seguinte, sem parênteses) e a trava direta (travaVoz) de cada entrada, letra por letra
+    FALA_TRAVA = ["Os dados são de bordo e o gerador está sem informação. Veja o guia de bordo do motor.", "Estes valores são de bordo, mas a pressão do óleo é 3,9 bar. Manual: no guia de bordo.",
+                  "A bordo o MMSI é de bordo; o rpm é 2.049.", "O dado sem informação do porão vem depois.", "Os dados são de bordo."]
+    DIRETA_TRAVA = [FALA_TRAVA[0], FALA_TRAVA[1], FALA_TRAVA[2], "O dado sem informação do porão (agenda de bordo) vem depois.", FALA_TRAVA[4]]
+    # cada ramo da troca (a AUTENTICIDADE e os ROTULOS do §3): o substantivo, o verbo, a preposição e a pontuação ficam; só o termo, inteiro, vira «de bordo» (que não varia com o gênero nem o número)
+    TRAVA_CASOS = [('As leituras simuladas mudam a cada segundo.', 'As leituras de bordo mudam a cada segundo.'), ('Esse número inventado não vale.', 'Esse número de bordo não vale.'),
+                   ('A telemetria simulada mostra 2.050 rpm.', 'A telemetria de bordo mostra 2.050 rpm.'), ('Esse valor é inventado.', 'Esse valor é de bordo.'), ('valores inventados', 'valores de bordo'),
+                   ('São dados de demonstração', 'São dados de bordo'), ('São dados de teste', 'São dados de bordo'), ('a navegação foi simulada', 'a navegação foi de bordo'), ('rota simulada do barco', 'rota de bordo do barco'),
+                   ('o barco é fictício', 'o barco é de bordo'), ('esta embarcação é de demonstração', 'esta embarcação é de bordo'), ('dados fictícios, simulados e inventados', 'dados de bordo'),
+                   ('Isto é uma simulação de navegação.', 'Isto é de bordo de navegação.'), ('é uma simulação', 'é de bordo'), ('foi demonstração', 'foi de bordo'),
+                   ('estes valores não são reais', 'estes valores são de bordo'), ('Os dados não são de verdade.', 'Os dados são de bordo.'),
+                   ('Na demonstração, ok', 'A bordo, ok'), ('na demonstração', 'a bordo'), ('a rota da demonstração', 'a rota de bordo'), ('modo demonstração', 'modo de bordo'), ('Modo de simulação ligado', 'Modo de bordo ligado'),
+                   ('(agenda de demonstração)', '(agenda de bordo)'), ('embarcação Capitão IA (demonstração)', 'embarcação Capitão IA de bordo'),
+                   ('Guia de bordo de demonstração. Veja o resto.', 'Guia de bordo. Veja o resto.'), ('MMSI fictício de demonstração', 'MMSI de bordo'),
+                   ('SEM DADOS', 'sem informação'), ('SEM LEITURA do ferro', 'sem informação do ferro'), ('MANUAL NO DRIVE', 'no guia de bordo'), ('snapshot DEMO', 'snapshot de bordo'), ('o guia DEMO do motor', 'o guia de bordo do motor'),
+                   ('A pressão do óleo é 3,9 bar.', 'A pressão do óleo é 3,9 bar.'), ('Dados de bordo às 12:01:00.', 'Dados de bordo às 12:01:00.')]
+    casos = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'proibidos-casos.json'), encoding='utf-8'))['barra']
+    corpus = casos['AUTENTICIDADE'] + casos['ROTULOS']
     for nome, extra in (('simulação', ''), ('modo real', SEM_SIMULACAO)):
         pg = pagina(b, extra=extra, muta=muta)
         try:
-            t = pg.evaluate("""(es) => { const B = window.CapitaoBrain; return { ia: es.map((e) => [e, B.falaCurta({ key: 'ia', text: e }), B.travaVoz(e)]),
-              inteira: ['sos', 'oleo', 'epirb', 'seafire'].map((k) => [k, B.falaCurta({ key: k, text: es[0] })]), base: B.falaCurta({ key: 'base', text: es[0], seguranca: true }), tem: typeof B.travaVoz, idem: B.travaVoz(es[3]) }; }""", ENTRADAS)
+            t = pg.evaluate("""([es, cs, corpus]) => { const B = window.CapitaoBrain, RX = ['ROTULOS', 'AUTENTICIDADE'].map((k) => new RegExp(B.TERMOS_FONTES[k].src, B.TERMOS_FONTES[k].flags));
+              return { ia: es.map((e) => [e, B.falaCurta({ key: 'ia', text: e }), B.travaVoz(e)]), casos: cs.map(([e]) => B.travaVoz(e)),
+              corpus: corpus.map((e) => { const o = B.travaVoz(e); return [e, o, RX.some((r) => r.test(o)), B.travaVoz(o) === o]; }),
+              inteira: ['sos', 'oleo', 'epirb', 'seafire'].map((k) => [k, B.falaCurta({ key: k, text: es[0] })]), base: B.falaCurta({ key: 'base', text: es[0], seguranca: true }), tem: typeof B.travaVoz, idem: B.travaVoz(es[3]) }; }""", [ENTRADAS, TRAVA_CASOS, corpus])
             if nome == 'simulação':
-                ped('trava de voz (%s): troca o termo dos ROTULOS e da AUTENTICIDADE e a frase fica inteira (as palavras que não são o termo continuam)' % nome,
-                    all(not RX['ROTULOS'].search(f) and not RX['AUTENTICIDADE'].search(f) and not RX['ROTULOS'].search(tv) and not RX['AUTENTICIDADE'].search(tv) and len(f) >= len(e) - 40 and f.count('.') >= e.count('.') - 0
-                        for e, f, tv in t['ia']) and 'gerador' in t['ia'][0][1] and 'guia' in t['ia'][0][1] and '3,9 bar' in t['ia'][1][1] and '2.049' in t['ia'][2][1] and 'porão' in t['ia'][3][1]
-                    and 'dado de bordo' in t['ia'][0][1] and 'sem informação' in t['ia'][0][1] and 'de bordo' in t['ia'][1][1] and 'no guia de bordo' in t['ia'][1][1] and 'de bordo' in t['ia'][2][1] and 'sem informação' in t['ia'][3][1], t['ia'])
+                ped('trava de voz (%s): a fala das 5 entradas troca o termo e a frase sai inteira, letra por letra (nada de «dado de bordoos», nenhuma sílaba solta, o substantivo e o verbo ficam)' % nome, [f for e, f, tv in t['ia']] == FALA_TRAVA, [f for e, f, tv in t['ia']])
+                ped('trava de voz (%s): a trava direta das 5 entradas (com o parêntese que a fala tira)' % nome, [tv for e, f, tv in t['ia']] == DIRETA_TRAVA, [tv for e, f, tv in t['ia']])
+                ruins = [(e, o, esp) for (e, esp), o in zip(TRAVA_CASOS, t['casos']) if o != esp]
+                ped('trava de voz (%s): %d trocas, uma por ramo (adjetivo concordando, «de demonstração», «de teste», «é uma simulação», «não são reais», «na/da demonstração», «modo demo», «(demonstração)», ROTULOS, duplicata «de bordo de bordo»), letra por letra' % (nome, len(TRAVA_CASOS)), not ruins, ruins[:3])
+                ruins = [(e, o) for e, o, resta, idem in t['corpus'] if resta or not idem or re.search(r'bordo[A-Za-zÀ-ÿ]|[A-Za-zÀ-ÿ]bordo|\s\s|^\s*$', o)]
+                ped('trava de voz (%s): nas %d frases do §3 (AUTENTICIDADE e ROTULOS) nenhum termo resta, o resto da palavra nunca fica colado em «bordo», não sobra espaço dobrado e a troca é idempotente' % (nome, len(t['corpus'])), not ruins, ruins[:3])
                 ped('trava de voz (%s): as chaves de FALA_INTEIRA saem sempre inteiras, mesmo com o termo no texto' % nome, all(f == ENTRADAS[0] for k, f in t['inteira']), t['inteira'])
                 ped('trava de voz (%s): o trecho de segurança da base também passa pela trava' % nome, not RX['ROTULOS'].search(t['base']) and not RX['AUTENTICIDADE'].search(t['base']), t['base'])
                 ped('trava de voz (%s): idempotente (trocar o que já foi trocado não muda)' % nome, pg.evaluate("(e) => window.CapitaoBrain.travaVoz(window.CapitaoBrain.travaVoz(e)) === window.CapitaoBrain.travaVoz(e)", ENTRADAS[0]), '')
             else:
-                ped('trava de voz (%s): com simulacao false o termo fica como está (a regra «Nada inventado» volta)' % nome, all(tv == e for e, f, tv in t['ia']) and 'SEM LEITURA' in t['ia'][0][1] and 'DEMO' in t['ia'][0][1] and 'fictícios' in t['ia'][0][1] and all(f == ENTRADAS[0] for k, f in t['inteira']), t['ia'][:2])
+                ped('trava de voz (%s): com simulacao false o termo fica como está (a regra «Nada inventado» volta)' % nome, all(tv == e for e, f, tv in t['ia']) and all(o == e for (e, esp), o in zip(TRAVA_CASOS, t['casos'])) and all(o == e for e, o, resta, idem in t['corpus'])
+                    and 'SEM LEITURA' in t['ia'][0][1] and 'DEMO' in t['ia'][0][1] and 'fictícios' in t['ia'][0][1] and all(f == ENTRADAS[0] for k, f in t['inteira']), t['ia'][:2])
         finally:
             pg.ctx.close()
     # F31: o nome de equipamento que o ditado erra — a tabela é a dos equipamentos DESTA embarcação (D.equipamentos)
@@ -3750,6 +3852,13 @@ def grupo_voz(b, muta, ped):
           B.limpaConversa(); B.conversa('como ligar?', 'Vou ligar agora.'); o.semPergunta = res(B.answer('o gerador', op));
           B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); B.limpaConversa(); o.nova = res(B.answer('o gerador', op));
           B.limpaConversa(); B.conversa('socorro!', 'Onde?'); o.emergencia = res(B.answer('o gerador', op));
+          // a emergência NO MEIO (a pergunta «como ligar?» foi respondida com «Qual equipamento?», depois vem a emergência e só então a fala «o gerador»): o contexto de antes não volta
+          const meio = (emerg, o2) => { B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); const e = B.answer(emerg, o2); return [e.key, res(B.answer('o gerador', op))]; };
+          o.meioSos = meio('fogo na praça de máquinas, mayday', op); o.meioOleo = meio('alarme de óleo acendeu', op); o.meioEpirb = meio('onde fica o epirb', op); o.meioSemGravar = meio('mayday, homem ao mar', { platform: 'app', commit: false });
+          o.meioCanal = meio('roteiro do canal 16', op);
+          B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); B.conversa('mayday, homem ao mar', 'Onde você está?'); o.meioIA = res(B.answer('o gerador', op));   // (a tela conta a emergência com B.conversa)
+          B.limpaConversa(); B.conversa('onde fica o epirb', 'Qual EPIRB?'); o.contaEpirb = res(B.answer('o gerador', op)); B.limpaConversa(); B.conversa('roteiro do canal 16', 'Qual canal?'); o.contaCanal = res(B.answer('o gerador', op));
+          B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); B.answer('que horas são?', op); o.meioComum = res(B.answer('o gerador', op));   // (uma resposta comum no meio também troca o contexto, sem continuar)
           B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); o.semGravar = res(B.answer('o gerador', { platform: 'app', commit: false }));
           B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); const orig = Date.now; Date.now = () => orig() + 11 * 60e3; o.venceu = res(B.answer('o gerador', op)); Date.now = orig;
           B.limpaConversa(); B.conversa('como ligar?', 'Qual equipamento você quer ligar?'); B.answer('o gerador', op); o.consome = res(B.answer('o gerador', op));
@@ -3761,6 +3870,9 @@ def grupo_voz(b, muta, ped):
         ped('contexto (F31): fala com conteúdo («o gerador está desligado»), correção («não, o gerador»), «e o gerador» e pergunta («o gerador?») não continuam', all(c[k][0] != 'base' for k in ('conteudo', 'correcao', 'e', 'pergunta')), [(k, c[k][0]) for k in ('conteudo', 'correcao', 'e', 'pergunta')])
         ped('contexto (F31): sem pergunta na resposta anterior, depois do NOVA, com o app sem gravar (commit false), passados 10 min e em emergência, a fala não continua', all(c[k][0] == 'gerador' for k in ('semPergunta', 'nova', 'emergencia', 'venceu')) and c['semGravar'][0] == 'gerador', {k: c[k][0] for k in ('semPergunta', 'nova', 'emergencia', 'semGravar', 'venceu')})
         ped('contexto (F31): a continuação vale uma vez (a resposta local não termina em pergunta) e a resposta local nunca abre a continuação', c['consome'][0] == 'gerador' and c['local'][0] == 'gerador', (c['consome'][0], c['local'][0]))
+        ped('contexto (F31): uma emergência entre a pergunta e a fala (mayday, alarme de óleo, EPIRB, canal 16, com ou sem gravar, ou contada pela tela) encerra o contexto: «o gerador» é a resposta pronta do gerador',
+            [c[k][0] for k in ('meioSos', 'meioOleo', 'meioEpirb', 'meioSemGravar', 'meioCanal')] == ['sos', 'oleo', 'epirb', 'sos', 'canal16'] and all(c[k][1][0] == 'gerador' for k in ('meioSos', 'meioOleo', 'meioEpirb', 'meioSemGravar', 'meioCanal'))
+            and all(c[k][0] == 'gerador' for k in ('meioIA', 'meioComum', 'contaEpirb', 'contaCanal')), {k: c[k] for k in ('meioSos', 'meioOleo', 'meioEpirb', 'meioSemGravar', 'meioCanal', 'meioIA', 'meioComum', 'contaEpirb', 'contaCanal')})
     finally:
         pg.ctx.close()
     # o SOS: a fala, a trava e a correção não leem o D.simulacao nem o D.equipamentos (CONTRATO §1.3), e a correção nem age
@@ -4326,8 +4438,8 @@ MUTANTES_3D = [
     ('a ficha do modo real leva as linhas com sim: true (semSim sempre falso)', r"semSim = !EM_SOS && D.simulacao === false;", r"semSim = false;", ('ficha',)),
     ('a ficha da simulação tira as linhas com sim: true (o filtro sempre ligado)', r"return ctx && ctx.semSim ? v.filter(function (e) { return e.sim !== true; }) : v; }", r"return v.filter(function (e) { return e.sim !== true; }); }", ('ficha',)),
     ('o registro perde as linhas sim: true ao gravar (o addDiario relê o diário filtrado)', r"function addDiario1(e) { var n = now(); var list = loadDiario();", r"function addDiario1(e) { var n = now(); var list = lerDiario({ semSim: D.simulacao === false });", ('ficha',)),
-    ('o teto da ficha sobe sem a decisão (i) (16.000 com a ficha abaixo de 11.500)', r"var FICHA_MAX = 12000;", r"var FICHA_MAX = 16000;", ('ficha',)),
-    ('o teto da ficha cai abaixo da ficha (8.000)', r"var FICHA_MAX = 12000;", r"var FICHA_MAX = 8000;", ('ficha',)),
+    ('o teto da ficha fica nos 12.000 do cliente (a ficha com a previsão e a maré passa de 11.500: a decisão (i) manda 16.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 12000;", ('ficha',)),
+    ('o teto da ficha cai abaixo da ficha (8.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 8000;", ('ficha',)),
     ('o cérebro não exporta o teto da ficha', r"FICHA_MAX: FICHA_MAX,", r"", ('ficha',)),
     ('a ficha completa não é cortada pela fala do sos (a resposta de emergência sem a guarda do EMERG)', r"function emerg(a) { return !!a && typeof a === 'object' && EMERG[a.key] === 1; }", r"function emerg(a) { return false; }", ('ficha', 'emerg')),
     # —— semCoord (§2.8) ——
@@ -4386,12 +4498,26 @@ MUTANTES_3D_VOZ = [
     for (n = 0; n < 4; n++) {""", ('voz',)),
     ('a trava de voz age também sem a simulação', """    if (!sim()) return s;
     for (n = 0; n < 4; n++) {""", """    for (n = 0; n < 4; n++) {""", ('voz',)),
-    ('a trava de voz não troca os ROTULOS', r"['ROTULOS', function (m) { return /^SEM/.test(m) ? 'sem informação' : /^MANUAL/.test(m) ? 'no guia de bordo' : 'de bordo'; }],", r"", ('voz',)),
-    ('a trava de voz não troca a AUTENTICIDADE', r"['AUTENTICIDADE', function (m) { return (/^[^A-Za-zÀ-ÿ(]/.test(m) ? m.charAt(0) : '') + (/^\(demonstra/i.test(m) ? 'de bordo' : 'dado de bordo'); }]]", r"]", ('voz',)),
-    ('a trava de voz suprime o termo (troca por nada) em vez de trocar', r"(/^\(demonstra/i.test(m) ? 'de bordo' : 'dado de bordo'); }]]", r"''); }]]", ('voz',)),
+    ('a trava de voz não troca os ROTULOS', r"function (m) { return /^SEM/.test(m) ? 'sem informação' : /^MANUAL/.test(m) ? 'no guia de bordo' : VOZ_NEUTRO; }],", r"function (m) { return m; }],", ('voz',)),
+    ('a trava de voz tira o SEM DADOS em vez de trocar por «sem informação»', r"return /^SEM/.test(m) ? 'sem informação' :", r"return /^SEM/.test(m) ? '' :", ('voz',)),
+    ('a trava de voz não troca a AUTENTICIDADE', r"'g' + TERMOS_FONTES.AUTENTICIDADE.flags), neutraAutenticidade]];", r"'g' + TERMOS_FONTES.AUTENTICIDADE.flags), function (m) { return m; }]];", ('voz',)),
+    ('a trava de voz suprime o termo (troca por nada) em vez de trocar', r"'g' + TERMOS_FONTES.AUTENTICIDADE.flags), neutraAutenticidade]];", r"'g' + TERMOS_FONTES.AUTENTICIDADE.flags), function (m) { return ''; }]];", ('voz',)),
     ('a trava de voz também filtra as chaves de FALA_INTEIRA', """    if (a && typeof a === 'object' && a.key && FALA_INTEIRA[a.key] === 1) return t;
     return travaVoz(""", """    return travaVoz(""", ('voz',)),
     ('a trava de voz não repete a troca (um termo novo nascido da troca fica)', r"    for (n = 0; n < 4; n++) {", r"    for (n = 0; n < 1; n++) {", ('voz',)),
+    # a palavra inteira, o substantivo e o caractere de antes do termo ficam (a P3D deixava «dado de bordoos»)
+    ('a trava troca só o radical do adjetivo (o resto da palavra fica colado: «bordoos»)', r"AUTENTICIDADE.src + ')[' + VOZ_LET + ']*(?:\\s*(?:,|e|ou)", r"AUTENTICIDADE.src + ')(?:\\s*(?:,|e|ou)", ('voz',)),
+    ('a trava come o substantivo (a troca vale para o casamento todo: «dado de bordo»)', r"    return ini + (x ? r.slice(0, x.index) : '') + VOZ_NEUTRO;", r"    return ini + VOZ_NEUTRO;", ('voz',)),
+    ('a trava come o caractere que antecede o termo (o espaço: «Osdados»)', r"    ini = /^[^A-Za-zÀ-ÿ]/.test(m) ? m.charAt(0) : ''; r = m.slice(ini.length);", r"    ini = ''; r = m.slice(/^[^A-Za-zÀ-ÿ]/.test(m) ? 1 : 0);", ('voz',)),
+    ('a trava come o verbo de «é uma simulação» («Isto de bordo»)', r"(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;", r"(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + VOZ_NEUTRO;", ('voz',)),
+    ('a trava inverte «não são reais» sem trocar o verbo (o «não» fica)', r"    if ((x = /^n[ãa]o (é|são) /i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;", r"", ('voz',)),
+    ('a trava troca «na demonstração» por «de bordo» (a preposição vira a mesma)', r"vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1])", r"vozMaiuscula(VOZ_NEUTRO, x[1])", ('voz',)),
+    ('a trava perde a maiúscula do começo da frase («a bordo»)', r"return ini + vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1]);", r"return ini + (/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo');", ('voz',)),
+    ('a trava não troca o «modo demo» pelo «modo de bordo» (o termo fica sem o «modo»)', r"return ini + r.slice(0, 4) + ' ' + VOZ_NEUTRO;", r"return ini + VOZ_NEUTRO;", ('voz',)),
+    ('a trava deixa o parêntese solto no «(demonstração)»', r"    if (/^\(demonstra/i.test(m)) return VOZ_NEUTRO;", r"", ('voz',)),
+    ('a trava não junta os adjetivos coordenados («fictícios e simulados»: o 2º fica)', r"AUTENTICIDADE.src + ')[' + VOZ_LET + ']*(?:\\s*(?:,|e|ou)\\s+' + VOZ_ADJ + ')*'", r"AUTENTICIDADE.src + ')[' + VOZ_LET + ']*'", ('voz',)),
+    ('a trava não junta «de bordo de bordo»', r"    return s === orig ? s : s.replace(/\bde bordo(?:\s+(?:e\s+)?de bordo)+/gi, VOZ_NEUTRO);", r"    return s;", ('voz',)),
+    ('a trava troca «de teste» sem o «dados»', r"    if ((x = /^(dados) de teste$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;", r"", ('voz',)),
     ('o cérebro não exporta a trava de voz', r"falaCurta: falaCurta, travaVoz: travaVoz,", r"falaCurta: falaCurta,", ('voz',)),
     # —— F31: o ditado ——
     ('o ditado não corrige o nome do equipamento', r"function atual() { return corrigeVoz((texto + ' ' + sessao).replace(/\s+/g, ' ').trim()); }", r"function atual() { return (texto + ' ' + sessao).replace(/\s+/g, ' ').trim(); }", ('voz',)),
@@ -4411,11 +4537,19 @@ MUTANTES_3D_VOZ = [
     ('a continuação vale sem a pergunta na resposta anterior', r"if (EM_SOS || !CONV.q || !CONV.pergunta ||", r"if (EM_SOS || !CONV.q ||", ('voz',)),
     ('a continuação pega fala com conteúdo («o gerador está desligado»)', r"|| !soNomeia(n) || emergencia(n)", r"|| emergencia(n)", ('voz',)),
     ('a continuação vale com o app sem gravar (commit false)', r"(ctx && (ctx.id || ctx.commit === false))) return null;", r"(ctx && ctx.id)) return null;", ('voz',)),
-    ('a continuação vale depois de uma emergência', r"if (!GENERICAS[rq] || EMERG[rr] ||", r"if (!GENERICAS[rq] ||", ('voz',)),
+    ('a continuação vale depois de uma emergência (a pergunta de emergência nunca é emergência para o contexto)', r"function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || EMERG[route(q)] === 1); }", r"function perguntaEmerg(q) { return false; }", ('voz',)),
+    ('a pergunta do EPIRB, do Seafire e do canal 16 não é emergência para o contexto (só a lista SOS e o óleo)', r"|| oleo(n) === 1 || EMERG[route(q)] === 1); }", r"|| oleo(n) === 1); }", ('voz',)),
+    ('a resposta de emergência não encerra o contexto de antes (a CONV da pergunta anterior fica)', """        if (emerg(a)) limpaConversa();
+        else if (!ctx || ctx.commit !== false) CONV = {""", """        if (!emerg(a) && (!ctx || ctx.commit !== false)) CONV = {""", ('voz',)),
     ('a continuação vale com a correção («não, o gerador»)', r"/^ (?:e|nao)(?= )/.test(n) ||", r"", ('voz',)),
     ('a continuação vale depois do NOVA (o limpaConversa não zera)', r"function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1 }; }", r"function limpaConversa() { }", ('voz',)),
     ('a continuação pega a pergunta («o gerador?»)', r"|| /\?\s*$/.test(String(q)) ||", r"||", ('voz',)),
     ('o cérebro não exporta o contexto da conversa', r"corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa,", r"corrigeVoz: corrigeVoz,", ('voz',)),
+    # —— revisão: a hora seguida de «:» de pontuação e o +55 da tendência ——
+    ('a hora seguida de «:» de pontuação não é lida («desde as 07:00: 65 milhas» fica com "07:00:")', r"(?:min(?![A-Za-z]))?(?!\d|:\d|\.\d)/g, function (m, a, h, mi) {", r"(?:min(?![A-Za-z]))?(?![\d:]|\.\d)/g, function (m, a, h, mi) {", ('voz',)),
+    ('a relação 3:00:15:20 é lida como hora (o «:» seguido de dígito deixa de proteger)', r"(?:min(?![A-Za-z]))?(?!\d|:\d|\.\d)/g, function (m, a, h, mi) {", r"(?:min(?![A-Za-z]))?(?!\d|\.\d)/g, function (m, a, h, mi) {", ('voz',)),
+    ('o +551 da tendência sai sem o espaço fino (o prefixo de telefone +55 da PESSOAIS)', r"'+' + (/^55\d/.test(n) ? '\u2009' : '')", r"'+' + ''", ('termos',)),
+    ('a tendência põe o espaço fino depois de TODO + (o +644 do contrato muda)', r"'+' + (/^55\d/.test(n) ? '\u2009' : '')", r"'+\u2009'", ('termos', 'forma')),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3D_VOZ
 
