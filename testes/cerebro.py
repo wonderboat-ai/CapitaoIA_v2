@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -6103,6 +6103,264 @@ MUTANTES_3E_REV5 = mutantes_ctx_baliza() + [
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_REV5
 
+
+
+# ——————————————— Fase 3, P3F: registro, propostas A CONFIRMAR, relato, registro pelo chat, contexto e foto com texto ———————————————
+# (PARIDADE F14, F16, F17, F18, F36; CONTRATO §1.25; PROMPT §2.9; CLAUDE.md 14.) Só o cérebro: as telas (os botões CONFIRMAR, ✎, RECUSAR, DESFAZER, o selo «apresentação», a
+# lista A CONFIRMAR) são da Fase 4. O registro só cresce: confirmar = 1 linha, recusar = 0, desfazer = uma linha de anulação (a confirmada fica guardada e sai da leitura).
+
+# —— o carimbo `sim` e a linha de ação ——
+JS_P3F_SIM = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear();
+  const d1 = B.addDiario({ t: 'nota normal', src: 'chat · voz/texto' }), d2 = B.addDiario({ t: 'MAYDAY teste', src: 'web · SOS · MAYDAY' }), d3 = B.addDiario({ t: 'MOB teste', src: 'app · SOS · MOB' }),
+        d4 = B.addDiario({ t: 'linha com o carimbo dado', src: 'app · texto', sim: true }), d5 = B.addDiario({ t: 'linha com sim false', src: 'app · texto', sim: false });
+  o.d = [d1.sim === true, 'sim' in d2, 'sim' in d3, d4.sim === true, d5.sim === false]; o.sosKeys = Object.keys(d2).sort();
+  B.markExec('porao-teste'); o.exec = B.loadExec()['porao-teste'];
+  B.addDoc({ n: 'doc.pdf', s: '1 KB', dd: '03/11', st: 'A CONFERIR', cat: 'Documentos', fonte: 'foto' }); B.addAbast({ n: 'nf.jpg', d: '03/11', st: 'A CONFIRMAR', fonte: 'foto' });
+  o.doc = B.loadDocs()[0]; o.abast = B.loadAbast()[0];
+  B.addDoc({ n: 'ja.pdf', sim: false }); o.docJa = B.loadDocs()[0].sim;   // o que a tela já mandou fica como está
+  return o; }"""
+# 3 linhas no MESMO milissegundo (o relógio parado): cada uma com o seu iso, e a anulação acha a certa
+JS_P3F_ISO = """() => { const B = window.CapitaoBrain; localStorage.clear();
+  const a = B.addDiario({ t: 'A' }), b = B.addDiario({ t: 'B' }), c = B.addDiario({ t: 'C' }), an = B.addDiario({ t: 'anula B', acao: 'anula', alvo: b.iso });
+  return { isos: [a.iso, b.iso, c.iso, an.iso], ordem: B.loadDiario().map((e) => e.t), vigente: B.answer('diário de bordo', { platform: 'app', commit: false }).text, anBy: an && an.alvo === b.iso }; }"""
+JS_P3F_ACAO = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, o = {}; localStorage.clear();
+  const linha = B.addDiario({ t: 'uma linha do aparelho' }), pend = B.addDiario({ t: 'pendência do aparelho', pend: true }), n = () => B.loadDiario().length, n0 = n();
+  const tenta = (e) => { const antes = n(), r = B.addDiario(e); return [r === null, n() - antes]; };
+  o.semAlvo = tenta({ t: 'x', acao: 'anula' }); o.alvoNum = tenta({ t: 'x', acao: 'anula', alvo: 5 }); o.alvoInexistente = tenta({ t: 'x', acao: 'anula', alvo: '2020-01-01T00:00:00.000Z' });
+  o.acaoDesconhecida = tenta({ t: 'x', acao: 'apaga', alvo: linha.iso }); o.acaoDesconhecidaPend = tenta({ t: 'x', acao: 'apaga', alvo: pend.iso }); o.acaoVazia = tenta({ t: 'x', acao: '', alvo: linha.iso });
+  o.geradaPorIso = tenta({ t: 'x', acao: 'anula', alvo: D.diario[1].iso }); o.corrigeVazio = tenta({ t: '  ', acao: 'corrige', alvo: linha.iso });
+  o.resolveNaoPend = tenta({ t: 'x', acao: 'resolve', alvo: D.diario.filter((x) => !x.pend)[0].id }); o.resolveLinhaSemPend = tenta({ t: 'x', acao: 'resolve', alvo: linha.iso });
+  o.resolveIdFalso = tenta({ t: 'x', acao: 'reabre', alvo: 'd99' });
+  o.pendIds = D.diario.filter((x) => x.pend).map((x) => x.id);
+  const ok = (e) => { const antes = n(), r = B.addDiario(e); return [r !== null && r.acao === e.acao && r.alvo === e.alvo, n() - antes]; };
+  o.anula = ok({ t: 'anula', acao: 'anula', alvo: linha.iso }); o.corrige = ok({ t: 'texto novo', acao: 'corrige', alvo: linha.iso });
+  o.resolveGerada = D.diario.filter((x) => x.pend).map((x) => ok({ t: 'ok', acao: 'resolve', alvo: x.id })); o.reabreGerada = ok({ t: 'volta', acao: 'reabre', alvo: D.diario.filter((x) => x.pend)[0].id });
+  o.resolveDoAparelho = ok({ t: 'ok', acao: 'resolve', alvo: pend.iso });
+  const ac = B.loadDiario()[0]; o.anulaDeAcao = tenta({ t: 'x', acao: 'anula', alvo: ac.iso });   // uma linha de ação não é alvo de outra
+  o.total = n() - n0; return o; }"""
+JS_P3F_VIGENTE = """() => { const B = window.CapitaoBrain; localStorage.clear(); const op = { platform: 'app', commit: false };
+  const a = B.addDiario({ t: 'LINHAAAA a ser anulada' }), c = B.addDiario({ t: 'LINHACCCC original' }), k = B.addDiario({ t: 'LINHAKKKK sempre vigente' });
+  const antes = B.answer('diário de bordo', op).text;
+  B.addDiario({ t: 'anulada', acao: 'anula', alvo: a.iso }); B.addDiario({ t: 'LINHACCCC corrigida', acao: 'corrige', alvo: c.iso }); B.addDiario({ t: 'LINHACCCC corrigida de novo', acao: 'corrige', alvo: c.iso });
+  const depois = B.answer('diário de bordo', op).text, ficha = B.ficha('app');
+  return { antes, depois, ficha, cru: B.loadDiario().map((e) => e.t), anomalias: B.answer('pendências abertas', op).text }; }"""
+
+# —— as propostas A CONFIRMAR (F14) ——
+JS_P3F_TICKET = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const n = () => B.loadDiario().length, n0 = n();
+  const t1 = B.addTicket({ k: 'diario', origem: 'relato', texto: '  Trocamos   o filtro de ar do gerador hoje de manhã  ', prop: { sys: 'Manutenção' } });
+  o.t1 = t1; o.invalidos = [B.addTicket(null), B.addTicket({ k: 'diario' }), B.addTicket({ k: 'diario', texto: '   ' }), B.addTicket({ k: 'xyz', texto: 'a' }), B.addTicket({ k: 'exec', texto: 'a' })];
+  o.mesmoId = B.addTicket({ id: 'tabc12', k: 'diario', texto: 'primeiro' }).texto + '|' + B.addTicket({ id: 'tabc12', k: 'diario', texto: 'segundo' }).texto + '|' + B.loadTickets().filter((t) => t.id === 'tabc12').length;
+  o.idRuim = B.addTicket({ id: 'x/../y', k: 'diario', texto: 'id sem o t' }).id;
+  o.abertos0 = B.ticketsAbertos().length; o.linhas0 = n() - n0;                       // propor não grava nada
+  o.edit = B.editaTicket(t1.id, { texto: 'Trocamos o filtro de ar do gerador hoje às 09:30' }); o.editVazio = B.editaTicket(t1.id, { texto: '  ' }); o.editFalta = B.editaTicket('tnaoexiste', { texto: 'x' });
+  const r = B.aceitaTicket(t1.id); o.r = r; o.linhas1 = n() - n0; o.linha = B.loadDiario()[0]; o.ticket1 = B.loadTickets().filter((t) => t.id === t1.id)[0];
+  o.ja = B.aceitaTicket(t1.id); o.linhas2 = n() - n0; o.editAceito = B.editaTicket(t1.id, { texto: 'depois de confirmada' }); o.recusaAceito = B.recusaTicket(t1.id);
+  o.nulo = [B.aceitaTicket('tnaoexiste'), B.aceitaTicket(null), B.recusaTicket('tnaoexiste'), B.desfazTicket('tnaoexiste'), B.desfazTicket(null)];
+  const d = B.desfazTicket(r); o.d = d; o.linhas3 = n() - n0; o.vig = B.answer('diário de bordo', { platform: 'app', commit: false }).text; o.abertos1 = B.ticketsAbertos().map((t) => t.id).indexOf(t1.id) >= 0;
+  o.dDeNovo = B.desfazTicket(r);                                                     // a proposta voltou a aberta: não há o que desfazer
+  const r2 = B.aceitaTicket(t1.id); o.r2 = r2 && [r2.ja, r2.linha.iso !== r.linha.iso]; o.linhas4 = n() - n0;
+  const t2 = B.addTicket({ k: 'diario', origem: 'relato', texto: 'A bomba de água doce começou a fazer barulho ontem à noite' });
+  o.rec = B.recusaTicket(t2.id); o.recGuardada = B.loadTickets().filter((t) => t.id === t2.id)[0]; o.linhas5 = n() - n0; o.aceitaRecusado = B.aceitaTicket(t2.id); o.editRecusado = B.editaTicket(t2.id, { texto: 'x' }); o.recDeNovo = B.recusaTicket(t2.id); o.linhas6 = n() - n0;
+  o.abertos2 = B.ticketsAbertos().length; o.estados = B.loadTickets().map((t) => t.estado).sort();
+  o.tela = B.ticketTela(t2); o.telaNull = B.ticketTela(null);
+  const t3 = B.addTicket({ k: 'diario', origem: 'ia', texto: 'Confirmada no chat', prop: { sys: 'Equipamentos' } }), r3 = B.aceitaTicket(t3.id, { chat: true });
+  o.janelaChat = r3.desfazAte - Date.now(); o.janelaTela = (() => { const t4 = B.addTicket({ k: 'diario', texto: 'na tela' }); return B.aceitaTicket(t4.id).desfazAte - Date.now(); })();
+  // a janela do desfazer: depois dela não desfaz e não escreve nada
+  const t5 = B.addTicket({ k: 'diario', texto: 'fora da janela' }), r5 = B.aceitaTicket(t5.id), cru = JSON.parse(localStorage.getItem('capitao.tickets.v1')); cru.filter((t) => t.id === t5.id)[0].dec.ate = Date.now() - 1; localStorage.setItem('capitao.tickets.v1', JSON.stringify(cru));
+  const antes = n(); o.foraJanela = B.desfazTicket(r5); o.foraJanelaLinhas = n() - antes; o.foraJanelaEstado = B.loadTickets().filter((t) => t.id === t5.id)[0].estado;
+  o.cruTipos = JSON.parse(localStorage.getItem('capitao.tickets.v1')).every((t) => typeof t.id === 'string' && typeof t.iso === 'string' && t.who);
+  return o; }"""
+# a gravação parte do que está guardado: linha de outra forma fica; o valor que não é lista é guardado ao lado
+JS_P3F_TICKET_CRU = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear();
+  localStorage.setItem('capitao.tickets.v1', JSON.stringify([{ id: 'tfuturo1', k: 'novoTipo', texto: 'de uma versão futura', estado: 'aberto' }, 'lixo', { sem: 'id' }, null]));
+  const t = B.addTicket({ k: 'diario', texto: 'Uma proposta nova' }); B.aceitaTicket(t.id);
+  o.cru = JSON.parse(localStorage.getItem('capitao.tickets.v1')); o.lista = B.loadTickets().map((x) => x.id);
+  localStorage.clear(); localStorage.setItem('capitao.tickets.v1', '{"nao":"e lista"}');
+  const u = B.addTicket({ k: 'diario', texto: 'Outra proposta' }); o.antes = localStorage.getItem('capitao.tickets.v1.antes'); o.depois = JSON.parse(localStorage.getItem('capitao.tickets.v1')).length; o.u = !!u;
+  localStorage.clear(); localStorage.setItem('capitao.tickets.v1', 'isto nem é JSON'); B.addTicket({ k: 'diario', texto: 'Mais uma' }); o.antes2 = localStorage.getItem('capitao.tickets.v1.antes');
+  return o; }"""
+# o alarme do replay só vira proposta num gesto, uma por alarme por dia de bordo; o replay nunca cria proposta nem grava no diário
+JS_P3F_ALARME = """([dias]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, A = window.CapitaoAlertas, o = {}; localStorage.clear();
+  const n = () => B.loadDiario().length, n0 = n(), tk = () => B.loadTickets();
+  R.fixar('105'); const ativo = A.porId('arref_be'); o.ativo = !!ativo;
+  o.semGesto = [B.propoeAlarme('arref_be'), B.propoeAlarme('arref_be', false), B.propoeAlarme('arref_be', 'sim'), B.propoeAlarme('arref_be', 1)]; o.nSem = tk().length;
+  o.ruim = [B.propoeAlarme('', true), B.propoeAlarme(null, true), B.propoeAlarme('../x', true), B.propoeAlarme('arref_bb', true), B.propoeAlarme('nao_existe', true)]; o.nRuim = tk().length;
+  const a = B.propoeAlarme('arref_be', true), b = B.propoeAlarme('arref_be', true); o.a = a; o.mesma = a && b && a.id === b.id; o.n1 = tk().length; o.linhas = n() - n0;
+  const dia1 = a.id; B.recusaTicket(a.id); const c = B.propoeAlarme('arref_be', true); o.aposRecusa = c && c.id === dia1 && c.estado === 'recusado'; o.n2 = tk().length;
+  R.fixar('60'); o.foraDaJanela = B.propoeAlarme('arref_be', true); o.n3 = tk().length;
+  R.fixar('105@576'); const d = B.propoeAlarme('arref_be', true); o.diaSeguinte = d && d.id !== dia1; o.idsDia = [dia1, d && d.id]; o.n4 = tk().length;
+  const ac = B.aceitaTicket(d.id); o.linhaAlarme = ac && ac.linha; o.linhas2 = n() - n0;
+  R.fixar('105'); o.texto = a.texto; o.passos = ativo && A.porId('arref_be').texto;
+  return o; }"""
+JS_P3F_REPLAY_SOZINHO = """() => new Promise((res) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, o = {}; localStorage.clear(); R.fixar(null);
+  const n0 = B.loadDiario().length, ev = []; window.addEventListener('capitao-alerta', (e) => ev.push(e.detail && e.detail.fase));
+  window.dispatchEvent(new CustomEvent('capitao-alerta', { detail: { fase: 'inicio', alarme: { id: 'arref_be', nivel: 'aviso' } } }));
+  window.dispatchEvent(new CustomEvent('capitao-alerta', { detail: { fase: 'nivel', alarme: { id: 'arref_be', nivel: 'critico' } } }));
+  R.fixar('99'); R.fixar('105'); R.fixar(null);
+  setTimeout(() => { o.ev = ev; o.tickets = localStorage.getItem('capitao.tickets.v1'); o.linhas = B.loadDiario().length - n0; o.chaves = Object.keys(localStorage).filter((k) => /tickets|diario/.test(k)); res(o); }, 2600); })"""
+
+
+def grupo_p3f_registro(b, muta, ped):
+    # —— o carimbo sim, as linhas de ação e a visão vigente ——
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900)
+    try:
+        x = pg.evaluate(JS_P3F_SIM)
+        ped('p3f sim (simulação): addDiario, markExec, addDoc e addAbast gravam sim: true (a linha que já traz o carimbo — sim: true ou sim: false — e o documento com sim: false ficam como estão)',
+            x['d'][0] is True and x['d'][3] is True and x['d'][4] is True and x['exec'].get('sim') is True and x['doc'].get('sim') is True and x['abast'].get('sim') is True and x['docJa'] is False, x)
+        ped('p3f sim (simulação): a linha do SOS (src web · SOS / app · SOS) nunca leva sim, mesmo numa tela que não é a do SOS', x['d'][1] is False and x['d'][2] is False and x['sosKeys'] == ['d', 'iso', 'src', 'sys', 't', 'tone', 'who'], (x['d'], x['sosKeys']))
+        y = pg.evaluate(JS_P3F_ISO)
+        ped('p3f iso: três linhas no mesmo milissegundo têm iso diferentes, em ordem, e a anulação acha a linha certa (B), que sai da leitura',
+            len(set(y['isos'])) == 4 and y['isos'] == sorted(y['isos']) and y['anBy'] and y['ordem'] == ['anula B', 'C', 'B', 'A'] and '— B (app)' not in y['vigente'] and '— A (app)' in y['vigente'] and '— C (app)' in y['vigente'], y)
+        z = pg.evaluate(JS_P3F_ACAO)
+        recusas = ('semAlvo', 'alvoNum', 'alvoInexistente', 'acaoDesconhecida', 'acaoDesconhecidaPend', 'acaoVazia', 'geradaPorIso', 'corrigeVazio', 'resolveNaoPend', 'resolveLinhaSemPend', 'resolveIdFalso', 'anulaDeAcao')
+        ped('p3f acao: addDiario recusa (devolve null e não grava) a ação sem alvo, com alvo que não é texto, que não existe, de linha gerada (só o aparelho pelo iso), de linha de ação, com texto vazio na correção, com ação fora das quatro e a pendência que não é pendência',
+            all(z[k] == [True, 0] for k in recusas), {k: z[k] for k in recusas if z[k] != [True, 0]})
+        ped('p3f acao: grava (1 linha cada) a anulação e a correção pelo iso, o resolve e o reabre pelo id da pendência gerada (as 3 do arquivo) e pelo iso de uma linha do aparelho com pend',
+            z['anula'] == [True, 1] and z['corrige'] == [True, 1] and len(z['pendIds']) == 3 and all(r == [True, 1] for r in z['resolveGerada']) and z['reabreGerada'] == [True, 1] and z['resolveDoAparelho'] == [True, 1] and z['total'] == 7, z)
+        v = pg.evaluate(JS_P3F_VIGENTE)
+        def quantos(t):
+            m = re.match(r'Diário de bordo: (\d+) registros', t)
+            return int(m.group(1)) if m else -1
+        ped('p3f vigente: a linha anulada sai da leitura (o diário de bordo, a ficha), a corrigida mostra o último texto, a linha de ação não é registro, e nada some do guardado (6 linhas)',
+            'LINHAAAA' in v['antes'] and 'LINHAAAA' not in v['depois'] and 'LINHAAAA' not in v['ficha'] and 'LINHACCCC corrigida de novo' in v['depois'] and 'LINHACCCC original' not in v['depois'] and 'LINHACCCC original' not in v['ficha']
+            and 'LINHAKKKK' in v['depois'] and quantos(v['depois']) == quantos(v['antes']) - 1 and len(v['cru']) == 6 and 'anulada' not in v['depois'], (quantos(v['antes']), quantos(v['depois']), v['cru']))
+    finally:
+        pg.ctx.close()
+    # —— sem a simulação ——
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO)
+    try:
+        x = pg.evaluate(JS_P3F_SIM)
+        ped('p3f sim (simulacao false): nenhum registro novo leva sim (linha, execução, documento nem abastecimento), e o carimbo que a tela mandou (sim: true) fica',
+            x['d'][0] is False and x['d'][3] is True and 'sim' not in x['exec'] and 'sim' not in x['doc'] and 'sim' not in x['abast'], x)
+    finally:
+        pg.ctx.close()
+    # —— o SOS: sem sim, sem leitura da flag ——
+    pg = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, extra=GETTERS_SOS)
+    try:
+        x = pg.evaluate(JS_P3F_SIM)
+        lidas = pg.evaluate("() => window.__lidas")
+        ped('p3f sim (SOS): no SOS nada leva sim (linha, execução, documento nem abastecimento) e a flag simulacao nunca é lida', x['d'][0] is False and 'sim' not in x['exec'] and 'sim' not in x['doc'] and 'sim' not in x['abast'] and lidas.get('simulacao') == 0, (x['d'], lidas))
+        t = pg.evaluate("() => { const B = window.CapitaoBrain; localStorage.clear(); return [B.addTicket({ k: 'diario', texto: 'uma proposta' }), B.propoeAlarme('arref_be', true), localStorage.getItem('capitao.tickets.v1')]; }")
+        ped('p3f tickets (SOS): o SOS não propõe nada (nenhum ticket, nenhuma chave de tickets)', t == [None, None, None], t)
+    finally:
+        pg.ctx.close()
+
+
+def grupo_p3f_tickets(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900)
+    try:
+        o = pg.evaluate(JS_P3F_TICKET)
+        t1, r, d = o['t1'], o['r'], o['d']
+        ped('p3f tickets: a proposta nasce aberta, com o texto limpo, quem, quando, a origem e o carimbo sim; propor não grava linha nenhuma; texto vazio, tipo desconhecido (exec ainda não existe), null e o id repetido não criam outra',
+            t1['estado'] == 'aberto' and t1['k'] == 'diario' and t1['origem'] == 'relato' and t1['texto'] == 'Trocamos o filtro de ar do gerador hoje de manhã' and t1['sim'] is True and t1['who'] and t1['iso'] and re.match(r't[A-Za-z0-9_-]{2,60}$', t1['id'])
+            and all(x is None for x in o['invalidos']) and o['mesmoId'] == 'primeiro|primeiro|1' and re.match(r't[A-Za-z0-9_-]+$', o['idRuim']) and o['idRuim'] != 'x/../y' and o['linhas0'] == 0, o)
+        ped('p3f tickets: ✎ muda só o texto da proposta aberta (vazio e inexistente devolvem null)', o['edit']['texto'] == 'Trocamos o filtro de ar do gerador hoje às 09:30' and o['editVazio'] is None and o['editFalta'] is None, (o['edit'], o['editVazio']))
+        ped('p3f tickets: CONFIRMAR grava 1 linha (o texto editado, sys da proposta, quem, de onde veio, com sim) e guarda a decisão e o que criou; confirmar de novo devolve ja e não grava outra',
+            o['linhas1'] == 1 and o['linha']['t'] == 'Trocamos o filtro de ar do gerador hoje às 09:30' and o['linha']['sys'] == 'Manutenção' and o['linha']['sim'] is True and o['linha']['who'] and o['linha']['src'] == 'app · proposta confirmada (relato)'
+            and o['ticket1']['estado'] == 'aceito' and o['ticket1']['res'] == {'tipo': 'diario', 'id': o['linha']['iso']} and o['ticket1']['dec']['quem'] and r['res']['id'] == o['linha']['iso']
+            and o['ja']['ja'] is True and o['linhas2'] == 1, o)
+        ped('p3f tickets: a proposta confirmada não muda (✎) nem se recusa; id que não existe, null: tudo null', o['editAceito'] is None and o['recusaAceito'] is None and all(x is None for x in o['nulo']), (o['editAceito'], o['recusaAceito'], o['nulo']))
+        ped('p3f tickets: DESFAZER (na janela) escreve uma linha de anulação (a confirmada fica guardada, sai da leitura), a proposta volta a aberta; desfazer de novo não faz nada; confirmar de novo escreve uma linha nova',
+            d and d['estado'] == 'aberto' and d['anulada']['acao'] == 'anula' and d['anulada']['alvo'] == r['linha']['iso'] and o['linhas3'] == 2 and o['abertos1'] is True and o['dDeNovo'] is None
+            and 'Trocamos o filtro de ar' not in o['vig'] and o['r2'] == [None, True] and o['linhas4'] == 3, o)
+        ped('p3f tickets: RECUSAR grava 0 linhas, a recusada não ressuscita (confirmar e ✎ devolvem null) nem se recusa duas vezes; as abertas e os estados batem', o['rec']['estado'] == 'recusado' and o['recGuardada']['estado'] == 'recusado' and o['recGuardada']['dec']['quem'] and o['recGuardada']['dec']['iso'] and 'res' not in o['recGuardada'] and o['linhas5'] == 3 and o['aceitaRecusado'] is None and o['editRecusado'] is None and o['recDeNovo'] is None
+            and o['linhas6'] == 3 and o['abertos0'] == 3 and o['abertos2'] == 2 and o['estados'] == ['aberto', 'aberto', 'aceito', 'recusado'], o)
+        ped('p3f tickets: o desfazer vale 10 s na tela e 10 min vindo do chat (opts.chat)', 9000 <= o['janelaTela'] <= 10000 and 599000 <= o['janelaChat'] <= 600000, (o['janelaTela'], o['janelaChat']))
+        ped('p3f tickets: fora da janela o desfazer devolve null, não escreve a anulação e a proposta continua aceita', o['foraJanela'] is None and o['foraJanelaLinhas'] == 0 and o['foraJanelaEstado'] == 'aceito', (o['foraJanela'], o['foraJanelaLinhas'], o['foraJanelaEstado']))
+        ped('p3f tickets: ticketTela traz o texto que o CONFIRMAR grava, a origem em rótulo e o selo «apresentação» só com simulacao false (aqui não); sem ticket, valor seguro', o['tela']['texto'].startswith('A bomba de água doce') and o['tela']['origem'] == 'Relato' and o['tela']['apresentacao'] is False and o['tela']['longo'] is False and o['telaNull']['texto'] == '', (o['tela'], o['telaNull']))
+        c = pg.evaluate(JS_P3F_TICKET_CRU)
+        ped('p3f tickets: a gravação parte do que está guardado (a proposta de uma versão futura, o lixo e o objeto sem id ficam; só a nossa entra e a lista lida mostra só as que a versão entende)',
+            len(c['cru']) == 5 and c['cru'][0]['estado'] == 'aceito' and c['cru'][1:] == [{'id': 'tfuturo1', 'k': 'novoTipo', 'texto': 'de uma versão futura', 'estado': 'aberto'}, 'lixo', {'sem': 'id'}, None] and len(c['lista']) == 1, c)
+        ped('p3f tickets: o valor guardado que não é lista (objeto, texto sem JSON) é copiado para capitao.tickets.v1.antes antes de ser trocado (nada se perde)', c['antes'] == '{"nao":"e lista"}' and c['depois'] == 1 and c['u'] and c['antes2'] == 'isto nem é JSON', c)
+    finally:
+        pg.ctx.close()
+    # —— o alarme do replay: só num gesto, um por dia ——
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        x = pg.evaluate(JS_P3F_ALARME, [None])
+        ped('p3f alarme: sem gesto (nada, false, texto, 1) nenhuma proposta; id vazio, null, fora do formato, de alarme que não está ativo ou que não existe: null', x['ativo'] and all(v is None for v in x['semGesto']) and x['nSem'] == 0 and all(v is None for v in x['ruim']) and x['nRuim'] == 0, (x['semGesto'], x['ruim']))
+        ped('p3f alarme: o gesto cria UMA proposta aberta (origem telemetria, k alarme) com o texto do alarme e a hora; o gesto repetido devolve a mesma (a recusada também); nenhuma linha no diário',
+            x['a'] and x['a']['estado'] == 'aberto' and x['a']['k'] == 'alarme' and x['a']['origem'] == 'telemetria' and x['a']['texto'].startswith('AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C) desde ') and x['a']['alvo'] == {'tipo': 'alarme', 'id': 'arref_be'} and x['a']['sim'] is True
+            and x['mesma'] and x['n1'] == 1 and x['linhas'] == 0 and x['aposRecusa'] and x['n2'] == 1, x)
+        ped('p3f alarme: fora da janela do alarme (12:01:00) nada; no dia seguinte (mesma volta, 576 voltas depois) é outra proposta; confirmar grava a linha do alarme (sys Motores, tom de aviso) e só ela',
+            x['foraDaJanela'] is None and x['n3'] == 1 and x['diaSeguinte'] and x['n4'] == 2 and x['idsDia'][0] != x['idsDia'][1] and x['linhaAlarme']['sys'] == 'Motores' and x['linhaAlarme']['t'].startswith('AVISO: Temperatura do motor BE') and 'warn' in x['linhaAlarme']['tone'] and x['linhas2'] == 1 and x['linhaAlarme']['src'] == 'app · proposta confirmada (alarme)', x)
+    finally:
+        pg.ctx.close()
+    # sem gesto, o replay andando sozinho (e o evento de alerta) nunca cria proposta nem grava no diário
+    pg = pagina(b, muta=muta, fixo=None)
+    try:
+        y = pg.evaluate(JS_P3F_REPLAY_SOZINHO)
+        ped('p3f alarme: o replay andando, o evento capitao-alerta (início e mudança de nível) e as voltas pela janela do alarme não criam proposta nem linha no diário', y['tickets'] is None and y['linhas'] == 0 and 'capitao.tickets.v1' not in y['chaves'], y)
+    finally:
+        pg.ctx.close()
+    # modo real: o alarme não vira proposta (o replay é inerte), a flag é lida na hora
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        r = pg.evaluate("() => { const B = window.CapitaoBrain; localStorage.clear(); window.CapitaoDados.simulacao = false; const a = B.propoeAlarme('arref_be', true), t = B.addTicket({ k: 'diario', texto: 'relato no modo real' }); return [a, t && t.sim, B.loadTickets().length]; }")
+        ped('p3f alarme (simulacao false, lida na hora): o alarme não vira proposta; o relato vira, sem o carimbo sim', r == [None, None, 1], r)
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3f_registro'] = grupo_p3f_registro
+GRUPOS_3A['p3f_tickets'] = grupo_p3f_tickets
+
+
+# —— os mutantes do registro, das linhas de ação e das propostas (P3F) ——
+MUTANTES_P3F = [
+    ('p3f sim: addDiario sem o carimbo sim', r"    if (sim() && !linhaDoSOS(entry) && entry.sim == null) entry.sim = true;", r"", ('p3f_registro',)),
+    ('p3f sim: a linha do SOS leva sim fora da página do SOS', r"if (sim() && !linhaDoSOS(entry) && entry.sim == null)", r"if (sim() && entry.sim == null)", ('p3f_registro',)),
+    ('p3f sim: o carimbo ignora a flag (leva sim com simulacao false)', r"if (sim() && !linhaDoSOS(entry) && entry.sim == null)", r"if (!EM_SOS && !linhaDoSOS(entry) && entry.sim == null)", ('p3f_registro',)),
+    ('p3f sim: o carimbo pisa o que a tela mandou', r"!linhaDoSOS(entry) && entry.sim == null) entry.sim = true;", r"!linhaDoSOS(entry)) entry.sim = true;", ('p3f_registro',)),
+    ('p3f sim: o SOS lê a flag mesmo no SOS (sim() sem a guarda)', r"function sim() { return !EM_SOS && D.simulacao === true; }", r"function sim() { return D.simulacao === true && !EM_SOS; }", ('p3f_registro',)),
+    ('p3f sim: markExec sem o carimbo', r"m[task] = Object.assign(now(), selaSim()); write(K.exec, m);", r"m[task] = now(); write(K.exec, m);", ('p3f_registro',)),
+    ('p3f sim: addDoc sem o carimbo', r"list.unshift(carimba(d)); write(K.docs, list);", r"list.unshift(d); write(K.docs, list);", ('p3f_registro',)),
+    ('p3f sim: addAbast sem o carimbo', r"list.unshift(carimba(a)); write(K.abast, list);", r"list.unshift(a); write(K.abast, list);", ('p3f_registro',)),
+    ('p3f sim: o carimbo do documento pisa o sim: false que a tela mandou', r"x && typeof x === 'object' && x.sim == null ? Object.assign({}, x, { sim: true }) : x; }", r"x && typeof x === 'object' ? Object.assign({}, x, { sim: true }) : x; }", ('p3f_registro',)),
+    ('p3f iso: duas linhas no mesmo milissegundo dividem o iso', r"while (isFinite(ms) && list.some(function (x) { return x.iso === entry.iso; })) {", r"while (false) {", ('p3f_registro',)),
+    ('p3f acao: addDiario grava a ação sem validar o alvo', r"    if (e && e.acao !== undefined && !alvoValido(e, list)) return null;", r"", ('p3f_registro',)),
+    ('p3f acao: qualquer texto é alvo de anulação ou correção (a linha nem precisa existir)', r"return !!linha && !linha.acao && (a === 'anula' || !!String(e.t || '').trim());", r"return true;", ('p3f_registro',)),
+    ('p3f acao: a correção com texto vazio passa', r"(a === 'anula' || !!String(e.t || '').trim());", r"true;", ('p3f_registro',)),
+    ('p3f acao: a linha de ação é alvo de outra ação', r"return !!linha && !linha.acao && (a === 'anula'", r"return !!linha && (a === 'anula'", ('p3f_registro',)),
+    ('p3f acao: o resolve vale para linha do aparelho sem pend', r"if (linha) return linha.pend === true && !linha.acao;", r"if (linha) return !linha.acao;", ('p3f_registro',)),
+    ('p3f acao: o resolve vale para qualquer linha gerada (não só a pendência)', r"return (D.diario || []).some(function (x) { return x && x.id === alvo && x.pend === true; });", r"return (D.diario || []).some(function (x) { return x && x.id === alvo; });", ('p3f_registro',)),
+    ('p3f acao: ação fora das quatro passa', r"if (!ACOES[a] || typeof alvo !== 'string' || !alvo) return false;", r"if (typeof alvo !== 'string' || !alvo) return false;", ('p3f_registro',)),
+    ('p3f vigente: a linha anulada continua na leitura', r"return !x.acao && !anula[x.iso]; })", r"return !x.acao; })", ('p3f_registro',)),
+    ('p3f vigente: a linha de ação aparece como registro', r"return !x.acao && !anula[x.iso]; })", r"return !anula[x.iso]; })", ('p3f_registro',)),
+    ('p3f vigente: a correção não aparece', r"return corr[x.iso] ? Object.assign({}, x, { t: corr[x.iso].t, corrigido: true }) : x; });", r"return x; });", ('p3f_registro',)),
+    ('p3f vigente: vale a correção mais antiga', r"else if (x.acao === 'corrige' && typeof x.alvo === 'string' && !corr[x.alvo]) corr[x.alvo] = x; })", r"else if (x.acao === 'corrige' && typeof x.alvo === 'string') corr[x.alvo] = x; })", ('p3f_registro',)),
+    ('p3f tickets: o id repetido duplica a proposta', r"    ja = achaTicket(cru, id); if (ja) return ja;   // o id repetido não duplica", r"", ('p3f_tickets',)),
+    ('p3f tickets: a proposta sem texto é criada', r"if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;", r"if (typeof t.k !== 'string' || !TICKET_K[t.k]) return null;", ('p3f_tickets',)),
+    ('p3f tickets: o tipo desconhecido é criado', r"if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;", r"if (typeof t.k !== 'string' || !texto) return null;", ('p3f_tickets',)),
+    ('p3f tickets: o SOS propõe', r"    if (EM_SOS) return null;   // o SOS não propõe nada", r"", ('p3f_registro',)),
+    ('p3f tickets: a proposta sem o carimbo sim', r"    if (sim()) item.sim = true;", r"", ('p3f_tickets',)),
+    ('p3f tickets: o id da tela não é conferido', r"id = typeof t.id === 'string' && /^t[A-Za-z0-9_-]{2,60}$/.test(t.id) ? t.id : novoIdTicket(cru);", r"id = typeof t.id === 'string' ? t.id : novoIdTicket(cru);", ('p3f_tickets',)),
+    ('p3f tickets: confirmar duas vezes grava duas linhas', r"    if (t.estado === 'aceito') return { id: id, k: t.k, ja: true, dec: t.dec || null, res: t.res || null };", r"", ('p3f_tickets',)),
+    ('p3f tickets: a proposta recusada ressuscita ao confirmar', "    if (!t || t.estado === 'recusado') return null;\n    if (t.estado === 'aceito')", "    if (!t) return null;\n    if (t.estado === 'aceito')", ('p3f_tickets',)),
+    ('p3f tickets: o ✎ muda a proposta confirmada', "    var cru = ticketsCru(), t = achaTicket(cru, id), tx;\n    if (!t || t.estado !== 'aberto') return null;", "    var cru = ticketsCru(), t = achaTicket(cru, id), tx;\n    if (!t) return null;", ('p3f_tickets',)),
+    ('p3f tickets: o ✎ aceita o texto vazio', r"if (campos.texto != null) { tx = limpaT(campos.texto, 600); if (!tx) return null; t.texto = tx; }", r"if (campos.texto != null) { tx = limpaT(campos.texto, 600); t.texto = tx; }", ('p3f_tickets',)),
+    ('p3f tickets: recusar a proposta já confirmada', "    var cru = ticketsCru(), t = achaTicket(cru, id);\n    if (!t || t.estado !== 'aberto') return null;\n    t.estado = 'recusado';", "    var cru = ticketsCru(), t = achaTicket(cru, id);\n    if (!t) return null;\n    t.estado = 'recusado';", ('p3f_tickets',)),
+    ('p3f tickets: recusar grava a decisão sem quem', r"t.estado = 'recusado'; t.dec = { quem: quem(), iso: new Date().toISOString() }; write(K.tickets, cru);", r"t.estado = 'recusado'; write(K.tickets, cru);", ('p3f_tickets',)),
+    ('p3f tickets: o desfazer vale para sempre', r" || Date.now() > t.dec.ate) return null;", r") return null;", ('p3f_tickets',)),
+    ('p3f tickets: o desfazer escreve a correção e não a anulação', r"src: 'app · proposta desfeita', acao: 'anula', alvo: lin.iso });", r"src: 'app · proposta desfeita', acao: 'corrige', alvo: lin.iso });", ('p3f_tickets',)),
+    ('p3f tickets: o desfazer não reabre a proposta', r"    t.estado = 'aberto'; delete t.dec; delete t.res; write(K.tickets, cru);", r"    write(K.tickets, cru);", ('p3f_tickets',)),
+    ('p3f tickets: o desfazer apaga a linha confirmada (o registro não pode encolher)', r"    an = addDiario({ sys: lin.sys,", r"    write(K.diario, loadDiario().filter(function (x) { return x.iso !== lin.iso; })); an = addDiario({ sys: lin.sys,", ('p3f_tickets',)),
+    ('p3f tickets: a janela do chat é a da tela', r"(opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ)", r"TICKET_DESFAZ", ('p3f_tickets',)),
+    ('p3f tickets: a janela da tela é a do chat', r"(opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ)", r"TICKET_DESFAZ_CHAT", ('p3f_tickets',)),
+    ('p3f tickets: a gravação perde as linhas de outra forma (parte do filtrado)', r"    cru.unshift(item); write(K.tickets, cru);", r"    cru = cru.filter(ehTicket); cru.unshift(item); write(K.tickets, cru);", ('p3f_tickets',)),
+    ('p3f tickets: o valor que não é lista é pisado sem cópia', r"try { if (s && localStorage.getItem(K.tickets + '.antes') === null) localStorage.setItem(K.tickets + '.antes', s); } catch (e) {}", r"", ('p3f_tickets',)),
+    ('p3f tickets: o selo «apresentação» aparece com a simulação ligada', r"apresentacao: !!(t && t.sim === true && !EM_SOS && D.simulacao === false)", r"apresentacao: !!(t && t.sim === true)", ('p3f_tickets',)),
+    ('p3f alarme: a proposta sem gesto', r"if (gesto !== true || EM_SOS || !sim() ||", r"if (EM_SOS || !sim() ||", ('p3f_tickets',)),
+    ('p3f alarme: o gesto vale qualquer valor verdadeiro', r"if (gesto !== true || EM_SOS", r"if (!gesto || EM_SOS", ('p3f_tickets',)),
+    ('p3f alarme: a proposta de um alarme que não está ativo', "    if (!al) return null;\n    try { dia =", "    try { dia =", ('p3f_tickets',)),
+    ('p3f alarme: uma proposta por alarme sem o dia (a de ontem vale hoje)', r"id: 'tal_' + id + '_' + dia, k: 'alarme'", r"id: 'tal_' + id, k: 'alarme'", ('p3f_tickets',)),
+    ('p3f alarme: a proposta nova a cada gesto', r"id: 'tal_' + id + '_' + dia, k: 'alarme'", r"k: 'alarme'", ('p3f_tickets',)),
+    ('p3f alarme: o dia é o do relógio e não o do instante', r"format(new Date(i.ms)).replace(/-/g, ''); } catch (e) { return null; }", r"format(new Date()).replace(/-/g, ''); } catch (e) { return null; }", ('p3f_tickets',)),
+    ('p3f alarme: o alarme grava a linha no diário ao propor', r"    return addTicket({ id: 'tal_' + id", r"    addDiario({ t: al.texto, sys: 'Motores' }); return addTicket({ id: 'tal_' + id", ('p3f_tickets',)),
+    ('p3f alarme: a linha do alarme com o sys errado', r"prop: { sys: al.sistema === 'motores' ? 'Motores' : 'Equipamentos'", r"prop: { sys: 'Equipamentos'", ('p3f_tickets',)),
+    ('p3f alarme: a proposta do alarme sem o alvo', r"alvo: { tipo: 'alarme', id: id } });", r"});", ('p3f_tickets',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F
 
 
 def instante_3a(b):

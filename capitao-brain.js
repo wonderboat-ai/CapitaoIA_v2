@@ -52,7 +52,7 @@
   ];
   var ALL = DEFAULTS.concat(BANK);
 
-  var K = { atalhos: 'capitao.atalhos.v1', diario: 'capitao.diario.v1', equipe: 'capitao.equipe.v1', exec: 'capitao.executado.v1', docs: 'capitao.docs.v1', abast: 'capitao.abast.v1' };
+  var K = { atalhos: 'capitao.atalhos.v1', diario: 'capitao.diario.v1', equipe: 'capitao.equipe.v1', exec: 'capitao.executado.v1', docs: 'capitao.docs.v1', abast: 'capitao.abast.v1', tickets: 'capitao.tickets.v1' };
   function read(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
   function write(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 
@@ -76,9 +76,37 @@
   function loadDiario() { var v = read(K.diario, []); return Array.isArray(v) ? v.filter(function (e) { return e && typeof e.t === 'string'; }) : []; }
   // O diário para LER (respostas, ficha): `ctx.semSim` tira as linhas do aparelho com `sim: true` (gravadas com a simulação ligada; com simulacao false saem da ficha, CLAUDE.md 14). Nunca para gravar:
   // o addDiario relê o diário inteiro (loadDiario), e o registro só cresce.
-  function lerDiario(ctx) { var v = loadDiario(); return ctx && ctx.semSim ? v.filter(function (e) { return e.sim !== true; }) : v; }
+  function lerDiario(ctx) { var v = vigente(loadDiario()); return ctx && ctx.semSim ? v.filter(function (e) { return e.sim !== true; }) : v; }
+  // A visão VIGENTE do diário (CONTRATO §1.25): as linhas de ação (`acao`: corrige, anula, resolve, reabre) não são registros, são o que se fez com um registro; a linha anulada sai da leitura e a corrigida
+  // mostra o texto da última correção. Nada se apaga do que está guardado (o loadDiario devolve tudo); só as respostas e a ficha leem por aqui.
+  function vigente(v) {
+    var anula = {}, corr = {};
+    v.forEach(function (x) { if (x.acao === 'anula' && typeof x.alvo === 'string') anula[x.alvo] = 1; else if (x.acao === 'corrige' && typeof x.alvo === 'string' && !corr[x.alvo]) corr[x.alvo] = x; });   // (mais nova primeiro: a 1ª correção de um alvo é a última)
+    return v.filter(function (x) { return !x.acao && !anula[x.iso]; }).map(function (x) { return corr[x.iso] ? Object.assign({}, x, { t: corr[x.iso].t, corrigido: true }) : x; });
+  }
+  // `acao` (CONTRATO §1.25): corrige e anula têm por `alvo` o `iso` de uma linha do aparelho; resolve e reabre, a pendência (o id da gerada, d03/d05/d07, ou o `iso` de uma linha do aparelho com `pend`).
+  // Linha de ação sem alvo que exista, ou com ação fora das quatro, NÃO é gravada (devolve null). O `iso` da linha nova é único (duas linhas no mesmo milissegundo não dividem o alvo).
+  var ACOES = { corrige: 1, anula: 1, resolve: 1, reabre: 1 };
+  function alvoValido(e, list) {
+    var linha, a = e.acao, alvo = e.alvo;
+    if (!ACOES[a] || typeof alvo !== 'string' || !alvo) return false;
+    linha = list.filter(function (x) { return x.iso === alvo; })[0];
+    if (a === 'corrige' || a === 'anula') return !!linha && !linha.acao && (a === 'anula' || !!String(e.t || '').trim());
+    if (linha) return linha.pend === true && !linha.acao;
+    return (D.diario || []).some(function (x) { return x && x.id === alvo && x.pend === true; });
+  }
+  // Carimbo `sim` (PROMPT §2.9, CLAUDE.md 14): a linha nova gravada com D.simulacao === true leva sim: true (lido AGORA, nunca na carga). O SOS não lê a flag (EM_SOS) e a linha do SOS (`src` web · SOS / app · SOS)
+  // nunca leva `sim`, de qualquer tela; com simulacao false as linhas com `sim` ganham o selo «apresentação» (tela) e saem da ficha (lerDiario com semSim).
+  function linhaDoSOS(e) { return /^(?:web|app) · SOS/.test(String(e && e.src || '')); }
   function addDiario(e) { return congela(function () { return addDiario1(e); }); }
-  function addDiario1(e) { var n = now(); var list = loadDiario(); var entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e); list.unshift(entry); write(K.diario, list); return entry; }
+  function addDiario1(e) { var n = now(); var list = loadDiario(); var entry, ms;
+    if (e && e.acao !== undefined && !alvoValido(e, list)) return null;
+    entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e);
+    ms = Date.parse(entry.iso);
+    while (isFinite(ms) && list.some(function (x) { return x.iso === entry.iso; })) { ms++; entry.iso = new Date(ms).toISOString(); }
+    if (sim() && !linhaDoSOS(entry) && entry.sim == null) entry.sim = true;
+    list.unshift(entry); write(K.diario, list); return entry;
+  }
   function diarioFonte() { return (D.diario || []).map(function (x) { return { d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: (D.diarioFonte || 'diário') }; }); }
   function loadExec() { var v = read(K.exec, {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
   // A execução COMO AS RESPOSTAS A LEEM. Dentro da ficha com simulacao false, a execução com `sim: true` (gravada com a simulação ligada, CONTRATO §1.25) fica fora, como a linha do diário (CLAUDE.md 14): a tarefa
@@ -86,15 +114,112 @@
   // (o registro só cresce; o markExec e o unmarkExec leem o `loadExec`, nunca esta visão).
   var EXEC_SEM_SIM = false;
   function execVisivel() { var m = loadExec(); if (!EXEC_SEM_SIM) return m; var r = {}; Object.keys(m).forEach(function (k) { if (!m[k] || m[k].sim !== true) r[k] = m[k]; }); return r; }
-  function markExec(task) { var m = loadExec(); m[task] = now(); write(K.exec, m); return m; }
+  function markExec(task) { var m = loadExec(); m[task] = Object.assign(now(), selaSim()); write(K.exec, m); return m; }   // (CONTRATO §1.25: a execução gravada com a simulação ligada leva sim: true)
   // Desfaz um Executado: relê a lista, tira só essa tarefa e grava (sem a tarefa ou com dado ruim, não grava nada)
   function unmarkExec(task) { var m = loadExec(); if (task != null && Object.prototype.hasOwnProperty.call(m, String(task))) { delete m[String(task)]; write(K.exec, m); } return m; }
   function loadEquipe() { var v = read(K.equipe, null); var o = v && typeof v === 'object' ? v : {}; return { fones: o.fones && typeof o.fones === 'object' && !Array.isArray(o.fones) ? o.fones : {}, convites: Array.isArray(o.convites) ? o.convites.filter(function (c) { return c && typeof c.nome === 'string'; }) : [] }; }
   function saveEquipe(v) { write(K.equipe, v); }
   function loadDocs() { var v = read(K.docs, []); return Array.isArray(v) ? v.filter(function (d) { return d && typeof d.n === 'string'; }) : []; }
-  function addDoc(d) { var list = loadDocs(); list.unshift(d); write(K.docs, list); return list; }
+  function addDoc(d) { var list = loadDocs(); list.unshift(carimba(d)); write(K.docs, list); return list; }
   function loadAbast() { var v = read(K.abast, []); return Array.isArray(v) ? v.filter(function (a) { return a && typeof a.n === 'string'; }) : []; }
-  function addAbast(a) { var list = loadAbast(); list.unshift(a); write(K.abast, list); return list; }
+  function addAbast(a) { var list = loadAbast(); list.unshift(carimba(a)); write(K.abast, list); return list; }
+  // o registro novo (documento, abastecimento) gravado com a simulação ligada leva sim: true (o que a tela já mandou fica como está); fora da simulação e no SOS, nada muda
+  function carimba(x) { return sim() && x && typeof x === 'object' && x.sim == null ? Object.assign({}, x, { sim: true }) : x; }
+
+  // ——— Propostas A CONFIRMAR (F14; CONTRATO §1.25; PROMPT §2.9) ———
+  // capitao.tickets.v1 = [{ id: 't…', k, origem, texto, prop, alvo: { tipo, id }, estado: 'aberto' | 'aceito' | 'recusado', dec: { quem, iso, ate? }, res: { tipo, id }, iso, who, sim? }]. Um ticket é a PROPOSTA de um
+  // registro (do relato no chat, de uma regra do diário, de um alarme do replay): NADA vira dado sem um toque. Confirmar = 1 linha nova no diário (`res` guarda o `iso` dela); recusar = 0 linhas; ✎ (editar)
+  // muda o texto antes de confirmar; desfazer (10 s na tela, 10 min no chat) escreve uma linha de ANULAÇÃO (o registro só cresce: a linha confirmada fica guardada e sai da leitura) e a proposta volta a «aberto».
+  // A tela chama estas funções; o chat chama o aceitaTicket e o recusaTicket pelas rotas do relato. Nenhum ticket é gerado, e o replay nunca cria um (o alarme só vira proposta num gesto: propoeAlarme).
+  // A gravação parte do que está guardado: linha de outra forma (de uma versão futura) fica como está.
+  var TICKET_DESFAZ = 10e3, TICKET_DESFAZ_CHAT = 10 * 60e3;
+  var ORIGEM_TICKET = { relato: 'Relato', telemetria: 'Telemetria', regra: 'Regra', ia: 'IA' };
+  var SYS_TONE = { 'Segurança': 'var(--cap-crit, #ff3b30)', 'Anomalia': 'var(--cap-crit, #ff3b30)', 'Manutenção': 'var(--cap-warn, #f0a63a)', 'Combustível': 'var(--cap-warn, #f0a63a)', 'Navegação': 'var(--cap-tele, #00f4fd)' };
+  function tomDe(sys) { return SYS_TONE[sys] || 'var(--cap-accent, #00a1fe)'; }
+  function limpaT(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
+  function ticketsCru() {
+    var s = null, v = null;
+    try { s = localStorage.getItem(K.tickets); v = s ? JSON.parse(s) : []; } catch (e) { v = null; }
+    if (Array.isArray(v)) return v;
+    try { if (s && localStorage.getItem(K.tickets + '.antes') === null) localStorage.setItem(K.tickets + '.antes', s); } catch (e) {}   // valor que não é uma lista (nem JSON): guardado ao lado, não pisado
+    return [];
+  }
+  function ehTicket(t) { return !!t && typeof t === 'object' && typeof t.id === 'string' && /^t[A-Za-z0-9_-]{2,60}$/.test(t.id) && typeof t.k === 'string' && TICKET_K[t.k] !== undefined && typeof t.texto === 'string'; }
+  function loadTickets() { return ticketsCru().filter(ehTicket); }
+  function achaTicket(cru, id) { return cru.filter(function (t) { return ehTicket(t) && t.id === id; })[0] || null; }
+  function novoIdTicket(cru) { var id; do { id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); } while (cru.some(function (t) { return t && t.id === id; })); return id; }
+  // k → como a confirmação grava. O `diario` é a linha do diário com o texto do ticket (sys e tom da proposta); o `alarme` é a mesma linha, do alarme do replay. As propostas da agenda (F15) entram aqui.
+  var TICKET_K = {
+    diario: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + (ORIGEM_TICKET[t.origem] || 'Relato').toLowerCase() + ')' }); },
+    alarme: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (alarme)' }); }
+  };
+  function addTicket(t) {
+    var cru, texto, id, ja, item;
+    if (EM_SOS) return null;   // o SOS não propõe nada
+    t = t || {}; texto = limpaT(t.texto, 600);
+    if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;
+    cru = ticketsCru(); id = typeof t.id === 'string' && /^t[A-Za-z0-9_-]{2,60}$/.test(t.id) ? t.id : novoIdTicket(cru);
+    ja = achaTicket(cru, id); if (ja) return ja;   // o id repetido não duplica
+    item = { id: id, k: t.k, origem: ORIGEM_TICKET[t.origem] ? t.origem : 'relato', texto: texto, prop: t.prop && typeof t.prop === 'object' ? t.prop : {}, estado: 'aberto', iso: new Date().toISOString(), who: quem() };
+    if (t.alvo && typeof t.alvo.tipo === 'string' && typeof t.alvo.id === 'string' && t.alvo.id) item.alvo = { tipo: t.alvo.tipo, id: t.alvo.id };
+    if (sim()) item.sim = true;
+    cru.unshift(item); write(K.tickets, cru);
+    return item;
+  }
+  // ✎ antes de confirmar: o texto (e/ou a proposta). Só a proposta aberta muda; a confirmada, a recusada e a que não existe devolvem null.
+  function editaTicket(id, campos) {
+    var cru = ticketsCru(), t = achaTicket(cru, id), tx;
+    if (!t || t.estado !== 'aberto') return null;
+    campos = campos || {};
+    if (campos.texto != null) { tx = limpaT(campos.texto, 600); if (!tx) return null; t.texto = tx; }
+    if (campos.prop && typeof campos.prop === 'object') t.prop = campos.prop;
+    write(K.tickets, cru); return t;
+  }
+  // CONFIRMAR (um toque): grava a linha (1) e a decisão (quem, quando, o que criou). {id, k, ja: true} se já estava confirmada (não grava outra); null se não existe, se foi recusada (a recusa não ressuscita) ou se
+  // a linha não pôde ser gravada. `opts.chat`: a confirmação veio do chat, e o desfazer vale por 10 min (na tela, 10 s).
+  function aceitaTicket(id, opts) {
+    var cru, t, lin, ate;
+    if (EM_SOS) return null;
+    cru = ticketsCru(); t = achaTicket(cru, id);
+    if (!t || t.estado === 'recusado') return null;
+    if (t.estado === 'aceito') return { id: id, k: t.k, ja: true, dec: t.dec || null, res: t.res || null };
+    lin = TICKET_K[t.k](t); if (!lin) return null;
+    ate = Date.now() + (opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ);
+    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: ate }; t.res = { tipo: 'diario', id: lin.iso };
+    write(K.tickets, cru);
+    return { id: id, k: t.k, texto: t.texto, origem: t.origem, res: t.res, linha: lin, desfazAte: ate };
+  }
+  function recusaTicket(id) {
+    var cru = ticketsCru(), t = achaTicket(cru, id);
+    if (!t || t.estado !== 'aberto') return null;
+    t.estado = 'recusado'; t.dec = { quem: quem(), iso: new Date().toISOString() }; write(K.tickets, cru);
+    return { id: id, estado: 'recusado' };
+  }
+  // DESFAZER a confirmação, dentro da janela (10 s; 10 min se veio do chat): a linha que ela escreveu ganha uma linha de anulação (acao 'anula', alvo = o iso dela) e a proposta volta a «aberto» (confirmar de novo
+  // escreve uma linha nova). Depois da janela, com a proposta aberta ou recusada, ou sem a linha, devolve null e não escreve nada. Aceita o id ou o resultado do aceitaTicket.
+  function desfazTicket(r) {
+    var id = r && typeof r === 'object' ? r.id : r, cru = ticketsCru(), t = achaTicket(cru, id), lin, an;
+    if (EM_SOS || !t || t.estado !== 'aceito' || !t.res || t.res.tipo !== 'diario' || !t.dec || typeof t.dec.ate !== 'number' || Date.now() > t.dec.ate) return null;
+    lin = loadDiario().filter(function (x) { return x.iso === t.res.id && !x.acao; })[0]; if (!lin) return null;
+    an = addDiario({ sys: lin.sys, tone: lin.tone, t: 'Registro anulado (proposta desfeita): ' + limpaT(lin.t, 200), who: quem(), src: 'app · proposta desfeita', acao: 'anula', alvo: lin.iso });
+    if (!an) return null;
+    t.estado = 'aberto'; delete t.dec; delete t.res; write(K.tickets, cru);
+    return { id: id, estado: 'aberto', anulada: an };
+  }
+  function ticketsAbertos() { return loadTickets().filter(function (t) { return t.estado === 'aberto'; }).sort(function (a, b) { return String(b.iso || '') < String(a.iso || '') ? -1 : String(b.iso || '') > String(a.iso || '') ? 1 : 0; }); }
+  // o que a lista A CONFIRMAR mostra: o texto que o CONFIRMAR grava, a origem e o selo «apresentação» (sim, só com simulacao false)
+  function ticketTela(t) { var tx = String((t && t.texto) || ''); return { texto: tx, origem: ORIGEM_TICKET[t && t.origem] || 'Relato', longo: tx.length > 220, apresentacao: !!(t && t.sim === true && !EM_SOS && D.simulacao === false) }; }
+  // O alarme do replay vira PROPOSTA só depois de um gesto (o toque em «Registrar» da C3, que passa gesto === true): o replay, o evento 'capitao-alerta' e a faixa nunca criam proposta. Uma por alarme por dia de bordo
+  // (o id do ticket traz o id do alarme e o dia): o gesto repetido devolve a mesma, aberta, aceita ou recusada. null = sem gesto, fora da simulação, no SOS ou sem alarme ativo com esse id agora.
+  function propoeAlarme(id, gesto) {
+    var AL = window.CapitaoAlertas, al = null, i, dia;
+    if (gesto !== true || EM_SOS || !sim() || typeof id !== 'string' || !/^[a-z0-9_]{1,40}$/.test(id)) return null;
+    i = instante(); if (!i) return null;
+    try { al = AL && typeof AL.porId === 'function' ? AL.porId(id, i.ms) : null; } catch (e) { al = null; }
+    if (!al) return null;
+    try { dia = new Intl.DateTimeFormat('en-CA', { timeZone: E.fuso || 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(i.ms)).replace(/-/g, ''); } catch (e) { return null; }
+    return addTicket({ id: 'tal_' + id + '_' + dia, k: 'alarme', origem: 'telemetria', texto: al.rotulo + ': ' + al.texto + ' desde ' + al.hora + '.', prop: { sys: al.sistema === 'motores' ? 'Motores' : 'Equipamentos', alarme: id, dia: dia, tone: al.nivel === 'critico' ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-warn, #f0a63a)' }, alvo: { tipo: 'alarme', id: id } });
+  }
 
   // ——— números e textos a partir dos dados ———
   function nb(x, d) { return typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—'; }
@@ -3301,7 +3426,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
