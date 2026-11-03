@@ -150,7 +150,7 @@
   function novoIdTicket(cru) { var id; do { id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); } while (cru.some(function (t) { return t && t.id === id; })); return id; }
   // k → como a confirmação grava. O `diario` é a linha do diário com o texto do ticket (sys e tom da proposta); o `alarme` é a mesma linha, do alarme do replay. As propostas da agenda (F15) entram aqui.
   var TICKET_K = {
-    diario: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + (ORIGEM_TICKET[t.origem] || 'Relato').toLowerCase() + ')' }); },
+    diario: function (t) { var p = t.prop || {}, e = { sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + (ORIGEM_TICKET[t.origem] || 'Relato').toLowerCase() + ')' }; if (p.pend === true) e.pend = true; return addDiario(e); },   // (o relato que conta um defeito abre pendência: `pend`, CONTRATO §1.9, F20)
     alarme: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (alarme)' }); }
   };
   function addTicket(t) {
@@ -902,15 +902,162 @@
     if (!grava) return 'Pedido vindo de link não grava no diário.';
     return 'Registrado no diário de bordo.' + (alerta ? ' Se a emergência é agora, abra o SOS.' : '') + (pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '');
   }
-  var RELATO_BTN = /^ (?:(?:sim|ok|pode|por favor) )*(?:registrar|registra|registre|anotar|anota|anote) (?:o |esse |este |um )?relato $/, RELATO_BTN_NAO = /^ (?:(?:nao|ok|por favor) )?(?:nao registrar|nao registra|nao registre|nao anotar|nao anote|cancelar|cancela|cancele) (?:o |esse |este |um )?relato $/;
-  function relatoRota(qRaw, q) {
-    if (RELATO_BTN_NAO.test(q)) return 'relatoCancela';
-    if (RELATO_BTN.test(q)) return 'relatoRegistra';
+  // ——— O relato no chat vira PROPOSTA de registro (F16; Avanti 1.17.2) ———
+  // A frase que CONTA um fato do barco — afirmação com verbo de fato (passado, «está …ndo», «não liga», «será necessário»), com 8 palavras ou mais, sem «?», sem palavra de pergunta nem pedido ao app, e sem
+  // perigo — é relato: a resposta de sempre ganha uma PROPOSTA (um ticket k diario, origem relato, aberto) com os botões Registrar no diário / Não registrar (e O que verificar?, se conta um defeito); só o
+  // «registrar» (ou o botão) grava, e é 1 linha. Pergunta, pedido, perigo (deriva, água, fogo, pessoa ferida, alarme, mar piorando), emergência e óleo NUNCA recebem a proposta: seguem a rota deles. O chat só
+  // grava com comando explícito: a proposta não grava nada.
+  var RELATO_FATO = new RegExp(' (?:' + [
+    'fez|fizeram|fizemos|teve|tiveram|tivemos|houve|deu|deram|veio|vieram|viemos|trouxe|trouxeram|disse|disseram|foi|foram|fomos|puseram',
+    '[a-z]{2,}(?:ou|aram|eram|iram|eu|iu)',   // passado: instalou, trocaram, desligou, apareceu, caiu, sumiu
+    '[a-z]{3,}(?:amos|emos|imos)',   // 1ª do plural: chegamos, abastecemos, saímos (os modais — podemos, devemos… — ficam no RELATO_NAO)
+    '(?:esta|estao|estava|estavam|ta|tava|tao|fica|ficou|ficam|ficaram|continua|continuam|segue|seguem|anda) [a-z]+ndo',   // está interferindo, continua vazando
+    'nao (?:liga|ligou|funciona|funcionou|parte|partiu|carrega|carregou|conecta|conectou|responde|respondeu|sobe|desce|aparece|apareceu|acende|acendeu|segura|pega|pegou|abre|fecha)',
+    'sem (?:sinal|comunicacao|conexao|internet|energia|leitura|resposta|carga)',
+    '(?:sera|foi|vai ser|seria) (?:necessari[oa]|precis[oa])|vai precisar|vamos precisar|vai ter que|teremos que|precisara|precisarao',
+    '(?:vem|vira|virao|vai vir|vao vir|chega|chegara|vai chegar) (?:amanha|hoje|segunda|terca|quarta|quinta|sexta|sabado|domingo|dia|as|na proxima|semana que vem)'
+  ].join('|') + ')(?= )');
+  // Pergunta ou pedido em qualquer ponto da frase («…, o que pode ser», «isso é normal», «me diga…», «então abre o checklist») e começo de pergunta ou imperativo ao app: não é relato. Voz não tem «?»: a
+  // pergunta ditada com a marca no fim («… é grave», «… tem solução», «… pode ser a bateria») também sai.
+  var RELATO_NAO = / (?:o que|oque|por que|qual|quais|quanto|quanta|quantos|quantas|quem|sera que|como (?:faco|faz|fazer|resolv\w*|consert\w*|arrum\w*|proced\w*|devo|posso|ligo|deslig\w*|configur\w*|ajust\w*|foi|foram|esta|estao|ficou|anda)|onde (?:fica|esta|estao|tem|acho|encontro)|duvida|me (?:diga|diz|fala|fale|mostra|mostre|explica|explique|ajuda|ajude|manda|mande|envia|envie|passa|passe|lembra|lembre|avisa|avise|informa|informe)|(?:voce|vc) (?:pode|poderia|consegue|sabe|acha|tem)|(?:quero|queria|gostaria|preciso|precisava|precisamos|querendo|queremos) (?:de )?(?:saber|entender)|saber (?:se|quando|onde|como|o que|qual)|pensando em|planejando|pretend\w*|sabe (?:se|quando|onde|como)|alguem sabe|nao sei (?:se|quando|onde|como)|e possivel|podemos|devemos|queremos|gostariamos|poderiamos|deveriamos|posso|devo|pode me|poderia|(?:isso )?(?:e|eh|seria) (?:o |um |uma )?(?:normal|grave|perigoso|seguro|comum|ruim|serio|problema)|faz sentido|tem (?:algum|alguma|solucao|conserto|jeito|como|problema|risco)|pode ser|isso (?:pode|e|eh|vai|tem)|pode (?:danificar|estragar|prejudicar|causar|dar problema)|preocup\w*|quando (?:mesmo|precisa|devo|vence|vai|sera|tem que|e a proxima)|(?:feit[oa]|trocad[oa]|foi) quando|em que (?:dia|data|mes|hora|ano)|expli(?:ca|que|car)|como se|como (?!sempre|combinado|de costume|previsto|planejado|o |a |os |as |um |uma )[a-z]+(?:o|ar|er|ir|amos|emos|imos)|acho que|acredito que|parece que|(?:queria|quero|gostaria|gostariamos) (?:o|a|os|as|um|uma|ver|que|de)|(?:preciso|precisamos|precisa|precisam) (?:de )?[a-z]+r|ou (?!(?:um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|\d))[a-z0-9]+|(?:da|de) (?:pra|para)|isso da|vale a pena|(?:entao|agora|depois|por favor) (?:abre|abra|ativa|ative|mostra|mostre|liga|ligue|desliga|desligue|registra|registre|cria|crie|marca|marque|avisa|avise|manda|mande|confere|confira|verifica|verifique|calcula|calcule)) /;
+  var RELATO_PEDIDO = /^ (?:(?:bom dia|boa tarde|boa noite|oi|ola|capitao|ok|entao|agora|e|por favor) )*(?:onde|quem|qual|quais|quanto|quanta|quantos|quantas|o que|oque|que|por que|porque|pq|cade|sera|voce|voces|vc|como|quando (?:e|foi|foram|sera|vence|venceu|vai|devo|posso|fica|abre|fecha|chega|tem|teve|aconteceu|acontece|ocorreu|comecou)|consumo|historico|ultim[oa]s?|tudo que|tudo o que|lista|resumo|relatorio|status|situacao|media|total|(?:mostr|abr|list|calcul|expli|verifi|confir|consult|procur|busc|chec|analis|compar|recomend|avali|ajud|cri|envi|mand|lig|cham|pergunt|lembr|avis|apag|remov|cancel|deslig|escrev|ger|prepar|planej|mont|inform)(?:a|e|ue|que|ca|ma|me|ar|ir|er)|abre|abra|diz|diga|dize|veja|ve|cheque|faca|faz|faze|sugira|desfaz|desfaca|exclua|exclui|resuma|traduza|tem|ha|existe|posso|pode|podemos|devo|preciso|precisamos|quero|queria|gostaria|vamos|vou)(?= )/;
+  // Perigo agora (deriva, pedras, garrando, leme, queda, água subindo, porão, EPIRB, alarme, código no display): segue a rota de antes (SOS, passos, FAQ, IA) — a proposta de registro não pode tomar o lugar dos
+  // passos. Defeito «agora» também (o passo a passo vem antes).
+  var RELATO_PERIGO = / (?:deriv\w*|pedra\w*|garr\w*|sem governo|sem motor\w*|sem propuls\w*|sem controle|leme|cabeca|escorreg\w*|tropec\w*|caiu (?:d[ao]|n[ao]|entre|ao|pela|pelo)|queda|subindo|dando conta|porao|epirb|alarm\w*|apit\w*|sirene|buzzer|codigo|spn|fmi|fumac\w*|cheiro|faisca|choque|socorr\w*|doendo|dor|dores|sangue|sangr\w*|queimadura|desmai\w*|vomit\w*|engasg\w*|engoliu|tossindo|afog\w*|picad[oa]s?|agua-viva|agua viva|torceu|torci|fratur\w*|primeiros socorros|hospital|ambulancia|samu|medico|bombeiro\w*|rajada\w*|temporal|tempestade|mar grosso|mar agitado|ressaca|fundo|raso|rasa|profundidade|encalh\w*|neblina|cerracao|rota de colisao|em direcao (?:a|ao|as|aos|à|da|do)|(?:vindo|indo) (?:na|em) (?:nossa )?direcao|nao responde\w* (?:no|ao|pelo) radio|soltou|batendo (?:contra|no|na|nos|nas)|entrou (?:muita )?agua|entrando agua|perdemos (?:[a-z]+ ){0,2}(?:governo|motores|motor|leme|controle|ancora|propulsao)|perdemos de vista|sendo (?:levad|arrastad|empurrad)\w*|(?:levando|arrastando|empurrando) (?:o barco|a gente|nos)|(?:para|contra) a costa|contra o pier|ventando|ventania|(?:abre|abra|mostra|mostre|chama|chame|liga|ligue|avisa|avise|manda|mande|marca|marque|agenda|agende|cria|crie|coloca|coloque|fecha|feche|atualiza|atualize|gera|gere) (?:o|a|os|as|pro|pra|para|com|me|um|uma)|me liga|virou|capot\w*|emborc\w*|nao responde (?:ao|o|a) (?:timao|joystick|leme|acelerador|manete|comando)|(?:acelerador|manete|timao|comando) (?:\w+ )?trav\w*|adern\w*|inclinando|enchendo|alagando|monoxido|detector|superficie|mergulhador|(?:os )?(?:dois|2|ambos os) motores (?:\w+ )?(?:falh|par|apag|morr|deslig|caiu|cair)\w*|motores (?:falharam|pararam|apagaram|morreram)|sem os motores|(?:foi|foram) (?:parar )?(?:na agua|no mar|pro mar|para o mar)|pulou (?:na agua|no mar)|sumiu|sumiram|nao (?:consegue|conseguia|consigo) respirar|alergic\w*|inchad\w*|esmag\w*|vaz\w* (?:de )?(?:diesel|combustivel|gas|oleo)|cheiro de gas|chama|chamas|entrando muita agua|alagou|desacordad\w*|inconsc\w*)(?= )/;
+  // Pessoa em risco («o Lucas queimou a mão no escapamento», «a convidada torceu o tornozelo», «uma pessoa caiu entre o barco e o píer»): os passos / a IA, nunca só o «registrar?»
+  var RELATO_PESSOA = / (?:pessoa|pessoas|crianca|criancas|convidad[oa]s?|marinheiro|tripulante|alguem|passageir[oa]s?|lucas|mulher|homem|senhor|senhora|menino|menina|filho|filha|ele|ela|eu|se)(?: [a-z]+){0,4} (?:caiu|cairam|cortou|cortaram|queimou|queimaram|quebrou|bateu|machuc\w*|feriu|ferid[oa]|passou mal|passando mal|mordid[oa]|bateram|escaldou)(?= )/;
+  // Tempo piorando («o vento aumentou muito», «as ondas estão batendo forte»): segue para o clima e a IA; «vento fraco» é relato
+  var RELATO_TEMPO = / (?:vento|ventos|onda|ondas|chuva|chovendo|barometro|tempo|mar)(?: [a-z]+){0,3} (?:forte|fortes|aument\w*|subindo|caiu|caindo|fechou|batendo|grande|grandes|alta|altas|piorou|piorando)(?= )/;
+  var RELATO_FIM = / (?:sera|ne|nao e|certo|confere|nao|e agora|e ai|e entao|faz sentido|(?:e|eh) (?:o |um )?normal|(?:ainda )?(?:esta|ta) na garantia|tem garantia|cobre a garantia|da garantia|sera (?!necessari|precis)[a-z]+(?: [a-z]+){0,2}) $/;   // marca de pergunta no fim da frase ditada («… interferindo no GPS, será»)
+  var RELATO_AGORA = / (?:agora|neste momento|nesse momento|agorinha)(?= )/, RELATO_DEFEITO = /(?:esquent|superaquec|apagou|apagaram|apagando|deslig(?:ou|a|ando|aram|ando) sozinh|parou de|parando de|vazand|vazament|nao liga|nao parte|nao funciona|falh|desarm|quebrou|quebrad[oa]|quebraram|trav(?:ou|ando|ado))/;
+  var RELATO_ANOMALIA = / (?:nao (?:liga|ligou|funciona|funcionou|parte|carrega|conecta|responde|transmite|mostra|gela|esta (?:ligando|funcionando|transmitindo|mostrando|carregando|gelando|pegando))|sem (?:sinal|comunicacao|resposta|carga)|pingand\w*|gotej\w*|vibr\w*|barulho|ruido|estranh\w*|desengat\w*|caiu para|subiu para|marcando menos|ecos falsos|gastando mais|interfer\w*|erro)(?= )/;
+  function relatoDiario(qRaw, q) {
+    var raw = String(qRaw || '');
+    if (EM_SOS || /\?/.test(raw) || raw.length > 1000) return false;
+    q = q || pad(raw);
+    if (q.trim().split(/\s+/).length < 8) return false;
+    if (RELATO_PEDIDO.test(q) || RELATO_NAO.test(q) || RELATO_FIM.test(q) || RELATO_PERIGO.test(q) || RELATO_PESSOA.test(q) || RELATO_TEMPO.test(q) || (RELATO_AGORA.test(q) && RELATO_DEFEITO.test(q))) return false;
+    if (emergencia(q) || oleo(q) === 1 || socorroImplicito(q) || cabecaEmerg(q) || SOBRE.test(q) || querRegistrar(raw, q) || foraBarcoPergunta(q) || TERMOS.DINHEIRO.test(raw)) return false;   // (dinheiro e o que é de fora do barco não viram proposta de registro)
+    // verbo de fato fora de oração com «que» («consumo das saídas que fizemos em setembro», «anotações que o Lucas fez»: pedido de dado, não relato)
+    return RELATO_FATO.test(q.replace(/ (?:que|quem)(?: [a-z]+){1,3}(?= )/g, ' '));
+  }
+  function notaRelato(raw) { var s = limpaT(raw, 1000).replace(/^[\s,;:.!—–-]+/, ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+  // categoria do relato (a mais grave vale): segurança, motores, combustível, manutenção, navegação, documentos; o defeito contado é de equipamento; o resto, Diário
+  var CAT_RELATO = [['Segurança', /colete|extintor|epirb|seafire|salvatagem|sinalizador|balsa|man overboard/], ['Motores', /motor|motores|cummins|rpm|escapamento|turbo|helice/], ['Combustível', /diesel|combustivel|abasteci|tanque/],
+    ['Manutenção', /troca|trocamos|trocou|trocaram|manutenc|revis|limpeza|limpamos|limpou|filtro|rotor|anodo|inspec/], ['Navegação', /saimos|saiu|chegamos|chegou|navegamos|fundeamos|atracamos|travessia|largamos|amarramos/], ['Documentos', /documento|licenca|vistoria|laudo|seguro do barco/]];
+  function categoriaRelato(n, defeito) {
+    var t = ' ' + n + ' ', k, sys = null;
+    for (k = 0; k < CAT_RELATO.length; k++) if (CAT_RELATO[k][1].test(t)) { sys = CAT_RELATO[k][0]; break; }
+    return sys || (defeito ? 'Equipamentos' : 'Diário');
+  }
+  // O que fala a proposta: só quando o relato é claramente passado (ontem, hoje cedo, dia 3…), sem urgência nem defeito, ela é falada e vai no alto; no resto vai no fim, calada, e só vale «registrar» ou o botão
+  var RELATO_PASSADO = / (?:ontem|anteontem|hoje|semana passada|mes passado|feriado passado|ultimo feriado|fim de semana passado|ultimo fim de semana|de manha|pela manha|a tarde|a noite|mais cedo|ultima saida|dia \d+|ha \d+ (?:dias?|semanas?|meses))(?= )/;
+  var RELATO_AGORA_PRES = / (?:agora|neste momento|nesse momento|estamos|ainda|(?:esta|estao|ta|tao|continua|continuam) [a-z]+ndo)(?= )/;
+  var RELATO_URGENTE = / (?:sozinh[oa]s?|pres[oa]s?|trav\w*|sem (?:manobra|direcao|governo|instrumentos?|energia|luz|forca|comando|controle|leme|visibilidade|radar|freio)|nao (?:reduz|volta|desliga|obedece|segura|para|engata|corta|responde)|rodando|circulos?|solt[oa]s?|apag\w*|deslig\w*|dispar\w*|acelerou|arrebent\w*|romp\w*|estour\w*|jorr\w*|navegando|navegacao|travessia|no meio|canal|manobra|quase|bat(?:eu|emos|eram|endo|ida|ido)|enrosc\w*|abord\w*|inspecao|vapor|derret\w*|ferv\w*|estufad\w*)(?= )/;
+  var RELATO_RISCO = / (?:agua|gas|fogo|chama\w*|fumac\w*|pessoa|crianca|convidad\w*|marinheiro|tripulante|passageir\w*|alguem|ferid\w*|machuc\w*)(?= )/;
+  var RELATO_SEGURO = { porao: 1, canal16: 1, ancora: 1, seguro: 1, clima: 1, mare: 1, alarmes: 1, oleoLeitura: 1, epirb: 1, posicao: 1, navegacao: 1 };
+  function relatoFalado(n, key, sys, defeito) { return !RELATO_SEGURO[key] && !RELATO_RISCO.test(n) && !RELATO_URGENTE.test(n) && !defeito && !/^(?:Segurança|Anomalia)$/.test(sys || '') && RELATO_PASSADO.test(n) && !RELATO_AGORA_PRES.test(n); }
+  // as rotas que nunca recebem a proposta: emergência, o próprio registro, o diagnóstico, a saudação, o que não é do barco e a frase padrão sobre os dados
+  var SEM_RELATO = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, saudacao: 1, diagnostico: 1, sobreDados: 1, foraBarco: 1 };
+  var RELATO_VALE = 10 * 60e3, REL_VER = 'O que verificar e qual pode ser a causa: ';
+  // A proposta do relato (um ticket aberto, k diario, origem relato); o mesmo texto ainda aberto não duplica. REL guarda a que espera o «registrar» (10 min): o botão leva o id do ticket (5 s: ALVO_REL)
+  var REL = null, ALVO_REL = null;
+  function relatoPendente() {
+    var t;
+    if (!REL || Date.now() >= REL.ate) return null;
+    t = achaTicket(ticketsCru(), REL.id);
+    return t && t.estado === 'aberto' && t.origem === 'relato' ? REL : null;
+  }
+  // o ticket que o botão tocado aponta (vale 5 s) ou, sem ele, o que espera
+  function relatoAlvo() {
+    var a = ALVO_REL, t;
+    ALVO_REL = null;
+    if (a && Date.now() - a.t < 5000) { t = achaTicket(ticketsCru(), a.id); if (t && t.estado === 'aberto' && t.origem === 'relato') return { id: t.id }; }
+    return relatoPendente();
+  }
+  function propoeRelato(nota, sys, defeito, q) {
+    var abertos = ticketsAbertos().filter(function (x) { return x.origem === 'relato' && norm(x.texto) === norm(nota); }), t = abertos[0];
+    if (!t) t = addTicket({ k: 'diario', origem: 'relato', texto: nota, prop: { sys: sys, tone: tomDe(sys), pend: defeito ? true : undefined, q0: limpaT(q, 200) } });
+    if (!t) return null;
+    REL = { id: t.id, ate: Date.now() + RELATO_VALE, n: CONV.n };
+    return t;
+  }
+  // A proposta SOMA à resposta de sempre (texto, botões e, se for passado e sem urgência, a fala). Não age em pedido de link (commit false), de chip (id) nem de FAQ; nunca na emergência.
+  function acrescentaRelato(a, key, q, ctx) {
+    var n, nota, defeito, sys, t, bt, seg, f0, linha;
+    if (!a || !q || EM_SOS || SEM_RELATO[key] || emerg(a) || a.seguranca || (ctx && (ctx.commit === false || ctx.id || ctx.faq))) return a;
+    n = pad(q);
+    if (!relatoDiario(q, n)) return a;
+    nota = notaRelato(q); defeito = RELATO_DEFEITO.test(n) || RELATO_ANOMALIA.test(n); sys = categoriaRelato(n, defeito);
+    t = propoeRelato(nota, sys, defeito, q); if (!t) return a;
+    linha = 'Isto também parece um relato para o diário de bordo — registrar? Toque em Registrar no diário ou diga “registrar”.';
+    bt = [{ l: 'Registrar no diário', href: '#capitao-relato-registra-' + t.id }, { l: 'Não registrar', href: '#capitao-relato-cancela-' + t.id }].concat(defeito ? [{ l: 'O que verificar?', href: '#capitao-relato-verifica-' + t.id }] : []);
+    seg = !relatoFalado(n, key, sys, defeito); f0 = falaCurta(a);
+    a.text = String(a.text || '') + '\n\n' + linha;
+    a.actions = seg ? (a.actions || []).concat(bt) : bt.concat(a.actions || []);
+    if (!seg) a.fala = f0 + ' Parece um relato para o diário; para registrar, diga registrar.';
+    a.relato = { id: t.id, nota: nota, sys: sys, defeito: defeito, linha: linha, botoes: bt, falado: !seg };
+    return a;
+  }
+  // O que o botão da proposta pergunta ao chat (a tela manda esta pergunta como se fosse digitada): registrar, não registrar, ou o que verificar (o relato vai à IA). Guarda o alvo por 5 s.
+  function perguntaDoBotao(href) {
+    var m = /#capitao-relato-(registra|cancela|verifica)-(t[A-Za-z0-9_-]{2,60})$/.exec(String(href || '')), t;
+    if (!m) return '';
+    ALVO_REL = { id: m[2], t: Date.now() };
+    if (m[1] === 'registra') return 'registrar o relato';
+    if (m[1] === 'cancela') return 'não registrar o relato';
+    t = achaTicket(ticketsCru(), m[2]);
+    return t ? (REL_VER + t.texto.replace(/[\s.!]+$/, '')).slice(0, 500) : '';
+  }
+  if (!EM_SOS && !window.__capitaoBotoesRelato) {   // o toque num botão da proposta vira a pergunta digitada (a tela escuta 'capitao-chat-pergunta'); o link não navega
+    window.__capitaoBotoesRelato = true;
+    try { document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href*="#capitao-relato-"]') : null, q = a ? perguntaDoBotao(a.getAttribute('href')) : '';
+      if (!q) return;
+      e.preventDefault();
+      try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}
+    }); } catch (e) {}
+  }
+  // A resposta à proposta: «registrar» / «sim, registra» / «não registrar» / «cancelar». «ok», «certo» e «isso» são reconhecimento, não confirmação; o «sim» e o «não» curtos só valem logo depois da proposta
+  // (REL.n = a conversa dela, sem outra pergunta no meio); fora disso só o pedido explícito (registrar, anotar, relato, diário) ou o botão.
+  var RELATO_SIM = /^( (sim|ok|okay|pode|isso|claro|confirm\w*|registr\w*|anot\w*|grav\w*|salv\w*|no|o|a|diario|de|bordo|relato|por|favor|esse|este|mesmo|certo|ai|aqui|ta|bom|beleza|valeu|show|positivo|perfeito|obrigad[oa]|blz|fechado))+ $/, RELATO_SIM_TEM = / (sim|pode|claro|confirm\w*|registr\w*|anot\w*|grav\w*|salv\w*) /;
+  var RELATO_NAO_RESP = /^( (nao|cancel\w*|deixa|pra|la|o|a|relato|registr\w*|precisa|agora|obrigado|esquece|melhor|nao quero|no|diario))+ $/, RELATO_NAO_TEM = / (nao|cancel\w*|deixa|esquece) /;
+  function respostaRelato(q, rp) {
+    var explicito = / (registr\w*|anot\w*|grav\w*|salv\w*|relato|diario) /.test(q), logo = rp && rp.n === CONV.n && !CONV.pergunta;
+    if (!explicito && !logo) return null;
+    if (RELATO_NAO_RESP.test(q) && RELATO_NAO_TEM.test(q)) return 'nao';
+    if (RELATO_SIM.test(q) && RELATO_SIM_TEM.test(q)) return 'sim';
     return null;
   }
-  // a proposta de relato que espera o «registrar» (10 min; F16): vem no commit seguinte, aqui ainda nenhuma
-  var REL = null;
-  function relatoPendente() { return REL && Date.now() < REL.ate ? REL : null; }
+  // «registra agora», «registra pra mim», «anota isso», «pode lançar no diário»: com a proposta esperando, é a confirmação dela; «registra também que o gerador ficou ligado» soma o complemento ao relato;
+  // «registra com a data de ontem» anota a data. Sobra com perigo, pessoa, emergência ou fato próprio (um registro novo) não confirma: segue a rota dela.
+  var RELATO_CONF = /^ (?:(?:sim|ok|pode|por favor|entao|capitao|ta|beleza|claro|manda|vai|so|e) )*(?:registr(?:a|e|ar)|anot(?:a|e|ar)|lan[cç](?:a|e|ar)|grav(?:a|e|ar)|salv(?:a|e|ar))(?= )/;
+  var RELATO_SOBRA = /^(?: (?:agora|ai|isso|isto|tudo|ja|entao|depois|logo|por favor|pra mim|para mim|no|o|a|ele|ela|diario|de|bordo|com|foto|video|imagem|anexo|junto|essa|esse|esta|este|relato|mesmo|tambem|sim|ok|obrigad[oa]|valeu|segue|vai|pode|que|eu|disse|falei|contei|escrevi|relatei|dito|falado|contado|mencionado|acima|anterior|ultim[oa]|mensagem|problema|ocorrencia|informacao|fato|caso|registro|texto|assunto))* $/;
+  var RELATO_COMPL = /^ (?:(?:e )?(?:tambem|alem disso)|e que)(?= )/, RELATO_DATA = /^ com (?:a )?data (?:de |do |da )?(?:ontem|anteontem|hoje|\d|dia|segunda|terca|quarta|quinta|sexta|sabado|domingo)/;
+  function sobraRelato(qRaw, q) {
+    var raw = String(qRaw || ''), resto, sobra, w, x;
+    if (!RELATO_CONF.test(q) || /\?/.test(raw) || pedeTexto(raw)) return null;
+    resto = raw.replace(/^[\s\S]*?(?:registr|anot|lan[cç]|grav|salv)[a-zà-ÿ]*/i, '').replace(/^[\s,;:.!—–-]*(?:(?:no|em|o) )?di[aá]rio(?: de bordo)?(?=[\s,;:.!—–-]|$)/i, '').replace(/^[\s,;:.!—–-]*(?:por favor|a[ií])(?=[\s,;:.!—–-]|$)/i, '');
+    sobra = pad(resto); w = sobra.trim() ? sobra.trim().split(/\s+/).length : 0;
+    if (!w || (RELATO_SOBRA.test(sobra) && !/\d/.test(sobra))) return { extra: '' };
+    if (emergencia(sobra) || oleo(sobra) === 1 || socorroImplicito(sobra) || RELATO_PERIGO.test(sobra) || RELATO_PESSOA.test(sobra)) return null;
+    if (RELATO_DATA.test(sobra) && w <= 9) return { extra: '(ocorrido ' + limpaT(resto.replace(/^[\s,;:.!—–-]*com\s+(?:a\s+)?data\s+(?:de\s+|do\s+|da\s+)?/i, ''), 60).replace(/[\s.]+$/, '') + ')' };
+    if (RELATO_COMPL.test(sobra)) { x = limpaT(resto.replace(/^[\s,;:.!—–-]*(?:(?:e|também|tambem|além disso|alem disso|que)\s+)*/i, ''), 600); return { extra: x ? notaRelato(x) : '' }; }
+    return null;
+  }
+  function comExtra(nota, sb) { var x = sb && sb.extra; return !x ? nota : (nota.replace(/[\s.]+$/, '') + (x.charAt(0) === '(' ? ' ' + x : '. ' + x)).slice(0, 600); }
+  // os botões da proposta («registrar o relato», «não registrar o relato») valem sempre; com a proposta esperando, também o «registrar», o «sim», o «não», o «registra agora»… (a emergência e o óleo vêm antes)
+  var RELATO_BTN = /^ (?:(?:sim|ok|pode|por favor) )*(?:registrar|registra|registre|anotar|anota|anote) (?:o |esse |este |um )?relato $/, RELATO_BTN_NAO = /^ (?:(?:nao|ok|por favor) )?(?:nao registrar|nao registra|nao registre|nao anotar|nao anote|cancelar|cancela|cancele) (?:o |esse |este |um )?relato $/;
+  function relatoRota(qRaw, q) {
+    var rp, r;
+    if (RELATO_BTN_NAO.test(q)) return 'relatoCancela';
+    if (RELATO_BTN.test(q)) return 'relatoRegistra';
+    rp = relatoPendente(); if (!rp) return null;
+    r = respostaRelato(q, rp);
+    if (r === 'nao') return 'relatoCancela';
+    if (r === 'sim' || sobraRelato(qRaw, q)) return 'relatoRegistra';
+    return null;
+  }
   var NAO_ESPERA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1 };
 
   function A(platform, key) { return (HREF[platform] || HREF.web)[key]; }
@@ -1655,17 +1802,26 @@
       return grava ? { text: 'O que devo registrar no diário de bordo? Diga ou digite o texto agora — a próxima frase é gravada (ou diga “cancelar”).', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'O que devo registrar no diário?' }
         : { text: 'Não registrado — pedido vindo de link não grava no diário.\nPara registrar, diga ou digite aqui “registre no diário…” seguido do texto.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Pedido vindo de link não grava no diário.' };
     },
-    // «registrar o relato» / «sim, registra» depois da proposta do relato (F16): confirma a proposta que espera (1 linha); sem proposta, diz que não há
-    relatoRegistra: function (p, ctx) {
-      var rp = relatoPendente(), abrir = act(p, [['Abrir diário', 'diario']]);
+    // «registrar o relato» / «sim, registra» depois da proposta do relato (F16): confirma a proposta que espera (1 linha, com o complemento ou a data que a frase trouxe); sem proposta, diz que não há
+    relatoRegistra: function (p, ctx, q) {
+      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;
       if (!rp) return { text: 'Não há relato esperando para registrar. Para registrar, diga “registre no diário…” seguido do texto.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando para registrar.' };
-      return { text: 'Não há relato esperando para registrar.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando para registrar.' };
+      if (!grava) return { text: 'Não registrado — pedido vindo de link não grava no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Pedido vindo de link não grava no diário.' };
+      sb = sobraRelato(q, pad(q)); t = achaTicket(ticketsCru(), rp.id);
+      if (sb && sb.extra && t) { ex = comExtra(t.texto, sb); if (ex !== t.texto) editaTicket(t.id, { texto: ex }); }
+      r = aceitaTicket(rp.id, { chat: true }); REL = null;
+      if (!r) return { text: 'Esse relato não está mais esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato não está mais esperando; nada foi registrado.' };
+      if (r.ja) return { text: 'Esse relato já está registrado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato já está registrado.' };
+      return { text: 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + r.linha.t + '”\nLinha nova — nada se apaga.', src: 'Fonte: relato de ' + quem() + ' · diário de bordo do app', actions: abrir, fala: 'Registrado no diário de bordo.' };
     },
-    // «não registrar» / «cancelar» (F16, F17): descarta o que espera (a proposta do relato recusa, 0 linhas) ou a espera do «o que devo registrar?»: nada é gravado
+    // «não registrar» / «cancelar» (F16, F17): descarta o que espera (a proposta do relato é recusada, 0 linhas) ou a espera do «o que devo registrar?»: nada é gravado
     relatoCancela: function (p, ctx) {
-      var abrir = act(p, [['Abrir diário', 'diario']]);
+      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]), rp;
       if (ctx && ctx.espera) return { text: 'Certo — nada registrado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Certo, nada registrado.' };
-      return { text: 'Não há relato esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando; nada foi registrado.' };
+      rp = grava ? relatoAlvo() : relatoPendente();
+      if (!rp) return { text: 'Não há relato esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando; nada foi registrado.' };
+      if (grava) { recusaTicket(rp.id); REL = null; }
+      return { text: 'Certo — relato não registrado; nada foi gravado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Certo, relato não registrado.' };
     },
     // Seguro para sair: as ressalvas (segurança primeiro), os alarmes do quadro e a previsão REAL de vento (§2.5); o vento e as ondas do quadro vão como «a bordo agora» e
     // não entram na decisão. O app não tem limite de vento com fonte: ele não diz «não» pelo vento. Alarme crítico ativo diz «Não».
@@ -2868,6 +3024,7 @@
         if (emerg(a)) limpaConversa();
         else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1 };
       }
+      acrescentaRelato(a, a.key, String(q1 == null ? '' : q1).trim(), ctx);   // F16: o relato vira proposta (a hora do instante já está na resposta)
       return a;
     });
   }
@@ -3504,7 +3661,7 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, perguntaDoBotao: perguntaDoBotao, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

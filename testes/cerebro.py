@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -6372,9 +6372,164 @@ def grupo_p3f_f17(b, muta, ped):
     finally:
         pg.ctx.close()
 
+# —— F16: o relato no chat vira proposta ——
+RELATOS_P3F = [
+    'Hoje de manhã trocamos o filtro de ar do gerador na marina', 'A equipe do estaleiro instalou o novo transdutor da sonda ontem à tarde', 'O técnico da marina veio ontem e limpou o filtro de água salgada do motor',
+    'Chegamos na marina às cinco da tarde com tempo bom e mar calmo', 'Abastecemos mil litros de diesel no posto da marina antes de sair', 'O ar condicionado da cabine de proa não está gelando desde ontem à noite',
+    'O Seakeeper fez um barulho estranho na saída da barra hoje cedo', 'Ontem fizemos a limpeza do casco e trocamos os anodos de zinco na marina', 'O estaleiro entregou as cartas náuticas atualizadas do plotter na semana passada',
+    'Passamos o fim de semana fundeados na enseada e ficamos sem sinal de internet', 'O gerador ficou ligado durante toda a noite e consumiu bastante diesel', 'Recebemos a visita do fiscal da capitania e a vistoria anual foi aprovada ontem',
+    # (12 e 13) o defeito CONTADO no passado, sem urgência (a proposta fica calada) e o relato passado que ainda tem pendência no presente (também calado)
+    'Ontem a geladeira da cozinha não funcionou durante a tarde toda por causa do calor', 'Hoje trocamos o filtro de ar do gerador e ainda falta limpar o filtro do compressor',
+]
+# a pergunta, o pedido, o perigo, a pessoa em risco, a emergência e o óleo, o tempo piorando, o dinheiro, a frase curta, o comando de registro: NÃO viram proposta
+NAO_RELATOS_P3F = [
+    'qual é a autonomia do barco com a reserva de dez por cento hoje de manhã?', 'o gerador foi ligado ontem à noite e consumiu muito diesel, é normal?', 'o filtro de ar do gerador foi trocado ontem na marina, quando é a próxima troca',
+    'me mostre a lista de tarefas atrasadas do gerador por favor ok', 'abra o checklist de saída e confira os itens do convés agora', 'registre no diário que trocamos o filtro de ar do gerador hoje de manhã',
+    'trocamos o filtro de ar do gerador', 'o gerador ligou ontem', 'o barco está derivando para as pedras e não temos motor agora', 'a âncora garrou durante a noite e o barco foi levado para perto da costa',
+    'tem fumaça saindo da praça de máquinas desde que ligamos o gerador', 'o Lucas caiu da escada e cortou o braço no convés ontem', 'uma convidada passou mal durante o passeio e vomitou no convés',
+    'a pressão de óleo do motor BB caiu e o alarme acendeu agora', 'o vento aumentou muito e as ondas estão batendo forte no casco', 'oi bom dia capitão como vai você hoje',
+    'o dólar subiu muito hoje e o diesel também ficou mais caro', 'o alarme do porão disparou ontem de madrugada e a bomba ligou várias vezes', 'o que você faz com os dados que eu registro no diário de bordo todo dia',
+    'trocamos o filtro de ar do gerador ontem na marina com o técnico de sempre, né', 'o gerador está falhando bastante agora e a luz da cabine fica piscando muito',
+    # só a «?» (sem palavra de pergunta), só o pedido (verbo de comando), só a pessoa (sem perigo), sem verbo de fato, e o verbo que está na oração do «que» (pedido de dado)
+    'trocamos o filtro de ar do gerador ontem na marina com o técnico de sempre?', 'confira se o filtro de ar do gerador foi trocado ontem na marina pelo técnico',
+    'o Lucas cortou o dedo com a faca de cozinha na cabine ontem à noite', 'o marinheiro bateu o joelho na escada da cabine ontem à noite durante a limpeza', 'a cabine de proa do barco tem uma cama grande e muito confortável', 'a lista que fizemos ontem de tarefas do estaleiro está na pasta do barco',
+    'estamos com água entrando no casco desde que batemos na pedra ontem', 'o EPIRB caiu do suporte e a bateria ficou exposta ao sol durante o dia todo', 'como se faz para trocar o filtro de ar do gerador sem desmontar a tampa',
+]
+JS_P3F_RELATO = """([relatos, nao]) => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().length;
+  const res = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, relato: a.relato || null, actions: a.actions.map((x) => [x.l, x.href]), text: a.text, fala: B.falaCurta(a), src: a.src, rota: B.route(q) }; };
+  o.pos = relatos.map((q) => { const r = res(q); return [q, r.key, r.rota, r.relato && { id: r.relato.id, sys: r.relato.sys, defeito: r.relato.defeito, falado: r.relato.falado }, r.actions.map((x) => x[0]), r.text.endsWith('Toque em Registrar no diário ou diga “registrar”.'), r.fala]; });
+  o.tickets1 = B.loadTickets().map((t) => [t.k, t.origem, t.estado, t.sim, !!t.prop.sys]); o.linhas1 = n();
+  const longo = (relatos[0] + ' ').repeat(30); o.nao = nao.concat([longo]).map((q) => { const r = res(q); return [q.slice(0, 60), r.key, !!r.relato]; }); o.tickets2 = B.loadTickets().length;   // (o texto de mais de 1000 letras entra também)
+  // o mesmo relato duas vezes não duplica a proposta
+  localStorage.clear(); const q0 = relatos[0]; res(q0); res(q0); o.dup = B.loadTickets().length;
+  // pedido de link (commit false), chip (id) e FAQ: nenhuma proposta
+  localStorage.clear(); const a1 = res(q0, { platform: 'app', commit: false }), a2 = res(q0, { platform: 'app', id: 'diario' }); o.semProposta = [!!a1.relato, a1.text.indexOf('relato para o diário') >= 0, B.loadTickets().length];
+  return o; }"""
+JS_P3F_RELATO_FLUXO = """([relatos]) => { const B = window.CapitaoBrain, o = {}; const op = { platform: 'app' }, n = () => B.loadDiario().length, tk = () => B.loadTickets(), est = () => tk().map((t) => t.estado);
+  const R = relatos[0], R2 = relatos[2];
+  const prop = (q) => { const a = B.answer(q, op); return a.relato && a.relato.id; };
+  const diz = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), linhas: n() }; };
+  // 1) registrar
+  localStorage.clear(); let id = prop(R), l0 = n(); o.antes = [l0, est()];
+  let r = diz('registrar'); o.reg = [r.key, r.text.split('\\n')[0].slice(0, 29), r.text.split('\\n')[1], r.fala, n() - l0, est(), B.loadDiario()[0].sys, B.loadDiario()[0].sim, B.loadDiario()[0].src, B.loadDiario()[0].t];
+  r = diz('registrar'); o.regDeNovo = [r.key, r.text, n() - l0];
+  // 2) não registrar
+  localStorage.clear(); prop(R); l0 = n(); r = diz('não registrar'); o.nao = [r.key, r.text, r.fala, n() - l0, est()]; r = diz('registrar'); o.naoDepois = [r.key, n() - l0];
+  // 3) os jeitos de confirmar e de recusar (cada um com uma proposta nova)
+  const jeitos = ['sim', 'sim, registra', 'pode registrar', 'registra agora', 'anota isso', 'registrar o relato', 'Sim, pode registrar no diário', 'registra pra mim', 'pode lançar no diário', 'registra isso mesmo'];
+  o.confirma = jeitos.map((q) => { localStorage.clear(); prop(R); const l = n(), c = diz(q); return [q, c.key, n() - l, est()[0]]; });
+  const recusas = ['não', 'não registrar', 'cancelar', 'deixa pra lá', 'não, cancela', 'esquece', 'não registra'];
+  o.recusa = recusas.map((q) => { localStorage.clear(); prop(R); const l = n(), c = diz(q); return [q, c.key, n() - l, est()[0]]; });
+  // 4) o reconhecimento NÃO confirma (nem recusa): «ok», «tá bom», «certo», «valeu», «isso», «beleza»
+  o.ack = ['ok', 'tá bom', 'certo', 'valeu', 'isso', 'beleza', 'entendi'].map((q) => { localStorage.clear(); prop(R); const l = n(), c = diz(q); return [q, c.key, n() - l, est()[0]]; });
+  // 5) o «sim» curto só vale LOGO depois da proposta; depois de outra pergunta ele não confirma
+  localStorage.clear(); prop(R); B.answer('qual a autonomia?', op); l0 = n(); r = diz('sim'); o.simTarde = [r.key, n() - l0, est()[0]]; r = diz('registrar'); o.explicitoTarde = [r.key, n() - l0, est()[0]];
+  // 5b) a proposta espera 10 min (aos 5 min ainda vale)
+  localStorage.clear(); prop(R); const real5 = Date.now; Date.now = () => real5() + 300000; l0 = n(); r = diz('registrar'); Date.now = real5; o.cincoMin = [r.key, n() - l0];
+  // 5c) o pedido de link não confirma a proposta (e a proposta continua esperando)
+  localStorage.clear(); prop(R); l0 = n(); r = diz('registrar o relato', { platform: 'app', commit: false }); o.porLink = [r.key, r.text, n() - l0, est()[0]]; r = diz('registrar'); o.depoisDoLink = [r.key, n() - l0];
+  // 5d) o relato com defeito abre pendência na linha; o sem defeito, não
+  localStorage.clear(); prop(relatos[5]); diz('registrar'); const ld = B.loadDiario()[0]; localStorage.clear(); prop(R); diz('registrar'); const lp = B.loadDiario()[0]; o.pend = [ld.pend === true, ld.sys, 'pend' in lp];
+  // 6) complemento e data
+  localStorage.clear(); prop(R); l0 = n(); r = diz('registra também que o gerador ficou ligado a noite toda'); o.compl = [r.key, n() - l0, B.loadDiario()[0].t];
+  localStorage.clear(); prop(R); l0 = n(); r = diz('registra com a data de ontem'); o.data = [r.key, n() - l0, B.loadDiario()[0].t];
+  localStorage.clear(); prop(R); l0 = n(); r = diz('registra o gerador foi ligado ontem à noite por duas horas'); o.novoFato = [r.key, n() - l0, est()[0]];   // sobra com fato próprio: registro novo, não a confirmação
+  localStorage.clear(); prop(R); l0 = n(); r = diz('registra também que a âncora garrou durante a noite'); o.sobraPerigo = [r.key, n() - l0, est()[0]];   // o complemento com perigo não soma à proposta
+  // 7) a emergência, o NOVA, os 10 min e a confirmação pela tela encerram a proposta
+  localStorage.clear(); prop(R); r = diz('mayday, homem ao mar'); l0 = n(); const e1 = diz('registrar'); o.emerg = [r.key, e1.key, n() - l0, est()[0]];
+  localStorage.clear(); prop(R); B.limpaConversa(); l0 = n(); const e2 = diz('sim'); o.nova = [e2.key, n() - l0, est()[0]];
+  localStorage.clear(); prop(R); const real = Date.now; Date.now = () => real() + 601000; l0 = n(); const e3 = diz('sim'); const e3b = diz('registrar o relato'); Date.now = real; o.dez = [e3.key, e3b.key, e3b.text, n() - l0, est()[0]];
+  localStorage.clear(); id = prop(R); B.aceitaTicket(id); l0 = n(); const e4 = diz('registrar o relato'); o.pelaTela = [e4.key, e4.text, n() - l0];
+  // 8) o botão aponta a proposta certa (a antiga, não a nova); os links dos botões viram a pergunta
+  localStorage.clear(); const id1 = prop(R), id2 = prop(R2); const q1 = B.perguntaDoBotao('#capitao-relato-registra-' + id1); l0 = n(); const b1 = diz(q1);
+  o.botao = [q1, b1.key, n() - l0, tk().filter((t) => t.id === id1)[0].estado, tk().filter((t) => t.id === id2)[0].estado];
+  const q2 = B.perguntaDoBotao('#capitao-relato-cancela-' + id2); const b2 = diz(q2); o.botaoNao = [q2, b2.key, tk().filter((t) => t.id === id2)[0].estado];
+  const id3 = prop(R); o.verifica = B.perguntaDoBotao('#capitao-relato-verifica-' + id3); o.lixo = [B.perguntaDoBotao('#x'), B.perguntaDoBotao(''), B.perguntaDoBotao(null), B.perguntaDoBotao('#capitao-relato-apaga-' + id3), B.perguntaDoBotao('#capitao-relato-registra-')];
+  // o alvo do botão vale 5 s: depois, o «registrar o relato» vale a proposta que espera (a nova)
+  localStorage.clear(); const idA = prop(R); const idB = prop(R2); B.perguntaDoBotao('#capitao-relato-registra-' + idA); Date.now = () => real() + 6000; l0 = n(); const c5 = diz('registrar o relato'); Date.now = real; o.alvoVelho = [tk().filter((t) => t.id === idA)[0].estado, tk().filter((t) => t.id === idB)[0].estado];
+  // 9) a proposta nova troca a que esperava: o «registrar» é a nova; a antiga continua aberta na lista A CONFIRMAR
+  localStorage.clear(); const p1 = prop(R), p2 = prop(R2); l0 = n(); diz('registrar'); o.troca = [tk().filter((t) => t.id === p1)[0].estado, tk().filter((t) => t.id === p2)[0].estado, n() - l0, B.ticketsAbertos().map((t) => t.id)[0] === p1];
+  return o; }"""
+JS_P3F_RELATO_SIMFALSE = """([relatos]) => { const B = window.CapitaoBrain; localStorage.clear(); const a = B.answer(relatos[0], { platform: 'app' }); B.answer('registrar', { platform: 'app' });
+  return [!!a.relato, B.loadTickets()[0].sim, B.loadDiario()[0].sim, B.loadDiario().length]; }"""
+
+
+def grupo_p3f_relato(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        o = pg.evaluate(JS_P3F_RELATO, [RELATOS_P3F, NAO_RELATOS_P3F])
+        faltam = [(q, key, rota) for q, key, rota, rel, *_ in o['pos'] if not rel]
+        ped('p3f F16: os %d relatos (afirmação de fato com 8 palavras ou mais) ganham a proposta, sem trocar a resposta de sempre (a chave é a da rota)' % len(RELATOS_P3F), not faltam and all(k == r for _, k, r, *_ in o['pos']), (faltam, [(k, r) for _, k, r, *_ in o['pos'] if k != r]))
+        ped('p3f F16: a proposta traz os botões Registrar no diário e Não registrar (mais O que verificar? só quando o relato conta um defeito) com o id do ticket, e a linha «registrar? Toque em Registrar no diário ou diga “registrar”.»',
+            all(('Registrar no diário' in ls and 'Não registrar' in ls and linha and (('O que verificar?' in ls) == bool(rel['defeito']))) for _, _, _, rel, ls, linha, _ in o['pos']) and sorted(p[0] for p in o['pos'] if p[3]['defeito']) == sorted([RELATOS_P3F[i] for i in (5, 6, 9, 12)]), [(p[0][:30], p[3]['defeito']) for p in o['pos']])
+        ped('p3f F16: a proposta é um ticket aberto (k diario, origem relato, com sim e a categoria) e NÃO grava linha nenhuma no diário', len(o['tickets1']) == len(RELATOS_P3F) and all(t == ['diario', 'relato', 'aberto', True, True] for t in o['tickets1']) and o['linhas1'] == 0, (o['tickets1'][:2], o['linhas1']))
+        cats = {p[0]: p[3]['sys'] for p in o['pos']}
+        ped('p3f F16: a categoria vem do relato (manutenção, navegação, combustível, motores, documentos) e o defeito sem categoria é de equipamento',
+            [cats[RELATOS_P3F[i]] for i in (0, 3, 4, 2, 11, 6, 5)] == ['Manutenção', 'Navegação', 'Combustível', 'Motores', 'Documentos', 'Equipamentos', 'Equipamentos'], cats)
+        ped('p3f F16: a pergunta (com ou sem «?»), o pedido ao app, o comando de registro, a frase curta, o perigo, a pessoa em risco, a emergência, o óleo, o mar piorando, o dinheiro, o alarme do porão e o que fala do app NÃO recebem a proposta (%d frases) e nenhum ticket nasce' % len(NAO_RELATOS_P3F),
+            not [x for x in o['nao'] if x[2]] and len(o['nao']) == len(NAO_RELATOS_P3F) + 1 and o['tickets2'] == len(RELATOS_P3F), [x for x in o['nao'] if x[2]])
+        ped('p3f F16: o mesmo relato duas vezes é uma proposta só; o pedido de link (commit false) e o chip (id) não propõem nada', o['dup'] == 1 and o['semProposta'] == [False, False, 0], (o['dup'], o['semProposta']))
+        fala = {p[0]: p[6] for p in o['pos']}
+        ped('p3f F16: a proposta só é falada (e os botões sobem) quando o relato é passado, sem defeito, sem urgência e sem pendência no presente («Parece um relato para o diário; para registrar, diga registrar.»); o defeito e o resto ficam calados e os botões vão no fim',
+            all(('Parece um relato para o diário' in f) == bool(rel['falado']) for _, _, _, rel, _, _, f in o['pos']) and all((ls[0] == 'Registrar no diário') == bool(rel['falado']) and (rel['falado'] or ls[-1] in ('Não registrar', 'O que verificar?')) for _, _, _, rel, ls, _, _ in o['pos']) and not o['pos'][12][3]['falado'] and not o['pos'][13][3]['falado'] and fala[RELATOS_P3F[0]].endswith('Parece um relato para o diário; para registrar, diga registrar.') and 'relato' not in fala[RELATOS_P3F[5]] and sum(1 for p in o['pos'] if p[3]['falado']) >= 2, fala)
+        x = pg.evaluate(JS_P3F_RELATO_FLUXO, [RELATOS_P3F])
+        r = x['reg']
+        ped('p3f F16: «registrar» confirma a proposta que espera: 1 linha (o texto do relato, a categoria, sim, de onde veio), a proposta fica aceita, a confirmação é falada; «registrar» de novo (sem proposta) não grava',
+            x['antes'] == [0, ['aberto']] and r[0] == 'relatoRegistra' and r[1] == 'Registrado no diário de bordo' and r[2] == '“Hoje de manhã trocamos o filtro de ar do gerador na marina”' and r[3] == 'Registrado no diário de bordo.' and r[4] == 1 and r[5] == ['aceito'] and r[6] == 'Manutenção' and r[7] is True
+            and r[8] == 'app · proposta confirmada (relato)' and r[9] == 'Hoje de manhã trocamos o filtro de ar do gerador na marina' and x['regDeNovo'][0] == 'fallback' and x['regDeNovo'][2] == 1, x['reg'])
+        ped('p3f F16: «não registrar» recusa a proposta (0 linhas, ficha recusada, fala «relato não registrado») e o «registrar» depois não grava', x['nao'][0] == 'relatoCancela' and x['nao'][1].startswith('Certo — relato não registrado') and x['nao'][2] == 'Certo, relato não registrado.' and x['nao'][3] == 0 and x['nao'][4] == ['recusado']
+            and x['naoDepois'][1] == 0, x['nao'])
+        ped('p3f F16: os jeitos de confirmar («sim» logo depois, «sim, registra», «pode registrar», «registra agora», «anota isso», «registrar o relato»…) gravam 1 linha e aceitam a proposta', all(c[1] == 'relatoRegistra' and c[2] == 1 and c[3] == 'aceito' for c in x['confirma']), [c for c in x['confirma'] if c[2] != 1])
+        ped('p3f F16: os jeitos de recusar («não», «não registrar», «cancelar», «deixa pra lá», «esquece»…) não gravam e recusam a proposta', all(c[1] == 'relatoCancela' and c[2] == 0 and c[3] == 'recusado' for c in x['recusa']), [c for c in x['recusa'] if c[2] != 0])
+        ped('p3f F16: o reconhecimento («ok», «tá bom», «certo», «valeu», «isso», «beleza», «entendi») NÃO confirma nem recusa: nada grava e a proposta continua aberta', all(c[2] == 0 and c[3] == 'aberto' and c[1] not in ('relatoRegistra', 'relatoCancela') for c in x['ack']), x['ack'])
+        ped('p3f F16: o «sim» curto só vale logo depois da proposta (depois de outra pergunta não confirma), mas o «registrar» explícito vale', x['simTarde'] == ['fallback', 0, 'aberto'] and x['explicitoTarde'][0] == 'relatoRegistra' and x['explicitoTarde'][1] == 1, (x['simTarde'], x['explicitoTarde']))
+        ped('p3f F16: «registra também que…» soma o complemento ao relato, «registra com a data de ontem» anota a data, e a sobra com fato próprio é um registro novo (não confirma a proposta)',
+            x['compl'][0] == 'relatoRegistra' and x['compl'][1] == 1 and x['compl'][2] == 'Hoje de manhã trocamos o filtro de ar do gerador na marina. O gerador ficou ligado a noite toda' and x['data'][2] == 'Hoje de manhã trocamos o filtro de ar do gerador na marina (ocorrido ontem)'
+            and x['novoFato'][0] == 'diario' and x['novoFato'][2] == 'aberto' and x['sobraPerigo'][0] == 'diario' and x['sobraPerigo'][2] == 'aberto', (x['compl'], x['data'], x['novoFato'], x['sobraPerigo']))
+        ped('p3f F16: a proposta espera 10 min (aos 5 min o «registrar» ainda vale); o pedido de link (commit false) não confirma e a proposta continua esperando; o relato com defeito abre pendência na linha (pend), o sem defeito não',
+            x['cincoMin'] == ['relatoRegistra', 1] and x['porLink'][0] == 'relatoRegistra' and x['porLink'][1].startswith('Não registrado — pedido vindo de link') and x['porLink'][2] == 0 and x['porLink'][3] == 'aberto' and x['depoisDoLink'] == ['relatoRegistra', 1] and x['pend'] == [True, 'Equipamentos', False], (x['cincoMin'], x['porLink'], x['depoisDoLink'], x['pend']))
+        ped('p3f F16: a emergência, o NOVA, os 10 minutos e a confirmação pela tela encerram a proposta (o «registrar» depois não grava; «registrar o relato» diz que não há)', x['emerg'][0] == 'sos' and x['emerg'][2] == 0 and x['emerg'][3] == 'aberto' and x['nova'][1] == 0 and x['nova'][2] == 'aberto'
+            and x['dez'][1] == 'relatoRegistra' and x['dez'][2].startswith('Não há relato esperando') and x['dez'][3] == 0 and x['pelaTela'][1].startswith('Não há') and x['pelaTela'][2] == 0, (x['emerg'], x['nova'], x['dez'], x['pelaTela']))
+        ped('p3f F16: o botão aponta a proposta certa (a antiga, não a nova), o «não registrar» do botão recusa a proposta do botão, o alvo do botão vale 5 s, o «O que verificar?» manda o relato à IA e o link sem sentido não vira pergunta',
+            x['botao'][0] == 'registrar o relato' and x['botao'][1] == 'relatoRegistra' and x['botao'][2] == 1 and x['botao'][3] == 'aceito' and x['botao'][4] == 'aberto' and x['botaoNao'][0] == 'não registrar o relato' and x['botaoNao'][2] == 'recusado'
+            and x['verifica'] == 'O que verificar e qual pode ser a causa: Hoje de manhã trocamos o filtro de ar do gerador na marina' and all(v == '' for v in x['lixo']) and x['alvoVelho'] == ['aberto', 'aceito'], (x['botao'], x['botaoNao'], x['verifica'], x['lixo'], x['alvoVelho']))
+        ped('p3f F16: a proposta nova troca a que esperava (o «registrar» é da nova) e a antiga continua aberta na lista A CONFIRMAR', x['troca'][0] == 'aberto' and x['troca'][1] == 'aceito' and x['troca'][2] == 1 and x['troca'][3] is True, x['troca'])
+        # nada do que a proposta escreve casa as regex do §3 nem leva coordenada
+        varre = pg.evaluate("""(qs) => { const B = window.CapitaoBrain; localStorage.clear(); return qs.map((q) => { const a = B.answer(q, { platform: 'app' }); return [a.text, a.src, B.falaCurta(a)].join('\\n'); }); }""", RELATOS_P3F)
+        ruim = [(n, m.group(0)) for t in varre for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'DINHEIRO') for m in [RX[n].search(t)] if m]
+        ped('p3f F16: nenhuma resposta com a proposta (texto, fonte, fala) casa ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL nem DINHEIRO', not ruim, ruim[:4])
+    finally:
+        pg.ctx.close()
+    # o toque num botão da proposta vira a pergunta digitada ('capitao-chat-pergunta') e o link não navega
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        c = pg.evaluate("""([relato]) => { const B = window.CapitaoBrain; localStorage.clear(); const a = B.answer(relato, { platform: 'app' }), got = [];
+          window.addEventListener('capitao-chat-pergunta', (e) => got.push(e.detail.q));
+          const dentro = a.relato.botoes.map((x) => { const l = document.createElement('a'); l.href = x.href; l.textContent = x.l; document.body.appendChild(l); const ev = new MouseEvent('click', { bubbles: true, cancelable: true }); l.dispatchEvent(ev); return [x.l, ev.defaultPrevented]; });
+          const hashDentro = location.hash; const fora = document.createElement('a'); fora.href = '#outro-link'; document.body.appendChild(fora); const ev2 = new MouseEvent('click', { bubbles: true, cancelable: true }); fora.dispatchEvent(ev2);
+          return { got, dentro, fora: ev2.defaultPrevented, hashDentro, hash: location.hash }; }""", [RELATOS_P3F[0]])
+        ped('p3f F16: o toque num botão da proposta (Registrar, Não registrar) vira a pergunta «registrar o relato» / «não registrar o relato» no evento capitao-chat-pergunta e o link não navega; outro link não é tocado',
+            c['got'] == ['registrar o relato', 'não registrar o relato'] and all(d[1] for d in c['dentro']) and c['hashDentro'] == '' and c['fora'] is False and c['hash'] == '#outro-link', c)
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, fixo='105', extra=SEM_SIMULACAO)
+    try:
+        r = pg.evaluate(JS_P3F_RELATO_SIMFALSE, [RELATOS_P3F])
+        ped('p3f F16 (simulacao false): a proposta e a linha confirmada não levam sim', r == [True, None, None, 1], r)
+    finally:
+        pg.ctx.close()
+    # o SOS não propõe: relato dito na página do SOS não gera ticket nem proposta
+    pg = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None)
+    try:
+        r = pg.evaluate("""([qs]) => { const B = window.CapitaoBrain; localStorage.clear(); const a = qs.map((q) => !!B.answer(q, { platform: 'app' }).relato); return [a, localStorage.getItem('capitao.tickets.v1')]; }""", [RELATOS_P3F])
+        ped('p3f F16 (SOS): na página do SOS nenhum relato recebe a proposta nem cria ticket', r == [[False] * len(RELATOS_P3F), None], r)
+    finally:
+        pg.ctx.close()
+
 GRUPOS_3A['p3f_registro'] = grupo_p3f_registro
 GRUPOS_3A['p3f_tickets'] = grupo_p3f_tickets
 GRUPOS_3A['p3f_f17'] = grupo_p3f_f17
+GRUPOS_3A['p3f_relato'] = grupo_p3f_relato
 
 
 # —— os mutantes do registro, das linhas de ação e das propostas (P3F) ——
@@ -6459,6 +6614,66 @@ MUTANTES_P3F_F17 = [
     ('p3f F17: o pedido de link fala que gravou', r"    if (!grava) return 'Pedido vindo de link não grava no diário.';", r"", ('p3f_f17',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F17
+
+MUTANTES_P3F_F16 = [
+    ('p3f F16: o relato curto (menos de 8 palavras) recebe a proposta', r"    if (q.trim().split(/\s+/).length < 8) return false;", r"", ('p3f_relato',)),
+    ('p3f F16: o relato precisa de 5 palavras só', r"    if (q.trim().split(/\s+/).length < 8) return false;", r"    if (q.trim().split(/\s+/).length < 5) return false;", ('p3f_relato',)),
+    ('p3f F16: a pergunta com «?» recebe a proposta', r"    if (EM_SOS || /\?/.test(raw) || raw.length > 1000) return false;", r"    if (EM_SOS || raw.length > 1000) return false;", ('p3f_relato',)),
+    ('p3f F16: o texto enorme (mais de 1000 letras) recebe a proposta', r"    if (EM_SOS || /\?/.test(raw) || raw.length > 1000) return false;", r"    if (EM_SOS || /\?/.test(raw)) return false;", ('p3f_relato',)),
+    ('p3f F16: o pedido ao app recebe a proposta', r"if (RELATO_PEDIDO.test(q) || RELATO_NAO.test(q) ||", r"if (RELATO_NAO.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: a pergunta ditada recebe a proposta', r"if (RELATO_PEDIDO.test(q) || RELATO_NAO.test(q) ||", r"if (RELATO_PEDIDO.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: a marca de pergunta no fim da frase ditada recebe a proposta', r"RELATO_NAO.test(q) || RELATO_FIM.test(q) ||", r"RELATO_NAO.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: o perigo recebe a proposta', r"RELATO_FIM.test(q) || RELATO_PERIGO.test(q) ||", r"RELATO_FIM.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: a pessoa em risco recebe a proposta', r"RELATO_PERIGO.test(q) || RELATO_PESSOA.test(q) ||", r"RELATO_PERIGO.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: o mar piorando recebe a proposta', r"RELATO_PESSOA.test(q) || RELATO_TEMPO.test(q) ||", r"RELATO_PESSOA.test(q) ||", ('p3f_relato',)),
+    ('p3f F16: o defeito «agora» recebe a proposta', r"RELATO_TEMPO.test(q) || (RELATO_AGORA.test(q) && RELATO_DEFEITO.test(q))) return false;", r"RELATO_TEMPO.test(q)) return false;", ('p3f_relato',)),
+    ('p3f F16: o dinheiro recebe a proposta', r" || foraBarcoPergunta(q) || TERMOS.DINHEIRO.test(raw)) return false;", r") return false;", ('p3f_relato',)),
+    ('p3f F16: sem verbo de fato qualquer frase longa é relato', r"    return RELATO_FATO.test(q.replace(/ (?:que|quem)(?: [a-z]+){1,3}(?= )/g, ' '));", r"    return true;", ('p3f_relato',)),
+    ('p3f F16: o verbo dentro de oração com «que» conta como fato', r"    return RELATO_FATO.test(q.replace(/ (?:que|quem)(?: [a-z]+){1,3}(?= )/g, ' '));", r"    return RELATO_FATO.test(q);", ('p3f_relato',)),
+    ('p3f F16: o pedido de link (commit false) recebe a proposta', r"|| a.seguranca || (ctx && (ctx.commit === false || ctx.id || ctx.faq))) return a;", r"|| a.seguranca || (ctx && (ctx.id || ctx.faq))) return a;", ('p3f_relato',)),
+    ('p3f F16: o chip (id) recebe a proposta', r"|| a.seguranca || (ctx && (ctx.commit === false || ctx.id || ctx.faq))) return a;", r"|| a.seguranca || (ctx && (ctx.commit === false || ctx.faq))) return a;", ('p3f_relato',)),
+    ('p3f F16: a proposta duplica o relato igual ainda aberto', r"    var abertos = ticketsAbertos().filter(function (x) { return x.origem === 'relato' && norm(x.texto) === norm(nota); }), t = abertos[0];", r"    var abertos = [], t = null;", ('p3f_relato',)),
+    ('p3f F16: a proposta grava a linha direto no diário', r"    t = propoeRelato(nota, sys, defeito, q); if (!t) return a;", r"    t = propoeRelato(nota, sys, defeito, q); if (!t) return a; addDiario({ t: nota, sys: sys });", ('p3f_relato',)),
+    ('p3f F16: o botão O que verificar? vale para todo relato', r"].concat(defeito ? [{ l: 'O que verificar?', href: '#capitao-relato-verifica-' + t.id }] : []);", r"].concat([{ l: 'O que verificar?', href: '#capitao-relato-verifica-' + t.id }]);", ('p3f_relato',)),
+    ('p3f F16: o botão O que verificar? não aparece nem no defeito', r"].concat(defeito ? [{ l: 'O que verificar?', href: '#capitao-relato-verifica-' + t.id }] : []);", r"].concat([]);", ('p3f_relato',)),
+    ('p3f F16: a proposta nunca é falada', r"    seg = !relatoFalado(n, key, sys, defeito); f0 = falaCurta(a);", r"    seg = true; f0 = falaCurta(a);", ('p3f_relato',)),
+    ('p3f F16: a proposta sempre é falada (mesmo o defeito)', r"    seg = !relatoFalado(n, key, sys, defeito); f0 = falaCurta(a);", r"    seg = false; f0 = falaCurta(a);", ('p3f_relato',)),
+    ('p3f F16: a proposta falada vai no fim dos botões (os botões não sobem)', r"    a.actions = seg ? (a.actions || []).concat(bt) : bt.concat(a.actions || []);", r"    a.actions = (a.actions || []).concat(bt);", ('p3f_relato',)),
+    ('p3f F16: o defeito é falado como relato passado (o defeito não conta)', r"!RELATO_URGENTE.test(n) && !defeito && !/^(?:Segurança|Anomalia)$/.test(sys || '')", r"!RELATO_URGENTE.test(n) && !/^(?:Segurança|Anomalia)$/.test(sys || '')", ('p3f_relato',)),
+    ('p3f F16: o relato no presente («estamos…», «continua…») é falado', r" && RELATO_PASSADO.test(n) && !RELATO_AGORA_PRES.test(n); }", r" && RELATO_PASSADO.test(n); }", ('p3f_relato',)),
+    ('p3f F16: a categoria de navegação some', r"['Navegação', /saimos|saiu|chegamos|chegou|navegamos|fundeamos|atracamos|travessia|largamos|amarramos/]", r"['Navegação', /zzzz/]", ('p3f_relato',)),
+    ('p3f F16: a categoria de combustível some', r"['Combustível', /diesel|combustivel|abasteci|tanque/]", r"['Combustível', /zzzz/]", ('p3f_relato',)),
+    ('p3f F16: o defeito sem categoria cai em Diário', r"    return sys || (defeito ? 'Equipamentos' : 'Diário');", r"    return sys || 'Diário';", ('p3f_relato',)),
+    ('p3f F16: a categoria de segurança não vence a de motores', r"    for (k = 0; k < CAT_RELATO.length; k++) if (CAT_RELATO[k][1].test(t)) { sys = CAT_RELATO[k][0]; break; }", r"    for (k = CAT_RELATO.length - 1; k >= 0; k--) if (CAT_RELATO[k][1].test(t)) { sys = CAT_RELATO[k][0]; break; }", ('p3f_relato',)),
+    ('p3f F16: a proposta que espera não vence em 10 minutos', r"    if (!REL || Date.now() >= REL.ate) return null;", r"    if (!REL) return null;", ('p3f_relato',)),
+    ('p3f F16: a proposta que espera vale 1 minuto', r"var RELATO_VALE = 10 * 60e3,", r"var RELATO_VALE = 60e3,", ('p3f_relato',)),
+    ('p3f F16: a proposta confirmada pela tela continua esperando o «registrar»', r"    return t && t.estado === 'aberto' && t.origem === 'relato' ? REL : null;", r"    return t && t.origem === 'relato' ? REL : null;", ('p3f_relato',)),
+    ('p3f F16: o «sim» curto vale em qualquer conversa (não só logo depois da proposta)', r"logo = rp && rp.n === CONV.n && !CONV.pergunta;", r"logo = !!rp;", ('p3f_relato',)),
+    ('p3f F16: o reconhecimento («ok», «tá bom») confirma', r"if (RELATO_SIM.test(q) && RELATO_SIM_TEM.test(q)) return 'sim';", r"if (RELATO_SIM.test(q)) return 'sim';", ('p3f_relato',)),
+    ('p3f F16: o «não» curto não recusa', r"if (RELATO_NAO_RESP.test(q) && RELATO_NAO_TEM.test(q)) return 'nao';", r"", ('p3f_relato',)),
+    ('p3f F16: a recusa vale sem a palavra de recusa (qualquer frase de recusa curta)', r"if (RELATO_NAO_RESP.test(q) && RELATO_NAO_TEM.test(q)) return 'nao';", r"if (RELATO_NAO_RESP.test(q)) return 'nao';", ('p3f_relato',)),
+    ('p3f F16: «registra agora» não confirma (a sobra não entra)', r"    if (r === 'sim' || sobraRelato(qRaw, q)) return 'relatoRegistra';", r"    if (r === 'sim') return 'relatoRegistra';", ('p3f_relato',)),
+    ('p3f F16: a sobra com fato próprio confirma a proposta', r"    if (RELATO_COMPL.test(sobra)) {", r"    if (true) {", ('p3f_relato',)),
+    ('p3f F16: a sobra com perigo confirma', r"socorroImplicito(sobra) || RELATO_PERIGO.test(sobra) || RELATO_PESSOA.test(sobra)) return null;", r"socorroImplicito(sobra)) return null;", ('p3f_relato',)),
+    ('p3f F16: a data não é anotada', r"    if (RELATO_DATA.test(sobra) && w <= 9) return", r"    if (false) return", ('p3f_relato',)),
+    ('p3f F16: o complemento não é somado', r"    if (RELATO_COMPL.test(sobra)) { x =", r"    if (false) { x =", ('p3f_relato',)),
+    ('p3f F16: o complemento troca o relato em vez de somar', r"(nota.replace(/[\s.]+$/, '') + (x.charAt(0) === '(' ? ' ' + x : '. ' + x)).slice(0, 600); }", r"x.slice(0, 600); }", ('p3f_relato',)),
+    ('p3f F16: o registrar não confere o complemento do relato', r"      if (sb && sb.extra && t) { ex = comExtra(t.texto, sb); if (ex !== t.texto) editaTicket(t.id, { texto: ex }); }", r"", ('p3f_relato',)),
+    ('p3f F16: o não registrar não recusa a proposta', r"      if (grava) { recusaTicket(rp.id); REL = null; }", r"      if (grava) { REL = null; }", ('p3f_relato',)),
+    ('p3f F16: o pedido de link confirma a proposta', r"      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;", r"      var grava = true, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;", ('p3f_relato',)),
+    ('p3f F16: o alvo do botão vale para sempre', r"    if (a && Date.now() - a.t < 5000) { t = achaTicket(ticketsCru(), a.id);", r"    if (a) { t = achaTicket(ticketsCru(), a.id);", ('p3f_relato',)),
+    ('p3f F16: o botão não guarda o alvo', "    ALVO_REL = { id: m[2], t: Date.now() };\n", "", ('p3f_relato',)),
+    ('p3f F16: o botão O que verificar? devolve só o relato (sem a pergunta)', r"    return t ? (REL_VER + t.texto.replace(/[\s.!]+$/, '')).slice(0, 500) : '';", r"    return t ? t.texto.slice(0, 500) : '';", ('p3f_relato',)),
+    ('p3f F16: o botão Registrar pergunta «não registrar»', r"    if (m[1] === 'registra') return 'registrar o relato';", r"    if (m[1] === 'registra') return 'não registrar o relato';", ('p3f_relato',)),
+    ('p3f F16: o toque no botão navega (sem preventDefault)', "      if (!q) return;\n      e.preventDefault();", "      if (!q) return;", ('p3f_relato',)),
+    ('p3f F16: o toque no botão não manda a pergunta', r"      try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}", r"", ('p3f_relato',)),
+    ('p3f F16: o NOVA não zera a proposta que espera', r"ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR", r"ESPERA_REG = null; }   // NOVA e ENCERRAR", ('p3f_relato',)),
+    ('p3f F16: a emergência não encerra a proposta que espera', "        if (emerg(a)) limpaConversa();\n        else if", "        if (false) limpaConversa();\n        else if", ('p3f_relato',)),
+    ('p3f F16: o botão da proposta não existe sem proposta (a rota some)', "    if (RELATO_BTN_NAO.test(q)) return 'relatoCancela';\n    if (RELATO_BTN.test(q)) return 'relatoRegistra';", "", ('p3f_relato',)),
+    ('p3f F16: sem a simulação a proposta leva o carimbo sim', r"    if (sim()) item.sim = true;", r"    item.sim = true;", ('p3f_relato',)),
+    ('p3f F16: o defeito não abre pendência na linha', r"pend: defeito ? true : undefined, q0: limpaT(q, 200) } });", r"q0: limpaT(q, 200) } });", ('p3f_relato',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F16
 
 
 def instante_3a(b):
