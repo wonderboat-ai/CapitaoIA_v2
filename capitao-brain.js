@@ -1169,7 +1169,7 @@
     // MMSI (CLAUDE.md 8): a 1ª linha manda usar o MMSI da etiqueta do rádio (Licença de Estação); a 2ª diz o do cadastro do app. Nunca com instrução de programar, nunca com posição ou pessoas.
     mmsi: function (p, ctx, qq) {
       var pq = pad(qq || ''), ind = has(pq, ['indicativo', 'call sign', 'callsign']),   // («qual o MMSI e o indicativo?»: o indicativo nunca é gerado, é o da Licença de Estação)
-        cad = !EM_SOS && !has(pq, MMSI_PROGRAMA);   // («como programar o MMSI no rádio?»: o do cadastro do app nunca aparece perto de programar, só o da etiqueta)
+        cad = !EM_SOS && mmsiNeutra(pq);   // (o do cadastro do app só vai para a pergunta NEUTRA do número («qual o MMSI do barco?»): perto de «colocar», «digitar», «cadastrar», do rádio, do AIS ou do plotter, só o da etiqueta)
       return { text: MMSI_USO + (ind ? ' Indicativo: ' + INDICATIVO + '.' : '') + (cad ? '\nCadastro do app: ' + mmsiNum() + '.' : ''), src: FT.proto + (cad ? ' · ' + (E.fonte || 'cadastro da embarcação') : ''), actions: act(p, [['Abrir SOS', 'sos'], ['Documentos', 'docs']]) };
     },
     // AIS: o transponder do cadastro e os alvos do quadro; a pergunta de procedimento (como, código, onde fica…) vai ao guia dele (GENERICAS/FAMILIA)
@@ -1250,11 +1250,15 @@
     ' lancha ', ' lanchas ', ' voce ', ' vc ', ' capitao ', ' ia ', ' sistema ', ' aplicativo ', ' informacoes ', ' diesel ', ' combustivel ', ' velocidade ', ' rumo ', ' vento ', ' ondas ', ' profundidade ',
     ' consumo ', ' autonomia ', ' temperatura ', ' calado ', ' horimetros '];
   var AUT_FORA = ['preco', 'custa', 'custo', 'pagar', 'r$', 'extintor', 'seafire', 'sea fire', 'sea-fire'];
+  // (revisão 3) o alarme, o alerta, o sensor e o GPS com «falso/fake» são o falso alarme, nunca a autenticidade; «alarme/alerta/sensor DE <coisa>» é o equipamento (o guia), e quem pede ajuda ou diz que é risco não recebe a frase de apresentação
+  var AUT_SENSOR = [' alarme ', ' alarmes ', ' alerta ', ' alertas ', ' sensor ', ' sensores ', ' gps '];
+  var AUT_FALSO = / (?:fals[oa]s?|fake) /;
+  var AUT_SENSOR_DE = / (?:alarmes?|alertas?|sensor(?:es)?) d[aeo]s? /;
   // o «real» da pergunta: as palavras da autenticidade que também são medida (real, reais, de verdade, verdadeiro) ou outro sentido (falso, fake)
   var AUT_AW = '(?:real|reais|de verdade|verdadeir[oa]s?|fals[oa]s?|fake)';
-  var AUT_COP = '(?:e|eh|sao|foi|era|eram|seria|seriam|sera|serao|ser|parece|parecem)';
+  var AUT_COP = '(?:e|eh|sao|foi|era|eram|seria|seriam|sera|serao|ser|parece|parecem|esta|estao|ta|tao|estava|estavam)';
   // o que pode vir depois do «real»: «certo», «mesmo», «né», «de verdade» (a cauda «ou simulado» é da ordem invertida e das palavras fortes)
-  var AUT_CAUDA = '(?: (?:mesmo|ne|certo|de fato|de verdade|hein|ou nao))*';
+  var AUT_CAUDA = '(?: (?:mesmo|ne|certo|de fato|de verdade|hein|ou nao|nao e|nao))*';
   var AUT_PRED = new RegExp(' ' + AUT_COP + ' (?:[a-z0-9]+ ){0,3}' + AUT_AW + AUT_CAUDA + ' $');
   var AUT_NOME = new RegExp(' (?:dado|dados|leitura|leituras|numeros|valores|informacoes|telemetria|navegacao|viagem|barco|embarcacao|lancha|app|aplicativo|sistema) ' + AUT_AW + AUT_CAUDA + ' $');
   var AUT_INV = new RegExp(' ' + AUT_COP + ' ' + AUT_AW + '(?: [a-z0-9]+){1,3} $');
@@ -1262,7 +1266,7 @@
   var AUT_QUE_E = / (?:o que|oque|oq) (?:e|eh) (?:real|de verdade|verdadeir[oa]|simulad[oa]|fals[oa]|fake)(?: (?:aqui|ai|nisso|nisto|disso|no app|neste app|nesse app|a bordo|no barco))* $/;
   var AUT_NAVEGANDO = / (?:navegando|navegamos|viajando|viajamos) de verdade /;
   // a forma curta, sem a palavra do alvo: «é real?», «é de verdade?», «é simulado?», «está simulado?», «é uma demo?», «é só uma simulação?», «estamos em uma simulação?», «é um simulador?», «isso é fake?»
-  var AUT_CURTA = /^ (?:(?:mas|entao|isso|isto|tudo|aqui|vc|voce|voces|vcs) )*(?:e|eh|sao|era|foi|esta|estao|estamos|estou|seria|sera) (?:(?:so|apenas|somente|tudo|isso|isto|mesmo|totalmente|realmente|muito|tao) )*(?:(?:em|numa|num|dentro de) )?(?:uma? )?(?:real|reais|de verdade|verdadeir[oa]s?|simulad[oa]s?|fictici[oa]s?|inventad[oa]s?|fals[oa]s?|fake|de mentira|simulacao|simulador|demonstracao|demo)(?: (?:mesmo|ne|certo|de verdade|de fato))* $/;
+  var AUT_CURTA = /^ (?:(?:mas|entao|isso|isto|tudo|aqui|vc|voce|voces|vcs) )*(?:e|eh|sao|era|foi|esta|estao|ta|tao|estamos|estou|seria|sera) (?:(?:so|apenas|somente|tudo|isso|isto|mesmo|totalmente|realmente|muito|tao) )*(?:(?:em|numa|num|dentro de) )?(?:uma? )?(?:real|reais|de verdade|verdadeir[oa]s?|simulad[oa]s?|fictici[oa]s?|inventad[oa]s?|fals[oa]s?|fake|de mentira|simulacao|simulador|demonstracao|demo)(?: (?:mesmo|ne|certo|de verdade|de fato|ou nao|nao e|nao|ou (?:e |eh |esta )?(?:real|reais|de verdade|verdadeir[oa]s?|simulad[oa]s?|fictici[oa]s?|fals[oa]s?|fake|de mentira)))* $/;
   // a medida (ou a moeda) que usa as mesmas palavras: nunca a pergunta da autenticidade
   var AUT_MEDIDA = / (?:tempo|velocidade|vento|valor|consumo|diesel|combustivel|profundidade|calado|rumo|norte|estado|nivel|autonomia|pressao|temperatura|distancia|rpm|horas|horario|posicao|latitude|longitude|curso|proa|angulo|ondas?|mare|altura|peso|carga|tensao|corrente|horimetro|rotacao|alcance|capacidade|vazao|volume|quantidade|media|maxima|minima|giro|sog|cog|stw) (?:real|reais|verdadeir[oa]s?) | (?:em|de|mil|milhoes de) reais | (?:quanto|quanta|quantos|quantas|qual|quais) /;
   function medidaAut(q) {
@@ -1271,6 +1275,7 @@
   }
   function sobreDados(q) {
     if (has(q, AUT_FORA) || has(q, EQUIP) || salvatagem(q) || epirbRelato(q) || eqSeg(q)) return false;
+    if (has(q, SOCORRO_VOC) || AUT_SENSOR_DE.test(q) || (has(q, AUT_SENSOR) && AUT_FALSO.test(q))) return false;
     if (AUT_CURTA.test(q) || AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;
     if (has(q, AUT_ALVO) && (has(q, AUT_FORTE) || has(q, AUT_EXISTE))) return true;
     return !medidaAut(q) && (AUT_NOME.test(q) || (has(q, AUT_ALVO) && (AUT_PRED.test(q) || AUT_INV.test(q))));
@@ -1280,15 +1285,12 @@
     'tamanho da embarcacao', 'quantos metros tem o barco', 'deslocamento do barco', 'deslocamento da lancha', 'deslocamento da embarcacao', 'qual o deslocamento', 'peso do barco', ' lotacao', 'quantas pessoas cabem',
     'cabem quantas pessoas', 'modelo do barco', 'modelo da lancha', 'modelo da embarcacao', 'fabricante do barco', 'fabricante da lancha', 'qual o estaleiro', 'quem fabricou', 'ano do barco', 'ano de fabricacao',
     'registro do barco', 'registro da lancha', 'registro da embarcacao', 'numero de registro', 'numero do registro', 'ficha tecnica', 'que barco e esse', 'qual e o barco'];
-  // outra coisa a bordo que também tem comprimento, fabricante, ano e lotação: a pergunta é dela, não do cadastro do barco («quem fabricou o motor», «comprimento da corrente da âncora», «lotação do bote»)
-  var EMB_OUTRA = [' motor', ' motores', ' ancora', ' amarra', ' corrente', ' cabo', ' cabos', ' guincho', ' bote', ' tender', ' helice', ' eixo', ' leme', ' mastro', ' defensa', ' mangueira', ' escada', ' passarela', ' reboque',
-    ' tanque', ' transdutor', ' sensor', ' antena', ' jet ', ' moto aquatica', ' canoa', ' caiaque', ' stand up', ' prancha', ' bimini', ' toldo', ' vela ', ' velas ', ' cordame', ' retranca'];
-  // as palavras do cadastro que também servem a OUTRA coisa a bordo («o comprimento da sonda», «quem fabricou o transdutor», «a lotação do flybridge»): sem «barco/lancha/embarcação» na pergunta, nada além das palavras do
-  // próprio cadastro e das de ligação pode sobrar (EMB_RESTO_OK); com elas, vale a lista EMB_OUTRA
+  // as palavras do cadastro que também servem a OUTRA coisa a bordo («quem fabricou o motor», «o comprimento da sonda», «a lotação do bote», «quem fabricou o transdutor», «o comprimento da corrente da âncora»): nada além das palavras do
+  // próprio cadastro e das de ligação pode sobrar (EMB_RESTO_OK; com «barco/lancha/embarcação» na pergunta, mais as neutras de NEUTRAS_BASE e os números). Qualquer outra palavra manda a pergunta à rota dela
   var EMB_RESTO_OK = ' qual quais e eh o a os as um uma de do da dos das no na nos nas em para pra por quanto quantos quantas tem ter ha meu minha nosso nossa seu sua esse essa este esta isso aqui ai agora hoje mesmo exatamente total maximo minimo certo oficial que me diga diz fala fale informe informa mostre mostra metros metro m pessoas pessoa cabem cabe lotacao calado comprimento dimensoes dimensao deslocamento peso quem fabricou fabricante modelo ano fabricacao numero registro ficha tecnica estaleiro boca largura tamanho altura capitao ia ';
   function embarcacaoPergunta(q) {
-    if (!has(q, EMB_PALAVRAS) || has(q, EQUIP) || has(q, EMB_OUTRA)) return false;
-    if (has(q, [' barco ', ' barcos ', ' lancha ', ' embarcacao '])) return true;
+    if (!has(q, EMB_PALAVRAS)) return false;
+    if (has(q, [' barco ', ' barcos ', ' lancha ', ' embarcacao '])) { var ok = EMB_RESTO_OK + NEUTRAS_BASE + 'barco barcos lancha embarcacao real sao maxima minima total '; return !DEFINICAO.test(q) && q.trim().split(' ').every(function (w) { return ok.indexOf(' ' + w + ' ') !== -1 || /^\d+$/.test(w); }); }
     return q.trim().split(' ').every(function (w) { return EMB_RESTO_OK.indexOf(' ' + w + ' ') !== -1; });
   }
   // pessoas a bordo: o número do registro de saída (embarcacao.pessoasBordo); a lotação («quantas pessoas cabem») é do cadastro (embarcacao)
@@ -1301,6 +1303,28 @@
   var PROFUNDIDADE_OK = NEUTRAS_BASE + 'profundidade fundo agua sob quilha ecobatimetro sonda leitura leituras marca marcando mostra mostrando indica indicando mede medindo real barco lancha embarcacao nosso nossa neste nesse momento ponto local lugar metros ';
   // (só a leitura do ecobatímetro: o alarme de profundidade, a mínima, o «como configurar», o relato, a de fundear, a do porão e a de OUTRO lugar têm palavra fora da lista e seguem o guia, a rota dele ou a IA)
   function profundidadePergunta(q) { return has(q, PROFUNDIDADE_PALAVRAS) && soNeutras(q, PROFUNDIDADE_OK); }
+  // Revisão 3 da P3C: a leitura calma de TODA rota nova só responde a pergunta neutra (lista branca por rota). O relato de falha, o imperativo do plotter, o lugar fora da rota e a pergunta de definição têm palavra fora da lista e
+  // seguem a rota do equipamento, o guia ou a IA, como antes da P3C (trava 10: relato de falha sem leitura calma). «O que é/significa …» é a pergunta do conceito (a IA), nunca a leitura.
+  var DEFINICAO = / (?:o que|oque|oq) (?:e|eh|sao|significa|quer dizer) | significa | quer dizer | definicao | conceito /;
+  function leitura(q, ok) { return !DEFINICAO.test(q) && soNeutras(q, ok); }
+  var POSICAO_VELHAS = ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'];
+  var POSICAO_NOVAS = ['onde estamos', ' rumo ', ' cog ', ' sog ', ' quantos nos ', 'milhas por hora'];
+  var POSICAO_OK = NEUTRAS_BASE + 'onde estamos estou posicao rumo cog sog curso fundo sobre verdadeiro nos milhas milha hora por fazendo navegando indo andando vamos barco lancha embarcacao nosso nossa meu minha ';
+  function posicaoPergunta(q) { return has(q, POSICAO_VELHAS) || (has(q, POSICAO_NOVAS) && leitura(q, POSICAO_OK)); }
+  var ETA_OK = NEUTRAS_BASE + 'eta chegada chegamos chegar chegaremos chega chegando vamos horario previsao prevista previsto tempo falta faltam milhas milha mn minutos horas hora destino waypoint waypoints ponto pontos proximo proxima distancia ate para pra percorrida percorridas percorremos percorrido navegadas navegamos navegado odometro gente rota viagem trajeto base marina que ou ';
+  var ALARMES_OK = NEUTRAS_BASE + 'alarme alarmes alerta alertas ativo ativos ativa ativas aceso acesos acesa acesas tocando soando algum alguma alguns algumas nenhum nenhuma existe existem barco lancha embarcacao bordo neste momento ';
+  var PESSOAS_OK = NEUTRAS_BASE + 'pessoas pessoa gente tripulantes tripulante passageiros passageiro bordo quem barco lancha embarcacao registro saida conosco ';
+  var NAVEGACAO_OK = NEUTRAS_BASE + 'navegacao status resumo anda andamento viagem situacao geral barco lancha embarcacao ';
+  // Pedido de socorro que a lista SOS (a do gerador, que não muda aqui) não pega: «isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco». Vai à rota sos; e a frase de apresentação (sobreDados) nunca responde a quem pede ajuda.
+  var SOCORRO_VOC = ['ajudem', 'socorr', 'auxilio', 'resgate', 'risco', 'perigo', 'apuro', 'urgen', 'emergenc', ' preciso ', ' precisamos ', ' necessito ', ' necessitamos ', 'desesper', 'passando mal', 'nao e um teste',
+    'nao e teste', 'nao e brincadeira', 'nao e treino', 'nao e exercicio', ' e serio '];
+  var SOCORRO_PEDE = /\b(?:preciso|precisamos|precisando|necessito|necessitamos) (?:de )?(?:muita )?(?:ajuda|socorro|auxilio|resgate)\b/;
+  var SOCORRO_DECLARA = /\b(?:e|eh|era) (?:real|serio|de verdade)\b|\bnao (?:e|eh) (?:um |uma )?(?:teste|brincadeira|treino|exercicio)\b|\bem (?:risco|apuros)\b/;
+  var NAO_TESTE = /\bnao (?:e|eh) (?:um |uma )?(?:teste|brincadeira|treino|exercicio)\b/;
+  var EM_RISCO = /\b(?:(?:estamos|estou|ficamos)(?: todos)? em (?:risco|apuros)|(?:corremos|corro) risco|(?:o barco|a lancha|a embarcacao) (?:esta|ta) em (?:risco|apuros))\b(?! de (?!vida))/;
+  // o pedido de ajuda junto de um dado que o MAYDAY pede (posição, rumo, ETA, pessoas a bordo) também é socorro: a posição é a do plotter, nunca a do quadro
+  var DADOS_MAYDAY = ['posicao', 'onde estamos', 'onde estou', 'coordenada', 'latitude', 'longitude', ' rumo ', ' eta ', 'chegada', 'pessoas a bordo', 'quantas pessoas', 'quantos a bordo', 'quantos tripulantes', 'quantos passageiros'];
+  function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q); }
   // O equipamento de segurança na pergunta (EPIRB, Seafire, canal 16, PAN-PAN, DSC): a pergunta mista («acionar o EPIRB, quantas pessoas a bordo?», «pan-pan, qual o ETA?») é do equipamento, com o procedimento e
   // a janela de emergência da chave dele; as rotas de dados da navegação e do cadastro (que levam ETA, pessoas, profundidade, alarmes…) não a tomam.
   var SEAFIRE_PALAVRAS = ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual'];
@@ -1309,7 +1333,10 @@
   function eqSeg(q) { return epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG); }   // (mayday e SOS já saíram na emergência)
   // MMSI (CLAUDE.md 8): a pergunta do número do MMSI é a rota mmsi; a que tem outro assunto junto fica com a rota dele: o EPIRB, o Seafire, o roteiro de rádio (canal 16, PAN-PAN, DSC, socorro ou pane) e o vencimento
   // (documento). Assim o 710123456 do cadastro nunca vai para a pergunta do EPIRB nem do rádio, e o procedimento não se perde.
-  var MMSI_PROGRAMA = ['program', 'configur', 'inserir', 'insere', 'digitar', 'colocar', 'gravar', 'definir', 'ajustar', 'alterar', 'mudar', 'trocar', 'registrar'];
+  // (a lista é BRANCA, não negra: nenhum verbo de pôr o número no aparelho, em nenhuma flexão, nem o rádio, o VHF, o AIS ou o plotter estão nela; «que MMSI eu coloco no rádio?» e «como cadastro o MMSI?» ficam só com o da etiqueta. O «por» sai da lista porque é também o «pôr»; o «por favor» sai da pergunta antes de conferir)
+  var MMSI_OK = NEUTRAS_BASE.replace(' por ', ' ') + 'que mmsi barco lancha embarcacao cadastrado cadastrada registrado app aplicativo numero nosso nossa meu minha seu sua indicativo ';
+  // («cadastro» sozinho é também o verbo, «como cadastro o MMSI?»: só vale como substantivo, «do/no/pelo cadastro»)
+  function mmsiNeutra(pq) { return !pq.trim() || soNeutras(semVocativo(pq).replace(/ por favor /g, ' ').replace(/ (?:do|no|pelo|de) cadastro /g, ' cadastrado '), MMSI_OK); }
   var MMSI_VENCE = [' vence', 'vencim', 'vencid', 'vencend', 'validade', 'valido', 'expira'];
   var MMSI_PERIGO = ['socorro', 'ajuda', ' pane', ' parou', 'falha', 'quebr', 'avaria', 'problema', 'encalh', 'emergencia', 'urgencia', 'perigo', 'pedir', 'chamar'];
   function mmsiRota(q) {
@@ -1327,9 +1354,8 @@
     'quantas milhas percorr', 'quantas milhas naveg', 'quantas mn faltam', 'quantas mn ate', 'quantas mn percorr', 'quantas mn naveg', 'odometro'];
   var FALTA_PALAVRAS = ['quanto falta', 'quanto tempo falta', 'quantas milhas faltam', 'quantos minutos faltam', 'quantas horas faltam', 'o que falta para'];
   var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta '];
-  // (o procedimento do plotter — «como criar/marcar/salvar um waypoint», «onde fica o botão» —, as milhas por litro, o alcance de um rádio e o resgate/socorro que se espera têm outra rota ou o guia; a chegada é a da rota do barco)
-  var ETA_FORA = ['autonomia', 'alcance', 'diesel', 'combustivel', 'checklist', 'abastec', 'consumo', 'tecnico', 'oficina', 'entrega', 'pedido', 'encomenda', 'peca', 'prestador', 'visita',
-    'litro', 'galao', 'onde fica', 'botao', 'menu', 'como ', 'criar', 'salvar', 'marcar', 'inserir', 'cadastr', 'resgate', 'socorro', 'salvament', 'guarda costeira', 'bombeiro', 'ambulancia', 'rebocador', 'samu', 'helicoptero'];
+  // (o procedimento do plotter — «como criar/marcar/salvar um waypoint», «onde fica o botão» —, as milhas por litro, o alcance de um rádio e o resgate/socorro que se espera têm outra rota ou o guia: não estão na lista
+  // branca ETA_OK, e a chegada é só a da rota do barco)
   // os nomes dos pontos da rota e dos destinos (D.rota, D.destinos; só com a simulação e nunca no SOS), sem o que vem entre parênteses
   function rotaDoPlano() { return EM_SOS ? null : D.rota; }   // no SOS nada lê a rota
   function lugaresRota() {
@@ -1339,9 +1365,8 @@
     return out;
   }
   function etaPergunta(q) {
-    if (has(q, ETA_FORA)) return false;
-    if (has(q, ETA_PALAVRAS)) return true;
-    return has(q, FALTA_PALAVRAS) && (has(q, FALTA_JUNTO) || has(q, lugaresRota()));
+    if (!has(q, ETA_PALAVRAS) && !(has(q, FALTA_PALAVRAS) && (has(q, FALTA_JUNTO) || has(q, lugaresRota())))) return false;
+    return leitura(q, ETA_OK + lugaresRota().join(''));   // (só o nome de um ponto da rota ou do destino entra: «até Itajaí», «crie um waypoint», «o ETA não atualiza» têm palavra fora da lista)
   }
   // alarmes ativos: «alarmes ativos», «tem algum alarme (ativo)?», «quais alarmes?», «o alarme está tocando». O «alarme de <equipamento>», «o alarme disparou» e «em caso de alarme» seguem as rotas deles.
   var FIM_ALARME = '(?: (?:estao|esta|sao))?(?: (?:ativos?|acesos?|tocando|soando|no barco|a bordo|agora|aqui|ai|hoje|neste momento))*';
@@ -1354,9 +1379,8 @@
   // o alarme que está SOANDO (o ruído do painel): a mesma rota, mas a resposta manda conferir o painel primeiro e nunca diz «tudo normal» (o app só lê os alarmes do quadro de leitura, não o alarme sonoro de porão, fumaça ou gás).
   // Com o lugar ou o equipamento («alarmes tocando na cabine») a pergunta segue a rota dele.
   var ALARME_SOANDO = / alarmes? (?:esta |estao )?(?:tocando|soando) /;
-  var ALARME_FORA = EQUIP.concat(EMB_OUTRA, ['cabine', 'camarote', 'motor', 'painel', 'maquina', 'banheiro', 'cozinha', 'salao', 'ponte', 'flybridge', 'porta', 'diesel', 'combustivel', 'manutenc', 'agenda', 'document', 'diario', 'equipe', 'horimetro', 'gps', 'sonda', 'profundidade', 'radio']);
   function alarmeSoando(q) { return / (?:tocando|soando|tocou|soou) /.test(pad(q)); }
-  function alarmesPergunta(q) { return (ALARMES_REGEX.some(function (r) { return r.test(q); }) || ALARME_SOANDO.test(q)) && !has(q, ALARME_FORA); }
+  function alarmesPergunta(q) { return (ALARMES_REGEX.some(function (r) { return r.test(q); }) || ALARME_SOANDO.test(q)) && leitura(q, ALARMES_OK); }   // (o «alarme de <equipamento>», o «alarmes tocando na cabine» e o alarme de um lugar têm palavra fora da lista branca: seguem a rota deles)
   // temperatura do motor (o arrefecimento): só a pergunta NEUTRA pela leitura (soNeutras); o alarme, o relato, o «como» e a temperatura alta seguem o guia dos motores (a resposta pronta cede ao trecho)
   var ARREF_REGEX = / (?:temperaturas? (?:d[oae]s? )?(?:motor|motores|arrefecimento|bb|be|bombordo|boreste)|temperaturas? da agua d[oa]s? (?:motor|motores)|arrefecimento) /;
   var ARREF_OK = NEUTRAS_BASE + 'temperatura temperaturas motor motores arrefecimento agua bb be bombordo boreste estibordo esquerdo direito principal principais dois ambos graus marca marcando mostra mostrando indica indicando ';   // («está em 110», «no vermelho», «parou», «sem água», «chegou a»… não são neutras)
@@ -1377,12 +1401,10 @@
   var NAVEGACAO_CURTA = /^ (?:e )?(?:entao )?como (?:estamos|vamos|estao as coisas|esta tudo)(?: agora| por ai| a bordo| ai)? $/;
   // «situação agora / atual / de bordo» só vale como a pergunta inteira («situação atual do gerador», «situação agora dos tanques» têm a rota do assunto)
   var NAVEGACAO_SITUACAO = /^ (?:e )?(?:entao )?(?:(?:qual|como|que) (?:e |esta )?)?(?:me (?:da|diga|fale|mostre|passa|passe) )?(?:a |o )?(?:situacao|status)(?: (?:geral|da navegacao|de bordo|do barco|da lancha|da embarcacao|a bordo|atual|agora|neste momento|por ai|ai))* $/;
-  // o assunto que tem rota própria («como está a navegação do piloto automático?» é do equipamento; documento, manutenção e tanque idem)
-  var NAVEGACAO_FORA = EQUIP.concat(EMB_OUTRA, ['document', 'licenc', 'manutenc', 'agenda', 'tarefa', 'vencimento', 'tanque', 'diesel', 'combustivel', 'equipe', 'motor', 'diario']);
-  function navegacaoPergunta(q) { return NAVEGACAO_CURTA.test(q) || NAVEGACAO_SITUACAO.test(semVocativo(q)) || (has(q, NAVEGACAO_PALAVRAS) && !has(q, NAVEGACAO_FORA)); }
+  function navegacaoPergunta(q) { return NAVEGACAO_CURTA.test(q) || NAVEGACAO_SITUACAO.test(semVocativo(q)) || (has(q, NAVEGACAO_PALAVRAS) && leitura(q, NAVEGACAO_OK)); }   // («como está a navegação do piloto automático?», do documento, da manutenção ou do tanque tem palavra fora da lista branca: é do assunto)
   // foraBarco (§2.7): dinheiro, esporte, notícia, política. Depois de todas as rotas de bordo: «quanto custa o diesel em reais?» é do diesel
   // «câmbio» (a reversora), «jogo» (o balanço do barco, a folga de uma peça, o jogo de cabos) e «bolsa» (estanque, de primeiros socorros) têm outro sentido a bordo: só são dinheiro ou esporte sem o vocabulário de bordo junto
-  var FORA_BARCO = ['dolar', 'cotacao', 'bitcoin', 'preco', 'quanto custa', 'placar', 'campeonato', 'noticia', 'eleicao', ' euro ', ' euros '];
+  var FORA_BARCO = ['dolar', 'cotacao', 'bitcoin', 'preco', 'quanto custa', 'placar', 'campeonato', 'noticia', 'eleicao', ' euro ', ' euros ', 'quem venceu', 'quem ganhou'];
   var CAMBIO_BORDO = ['engat', 'marcha', 'reversor', 'reversora', 'embreagem', 'alavanca', 'manete', 'duro', 'dura ', 'trava', 'motor', 'helice', 'oleo', 'barulho', 'vibra', 'falha', 'defeito', 'problema', 'neutro', 'acelerador', 'solta', 'arranha',
     'troca', 'trocar', 'revisao', 'manutenc', 'conserto', 'reparo', 'ajust', 'regular', 'quebr', 'desligo', 'copiou', 'copiad', 'recebido', ' radio', ' vhf', 'canal', 'ouvindo', 'escuta'];   // (e o «câmbio, desligo» do rádio)
   var JOGO_BORDO = ['barco', 'lancha', 'embarcacao', 'casco', 'estabiliz', 'seakeeper', 'balan', 'rolagem', 'graus', 'inclina', 'folga', 'leme', 'ancora', 'amarra', 'corrente', 'guincho', 'bote', 'tender', 'eixo', 'helice', 'reversor', 'transmiss', 'volante', 'direcao', 'motor', 'gerador', 'cabo', 'mecanic', 'muito jogo', 'pouco jogo', 'jogo excessivo', 'jogo no ', 'jogo na ', 'jogo de ferrament', 'jogo de chave', 'jogo de cabo', 'jogo de vela', 'jogo de colete', 'jogo de bordo'];
@@ -1398,6 +1420,8 @@
     if (emergencia(q)) return 'sos';
     var ol = oleo(q);
     if (ol) return ol === 1 ? 'oleo' : 'oleoLeitura';
+    // pedido de socorro que a lista SOS não pega («isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco»): a instrução de segurança, local (revisão 3 da P3C)
+    if (socorroImplicito(q)) return 'sos';
     // "Situação e vencimento do documento: <nome>" é a pergunta do botão "Perguntar sobre" da G1 (web e app): papelada, seja qual for o nome.
     // Com o doc-epirb (C7, "Certificado do EPIRB…") ela caía na rota `epirb` (a resposta do procedimento e, depois da 1b, a que liga a
     // conversa em emergência por 15 min: um toque na papelada abriria o modo emergência). Vem depois da emergência e do óleo (segurança
@@ -1413,13 +1437,13 @@
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
     // «alarme de óleo acendeu» (o óleo vem antes), «temperatura hoje» (o clima) nem «alarme de fluxo da climatização» (a resposta pronta cede ao trecho do guia).
-    var seg = eqSeg(q);   // (a pergunta mista com o EPIRB, o Seafire, o canal 16, o PAN-PAN ou o DSC segue a rota do equipamento, mais abaixo)
-    if (!seg && navegacaoPergunta(q)) return 'navegacao';
-    if (!seg && embarcacaoPergunta(q)) return 'embarcacao';   // «o deslocamento do Seakeeper» e «o registro do EPIRB» são do equipamento
-    if (!seg && has(q, PESSOAS_PALAVRAS) && !/\d/.test(q) && !has(q, EMB_OUTRA) && !has(q, [' cabem ', ' cabe '])) return 'pessoas';   // «temos 6 pessoas a bordo» é relato (com número), não pergunta
+    var seg = eqSeg(q);   // (a pergunta mista com o EPIRB, o Seafire, o canal 16, o PAN-PAN ou o DSC segue a rota do equipamento, mais abaixo: as rotas de leitura calma já a deixam de fora pela lista branca, e só o AIS precisa do `seg`)
+    if (navegacaoPergunta(q)) return 'navegacao';
+    if (embarcacaoPergunta(q)) return 'embarcacao';   // «o deslocamento do Seakeeper» e «o registro do EPIRB» são do equipamento
+    if (has(q, PESSOAS_PALAVRAS) && leitura(q, PESSOAS_OK)) return 'pessoas';   // «temos 6 pessoas a bordo» é relato (com número), não pergunta
     if (profundidadePergunta(q)) return 'profundidade';   // (a profundidade, o motor, as ondas e a água do mar só respondem a pergunta NEUTRA: o EPIRB, o canal 16 etc. na pergunta já a deixam de fora)
-    if (!seg && etaPergunta(q)) return 'eta';
-    if (!seg && alarmesPergunta(q)) return 'alarmes';
+    if (etaPergunta(q)) return 'eta';
+    if (alarmesPergunta(q)) return 'alarmes';
     if (arrefecimentoPergunta(q)) return 'arrefecimento';
     // «quanto falta para a troca de óleo / a revisão?»: as horas que faltam são dos horímetros (a manutenção, sem horas)
     if (has(q, FALTA_PALAVRAS) && has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && !has(q, EQUIP)) return 'horimetros';
@@ -1478,9 +1502,9 @@
     // "bateria de partida" é o banco de baterias (g_eletrico §1), não a partida do motor (revisão 6 do C5: caía na resposta pronta dos motores)
     if (has(q, ['bateria']) && has(q, ['partida']) && !has(q, ['motor', 'volvo', 'penta'])) return 'eletrico';
     if (has(q, ['motor', 'partida', 'volvo', 'penta', ' revisao'])) return 'motores';
-    if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
+    if (has(q, ['manutenc', 'atrasad', 'agenda', 'tarefa']) || (has(q, ['vence']) && !(has(q, ['venceu', 'vencedor', 'venceram']) && foraBarcoPergunta(q)))) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
-    if (has(q, ['posicao', 'onde estou', 'onde estamos', 'onde esta o barco', 'coordenada', ' gps', ' proa', ' rumo', ' cog ', ' sog ', 'quantos nos', 'milhas por hora', 'velocidade'])) return 'posicao';
+    if (posicaoPergunta(q)) return 'posicao';
     // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?", "previsão de rajada"),
     // e depois das rotas de equipamento. "Hoje"/"agora" sozinhos não bastam: relato ("pegamos uma rajada agora e o barco adernou",
     // "a rajada de hoje arrancou o toldo", "a âncora garrou com a rajada"), pessoa em risco e limite do barco seguem o equipamento ou a IA.
