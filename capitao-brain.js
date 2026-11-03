@@ -1744,7 +1744,7 @@
   function checklistConcluir(tipo, ctx) {
     var ln = checklistLinha(tipo), e;
     if (!ln || (ctx && ctx.commit === false)) return null;
-    e = addDiario(Object.assign({ sys: ln.sys, t: ln.t, who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') }, selaSim()));
+    e = addDiario({ sys: ln.sys, t: ln.t, who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') });   // (o carimbo sim é do addDiario, P3F)
     checklistZera(ln.tipo);
     return Object.assign({ entrada: e }, ln);
   }
