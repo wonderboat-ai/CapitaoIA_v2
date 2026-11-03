@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -4903,8 +4903,8 @@ MUTANTES_3E_F11 = [
     # (revisão 4) os ramos plantados: o limiar das baterias (0,3 V) no nível e no texto, o da pressão de óleo (0,2 bar) no nível e no texto, a série mínima de 14 dias
     ('p3e preditiva: o nível das baterias só vai a atenção com 3 V de queda', r"nivel: queda >= 0.3 ? 'atencao' : 'ok', titulo: 'Baterias nos últimos 30 dias',", r"nivel: queda >= 3 ? 'atencao' : 'ok', titulo: 'Baterias nos últimos 30 dias',", ('preditiva',)),
     ('p3e preditiva: o texto das baterias só diz «caiu» com 3 V de queda', r"texto: queda >= 0.3 ? 'Banco de baterias caiu '", r"texto: queda >= 3 ? 'Banco de baterias caiu '", ('preditiva',)),
-    ('p3e preditiva: o nível da pressão de óleo só vai a atenção com 2 bar de queda', r"nivel: queda >= 0.2 || (mn !== null", r"nivel: queda >= 2 || (mn !== null", ('preditiva',)),
-    ('p3e preditiva: o texto da pressão de óleo só diz «caindo» com 2 bar de queda', r"(queda >= 0.2 ? 'caindo' : 'estável')", r"(queda >= 2 ? 'caindo' : 'estável')", ('preditiva',)),
+    ('p3e preditiva: o nível da pressão de óleo só vai a atenção com 2 bar de queda', r"nivel: queda >= 0.2 || abaixo ?", r"nivel: queda >= 2 || abaixo ?", ('preditiva',)),
+    ('p3e preditiva: o texto da pressão de óleo só diz «caindo» com 2 bar de queda', r"(queda >= 0.2 ? 'caindo' : 'estável') + ' há ' + n + ' dias: BB '", r"(queda >= 2 ? 'caindo' : 'estável') + ' há ' + n + ' dias: BB '", ('preditiva',)),
     ('p3e preditiva: a série de cruzeiro curta (menos de 14 dias) dá achado', r"s.d.length < 14 ||", r"s.d.length < 3 ||", ('preditiva',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F11
@@ -5240,9 +5240,9 @@ MUTANTES_3E_F22 = [
     ('p3e pecas: a quantidade ignora os movimentos', "(soma[x.id] || 0))), mn =", "0)), mn =", ('pecas',)),
     ('p3e pecas: a peça no mínimo não conta como baixa', "return q <= 0 ? 'zero' : mn > 0 && q <= mn ? 'baixa' : 'ok'; }", "return q <= 0 ? 'zero' : mn > 0 && q < mn ? 'baixa' : 'ok'; }", ('pecas',)),
     ('p3e pecas: o −1 USADA deixa a peça zerada ir a menos', "if (!p || !(p.qtd > 0)) return null;\n    m = pecaMov(id, -1);", "if (!p) return null;\n    m = pecaMov(id, -1);", ('pecas',)),
-    ('p3e pecas: as zeradas não vêm primeiro', "var ord = { zero: 0, baixa: 1, ok: 2 }, linha", "var ord = { zero: 2, baixa: 1, ok: 0 }, linha", ('pecas',)),
+    ('p3e pecas: as zeradas não vêm primeiro', "ord = { zero: 0, baixa: 1, ok: 2 }, linha", "ord = { zero: 2, baixa: 1, ok: 0 }, linha", ('pecas',)),
     ('p3e pecas: o movimento sem o carimbo sim', "function selaSim() { return sim() ? { sim: true } : {}; }", "function selaSim() { return {}; }", ('pecas',)),
-    ('p3e pecas: o movimento repete o iso', "do { iso = new Date(t++).toISOString(); } while (est.movs.some(function (x) { return x.iso === iso; }));", "iso = new Date(t).toISOString();", ('pecas',)),
+    ('p3e pecas: o movimento repete o iso', "do { iso = new Date(t++).toISOString(); } while (movs.some(function (x) { return x && x.iso === iso; }));", "iso = new Date(t).toISOString();", ('pecas',)),
     ('p3e pecas: a rota do estoque sai', "    if (pecasPergunta(q)) return 'pecas';", "", ('pecas',)),
     ('p3e pecas: o + PEÇA aceita a tarefa que não existe', "Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}", "Array.isArray(c.tarefas) && c.tarefas.length ? { tarefas: c.tarefas.slice(0, 10) } : {}", ('pecas',)),
     ('p3e pecas: o SOS lê as peças', "    if (EM_SOS) return [];\n    est = pecasEstado();", "    est = pecasEstado();", ('pecas',)),
@@ -5253,7 +5253,7 @@ MUTANTES_3E_F22 = [
     ('p3e pecas: o estoque pelo nome da peça sai', "function pecasNomePede(q) {\n    return (", "function pecasNomePede(q) {\n    return false && (", ('pecas',)),
     ('p3e pecas: «falta / acabou / zerou» + qualquer palavra com nome de peça no resto da frase vira o estoque (a peça não precisa ser o objeto do verbo)', r"&& objetoPeca(q, PECAS_VERBOS_FALTA));", r"&& nomeCadastrado(q));", ('pecas',)),
     ('p3e pecas: «quantos X … temos» com a peça em qualquer lugar da frase vira o estoque («quanta água tem no filtro?»)', r"&& objetoPeca(q, PECAS_VERBOS_QUANT))", r"&& nomeCadastrado(q))", ('pecas',)),
-    ('p3e pecas: «tem X … a bordo» com a peça em qualquer lugar da frase vira o estoque («tem fluxo de água no filtro a bordo?»)', r"&& objetoPeca(q, PECAS_VERBOS_TEM))", r"&& nomeCadastrado(q))", ('pecas',)),
+    ('p3e pecas: «tem X … a bordo» com a peça em qualquer lugar da frase vira o estoque («tem fluxo de água no filtro a bordo?»)', r"de reposicao|de reserva|de sobressalente)/.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))", r"de reposicao|de reserva|de sobressalente)/.test(q) && nomeCadastrado(q))", ('pecas',)),
     ('p3e pecas: o artigo entre o verbo e a peça barra o estoque («acabou o rotor?»)', r"var PECAS_ARTIGOS = ' o a os as um uma uns umas algum alguma alguns algumas mais outro outra outros outras de do da dos das estoque ';", r"var PECAS_ARTIGOS = ' ';", ('pecas',)),
     ('p3e pecas: «tela» sozinha (a do plotter, a do radar) é a tela do filtro', r"var PECAS_NUCLEO_FRACO = { tela: 'filtro' };", r"var PECAS_NUCLEO_FRACO = {};", ('pecas',)),
     ('p3e pecas: o singular e o plural da peça não casam («fusível»/«fusíveis»)', r"function radicalPeca(w) { return w.length > 4 ? w.replace(/([aeou])i$/, '$1l') : w; }", r"function radicalPeca(w) { return w; }", ('pecas',)),
@@ -5265,8 +5265,8 @@ MUTANTES_3E_F22 = [
     ('p3e pecas: a 1ª linha da lista longa não nomeia as peças no mínimo ou abaixo', r"': ' + ps.slice(0, 3).map(frase).join('; ') +", r"'. ' +", ('pecas',)),
     ('p3e pecas: a 1ª linha não diz a peça zerada nem o mínimo', r"x.nivel === 'zero' ? ', zerada' + (x.min > 0 ? ', mínimo ' + x.min : '')", r"x.nivel === 'zero' ? ''", ('pecas',)),
     ('p3e pecas: a 1ª linha não diz o mínimo de quem está abaixo dele', r"(x.qtd < x.min ? ', abaixo do mínimo de ' + x.min : ', no mínimo')", r"', no mínimo'", ('pecas',)),
-    ('p3e pecas: a pergunta que cita a tarefa abre só com o total', r"+ ': ' + corpo(lig) + '\n'", r"+ ': ' + lig.length + ' cadastradas\n'", ('pecas',)),
-    ('p3e pecas: a pergunta que cita a peça abre só com o total', r"text: 'Estoque de peças: ' + corpo(nm.lista) +", r"text: 'Estoque de peças: ' + nm.lista.length + ' cadastradas' +", ('pecas',)),
+    ('p3e pecas: a pergunta que cita a tarefa abre só com o total', r"+ ': ' + corpo(lig)) + '\n'", r"+ ': ' + lig.length + ' cadastradas') + '\n'", ('pecas',)),
+    ('p3e pecas: a pergunta que cita a peça abre só com o total', r": 'Estoque de peças: ' + corpo(nm.lista))", r": 'Estoque de peças: ' + nm.lista.length + ' cadastradas')", ('pecas',)),
     ('p3e pecas: a palavra sem coisa de bordo vira «Nenhuma peça cadastrada com esse nome» (a lista sem nada de palavra)', r"(nm.nome && nm.palavras.length ? 'Nenhuma peça cadastrada com «'", r"(nm.nome ? 'Nenhuma peça cadastrada com «'", ('pecas',)),
     ('p3e pecas: «alguma peça» não é pergunta de estoque', r"' alguma peca ',", r"", ('pecas',)),
     ('p3e pecas: sem a guarda do combustível, o «estoque de combustível» vira o das peças', "    if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;\n", "", ('pecas',)),
@@ -5718,7 +5718,17 @@ for _n in LISTAS_CABECA:
         if _w.strip() not in PALAVRAS_CABECA:
             PALAVRAS_CABECA.append(_w.strip())
 # a cabeça de cada palavra («o canal 16», «o pan-pan», «o dsc», «o distress», «o vhf», «o radio», «o epirb»…) e a da baliza do EPIRB; mais uma de cada OUTRA rota de emergência
-CABECAS_LISTAS = ['o ' + w for w in PALAVRAS_CABECA] + ['a baliza']
+def palavras_ctx_baliza():
+    m = re.search(r"var BALIZA_CTX = \{\}; \[([^\]]*)\]\.forEach", BRAIN_TXT)
+    assert m, 'a lista BALIZA_CTX não está no cérebro'
+    return re.findall(r"'([^']*)'", m.group(1))
+
+
+# (revisão 5) a «baliza» sozinha é também a de balizamento: só é cabeça de emergência com contexto de EPIRB (uma palavra de BALIZA_CTX, lida do cérebro), sozinha com palavras neutras, ou junto de uma pergunta
+# que tem rota própria. Uma cabeça por palavra do contexto («baliza teste», «baliza bateria», «baliza validade»…) entra na matriz com TODAS as caudas.
+CTX_BALIZA = palavras_ctx_baliza()
+CABECAS_BALIZA = ['baliza ' + w for w in CTX_BALIZA]
+CABECAS_LISTAS = ['o ' + w for w in PALAVRAS_CABECA] + ['a baliza'] + CABECAS_BALIZA
 CABECAS_OUTRAS = ['MAYDAY, homem ao mar', 'onde ficam os coletes', 'qual o MMSI', 'pressão de óleo baixa no motor BB', 'estamos em risco']
 CABECAS_TODAS = CABECAS_LISTAS + CABECAS_OUTRAS
 # as caudas: as da P3C, os 4 checklists, o estoque, a tendência, o FAQ, «pronto para sair?» e cada rota de dado do quadro SEM lista branca (a que levava a SOG, o rumo, o ETA, a hora do instante).
@@ -5727,7 +5737,9 @@ CAUDAS_CABECA = []
 for _c in MISTAS_CAUDAS + ['checklist de abastecimento', 'checklist de chegada', 'checklist de saída', 'checklist de fundeio', 'quanto diesel temos?', 'pronto para sair?', 'quais peças temos?', 'que peça acabou?',
                            'o rotor do gerador está zerado?', 'qual a tendência do óleo?', 'água rasa: o que faço', 'como está o barco?', 'pendências abertas', 'qual a maré?', 'como está o clima?', 'para onde vamos?',
                            'é seguro sair hoje?', 'quantos metros de corrente?', 'qual a autonomia?', 'qual o consumo?', 'nível dos tanques', 'quanto falta para a troca de óleo?', 'onde estamos?', 'qual o vento?',
-                           'o que tem no diário?', 'qual a velocidade?', 'qual o rumo?', 'quais as tendências?']:
+                           'o que tem no diário?', 'qual a velocidade?', 'qual o rumo?', 'quais as tendências?',
+                           # (revisão 5) as formas novas do estoque: «tem <peça>?», «onde está <peça>?», o relato com «tem outro?»
+                           'tem correia do alternador?', 'onde está o rotor do gerador?', 'o fusível queimou, tem outro?', 'temos fusível de 24 V?']:
     if _c not in CAUDAS_CABECA:
         CAUDAS_CABECA.append(_c)
 EMERG_CHAVES = ('sos', 'oleo', 'canal16', 'epirb', 'seafire', 'salvatagem', 'mmsi')
@@ -5750,6 +5762,36 @@ def chaves_cabecas(b):
     return _CHAVES_CABECA
 
 
+_CAUDAS_SEM_ROTA = []
+
+
+def caudas_sem_rota(b):
+    """As caudas que NENHUMA rota do cérebro de verdade responde (o fallback, o trecho do guia ou o FAQ): com a «baliza» sozinha (ambígua: balizamento) elas não fazem a pergunta mista de emergência."""
+    if not _CAUDAS_SEM_ROTA:
+        pg = pagina(b)
+        try:
+            pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); window.CapitaoBrain.carregaFaq(); setTimeout(r, 900); })")
+            for q, k, *_ in pg.evaluate(JS_CABECAS, ['60', CAUDAS_CABECA]):
+                if k in ('fallback', 'base', 'faqEquip'):
+                    _CAUDAS_SEM_ROTA.append(q)
+        finally:
+            pg.ctx.close()
+    return _CAUDAS_SEM_ROTA
+
+
+def pares_cabeca(b, cabecas):
+    """(cabeça, cauda, ordem, pergunta) nas duas ordens. A baliza SIMPLES não se mistura com a cauda que não tem rota (ver CABECAS_BALIZA)."""
+    sem = caudas_sem_rota(b)
+    pares = []
+    for h in cabecas:
+        for c in CAUDAS_CABECA:
+            if h == 'a baliza' and c in sem:
+                continue
+            pares.append((h, c, 'cabeça, cauda', h + ', ' + c))
+            pares.append((h, c, 'cauda, cabeça', c.rstrip('?') + ', ' + h))
+    return pares
+
+
 def grupo_cabecas(b, muta, ped):
     chaves = chaves_cabecas(b)
     ped('cabeças: a chave de cada palavra das listas SOZINHA é a da família dela (CANAL16_ROTA → canal16, EPIRB_PALAVRAS → epirb, SEAFIRE_PALAVRAS → seafire; o «distress» do CANAL16_SEG e a «baliza» → o trecho de segurança, base)',
@@ -5764,11 +5806,7 @@ def grupo_cabecas(b, muta, ped):
         sozinhas = pg.evaluate(JS_CABECAS, ['60', CABECAS_TODAS])
         ruins = [(q, k, 'esperado ' + chaves[q]) for q, k, *_ in sozinhas if k != chaves[q]]
         ped('cabeças: as %d cabeças sozinhas (uma de cada palavra das listas, a baliza e uma de cada outra rota de emergência) mantêm a chave da família' % len(CABECAS_TODAS), not ruins, ruins[:6])
-        pares = []   # (cabeça, cauda, ordem, pergunta)
-        for h in CABECAS_TODAS:
-            for c in CAUDAS_CABECA:
-                pares.append((h, c, 'cabeça, cauda', h + ', ' + c))
-                pares.append((h, c, 'cauda, cabeça', c.rstrip('?') + ', ' + h))
+        pares = pares_cabeca(b, CABECAS_TODAS)   # (cabeça, cauda, ordem, pergunta)
         for t in (('60', '105') if not muta else ('60',)):   # (o mutante da lista de palavras não depende do instante: só 12:01:00)
             res = pg.evaluate(JS_CABECAS, [t, [x[3] for x in pares]])
             ruins = []
@@ -5787,7 +5825,7 @@ def grupo_cabecas(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaFaq(); setTimeout(r, 900); })")
         r = pg.evaluate("""() => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; return ['teste da baliza', 'como testar a baliza', 'o botão DISTRESS, água rasa: o que faço', 'água rasa: o que faço'].map((q) => { const a = B.answer(q, op); return [a.key, a.faq || null, B.pedeIA(a, q)]; }); }""")
-        ped('cabeças (sem o guia): «água rasa: o que faço» é o item EL-08 do FAQ; «teste da baliza» e «como testar a baliza» (que casam o item EP-02 do FAQ) e o botão DISTRESS na frase NÃO são (ficam no fallback local, sem IA) — o FAQ não toma a cabeça de emergência', r == [['fallback', None, False]] * 3 + [['faqEquip', 'EL-08', True]], r)
+        ped('cabeças (sem o guia): «água rasa: o que faço» é o item EL-08 do FAQ; «teste da baliza» e «como testar a baliza» (que casam o item EP-02 do FAQ) e o botão DISTRESS na frase NÃO são do FAQ: ficam locais, sem IA, na instrução de segurança da família (a baliza → EPIRB, o botão DISTRESS → canal 16), nunca no fallback com o quadro (revisão 5)', r == [['epirb', None, False], ['epirb', None, False], ['canal16', None, False], ['faqEquip', 'EL-08', True]], r)
     finally:
         pg.ctx.close()
 
@@ -5813,8 +5851,8 @@ def mutantes_cabecas():
 
 
 MUTANTES_3E_CABECAS = mutantes_cabecas() + [
-    ('p3e cabeças: a baliza do EPIRB deixa de ser cabeça de emergência', r"if (!has(q, ['baliza'])) return false;", r"if (!has(q, ['xbaliza'])) return false;", ('cabecas',)),
-    ('p3e cabeças: a baliza de sinalização (canal, cardinal, luz) também é cabeça de emergência', r"return !(qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; }));", r"return true;", ('checklist',)),
+    ('p3e cabeças: a baliza do EPIRB deixa de ser cabeça de emergência', r"if (EM_BALIZA || !has(q, ['baliza'])) return false;", r"if (EM_BALIZA || !has(q, ['xbaliza'])) return false;", ('cabecas',)),
+    ('p3e cabeças: a baliza de sinalização (canal, cardinal, luz) também é cabeça de emergência', r"    if (qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; })) return false;" "\n", r"", ('checklist', 'rev5')),
     ('p3e cabeças: sem o despacho antecipado da cabeça de equipamento (as rotas de dado a tomam)', r"var eq = equipRota(q); if (eq) return eq;", r"", ('cabecas',)),
     ('p3e cabeças: o despacho antecipado não vê o EPIRB', r"    if (epirbRelato(q)) return 'epirb';" "\n" r"    if (seafirePergunta(q)) return 'seafire';" "\n" r"    if (has(q, DOC_PALAVRAS)) return null;", r"    if (seafirePergunta(q)) return 'seafire';" "\n" r"    if (has(q, DOC_PALAVRAS)) return null;", ('cabecas',)),
     ('p3e cabeças: o despacho antecipado não vê o Seafire', r"    if (seafirePergunta(q)) return 'seafire';" "\n" r"    if (has(q, DOC_PALAVRAS)) return null;", r"    if (has(q, DOC_PALAVRAS)) return null;", ('cabecas',)),
@@ -5861,6 +5899,209 @@ MUTANTES_3E_REV4 = [
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_REV4
 
+
+# ——— Fase 3, P3E, revisão 5 ———
+# (1) a «baliza» de balizamento (cor, lado, luz, estado, tipo) não é o EPIRB: vai à IA (fallback, pedeIA true), e o trecho do EPIRB não aparece; (2) a baliza do EPIRB com contexto (teste, bateria, validade, acionamento…) ou
+# sozinha segue local; (3) a cabeça de emergência SEM o guia (nem o FAQ) termina local, na instrução de segurança da família, sem o quadro; (4) o estoque responde «tem <peça>?», «onde está <peça>?» e «o fusível queimou,
+# tem outro?»; (5) a gravação em capitao.pecas.v1 parte do que está guardado; (6) a pressão de óleo estável abaixo do mínimo normal é ATENÇÃO e o texto diz isso.
+BALIZA_SINAL_R5 = ['qual a cor da baliza de boreste?', 'qual a baliza de bombordo?', 'passei pela baliza vermelha', 'vi uma baliza apagada', 'baliza luminosa', 'baliza de sinalização apagada', 'baliza náutica',
+                   'como funciona a baliza?', 'a baliza está fora do lugar', 'baliza fora de posição', 'baliza verde', 'a baliza está torta', 'baliza de bombordo ou boreste?', 'tem baliza no canal?',
+                   'qual a baliza para entrar na barra?', 'passamos pela baliza amarela', 'a baliza cardinal norte está apagada?', 'baliza de perigo isolado', 'a baliza de perigo isolado está apagada?']
+BALIZA_EPIRB_R5 = ['a baliza', 'cadê a baliza?', 'bateria da baliza', 'validade da baliza', 'como acionar a baliza', 'autoteste da baliza']
+ROTAS_P3E_R5_PECAS = [
+    # «tem <peça cadastrada>?» sem sujeito antes do verbo, «reserva / sobressalente» depois da peça, o vocativo, «onde está / fica / guardamos / cadê <peça>?» e o relato com o pedido de outra
+    ('tem correia do alternador?', 'pecas', False), ('tem escova do limpador?', 'pecas', False), ('tem fusível reserva?', 'pecas', False), ('tem rotor reserva?', 'pecas', False), ('temos correia reserva?', 'pecas', False),
+    ('cadê o rotor?', 'pecas', False), ('o fusível queimou, tem outro?', 'pecas', False), ('temos fusível de 24 V?', 'pecas', False), ('onde está o rotor do gerador?', 'pecas', False),
+    ('onde fica o filtro de óleo?', 'pecas', False), ('onde ficam os anodos?', 'pecas', False), ('onde guardamos o impeller?', 'pecas', False), ('há fusível de reserva?', 'pecas', False),
+    ('ainda tem rotor?', 'pecas', False), ('você tem filtro de óleo?', 'pecas', False), ('a gente tem escova do limpador?', 'pecas', False), ('a correia estragou, temos outra?', 'pecas', False),
+    ('tem rotor para o gerador?', 'pecas', False), ('onde está a escova', 'pecas', False), ('o painel tem fusível reserva?', 'pecas', False), ('o barco tem rotor extra?', 'pecas', False),
+    ('capitão, tem correia do alternador?', 'pecas', False), ('capitão, quantos filtros temos?', 'pecas', False), ('ei capitão, tem rotor de reposição?', 'pecas', False), ('tem correia do alternador, capitão?', 'pecas', False),
+    # o que ela não rouba: a peça instalada (sujeito antes do verbo, lugar), o equipamento, o relato de falha sem pedido de outra, o motor que queimou, o que não é peça cadastrada
+    ('o motor tem filtro?', 'base', True), ('a bomba tem rotor?', 'base', True), ('tem rotor no gerador?', 'base', True), ('tem anodo no casco?', 'fallback', True), ('o fusível queimou', 'fallback', True),
+    ('o fusível queimou, o que faço?', 'fallback', True), ('a correia estragou, como troco?', 'fallback', True), ('o motor queimou, tem outro?', 'motores', False), ('onde fica o alternador?', 'fallback', True),
+    ('tem gelo a bordo?', 'fallback', True), ('onde está o motor?', 'motores', False), ('o apito está tocando', 'fallback', True), ('tem apito reserva?', 'fallback', True), ('tem peça?', 'fallback', True),
+]
+ROTAS_P3E_R5 = [(q, 'fallback', True) for q in BALIZA_SINAL_R5] + [(q, 'base', False) for q in BALIZA_EPIRB_R5] + ROTAS_P3E_R5_PECAS
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_R5]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_R5})
+# a 1ª linha (e a falada) de «onde está <peça>?»: o LOCAL do cadastro e quantas há; mais de 3 peças, a 1ª linha de sempre
+ONDE_PECAS_R5 = [('onde está o rotor do gerador?', 'Onde ficam: rotor (impeller) do gerador — caixa de sobressalentes B (0 a bordo, zerada).'),
+                 ('cadê a escova do limpador?', 'Onde ficam: escova do limpador do para-brisa — armário de ferramentas (2 a bordo).'),
+                 ('onde ficam os anodos?', 'Onde ficam: jogo de anodos do eixo e do casco — estante técnica 3 (1 a bordo, no mínimo ou abaixo); anodo do trocador de calor do estabilizador — caixa de sobressalentes B (2 a bordo).')]
+PECAS_PLANTADO_R5 = "{ novas: [{ id: 'x1', n: 'Peça de outra versão', qtd: '3', extra: 'n' }, null, 5], movs: [{ id: 'p01', dq: '-1', iso: '2026-01-01T00:00:00.000Z' }, { id: 'p01', dq: -1, iso: '2026-01-02T00:00:00.000Z', extra: 'a' }, 'texto', null], extra: { a: 1 }, v: 2 }"
+JS_PECAS_R5 = """() => { const B = window.CapitaoBrain, K = 'capitao.pecas.v1', out = {}; localStorage.clear();
+  localStorage.setItem(K, JSON.stringify(PLANTADO)); out.ant = JSON.parse(localStorage.getItem(K));
+  out.u = !!B.usaPeca('p02'); out.d1 = JSON.parse(localStorage.getItem(K));
+  out.n = !!B.addPeca({ n: 'Peça nova', qtd: 2 }); out.d2 = JSON.parse(localStorage.getItem(K));
+  out.formas = ['[1,2]', 'não é json', '{"movs":"x","novas":3}', '"texto"', '{"movs":{"a":1},"movsAntes":"y"}'].map((v) => { localStorage.setItem(K, v);
+    const u = !!B.usaPeca('p02'), a = !!B.addPeca({ n: 'Outra', qtd: 1 }); return [v, u, a, JSON.parse(localStorage.getItem(K)), B.pecas().length]; });
+  return out; }""".replace('PLANTADO', PECAS_PLANTADO_R5)
+JS_ONDE_R5 = """() => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; window.CapitaoReplay.fixar('60'); localStorage.clear();
+  return QS.map((q) => { const a = B.answer(q, op); return [q, a.key, a.text.split('\\n')[0], B.falaCurta(a), B.pedeIA(a, q)]; }); }""".replace('QS', json.dumps([q for q, _ in ONDE_PECAS_R5] + ['onde ficam os filtros?', 'onde ficam as peças sobressalentes?'], ensure_ascii=False))
+JS_OLEO_R5 = """([sim, a, b_]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, h = D.historico.cruzeiro;
+  if (sim) { const orig = R.quadro; R.quadro = function (t) { return Object.assign({}, orig.call(R, t), { motor_bb_oleo_bar: a, motor_be_oleo_bar: b_ }); }; }
+  else ['motor_bb_oleo_bar', 'motor_be_oleo_bar'].forEach((c) => { const s = h[c]; s.d = Array.from({ length: 60 }, (_, k) => Math.round((a - k * b_) * s.escala)); });
+  const x = B.preditiva().filter((y) => y.id === 'oleo_cruzeiro')[0]; return x && { texto: x.texto, nivel: x.nivel, rotulo: x.rotulo }; }"""
+
+
+def local_cabeca(texto, fala, src):
+    tudo = texto + '\n' + fala + '\n' + src
+    return not confere.R_COORD.search(tudo) and not QUADRO_RX.search(tudo)
+
+
+def grupo_rev5(b, muta, ped):
+    # (1) a baliza de balizamento vai à IA (fallback, pedeIA true, sem o trecho do EPIRB); a do EPIRB (sozinha, teste, bateria, validade, acionamento) é o trecho de segurança, local; nos dois instantes
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); window.CapitaoBrain.carregaFaq(); setTimeout(r, 900); })")
+        for t in ('60', '105'):
+            res = pg.evaluate(JS_CABECAS, [t, BALIZA_SINAL_R5 + BALIZA_EPIRB_R5])
+            ruins = []
+            for q, key, ia, seg, texto, fala, src in res:
+                if q in BALIZA_SINAL_R5:
+                    if not (key == 'fallback' and ia and not seg and 'EPIRB' not in texto):
+                        ruins.append((q, key, ia))
+                elif not (key == 'base' and not ia and seg and local_cabeca(texto, fala, src)):
+                    ruins.append((q, key, ia, seg))
+            ped('rev5 t=%s: as %d perguntas de balizamento (cor, lado, luz, estado, tipo) vão à IA — fallback, pedeIA true, sem o trecho do EPIRB — e as %d da baliza do EPIRB (sozinha, onde fica, bateria, validade, acionar, autoteste) são o trecho de segurança, local'
+                % (t, len(BALIZA_SINAL_R5), len(BALIZA_EPIRB_R5)), not ruins, ruins[:8])
+        for t in ('60', '105'):
+            pg.evaluate("(x) => window.CapitaoReplay.fixar(x)", t)
+            res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3E_R5_PECAS])
+            ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3E_R5_PECAS, res) if key != esp or ia != ia_esp]
+            ped('rev5 t=%s: as %d perguntas do estoque («tem <peça>?», «reserva», «onde está <peça>?», o vocativo, o relato com «tem outro?») e as que ela não rouba (o equipamento, a peça instalada, o relato sem pedido de outra) caem na chave certa' % (t, len(ROTAS_P3E_R5_PECAS)), not ruins, ruins[:6])
+        # a palavra que TEM «baliza» dentro e escapa da troca (a route() sobre o resto a veria de novo) não prende o cérebro: a guarda de volta
+        x = pg.evaluate("() => { try { const B = window.CapitaoBrain, a = B.answer('rebaliza, qual a velocidade?', { platform: 'app', commit: false }); return [a.key, null]; } catch (e) { return [null, String(e).slice(0, 80)]; } }")
+        ped('rev5: «rebaliza, qual a velocidade?» (a palavra com «baliza» dentro que a troca não tira) responde sem voltar a si mesma (nenhuma exceção de pilha)', x[1] is None, x)
+        # a baliza de balizamento com um dado junto segue o dado (a maré, o checklist), com o quadro; é só a baliza com a pergunta de EPIRB que é emergência
+        r = pg.evaluate(JS_CABECAS, ['60', ['a baliza vermelha, checklist de saída', 'a baliza do canal está apagada, qual a maré?']])
+        ped('rev5: a baliza de balizamento com um dado junto segue o dado (checklist, maré), nunca o EPIRB', [x[1] for x in r] == ['checklist', 'mare'] and all(not x[3] for x in r), [(x[0], x[1]) for x in r])
+    finally:
+        pg.ctx.close()
+    # (3) SEM o guia (e sem o guia nem o FAQ): TODA cabeça de emergência, sozinha e misturada com cada cauda, nas duas ordens, em 12:01:00 e 12:01:45, termina na chave de emergência, local — a instrução de segurança da
+    # família, nunca o fallback com a situação de bordo (SOG, proa, hora do quadro) nem a IA
+    familia = {'teste da baliza': 'epirb', 'como testar a baliza': 'epirb', 'o botão DISTRESS': 'canal16', 'onde fica o botão DISTRESS?': 'canal16', 'o distress': 'canal16'}
+    for nome, aborta, caminho in (('sem o guia', ('**/base-conhecimento.json',), 'faq-equipamentos.json'), ('sem o guia nem o FAQ', ('**/base-conhecimento.json', '**/faq-equipamentos.json'), 'integracoes/integracoes.json')):
+        pg = pagina(b, muta=muta, caminho=caminho, aborta=aborta)
+        try:
+            pg.evaluate("() => new Promise(r => { if (window.CapitaoBrain.carregaFaq) window.CapitaoBrain.carregaFaq(); setTimeout(r, 900); })")
+            res = pg.evaluate(JS_CABECAS, ['60', list(familia)])
+            ped('rev5 (%s): «teste da baliza» e «como testar a baliza» são o procedimento do EPIRB e o botão DISTRESS o do canal 16 — local, sem IA, sem o quadro (nunca o fallback)' % nome,
+                all(key == familia[q] and not ia and local_cabeca(texto, fala, src) for q, key, ia, seg, texto, fala, src in res), [(q, key, ia) for q, key, ia, *_ in res])
+            pares = [(h, '', '', h) for h in CABECAS_TODAS] + pares_cabeca(b, CABECAS_TODAS)
+            for t in (('60', '105') if not muta else ('60',)):
+                res = pg.evaluate(JS_CABECAS, [t, [x[3] for x in pares]])
+                ruins = []
+                for (h, c, ordem, q), (_, key, ia, seg, texto, fala, src) in zip(pares, res):
+                    if not (key in EMERG_CHAVES and not ia and local_cabeca(texto, fala, src)):
+                        ruins.append((q, key, 'ia' if ia else '', 'quadro' if QUADRO_RX.search(texto + fala + src) else ''))
+                ped('rev5 t=%s (%s): as %d cabeças sozinhas e as %d perguntas mistas (cabeça × cauda, nas duas ordens) terminam local, em chave de emergência, sem IA, sem coordenada, sem SOG, rumo, ETA, pessoas a bordo nem hora do instante'
+                    % (t, nome, len(CABECAS_TODAS), len(pares) - len(CABECAS_TODAS)), not ruins, ruins[:10])
+        finally:
+            pg.ctx.close()
+    # (4) o estoque: a 1ª linha de «onde está <peça>?» diz o LOCAL do cadastro e quantas há (até 3 peças; mais que isso, a 1ª linha de sempre); a falada leva o local
+    pg = pagina(b, muta=muta)
+    try:
+        r = pg.evaluate(JS_ONDE_R5)
+        quer = ONDE_PECAS_R5
+        ped('rev5: «onde está / cadê / onde ficam <peça>?» abre com «Onde ficam: <peça> — <local do cadastro> (N a bordo…)», é do estoque (pecas), local, e a falada leva o local',
+            all(k == 'pecas' and l1 == esp and 'Onde ficam' in fala and ia is False for (q, esp), (_, k, l1, fala, ia) in zip(quer, r[:3]))
+            and 'caixa de sobressalentes B' in r[0][3] and 'armário de ferramentas' in r[1][3] and 'estante técnica 3' in r[2][3], r[:3])
+        ped('rev5: «onde ficam os filtros?» (5 peças) e «onde ficam as peças sobressalentes?» (sem nome) NÃO abrem com «Onde ficam: »: a 1ª linha de sempre (a lista e o resumo)', all(k == 'pecas' and not l1.startswith('Onde ficam:') for _, k, l1, *_ in r[3:]), r[3:])
+        x = pg.evaluate("""() => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; localStorage.clear(); B.addPeca({ n: 'Lâmpada de navegação', qtd: 2 });
+          const a = B.answer('onde está a lâmpada?', op); return [a.key, a.text.split('\\n')[0]]; }""")
+        ped('rev5: a peça cadastrada sem local diz «sem local cadastrado» na 1ª linha («Onde ficam»)', x == ['pecas', 'Onde ficam: lâmpada de navegação — sem local cadastrado (2 a bordo).'], x)
+        # o iso do movimento novo é único entre TODAS as linhas guardadas (as que a leitura filtra também): com o relógio parado, a linha crua de dq em texto que já tem o iso de agora não o repete
+        x = pg.evaluate("""() => { const B = window.CapitaoBrain, K = 'capitao.pecas.v1', T = 1767225600000, orig = Date.now; Date.now = () => T; localStorage.clear();
+          localStorage.setItem(K, JSON.stringify({ movs: [{ id: 'zz', dq: 'x', iso: new Date(T).toISOString() }, { id: 'zz', dq: 'x', iso: new Date(T + 1).toISOString() }] }));
+          B.usaPeca('p01'); Date.now = orig; const m = JSON.parse(localStorage.getItem(K)).movs; return [m.length, (m[2] || {}).iso, m.map((y) => y.iso)]; }""")
+        ped('rev5: o iso do movimento novo não repete o de nenhuma linha guardada (com o relógio parado, pula as duas linhas cruas que já o têm)', x[0] == 3 and len(set(x[2])) == 3 and x[1] == '2026-01-01T00:00:00.002Z', x)
+        # (5) a gravação parte do que está guardado: nenhuma linha, nenhuma chave de topo e nenhum valor de outra forma some (o registro só cresce)
+        r = pg.evaluate(JS_PECAS_R5)
+        ant, d1, d2 = r['ant'], r['d1'], r['d2']
+        ped('rev5: o −1 USADA acrescenta UMA linha ao fim de movs e deixa TUDO o mais como estava: as 4 linhas anteriores (inclusive a de dq em texto, a de campo extra, o texto e o null), as 3 novas (inclusive o null e o número), a chave `extra` e a `v`',
+            r['u'] and d1['movs'][:4] == ant['movs'] and len(d1['movs']) == 5 and d1['movs'][4]['id'] == 'p02' and d1['movs'][4]['dq'] == -1 and d1['novas'] == ant['novas'] and d1['extra'] == {'a': 1} and d1['v'] == 2, d1)
+        ped('rev5: o + PEÇA acrescenta UMA peça ao fim de novas e deixa as movs, as chaves `extra` e `v` e as 3 novas anteriores como estavam', r['n'] and d2['novas'][:3] == ant['novas'] and len(d2['novas']) == 4 and d2['novas'][3]['n'] == 'Peça nova'
+            and d2['movs'] == d1['movs'] and d2['extra'] == {'a': 1} and d2['v'] == 2, d2)
+        f = {v: (u, a, st, n) for v, u, a, st, n in r['formas']}
+        g = lambda v, k: (f[v][2] or {}).get(k)   # (o campo que falta é falha da conferência, não queda do teste)
+        ped('rev5: valor guardado de outra forma (lista, texto, JSON ruim) fica em `antes` e a linha nova entra em movs/novas', g('[1,2]', 'antes') == [1, 2] and g('não é json', 'antes') == 'não é json' and g('"texto"', 'antes') == 'texto'
+            and all(len(g(v, 'movs') or []) == 1 and (g(v, 'novas') or [{}])[0].get('n') == 'Outra' and f[v][0] and f[v][1] for v in ('[1,2]', 'não é json', '"texto"')), f)
+        ped('rev5: o campo que não é lista fica em `<campo>Antes` (e o campo recomeça lista; um `movsAntes` que já existia não é pisado: o novo ganha `_`)', g('{"movs":"x","novas":3}', 'movsAntes') == 'x' and g('{"movs":"x","novas":3}', 'novasAntes') == 3
+            and g('{"movs":{"a":1},"movsAntes":"y"}', 'movsAntes') == 'y' and g('{"movs":{"a":1},"movsAntes":"y"}', 'movsAntes_') == {'a': 1} and len(g('{"movs":"x","novas":3}', 'movs') or []) == 1, f['{"movs":{"a":1},"movsAntes":"y"}'])
+    finally:
+        pg.ctx.close()
+    # (6) a pressão de óleo em cruzeiro abaixo do mínimo normal (2,4 bar) é ATENÇÃO e o texto diz «abaixo do mínimo normal», estável ou caindo; sem a simulação a pressão é a da última semana do histórico, com ela é a da volta de hoje
+    for extra, args, quer, rot in ((SEM_SIMULACAO, [False, 2.0, 0.0], r'^Pressão de óleo em cruzeiro abaixo do mínimo normal de 2,4 bar: BB 2,0 bar · BE 2,0 bar, estável há 60 dias\.$', 'histórico estável em 2,0 bar'),
+                                   (SEM_SIMULACAO, [False, 2.9, 0.015], r'^Pressão de óleo em cruzeiro abaixo do mínimo normal de 2,4 bar: BB 2,\d bar · BE 2,\d bar, caindo há 60 dias\.$', 'histórico caindo de 2,9 a 2,0 bar'),
+                                   ('', [True, 3.2, 2.0], r'^Pressão de óleo em cruzeiro abaixo do mínimo normal de 2,4 bar: BB 3,2 bar · BE 2,0 bar, estável há 60 dias\.$', 'volta de hoje com o BB em 3,2 e o BE (o menor) em 2,0 bar')):
+        pg = pagina(b, extra=extra, muta=muta)
+        try:
+            x = pg.evaluate(JS_OLEO_R5, args)
+            ped('rev5 (óleo, %s): ATENÇÃO e o texto diz «abaixo do mínimo normal de 2,4 bar» (nunca «estável» sem dizer isso)' % rot, bool(x) and x['nivel'] == 'atencao' and x['rotulo'] == 'ATENÇÃO' and re.match(quer, x['texto']) is not None, x)
+        finally:
+            pg.ctx.close()
+
+
+GRUPOS_3A['rev5'] = grupo_rev5
+
+
+def mutantes_ctx_baliza():
+    """Um mutante por palavra do contexto de EPIRB da baliza (BALIZA_CTX): a palavra sai da lista. Ficam de fora (equivalentes por redundância proposital, medidos) as palavras que o cérebro já pega por
+    outro caminho: as de emergência da lista SOS (sos, socorro, emergência) e as que são, sozinhas, a rota de um assunto (a prova 3 já faz da baliza a cabeça: bateria, vence, teste, perigo…)."""
+    m = re.search(r"var BALIZA_CTX = \{\}; \[[^\]]*\]\.forEach", BRAIN_TXT)
+    regiao = m.group(0)
+    return [('p3e rev5 baliza: «%s» sai do contexto de EPIRB' % w, regiao, regiao.replace("'%s'" % w, "'zz%s'" % w, 1), ('cabecas', 'rev5')) for w in CTX_BALIZA if w not in CTX_BALIZA_EQUIVALENTES]
+
+
+# (equivalentes por redundância proposital, medidos: a palavra já é pega por outro caminho — a lista do EPIRB, a lista SOS ou a rota própria dela, que faz da baliza a cabeça pela prova 3)
+CTX_BALIZA_EQUIVALENTES = ('epirb', 'radiobaliza', 'sos', 'socorro', 'emergencia', 'bateria', 'vence', 'venceu')
+MUTANTES_3E_REV5 = mutantes_ctx_baliza() + [
+    # a baliza de balizamento × a do EPIRB (as três provas)
+    ('p3e rev5 baliza: sem o contexto de EPIRB (a prova 1)', r"if (qs.some(function (w) { return BALIZA_CTX[w]; }) || soNeutras(", r"if (false || soNeutras(", ('rev5', 'cabecas')),
+    ('p3e rev5 baliza: sem a prova da baliza sozinha (a prova 2)', r" || soNeutras(semVocativo(q).replace(/ por favor /g, ' '), BALIZA_OK)) return true;", r") return true;", ('rev5', 'cabecas')),
+    ('p3e rev5 baliza: sem a prova da pergunta mista (a prova 3)', r"    return rota !== 'fallback';", r"    return false;", ('cabecas', 'rev5')),
+    ('p3e rev5 baliza: a prova 3 vale sempre (toda pergunta com «baliza» é cabeça de emergência)', r"    return rota !== 'fallback';", r"    return true;", ('rev5',)),
+    ('p3e rev5 baliza: o artigo não sai junto da baliza (a cauda ficaria com um «a» solto)', r"(?:(?:a|as|da|das|na|nas|pela|uma|essa|esta|nossa|minha|de|do) )?baliza\w*(?= )", r"(?:(?:zz) )?baliza\w*(?= )", ('cabecas',)),
+    ('p3e rev5 baliza: sem a guarda de volta, a route() sobre o resto chama a baliza de novo (a guarda só vale na 1ª entrada)', r"    if (EM_BALIZA || !has(q, ['baliza'])) return false;", r"    if (!has(q, ['baliza'])) return false;", ('rev5', 'cabecas')),
+    ('p3e rev5 baliza: «fora» sai dos descritores da boia («baliza fora de posição» é a boia)', r"'deslocado', 'fora', 'deriva'", r"'deslocado', 'deriva'", ('rev5',)),
+    ('p3e rev5 baliza: os descritores da boia (cor, lado, luz, estado) saem da lista', r"'sinalizacao', 'sinalizar', 'luminosa', 'luminoso', 'nautica', 'nautico', 'isolado', 'isolada', 'vermelha', 'vermelho', 'verde', 'amarela', 'amarelo', 'cor', 'cores', 'bombordo', 'boreste', 'estibordo',"
+     "\n" r"    'apagada', 'apagado', 'apagou', 'torta', 'torto', 'deslocada', 'deslocado', 'fora', 'deriva', 'derivando'", r"'zzsinal'", ('rev5',)),
+    ('p3e rev5 baliza: «baliza fora de posição» é a posição do barco (a rota da posição vê a baliza)', r"function posicaoPergunta(q) { return !has(q, ['baliza']) && (", r"function posicaoPergunta(q) { return (", ('rev5',)),
+    # a cabeça de emergência SEM o guia: a instrução de segurança da família, nunca o fallback com o quadro
+    ('p3e rev5 sem guia: a cabeça de emergência no fallback leva o quadro (SOG, proa, hora)', r"    if (key === 'fallback' && cabecaEmerg(pad(q))) { var fam", r"    if (false) { var fam", ('rev5', 'cabecas')),
+    ('p3e rev5 sem guia: a cabeça sem guia é sempre o SOS', r"key = fam === 'baliza' ? 'epirb' : fam ? 'canal16' : 'sos';", r"key = 'sos';", ('rev5', 'cabecas')),
+    ('p3e rev5 sem guia: a baliza do EPIRB sem guia é o roteiro do canal 16', r"key = fam === 'baliza' ? 'epirb' : fam ? 'canal16' : 'sos';", r"key = fam ? 'canal16' : 'sos';", ('rev5', 'cabecas')),
+    ('p3e rev5 sem guia: o botão DISTRESS sem guia é o procedimento do EPIRB', r"key = fam === 'baliza' ? 'epirb' : fam ? 'canal16' : 'sos';", r"key = fam ? 'epirb' : 'sos';", ('rev5', 'cabecas')),
+    # a gravação em capitao.pecas.v1 parte do que está guardado
+    ('p3e rev5 pecas: o −1 USADA grava o estado filtrado (a linha de dq em texto e as chaves desconhecidas somem)', r"    movs.push(m); write(K_PECAS, cru);", r"    movs.push(m); write(K_PECAS, { novas: pecasEstado().novas, movs: pecasEstado().movs.concat([m]) });", ('rev5',)),
+    ('p3e rev5 pecas: o + PEÇA grava o estado filtrado', r"    novas.push(item); write(K_PECAS, est);", r"    novas.push(item); write(K_PECAS, { novas: pecasEstado().novas.concat([item]), movs: pecasEstado().movs });", ('rev5',)),
+    ('p3e rev5 pecas: o JSON ruim guardado vira vazio na gravação (e se perde)', r"    try { v = JSON.parse(s); } catch (e) { return { antes: s }; }", r"    try { v = JSON.parse(s); } catch (e) { return {}; }", ('rev5',)),
+    ('p3e rev5 pecas: o valor guardado que não é objeto vira vazio na gravação (e se perde)', r"typeof v === 'object' && !Array.isArray(v) ? v : { antes: v };", r"typeof v === 'object' && !Array.isArray(v) ? v : {};", ('rev5',)),
+    ('p3e rev5 pecas: o campo que não é lista é pisado', r"{ while (cru[k] !== undefined) k += '_'; cru[k] = cru[campo]; }", r"{ }", ('rev5',)),
+    ('p3e rev5 pecas: o `<campo>Antes` que já existia é pisado', r"{ while (cru[k] !== undefined) k += '_'; cru[k] = cru[campo]; }", r"{ cru[k] = cru[campo]; }", ('rev5',)),
+    ('p3e rev5 pecas: o iso do movimento novo ignora as linhas cruas', r"} while (movs.some(function (x) { return x && x.iso === iso; }));", r"} while (pecasEstado().movs.some(function (x) { return x.iso === iso; }));", ('pecas', 'rev5')),
+    # «tem <peça>?», «onde está <peça>?» e o relato com o pedido de outra
+    ('p3e rev5 pecas: «tem correia do alternador?» (o verbo sem sujeito) não é estoque', r"      || (PECAS_TEM_ABRE.test(semVocativo(q)) && !PECAS_LUGAR.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))" "\n", r"", ('rev5',)),
+    ('p3e rev5 pecas: «o motor tem filtro?» (com sujeito) é estoque', r"var PECAS_TEM_ABRE = /^ (?:(?:ainda|ja|sera que|a gente|voces?|vc|entao|e|mas|por acaso|aqui|ai|nos) )*(?:temos|tenho|tem|ha) /;", r"var PECAS_TEM_ABRE = /^ (?:.* )?(?:temos|tenho|tem|ha) /;", ('rev5',)),
+    ('p3e rev5 pecas: «tem anodo no casco?» (a peça instalada, com o lugar) é estoque', r" && !PECAS_LUGAR.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))", r" && objetoPeca(q, PECAS_VERBOS_TEM))", ('rev5',)),
+    ('p3e rev5 pecas: «tem fusível reserva?» («reserva» depois da peça) não é estoque', r"      || (/ (?:temos|tenho|tem|ha) /.test(q) && PECAS_RESERVA.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))" "\n", r"", ('rev5',)),
+    ('p3e rev5 pecas: «onde está o rotor do gerador?» / «cadê o rotor?» não é estoque', r"      || (/ (?:onde|cade) /.test(q) && objetoPeca(q, PECAS_VERBOS_ONDE))", r"", ('rev5',)),
+    ('p3e rev5 pecas: o verbo de «onde» não inclui «cadê»', r"var PECAS_VERBOS_ONDE = ['esta', 'estao', 'fica', 'ficam', 'cade', 'guardamos',", r"var PECAS_VERBOS_ONDE = ['esta', 'estao', 'fica', 'ficam', 'guardamos',", ('rev5',)),
+    ('p3e rev5 pecas: «o fusível queimou, tem outro?» não é estoque (o relato vence)', r"    if (PECAS_RELATO_OUTRA.test(q) && sujeitoPeca(q) && !has(q, PECAS_CONTATO)) return true;" "\n", r"", ('rev5',)),
+    ('p3e rev5 pecas: «o motor queimou, tem outro?» é estoque (o sujeito não é a peça)', r"if (PECAS_RELATO_OUTRA.test(q) && sujeitoPeca(q) &&", r"if (PECAS_RELATO_OUTRA.test(q) &&", ('rev5',)),
+    ('p3e rev5 pecas: «apit» (o apito) dentro de «capitão» tira do estoque a pergunta com o vocativo', r"'nao parte', ' apit', 'fumac',", r"'nao parte', 'apit', 'fumac',", ('rev5',)),
+    ('p3e rev5 pecas: «onde está <peça>?» não abre com «Onde ficam: » (a peça do nome)', r"(onde && nm.lista.length <= 3 ? ondeFicam(nm.lista) : 'Estoque de peças: ' + corpo(nm.lista))", r"('Estoque de peças: ' + corpo(nm.lista))", ('rev5',)),
+    ('p3e rev5 pecas: mais de 3 peças também abrem com «Onde ficam: »', r"(onde && nm.lista.length <= 3 ? ondeFicam(nm.lista)", r"(onde ? ondeFicam(nm.lista)", ('rev5',)),
+    ('p3e rev5 pecas: «onde está <peça>?» da tarefa da agenda não abre com «Onde ficam: »', r"(onde && lig.length <= 3 ? ondeFicam(lig) : 'Peças para '", r"(false ? ondeFicam(lig) : 'Peças para '", ('rev5',)),
+    ('p3e rev5 pecas: a peça sem local cadastrado some da 1ª linha («Onde ficam»)', r"(x.local || 'sem local cadastrado')", r"x.local", ('rev5',)),
+    # a pressão de óleo estável abaixo do mínimo
+    ('p3e rev5 óleo: a pressão estável abaixo do mínimo normal não pede atenção', r"nivel: queda >= 0.2 || abaixo ? 'atencao' : 'ok'", r"nivel: queda >= 0.2 ? 'atencao' : 'ok'", ('rev5', 'preditiva')),
+    ('p3e rev5 óleo: o texto abaixo do mínimo normal diz «estável» sem dizer que está abaixo', r"      texto: abaixo ? 'Pressão de óleo em cruzeiro abaixo do mínimo normal de '", r"      texto: false ? 'Pressão de óleo em cruzeiro abaixo do mínimo normal de '", ('rev5', 'preditiva')),
+    ('p3e rev5 óleo: o texto abaixo do mínimo normal diz «estável» mesmo quando está caindo', r"BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar, ' + (queda >= 0.2 ? 'caindo' : 'estável') + ' há '", r"BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar, ' + ('estável') + ' há '", ('rev5',)),
+    ('p3e rev5 óleo: só o maior dos dois motores conta para o mínimo (o outro, abaixo, passa)', r"abaixo = mn !== null && Math.min(vb, ve) < mn;", r"abaixo = mn !== null && Math.max(vb, ve) < mn;", ('rev5',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_REV5
 
 
 

@@ -924,15 +924,17 @@
   }
   // pressão de óleo em cruzeiro, por motor: estável ou caindo contra a primeira semana do histórico; a faixa normal é a do guia (a partir de 1.000 rpm)
   function achadoOleoCruzeiro() {
-    var bb = cruzeiroSerie('motor_bb_oleo_bar'), be = cruzeiroSerie('motor_be_oleo_bar'), hoje, n, queda, vb, ve, mn, L, k, r;
+    var bb = cruzeiroSerie('motor_bb_oleo_bar'), be = cruzeiroSerie('motor_be_oleo_bar'), hoje, n, queda, vb, ve, mn, L, k, r, abaixo;
     if (!bb || !be) return null;
     hoje = cruzeiroHoje(['motor_bb_oleo_bar', 'motor_be_oleo_bar']); n = bb.length;
     queda = Math.max(mediaDe(bb.slice(0, 7)) - mediaDe(bb.slice(-7)), mediaDe(be.slice(0, 7)) - mediaDe(be.slice(-7)));
     vb = hoje ? hoje.motor_bb_oleo_bar : mediaDe(bb.slice(-7)); ve = hoje ? hoje.motor_be_oleo_bar : mediaDe(be.slice(-7));
     L = limitesDe('motor_bb_oleo_bar'); r = L && L.regimes; mn = null;
     if (r) for (k = 0; k < r.length; k++) if (r[k].rpm_de != null && r[k].normal && typeof r[k].normal.de === 'number') mn = r[k].normal.de;
-    return { id: 'oleo_cruzeiro', sistema: 'Motores', nivel: queda >= 0.2 || (mn !== null && Math.min(vb, ve) < mn) ? 'atencao' : 'ok', titulo: 'Pressão de óleo em cruzeiro',
-      texto: 'Pressão de óleo em cruzeiro ' + (queda >= 0.2 ? 'caindo' : 'estável') + ' há ' + n + ' dias: BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar' + (mn !== null ? ', com mínimo normal de ' + nb(mn, 1) + ' bar' : '') + '.',
+    abaixo = mn !== null && Math.min(vb, ve) < mn;   // (estável ou não, a pressão abaixo do mínimo normal é ATENÇÃO e o texto diz «abaixo do mínimo normal»: nunca «estável» sem dizer isso)
+    return { id: 'oleo_cruzeiro', sistema: 'Motores', nivel: queda >= 0.2 || abaixo ? 'atencao' : 'ok', titulo: 'Pressão de óleo em cruzeiro',
+      texto: abaixo ? 'Pressão de óleo em cruzeiro abaixo do mínimo normal de ' + nb(mn, 1) + ' bar: BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar, ' + (queda >= 0.2 ? 'caindo' : 'estável') + ' há ' + n + ' dias.'
+        : 'Pressão de óleo em cruzeiro ' + (queda >= 0.2 ? 'caindo' : 'estável') + ' há ' + n + ' dias: BB ' + nb(vb, 1) + ' bar · BE ' + nb(ve, 1) + ' bar' + (mn !== null ? ', com mínimo normal de ' + nb(mn, 1) + ' bar' : '') + '.',
       fonte: histFonte() + ' · cruzeiro dos últimos ' + n + ' dias' + (hoje ? ' e a volta de hoje' : '') + (L && L.fonte ? ' · ' + L.fonte : '') };
   }
   // os três bancos de baterias nos últimos 30 dias (CapitaoReplay.serie): estáveis ou com queda de 0,3 V ou mais
@@ -1058,11 +1060,27 @@
   }
   // a quantidade e o mínimo do + PEÇA são opcionais (sem eles, 0); com um valor que não é inteiro puro, o cadastro todo é recusado
   function intPecaOpc(v) { return v == null || (typeof v === 'string' && !v.trim()) ? 0 : intPeca(v); }
+  // A GRAVAÇÃO parte do que está guardado, como está (o registro só cresce): nunca do estado filtrado que a leitura devolve. Uma linha que esta versão não entende (quantidade em texto, campo de outra versão,
+  // cópia restaurada), uma chave de topo desconhecida e um valor de outra forma (lista, texto, JSON ruim) ficam onde estavam; só a linha nova entra no fim da lista. O que não é objeto fica em `antes`;
+  // o campo que não é lista, em `<campo>Antes` (e o campo recomeça lista).
+  function pecasCru() {
+    var s = null, v;
+    try { s = localStorage.getItem(K_PECAS); } catch (e) {}
+    if (!s) return {};
+    try { v = JSON.parse(s); } catch (e) { return { antes: s }; }
+    return v === null || v === undefined ? {} : typeof v === 'object' && !Array.isArray(v) ? v : { antes: v };
+  }
+  function pecasLinhas(cru, campo) {
+    var k = campo + 'Antes';
+    if (Array.isArray(cru[campo])) return cru[campo];
+    if (cru[campo] !== undefined && cru[campo] !== null) { while (cru[k] !== undefined) k += '_'; cru[k] = cru[campo]; }
+    return (cru[campo] = []);
+  }
   function pecaMov(id, dq) {   // grava UM movimento novo (iso único: o dados.html soma pelo iso) e devolve a linha
-    var est = pecasEstado(), t = Date.now(), iso, m;
-    do { iso = new Date(t++).toISOString(); } while (est.movs.some(function (x) { return x.iso === iso; }));
+    var cru = pecasCru(), movs = pecasLinhas(cru, 'movs'), t = Date.now(), iso, m;
+    do { iso = new Date(t++).toISOString(); } while (movs.some(function (x) { return x && x.iso === iso; }));
     m = Object.assign({ id: id, dq: dq, iso: iso, who: quem() }, selaSim());
-    est.movs.push(m); write(K_PECAS, est);
+    movs.push(m); write(K_PECAS, cru);
     return m;
   }
   // −1 USADA: tira uma do estoque. {id, ant, novo, iso} para o Desfazer; null se a peça não existe ou já está zerada.
@@ -1088,16 +1106,16 @@
   }
   // + PEÇA: nome (obrigatório), quantas a bordo, mínimo, local, observação e as tarefas da agenda que a usam. Sem código de fabricante nem valor. Devolve a peça cadastrada, ou null.
   function addPeca(c) {
-    var n = txtPeca(c && c.n, 80), est, ids = {}, id, ag = {}, item, qtd, mn;
+    var n = txtPeca(c && c.n, 80), est, novas, ids = {}, id, ag = {}, item, qtd, mn;
     if (EM_SOS || !n) return null;
     qtd = intPecaOpc(c.qtd); mn = intPecaOpc(c.min);
     if (qtd === null || mn === null) return null;
-    est = pecasEstado();
-    (D.pecas || []).forEach(function (x) { ids[x.id] = 1; }); est.novas.forEach(function (x) { ids[x.id] = 1; }); (D.agenda || []).forEach(function (t) { ag[t.id] = 1; });
+    est = pecasCru(); novas = pecasLinhas(est, 'novas');
+    (D.pecas || []).forEach(function (x) { ids[x.id] = 1; }); novas.forEach(function (x) { if (x && x.id !== undefined) ids[x.id] = 1; }); (D.agenda || []).forEach(function (t) { ag[t.id] = 1; });
     do { id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4); } while (ids[id]);
     item = Object.assign({ id: id, n: n, qtd: qtd, min: mn }, c.local ? { local: txtPeca(c.local, 60) } : {}, c.obs ? { obs: txtPeca(c.obs, 200) } : {},
       Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}, { iso: new Date().toISOString(), who: quem() }, selaSim());
-    est.novas.push(item); write(K_PECAS, est);
+    novas.push(item); write(K_PECAS, est);
     return item;
   }
   // as tarefas da agenda que a peça serve, com o prazo de hoje («Troca de óleo e filtros dos motores (D-17 · 20/11)»)
@@ -1202,6 +1220,15 @@
   // estoque junto, e a peça tem de ser o OBJETO do verbo (objetoPeca): «falta fluxo no filtro» e «acabou a luz da tela» são relato de falha. «Tem» e «há» sozinhos não bastam («o motor tem filtro?»): pedem o
   // «a bordo», o «em estoque» ou a reposição. «Preciso/falta repor alguma coisa» é o estoque sem nome.
   var PECAS_VERBOS_QUANT = ['quanto', 'quanta', 'quantos', 'quantas'], PECAS_VERBOS_TEM = ['temos', 'tenho', 'tem', 'ha'], PECAS_VERBOS_PRECISA = ['preciso', 'precisamos', 'precisa', 'precisar'];
+  // «Tem correia do alternador?», «temos fusível de 24 V?», «tem fusível reserva?», «onde está o rotor do gerador?», «cadê o rotor?», «onde guardamos o impeller?»: a peça cadastrada é o OBJETO do verbo. O «tem» só vale
+  // sem sujeito antes dele (os abridores abaixo: «ainda tem», «a gente tem», «e temos», «você tem»); com sujeito («o motor tem filtro?», «a bomba tem rotor?») é a pergunta do equipamento: o guia ou a IA. O
+  // «reserva / sobressalente / reposição / extra» depois da peça diz que é o estoque, com ou sem sujeito. Com «no / na / em» + lugar («tem anodo no casco?») é a peça instalada, não o estoque («em estoque» fica).
+  var PECAS_VERBOS_ONDE = ['esta', 'estao', 'fica', 'ficam', 'cade', 'guardamos', 'guardo', 'guardam', 'guarda', 'guardado', 'guardada', 'guardados', 'guardadas'];
+  var PECAS_TEM_ABRE = /^ (?:(?:ainda|ja|sera que|a gente|voces?|vc|entao|e|mas|por acaso|aqui|ai|nos) )*(?:temos|tenho|tem|ha) /;
+  var PECAS_RESERVA = / (?:reservas?|sobressalentes?|reposicao|reposicoes|extras?) /;
+  var PECAS_LUGAR = / (?:no|na|nos|nas|dentro|embaixo|debaixo|sob|sobre) | em (?!estoque)/;
+  // o relato de que a peça cadastrada falhou, com o pedido de outra («o fusível queimou, tem outro?»): é o estoque (a peça é o sujeito), não só o relato de falha que a lista PECAS_FORA manda ao guia
+  var PECAS_RELATO_OUTRA = / (?:queimou|quebrou|estragou|furou|rompeu|trincou|estourou|rasgou|arrebentou)(?: .*)? (?:tem|temos|tenho|ha) (?:mais )?(?:outro|outra|outros|outras|um|uma|reservas?|sobressalentes?|de reposicao|de reserva) /;
   var PECAS_VERBOS_FALTA = ['falta', 'faltam', 'faltando', 'acabou', 'acabaram', 'acabando', 'zerou', 'repor', 'repomos', 'reposicao'];
   // A peça é o SUJEITO e o verbo é de estoque: «o rotor do gerador está zerado?», «por que o rotor do gerador está zerado?», «o filtro de óleo acabou?», «o anodo está no mínimo?». O sujeito é a 1ª palavra depois dos
   // artigos e do «por que» («o fluxo do filtro está zerado» e «a tela do plotter zerou» são relato de falha: o fluxo e a tela do plotter não são peça cadastrada).
@@ -1219,6 +1246,9 @@
       || (PECAS_SEM_ESTOQUE.test(q) && sujeitoPeca(q))
       || (/ (?:preciso|precisamos|precisa|precisar) /.test(q) && objetoPeca(q, PECAS_VERBOS_PRECISA))
       || (/ (?:temos|tenho|tem|ha) .*(?:a bordo|no barco|na lancha|em estoque|de reposicao|de reserva|de sobressalente)/.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))
+      || (PECAS_TEM_ABRE.test(semVocativo(q)) && !PECAS_LUGAR.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))
+      || (/ (?:temos|tenho|tem|ha) /.test(q) && PECAS_RESERVA.test(q) && objetoPeca(q, PECAS_VERBOS_TEM))
+      || (/ (?:onde|cade) /.test(q) && objetoPeca(q, PECAS_VERBOS_ONDE))
       || (/ de (?:reposicao|reserva) /.test(q) && nomeCadastrado(q))
       || (/ (?:falta|faltam|faltando|acabou|acabaram|acabando|zerou|repor|repomos|reposicao) /.test(q) && objetoPeca(q, PECAS_VERBOS_FALTA));
   }
@@ -1226,7 +1256,7 @@
   // (o reparo, o código, a vida útil, a idade, o preço e a compra não são o estoque: seguem o guia, a rota do dinheiro ou a IA. O diesel e o combustível também, a menos que a pergunta nomeie uma peça
   // cadastrada — «quantos filtros de combustível temos?»)
   var PECAS_FORA = [' acabou de ', ' acabaram de ', 'gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
-    'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', 'apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual',
+    'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', ' apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual',
     'quanto tempo', 'desde quando', 'quando troc', 'quando subst', 'ultima troca', 'temos que ', ' tem que ', ' tenho que ', 'quanto falta', ' falta para ', ' faltam para ', 'o que falta para', 'falta muito', 'falta troc', 'faltam troc', 'falta a troca', 'falta fazer', 'falta inspec', 'falta revis',
     ' preco ', ' precos ', ' valor ', ' valores ', 'custa', 'r$', 'comprar', ' compra ', ' compro ', 'cotacao', 'orcamento', ' reais '];
   var PECAS_COMBUSTIVEL = [' diesel', 'combustivel'];
@@ -1237,6 +1267,7 @@
   // de segurança, local; trava 10. A guarda é a única do cabecaEmerg, no topo, antes de qualquer outra regra do estoque)
   function pecasPergunta(q) {
     if (cabecaEmerg(q)) return false;
+    if (PECAS_RELATO_OUTRA.test(q) && sujeitoPeca(q) && !has(q, PECAS_CONTATO)) return true;
     if (has(q, PECAS_FORA) || has(q, PECAS_CONTATO)) return false;
     if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;
     if (has(q, PECAS_FORTES) || ((has(q, PECAS_FRACAS) || (has(q, [' estoque']) && !has(q, ESTOQUE_OUTRO))) && has(q, PECAS_PEDE))) return true;
@@ -1521,7 +1552,7 @@
     // Peças e estoque (F22): a lista (zeradas e no mínimo primeiro), as peças de uma tarefa da agenda ou as que o nome da pergunta cita; só lê, nunca grava (o −1 USADA é da tela)
     pecas: function (p, ctx, q) {
       var l = pecasLista(), tf = tarefasDaPergunta(q), acoes = act(p, [['Manutenção', 'manut'], ['Documentos', 'docs']]), src = 'Fonte: estoque de peças a bordo · cadastro do app';
-      var ord = { zero: 0, baixa: 1, ok: 2 }, linha = function (x) {
+      var onde = / (?:onde|cade) /.test(pad(q)), ord = { zero: 0, baixa: 1, ok: 2 }, linha = function (x) {
         var t = tarefasDaPeca(x);
         return '• ' + x.n + ' · ' + x.qtd + ' a bordo' + (x.min > 0 ? ' · mínimo ' + x.min : '') + (x.local ? ' · ' + x.local : '') + (x.nivel !== 'ok' ? ' — ' + x.st : '') + (t.length ? ' · para: ' + t.map(function (y) { return y.n + ' (' + y.prazo + ')'; }).join('; ') : '');
       };
@@ -1540,15 +1571,20 @@
         if (xs.length <= 3) return xs.map(frase).join('; ') + '.';
         return xs.length + ' cadastradas' + (ps.length ? resumo(xs).replace(/\.$/, '') + ': ' + ps.slice(0, 3).map(frase).join('; ') + (ps.length > 3 ? ' e mais ' + (ps.length - 3) : '') + '.' : ', todas acima do mínimo.');
       };
+      // «onde está / fica / guardamos / cadê <peça>?»: a 1ª linha, a falada, diz ONDE a peça é guardada (o local do cadastro) e quantas há (até 3 peças; mais que isso, a 1ª linha de sempre)
+      var ondeFicam = function (xs) { return 'Onde ficam: ' + xs.map(function (x) { return min1(x.n) + ' — ' + (x.local || 'sem local cadastrado') + ' (' + x.qtd + ' a bordo' + (x.nivel === 'zero' ? ', zerada' : x.nivel === 'baixa' ? ', no mínimo ou abaixo' : '') + ')'; }).join('; ') + '.'; };
       if (!l.length) return { text: 'Não há peças cadastradas neste aparelho ainda — não invento estoque. Cadastre em Documentos: nome, quantas a bordo, mínimo, local e a tarefa da agenda que a usa.', src: 'Fonte: estoque de peças a bordo (vazio)', actions: acoes };
       if (tf.length) {
         var ids = tf.map(function (t) { return t.id; }), lig = l.filter(function (x) { return x.tarefas.some(function (t) { return ids.indexOf(t) !== -1; }); }).sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
         var nomes = tf.map(function (t) { return t.t; }).join(' e ');
         if (!lig.length) return { text: 'Nenhuma peça cadastrada para ' + min1(nomes) + '. Cadastre em Documentos a peça que ela usa.', src: src + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: acoes };
-        return { text: 'Peças para ' + min1(nomes).replace(/:\s*/g, ' — ') + ': ' + corpo(lig) + '\n' + lig.map(linha).join('\n'), src: src + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: acoes };
+        return { text: (onde && lig.length <= 3 ? ondeFicam(lig) : 'Peças para ' + min1(nomes).replace(/:\s*/g, ' — ') + ': ' + corpo(lig)) + '\n' + lig.map(linha).join('\n'), src: src + ' · ' + FT.agenda.replace('Fonte: ', ''), actions: acoes };
       }
       var nm = pecasDoNome(q, l), sai = src + ' · ' + FT.agenda.replace('Fonte: ', '');
-      if (nm.lista.length) { nm.lista.sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; }); return { text: 'Estoque de peças: ' + corpo(nm.lista) + '\n' + nm.lista.map(linha).join('\n'), src: sai, actions: acoes }; }
+      if (nm.lista.length) {
+        nm.lista.sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
+        return { text: (onde && nm.lista.length <= 3 ? ondeFicam(nm.lista) : 'Estoque de peças: ' + corpo(nm.lista)) + '\n' + nm.lista.map(linha).join('\n'), src: sai, actions: acoes };
+      }
       var todas = l.slice().sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
       // (a palavra que a pessoa escreveu só é repetida se o app a conhece como coisa de bordo; «peças para o fim de semana» e «resumo das peças» abrem direto com a lista, sem negar nada)
       return { text: (nm.nome && nm.palavras.length ? 'Nenhuma peça cadastrada com «' + nm.palavras.join(' ') + '» no nome. ' : '') + 'Peças a bordo: ' + corpo(todas) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };   // (a 1ª linha, a falada, nomeia as zeradas e as no mínimo: «quais estão zeradas?» não responde só a contagem)
@@ -1963,7 +1999,7 @@
   var POSICAO_VELHAS = [' posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'];
   var POSICAO_NOVAS = ['onde estamos', ' rumo ', ' cog ', ' sog ', ' quantos nos ', 'milhas por hora'];
   var POSICAO_OK = NEUTRAS_BASE + 'que estamos onde estou posicao rumo cog sog curso fundo sobre verdadeiro nos milhas milha hora por fazendo navegando indo andando vamos barco lancha embarcacao nosso nossa meu minha ';
-  function posicaoPergunta(q) { return has(q, POSICAO_VELHAS) || (has(q, POSICAO_NOVAS) && leitura(q, POSICAO_OK)); }
+  function posicaoPergunta(q) { return !has(q, ['baliza']) && (has(q, POSICAO_VELHAS) || (has(q, POSICAO_NOVAS) && leitura(q, POSICAO_OK))); }   // («baliza fora de posição» é a boia de balizamento, não a posição do barco; a baliza do EPIRB é cabeça de emergência, antes desta rota)
   var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta chegada chegamos chegar chegaremos chega chegando vamos horario previsao prevista previsto tempo falta faltam milhas milha mn minutos horas hora destino waypoint waypoints ponto pontos proximo proxima distancia ate para pra percorrida percorridas percorremos percorrido navegadas navegamos navegado odometro gente rota viagem trajeto base marina que ou ';
   var ALARMES_OK = NEUTRAS_BASE + 'alarme alarmes alerta alertas ativo ativos ativa ativas aceso acesos acesa acesas tocando soando algum alguma alguns algumas nenhum nenhuma existe existem barco lancha embarcacao bordo neste momento ';
   var PESSOAS_OK = NEUTRAS_BASE + 'pessoas pessoa gente tripulantes tripulante passageiros passageiro bordo quem barco lancha embarcacao registro saida conosco ';
@@ -1997,12 +2033,27 @@
   // (as palavras e a baliza que disparou), a baliza do EPIRB, o Seafire e TODAS as palavras de CANAL16_SEG e de CANAL16_ROTA. Cada rota nova que lê o quadro ou a lista (os 4 checklists, o estoque de peças, as
   // tendências, o FAQ no lugar do fallback) abre com ele: a pergunta de cabeça de emergência nunca é delas, é local e não leva posição, rumo, SOG, ETA nem pessoas. O testes/cerebro.py lê estas listas do
   // próprio arquivo e gera a matriz cabeça × cauda: uma palavra nova aqui passa a ser testada sozinha.
-  // A «baliza» do EPIRB: a palavra sozinha é também a de sinalização («a baliza do canal está apagada», «baliza cardinal»), que não é emergência: com palavra de sinalização e sem palavra só do EPIRB, não conta
+  // A «baliza» do EPIRB: a palavra sozinha é também a de sinalização («a baliza do canal está apagada», «baliza cardinal», «a cor da baliza de boreste», «vi uma baliza apagada»), que não é emergência e vai à IA, que sabe de
+  // balizamento. A baliza só é cabeça de emergência com UMA destas três provas, nunca pela palavra sozinha numa pergunta de outro assunto:
+  //  (1) contexto de EPIRB na pergunta (BALIZA_CTX: o teste, a bateria, a validade, o acionamento, o perigo…; epirb/radiobaliza/autoteste/hidrostático/406 também);
+  //  (2) a pergunta é só a baliza e palavras neutras («a baliza», «onde fica a baliza», «cadê a baliza»);
+  //  (3) a baliza vem JUNTO de uma pergunta que tem rota própria («a baliza, checklist de saída», «nível dos tanques, a baliza»): a pergunta mista é do equipamento. A prova é a rota do que sobra tirando a palavra:
+  //      sobra o fallback («qual a baliza de bombordo?» → «qual a de bombordo?») = a pergunta é de balizamento. (A baliza com palavra de sinalização e sem palavra só do EPIRB nunca conta, em nenhuma prova.)
+  var BALIZA_CTX = {}; ['epirb', 'radiobaliza', 'autoteste', 'hidrostatico', '406', 'teste', 'testar', 'testo', 'testamos', 'testei', 'bateria', 'validade', 'vencimento', 'vence', 'venceu', 'acionar', 'acionamento', 'aciono', 'acionei',
+    'ativar', 'ativacao', 'ativei', 'disparar', 'disparo', 'dispara', 'perigo', 'emergencia', 'socorro', 'resgate', 'sos', 'etiqueta', 'sobressalente', 'registro', 'hex'].forEach(function (w) { BALIZA_CTX[raiz(w)] = 1; });
+  var BALIZA_OK = NEUTRAS_BASE + 'baliza onde fica ficam cade guardada guardado guardamos nosso nossa meu minha barco lancha embarcacao que ';
+  var EM_BALIZA = false;   // (a prova 3 chama a route() sobre o que sobra SEM a palavra «baliza»: a guarda impede qualquer volta)
   function balizaEpirb(q) {
-    var qs;
-    if (!has(q, ['baliza'])) return false;
+    var qs, resto, rota;
+    if (EM_BALIZA || !has(q, ['baliza'])) return false;
     qs = tokens(q);
-    return !(qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; }));
+    if (qs.some(function (w) { return SINAL_RAIZES[w]; }) && !qs.some(function (w) { return EPIRB_SO[w]; })) return false;
+    if (qs.some(function (w) { return BALIZA_CTX[w]; }) || soNeutras(semVocativo(q).replace(/ por favor /g, ' '), BALIZA_OK)) return true;
+    resto = q.replace(/ (?:(?:a|as|da|das|na|nas|pela|uma|essa|esta|nossa|minha|de|do) )?baliza\w*(?= )/g, ' ');   // («a baliza», «da baliza», «uma baliza»: o artigo vai junto)
+    if (!resto.trim()) return false;
+    EM_BALIZA = true;
+    try { rota = route(resto); } finally { EM_BALIZA = false; }
+    return rota !== 'fallback';
   }
   function cabecaEmerg(q) {
     return emergencia(q) || oleo(q) === 1 || socorroImplicito(q) || salvatagem(q) || has(q, ['mmsi']) || epirbRelato(q) || balizaEpirb(q) || seafirePergunta(q) || has(q, CANAL16_SEG) || has(q, CANAL16_ROTA);
@@ -2277,7 +2328,10 @@
   // só o EPIRB tem (epirb, radiobaliza, autoteste, hidrostático, 406), o guia do EPIRB sai da busca. Sem isto, «por que a baliza do canal está piscando?» devolvia o «Disparo por engano:
   // desligue e avise no canal 16» (o sinônimo baliza→epirb e o «canal» fechavam os 60 %) e, por ser trecho de segurança, barrava a IA, que sabe de balizamento.
   var RAIZ_BALIZA = raiz('baliza');
-  var SINAL_RAIZES = {}; ['canal', 'cardinal', 'lateral', 'farol', 'luz', 'barra', 'entrada', 'piscando', 'boia', 'boias', 'balizamento', 'balizar'].forEach(function (w) { SINAL_RAIZES[raiz(w)] = 1; });
+  var SINAL_RAIZES = {}; ['canal', 'cardinal', 'lateral', 'farol', 'luz', 'barra', 'entrada', 'piscando', 'boia', 'boias', 'balizamento', 'balizar',
+    // (revisão 5) o que descreve a boia de balizamento: a sinalização e o tipo (luminosa, náutica, perigo isolado), a cor e o lado (vermelha, verde, amarela, bombordo, boreste, estibordo) e o estado dela (apagada, torta, deslocada, fora do lugar)
+    'sinalizacao', 'sinalizar', 'luminosa', 'luminoso', 'nautica', 'nautico', 'isolado', 'isolada', 'vermelha', 'vermelho', 'verde', 'amarela', 'amarelo', 'cor', 'cores', 'bombordo', 'boreste', 'estibordo',
+    'apagada', 'apagado', 'apagou', 'torta', 'torto', 'deslocada', 'deslocado', 'fora', 'deriva', 'derivando'].forEach(function (w) { SINAL_RAIZES[raiz(w)] = 1; });
   var EPIRB_SO = {}; ['epirb', 'radiobaliza', 'autoteste', 'hidrostatico', '406'].forEach(function (w) { EPIRB_SO[raiz(w)] = 1; });
   function raiz(w) { if (/^\d/.test(w)) return w; w = w.replace(/coes$/, 'cao').replace(/oes$/, 'ao').replace(/aes$/, 'ao'); return w.length > 4 ? w.replace(/(es|s)$/, '') : w; }
   // "ar" (2 letras) é palavra da busca ("como ligar o ar" é a climatização; o SINONIMOS.ar existia, mas o filtro de tamanho o tirava);
@@ -2542,6 +2596,9 @@
     if (rota0 === 'fallback' && (key === 'fallback' || key === 'base') && !a.seguranca) { var cq = cabecaSemRota(pad(q)), kc = null; if (cq) { try { kc = respostaBase(cq, p, null); } catch (e) {} if (kc && kc.seguranca) { a = kc; key = 'base'; } } }
     // F10 (2): sem resposta pronta e sem trecho do guia (o fallback, que iria à IA), a pergunta que casa bem de perto com um item do FAQ é respondida por ele — menos a de cabeça de emergência (cabecaEmerg), que é do equipamento
     if (key === 'fallback' && !cabecaEmerg(pad(q))) { var fq = null; try { fq = respostaFaq(q, p); } catch (e) {} if (fq) { a = fq; key = 'faqEquip'; } }
+    // P3E (revisão 5): a cabeça de emergência que ficou no fallback (o guia não carregou: o trecho de segurança do botão DISTRESS ou da baliza do EPIRB não veio, ou a cauda não o deixou subir) é a instrução de
+    // segurança da família dela, local, e NUNCA o fallback, que leva a situação de bordo (SOG, proa, motores, a hora do quadro: trava 10). A baliza do EPIRB dá a resposta do EPIRB; o botão DISTRESS, a do canal 16.
+    if (key === 'fallback' && cabecaEmerg(pad(q))) { var fam = cabecaSemRota(pad(q)); key = fam === 'baliza' ? 'epirb' : fam ? 'canal16' : 'sos'; try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'sos'; a = ANSWERS.sos(p, ctx, ''); } }
     a.key = key;
     return a;
   }
