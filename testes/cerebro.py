@@ -511,7 +511,8 @@ ROTAS_P3C = [
     ('quantas pessoas estão a bordo?', 'pessoas', False), ('temos 6 pessoas a bordo', 'fallback', True),
     # embarcação (calado, comprimento, dimensões, lotação, modelo, registro)
     ('qual o calado do barco?', 'embarcacao', False), ('qual o comprimento?', 'embarcacao', False), ('dimensões do barco', 'embarcacao', False), ('qual a lotação?', 'embarcacao', False), ('qual o modelo do barco?', 'embarcacao', False),
-    ('qual o registro do barco?', 'embarcacao', False), ('a lotação do barco é 12?', 'embarcacao', False), ('qual o registro de hoje?', 'fallback', True),
+    ('qual o registro do barco?', 'embarcacao', False), ('qual o número do registro do barco?', 'embarcacao', False), ('a lotação do barco é 12?', 'embarcacao', False), ('qual o registro de hoje?', 'fallback', True),
+    ('qual o deslocamento do Seakeeper?', 'estabilizador', False),
     # mmsi (o MMSI da etiqueta do rádio; o do cadastro só na 2ª linha) e AIS (rota própria, antes do canal 16)
     ('meu MMSI', 'mmsi', False), ('qual o MMSI?', 'mmsi', False), ('MMSI da licença de estação', 'mmsi', False), ('qual o numero do MMSI do rádio?', 'mmsi', False),
     ('quantos alvos no AIS?', 'ais', False), ('tem AIS?', 'ais', False), ('AIS', 'ais', False), ('AIS em modo silencioso', 'base', True), ('Identificação do AIS', 'base', False), ('quantos alvos tem no radar?', 'eletronicos', False),
@@ -3378,6 +3379,7 @@ MUTANTES_3C = [
     ('a navegação pega «como estamos de diesel» (a forma curta sem o fim ancorado)', r"(?: agora| por ai| a bordo| ai)? $/;", r"(?: agora| por ai| a bordo| ai)?/;", ('p3c',)),
     ('as pessoas pegam o relato com número', r"if (has(q, PESSOAS_PALAVRAS) && !/\d/.test(q)) return 'pessoas';", r"if (has(q, PESSOAS_PALAVRAS)) return 'pessoas';", ('p3c',)),
     ('a embarcação sem «calado»', r"var EMB_PALAVRAS = [' calado', ", r"var EMB_PALAVRAS = [", ('p3c',)),
+    ('a embarcação pega o deslocamento do Seakeeper (sem a guarda do equipamento)', r"if (has(q, EMB_PALAVRAS) && !has(q, EQUIP)) return 'embarcacao';", r"if (has(q, EMB_PALAVRAS)) return 'embarcacao';", ('p3c',)),
     ('o AIS de status vai ao guia (sem a lista de status)', r"var AIS_STATUS = /\b(?:quantos?|", r"var AIS_STATUS = /\b(?:xquantos?|", ('p3c',)),
     ('o AIS sai da lista das respostas prontas de equipamento (a pergunta de guia fica na resposta)', r"porao: 1, ancora: 1, ais: 1, manual: 1", r"porao: 1, ancora: 1, manual: 1", ('p3c',)),
     # —— o texto de cada resposta (grupo p3c: o texto esperado do instante) ——

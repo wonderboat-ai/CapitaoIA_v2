@@ -1255,7 +1255,7 @@
   var EMB_PALAVRAS = [' calado', ' comprimento', 'dimensoes', ' boca do barco', ' boca da lancha', ' boca da embarcacao', 'largura do barco', 'largura da lancha', 'largura da embarcacao', 'tamanho do barco', 'tamanho da lancha',
     'tamanho da embarcacao', 'quantos metros tem o barco', 'deslocamento do barco', 'deslocamento da lancha', 'deslocamento da embarcacao', 'qual o deslocamento', 'peso do barco', ' lotacao', 'quantas pessoas cabem',
     'cabem quantas pessoas', 'modelo do barco', 'modelo da lancha', 'modelo da embarcacao', 'fabricante do barco', 'fabricante da lancha', 'qual o estaleiro', 'quem fabricou', 'ano do barco', 'ano de fabricacao',
-    'registro do barco', 'registro da lancha', 'registro da embarcacao', 'numero de registro', 'ficha tecnica', 'que barco e esse', 'qual e o barco'];
+    'registro do barco', 'registro da lancha', 'registro da embarcacao', 'numero de registro', 'numero do registro', 'ficha tecnica', 'que barco e esse', 'qual e o barco'];
   // pessoas a bordo: o número do registro de saída (embarcacao.pessoasBordo); a lotação («quantas pessoas cabem») é do cadastro (embarcacao)
   var PESSOAS_PALAVRAS = ['pessoas a bordo', 'quantas pessoas', 'quantos a bordo', 'gente a bordo', 'tripulantes a bordo', 'passageiros a bordo', 'quem esta a bordo', 'quantos tripulantes', 'quantos passageiros'];
   var PROFUNDIDADE_PALAVRAS = ['profundidade', 'ecobatimetro', 'sob a quilha', 'quanto fundo', ' fundo aqui', 'agua sob'];
@@ -1335,7 +1335,7 @@
     // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
     // «alarme de óleo acendeu» (o óleo vem antes), «temperatura hoje» (o clima) nem «alarme de fluxo da climatização» (a resposta pronta cede ao trecho do guia).
     if (has(q, NAVEGACAO_PALAVRAS) || NAVEGACAO_CURTA.test(q)) return 'navegacao';
-    if (has(q, EMB_PALAVRAS)) return 'embarcacao';
+    if (has(q, EMB_PALAVRAS) && !has(q, EQUIP)) return 'embarcacao';   // «o deslocamento do Seakeeper» e «o registro do EPIRB» são do equipamento
     if (has(q, PESSOAS_PALAVRAS) && !/\d/.test(q)) return 'pessoas';   // «temos 6 pessoas a bordo» é relato (com número), não pergunta
     if (has(q, PROFUNDIDADE_PALAVRAS) && !has(q, PROFUNDIDADE_FORA)) return 'profundidade';
     if (etaPergunta(q)) return 'eta';
