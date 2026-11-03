@@ -992,10 +992,22 @@
       return l.map(function (a) { return Object.assign({ rotulo: PRED_ROTULO[a.nivel] }, a); });
     });
   }
-  // a pergunta sobre as tendências («quais as tendências?», «análise preditiva»): não é a tendência do vento, da pressão, da maré nem de mercado (esses seguem as suas rotas)
-  var PRED_PALAVRAS = ['preditiv', ' tendencia ', ' tendencias ', 'perdendo capacidade', 'recomendacao da ia', 'recomendacoes da ia'];
-  var PRED_FORA = ['vento', 'barometr', 'atmosfer', ' mare', 'clima', 'chuva', 'previs', 'ondas', 'dolar', 'bolsa', 'mercado', 'preco', 'cotacao', 'bitcoin', 'consumo', 'diesel', 'combustivel'];
-  function tendenciaPergunta(q) { return has(q, PRED_PALAVRAS) && !has(q, PRED_FORA) && !(has(q, ['pressao']) && !has(q, ['oleo'])); }   // («tendência da pressão» sozinha é a barométrica; com o óleo é a do óleo)
+  // A pergunta sobre as tendências («quais as tendências?», «análise preditiva», «tendência do óleo», «as baterias estão perdendo capacidade?»). Como toda rota de leitura calma, só responde a pergunta
+  // NEUTRA (lista branca PRED_OK, mais abaixo): o escopo é o dos achados (motores, óleo, arrefecimento, baterias, horas até a revisão, gerador) e a pergunta não leva outro assunto nem palavra de relato.
+  // «Tendência do tempo / do mar / da água / da âncora / do rumo / de carga / do Flamengo», o relato («perdendo capacidade de governo», «tem tendência a adernar») e o pedido de socorro, de salvatagem,
+  // de EPIRB, de Seafire, de canal 16 ou de MMSI têm palavra fora da lista: seguem a rota deles (a instrução de segurança local, o clima, a maré, o consumo, a âncora, o guia ou a IA) — a trava 10 não
+  // depende da posição desta rota na route(). «Perdendo capacidade» só vale com a bateria. «Tendência da pressão» sozinha é a barométrica (fora); com o óleo é a do óleo.
+  var PRED_PALAVRAS = ['preditiv', ' tendencia ', ' tendencias ', 'recomendacao da ia', 'recomendacoes da ia'];
+  function tendenciaPergunta(q) {
+    return (has(q, PRED_PALAVRAS) || (has(q, ['perdendo capacidade']) && has(q, ['bateria']))) && leitura(q, PRED_OK) && !(has(q, ['pressao']) && !has(q, ['oleo']));
+  }
+  // O achado que a pergunta nomeia sobe para a 1ª linha (a falada): «qual a tendência do óleo?» abre com a pressão de óleo, não com o motor mais quente. Sem assunto, o mais grave.
+  var PRED_FOCO = [[[' hora', 'revisao', 'troca', 'gerador'], ['horas']], [['oleo', 'pressao'], ['oleo_cruzeiro']], [['arrefec', 'temperatura', 'esquent'], ['arref_agora', 'arref_cruzeiro']], [['bateria'], ['baterias']]];
+  function predFoco(q) {
+    var n = pad(q), ids = [];
+    PRED_FOCO.forEach(function (f) { if (!ids.length && has(n, f[0])) ids = f[1]; });
+    return ids;
+  }
 
   // ——— Peças e estoque (F22; CONTRATO §1.20, §1.25) ———
   // A base gerada (D.pecas: nome, quantidade, mínimo, local e as tarefas da agenda que usam; sem código de fabricante, sem R$ e sem peça de salvatagem) NUNCA se muta. O que este aparelho faz
@@ -1076,24 +1088,75 @@
     return (D.agenda || []).filter(function (t) { return (t.palavras || []).some(function (w) { w = norm(w).trim(); return w && n.indexOf(' ' + w + ' ') !== -1; }); });
   }
   var PECAS_GENERICAS = null;   // (montada na 1ª chamada: o tokens() usa a lista de palavras comuns, definida mais abaixo)
-  // as peças que a pergunta nomeia pelo nome («rotor», «filtro de óleo», «anodo»); [] se a pergunta só diz «peças» (a lista inteira)
+  // as palavras que dizem «estoque» e não nomeiam peça: o que se pergunta (tem, quantas, falta, onde fica, preciso, cadê), o que se fez (usei, gastei) e as de contexto (revisão, viagem, hoje, mais…). O que sobra
+  // da pergunta é o NOME que a pessoa deu; nenhuma sobra = a pergunta é «as peças» em geral (a lista inteira, sem dizer que o nome não existe)
+  var PECAS_GEN_TXT = 'pecas peca sobressalente sobressalentes estoque bordo barco lancha temos tem tenho tinha quais qual quanto quantas quantos minimo repor reposicao reserva reservas cadastradas cadastrada cadastro lista liste listar precisa precisamos preciso precisar precisando precisarei '
+    + 'falta faltam faltando faltou acabando acabou acabaram acabar abaixo zerada zeradas zerou zerado sobra sobram sobrando sobrou restam resta restando onde fica ficam guardamos guardo guardado guardada guardadas guardados guardar cade usei usamos usou usado usada usadas usados uso usar '
+    + 'tirei tiramos tirou gastei gastamos gastou algum alguma alguns algumas coisa coisas algo todas todos tudo outra outro outras outros mais menos mesmo ainda favor diga diz mostre mostra fale fala quero queria gostaria saber ver conferir conferencia '
+    + 'revisao revisoes manutencao viagem viagens temporada saida chegada semana mes ano dia hoje agora proxima proximo proximas proximos vou vamos devo devemos posso podemos existe existem esta estao estamos sao ser ter haver ha comprar compra compro comprei';
+  // (e as flexões dos verbos de estoque, pela raiz: precisa/precisam/precisamos, falta/faltam, repor/reposição, guardamos/guardado, usei/usamos…; e onde a peça fica: caixa, estante, armário)
+  var PECAS_GEN_RAIZES = ['precis', 'falt', 'repo', 'reser', 'sobr', 'rest', 'acab', 'zer', 'guard', 'cadast', 'quant', 'usa', 'gast', 'compr', 'cabe', 'valor', 'armari', 'caixa', 'estante', 'tecnic', 'ferrament'];
+  function pecasGenerica(w) {
+    if (!PECAS_GENERICAS) { PECAS_GENERICAS = {}; tokens(PECAS_GEN_TXT).forEach(function (x) { PECAS_GENERICAS[x] = 1; }); }
+    return PECAS_GENERICAS[w] === 1 || PECAS_GEN_RAIZES.some(function (r) { return w.indexOf(r) === 0; });
+  }
+  // as palavras da pergunta que podem ser o nome de uma peça (sem as de estoque), sem repetir
+  function pecasPalavras(q) {
+    return tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !pecasGenerica(w); });
+  }
+  // o núcleo do nome da peça: até o primeiro «do/da/dos/das» («Filtro de óleo» do motor, «Rotor (impeller)» da bomba, «Correia» do alternador, «Jogo de anodos» do eixo), sem o que é só qualificador
+  // ou comum demais para nomear («óleo», «água», «diesel», «combustível», «jogo», «pré»): «quanto óleo tem a bordo?» é o óleo, não o filtro
+  var PECAS_AMBIGUAS = ' oleo agua diesel combustivel gasolina jogo pre ';
+  function nucleoPeca(n) {
+    return tokens(String(n || '').split(/\s+d[oa]s?\s+/i)[0]).filter(function (w) { return !/^\d+$/.test(w) && PECAS_AMBIGUAS.indexOf(' ' + w + ' ') === -1; });
+  }
+  // a pergunta nomeia uma peça cadastrada pelo núcleo do nome («rotor», «filtros», «anodos», «impellers», «correia»)
+  function nomeCadastrado(q) {
+    var ws = pecasPalavras(q), l = pecasLista();
+    return ws.length > 0 && l.some(function (x) { var nu = nucleoPeca(x.n); return ws.some(function (w) { return nu.indexOf(w) !== -1; }); });
+  }
+  // as palavras como a pessoa escreveu, para dizer «Nenhuma peça cadastrada com «guincho» no nome». Só palavra de letras (até 24: nada de número, telefone, preço nem coordenada) e nenhuma do vocabulário
+  // que o app não repete («fictícia», «simulada», «demonstração», «roteiro», «snapshot»…, §3): com uma delas a frase fica em «esse nome»
+  function palavrasEscritas(q, ws) {
+    var m = {}, l;
+    String(q || '').split(/[^A-Za-zÀ-ÿ0-9]+/).forEach(function (w) { var t = tokens(w)[0]; if (t && !m[t]) m[t] = w.toLowerCase(); });
+    l = ws.map(function (t) { return m[t] || t; }).filter(function (w) { return /^[a-zà-ÿ]{1,24}$/.test(w); }).slice(0, 3);
+    return l.length && !l.some(function (w) { return /^(?:simul|fict|demo|invent|hipot|ilustr|exempl|roteir|laco|teste|snapshot)/.test(w); }) ? l : [];
+  }
+  // as peças que a pergunta nomeia pelo nome («rotor», «filtro de óleo», «anodo», «rotor do gerador»): as que casam MAIS palavras do nome ganham («rotores do gerador» é o rotor do gerador, não o filtro do gerador
+  // nem o rotor da bomba); { nome: false } se a pergunta só diz «peças» (a lista inteira); { nome: true, lista: [] } se há nome e nenhuma peça o tem
   function pecasDoNome(q, l) {
-    var ws;
-    if (!PECAS_GENERICAS) { PECAS_GENERICAS = {}; tokens('pecas peca sobressalente sobressalentes estoque bordo temos tem tenho quais qual quanto quantas quantos minimo repor reposicao cadastradas cadastro lista precisa precisamos falta faltam faltando acabando acabou abaixo zerada zeradas').forEach(function (w) { PECAS_GENERICAS[w] = 1; }); }
-    ws = tokens(q).filter(function (w, k, a) { return a.indexOf(w) === k && !PECAS_GENERICAS[w]; });
-    if (!ws.length) return { nome: false, lista: [] };
-    return { nome: true, lista: l.filter(function (x) { var nt = tokens(x.n); return ws.some(function (w) { return nt.indexOf(w) !== -1; }); }) };
+    var ws = pecasPalavras(q), pts, max;
+    if (!ws.length) return { nome: false, palavras: [], lista: [] };
+    pts = l.map(function (x) { var nt = tokens(x.n); return ws.filter(function (w) { return nt.indexOf(w) !== -1; }).length; });
+    max = Math.max.apply(null, pts.concat(0));
+    return { nome: true, palavras: palavrasEscritas(q, ws), lista: max ? l.filter(function (x, k) { return pts[k] === max; }) : [] };
   }
   // «peças» (plural) e «sobressalente» já são a pergunta do estoque; a forma no singular e «estoque» pedem também um verbo ou número de estoque («tem», «quantas», «falta», «a bordo»…)
   var PECAS_FORTES = [' pecas ', 'sobressalente'];
-  var PECAS_FRACAS = [' peca de ', ' peca a bordo', ' peca para ', ' peca pra ', ' uma peca ', ' a peca ', ' qual peca', ' que peca', ' de peca ', ' da peca ', ' sem peca'];
+  var PECAS_FRACAS = [' peca de ', ' peca a bordo', ' peca para ', ' peca pra ', ' uma peca ', ' a peca ', ' qual peca', ' que peca', ' de peca ', ' da peca ', ' sem peca', ' alguma peca '];
   var PECAS_PEDE = [' a bordo', ' estoque', ' temos ', ' tem ', ' ha ', 'quant', 'precis', ' falt', ' repor', 'reposicao', 'cadastr', ' lista', 'minimo', 'acabando', 'zerad', ' quais '];
-  var PECAS_FORA = [' diesel', 'combustivel', 'gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
-    'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', 'apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual', 'onde fica'];
+  // O estoque pelo NOME de uma peça cadastrada, sem a palavra «peça» («tem rotor de reposição?», «quantos filtros de óleo temos?», «temos anodo a bordo?», «falta rotor?»): só com um verbo ou número de
+  // estoque junto. «Tem» e «há» sozinhos não bastam («o motor tem filtro?»): pedem o «a bordo», o «em estoque» ou a reposição. «Preciso/falta repor alguma coisa» é o estoque sem nome.
+  var PECAS_NOME_PEDE = [/ quant[oa]s? .*\b(?:temos|tem|tenho|ha|sobraram|restam|faltam)\b/, / (?:temos|tenho|tem|ha) .*(?:a bordo|no barco|na lancha|em estoque|de reposicao|de reserva|de sobressalente)/,
+    / de (?:reposicao|reserva) /, / (?:falta|faltam|faltando|acabou|acabaram|acabando|zerou|repor|repomos|reposicao) /];
+  var PECAS_REPOR = / (?:alguma coisa|algo|o que|quais coisas) (?:para|pra|a|que|tem que|preciso|precisa|precisamos|devo|devemos) repor | (?:preciso|precisamos|precisa|devo|devemos|falta|faltam|tem|temos) (?:que )?repor /;
+  // (o reparo, o código, a vida útil, a idade, o preço e a compra não são o estoque: seguem o guia, a rota do dinheiro ou a IA. O diesel e o combustível também, a menos que a pergunta nomeie uma peça
+  // cadastrada — «quantos filtros de combustível temos?»)
+  var PECAS_FORA = ['gasolina', 'quebr', 'trav', 'defeit', 'vazament', 'vazando', 'falh', 'o que fazer', 'o que faco', 'como troc', 'como faz', 'como faco', 'como subst', ' pn ', 'codigo', 'part number',
+    'recomend', 'suger', 'alarm', 'superaquec', 'disparou', ' parou', 'desligou', 'estour', 'queim', 'enchend', 'entrando', 'nao liga', 'nao parte', 'apit', 'fumac', 'esquent', 'quantas horas', ' dura ', 'vida util', 'manual',
+    'quanto tempo', 'desde quando', 'quando troc', 'quando subst', 'ultima troca', 'temos que ', ' tem que ', ' tenho que ', 'quanto falta', ' falta para ', ' faltam para ', 'o que falta para', 'falta muito', 'falta troc', 'faltam troc', 'falta a troca', 'falta fazer', 'falta inspec', 'falta revis',
+    ' preco ', ' precos ', ' valor ', ' valores ', 'custa', 'r$', 'comprar', ' compra ', ' compro ', 'cotacao', 'orcamento', ' reais '];
+  var PECAS_COMBUSTIVEL = [' diesel', 'combustivel'];
   var ESTOQUE_OUTRO = ['agua', 'gelo', 'comida', 'bebida', 'mantiment', 'potavel', 'cervej', 'refriger', 'lanche', 'racao'];
+  // o equipamento de segurança que as rotas de EMERGÊNCIA mais abaixo (EPIRB, Seafire, canal 16, PAN-PAN, DSC) tomam: a pergunta de peça dele («tem sobressalente do EPIRB?») segue a rota do equipamento (a instrução de segurança, local; trava 10)
+  function equipSegPergunta(q) { return epirbRelato(q) || has(q, ['baliza']) || seafirePergunta(q) || has(q, CANAL16_ROTA); }
   function pecasPergunta(q) {
-    if (has(q, PECAS_FORA)) return false;
-    return has(q, PECAS_FORTES) || ((has(q, PECAS_FRACAS) || (has(q, [' estoque']) && !has(q, ESTOQUE_OUTRO))) && has(q, PECAS_PEDE));
+    if (has(q, PECAS_FORA) || equipSegPergunta(q)) return false;
+    if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;
+    if (has(q, PECAS_FORTES) || ((has(q, PECAS_FRACAS) || (has(q, [' estoque']) && !has(q, ESTOQUE_OUTRO))) && has(q, PECAS_PEDE))) return true;
+    if (PECAS_NOME_PEDE.some(function (rx) { return rx.test(q); }) && nomeCadastrado(q)) return true;
+    return PECAS_REPOR.test(q) && (pecasPalavras(q).length === 0 || nomeCadastrado(q));   // («preciso repor o gelo / o óleo» tem nome que não é peça: segue a rota dele)
   }
 
   // ——— Checklists guiados (F09; CONTRATO §1.18, §1.25) ———
@@ -1350,11 +1413,13 @@
       var pend = pendencias(), app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
       return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
-    // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante. Só lê: nada grava, nada abre.
-    preditiva: function (p) {
+    // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante — ou o que a pergunta nomeia («qual a
+    // tendência do óleo?» abre com a pressão de óleo; se o nomeado está estável e outro pede atenção, a 1ª linha diz quantos). A lista de baixo segue a ordem de gravidade. Só lê: nada grava, nada abre.
+    preditiva: function (p, ctx, q) {
       var i = vivo(), l = preditivaLista(), h = i ? ' às ' + i.hora : '', pedem = l.filter(function (a) { return a.nivel !== 'ok'; }).length, hist = histFonte();
+      var ids = predFoco(q), topo = l.filter(function (a) { return ids.indexOf(a.id) !== -1; })[0] || l[0], n = l.length - 1;
       if (!l.length) return { text: 'Tendências' + h + ': ' + (sim() ? 'o aparelho ainda não tem histórico para calcular.' : SD + ' — sem histórico de cruzeiro neste aparelho.'), src: 'Fonte: nenhuma — sem histórico de cruzeiro neste aparelho', actions: act(p, [['Manutenção', 'manut']]) };
-      return { text: 'Tendências' + h + ': ' + (pedem ? '' : 'nenhuma pede atenção. ') + l[0].texto + (l.length > 1 ? ' Mais ' + (l.length - 1) + (l.length === 2 ? ' achado' : ' achados') + ' na lista.' : '')
+      return { text: 'Tendências' + h + ': ' + (pedem ? '' : 'nenhuma pede atenção. ') + topo.texto + (n ? ' Mais ' + n + (n === 1 ? ' achado' : ' achados') + ' na lista' + (topo.nivel === 'ok' && pedem ? ', ' + pedem + (pedem === 1 ? ' pede atenção.' : ' pedem atenção.') : '.') : '')
         + '\n' + l.map(function (a) { return '• ' + a.rotulo + ' · ' + a.sistema + ' — ' + a.texto + ' (' + a.fonte + ')'; }).join('\n'),
         src: 'Fonte: achados por regra fixa neste aparelho sobre ' + hist + ' · ' + FT.agenda.replace('Fonte: ', '') + comTele(), actions: act(p, [['Console', 'console'], ['Manutenção', 'manut']]) };
     },
@@ -1381,7 +1446,7 @@
       var nm = pecasDoNome(q, l), sai = src + ' · ' + FT.agenda.replace('Fonte: ', '');
       if (nm.lista.length) { nm.lista.sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; }); return { text: 'Peças com esse nome: ' + nm.lista.length + (nm.lista.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(nm.lista) + '\n' + nm.lista.map(linha).join('\n'), src: sai, actions: acoes }; }
       var todas = l.slice().sort(function (a, b) { return ord[a.nivel] - ord[b.nivel]; });
-      return { text: (nm.nome ? 'Nenhuma peça cadastrada com esse nome. ' : '') + 'Peças a bordo: ' + l.length + (l.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(l) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };
+      return { text: (nm.nome ? 'Nenhuma peça cadastrada com ' + (nm.palavras.length ? '«' + nm.palavras.join(' ') + '» no nome' : 'esse nome') + '. ' : '') + 'Peças a bordo: ' + l.length + (l.length === 1 ? ' cadastrada' : ' cadastradas') + resumo(l) + '\n' + todas.map(linha).join('\n'), src: sai, actions: acoes };
     },
     // Porão: o nível das bombas no quadro, a faixa do guia e o teste mensal; sem o dado do porão, SEM LEITURA (o caminho null)
     porao: function (p) {
@@ -1790,7 +1855,7 @@
   // seguem a rota do equipamento, o guia ou a IA, como antes da P3C (trava 10: relato de falha sem leitura calma). «O que é/significa …» é a pergunta do conceito (a IA), nunca a leitura.
   var DEFINICAO = / (?:o que|oque|oq) (?:e|eh|sao|significa|quer dizer) | significa | quer dizer | definicao | conceito /;
   function leitura(q, ok) { return !DEFINICAO.test(q) && soNeutras(q, ok); }
-  var POSICAO_VELHAS = ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'];
+  var POSICAO_VELHAS = [' posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'];
   var POSICAO_NOVAS = ['onde estamos', ' rumo ', ' cog ', ' sog ', ' quantos nos ', 'milhas por hora'];
   var POSICAO_OK = NEUTRAS_BASE + 'que estamos onde estou posicao rumo cog sog curso fundo sobre verdadeiro nos milhas milha hora por fazendo navegando indo andando vamos barco lancha embarcacao nosso nossa meu minha ';
   function posicaoPergunta(q) { return has(q, POSICAO_VELHAS) || (has(q, POSICAO_NOVAS) && leitura(q, POSICAO_OK)); }
@@ -1799,6 +1864,8 @@
   var PESSOAS_OK = NEUTRAS_BASE + 'pessoas pessoa gente tripulantes tripulante passageiros passageiro bordo quem barco lancha embarcacao registro saida conosco ';
   var AIS_OK = NEUTRAS_BASE + 'ais alvos alvo transponder classe b ligado ligada funcionando recebendo vendo algum alguns quantidade quais situacao status estado barco lancha embarcacao nosso nossa temos ';
   var NAVEGACAO_OK = NEUTRAS_BASE + 'navegacao status resumo anda andamento viagem situacao geral barco lancha embarcacao ';
+  // (tendências: os assuntos dos achados — motor, óleo, arrefecimento, bateria, horas até a revisão, gerador — e as palavras de pedir a tendência; «governo», «manobra», «adernar», «carga», «tempo», «mar», «água», «âncora», «rumo» não estão aqui)
+  var PRED_OK = NEUTRAS_BASE + 'tendencia tendencias preditiva preditivo preditivas preditivos analise analises recomendacao recomendacoes algum alguma alguns algumas queda quedas subida subindo caindo estavel estaveis motor motores oleo pressao arrefecimento temperatura bateria baterias banco bancos partida servico horas hora ate revisao troca gerador cruzeiro sistema sistemas geral manutencao barco lancha embarcacao perdendo capacidade sao existem existe bb be bombordo boreste ';
   // Pedido de socorro que a lista SOS (a do gerador, que não muda aqui) não pega: «isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco». Vai à rota sos; e a frase de apresentação (sobreDados, lista branca) nunca responde a quem pede ajuda.
   var SOCORRO_PEDE = /\b(?:preciso|precisamos|precisando|necessito|necessitamos) (?:de )?(?:muita )?(?:ajuda|socorro|auxilio|resgate)\b/;
   var SOCORRO_DECLARA = /\b(?:e|eh|era) (?:real|serio|de verdade)\b|\bnao (?:e|eh) (?:um |uma )?(?:teste|brincadeira|treino|exercicio)\b|\bem (?:risco|apuros)\b/;
@@ -1815,6 +1882,8 @@
   var SEAFIRE_PALAVRAS = ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual'];
   function seafirePergunta(q) { return has(q, SEAFIRE_PALAVRAS) || seafireDisparo(q); }
   var CANAL16_SEG = ['canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];   // (o rádio VHF sozinho não entra: «alcance do rádio» não é o roteiro)
+  // o que a route() manda para a rota canal16 (o roteiro MAYDAY): a pergunta de peça do rádio segue essa rota, como antes (equipSegPergunta)
+  var CANAL16_ROTA = ['canal 16', ' vhf', ' radio', ' dsc', 'pan-pan', 'pan pan'];
   // MMSI (CLAUDE.md 8): a pergunta do número do MMSI é a rota mmsi; a que tem outro assunto junto fica com a rota dele: o EPIRB, o Seafire, o roteiro de rádio (canal 16, PAN-PAN, DSC, socorro ou pane) e o vencimento
   // (documento). Assim o 710123456 do cadastro nunca vai para a pergunta do EPIRB nem do rádio, e o procedimento não se perde.
   // (a lista é BRANCA, não negra: nenhum verbo de pôr o número no aparelho, em nenhuma flexão, nem o rádio, o VHF, o AIS ou o plotter estão nela; «que MMSI eu coloco no rádio?» e «como cadastro o MMSI?» ficam só com o da etiqueta. O «por» sai da lista porque é também o «pôr»; o «por favor» sai da pergunta antes de conferir)
@@ -1981,7 +2050,7 @@
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
     // o AIS tem a rota dele, antes do canal16 (PROMPT §2.2: a pergunta do AIS não é o roteiro MAYDAY nem liga a conversa em emergência); o MMSI foi para a rota mmsi, acima
     if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';   // (só a pergunta NEUTRA do status; «o AIS parou», «sem sinal do AIS», «AIS desligado» seguem o guia ou a IA, nunca a contagem de alvos)
-    if (has(q, ['canal 16', ' vhf', ' radio', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
+    if (has(q, CANAL16_ROTA)) return 'canal16';
     if (has(q, ['contato', 'telefone', 'equipe', 'oficina', 'quem chamar', 'tecnico de bordo', 'marina da base'])) return 'contatos';
     // "bomba" sozinha é a de porão. Com o nome de outra bomba (água salgada, rotor, impeller, climatização, gerador, motor, estabilizador…) a
     // pergunta segue a rota do outro assunto ou o guia dele: "como trocar o rotor da bomba de água salgada" é o g_motores §7, e a resposta
