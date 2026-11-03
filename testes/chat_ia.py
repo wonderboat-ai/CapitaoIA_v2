@@ -225,18 +225,28 @@ def main():
                 ok(tela + ': só um "oi" não chama a IA (saudação pronta)', n == 0 and 'Capitão IA online' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('Oque você faz?')
                 ok(tela + ': "Oque você faz?" chama a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?')
+                # Fase 3 (P3C), PROMPT Fase 7 «Mudanças nos testes»: o «calado» passou a ter dado (rota embarcacao, resposta local); o gatilho «sem resposta pronta → IA» é uma
+                # pergunta de náutica geral sem rota (cai em fallback, pedeIA true). Vale em todos os usos abaixo (SEM DADOS da IA, sem chave, ordem da resposta, CONVERSA e erro).
+                t, n, _ = digita('como se faz um nó lais de guia?')
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
-                ok(tela + ': SEM DADOS local chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
+                ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
+                # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
+                t, n, _ = digita('qual o calado do barco?')
+                cal = ('%.2f' % pg.evaluate('() => window.CapitaoDados.embarcacao.calado')).replace('.', ',')
+                ok(tela + ': o calado tem dado: a rota embarcacao responde na tela, no aparelho, sem chamar a IA', n == 0 and ('O calado do barco é %s m' % cal) in t and TEXTO_IA not in t and FALLBACK_LOCAL not in t, 'pedidos=%d calado=%s' % (n, cal))
+                t, n, _ = digita('qual o preço do dólar?')
+                ok(tela + ': dinheiro e fora do barco (foraBarco) respondem no aparelho, sem IA e sem preço', n == 0 and 'Isso fica fora do barco.' in t and 'Situação de bordo agora' in t and TEXTO_IA not in t and not re.search(r'R\$|US\$|\d,\d\d\s*(?:reais|dólares)', t), 'pedidos=%d' % n)
+                t, n, _ = digita('esses dados são reais?')
+                ok(tela + ': a pergunta sobre os dados (sobreDados) é local: a frase padrão e a situação de bordo, sem IA', n == 0 and 'Esta é a embarcação de apresentação da plataforma Capitão IA' in t and 'Situação de bordo agora' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('diagnóstico')
                 ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste navegador' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('diagnóstico', chave=False)
                 ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste navegador (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste navegador (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?', modo='semdados')
+                t, n, _ = digita('como se faz um nó lais de guia?', modo='semdados')
                 ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and FALLBACK_LOCAL not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('como ligar o gerador?', chave=False)
                 ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede (fica o trecho local)', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?', chave=False)
+                t, n, _ = digita('como se faz um nó lais de guia?', chave=False)
                 ok(tela + ': sem a CHAVE_APP, a fonte diz "IA na nuvem desligada neste aparelho" e oferece "Ativar IA na nuvem"', n == 0 and 'IA na nuvem desligada neste aparelho' in t and pg.query_selector('a[href="#ia=ativar"]') is not None, t[-300:])
                 ok(tela + ': sem a CHAVE_APP, aviso grande na tela "IA NA NUVEM NÃO ATIVADA NESTE APARELHO"', 'IA NA NUVEM NÃO ATIVADA NESTE APARELHO' in t, t[-300:])
                 t, n, livre = digita('como ligar o gerador?', modo='erro')
@@ -254,20 +264,20 @@ def main():
                 # Ordem: a resposta da IA (demorada) entra logo depois da pergunta dela, antes da pergunta seguinte.
                 abre()
                 pg.evaluate("() => { const IA = window.CapitaoIA; IA.ativa = () => true; IA.perguntar = (q) => new Promise((r) => setTimeout(() => r({ text: 'IA respondeu: ' + q, src: 'Fonte: teste · via IA na nuvem', key: 'ia', semDados: false }), 1800)); }")
-                pg.fill(campo, 'qual o calado do barco?')
+                pg.fill(campo, 'como se faz um nó lais de guia?')
                 pg.press(campo, 'Enter')
                 pg.wait_for_timeout(300)
                 pg.fill(campo, 'autonomia')
                 pg.press(campo, 'Enter')
                 espera_resposta()
-                pg.wait_for_function("() => /IA respondeu: qual o calado/.test(document.body.innerText)", timeout=10000)
+                pg.wait_for_function("() => /IA respondeu: como se faz um nó lais/.test(document.body.innerText)", timeout=10000)
                 t = pg.evaluate('() => document.body.innerText')
-                i1, i2, i3 = t.find('IA respondeu: qual o calado do barco?'), t.find('\nautonomia\n'), t.find(AUTONOMIA)
+                i1, i2, i3 = t.find('IA respondeu: como se faz um nó lais de guia?'), t.find('\nautonomia\n'), t.find(AUTONOMIA)
                 ok(tela + ': resposta da IA entra logo depois da pergunta dela (ordem pergunta › resposta mantida)', -1 < i1 < i2 < i3, (i1, i2, i3))
 
                 # CONVERSA por voz: a pergunta falada vai para a IA e a resposta falada é a da IA (o núcleo fica em PROCESSANDO).
                 abre()
-                pg.evaluate("() => { window.__falas.push('qual o calado do barco'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
+                pg.evaluate("() => { window.__falas.push('como se faz um nó lais de guia'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
                 antes = len(estado['pedidos'])
                 pg.click(CONVERSA)
                 try:
@@ -277,7 +287,7 @@ def main():
                 faladas = pg.evaluate('() => window.__faladas')
                 segura = pg.evaluate("() => window.__voz.some((v) => v.estado === 'pensando' && v.segura)")
                 ultimo = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
-                ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'qual o calado do barco' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
+                ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'como se faz um nó lais de guia' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
                 ok(tela + ': CONVERSA: o núcleo de voz fica em PROCESSANDO esperando a IA', segura)
                 pg.keyboard.press('Escape')
 
@@ -299,7 +309,7 @@ def main():
                 ok(tela + ': CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
                 f, n = conversa('Capitão, diagnóstico')
                 ok(tela + ': CONVERSA: "Capitão, diagnóstico" fala se a IA está ligada e o resultado do teste da chave (sem gastar a cota)', n == 1 and len(f) >= 2 and 'IA na nuvem: LIGADA' in f[1] and 'Chave aceita pelo servidor' in f[1], json.dumps(f, ensure_ascii=False)[:300])
-                f, n = conversa('qual o calado do barco', modo='erro')
+                f, n = conversa('como se faz um nó lais de guia', modo='erro')
                 ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
 
                 # Sem a pausa de 0,65 s na CONVERSA (paridade Avanti 1.21.2): a frase final do reconhecedor vai direto ao cérebro;

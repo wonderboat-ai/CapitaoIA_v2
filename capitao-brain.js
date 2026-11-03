@@ -179,6 +179,22 @@
       return (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ': ' + ti + (vt ? ': ' + vt + un + (lt ? ' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + lt + un + ')' : '') : '');
     }).join(' · ');
   }
+  // o catálogo de alertas do replay (título, passos e fonte de cada alarme); no SOS nada lê o D.replay
+  function catalogoAlertas() { return EM_SOS ? {} : (D.replay && D.replay.alertas) || {}; }
+  // o campo do quadro como as telas o mostram (CapitaoAgora.fmt.campo: as casas e o milhar do D.campos), ou null se falta
+  function campoTxt(i, c) { try { return window.CapitaoAgora.fmt.campo(i.q, c); } catch (e) { return null; } }
+  // os alarmes do instante com o que a resposta de alarmes precisa (título, passos do guia, fonte, hora desde e o detalhe da C3; o texto do alarme é o `txt.alarmes` do instante): a CapitaoAlertas
+  // quando a tela a traz e o quadro é o do replay; senão os do próprio quadro com o catálogo D.replay.alertas. null = o quadro não reporta alarmes (um coletor sem o campo).
+  function alarmesDetalhe(i) {
+    var AL = window.CapitaoAlertas, ativos = null, ale = catalogoAlertas(), F = window.CapitaoAgora.fmt, doQuadro = i.q.alarmes;
+    try { ativos = i.fonte === 'replay' && AL && typeof AL.ativos === 'function' ? AL.ativos(i.ms) : null; } catch (e) { ativos = null; }
+    if (Array.isArray(ativos)) return ativos.map(function (a) { return { id: a.id, campo: a.campo, titulo: a.titulo, hora: a.hora, passos: (a.passos || []).slice(), fonte: a.fonte, detalhe: a.detalhe }; });
+    if (!Array.isArray(doQuadro)) return null;
+    return doQuadro.map(function (a) {
+      var c = D.campos && D.campos[a.campo], cat = ale[a.id] || {}, ms = Date.parse(a.desde);
+      return { id: a.id, campo: a.campo, titulo: cat.titulo || (c && c.rotulo) || a.id, hora: isFinite(ms) ? F.hora(ms, true) : '', passos: (cat.passos || []).slice(), fonte: cat.fonte, detalhe: cat.passos ? 'C3-Leme-Alerta.dc.html#alarme=' + a.id : '' };
+    });
+  }
   // O texto único de cada medida (CONTRATO §1.23: Main, A1, E1, HUD, answer('telemetria') e `## Navegação agora` mostram este). Só o que o quadro tem; sem coordenada.
   function textos(i) {
     var A = window.CapitaoAgora, F = A.fmt, q = i.q, t = {}, c = i.calc || {}, cp = function (n) { return F.campo(q, n); };
@@ -711,6 +727,8 @@
   var MMSI_RADIO = P.mmsiRadio || 'MMSI do rádio de bordo (etiqueta / Licença de Estação)';
   var INDICATIVO = P.indicativo || 'o da Licença de Estação (no rádio)';
   function mmsiNum() { return E.mmsi ? 'MMSI ' + E.mmsi : 'MMSI ' + SD; }
+  // a 1ª linha da rota mmsi (PROMPT §2.2): o MMSI do MAYDAY e do DSC é o da etiqueta do rádio; o do cadastro do app só vem na 2ª linha, sem instrução de programar
+  var MMSI_USO = 'No MAYDAY e no DSC, use o MMSI da etiqueta do rádio (Licença de Estação).';
   // Os passos vêm do D.protocolos (fonte única do SOS, dos guias e dos cartões): mob, seafire.passos, epirb.passos, oleo. Nada de posição,
   // rumo, SOG, ETA, pessoas a bordo do quadro, MMSI gerado, modelo, validade nem lugar de equipamento de salvatagem (trava 17).
   var NOTA_ETIQUETA = (P.seafire && P.seafire.nota) || (P.epirb && P.epirb.nota) || 'modelo, validade e acionamento: veja a etiqueta do equipamento';
@@ -822,6 +840,8 @@
   var MAR_SIM = ' · ondas: o app não tem previsão de mar — confira a previsão da Marinha antes de sair.';
   // a situação de bordo sem posição, para as respostas que a decisão (g) manda levar (tempo e maré sem conexão, contatos, fallback, anexos)
   function linhaBordo() { return (vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ') + resumoAgora({ semPosicao: true }); }
+  // «Posição 26°59,46'S 048°36,71'W.» (a 2ª linha da posição, só no texto da tela); o dado que falta já vem como «posição SEM LEITURA» (o caminho null), sem repetir a palavra
+  function posicaoTxt() { return (/^posi/.test(SNAP.pos) ? '' : 'Posição ') + SNAP.pos + '.\n'; }
   function poraoTxt() { var PO = S.porao || {}; return typeof PO.bb_cm === 'number' && typeof PO.be_cm === 'number' ? 'BB ' + nb(PO.bb_cm) + ' cm · BE ' + nb(PO.be_cm) + ' cm' + (typeof PO.ciclos_h === 'number' ? ' · ' + (PO.ciclos_h ? PO.ciclos_h + (PO.ciclos_h === 1 ? ' ciclo' : ' ciclos') : 'nenhum ciclo') + ' da bomba na última hora' : '') : null; }
   // «Motores Cummins QSB6.7 305 · 2 unidades (BB e BE)»: do cadastro (D.equipamentos), nunca um fabricante fixo no código
   function motoresTxt() { var e = equip('motores'); return fabMod('motores') + (e && e.qtd ? ' · ' + e.qtd + (e.qtd === 1 ? ' unidade' : ' unidades') : '') + (e && e.lados ? ' (' + e.lados + ')' : ''); }
@@ -946,7 +966,21 @@
         + (i ? alarmesCl(i, '\n• Alarmes: ') + (t.tend ? '\n• Tendência — ' + t.tend : '') : ''),
         src: FT.tele, actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
     },
-    posicao: function (p) { return { text: SNAP.pos + ' · ' + (S.estado || SD).toLowerCase() + ' · ' + (S.local || SD) + '\nSOG ' + nb(S.sog) + ' nós · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · ' + quando() + '.', src: 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) }; },
+    // Posição (PROMPT §2.8): a 1ª linha, a falada, é a posição RELATIVA («a 0,5 mn da Barra Sul, chegando»: só com a simulação, só de pontos com fonte) com o rumo e a velocidade; as coordenadas ficam
+    // na 2ª linha, só no texto da tela. Sem quadro vivo (modo real): o estado e o lugar do snapshot, sem posição relativa (a rota não existe), e as coordenadas na 2ª linha.
+    posicao: function (p) {
+      var i = vivo(), q = i && i.q, t = i && i.txt, parado, onde, l1, coord;
+      if (i) {
+        parado = typeof q.sog_nos === 'number' && q.sog_nos < 0.5; onde = t.relativa || t.local;
+        l1 = cap1(q.estado || 'Navegando') + (t.sog ? ' a ' + t.sog : '') + (!parado && t.rumo ? ', rumo ' + t.rumo : t.proa ? ', proa ' + t.proa : '') + (onde ? ', ' + onde : '') + ' — ' + i.hora + '.';
+        coord = typeof q.lat === 'number' && typeof q.lon === 'number' ? posicaoTxt() : '';
+      } else {
+        l1 = cap1(S.estado || SD) + (S.local ? ' — ' + S.local : '') + ', SOG ' + nb(S.sog) + ' nós, proa ' + grau3(S.proa) + ' — ' + quando() + '.';
+        coord = posicaoTxt();
+      }
+      return { text: l1 + '\n' + coord + 'SOG ' + nb(S.sog) + ' nós · proa ' + grau3(S.proa) + ' · ' + ((S.gps && S.gps.satelites) || '—') + ' satélites · profundidade ' + nb(S.profundidade) + ' m · ' + quando() + '.',
+        src: i ? 'Fonte: ' + i.fonteTxt : 'Fonte: GPS na rede NMEA 2000 · ' + SNAP.fonte, actions: act(p, [['Telemetria', 'console']]) };
+    },
     // Documentos: o prazo contado do dia do instante; o documento de um equipamento de segurança (o certificado do EPIRB) sem a data, com a nota da etiqueta; a linha do que
     // falta (SEM DADOS) só existe quando há documento sem dado
     docsvenc: function (p) {
@@ -1022,17 +1056,146 @@
       var fala = (linhaIA ? linhaIA.replace(/^•\s*/, '') + '.' : 'Nesta tela a IA na nuvem não é carregada: ela fica na tela inicial.') + (app !== VERSAO || (IA && cli !== VERSAO) ? ' Atenção: arquivos de versões diferentes, feche o app e abra de novo.' : '');
       return { text: linhas.join('\n'), fala: fala, src: 'Fonte: este aparelho' + (IA && IA.testar ? ' · teste da chave no servidor, sem gastar a cota da IA' : ''), actions: act(p, [['Ativar IA na nuvem', IA ? '#ia=ativar' : A(p, 'home') + '#ia=ativar']]) };
     },
+    // ——— P3C: navegação, cadastro e perguntas sobre os dados ———
+    // Profundidade: o ecobatímetro do quadro e o calado do cadastro (a folga de água sob a quilha depende da posição do transdutor: não se calcula). Sem o dado, SEM LEITURA no modo real.
+    profundidade: function (p) {
+      var i = vivo(), prof = i ? i.txt.prof : typeof S.profundidade === 'number' ? nb(S.profundidade) + ' m' : null, cal = EM_SOS ? null : E.calado;
+      var l1 = prof ? 'Profundidade de ' + prof + (i ? ' às ' + i.hora : ' na ' + quando()) + '.' : sim() && i ? 'O sensor de profundidade não trouxe leitura às ' + i.hora + '.' : 'Profundidade: ' + SL + ' (o ecobatímetro não está na rede NMEA).';
+      return { text: l1 + '\nCalado do barco: ' + (typeof cal === 'number' ? nb(cal, 2) + ' m (cadastro)' : SD) + '.', src: 'Fonte: ' + (i ? i.fonteTxt : SNAP.fonte) + ' · profundidade na rede NMEA 2000 · ' + (E.fonte || 'cadastro da embarcação'), actions: act(p, [['Telemetria', 'console']]) };
+    },
+    // Chegada prevista, distância ao destino e ao próximo ponto, e o percorrido desde as 07:00 (rota em andamento do quadro). Sem rota no quadro (modo real, coletor sem destino): SEM DADOS.
+    eta: function (p, ctx, qq) {
+      var i = vivo(), q = i && i.q, R = rotaDoPlano(), wp = i && /waypoint|proximo ponto/.test(norm(qq)), pc = i && /percorrid|navegad|odometro|navegamos|percorremos/.test(norm(qq)), dest, ponto, perc, fonte, an;
+      if (!i || typeof q.destino !== 'string') {
+        return { text: sim() && i ? 'O quadro de ' + i.hora + ' não trouxe destino nem chegada prevista — confira a rota no plotter.' : 'Destino, chegada prevista e próximo ponto: ' + SD + ' (nenhuma rota ativa na ' + quando() + ') — confira a rota no plotter.',
+          src: 'Fonte: ' + (i ? i.fonteTxt : SNAP.fonte), actions: act(p, [['Destinos', askHref(p, 'Para onde vamos hoje?')]]) };
+      }
+      an = (D.replay && D.replay.ancora_hora) || '07:00';
+      dest = 'Chegada prevista em ' + q.destino + (q.eta ? ' às ' + q.eta : '') + (campoTxt(i, 'destino_mn') ? ', a ' + campoTxt(i, 'destino_mn') + ' mn' : '');
+      ponto = q.wp_proximo ? 'Próximo ponto: ' + q.wp_proximo + (campoTxt(i, 'wp_mn') ? ', a ' + campoTxt(i, 'wp_mn') + ' mn' : '') : '';
+      perc = campoTxt(i, 'distancia_mn') ? 'Percorrido desde as ' + an + ': ' + campoTxt(i, 'distancia_mn') + ' mn' + (i.txt.sog ? ' · velocidade ' + i.txt.sog : '') + '.' : '';
+      fonte = 'Fonte: ' + i.fonteTxt + ' · ' + (R && R.fonte ? R.fonte : 'rota em andamento');
+      return { text: pc && perc ? perc.replace(/\.$/, '') + ' — ' + i.hora + '.\n' + dest + '.' + (ponto ? '\n' + ponto + '.' : '')
+        : (wp && ponto ? ponto + ' — ' + i.hora + '.\n' + dest + '.' : dest + ' — ' + i.hora + '.' + (ponto ? '\n' + ponto + '.' : '')) + (perc ? '\n' + perc : ''), src: fonte, actions: act(p, [['Destinos', askHref(p, 'Para onde vamos hoje?')], ['Telemetria', 'console']]) };
+    },
+    // Alarmes ativos do instante (a CapitaoAlertas quando a tela a traz, senão os do quadro): o nível e o texto na 1ª linha, o que verificar primeiro (os passos do guia, do catálogo D.replay.alertas) depois.
+    // O alarme de uma volta do replay é sempre AVISO (o crítico só com cenario 'alarme-critico', desligado): esta resposta nunca abre o SOS nem a C3 sozinha.
+    alarmes: function (p) {
+      var i = vivo(), lista = i ? alarmesDetalhe(i) : null, ale = catalogoAlertas(), n, partes = [], link = null;
+      if (!i || !lista) {
+        return { text: sim() && i ? 'O coletor não trouxe a lista de alarmes às ' + i.hora + ' — confira o painel dos motores e o plotter.' : 'Alarmes: ' + SL + ' (o coletor não reporta alarmes) na ' + quando() + ' — confira o painel dos motores e o plotter.',
+          src: 'Fonte: ' + (i ? i.fonteTxt : SNAP.fonte), actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
+      }
+      n = lista.length;
+      if (!n) return { text: 'Nenhum alarme ativo às ' + i.hora + '.', src: 'Fonte: ' + i.fonteTxt + ' · limites do guia de bordo', actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
+      lista.forEach(function (a) {
+        var c = ale[a.id] || {};
+        partes.push((a.titulo || c.titulo || 'Alarme') + (a.hora ? ' (desde ' + a.hora + ')' : '') + ' — o que verificar primeiro:\n' + numerados(a.passos && a.passos.length ? a.passos : c.passos || []));
+        if (!link && a.detalhe) link = a.detalhe;
+      });
+      return { text: (n === 1 ? 'Há 1 alarme ativo' : 'Há ' + n + ' alarmes ativos') + ' às ' + i.hora + ' — ' + i.txt.alarmes + '.\n' + partes.join('\n'),
+        src: 'Fonte: ' + i.fonteTxt + ' · ' + lista.map(function (a) { return a.fonte || (ale[a.id] && ale[a.id].fonte) || ''; }).filter(function (x, k, v) { return x && v.indexOf(x) === k; }).join(' · '),
+        actions: (link ? [{ l: 'Ver o alerta', href: link }] : []).concat(act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']])) };
+    },
+    // Temperatura dos motores (o arrefecimento): a leitura, a faixa normal do guia dos motores §9 e a tendência de 30 s; fora da faixa, o alarme e o que verificar primeiro. Sem quadro vivo: a última leitura com motores ligados.
+    arrefecimento: function (p) {
+      var i = vivo(), A = window.CapitaoAgora, L = limitesDe('motor_bb_arref_c'), ate = L && L.normal && typeof L.normal.ate === 'number' ? L.normal.ate : null, fx = ate != null ? 'Faixa normal: até ' + nb(ate, 0) + ' °C (' + L.fonte + ').' : '';
+      var ale = catalogoAlertas(), alr, lista, niv, fora = [], tend, l1, pass = '';
+      if (!i) {
+        return { text: 'Arrefecimento ' + (M.arref ? M.arref.join('/') + ' °C na última leitura com motores ligados ' + (M.hora || SD) + ' (motores ' + (M.estado || SD) + ', ' + quando() + ').' : SL + ' (' + quando() + ').') + (fx ? '\n' + fx : ''),
+          src: FT.tele + ' · ' + guia('g_motores') + ' §9', actions: act(p, [['Motores', askHref(p, 'motores')], ['Telemetria', 'console']]) };
+      }
+      ['bb', 'be'].forEach(function (l) {
+        var v = i.q['motor_' + l + '_arref_c'];
+        try { niv = A.nivel('motor_' + l + '_arref_c', i.q); } catch (e) { niv = null; }
+        if (niv && niv.nivel && niv.nivel !== 'normal') fora.push(l.toUpperCase() + (typeof niv.limite === 'number' ? (v > niv.limite ? ' acima de ' : ' abaixo de ') + nb(niv.limite, 0) + ' °C' : ' fora da faixa') + ' (' + (niv.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ')');
+      });
+      l1 = i.txt.arref ? 'Arrefecimento ' + i.txt.arref + ' às ' + i.hora + (fora.length ? ': ' + fora.join(' e ') : ate != null && i.q.motor_bb_rpm > 0 ? ', dentro da faixa normal (até ' + nb(ate, 0) + ' °C)' : '') + '.' : 'O quadro de ' + i.hora + ' não trouxe a temperatura dos motores.';
+      tend = i.tend && 'motor_bb_arref_c' in i.tend && 'motor_be_arref_c' in i.tend ? 'Nos últimos 30 s: BB ' + sinal(i.tend.motor_bb_arref_c, 1) + ' · BE ' + sinal(i.tend.motor_be_arref_c, 1) + ' °C.' : '';
+      lista = alarmesDetalhe(i) || [];
+      alr = lista.filter(function (a) { return /arref/.test(a.campo || a.id || ''); });
+      alr.forEach(function (a) { var c = ale[a.id] || {}; pass += '\n' + (a.titulo || c.titulo || 'Alarme') + ' — o que verificar primeiro:\n' + numerados(a.passos && a.passos.length ? a.passos : c.passos || []); });
+      return { text: l1 + (tend ? '\n' + tend : '') + (fx ? '\n' + fx : '') + pass, src: 'Fonte: ' + i.fonteTxt + ' · ' + (L && L.fonte ? L.fonte : guia('g_motores') + ' §9'), actions: act(p, [['Motores', askHref(p, 'motores')], ['Telemetria', 'console']]) };
+    },
+    // Estado do mar a bordo (as ondas do quadro): só «a bordo agora», nunca previsão (§2.5: a previsão de mar é do mundo real, e o app não a tem)
+    ondas: function (p) {
+      var i = vivo(), o = i ? i.txt.ondas : null, v = i ? i.txt.vento : typeof S.vento === 'number' ? nb(S.vento) + ' nós de ' + grau3(S.ventoDe) : null, s = sim();
+      return { text: (o ? 'Ondas de ' + o + ' a bordo agora — ' + i.hora + '.' : s && i ? 'O sensor de ondas não trouxe leitura às ' + i.hora + '.' : 'Ondas a bordo: ' + SL + ' (o coletor não reporta a altura da onda) na ' + quando() + '.')
+        + (v ? '\nVento verdadeiro ' + v + ', a bordo agora.' : '') + '\n' + (s ? 'Previsão de mar: o app não tem previsão de ondas — confira a previsão da Marinha antes de sair.' : 'Previsão de mar (ondas): ' + SD + ' no app — confira a previsão da Marinha antes de sair.'),
+        src: 'Fonte: ' + (i ? i.fonteTxt : SNAP.fonte) + ' · a bordo, não é previsão', actions: act(p, [['Clima', askHref(p, 'Clima')], ['Telemetria', 'console']]) };
+    },
+    // Temperatura da água do mar a bordo (o sensor do quadro, preso à máxima e à mínima do dia da previsão real quando o aparelho a leu)
+    temperaturaAgua: function (p) {
+      var i = vivo(), ag = i ? i.txt.agua : typeof S.agua === 'number' ? nb(S.agua) + ' °C' : null, ar = i ? i.txt.ar : typeof S.ar === 'number' ? nb(S.ar) + ' °C' : null;
+      return { text: (ag ? 'Água do mar a ' + ag + ' a bordo agora' + (i ? ' — ' + i.hora : ' (' + quando() + ')') + '.' : sim() && i ? 'O sensor de temperatura da água não trouxe leitura às ' + i.hora + '.' : 'Temperatura da água: ' + SL + ' (' + quando() + ').') + (ar ? '\nAr externo ' + ar + '.' : ''),
+        src: 'Fonte: ' + (i ? i.fonteTxt : SNAP.fonte) + ' · sensor de bordo, não é previsão', actions: act(p, [['Clima', askHref(p, 'Clima')], ['Telemetria', 'console']]) };
+    },
+    // Como está a navegação / situação agora: o resumo narrado do instante (estado, velocidade, rumo, lugar, chegada) e, em linhas, os motores, o diesel, os equipamentos, o tempo a bordo, os alarmes e a tendência.
+    // Sem quadro vivo (modo real), é a telemetria do snapshot.
+    navegacao: function (p, ctx, q) {
+      var i = vivo(), t = i && i.txt, qd = i && i.q, ls = [], parado, onde, l1;
+      if (!i) return ANSWERS.telemetria(p, ctx, q);
+      parado = typeof qd.sog_nos === 'number' && qd.sog_nos < 0.5; onde = t.relativa || t.local;
+      l1 = cap1(qd.estado || 'Navegando') + (t.sog ? ' a ' + t.sog : '') + (!parado && t.rumo ? ', rumo ' + t.rumo : '') + (onde ? ', ' + onde : '') + (t.eta ? '; chegada prevista às ' + t.eta : '') + ' — ' + i.hora + '.';
+      if (t.rpm) ls.push('• Motores ' + t.rpm + (t.oleo ? ' · óleo ' + t.oleo : '') + (t.arref ? ' · arrefecimento ' + t.arref : ''));
+      if (t.diesel) ls.push('• Diesel ' + t.diesel + (t.consumo ? ' · consumo ' + t.consumo : '') + (t.autonomia ? ' · autonomia ' + t.autonomia : ''));
+      if (t.gerador || t.seakeeper) ls.push('• ' + [t.gerador ? 'Gerador ' + t.gerador : '', t.seakeeper ? 'Seakeeper ' + t.seakeeper : ''].filter(Boolean).join(' · '));
+      if (t.vento || t.ondas || t.prof) ls.push('• ' + [t.vento ? 'Vento ' + t.vento : '', t.ondas ? 'ondas ' + t.ondas : '', t.prof ? 'profundidade ' + t.prof : ''].filter(Boolean).join(' · ') + ' (a bordo agora)');
+      if (t.alarmes) ls.push('• Alarmes: ' + t.alarmes);
+      if (t.tend) ls.push('• Tendência — ' + t.tend);
+      return { text: l1 + (ls.length ? '\n' + ls.join('\n') : ''), src: 'Fonte: ' + i.fonteTxt, actions: act(p, [['Telemetria', 'console'], ['Destinos', askHref(p, 'Para onde vamos hoje?')]]) };
+    },
+    // Pessoas a bordo: o número do registro de saída do cadastro (nunca nas chaves de emergência, nem no quadro) e a lotação do barco
+    pessoas: function (p) {
+      var n = EM_SOS ? null : E.pessoasBordo, lot = EM_SOS ? null : E.lotacao, i = vivo();
+      return { text: typeof n === 'number' ? n + (n === 1 ? ' pessoa a bordo' : ' pessoas a bordo') + ', pelo registro de saída' + (typeof lot === 'number' ? ' (lotação ' + lot + ')' : '') + (i ? ' — ' + i.hora : '') + '.\nSe alguém embarcou ou desembarcou depois da saída, conte de novo.' : 'Pessoas a bordo: ' + SD + ' (o registro de saída não traz o número).',
+        src: 'Fonte: ' + (E.fonte || 'cadastro da embarcação') + ' · ' + FT.diario.replace('Fonte: ', ''), actions: act(p, [['Abrir diário', 'diario']]) };
+    },
+    // Embarcação (o cadastro): dimensões, calado, lotação, modelo e registro. A 1ª linha responde ao que foi perguntado (calado, comprimento, lotação, registro, modelo); sem foco, o resumo.
+    embarcacao: function (p, ctx, qq) {
+      if (EM_SOS) return { text: (E.nome || SD) + '.', src: 'Fonte: cadastro da embarcação', actions: [] };   // no SOS o cérebro não lê o cadastro além do nome
+      var s = pad(qq), nm = function (k, c) { return typeof E[k] === 'number' ? nb(E[k], c) + ' ' + ((E.un && E.un[k]) || '') : SD; }, i = vivo(), h = i ? ' — ' + i.hora : '', mod = E.modelo ? E.modelo + (E.fabricante ? ', do ' + E.fabricante : '') : SD, l1;
+      if (s.indexOf(' calado') !== -1) l1 = 'O calado do barco é ' + nm('calado', 2) + h + '.';
+      else if (s.indexOf(' comprimento') !== -1) l1 = 'O comprimento do barco é ' + nm('comprimento', 2) + h + '.';
+      else if (has(s, [' boca ', 'largura'])) l1 = 'A boca do barco é ' + nm('boca', 2) + h + '.';
+      else if (has(s, ['deslocamento', 'peso'])) l1 = 'O deslocamento do barco é ' + nm('deslocamento', 1) + h + '.';
+      else if (has(s, ['lotacao', 'cabem'])) l1 = 'A lotação do barco é de ' + (typeof E.lotacao === 'number' ? E.lotacao + ' pessoas' : SD) + h + '.';
+      else if (has(s, ['registro'])) l1 = 'O registro do barco é ' + (E.registro || SD) + h + '.';
+      else if (has(s, ['modelo', 'fabricante', 'estaleiro', 'fabricou', 'que barco', 'qual e o barco'])) l1 = 'O barco é o ' + mod + (E.ano ? ', de ' + E.ano : '') + h + '.';
+      else l1 = (E.nome || 'O barco') + ': ' + mod + ', ' + nm('comprimento', 2) + ' de comprimento, boca de ' + nm('boca', 2) + ' e calado de ' + nm('calado', 2) + h + '.';
+      return { text: l1 + (E.rotulo ? '\n' + E.rotulo + (E.motorizacao ? ' · ' + E.motorizacao : '') : '') + '\nComprimento ' + nm('comprimento', 2) + ' · boca ' + nm('boca', 2) + ' · calado ' + nm('calado', 2) + ' · deslocamento ' + nm('deslocamento', 1)
+        + ' · lotação ' + (typeof E.lotacao === 'number' ? E.lotacao + ' pessoas' : SD) + ' · registro ' + (E.registro || SD) + '.', src: 'Fonte: ' + (E.fonte || 'cadastro da embarcação'), actions: act(p, [['Documentos', 'docs'], ['Equipamentos', 'manut']]) };
+    },
+    // MMSI (CLAUDE.md 8): a 1ª linha manda usar o MMSI da etiqueta do rádio (Licença de Estação); a 2ª diz o do cadastro do app. Nunca com instrução de programar, nunca com posição ou pessoas.
+    mmsi: function (p) {
+      return { text: MMSI_USO + (EM_SOS ? '' : '\nCadastro do app: ' + mmsiNum() + '.'), src: FT.proto + (EM_SOS ? '' : ' · ' + (E.fonte || 'cadastro da embarcação')), actions: act(p, [['Abrir SOS', 'sos'], ['Documentos', 'docs']]) };
+    },
+    // AIS: o transponder do cadastro e os alvos do quadro; a pergunta de procedimento (como, código, onde fica…) vai ao guia dele (GENERICAS/FAMILIA)
+    ais: function (p) {
+      var i = vivo(), a = i && i.q.ais_alvos;
+      return { text: fabMod('ais') + (typeof a === 'number' ? ' com ' + a + (a === 1 ? ' alvo' : ' alvos') + ' às ' + i.hora : ' · alvos: ' + (sim() && i ? 'o quadro não trouxe leitura às ' + i.hora : SL + ' (' + quando() + ')')) + '.\nOs alvos aparecem no plotter, com nome, rumo e velocidade (' + guia('g_ais') + ' §1).',
+        src: 'Fonte: ' + guia('g_ais') + ' · ' + (i ? i.fonteTxt : SNAP.fonte), actions: act(p, [['FAQ eletrônicos', 'f3']]) };
+    },
+    // Pergunta direta sobre os dados (PROMPT §2.6, decisão (f)): a frase padrão e a situação de bordo sem posição. Local, sem IA, nunca afirma que é real. Com simulacao false, que é uma embarcação de verdade, a regra «Nada inventado».
+    sobreDados: function (p) {
+      var s = sim();
+      return { text: (s ? SOBRE_DADOS : 'Cada número vem de uma fonte, com a hora da leitura: o coletor NMEA de bordo, a agenda, os documentos e o diário. O que não tem fonte aparece como ' + SD + ' e o sensor ausente como ' + SL + '.') + '\n' + linhaBordo(),
+        src: s ? 'Fonte: este aparelho · modo de apresentação' : 'Fonte: este aparelho · regra da casa: cada dado com a fonte', actions: act(p, [['Telemetria', 'console'], ['FAQ de bordo', 'faq']]) };
+    },
+    // Fora do barco e dinheiro (PROMPT §2.7): local, sem IA, sem preço, telefone nem nome de terceiro; a situação de bordo (sem posição) com o número e a hora
+    foraBarco: function (p) {
+      return { text: 'Isso fica fora do barco.\n' + linhaBordo(), src: 'Fonte: fontes de bordo consultadas' + (vivo() ? ' às ' + vivo().hora : ''), actions: act(p, [['FAQ de bordo', 'faq'], ['Telemetria', 'console']]) };
+    },
     // Sem rota (pergunta fora das fontes de bordo): o fallback não diz SEM DADOS (decisão 5) e leva a situação de bordo sem posição (a IA responde por cima, quando liga)
     fallback: function (p) { return { text: 'Isso não está nas fontes de bordo que o app consulta — telemetria, agenda, documentos, diário e guias de bordo.\nPosso registrar como pendência no diário, ou você envia uma foto (etiqueta, tela, nota) para eu identificar.\n' + linhaBordo(), src: 'Fonte: fontes de bordo consultadas' + (vivo() ? ' às ' + vivo().hora : '') + ' — hierarquia: manual oficial › registro oficial › laudo › diário › foto › nota informal', actions: (BASE ? [BASE] : []).concat(act(p, [['Registrar pendência', 'diario'], ['FAQ de bordo', 'faq']])) }; }
   };
 
   // ——— Telemetria ao vivo ———
-  // Com quadro vivo no instante (o do replay ou o do coletor, capitao-telemetria.js), posição, tanques, baterias e Seakeeper saem da leitura do instante e a fonte
+  // Com quadro vivo no instante (o do replay ou o do coletor, capitao-telemetria.js), tanques, baterias e Seakeeper saem da leitura do instante (a posição tem a resposta própria, que trata o quadro vivo e a reserva) e a fonte
   // é a dele (`fonteTxt`: «telemetria ao vivo · hora» para o replay, «coletor NMEA · ao vivo hora» só para o coletor de verdade). O resto das respostas de dado de
   // bordo lê o mesmo instante por S, M, G, DI, T, SNAP, AUT e CON (recarrega). Sem quadro vivo (modo real sem coletor, tela sem replay) valem os textos do snapshot,
   // como antes. Fora daqui, por decisão: sos, canal16, epirb, seafire, salvatagem, mmsi e óleo nunca leem o quadro.
   var VIVO = {
-    posicao: function (i) { var q = i.q; return { text: SNAP.pos + (q.sog_nos < 0.5 ? ' · parado' : '') + '\nSOG ' + nb(q.sog_nos) + ' nós · proa ' + grau3(q.proa_graus) + ' · ' + nb(q.gps_satelites, 0) + ' satélites · profundidade ' + nb(q.profundidade_m) + ' m · ao vivo ' + i.hora + '.' }; },
     tanques: function (i) { var q = i.q; return { text: 'Tanques agora:\n• água doce ' + nb(q.tanque_agua_pct) + ' %\n• águas cinzas ' + nb(q.tanque_cinzas_pct) + ' %' + (q.tanque_cinzas_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• águas negras ' + nb(q.tanque_negras_pct) + ' %' + (q.tanque_negras_pct > 70 ? ' — atenção: programar esgoto' : '') + '\n• diesel: ' + SNAP.diesel + ' — ' + SNAP.dieselHora + '.' }; },
     eletrico: function (i, base) { var q = i.q; return { text: 'Baterias agora: banco 24 V ' + nb(q.bateria_0_tensao_v, 2) + ' V · banco 12 V ' + nb(q.bateria_2_tensao_v, 2) + ' V (ao vivo ' + i.hora + ').\n' + base.text.split('\n').slice(2).join('\n') }; },
     estabilizador: function (i, base) { var q = i.q; return { text: 'Seakeeper agora: ' + (typeof q.seakeeper_ativo !== 'boolean' ? 'SEM LEITURA' : q.seakeeper_ativo ? 'LIGADO' + (typeof q.seakeeper_volante_rpm === 'number' ? ' · volante ' + mil(q.seakeeper_volante_rpm) + ' rpm (' + nb(q.seakeeper_volante_pct, 0) + ' %)' : '') : 'desligado') + ' · ao vivo ' + i.hora + '.\n' + base.text.split('\n').slice(1).join('\n') }; }
@@ -1047,8 +1210,11 @@
   });
   // as chaves de ANSWERS (o teste varre uma pergunta de cada) e as que não levam a hora do instante na fonte (emergência, diagnóstico, saudação, checklists, registro)
   var CHAVES = Object.keys(ANSWERS);
+  // AIS: a pergunta de status («quantos alvos?», «tem AIS?», «está ligado?») fica na resposta pronta; qualquer outra (modo silencioso, identificação, alvos no plotter) vai ao trecho do g_ais quando ele serve
+  var AIS_STATUS = /\b(?:quantos?|quantas?|quais|tem|temos|ha|algum|alguns|agora|ligado|ligada|funcionando|recebendo|vendo)\b/;
   // (a maré é do mundo real, §2.5: a hora dela é a da leitura salva, «lida às HH:MM» na fonte; o instante do replay nunca entra na fonte da maré)
   var SEM_HORA_NA_FONTE = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, checklist: 1, checklistChegada: 1, diario: 1, mare: 1 };
+  SEM_HORA_NA_FONTE.sobreDados = 1;   // (a frase padrão e a fonte «este aparelho · modo de apresentação» não levam o «consultado às»)
 
   // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
   // Revisão 7 do C5: "esgoto" saiu. "Bomba de esgoto" também é a de esgotamento do porão em português de bordo, e "a bomba de esgoto não
@@ -1064,6 +1230,87 @@
   var DIAGNOSTICO = /^ (?:(?:fazer |faz |faca |rodar |roda |rode |mostrar |mostra |mostre |me mostra |me mostre |me da |ver )?(?:o |um )?diagnostico(?: da ia| do app| do aplicativo| do capitao| completo)?|(?:qual e |qual )?(?:o )?(?:status|estado) (?:da ia|do app|do aplicativo)|teste da ia|testar a ia|testa a ia|teste a ia|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:(?:esta|ta) )?(?:ligada|funcionando|ativa|ativada|on)|(?:a )?(?:ia|inteligencia artificial)(?: na nuvem)? (?:nao )?(?:(?:esta|ta) )?(?:funciona|funcionando|responde|respondendo)) $/;
   // tira "capitão,"/"capitão IA," do começo e "por favor" do fim antes de conferir (jeito comum de falar com o app)
   function semVocativo(q) { return q.replace(/^ (?:ei |oi |ola )?capitao(?: ia)? /, ' ').replace(/ por favor $/, ' '); }
+
+  // ——— Rotas novas da navegação, do cadastro e de fora do barco (P3C; PROMPT Fase 3 «Rotas novas», §2.3, §2.6, §2.7) ———
+  // Todas entram depois da emergência e do óleo (route() as chama nessa ordem) e só com palavra inteira em pad(q). A resposta de cada uma abre com a própria resposta, numa frase falável com o
+  // dado e a hora do instante; a situação de bordo vem na linha seguinte onde a decisão (g) manda (sobreDados, foraBarco).
+  //
+  // sobreDados (§2.6): pergunta direta sobre a autenticidade. ` real ` sozinho é medida em muita pergunta de bordo («velocidade real», «consumo real», «em tempo real», «em reais»,
+  // «norte verdadeiro»): AUT_MEDIDA tira essas frases antes da conferência. Equipamento, salvatagem, EPIRB, Seafire, extintor e dinheiro nunca são a pergunta sobre os dados.
+  var AUT_MEDIDA = / (?:tempo|velocidade|vento|valor|consumo|autonomia|distancia|posicao|rumo|hora|horario|custo|preco|tensao|temperatura|pressao|carga|nivel|rotacao|rpm|vazao|fluxo|giro|curso|volume|peso|altura|angulo|direcao|forca|alcance|raio|trajeto|rota|tendencia|norte|cota) (?:real|reais|verdadeir[oa]s?) | (?:em|de|mil|milhoes de) reais /g;
+  var AUT_FORTE = [' real ', ' reais ', ' de verdade ', ' verdadeir', ' simulad', ' simulac', ' fictici', ' demo ', ' demonstracao ', ' inventad', ' de mentira '];
+  var AUT_EXISTE = [' o barco existe ', ' a embarcacao existe ', ' isso existe '];
+  var AUT_ALVO = [' dado ', ' dados ', ' leitura ', ' leituras ', ' valores ', ' numeros ', ' telemetria ', ' isso ', ' isto ', ' barco ', ' embarcacao ', ' navegacao ', ' app ',
+    ' alarme ', ' alarmes ', ' alerta ', ' alertas ', ' sensor ', ' sensores ', ' gps ', ' posicao ', ' rota ', ' viagem '];
+  var AUT_FORA = ['preco', 'custa', 'custo', 'pagar', 'r$', 'extintor', 'seafire', 'sea fire', 'sea-fire'];
+  // a forma curta, sem a palavra do alvo: «é real?», «é de verdade?», «é simulado?»
+  var AUT_CURTA = /^ (?:(?:mas|entao|isso|isto|tudo|aqui) )*(?:e|eh|sao|era|foi) (?:(?:tudo|isso|isto|mesmo|totalmente|realmente|muito) )*(?:real|reais|de verdade|verdadeir[oa]s?|simulad[oa]s?|fictici[oa]s?|inventad[oa]s?|de mentira|uma simulacao|simulacao|uma demonstracao|demonstracao) $/;
+  function sobreDados(q) {
+    if (has(q, AUT_FORA) || has(q, EQUIP) || salvatagem(q) || epirbRelato(q)) return false;
+    if (AUT_CURTA.test(q)) return true;
+    var s = q.replace(AUT_MEDIDA, ' ');
+    return (has(s, AUT_FORTE) || has(s, AUT_EXISTE)) && has(s, AUT_ALVO);
+  }
+  // embarcacao: as dimensões, o calado, a lotação, o modelo e o registro do cadastro (D.embarcacao). A pergunta do calado é daqui (o calado tem dado desde a Fase 1).
+  var EMB_PALAVRAS = [' calado', ' comprimento', 'dimensoes', ' boca do barco', ' boca da lancha', ' boca da embarcacao', 'largura do barco', 'largura da lancha', 'largura da embarcacao', 'tamanho do barco', 'tamanho da lancha',
+    'tamanho da embarcacao', 'quantos metros tem o barco', 'deslocamento do barco', 'deslocamento da lancha', 'deslocamento da embarcacao', 'qual o deslocamento', 'peso do barco', ' lotacao', 'quantas pessoas cabem',
+    'cabem quantas pessoas', 'modelo do barco', 'modelo da lancha', 'modelo da embarcacao', 'fabricante do barco', 'fabricante da lancha', 'qual o estaleiro', 'quem fabricou', 'ano do barco', 'ano de fabricacao',
+    'registro do barco', 'registro da lancha', 'registro da embarcacao', 'numero de registro', 'ficha tecnica', 'que barco e esse', 'qual e o barco'];
+  // pessoas a bordo: o número do registro de saída (embarcacao.pessoasBordo); a lotação («quantas pessoas cabem») é do cadastro (embarcacao)
+  var PESSOAS_PALAVRAS = ['pessoas a bordo', 'quantas pessoas', 'quantos a bordo', 'gente a bordo', 'tripulantes a bordo', 'passageiros a bordo', 'quem esta a bordo', 'quantos tripulantes', 'quantos passageiros'];
+  var PROFUNDIDADE_PALAVRAS = ['profundidade', 'ecobatimetro', 'sob a quilha', 'quanto fundo', ' fundo aqui', 'agua sob'];
+  // só a leitura do ecobatímetro: o alarme de profundidade, a profundidade mínima, o «como», o relato («sonda mostrando pouca profundidade») e a de fundear seguem o guia ou a IA
+  var PROFUNDIDADE_FORA = ['minim', 'alarme', 'alerta', 'aviso', 'como ', 'configur', 'ajust', 'defin', 'limite', 'pouca', 'rasa', 'raso', 'segur', 'recomend', 'ideal', 'quanto preciso', 'fundear', 'ancorar', 'lancar', 'sonda mostrando'];
+  // ETA, distância e waypoint. «Quanto falta» só vale junto de chegar, chegada, destino, waypoint, ponto, ETA ou o nome de um ponto da rota (nunca «quanto falta para a troca de óleo?»);
+  // a autonomia, o diesel, o alcance, o consumo e o checklist têm as rotas deles.
+  var ETA_PALAVRAS = [' eta ', 'hora de chegada', 'horario de chegada', 'chegada prevista', 'previsao de chegada', 'quando chegamos', 'quando vamos chegar', 'quando a gente chega', 'que horas chegamos',
+    'que horas chegaremos', 'que horas vamos chegar', 'que horas chega', 'tempo para chegar', 'tempo ate chegar', 'tempo de chegada', 'falta para chegar', 'faltam para chegar', 'waypoint', 'proximo ponto',
+    'distancia ate', 'distancia para', 'distancia do destino', 'distancia percorrida', 'milhas percorridas', 'milhas navegadas', 'quantas milhas', 'quantas mn', 'odometro'];
+  var FALTA_PALAVRAS = ['quanto falta', 'quanto tempo falta', 'quantas milhas faltam', 'quantos minutos faltam', 'quantas horas faltam', 'o que falta para'];
+  var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta '];
+  var ETA_FORA = ['autonomia', 'alcance', 'diesel', 'combustivel', 'checklist', 'abastec', 'consumo', 'tecnico', 'oficina', 'entrega', 'pedido', 'encomenda', 'peca', 'prestador', 'visita'];
+  // os nomes dos pontos da rota e dos destinos (D.rota, D.destinos; só com a simulação e nunca no SOS), sem o que vem entre parênteses
+  function rotaDoPlano() { return EM_SOS ? null : D.rota; }   // no SOS nada lê a rota
+  function lugaresRota() {
+    var R = rotaDoPlano(), out = [];
+    if (!sim() || !R) return out;
+    try { [R.base].concat(R.pontos || [], D.destinos || []).forEach(function (x) { var n = x && x.nome ? norm(x.nome).split('(')[0].replace(/\s+/g, ' ').trim() : ''; if (n && out.indexOf(' ' + n + ' ') === -1) out.push(' ' + n + ' '); }); } catch (e) {}
+    return out;
+  }
+  function etaPergunta(q) {
+    if (has(q, ETA_FORA)) return false;
+    if (has(q, ETA_PALAVRAS)) return true;
+    return has(q, FALTA_PALAVRAS) && (has(q, FALTA_JUNTO) || has(q, lugaresRota()));
+  }
+  // alarmes ativos: «alarmes ativos», «tem algum alarme (ativo)?», «quais alarmes?», «o alarme está tocando». O «alarme de <equipamento>», «o alarme disparou» e «em caso de alarme» seguem as rotas deles.
+  var FIM_ALARME = '(?: (?:estao|esta|sao))?(?: (?:ativos?|acesos?|tocando|soando|no barco|a bordo|agora|aqui|ai|hoje|neste momento))*';
+  var ALARMES_REGEX = [
+    / (?:alarmes?|alertas?) (?:ativos?|acesos?)(?: |$)/,
+    new RegExp(' (?:tem|ha|existe|existem|temos) (?:algum |alguns )?(?:alarmes?|alertas?)' + FIM_ALARME + ' $'),
+    new RegExp(' quais (?:sao |estao )?(?:os )?(?:alarmes|alertas)' + FIM_ALARME + ' $'),
+    new RegExp('^ (?:e )?(?:os |o )?(?:alarmes?|alertas?)' + FIM_ALARME + ' $'),
+    / alarmes? (?:esta |estao )?(?:tocando|soando) /
+  ];
+  function alarmesPergunta(q) { return ALARMES_REGEX.some(function (r) { return r.test(q); }); }
+  // temperatura do motor (o arrefecimento): a pergunta neutra pela leitura; o alarme, o relato, o «como» e a temperatura alta seguem o guia dos motores (a resposta pronta cede ao trecho)
+  var ARREF_REGEX = / (?:temperaturas? (?:d[oae]s? )?(?:motor|motores|arrefecimento|bb|be|bombordo|boreste)|temperaturas? da agua d[oa]s? (?:motor|motores)|arrefecimento) /;
+  var ARREF_FORA = ['alarme', 'alerta', 'disparou', 'disparo', ' alta ', ' alto ', 'altas', 'subindo', 'subiu', ' sobe ', 'superaquec', 'esquent', 'aquec', 'quente', 'problema', 'pane', 'falha', 'vazament', 'bomba', 'rotor',
+    'filtro', 'troca', 'trocar', 'manutenc', 'aditivo', 'liquido', 'nivel', 'sistema de arrefecimento', 'o que fazer', 'o que faco', 'por que', 'porque', 'resolver', 'baixar', 'esfriar', 'evitar', 'diminuir', 'reduzir', 'limpar', 'fazer', 'ligar',
+    'rotacao', 'oleo', 'pressao', 'normal', 'normais', 'faixa', 'limite', 'maxim', 'minim', 'ideal', 'quais'];
+  function arrefecimentoPergunta(q) { return ARREF_REGEX.test(q) && !has(q, ARREF_FORA); }
+  // temperatura da água do mar (o sensor de bordo); a «temperatura da água subindo» do relato é do motor (guia) e fica fora
+  var AGUA_REGEX = / temperatura (?:da|do|de) (?:agua|mar)(?: do mar)? | agua do mar (?:esta|ta) | quantos graus (?:esta|ta) a agua | temperatura da agua do mar /;
+  var AGUA_FORA = ['motor', 'arrefec', 'subindo', 'subiu', ' sobe ', ' alta ', ' alto ', 'esquent', 'aquec', 'quente demais', 'gerador', 'climatiza', 'condicionado', 'dessaliniz', 'chuveiro', 'tanque', 'potavel', 'doce'];
+  function aguaPergunta(q) { return AGUA_REGEX.test(q) && !has(q, AGUA_FORA); }
+  // estado do mar a bordo (ondas do quadro); a previsão de mar é do mundo real (clima), e a maré tem a rota dela
+  var ONDAS_PALAVRAS = [' ondas ', 'ondulacao', 'estado do mar', 'altura da onda', 'altura das ondas', 'como esta o mar', 'mar agitado', 'mar grosso', 'mar calmo', ' swell '];
+  // o relato da onda («a onda bateu no casco», «as ondas molharam o convés») não é pergunta do sensor: segue a IA, como antes
+  var ONDAS_FORA = [' bateu', ' bateram', ' batendo', ' bate ', ' batem ', 'quebr', ' jogou', ' jogaram', 'molh', 'derrub', 'adern', 'entrou', 'entraram', 'cobr'];
+  // «como está a navegação», «situação agora»: o resumo narrado do instante. «Como estamos de diesel?» é a autonomia: a frase curta só vale inteira.
+  var NAVEGACAO_PALAVRAS = ['como esta a navegacao', 'situacao agora', 'situacao atual', 'situacao de bordo', 'situacao da navegacao', 'status da navegacao', 'navegacao agora', 'resumo da navegacao', 'como anda a navegacao'];
+  var NAVEGACAO_CURTA = /^ (?:e )?(?:entao )?como (?:estamos|vamos|estao as coisas|esta tudo)(?: agora| por ai| a bordo| ai)? $/;
+  // foraBarco (§2.7): dinheiro, esporte, notícia, política. Depois de todas as rotas de bordo: «quanto custa o diesel em reais?» é do diesel
+  var FORA_BARCO = ['dolar', 'cotacao', 'cambio', 'bolsa', 'bitcoin', 'preco', 'quanto custa', 'placar', 'campeonato', 'noticia', 'eleicao', ' euro ', ' euros ', ' jogo ', ' jogos '];
   function route(qRaw) {
     var q = pad(qRaw);
     if (!q.trim()) return 'saudacao';
@@ -1080,7 +1327,22 @@
     // Salvatagem (PROMPT §2.3): colete, balsa, boia, sinalizador, extintor sem fogo… logo depois da emergência e do óleo, antes das rotas de
     // assunto (epirb, seafire, canal16): resposta fixa, local, sem número de pessoas e sem lugar a bordo
     if (salvatagem(q)) return 'salvatagem';
+    // sobreDados (PROMPT §2.6): depois da emergência, do óleo e da salvatagem e antes de epirb, seafire e canal16; local, sem IA, nunca afirma que é real
+    if (sobreDados(q)) return 'sobreDados';
+    // mmsi (CLAUDE.md 8): a pergunta do MMSI não é o roteiro MAYDAY; a 1ª linha manda usar o MMSI da etiqueta do rádio, a 2ª diz o do cadastro do app
+    if (has(q, ['mmsi'])) return 'mmsi';
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
+    // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
+    // «alarme de óleo acendeu» (o óleo vem antes), «temperatura hoje» (o clima) nem «alarme de fluxo da climatização» (a resposta pronta cede ao trecho do guia).
+    if (has(q, NAVEGACAO_PALAVRAS) || NAVEGACAO_CURTA.test(q)) return 'navegacao';
+    if (has(q, EMB_PALAVRAS)) return 'embarcacao';
+    if (has(q, PESSOAS_PALAVRAS) && !/\d/.test(q)) return 'pessoas';   // «temos 6 pessoas a bordo» é relato (com número), não pergunta
+    if (has(q, PROFUNDIDADE_PALAVRAS) && !has(q, PROFUNDIDADE_FORA)) return 'profundidade';
+    if (etaPergunta(q)) return 'eta';
+    if (alarmesPergunta(q)) return 'alarmes';
+    if (arrefecimentoPergunta(q)) return 'arrefecimento';
+    // «quanto falta para a troca de óleo / a revisão?»: as horas que faltam são dos horímetros (a manutenção, sem horas)
+    if (has(q, FALTA_PALAVRAS) && has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && !has(q, EQUIP)) return 'horimetros';
     if (has(q, ['telemetria', 'leituras', 'sensores', 'como esta o barco', 'estado do barco', 'status do barco'])) return 'telemetria';
     if (has(q, ['anomalia', 'pendencia', 'problema aberto'])) return 'anomalias';
     if (has(q, ['diario'])) return 'diarioLer';
@@ -1088,6 +1350,8 @@
     if (CORRENTE_ANCORA.test(q) && !has(q, [' mare', 'correnteza', 'corrente de mare'])) return 'ancora';
     if (has(q, [' mare', 'correnteza', 'corrente de mare']) || (has(q, [' corrente']) && !has(q, ['bateria', 'carregador', 'eletric', 'tensao', 'amper', 'alternada', 'continua', 'shore', 'tomada', ' ac ', ' dc ', 'ancora', 'amarra']))) return 'mare';
     if (has(q, [' clima ', 'climatic', 'tempo hoje', ' vento', 'chuva', 'meteor', 'temperatura hoje']) || (has(q, ['previsao']) && !has(q, [' revisao', 'manutenc', 'devoluc', 'entrega', 'chegada']))) return 'clima';
+    if (has(q, ONDAS_PALAVRAS) && !has(q, ONDAS_FORA)) return 'ondas';
+    if (aguaPergunta(q)) return 'temperaturaAgua';
     if (has(q, ['para onde', 'destino', 'passeio', 'onde vamos', 'melhor rota', 'rota para', 'rota ate'])) return 'destinos';
     if (has(q, ['checklist de chegada', 'chegada'])) return 'checklistChegada';
     if (has(q, ['checklist', 'check list', ' saida'])) return 'checklist';
@@ -1106,7 +1370,9 @@
     if (has(q, ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual']) || seafireDisparo(q)) return 'seafire';
     // documento/licença antes do rádio: "Licença de estação" é documento, não MAYDAY
     if (has(q, ['document', 'licenc', ' tie ', 'titulo de inscricao', 'seguro da', 'apolice', 'laudo', 'vistoria', 'vencendo', 'certificado', 'garantia'])) return 'docsvenc';
-    if (has(q, ['canal 16', ' vhf', ' radio', ' ais ', 'mmsi', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
+    // o AIS tem a rota dele, antes do canal16 (PROMPT §2.2: a pergunta do AIS não é o roteiro MAYDAY nem liga a conversa em emergência); o MMSI foi para a rota mmsi, acima
+    if (has(q, [' ais '])) return 'ais';
+    if (has(q, ['canal 16', ' vhf', ' radio', ' dsc', 'pan-pan', 'pan pan'])) return 'canal16';
     if (has(q, ['contato', 'telefone', 'equipe', 'oficina', 'quem chamar', 'tecnico de bordo', 'marina da base'])) return 'contatos';
     // "bomba" sozinha é a de porão. Com o nome de outra bomba (água salgada, rotor, impeller, climatização, gerador, motor, estabilizador…) a
     // pergunta segue a rota do outro assunto ou o guia dele: "como trocar o rotor da bomba de água salgada" é o g_motores §7, e a resposta
@@ -1134,12 +1400,14 @@
     if (has(q, ['motor', 'partida', 'volvo', 'penta', ' revisao'])) return 'motores';
     if (has(q, ['manutenc', 'vence', 'atrasad', 'agenda', 'tarefa'])) return 'manutencao';
     if (has(q, ['bateria', '24 v', '24v', '12 v', '12v', 'eletric', 'tensao', 'voltagem', 'carregador'])) return 'eletrico';
-    if (has(q, ['posicao', 'onde estou', 'onde esta o barco', 'coordenada', ' gps', ' proa', 'velocidade'])) return 'posicao';
+    if (has(q, ['posicao', 'onde estou', 'onde estamos', 'onde esta o barco', 'coordenada', ' gps', ' proa', ' rumo', ' cog ', ' sog ', 'quantos nos', 'velocidade'])) return 'posicao';
     // "Rajada" é a previsão do dia só em pergunta de previsão ("vai ter rajada hoje?", "como estão as rajadas?", "previsão de rajada"),
     // e depois das rotas de equipamento. "Hoje"/"agora" sozinhos não bastam: relato ("pegamos uma rajada agora e o barco adernou",
     // "a rajada de hoje arrancou o toldo", "a âncora garrou com a rajada"), pessoa em risco e limite do barco seguem o equipamento ou a IA.
     if (has(q, [' rajada']) && (RAJADA_SO.test(q) || has(q, ['previs', 'vai ter rajada', 'tem rajada', ' ha rajada', 'havera rajada', 'como estao as rajadas', 'como esta a rajada', 'como vao estar as rajadas']))
       && !has(q, RAJADA_RELATO)) return 'clima';
+    // foraBarco (PROMPT §2.7): depois de todas as rotas de bordo e antes do fallback; local, sem IA, sem preço nem número
+    if (has(q, FORA_BARCO)) return 'foraBarco';
     if (has(q, [' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', 'ajuda', 'o que voce faz', 'quem e voce']) || SOBRE.test(q)) return 'saudacao';
     return 'fallback';
   }
@@ -1296,7 +1564,7 @@
     return (m && m[0].length > max * 0.5 ? m[0] : c.slice(0, c.lastIndexOf(' ')) + '…');
   }
   var MAX_SEGURANCA = 1500;
-  var GENERICAS = { gerador: 1, motores: 1, audio: 1, estabilizador: 1, eletronicos: 1, climatizacao: 1, dessalinizador: 1, eletrico: 1, porao: 1, ancora: 1, manual: 1, clima: 0 };
+  var GENERICAS = { gerador: 1, motores: 1, audio: 1, estabilizador: 1, eletronicos: 1, climatizacao: 1, dessalinizador: 1, eletrico: 1, porao: 1, ancora: 1, ais: 1, manual: 1, clima: 0 };
   var ESPECIFICA = /\b(como|trocar|troca|substitu\w*|parear|pareamento|conectar|codigo|codigos|alarme|alarmes|erro|falha|falhas|defeito|superaquec\w*|oleo|filtro|impeller|impelidor|rotor|capacidade|litros|pressao|temperatura|onde fica|localiza\w*|procedimento|passo|reset\w*|calibr\w*|configur\w*|limp\w*|intervalo|torque|especifica\w*|viscosidade|bluetooth|dsc|mob|zinco|anodo|fusivel|disjuntor|fluxo)\b/;
   // Resposta pronta de equipamento × trecho do guia (revisão 5 do C5). A resposta pronta (GENERICAS) só cede ao trecho do topo quando ele é
   // do assunto perguntado. Com os 91 trechos, "como ligar o plotter" trazia o "Ligar e transmitir" do radar ("ligue o radar pelo plotter"),
@@ -1311,7 +1579,7 @@
   // abre a busca (a pergunta o nomeia) não passa por aqui, e a pergunta sem resposta pronta (fallback) também não.
   // (a âncora também é do g_eletronicos: o alarme de âncora está no plotter, §3)
   var FAMILIA = { gerador: ['g_gerador'], motores: ['g_motores'], estabilizador: ['g_seakeeper'], climatizacao: ['g_clima'], dessalinizador: ['g_dessalinizador'],
-    eletrico: ['g_eletrico'], porao: ['g_porao'], ancora: ['g_ancora', 'g_eletronicos'], audio: ['g_eletronicos'], eletronicos: ['g_eletronicos', 'g_piloto', 'g_radar', 'g_ais'] };
+    eletrico: ['g_eletrico'], porao: ['g_porao'], ancora: ['g_ancora', 'g_eletronicos'], ais: ['g_ais'], audio: ['g_eletronicos'], eletronicos: ['g_eletronicos', 'g_piloto', 'g_radar', 'g_ais'] };
   var SEM_ASSUNTO = {}; tokens('funciona funcionamento').forEach(function (w) { SEM_ASSUNTO[w] = 1; });
   function trechoServe(key, q, d) {
     var fam = FAMILIA[key];
@@ -1356,7 +1624,7 @@
     // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
-    if (key === 'fallback' || (GENERICAS[key] && ESPECIFICA.test(' ' + norm(q) + ' '))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
+    if (key === 'fallback' || (GENERICAS[key] && (ESPECIFICA.test(' ' + norm(q) + ' ') || (key === 'ais' && !AIS_STATUS.test(' ' + norm(q) + ' '))))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     a.key = key;
     return a;
   }
