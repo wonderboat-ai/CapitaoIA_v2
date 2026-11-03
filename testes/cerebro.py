@@ -3559,12 +3559,16 @@ def grupo_ficha(b, muta, ped):
             lit = r['txt']['diesel'].split(' L')[0]   # (os litros: a resposta «telemetria» os escreve «≈ 1.333 L de 1.600», o inst.txt «1.333 L (83,3 %)»)
             ped(rot + ': a navegação e a telemetria da resposta dizem o mesmo rpm, SOG e litros de diesel', all(r['txt'][k] in r['tele'] and r['txt'][k] in nav for k in ('rpm', 'sog')) and lit in r['tele'] and lit in nav, (r['txt']['rpm'], lit, r['tele'][:80]))
             ped(rot + ': o vento da navegação é o de bordo agora (o vento verdadeiro do quadro, não a previsão)', ('vento a bordo agora ' + r['txt']['vento']) in nav, nav[:300])
+            ped(rot + ': o vento aparente, as ondas e a água do mar do quadro também vão «a bordo agora» (decisão 12: vento e mar do quadro só assim; a ficha é o insumo da IA, que não pode dá-los como o mar do dia)',
+                all(k in r['txt'] for k in ('ventoAp', 'ondas', 'agua')) and all((rt + ' a bordo agora ' + r['txt'][k]) in nav for k, rt in (('ventoAp', 'vento aparente'), ('ondas', 'ondas'), ('agua', 'água do mar'))), nav[:400])
             ped(rot + ': a navegação traz a rota («rumo (COG)», «SOG», «STW»), a posição relativa e os alarmes', 'rumo (COG)' in nav and 'SOG ' in nav and 'STW ' in nav and ('alarmes: ' + r['txt']['alarmes']) in nav and r['txt']['relativa'] in nav, nav[:160])
             ped(rot + ': nenhuma coordenada (regex do §2.8) e nenhum termo do §3 (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL) na ficha', not confere.R_COORD.search(f) and not [n for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL') if RX[n].search(f)],
                 (confere.R_COORD.search(f) and confere.R_COORD.search(f).group(0), [n for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL') if RX[n].search(f)]))
             ped(rot + ': a ficha mantém «1.600» (o tanque) e o rpm do quadro com o mesmo texto da resposta «telemetria»', '1.600' in f and r['txt']['rpm'] in f and r['txt']['rpm'] in r['tele'], (r['txt']['rpm'],))
             rs = r['r']; tr = re.findall(r'^## (.*)$', rs, re.M); nr = bloco_ficha(rs, 'Navegação agora') or ''
-            ped(rot + ': a ficha resumida leva SÓ uma linha de navegação (o estado, a hora, SOG, rumo, motores, alarmes) e fica abaixo de 4.000 letras', tr == ORDEM_RESUMIDA and len(rs) < 4000 and len([l for l in nr.split('\n') if l and not l.startswith('(Fonte')]) == 1 and ('Navegando às ' + r['hora']) in nr and r['txt']['sog'] in nr and r['txt']['rpm'] in nr, (tr, len(rs), nr[:120]))
+            ped(rot + ': a ficha resumida leva SÓ uma linha de navegação (o estado, a hora, SOG, rumo, posição relativa, motores, alarmes) e fica abaixo de 4.000 letras', tr == ORDEM_RESUMIDA and len(rs) < 4000 and len([l for l in nr.split('\n') if l and not l.startswith('(Fonte')]) == 1 and ('Navegando às ' + r['hora']) in nr and r['txt']['sog'] in nr and r['txt']['rpm'] in nr, (tr, len(rs), nr[:120]))
+            ped(rot + ': a linha da resumida diz cada item com o MESMO texto do inst.txt: «SOG», «rumo (COG)», a posição relativa à rota, «motores» e «alarmes: …» (o título promete, cada um tem o seu mutante)',
+                all(x in nr for x in ('SOG ' + r['txt']['sog'], 'rumo (COG) ' + r['txt']['rumo'], r['txt']['relativa'], 'motores ' + r['txt']['rpm'], 'alarmes: ' + r['txt']['alarmes'])), nr[:240])
             ped(rot + ': a ficha da resposta de emergência (sos) sai sem o quadro (nem a navegação) e com a emergência', r['sosKey'] == 'sos' and 'Navegação agora' not in re.findall(r'^## (.*)$', r['sos'], re.M) and not [k for k in ('Telemetria', 'Horímetros', 'Autonomia e consumo') if '## ' + k in r['sos']] and '## Emergência' in r['sos'] and 'Agora' in r['sos'], re.findall(r'^## (.*)$', r['sos'], re.M))
         ped('tamanho da ficha (página sem o capitao-clima.js): nunca passa de B.FICHA_MAX (%d) nos %d instantes (máx. %d); a medida que vale é a de baixo, com a previsão e a maré' % (x['max'], len(tam), max(tam)), all(3000 <= n <= x['max'] for n in tam), tam)
     finally:
@@ -3623,6 +3627,53 @@ def grupo_ficha(b, muta, ped):
             pg.evaluate("() => { const B = window.CapitaoBrain; B.addDiario({ t: 'LINHAEEEE grava depois' }); }")
             depois = pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.diario.v1')).map((e) => e.t.slice(0, 9))")
             ped('ficha (%s): as linhas com `sim: true` %s, e o registro só cresce (a gravação depois da ficha guarda as 4 + 1)' % (nome, 'entram' if nome == 'simulação' else 'ficam FORA'), achou == esperado and len(depois) == 5, (achou, depois))
+        finally:
+            pg.ctx.close()
+    # semCoord FINAL (PROMPT §2.8, nos dois modos): é o filtro de TODA a ficha. Só os blocos do `bloco()` passam por um semCoord próprio; «## Embarcação», «## Equipamentos», «## Sobre o app» e a ficha resumida
+    # saem só pelo final. Coordenada plantada no cadastro (base, proprietário, registro, modelo e fabricante de equipamento) e no diário do aparelho nunca sai, na completa e na resumida
+    PLANTA_COORD = (";(function () { var D = window.CapitaoDados, E = D.embarcacao; E.base = \"Marina 26°59,6'S 048°36,8'W\"; E.proprietario = 'Lucas -26.9931 -48.6140'; E.registro = 'CIA 26°59\\'35\"S 048°36\\'48\"W';"
+                    " D.equipamentos.forEach(function (e) { if (e.id === 'motores') e.modelo = 'X lat -26.99312 lon -48.61403'; if (e.id === 'gerador') e.fabricante = '-26,993 / -48,614'; }); })();")
+    JS_COORD_FICHA = """(qs) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; B.addDiario({ t: 'Fundeio em 26°59,6\\'S 048°36,8\\'W, de manhã.' });
+      return qs.map((q) => [q, B.ficha('app', q, B.answer(q, op))]); }"""
+    for nome, extra in (('simulação', ''), ('modo real', SEM_SIMULACAO)):
+        pg = pagina(b, extra=PLANTA_COORD + extra, muta=muta)
+        try:
+            fs = pg.evaluate(JS_COORD_FICHA, [PERGUNTA_FICHA, PERGUNTA_META])
+            for q, f in fs:
+                tit = 'completa' if q == PERGUNTA_FICHA else 'resumida'
+                emb, eqp = bloco_ficha(f, 'Embarcação') or '', bloco_ficha(f, 'Equipamentos') or ''
+                ped('ficha %s (%s): coordenada plantada no cadastro (base, proprietário, registro, modelo e fabricante de equipamento) e no diário não sai: nenhum trecho casa o R_COORD e os dígitos somem' % (tit, nome),
+                    not confere.R_COORD.search(f) and not [x for x in ("26°59", "048°36", "26.9931", "48.6140", "26.99312", "48.61403", "26,993", "48,614") if x in f] and emb.count('(coordenadas só na tela do app)') >= 3 and 'Marina' in emb and 'Lucas' in emb and '(coordenadas só na tela do app)' in eqp,
+                    (confere.R_COORD.search(f) and confere.R_COORD.search(f).group(0), emb[:260], eqp[:120]))
+        finally:
+            pg.ctx.close()
+    # a execução (capitao.executado.v1) com `sim: true` (CONTRATO §1.25): com simulacao false ela também fica FORA da ficha (a tarefa volta a atrasada, como a linha do diário), com a simulação ligada vale, uma
+    # execução sem `sim` vale nos dois, o registro não perde nada e a ficha não deixa o filtro ligado nas respostas da tela
+    JS_EXEC_FICHA = """(plantio) => { localStorage.setItem('capitao.executado.v1', JSON.stringify(plantio)); const B = window.CapitaoBrain, op = { platform: 'app', commit: false }, q = 'como se faz um nó lais de guia?';
+      const blk = (f, t) => { const m = new RegExp('(?:^|\\\\n\\\\n)## ' + t + '\\\\n([\\\\s\\\\S]*?)(?=\\\\n\\\\n## |$)').exec(f); return m ? m[1] : ''; };
+      const f = B.ficha('app', q, B.answer(q, op)), dep = B.answer('próximas manutenções', op);
+      return { man: blk(f, 'Manutenção'), hor: blk(f, 'Horímetros'), depois: dep.text, bruto: localStorage.getItem('capitao.executado.v1') }; }"""
+    EX = {'d': '03/11', 't': '00:38', 'iso': '2026-11-03T03:38:00.000Z'}
+    TAREFA = 'Teste das bombas de porão'
+    nat = lambda t: int((re.search(r'Atrasadas \((\d+)\)', t) or [0, -1])[1])
+    OLEO = 'Óleo e filtros dos motores:'   # (a linha do óleo da «## Manutenção» some quando a troca está executada) e a do «## Horímetros»: «Troca de óleo dos motores: executada em …»
+    pg = pagina(b, muta=muta)
+    try:
+        r0 = pg.evaluate(JS_EXEC_FICHA, {})
+        n0 = nat(r0['man'])
+    finally:
+        pg.ctx.close()
+    ped('ficha (execução sim: true): sem execução nenhuma o bloco «## Manutenção» tem a tarefa de segurança entre as atrasadas (a medida de comparação: %d), a linha do óleo e a próxima troca nos «## Horímetros»' % n0,
+        n0 >= 2 and TAREFA in r0['man'] and OLEO in r0['man'] and 'executada em' not in r0['hor'] and 'Próxima troca de óleo dos motores' in r0['hor'], (n0, r0['man'][:80], r0['hor'][-200:]))
+    for nome, extra, plantio, vale in (('simulação', '', dict(EX, sim=True), True), ('simulação', '', EX, True), ('modo real', SEM_SIMULACAO, dict(EX, sim=True), False), ('modo real', SEM_SIMULACAO, EX, True)):
+        pg = pagina(b, extra=extra, muta=muta)
+        try:
+            mapa = {'porao-teste': plantio, 'motores-oleo': plantio}
+            r = pg.evaluate(JS_EXEC_FICHA, mapa)
+            ped('ficha (%s): a execução (teste das bombas e troca de óleo) %s %s na ficha (a tarefa de segurança %s das atrasadas, a linha do óleo %s e os «## Horímetros» %s)' % (nome, 'com `sim: true`' if plantio.get('sim') else 'sem `sim`', 'vale' if vale else 'NÃO vale', 'sai' if vale else 'continua entre', 'some' if vale else 'continua', 'dizem «executada»' if vale else 'não dizem «executada»'),
+                nat(r['man']) == (n0 - 1 if vale else n0) and (TAREFA in r['man']) == (not vale) and (OLEO in r['man']) == (not vale) and ('Troca de óleo dos motores: executada em 03/11 às 00:38' in r['hor']) == vale, (nat(r['man']), n0, r['man'][:120], r['hor'][-160:]))
+            ped('ficha (%s, execução %s): o registro só cresce (o mapa do aparelho fica como estava) e a resposta da tela depois da ficha ainda conta a execução (o filtro da ficha não vaza: «próximas manutenções» tem %d atrasadas e sem a linha do óleo)' % (nome, 'com `sim: true`' if plantio.get('sim') else 'sem `sim`', n0 - 1),
+                json.loads(r['bruto']) == mapa and nat(r['depois']) == n0 - 1 and TAREFA not in r['depois'].split('Próximas')[0] and OLEO not in r['depois'], (nat(r['depois']), r['depois'][:100], r['bruto'][:80]))
         finally:
             pg.ctx.close()
 
@@ -3764,7 +3815,7 @@ def grupo_voz(b, muta, ped):
     ENTRADAS = ["Os dados são fictícios e o gerador está SEM LEITURA. Veja o guia DEMO do motor.", "Estes valores não são reais, mas a pressão do óleo é 3,9 bar. Manual: MANUAL NO DRIVE.",
                 "Na demonstração o MMSI é fictício; o rpm é 2.049.", "O dado SEM DADOS do porão (agenda de demonstração) vem depois.", "Os dados são fictícios e simulados."]
     # a fala (falaCurta, chave `ia`: a 1ª frase e a seguinte, sem parênteses) e a trava direta (travaVoz) de cada entrada, letra por letra
-    FALA_TRAVA = ["Os dados são de bordo e o gerador está sem informação. Veja o guia de bordo do motor.", "Estes valores são de bordo, mas a pressão do óleo é 3,9 bar. Manual: no guia de bordo.",
+    FALA_TRAVA = ["Os dados são de bordo e o gerador está sem informação. Veja o guia de bordo do motor.", "Estes valores não são de bordo, mas a pressão do óleo é 3,9 bar. Manual: no guia de bordo.",
                   "A bordo o MMSI é de bordo; o rpm é 2.049.", "O dado sem informação do porão vem depois.", "Os dados são de bordo."]
     DIRETA_TRAVA = [FALA_TRAVA[0], FALA_TRAVA[1], FALA_TRAVA[2], "O dado sem informação do porão (agenda de bordo) vem depois.", FALA_TRAVA[4]]
     # cada ramo da troca (a AUTENTICIDADE e os ROTULOS do §3): o substantivo, o verbo, a preposição e a pontuação ficam; só o termo, inteiro, vira «de bordo» (que não varia com o gênero nem o número)
@@ -3773,7 +3824,10 @@ def grupo_voz(b, muta, ped):
                    ('São dados de demonstração', 'São dados de bordo'), ('São dados de teste', 'São dados de bordo'), ('a navegação foi simulada', 'a navegação foi de bordo'), ('rota simulada do barco', 'rota de bordo do barco'),
                    ('o barco é fictício', 'o barco é de bordo'), ('esta embarcação é de demonstração', 'esta embarcação é de bordo'), ('dados fictícios, simulados e inventados', 'dados de bordo'),
                    ('Isto é uma simulação de navegação.', 'Isto é de bordo de navegação.'), ('é uma simulação', 'é de bordo'), ('foi demonstração', 'foi de bordo'),
-                   ('estes valores não são reais', 'estes valores são de bordo'), ('Os dados não são de verdade.', 'Os dados são de bordo.'),
+                   ('estes valores não são reais', 'estes valores não são de bordo'), ('Os dados não são de verdade.', 'Os dados não são de bordo.'),
+                   # a negação fica: trocar o casamento inteiro tirava o «não» e afirmava o contrário («a leitura não é verdadeira» virava «é de bordo»); só o predicado vira «de bordo», com a caixa do «Não»
+                   ('Atenção: a leitura de pressão de óleo não é verdadeira, confira o manômetro.', 'Atenção: a leitura de pressão de óleo não é de bordo, confira o manômetro.'), ('Esses números não são verdadeiros.', 'Esses números não são de bordo.'),
+                   ('Não é de verdade.', 'Não é de bordo.'), ('Isso não é uma simulação.', 'Isso não é de bordo.'), ('Os valores não são reais e fictícios.', 'Os valores não são de bordo.'),
                    ('Na demonstração, ok', 'A bordo, ok'), ('na demonstração', 'a bordo'), ('a rota da demonstração', 'a rota de bordo'), ('modo demonstração', 'modo de bordo'), ('Modo de simulação ligado', 'Modo de bordo ligado'),
                    ('(agenda de demonstração)', '(agenda de bordo)'), ('embarcação Capitão IA (demonstração)', 'embarcação Capitão IA de bordo'),
                    ('Guia de bordo de demonstração. Veja o resto.', 'Guia de bordo. Veja o resto.'), ('MMSI fictício de demonstração', 'MMSI de bordo'),
@@ -3795,6 +3849,9 @@ def grupo_voz(b, muta, ped):
                 ped('trava de voz (%s): %d trocas, uma por ramo (adjetivo concordando, «de demonstração», «de teste», «é uma simulação», «não são reais», «na/da demonstração», «modo demo», «(demonstração)», ROTULOS, duplicata «de bordo de bordo»), letra por letra' % (nome, len(TRAVA_CASOS)), not ruins, ruins[:3])
                 ruins = [(e, o) for e, o, resta, idem in t['corpus'] if resta or not idem or re.search(r'bordo[A-Za-zÀ-ÿ]|[A-Za-zÀ-ÿ]bordo|\s\s|^\s*$', o)]
                 ped('trava de voz (%s): nas %d frases do §3 (AUTENTICIDADE e ROTULOS) nenhum termo resta, o resto da palavra nunca fica colado em «bordo», não sobra espaço dobrado e a troca é idempotente' % (nome, len(t['corpus'])), not ruins, ruins[:3])
+                ped('trava de voz (%s): a negação nunca some (toda frase do §3 com «não» sai da trava com o «não») e a frase negada não vira afirmação' % nome,
+                    all(re.search(r'\bn[ãa]o\b', o, re.I) for e, o, resta, idem in t['corpus'] if re.search(r'\bn[ãa]o\b', e, re.I)) and not [1 for (e, esp), o in zip(TRAVA_CASOS, t['casos']) if re.search(r'\bn[ãa]o\b', e, re.I) and not re.search(r'\bn[ãa]o\b', o, re.I)],
+                    [(e, o) for e, o, resta, idem in t['corpus'] if re.search(r'\bn[ãa]o\b', e, re.I) and not re.search(r'\bn[ãa]o\b', o, re.I)])
                 ped('trava de voz (%s): as chaves de FALA_INTEIRA saem sempre inteiras, mesmo com o termo no texto' % nome, all(f == ENTRADAS[0] for k, f in t['inteira']), t['inteira'])
                 ped('trava de voz (%s): o trecho de segurança da base também passa pela trava' % nome, not RX['ROTULOS'].search(t['base']) and not RX['AUTENTICIDADE'].search(t['base']), t['base'])
                 ped('trava de voz (%s): idempotente (trocar o que já foi trocado não muda)' % nome, pg.evaluate("(e) => window.CapitaoBrain.travaVoz(window.CapitaoBrain.travaVoz(e)) === window.CapitaoBrain.travaVoz(e)", ENTRADAS[0]), '')
@@ -3917,7 +3974,7 @@ MUTANTES_3A = [
     ('o instante só é solto sem exceção (sem finally)', "    try { return f(); } finally { if (--CONG.n === 0) CONG.inst = null; }", "    var r = f(); if (--CONG.n === 0) CONG.inst = null; return r;", ('uma',)),
     ('Date.now numa segunda leitura (a hora da ficha)', "    var ms = CONG.inst && CONG.inst.ms;   // a hora da ficha é a do instante da pergunta (a mesma da telemetria)", "    var ms = Date.now();", ('uma',)),
     ('o resumo lê um instante novo', "      if (i) return x && x.semPosicao ? i.txt.resumoSemPosicao : i.txt.resumo;", "      if (i) return lerInstante().txt.resumo;", ('uma',)),
-    ('a ficha ignora o instante da resposta', "  function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }", "  function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }); }", ('uma',)),
+    ('a ficha ignora o instante da resposta', "return congela(function () { return ficha1(p, q, a); }, a && a._inst);", "return congela(function () { return ficha1(p, q, a); });", ('uma',)),
     ('a resposta não leva o instante dela', "a = marca(responde(junto || q1, ctx));", "a = responde(junto || q1, ctx);", ('uma',)),
     ('a fonte do replay vira «coletor NMEA»', "      fonte: v.fonteTxt });", "      fonte: 'coletor NMEA \u00b7 ao vivo ' + v.hora });", ('uma',)),
     ('o VIVO escreve «coletor NMEA» para o replay', "      return { text: r.text, src: 'Fonte: ' + i.fonteTxt, actions: base.actions };", "      return { text: r.text, src: 'Fonte: coletor NMEA \u00b7 ao vivo ' + i.hora, actions: base.actions };", ('uma',)),
@@ -4443,7 +4500,7 @@ MUTANTES_3D = [
     ('a navegação perde a posição relativa', r"un('piloto', t.piloto), un('leme', t.leme), t.relativa, un('destino'", r"un('piloto', t.piloto), un('leme', t.leme), un('destino'", ('ficha',)),
     ('a navegação perde o consumo e o diesel', r"junta([un('consumo', t.consumo), un('diesel', t.diesel),", r"junta([", ('ficha',)),
     ('a navegação perde os motores (rpm, óleo, arrefecimento, carga)', r"junta([un('motores', t.rpm), un('óleo', t.oleo)", r"junta([un('óleo', t.oleo)", ('ficha',)),
-    ('a navegação perde a profundidade, o vento e o mar', r"junta([un('profundidade', t.prof), t.vento ? 'vento a bordo agora ' + t.vento : '', un('vento aparente', t.ventoAp), un('ondas', t.ondas), un('água do mar', t.agua),", r"junta([", ('ficha',)),
+    ('a navegação perde a profundidade, o vento e o mar', r"junta([un('profundidade', t.prof), t.vento ? 'vento a bordo agora ' + t.vento : '', un('vento aparente a bordo agora', t.ventoAp), un('ondas a bordo agora', t.ondas), un('água do mar a bordo agora', t.agua),", r"junta([", ('ficha',)),
     ('a navegação escreve o vento sem o «a bordo agora»', r"t.vento ? 'vento a bordo agora ' + t.vento : ''", r"t.vento ? 'vento ' + t.vento : ''", ('ficha',)),
     ('a ficha resumida perde a linha de navegação', r"    if (resumida) bloco('Navegação agora', linhaNavegacao);", r"", ('ficha',)),
     ('a ficha resumida leva a navegação inteira (passa de 4.000 letras)', r"    if (resumida) bloco('Navegação agora', linhaNavegacao);", r"    if (resumida) bloco('Navegação agora', navegacaoAgora);", ('ficha',)),
@@ -4524,7 +4581,7 @@ MUTANTES_3D_VOZ = [
     ('a trava come o substantivo (a troca vale para o casamento todo: «dado de bordo»)', r"    return ini + (x ? r.slice(0, x.index) : '') + VOZ_NEUTRO;", r"    return ini + VOZ_NEUTRO;", ('voz',)),
     ('a trava come o caractere que antecede o termo (o espaço: «Osdados»)', r"    ini = /^[^A-Za-zÀ-ÿ]/.test(m) ? m.charAt(0) : ''; r = m.slice(ini.length);", r"    ini = ''; r = m.slice(/^[^A-Za-zÀ-ÿ]/.test(m) ? 1 : 0);", ('voz',)),
     ('a trava come o verbo de «é uma simulação» («Isto de bordo»)', r"(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;", r"(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + VOZ_NEUTRO;", ('voz',)),
-    ('a trava inverte «não são reais» sem trocar o verbo (o «não» fica)', r"    if ((x = /^n[ãa]o (é|são) /i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;", r"", ('voz',)),
+    ('a trava apaga a negação inteira (o ramo «não é/são …» some: «não são reais» vira só «de bordo»)', r"    if ((x = /^(n[ãa]o) (é|são) /i.exec(r))) return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;", r"", ('voz',)),
     ('a trava troca «na demonstração» por «de bordo» (a preposição vira a mesma)', r"vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1])", r"vozMaiuscula(VOZ_NEUTRO, x[1])", ('voz',)),
     ('a trava perde a maiúscula do começo da frase («a bordo»)', r"return ini + vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1]);", r"return ini + (/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo');", ('voz',)),
     ('a trava não troca o «modo demo» pelo «modo de bordo» (o termo fica sem o «modo»)', r"return ini + r.slice(0, 4) + ' ' + VOZ_NEUTRO;", r"return ini + VOZ_NEUTRO;", ('voz',)),
@@ -4569,6 +4626,48 @@ MUTANTES_3D_VOZ = [
     ('a tendência põe o espaço fino depois de TODO + (o +644 do contrato muda)', r"'+' + (/^55\d/.test(n) ? '\u2009' : '')", r"'+\u2009'", ('termos', 'forma')),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3D_VOZ
+
+
+# Mutantes da revisão da P3D: o semCoord FINAL da ficha, cada item da linha da resumida, o «a bordo agora» do vento aparente, das ondas e da água do mar, a execução com `sim: true` e a negação da trava de voz
+MUTANTES_3D_REV = [
+    # —— o semCoord final (o único filtro de «## Agora», «## Sobre o app», «## Embarcação», «## Equipamentos», «## Emergência» e da «## Ficha resumida») ——
+    ('a ficha completa perde o semCoord final (a coordenada do cadastro vaza em «## Embarcação» e «## Equipamentos»)', r"""    return semCoord(out.join('\n\n'));
+  }
+
+  // Anexos""", r"""    return out.join('\n\n');
+  }
+
+  // Anexos""", ('ficha',)),
+    ('a ficha resumida perde o semCoord final (a coordenada do cadastro vaza em «## Embarcação»)', r"""      return semCoord(out.join('\n\n'));
+    }
+    bloco('Telemetria'""", r"""      return out.join('\n\n');
+    }
+    bloco('Telemetria'""", ('ficha',)),
+    # —— a linha única da ficha resumida: cada item que o título promete ——
+    ('a linha da resumida perde os alarmes', r"t.alarmes ? 'alarmes: ' + t.alarmes : ''].filter(Boolean).join(' · ');", r"''].filter(Boolean).join(' · ');", ('ficha',)),
+    ('a linha da resumida perde o rumo (COG)', r"t.rumo ? 'rumo (COG) ' + t.rumo : '', t.relativa || '',", r"t.relativa || '',", ('ficha',)),
+    ('a linha da resumida perde a posição relativa à rota', r"t.rumo ? 'rumo (COG) ' + t.rumo : '', t.relativa || '',", r"t.rumo ? 'rumo (COG) ' + t.rumo : '',", ('ficha',)),
+    ('a linha da resumida perde o rótulo «motores»', r"t.rpm ? 'motores ' + t.rpm : '',", r"t.rpm ? t.rpm : '',", ('ficha',)),
+    ('a linha da resumida perde o SOG', r"t.sog ? 'SOG ' + t.sog : '', t.rumo", r"t.rumo", ('ficha',)),
+    # —— vento aparente, ondas e água do mar do quadro: «a bordo agora» (decisão 12) ——
+    ('a navegação escreve o vento aparente sem o «a bordo agora»', r"un('vento aparente a bordo agora', t.ventoAp)", r"un('vento aparente', t.ventoAp)", ('ficha',)),
+    ('a navegação escreve as ondas sem o «a bordo agora»', r"un('ondas a bordo agora', t.ondas)", r"un('ondas', t.ondas)", ('ficha',)),
+    ('a navegação escreve a água do mar sem o «a bordo agora»', r"un('água do mar a bordo agora', t.agua)", r"un('água do mar', t.agua)", ('ficha',)),
+    # —— a execução com `sim: true` fora da ficha com simulacao false ——
+    ('a ficha do modo real conta a execução com `sim: true` (a visão da execução ignora a flag)', r"if (!EXEC_SEM_SIM) return m; var r = {};", r"return m; var r = {};", ('ficha',)),
+    ('a ficha nunca liga o filtro da execução', r"    EXEC_SEM_SIM = semSim;   // a execução", r"    // a execução", ('ficha',)),
+    ('a ficha tira a execução com `sim: true` também com a simulação ligada (o filtro sempre ligado)', r"    EXEC_SEM_SIM = semSim;   // a execução", r"    EXEC_SEM_SIM = true;   // a execução", ('ficha',)),
+    ('a ficha deixa o filtro da execução ligado depois (vaza para a resposta da tela)', r"finally { EXEC_SEM_SIM = false; } }", r"finally { } }", ('ficha',)),
+    ('a agenda lê o mapa cru da execução (a ficha do modo real esconde a tarefa executada com sim)', r"function agenda() { var ex = execVisivel();", r"function agenda() { var ex = loadExec();", ('ficha',)),
+    ('o texto «executada em …» lê o mapa cru (os «## Horímetros» do modo real dizem «executada» com sim)', r"var f = t && execVisivel()[t.id];", r"var f = t && loadExec()[t.id];", ('ficha',)),
+    ('a linha do óleo da «## Manutenção» lê o mapa cru', r"oleoM && oleoM.horas && !execVisivel()[oleoM.id] ?", r"oleoM && oleoM.horas && !loadExec()[oleoM.id] ?", ('ficha',)),
+    ('a visão da execução tira também a execução sem `sim` (o filtro pega tudo)', r"if (!m[k] || m[k].sim !== true) r[k] = m[k];", r"if (!m[k]) r[k] = m[k];", ('ficha',)),
+    # —— a trava de voz mantém a negação ——
+    ('a trava tira o «não» de «não é verdadeira» (afirma o contrário: «a leitura é de bordo»)', r"return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", r"return ini + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", ('voz',)),
+    ('a trava perde a maiúscula do «Não» (a frase começa em minúscula)', r"return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", r"return ini + 'não ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", ('voz',)),
+    ('a trava troca «não é verdadeira» por «não é» (sem o predicado «de bordo»)', r"return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA", r"return ini + x[1] + ' ' + x[2];   // a negação FICA", ('voz',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3D_REV
 
 
 def instante_3a(b):

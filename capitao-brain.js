@@ -81,6 +81,11 @@
   function addDiario1(e) { var n = now(); var list = loadDiario(); var entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e); list.unshift(entry); write(K.diario, list); return entry; }
   function diarioFonte() { return (D.diario || []).map(function (x) { return { d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: (D.diarioFonte || 'diário') }; }); }
   function loadExec() { var v = read(K.exec, {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
+  // A execução COMO AS RESPOSTAS A LEEM. Dentro da ficha com simulacao false, a execução com `sim: true` (gravada com a simulação ligada, CONTRATO §1.25) fica fora, como a linha do diário (CLAUDE.md 14): a tarefa
+  // volta a atrasada para a IA. `EXEC_SEM_SIM` só liga dentro da ficha (síncrona; a ficha1 liga, a ficha desliga no fim); as respostas da tela e o resto do app leem o mapa inteiro. O mapa guardado nunca muda
+  // (o registro só cresce; o markExec e o unmarkExec leem o `loadExec`, nunca esta visão).
+  var EXEC_SEM_SIM = false;
+  function execVisivel() { var m = loadExec(); if (!EXEC_SEM_SIM) return m; var r = {}; Object.keys(m).forEach(function (k) { if (!m[k] || m[k].sim !== true) r[k] = m[k]; }); return r; }
   function markExec(task) { var m = loadExec(); m[task] = now(); write(K.exec, m); return m; }
   // Desfaz um Executado: relê a lista, tira só essa tarefa e grava (sem a tarefa ou com dado ruim, não grava nada)
   function unmarkExec(task) { var m = loadExec(); if (task != null && Object.prototype.hasOwnProperty.call(m, String(task))) { delete m[String(task)]; write(K.exec, m); } return m; }
@@ -381,12 +386,12 @@
   function prazoSt(n) { var A = window.CapitaoAgora; try { if (A && typeof A.prazoDe === 'function') return A.prazoDe(n); } catch (e) {} return { st: n < 0 ? 'ATRASADA' : 'EM DIA' }; }
   function atrasadaN(n) { return !isNaN(n) && prazoSt(n).st === 'ATRASADA'; }
   function seg(t) { var e = t && equip(t.sistema); return !!(e && e.seguranca); }
-  function agenda() { var ex = loadExec(); return (D.agenda || []).filter(function (t) { return !ex[t.id]; }).sort(function (a, b) { return (dnDe(a) - dnDe(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); }); }
+  function agenda() { var ex = execVisivel(); return (D.agenda || []).filter(function (t) { return !ex[t.id]; }).sort(function (a, b) { return (dnDe(a) - dnDe(b)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); }); }
   function atrasadas() { return agenda().filter(function (t) { return atrasadaN(dnDe(t)); }); }
   function tarefa(id) { return (D.agenda || []).filter(function (t) { return t.id === id; })[0] || null; }
   // «executada em 03/11 às 00:38» (a troca, a limpeza, a revisão, a inspeção) ou «executado em …» (o teste, o anodo): o gênero é o do título da tarefa; sem Executado, null
   function execTxt(t) {
-    var f = t && loadExec()[t.id];
+    var f = t && execVisivel()[t.id];
     return f ? (/^(troca|inspecao|limpeza|revisao|atualizacao|verificacao|manutencao|calibragem|calibracao)\b/.test(norm(t.t || '')) ? 'executada' : 'executado') + ' em ' + f.d + ' às ' + f.t : null;
   }
   function prazoTxt(t) {
@@ -921,7 +926,7 @@
     manutencao: function (p) {
       var at = atrasadas(), prox = agenda().filter(function (t) { return !atrasadaN(dnDe(t)); }).slice(0, 3), oleoM = tarefa('motores-oleo'), i = vivo();
       var linha = function (t) { return seg(t) ? '• ' + t.t + ' (' + t.quem + ') — ' + NOTA_ETIQUETA : '• ' + prazoTxt(t) + ' — ' + t.t + ' (' + t.quem + ')'; };
-      return { text: (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !loadExec()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
+      return { text: (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !execVisivel()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
     autonomia: function (p) { return { text: 'Autonomia ≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de ' + reservaPct() + ' %.\nA bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + (vivo() ? CON.fonte : CON.periodo) + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
     // Maré: do mundo real (Open-Meteo Marine, modelo, não a tábua da Marinha). Sem conexão e sem leitura salva: a frase do §2.5 e a situação de bordo (decisão (g)).
@@ -1926,15 +1931,15 @@
   // seguro?") ou trecho do guia ("quando foi a última troca de óleo?"), a completa: a resumida tirava o dado pedido (1.0.7).
   var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
   function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
-  function ficha(p, q, a) { return congela(function () { return ficha1(p, q, a); }, a && a._inst); }
+  function ficha(p, q, a) { try { return congela(function () { return ficha1(p, q, a); }, a && a._inst); } finally { EXEC_SEM_SIM = false; } }
   // O teto da ficha (letras). Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000. Medida nos 150 instantes do laço e em 4 instantes de cada uma das 576 voltas do dia:
-  // 11.339 a 11.483 letras sem a previsão e a maré (a página sem o capitao-clima.js), 11.616 a 11.760 COM elas (o app real sempre as tem: o capitao-clima.js grava a leitura do dia e a série da maré) e
-  // até 12.171 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js: `.slice(0, 12000)`) e os dois Workers cortam a ficha em 12.000
+  // 11.382 a 11.523 letras sem a previsão e a maré (a página sem o capitao-clima.js), 11.658 a 11.802 COM elas (o app real sempre as tem: o capitao-clima.js grava a leitura do dia e a série da maré) e
+  // até 12.213 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js: `.slice(0, 12000)`) e os dois Workers cortam a ficha em 12.000
   // PELO FIM (Clima e maré e Guias de bordo caem primeiro) e sobem juntos para 16.000 na Fase 6: este valor é o que eles têm de acompanhar. O testes/cerebro.py (grupo ficha) cobra a regra: acima
   // de 11.500 este valor TEM de ser 16.000. Exposto em B.FICHA_MAX. O «## Emergência» fica perto do topo porque o corte do cliente é pelo fim.
   var FICHA_MAX = 16000;
   // «## Navegação agora» (PROMPT Fase 3 «ficha()»): a hora e a fase, SOG/STW, rumo/COG e proa, a posição relativa (§2.8: só com a simulação e só dos pontos com fonte, nunca coordenada),
-  // profundidade, vento e mar a bordo, motores (rpm, óleo, arrefecimento, carga), consumo, diesel e autonomia, gerador, Seakeeper, baterias, porão e âncora, os alarmes e a tendência dos
+  // profundidade, vento e mar a bordo (o vento verdadeiro, o aparente, as ondas e a água do mar do quadro vão sempre «a bordo agora», decisão 12: a IA não os dá como o tempo do dia), motores (rpm, óleo, arrefecimento, carga), consumo, diesel e autonomia, gerador, Seakeeper, baterias, porão e âncora, os alarmes e a tendência dos
   // últimos ~30 s. Cada medida é o texto ÚNICO do instante (inst.txt: o mesmo da Main, da A1, do HUD e da answer('telemetria')). Só existe com o quadro vivo (replay ou coletor): sem ele
   // (modo real sem coletor, a reserva do snapshot) o bloco «Telemetria» já diz a data da última leitura. No modo real o coletor não traz posição relativa, e o bloco vai sem ela.
   function navegacaoAgora() {
@@ -1943,7 +1948,7 @@
     if (!i) return null;
     junta([cap1(q.estado || 'Navegando') + ' às ' + i.hora, f ? 'fase ' + f : '']);
     junta([un('SOG', t.sog), un('STW', t.stw), un('rumo (COG)', t.rumo), un('proa', t.proa), un('piloto', t.piloto), un('leme', t.leme), t.relativa, un('destino', t.destino), un('próximo ponto', t.wp), t.eta ? 'chegada prevista às ' + t.eta : '', un('percorrido', t.distancia)]);
-    junta([un('profundidade', t.prof), t.vento ? 'vento a bordo agora ' + t.vento : '', un('vento aparente', t.ventoAp), un('ondas', t.ondas), un('água do mar', t.agua), un('ar', t.ar), un('pressão', t.pressao)]);
+    junta([un('profundidade', t.prof), t.vento ? 'vento a bordo agora ' + t.vento : '', un('vento aparente a bordo agora', t.ventoAp), un('ondas a bordo agora', t.ondas), un('água do mar a bordo agora', t.agua), un('ar', t.ar), un('pressão', t.pressao)]);
     junta([un('motores', t.rpm), un('óleo', t.oleo), un('arrefecimento', t.arref), un('carga', t.carga), un('praça de máquinas', t.praca)]);
     junta([un('consumo', t.consumo), un('diesel', t.diesel), un('tanques', t.dieselLados), un('autonomia', t.autonomia)]);
     junta([t.gerador ? 'gerador ' + t.gerador : '', t.seakeeper ? 'Seakeeper ' + t.seakeeper : '', un('banco 24 V', t.b24), un('banco 12 V', t.b12), un('porão', t.porao), un('âncora', t.ancora)]);
@@ -1960,6 +1965,7 @@
   function ficha1(p, q, a) {
     p = p || 'app';
     var out = [], emergencia = emerg(a), resumida = fichaResumida(q, a), semSim = !EM_SOS && D.simulacao === false;
+    EXEC_SEM_SIM = semSim;   // a execução com `sim: true` também fica fora (as respostas deste bloco leem a agenda); a ficha() desliga no fim
     // (no SOS nada lê a flag, CONTRATO §1.3) resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Navegação agora, Horímetros, Autonomia e consumo)
     var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return; try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
     out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem());
@@ -2462,7 +2468,7 @@
     ini = /^[^A-Za-zÀ-ÿ]/.test(m) ? m.charAt(0) : ''; r = m.slice(ini.length);
     if (/^modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)$/i.test(r)) return ini + r.slice(0, 4) + ' ' + VOZ_NEUTRO;
     if ((x = /^(é|são|foi|está|estão) (?:uma? )?(?:simula|demonstra)[çc][ãa]o$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
-    if ((x = /^n[ãa]o (é|são) /i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
+    if ((x = /^(n[ãa]o) (é|são) /i.exec(r))) return ini + x[1] + ' ' + x[2] + ' ' + VOZ_NEUTRO;   // a negação FICA («a leitura não é verdadeira» → «não é de bordo»): sem o «não» a frase afirmava o contrário
     if ((x = /^(na|da|para) demonstra[çc][ãa]o$/i.exec(r))) return ini + vozMaiuscula(/^da$/i.test(x[1]) ? VOZ_NEUTRO : 'a bordo', x[1]);
     if ((x = /^(dados) de teste$/i.exec(r))) return ini + x[1] + ' ' + VOZ_NEUTRO;
     x = VOZ_FIM_TERMO.exec(r);
