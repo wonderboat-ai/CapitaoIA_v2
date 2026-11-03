@@ -726,7 +726,9 @@ NAO_ETA = ['quanto falta?', 'quanto falta', 'quanto tempo falta?', 'quantas milh
 MISTAS_CABECAS = [('acionar o EPIRB', 'epirb'), ('onde fica o EPIRB', 'epirb'), ('disparar o Seafire', 'seafire'), ('sistema de supressão', 'seafire'), ('o sistema fixo disparou', 'seafire'), ('canal 16', 'canal16'),
                   ('pan-pan', 'canal16'), ('fazer um pan pan', 'canal16'), ('teste do DSC', 'canal16'), ('botão DISTRESS do DSC', 'canal16')]
 MISTAS_CAUDAS = ['quantas pessoas a bordo?', 'qual o ETA?', 'quanto falta para chegar?', 'qual a profundidade?', 'quais alarmes ativos?', 'como está o estado do mar?', 'qual a temperatura da água?', 'qual a temperatura do motor?',
-                 'como está a navegação?', 'qual o calado do barco?', 'situação agora', 'qual o comprimento do barco?', 'o que é o AIS?', 'os dados são reais?', 'qual o MMSI?']
+                 'como está a navegação?', 'qual o calado do barco?', 'situação agora', 'qual o comprimento do barco?', 'o que é o AIS?', 'os dados são reais?', 'qual o MMSI?',
+                 # (P3E, revisão) o checklist (que traz a velocidade do quadro), a lista de tendências e o estoque de peças também não tomam a pergunta do equipamento de segurança
+                 'checklist de fundeio', 'checklist de saída', 'quais as tendências?', 'tem peça sobressalente?']
 
 
 def main():
@@ -4710,6 +4712,13 @@ ROTAS_P3E_F11 = [
     ('qual a tendência do Flamengo?', 'fallback', True), ('tendência da inflação', 'fallback', True), ('perdendo capacidade de carga', 'fallback', True), ('isso é real, tendências', 'fallback', True),
     ('o barco está perdendo capacidade?', 'fallback', True), ('estamos perdendo capacidade de governo', 'fallback', True), ('perdendo capacidade de manobra', 'fallback', True),
     ('o gerador está perdendo capacidade', 'gerador', False), ('o barco tem tendência a adernar', 'fallback', True), ('o que é análise preditiva?', 'fallback', True), ('tendência de pressão', 'fallback', True),
+    # (revisão 3) o relato do sintoma («está subindo», «caindo») + a palavra «tendência» não é a pergunta da tendência: a leitura calma («dentro da faixa normal», «ESTÁVEL») contra o relato seria o erro da trava 10;
+    # segue o guia do motor, a rota do equipamento ou a IA (como sem a palavra «tendência»). «Tendência de queda / de subida» é o substantivo e continua a pergunta.
+    ('a temperatura do motor está subindo, qual a tendência?', 'base', True), ('temperatura do motor subindo, tendência', 'base', True), ('arrefecimento subindo, qual a tendência', 'base', True),
+    ('o gerador está subindo de temperatura, qual a tendência?', 'gerador', False), ('a bateria está caindo, qual a tendência?', 'eletrico', False), ('bateria caindo tendência', 'eletrico', False),
+    ('tendência de subida da temperatura do motor', 'preditiva', False), ('qual a tendência de queda das baterias?', 'preditiva', False),
+    # (revisão 3) o relato de queda da pressão do óleo (segurança) vem antes, mesmo com «tendência de queda»
+    ('tendência de queda da pressão do óleo', 'oleo', False), ('qual a tendência de queda do óleo?', 'oleo', False),
 ]
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F11]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F11})
@@ -4848,9 +4857,12 @@ MUTANTES_3E_F11 = [
     ('p3e preditiva: a diferença abaixo de 1 °C vira «motor X acima do Y» (sem o ramo «esfriam igual»)', r"    if (abs < 1) return { id: 'arref_cruzeiro'", r"    if (abs < 0) return { id: 'arref_cruzeiro'", ('preditiva',)),
     ('p3e preditiva: o motor mais quente em cruzeiro é sempre o BE', r"quente = fim >= 0 ? 'BE' : 'BB'; frio = fim >= 0 ? 'BB' : 'BE';", r"quente = 'BE'; frio = 'BB';", ('preditiva',)),
     # (revisão) a lista branca, o «perdendo capacidade» só com a bateria, a pressão barométrica, o assunto na 1ª linha
-    ('p3e preditiva: sem a lista branca a tendência rouba o tempo, o mar, a âncora, o relato e a emergência', r"has(q, ['bateria']))) && leitura(q, PRED_OK) && !(has(q, ['pressao'])", r"has(q, ['bateria']))) && !(has(q, ['pressao'])", ('preditiva',)),
+    ('p3e preditiva: sem a lista branca a tendência rouba o tempo, o mar, a âncora, o relato e a emergência', r"has(q, ['bateria']))) && leitura(q.replace(PRED_TENDENCIA_DE, ' tendencia '), PRED_OK) && !(has(q, ['pressao'])", r"has(q, ['bateria']))) && !(has(q, ['pressao'])", ('preditiva',)),
     ('p3e preditiva: «perdendo capacidade» vale sem a bateria', r"(has(q, ['perdendo capacidade']) && has(q, ['bateria']))", r"has(q, ['perdendo capacidade'])", ('preditiva',)),
-    ('p3e preditiva: a tendência da pressão (a barométrica) vira a do óleo', r"leitura(q, PRED_OK) && !(has(q, ['pressao']) && !has(q, ['oleo']));", r"leitura(q, PRED_OK);", ('preditiva',)),
+    ('p3e preditiva: a tendência da pressão (a barométrica) vira a do óleo', r"PRED_OK) && !(has(q, ['pressao']) && !has(q, ['oleo']));", r"PRED_OK);", ('preditiva',)),
+    # (revisão 3) o relato do sintoma + «tendência»; «tendência de queda» é a pergunta
+    ('p3e preditiva: «subindo», «caindo», «queda» e «subida» voltam à lista branca (o relato vira a leitura calma)', r"recomendacao recomendacoes algum alguma alguns algumas estavel estaveis", r"recomendacao recomendacoes algum alguma alguns algumas queda quedas subida subindo caindo estavel estaveis", ('preditiva',)),
+    ('p3e preditiva: «tendência de queda / de subida» deixa de ser a pergunta da tendência', r"leitura(q.replace(PRED_TENDENCIA_DE, ' tendencia '), PRED_OK)", r"leitura(q, PRED_OK)", ('preditiva',)),
     ('p3e preditiva: o assunto da pergunta não sobe para a 1ª linha', r"topo = l.filter(function (a) { return ids.indexOf(a.id) !== -1; })[0] || l[0]", r"topo = l[0]", ('preditiva',)),
     ('p3e preditiva: a 1ª linha do achado estável não diz quantos pedem atenção', r"(topo.nivel === 'ok' && pedem ? ', ' + pedem + (pedem === 1 ? ' pede atenção.' : ' pedem atenção.') : '.')", r"'.'", ('preditiva',)),
     ('p3e preditiva: a pergunta do gerador e da revisão não sobe o achado das horas', r"[[' hora', 'revisao', 'troca', 'gerador'], ['horas']]", r"[[' hora', 'revisao', 'troca'], ['horas']]", ('preditiva',)),
@@ -4881,23 +4893,42 @@ ROTAS_P3E_F22 = [
     ('qual o preço das peças?', 'foraBarco', False), ('quanto custa a peça do rotor?', 'foraBarco', False), ('preço das peças em estoque', 'foraBarco', False), ('qual o valor das peças?', 'fallback', True),
     ('preciso comprar peças', 'fallback', True), ('quanto falta para o rotor do gerador?', 'base', True), ('falta trocar o rotor?', 'base', True), ('quanto tempo dura o rotor?', 'fallback', True),
     ('quando trocar o filtro de óleo?', 'base', True), ('quantos filtros de óleo o motor leva?', 'base', True), ('quanto óleo temos a bordo?', 'base', True), ('quanto diesel temos?', 'autonomia', False),
-    ('fusível de reposição', 'fallback', True), ('reposição', 'fallback', True), ('qual a posição?', 'posicao', False), ('minha posição', 'posicao', False),
+    ('fusível de reposição', 'pecas', False), ('reposição', 'fallback', True), ('qual a posição?', 'posicao', False), ('minha posição', 'posicao', False),
     ('quanto tempo tem o rotor a bordo?', 'base', True), ('quando trocar o rotor que temos a bordo?', 'base', True), ('temos que trocar o filtro de óleo que temos a bordo', 'base', True),
     ('estoque de combustível', 'autonomia', False), ('preciso repor óleo', 'fallback', True), ('preciso repor o gelo', 'fallback', True),
+    # (revisão 3) o relato de falha com «falta / acabou / zerou» + palavra que é nome de peça («tela», «filtro», «rotor») NÃO é o estoque: a peça tem de ser o OBJETO do verbo («falta rotor?»), e «tela» sozinha é a do plotter
+    ('falta imagem na tela do radar', 'eletronicos', False), ('falta sinal na tela do plotter', 'eletronicos', False), ('a tela do plotter apagou, falta sinal', 'eletronicos', False), ('faltando brilho na tela', 'fallback', True),
+    ('zerou a tela do plotter', 'eletronicos', False), ('acabou a luz da tela', 'fallback', True), ('faltando fluxo de água no filtro de água salgada', 'base', True), ('falta fluxo no filtro', 'base', True),
+    ('falta água no rotor', 'base', True), ('falta combustível no filtro separador', 'autonomia', False), ('acabou o combustível do filtro', 'autonomia', False), ('faltando diesel nos filtros', 'autonomia', False),
+    ('acabou a água do rotor', 'base', True), ('quanta água tem no filtro de água salgada?', 'base', True), ('tem fluxo de água no filtro a bordo?', 'base', True),
+    ('falta tela do filtro?', 'pecas', False), ('quantas telas do filtro temos?', 'pecas', False), ('acabou o rotor?', 'pecas', False), ('faltando filtros de óleo?', 'pecas', False),
+    # (revisão 3) o singular e o plural de uma peça casam («fusível» e «fusíveis»), com qualquer verbo de estoque
+    ('temos fusível sobressalente?', 'pecas', False), ('tem fusível de reposição?', 'pecas', False), ('temos fusível a bordo?', 'pecas', False), ('falta fusível?', 'pecas', False), ('quantos fusíveis temos?', 'pecas', False),
+    # (revisão 3) telefone, contato, CNPJ, e-mail e nome de oficina, fornecedor e técnico (trava 13) seguem a rota dos contatos ou a IA, nunca a lista de estoque
+    ('telefone do fornecedor de peças', 'contatos', False), ('contato da oficina para peças sobressalentes', 'contatos', False), ('quem é o técnico de bordo que cuida das peças', 'contatos', False),
+    ('peças do técnico de bordo', 'contatos', False), ('onde fica a marina da base peças', 'contatos', False), ('peças de reposição para quando eu ligar para a oficina', 'contatos', False),
+    ('CNPJ do fornecedor de peças', 'fallback', True), ('tem alguma peça do fornecedor Marcos?', 'fallback', True), ('peças do fornecedor Náutica Sol', 'fallback', True), ('e-mail do fornecedor de sobressalentes', 'fallback', True),
+    # (revisão 3) «temos que / tenho que» + repor é a obrigação (o guia ou a IA), não a pergunta do estoque
+    ('temos que repor o filtro de óleo', 'fallback', True), ('tenho que repor o rotor', 'fallback', True),
 ]
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F22]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F22})
 K_PECAS_T = 'capitao.pecas.v1'
 GENERICAS_PECAS = ['quais peças preciso repor?', 'quais peças precisam de reposição?', 'preciso de peças?', 'vou precisar de peças na revisão?', 'cadê as peças?', 'onde guardamos os sobressalentes?', 'onde ficam as peças sobressalentes?',
-                   'usei uma peça do estoque', 'preciso repor alguma peça?', 'falta alguma peça?', 'tem alguma coisa para repor?', 'cabe quantas peças no armário?']
+                   'usei uma peça do estoque', 'preciso repor alguma peça?', 'falta alguma peça?', 'tem alguma coisa para repor?', 'cabe quantas peças no armário?',
+                   # (revisão 3) a palavra que o app não conhece como coisa de bordo («dizer», «atual», «indisponível», «leitura fixa», um e-mail, um site) não vira nome: abre direto com a lista, sem «Nenhuma peça cadastrada…»
+                   'pode me dizer quais peças temos?', 'me informa o estoque de peças', 'situação do estoque', 'temos peças suficientes?', 'peças de reposição disponíveis', 'qual o estoque de peças atual?', 'resumo das peças',
+                   'peças críticas', 'peças vencidas', 'peças com validade', 'estoque baixo', 'preciso de ajuda com as peças', 'peças para o fim de semana', 'peças indisponível', 'peças leitura fixa', 'peças joao@marina.com.br',
+                   'peças www.nauticasol.com.br']
 JS_PECAS = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, op = { platform: 'app', commit: false }, R = window.CapitaoReplay; R.fixar('60');
   const antes = JSON.stringify(D.pecas), chave = () => localStorage.getItem('capitao.pecas.v1'), movs = () => { const v = JSON.parse(chave() || '{}'); return v.movs || []; }, q = (id) => B.pecas().filter((x) => x.id === id)[0];
   const out = { base: D.pecas.map((x) => ({ id: x.id, n: x.n, qtd: x.qtd, min: x.min, local: x.local, tarefas: x.tarefas || [] })), ags: D.agenda.map((t) => t.id) };
   const resp = (p) => { const a = B.answer(p, op); return { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, p) }; };
   out.genericas = GENERICAS.map((q) => [q, resp(q)]);
   out.nomes = { rotorGerador: resp('quantos rotores do gerador temos?'), filtroOleo: resp('temos filtro de óleo a bordo?'), filtroOleo2: resp('quantos filtros de óleo temos?'), anodos: resp('quantos anodos temos a bordo?'),
-                rotorReposicao: resp('tem rotor de reposição?'), filtroComb: resp('tem filtro de combustível a bordo?') };
-  out.eco = ['peças fictícias', 'peças simuladas do guincho', 'estoque de peças do 11 99999 9999', 'peças do guincho'].map(resp);
+                rotorReposicao: resp('tem rotor de reposição?'), filtroComb: resp('tem filtro de combustível a bordo?'), filtros5: resp('quantos filtros temos?'), fusivel: resp('quantos fusíveis temos?'),
+                fusivelSing: resp('temos fusível sobressalente?'), telaFiltro: resp('falta tela do filtro?'), telaPlotter: resp('peças da tela do plotter'), zerou: resp('acabou o rotor?') };
+  out.eco = ['peças fictícias', 'peças simuladas do guincho', 'estoque de peças do 11 99999 9999', 'peças do guincho', 'peças do radar', 'peças do guincho amarelo'].map(resp);
   out.lista0 = B.pecas(); out.todas = resp('quais peças temos a bordo?'); out.gerador = resp('peças da revisão do gerador'); out.rotor = resp('tem rotor sobressalente?'); out.guincho = resp('peças do guincho'); out.clima = resp('peças para o filtro da climatização');
   out.semEscrita = chave() === null;
   // −1 USADA ×4 no p01 (4 → 0), a 5ª não existe; o Desfazer só da última; o da primeira recusa
@@ -4921,6 +4952,38 @@ def esperado_peca(x):
     nivel = 'zero' if q <= 0 else 'baixa' if mn > 0 and q <= mn else 'ok'
     st = 'ZERADA' if q <= 0 else 'ABAIXO DO MÍNIMO' if mn > 0 and q < mn else 'NO MÍNIMO' if mn > 0 and q == mn else 'OK'
     return nivel, st
+
+
+def min1_py(n):
+    return n if re.match(r'^[A-ZÀ-Ý]{2}', n) else n[:1].lower() + n[1:]
+
+
+def frase_peca(x):
+    """A frase da peça na 1ª linha: «rotor do gerador, 0 a bordo, zerada, mínimo 1», «…, 1 a bordo, abaixo do mínimo de 2», «…, no mínimo», «…, 4 a bordo, mínimo 2»."""
+    nivel, _ = esperado_peca(x)
+    q, mn = x['qtd'], x['min']
+    t = '%s, %d a bordo' % (min1_py(x['n']), q)
+    if nivel == 'zero':
+        t += ', zerada' + (', mínimo %d' % mn if mn > 0 else '')
+    elif nivel == 'baixa':
+        t += (', abaixo do mínimo de %d' % mn) if q < mn else ', no mínimo'
+    elif mn > 0:
+        t += ', mínimo %d' % mn
+    return t
+
+
+def corpo_pecas(xs):
+    """O que vem depois do «Estoque de peças: » (ou do «Peças para <tarefa>: »): até 3 peças, cada uma com a quantidade; mais que isso, o total e as que pedem atenção (até 3)."""
+    rank = {'zero': 0, 'baixa': 1, 'ok': 2}
+    xs = sorted(xs, key=lambda x: rank[esperado_peca(x)[0]])   # estável, como o sort do cérebro
+    ps = [x for x in xs if esperado_peca(x)[0] != 'ok']
+    if len(xs) <= 3:
+        return '; '.join(frase_peca(x) for x in xs) + '.'
+    z = sum(1 for x in xs if esperado_peca(x)[0] == 'zero')
+    r = ([('%d %s' % (z, 'zerada' if z == 1 else 'zeradas'))] if z else []) + (['%d no mínimo ou abaixo' % (len(ps) - z)] if len(ps) - z else [])
+    if not ps:
+        return '%d cadastradas, todas acima do mínimo.' % len(xs)
+    return '%d cadastradas — %s: %s%s.' % (len(xs), ' e '.join(r), '; '.join(frase_peca(x) for x in ps[:3]), (' e mais %d' % (len(ps) - 3)) if len(ps) > 3 else '')
 
 
 def grupo_pecas(b, muta, ped):
@@ -4955,11 +5018,16 @@ def grupo_pecas(b, muta, ped):
         ped('pecas: a linha da peça ligada a uma tarefa traz a tarefa e o prazo de hoje («para: Troca de óleo e filtros dos motores (D-17 · 20/11)»)',
             any(l.startswith('• Filtro de óleo do motor') and re.search(r'para: Troca de óleo e filtros dos motores \((?:D-\d+ · \d\d/\d\d|em atraso há \d+ dias?)\)', l) for l in linhas), [l for l in linhas if 'Filtro de óleo do motor' in l])
         g = x['gerador']
-        ped('pecas: a pergunta que cita a tarefa («peças da revisão do gerador») lista só as peças dela, com a tarefa', g['key'] == 'pecas' and g['text'].split('\n')[0].startswith('Peças para revisão do gerador — óleo e filtros: 1 cadastrada') and len(g['text'].split('\n')) == 2
-            and 'Filtro de óleo do gerador' in g['text'], g['text'][:200])
+        ped('pecas: a pergunta que cita a tarefa («peças da revisão do gerador») lista só as peças dela, com a tarefa, e a 1ª linha diz qual peça e quantas há a bordo', g['key'] == 'pecas'
+            and g['text'].split('\n')[0] == 'Peças para revisão do gerador — óleo e filtros: ' + corpo_pecas([base['p06']]) and len(g['text'].split('\n')) == 2 and 'Filtro de óleo do gerador' in g['text'], g['text'][:200])
+        cl = x['clima']
+        ped('pecas: «peças para o filtro da climatização» abre com a tela do filtro e a quantidade (1 a bordo, no mínimo)', cl['key'] == 'pecas' and cl['text'].split('\n')[0].startswith('Peças para limpeza do filtro de água salgada da climatização: ')
+            and cl['text'].split('\n')[0].endswith(corpo_pecas([base['p09']])) and 'tela do filtro de água salgada da climatização, 1 a bordo, no mínimo.' in cl['text'].split('\n')[0], cl['text'].split('\n')[0])
         r_ = x['rotor']
         ped('pecas: a pergunta que cita a peça pelo nome («tem rotor sobressalente?») lista as peças com esse nome (as duas, com a zerada primeiro)',
-            r_['text'].split('\n')[0] == 'Peças com esse nome: 2 cadastradas — 1 zerada e 1 no mínimo ou abaixo.' and r_['text'].split('\n')[1].startswith('• Rotor (impeller) do gerador'), r_['text'][:240])
+            r_['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p03'], base['p05']]) and r_['text'].split('\n')[1].startswith('• Rotor (impeller) do gerador'), r_['text'][:240])
+        ped('pecas: a 1ª linha (a falada) diz QUAL peça e QUANTAS há («rotor do gerador, 0 a bordo, zerada, mínimo 1; rotor da bomba…, 1 a bordo, abaixo do mínimo de 2») e a hora do instante; nunca «com esse nome»',
+            'rotor do gerador, 0 a bordo, zerada, mínimo 1' in r_['fala'] and 'rotor da bomba de água salgada dos motores, 1 a bordo, abaixo do mínimo de 2' in r_['fala'] and '12:01:00' in r_['fala'] and 'esse nome' not in r_['text'] + r_['fala'], r_['fala'])
         ped('pecas: o nome que nenhuma peça tem («peças do guincho») diz qual nome (como foi escrito) e mostra a lista inteira', x['guincho']['text'].startswith('Nenhuma peça cadastrada com «guincho» no nome. Peças a bordo: 12 cadastradas'), x['guincho']['text'][:120])
         # (revisão) a pergunta de estoque sem nome (verbo, contexto, lugar) não inventa um nome: abre com «Peças a bordo: 12 cadastradas…» e nunca com «Nenhuma peça cadastrada»
         ruins = [(q, t['text'].split('\n')[0][:80]) for q, t in x['genericas'] if not (t['key'] == 'pecas' and t['text'].split('\n')[0] == quer and len(t['text'].split('\n')) == 13)]
@@ -4967,14 +5035,25 @@ def grupo_pecas(b, muta, ped):
         # (revisão) a pergunta que cita a peça pelo nome (sem a palavra «peças») lista só as que casam MAIS palavras do nome: o rotor do gerador, não o filtro do gerador nem o rotor da bomba
         nm = x['nomes']
         ped('pecas: «quantos rotores do gerador temos?» lista só o rotor do gerador (1 zerada); «temos filtro de óleo a bordo?» e «quantos filtros de óleo temos?», os dois filtros de óleo; «quantos anodos temos a bordo?», os dois anodos; «tem rotor de reposição?», os dois rotores',
-            nm['rotorGerador']['text'].split('\n')[0] == 'Peças com esse nome: 1 cadastrada — 1 zerada.' and len(nm['rotorGerador']['text'].split('\n')) == 2 and nm['rotorGerador']['text'].split('\n')[1].startswith('• Rotor (impeller) do gerador · 0 a bordo')
-            and all(nm[k]['text'].split('\n')[0].startswith('Peças com esse nome: 2 cadastradas') and sorted(l[2:].split(' · ')[0] for l in nm[k]['text'].split('\n')[1:]) == sorted(esp) for k, esp in (
+            nm['rotorGerador']['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p05']]) and len(nm['rotorGerador']['text'].split('\n')) == 2 and nm['rotorGerador']['text'].split('\n')[1].startswith('• Rotor (impeller) do gerador · 0 a bordo')
+            and all(nm[k]['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([p for p in x['base'] if p['n'] in esp]) and sorted(l[2:].split(' · ')[0] for l in nm[k]['text'].split('\n')[1:]) == sorted(esp) for k, esp in (
                 ('filtroOleo', ['Filtro de óleo do gerador', 'Filtro de óleo do motor']), ('filtroOleo2', ['Filtro de óleo do gerador', 'Filtro de óleo do motor']),
                 ('anodos', ['Anodo do trocador de calor do estabilizador', 'Jogo de anodos do eixo e do casco']), ('rotorReposicao', ['Rotor (impeller) da bomba de água salgada dos motores', 'Rotor (impeller) do gerador']))), [(k, v['text'][:100]) for k, v in nm.items()])
-        ped('pecas: o nome que a pessoa digitou só é repetido se é palavra de letras e fora do vocabulário do §3 («fictícias», «simuladas», um telefone viram «esse nome»; «guincho» é repetido)',
-            all(t['text'].split('\n')[0] == 'Nenhuma peça cadastrada com esse nome. Peças a bordo: 12 cadastradas — %s.' % ' e '.join(ps) for t in x['eco'][:3]) and x['eco'][3]['text'].startswith('Nenhuma peça cadastrada com «guincho» no nome.')
-            and not any(re.search(r'fict|simul|99999', t['text'] + t['src'] + t['fala'], re.I) for t in x['eco']), [t['text'][:90] for t in x['eco']])
-        ped('pecas: «tem filtro de combustível a bordo?» lista o filtro de combustível (o combustível não tira a pergunta da peça cadastrada)', nm['filtroComb']['text'].split('\n')[0] == 'Peças com esse nome: 1 cadastrada, todas acima do mínimo.' and 'Filtro de combustível' in nm['filtroComb']['text'], nm['filtroComb']['text'][:120])
+        ped('pecas: o nome que a pessoa digitou só é repetido se o app o conhece como coisa de bordo («guincho», «radar»; «guincho amarelo» repete só o «guincho»); «fictícias», «simuladas», um telefone ou uma palavra desconhecida abrem direto com a lista, sem «Nenhuma peça cadastrada…»',
+            all(t['text'].split('\n')[0] == 'Peças a bordo: 12 cadastradas — %s.' % ' e '.join(ps) for t in (x['eco'][0], x['eco'][2])) and x['eco'][1]['text'].startswith('Nenhuma peça cadastrada com «guincho» no nome. Peças a bordo: 12')
+            and x['eco'][3]['text'].startswith('Nenhuma peça cadastrada com «guincho» no nome. Peças a bordo: 12')
+            and x['eco'][4]['text'].startswith('Nenhuma peça cadastrada com «radar» no nome. Peças a bordo: 12') and x['eco'][5]['text'].startswith('Nenhuma peça cadastrada com «guincho» no nome. Peças a bordo: 12')
+            and not any(re.search(r'fict|simul|99999|amarelo', t['text'] + t['src'] + t['fala'], re.I) for t in x['eco']), [t['text'][:90] for t in x['eco']])
+        ped('pecas: «tela» sozinha não é a tela do filtro (a do plotter, a do radar): «peças da tela do plotter» repete só o «plotter» e não lista a tela do filtro; «falta tela do filtro?» lista só ela',
+            x['nomes']['telaPlotter']['text'].startswith('Nenhuma peça cadastrada com «plotter» no nome. Peças a bordo: 12') and 'tela' not in x['nomes']['telaPlotter']['text'].split('\n')[0].lower()
+            and x['nomes']['telaFiltro']['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p09']]) and len(x['nomes']['telaFiltro']['text'].split('\n')) == 2, (x['nomes']['telaPlotter']['text'][:100], x['nomes']['telaFiltro']['text'][:100]))
+        ped('pecas: o singular e o plural casam («fusível» e «fusíveis»): as duas perguntas listam o jogo de fusíveis de 24 V, na 1ª linha com a quantidade a bordo; «acabou o rotor?» lista os dois rotores',
+            all(x['nomes'][k]['key'] == 'pecas' and x['nomes'][k]['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p11']]) for k in ('fusivel', 'fusivelSing'))
+            and x['nomes']['zerou']['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p03'], base['p05']]), (x['nomes']['fusivel']['text'][:100], x['nomes']['zerou']['text'][:100]))
+        f5 = [p for p in x['base'] if 'filtro' in p['n'].lower()]
+        ped('pecas: a lista longa («quantos filtros temos?», 5 cadastradas) abre com o total e nomeia as peças no mínimo ou abaixo, com a quantidade; o texto traz as 5 linhas',
+            len(f5) == 5 and x['nomes']['filtros5']['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas(f5) and len(x['nomes']['filtros5']['text'].split('\n')) == 6 and '5 cadastradas — 2 no mínimo ou abaixo: ' in x['nomes']['filtros5']['text'], x['nomes']['filtros5']['text'].split('\n')[0])
+        ped('pecas: «tem filtro de combustível a bordo?» lista o filtro de combustível (o combustível não tira a pergunta da peça cadastrada), com a quantidade na 1ª linha', nm['filtroComb']['text'].split('\n')[0] == 'Estoque de peças: ' + corpo_pecas([base['p02']]) and 'Filtro de combustível' in nm['filtroComb']['text'], nm['filtroComb']['text'][:120])
         ped('pecas: nenhuma peça é de salvatagem nem tem código de fabricante, preço ou R$; a resposta é local (nunca à IA)',
             not re.search(r'R\$|preço|\bPN\b|código|colete|balsa|extintor|sinalizador', x['todas']['text'] + x['gerador']['text'] + x['rotor']['text']) and not any(r['ia'] for r in (x['todas'], x['gerador'], x['rotor'], x['guincho'], x['clima'])), x['todas']['text'][:80])
         for r in (x['todas'], x['gerador'], x['rotor']):
@@ -5008,6 +5087,17 @@ def grupo_pecas(b, muta, ped):
         ped('pecas: depois dos usos a resposta já fala da peça zerada do p01 e da nova (13 cadastradas), e o registro só cresceu (os movimentos anteriores intactos)',
             x['respDepois']['text'].startswith('Peças a bordo: 13 cadastradas') and 'Fusível 10 A · 4 a bordo' in x['respDepois']['text'] and x['estado']['movs'][:5] == x['movs2'], x['respDepois']['text'][:90])
         ped('pecas: o iso de cada movimento é único (o dados.html soma pelo iso)', len(x['isos']) == len(set(x['isos'])) and len(x['isos']) == len(x['estado']['movs']), x['isos'])
+    finally:
+        pg.ctx.close()
+    # (revisão 3) o eco passa pelo §3 mesmo com a palavra no vocabulário do app: com «indisponível», «simulada», «fictícia» e «demonstração» entre as palavras de um equipamento (dado adulterado), a resposta não as repete
+    pg = pagina(b, muta=muta)
+    try:
+        r = pg.evaluate("""() => { const B = window.CapitaoBrain, D = window.CapitaoDados; D.equipamentos[0].palavras = D.equipamentos[0].palavras.concat(['indisponível', 'simulada', 'fictícia', 'demonstração', 'leitura', 'fixa', 'cadê', 'usei', 'precisam', 'ficam']);
+          return ['peças indisponível', 'peças simulada', 'peças fictícia', 'peças demonstração', 'peças indisponível do guincho', 'peças leitura fixa', 'cadê as peças?', 'usei uma peça do estoque',
+                  'quais peças precisam de reposição?', 'onde ficam as peças sobressalentes?'].map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return [a.key, a.text.split('\\n')[0]]; }); }""")
+        ped('pecas: o eco do nome passa pelo §3 e pelo vocabulário que o app não repete: «indisponível», «simulada», «fictícia», «demonstração», «leitura fixa» e as palavras de estoque («cadê», «usei», «precisam», «ficam») nunca são repetidas, mesmo como palavra de equipamento; «guincho» é',
+            all(k == 'pecas' for k, _ in r) and all(l.startswith('Peças a bordo: ') for _, l in r[:4]) and r[4][1].startswith('Nenhuma peça cadastrada com «guincho» no nome. ') and r[5][1].startswith('Peças a bordo: ')
+            and all(l.startswith('Peças a bordo: ') for _, l in r[6:]) and not any(re.search(r'indispon|simulad|fict|demonstra|leitura|cadê|usei|precisam|ficam', l) for _, l in r), r)
     finally:
         pg.ctx.close()
     # modo real: a linha não leva `sim`; sem a simulação a ficha deixa de fora o que tem sim (semSim); JSON ruim no aparelho vale como vazio
@@ -5052,17 +5142,31 @@ MUTANTES_3E_F22 = [
     ('p3e pecas: o + PEÇA aceita a tarefa que não existe', "Array.isArray(c.tarefas) && c.tarefas.filter(function (t) { return ag[t]; }).length ? { tarefas: c.tarefas.filter(function (t) { return ag[t]; }).slice(0, 10) } : {}", "Array.isArray(c.tarefas) && c.tarefas.length ? { tarefas: c.tarefas.slice(0, 10) } : {}", ('pecas',)),
     ('p3e pecas: o SOS lê as peças', "    if (EM_SOS) return [];\n    est = pecasEstado();", "    est = pecasEstado();", ('pecas',)),
     # (revisão) a trava 10 (o equipamento de segurança), o dinheiro, o prazo, o estoque pelo nome, o estoque sem nome, a posição
-    ('p3e pecas: a pergunta de peça do EPIRB vai para o estoque', r"if (has(q, PECAS_FORA) || equipSegPergunta(q)) return false;", r"if (has(q, PECAS_FORA)) return false;", ('pecas',)),
+    ('p3e pecas: a pergunta de peça do EPIRB vai para o estoque', r"has(q, PECAS_CONTATO) || equipSegPergunta(q)) return false;", r"has(q, PECAS_CONTATO)) return false;", ('pecas',)),
     ('p3e pecas: a guarda do equipamento não vê o EPIRB', r"function equipSegPergunta(q) { return epirbRelato(q) || has(q, ['baliza'])", r"function equipSegPergunta(q) { return has(q, ['baliza'])", ('pecas',)),
     ('p3e pecas: a guarda do equipamento não vê o Seafire', r"|| seafirePergunta(q) || has(q, CANAL16_ROTA); }", r"|| has(q, CANAL16_ROTA); }", ('pecas',)),
     ('p3e pecas: a guarda do equipamento não vê o rádio e o VHF (só o canal 16)', r"|| seafirePergunta(q) || has(q, CANAL16_ROTA); }", r"|| seafirePergunta(q) || has(q, CANAL16_SEG); }", ('pecas',)),
     ('p3e pecas: o preço e a compra das peças vão para o estoque', r"' preco ', ' precos ', ' valor ', ' valores ', 'custa', 'r$', 'comprar', ' compra ', ' compro ', 'cotacao', 'orcamento', ' reais '];", r"'cotacao', 'orcamento', ' reais '];", ('pecas',)),
     ('p3e pecas: a idade e o prazo da peça vão para o estoque', r"'quanto tempo', 'desde quando', 'quando troc', 'quando subst', 'ultima troca', 'temos que ', ' tem que ', ' tenho que ', 'quanto falta', ' falta para ', ' faltam para ', 'o que falta para', 'falta muito', 'falta troc', 'faltam troc', 'falta a troca', 'falta fazer', 'falta inspec', 'falta revis',", r"'desde quando', 'ultima troca',", ('pecas',)),
     ('p3e pecas: o «temos que trocar» vai para o estoque', r"'temos que ', ' tem que ', ' tenho que ',", r"", ('pecas',)),
-    ('p3e pecas: o estoque pelo nome da peça sai', r"return rx.test(q); }) && nomeCadastrado(q)) return true;", r"return rx.test(q); }) && false) return true;", ('pecas',)),
-    ('p3e pecas: o estoque pelo nome aceita qualquer palavra (sem a peça cadastrada)', r"return rx.test(q); }) && nomeCadastrado(q)) return true;", r"return rx.test(q); })) return true;", ('pecas',)),
-    ('p3e pecas: «preciso/falta repor alguma coisa» sai', r"    return PECAS_REPOR.test(q) && (pecasPalavras(q).length === 0 || nomeCadastrado(q));", r"    return false;", ('pecas',)),
-    ('p3e pecas: «preciso repor óleo» (nome que não é peça) vira o estoque', r"(pecasPalavras(q).length === 0 || nomeCadastrado(q));", r"true;", ('pecas',)),
+    ('p3e pecas: o estoque pelo nome da peça sai', "function pecasNomePede(q) {\n    return (", "function pecasNomePede(q) {\n    return false && (", ('pecas',)),
+    ('p3e pecas: «falta / acabou / zerou» + qualquer palavra com nome de peça no resto da frase vira o estoque (a peça não precisa ser o objeto do verbo)', r"&& objetoPeca(q, PECAS_VERBOS_FALTA));", r"&& nomeCadastrado(q));", ('pecas',)),
+    ('p3e pecas: «quantos X … temos» com a peça em qualquer lugar da frase vira o estoque («quanta água tem no filtro?»)', r"&& objetoPeca(q, PECAS_VERBOS_QUANT))", r"&& nomeCadastrado(q))", ('pecas',)),
+    ('p3e pecas: «tem X … a bordo» com a peça em qualquer lugar da frase vira o estoque («tem fluxo de água no filtro a bordo?»)', r"&& objetoPeca(q, PECAS_VERBOS_TEM))", r"&& nomeCadastrado(q))", ('pecas',)),
+    ('p3e pecas: o artigo entre o verbo e a peça barra o estoque («acabou o rotor?»)', r"var PECAS_ARTIGOS = ' o a os as um uma uns umas algum alguma alguns algumas mais outro outra outros outras de do da dos das estoque ';", r"var PECAS_ARTIGOS = ' ';", ('pecas',)),
+    ('p3e pecas: «tela» sozinha (a do plotter, a do radar) é a tela do filtro', r"var PECAS_NUCLEO_FRACO = { tela: 'filtro' };", r"var PECAS_NUCLEO_FRACO = {};", ('pecas',)),
+    ('p3e pecas: o singular e o plural da peça não casam («fusível»/«fusíveis»)', r"function radicalPeca(w) { return w.length > 4 ? w.replace(/([aeou])i$/, '$1l') : w; }", r"function radicalPeca(w) { return w; }", ('pecas',)),
+    ('p3e pecas: telefone, contato, CNPJ, e-mail de oficina, fornecedor e técnico vão para o estoque', r"has(q, PECAS_FORA) || has(q, PECAS_CONTATO) ||", r"has(q, PECAS_FORA) ||", ('pecas',)),
+    ('p3e pecas: «preciso/falta repor alguma coisa» sai', r"    return PECAS_REPOR.test(q) && (pecasPalavras(q).length === 0 || objetoPeca(q, ['repor']));", r"    return false;", ('pecas',)),
+    ('p3e pecas: «preciso repor óleo» (nome que não é peça) vira o estoque', r"(pecasPalavras(q).length === 0 || objetoPeca(q, ['repor']));", r"true;", ('pecas',)),
+    ('p3e pecas: o app repete qualquer palavra da pergunta («dizer», «atual», «indisponível», o e-mail), não só as que conhece como coisa de bordo', r"ws.filter(function (t) { return voc[t] === 1; })", r"ws.filter(function (t) { return true; })", ('pecas',)),
+    ('p3e pecas: a 1ª linha da lista curta não diz qual peça nem quantas há', r"if (xs.length <= 3) return xs.map(frase).join('; ') + '.';", r"if (xs.length <= 3) return xs.length + ' cadastradas.';", ('pecas',)),
+    ('p3e pecas: a 1ª linha da lista longa não nomeia as peças no mínimo ou abaixo', r"': ' + ps.slice(0, 3).map(frase).join('; ') +", r"'. ' +", ('pecas',)),
+    ('p3e pecas: a 1ª linha não diz a peça zerada nem o mínimo', r"x.nivel === 'zero' ? ', zerada' + (x.min > 0 ? ', mínimo ' + x.min : '')", r"x.nivel === 'zero' ? ''", ('pecas',)),
+    ('p3e pecas: a 1ª linha não diz o mínimo de quem está abaixo dele', r"(x.qtd < x.min ? ', abaixo do mínimo de ' + x.min : ', no mínimo')", r"', no mínimo'", ('pecas',)),
+    ('p3e pecas: a pergunta que cita a tarefa abre só com o total', r"+ ': ' + corpo(lig) + '\n'", r"+ ': ' + lig.length + ' cadastradas\n'", ('pecas',)),
+    ('p3e pecas: a pergunta que cita a peça abre só com o total', r"text: 'Estoque de peças: ' + corpo(nm.lista) +", r"text: 'Estoque de peças: ' + nm.lista.length + ' cadastradas' +", ('pecas',)),
+    ('p3e pecas: a palavra sem coisa de bordo vira «Nenhuma peça cadastrada com esse nome» (a lista sem nada de palavra)', r"(nm.nome && nm.palavras.length ? 'Nenhuma peça cadastrada com «'", r"(nm.nome ? 'Nenhuma peça cadastrada com «'", ('pecas',)),
     ('p3e pecas: «alguma peça» não é pergunta de estoque', r"' sem peca', ' alguma peca '];", r"' sem peca'];", ('pecas',)),
     ('p3e pecas: sem a guarda do combustível, o «estoque de combustível» vira o das peças', "    if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;\n", "", ('pecas',)),
     ('p3e pecas: o combustível barra até o filtro de combustível cadastrado', r"if (has(q, PECAS_COMBUSTIVEL) && !nomeCadastrado(q)) return false;", r"if (has(q, PECAS_COMBUSTIVEL)) return false;", ('pecas',)),
@@ -5071,8 +5175,9 @@ MUTANTES_3E_F22 = [
     ('p3e pecas: «cadê» é tomado por nome de peça', r"guardar cade usei", r"guardar usei", ('pecas',)),
     ('p3e pecas: «usei» é tomado por nome de peça', r"cade usei usamos usou usado usada usadas usados uso usar", r"cade usamos usou usado usada usadas usados uso usar", ('pecas',)),
     ('p3e pecas: «onde ficam» é tomado por nome de peça', r"onde fica ficam guardamos", r"guardamos", ('pecas',)),
-    ('p3e pecas: o app repete a palavra «simulada» que a pessoa digitou', r"return l.length && !l.some(function (w) { return /^(?:simul|fict|demo|invent|hipot|ilustr|exempl|roteir|laco|teste|snapshot)/.test(w); }) ? l : [];", r"return l.length ? l : [];", ('pecas',)),
-    ('p3e pecas: o app repete o número ou o telefone que a pessoa digitou', r"return /^[a-zà-ÿ]{1,24}$/.test(w); })", r"return true; })", ('pecas',)),
+    ('p3e pecas: o app repete a palavra «simulada» ou «demonstração» do vocabulário', r"&& !/^(?:simul|fict|demo|invent|hipot|ilustr|exempl|roteir|laco|teste|snapshot)/.test(w)", r"", ('pecas',)),
+    ('p3e pecas: o eco não passa cada palavra pelo §3 (a palavra «indisponível» do vocabulário é repetida)', r"&& !PECAS_ECO_TERMOS.some(function (k) { return TERMOS[k].test(w); });", r";", ('pecas',)),
+    ('p3e pecas: o eco não passa o conjunto das palavras pelo §3 («leitura fixa» do vocabulário é repetida)', r"return l.length && !PECAS_ECO_TERMOS.some(function (k) { return TERMOS[k].test(l.join(' ')); }) ? l : [];", r"return l;", ('pecas',)),
     ('p3e pecas: «reposição» cai de novo na posição do barco', r"var POSICAO_VELHAS = [' posicao',", r"var POSICAO_VELHAS = ['posicao',", ('pecas',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F22
@@ -5084,7 +5189,18 @@ ROTAS_P3E_F09 = [
     ('lista de verificação de ancoragem', 'checklistFundeio', False), ('checklist de abastecimento', 'checklistAbastecimento', False), ('checklist para abastecer', 'checklistAbastecimento', False),
     # o que ela não rouba: a pergunta de chegada sem a palavra checklist segue como antes (P3C), a de fundeio sem a palavra checklist é a âncora, o diesel é a autonomia
     ('previsão de chegada do técnico da oficina', 'checklistChegada', False), ('âncora garrando?', 'ancora', False), ('quanto diesel tem?', 'autonomia', False),
+    # (revisão 3) a trava 10: o EPIRB, o Seafire, o canal 16, o PAN-PAN e o DSC na pergunta do checklist são do equipamento (a instrução de segurança, local, sem a velocidade do quadro), nunca o checklist; o rádio VHF sozinho segue o checklist
+    ('checklist de fundeio, onde fica o EPIRB?', 'epirb', False), ('checklist ao fundear, e o EPIRB?', 'epirb', False), ('checklist de fundeio com o EPIRB', 'epirb', False), ('checklist de fundeio e o canal 16', 'canal16', False),
+    ('checklist do EPIRB', 'epirb', False), ('checklist do canal 16', 'canal16', False), ('checklist do sistema Seafire', 'seafire', False), ('checklist de chegada, pan-pan', 'canal16', False),
+    ('checklist de saída e o EPIRB', 'epirb', False), ('checklist de saída, teste do DSC', 'canal16', False), ('checklist do rádio VHF', 'checklist', False),
+    # (revisão 3) «antes de largar / de sair», «pré-saída» e «rotina de saída» são o checklist de saída
+    ('o que preciso conferir antes de largar?', 'checklist', False), ('pré-saída', 'checklist', False), ('rotina de saída', 'checklist', False), ('o que conferir antes de sair?', 'checklist', False),
+    ('o que devo verificar antes de zarpar?', 'checklist', False), ('o que fazer antes de largar', 'base', False),
 ]
+# (revisão 3) a «saída» sem a palavra checklist que é do passado, do consumo, da duração, da distância, do horário ou de uma saída de coisa NÃO é o checklist de saída (o diário, o consumo, o guia ou a IA)
+NAO_CHECK_SAIDA = ['como foi a saída de ontem?', 'resumo da última saída', 'quanto gastamos na saída de hoje cedo?', 'quanto tempo durou a saída?', 'quantas milhas fizemos na saída?', 'a que horas é a saída?',
+                   'horário de saída da marina', 'vamos de saída amanhã cedo', 'qual o consumo da saída anterior?', 'onde fica a saída de água do motor?', 'saída do escape do gerador', 'a saída de ar da climatização está fraca',
+                   'antes de sair, confira o porão']
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3E_F09]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3E_F09})
 # O estado de cada item `auto` em 12:01:00 (CONTRATO §1.18, «Estado esperado de cada item auto»): ok (✓ pelo quadro), falta (✗), ler (mostra a leitura e pede a conferência); None = item sem verificação automática.
@@ -5152,6 +5268,9 @@ def grupo_checklist(b, muta, ped):
         pg.evaluate("() => { localStorage.clear(); return new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); }); }")
         res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3E_F09])
         ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3E_F09, res) if key != esp or ia != ia_esp]
+        res_nc = pg.evaluate(JS_P3C_CHAVES, [[q] for q in NAO_CHECK_SAIDA])
+        ruins_nc = [(q, key) for q, (key, ia) in zip(NAO_CHECK_SAIDA, res_nc) if key.startswith('checklist')]
+        ped('checklist: as %d perguntas de «saída» do passado, do consumo, da duração, da distância, do horário e de saída de coisa NÃO são o checklist de saída' % len(NAO_CHECK_SAIDA), not ruins_nc, ruins_nc)
         ped('checklist: as %d perguntas dos 4 checklists (saída, chegada, abastecimento, fundeio — «fundear» e «abastecer» não caem no de saída; «checklist de chegada» e «previsão de chegada…» seguem na rota certa) caem na chave certa, local' % len(ROTAS_P3E_F09), not ruins, ruins[:6])
         x = pg.evaluate(JS_CK, ['60', '105'])
         d = x['dados']
@@ -5276,6 +5395,18 @@ MUTANTES_3E_F09 = [
     ('p3e checklist: o diesel olha só o total', "nv(x, 'diesel_litros') === 'normal' && q.diesel_bb_pct >= min && q.diesel_be_pct >= min ? 'ok' : 'falta'", "nv(x, 'diesel_litros') === 'normal' ? 'ok' : 'falta'", ('checklist',)),
     ('p3e checklist: «checklist ao fundear» cai no de saída', "    if (has(q, CHECK_PALAVRAS) && has(q, ['fundei', 'fundear', 'ancorar', 'ancoragem'])) return 'checklistFundeio';\n", "", ('checklist',)),
     ('p3e checklist: «checklist de abastecimento» cai no de saída', "    if (has(q, CHECK_PALAVRAS) && has(q, ['abastec'])) return 'checklistAbastecimento';\n", "", ('checklist',)),
+    # (revisão 3) a trava 10 (o equipamento de segurança), a «saída» de outra coisa, o «antes de largar»
+    ('p3e checklist: o checklist toma a pergunta do equipamento de segurança (EPIRB, Seafire, canal 16, PAN-PAN, DSC)', r"if (!(epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG))) {", r"if (true) {", ('checklist',)),
+    ('p3e checklist: o checklist toma a pergunta do EPIRB', r"if (!(epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG))) {", r"if (!(seafirePergunta(q) || has(q, CANAL16_SEG))) {", ('checklist',)),
+    ('p3e checklist: o checklist toma a pergunta do Seafire', r"if (!(epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG))) {", r"if (!(epirbRelato(q) || has(q, CANAL16_SEG))) {", ('checklist',)),
+    ('p3e checklist: o checklist toma a pergunta do canal 16, do PAN-PAN e do DSC', r"if (!(epirbRelato(q) || seafirePergunta(q) || has(q, CANAL16_SEG))) {", r"if (!(epirbRelato(q) || seafirePergunta(q))) {", ('checklist',)),
+    ('p3e checklist: toda pergunta com «saída» é o checklist de saída (sem a lista do passado, do consumo, da duração e do horário)', r"(has(q, [' saida']) && !has(q, SAIDA_NAO_CHECK))", r"has(q, [' saida'])", ('checklist',)),
+    ('p3e checklist: «a que horas é a saída?» e «horário de saída» são o checklist', r"'hoje cedo', 'amanha', 'vamos de', 'horario', 'que horas',", r"'hoje cedo',", ('checklist',)),
+    ('p3e checklist: «a saída de água / de ar / do escape» é o checklist de saída', r"' saida de ar', ' saida de agua', ' saida do escape', ' saida de escape',", r"", ('checklist',)),
+    ('p3e checklist: o «antes de largar / de sair» não é o checklist de saída', r"|| (has(q, CHECK_ANTES) && leitura(q, CHECK_ANTES_OK));", r";", ('checklist',)),
+    ('p3e checklist: «antes de sair, confira o porão» vira o checklist de saída (sem a lista branca)', r"(has(q, CHECK_ANTES) && leitura(q, CHECK_ANTES_OK))", r"has(q, CHECK_ANTES)", ('checklist',)),
+    ('p3e checklist: «o que fazer antes de largar» (o trecho do guia «Saída · antes de largar») vira o checklist', r"conferir verificar checar revisar lembrar antes largar sair", r"conferir verificar checar revisar fazer lembrar antes largar sair", ('checklist',)),
+    ('p3e checklist: a «pré-saída» não é o checklist de saída', r"|| has(q, ['pre-saida', 'pre saida'])", r"", ('checklist',)),
     ('p3e checklist: a marca aceita item que não existe', "if (!tp || !checkIds(tp.id).some(function (it) { return it.id === id; })) return null;", "if (!tp) return null;", ('checklist',)),
     ('p3e checklist: o item sem leitura do quadro vira ✓ (modo real)', "      if (!a) return R_('sem', SL);\n      return a.indexOf('nenhum') === 0", "      if (!a) return R_('ok', SL);\n      return a.indexOf('nenhum') === 0", ('checklist',)),
     ('p3e checklist: o SOS lê os tipos', "function checkTipos() { return EM_SOS || !D.checklists", "function checkTipos() { return !D.checklists", ('checklist',)),
