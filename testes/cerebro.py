@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -6613,11 +6613,79 @@ def grupo_p3f_contexto(b, muta, ped):
     finally:
         pg.ctx.close()
 
+# —— F36: foto (ou vídeo) + texto na MESMA linha do diário ——
+# O arquivo nunca sai do aparelho nem é lido pelo cérebro: o objeto de arquivo do teste só deixa ler `name` e `size` (qualquer outra propriedade — arrayBuffer, stream, slice, type… — lança).
+JS_P3F_FOTO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().length;
+  const arq = (nome, kb) => new Proxy({ name: nome, size: kb * 1024 }, { get(t, k) { if (k === 'name' || k === 'size') return t[k]; throw new Error('o cérebro leu o arquivo: ' + String(k)); } });
+  const foto = (kind, texto, c, nome) => { const antes = n(), a = B.answerAttachment(kind, arq(nome || 'a.jpg', 2), Object.assign({ platform: 'app', texto: texto }, c || {})), l = n() > antes ? B.loadDiario()[0] : null; return { key: a.key, text: a.text, src: a.src, pedido: a.pedido, nota: a.nota, linhas: n() - antes, linha: l, hora: a.hora }; };
+  o.sem = foto('foto', undefined); o.semVideo = foto('video', undefined, null, 'v.mp4');
+  o.legenda = foto('foto', 'filtro de água salgada sujo e com limo'); o.legendaVideo = foto('video', 'barulho estranho no motor BE ao acelerar', null, 'v.mp4');
+  o.pedidoReg = foto('foto', 'registre no diário: o rotor da bomba foi trocado ontem'); o.pedidoResumo = foto('foto', 'registre no diário posição e hora');
+  o.relato = foto('foto', 'Trocamos o filtro de ar do gerador hoje de manhã na marina'); o.tickets0 = B.loadTickets().length;
+  o.perguntaMarca = foto('foto', 'esta etiqueta está legível?'); o.pedidoApp = foto('foto', 'confira a etiqueta desta foto do gerador'); o.pedidoResumoMais = foto('foto', 'registre no diário posição e hora, saída com 4 pessoas');
+  o.semCat = foto('foto', 'vista bonita do pier ao entardecer'); o.longaLegenda = foto('foto', 'legenda '.repeat(90));
+  o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB');
+  B.answer('registrar no diário que', op); o.link = foto('foto', 'filtro sujo', { commit: false }); o.depoisDoLink = foto('foto', 'o gerador foi ligado às sete');   // o pedido de link não consome a espera
+  B.answer('registrar no diário que', op); const real = Date.now; Date.now = () => real() + 121000; o.esperaVelha = foto('foto', 'o gerador foi ligado às sete'); Date.now = real;   // a espera vale 2 min
+  // a espera do «o que devo registrar?»: a legenda é o registro (uma vez só)
+  B.answer('registrar no diário que', op); o.espera = foto('foto', 'o gerador foi ligado às sete'); o.esperaDepois = foto('foto', 'outro texto qualquer sem espera');
+  // a proposta do relato esperando: «registra» leva o relato junto com a foto (UMA linha); «não» só descarta a proposta
+  localStorage.clear(); const R = 'Hoje de manhã trocamos o filtro de ar do gerador na marina'; B.answer(R, op); const idA = B.loadTickets()[0].id;
+  o.doRelato = foto('foto', 'sim, registra'); o.doRelatoTicket = B.loadTickets().filter((t) => t.id === idA)[0]; o.doRelatoDepois = B.answer('registrar o relato', op).key;
+  localStorage.clear(); B.answer(R, op); const idB = B.loadTickets()[0].id;
+  o.descarta = foto('foto', 'não'); o.descartaTicket = B.loadTickets().filter((t) => t.id === idB)[0].estado;
+  localStorage.clear(); B.answer(R, op); o.relatoLongo = foto('foto', 'registra também que a bomba estava com vazamento'); o.relatoLongoTicket = B.loadTickets()[0].estado;
+  localStorage.clear(); B.answer(R, op); o.outroRelato = foto('foto', 'O gerador foi ligado ontem à noite por duas horas'); o.outroRelatoTicket = B.loadTickets()[0].estado;
+  // a pergunta de texto da tela depois da foto não grava de novo (a tela chama o answer só quando `pedido` é falso)
+  localStorage.clear(); o.coord = foto('foto', 'foto do pier da marina na posição -26.9931 / -48.6140');
+  // o texto da ficha e da leitura do diário: a linha com o texto aparece na ficha SEM coordenada
+  o.ficha = B.ficha('app', 'diário', B.answer('diário de bordo', { platform: 'app', commit: false }));
+  return o; }"""
+
+
+def grupo_p3f_foto(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        o = pg.evaluate(JS_P3F_FOTO)
+        ped('p3f F36: a foto e o vídeo sem texto gravam UMA linha (A CONFIRMAR, sys Equipamentos, de onde veio, com sim e pend), como antes, e a resposta não leva o texto da pessoa; o cérebro só lê nome e tamanho do arquivo',
+            o['sem']['linhas'] == 1 and o['sem']['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and o['sem']['linha']['sys'] == 'Equipamentos' and o['sem']['linha']['src'] == 'app · foto' and o['sem']['linha']['sim'] is True and o['sem']['linha']['pend'] is True
+            and o['sem']['key'] == 'foto' and not o['sem']['pedido'] and not o['sem']['nota'] and 'Seu texto' not in o['sem']['text'] and o['semVideo']['key'] == 'video' and o['semVideo']['linhas'] == 1 and o['semVideo']['linha']['t'] == 'Vídeo anexada pelo chat: v.mp4 (2 KB) — identificação A CONFIRMAR.'
+            and o['semVideo']['linha']['src'] == 'app · video', (o['sem'], o['semVideo']['linha']))
+        ped('p3f F36: a legenda (frase que descreve a foto, sem pergunta) entra na MESMA linha — «texto · foto anexada pelo chat: … A CONFIRMAR» — e a linha é uma só; a categoria vem do texto; a resposta diz que o texto entrou; o pedido continua falso (a tela ainda responde à frase)',
+            o['legenda']['linhas'] == 1 and o['legenda']['linha']['t'] == 'Filtro de água salgada sujo e com limo · foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and o['legenda']['linha']['sys'] == 'Manutenção' and o['legenda']['linha']['pend'] is True and o['legenda']['nota'] == 'Filtro de água salgada sujo e com limo'
+            and o['legenda']['pedido'] is False and 'Seu texto entrou na mesma linha do diário: “Filtro de água salgada sujo e com limo”' in o['legenda']['text'] and o['legendaVideo']['linhas'] == 1 and o['legendaVideo']['linha']['t'].startswith('Barulho estranho no motor BE ao acelerar · vídeo anexada pelo chat: v.mp4')
+            and o['legendaVideo']['linha']['sys'] == 'Motores', (o['legenda']['linha'], o['legendaVideo']['linha']))
+        ped('p3f F36: o pedido de registro com a foto («registre no diário: …») grava o texto pedido na linha da foto (1 linha, pedido verdadeiro: a tela não responde de novo, senão gravaria outra); «posição e hora» é o resumo, não vai na linha; o relato com a foto é a nota (pedido verdadeiro, sem proposta)',
+            o['pedidoReg']['linhas'] == 1 and o['pedidoReg']['linha']['t'].startswith('O rotor da bomba foi trocado ontem · foto anexada pelo chat') and o['pedidoReg']['pedido'] is True and o['pedidoResumo']['linhas'] == 1 and o['pedidoResumo']['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o['pedidoResumo']['pedido']
+            and o['relato']['linhas'] == 1 and o['relato']['linha']['t'].startswith('Trocamos o filtro de ar do gerador hoje de manhã na marina · foto anexada') and o['relato']['pedido'] is True and o['tickets0'] == 0, (o['pedidoReg'], o['pedidoResumo'], o['relato']['linha']))
+        sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo')
+        ped('p3f F36: a pergunta, o reconhecimento, a emergência e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
+            all(o[k]['linhas'] == 1 and o[k]['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o[k]['nota'] and not o[k]['pedido'] for k in sem_texto), {k: o[k]['linha']['t'] for k in sem_texto})
+        ped('p3f F36: o pedido de link (commit false) não grava nada, diz que não anexou e não consome a espera do «o que devo registrar?» (a foto seguinte ainda é o registro); a espera vencida (121 s) não vira registro', o['link']['linhas'] == 0 and 'pedido vindo de link' in o['link']['text'] and o['depoisDoLink']['pedido'] is True and o['depoisDoLink']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada') and o['esperaVelha']['pedido'] is False and o['esperaVelha']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada'), (o['link']['linhas'], o['link']['text'][:160], o['depoisDoLink']['pedido'], o['esperaVelha']['pedido']))
+        ped('p3f F36: a legenda sem categoria fica em Equipamentos; a legenda enorme (700 letras) entra com no máximo 600', o['semCat']['linha']['sys'] == 'Equipamentos' and o['semCat']['linha']['t'].startswith('Vista bonita do pier ao entardecer · foto anexada') and 0 < len(o['longaLegenda']['linha']['t'].split(' · foto anexada')[0]) <= 600, (o['semCat']['linha']['sys'], len(o['longaLegenda']['linha']['t'])))
+        ped('p3f F36: depois do «o que devo registrar?» a legenda da foto é o registro (1 linha, a espera é consumida: a próxima foto com texto comum não vira registro explícito)', o['espera']['linhas'] == 1 and o['espera']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada') and o['espera']['pedido'] is True and o['esperaDepois']['pedido'] is False, (o['espera'], o['esperaDepois']['pedido']))
+        dr = o['doRelatoTicket']
+        ped('p3f F36: com a proposta do relato esperando, «sim, registra» na foto leva o relato junto (1 linha: o relato + a foto), a proposta fica aceita apontando essa linha e o «registrar o relato» depois não grava de novo; «não» só descarta a proposta (a foto vai sem texto); «registra também que…» confirma com o complemento; outro relato dito com a foto vira a linha e NÃO fecha a proposta',
+            o['doRelato']['linhas'] == 1 and o['doRelato']['linha']['t'].startswith('Hoje de manhã trocamos o filtro de ar do gerador na marina · foto anexada') and o['doRelato']['pedido'] is True and dr['estado'] == 'aceito' and dr['res']['id'] == o['doRelato']['linha']['iso'] and o['doRelatoDepois'] == 'relatoRegistra'
+            and o['descarta']['linhas'] == 1 and o['descarta']['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and o['descartaTicket'] == 'recusado'
+            and o['relatoLongo']['linha']['t'].startswith('Hoje de manhã trocamos o filtro de ar do gerador na marina. A bomba estava com vazamento · foto anexada') and o['relatoLongoTicket'] == 'aceito'
+            and o['outroRelato']['linha']['t'].startswith('O gerador foi ligado ontem à noite por duas horas · foto anexada') and o['outroRelatoTicket'] == 'aberto', (o['doRelato']['linha'], dr, o['descarta'], o['descartaTicket'], o['relatoLongoTicket'], o['outroRelatoTicket']))
+        ped('p3f F36: a foto com coordenada no texto grava a linha no aparelho, mas a ficha (o que vai à IA) e a leitura do diário não a levam', 'posição -26.9931' in o['coord']['linha']['t'] and not confere.R_COORD.search(o['ficha']) and '-26.99' not in o['ficha'], o['ficha'][:100])
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, fixo='105', extra=SEM_SIMULACAO)
+    try:
+        o = pg.evaluate(JS_P3F_FOTO)
+        ped('p3f F36 (simulacao false): a linha da foto com texto não leva sim', 'sim' not in o['legenda']['linha'] and o['legenda']['linha']['pend'] is True and o['legenda']['linha']['t'].startswith('Filtro de água salgada sujo e com limo · foto anexada'), o['legenda']['linha'])
+    finally:
+        pg.ctx.close()
+
 GRUPOS_3A['p3f_registro'] = grupo_p3f_registro
 GRUPOS_3A['p3f_tickets'] = grupo_p3f_tickets
 GRUPOS_3A['p3f_f17'] = grupo_p3f_f17
 GRUPOS_3A['p3f_relato'] = grupo_p3f_relato
 GRUPOS_3A['p3f_contexto'] = grupo_p3f_contexto
+GRUPOS_3A['p3f_foto'] = grupo_p3f_foto
 
 
 # —— os mutantes do registro, das linhas de ação e das propostas (P3F) ——
@@ -6762,6 +6830,37 @@ MUTANTES_P3F_F16 = [
     ('p3f F16: o defeito não abre pendência na linha', r"pend: defeito ? true : undefined, q0: limpaT(q, 200) } });", r"q0: limpaT(q, 200) } });", ('p3f_relato',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F16
+
+MUTANTES_P3F_F36 = [
+    ('p3f F36: a foto com texto grava uma linha só da foto (o texto não entra)', r"t: nota ? nota.replace(/[\s.]+$/, '') + ' · ' + arq.charAt(0).toLowerCase() + arq.slice(1) : arq,", r"t: arq,", ('p3f_foto',)),
+    ('p3f F36: a foto com texto grava duas linhas (a da foto e a do texto)', r"      reg = addDiario({ sys: sys, tone: tomDe(sys),", r"      if (nota) addDiario({ sys: sys, t: nota }); reg = addDiario({ sys: sys, tone: tomDe(sys),", ('p3f_foto',)),
+    ('p3f F36: a linha da foto não abre pendência (pend)', r"who: quem(), src: 'app · ' + kind, pend: true });", r"who: quem(), src: 'app · ' + kind });", ('p3f_foto',)),
+    ('p3f F36: a foto com texto fica na categoria Equipamentos', r"    if (nota) { sys = categoriaRelato(pad(nota), false); if (sys === 'Diário') sys = 'Equipamentos'; }", r"", ('p3f_foto',)),
+    ('p3f F36: o texto sem categoria vira Diário', r"if (sys === 'Diário') sys = 'Equipamentos'; }", r"}", ('p3f_foto',)),
+    ('p3f F36: o pedido de link grava a foto com o texto', r"tx = grava ? textoDoAnexo(ctx && ctx.texto) : null,", r"tx = textoDoAnexo(ctx && ctx.texto),", ('p3f_foto',)),
+    ('p3f F36: a pergunta dita com a foto entra na linha', r"|| /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n)", r"|| RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n)", ('p3f_foto',)),
+    ('p3f F36: o pedido ao app dito com a foto entra na linha', r"/\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) ||", r"/\?/.test(raw) || RELATO_NAO.test(n) ||", ('p3f_foto',)),
+    ('p3f F36: o reconhecimento dito com a foto entra na linha', r"RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;", r"RELATO_NAO.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;", ('p3f_foto',)),
+    ('p3f F36: a emergência dita com a foto entra na linha', r"    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw)", r"    if (/\?/.test(raw)", ('p3f_foto',)),
+    ('p3f F36: a legenda comum é tratada como pedido (a tela não responde)', r"    return { nota: notaRelato(raw), pedido: false };   // a legenda", r"    return { nota: notaRelato(raw), pedido: true };   // a legenda", ('p3f_foto',)),
+    ('p3f F36: o relato dito com a foto não é tratado (pedido falso)', r"    if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };", r"", ('p3f_foto',)),
+    ('p3f F36: o pedido de registro dito com a foto não é tratado', r"    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"", ('p3f_foto',)),
+    ('p3f F36: «posição e hora» dito com a foto entra na linha', r"return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"return nota ? { nota: nota, pedido: true } : null; }", ('p3f_foto',)),
+    ('p3f F36: a legenda depois do «o que devo registrar?» não é o registro', r"    if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }", r"", ('p3f_foto',)),
+    ('p3f F36: a espera do registro não é consumida pela foto', r"{ ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }", r"{ return { nota: notaRelato(raw), pedido: true }; }", ('p3f_foto',)),
+    ('p3f F36: a espera do registro vale depois dos 2 minutos', r"    if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) {", r"    if (ESPERA_REG) {", ('p3f_foto',)),
+    ('p3f F36: o «sim, registra» na foto não leva o relato', r"      if (t && (r === 'sim' || (sb && !sb.duvida))) return { nota: comExtra(t.texto, sb), pedido: true, doRelato: rp.id };", r"", ('p3f_foto',)),
+    ('p3f F36: o «sim, registra» na foto leva o relato mas não fecha a proposta', r"      if (reg && tx && tx.doRelato) fechaTicketCom(tx.doRelato, reg);", r"", ('p3f_foto',)),
+    ('p3f F36: o «não» na foto não recusa a proposta', r"      if (tx && tx.descarta) { recusaTicket(tx.descarta); REL = null; }", r"", ('p3f_foto',)),
+    ('p3f F36: o relato dito com a foto fecha a proposta que esperava', r"      if (t && (r === 'sim' || (sb && !sb.duvida))) return", r"      if (t) return", ('p3f_foto',)),
+    ('p3f F36: a proposta fechada pela foto escreve outra linha', "    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: Date.now() + TICKET_DESFAZ }; t.res = { tipo: 'diario', id: lin.iso }; write(K.tickets, cru);\n    return t;", "    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: Date.now() + TICKET_DESFAZ }; t.res = { tipo: 'diario', id: lin.iso }; write(K.tickets, cru);\n    addDiario({ sys: lin.sys, t: lin.t });\n    return t;", ('p3f_foto',)),
+    ('p3f F36: a resposta não diz que o texto entrou na linha', r"    if (nota && reg) r.text = r.text.replace('\n', '\nSeu texto entrou na mesma linha do diário: “' + nota + '”\n');", r"", ('p3f_foto',)),
+    ('p3f F36: a foto sem texto responde que o texto entrou', r"    if (nota && reg) r.text", r"    if (reg) r.text", ('p3f_foto',)),
+    ('p3f F36: o texto com mais de 600 letras entra inteiro', r"    raw = raw.slice(0, 600); n = pad(raw); rp = relatoPendente();", r"    n = pad(raw); rp = relatoPendente();", ('p3f_foto',)),
+    ('p3f F36: o vídeo com texto grava a linha de foto', r"arq = (kind === 'video' ? 'Vídeo' : 'Foto') + ' anexada pelo chat: '", r"arq = 'Foto anexada pelo chat: '", ('p3f_foto',)),
+    ('p3f F36: o cérebro lê o arquivo (o conteúdo sairia do aparelho)', "    var p = (ctx && ctx.platform) || 'web';\n    var name = file && file.name ? file.name : (kind === 'video' ? 'vídeo' : 'foto');", "    var p = (ctx && ctx.platform) || 'web';\n    if (file && file.type) p = p;\n    var name = file && file.name ? file.name : (kind === 'video' ? 'vídeo' : 'foto');", ('p3f_foto',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F36
 
 MUTANTES_P3F_F18 = [
     ('p3f F18: a fala «e …» não continua nada', r"var SEGUE_E = /^ (?:e|tambem|mas) /,", r"var SEGUE_E = /^ zzzzz /,", ('p3f_contexto',)),

@@ -206,6 +206,13 @@
     t.estado = 'aberto'; delete t.dec; delete t.res; write(K.tickets, cru);
     return { id: id, estado: 'aberto', anulada: an };
   }
+  // A proposta que a foto confirmou (F36: «sim, registra» junto com a foto): a linha da foto já leva o texto do relato, então a proposta fecha apontando essa linha, sem escrever outra
+  function fechaTicketCom(id, lin) {
+    var cru = ticketsCru(), t = achaTicket(cru, id);
+    if (EM_SOS || !t || t.estado !== 'aberto' || !lin) return null;
+    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: Date.now() + TICKET_DESFAZ }; t.res = { tipo: 'diario', id: lin.iso }; write(K.tickets, cru);
+    return t;
+  }
   function ticketsAbertos() { return loadTickets().filter(function (t) { return t.estado === 'aberto'; }).sort(function (a, b) { return String(b.iso || '') < String(a.iso || '') ? -1 : String(b.iso || '') > String(a.iso || '') ? 1 : 0; }); }
   // o que a lista A CONFIRMAR mostra: o texto que o CONFIRMAR grava, a origem e o selo «apresentação» (sim, só com simulacao false)
   function ticketTela(t) { var tx = String((t && t.texto) || ''); return { texto: tx, origem: ORIGEM_TICKET[t && t.origem] || 'Relato', longo: tx.length > 220, apresentacao: !!(t && t.sim === true && !EM_SOS && D.simulacao === false) }; }
@@ -3207,14 +3214,43 @@
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
   function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }
+  // O texto que vai JUNTO com a foto ou o vídeo (F36; ctx.texto): a linha do diário é UMA só, «<texto> · foto anexada pelo chat: … A CONFIRMAR». O arquivo não é lido (só nome e tamanho) e não sai do aparelho.
+  // Entram na linha: a legenda (a frase que descreve a foto, sem pergunta), o pedido de registro («registre no diário: …»), o relato, a legenda depois do «o que devo registrar?» e o relato que esperava o
+  // «registrar» («sim, registra» leva o relato junto e fecha a proposta; «não» só a descarta). A pergunta, o pedido ao app, o reconhecimento, o cancelar, a emergência, o óleo e o perigo NÃO entram: a foto
+  // vai sozinha e a conversa os responde. `pedido` verdadeiro = o texto já foi tratado (comando de registro, relato, legenda da espera, confirmação da proposta): a tela não o responde de novo (gravaria
+  // outra linha). → { nota, pedido, doRelato?, descarta? } | null
+  function textoDoAnexo(tx) {
+    var raw = String(tx == null ? '' : tx).trim(), n, rp, r, sb, t, nota;
+    if (!raw || EM_SOS) return null;
+    raw = raw.slice(0, 600); n = pad(raw); rp = relatoPendente();
+    if (rp) {
+      r = respostaRelato(n, rp); sb = sobraRelato(raw, n); t = achaTicket(ticketsCru(), rp.id);
+      if (r === 'nao') return { nota: '', pedido: true, descarta: rp.id };
+      if (t && (r === 'sim' || (sb && !sb.duvida))) return { nota: comExtra(t.texto, sb), pedido: true, doRelato: rp.id };
+    }
+    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
+    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;
+    if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }
+    if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };
+    return { nota: notaRelato(raw), pedido: false };   // a legenda
+  }
   function anexo1(kind, file, ctx) {
     var p = (ctx && ctx.platform) || 'web';
     var name = file && file.name ? file.name : (kind === 'video' ? 'vídeo' : 'foto');
     var kb = file && file.size ? Math.round(file.size / 1024) + ' KB' : '';
-    var n = now(), grava = !ctx || ctx.commit !== false, nao = 'não anexei ao diário (pedido vindo de link).';
-    if (grava) addDiario({ sys: 'Equipamentos', tone: 'var(--cap-accent, #00a1fe)', t: (kind === 'video' ? 'Vídeo' : 'Foto') + ' anexada pelo chat: ' + name + (kb ? ' (' + kb + ')' : '') + ' — identificação A CONFIRMAR.', who: quem(), src: 'app · ' + kind });
-    if (kind === 'video') return { key: 'video', text: 'Vídeo recebido (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nO som e o comportamento não são analisados automaticamente: ' + (grava ? 'anexei ao diário como anomalia A CONFIRMAR.' : nao) + '\n' + linhaBordo() + '\nDescreva em uma frase o que você viu ou ouviu — respondo com o que verificar primeiro.', src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario']]) };
-    return { key: 'foto', text: 'Foto recebida (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nA leitura da imagem não é automática: ' + (grava ? 'anexei ao diário como A CONFIRMAR.' : nao) + ' Para etiqueta ou tela de alarme, digite o modelo/código que aparece e eu localizo o guia; para nota fiscal, registre em Abastecimento (fica A CONFIRMAR).\n' + linhaBordo(), src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario'], ['Documentos', 'docs']]) };
+    var n = now(), grava = !ctx || ctx.commit !== false, nao = 'não anexei ao diário (pedido vindo de link).', tx = grava ? textoDoAnexo(ctx && ctx.texto) : null, nota = tx && tx.nota ? tx.nota : '', sys = 'Equipamentos', arq, reg = null, r;
+    if (nota) { sys = categoriaRelato(pad(nota), false); if (sys === 'Diário') sys = 'Equipamentos'; }
+    arq = (kind === 'video' ? 'Vídeo' : 'Foto') + ' anexada pelo chat: ' + name + (kb ? ' (' + kb + ')' : '') + ' — identificação A CONFIRMAR.';
+    if (grava) {
+      reg = addDiario({ sys: sys, tone: tomDe(sys), t: nota ? nota.replace(/[\s.]+$/, '') + ' · ' + arq.charAt(0).toLowerCase() + arq.slice(1) : arq, who: quem(), src: 'app · ' + kind, pend: true });   // (a foto fica A CONFIRMAR: abre pendência, F20)
+      if (reg && tx && tx.doRelato) fechaTicketCom(tx.doRelato, reg);
+      if (tx && tx.descarta) { recusaTicket(tx.descarta); REL = null; }
+    }
+    if (kind === 'video') r = { key: 'video', text: 'Vídeo recebido (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nO som e o comportamento não são analisados automaticamente: ' + (grava ? 'anexei ao diário como anomalia A CONFIRMAR.' : nao) + '\n' + linhaBordo() + '\nDescreva em uma frase o que você viu ou ouviu — respondo com o que verificar primeiro.', src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario']]) };
+    else r = { key: 'foto', text: 'Foto recebida (' + name + (kb ? ' · ' + kb : '') + ') · ' + n.d + ' ' + n.t + '.\nA leitura da imagem não é automática: ' + (grava ? 'anexei ao diário como A CONFIRMAR.' : nao) + ' Para etiqueta ou tela de alarme, digite o modelo/código que aparece e eu localizo o guia; para nota fiscal, registre em Abastecimento (fica A CONFIRMAR).\n' + linhaBordo(), src: 'Fonte: anexo · diário de bordo', actions: act(p, [['Abrir diário', 'diario'], ['Documentos', 'docs']]) };
+    if (nota && reg) r.text = r.text.replace('\n', '\nSeu texto entrou na mesma linha do diário: “' + nota + '”\n');
+    r.nota = nota; r.pedido = !!(tx && tx.pedido);   // `pedido`: o texto já foi tratado (a tela não o responde de novo); sem a linha (pedido de link) não há texto tratado
+    return r;
   }
 
   function safeDecode(s) { try { return decodeURIComponent(String(s).replace(/\+/g, '%20')); } catch (e) { return String(s); } }
