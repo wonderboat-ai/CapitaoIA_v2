@@ -276,6 +276,7 @@
     return [];
   }
   // ——— Datas (F15): o dia do barco é o do instante (fuso do barco); 'AAAA-MM-DD' é a forma guardada da tarefa ———
+  var DIA_SEMANA = { domingo: 0, segunda: 1, terca: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6 };
   var MES_NUM = { janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
   function diaIso(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
   function brData(iso) { var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); }
@@ -470,7 +471,9 @@
 
   // ——— Diário → agenda (F15) ———
   // «agendar|agende|marcar|programar X para dd/mm [com Fulano]» (ou «X agendada para dd/mm») → { n, vence ('AAAA-MM-DD'), quem } ou { passada: true }; a data pode ser dd/mm[/aa|/aaaa], «15 de novembro»,
-  // «amanhã», «depois de amanhã», «daqui a N dias|semanas» e «dia 20». O pedido é o verbo no imperativo ou no infinitivo, sem pergunta (a cortesia «pode agendar…?» vale), sem negação e sem cancelamento.
+  // «amanhã», «depois de amanhã», «daqui a N dias|semanas», «dia 20», o dia da semana («para sexta», «segunda-feira», «sexta que vem»: a PRÓXIMA ocorrência, nunca hoje) e «semana que vem» (daqui a 7 dias; a proposta mostra
+  // a data para o usuário conferir). O pedido é o verbo no imperativo ou no infinitivo, sem pergunta (a cortesia «pode agendar…?» vale), sem negação e sem cancelamento. Com `semData`, o «agendar …» SEM data entendida
+  // (ou com data que não existe) devolve { semData: true, n, invalida } — a resposta diz que NADA foi agendado, em vez de a pergunta cair em outro assunto.
   var AG_VERBO = /\b(agend(?:ar|e|a|amos|ei|ou|aram)|marc(?:ar|a|amos)|marque|program(?:ar|e|a|amos))\b/g, AG_FEITO = /\b(agendad[oa]s?|marcad[oa]s?|programad[oa]s?)\b/;
   var AG_AMBIGUO = /^(agenda|marca|programa)$/, AG_INICIO = /^[\s,]*(?:(?:por favor|favor|pode|poderia|voce|vc|consegue|da pra|da para|ok|entao|tambem|e|ai|capitao)[\s,]+)*$/, AG_NOME = /^\s+(de|do|da|dos|das)\b/, AG_ANOTA = /^\s*(?:(?:ai|la)\b|que\b|:)/;
   var AG_CORTESIA = /(?:^|[\s,])(?:pode|poderia|podia|consegue|conseguiria|da pra|da para|daria pra|daria para|tem como|seria possivel)(?:\s+(?:me|por favor|voce|vc))?[\s,]*$/, AG_ANTES = /\b(o|a|os|as|um|uma|do|da|dos|das|no|na|nos|nas|de|meu|minha|seu|sua|esse|essa|este|esta|pelo|pela)\s+$/;
@@ -481,12 +484,17 @@
   var AG_GENERICO = /^[\s,]*(?:(?:as|os|a|o|uns|umas|todas?|todos|minhas?|meus|nossas?|nossos|outras?|outros|essas?|esses|quais|que|alguma|algum|nenhuma|nenhum|tudo|algo|nada|coisa|coisas|tarefas?|manutencoes|manutencao|servicos?|compromissos?|itens?|revisoes|pendencias?|lembretes?|alertas?|avisos?|visitas|tem|ha)[\s,]*)+$/;
   // a primeira data do texto dobrado: { ini, fim, dia (desde 1970) } — dd/mm, «15 de novembro», «amanhã», «daqui a N dias», «dia 20»; null se não há; dia NaN se a data não existe
   function dataNoTexto(s) {
-    var m, hoje = diaDe(msAgora()), p, mes;
+    var m, hoje = diaDe(msAgora()), p, mes, dow;
     function r(grupo, dia) { var ini = m.index + m[0].length - grupo.length; return { ini: ini, fim: ini + grupo.length, dia: dia }; }
     if ((m = /(?:^|[^0-9\/])((\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?)(?![0-9\/])/.exec(s))) return r(m[1], diaDigitado(+m[2], +m[3], m[4]));
     if ((m = /(?:^|[^0-9])((?:dia )?(\d{1,2}) de (janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?: de (\d{4}))?)(?![a-z0-9])/.exec(s))) return r(m[1], diaDigitado(+m[2], MES_NUM[m[3]], m[4]));
     if ((m = /(?:^|[^a-z])(depois de amanha|amanha)(?![a-z])/.exec(s))) return r(m[1], hoje + (m[1] === 'amanha' ? 1 : 2));
     if ((m = /(?:^|[^a-z0-9])((?:daqui a|em) (\d{1,3}) (dias?|semanas?))(?![a-z])/.exec(s))) return r(m[1], hoje + +m[2] * (/^semana/.test(m[3]) ? 7 : 1));
+    if ((m = /(?:^|[^a-z0-9])((?:(?:para|pra|pro|na|no|em|ate|nesta|neste|nessa|nesse|esta|este|proxima|proximo) +(?:(?:a|o|esta|este|proxima|proximo) +)*(domingo|segunda|terca|quarta|quinta|sexta|sabado)(?:[- ]feira)?|(domingo|segunda|terca|quarta|quinta|sexta|sabado)[- ]feira|(domingo|segunda|terca|quarta|quinta|sexta|sabado) +(?:que vem|seguinte))(?: +(?:que vem|seguinte|proxima|proximo))?)(?![a-z0-9])(?! +(?:passad[oa]|revisao|revisoes|etapa|parte|vez|troca|visita|fase|tarefa|inspecao|manutencao))/.exec(s))) {
+      p = DIA_SEMANA[m[2] || m[3] || m[4]]; dow = ((hoje % 7) + 7 + 4) % 7;   // (o dia 0, 01/01/1970, foi quinta-feira)
+      return r(m[1], hoje + ((p - dow + 7) % 7 || 7));
+    }
+    if ((m = /(?:^|[^a-z])((?:(?:para|pra|na|em|ate) +(?:a +)?)?(?:semana que vem|proxima semana|semana seguinte))(?![a-z])/.exec(s))) return r(m[1], hoje + 7);
     if ((m = /(?:^|[^a-z0-9])((?:(?:no|o|pro|para o|ate o|até o) )?dia (\d{1,2}))(?![0-9\/])/.exec(s))) {
       p = +m[2]; mes = +diaIso(hoje).slice(5, 7);
       var ano = +diaIso(hoje).slice(0, 4), n = dataCivil(ano, mes, p);
@@ -495,7 +503,16 @@
     }
     return null;
   }
-  function achaAgendar(texto) {
+  // «agendar|agende» sem a data entendida: só o pedido claro (o verbo agendar no imperativo ou no infinitivo, sem «vou/ele…» antes, sem Google/agenda de outro app); marcar e programar sem data seguem as rotas de sempre
+  // («marcar waypoint», «programar o piloto»). { semData: true, n (a tarefa dita, '' se não disse), invalida (a data dita não existe, 30/02) }; a resposta não repete a tarefa (o resto da frase pode ser a data que não entendeu).
+  var AG_SEM_DATA_NAO = /\b(?:vou|vamos|vai|vao|ja|esqueci|esquecemos|esqueceu|ele|ela|eles|elas|tera|tem que|tenho que|temos que|google|calendar|calendario|outlook|whatsapp|e-mail|email)\b/;
+  function agendaSemData(raw, f, v, ini, d) {
+    var n;
+    if (!/^agend(?:ar|e)$/.test(v[1]) || AG_SEM_DATA_NAO.test(f)) return null;
+    n = limpaNome(raw.slice(ini).replace(/\s+(?:com|responsavel|responsável)\s*:?\s+.*$/i, '').replace(/^(?:\s+(?:para|pra|pro|em|no|na|o|a|ate|até|dia|de|do|da))+/i, '').replace(/\?+\s*$/, ''));
+    return { semData: true, n: (n.length >= 3 ? n.slice(0, 120) : ''), invalida: !!(d && isNaN(d.dia)) };
+  }
+  function achaAgendar(texto, semData) {
     var raw = String(texto || '').slice(0, 1000), f = dobra(raw), re = new RegExp(AG_VERBO.source, 'g'), v = null, pp = null, x, dep, antes, ini, resto, d, hoje, n, depois, sem, q, quemT = '', w, lw;
     while ((x = re.exec(f))) {
       dep = f.slice(x.index + x[0].length); antes = f.slice(0, x.index);
@@ -512,7 +529,7 @@
     if (/\b(nao|nunca)\b/.test(f.slice(0, v ? v.index : pp.index)) || /\b(cancel\w*|desmarc\w*)\b/.test(f)) return null;
     if (v && AG_ANTES.test(f.slice(0, v.index))) return null;   // «a marca», «o programa»: substantivo
     ini = v ? v.index + v[0].length : pp.index + pp[0].length; resto = f.slice(ini); d = dataNoTexto(resto);
-    if (!d || isNaN(d.dia)) return null;
+    if (!d || isNaN(d.dia)) return semData && v ? agendaSemData(raw, f, v, ini, d) : null;
     hoje = diaDe(msAgora());
     if (d.dia < hoje) return v ? { passada: true, vence: diaIso(d.dia) } : null;   // «revisão marcada para 10/09» (fato) já passado = registro antigo, não pedido
     n = v ? raw.slice(ini, ini + d.ini) : raw.slice(0, pp.index).replace(/(?:\s+(?:est[áa]|est[ãa]o|foi|foram|ficou|ficaram|fica|j[áa]))+\s*$/i, '');   // («a revisão do gerador está agendada para 20/11»: o nome é «revisão do gerador»)
@@ -687,7 +704,7 @@
     cru = listaCru(K.alarmes); n = almProxN();
     itens.forEach(function (it) {
       var lin;
-      if (!it || !it.m || (it.op !== '<' && it.op !== '>') || it.m.ops.indexOf(it.op) === -1 || typeof it.limite !== 'number' || !isFinite(it.limite) || it.limite < it.m.faixa[0] || it.limite > it.m.faixa[1]) return;
+      if (!it || !it.m || (it.op !== '<' && it.op !== '>') || it.m.ops.indexOf(it.op) === -1 || typeof it.limite !== 'number' || !isFinite(it.limite) || it.limite < it.m.faixa[0] || it.limite > it.m.faixa[1] || almMorta(it.m, it.op, it.limite)) return;
       if (ativas.concat(criadas).some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; })) return;
       lin = { id: 'usr_' + n++, campo: it.m.campos[0], op: it.op, limite: it.limite, iso: almIsoUnico(cru, Date.now()), who: quem() };
       if (sim()) lin.sim = true;
@@ -710,6 +727,9 @@
   function almTxt(m, v) { return almNum(v, m.casas) + ' ' + m.un; }
   function almRegra(a) { return a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite); }
   function almMotorTxt(m) { return m.motor ? ' — só vale com o motor em cruzeiro (a partir de 1.000 rpm)' : ''; }
+  // a regra que nunca dispara: «rotação abaixo de 800 rpm» — a rotação só é avaliada com o motor em cruzeiro (a partir de 1.000 rpm), então «abaixo de» 1.000 rpm ou menos não tem como valer (o motor apagando é o caso
+  // que o usuário queria vigiar, e esse o app não avalia); o pedido é recusado com o motivo, e a API também não grava
+  function almMorta(m, op, lim) { return !!m.motor && /_rpm$/.test(m.campos[0]) && op === '<' && lim <= 1000; }
   // ——— entender o pedido ———
   var ALM_CRIA = '(?:cri(?:e|a|ar)|configur(?:e|a|ar)|colo(?:que|ca|car)|ativ(?:e|a|ar)|program(?:e|a|ar)|mont(?:e|a|ar)|adicion(?:e|a|ar)|defin(?:a|ir))';
   var ALM_GAT_A = / (?:me )?(?:avis(?:e|a|ar)|alert(?:e|a|ar)|notifi(?:que|ca|car))(?:-me| me)? /, ALM_COND = / (?:quando|se|caso|sempre que|assim que|toda vez que) /;
@@ -721,17 +741,31 @@
   var ALM_RELATO = / (?:esta|estao|ta|tao|estava|estavam|caiu|cairam|acendeu|acesa|acesas|disparou|soou|apagou|parou|agora|neste momento|nesse momento|urgente|socorro|ajuda|problema|falha|falhou|luz|vermelha|vermelho|zerou|zerada|sem pressao) /;
   var ALM_PERGUNTA = / (?:como|onde|quando|qual|quais|quanto|porque|por que|o que|quem|sera|posso|devo) /;
   function almGatilho(q) { return (ALM_GAT_A.test(q) && ALM_COND.test(q)) || ALM_GAT_B.test(q) || ALM_GAT_C.test(q); }
-  // O relato junto do pedido («pressão do óleo baixa no BB, me avise se cair abaixo de 2 bar», «baixou», «caindo», «o manômetro marca 1 bar, me avise…») segue a instrução de segurança (oleo): o pedido de alarme só é
-  // configuração quando a frase COMEÇA pelo pedido — antes do gatilho («me avise», «alerte», «crie um alarme», «se», «quando») só cortesia ou o motor/lado (“por favor”, “capitão”, “no motor de bombordo”) — e não traz
-  // sinal do estado de agora: nenhum sintoma (baixa, baixou, fraca, caindo, perdendo, oscilando, marca, vazando, quente, ruído…) fora da própria condição («cair abaixo de 2») e nenhum número antes dela (a leitura
-  // citada). Na dúvida, o oleo() vale (os passos de segurança, local, sem leitura).
-  var ALM_SINTOMA = / (?:baix[oa]s?|baixou|baixaram|fraco|fraca|fracos|fracas|pouc[oa]s?|zero|oscil\w*|perd\w*|cain\w*|despenc\w*|sumi\w*|diminu\w*|reduziu|reduziram|zerand\w*|marca|marcam|marcando|marcou|marcava|apit\w*|piscand\w*|acendend\w*|pingand\w*|vazand\w*|vazou|vazamentos?|fumac\w*|fumegand\w*|quent\w*|aquec\w*|esquent\w*|ruidos?|barulh\w*|estranh\w*|anormal\w*|anormais|esquisit\w*|trepid\w*|falhand\w*|falhas|tremend\w*|instave\w*|cheiro|cheirando|pior\w*|ruim|ruins|travand\w*|engasg\w*|limite) /;
+  // O relato junto do pedido («pressão do óleo baixa no BB, me avise se cair abaixo de 2 bar», «baixou», «caindo», «o manômetro marca 1 bar, me avise…», «…cair abaixo de 2 bar, o motor morreu») segue a instrução
+  // de segurança (oleo): o pedido de alarme só é configuração quando a frase COMEÇA pelo pedido — antes do gatilho («me avise», «alerte», «crie um alarme», «se», «quando») só cortesia ou o motor/lado (“por favor”,
+  // “capitão”, “no motor de bombordo”) —, não traz número antes da condição (a leitura citada) e TODA palavra dela é da configuração: depois de tirar a medida («pressão do óleo»), o sentido com o número («cair
+  // abaixo de 2 bar») e o gatilho, só pode sobrar cortesia, lado/motor, conectivo e unidade — uma LISTA BRANCA curta (ALM_CFG_OK). Qualquer palavra fora dela (sintoma, defeito, alarme que tocou, «não sobe», «tem óleo
+  // no porão», «estou sem óleo», uma leitura dita), antes ou depois da condição, é relato. Na dúvida, o oleo() vale (os passos de segurança, local, sem leitura).
   var ALM_ABRE_OK = ' por favor gentileza favor entao capitao ok ei oi ola olha bom dia boa tarde noite e ai pode poderia voce quero que preciso gostaria queria vamos tambem agora me no na nos nas do da de para pra o a os as motor motores bb be bombordo boreste estibordo lado ';
+  var ALM_CFG_OK = ' ' + raizes(ALM_ABRE_OK + ' obrigado obrigada valeu pf pfv sim mim aqui la ja mesmo vc ambos ambas dois duas pelo pela pressao oleo ou mais'
+    + ' avise avisa avisar alerte alerta alertar notifique notifica notificar quando se caso sempre assim toda vez alarme aviso um uma novo nova outro outra faz fazer faca dae cri crie cria criar configure configura configurar coloque coloca colocar ative ativa ativar programe programa programar monte monta montar adicione adiciona adicionar defina definir'
+    + ' bar volt v grau c celsius rpm knot kt metro m hpa litro l por cento porcento').join(' ') + ' ';
+  var ALM_SENTIDO_VB = ' ' + raizes('cair cai caia caiam caiem ficar fique fiquem ficarem estiver estiverem tiver tiverem for forem seja sejam passar passe passem descer desca descam baixar baixe baixem subir suba subam chegar chegue cheguem atingir atinja ultrapassar ultrapasse exceder exceda para a de').join(' ') + ' ';
   var ALM_COMP_NUM = new RegExp('(?:' + ALM_LT.source + '|' + ALM_GT.source + ')(?= *\\d)', 'g');
+  function almRestoDesconhecido(q) {
+    var tk = raizes(q.replace(ALM_COMP_NUM, ' zzcmp ')), out = [], i;
+    for (i = 0; i < tk.length; i++) {
+      if (tk[i] === 'zzcmp') { while (out.length && ALM_SENTIDO_VB.indexOf(' ' + out[out.length - 1] + ' ') !== -1) out.pop(); continue; }   // (o verbo colado ao sentido: «cair», «ficar», «estiver», «cair para»)
+      out.push(tk[i]);
+      if (/^\d+$/.test(tk[i])) while (i + 1 < tk.length && ALM_UN_ALHEIA.test(tk[i + 1])) i++;   // (a unidade que o app não usa — «5 psi», «25 km/h» — também é do pedido: a resposta diz a unidade da medida)
+    }
+    almMetricas().forEach(function (m) { m.palavras.forEach(function (f) { var j = posFrase(out, f), n = raizes(f).length; while (j >= 0) { out.splice(j, n); j = posFrase(out, f); } }); });   // (a medida; a de um 2º pedido junto também)
+    return out.some(function (w) { return !/^\d+$/.test(w) && ALM_CFG_OK.indexOf(' ' + w + ' ') === -1; });
+  }
   function almSinalEstado(q) {
     var s = q.replace(ALM_COMP_NUM, ' | '), i = s.indexOf(' | '), gs = [ALM_GAT_A, ALM_GAT_B, ALM_GAT_C, ALM_COND].map(function (r) { var m = r.exec(q); return m ? m.index : -1; }).filter(function (k) { return k >= 0; });   // (a condição vira ' | ': o número ANTES dela é a leitura que o usuário cita — «a pressão do óleo do BB 1,5 bar, me avise se cair abaixo de 1 bar» —, não o limite)
     if (q.slice(0, gs.length ? Math.min.apply(null, gs) : 0).trim().split(/\s+/).some(function (w) { return w && ALM_ABRE_OK.indexOf(' ' + w + ' ') === -1; })) return true;   // texto de relato ANTES do pedido
-    return ALM_SINTOMA.test(s) || (i > 0 && /\d/.test(s.slice(0, i)));
+    return (i > 0 && /\d/.test(s.slice(0, i))) || almRestoDesconhecido(q);
   }
   // o pedido COMPLETO na forma de configuração («me avise se … cair abaixo de 2 bar»): gatilho + sentido + número e nenhuma palavra de relato. É o que vale ANTES do óleo (o relato de queda de pressão
   // segue a instrução de segurança; a configuração da regra não é relato) e o que o oleo() deixa de tratar como queda
@@ -809,6 +843,7 @@
       if (un && un !== m.un) return { ok: false, motivo: 'unidade', m: m };
       if (m.ops.indexOf(op) === -1) return { ok: false, motivo: 'op', m: m };
       if (!(lim >= m.faixa[0] && lim <= m.faixa[1])) return { ok: false, motivo: 'faixa', m: m };
+      if (almMorta(m, op, lim)) return { ok: false, motivo: 'rpm', m: m };
     }
     return { ok: true, itens: med.itens.map(function (m2) { return { m: m2, op: op, limite: lim }; }) };
   }
@@ -831,8 +866,12 @@
     return op === '<' ? v < limite : v > limite;
   }
   // os alarmes pedidos ATIVOS no instante `ms` (o do instante da pergunta, o fixado ou agora): [{ id, n, nivel: 'aviso', rotulo, cor, rgb, sistema, lado?, campo, titulo, valor, limite, un, valorTxt, limiteTxt, texto, desde, desdeMs,
-  // hora, fonte, pedido: true, op }] — a forma dos alertas do CapitaoAlertas, para a faixa do topo (Fase 4) juntar à lista. Ativo = a condição vale agora ou valeu nos últimos `histerese_s` s (fecha só depois de 10 s
-  // sem valer); `desde` = o começo dessa sequência (até 160 s para trás, só com o replay). Sem quadro vivo (replay ou coletor), no SOS ou sem regra: [].
+  // hora, seg, guia, secao, passos, detalhe, fonte, pedido: true, op }] — a forma dos alertas do CapitaoAlertas (CONTRATO §1.24), para a faixa do topo (Fase 4) juntar à lista; guia, secao, passos e detalhe vão vazios (o aviso
+  // pedido não tem passo a passo nem tela de detalhe). Ativo = a condição vale agora ou valeu nos últimos `histerese_s` s (fecha só depois de 10 s sem valer). `desde` = o começo dessa sequência, olhando até 160 s para
+  // trás, só com o replay. A sequência que chega ao fim dessa janela (ou o coletor, que não guarda histórico) NÃO tem começo conhecido: `desde` '', `desdeMs` null, `hora` '', `desdeAberto` true e `desdeTxt` «há mais de
+  // 2 min 40 s» (ou «agora», no coletor) — nunca uma hora que anda com o relógio. Com o começo achado, `desdeTxt` é «desde HH:MM:SS». Sem quadro vivo (replay ou coletor), no SOS ou sem regra: [].
+  var ALM_JANELA = 160;
+  function almJanelaTxt() { return Math.floor(ALM_JANELA / 60) + ' min ' + (ALM_JANELA % 60) + ' s'; }
   function almAtivos(ms) {
     var A = almCfg(), regras, i = instante(), R = window.CapitaoReplay, H, cache = {}, NIV = (window.CapitaoAlertas && window.CapitaoAlertas.NIVEL && window.CapitaoAlertas.NIVEL.aviso) || {};
     if (!A || !i || !i.q || VIVAS[i.fonte] !== 1) return [];
@@ -841,19 +880,21 @@
     ms = typeof ms === 'number' && isFinite(ms) ? ms : i.ms;
     function quadro(k) { var t = ms - k * 1000; if (!tem(cache, 'k' + k)) cache['k' + k] = k === 0 && ms === i.ms ? i.q : (i.fonte === 'replay' && R && typeof R.em === 'function' ? R.em(t) : (k === 0 ? i.q : null)); return cache['k' + k]; }
     return regras.map(function (a) {
-      var ser = [], k, ult, ini, gap, v, d, A2 = window.CapitaoAgora, lado = /^motor_(bb|be)_/.exec(a.campo), q0 = quadro(0);
-      for (k = 0; k <= 160; k++) { ser.push(almCond(a.m, a.op, a.limite, quadro(k)) === true); if (k >= H && !ser.slice(0, k + 1).some(Boolean)) break; if (i.fonte !== 'replay' && k === 0) break; }
+      var ser = [], k, ult, ini, gap, v, d, A2 = window.CapitaoAgora, lado = /^motor_(bb|be)_/.exec(a.campo), q0 = quadro(0), fechou, hora, desdeTxt;
+      for (k = 0; k <= ALM_JANELA; k++) { ser.push(almCond(a.m, a.op, a.limite, quadro(k)) === true); if (k >= H && !ser.slice(0, k + 1).some(Boolean)) break; if (i.fonte !== 'replay' && k === 0) break; }
       ult = ser.indexOf(true);
       if (ult < 0 || ult > H) return null;
-      ini = ult; gap = 0;
-      for (k = ult + 1; k < ser.length; k++) { if (ser[k]) { ini = k; gap = 0; } else if (++gap > H) break; }
+      ini = ult; gap = 0; fechou = false;
+      for (k = ult + 1; k < ser.length; k++) { if (ser[k]) { ini = k; gap = 0; } else if (++gap > H) { fechou = true; break; } }   // (achou o começo: mais de `H` s sem valer antes dele)
       v = q0 && typeof q0[a.campo] === 'number' ? q0[a.campo] : null;
-      d = ms - ini * 1000;
+      d = fechou ? ms - ini * 1000 : null;
+      hora = fechou && A2 && A2.fmt ? A2.fmt.hora(d, true) : '';
+      desdeTxt = hora ? 'desde ' + hora : i.fonte === 'replay' ? 'há mais de ' + almJanelaTxt() : 'agora';
       var normal = ult > 0;   // a condição já não vale agora: o aviso só fecha 10 s depois de normalizar
       return { id: a.id, n: a.n, nivel: 'aviso', rotulo: NIV.rotulo || 'AVISO', cor: NIV.cor || 'var(--cap-warn, #f0a63a)', rgb: NIV.rgb || 'var(--cap-warn-rgb, 240,166,58)', sistema: /^motor_/.test(a.campo) ? 'motores' : /^bateria_/.test(a.campo) ? 'elétrico' : /^tanque_/.test(a.campo) ? 'tanques' : a.campo === 'diesel_litros' ? 'combustível' : 'navegação',
         lado: lado ? lado[1].toUpperCase() : undefined, campo: a.campo, titulo: 'Alarme pedido #' + a.n + ': ' + a.m.nome, valor: v, limite: a.limite, un: a.m.un, valorTxt: v == null ? '' : almTxt(a.m, v), limiteTxt: almTxt(a.m, a.limite), op: a.op,
-        normalizando: normal, texto: 'Alarme pedido #' + a.n + ' — ' + a.m.nome + (v == null ? '' : ': ' + almTxt(a.m, v)) + ' (' + (normal ? 'já voltou ' + (a.op === '<' ? 'acima' : 'abaixo') + ' de ' + almTxt(a.m, a.limite) + '; o aviso fecha ' + H + ' s depois de normalizar' : (a.op === '<' ? 'abaixo' : 'acima') + ' de ' + almTxt(a.m, a.limite)) + ')', desde: new Date(d).toISOString(), desdeMs: d, hora: A2 && A2.fmt ? A2.fmt.hora(d, true) : '',
-        fonte: A.fonte || 'alarme pedido no chat · avaliado neste aparelho', pedido: true };
+        normalizando: normal, texto: 'Alarme pedido #' + a.n + ' — ' + a.m.nome + (v == null ? '' : ': ' + almTxt(a.m, v)) + ' (' + (normal ? 'já voltou ' + (a.op === '<' ? 'acima' : 'abaixo') + ' de ' + almTxt(a.m, a.limite) + '; o aviso fecha ' + H + ' s depois de normalizar' : (a.op === '<' ? 'abaixo' : 'acima') + ' de ' + almTxt(a.m, a.limite)) + ')', desde: fechou ? new Date(d).toISOString() : '', desdeMs: fechou ? d : null, hora: hora, seg: fechou ? ini : i.fonte === 'replay' ? ALM_JANELA : 0, desdeAberto: !fechou, desdeTxt: desdeTxt,
+        guia: '', secao: '', passos: [], detalhe: '', fonte: A.fonte || 'alarme pedido no chat · avaliado neste aparelho', pedido: true };
     }).filter(Boolean);
   }
 
@@ -2584,8 +2625,10 @@
     },
     // F15 (diário → agenda): «agendar revisão do gerador para 15/11 com a marina» é a PROPOSTA da tarefa da equipe; nada é gravado sem o Confirmar (a tarefa em capitao.tarefas.v1 e 1 linha no diário)
     agendar: function (p, ctx, q) {
-      var ag = achaAgendar(q), grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir manutenção', 'manut']]), prop, sis, tk, pe, dia, fonte = 'Fonte: agenda da equipe do app';
+      var ag = achaAgendar(q, true), grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir manutenção', 'manut']]), prop, sis, tk, pe, dia, fonte = 'Fonte: agenda da equipe do app';
       var como = 'Para agendar, diga “agendar <tarefa> para dd/mm” — por exemplo “agendar revisão do gerador para 15/11 com a marina”.';
+      if (ag && ag.semData) return { text: (ag.invalida ? 'Essa data não existe' : ag.n ? 'Não entendi a data' : 'Não entendi a tarefa nem a data') + ' — nada foi agendado. Diga dd/mm, “amanhã”, “dia 20”, “daqui a 2 semanas”, “segunda-feira” ou “semana que vem”. ' + como,
+        src: fonte, actions: abrir, fala: (ag.invalida ? 'Essa data não existe' : 'Não entendi a data') + ' e nada foi agendado. Diga agendar, a tarefa e a data.' };
       if (!ag) return { text: 'Não entendi a tarefa ou a data. ' + como, src: fonte, actions: abrir, fala: 'Não entendi a tarefa ou a data. Diga agendar, a tarefa e a data.' };
       if (ag.passada) return { text: 'A data ' + brData(ag.vence) + ' já passou — diga uma data de hoje em diante. ' + como, src: fonte, actions: abrir, fala: 'Essa data já passou. Diga uma data de hoje em diante.' };
       if (!grava) return { text: 'Não agendado — pedido vindo de link não grava na agenda.\n' + como, src: fonte, actions: abrir, fala: 'Pedido vindo de link não agenda.' };
@@ -2648,8 +2691,9 @@
           : pr.motivo === 'ambigua' ? 'Um alarme por pedido: diga uma medida e um sentido (“abaixo de” ou “acima de”) de cada vez. ' + ex
           : pr.motivo === 'unidade' ? 'A unidade de ' + min1(m.nome) + ' é ' + m.un + '. ' + ex
           : pr.motivo === 'faixa' ? 'O limite de ' + min1(m.nome) + ' vai de ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + ' (a faixa que o app aceita para o alarme).'
+          : pr.motivo === 'rpm' ? 'Abaixo de 1.000 rpm o app não avalia a rotação (só vale com o motor em cruzeiro, a partir de 1.000 rpm): um alarme de “abaixo de” 1.000 rpm ou menos nunca dispararia, e nada foi criado. Escolha um limite acima de 1.000 rpm; para o motor apagar, confira o painel dos motores e o plotter.'
           : m.nome + ' não aceita esse sentido. ' + ex;
-        return { text: t, src: f, actions: abrir, fala: pr.motivo === 'faixa' ? 'Esse limite está fora da faixa. De ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + '.' : 'Não consegui montar o alarme. Diga a medida, abaixo ou acima de, e o valor.' };
+        return { text: t, src: f, actions: abrir, fala: pr.motivo === 'faixa' ? 'Esse limite está fora da faixa. De ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + '.' : pr.motivo === 'rpm' ? 'Abaixo de mil rpm o app não avalia a rotação, e nada foi criado. Escolha um limite acima de mil rpm.' : 'Não consegui montar o alarme. Diga a medida, abaixo ou acima de, e o valor.' };
       }
       dup = pr.itens.filter(function (it) { return ativas.some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); });
       if (dup.length === pr.itens.length) return { text: 'Esse alarme já existe: ' + ativas.filter(function (a) { return dup.some(function (it) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); }).map(function (a) { return '#' + a.n + ' ' + almRegra(a); }).join(' · ') + '. Nada foi criado.', src: f, actions: abrir, fala: 'Esse alarme já existe. Nada foi criado.' };
@@ -2687,7 +2731,7 @@
       if (!v.length) return { text: 'Você não tem alarmes pedidos' + h + ' (0 de ' + max + ').\nPara criar um: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.', src: f, actions: abrir, fala: 'Você não tem alarmes pedidos' + h + '.' };
       return { text: v.length + (v.length === 1 ? ' alarme pedido' : ' alarmes pedidos') + h + ' (de ' + max + ' possíveis)' + (at.length ? ', ' + at.length + (at.length === 1 ? ' ativo agora' : ' ativos agora') : ', nenhum ativo agora') + ':\n' + v.map(function (a) {
         var s = at.filter(function (x) { return x.id === a.id; })[0], val = i && i.q && typeof i.q[a.campo] === 'number' ? almTxt(a.m, i.q[a.campo]) : '';
-        return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO desde ' + s.hora + (val ? ' (agora ' + val + ')' : '') : val ? ' — agora ' + val + ', sem disparar' : ' — sem leitura agora');
+        return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO ' + s.desdeTxt + (val ? ' (agora ' + val + ')' : '') : val ? ' — agora ' + val + ', sem disparar' : ' — sem leitura agora');
       }).join('\n') + '\nPara apagar: “apagar alarme #n”.', src: f, actions: abrir };
     },
     alarmeApaga: function (p, ctx, q) {
@@ -3180,7 +3224,7 @@
     ANSWERS.alarmes = function (p, ctx, qq) {
       var r = alarmes0(p, ctx, qq), pa = almAtivos(), i, lista, cab;
       if (!pa.length) return r;
-      i = vivo(); lista = pa.map(function (x) { return '• ' + x.texto + ' — desde ' + x.hora; }).join('\n');
+      i = vivo(); lista = pa.map(function (x) { return '• ' + x.texto + ' — ' + x.desdeTxt; }).join('\n');
       cab = pa.length === 1 ? 'Há 1 alarme pedido por você ativo' : 'Há ' + pa.length + ' alarmes pedidos por você ativos';
       if (/^Nenhum alarme ativo às /.test(r.text)) r.text = r.text.replace(/^Nenhum alarme ativo às ([0-9:]+)\./, 'Nenhum alarme do barco ativo às $1; ' + cab.charAt(0).toLowerCase() + cab.slice(1) + ':') + '\n' + lista;
       else r.text = r.text + '\n' + cab + (i ? ' às ' + i.hora : '') + ':\n' + lista;
@@ -3562,7 +3606,7 @@
     if (almPedido(q)) return 'alarmePedido';
     if (almApagaN(qRaw) >= 0) return 'alarmeApaga';
     if (almLista(q)) return 'alarmesLista';
-    if (!!achaAgendar(qRaw)) return 'agendar';
+    if (!!achaAgendar(qRaw, true)) return 'agendar';
     if (capacidadesPergunta(q)) return 'capacidades';   // F26
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
@@ -4233,7 +4277,7 @@
   function fichaAlarmes(semSim) {
     var v = almVigentes({ semSim: semSim }), at = almAtivos(), i = vivo();
     if (!v.length) return null;
-    return { text: v.map(function (a) { var s = at.filter(function (x) { return x.id === a.id; })[0]; return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO desde ' + s.hora + (s.valorTxt ? ' (agora ' + s.valorTxt + ')' : '') : ''); }).join('\n') + (i ? '\n(às ' + i.hora + ')' : ''), src: 'Fonte: alarmes pedidos neste aparelho' };
+    return { text: v.map(function (a) { var s = at.filter(function (x) { return x.id === a.id; })[0]; return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO ' + s.desdeTxt + (s.valorTxt ? ' (agora ' + s.valorTxt + ')' : '') : ''); }).join('\n') + (i ? '\n(às ' + i.hora + ')' : ''), src: 'Fonte: alarmes pedidos neste aparelho' };
   }
   function ficha1(p, q, a) {
     p = p || 'app';
