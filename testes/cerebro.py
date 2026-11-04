@@ -2436,10 +2436,12 @@ PERGUNTA_CHAVE = {
     'checklistFundeio': 'checklist de fundeio', 'checklistAbastecimento': 'checklist de abastecimento',
     # P3F: o registro pelo chat (F17) e a proposta do relato (F16): o pedido sem o texto, e os botões «registrar o relato» / «não registrar o relato» (sem proposta esperando, dizem que não há)
     'diarioPede': 'registrar no diário que', 'relatoRegistra': 'registrar o relato', 'relatoCancela': 'não registrar o relato',
+    # P3F (revisão): o botão «O que verificar?» do relato (a pergunta pronta; vai à IA, ou ao guia se a IA não responde)
+    'relatoVerifica': 'O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado',
 }
 # as chaves cuja resposta não traz a hora do instante: emergência (nada do quadro), diagnóstico (do aparelho) e a saudação.
 # Fase 3 (P3E, F09): os checklists saíram daqui — o item conferido pelo quadro muda com o instante («item conferido muda com o replay», PARIDADE F09), então a resposta traz a hora e os números dele
-SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'diarioPede', 'relatoRegistra', 'relatoCancela')   # (P3F: o pedido de registro e os botões do relato não trazem dado de bordo)
+SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica')   # (P3F: o pedido de registro e os botões do relato não trazem dado de bordo)
 # as respostas cujos números mudam de 12:01:00 para 12:01:45 (vento, SOG, rpm, arrefecimento, volante, tensão, nível do porão, distância do destino, diesel)
 MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora', 'consumo', 'autonomia',
          'profundidade', 'eta', 'alarmes', 'arrefecimento', 'navegacao', 'sobreDados', 'foraBarco', 'preditiva',
@@ -3769,7 +3771,7 @@ GRUPOS_3A['termos'] = grupo_termos
 # As chaves cuja fala é só a frase (sem a hora do instante): as de FALA_INTEIRA e de emergência, as do (g) (tempo e maré, contatos, fora do barco, sobre os dados, o fallback), o trecho
 # do guia, o cadastro sem quadro (áudio, guias), a saudação, o diagnóstico e o registro (Fase 3, P3E, F09: os checklists saíram daqui — a fala deles traz a hora do instante). As outras são de dado de bordo: a fala traz o número e a hora do instante.
 VOZ_SO_FRASE = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'sobreDados', 'foraBarco', 'fallback', 'mare', 'clima',
-                'contatos', 'manual', 'audio', 'diario', 'diarioPede', 'relatoRegistra', 'relatoCancela')   # (P3F: o pedido de registro e os botões do relato — a fala é a pergunta «o que devo registrar?» ou o aviso de que não há relato esperando)
+                'contatos', 'manual', 'audio', 'diario', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica')   # (P3F: o pedido de registro e os botões do relato — a fala é a pergunta «o que devo registrar?» ou o aviso de que não há relato esperando)
 # perguntas que caem numa chave que já tem outra pergunta acima, mas com a 1ª linha própria (a chave `eta` abre com «Percorrido desde as 07:00: …» na pergunta de distância)
 VOZ_EXTRA = {'etaPercorrido': 'quantas milhas percorremos hoje?', 'etaProximoPonto': 'qual o próximo waypoint?', 'situacaoAgora': 'situação agora'}
 PERGUNTAS_VOZ = dict(PERGUNTA_CHAVE, **VOZ_EXTRA)
@@ -4190,7 +4192,7 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV2
 # Mutantes da 3ª revisão da P3B: a hora da maré (real, não a do replay), o coletor sem o campo `alarmes`, a fala do gerador, a corrente da âncora e os estados fixos que os mutantes anteriores
 # não alcançavam (o replay só navega: horímetros, radar, motores, climatização, Seakeeper e dessalinizador só mudam num coletor; destinos com pouco diesel; tudo Executado; tarefa de segurança)
 MUTANTES_3B_REV3 = [
-    ('a maré volta a levar o carimbo «consultado às» do instante do replay', r"relatoCancela: 1, mare: 1 };", r"relatoCancela: 1 };", ('tempo',)),   # (P3F: as chaves do registro entraram antes da maré)
+    ('a maré volta a levar o carimbo «consultado às» do instante do replay', r"relatoCancela: 1, relatoVerifica: 1, mare: 1 };", r"relatoCancela: 1, relatoVerifica: 1 };", ('tempo',)),   # (P3F: as chaves do registro entraram antes da maré)
     ('a fonte da maré salva perde a hora da leitura', r"(s && mareLidaHM() ? ' · lida às ' + mareLidaHM() : '')", r"''", ('tempo',)),
     ('a hora da leitura da maré vale também com a simulação desligada', r"(s && mareLidaHM() ? ' · lida às '", r"(mareLidaHM() ? ' · lida às '", ('tempo',)),
     ('a hora da leitura da maré é a do instante do replay', r"isFinite(v.em) ? fmtHM(v.em) : ''; }", r"isFinite(v.em) ? fmtHM(msAgora()) : ''; }", ('tempo',)),
@@ -4237,7 +4239,7 @@ MUTANTES_3C = [
     ('o foraBarco sem «dolar»', r"var FORA_BARCO = [' dolar ', ' dolares ', ", r"var FORA_BARCO = [", ('p3c',)),
     ('o foraBarco sem «preco»', r"' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' bitcoin ', 'quanto custa'", ('p3c',)),
     # (P3E, F10: o `pedeIA` ganhou o 'faqEquip' na mesma linha; a mutação é a mesma, ancorada no texto novo)
-    ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'foraBarco') return false;", ('p3c',)),
+    ('o foraBarco chama a IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica' && k !== 'foraBarco') return false;", ('p3c',)),
     ('a sobreDados sem a forma curta («é de verdade?»)', r"if (AUT_CURTA.test(q) || AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", r"if (AUT_QUE_E.test(q) || AUT_NAVEGANDO.test(q)) return true;", ('p3c',)),
     ('a sobreDados sem «o barco existe»', r"var AUT_EXISTE = [' o barco existe ', ", r"var AUT_EXISTE = [", ('p3c',)),
     ('o horímetro pega a revisão do gerador e o filtro de água salgada (sem a lista branca)', r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor']) && leitura(q, FALTA_TROCA_OK)) return 'horimetros';", r"has(q, ['troca', 'revisao', 'oleo', 'horas de motor'])) return 'horimetros';", ('p3c',)),
@@ -5874,6 +5876,7 @@ MUTANTES_3E_CABECAS = mutantes_cabecas() + [
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_CABECAS
 
 # —— P3E, revisão 4: os mutantes do inteiro puro, do desempate, do estoque (acabou/zerado/preciso), da 1ª linha da lista, da ficha, do FAQ e do «pronto para sair» ——
+RV_COMENTARIO = r"    // F16: o botão «O que verificar?» do relato: a busca no FAQ e nos guias pelo texto do relato (e a IA, se a tela a chamar), antes das rotas por palavra (depois da emergência e da cabeça de segurança)"
 MUTANTES_3E_REV4 = [
     ('p3e rev4: o inteiro puro aceita o prefixo numérico («12abc», «1e2»)', r"/^\d{1,3}$/.test(v.trim())", r"/^\d{1,3}/.test(v.trim())", ('pecas',)),
     ('p3e rev4: o inteiro puro arredonda a fração (3.7 vira 4)', r"return Number.isInteger(n) && n >= 0 && n <= 999 ? n : null;", r"return isFinite(n) && n >= 0 && n <= 999 ? Math.round(n) : null;", ('pecas',)),
@@ -5899,7 +5902,7 @@ MUTANTES_3E_REV4 = [
     ('p3e rev4: «pronto para sair?» não é o checklist de saída', r"|| (PRONTO_SAIR.test(q) && leitura(q, CHECK_ANTES_OK));", r";", ('checklist', 'faq')),
     ('p3e rev4: «prontos para zarpar?» (plural) não é o checklist de saída', r"var PRONTO_SAIR = / prontos? (?:para|pra)", r"var PRONTO_SAIR = / pronto (?:para|pra)", ('checklist', 'faq')),
     ('p3e rev4: «estamos prontos para sair?» não é o checklist de saída (a lista branca não tem estamos, pronto, tudo)', r"antes largar sair zarpar saida barco lancha embarcacao para pra estamos pronto prontos tudo ja ';", r"antes largar sair zarpar saida barco lancha embarcacao para pra ';", ('checklist', 'faq')),
-    ('p3e rev4: a leitura da pressão do óleo toma a cabeça de equipamento («onde fica o EPIRB, qual a pressão do óleo?»)', r"    var eq = equipRota(q); if (eq) return eq;" "\n" r"    if (ol) return 'oleoLeitura';", r"    if (ol) return 'oleoLeitura';" "\n" r"    var eq = equipRota(q); if (eq) return eq;", ('cabecas',)),
+    ('p3e rev4: a leitura da pressão do óleo toma a cabeça de equipamento («onde fica o EPIRB, qual a pressão do óleo?»)', r"    var eq = equipRota(q); if (eq) return eq;" "\n" + RV_COMENTARIO + "\n" r"    if (relatoVerificaPergunta(q)) return 'relatoVerifica';" "\n" r"    if (ol) return 'oleoLeitura';", r"    if (ol) return 'oleoLeitura';" "\n" r"    var eq = equipRota(q); if (eq) return eq;" "\n" + RV_COMENTARIO + "\n" r"    if (relatoVerificaPergunta(q)) return 'relatoVerifica';", ('cabecas',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_REV4
 
@@ -6135,6 +6138,8 @@ JS_P3F_ACAO = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados,
   o.geradaPorIso = tenta({ t: 'x', acao: 'anula', alvo: D.diario[1].iso }); o.corrigeVazio = tenta({ t: '  ', acao: 'corrige', alvo: linha.iso });
   o.resolveNaoPend = tenta({ t: 'x', acao: 'resolve', alvo: D.diario.filter((x) => !x.pend)[0].id }); o.resolveLinhaSemPend = tenta({ t: 'x', acao: 'resolve', alvo: linha.iso });
   o.resolveIdFalso = tenta({ t: 'x', acao: 'reabre', alvo: 'd99' });
+  // a chave do protótipo (constructor, toString…) não é uma das quatro ações, mesmo com o alvo válido (a pendência gerada d03, o iso de uma linha do aparelho com pend)
+  o.protoAcao = ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__', 'isPrototypeOf'].reduce((r, k) => r.concat([tenta({ t: 'x', acao: k, alvo: 'd03' }), tenta({ t: 'x', acao: k, alvo: pend.iso }), tenta({ t: 'x', acao: k, alvo: linha.iso })]), []);
   o.pendIds = D.diario.filter((x) => x.pend).map((x) => x.id);
   const ok = (e) => { const antes = n(), r = B.addDiario(e); return [r !== null && r.acao === e.acao && r.alvo === e.alvo, n() - antes]; };
   o.anula = ok({ t: 'anula', acao: 'anula', alvo: linha.iso }); o.corrige = ok({ t: 'texto novo', acao: 'corrige', alvo: linha.iso });
@@ -6183,6 +6188,23 @@ JS_P3F_TICKET_CRU = """() => { const B = window.CapitaoBrain, o = {}; localStora
   const u = B.addTicket({ k: 'diario', texto: 'Outra proposta' }); o.antes = localStorage.getItem('capitao.tickets.v1.antes'); o.depois = JSON.parse(localStorage.getItem('capitao.tickets.v1')).length; o.u = !!u;
   localStorage.clear(); localStorage.setItem('capitao.tickets.v1', 'isto nem é JSON'); B.addTicket({ k: 'diario', texto: 'Mais uma' }); o.antes2 = localStorage.getItem('capitao.tickets.v1.antes');
   return o; }"""
+# a chave do protótipo (constructor, toString, hasOwnProperty, __proto__…) como tipo, origem ou sistema: não é um tipo de proposta, uma origem nem um sistema (as tabelas são lidas por texto que vem de fora, e o valor guardado pode ser adulterado)
+JS_P3F_TICKET_PROTO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const n = () => B.loadDiario().length;
+  const ks = ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__', 'isPrototypeOf'];
+  o.k = ks.map((k) => { try { return B.addTicket({ k: k, texto: 'uma proposta com o tipo ' + k }); } catch (e) { return 'erro ' + e.message; } }); o.criadas = B.loadTickets().length;
+  // adulterada no armazenamento (o tipo é a chave do protótipo; mais uma com a origem do protótipo, que a leitura aceita): só a de origem estranha é uma proposta
+  const iso = new Date().toISOString(), forja = ks.map((k, i) => ({ id: 'tforja' + i, k: k, origem: 'relato', texto: 'forjada ' + k, estado: 'aberto', iso: iso, who: 'x' }));
+  forja.push({ id: 'tforjaorig', k: 'diario', origem: 'toString', texto: 'de origem estranha', estado: 'aberto', iso: iso, who: 'x' });
+  localStorage.setItem('capitao.tickets.v1', JSON.stringify(forja));
+  o.lidas = B.loadTickets().map((t) => t.id); o.abertas = B.ticketsAbertos().map((t) => t.id);
+  const n0 = n(); o.aceita = ks.map((k, i) => { try { return B.aceitaTicket('tforja' + i); } catch (e) { return 'erro ' + e.message; } }); o.linhasForjadas = n() - n0;
+  o.recusa = ks.map((k, i) => B.recusaTicket('tforja' + i)); o.edita = ks.map((k, i) => B.editaTicket('tforja' + i, { texto: 'x' }));
+  const orig = B.loadTickets().filter((t) => t.id === 'tforjaorig')[0], tela = B.ticketTela(orig), ac = B.aceitaTicket('tforjaorig'); o.origemForjada = [tela.origem, ac && ac.linha.src];
+  localStorage.clear();
+  o.origem = ks.map((k) => { const t = B.addTicket({ k: 'diario', origem: k, texto: 'origem ' + k }); return [t.origem, B.ticketTela(t).origem]; });
+  o.sys = ks.map((k) => { const t = B.addTicket({ k: 'diario', texto: 'sistema ' + k, prop: { sys: k } }), r = B.aceitaTicket(t.id); return [r.linha.sys, r.linha.tone, r.linha.src]; });
+  return o; }"""
+
 # o alarme do replay só vira proposta num gesto, uma por alarme por dia de bordo; o replay nunca cria proposta nem grava no diário
 JS_P3F_ALARME = """([dias]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, A = window.CapitaoAlertas, o = {}; localStorage.clear();
   const n = () => B.loadDiario().length, n0 = n(), tk = () => B.loadTickets();
@@ -6219,6 +6241,8 @@ def grupo_p3f_registro(b, muta, ped):
         recusas = ('semAlvo', 'alvoNum', 'alvoInexistente', 'acaoDesconhecida', 'acaoDesconhecidaPend', 'acaoVazia', 'geradaPorIso', 'corrigeVazio', 'resolveNaoPend', 'resolveLinhaSemPend', 'resolveIdFalso', 'anulaDeAcao')
         ped('p3f acao: addDiario recusa (devolve null e não grava) a ação sem alvo, com alvo que não é texto, que não existe, de linha gerada (só o aparelho pelo iso), de linha de ação, com texto vazio na correção, com ação fora das quatro e a pendência que não é pendência',
             all(z[k] == [True, 0] for k in recusas), {k: z[k] for k in recusas if z[k] != [True, 0]})
+        ped('p3f acao: a chave do protótipo (constructor, toString, valueOf, hasOwnProperty, __proto__, isPrototypeOf) não é uma das quatro ações: nada é gravado, com o alvo da pendência gerada, da pendência do aparelho e da linha comum',
+            len(z['protoAcao']) == 18 and all(x == [True, 0] for x in z['protoAcao']), z['protoAcao'])
         ped('p3f acao: grava (1 linha cada) a anulação e a correção pelo iso, o resolve e o reabre pelo id da pendência gerada (as 3 do arquivo) e pelo iso de uma linha do aparelho com pend',
             z['anula'] == [True, 1] and z['corrige'] == [True, 1] and len(z['pendIds']) == 3 and all(r == [True, 1] for r in z['resolveGerada']) and z['reabreGerada'] == [True, 1] and z['resolveDoAparelho'] == [True, 1] and z['total'] == 7, z)
         v = pg.evaluate(JS_P3F_VIGENTE)
@@ -6272,6 +6296,12 @@ def grupo_p3f_tickets(b, muta, ped):
         ped('p3f tickets: o desfazer vale 10 s na tela e 10 min vindo do chat (opts.chat)', 9000 <= o['janelaTela'] <= 10000 and 599000 <= o['janelaChat'] <= 600000, (o['janelaTela'], o['janelaChat']))
         ped('p3f tickets: fora da janela o desfazer devolve null, não escreve a anulação e a proposta continua aceita', o['foraJanela'] is None and o['foraJanelaLinhas'] == 0 and o['foraJanelaEstado'] == 'aceito', (o['foraJanela'], o['foraJanelaLinhas'], o['foraJanelaEstado']))
         ped('p3f tickets: ticketTela traz o texto que o CONFIRMAR grava, a origem em rótulo e o selo «apresentação» só com simulacao false (aqui não); sem ticket, valor seguro', o['tela']['texto'].startswith('A bomba de água doce') and o['tela']['origem'] == 'Relato' and o['tela']['apresentacao'] is False and o['tela']['longo'] is False and o['telaNull']['texto'] == '', (o['tela'], o['telaNull']))
+        px = pg.evaluate(JS_P3F_TICKET_PROTO)
+        ped('p3f tickets: o tipo que é chave do protótipo (constructor, toString, valueOf, hasOwnProperty, __proto__, isPrototypeOf) não cria proposta, e a forjada no armazenamento não é lida, não está entre as abertas, não se confirma (0 linhas), não se recusa nem se edita',
+            px['k'] == [None] * 6 and px['criadas'] == 0 and px['lidas'] == ['tforjaorig'] and px['abertas'] == ['tforjaorig'] and px['aceita'] == [None] * 6 and px['linhasForjadas'] == 0 and px['recusa'] == [None] * 6 and px['edita'] == [None] * 6, px)
+        ped('p3f tickets: a origem e o sistema que são chave do protótipo caem no padrão (origem relato / rótulo Relato, tom de destaque do app), na proposta nova e na forjada no armazenamento (linha «proposta confirmada (relato)»)',
+            all(x == ['relato', 'Relato'] for x in px['origem']) and all(x[0] == k and x[1] == 'var(--cap-accent, #00a1fe)' and x[2] == 'app · proposta confirmada (relato)' for x, k in zip(px['sys'], ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__', 'isPrototypeOf']))
+            and px['origemForjada'] == ['Relato', 'app · proposta confirmada (relato)'], px)
         c = pg.evaluate(JS_P3F_TICKET_CRU)
         ped('p3f tickets: a gravação parte do que está guardado (a proposta de uma versão futura, o lixo e o objeto sem id ficam; só a nossa entra e a lista lida mostra só as que a versão entende)',
             len(c['cru']) == 5 and c['cru'][0]['estado'] == 'aceito' and c['cru'][1:] == [{'id': 'tfuturo1', 'k': 'novoTipo', 'texto': 'de uma versão futura', 'estado': 'aberto'}, 'lixo', {'sem': 'id'}, None] and len(c['lista']) == 1, c)
@@ -6331,7 +6361,7 @@ JS_P3F_F17 = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clea
   // 3) cancelar, pergunta, outro pedido, emergência, óleo e o NOVA: nada gravado
   const tenta = (x, antes) => { B.answer(antes || 'anote no diário:', op); const n0 = n(), c = r(x); return [x, c[0], n() - n0]; };
   o.cancela = ['cancelar', 'esquece', 'deixa pra lá', 'nada', 'não precisa'].map((x) => tenta(x));
-  o.perguntas = ['qual a autonomia?', 'quanto diesel temos', 'como está o gerador?', 'onde fica o extintor?', 'o gerador está ligado?', 'tem diesel suficiente?'].map((x) => tenta(x));
+  o.perguntas = ['qual a autonomia?', 'quanto diesel temos', 'como está o gerador?', 'onde fica o extintor?', 'o gerador está ligado?', 'tem diesel suficiente?', 'quanto diesel ainda temos nos tanques de bombordo e boreste', 'onde fica o extintor da cabine de proa'].map((x) => tenta(x));   // (as duas últimas, sem «?» e com mais de 3 palavras: só a PERGUNTA as segura)
   o.acoes = ['diagnóstico'].map((x) => tenta(x)); o.semTexto = tenta('anote no diário:');   // a rota de ação segue a dela; o pedido sem o texto outra vez pergunta de novo (e não grava o resumo)
   o.emerg = ['socorro, homem ao mar', 'tem fogo na praça de máquinas', 'pressão de óleo baixa no motor BB'].map((x) => tenta(x));
   o.outroPedido = tenta('registre no diário que chegamos às dez');
@@ -6347,6 +6377,14 @@ JS_P3F_F17 = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clea
   const f = (q) => { const c = B.answer(q, op); return [c.key, B.falaCurta(c)]; };
   o.falas = { nota: f('registre no diário: saída com 4 pessoas'), mob: f('registre no diário: homem ao mar'), oleo: f('registre no diário: pressão de óleo baixa no motor BB'), resumo: f('Registre no diário o resumo da navegação de agora e confirme.'),
               juntoOleo: f('registre posição e hora, pressão de óleo baixa no motor BB'), link: (() => { const c = B.answer('registre no diário: nota por link', { platform: 'app', commit: false }); return [c.key, B.falaCurta(c)]; })() };
+  // 7) o que NÃO é texto de registro (a espera é consumida e a fala segue a rota dela): a saudação, o controle da conversa, o pedido ao app, o pedido de dado curto, o enchimento e o adiamento
+  o.enche = ['oi', 'bom dia', 'boa noite capitão', 'bom dia capitão tudo bem', 'tudo bem capitão como vai', 'ia capitão', 'nova conversa', 'novo chat', 'nova conversa por favor', 'encerrar', 'parar', 'para', 'pare de falar', 'silêncio', 'telemetria agora', 'mostre a telemetria', 'nível dos tanques', 'autonomia', 'checklist de chegada',
+    'me mostra o diário', 'mostrar o diário', 'próximas manutenções', 'previsão do tempo', 'quero ver os documentos', 'abrir telemetria', 'consumo de diesel', 'horímetros', 'pendências abertas', 'pode ser', 'talvez', 'hã', 'hã hã', 'hum', 'ah tá', 'quero', 'vamos', 'tchau', 'calma aí', 'ok valeu'].map((x) => tenta(x));
+  o.adia = ['deixa quieto', 'agora não', 'depois', 'depois eu falo', 'deixa eu pensar', 'um momento', 'só um instante', 'espera', 'peraí', 'não sei', 'nada a registrar', 'não quero', 'mais tarde'].map((x) => tenta(x));
+  o.rotaDoPedido = ['oi', 'telemetria agora', 'nível dos tanques', 'próximas manutenções', 'previsão do tempo', 'me mostra o diário', 'quero ver os documentos', 'checklist de chegada'].map((x) => tenta(x));
+  // …e a nota que parece pedido de dado ou é curta continua sendo gravada (1 linha cada): o verbo de fato, o número, a frase maior, a nota sem rota de dado
+  o.notas = ['o gerador foi ligado às sete e desligado às nove', 'troca do filtro de combustível', 'limpeza do casco', 'saída às sete com quatro pessoas', 'motor BE esquentou ontem', 'motor BE esquentou', 'abastecimento de 500 litros', 'diesel 800 litros', 'saímos à tarde', 'chegamos na marina', 'trocamos o rotor do gerador',
+    'a bomba de porão foi testada', 'filtro de água salgada limpo', 'vou trocar o filtro amanhã', 'vamos trocar o filtro do gerador amanhã', 'lavagem do convés', 'troca do filtro'].map((x) => tenta(x));
   return o; }"""
 
 
@@ -6364,6 +6402,11 @@ def grupo_p3f_f17(b, muta, ped):
         ped('p3f F17: depois do «o que devo registrar?», cancelar/esquecer, a pergunta, a emergência e a pressão de óleo não gravam (e a emergência e o óleo seguem a rota deles, com os passos); outro pedido de registro segue a rota normal (1 linha, a dele)',
             all(x[2] == 0 for x in o['cancela']) and all(x[1] == 'relatoCancela' for x in o['cancela']) and all(x[2] == 0 for x in o['perguntas']) and [x[1] for x in o['emerg']] == ['sos', 'sos', 'oleo'] and all(x[2] == 0 for x in o['emerg'])
             and o['outroPedido'][1] == 'diario' and o['outroPedido'][2] == 1 and o['acoes'] == [['diagnóstico', 'diagnostico', 0]] and o['semTexto'][1] == 'diarioPede' and o['semTexto'][2] == 0, (o['cancela'], o['perguntas'], o['emerg'], o['outroPedido'], o['acoes'], o['semTexto']))
+        ped('p3f F17: depois do «o que devo registrar?», a saudação, o controle da conversa (nova conversa, parar, silêncio), o pedido ao app (mostre…, quero ver…, me mostra…), o pedido de dado curto sem fato (telemetria agora, nível dos tanques, próximas manutenções, previsão do tempo), o enchimento (pode ser, hã, quero, vamos) e a despedida NÃO viram linha do diário (%d falas, 0 linhas)' % len(o['enche']),
+            all(x[2] == 0 for x in o['enche']) and all(x[2] == 0 and x[1] == 'relatoCancela' for x in o['adia']), ([x for x in o['enche'] if x[2] != 0], [x for x in o['adia'] if x[2] != 0 or x[1] != 'relatoCancela']))
+        ped('p3f F17: a fala que não é registro segue a rota dela (a saudação, a telemetria, os tanques, a manutenção, o clima, o diário, os documentos, o checklist): a espera foi consumida e a resposta é a de sempre',
+            [x[1] for x in o['rotaDoPedido']] == ['saudacao', 'telemetria', 'tanques', 'manutencao', 'clima', 'diarioLer', 'docsvenc', 'checklistChegada'] and all(x[2] == 0 for x in o['rotaDoPedido']), o['rotaDoPedido'])
+        ped('p3f F17: a nota curta (verbo de fato, número, sem rota de dado) e a frase maior seguem sendo o texto do registro, mesmo quando a rota dela é a de um dado (o gerador, os motores, a autonomia): 1 linha cada', all(x[1] == 'diario' and x[2] == 1 for x in o['notas']), [x for x in o['notas'] if x[1] != 'diario' or x[2] != 1])
         ped('p3f F17: o NOVA zera a espera; a espera vale 2 min (119 s grava, 121 s não); pedido de link (commit false) não arma a espera e diz que não grava; a espera é consumida na primeira fala (a segunda não grava); o texto por link não grava',
             o['nova'] == ['fallback', 0] and o['venceu'][1] == 0 and o['dentro'] == ['diario', 1] and o['link'][0] == 'diarioPede' and 'não grava' in o['link'][1] and o['linkDepois'][1] == 0 and o['uma'] == 1 and o['porLink'] == ['fallback', 0], o)
         fl = o['falas']
@@ -6382,6 +6425,8 @@ RELATOS_P3F = [
     'Passamos o fim de semana fundeados na enseada e ficamos sem sinal de internet', 'O gerador ficou ligado durante toda a noite e consumiu bastante diesel', 'Recebemos a visita do fiscal da capitania e a vistoria anual foi aprovada ontem',
     # (12 e 13) o defeito CONTADO no passado, sem urgência (a proposta fica calada) e o relato passado que ainda tem pendência no presente (também calado)
     'Ontem a geladeira da cozinha não funcionou durante a tarde toda por causa do calor', 'Hoje trocamos o filtro de ar do gerador e ainda falta limpar o filtro do compressor',
+    # (14) a água que NÃO é perigo (abastecer a água doce, conferir o nível do dessalinizador) continua sendo relato
+    'Hoje de manhã abastecemos a água doce do tanque e conferimos o nível de água do dessalinizador na marina',
 ]
 # a pergunta, o pedido, o perigo, a pessoa em risco, a emergência e o óleo, o tempo piorando, o dinheiro, a frase curta, o comando de registro: NÃO viram proposta
 NAO_RELATOS_P3F = [
@@ -6395,7 +6440,10 @@ NAO_RELATOS_P3F = [
     # só a «?» (sem palavra de pergunta), só o pedido (verbo de comando), só a pessoa (sem perigo), sem verbo de fato, e o verbo que está na oração do «que» (pedido de dado)
     'trocamos o filtro de ar do gerador ontem na marina com o técnico de sempre?', 'confira se o filtro de ar do gerador foi trocado ontem na marina pelo técnico',
     'o Lucas cortou o dedo com a faca de cozinha na cabine ontem à noite', 'o marinheiro bateu o joelho na escada da cabine ontem à noite durante a limpeza', 'a cabine de proa do barco tem uma cama grande e muito confortável', 'a lista que fizemos ontem de tarefas do estaleiro está na pasta do barco',
-    'estamos com água entrando no casco desde que batemos na pedra ontem', 'o EPIRB caiu do suporte e a bateria ficou exposta ao sol durante o dia todo', 'como se faz para trocar o filtro de ar do gerador sem desmontar a tampa',
+    'estamos com água entrando no casco desde que batemos na pedra ontem',
+    # a água do mar entrando, o nível de água subindo e o barco fazendo água (o substantivo antes do verbo): perigo, nunca a proposta de registro
+    'a água do mar está entrando pelo casco da popa devagar agora', 'o nível de água na sala de máquinas subiu bastante nos últimos minutos desde que saímos', 'o barco está fazendo água pela popa desde que saímos da barra ontem à tarde', 'o barco está tomando água pela proa desde que saímos da barra ontem de manhã', 'a água salgada continua subindo no casco desde que saímos da marina',
+    'a água do mar invadiu a sala de máquinas depois que saímos da barra hoje cedo', 'a sala de máquinas encheu de água devagar depois que passamos pela barra hoje cedo', 'o EPIRB caiu do suporte e a bateria ficou exposta ao sol durante o dia todo', 'como se faz para trocar o filtro de ar do gerador sem desmontar a tampa',
 ]
 JS_P3F_RELATO = """([relatos, nao]) => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().length;
   const res = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, relato: a.relato || null, actions: a.actions.map((x) => [x.l, x.href]), text: a.text, fala: B.falaCurta(a), src: a.src, rota: B.route(q) }; };
@@ -6452,6 +6500,40 @@ JS_P3F_RELATO_FLUXO = """([relatos]) => { const B = window.CapitaoBrain, o = {};
   // 9) a proposta nova troca a que esperava: o «registrar» é a nova; a antiga continua aberta na lista A CONFIRMAR
   localStorage.clear(); const p1 = prop(R), p2 = prop(R2); l0 = n(); diz('registrar'); o.troca = [tk().filter((t) => t.id === p1)[0].estado, tk().filter((t) => t.id === p2)[0].estado, n() - l0, B.ticketsAbertos().map((t) => t.id)[0] === p1];
   return o; }"""
+# com a base dos guias carregada, o «O que verificar?» de um relato que casa com um guia devolve o trecho (com a fonte), os botões da proposta e a chamada à IA
+JS_P3F_VERIFICA_BASE = """() => new Promise((res) => { const B = window.CapitaoBrain, op = { platform: 'app' }; B.carregaBase(); if (B.carregaFaq) B.carregaFaq();
+  setTimeout(() => { localStorage.clear(); const q = 'Hoje limpamos o filtro de água salgada da climatização';
+    const a = B.answer(q, op), id = a.relato && a.relato.id, ver = B.perguntaDoBotao('#capitao-relato-verifica-' + id), v = B.answer(ver, op);
+    res({ prop: !!id, ver, key: v.key, text: v.text, acoes: (v.actions || []).map((x) => x.l), src: v.src, pedeIA: B.pedeIA(v, ver), relato: !!v.relato, linhas: B.loadDiario().length, tickets: B.loadTickets().length, estado: B.loadTickets()[0].estado }); }, 900); })"""
+COORDS_P3F = ["fundeamos em 27°00,1'S 048°38,2'W e hoje cedo o gerador desligou sozinho durante o almoço", 'fundeamos em -26.99312 -48.61405 e hoje cedo o gerador desligou sozinho durante o almoço',
+              'chegamos em -26.993, -48.614 e hoje cedo o gerador desligou sozinho durante o almoço', 'paramos em 26°59\'35"S 048°36\'50"W e hoje cedo o gerador desligou sozinho durante o almoço']
+# a revisão da P3F: as coordenadas no botão «O que verificar?», a rota relatoVerifica, o botão velho de uma proposta já decidida e o «sim» curto depois do conversa() da IA
+JS_P3F_REVISAO = """([relatos, coords]) => { const B = window.CapitaoBrain, o = {}; const op = { platform: 'app' }, n = () => B.loadDiario().length, tk = () => B.loadTickets();
+  const diz = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), linhas: n(), pedeIA: B.pedeIA(a, q), relato: !!a.relato, acoes: (a.actions || []).map((x) => x.l), src: a.src, seg: !!a.seguranca, junto: a.junto || '' }; };
+  const prop = (q) => { const a = B.answer(q, op); return a.relato && a.relato.id; };
+  // 1) o botão «O que verificar?» de um relato com coordenada: a pergunta que vai à IA não leva a coordenada (a proposta local guarda o texto como foi dito)
+  o.coord = coords.map((q) => { localStorage.clear(); const id = prop(q); const ver = id ? B.perguntaDoBotao('#capitao-relato-verifica-' + id) : null; return { q, id: !!id, ver, guardado: id ? tk()[0].texto : null, rota: ver ? diz(ver) : null }; });
+  // 2) a pergunta pronta é a rota relatoVerifica (a IA ou o guia), não a resposta pronta do equipamento que o relato já recebeu
+  o.verifica = [5, 6, 9, 12].map((i) => { localStorage.clear(); const q = relatos[i], a0 = B.answer(q, op), id = a0.relato.id, ver = B.perguntaDoBotao('#capitao-relato-verifica-' + id), r = diz(ver); return { i, rotaDoRelato: a0.key, ver, r, pendente: tk()[0].estado, tickets: tk().length }; });
+  localStorage.clear(); const idv = prop(relatos[5]); const ver1 = B.perguntaDoBotao('#capitao-relato-verifica-' + idv), v1 = diz(ver1); const ver2 = ver1.replace('O que verificar', 'o que verificar'), v2 = diz(ver2);
+  o.botoes = [v1.acoes.slice(0, 2), v2.acoes.slice(0, 2), v1.relato]; o.horaFonte = [v1.src, v1.fala]; const eb = diz('e boreste?'); o.eBoreste = [eb.key, eb.junto]; l0 = n(); const reg = diz('registrar'); o.depoisDoVerifica = [reg.key, n() - l0, tk()[0].estado];
+  o.digitado = ['O que verificar e qual pode ser a causa: tem fogo no motor', 'O que verificar e qual pode ser a causa: socorro, homem ao mar', 'O que verificar e qual pode ser a causa: onde fica o EPIRB', 'O que verificar e qual pode ser a causa: pressão de óleo baixa no motor BB', 'O que verificar e qual pode ser a causa:', 'O que verificar e qual pode ser a causa'].map((q) => { const r = diz(q); return [q.slice(40), r.key, r.pedeIA]; });
+  // 3) o botão velho de uma proposta já decidida não age sobre a que espera (nem registra a outra, nem a recusa)
+  var l0;
+  const tenta = (primeiro, botao) => { localStorage.clear(); const A = prop(relatos[0]), Bq = prop(relatos[2]); const botaoA = (k) => B.perguntaDoBotao('#capitao-relato-' + k + '-' + A);
+    diz(botaoA(primeiro)); const antes = n(), estA = tk().filter((t) => t.id === A)[0].estado, r = diz(botaoA(botao)); return { estA, key: r.key, text: r.text, fala: r.fala, linhas: n() - antes, estA2: tk().filter((t) => t.id === A)[0].estado, estB: tk().filter((t) => t.id === Bq)[0].estado }; };
+  o.velhoRegistra = tenta('cancela', 'registra'); o.velhoCancela = tenta('registra', 'cancela'); o.velhoRegistraDeNovo = tenta('registra', 'registra'); o.velhoCancelaDeNovo = tenta('cancela', 'cancela');
+  localStorage.clear(); const Bn = prop(relatos[2]); B.perguntaDoBotao('#capitao-relato-registra-tnaoexiste'); l0 = n(); const nx = diz('registrar o relato'); o.velhoInexistente = [nx.key, nx.text, n() - l0, tk().filter((t) => t.id === Bn)[0].estado];
+  localStorage.clear(); const Ba = prop(relatos[0]); B.perguntaDoBotao('#capitao-relato-registra-' + Ba); const real = Date.now; l0 = n(); Date.now = () => real() + 6000; const sx = diz('registrar'); Date.now = real; o.alvoVenceu = [sx.key, n() - l0];   // o alvo vence em 5 s: o «registrar» é da proposta que espera
+  // 4) a resposta da IA: a tela conta a conversa DEPOIS (B.conversa) e o «sim» curto da proposta continua valendo logo depois; outra pergunta no meio, ou uma resposta que pergunta, não
+  const rel = 'a luz de navegação de boreste queimou e navegamos à noite sem ela por duas horas';
+  const fluxo = (antes, depois, resp) => { localStorage.clear(); const a = B.answer(rel, op); const id = a.relato && a.relato.id; (antes || []).forEach((x) => B.answer(x, op)); if (depois) B.conversa(depois, resp); const l = n(), r = diz('sim'); return { proposta: !!id, key: r.key, linhas: n() - l, estado: tk()[0].estado, chaveRelato: a.key }; };
+  o.convOk = fluxo(null, rel, 'Troque a lâmpada ou o fusível da luz de boreste.'); o.convSemTela = fluxo(null, null);
+  o.convOutraNoMeio = fluxo(['qual a autonomia?'], rel, 'Troque a lâmpada ou o fusível.'); o.convOutraPergunta = fluxo(null, 'como troco a lâmpada da luz de boreste', 'Troque a lâmpada.');
+  o.convPergunta = fluxo(null, rel, 'Qual é o tipo da lâmpada?'); o.convVoz = fluxo(null, '  ' + rel + '  ', 'Troque a lâmpada.');
+  localStorage.clear(); B.answer(rel, op); B.conversa(rel, 'Troque a lâmpada ou o fusível.'); l0 = n(); const rg = diz('registrar'); o.convRegistrar = [rg.key, n() - l0];
+  localStorage.clear(); B.answer(rel, op); B.conversa(rel, 'Troque a lâmpada ou o fusível.'); l0 = n(); const nn = diz('não'); o.convNao = [nn.key, n() - l0, tk()[0].estado];
+  return o; }"""
 JS_P3F_RELATO_SIMFALSE = """([relatos]) => { const B = window.CapitaoBrain; localStorage.clear(); const a = B.answer(relatos[0], { platform: 'app' }); B.answer('registrar', { platform: 'app' });
   return [!!a.relato, B.loadTickets()[0].sim, B.loadDiario()[0].sim, B.loadDiario().length]; }"""
 
@@ -6496,10 +6578,39 @@ def grupo_p3f_relato(b, muta, ped):
             x['botao'][0] == 'registrar o relato' and x['botao'][1] == 'relatoRegistra' and x['botao'][2] == 1 and x['botao'][3] == 'aceito' and x['botao'][4] == 'aberto' and x['botaoNao'][0] == 'não registrar o relato' and x['botaoNao'][2] == 'recusado'
             and x['verifica'] == 'O que verificar e qual pode ser a causa: Hoje de manhã trocamos o filtro de ar do gerador na marina' and all(v == '' for v in x['lixo']) and x['alvoVelho'] == ['aberto', 'aceito'], (x['botao'], x['botaoNao'], x['verifica'], x['lixo'], x['alvoVelho']))
         ped('p3f F16: a proposta nova troca a que esperava (o «registrar» é da nova) e a antiga continua aberta na lista A CONFIRMAR', x['troca'][0] == 'aberto' and x['troca'][1] == 'aceito' and x['troca'][2] == 1 and x['troca'][3] is True, x['troca'])
+        rv = pg.evaluate(JS_P3F_REVISAO, [RELATOS_P3F, COORDS_P3F])
+        ped('p3f F16 (revisão): a pergunta do botão «O que verificar?» de um relato com coordenada (graus-minutos, decimal, par, graus-minutos-segundos) vai à IA SEM a coordenada (a proposta local guarda o texto como foi dito), e a resposta dela também não leva',
+            len(rv['coord']) == 4 and all(c['id'] and c['ver'].startswith('O que verificar e qual pode ser a causa: ') and not confere.R_COORD.search(c['ver']) and '(coordenadas só na tela do app)' in c['ver'] and confere.R_COORD.search(c['guardado']) and c['rota']['key'] == 'relatoVerifica'
+                for c in rv['coord']), [(c['q'][:30], c['id'], c['ver']) for c in rv['coord']])
+        ped('p3f F16 (revisão): a pergunta pronta do botão «O que verificar?» é a rota relatoVerifica (o guia ou o FAQ e a IA), e não a resposta pronta do equipamento que o relato já recebeu (gerador, climatização, Seakeeper): chama a IA (pedeIA), não cria outra proposta, não grava e não decide a que espera',
+            [v['r']['key'] for v in rv['verifica']] == ['relatoVerifica'] * 4 and all(v['r']['pedeIA'] is True and not v['r']['relato'] and v['pendente'] == 'aberto' and v['tickets'] == 1 and v['r']['linhas'] == 0 for v in rv['verifica']) and [v['rotaDoRelato'] for v in rv['verifica']] != ['relatoVerifica'] * 4,
+            [(v['i'], v['rotaDoRelato'], v['r']['key'], v['r']['pedeIA']) for v in rv['verifica']])
+        ped('p3f F16 (revisão): a resposta do «O que verificar?» mantém os botões Registrar no diário / Não registrar da proposta que espera; vale digitada em minúsculas; o «registrar» depois ainda registra a proposta; a mesma frase com perigo (fogo, homem ao mar, óleo, EPIRB) segue a emergência, e sem texto do relato não é a rota',
+            rv['botoes'][0] == ['Registrar no diário', 'Não registrar'] and rv['botoes'][1] == ['Registrar no diário', 'Não registrar'] and rv['botoes'][2] is False and 'consultado' not in rv['horaFonte'][0] and not re.search(r'\d\d:\d\d:\d\d', rv['horaFonte'][0] + rv['horaFonte'][1]) and rv['eBoreste'] == ['fallback', ''] and rv['depoisDoVerifica'] == ['relatoRegistra', 1, 'aceito']
+            and [d[1] for d in rv['digitado']] == ['sos', 'sos', 'epirb', 'oleo', 'fallback', 'fallback'] and not any(d[2] for d in rv['digitado'][:4]), (rv['botoes'], rv['depoisDoVerifica'], rv['digitado']))
+        for k, nome in (('velhoRegistra', 'registrar o relato descartado'), ('velhoCancela', 'descartar o relato já registrado'), ('velhoRegistraDeNovo', 'registrar de novo o relato já registrado'), ('velhoCancelaDeNovo', 'descartar de novo o relato já descartado')):
+            pass
+        vr, vc, vrr, vcc = rv['velhoRegistra'], rv['velhoCancela'], rv['velhoRegistraDeNovo'], rv['velhoCancelaDeNovo']
+        ped('p3f F16 (revisão): o botão velho de uma proposta já decidida NÃO age sobre a que espera: o «Registrar» de uma descartada, o «Não registrar» de uma registrada, os dois de novo, e o de uma que nem existe não gravam nada, não decidem a outra (continua aberta) e dizem que nada mudou',
+            vr['estA'] == 'recusado' and vr['linhas'] == 0 and vr['estA2'] == 'recusado' and vr['estB'] == 'aberto' and vr['text'] == 'Esse relato já foi descartado; nada mudou.' and vc['estA'] == 'aceito' and vc['linhas'] == 0 and vc['estA2'] == 'aceito' and vc['estB'] == 'aberto' and vc['text'] == 'Esse relato já está registrado no diário; nada mudou.'
+            and vrr['linhas'] == 0 and vrr['estB'] == 'aberto' and vrr['text'] == vc['text'] and vcc['linhas'] == 0 and vcc['estB'] == 'aberto' and vcc['text'] == vr['text'] and vr['fala'] == vr['text'] and vr['key'] == 'relatoRegistra' and vc['key'] == 'relatoCancela'
+            and rv['velhoInexistente'][0] == 'relatoRegistra' and rv['velhoInexistente'][1] == 'Esse relato não está mais esperando; nada mudou.' and rv['velhoInexistente'][2] == 0 and rv['velhoInexistente'][3] == 'aberto' and rv['alvoVenceu'] == ['relatoRegistra', 1], (vr, vc, rv['velhoInexistente'], rv['alvoVenceu']))
+        ped('p3f F16 (revisão): quando a resposta vem da IA e a tela conta a conversa depois (B.conversa), o «sim» curto logo depois ainda registra a proposta (e o «registrar» e o «não» também); com outra pergunta no meio, outra pergunta no conversa() ou uma resposta da IA que termina em pergunta, o «sim» não confirma',
+            rv['convSemTela']['key'] == 'relatoRegistra' and rv['convSemTela']['linhas'] == 1 and rv['convOk']['proposta'] and rv['convOk']['chaveRelato'] == 'fallback' and rv['convOk']['key'] == 'relatoRegistra' and rv['convOk']['linhas'] == 1 and rv['convOk']['estado'] == 'aceito'
+            and rv['convVoz']['key'] == 'relatoRegistra' and rv['convVoz']['linhas'] == 1 and rv['convRegistrar'] == ['relatoRegistra', 1] and rv['convNao'] == ['relatoCancela', 0, 'recusado']
+            and all(rv[k]['key'] == 'fallback' and rv[k]['linhas'] == 0 and rv[k]['estado'] == 'aberto' for k in ('convOutraNoMeio', 'convOutraPergunta', 'convPergunta')), {k: rv[k] for k in ('convOk', 'convSemTela', 'convOutraNoMeio', 'convOutraPergunta', 'convPergunta', 'convVoz', 'convRegistrar', 'convNao')})
         # nada do que a proposta escreve casa as regex do §3 nem leva coordenada
         varre = pg.evaluate("""(qs) => { const B = window.CapitaoBrain; localStorage.clear(); return qs.map((q) => { const a = B.answer(q, { platform: 'app' }); return [a.text, a.src, B.falaCurta(a)].join('\\n'); }); }""", RELATOS_P3F)
         ruim = [(n, m.group(0)) for t in varre for n in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL', 'DINHEIRO') for m in [RX[n].search(t)] if m]
         ped('p3f F16: nenhuma resposta com a proposta (texto, fonte, fala) casa ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL nem DINHEIRO', not ruim, ruim[:4])
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, fixo='105')
+    try:
+        vb = pg.evaluate(JS_P3F_VERIFICA_BASE)
+        ped('p3f F16 (revisão): com os guias carregados, o «O que verificar?» de um relato que casa com um guia (o filtro de água salgada da climatização) mostra o trecho com a fonte, mantém os botões Registrar no diário / Não registrar à frente, chama a IA (pedeIA), não cria outra proposta nem grava',
+            vb['prop'] and vb['key'] == 'relatoVerifica' and vb['acoes'][:2] == ['Registrar no diário', 'Não registrar'] and 'FAQ de bordo' in vb['acoes'] and 'não achei' not in vb['text'] and vb['src'].startswith('Fonte: ') and 'Climatização' in vb['src'] + vb['text']
+            and vb['pedeIA'] is True and not vb['relato'] and vb['linhas'] == 0 and vb['tickets'] == 1 and vb['estado'] == 'aberto', vb)
     finally:
         pg.ctx.close()
     # o toque num botão da proposta vira a pergunta digitada ('capitao-chat-pergunta') e o link não navega
@@ -6622,6 +6733,8 @@ JS_P3F_FOTO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.cle
   o.legenda = foto('foto', 'filtro de água salgada sujo e com limo'); o.legendaVideo = foto('video', 'barulho estranho no motor BE ao acelerar', null, 'v.mp4');
   o.pedidoReg = foto('foto', 'registre no diário: o rotor da bomba foi trocado ontem'); o.pedidoResumo = foto('foto', 'registre no diário posição e hora');
   o.relato = foto('foto', 'Trocamos o filtro de ar do gerador hoje de manhã na marina'); o.tickets0 = B.loadTickets().length;
+  // o perigo com água (entrando, nível subindo) não é relato: a tela responde ao texto (pedido falso) e nenhuma proposta nasce
+  o.agua = foto('foto', 'a água do mar está entrando pelo casco da popa devagar agora'); o.aguaNivel = foto('foto', 'o nível de água na sala de máquinas subiu bastante nos últimos minutos desde que saímos'); o.ticketsAgua = B.loadTickets().length;
   o.perguntaMarca = foto('foto', 'esta etiqueta está legível?'); o.pedidoApp = foto('foto', 'confira a etiqueta desta foto do gerador'); o.pedidoResumoMais = foto('foto', 'registre no diário posição e hora, saída com 4 pessoas');
   o.semCat = foto('foto', 'vista bonita do pier ao entardecer'); o.longaLegenda = foto('foto', 'legenda '.repeat(90));
   o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB');
@@ -6658,6 +6771,8 @@ def grupo_p3f_foto(b, muta, ped):
         ped('p3f F36: o pedido de registro com a foto («registre no diário: …») grava o texto pedido na linha da foto (1 linha, pedido verdadeiro: a tela não responde de novo, senão gravaria outra); «posição e hora» é o resumo, não vai na linha; o relato com a foto é a nota (pedido verdadeiro, sem proposta)',
             o['pedidoReg']['linhas'] == 1 and o['pedidoReg']['linha']['t'].startswith('O rotor da bomba foi trocado ontem · foto anexada pelo chat') and o['pedidoReg']['pedido'] is True and o['pedidoResumo']['linhas'] == 1 and o['pedidoResumo']['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o['pedidoResumo']['pedido']
             and o['relato']['linhas'] == 1 and o['relato']['linha']['t'].startswith('Trocamos o filtro de ar do gerador hoje de manhã na marina · foto anexada') and o['relato']['pedido'] is True and o['tickets0'] == 0, (o['pedidoReg'], o['pedidoResumo'], o['relato']['linha']))
+        ped('p3f F36 (revisão): o texto de perigo com água (a água do mar entrando, o nível de água subindo) dito com a foto NÃO é relato tratado: o pedido é falso (a tela responde ao texto, que pode ser socorro) e nenhuma proposta nasce',
+            o['agua']['pedido'] is False and o['aguaNivel']['pedido'] is False and o['agua']['linhas'] == 1 and o['aguaNivel']['linhas'] == 1 and o['ticketsAgua'] == 0, (o['agua']['pedido'], o['aguaNivel']['pedido'], o['ticketsAgua']))
         sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo')
         ped('p3f F36: a pergunta, o reconhecimento, a emergência e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
             all(o[k]['linhas'] == 1 and o[k]['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o[k]['nota'] and not o[k]['pedido'] for k in sem_texto), {k: o[k]['linha']['t'] for k in sem_texto})
@@ -6706,14 +6821,14 @@ MUTANTES_P3F = [
     ('p3f acao: a linha de ação é alvo de outra ação', r"return !!linha && !linha.acao && (a === 'anula'", r"return !!linha && (a === 'anula'", ('p3f_registro',)),
     ('p3f acao: o resolve vale para linha do aparelho sem pend', r"if (linha) return linha.pend === true && !linha.acao;", r"if (linha) return !linha.acao;", ('p3f_registro',)),
     ('p3f acao: o resolve vale para qualquer linha gerada (não só a pendência)', r"return (D.diario || []).some(function (x) { return x && x.id === alvo && x.pend === true; });", r"return (D.diario || []).some(function (x) { return x && x.id === alvo; });", ('p3f_registro',)),
-    ('p3f acao: ação fora das quatro passa', r"if (!ACOES[a] || typeof alvo !== 'string' || !alvo) return false;", r"if (typeof alvo !== 'string' || !alvo) return false;", ('p3f_registro',)),
+    ('p3f acao: ação fora das quatro passa', r"if (!tem(ACOES, a) || typeof alvo !== 'string' || !alvo) return false;", r"if (typeof alvo !== 'string' || !alvo) return false;", ('p3f_registro',)),
     ('p3f vigente: a linha anulada continua na leitura', r"return !x.acao && !anula[x.iso]; })", r"return !x.acao; })", ('p3f_registro',)),
     ('p3f vigente: a linha de ação aparece como registro', r"return !x.acao && !anula[x.iso]; })", r"return !anula[x.iso]; })", ('p3f_registro',)),
     ('p3f vigente: a correção não aparece', r"return corr[x.iso] ? Object.assign({}, x, { t: corr[x.iso].t, corrigido: true }) : x; });", r"return x; });", ('p3f_registro',)),
     ('p3f vigente: vale a correção mais antiga', r"else if (x.acao === 'corrige' && typeof x.alvo === 'string' && !corr[x.alvo]) corr[x.alvo] = x; })", r"else if (x.acao === 'corrige' && typeof x.alvo === 'string') corr[x.alvo] = x; })", ('p3f_registro',)),
     ('p3f tickets: o id repetido duplica a proposta', r"    ja = achaTicket(cru, id); if (ja) return ja;   // o id repetido não duplica", r"", ('p3f_tickets',)),
-    ('p3f tickets: a proposta sem texto é criada', r"if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;", r"if (typeof t.k !== 'string' || !TICKET_K[t.k]) return null;", ('p3f_tickets',)),
-    ('p3f tickets: o tipo desconhecido é criado', r"if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;", r"if (typeof t.k !== 'string' || !texto) return null;", ('p3f_tickets',)),
+    ('p3f tickets: a proposta sem texto é criada', r"if (!tem(TICKET_K, t.k) || !texto) return null;", r"if (!tem(TICKET_K, t.k)) return null;", ('p3f_tickets',)),
+    ('p3f tickets: o tipo desconhecido é criado', r"if (!tem(TICKET_K, t.k) || !texto) return null;", r"if (!texto) return null;", ('p3f_tickets',)),
     ('p3f tickets: o SOS propõe', r"    if (EM_SOS) return null;   // o SOS não propõe nada", r"", ('p3f_registro',)),
     ('p3f tickets: a proposta sem o carimbo sim', r"    if (sim()) item.sim = true;", r"", ('p3f_tickets',)),
     ('p3f tickets: o id da tela não é conferido', r"id = typeof t.id === 'string' && /^t[A-Za-z0-9_-]{2,60}$/.test(t.id) ? t.id : novoIdTicket(cru);", r"id = typeof t.id === 'string' ? t.id : novoIdTicket(cru);", ('p3f_tickets',)),
@@ -6763,7 +6878,7 @@ MUTANTES_P3F_F17 = [
     ('p3f F17: a pergunta com «?» vira o texto do registro', r"if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;", r"if (PERGUNTA.test(n) || ACK.test(n)) return null;", ('p3f_f17',)),
     ('p3f F17: o cancelar vira o texto do registro', r"    if (CANCELA_REG.test(n)) return 'relatoCancela';", r"", ('p3f_f17',)),
     ('p3f F17: o NOVA não zera a espera', r"n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }", r"n: (CONV.n || 0) + 1, reg: false }; REL = null; }", ('p3f_f17',)),
-    ('p3f F17: a espera não acha o botão de ação (NAO_ESPERA vazio)', r"return NAO_ESPERA[route(raw)] === 1 ? null : 'diario';", r"return 'diario';", ('p3f_f17',)),
+    ('p3f F17: a espera não acha o botão de ação (NAO_ESPERA vazio)', r"if (NAO_ESPERA[route(raw)] === 1) return null;", r"", ('p3f_f17',)),
     ('p3f F17: a fala do registro volta à 1ª linha com a data', r"    return 'Registrado no diário de bordo.' + (alerta", r"    return 'Registrado no diário de bordo · ' + now().d + ' ' + now().t + (alerta", ('p3f_f17',)),
     ('p3f F17: a fala do registro de emergência não manda abrir o SOS', r"(alerta ? ' Se a emergência é agora, abra o SOS.' : '')", r"''", ('p3f_f17',)),
     ('p3f F17: a fala do registro de óleo não traz a instrução', r"(pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '')", r"''", ('p3f_f17',)),
@@ -6817,9 +6932,9 @@ MUTANTES_P3F_F16 = [
     ('p3f F16: o registrar não confere o complemento do relato', r"      if (sb && sb.extra && t) { ex = comExtra(t.texto, sb); if (ex !== t.texto) editaTicket(t.id, { texto: ex }); }", r"", ('p3f_relato',)),
     ('p3f F16: o não registrar não recusa a proposta', r"      if (grava) { recusaTicket(rp.id); REL = null; }", r"      if (grava) { REL = null; }", ('p3f_relato',)),
     ('p3f F16: o pedido de link confirma a proposta', r"      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;", r"      var grava = true, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;", ('p3f_relato',)),
-    ('p3f F16: o alvo do botão vale para sempre', r"    if (a && Date.now() - a.t < 5000) { t = achaTicket(ticketsCru(), a.id);", r"    if (a) { t = achaTicket(ticketsCru(), a.id);", ('p3f_relato',)),
+    ('p3f F16: o alvo do botão vale para sempre', r"    if (a && Date.now() - a.t < 5000) {" "\n" r"      t = achaTicket(ticketsCru(), a.id);", r"    if (a) {" "\n" r"      t = achaTicket(ticketsCru(), a.id);", ('p3f_relato',)),
     ('p3f F16: o botão não guarda o alvo', "    ALVO_REL = { id: m[2], t: Date.now() };\n", "", ('p3f_relato',)),
-    ('p3f F16: o botão O que verificar? devolve só o relato (sem a pergunta)', r"    return t ? (REL_VER + t.texto.replace(/[\s.!]+$/, '')).slice(0, 500) : '';", r"    return t ? t.texto.slice(0, 500) : '';", ('p3f_relato',)),
+    ('p3f F16: o botão O que verificar? devolve só o relato (sem a pergunta)', r"    return t ? (REL_VER + semCoord(t.texto.replace(/[\s.!]+$/, ''))).slice(0, 500) : '';", r"    return t ? t.texto.slice(0, 500) : '';", ('p3f_relato',)),
     ('p3f F16: o botão Registrar pergunta «não registrar»', r"    if (m[1] === 'registra') return 'registrar o relato';", r"    if (m[1] === 'registra') return 'não registrar o relato';", ('p3f_relato',)),
     ('p3f F16: o toque no botão navega (sem preventDefault)', "      if (!q) return;\n      e.preventDefault();", "      if (!q) return;", ('p3f_relato',)),
     ('p3f F16: o toque no botão não manda a pergunta', r"      try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}", r"", ('p3f_relato',)),
@@ -6898,6 +7013,54 @@ MUTANTES_P3F_F18 = [
     ('p3f F18: o histórico da IA aceita o que não é lista', r"    return (Array.isArray(msgs) ? msgs : []).map(function (m) {", r"    return (msgs || []).map(function (m) {", ('p3f_contexto',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F18
+
+# —— os mutantes da revisão da P3F: a chave do protótipo, a espera do registro, o botão «O que verificar?», o botão velho, o conversa() da IA e a água do relato ——
+MUTANTES_P3F_REV = [
+    # a chave do protótipo (constructor, toString, hasOwnProperty, __proto__) como ação, tipo, origem e sistema
+    ('p3f rev proto: a chave da tabela passa a ser a do protótipo (tem() lê o valor, não o dono)', r"function tem(tabela, k) { return typeof k === 'string' && Object.prototype.hasOwnProperty.call(tabela, k); }", r"function tem(tabela, k) { return typeof k === 'string' && tabela[k] !== undefined; }", ('p3f_registro', 'p3f_tickets')),
+    ('p3f rev proto: a proposta guardada com o tipo do protótipo é lida (ehTicket)', r"tem(TICKET_K, t.k) && typeof t.texto === 'string'; }", r"typeof t.k === 'string' && TICKET_K[t.k] !== undefined && typeof t.texto === 'string'; }", ('p3f_tickets',)),
+    ('p3f rev proto: a proposta nova com o tipo do protótipo é criada (addTicket)', r"if (!tem(TICKET_K, t.k) || !texto) return null;", r"if (typeof t.k !== 'string' || !TICKET_K[t.k] || !texto) return null;", ('p3f_tickets',)),
+    ('p3f rev proto: a ação do protótipo passa pelo alvoValido (ACOES[a])', r"if (!tem(ACOES, a) || typeof alvo !== 'string' || !alvo) return false;", r"if (!ACOES[a] || typeof alvo !== 'string' || !alvo) return false;", ('p3f_registro',)),
+    ('p3f rev proto: a origem do protótipo é guardada na proposta nova', r"origem: tem(ORIGEM_TICKET, t.origem) ? t.origem : 'relato', texto: texto,", r"origem: ORIGEM_TICKET[t.origem] ? t.origem : 'relato', texto: texto,", ('p3f_tickets',)),
+    ('p3f rev proto: a origem do protótipo entra na linha confirmada', r"(tem(ORIGEM_TICKET, t.origem) ? ORIGEM_TICKET[t.origem] : 'Relato').toLowerCase()", r"(ORIGEM_TICKET[t.origem] || 'Relato').toLowerCase()", ('p3f_tickets',)),
+    ('p3f rev proto: a origem do protótipo vai à tela (ticketTela)', r"origem: tem(ORIGEM_TICKET, t && t.origem) ? ORIGEM_TICKET[t.origem] : 'Relato', longo:", r"origem: ORIGEM_TICKET[t && t.origem] || 'Relato', longo:", ('p3f_tickets',)),
+    ('p3f rev proto: o sistema do protótipo vira o tom da linha (tomDe)', r"function tomDe(sys) { return tem(SYS_TONE, sys) ? SYS_TONE[sys] : 'var(--cap-accent, #00a1fe)'; }", r"function tomDe(sys) { return SYS_TONE[sys] || 'var(--cap-accent, #00a1fe)'; }", ('p3f_tickets',)),
+    # a espera do «o que devo registrar?»
+    ('p3f rev espera: a fala sem conteúdo (menos de 2 palavras de conteúdo) vira registro', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return /\d/.test(n) || ws.length > 3 || route(raw) === 'fallback';", ('p3f_f17',)),
+    ('p3f rev espera: a fala curta que tem rota de dado vira registro (telemetria agora, nível dos tanques)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2;", ('p3f_f17',)),
+    ('p3f rev espera: a nota curta sem rota de dado deixa de ser registro (limpeza do casco)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3);", ('p3f_f17',)),
+    ('p3f rev espera: a nota curta com número deixa de ser registro (diesel 800 litros)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2 && (ws.length > 3 || route(raw) === 'fallback');", ('p3f_f17',)),
+    ('p3f rev espera: a frase maior com rota de dado deixa de ser registro (troca do filtro de combustível)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2 && (/\d/.test(n) || route(raw) === 'fallback');", ('p3f_f17',)),
+    ('p3f rev espera: o verbo de fato não basta para a nota curta (motor BE esquentou)', r"    if (fato && ws.length >= 2) return true;", r"", ('p3f_f17',)),
+    ('p3f rev espera: o controle da conversa (nova conversa, parar) vira registro', r"if (CONTROLE_REG.test(n) || PEDIDO_REG.test(n)) return false;", r"if (PEDIDO_REG.test(n)) return false;", ('p3f_f17',)),
+    ('p3f rev espera: o pedido ao app (mostre…, quero ver…, me mostra…) vira registro', r"if (CONTROLE_REG.test(n) || PEDIDO_REG.test(n)) return false;", r"if (CONTROLE_REG.test(n)) return false;", ('p3f_f17',)),
+    ('p3f rev espera: a saudação comprida vira registro (NAO_ESPERA sem saudacao)', r"diagnostico: 1, saudacao: 1, diarioPede: 1,", r"diagnostico: 1, diarioPede: 1,", ('p3f_f17',)),
+    ('p3f rev espera: o adiamento (agora não, depois eu falo, deixa eu pensar, espera, não sei) não cancela', r"|desisto|deixa quieto|deixa quieta|deixa isso|agora nao|nao agora|nao quero|depois|mais tarde|depois eu (?:falo|digo|conto|registro|anoto)|nada (?:a|para|pra) registrar|deixa pra depois|deixa para depois|deixa eu pensar|um momento|so um momento|um instante|so um instante|espera|espere|aguarda|aguarde|perai|pera ai|calma|nao sei|sei la) $/;", r"|desisto) $/;", ('p3f_f17',)),
+    ('p3f rev espera: o enchimento social (tudo bem capitão como vai) conta como conteúdo', r" entao oi ola opa capitao ia tudo como ha ah", r" entao ha ah", ('p3f_f17',)),
+    # o botão «O que verificar?»
+    ('p3f rev verifica: a pergunta do botão leva a coordenada do relato à IA', r"    return t ? (REL_VER + semCoord(t.texto.replace(/[\s.!]+$/, ''))).slice(0, 500) : '';", r"    return t ? (REL_VER + t.texto.replace(/[\s.!]+$/, '')).slice(0, 500) : '';", ('p3f_relato',)),
+    ('p3f rev verifica: a rota relatoVerifica não existe (a pergunta cai nas rotas por palavra)', r"    if (relatoVerificaPergunta(q)) return 'relatoVerifica';", r"", ('p3f_relato',)),
+    ('p3f rev verifica: a pergunta sem o texto do relato também é a rota', r"return q.indexOf(v) === 0 && q.length > v.length; }", r"return q.indexOf(v) === 0; }", ('p3f_relato',)),
+    ('p3f rev verifica: a pergunta pronta não chama a IA (pedeIA recusa a chave)', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;", r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip') return false;", ('p3f_relato',)),
+    ('p3f rev verifica: a resposta do «O que verificar?» perde os botões da proposta', r"if (loc) return Object.assign({}, loc, { actions: acoes.concat(loc.actions || []) });", r"if (loc) return loc;", ('p3f_relato',)),
+    ('p3f rev verifica: o «O que verificar?» leva o «consultado às» do instante na fonte', r"relatoCancela: 1, relatoVerifica: 1, mare: 1 };", r"relatoCancela: 1, mare: 1 };", ('p3f_relato',)),
+    ('p3f rev verifica: o «O que verificar?» é a raiz do «e boreste?»', r"relatoRegistra: 1, relatoCancela: 1, relatoVerifica: 1, sos: 1,", r"relatoRegistra: 1, relatoCancela: 1, sos: 1,", ('p3f_relato',)),
+    # o botão velho de uma proposta já decidida
+    ('p3f rev botão velho: o botão da proposta decidida cai na que espera (relatoAlvo)', r"      return { decidido: true, estado: t ? t.estado : null };", r"      return relatoPendente();", ('p3f_relato',)),
+    ('p3f rev botão velho: o «Registrar» velho registra a que espera', r"      if (rp.decidido) return relatoDecidido(rp, abrir);   // o botão velho de uma proposta já decidida: não registra a que espera", r"", ('p3f_relato',)),
+    ('p3f rev botão velho: o «Não registrar» velho recusa a que espera', r"      if (rp.decidido) return relatoDecidido(rp, abrir);   // o botão velho de uma proposta já decidida: não recusa a que espera", r"", ('p3f_relato',)),
+    ('p3f rev botão velho: a proposta registrada diz que foi descartada', r"var t = rp.estado === 'aceito' ? 'Esse relato já está registrado no diário; nada mudou.'", r"var t = rp.estado === 'aceito' ? 'Esse relato já foi descartado; nada mudou.'", ('p3f_relato',)),
+    # o «sim» curto depois do conversa() da IA
+    ('p3f rev conversa: o conversa() da IA não realinha o «sim» curto da proposta', r"    if (alinha) REL.n = CONV.n;", r"", ('p3f_relato',)),
+    ('p3f rev conversa: o conversa() realinha mesmo com outra pergunta no meio', r"var alinha = !!(REL && REL.q && REL.n === CONV.n && REL.q === limpaT(corrigeVoz(q), 500));", r"var alinha = !!(REL && REL.q && REL.q === limpaT(corrigeVoz(q), 500));", ('p3f_relato',)),
+    ('p3f rev conversa: o conversa() realinha para qualquer pergunta', r"var alinha = !!(REL && REL.q && REL.n === CONV.n && REL.q === limpaT(corrigeVoz(q), 500));", r"var alinha = !!(REL && REL.q && REL.n === CONV.n);", ('p3f_relato',)),
+    ('p3f rev conversa: a proposta não guarda a pergunta que a abriu', r"n: CONV.n, q: limpaT(q, 500) };", r"n: CONV.n, q: '' };", ('p3f_relato',)),
+    # a água do relato é perigo
+    ('p3f rev água: «a água do mar está entrando» é relato', r"|agua (?:do mar |salgada |doce |preta )?(?:(?:esta|estava|estao|continua|continuam|vai|vem|comecou a|passou a) )?(?:entrando|subindo|vazando|invadindo|jorrando|brotando|entrar|subir)", r"", ('p3f_relato', 'p3f_foto')),
+    ('p3f rev água: «a água do mar invadiu a sala de máquinas» é relato', r"|agua (?:do mar |salgada )?(?:subiu|invadiu|entrou)", r"", ('p3f_relato',)),
+    ('p3f rev água: «o nível de água subiu» é relato', r"|(?:nivel|altura) d[ae] agua (?:[a-z]+ ){0,5}(?:subiu|subindo|aument\w*|cresc\w*)", r"", ('p3f_relato', 'p3f_foto')),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_REV
 
 
 def instante_3a(b):

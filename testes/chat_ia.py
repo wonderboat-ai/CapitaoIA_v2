@@ -247,6 +247,9 @@ def main():
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
                 ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and not confere.R_COORD.search(fc), 'pedidos=%d ficha=%d' % (n, len(fc)))
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
+                # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
+                t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
+                ok(tela + ': O que verificar? (revisão P3F): a pergunta pronta do relato chama a IA (1 pedido, com o texto do relato) e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'desligou sozinho duas vezes' in json.dumps(estado['pedidos'][-1], ensure_ascii=False), 'pedidos=%d' % n)
                 t, n, _ = digita('qual o calado do barco?')
                 cal = ('%.2f' % pg.evaluate('() => window.CapitaoDados.embarcacao.calado')).replace('.', ',')
                 ok(tela + ': o calado tem dado: a rota embarcacao responde na tela, no aparelho, sem chamar a IA', n == 0 and ('O calado do barco é %s m' % cal) in t and TEXTO_IA not in t and FALLBACK_LOCAL not in t, 'pedidos=%d calado=%s' % (n, cal))
@@ -345,6 +348,8 @@ def main():
                     return r, len(estado['pedidos']) - antes
                 r, n = conversa_seq(['registre no diário que saímos da marina às sete', 'tá bom'], 3)
                 ok(tela + ': CONVERSA (F17): «registre no diário que…» grava 1 linha com o texto, a voz confirma «Registrado no diário de bordo.» e o «tá bom» seguinte não grava', len(r['f']) >= 3 and r['f'][1] == 'Registrado no diário de bordo.' and r['linhas'] == ['Saímos da marina às sete'], json.dumps(r, ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'bom dia'], 3)
+                ok(tela + ': CONVERSA (revisão P3F): depois do «o que devo registrar?» a saudação não vira linha do diário (a espera acaba, nada gravado, nada na rede)', len(r['f']) >= 3 and r['f'][1] == 'O que devo registrar no diário?' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
                 r, n = conversa_seq(['registrar no diário que', 'o gerador foi ligado às sete', 'tá bom'], 4)
                 ok(tela + ': CONVERSA (F17): o pedido cortado pela pausa pergunta «O que devo registrar no diário?», a próxima frase vira a linha (1) e o «tá bom» depois não grava; nada vai para a rede', len(r['f']) >= 4 and r['f'][1] == 'O que devo registrar no diário?' and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['O gerador foi ligado às sete'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
 
