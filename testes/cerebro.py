@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -7651,6 +7651,31 @@ ROTAS_P3G = [
     ('do que você é capaz?', 'capacidades', False), ('o que dá pra fazer aqui?', 'capacidades', False), ('lista de funções', 'capacidades', False),
     ('o que você pode fazer pelo gerador?', 'gerador', False), ('o que você pode fazer se o motor apagar?', 'motores', False), ('o que você faz?', 'saudacao', True), ('quem é você?', 'saudacao', True),
     ('o que vc sabe fazer?', 'saudacao', True), ('como você funciona?', 'saudacao', True), ('pra que serve esse app?', 'saudacao', True), ('o que você sabe sobre o seguro?', 'saudacao', True),
+    # revisão (achados 1, 5): o RELATO de óleo com o pedido junto («baixa», «caindo», «vazando», «perdendo», «oscila», «marca», a leitura citada) segue a instrução de segurança, nunca a proposta de alarme
+    ('pressão de óleo baixa no BB, me avise se cair abaixo de 2 bar', 'oleo', False), ('pressão do óleo caindo, me avise se ficar abaixo de 2 bar', 'oleo', False), ('pressão do óleo vazando, alerta se ficar abaixo de 2 bar', 'oleo', False),
+    ('óleo baixo no motor de bombordo, me avise se cair abaixo de 2 bar', 'oleo', False), ('motor BB perdendo pressão de óleo, me avise se cair abaixo de 2 bar', 'oleo', False), ('o manômetro do óleo do BB marca 1 bar, me avise se cair abaixo de 1 bar', 'oleo', False), ('o manômetro do óleo do BB marca pouco, me avise se cair abaixo de 2 bar', 'oleo', False),
+    ('a pressão do óleo do BB oscila, me avise se cair abaixo de 2 bar', 'oleo', False), ('vi pressão do óleo baixa no BB. me avise se cair abaixo de 2 bar', 'oleo', False), ('pressão do óleo do motor oscilando; me avise se cair abaixo de 2 bar', 'oleo', False),
+    ('pressão do óleo do BB 1,5 bar, me avise se cair abaixo de 1 bar', 'oleo', False), ('pressão do óleo fraca no BB, me avise se cair abaixo de 2 bar', 'oleo', False), ('o óleo do motor BE está com pressão fraca; me avise se cair abaixo de 2 bar', 'oleo', False),
+    ('a pressão do óleo baixou, me avise se cair abaixo de 2 bar', 'oleo', False), ('pressão do óleo no limite, me avise se cair abaixo de 2 bar', 'oleo', False), ('tô com pouca pressão de óleo, me avise se cair abaixo de 2 bar', 'oleo', False),
+    ('a pressão de óleo do motor de boreste não sobe, me avise se cair abaixo de 2 bar', 'oleo', False), ('óleo do BB com 1 bar, me avise se cair abaixo de 1 bar', 'oleo', False),
+    # …o relato SEM palavra de sintoma nem número: só o que vem ANTES do pedido (o assunto na frente do gatilho) o denuncia; com o sintoma, o número ou a leitura DEPOIS do gatilho, cada palavra também
+    ('óleo do BB, me avise se a pressão cair abaixo de 2 bar', 'oleo', False), ('a pressão do óleo, me avise se cair abaixo de 2 bar', 'oleo', False),
+    ('me avise se a pressão do óleo do BB 1,5 bar cair abaixo de 1 bar', 'oleo', False),
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, ela fica baixa', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, ficou fraca', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, baixou', 'oleo', False),
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, tem pouca', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, anda oscilando', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, vai perdendo pressão', 'oleo', False),
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, vem caindo', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, o manômetro só marca isso', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, o óleo anda vazando', 'oleo', False),
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, diminuiu', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, foi a zero', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, o motor anda quente', 'oleo', False),
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, com ruído', 'oleo', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar, no limite', 'oleo', False),
+    ('no motor de bombordo, me avise se a pressão do óleo cair abaixo de 2 bar', 'alarmePedido', False), ('me avise se a pressão do óleo do BB cair abaixo de 2 bar e passar de 5 bar', 'alarmePedido', False), ('por favor, capitão, me avise se a pressão do óleo cair abaixo de 2 bar', 'alarmePedido', False),
+    # revisão (achado 2): o tanque de água cinza, negra ou servida não é o da água doce
+    ('me avise se o tanque de águas cinzas passar de 80%', 'alarmePedido', False), ('me avise se o tanque de água negra passar de 80%', 'alarmePedido', False), ('me avise se o tanque de águas servidas passar de 80%', 'alarmePedido', False),
+    # revisão (achado 8): o alarme DO BARCO com verbo de criar/ativar/configurar não é o pedido de alarme do app (as rotas de sempre respondem); a medida sozinha ainda é o pedido incompleto
+    ('ativar o alarme ao fundear', 'base', True), ('ativar alarme de fundeio', 'base', True), ('ativar o alarme de âncora', 'base', True), ('ativar o alarme de deriva', 'base', True), ('configurar o alarme do porão', 'base', True),
+    ('configurar o alarme de profundidade no plotter', 'eletronicos', False), ('programar aviso de manutenção', 'manutencao', False), ('criar um alarme de diesel', 'alarmePedido', False), ('quero um alarme de profundidade', 'alarmePedido', False),
+    # revisão (achado 6): a pergunta sobre a agenda sem o «?» (ditado, teclado) não é pedido de agendar
+    ('o que está agendado para amanhã', 'manutencao', False), ('tarefas agendadas para 15/11', 'manutencao', False), ('quais manutenções estão programadas para dia 20', 'manutencao', False), ('quais tarefas estão marcadas para 15/11', 'manutencao', False),
+    ('tem algo marcado para dia 20', 'fallback', True), ('mostre as tarefas agendadas para 15/11', 'manutencao', False), ('como agendar a revisão do gerador para 15/11', 'gerador', False), ('quando agendar a limpeza do casco para 12/12', 'manutencao', False),
+    ('quais revisões do gerador estão agendadas para 15/11', 'gerador', False), ('revisão do gerador agendada para 20/11', 'agendar', False), ('tem como agendar a revisão do gerador para 15/11', 'agendar', False), ('agendar a limpeza do casco para 12/12?', 'manutencao', False), ('por favor marcar teste das bombas de porão para amanhã', 'agendar', False),
 ]
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3G]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3G})
@@ -7933,7 +7958,14 @@ JS_P3G_REGISTRO = """([notas]) => { const B = window.CapitaoBrain, C = window.Ca
 NOTAS_NAO_PROPOE = ['vou limpar o filtro de água salgada da climatização', 'precisamos limpar o filtro de água salgada da climatização', 'será que limpei o filtro de água salgada da climatização?', 'não limpei o filtro de água salgada da climatização',
                     'limpei o filtro de água salgada da climatização mas o fluxo continua fraco', 'o filtro de água salgada da climatização continua sujo', 'limpei o filtro de água salgada da climatização ontem', 'limpei o filtro de água salgada da climatização dia 10/10',
                     'limpamos o filtro de água salgada da climatização e fizemos o teste das bombas de porão', 'comprei um filtro novo',
-                    'vou limpar o filtro de água salgada da climatização, o último que limpei foi há dois meses', 'amanhã limpamos o filtro de água salgada da climatização', 'precisamos limpar o filtro de água salgada da climatização, o do gerador limpei ontem', 'acho que limpei o filtro de água salgada da climatização', 'tentei limpar o filtro de água salgada da climatização sem sucesso']
+                    'vou limpar o filtro de água salgada da climatização, o último que limpei foi há dois meses', 'amanhã limpamos o filtro de água salgada da climatização', 'precisamos limpar o filtro de água salgada da climatização, o do gerador limpei ontem', 'acho que limpei o filtro de água salgada da climatização', 'tentei limpar o filtro de água salgada da climatização sem sucesso',
+                    # revisão (achados 3, 7, 10): o defeito que continua sem a palavra de continuidade, o sintoma dito, o estado (não ato), outro equipamento e a ação que não é a da tarefa
+                    'limpei o filtro de água salgada, fluxo fraco ainda', 'limpei o filtro de água salgada, sem melhora', 'limpei o filtro de água salgada, fluxo ainda ruim', 'limpei o filtro de água salgada da climatização, climatização com fluxo fraco', 'limpei o filtro de água salgada da climatização e o fluxo está fraco',
+                    'limpei o filtro de água salgada da climatização, o fluxo está fraco', 'o filtro de água salgada da climatização está limpo e o fluxo está fraco', 'o filtro de água salgada está limpo', 'testei a bomba de porão e ela faz um ruído estranho', 'revisei as bombas de porão e uma delas está com vazamento',
+                    'limpei o filtro de água salgada do gerador', 'limpei as bombas de porão', 'troquei as bombas de porão', 'limpei o rotor do gerador', 'testei o filtro de água salgada', 'verifiquei o óleo dos motores', 'limpei o filtro do gerador', 'o filtro de água salgada da climatização ficou travado',
+                    'limpei o filtro de água salgada da climatização e o alarme ainda toca', 'limpei o filtro de água salgada da climatização e sai fumaça', 'limpei o filtro de água salgada da climatização e a água sai quente', 'limpei o filtro de água salgada da climatização e o outro está sujo',
+                    'limpei o filtro de água salgada da climatização e o outro está com problema',
+                    'limpei o filtro de água salgada da climatização e o ar sai morno', 'limpei o filtro de água salgada da climatização e sai pouco ar', 'limpei o filtro de água salgada da climatização e a cabine permanece assim', 'limpei o filtro de água salgada da climatização e o ar-condicionado fica sem gelar']
 
 
 def grupo_p3g_agenda(b, muta, ped):
@@ -8094,7 +8126,10 @@ JS_P3G_PEND_CHAT = """() => { const B = window.CapitaoBrain, D = window.CapitaoD
 FRASES_FECHAM = [('limpei o filtro de água salgada da climatização', 'd05'), ('Limpamos os filtros de água salgada do ar condicionado hoje cedo', 'd05'), ('o filtro da climatização foi limpo', 'd05'), ('fizemos o teste das bombas de porão', 'd07'),
                  ('a bomba de porão foi testada', 'd07'), ('trocamos o rotor do gerador', 'd03'), ('o impeller do gerador foi trocado', 'd03'), ('inspecionei o rotor impeller do gerador', 'd03'), ('feito o teste das bombas de porão', 'd07'),
                  ('verifiquei o filtro de água salgada: ok', 'd05'), ('Limpei o filtro de água salgada que estava sujo', 'd05'),
-                 ('limpei o filtro de água salgada da climatização ontem', 'd05'), ('limpei o filtro de água salgada da climatização dia 10/10', 'd05')]
+                 ('limpei o filtro de água salgada da climatização ontem', 'd05'), ('limpei o filtro de água salgada da climatização dia 10/10', 'd05'),
+                 # revisão: o defeito de ANTES («estava fraco») é o motivo do serviço, não o resultado; a troca conclui a limpeza; a verificação e a revisão concluem o teste; o equipamento certo nomeado vale
+                 ('o fluxo estava fraco, limpei o filtro de água salgada da climatização', 'd05'), ('troquei o filtro de água salgada', 'd05'), ('verifiquei as bombas de porão', 'd07'), ('revisei as bombas de porão', 'd07'), ('testei as bombas de porão e os alarmes: ok', 'd07'),
+                 ('o filtro de água salgada da climatização foi limpo e o fluxo voltou ao normal', 'd05'), ('inspecionei o rotor do gerador', 'd03')]
 FRASES_NAO_FECHAM = [x for x in NOTAS_NAO_PROPOE if not x.endswith('ontem') and 'dia 10/10' not in x] + ['compramos um rotor do gerador novo', 'o rotor do gerador está desgastado', 'rotor do gerador em falta no estoque', 'o teste das bombas de porão ficou para a semana que vem', 'precisa trocar o rotor do gerador',
                                         'deve ter sujeira no filtro de água salgada', 'a limpeza do filtro de água salgada está atrasada', 'vamos fazer o teste das bombas de porão amanhã', 'agendar o teste das bombas de porão para 15/11',
                                         'reparei que o filtro de água salgada está sujo', 'nunca fizemos o teste das bombas de porão', 'o rotor do gerador quebrou', 'falta limpar o filtro de água salgada da climatização']
@@ -8185,7 +8220,7 @@ GRUPOS_3A['p3g_capacidades'] = grupo_p3g_capacidades
 MUTANTES_P3G = [
     # — F12: o pedido de alarme (rota e entendimento) —
     ('p3g alarme: o pedido com «agora» (relato) vira proposta de alarme (sem a guarda do relato)', r"&& /\d/.test(q) && !ALM_RELATO.test(q); }", r"&& /\d/.test(q); }", ('p3g_rotas',)),
-    ('p3g alarme: o oleo() trata a configuração como queda (o «confirmar alarme» seguinte perde a proposta)', r"    if (almPedidoLite(q)) return 0;   // F12: «me avise se a pressão do óleo cair", r"    if (false) return 0;   // F12: «me avise se a pressão do óleo cair", ('p3g_alarmes',)),
+    ('p3g alarme: o oleo() trata a configuração como queda (o «confirmar alarme» seguinte perde a proposta)', r"    if (almPedidoLite(q) && !almSinalEstado(q)) return 0;   // F12: «me avise se a pressão do óleo cair", r"    if (false) return 0;   // F12: «me avise se a pressão do óleo cair", ('p3g_alarmes',)),
     ('p3g alarme: o pedido incompleto («criar um alarme», «quando o diesel estiver baixo») não tem rota', r"    if (almPedido(q)) return 'alarmePedido';", r"", ('p3g_rotas',)),
     ('p3g alarme: o apagar vale sem o número («desligar o alarme», «apagar alarme»)', r"return m[1] ? +m[1] : / (?:pedid|criad)\w+/.test(m[0]) ? 0 : -1;", r"return m[1] ? +m[1] : 0;", ('p3g_rotas',)),
     ('p3g alarme: a lista dos alarmes pedidos não tem rota', r"    if (almLista(q)) return 'alarmesLista';", r"", ('p3g_rotas',)),
@@ -8296,14 +8331,14 @@ MUTANTES_P3G = [
     ('p3g exec: o desfazer do relato não reabre a pendência que ele fechou', r"    if (r.pend && typeof r.pend.alvo === 'string') desfazPendencia(", r"    if (false) desfazPendencia(", ('p3g_pendencias',)),
     ('p3g exec: o relato confirmado não fecha pendência nem propõe (o registro sem as opções)', r"var lin = addDiario(e, t.origem === 'relato' ? { pendencia: true, agenda: true, chat: !!(opts && opts.chat) } : undefined);", r"var lin = addDiario(e);", ('p3g_pendencias',)),
     # — F20: pendências —
-    ('p3g pendência: o verbo de conclusão não é exigido (qualquer citação fecha)', r"    return FEITO.test(f) && !CONC_FUTURO.test(f)", r"    return !CONC_FUTURO.test(f)", ('p3g_pendencias',)),
+    ('p3g pendência: o verbo de conclusão não é exigido (qualquer citação fecha)', r"    return FEITO.test(f.replace(CONC_ESTADO, ' ')) && !CONC_FUTURO.test(f)", r"    return !CONC_FUTURO.test(f)", ('p3g_pendencias',)),
     ('p3g pendência: o plano («vou limpar», «precisa trocar») fecha', r"&& !CONC_FUTURO.test(f) && !CONC_DUVIDA.test(f)", r"&& !CONC_DUVIDA.test(f)", ('p3g_pendencias',)),
     ('p3g pendência: a dúvida («será que», «acho que», «?») fecha', r"&& !CONC_DUVIDA.test(f) && !CONC_NEGA.test(f)", r"&& !CONC_NEGA.test(f)", ('p3g_pendencias',)),
-    ('p3g pendência: a negação («não limpei») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);", r"&& !CONC_DEFEITO.test(f);", ('p3g_pendencias',)),
-    ('p3g pendência: o defeito que continua («continua fraco», «mas», «sem sucesso») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);", r"&& !CONC_NEGA.test(f);", ('p3g_pendencias',)),
+    ('p3g pendência: a negação («não limpei») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f.replace(CONC_PASSADO, ' '));", r"&& !CONC_DEFEITO.test(f.replace(CONC_PASSADO, ' '));", ('p3g_pendencias',)),
+    ('p3g pendência: o defeito que continua («continua fraco», «mas», «sem sucesso») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f.replace(CONC_PASSADO, ' '));", r"&& !CONC_NEGA.test(f);", ('p3g_pendencias',)),
     ('p3g pendência: «fizemos» não é verbo de conclusão', r"|troquei|verifiquei|fiz|fizemos|fez|fizeram|feit[oa]s?|", r"|troquei|verifiquei|fiz|fez|fizeram|feit[oa]s?|", ('p3g_pendencias',)),
     ('p3g pendência: o plural («filtros») não cita a pendência', r"function stem(w) { return w.length > 3 ? w.replace(/s$/, '') : w; }", r"function stem(w) { return w; }", ('p3g_pendencias',)),
-    ('p3g pendência: o registro que cita duas pendências fecha a primeira', r"    if (cit.length > 1) return { ambigua: cit };", r"", ('p3g_pendencias',)),
+    ('p3g pendência: o registro que cita duas pendências fecha a primeira', r"    if (cit.length > 1) return conclusao(texto) ? { ambigua: cit } : null;", r"", ('p3g_pendencias',)),
     ('p3g pendência: a frase da pendência casa solta no meio das palavras (não em sequência)', r"""    for (i = 0; i + ft.length <= tk.length; i++) { for (j = 0; j < ft.length && tk[i + j] === ft[j]; j++); if (j === ft.length) return true; }
     return false;
   }
@@ -8341,6 +8376,170 @@ MUTANTES_P3G = [
     ('p3g capacidades: a pergunta de capacidades vai à IA (pedeIA)', r"    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;", r"    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica' && k !== 'capacidades') return false;", ('p3g_rotas', 'p3g_capacidades')),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3G
+
+
+# —— P3G, revisão: o relato de óleo com o pedido junto, o tanque cinza/negra/servida, a unidade que o app não usa, o «cancelar o alarme» do barco, o alarme do barco com verbo de criar, a pergunta sobre a agenda sem «?» ——
+RELATOS_OLEO_PEDIDO = [x[0] for x in ROTAS_P3G if x[1] == 'oleo' and 'me avise' in x[0].lower() + ' ' or x[1] == 'oleo' and 'alerta se' in x[0]]
+UNIDADES_ALHEIAS = [('me avise se a profundidade ficar abaixo de 10 pés', 'A unidade de profundidade é m.'), ('me avise se o vento passar de 25 km/h', 'A unidade de vento verdadeiro é nós.'), ('me avise se a pressão do óleo do BE cair abaixo de 5 psi', 'A unidade de pressão de óleo BE é bar.'),
+                    ('me avise se a profundidade ficar abaixo de 10 ft', 'A unidade de profundidade é m.'), ('me avise se a temperatura da água passar de 80 fahrenheit', 'A unidade de temperatura da água é °C.'), ('me avise se o vento passar de 20 m/s', 'A unidade de vento verdadeiro é nós.')]
+TANQUES_P3G = [('me avise se o tanque de águas cinzas passar de 80%', 'Posso criar este alarme: Tanque de águas cinzas acima de 80,0 %.'), ('me avise se o tanque de águas negras passar de 80%', 'Posso criar este alarme: Tanque de águas negras acima de 80,0 %.'),
+               ('me avise se o tanque de água cinza passar de 80%', 'Posso criar este alarme: Tanque de águas cinzas acima de 80,0 %.'), ('me avise se o tanque de água negra passar de 80%', 'Posso criar este alarme: Tanque de águas negras acima de 80,0 %.'),
+               ('me avise se o nível do tanque de água cinza passar de 80%', 'Posso criar este alarme: Tanque de águas cinzas acima de 80,0 %.'), ('me avise se as águas negras passarem de 80 por cento', 'Posso criar este alarme: Tanque de águas negras acima de 80,0 %.'),
+               ('me avise se o tanque de águas servidas passar de 80%', 'Posso criar estes 2 alarmes: Tanque de águas cinzas acima de 80,0 % · Tanque de águas negras acima de 80,0 %.'),
+               ('me avise se o tanque de água doce ficar abaixo de 20%', 'Posso criar este alarme: Tanque de água doce abaixo de 20,0 %.'), ('me avise se o tanque de água ficar abaixo de 20%', 'Posso criar este alarme: Tanque de água doce abaixo de 20,0 %.'),
+               ('me avise se o nível de água ficar abaixo de 20%', 'Posso criar este alarme: Tanque de água doce abaixo de 20,0 %.'), ('me avise se o tanque de água doce e as águas cinzas passarem de 80%', 'Um alarme por pedido')]
+OUTRO_DIA_P3G = ['limpei o filtro de água salgada da climatização há duas semanas', 'limpei o filtro de água salgada da climatização na sexta', 'limpei o filtro de água salgada da climatização dia 10', 'limpei o filtro de água salgada da climatização três dias atrás',
+                 'limpei o filtro de água salgada da climatização no mês passado', 'há uma semana limpei o filtro de água salgada da climatização']
+AGENDA_PERGUNTAS = ['o que está agendado para amanhã', 'tarefas agendadas para 15/11', 'quais manutenções estão programadas para dia 20', 'quais tarefas estão marcadas para 15/11', 'tem algo marcado para dia 20', 'mostre as tarefas agendadas para 15/11',
+                    'como agendar a revisão do gerador para 15/11', 'quando agendar a limpeza do casco para 12/12', 'o que posso agendar para amanhã', 'há tarefas marcadas para sexta', 'quais revisões do gerador estão agendadas para 15/11']
+JS_P3G_REV = """([oleo, tanques, unidades, agenda, outroDia]) => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' };
+  const lin = () => JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]'), nt = () => B.loadTickets().length, nd = () => B.loadDiario().length;
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, ia: B.pedeIA(a, q), acoes: (a.actions || []).map((x) => x.l) }; };
+  // 1) o relato de óleo com o pedido junto: a instrução de segurança (oleo), local, sem a proposta, sem leitura e sem nada armado
+  o.oleo = oleo.map((q) => { B.limpaConversa(); const x = r(q); return [q, x.key, x.ia, /Posso criar|agora \\d/.test(x.text), x.acoes.indexOf('Confirmar') !== -1, /marcha lenta/.test(x.text)]; });
+  o.oleoNada = [lin().length, nd(), nt(), r('confirmar alarme').key];
+  // 2) o tanque: a proposta certa; «servidas» abre os dois; o Confirmar grava o campo certo
+  o.tanques = tanques.map(([q]) => { B.limpaConversa(); const x = r(q); return [q, x.key, x.text.split('\\n')[0]]; });
+  localStorage.clear(); B.limpaConversa(); r('me avise se o tanque de águas servidas passar de 80%'); r('confirmar alarme'); o.servidas = lin().map((x) => x.campo).sort();
+  localStorage.clear(); B.limpaConversa(); r('me avise se o tanque de água cinza passar de 80%'); r('confirmar alarme'); o.cinza = lin().map((x) => x.campo);
+  // 3) a unidade que o app não usa: diz a da medida, não propõe, não arma
+  localStorage.clear(); o.unidades = unidades.map(([q]) => { B.limpaConversa(); const x = r(q); return [q, x.key, x.text.split('\\n')[0], x.acoes.indexOf('Confirmar') !== -1]; }); o.unidadeNada = [lin().length, r('confirmar alarme').text.split('\\n')[0]];
+  localStorage.clear(); B.limpaConversa(); o.certas = ['me avise se a profundidade ficar abaixo de 3 metros por favor', 'me avise se o vento passar de 25', 'me avise se o diesel cair abaixo de 300 l', 'me avise se o vento passar de 25 nós'].map((q) => { B.limpaConversa(); const x = r(q); return [q, x.text.split('\\n')[0]]; });
+  // 4) a pergunta sobre a agenda sem «?» não propõe tarefa (nenhum ticket, nenhuma tarefa)
+  localStorage.clear(); B.limpaConversa(); o.agenda = agenda.map((q) => { B.limpaConversa(); const x = r(q); return [q, x.key, /Posso agendar/.test(x.text)]; }); o.agendaNada = [nt(), JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]').length];
+  // 5) o registro que cita DUAS pendências sem concluir nada não pergunta «qual foi resolvida» e não fecha nenhuma
+  localStorage.clear(); B.limpaConversa(); o.duas = ['vou limpar o filtro de água salgada e testar as bombas de porão', 'falta limpar o filtro de água salgada e testar as bombas de porão'].map((q) => { localStorage.clear(); B.limpaConversa(); const x = r('registre no diário que ' + q); return [q, /mais de uma pendência/.test(x.text), B.pendenciasLista().filter((p) => p.aberta).length]; });
+  // 6) o Executado certo: a troca de óleo dos motores com «troquei»; a limpeza do casco com «fiz a limpeza»; o equipamento certo nomeado
+  o.exec = ['troquei o óleo dos motores', 'fiz a limpeza do casco', 'troquei o filtro do gerador', 'inspecionei o rotor do gerador', 'limpei o anodo do seakeeper'].map((q) => { localStorage.clear(); B.limpaConversa(); r('registre no diário que ' + q); return [q, B.loadTickets().map((t) => t.k + ':' + (t.prop && t.prop.tarefa))]; });
+  // 7) o texto que cita OUTRO dia («há duas semanas», «na sexta», «dia 10», «três dias atrás», «no mês passado») não propõe o Executado (ele seria datado de hoje); «hoje cedo» propõe
+  o.outroDia = outroDia.map((q) => { localStorage.clear(); B.limpaConversa(); r('registre no diário que ' + q); return [q, B.loadTickets().length]; }); localStorage.clear(); B.limpaConversa(); r('registre no diário que limpei o filtro de água salgada da climatização hoje cedo'); o.hojeCedo = B.loadTickets().map((t) => t.k + ':' + t.prop.tarefa);
+  return o; }"""
+# o «cancelar o alarme» e o «confirmar alarme» sem pedido recente são do barco; depois do pedido (mesmo vencido) a resposta é local; passados 30 min, de novo do barco
+JS_P3G_REV_FRESCO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, real = Date.now;
+  const r = (q) => { const a = B.answer(q, op); return { key: a.key, text: a.text.split('\\n')[0], ia: B.pedeIA(a, q) }; };
+  o.antes = ['cancelar o alarme', 'confirmar alarme', 'confirmar o alarme', 'descartar o alarme', 'cancelar alarme'].map((q) => { B.limpaConversa(); const x = r(q); return [q, x.key, x.ia]; });
+  r('me avise se o vento passar de 25 nós'); o.cancela = [r('cancelar o alarme').key, r('cancelar o alarme').text];
+  r('me avise se o vento passar de 25 nós'); Date.now = () => real() + 11 * 60e3; o.venceu = [r('confirmar alarme').key, r('confirmar alarme').text];
+  Date.now = () => real() + 31 * 60e3; o.esquecido = ['confirmar alarme', 'cancelar o alarme'].map((q) => { const x = r(q); return [q, x.key]; }); Date.now = real;
+  r('me avise se o vento passar de 20 nós'); o.vivo = r('confirmar alarme').key;
+  return o; }"""
+
+
+def grupo_p3g_rev(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        o = pg.evaluate(JS_P3G_REV, [RELATOS_OLEO_PEDIDO, TANQUES_P3G, UNIDADES_ALHEIAS, AGENDA_PERGUNTAS, OUTRO_DIA_P3G])
+        ruins = [x for x in o['oleo'] if x[1] != 'oleo' or x[2] or x[3] or x[4] or not x[5]]
+        ped('p3g rev (óleo): o RELATO de pressão baixa com o pedido de alarme junto («baixa», «caindo», «vazando», «perdendo», «oscila», «marca», a leitura citada: %d frases) é a instrução de segurança — local (sem IA), nenhum «Posso criar», nenhum botão Confirmar, nenhuma leitura de agora — e nada fica armado ou gravado' % len(RELATOS_OLEO_PEDIDO),
+            len(RELATOS_OLEO_PEDIDO) >= 10 and not ruins and o['oleoNada'][:3] == [0, 0, 0] and o['oleoNada'][3] != 'alarmeConfirma', (ruins[:4], o['oleoNada']))
+        ruins = [(q, k, t, esp) for (q, esp), (_, k, t) in zip(TANQUES_P3G, o['tanques']) if k != 'alarmePedido' or not t.startswith(esp)]
+        ped('p3g rev (tanque): «tanque de água cinza|negra», «águas cinzas|negras» e «nível do tanque de água cinza» são do tanque certo; «águas servidas» abre os DOIS; «tanque de água» e «nível de água» sem qualificador seguem a água doce; água doce e cinza no mesmo pedido pede um por vez', not ruins, ruins[:4])
+        ped('p3g rev (tanque): o Confirmar grava o campo do tanque pedido (servidas: cinzas e negras; água cinza: só tanque_cinzas_pct) — nunca tanque_agua_pct', o['servidas'] == ['tanque_cinzas_pct', 'tanque_negras_pct'] and o['cinza'] == ['tanque_cinzas_pct'], (o['servidas'], o['cinza']))
+        ruins = [(q, k, t, esp) for (q, esp), (_, k, t, c) in zip(UNIDADES_ALHEIAS, o['unidades']) if k != 'alarmePedido' or not t.startswith(esp) or c]
+        ped('p3g rev (unidade): a unidade que o app não usa («10 pés», «25 km/h», «5 psi», «10 ft», «80 fahrenheit», «20 m/s») NÃO vira o número da unidade da medida: a resposta diz a unidade dela, não propõe, não arma e não grava; a unidade certa, ou nenhuma, segue a proposta',
+            not ruins and o['unidadeNada'][0] == 0 and not o['unidadeNada'][1].startswith('Posso') and all(t.startswith('Posso criar este alarme') for _, t in o['certas']), (ruins[:3], o['unidadeNada'], o['certas']))
+        ruins = [x for x in o['agenda'] if x[1] not in ('manutencao', 'gerador', 'fallback') or x[2]]
+        ped('p3g rev (agenda): a pergunta sobre a agenda SEM o «?» («o que está agendado para amanhã», «tarefas agendadas para 15/11», «quais manutenções estão programadas…», «tem algo marcado…», «como agendar…», «quando agendar…») não vira «Posso agendar» e não cria ticket nem tarefa',
+            not ruins and o['agendaNada'] == [0, 0], (ruins[:4], o['agendaNada']))
+        ped('p3g rev (pendências): o registro que cita DUAS pendências mas não conclui nada («vou limpar… e testar…», «falta limpar… e testar…») não diz «cita mais de uma pendência» e não fecha nenhuma', all(not x[1] and x[2] == 3 for x in o['duas']), o['duas'])
+        ped('p3g rev (outro dia): o registro que cita OUTRO dia («há duas semanas», «na sexta», «dia 10», «três dias atrás», «no mês passado») não propõe o Executado (seria datado de hoje); o de «hoje cedo» propõe', all(n == 0 for _, n in o['outroDia']) and o['hojeCedo'] == ['exec:clima-filtro'], (o['outroDia'], o['hojeCedo']))
+        ped('p3g rev (Executado): a troca de óleo dos motores com «troquei», a limpeza do casco com «fiz a limpeza», a troca do filtro do gerador e a inspeção do rotor propõem o Executado da tarefa certa (e só ela)',
+            [x[1] for x in o['exec']] == [['exec:motores-oleo'], ['exec:casco-anodos'], ['exec:gerador-revisao'], ['exec:gerador-rotor'], ['exec:seakeeper-anodo']], o['exec'])
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        f = pg.evaluate(JS_P3G_REV_FRESCO)
+        ped('p3g rev (cancelar o alarme): SEM pedido de alarme recente, «cancelar o alarme», «confirmar alarme», «descartar o alarme» são do barco — seguem as rotas de sempre (nunca a resposta «nenhum alarme esperando»)',
+            all(k not in ('alarmeCancela', 'alarmeConfirma') for _, k, _ in f['antes']), f['antes'])
+        ped('p3g rev (cancelar o alarme): com a proposta esperando «cancelar o alarme» a cancela; com a proposta vencida (11 min) ou zerada o «confirmar alarme» ainda é a resposta local «nenhum alarme esperando»; passados 30 min do pedido volta a ser do barco; com a proposta viva confirma',
+            f['cancela'][0] == 'alarmeCancela' and f['cancela'][1] == 'Nenhum alarme esperando confirmação; nada foi gravado.' and f['venceu'][0] == 'alarmeConfirma' and f['venceu'][1].startswith('Nenhum alarme esperando confirmação')
+            and all(k not in ('alarmeCancela', 'alarmeConfirma') for _, k in f['esquecido']) and f['vivo'] == 'alarmeConfirma', (f['cancela'], f['venceu'], f['esquecido'], f['vivo']))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_rev'] = grupo_p3g_rev
+
+
+# —— mutantes da revisão do P3G (óleo com o pedido junto, tanque, gatilho do alarme do barco, espera, unidade, agenda sem «?», conclusão: defeito, ação, equipamento, outro dia) ——
+MUTANTES_P3G_REV = [
+ # —— óleo: o relato com o pedido junto ——
+ ('p3g rev óleo: o pedido com sintoma volta a ser configuração (sem a conferência do sinal de estado)', r"almPedidoLite(q) && !almSinalEstado(q)", r"almPedidoLite(q)", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o texto de relato ANTES do pedido («óleo do BB, me avise…») não conta', r"    if (q.slice(0, gs.length ? Math.min.apply(null, gs) : 0).trim().split(/\s+/).some(function (w) { return w && ALM_ABRE_OK.indexOf(' ' + w + ' ') === -1; })) return true;", r"", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o motor/lado antes do pedido («no motor de bombordo, me avise…») é relato (a lista de cortesia sem o lado)', r" no na nos nas do da de para pra o a os as motor motores bb be bombordo boreste estibordo lado ';", r" ';", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «baixa/baixo» não conta', r"baix[oa]s?|baixou", r"zzqq|baixou", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «baixou/baixaram» não conta', r"|baixou|baixaram|", r"|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «fraco/fraca» não conta', r"|fraco|fraca|fracos|fracas|pouc[oa]s?|", r"|pouc[oa]s?|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «pouca» não conta', r"|pouc[oa]s?|zero|", r"|zero|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «zero» não conta', r"|zero|oscil\w*|", r"|oscil\w*|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «oscila/oscilando» não conta', r"oscil\w*|perd\w*|", r"perd\w*|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «perdendo pressão» não conta', r"|perd\w*|cain\w*|", r"|cain\w*|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «caindo» não conta', r"|cain\w*|despenc\w*|", r"|despenc\w*|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «diminuiu/reduziu» não conta', r"|diminu\w*|reduziu|reduziram|", r"|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «marca» (a leitura dita) não conta', r"marca|marcam|marcando|marcou|marcava|", r"", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «vazando» não conta', r"vazand\w*|vazou|vazamentos?|", r"", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «quente» não conta', r"|quent\w*|aquec\w*|esquent\w*|", r"|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o sintoma «ruído» não conta', r"|ruidos?|barulh\w*|estranh\w*|", r"|", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o «no limite» não conta', r"|engasg\w*|limite) /;", r"|engasg\w*) /;", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: o número antes da condição (a leitura citada) não é sinal de estado', r"(i > 0 && /\d/.test(s.slice(0, i)))", r"false", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev óleo: a condição («cair abaixo de 2») não é separada do resto (a leitura citada some)', r"var s = q.replace(ALM_COMP_NUM, ' | '), i = s.indexOf(' | '), gs = [", r"var s = q, i = -1, gs = [", ('p3g_rotas', 'p3g_rev')),
+ # —— tanque ——
+ ('p3g rev tanque: o qualificador cinza/negra/servida não tira a água doce', r"    if (esg.length) ach = ach.filter(function (a) { return a.m.campos[0] !== 'tanque_agua_pct' || !esg.some(function (e) { return e.ini >= a.ini && e.ini <= a.ini + a.len; }); });", r"", ('p3g_rev',)),
+ ('p3g rev tanque: o qualificador logo depois da frase («tanque de água servidas») não conta (só o dentro dela)', r"return e.ini >= a.ini && e.ini <= a.ini + a.len; }); });", r"return e.ini >= a.ini && e.ini < a.ini + a.len; }); });", ('p3g_rev',)),
+ ('p3g rev tanque: as águas negras não tiram a água doce (só as cinzas)', r"/^tanque_(?:cinzas|negras)_pct$/.test(a.m.campos[0])", r"/^tanque_cinzas_pct$/.test(a.m.campos[0])", ('p3g_rev',)),
+ # —— o alarme do barco com verbo de criar ——
+ ('p3g rev gatilho: o «criar/ativar/configurar … alarme» com outro assunto vira o pedido de alarme do app', r"|| almSoGatilho(q))) return true;", r"|| true)) return true;", ('p3g_rotas',)),
+ ('p3g rev gatilho: a conferência do «só o gatilho» aceita qualquer sobra', r"return tk.every(function (w) { return ALM_SOBRA_OK.indexOf(' ' + w + ' ') !== -1; });", r"return true;", ('p3g_rotas',)),
+ ('p3g rev gatilho: a medida dita («criar um alarme de diesel») conta como sobra', r"(med.itens || []).forEach(function (m) {", r"[].forEach(function (m) {", ('p3g_rotas',)),
+ # —— o «confirmar/cancelar o alarme» escrito ——
+ ('p3g rev espera: o «confirmar alarme» escrito vale sem pedido recente', r"if (AL_CONFIRMA_EXP.test(q) && almPediuRecente()) return 'alarmeConfirma';", r"if (AL_CONFIRMA_EXP.test(q)) return 'alarmeConfirma';", ('p3g_rev',)),
+ ('p3g rev espera: o «cancelar o alarme» escrito vale sem pedido recente (é o alarme do barco)', r"if (AL_CANCELA_EXP.test(q) && almPediuRecente()) return 'alarmeCancela';", r"if (AL_CANCELA_EXP.test(q)) return 'alarmeCancela';", ('p3g_rev',)),
+ ('p3g rev espera: a memória do pedido nunca acaba (30 min)', r"ALM_MEMORIA = 30 * 60e3;", r"ALM_MEMORIA = 3000 * 60e3;", ('p3g_rev',)),
+ ('p3g rev espera: o pedido não deixa memória (a proposta vencida perde o «nenhum alarme esperando»)', "      ALM_PEDIU = Date.now();\n      pe = grava ? armaProp('alarme', {", "      pe = grava ? armaProp('alarme', {", ('p3g_rev', 'p3g_alarmes')),
+ # —— a unidade que o app não usa ——
+ ('p3g rev unidade: a unidade desconhecida («10 pés») é descartada', r"if (!nm[2] && ALM_UN_ALHEIA.test(", r"if (false && ALM_UN_ALHEIA.test(", ('p3g_rev',)),
+ ('p3g rev unidade: o «psi» não é unidade alheia', r"|psi|kpa|", r"|kpa|", ('p3g_rev',)),
+ ('p3g rev unidade: o «km/h» não é unidade alheia', r"|km\/h|kmh|kph|mph|m\/s|", r"|kmh|kph|mph|", ('p3g_rev',)),
+ # —— a pergunta sobre a agenda sem «?» ——
+ ('p3g rev agenda: o interrogativo antes do verbo («como agendar … para 15/11») é pedido', r"    if (v && AG_PERG.test(f.slice(0, v.index))) return null;", r"", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev agenda: a cortesia «tem como agendar …» é lida como a listagem «tem» (pergunta)', r"    if (v && AG_PERG.test(f.slice(0, v.index))) return null;", r"    if (v && (AG_PERG.test(f.slice(0, v.index)) || AG_LISTA.test(f.slice(0, v.index)))) return null;", ('p3g_rotas',)),
+ ('p3g rev agenda: a listagem antes do «agendada para» («mostre as tarefas agendadas para 15/11») é pedido', r"|| AG_LISTA.test(f.slice(0, pp.index))", r"", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev agenda: o interrogativo antes do «agendada para» («quais revisões … estão agendadas para 15/11») é pedido', r"(AG_PERG.test(f.slice(0, pp.index)) || AG_LISTA.test(", r"(false || AG_LISTA.test(", ('p3g_rotas', 'p3g_rev')),
+ ('p3g rev agenda: o nome genérico («tarefas agendadas para 15/11») é pedido', r"|| AG_GENERICO.test(f.slice(0, pp.index)", r"|| false && AG_GENERICO.test(f.slice(0, pp.index)", ('p3g_rotas', 'p3g_rev')),
+ # —— a frase de conclusão ——
+ ('p3g rev conclusão: o estado («está limpo») é ato', r"FEITO.test(f.replace(CONC_ESTADO, ' '))", r"FEITO.test(f)", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: o defeito de ANTES («o fluxo estava fraco, limpei…») barra o fechamento', r"CONC_DEFEITO.test(f.replace(CONC_PASSADO, ' '))", r"CONC_DEFEITO.test(f)", ('p3g_pendencias',)),
+ ('p3g rev conclusão: «ainda» não é defeito que continua', r"|voltaram a|ainda|sem (?:", r"|voltaram a|sem (?:", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «sem melhora» não é defeito', r"|solucao|melhora|melhoria|diferenca|mudanca|alteracao|progresso)", r"|solucao)", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «fluxo fraco/baixo/ruim» (o sintoma dito) não é defeito', r"|fraco|fraca|fracos|fracas|baixo|baixa|baixos|baixas|ruim|ruins|lento|lenta|lentos|lentas|insuficiente\w*|", r"|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «ruído estranho / vazamento» não é defeito', r"|ruidos?|barulh\w+|vazamentos?|estranh\w+|anormal\w*|anormais|esquisit\w+|", r"|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «sai fumaça / sai quente» não é defeito', r"|quentes?|aquec\w+|superaquec\w+|esquent\w+|fumac\w+|fumegand\w+|cheiro|vibrac\w+|trepid\w+|instave\w+|oscil\w+|desgastad\w+|queimad\w+|furad\w+|corroid\w+|enferrujad\w+|emperrad\w+|", r"|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «está sujo» (presente) não é defeito', r"|(?:esta|estao|ta|tao|fica|ficam|ficou|ficaram|anda|andam)(?: (?:muito|bem|meio|bastante|um pouco|pouco))* (?:sujo|suja|", r"|(?:zzqq) (?:sujo|suja|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «está com problema» não é defeito', r"|gasto|gasta|com (?:um |uma )?(?:problema|defeito|falha|erro|folga)))\b/;", r"|gasto|gasta))\b/;", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «permanece / reapareceu» não é defeito', r"|permanec\w+|reapare\w+|retornou|retornaram|", r"|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «sai pouco ar» não é defeito', r"|pouc[oa]s?|mornos?|", r"|mornos?|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «o ar sai morno» não é defeito', r"|mornos?|mornas?|sem (?:gelar", r"|sem (?:gelar", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: «fica sem gelar» não é defeito', r"|sem (?:gelar|funcionar|ligar|pegar|partir|pressao|agua|fluxo|ar|luz|som)|mas|", r"|mas|", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev outro dia: «há duas semanas / três dias atrás» propõe o Executado de hoje', r"|ano passado|outro dia|ha (?:\w+ ){1,2}(?:dias?|semanas?|mes|meses|anos?)|(?:dias?|semanas?|meses) atras|", r"|", ('p3g_rev',)),
+ ('p3g rev outro dia: «na sexta» propõe o Executado de hoje', r"(?:na |no |nesta |neste |nessa |nesse )?(?:segunda|terca|quarta|quinta|sexta|sabado|domingo)(?: passad[oa])?|dia \d{1,2}|", r"", ('p3g_rev',)),
+ ('p3g rev outro dia: «dia 10» (sem barra) propõe o Executado de hoje', r"|dia \d{1,2}|\d{1,2}\/\d{1,2})\b/;", r"|\d{1,2}\/\d{1,2})\b/;", ('p3g_rev',)),
+ # —— a ação e o equipamento ——
+ ('p3g rev ação: qualquer ação do texto conclui a tarefa («limpei as bombas de porão» fecha o teste)', r"    return fTexto.some(function (x) { return fAlvo.some(function (g) { return ACAO_BASTA[g].indexOf(x) !== -1; }); });", r"    return true;", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev ação: a inspeção não conclui nem a troca do rotor (V sem a troca)', r"V: 'VRST'", r"V: 'VRS'", ('p3g_pendencias',)),
+ ('p3g rev ação: a verificação/revisão não conclui o teste (S só com teste)', r"S: 'SVR'", r"S: 'S'", ('p3g_pendencias',)),
+ ('p3g rev ação: a troca não conclui a limpeza (L sem a troca)', r"L: 'LTVR'", r"L: 'LVR'", ('p3g_pendencias',)),
+ ('p3g rev ação: «troquei» (c→qu) não é a ação trocar', r"troc(?!ador)|troq|substitu", r"troc(?!ador)|substitu", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev ação: «verifiquei» (c→qu) não é a ação verificar', r"verific|verifiqu|confer", r"verific|confer", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev ação: o «trocador» de calor é a ação trocar (a tarefa do ânodo do trocador vira troca)', r"troc(?!ador)|troq", r"troc|troq", ('p3g_rev',)),
+ ('p3g rev ação: o Executado propõe com a ação que não é a da tarefa («verifiquei o óleo dos motores»)', r"if (!acaoCombina(acoesDe(texto), acoesDe(ts[0].t)) ||", r"if (false ||", ('p3g_agenda', 'p3g_rev')),
+ ('p3g rev equipamento: o Executado propõe com o equipamento de outra tarefa («limpei o filtro de água salgada do gerador»)', r"|| !equipamentoCombina(texto, ts[0].sistema)) return null;", r") return null;", ('p3g_agenda',)),
+ ('p3g rev equipamento: a pendência fecha com o equipamento de outra («filtro de água salgada do gerador» fecha a da climatização)', r"sistema: t ? t.sistema : '' }; }", r"sistema: '' }; }", ('p3g_pendencias',)),
+ ('p3g rev equipamento: o equipamento do texto nunca confere', r"    return !ids.length || ids.indexOf(sistema) !== -1;", r"    return true;", ('p3g_pendencias', 'p3g_agenda')),
+ ('p3g rev conclusão: a pendência fecha sem conferir a ação nem o equipamento (só a frase de conclusão)', r"&& acaoCombina(acoesDe(texto), acoesDe(titulo)) && equipamentoCombina(texto, sistema);", r";", ('p3g_pendencias',)),
+ ('p3g rev pendência: o registro que cita duas pendências e não conclui pergunta «qual foi resolvida»', r"return conclusao(texto) ? { ambigua: cit } : null;", r"return { ambigua: cit };", ('p3g_rev',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3G_REV
 
 
 def instante_3a(b):

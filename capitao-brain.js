@@ -335,16 +335,49 @@
   function tarefasAgendadas(ctx) { return tarefasEquipe(ctx).filter(function (t) { return t.aparelho && !t.feita; }); }
   // ——— O que o texto de um registro diz (F20, F15) ———
   // «Frase de conclusão»: o verbo de quem FEZ o serviço (passado ou particípio), sem plano, dúvida, pergunta, negação nem defeito que continua. É a única regra que fecha uma pendência e que propõe o Executado;
-  // na dúvida NÃO conclui (a tela tem o Resolver e o Executado de um toque). «Limpei o filtro» fecha; «vou limpar o filtro», «será que limpei o filtro?», «não limpei o filtro» e «limpei o filtro, mas o fluxo
-  // continua fraco» não. As linhas do próprio app («Executado: … nada se apaga») levam «nada» e nunca concluem.
+  // na dúvida NÃO conclui (a tela tem o Resolver e o Executado de um toque). «Limpei o filtro» fecha; «vou limpar o filtro», «será que limpei o filtro?», «não limpei o filtro», «limpei o filtro, mas o fluxo
+  // continua fraco», «limpei o filtro e o fluxo está fraco», «o filtro está limpo» (estado, não ato) e «testei a bomba e ela faz um ruído estranho» não. As linhas do próprio app («Executado: … nada se apaga»)
+  // levam «nada» e nunca concluem.
   var FEITO = /\b(?:(?:limp|test|inspecion|revis|realiz|execut|finaliz|lav|ajust|instal|consert|atualiz|arrum|calibr|troc|verific)(?:ei|amos|ou|aram|ad[oa]s?)|troquei|verifiquei|fiz|fizemos|fez|fizeram|feit[oa]s?|conclu(?:i|imos|iu|iram|id[oa]s?)|substitu(?:i|imos|iu|iram|id[oa]s?)|corrig(?:i|imos|iu|iram|id[oa]s?)|resolv(?:i|emos|eu|eram|id[oa]s?)|limp[oa]s?|pront[oa]s?|normaliz(?:ou|aram|ad[oa]s?))\b/;
   var CONC_FUTURO = /\b(?:vou|vamos|vai|irei|iremos|iria|precis(?:a|o|amos|am|ar)|necessit\w*|tem que|temos que|tenho que|tenha que|devo|devemos|deve|deveria|deveriamos|poderia|poderiamos|posso|podemos|pretend\w*|planej\w*|quero|queremos|queria|gostaria|lembrar|lembrete|amanha|semana que vem|mes que vem|proxim[oa]|em breve|logo mais|falta|faltam|faltou|pendente|aguardando|esperando|a fazer|por fazer|ate (?:segunda|terca|quarta|quinta|sexta|sabado|domingo))\b/;
   var CONC_DUVIDA = /\?|\b(?:sera que|acho que|talvez|parece que|nao sei|duvid\w+|supostamente|aparentemente|creio que|imagino que|devo ter|deve ter|pode ser que|nao tenho certeza|nao lembro|quem sabe|se)\b/;
   var CONC_NEGA = /\b(?:nao|nunca|jamais|nem|ninguem|nada)\b/;
-  var CONC_DEFEITO = /\b(?:continu\w+|segue|seguem|persist\w+|voltou a|voltaram a|ainda (?:esta|ta|estao|tao|nao|apresenta|com|tem|sujo|suja|vazando|falhando|fraco|fraca)|sem (?:sucesso|resultado|efeito|conseguir|solucao)|em vao|apesar de|mesmo assim|mesmo depois|pior\w*|danificad\w+|quebr\w+|entupid\w+|travad\w+|travou|trincad\w+|rachad\w+|vazand\w+|vazou|falhou|falhando|defeit\w+|mas|porem|contudo|entretanto|todavia)\b/;
+  // O DEFEITO que continua ou que o registro acabou de achar: as palavras de continuidade (continua, segue, ainda, mesmo assim, mas…), o sintoma dito (fraco, baixo, ruim, ruído, barulho, vazamento, estranho, quente…) e «está/ficou +
+  // adjetivo de defeito» (está sujo, ficou travado). O defeito de ANTES («o filtro que estava sujo», «o fluxo estava fraco») sai antes de procurar (CONC_PASSADO): é o motivo do serviço, não o resultado dele.
+  var CONC_DEFEITO = /\b(?:continu\w+|segue|seguem|persist\w+|voltou a|voltaram a|ainda|sem (?:sucesso|resultado|efeito|conseguir|solucao|melhora|melhoria|diferenca|mudanca|alteracao|progresso)|em vao|apesar de|mesmo assim|mesmo depois|pior\w*|danificad\w+|quebr\w+|entupid\w+|travad\w+|travou|trincad\w+|rachad\w+|vazand\w+|vazou|falhou|falhando|defeit\w+|fraco|fraca|fracos|fracas|baixo|baixa|baixos|baixas|ruim|ruins|lento|lenta|lentos|lentas|insuficiente\w*|ruidos?|barulh\w+|vazamentos?|estranh\w+|anormal\w*|anormais|esquisit\w+|quentes?|aquec\w+|superaquec\w+|esquent\w+|fumac\w+|fumegand\w+|cheiro|vibrac\w+|trepid\w+|instave\w+|oscil\w+|desgastad\w+|queimad\w+|furad\w+|corroid\w+|enferrujad\w+|emperrad\w+|permanec\w+|reapare\w+|retornou|retornaram|pouc[oa]s?|mornos?|mornas?|sem (?:gelar|funcionar|ligar|pegar|partir|pressao|agua|fluxo|ar|luz|som)|mas|porem|contudo|entretanto|todavia|(?:esta|estao|ta|tao|fica|ficam|ficou|ficaram|anda|andam)(?: (?:muito|bem|meio|bastante|um pouco|pouco))* (?:sujo|suja|sujos|sujas|cheio|cheia|vazio|vazia|parado|parada|desligado|desligada|solto|solta|frouxo|frouxa|morto|morta|gasto|gasta|com (?:um |uma )?(?:problema|defeito|falha|erro|folga)))\b/;
+  var CONC_PASSADO = /\b(?:estava|estavam|era|eram)(?: (?:muito|bem|bastante|meio))? [a-z]+/g, CONC_ESTADO = /\b(?:esta|estao|ta|tao|estava|estavam|era|eram)(?: (?:ja|bem|todo|toda|muito|bastante|meio))? [a-z]+/g;
+  // A AÇÃO que o texto diz e a da tarefa ou da pendência: limpar, trocar, testar, inspecionar/verificar, revisar, atualizar. O registro que diz OUTRA ação («limpei as bombas de porão» para o «Teste das bombas de
+  // porão», «verifiquei o óleo dos motores» para a «Troca de óleo») não conclui. Sem ação conhecida (fiz, feito, concluí, realizei, resolvi…) de um lado ou do outro, vale. ACAO_BASTA: as ações do texto que
+  // concluem a de cada tipo (a verificação conclui a limpeza, o teste e a revisão; a troca conclui a limpeza, a inspeção e a revisão).
+  var ACAO_TIPOS = [['L', /\b(?:limp|lav)\w*/], ['T', /\b(?:troc(?!ador)|troq|substitu)\w*/], ['S', /\b(?:auto)?test\w*/], ['V', /\b(?:inspe|verific|verifiqu|confer|vistori|cheq|checa)\w*/], ['R', /\b(?:revis|manuten)\w*/], ['A', /\batualiz\w*/]];
+  var ACAO_BASTA = { L: 'LTVR', T: 'TR', S: 'SVR', V: 'VRST', R: 'RVT', A: 'AV' };
+  function acoesDe(texto) { var f = dobra(texto); return ACAO_TIPOS.filter(function (a) { return a[1].test(f); }).map(function (a) { return a[0]; }); }
+  function acaoCombina(fTexto, fAlvo) {
+    if (!fTexto.length || !fAlvo.length) return true;
+    return fTexto.some(function (x) { return fAlvo.some(function (g) { return ACAO_BASTA[g].indexOf(x) !== -1; }); });
+  }
+  // o equipamento: o texto que nomeia um equipamento (D.equipamentos, menos os de segurança) e não o do sistema da tarefa («limpei o filtro de água salgada do GERADOR» para a limpeza da CLIMATIZAÇÃO) não conclui
+  function equipamentosDoTexto(texto) {
+    var tk = tokens(texto), ids = [];
+    (D.equipamentos || []).forEach(function (e) {
+      if (e.seguranca) return;
+      if ([e.nome, e.fabricante, e.modelo].concat(e.palavras || []).some(function (x) { var ws = tokens(x); return ws.length && ws.every(function (w) { return tk.indexOf(w) !== -1; }); })) ids.push(e.id);
+    });
+    return ids;
+  }
+  function equipamentoCombina(texto, sistema) {
+    var ids;
+    if (!sistema || !equip(sistema)) return true;
+    ids = equipamentosDoTexto(texto);
+    return !ids.length || ids.indexOf(sistema) !== -1;
+  }
+  // o texto conclui o serviço de uma tarefa ou de uma pendência: a frase de conclusão, a ação dela e o equipamento (`titulo`: o texto da tarefa ou da pendência; `sistema`: o da tarefa)
+  function concluiAlvo(texto, titulo, sistema) {
+    return conclusao(texto) && acaoCombina(acoesDe(texto), acoesDe(titulo)) && equipamentoCombina(texto, sistema);
+  }
   function conclusao(texto) {
     var raw = String(texto || ''), f = dobra(raw).replace(/[.,;:!()"“”]+/g, ' ').replace(/\s+/g, ' ');
-    return FEITO.test(f) && !CONC_FUTURO.test(f) && !CONC_DUVIDA.test(f) && !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);
+    return FEITO.test(f.replace(CONC_ESTADO, ' ')) && !CONC_FUTURO.test(f) && !CONC_DUVIDA.test(f) && !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f.replace(CONC_PASSADO, ' '));
   }
   // HH:MM de um instante ISO no fuso do barco (a linha do aparelho guarda o `iso`, não a hora); '' se não for data
   function horaDe(iso) { var ms = Date.parse(iso), A = window.CapitaoAgora; if (isNaN(ms)) return ''; try { return A.fmt.hora(ms, false); } catch (e) { return ''; } }
@@ -425,11 +458,14 @@
   }
   function pendencias(ctx) { return pendenciasLista(ctx).filter(function (p) { return p.aberta; }); }
   // A pendência que o texto cita (as `palavras` dela; o plural vale): { p, fecha } com UMA citada, { ambigua } com duas ou mais abertas (nenhuma fecha; a resposta pergunta qual), null sem citação. Só as abertas contam.
+  // (a tarefa da agenda que a pendência aponta pelo `ref` dá o sistema e o título que a frase de conclusão confere: o texto que nomeia OUTRO equipamento («filtro de água salgada do gerador») não fecha a da climatização)
+  function alvoDaPend(p) { var t = p.ref ? tarefa(p.ref) : null; return { titulo: p.t + (t ? ' ' + t.t : ''), sistema: t ? t.sistema : '' }; }
   function achaPendencia(texto) {
-    var tk = raizes(texto), cit = pendencias().filter(function (p) { return citaFrases(tk, p.palavras); });
+    var tk = raizes(texto), cit = pendencias().filter(function (p) { return citaFrases(tk, p.palavras); }), a;
     if (!cit.length) return null;
-    if (cit.length > 1) return { ambigua: cit };
-    return { p: cit[0], fecha: conclusao(texto) };
+    if (cit.length > 1) return conclusao(texto) ? { ambigua: cit } : null;   // (duas citadas e o texto não conclui nada: não há o que perguntar)
+    a = alvoDaPend(cit[0]);
+    return { p: cit[0], fecha: concluiAlvo(texto, a.titulo, a.sistema) };
   }
 
   // ——— Diário → agenda (F15) ———
@@ -438,6 +474,11 @@
   var AG_VERBO = /\b(agend(?:ar|e|a|amos|ei|ou|aram)|marc(?:ar|a|amos)|marque|program(?:ar|e|a|amos))\b/g, AG_FEITO = /\b(agendad[oa]s?|marcad[oa]s?|programad[oa]s?)\b/;
   var AG_AMBIGUO = /^(agenda|marca|programa)$/, AG_INICIO = /^[\s,]*(?:(?:por favor|favor|pode|poderia|voce|vc|consegue|da pra|da para|ok|entao|tambem|e|ai|capitao)[\s,]+)*$/, AG_NOME = /^\s+(de|do|da|dos|das)\b/, AG_ANOTA = /^\s*(?:(?:ai|la)\b|que\b|:)/;
   var AG_CORTESIA = /(?:^|[\s,])(?:pode|poderia|podia|consegue|conseguiria|da pra|da para|daria pra|daria para|tem como|seria possivel)(?:\s+(?:me|por favor|voce|vc))?[\s,]*$/, AG_ANTES = /\b(o|a|os|as|um|uma|do|da|dos|das|no|na|nos|nas|de|meu|minha|seu|sua|esse|essa|este|esta|pelo|pela)\s+$/;
+  // A PERGUNTA sobre a agenda sem o «?» (o ditado e o teclado quase nunca o põem): «o que está agendado para amanhã», «tarefas agendadas para 15/11», «quais manutenções estão programadas para dia 20», «tem algo marcado para
+  // dia 20», «como agendar a revisão para 15/11» não são pedido de agendar. O interrogativo na frente do verbo (AG_PERG), a listagem na frente do «agendada para» (AG_LISTA: tem, mostre, minhas…) e o nome que é só palavra genérica (AG_GENERICO: tarefas, manutenções, o que…) saem.
+  var AG_PERG = /^[\s,]*(?:(?:e|entao|ai|capitao|por favor)[\s,]+)*(?:o que|oque|que|qual|quais|quando|quanto|quantos|quantas|quem|onde|como|por que|porque|sera que)\b/;
+  var AG_LISTA = /^[\s,]*(?:(?:e|entao|ai|capitao|por favor)[\s,]+)*(?:tem|ha|existe|existem|temos|mostre|mostra|mostrar|liste|lista|listar|ver|veja|confira|conferir|diga|minhas?|meus)\b/;
+  var AG_GENERICO = /^[\s,]*(?:(?:as|os|a|o|uns|umas|todas?|todos|minhas?|meus|nossas?|nossos|outras?|outros|essas?|esses|quais|que|alguma|algum|nenhuma|nenhum|tudo|algo|nada|coisa|coisas|tarefas?|manutencoes|manutencao|servicos?|compromissos?|itens?|revisoes|pendencias?|lembretes?|alertas?|avisos?|visitas|tem|ha)[\s,]*)+$/;
   // a primeira data do texto dobrado: { ini, fim, dia (desde 1970) } — dd/mm, «15 de novembro», «amanhã», «daqui a N dias», «dia 20»; null se não há; dia NaN se a data não existe
   function dataNoTexto(s) {
     var m, hoje = diaDe(msAgora()), p, mes;
@@ -466,6 +507,8 @@
     if (raw.indexOf('?') >= 0 && !(v && AG_CORTESIA.test(f.slice(0, v.index)) && f.slice(0, v.index).indexOf('?') < 0)) return null;
     if (!v) pp = AG_FEITO.exec(f);
     if (!v && !pp) return null;
+    if (v && AG_PERG.test(f.slice(0, v.index))) return null;   // «como agendar a revisão para 15/11» (sem o «?»)
+    if (pp && (AG_PERG.test(f.slice(0, pp.index)) || AG_LISTA.test(f.slice(0, pp.index)) || AG_GENERICO.test(f.slice(0, pp.index).replace(/(?:\s+(?:esta|estao|foi|foram|ficou|ficaram|fica|ja))+\s*$/, '')))) return null;   // «o que está agendado para amanhã», «tarefas agendadas para 15/11»
     if (/\b(nao|nunca)\b/.test(f.slice(0, v ? v.index : pp.index)) || /\b(cancel\w*|desmarc\w*)\b/.test(f)) return null;
     if (v && AG_ANTES.test(f.slice(0, v.index))) return null;   // «a marca», «o programa»: substantivo
     ini = v ? v.index + v[0].length : pp.index + pp[0].length; resto = f.slice(ini); d = dataNoTexto(resto);
@@ -490,7 +533,7 @@
     var tk = raizes(texto), ex = loadExec();
     return (D.agenda || []).filter(function (t) { return !ex[t.id] && citaFrases(tk, t.palavras); });
   }
-  var OUTRO_DIA = /\b(?:ontem|anteontem|semana passada|mes passado|\d{1,2}\/\d{1,2})\b/;
+  var OUTRO_DIA = /\b(?:ontem|anteontem|semana passada|mes passado|ano passado|outro dia|ha (?:\w+ ){1,2}(?:dias?|semanas?|mes|meses|anos?)|(?:dias?|semanas?|meses) atras|(?:na |no |nesta |neste |nessa |nesse )?(?:segunda|terca|quarta|quinta|sexta|sabado|domingo)(?: passad[oa])?|dia \d{1,2}|\d{1,2}\/\d{1,2})\b/;
   // A proposta que o texto de um registro faz: agendar (a tarefa nova) vence «foi feito» (o Executado). O Executado é datado na confirmação (markExec): o texto que cita OUTRO dia («ontem», «dd/mm») não
   // propõe (a tela marca a tarefa com a data certa); e o texto que cita duas tarefas não propõe nenhuma.
   function propostaDoTexto(texto) {
@@ -502,6 +545,7 @@
     }
     if (!conclusao(texto) || OUTRO_DIA.test(dobra(texto))) return null;
     ts = tarefasDoTexto(texto); if (ts.length !== 1) return null;   // (as já executadas não entram em tarefasDoTexto)
+    if (!acaoCombina(acoesDe(texto), acoesDe(ts[0].t)) || !equipamentoCombina(texto, ts[0].sistema)) return null;   // («verifiquei o óleo dos motores» não é a «Troca de óleo e filtros»; «limpei o filtro do gerador» não é o da climatização)
     return { k: 'exec', prop: { tarefa: ts[0].id } };
   }
   function sistemaDoTexto(texto) { var e = equipamentoDoRelato(texto); return e ? e.id : ''; }
@@ -544,6 +588,10 @@
   // «confirmar», «recusar» e os botões valem sempre dentro dos 10 min. `seq` identifica a proposta: o botão de uma antiga não age na nova. DESFAZ guarda o que acabou de ser confirmado ou fechado (10 min): «desfazer»
   // desmancha. A emergência, o NOVA e o ENCERRAR zeram as duas (limpaConversa). Nada é gravado sem o Confirmar; o pedido de link (commit false) não arma nada.
   var PEND_CHAT = null, DESFAZ = null, PROP_SEQ = 0, ALVO_PROP = null, PROP_VALE = 10 * 60e3;
+  // quando o último pedido de alarme virou proposta (mesmo a de link, que não arma): 30 min de memória. O «confirmar alarme» e o «cancelar o alarme» escritos valem só nesse tempo — depois que a proposta venceu
+  // (10 min), ou que a emergência/NOVA a zerou, ainda é a resposta local «nenhum alarme esperando»; sem pedido recente, «cancelar o alarme» é o alarme do barco e segue para as rotas de sempre
+  var ALM_PEDIU = 0, ALM_MEMORIA = 30 * 60e3;
+  function almPediuRecente() { return !!ALM_PEDIU && Date.now() - ALM_PEDIU < ALM_MEMORIA; }
   function armaProp(tipo, dados) { PROP_SEQ++; PEND_CHAT = Object.assign({ tipo: tipo, seq: PROP_SEQ, ate: Date.now() + PROP_VALE, n: undefined }, dados); return PEND_CHAT; }
   function armaDesfaz(tipo, dados, ate) { PROP_SEQ++; DESFAZ = Object.assign({ tipo: tipo, seq: PROP_SEQ, ate: ate, n: undefined }, dados); return DESFAZ; }
   function propVale() { return PEND_CHAT && Date.now() < PEND_CHAT.ate ? PEND_CHAT : null; }
@@ -574,8 +622,8 @@
       if (PC_CONFIRMA.test(q) || (logo && PC_SIM.test(q))) return p.tipo === 'alarme' ? 'alarmeConfirma' : 'ticketConfirma';
       if (PC_RECUSA.test(q) || (logo && PC_NAO.test(q))) return p.tipo === 'alarme' ? 'alarmeCancela' : 'ticketRecusa';
     }
-    if (AL_CONFIRMA_EXP.test(q)) return 'alarmeConfirma';
-    if (AL_CANCELA_EXP.test(q)) return 'alarmeCancela';
+    if (AL_CONFIRMA_EXP.test(q) && almPediuRecente()) return 'alarmeConfirma';
+    if (AL_CANCELA_EXP.test(q) && almPediuRecente()) return 'alarmeCancela';
     // a pergunta pronta de um botão velho (a proposta venceu, a página recarregou, outra pergunta zerou): a resposta local diz que não há proposta, nunca a IA
     if (PC_BTN_CONFIRMA.test(q) || PC_SO_CONFIRMA.test(q)) return 'ticketConfirma';   // («confirmar» sozinho, sem proposta esperando, é resposta local: não há o que confirmar)
     if (PC_BTN_RECUSA.test(q) || PC_SO_RECUSA.test(q)) return 'ticketRecusa';
@@ -673,15 +721,38 @@
   var ALM_RELATO = / (?:esta|estao|ta|tao|estava|estavam|caiu|cairam|acendeu|acesa|acesas|disparou|soou|apagou|parou|agora|neste momento|nesse momento|urgente|socorro|ajuda|problema|falha|falhou|luz|vermelha|vermelho|zerou|zerada|sem pressao) /;
   var ALM_PERGUNTA = / (?:como|onde|quando|qual|quais|quanto|porque|por que|o que|quem|sera|posso|devo) /;
   function almGatilho(q) { return (ALM_GAT_A.test(q) && ALM_COND.test(q)) || ALM_GAT_B.test(q) || ALM_GAT_C.test(q); }
+  // O relato junto do pedido («pressão do óleo baixa no BB, me avise se cair abaixo de 2 bar», «baixou», «caindo», «o manômetro marca 1 bar, me avise…») segue a instrução de segurança (oleo): o pedido de alarme só é
+  // configuração quando a frase COMEÇA pelo pedido — antes do gatilho («me avise», «alerte», «crie um alarme», «se», «quando») só cortesia ou o motor/lado (“por favor”, “capitão”, “no motor de bombordo”) — e não traz
+  // sinal do estado de agora: nenhum sintoma (baixa, baixou, fraca, caindo, perdendo, oscilando, marca, vazando, quente, ruído…) fora da própria condição («cair abaixo de 2») e nenhum número antes dela (a leitura
+  // citada). Na dúvida, o oleo() vale (os passos de segurança, local, sem leitura).
+  var ALM_SINTOMA = / (?:baix[oa]s?|baixou|baixaram|fraco|fraca|fracos|fracas|pouc[oa]s?|zero|oscil\w*|perd\w*|cain\w*|despenc\w*|sumi\w*|diminu\w*|reduziu|reduziram|zerand\w*|marca|marcam|marcando|marcou|marcava|apit\w*|piscand\w*|acendend\w*|pingand\w*|vazand\w*|vazou|vazamentos?|fumac\w*|fumegand\w*|quent\w*|aquec\w*|esquent\w*|ruidos?|barulh\w*|estranh\w*|anormal\w*|anormais|esquisit\w*|trepid\w*|falhand\w*|falhas|tremend\w*|instave\w*|cheiro|cheirando|pior\w*|ruim|ruins|travand\w*|engasg\w*|limite) /;
+  var ALM_ABRE_OK = ' por favor gentileza favor entao capitao ok ei oi ola olha bom dia boa tarde noite e ai pode poderia voce quero que preciso gostaria queria vamos tambem agora me no na nos nas do da de para pra o a os as motor motores bb be bombordo boreste estibordo lado ';
+  var ALM_COMP_NUM = new RegExp('(?:' + ALM_LT.source + '|' + ALM_GT.source + ')(?= *\\d)', 'g');
+  function almSinalEstado(q) {
+    var s = q.replace(ALM_COMP_NUM, ' | '), i = s.indexOf(' | '), gs = [ALM_GAT_A, ALM_GAT_B, ALM_GAT_C, ALM_COND].map(function (r) { var m = r.exec(q); return m ? m.index : -1; }).filter(function (k) { return k >= 0; });   // (a condição vira ' | ': o número ANTES dela é a leitura que o usuário cita — «a pressão do óleo do BB 1,5 bar, me avise se cair abaixo de 1 bar» —, não o limite)
+    if (q.slice(0, gs.length ? Math.min.apply(null, gs) : 0).trim().split(/\s+/).some(function (w) { return w && ALM_ABRE_OK.indexOf(' ' + w + ' ') === -1; })) return true;   // texto de relato ANTES do pedido
+    return ALM_SINTOMA.test(s) || (i > 0 && /\d/.test(s.slice(0, i)));
+  }
   // o pedido COMPLETO na forma de configuração («me avise se … cair abaixo de 2 bar»): gatilho + sentido + número e nenhuma palavra de relato. É o que vale ANTES do óleo (o relato de queda de pressão
   // segue a instrução de segurança; a configuração da regra não é relato) e o que o oleo() deixa de tratar como queda
   function almPedidoLite(q) { return !EM_SOS && !!D.alarmesPedidos && almGatilho(q) && (ALM_LT.test(q) || ALM_GT.test(q)) && /\d/.test(q) && !ALM_RELATO.test(q); }
   // (A cabeça de emergência — socorro, salvatagem, MMSI, EPIRB/baliza, Seafire, canal 16/rádio/DSC — nunca vira proposta de alarme: a route() as entrega às rotas de emergência ANTES de chegar aqui, e o oleo() devolver 0 não tira
   // nada dessas perguntas, que o cabecaEmerg pega pelas outras palavras. O testes/cerebro.py (p3g_rotas) confere a pergunta mista, com o EPIRB, o Seafire, o rádio, a salvatagem e o perigo.)
+  // O «criar um alarme» do começo da fala SEM sentido nem número: só vale sozinho («criar um alarme», «quero um alarme novo») ou com a medida da lista e mais nada («criar um alarme de diesel»): a resposta diz o que
+  // falta. Com outro assunto («ativar o alarme ao fundear», «configurar o alarme do porão», «… de profundidade no plotter», «programar aviso de manutenção») o alarme é o do barco: segue para as rotas de sempre.
+  var ALM_SOBRA_OK = ' de do da dos das para pra por um uma uns umas o a os as e ou que se no na nos nas em ao aos favor pedido novo nova outro outra mais aqui agora ja mesmo mim me voce motor motores bb be bombordo boreste estibordo ';
+  function almSoGatilho(q) {
+    var g = ALM_GAT_B.exec(q), tk, med;
+    if (!g) return false;
+    tk = raizes(q.slice(g.index + g[0].length));
+    med = almMedida(q);
+    (med.itens || []).forEach(function (m) { m.palavras.forEach(function (f) { var i = posFrase(tk, f), n = raizes(f).length; while (i >= 0) { tk.splice(i, n); i = posFrase(tk, f); } }); });
+    return tk.every(function (w) { return ALM_SOBRA_OK.indexOf(' ' + w + ' ') !== -1; });
+  }
   // o pedido de alarme em geral (incompleto também: a resposta diz o que falta): gatilho + (sentido com número, ou uma medida da lista) ou o «criar um alarme» do começo da fala; nunca pergunta nem relato
   function almPedido(q) {
     if (EM_SOS || !almCfg() || ALM_RELATO.test(q)) return false;
-    if (ALM_GAT_B.test(q) && !ALM_PERGUNTA.test(q) && !/\?/.test(q)) return true;
+    if (ALM_GAT_B.test(q) && !ALM_PERGUNTA.test(q) && !/\?/.test(q) && (((ALM_LT.test(q) || ALM_GT.test(q)) && /\d/.test(q)) || almSoGatilho(q))) return true;
     if (!((ALM_GAT_A.test(q) && ALM_COND.test(q)) || ALM_GAT_C.test(q))) return false;
     return ((ALM_LT.test(q) || ALM_GT.test(q)) && /\d/.test(q)) || !!almMedida(q).itens;
   }
@@ -698,10 +769,14 @@
   // a medida que o texto nomeia: a frase mais longa das `palavras` ganha; as medidas irmãs (óleo BB e BE, o banco sem dizer qual, águas cinzas e negras) que dividem a frase valem todas, e o lado dito (BB, BE,
   // bombordo, boreste) escolhe uma. { itens: [metricas] } ou { erro: 'medida' | 'ambigua' } (nenhuma, ou duas medidas diferentes no mesmo pedido).
   function almMedida(pq) {
-    var tk = raizes(pq), lado = almLado(tk), melhor = 0, ach = [], cands, lc, comum, span = {}, outra = false;
+    var tk = raizes(pq), lado = almLado(tk), melhor = 0, ach = [], cands, lc, comum, span = {}, outra = false, esg;
     almMetricas().forEach(function (m) {
-      m.palavras.forEach(function (f) { var ft = raizes(f), i = posFrase(tk, f); if (i >= 0) { ach.push({ m: m, f: ft.join(' '), len: ft.length, ini: i }); melhor = Math.max(melhor, ft.length); } });
+      m.palavras.forEach(function (f) { var ft = raizes(f), i = posFrase(tk, f); if (i >= 0) ach.push({ m: m, f: ft.join(' '), len: ft.length, ini: i }); });
     });
+    // «tanque de água cinza|negra|servida»: a frase genérica da água doce («tanque de água», «nível de água») com o qualificador de OUTRO tanque colado (dentro dela ou logo depois) é desse tanque, não da água doce
+    esg = ach.filter(function (a) { return /^tanque_(?:cinzas|negras)_pct$/.test(a.m.campos[0]); });
+    if (esg.length) ach = ach.filter(function (a) { return a.m.campos[0] !== 'tanque_agua_pct' || !esg.some(function (e) { return e.ini >= a.ini && e.ini <= a.ini + a.len; }); });
+    ach.forEach(function (a) { melhor = Math.max(melhor, a.len); });
     if (!melhor) return { erro: 'medida' };
     cands = []; ach.forEach(function (a) { if (a.len === melhor && !cands.some(function (c) { return c.m === a.m; })) cands.push({ m: a.m, fr: [] }); });
     ach.forEach(function (a) { if (a.len === melhor) cands.forEach(function (c) { if (c.m === a.m && c.fr.indexOf(a.f) === -1) c.fr.push(a.f); }); });
@@ -713,6 +788,7 @@
   }
   var ALM_NUM = /(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?: ?(%|por cento|porcento|bar|volts?|v|graus?|°c|c|rpm|nos|knots?|kt|metros?|m|hpa|litros?|l))?(?= |$)/;
   var ALM_UN = { '%': '%', 'por cento': '%', porcento: '%', bar: 'bar', volt: 'V', volts: 'V', v: 'V', grau: '°C', graus: '°C', '°c': '°C', c: '°C', rpm: 'rpm', nos: 'nós', knot: 'nós', knots: 'nós', kt: 'nós', metro: 'm', metros: 'm', m: 'm', hpa: 'hPa', litro: 'L', litros: 'L', l: 'L' };
+  var ALM_UN_ALHEIA = /^(?:pes?|ft|feet|foot|jardas?|yd|polegadas?|pol|bracas?|cm|mm|km|quilometros?|milhas?|mn|km\/h|kmh|kph|mph|m\/s|psi|kpa|mpa|pa|atm|mmhg|inhg|torr|kgf|f|°f|fahrenheit|kelvin|k|bf|beaufort|gal|galao|galoes|gallons?|lbs?|libras?|kg|quilos?|ton|toneladas?|kw|w|hp|cv|amps?|amperes?|ah|mah|mv|kv|h|horas?|min|minutos?|segundos?|dias?)$/;
   function almValor(t) { return parseFloat(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t.replace(',', '.')); }
   // O pedido entendido: { ok: true, itens: [{ m, op, limite }] } ou { ok: false, motivo: 'sentido' | 'limite' | 'medida' | 'ambigua' | 'unidade' | 'faixa' | 'op', m? }. O texto original (com as vírgulas dos decimais) é o que se lê.
   function almParse(raw) {
@@ -726,6 +802,8 @@
     med = almMedida(pad(raw));
     if (!med.itens) return { ok: false, motivo: med.erro };
     lim = almValor(nm[1]); un = nm[2] ? ALM_UN[nm[2]] : null;
+    // a unidade que o app não usa («10 pés», «25 km/h», «5 psi»): não vira o número da unidade da medida (10 pés não são 10 m); o app não converte, diz a unidade dela
+    if (!nm[2] && ALM_UN_ALHEIA.test((s.slice(ref.index + nm.index + nm[0].length).trim().split(' ')[0]) || '')) return { ok: false, motivo: 'unidade', m: med.itens[0] };
     for (i = 0; i < med.itens.length; i++) {
       m = med.itens[i];
       if (un && un !== m.un) return { ok: false, motivo: 'unidade', m: m };
@@ -1356,7 +1434,7 @@
   function oleo(q) {
     q = q.replace(/ oleo (?:diesel|combustivel)(?= )/g, ' diesel'); // "óleo diesel" é combustível, não óleo do motor
     if (!has(q, [' oleo']) || has(q, ['barometr', 'atmosf', 'hpa', 'pneu', 'hidraul'])) return 0;
-    if (almPedidoLite(q)) return 0;   // F12: «me avise se a pressão do óleo cair abaixo de 2 bar» CONFIGURA um alarme, não relata queda (o relato, com «está», «caiu», «agora», «acendeu»…, segue em 1)
+    if (almPedidoLite(q) && !almSinalEstado(q)) return 0;   // F12: «me avise se a pressão do óleo cair abaixo de 2 bar» CONFIGURA um alarme, não relata queda (o relato, com «está», «caiu», «agora», «acendeu», «baixa», «oscilando»…, segue em 1)
     if (!OLEO_SINAL.test(q) && has(q, ['porao', 'vazament', 'vazand', 'pingand'])) return 0; // óleo no porão / vazamento: rota própria
     if (has(q, ['gerador', ' onan ']) && !has(q, ['motor'])) return 0; // óleo do gerador: rota do gerador (' onan ': 'funcionando' contém 'onan')
     var pressao = has(q, ['pressao']);
@@ -2578,6 +2656,7 @@
       if (ativas.length + pr.itens.length - dup.length > max) return { text: 'Você já tem ' + ativas.length + ' de ' + max + ' alarmes pedidos: não cabe mais ' + (pr.itens.length - dup.length) + '. Apague um com “apagar alarme #n” (veja os números em “meus alarmes”).', src: f, actions: abrir, fala: 'Você já tem ' + ativas.length + ' alarmes pedidos; apague um antes de criar outro.' };
       regras = pr.itens.map(function (it) { return it.m.nome + ' ' + (it.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(it.m, it.limite); });
       linhas = pr.itens.map(function (it) { var v = i && i.q ? i.q[it.m.campos[0]] : null; return '• ' + regras[pr.itens.indexOf(it)] + almMotorTxt(it.m) + (typeof v === 'number' ? ' — agora ' + almTxt(it.m, v) + ' (' + i.hora + ')' : ''); });
+      ALM_PEDIU = Date.now();
       pe = grava ? armaProp('alarme', { itens: pr.itens.map(function (it) { return { campo: it.m.campos[0], op: it.op, limite: it.limite }; }) }) : null;
       return { text: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join(' · ') + '.\n' + linhas.join('\n') + '\nAviso só na tela do app (nunca crítico: sem notificação, sem som, não abre o SOS nem grava no diário). ' + (grava ? 'Nada é gravado sem o seu Confirmar: toque em Confirmar ou diga “confirmar alarme”; para desistir, “cancelar”.' : 'Não criado — pedido vindo de link não cria alarme: digite o pedido aqui no chat para confirmar.') + ' Você tem ' + ativas.length + ' de ' + max + ' alarmes pedidos.',
         src: f, actions: (pe ? botoesProp(pe) : []).concat(abrir),
