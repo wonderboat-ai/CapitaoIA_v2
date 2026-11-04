@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -2433,6 +2433,8 @@ PERGUNTA_CHAVE = {
     'navegacao': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?', 'embarcacao': 'qual o calado do barco?', 'ais': 'quantos alvos no AIS?',
     # P3E: as tendências (F11)
     'preditiva': 'quais as tendências?', 'pecas': 'quais peças temos a bordo?',
+    # P3F (revisão 3): a leitura pontual do quadro (o barômetro, os satélites, a inclinação, a marcha, o piloto, o radar)
+    'leituraBordo': 'qual a pressão barométrica?',
     'checklistFundeio': 'checklist de fundeio', 'checklistAbastecimento': 'checklist de abastecimento',
     # P3F: o registro pelo chat (F17) e a proposta do relato (F16): o pedido sem o texto, e os botões «registrar o relato» / «não registrar o relato» (sem proposta esperando, dizem que não há)
     'diarioPede': 'registrar no diário que', 'relatoRegistra': 'registrar o relato', 'relatoCancela': 'não registrar o relato',
@@ -4233,7 +4235,7 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV3
 MUTANTES_3C = [
     # —— a ordem e os gatilhos (grupo p3c: a tabela ROTAS_P3C) ——
     ('a pergunta do MMSI volta ao canal16', r"if (has(q, ['mmsi'])) return mmsiRota(q);", r"if (has(q, ['mmsi'])) return 'canal16';", ('p3c',)),
-    ('o AIS volta ao canal16 (sem a rota própria)', r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';", r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'canal16';", ('p3c',)),
+    ('o AIS volta ao canal16 (sem a rota própria)', r"if (aisPergunta(q)) return 'ais';", r"if (aisPergunta(q)) return 'canal16';", ('p3c',)),
     ('a sobreDados sai da route()', r"    if (sobreDados(q)) return 'sobreDados';", r"", ('p3c',)),
     ('o foraBarco antes das rotas de bordo («quanto custa o diesel em reais?» deixa de ser o diesel)', r"if (sobreDados(q)) return 'sobreDados';", r"if (sobreDados(q)) return 'sobreDados'; if (has(q, FORA_BARCO)) return 'foraBarco';", ('p3c',)),
     ('o foraBarco sem «dolar»', r"var FORA_BARCO = [' dolar ', ' dolares ', ", r"var FORA_BARCO = [", ('p3c',)),
@@ -4249,9 +4251,9 @@ MUTANTES_3C = [
     ('a posição sem «onde estamos»', r"var POSICAO_NOVAS = ['onde estamos', ", r"var POSICAO_NOVAS = [", ('p3c',)),
     ('a posição sem rumo, COG e «quantos nós»', r"' rumo ', ' cog ', ' sog ', ' quantos nos ', 'milhas por hora'];", r"'milhas por hora'];", ('p3c',)),
     ('o alarme sem «tem algum alerta»', r"    new RegExp(' (?:tem|ha|existe|existem|temos) (?:algum |alguns )?(?:alarmes?|alertas?)' + FIM_ALARME + ' $'),", r"", ('p3c',)),
-    ('a temperatura do motor pega o alarme (sem a lista de palavras neutras)', r"function arrefecimentoPergunta(q) { return ARREF_REGEX.test(q) && soNeutras(q, arrefOk()); }", r"function arrefecimentoPergunta(q) { return ARREF_REGEX.test(q); }", ('p3c',)),
+    ('a temperatura do motor pega o alarme (sem a lista de palavras neutras)', r"function arrefecimentoPergunta(q) { return (ARREF_REGEX.test(q) && soNeutras(q, arrefOk())) ||", r"function arrefecimentoPergunta(q) { return (ARREF_REGEX.test(q)) ||", ('p3c',)),
     ('as ondas pegam o relato (sem a lista de palavras neutras)', r"function ondasPergunta(q) { return has(q, ONDAS_PALAVRAS) && soNeutras(q, ONDAS_OK); }", r"function ondasPergunta(q) { return has(q, ONDAS_PALAVRAS); }", ('p3c',)),
-    ('a temperatura da água pega a «subindo» do relato (sem a lista de palavras neutras)', r"function aguaPergunta(q) { return AGUA_REGEX.test(q) && soNeutras(q, AGUA_OK); }", r"function aguaPergunta(q) { return AGUA_REGEX.test(q); }", ('p3c',)),
+    ('a temperatura da água pega a «subindo» do relato (sem a lista de palavras neutras)', r"function aguaPergunta(q) { return (AGUA_REGEX.test(q) && soNeutras(q, AGUA_OK)) ||", r"function aguaPergunta(q) { return (AGUA_REGEX.test(q)) ||", ('p3c',)),
     ('a navegação pega «como estamos de diesel» (a forma curta sem o fim ancorado)', r"(?: agora| por ai| a bordo| ai)? $/;", r"(?: agora| por ai| a bordo| ai)?/;", ('p3c',)),
     ('as pessoas pegam o relato com número (a leitura calma ignora os dígitos)', r"function leitura(q, ok) { return !DEFINICAO.test(q) && soNeutras(q, ok); }", r"function leitura(q, ok) { return !DEFINICAO.test(q) && soNeutras(q.replace(/ \d+ /g, ' '), ok); }", ('p3c',)),
     ('a embarcação sem «calado»', r"var EMB_PALAVRAS = [' calado', ", r"var EMB_PALAVRAS = [", ('p3c',)),
@@ -4380,7 +4382,7 @@ MUTANTES_3C_REV2 = [
     ('o MMSI mostra o número do cadastro na pergunta de programar', r"cad = !EM_SOS && mmsiNeutra(pq);", r"cad = !EM_SOS;", ('p3c',)),
     ('o MMSI sem a linha do indicativo', r"(ind ? ' Indicativo: ' + INDICATIVO + '.' : '')", r"''", ('p3c',)),
     # —— a pergunta mista é do equipamento de segurança ——
-    ('o AIS pega o relato e a pergunta mista do rádio (sem a lista branca)', r"if (has(q, [' ais ']) && leitura(q, AIS_OK)) return 'ais';", r"if (has(q, [' ais '])) return 'ais';", ('p3c',)),
+    ('o AIS pega o relato e a pergunta mista do rádio (sem a lista branca)', r"return (has(q, [' ais ']) && leitura(q, AIS_OK)) || (AIS_PERTO.test(q)", r"return (has(q, [' ais '])) || (AIS_PERTO.test(q)", ('p3c',)),
     ('a pergunta mista não vê o «canal 16»', r"var CANAL16_SEG = ['canal 16', 'pan-pan',", r"var CANAL16_SEG = ['xcanal 16', 'pan-pan',", ('p3c',)),
     ('a pergunta mista não vê o «pan-pan»', r"'canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];", r"'canal 16', 'xpan-pan', 'pan pan', ' dsc', 'distress'];", ('p3c',)),
     ('a pergunta mista não vê o «pan pan»', r"'canal 16', 'pan-pan', 'pan pan', ' dsc', 'distress'];", r"'canal 16', 'pan-pan', 'xpan pan', ' dsc', 'distress'];", ('p3c',)),
@@ -4477,7 +4479,7 @@ MUTANTES_3C_REV4 = [
     ('a chegada perde «já», «muito» e «estamos» («já chegamos?», «falta muito para chegar?», «estamos chegando?»)', r"var ETA_OK = NEUTRAS_BASE + 'quando ja muito estamos eta", r"var ETA_OK = NEUTRAS_BASE + 'quando eta", ('p3c',)),
     ('a chegada perde «vamos chegar a que horas»', r"    'vamos chegar a que horas', 'a que horas vamos chegar',", r"    'a que horas vamos chegar',", ('p3c',)),
     ('a chegada perde «em quanto tempo chegamos»', r"'em quanto tempo chegamos', 'em quanto tempo vamos chegar',", r"'em quanto tempo vamos chegar',", ('p3c',)),
-    ('a chegada perde «já chegamos» e «estamos chegando»', r"    'ja chegamos', 'estamos chegando'];", r"    ];", ('p3c',)),
+    ('a chegada perde «já chegamos» e «estamos chegando»', r"    'ja chegamos', 'estamos chegando', 'quanto tempo ate',", r"    'quanto tempo ate',", ('p3c',)),
     ('a chegada perde «falta muito» («falta muito para chegar?»)', r"'o que falta para', 'falta muito'];", r"'o que falta para'];", ('p3c',)),
     ('a chegada perde «base» e «marina» («quanto falta pra base?»)', r"var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta ', ' base ', ' marina '];", r"var FALTA_JUNTO = ['chegar', 'chegada', 'destino', 'waypoint', 'ponto', ' eta '];", ('p3c',)),
     ('a chegada perde «quantas milhas já navegamos»', r"'quantas milhas ja naveg', 'quantas milhas ja percorr', ", r"", ('p3c',)),
@@ -4490,12 +4492,12 @@ MUTANTES_3C_REV4 = [
     ('a profundidade perde «tem pouco fundo?»', r"|| POUCO_FUNDO.test(q); }", r"; }", ('p3c',)),
     ('a profundidade pega a válvula de fundo (a lista neutra aceita «feche», «válvula»)', r"neste nesse momento ponto local lugar metros", r"neste nesse momento ponto local lugar metros feche valvula do casco", ('p3c',)),
     # —— as horas que faltam ——
-    ('«quanto falta para a troca de óleo?» perde a 1ª linha com as horas que faltam', r"l1 = has(pad(qq || ''), FALTA_PALAVRAS) ? linhaFalta(o, 'a troca de óleo e filtros dos motores') : ''", r"l1 = ''", ('p3c',)),
+    ('«quanto falta para a troca de óleo?» perde a 1ª linha com as horas que faltam', r"l1 = has(pad(qq || ''), FALTA_PALAVRAS) || has(pad(qq || ''), PROX_TROCA) ? linhaFalta(o, 'a troca de óleo e filtros dos motores') : ''", r"l1 = ''", ('p3c', 'p3f_rev3_rotas')),
     ('«quanto falta para a revisão do gerador?» perde a 1ª linha com as horas que faltam', r"has(sq, ['revisao', 'oleo', 'filtro', 'troca', 'horas']) ? linhaFalta(rv, 'a revisão de óleo e filtros do gerador') : ''", r"has(sq, ['revisao', 'oleo', 'filtro', 'troca', 'horas']) ? '' : ''", ('p3c',)),
     ('as horas que faltam perdem a data (o que vier antes)', r"(t.vence ? ' ou até ' + t.vence + ', o que vier antes' : '')", r"''", ('p3c',)),
     ('as horas que faltam perdem o limite', r"' h para ' + nome + ' (limite de ' + mil(t.horas.limite) + ' h)'", r"' h para ' + nome", ('p3c',)),
     # —— o vento a bordo ——
-    ('«o vento a bordo agora» perde a 1ª linha do quadro (a previsão primeiro)', r"lv = linhasVento(qq, i);", r"lv = '';", ('p3c',)),
+    ('«o vento a bordo agora» perde a 1ª linha do quadro (a previsão primeiro)', r"lv = linhasVento(qq, i),", r"lv = '',", ('p3c',)),
     ('o relato «o vento está forte agora» vira o vento do quadro (sem a lista branca)', r" || !leitura(sq, NEUTRAS_BASE + VENTO_OK_P)) return '';", r") return '';", ('p3c',)),
     ('«vento aparente» perde o aparente na 1ª linha', r"if (ap && t.ventoAp) return 'A bordo agora, vento aparente '", r"if (false) return 'A bordo agora, vento aparente '", ('p3c',)),
     ('«verdadeiro ou aparente» perde o par na 1ª linha', r"if (ap && vd && t.ventoAp) return", r"if (false) return", ('p3c',)),
@@ -6358,7 +6360,7 @@ JS_P3F_F17 = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clea
   // 2) cada reconhecimento consumido sem gravar
   o.acks = ['tá bom', 'ok', 'valeu', 'entendi', 'sim', 'não', 'beleza', 'obrigado', 'certo, valeu', 'tudo bem'].map((x) => { B.answer('anote no diário:', op); const n0 = n(), c = r(x); return [x, n() - n0, c[0] === 'diario']; });
   // 3) cancelar, pergunta, outro pedido, emergência, óleo e o NOVA: nada gravado
-  const tenta = (x, antes) => { B.answer(antes || 'anote no diário:', op); const n0 = n(), c = r(x); return [x, c[0], n() - n0]; };
+  const tenta = (x, antes) => { B.answer(antes || 'anote no diário:', op); const n0 = n(), c = r(x); return [x, c[0], n() - n0, c[1].split('\\n')[0]]; };   // (a 4ª posição, a 1ª linha, separa o «Certo — nada registrado no diário.» do cancelamento da frase local «Não registrei isso…»)
   o.cancela = ['cancelar', 'esquece', 'deixa pra lá', 'nada', 'não precisa'].map((x) => tenta(x));
   o.perguntas = ['qual a autonomia?', 'quanto diesel temos', 'como está o gerador?', 'onde fica o extintor?', 'o gerador está ligado?', 'tem diesel suficiente?', 'quanto diesel ainda temos nos tanques de bombordo e boreste', 'onde fica o extintor da cabine de proa'].map((x) => tenta(x));   // (as duas últimas, sem «?» e com mais de 3 palavras: só a PERGUNTA as segura)
   o.acoes = ['diagnóstico'].map((x) => tenta(x)); o.semTexto = tenta('anote no diário:');   // a rota de ação segue a dela; o pedido sem o texto outra vez pergunta de novo (e não grava o resumo)
@@ -6399,10 +6401,10 @@ def grupo_p3f_f17(b, muta, ped):
             and o['grava'][0] == 'diario' and o['grava'][3] == 1 and o['grava'][4] == 'O gerador foi ligado às sete e desligado às nove' and o['grava'][2] == 'Registrado no diário de bordo.' and o['taBom'][1] == 1 and o['semEspera'][1] == 1, o)
         ped('p3f F17: depois do «o que devo registrar?», o reconhecimento («tá bom», «ok», «valeu», «entendi», «sim», «não»…) não vira o texto do registro', all(x[1] == 0 and x[2] is False for x in o['acks']), o['acks'])
         ped('p3f F17: depois do «o que devo registrar?», cancelar/esquecer, a pergunta, a emergência e a pressão de óleo não gravam (e a emergência e o óleo seguem a rota deles, com os passos); outro pedido de registro segue a rota normal (1 linha, a dele)',
-            all(x[2] == 0 for x in o['cancela']) and all(x[1] == 'relatoCancela' for x in o['cancela']) and all(x[2] == 0 for x in o['perguntas']) and [x[1] for x in o['emerg']] == ['sos', 'sos', 'oleo'] and all(x[2] == 0 for x in o['emerg'])
-            and o['outroPedido'][1] == 'diario' and o['outroPedido'][2] == 1 and o['acoes'] == [['diagnóstico', 'diagnostico', 0]] and o['semTexto'][1] == 'diarioPede' and o['semTexto'][2] == 0, (o['cancela'], o['perguntas'], o['emerg'], o['outroPedido'], o['acoes'], o['semTexto']))
+            all(x[2] == 0 for x in o['cancela']) and all(x[1] == 'relatoCancela' and x[3] == 'Certo — nada registrado no diário.' for x in o['cancela']) and all(x[2] == 0 for x in o['perguntas']) and [x[1] for x in o['emerg']] == ['sos', 'sos', 'oleo'] and all(x[2] == 0 for x in o['emerg'])
+            and o['outroPedido'][1] == 'diario' and o['outroPedido'][2] == 1 and [a[:3] for a in o['acoes']] == [['diagnóstico', 'diagnostico', 0]] and o['semTexto'][1] == 'diarioPede' and o['semTexto'][2] == 0, (o['cancela'], o['perguntas'], o['emerg'], o['outroPedido'], o['acoes'], o['semTexto']))
         ped('p3f F17: depois do «o que devo registrar?», a saudação, o controle da conversa (nova conversa, parar, silêncio), o pedido ao app (mostre…, quero ver…, me mostra…), o pedido de dado curto sem fato (telemetria agora, nível dos tanques, próximas manutenções, previsão do tempo), o enchimento (pode ser, hã, quero, vamos) e a despedida NÃO viram linha do diário (%d falas, 0 linhas)' % len(o['enche']),
-            all(x[2] == 0 for x in o['enche']) and all(x[2] == 0 and x[1] == 'relatoCancela' for x in o['adia']), ([x for x in o['enche'] if x[2] != 0], [x for x in o['adia'] if x[2] != 0 or x[1] != 'relatoCancela']))
+            all(x[2] == 0 for x in o['enche']) and all(x[2] == 0 and x[1] == 'relatoCancela' and x[3] == 'Certo — nada registrado no diário.' for x in o['adia']), ([x for x in o['enche'] if x[2] != 0], [x for x in o['adia'] if x[2] != 0 or x[1] != 'relatoCancela' or x[3] != 'Certo — nada registrado no diário.']))
         ped('p3f F17: a fala que não é registro segue a rota dela (a saudação, a telemetria, os tanques, a manutenção, o clima, o diário, os documentos, o checklist): a espera foi consumida e a resposta é a de sempre',
             [x[1] for x in o['rotaDoPedido']] == ['saudacao', 'telemetria', 'tanques', 'manutencao', 'clima', 'diarioLer', 'docsvenc', 'checklistChegada'] and all(x[2] == 0 for x in o['rotaDoPedido']), o['rotaDoPedido'])
         ped('p3f F17: a nota curta (verbo de fato, número, sem rota de dado) e a frase maior seguem sendo o texto do registro, mesmo quando a rota dela é a de um dado (o gerador, os motores, a autonomia): 1 linha cada', all(x[1] == 'diario' and x[2] == 1 for x in o['notas']), [x for x in o['notas'] if x[1] != 'diario' or x[2] != 1])
@@ -6426,6 +6428,8 @@ RELATOS_P3F = [
     'Ontem a geladeira da cozinha não funcionou durante a tarde toda por causa do calor', 'Hoje trocamos o filtro de ar do gerador e ainda falta limpar o filtro do compressor',
     # (14) a água que NÃO é perigo (abastecer a água doce, conferir o nível do dessalinizador) continua sendo relato
     'Hoje de manhã abastecemos a água doce do tanque e conferimos o nível de água do dessalinizador na marina',
+    # (15) o limite exato: 8 palavras já é relato (7 não: «trocamos o filtro de ar do gerador» está em NAO_RELATOS_P3F)
+    'Hoje trocamos o filtro do motor de boreste',
 ]
 # a pergunta, o pedido, o perigo, a pessoa em risco, a emergência e o óleo, o tempo piorando, o dinheiro, a frase curta, o comando de registro: NÃO viram proposta
 NAO_RELATOS_P3F = [
@@ -6443,6 +6447,8 @@ NAO_RELATOS_P3F = [
     # a água do mar entrando, o nível de água subindo e o barco fazendo água (o substantivo antes do verbo): perigo, nunca a proposta de registro
     'a água do mar está entrando pelo casco da popa devagar agora', 'o nível de água na sala de máquinas subiu bastante nos últimos minutos desde que saímos', 'o barco está fazendo água pela popa desde que saímos da barra ontem à tarde', 'o barco está tomando água pela proa desde que saímos da barra ontem de manhã', 'a água salgada continua subindo no casco desde que saímos da marina',
     'a água do mar invadiu a sala de máquinas depois que saímos da barra hoje cedo', 'a sala de máquinas encheu de água devagar depois que passamos pela barra hoje cedo', 'o EPIRB caiu do suporte e a bateria ficou exposta ao sol durante o dia todo', 'como se faz para trocar o filtro de ar do gerador sem desmontar a tampa',
+    # o dinheiro (revisão 3): a frase com R$ é de fora do barco, nunca a proposta de registro
+    'Ontem pagamos R$ 350 de taxa de uso da vaga na marina e guardamos o recibo',
 ]
 JS_P3F_RELATO = """([relatos, nao]) => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().length;
   const res = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, relato: a.relato || null, actions: a.actions.map((x) => [x.l, x.href]), text: a.text, fala: B.falaCurta(a), src: a.src, rota: B.route(q) }; };
@@ -6908,7 +6914,7 @@ JS_P3F_REV2 = r"""([cancela, conversa, notas, cortes, relatosV]) => new Promise(
  B.carregaBase(); if (B.carregaFaq) B.carregaFaq();
  setTimeout(() => {
   const fresca = () => { localStorage.clear(); B.limpaConversa(); };
-  const tenta = (x, antes) => { fresca(); B.answer(antes || 'registrar no diário que', op); const n0 = n(), a = B.answer(x, op); return [x, a.key, n() - n0]; };
+  const tenta = (x, antes) => { fresca(); B.answer(antes || 'registrar no diário que', op); const n0 = n(), a = B.answer(x, op); return [x, a.key, n() - n0, a.text.split('\n')[0]]; };   // (a 1ª linha separa o cancelamento da frase local «Não registrei isso…»)
   // 1) a guarda SEM_RELATO: o texto que parece relato mas é a nota gravada, o cancelamento e a saudação NÃO ganham proposta (e o «sim» seguinte não grava outra linha)
   const g = (pre, q) => { fresca(); if (pre) B.answer(pre, op); const n0 = n(), a = B.answer(q, op), t = tk(), s = B.answer('sim', op); return { key: a.key, relato: !!a.relato, tickets: t, linhas: n() - n0, simKey: s.key, linhasDepois: n() - n0 }; };
   o.guarda = { diario: g('registrar no diário que', 'o gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado'), cancela: g('registrar no diário que', 'espera um pouco aí, o gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar'), saudacao: g('', 'ontem à noite chegamos tarde e demos boa noite para o pessoal do píer e fomos dormir'), diagnostico: g('', 'a inteligência artificial na nuvem não está funcionando') };
@@ -6958,7 +6964,7 @@ def grupo_p3f_rev2(b, muta, ped):
             and g['saudacao'] == {'key': 'saudacao', 'relato': False, 'tickets': 0, 'linhas': 0, 'simKey': 'fallback', 'linhasDepois': 0}
             and g['diagnostico'] == {'key': 'diagnostico', 'relato': False, 'tickets': 0, 'linhas': 0, 'simKey': 'fallback', 'linhasDepois': 0} and g['registra'] == {'key': 'relatoRegistra', 'relato': False, 'tickets': 1, 'linhas': 1}, g)
         ped('p3f rev2: depois do «o que devo registrar?», a fala SOBRE o registro (recusa, «já está no diário», promessa, adiamento, ordem de esperar) cancela a espera — %d falas, 0 linhas, «relatoCancela»' % len(META_CANCELA_P3F),
-            all(x[1] == 'relatoCancela' and x[2] == 0 for x in o['cancela']), [x for x in o['cancela'] if x[1] != 'relatoCancela' or x[2] != 0])
+            all(x[1] == 'relatoCancela' and x[2] == 0 and x[3] == 'Certo — nada registrado no diário.' for x in o['cancela']), [x for x in o['cancela'] if x[1] != 'relatoCancela' or x[2] != 0 or x[3] != 'Certo — nada registrado no diário.'])
         ped('p3f rev2: depois do «o que devo registrar?», a fala que não é do barco (despedida, «estou ouvindo», volume, «tô pensando aqui», «tanto faz», «foi engano», a ordem ao app com palavra de bordo como «fica de olho no diesel», «estamos aqui esperando») não vira linha e segue a rota dela — %d falas, 0 linhas' % len(META_CONVERSA_P3F), all(x[1] != 'diario' and x[2] == 0 for x in o['conversa']), [x for x in o['conversa'] if x[1] == 'diario' or x[2] != 0])
         ped('p3f rev2: a nota — fala do barco: palavra de bordo, número, verbo de «nós» no passado ou nome de equipamento do cadastro («não precisa trocar o filtro», «o sensor não registrou», «espera de duas horas», «viagem de 3 horas», «saímos cedo e chegamos tarde», «choveu bastante durante a noite», «a TV da sala quebrou», «Garmin novo na ponte») — segue sendo 1 linha (%d notas)' % len(NOTAS_P3F), all(x[1] == 'diario' and x[2] == 1 for x in o['notas']), [x for x in o['notas'] if x[1] != 'diario' or x[2] != 1])
         ped('p3f rev2: o ditado cortado no meio da frase («registre no diário o», «anote que», «registrar no diário que o») pede o texto de novo e nunca grava «O» nem «O que»; o cortado de novo na espera e o «registrar no diário o que aconteceu» (pergunta, não texto) seguem a rota deles',
@@ -7213,7 +7219,7 @@ MUTANTES_P3F_REV = [
     ('p3f rev espera: a nota curta com número deixa de ser registro (diesel 800 litros)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2 && (ws.length > 3 || route(raw) === 'fallback');", ('p3f_f17',)),
     ('p3f rev espera: a frase maior com rota de dado deixa de ser registro (troca do filtro de combustível)', r"return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');", r"return conteudo >= 2 && (/\d/.test(n) || route(raw) === 'fallback');", ('p3f_f17',)),
     ('p3f rev espera: o verbo de fato não basta para a nota curta (motor BE esquentou)', r"    if (fato && ws.length >= 2) return true;", r"", ('p3f_f17',)),
-    ('p3f rev espera: o pedido ao app (mostre…, quero ver…, me mostra…) vira registro', r"if (PEDIDO_REG.test(n) || !falaDeBordo(n)) return false;", r"if (!falaDeBordo(n)) return false;", ('p3f_f17',)),
+    ('p3f rev espera: o pedido ao app (mostre…, quero ver…, me mostra…) vira registro', r"if (PEDIDO_REG.test(n) || CONVERSA_REG.test(n) || !falaDeBordo(n)) return false;", r"if (CONVERSA_REG.test(n) || !falaDeBordo(n)) return false;", ('p3f_f17',)),
     ('p3f rev espera: o adiamento (agora não, depois eu falo, deixa eu pensar, espera, não sei) não cancela', r"|desisto|deixa quieto|deixa quieta|deixa isso|agora nao|nao agora|nao quero|depois|mais tarde|depois eu (?:falo|digo|conto|registro|anoto)|nada (?:a|para|pra) registrar|deixa pra depois|deixa para depois|deixa eu pensar|um momento|so um momento|um instante|so um instante|espera|espere|aguarda|aguarde|perai|pera ai|calma|nao sei|sei la) $/;", r"|desisto) $/;", ('p3f_f17',)),
     # o botão «O que verificar?»
     ('p3f rev verifica: a pergunta do botão leva a coordenada do relato à IA', r"    return t ? (REL_VER + semCoord(t.texto.replace(/[\s.!]+$/, ''))).slice(0, 500) : '';", r"    return t ? (REL_VER + t.texto.replace(/[\s.!]+$/, '')).slice(0, 500) : '';", ('p3f_relato',)),
@@ -7266,7 +7272,7 @@ MUTANTES_P3F_REV2 = [
     ('p3f rev2 corte: a nota de até 3 palavras de ligação não é cortada', r"return ws.length > 0 && ws.length <= 3 && ws.every(", r"return ws.length > 0 && ws.length <= 0 && ws.every(", ('p3f_rev2',)),
     ('p3f rev2 corte: «o» não é palavra de ligação', r"var REG_CORTA = ' o a os as um uma de do da dos das no na em ao que ';", r"var REG_CORTA = ' a os as um uma de do da dos das no na em ao que ';", ('p3f_rev2',)),
     ('p3f rev2 corte: «registrar no diário o que aconteceu» é o pedido com o texto «O que aconteceu»', r"necessario|o que|oque)(?=\s|$)/;", r"necessario)(?=\s|$)/;", ('p3f_rev2',)),
-    ('p3f rev2 espera: a fala que não é do barco («tô pensando aqui», «tanto faz», «foi engano», «volto daqui a pouco») vira linha (sem a evidência de bordo)', r"if (PEDIDO_REG.test(n) || !falaDeBordo(n)) return false;", r"if (PEDIDO_REG.test(n)) return false;", ('p3f_rev2',)),
+    ('p3f rev2 espera: a fala que não é do barco («tô pensando aqui», «tanto faz», «foi engano», «volto daqui a pouco») vira linha (sem a evidência de bordo)', r"if (PEDIDO_REG.test(n) || CONVERSA_REG.test(n) || !falaDeBordo(n)) return false;", r"if (PEDIDO_REG.test(n) || CONVERSA_REG.test(n)) return false;", ('p3f_rev2',)),
     ('p3f rev2 espera: o número não basta como evidência de bordo («viagem de 3 horas» não grava)', r"if (/\d/.test(n) || BORDO_REG.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", r"if (BORDO_REG.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", ('p3f_rev2',)),
     ('p3f rev2 espera: a palavra de bordo não basta como evidência («limpeza do casco» não grava)', r"if (/\d/.test(n) || BORDO_REG.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", r"if (/\d/.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", ('p3f_rev2',)),
     ('p3f rev2 espera: o verbo de «nós» no passado não basta como evidência («saímos cedo e chegamos tarde» não grava)', r"if (/\d/.test(n) || BORDO_REG.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", r"if (/\d/.test(n) || BORDO_REG.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;", ('p3f_rev2',)),
@@ -7280,7 +7286,7 @@ MUTANTES_P3F_REV2 = [
     ('p3f rev2 espera: sem «mudei de ideia», «pensei melhor», «esquece isso» (cancelam a espera)', r"    /^ (?:(?:ah|bom|entao|olha|ops|eh|nao) )*(?:mudei de ideia|pensei melhor|esquece|esqueca|esquecer|deixei pra la|deixa pra la)(?= )/", r"    /(?!)/", ('p3f_rev2',)),
     ('p3f rev2 espera: «gelo» não é palavra de bordo («o gelo acabou» não grava)', r"'churrasqueira', 'gelo', 'mantimentos',", r"'churrasqueira', 'mantimentos',", ('p3f_rev2',)),
     ('p3f rev2 espera: «estamos», «podemos», «queremos» contam como verbo de «nós» no passado', r"(?!estamos|podemos|devemos|queremos|precisamos|gostamos|sabemos|achamos|pensamos|vamos|temos|vemos|somos)", r"", ('p3f_rev2',)),
-    ('p3f rev2 espera: a ordem ao app com palavra de bordo («fica de olho no diesel», «desliga o gerador») vira linha', r"|repetir|resuma|resumir|fica de olho|fique de olho|me avis[ae]|avis[ae]|me lembr[ae]|lembr[ae]|toca|toque|deslig[ae]|abaix[ae]|aument[ae]|cham[ae])(?= )/;", r"|repetir|resuma|resumir)(?= )/;", ('p3f_rev2',)),
+    ('p3f rev2 espera: a ordem ao app com palavra de bordo («fica de olho no diesel», «desliga o gerador») vira linha', r"|fica de olho|fique de olho|me avis[ae]|avis[ae]|me lembr[ae]|lembr[ae]|toca|toque|liga|deslig[ae]|abaix[ae]|aument[ae]|cham[ae]|explic(?:a|ue|ar)|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", r")(?= )/;", ('p3f_rev2', 'p3f_rev3')),
     ('p3f rev2 emergência: o diário com emergência não encerra a conversa (a pergunta e a resposta ficam em `anterior`)', r"if (emerg(a) || pe) limpaConversa();", r"if (emerg(a)) limpaConversa();", ('p3f_rev2',)),
     ('p3f rev2 emergência: a nota de emergência do diário leva a pergunta de antes (anterior)', r"if (ant && !emerg(a) && !pe) { a.anterior = ant;", r"if (ant && !emerg(a)) { a.anterior = ant;", ('p3f_rev2',)),
     ('p3f rev2 emergência: a cabeça de segurança (o botão DISTRESS) não é pergunta de emergência', r"return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || EMERG[route(q)] === 1); }", r"return !!(emergencia(n) || oleo(n) === 1 || EMERG[route(q)] === 1); }", ('p3f_rev2',)),
@@ -7313,6 +7319,292 @@ MUTANTES_P3F_REV2 = [
     ('p3f rev2 verifica: o texto de último recurso volta ao «não achei»', r"O que verificar: esse relato é para a IA de bordo analisar (precisa de internet); o FAQ de bordo e os guias não têm um item que case com ele.", r"Para esse relato não achei um item do FAQ de bordo nem um trecho dos guias que case.", ('p3f_rev2',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_REV2
+
+
+# —— revisão 3 da P3F: a espera do registro nunca fica no silêncio, o adiamento («registra depois») não registra, o banco da bateria e o ar na continuação, e as perguntas de UM dado do quadro ——
+# a nota que SEGUE sendo gravada depois do «o que devo registrar?» (as três do achado e as de bordo comuns)
+NOTAS_REV3_P3F = ['sem ocorrências', 'nenhuma ocorrência a relatar', 'dia tranquilo sem novidades', 'visibilidade ruim hoje', 'chegamos na marina às quatro e meia da tarde', 'o motor BB precisa de um filtro novo',
+                  'acho que o motor BB está estranho', 'e o gerador foi ligado às sete', 'pedimos ajuda ao mecânico para o filtro do motor', 'o técnico explicou como trocar o filtro do motor', 'e 3 horas de gerador ligado']
+# a fala que não é nota, nem pedido, nem pergunta e que nenhuma rota responde: a frase local «Não registrei isso» (nunca o silêncio, nunca a IA)
+AVISA_REV3_P3F = ['o dia foi tranquilo', 'tô pensando aqui', 'tanto faz', 'foi engano', 'sem novidades', 'sem alterações', 'tudo certo a bordo']
+# a conversa com o app que tem palavra de bordo: não vira linha do diário (a rota dela responde)
+CONVERSA_REV3_P3F = ['tenho uma dúvida sobre o gerador', 'preciso de ajuda com o motor', 'me explica como funciona o gerador', 'estou com uma dúvida no radar', 'pode me ajudar com o plotter', 'sobre o gerador eu queria saber mais',
+                     'só uma dúvida sobre os documentos do barco', 'tenho uma pergunta sobre a revisão do motor', 'quero conversar sobre a manutenção do motor', 'e o motor de boreste', 'liga o gerador para mim',
+                     'preciso pensar sobre a revisão do motor', 'quero saber mais sobre o motor', 'explica como funciona o radar', 'me ensina a ligar o gerador', 'e o gerador?', 'liga o gerador agora', 'confere o óleo do motor para mim', 'quero falar sobre a manutenção do motor', 'vamos falar sobre a revisão do motor', 'gostaria de falar sobre a revisão do motor',
+                     'tenho uma dúvida urgente no gerador', 'tenho uma pergunta urgente no gerador', 'dúvida sobre o gerador', 'uma pergunta sobre o motor', 'tenho uma questão sobre o motor', 'posso perguntar sobre o motor', 'posso te perguntar uma coisa sobre o gerador',
+                     'não entendi o que você disse sobre o motor', 'repete a última sobre o motor', 'dá uma olhada no motor', 'vê o motor aí']
+# a pergunta ao app sem palavra de rota (a IA responde): segue a rota, não é engolida pelo aviso
+PEDE_IA_REV3_P3F = ['me explica o que é um nó lais', 'como se faz um nó lais de guia', 'e como se faz um nó lais', 'tenho uma dúvida sobre nós de marinheiro']
+# o adiamento: com a proposta do relato esperando, nada é gravado nem recusado
+ADIA_P3F = ['registrar depois', 'registra depois', 'anota depois', 'sim, registrar depois', 'pode registrar depois', 'registra isso depois por favor', 'registrar amanhã', 'registra mais tarde', 'anota outra hora',
+            'registra agora não', 'registra por enquanto não', 'depois registro', 'vou registrar depois', 'sim, mas depois', 'agora não', 'registrar no diário depois', 'eu registro depois', 'registra daqui a pouco', 'vou registrar amanhã', 'eu anoto amanhã',
+            'registra o relato depois', 'anota o relato mais tarde', 'registrar esse relato depois', 'registra esse relato amanhã', 'pode registrar o relato depois', 'registre o relato depois por favor', 'registrar no diário amanhã cedo', 'anota amanhã de manhã']
+ADIA_SEM_P3F = ['registra depois', 'anota depois', 'registrar amanhã', 'registra mais tarde', 'registrar no diário depois', 'registre no diário mais tarde', 'anota por enquanto não', 'registra o relato depois', 'registrar no diário amanhã cedo']
+NAO_ADIA_P3F = ['registra o filtro de amanhã', 'anote que o rotor será trocado depois', 'registre no diário: troquei o filtro depois do almoço', 'registre no diário que o gerador ligou mais tarde']
+BANCOS_P3F = [('bateria de serviço', 'e a de partida?', 'partida'), ('qual a tensão da bateria de partida?', 'e a de serviço?', 'servico'), ('qual a tensão da bateria de partida?', 'e a de 12 volts?', '12'),
+              ('bateria de serviço', 'e a de partida', 'partida'), ('tensão da bateria', 'e a de serviço?', 'servico'), ('qual a tensão da bateria de serviço?', 'também a de partida?', 'partida')]
+RELATO_REV3_P3F = 'Hoje cedo trocamos o filtro de combustível do motor de boreste na marina'
+JS_P3F_REV3 = r"""([notas, avisos, conversa, pedeIA, adia, adiaSem, naoAdia, bancos, relato]) => { const B = window.CapitaoBrain, op = { platform: 'app' }, o = {}; const n = () => B.loadDiario().length;
+  const fresca = () => { localStorage.clear(); B.limpaConversa(); };
+  const espera = (x) => { fresca(); B.answer('registrar no diário que', op); const n0 = n(), a = B.answer(x, op); return [x, a.key, n() - n0, B.pedeIA(a, x), a.text.split('\n')[0], B.falaCurta(a), n() > n0 ? B.loadDiario()[0].t : null]; };
+  o.notas = notas.map(espera); o.avisos = avisos.map(espera); o.conversa = conversa.map(espera); o.pedeIA = pedeIA.map(espera);
+  // o aviso consome a espera: a mesma fala, de novo, segue a rota normal (o aviso não se repete) e nada é gravado; o pedido de link não arma a espera
+  fresca(); B.answer('registrar no diário que', op); B.answer('tô pensando aqui', op); const n1 = n(), seg = B.answer('tô pensando aqui', op); o.consumida = [seg.key, n() - n1];
+  fresca(); B.answer('registrar no diário que', { platform: 'app', commit: false }); const n2 = n(), lk = B.answer('tô pensando aqui', { platform: 'app', commit: false }); o.link = [lk.key, n() - n2];
+  // o adiamento
+  const comProposta = (x) => { fresca(); B.answer(relato, op); const n0 = n(), a = B.answer(x, op), l0 = n() - n0, estado = (B.loadTickets()[0] || {}).estado, r = B.answer('registrar', op);
+    return [x, a.key, l0, estado, a.text.split('\n')[0].slice(0, 44), r.key, n() - n0, !!(a.actions || []).find((z) => /relato-registra/.test(z.href)), B.falaCurta(a)]; };
+  o.adia = adia.map(comProposta);
+  o.adiaSem = adiaSem.map((x) => { fresca(); const n0 = n(), a = B.answer(x, op); return [x, a.key, n() - n0, a.text.split('\n')[0].slice(0, 44), B.pedeIA(a, x)]; });
+  o.naoAdia = naoAdia.map((x) => { fresca(); const n0 = n(), a = B.answer(x, op); return [x, a.key, n() - n0]; });
+  fresca(); B.answer(relato, op); const am = B.answer('amanhã', op); o.amanhaSolto = [am.key, (B.loadTickets()[0] || {}).estado];
+  fresca(); const an = B.answer('agora não', op); o.agoraNaoSem = [an.key, n()];
+  fresca(); B.answer(relato, op); const m0 = n(), g = B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app', texto: 'registra depois' }); o.foto = [g.pedido, g.nota, n() - m0, (B.loadTickets()[0] || {}).estado];
+  fresca(); B.answer(relato, op); const m1 = n(), h = B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app', texto: 'registra agora' }); o.fotoSim = [h.pedido, n() - m1, (B.loadTickets()[0] || {}).estado];
+  // F18: o banco da bateria e o ar/água continuam a pergunta de antes
+  const f = (v) => v.toFixed(2).replace('.', ',');
+  o.bancos = bancos.map(([a, b]) => { fresca(); B.answer(a, op); const y = B.answer(b, op), i = B.instante(); return [a, b, y.key, y.junto, y.text.split('\n')[0], f(i.q.bateria_0_tensao_v), f(i.q.bateria_1_tensao_v), f(i.q.bateria_2_tensao_v), i.hora]; });
+  o.bancoSolto = ['qual a tensão da bateria de partida?', 'bateria de serviço', 'bateria 24 v', 'tensão da bateria de 12 volts', 'tensão da bateria de serviço e de partida'].map((q) => { fresca(); const y = B.answer(q, op); return [q, y.key, y.text.split('\n')[0]]; });
+  fresca(); B.answer('temperatura dos motores', op); o.partidaMotores = B.answer('e a de partida?', op).key;
+  fresca(); B.answer('bateria de serviço', op); o.partidaDoMotor = B.answer('e a partida do motor BB?', op).key;
+  o.arAgua = [['qual a temperatura da água?', 'e do ar?'], ['qual a temperatura do ar?', 'e da água?'], ['qual a temperatura do mar?', 'e o ar?']].map(([a, b]) => { fresca(); B.answer(a, op); const y = B.answer(b, op), t = B.instante().txt; return [a, b, y.key, y.text.split('\n')[0], t.ar, t.agua]; });
+  o.arSolta = ['qual a temperatura do ar?', 'quantos graus está lá fora?', 'qual a temperatura da água?', 'qual a temperatura do ar condicionado?', 'qual a temperatura do ar e da água?'].map((q) => { fresca(); const y = B.answer(q, op); return [q, y.key, y.text.split('\n')[0].slice(0, 40)]; });
+  return o; }"""
+
+
+def grupo_p3f_rev3(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        o = pg.evaluate(JS_P3F_REV3, [NOTAS_REV3_P3F, AVISA_REV3_P3F, CONVERSA_REV3_P3F, PEDE_IA_REV3_P3F, ADIA_P3F, ADIA_SEM_P3F, NAO_ADIA_P3F, BANCOS_P3F, RELATO_REV3_P3F])
+        ped('p3f rev3 F17: depois do «o que devo registrar?», a nota de diário comum («sem ocorrências», «dia tranquilo sem novidades», «visibilidade ruim hoje», a que tem «dúvida» ou «ajuda» no passado, «e o gerador foi ligado às sete») segue gravada: 1 linha (%d notas)' % len(NOTAS_REV3_P3F),
+            all(x[1] == 'diario' and x[2] == 1 for x in o['notas']), [x for x in o['notas'] if x[1] != 'diario' or x[2] != 1])
+        ped('p3f rev3 F17: a fala que não é nota, pedido nem pergunta e que nenhuma rota responde («o dia foi tranquilo», «tô pensando aqui», «tanto faz», «sem novidades») NÃO fica no silêncio nem vai à IA: a frase local «Não registrei isso…», 0 linhas, fala igual (%d falas)' % len(AVISA_REV3_P3F),
+            all(x[1] == 'relatoCancela' and x[2] == 0 and x[3] is False and x[4].startswith('Não registrei isso no diário.') and x[5].startswith('Não registrei isso.') for x in o['avisos']), [x for x in o['avisos'] if x[1] != 'relatoCancela' or x[2] != 0 or x[3] or not x[4].startswith('Não registrei isso no diário.')])
+        ped('p3f rev3 F17: o aviso consome a espera (a mesma fala de novo segue a rota normal, sem aviso e sem linha) e o pedido de link nem arma a espera', o['consumida'] == ['fallback', 0] and o['link'][0] != 'relatoCancela' and o['link'][1] == 0, (o['consumida'], o['link']))
+        ped('p3f rev3 F17: a conversa com o app que tem palavra de bordo (dúvida, pergunta, ajuda, «quero saber/conversar/pensar», «para mim», «e o motor de boreste», «liga o gerador», «me explica…») não vira linha: 0 linhas e a rota dela responde (%d falas)' % len(CONVERSA_REV3_P3F),
+            all(x[1] != 'diario' and x[2] == 0 for x in o['conversa']), [x for x in o['conversa'] if x[1] == 'diario' or x[2] != 0])
+        ped('p3f rev3 F17: a pergunta ao app sem rota de dado («me explica o que é um nó lais», «como se faz um nó lais de guia») não é engolida pelo aviso: segue a rota (fallback) e vai à IA, 0 linhas',
+            all(x[1] == 'fallback' and x[2] == 0 and x[3] is True for x in o['pedeIA']), o['pedeIA'])
+        ped('p3f rev3 F16: o adiamento («registra depois», «anota mais tarde», «registrar amanhã», «agora não», «depois registro», «registra por enquanto não»…) NÃO registra nem recusa: a proposta fica aberta com os botões, a resposta diz que não registrou (%d jeitos) e o «registrar» seguinte ainda grava a linha' % len(ADIA_P3F),
+            all(x[1] == 'relatoCancela' and x[2] == 0 and x[3] == 'aberto' and x[4].startswith('Certo — não registrei agora') and x[5] == 'relatoRegistra' and x[6] == 1 and x[7] is True and x[8].startswith('Certo, não registrei agora') for x in o['adia']),
+            [x for x in o['adia'] if x[1] != 'relatoCancela' or x[2] != 0 or x[3] != 'aberto' or x[5] != 'relatoRegistra' or x[6] != 1])
+        ped('p3f rev3 F17: o adiamento sem proposta («registra depois», «anota depois», «registrar no diário depois») não grava nada (nem o resumo da telemetria): «Certo — nada registrado agora», 0 linhas, local',
+            all(x[1] == 'relatoCancela' and x[2] == 0 and x[3].startswith('Certo — nada registrado agora') and x[4] is False for x in o['adiaSem']), o['adiaSem'])
+        ped('p3f rev3 F17: o que tem conteúdo próprio («registra o filtro de amanhã», «anote que o rotor será trocado depois», «registre no diário: troquei o filtro depois do almoço») é nota e grava 1 linha; o «amanhã» solto com a proposta esperando não registra nem a recusa',
+            all(x[1] == 'diario' and x[2] == 1 for x in o['naoAdia']) and o['amanhaSolto'][0] != 'relatoRegistra' and o['amanhaSolto'][1] == 'aberto' and o['agoraNaoSem'][0] != 'relatoCancela' and o['agoraNaoSem'][1] == 0, (o['naoAdia'], o['amanhaSolto'], o['agoraNaoSem']))
+        ped('p3f rev3 F36: a foto com o texto «registra depois» vai sozinha (1 linha da foto, sem o texto «Depois»), a proposta fica aberta e a tela responde ao texto; com «registra agora» o relato entra na mesma linha e fecha',
+            o['foto'] == [False, '', 1, 'aberto'] and o['fotoSim'] == [True, 1, 'aceito'], (o['foto'], o['fotoSim']))
+        for a, c, foco, y_key, y_junto, l1, sv, pt, d12, hora in [(x[0], x[1], BANCOS_P3F[k][2], x[2], x[3], x[4], x[5], x[6], x[7], x[8]) for k, x in enumerate(o['bancos'])]:
+            esp = {'partida': 'Baterias agora: banco 24 V de partida %s V · banco 24 V de serviço %s V · banco 12 V %s V (ao vivo %s)' % (pt, sv, d12, hora),
+                   'servico': 'Baterias agora: banco 24 V de serviço %s V · banco 24 V de partida %s V · banco 12 V %s V (ao vivo %s)' % (sv, pt, d12, hora),
+                   '12': 'Baterias agora: banco 12 V %s V · banco 24 V %s V (ao vivo %s)' % (d12, sv, hora)}[foco]
+            ped('p3f rev3 F18: «%s» + «%s» é a bateria (a rota da pergunta de antes, não os motores): a 1ª linha abre pelo banco pedido (%s)' % (a, c, foco), y_key == 'eletrico' and y_junto == a + ' — ' + c and l1 == esp + '.', (y_key, y_junto, l1, esp))
+        ped('p3f rev3 F18: a pergunta do banco sozinha abre pelo banco pedido («bateria de partida», «de serviço», «de 12 volts»); sem banco, ou com os dois, a linha de sempre («banco 24 V … · banco 12 V …»)',
+            o['bancoSolto'][0][2].startswith('Baterias agora: banco 24 V de partida') and o['bancoSolto'][1][2].startswith('Baterias agora: banco 24 V de serviço') and o['bancoSolto'][2][2].startswith('Baterias agora: banco 24 V ') and 'de ' not in o['bancoSolto'][2][2][len('Baterias agora: banco 24 V '):len('Baterias agora: banco 24 V ') + 3]
+            and o['bancoSolto'][3][2].startswith('Baterias agora: banco 12 V ') and o['bancoSolto'][4][2].startswith('Baterias agora: banco 24 V ') and 'de serviço' not in o['bancoSolto'][4][2], o['bancoSolto'])
+        ped('p3f rev3 F18: «e a de partida?» depois de outra pergunta (a temperatura dos motores) continua sendo os motores, e «e a partida do motor BB?» depois da bateria também (a fala com palavra de fora da lista não é o banco)', o['partidaMotores'] == 'motores' and o['partidaDoMotor'] == 'motores', (o['partidaMotores'], o['partidaDoMotor']))
+        ped('p3f rev3 F18: «e do ar?» depois da temperatura da água abre pelo ar externo (e «e da água?» depois da do ar, pela água do mar); a pergunta do ar sozinha («qual a temperatura do ar?», «quantos graus está lá fora?») também; o «ar condicionado» não é o ar externo',
+            all(x[2] == 'temperaturaAgua' for x in o['arAgua']) and o['arAgua'][0][3].startswith('Ar externo a ' + o['arAgua'][0][4]) and o['arAgua'][1][3].startswith('Água do mar a ' + o['arAgua'][1][5]) and o['arAgua'][2][3].startswith('Ar externo a ')
+            and o['arSolta'][0][1] == 'temperaturaAgua' and o['arSolta'][0][2].startswith('Ar externo a ') and o['arSolta'][1][1] == 'temperaturaAgua' and o['arSolta'][1][2].startswith('Ar externo a ') and o['arSolta'][2][2].startswith('Água do mar a ') and o['arSolta'][3][1] != 'temperaturaAgua' and o['arSolta'][4][1] == 'temperaturaAgua' and o['arSolta'][4][2].startswith('Água do mar a '), (o['arAgua'], o['arSolta']))
+    finally:
+        pg.ctx.close()
+
+
+# as perguntas de UM dado (revisão 3 da P3F): a rota certa e a 1ª linha é o dado, com a hora (o que o quadro de 12:01:00 diz vem do próprio instante)
+JS_P3F_REV3_ROTAS = r"""(qs) => new Promise((res) => { const B = window.CapitaoBrain, op = { platform: 'app' }; B.carregaBase(); if (B.carregaFaq) B.carregaFaq();
+  setTimeout(() => { const i = B.instante(), t = i.txt, q = i.q, e = { hora: i.hora, pressao: t.pressao, inclinacao: t.inclinacao, ar: t.ar, vento: t.vento, ventoAp: t.ventoAp, piloto: t.piloto, consumo: t.consumo, sat: q.gps_satelites, marcha: q.marcha, radar: q.radar_ativo, ais: q.ais_alvos, destino: q.destino };
+    res({ e, r: qs.map((x) => { localStorage.clear(); B.limpaConversa(); const a = B.answer(x, op); return [x, a.key, B.pedeIA(a, x), a.text.split('\n')[0], B.falaCurta(a)]; }) }); }, 1500); })"""
+# (pergunta, chave, o que a 1ª linha tem de dizer: começo ou pedaço, com {campo} do quadro do instante)
+ROTAS_REV3_P3F = [
+    ('tem barco por perto?', 'ais', 'com {ais} alvos às {hora}'), ('tem algum navio perto?', 'ais', 'com {ais} alvos às {hora}'), ('quantas embarcações próximas?', 'ais', 'com {ais} alvos às {hora}'),
+    ('quanto tempo até a marina?', 'eta', 'Chegada prevista em '), ('quanto tempo para chegar?', 'eta', 'Chegada prevista em '),
+    ('qual a temperatura do ar?', 'temperaturaAgua', 'Ar externo a {ar} a bordo agora — {hora}.'),
+    ('quando é a próxima troca de óleo?', 'horimetros', 'Faltam '), ('quando vence o seguro?', 'docsvenc', 'Seguro da embarcação — '), ('quando vence a licença?', 'docsvenc', 'Licença de Estação'),
+    ('é o BE que está mais quente?', 'arrefecimento', 'Arrefecimento BB '), ('qual motor está mais quente?', 'arrefecimento', 'Arrefecimento BB '),
+    ('o rotor do gerador está atrasado?', 'manutencao', 'Sim — Inspeção do rotor (impeller) do gerador (Gerador Onan QD 9): em atraso há '), ('o teste das bombas de porão está atrasado?', 'manutencao', 'Sim — Teste das bombas de porão e alarmes (Bombas de porão Rule 2000): em atraso há '),
+    ('a troca do filtro está em atraso?', 'manutencao', 'Atrasadas ('), ('a revisão do gerador está atrasada?', 'manutencao', 'Atrasadas ('), ('quais tarefas estão atrasadas?', 'manutencao', 'Atrasadas ('),
+    ('quanto consome por hora?', 'consumo', 'Consumo agora ({hora}): {consumo}'), ('quanto consome o motor de bombordo?', 'consumo', 'Consumo agora ({hora}): {consumo}'),
+    ('quantos litros gastamos desde o último abastecimento?', 'consumo', 'Desde o abastecimento de '), ('quanto gastamos de diesel?', 'consumo', 'Desde o abastecimento de '),
+    ('qual a pressão barométrica?', 'leituraBordo', 'Barômetro a bordo agora: {pressao} — {hora}.'), ('qual o barômetro?', 'leituraBordo', 'Barômetro a bordo agora: {pressao} — {hora}.'),
+    ('está ventando muito?', 'clima', 'A bordo agora, vento verdadeiro {vento} — {hora}.'), ('vai chover?', 'clima', 'O app não traz previsão de chuva'),
+    ('como está o vento?', 'clima', 'A bordo agora, vento verdadeiro {vento} — {hora}.'), ('qual a velocidade do vento?', 'clima', 'A bordo agora, vento verdadeiro {vento} — {hora}.'),
+    ('qual a inclinação do barco?', 'leituraBordo', 'Inclinação a bordo agora: {inclinacao} — {hora}.'), ('quantos satélites?', 'leituraBordo', 'GPS com {sat} satélites — {hora}.'),
+    ('em que marcha estamos?', 'leituraBordo', 'Marcha: {marcha} — {hora}.'),
+    ('resumo da viagem', 'eta', 'Percorrido desde as '), ('como foi a saída hoje?', 'eta', 'Percorrido desde as '), ('balanço do passeio', 'eta', 'Percorrido desde as '),
+    ('quanto diesel tem?', 'autonomia', 'A bordo ≈ '), ('qual o nível do tanque de diesel?', 'autonomia', 'A bordo ≈ '), ('quantos litros de diesel temos?', 'autonomia', 'A bordo ≈ '),
+    ('o piloto automático está ligado?', 'leituraBordo', 'O quadro traz o rumo do piloto automático, {piloto}, mas não diz se está engajado ou em espera — {hora}.'), ('o piloto está engajado?', 'leituraBordo', 'O quadro traz o rumo do piloto automático, {piloto}, mas não diz se está engajado ou em espera — {hora}.'),
+    ('qual o rumo do piloto?', 'leituraBordo', 'Piloto automático com rumo {piloto} — {hora}.'),
+    ('o radar está ligado?', 'leituraBordo', 'Radar ligado — {hora}.'),
+    ('qual a temperatura lá fora?', 'temperaturaAgua', 'Ar externo a {ar} a bordo agora — {hora}.'), ('quantos graus está lá fora?', 'temperaturaAgua', 'Ar externo a {ar} a bordo agora — {hora}.'), ('qual o ar externo?', 'temperaturaAgua', 'Ar externo a {ar} a bordo agora — {hora}.'),
+    ('quanto diesel temos de autonomia?', 'autonomia', 'Autonomia ≈ '), ('quais documentos vencem?', 'docsvenc', 'Vencem primeiro:'), ('quando vence o seguro e a licença?', 'docsvenc', 'Vencem primeiro:'),
+]
+# o que as rotas novas NÃO podem tomar: segue a rota de antes (o guia do equipamento, o «previsão primeiro», a pergunta de autonomia)
+NAO_ROTAS_REV3_P3F = [
+    ('qual a temperatura do ar condicionado?', 'base'), ('quando trocar o óleo do gerador?', 'base'), ('quando trocar o óleo do motor?', 'base'), ('quando trocar o filtro de óleo?', 'base'), ('o piloto em espera', 'eletronicos'),
+    ('qual o jogo do barco agora', 'fallback'), ('o vento está forte agora', 'clima'), ('clima e vento', 'clima'), ('como foi a travessia ontem?', 'fallback'), ('tem barco perto do píer?', 'fallback'),
+    ('como estamos de diesel?', 'autonomia'), ('qual a autonomia?', 'autonomia'), ('quando vence a troca do filtro?', 'manutencao'), ('quais documentos vencem?', 'docsvenc'), ('é seguro sair hoje?', 'seguro'),
+    ('quanto custa o diesel?', 'autonomia'), ('quando é a próxima troca de óleo do gerador?', 'base'), ('o radar está ligado desde ontem?', 'eletronicos'),
+]
+
+
+def grupo_p3f_rev3_rotas(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        x = pg.evaluate(JS_P3F_REV3_ROTAS, [q for q, _, _ in ROTAS_REV3_P3F] + [q for q, _ in NAO_ROTAS_REV3_P3F])
+        e, r = x['e'], x['r']
+        n = len(ROTAS_REV3_P3F)
+        ruins = []
+        for (q, k, abre), (_, key, ia, l1, fala) in zip(ROTAS_REV3_P3F, r[:n]):
+            esp = abre.format(**e)
+            if not (key == k and ia is False and (l1.startswith(esp) or (esp in l1))):
+                ruins.append((q, key, ia, l1[:80], esp))
+        ped('p3f rev3 rotas: as %d perguntas de UM dado (o AIS por perto, o tempo até a marina, o ar, a próxima troca de óleo, o vencimento do seguro, o motor mais quente, a tarefa atrasada, o consumo, o barômetro, o vento e a chuva, a inclinação, os satélites, a marcha, o resumo da viagem, o nível do diesel, o piloto e o radar) caem na rota do dado, locais, e a 1ª linha é o dado (com a hora)' % n, not ruins, ruins)
+        nao = [(q, k, key) for (q, k), (_, key, *_resto) in zip(NAO_ROTAS_REV3_P3F, r[n:]) if key != k]
+        ped('p3f rev3 rotas: o que as rotas novas não podem tomar (o ar condicionado, o óleo do gerador ou do motor, o piloto em espera, o jogo do barco, o relato do vento, «clima e vento», a travessia de ontem, a autonomia, o dinheiro) segue a rota de antes (%d perguntas)' % len(NAO_ROTAS_REV3_P3F), not nao, nao)
+        # a fala curta de cada uma traz a hora do instante (dado de bordo) e nenhuma coordenada
+        pg3 = pagina(b, muta=muta, fixo='10@0')
+        try:
+            y3 = pg3.evaluate(JS_P3F_REV3_ROTAS, ['qual o rumo do piloto?'])
+        finally:
+            pg3.ctx.close()
+        ped('p3f rev3 rotas: o rumo do piloto é o do piloto (020° às 07:00:10), não o COG (302°)', y3['r'][0][3] == 'Piloto automático com rumo %s — %s.' % (y3['e']['piloto'], y3['e']['hora']) and y3['e']['piloto'] == '020°', (y3['r'][0], y3['e']['piloto']))
+        nome_sos, extra_sos = list(FONTES_SOS.items())[0]
+        pg4 = pagina(b, extra=extra_sos + GETTERS_SOS, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+        try:
+            qs_sos = ['qual a pressão barométrica?', 'quantos satélites?', 'qual a inclinação do barco?', 'em que marcha estamos?', 'o piloto automático está ligado?', 'o radar está ligado?']
+            ks_sos = pg4.evaluate("(qs) => qs.map((q) => window.CapitaoBrain.route(q))", qs_sos)
+        finally:
+            pg4.ctx.close()
+        ped('p3f rev3 rotas (SOS): na página do SOS a pergunta de um dado do quadro NÃO cai na leitura pontual (o SOS nunca lê o quadro)', 'leituraBordo' not in ks_sos, list(zip(qs_sos, ks_sos)))
+        pg2 = pagina(b, muta=muta, fixo='60', clima=True)
+        try:
+            y = pg2.evaluate(JS_P3F_REV3_ROTAS, ['está ventando muito?', 'como está o vento?', 'vai chover?', 'clima e vento'])
+        finally:
+            pg2.ctx.close()
+        v = [l[3] for l in y['r']]
+        ped('p3f rev3 rotas: COM a previsão do dia, «está ventando muito?» abre pelo vento a bordo agora (a pergunta é de agora), «como está o vento?» e «clima e vento» abrem pela previsão, e «vai chover?» diz que o app não tem previsão de chuva',
+            v[0].startswith('A bordo agora, vento verdadeiro ') and v[1].startswith('Hoje em Balneário Camboriú:') and v[3].startswith('Hoje em Balneário Camboriú:') and v[2].startswith('O app não traz previsão de chuva'), v)
+        sem_hora = [(q, fala) for (q, k, _), (_, key, ia, l1, fala) in zip(ROTAS_REV3_P3F, r[:n]) if k in ('leituraBordo', 'ais', 'eta', 'consumo', 'temperaturaAgua') and e['hora'] not in fala]
+        ped('p3f rev3 rotas: a fala da pergunta de um dado traz a hora do instante', not sem_hora, sem_hora[:4])
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3f_rev3'] = grupo_p3f_rev3
+GRUPOS_3A['p3f_rev3_rotas'] = grupo_p3f_rev3_rotas
+
+# —— os mutantes da revisão 3 da P3F: a espera do registro (o aviso, a conversa com o app, a nota vazia), o adiamento, o banco da bateria e o ar, e as perguntas de UM dado ——
+MUTANTES_P3F_REV3 = [
+    ('p3f rev3 espera: sem o aviso «Não registrei isso» (a fala que nenhuma rota responde fica no silêncio e vai à IA)', r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback') return 'relatoNaoGravou';", r"", ('p3f_rev3',)),
+    ('p3f rev3 espera: o aviso engole o pedido ao app («me explica o que é um nó lais» não vai à IA)', r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", r"if (!CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", ('p3f_rev3',)),
+    ('p3f rev3 espera: o aviso engole a dúvida («tenho uma dúvida sobre nós de marinheiro» não vai à IA)', r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", r"if (!PEDIDO_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", ('p3f_rev3',)),
+    ('p3f rev3 espera: o aviso engole a continuação «e como se faz um nó lais»', r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && route(raw) === 'fallback')", ('p3f_rev3',)),
+    ('p3f rev3 espera: o aviso vale para toda fala, não só a que cairia no fallback (a rota de dado some)', r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n) && route(raw) === 'fallback')", r"if (!PEDIDO_REG.test(n) && !CONVERSA_REG.test(n) && !SEGUE_E.test(n))", ('p3f_f17', 'p3f_rev2')),
+    ('p3f rev3 espera: a chave do aviso não vira a do cancelamento (key = espera)', r"key = espera === 'relatoNaoGravou' ? 'relatoCancela' : espera;", r"key = espera;", ('p3f_rev3',)),
+    ('p3f rev3 espera: o aviso diz «Certo — nada registrado» (ctx.espera true em vez de nao)', r"espera: espera === 'relatoCancela' ? true : 'nao' });", r"espera: true });", ('p3f_rev3',)),
+    ('p3f rev3 espera: a resposta do aviso some (relatoCancela sem o ramo nao)', r"if (ctx && ctx.espera === 'nao') return", r"if (false) return", ('p3f_rev3',)),
+    ('p3f rev3 espera: sem a nota vazia («sem ocorrências», «nenhuma ocorrência a relatar»)', r"if (NOTA_VAZIA.test(n)) return true;", r"", ('p3f_rev3',)),
+    ('p3f rev3 espera: «visibilidade» não é palavra de bordo («visibilidade ruim hoje» cai no aviso)', r"'novidade\\w*', 'visibilidade', 'barco',", r"'novidade\\w*', 'barco',", ('p3f_rev3',)),
+    ('p3f rev3 espera: «novidades» não é palavra de bordo («dia tranquilo sem novidades» cai no aviso)', r"'novidade\\w*', 'visibilidade', 'barco',", r"'visibilidade', 'barco',", ('p3f_rev3',)),
+    ('p3f rev3 espera: a continuação «e o motor de boreste» vira linha', r"if (SEGUE_E.test(n) && !fato && !/\d/.test(n)) return false;", r"", ('p3f_rev3',)),
+    ('p3f rev3 espera: «e o gerador foi ligado às sete» (com verbo de fato) não grava', r"if (SEGUE_E.test(n) && !fato && !/\d/.test(n)) return false;", r"if (SEGUE_E.test(n) && !/\d/.test(n)) return false;", ('p3f_rev3',)),
+    ('p3f rev3 espera: «e o gerador ficou 3 horas ligado» (com número) não grava', r"if (SEGUE_E.test(n) && !fato && !/\d/.test(n)) return false;", r"if (SEGUE_E.test(n) && !fato) return false;", ('p3f_rev3',)),
+    ('p3f rev3 espera: a «dúvida» do «tenho uma dúvida» vira linha', r"(?:uma |umas |a )?(?:duvidas?|perguntas?)|(?:duvidas?", r"(?:uma |umas |a )?(?:perguntas?)|(?:duvidas?", ('p3f_rev3',)),
+    ('p3f rev3 espera: a «dúvida sobre o gerador» (sem o «tenho») vira linha', r"|(?:duvidas?|perguntas?|questao|questoes) (?:sobre", r"|(?:perguntas?|questao|questoes) (?:sobre", ('p3f_rev3',)),
+    ('p3f rev3 espera: a «questão sobre o motor» vira linha', r"|(?:duvidas?|perguntas?|questao|questoes) (?:sobre", r"|(?:duvidas?|perguntas?) (?:sobre", ('p3f_rev3',)),
+    ('p3f rev3 espera: «posso perguntar…» vira linha', r"|gostaria(?: de)?|posso|podemos|poderia) (?:te |lhe |so )?", r"|gostaria(?: de)?) (?:te |lhe |so )?", ('p3f_rev3',)),
+    ('p3f rev3 espera: «posso te perguntar…» vira linha', r"|poderia) (?:te |lhe |so )?(?:de )?(?:ajuda", r"|poderia) (?:de )?(?:ajuda", ('p3f_rev3',)),
+    ('p3f rev3 espera: «não entendi o que você disse…» vira linha', r"|nao (?:entendi|compreendi|ouvi|escutei)|", r"|", ('p3f_rev3',)),
+    ('p3f rev3 espera: «repete a última…» vira linha', r"|repetir|repete|resuma|", r"|repetir|resuma|", ('p3f_rev3',)),
+    ('p3f rev3 espera: «dá uma olhada no motor» vira linha', r"|d[ae] uma olhad\w*|", r"|", ('p3f_rev3',)),
+    ('p3f rev3 espera: «vê o motor aí» vira linha', r"|ve(?= (?:o|a|os|as|isso|ai) )|", r"|", ('p3f_rev3',)),
+    ('p3f rev3 espera: a «pergunta» do «tenho uma pergunta» vira linha', r"(?:uma |umas |a )?(?:duvidas?|perguntas?)|(?:duvidas?", r"(?:uma |umas |a )?(?:duvidas?)|(?:duvidas?", ('p3f_rev3',)),
+    ('p3f rev3 espera: o «preciso de ajuda» vira linha', r"(?:ajuda|ajudar|saber|entender|conversar|perguntar|pensar|explicar)|(?:quero|queria|gostaria de|vamos", r"(?:saber|entender|conversar|perguntar|pensar|explicar)|(?:quero|queria|gostaria de|vamos", ('p3f_rev3',)),
+    ('p3f rev3 espera: o «quero saber» vira linha', r"(?:ajuda|ajudar|saber|entender|conversar|perguntar|pensar|explicar)|(?:quero|queria|gostaria de|vamos", r"(?:ajuda|ajudar|entender|conversar|perguntar|pensar|explicar)|(?:quero|queria|gostaria de|vamos", ('p3f_rev3',)),
+    ('p3f rev3 espera: o «preciso pensar» vira linha', r"(?:ajuda|ajudar|saber|entender|conversar|perguntar|pensar|explicar)|(?:quero|queria|gostaria de|vamos", r"(?:ajuda|ajudar|saber|entender|conversar|perguntar|explicar)|(?:quero|queria|gostaria de|vamos", ('p3f_rev3',)),
+    ('p3f rev3 espera: o «quero conversar sobre» vira linha', r"|(?:quero|queria|gostaria de|vamos|podemos) (?:falar|conversar) (?:sobre|do|da|de|um pouco)|", r"|", ('p3f_rev3',)),
+    ('p3f rev3 espera: o «para mim» vira linha', r"|(?:para|pra) mim)(?= )/;", r")(?= )/;", ('p3f_rev3',)),
+    ('p3f rev3 espera: «liga o gerador agora» vira linha', r"|toca|toque|liga|deslig[ae]|", r"|toca|toque|deslig[ae]|", ('p3f_rev3',)),
+    ('p3f rev3 espera: «explica como funciona…» vira linha', r"|explic(?:a|ue|ar)|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", r"|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", ('p3f_rev3',)),
+    ('p3f rev3 espera: «me ensina a ligar…» vira linha', r"|explic(?:a|ue|ar)|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", r"|explic(?:a|ue|ar)|ajud(?:a|e|ar))(?= )/;", ('p3f_rev3',)),
+    ('p3f rev3 espera: «pode me ajudar com…» vira linha', r"|explic(?:a|ue|ar)|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", r"|explic(?:a|ue|ar)|ensin(?:a|e|ar))(?= )/;", ('p3f_rev3',)),
+    ('p3f rev3 adia: o «registra depois» não é adiamento na rota (confirma o relato ou grava o resumo)', r"if (adiaRegistro(qRaw, q)) return 'relatoCancela';", r"", ('p3f_rev3',)),
+    ('p3f rev3 adia: a foto com «registra depois» grava o texto e fecha o relato', r"if (adiaRegistro(raw, n)) return null;", r"", ('p3f_rev3',)),
+    ('p3f rev3 adia: «registrar amanhã» (sem «no diário») não é o comando de adiar', r"if (querRegistrar(raw, n) || COMANDO_REG.test(n)) return true;", r"if (querRegistrar(raw, n)) return true;", ('p3f_rev3',)),
+    ('p3f rev3 adia: o adiamento solto vale sem a proposta esperando («agora não» sozinho)', r"return !!relatoPendente() && (ADIA_SOLTO.test(n) ||", r"return (ADIA_SOLTO.test(n) ||", ('p3f_rev3',)),
+    ('p3f rev3 adia: o adiamento solto não existe («agora não», «sim, mas depois» com a proposta esperando)', r"return !!relatoPendente() && (ADIA_SOLTO.test(n) ||", r"return !!relatoPendente() && (", ('p3f_rev3',)),
+    ('p3f rev3 adia: «vou registrar amanhã» (verbo sem adiamento solto) não é adiamento', r"(ADIA_SOLTO.test(n) || / (?:registr|anot|grav|lanc)\w* /.test(n));", r"(ADIA_SOLTO.test(n));", ('p3f_rev3',)),
+    ('p3f rev3 adia: «registra o relato depois» não é adiamento (grava a linha «o relato depois»)', r"|(?:o |esse |este )?relato|o registro|o ocorrido) )*", r"|zzqq) )*", ('p3f_rev3',)),
+    ('p3f rev3 adia: «amanhã cedo» não é adiamento (grava a linha «amanhã cedo»)', r"amanha(?: cedo| de manha| a tarde| a noite| de noite)?|outra hora|", r"amanha|outra hora|", ('p3f_rev3',)),
+    ('p3f rev3 adia: «amanhã» não é adiamento', r"(?:depois|mais tarde|amanha(?: cedo| de manha| a tarde| a noite| de noite)?|outra hora|", r"(?:depois|mais tarde|outra hora|", ('p3f_rev3',)),
+    ('p3f rev3 adia: «mais tarde» não é adiamento', r"(?:depois|mais tarde|amanha(?:", r"(?:depois|amanha(?:", ('p3f_rev3',)),
+    ('p3f rev3 adia: «outra hora» não é adiamento', r"| a noite| de noite)?|outra hora|outro dia|", r"| a noite| de noite)?|outro dia|", ('p3f_rev3',)),
+    ('p3f rev3 adia: «por enquanto» não é adiamento', r"|em outro momento|num outro momento|por enquanto|ainda nao|", r"|em outro momento|num outro momento|ainda nao|", ('p3f_rev3',)),
+    ('p3f rev3 adia: «agora não» não é adiamento', r"|ainda nao|agora nao|nao agora|daqui a pouco|", r"|ainda nao|daqui a pouco|", ('p3f_rev3',)),
+    ('p3f rev3 adia: «daqui a pouco» não é adiamento', r"|agora nao|nao agora|daqui a pouco|mais pra frente|", r"|agora nao|nao agora|mais pra frente|", ('p3f_rev3',)),
+    ('p3f rev3 adia: o «sim» antes do adiamento o desmancha', r"(?:(?:sim|ok|ta|certo|entao|por favor|pode ser|isso|tudo|mas|eu|", r"(?:(?:ok|ta|certo|entao|por favor|pode ser|isso|tudo|mas|eu|", ('p3f_rev3',)),
+    ('p3f rev3 adia: o «mas» antes do adiamento o desmancha', r"|isso|tudo|mas|eu|a gente|nos|ai|vou|", r"|isso|tudo|eu|a gente|nos|ai|vou|", ('p3f_rev3',)),
+    ('p3f rev3 adia: o «vou» antes do verbo o desmancha', r"|nos|ai|vou|vamos|posso|pode|preciso|", r"|nos|ai|vamos|posso|pode|preciso|", ('p3f_rev3',)),
+    ('p3f rev3 adia: o «pode» antes do verbo o desmancha', r"|vou|vamos|posso|pode|preciso|quero|queria) )*", r"|vou|vamos|posso|preciso|quero|queria) )*", ('p3f_rev3',)),
+    ('p3f rev3 adia: a resposta do adiamento some (relatoCancela sem o ramo)', r"if (!(ctx && ctx.espera) && adiaRegistro(q, pad(q))) {", r"if (false) {", ('p3f_rev3',)),
+    ('p3f rev3 adia: o adiamento com a proposta esperando não leva os botões nem diz que ela continua', r"return rp ? { text: 'Certo — não registrei agora.", r"return false ? { text: 'Certo — não registrei agora.", ('p3f_rev3',)),
+    ('p3f rev3 adia: o adiamento recusa a proposta (recusaTicket)', 'rp = relatoPendente();\n        return rp ? {', 'rp = relatoPendente(); if (rp) recusaTicket(rp.id);\n        return rp ? {', ('p3f_rev3',)),
+    ('p3f rev3 F18: «e a de partida?» depois da bateria cai nos motores (sem a continuação do banco)', r"if (rr === 'eletrico' && BANCO_SEGUE.test(n) && soNeutras(n, SEGUE_OK + 'bateria baterias banco bancos volts v 12 24 ')) { SEG.raiz = true; return junto; }", r"", ('p3f_rev3',)),
+    ('p3f rev3 F18: «e a partida do motor BB?» depois da bateria vira o banco (sem a lista de palavras neutras)', r"BANCO_SEGUE.test(n) && soNeutras(n, SEGUE_OK + 'bateria baterias banco bancos volts v 12 24 '))", r"BANCO_SEGUE.test(n))", ('p3f_rev3',)),
+    ('p3f rev3 F18: «e do ar?» depois da água não continua', r"if (rr === 'temperaturaAgua' && AR_AGUA_SEGUE.test(n)) { SEG.raiz = true; return junto; }", r"", ('p3f_rev3',)),
+    ('p3f rev3 F18: o banco pedido troca (partida ↔ serviço)', r"return pt && !sv ? 'partida' : sv && !pt ? 'servico' :", r"return pt && !sv ? 'servico' : sv && !pt ? 'partida' :", ('p3f_rev3',)),
+    ('p3f rev3 F18: o banco vale o da pergunta inteira (não o da fala nova)', r"var t = String(q || ''), k = t.lastIndexOf(' — '), n = pad(k < 0 ? t : t.slice(k + 3)), pt =", r"var t = String(q || ''), k = t.lastIndexOf(' — '), n = pad(t), pt =", ('p3f_rev3',)),
+    ('p3f rev3 F18: o banco de 12 V não abre a linha', r"? '12' : null;", r"? null : null;", ('p3f_rev3',)),
+    ('p3f rev3 F18: a linha do banco de partida mostra o valor do serviço', r"'banco 24 V de partida ' + pt + ' V · banco 24 V de serviço ' + sv + ' V · ' + b12", r"'banco 24 V de partida ' + sv + ' V · banco 24 V de serviço ' + pt + ' V · ' + b12", ('p3f_rev3',)),
+    ('p3f rev3 F18: o ar externo nunca abre a linha', r"return / (?:ar|la fora|fora) /.test(n) && !/ (?:agua|mar) /.test(n) ? 'ar' : null;", r"return null;", ('p3f_rev3', 'p3f_rev3_rotas')),
+    ('p3f rev3 F18: «lá fora» não é o ar externo', r"return / (?:ar|la fora|fora) /.test(n) && !/ (?:agua|mar) /.test(n) ? 'ar' : null;", r"return / ar /.test(n) && !/ (?:agua|mar) /.test(n) ? 'ar' : null;", ('p3f_rev3', 'p3f_rev3_rotas')),
+    ('p3f rev3 F18: a água sozinha também abre pelo ar (sem o teste da água)', r"return / (?:ar|la fora|fora) /.test(n) && !/ (?:agua|mar) /.test(n) ? 'ar' : null;", r"return / (?:ar|la fora|fora) /.test(n) ? 'ar' : null;", ('p3f_rev3',)),
+    ('p3f rev3 F18: a temperatura do ar abre pela água', r"if (foco === 'ar' && ar) return {", r"if (false) return {", ('p3f_rev3', 'p3f_rev3_rotas')),
+    ('p3f rev3 F18: o «ar condicionado» é o ar externo (sem a lista de palavras neutras)', r"|| (AR_REGEX.test(q) && soNeutras(q, AR_OK)); }", r"|| AR_REGEX.test(q); }", ('p3f_rev3', 'p3f_rev3_rotas')),
+    ('p3f rev3 rotas: a temperatura do ar não tem rota', r"|| (AR_REGEX.test(q) && soNeutras(q, AR_OK)); }", r"; }", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «temperatura lá fora» não é o ar', r"| temperatura (?:la )?fora |", r"|", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «ar externo» não é o ar', r"| ar externo |", r"|", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «quantos graus está lá fora» não é o ar', r"| quantos graus (?:esta|ta|faz) (?:la fora|o ar|fora) /;", r"/;", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o AIS por perto não tem rota', r"|| (AIS_PERTO.test(q) && leitura(q, AIS_PERTO_OK)); }", r"; }", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o AIS por perto toma «barco perto do píer» (sem a lista de palavras neutras)', r"(AIS_PERTO.test(q) && leitura(q, AIS_PERTO_OK))", r"AIS_PERTO.test(q)", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «embarcações próximas» não é o AIS', r"|proximos?|proximas?|aqui perto|", r"|proximos?|aqui perto|", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o resumo da viagem não tem rota', r"|| (RESUMO_VIAGEM.test(q) && soNeutras(q, RESUMO_VIAGEM_OK))) return 'eta';", r") return 'eta';", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «como foi a travessia ontem?» vira o resumo da viagem (sem a lista de palavras neutras)', r"|| (RESUMO_VIAGEM.test(q) && soNeutras(q, RESUMO_VIAGEM_OK))) return 'eta';", r"|| RESUMO_VIAGEM.test(q)) return 'eta';", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o resumo da viagem não abre pelo percorrido', r"|percorremos|resumo d|balanco d|relatorio d|como foi|como esta indo|como esta sendo|como foram/", r"|percorremos/", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual do quadro não tem rota', r"if (!EM_SOS && leituraBordoDe(q)) return 'leituraBordo';", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual toma o relato (sem a lista de palavras neutras)', r"if (d[0].test(q) && soNeutras(q, d[1])) return k;", r"if (d[0].test(q)) return k;", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «pressao» some', r"    pressao: [/ barometr\w* | pressao (?:atmosferica|do ar|barometrica) /,", r"    pressao: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «satelites» some', r"    satelites: [/ satelites? /,", r"    satelites: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «inclinacao» some', r"    inclinacao: [/ inclinacao | inclinado | caimento | angulo do barco /,", r"    inclinacao: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «marcha» some', r"    marcha: [/ (?:em )?que marcha | qual (?:e )?a marcha | marcha engatada /,", r"    marcha: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «piloto» some', r"    piloto: [/ piloto (?:automatico )?(?:esta|ta) (?:ligado|engajado|ativo|ativado|em espera|standby|desligado|funcionando|engatado) | rumo (?:do piloto|ordenado)/,", r"    piloto: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a leitura pontual «radar» some', r"    radar: [/ radar (?:esta|ta) (?:ligado|ligada|desligado|desligada|transmitindo|ativo|funcionando) /,", r"    radar: [/ zzqq /,", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o barômetro perde o rótulo «a bordo agora»', r"l = t.pressao ? 'Barômetro a bordo agora: ' + t.pressao + fim", r"l = t.pressao ? 'Barômetro: ' + t.pressao + fim", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «quando é a próxima troca de óleo?» não tem rota', r"if (has(q, PROX_TROCA) && has(q, ['oleo', 'revisao']) && leitura(q, FALTA_TROCA_OK + 'e eh vai vence ')) return 'horimetros';", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o vencimento do seguro/licença não tem rota', r"if (has(q, ['vence', 'vencimento', 'vencer', 'validade', 'renova', 'vencendo', 'venceu']) && has(q, [' seguro ', 'apolice', 'licenca', 'documento', 'certificado', ' tie ', 'habilitacao', 'capitania', 'registro do barco'])) return 'docsvenc';", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o documento que a pergunta nomeia não abre a resposta', r"var alvo = docPedido(com, qq), l1 = alvo ?", r"var alvo = docPedido(com, qq), l1 = false ?", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a pergunta de dois documentos abre por um deles (sem o empate)', r"else if (k === pts && k > 0) empate = true;", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a tarefa atrasada não tem rota («o rotor do gerador está atrasado?» vai ao guia)', r"if (has(q, ['atrasad', 'em atraso']) && has(q, ['rotor', 'impeller', 'filtro', 'anodo', 'zinco', 'revisao', 'troca', 'tarefa', 'manutenc', 'servico', 'limpeza', 'teste', 'inspec', 'cartas', 'oleo']) && !has(q, [' como ', 'chegar', 'chegada'])) return 'manutencao';", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: a tarefa que a pergunta nomeia não abre a resposta («o rotor do gerador está atrasado?» abre pela lista)', r"if (alvo) l1 = (/ (?:atrasad\w*|atraso) /", r"if (false) l1 = (/ (?:atrasad\w*|atraso) /", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «a troca do filtro está em atraso?» abre por UMA tarefa de filtro (sem as palavras genéricas)', r" como que troca trocas trocar limpeza ", r" como que limpeza ", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o «Sim»/«Não» da tarefa atrasada troca', r"(atrasadaN(dnDe(alvo)) ? 'Sim — ' : 'Não — ')", r"(atrasadaN(dnDe(alvo)) ? 'Não — ' : 'Sim — ')", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o consumo perde «consome»', r"' consome ', ' consomem ', ", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o consumo perde «gastamos»', r"'gastamos', 'gastando', ", r"", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o consumo desde o abastecimento não abre a resposta', r"/ (?:desde|gastamos|gastos|gastou|consumimos|consumido|ultimo abastecimento) /", r"/ zzqq /", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o nível do diesel não abre a resposta da autonomia', r"var nivel = NIVEL_DIESEL.test(pad(qq || '')) &&", r"var nivel = false &&", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «diesel de autonomia» abre pelo nível (sem a guarda da autonomia)', r"&& !has(pad(qq || ''), ['autonomia', 'alcance', 'abastec', 'nota fiscal', 'nf-e']), lDiesel", r", lDiesel", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: sem previsão, o vento a bordo agora não abre a resposta', r"if (!lv && !pv && s && i && i.txt.vento &&", r"if (false && !lv && !pv && s && i && i.txt.vento &&", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «clima e vento» abre pelo vento a bordo (sem a lista de palavras neutras)', r"&& !has(sq, [' previsao ', ' amanha ', ' hoje ']) && leitura(sq, NEUTRAS_BASE + VENTO_OK_P)) lv =", r"&& !has(sq, [' previsao ', ' amanha ', ' hoje '])) lv =", ('tempo', 'p3f_rev3_rotas')),
+    ('p3f rev3 rotas: «vai chover?» não diz que o app não tem previsão de chuva', r"if (has(sq, [' chover ', ' chovendo ', ' chuva ', ' chuvas ', ' chuvoso ']) && !has(sq, [' agua da chuva '])) lv =", r"if (false) lv =", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «está ventando muito?» (com previsão) abre pela previsão', r"|| !has(sq, [' vento ', ' ventando ']) ||", r"|| !has(sq, [' vento ']) ||", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o motor mais quente não tem rota', r"|| (ARREF_QUENTE.test(q) && soNeutras(q, arrefOk() + 'quente quentes mais menos que qual quais ')); }", r"; }", ('p3f_rev3_rotas',)),
+    ('p3f rev3 F16: o relato de 8 palavras não é relato (limite 9)', r"if (q.trim().split(/\s+/).length < 8) return false;", r"if (q.trim().split(/\s+/).length < 9) return false;", ('p3f_relato',)),
+    ('p3f rev3 F16: o relato com dinheiro («R$ 350 de taxa») vira proposta de registro (sem a guarda do dinheiro)', r"|| foraBarcoPergunta(q) || TERMOS.DINHEIRO.test(raw)) return false;", r"|| foraBarcoPergunta(q)) return false;", ('p3f_relato',)),
+    ('p3f rev3 rotas: a leitura pontual responde no SOS (a rota não olha o EM_SOS)', r"if (!EM_SOS && leituraBordoDe(q)) return 'leituraBordo';", r"if (leituraBordoDe(q)) return 'leituraBordo';", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: «o piloto está ligado?» responde com o rumo como se dissesse que está engajado (sem o ramo do estado)', r"else if (ESTADO_PILOTO.test(pad(qq || ''))) l =", r"else if (false) l =", ('p3f_rev3_rotas',)),
+    ('p3f rev3 rotas: o rumo do piloto é o COG', r"'Piloto automático com rumo ' + t.piloto + fim", r"'Piloto automático com rumo ' + t.rumo + fim", ('p3f_rev3_rotas',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_REV3
 
 
 def instante_3a(b):

@@ -353,6 +353,14 @@ def main():
                 r, n = conversa_seq(['registrar no diário que', 'o gerador foi ligado às sete', 'tá bom'], 4)
                 ok(tela + ': CONVERSA (F17): o pedido cortado pela pausa pergunta «O que devo registrar no diário?», a próxima frase vira a linha (1) e o «tá bom» depois não grava; nada vai para a rede', len(r['f']) >= 4 and r['f'][1] == 'O que devo registrar no diário?' and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['O gerador foi ligado às sete'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
 
+                # P3F (revisão 3): a promessa do «o que devo registrar?» nunca fica no silêncio, e o adiamento não grava. Nada vai para a rede (o registro e o aviso são locais).
+                r, n = conversa_seq(['registrar no diário que', 'sem ocorrências'], 3)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): depois do «o que devo registrar?», «sem ocorrências» vira a linha (1) e a voz confirma «Registrado no diário de bordo.»; nada na rede', len(r['f']) >= 3 and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['Sem ocorrências'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'tô pensando aqui'], 3)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): a fala que não é nota nem pedido recebe «Não registrei isso…» na voz (não o silêncio, não a IA): 0 linhas, 0 pedidos', len(r['f']) >= 3 and r['f'][2] == 'Não registrei isso. Para registrar, diga registre no diário e o texto.' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registra depois'], 2)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): «registra depois» não grava (nem o resumo da telemetria): a voz diz «Certo, nada registrado agora.»; 0 linhas, 0 pedidos', len(r['f']) >= 2 and r['f'][1] == 'Certo, nada registrado agora.' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+
                 # Sem a pausa de 0,65 s na CONVERSA (paridade Avanti 1.21.2): a frase final do reconhecedor vai direto ao cérebro;
                 # fora da conversa (VOZ→TEXTO) a pausa visual fica. Medido no navegador (performance.now), do fim do ditado à
                 # chamada do B.answer com a frase: o piso do VOZ→TEXTO é o setTimeout de 0,65 s da tela, que nunca dispara antes
