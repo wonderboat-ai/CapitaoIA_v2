@@ -828,7 +828,7 @@
   // seguem nas rotas deles. gravar/lançar só com «no diário». Não vale: pergunta («Registrar no diário é obrigatório?»), conteúdo que começa por verbo de ligação, palavra de pergunta ou avaliação
   // («registrar no diário como faz»), nem «é» logo no começo. → 0 = não é pedido · 1 = pedido com o texto · 2 = pedido sem o texto («registrar no diário», «… que» cortado pela pausa da voz).
   var REG_INF = /^[\s"“”«»]*(?:(?:ok|sim|capit[aã]o|ent[aã]o|agora)[\s,;:.!—–-]+)*(registrar|anotar|gravar|lan[cç]ar)((?:\s+(?:isso|aqui|a[ií]|l[aá]))*)(\s+(?:no|em)\s+(?:o\s+)?di[aá]rio(?:\s+de\s+bordo)?)?(?:\s+(?:isso|aqui|a[ií]|l[aá]))*(?:\s*([:—–-]|,)|\s+(que)(?=\s|$)|(?=\s|$))\s*([\s\S]*)$/;
-  var REG_INF_NAO = /^(?:e|eh|era|foi|sera|seria|serve|servia|funciona|adianta|vale|ajuda|demora|leva|precisa|deve|devo|pode|posso|podemos|tem|da|fica|faz|nao|so|como|onde|quando|qual|quais|quanto|quem|porque|por|pra|para|pelo|pela|tambem|ainda|sempre|direito|certo|errado|chato|facil|dificil|obrigatorio|importante|necessario)(?=\s|$)/;
+  var REG_INF_NAO = /^(?:e|eh|era|foi|sera|seria|serve|servia|funciona|adianta|vale|ajuda|demora|leva|precisa|deve|devo|pode|posso|podemos|tem|da|fica|faz|nao|so|como|onde|quando|qual|quais|quanto|quem|porque|por|pra|para|pelo|pela|tambem|ainda|sempre|direito|certo|errado|chato|facil|dificil|obrigatorio|importante|necessario|o que|oque)(?=\s|$)/;
   function infinitivoInicio(qRaw) {
     var s = String(qRaw || '').slice(0, 2000).toLowerCase().replace(/\s+/g, ' ').trim(), m = REG_INF.exec(s), verbo, diario, sep, resto;
     if (!m || /\?\s*$/.test(s)) return 0;
@@ -883,9 +883,14 @@
   }
   // Pedido SEM o texto (F17): «registrar no diário que…» cortado pela pausa da voz, «anote no diário:», «registrar no diário». O app pergunta o que registrar e grava a PRÓXIMA frase (ESPERA_REG, 2 min); o
   // atalho e o «registre no diário» sozinho (imperativo) seguem gravando o resumo da telemetria. A espera vale uma vez: qualquer fala seguinte a consome, e só a que é o texto do registro é gravada.
+  // A nota que sobra do comando só com palavras de ligação («registre no diário o», «anote que o», «registre no diário o que»: o ditado cortado no meio da frase) também PEDE o texto: nunca vira a linha «O» ou «O que».
+  var REG_CORTA = ' o a os as um uma de do da dos das no na em ao que ';
+  function notaCortada(nota) { var ws = norm(nota).replace(/[^a-z0-9]+/g, ' ').trim().split(' '); return ws.length > 0 && ws.length <= 3 && ws.every(function (w) { return REG_CORTA.indexOf(' ' + w + ' ') !== -1; }); }
   function pedeTexto(q) {
-    var s = String(q || '').trim();
-    if (!s || notaDoUsuario(s)) return false;
+    var s = String(q || '').trim(), nota;
+    if (!s) return false;
+    nota = notaDoUsuario(s);
+    if (nota) return notaCortada(nota);
     return infinitivoInicio(s) === 2 || /(?:^|\s)que[\s.…]*$|[:—–-][\s.…]*$/i.test(s);
   }
   var ESPERA_REG = null, ESPERA_VALE = 120e3;
@@ -895,25 +900,66 @@
   var ACK = /^ (?:sim|nao|ok|okay|obrigad[oa]|valeu|beleza|show|entendi|certo|perfeito|blz|tchau|ate mais|ta bom|ta certo|ta otimo|tudo bem|tranquilo|combinado|fechado|isso|isso mesmo|pode ser|talvez|ha|ah|eh|hum|hmm|aham|uhum|ata|uai)(?: (?:entendi|obrigad[oa]|valeu|brigad[oa]|capitao))* $/;
   // A fala depois de «o que devo registrar?»: vira o texto do registro (rota diario), salvo cancelar (relatoCancela, com ctx.espera), pergunta, reconhecimento, outro pedido de registro, emergência (que segue o SOS,
   // com os passos) ou o botão de uma proposta (a rota dele). null = segue a rota normal. A espera é consumida em toda chamada.
-  // Aquilo que a fala depois do «o que devo registrar?» NÃO é: o controle da conversa («nova conversa», «novo chat», «parar», «silêncio»), o pedido ao app («mostre a telemetria», «quero ver os documentos», «me mostra o
-  // diário») e a que não diz nada (menos de 2 palavras de conteúdo: «oi», «bom dia», «quero», «vamos», «autonomia»). O pedido de dado CURTO sem fato («telemetria agora», «nível dos tanques», «próximas manutenções»,
-  // «previsão do tempo») também é do app; o curto com verbo de fato, número ou sem rota de dado («limpeza do casco») é a nota, e a frase maior é sempre a nota («o gerador foi ligado às sete…»).
-  var CONTROLE_REG = /^ (?:pode |por favor |agora )*(?:nova conversa|novo chat|nova|novo|encerrar|encerra|encerre|encerrar conversa|parar|para|pare|parar de ouvir|pare de ouvir|parar de falar|pare de falar|silencio|chega|calar|cale|sair|fechar|fecha)(?: por favor)? $/;
-  var PEDIDO_REG = /^ (?:(?:por favor|entao|agora|capitao|me|nos|pode|poderia) )*(?:mostr[ae]r?|mostra|abr[ae]|abrir|ver|veja|list[ae]r?|diz|diga|fal[ae]r?|mand[ae]r?|envi[ae]r?|quero ver|queria ver|quero saber|gostaria de ver|gostaria de saber|preciso saber|checar|confira|conferir|verifique|verificar|consulte|consultar|calcule|calcular|ative|ativar|ligue|chame|chamar|inicie|iniciar|volte|voltar|leia|ler|repita|repetir|resuma|resumir)(?= )/;
+  // Aquilo que a fala depois do «o que devo registrar?» NÃO é: a que não fala do barco (falaDeBordo: o controle da conversa — «nova conversa», «parar», «silêncio» —, a despedida, «estou ouvindo», o volume, «tô pensando aqui»,
+  // «tanto faz», «foi engano»), o pedido ao app («mostre a telemetria», «quero ver os documentos», «fica de olho no diesel») e a que não diz nada (menos de 2 palavras de conteúdo: «oi», «bom dia», «quero», «vamos»,
+  // «autonomia»). O pedido de dado CURTO sem fato («telemetria agora», «nível dos tanques», «próximas manutenções», «previsão do tempo») também é do app; o curto com verbo de fato, número ou sem rota de dado («limpeza do
+  // casco») é a nota, e a frase maior que fala do barco é sempre a nota («o gerador foi ligado às sete…»).
+  var PEDIDO_REG = /^ (?:(?:por favor|entao|agora|capitao|me|nos|pode|poderia) )*(?:mostr[ae]r?|mostra|abr[ae]|abrir|ver|veja|list[ae]r?|diz|diga|fal[ae]r?|mand[ae]r?|envi[ae]r?|quero ver|queria ver|quero saber|gostaria de ver|gostaria de saber|preciso saber|checar|confira|conferir|verifique|verificar|consulte|consultar|calcule|calcular|ative|ativar|ligue|chame|chamar|inicie|iniciar|volte|voltar|leia|ler|repita|repetir|resuma|resumir|fica de olho|fique de olho|me avis[ae]|avis[ae]|me lembr[ae]|lembr[ae]|toca|toque|deslig[ae]|abaix[ae]|aument[ae]|cham[ae])(?= )/;
   var REG_FUNC = ' a o as os um uma uns umas de do da dos das no na nos nas em ao aos pelo pela por para pra com sem e ou que se eu me meu minha ele ela voce vc la ai aqui ja so mais muito bem nao sim ta eh vou vai ser pode posso isso isto esse essa agora hoje depois antes ainda mesmo tambem entao oi ola opa capitao ia tudo como ha ah hum hmm aham uhum ata uai ne ok okay valeu obrigado obrigada brigado ';
+  // Evidência de que a fala É nota (revisão 2 da P3F): fala do barco ou da viagem — número, palavra de bordo (peça, equipamento do cadastro, lugar, manobra, combustível, tempo no mar) ou verbo de «nós» no passado
+  // («chegamos», «saímos», «fundeamos»). Sem isso («tô pensando aqui», «tanto faz», «foi engano», «volto daqui a pouco») a fala é conversa: segue a rota dela e nada é gravado — o diário só cresce, e a linha errada não sai.
+  var BORDO_REG = new RegExp(' (?:' + ['motor\\w*', 'gerador\\w*', 'casco', 'conves', 'proa', 'popa', 'boreste', 'bombordo', 'bb', 'be', 'porao', 'bomba\\w*', 'filtro\\w*', 'oleo', 'diesel', 'combustivel', 'tanque\\w*', 'bateria\\w*', 'ancora\\w*', 'guincho', 'helice\\w*', 'leme', 'rotor\\w*',
+    'impeller', 'anodo\\w*', 'zinco\\w*', 'marina', 'pier', 'barra', 'enseada', 'baia', 'ilha', 'fundeio', 'fundead\\w*', 'atracad\\w*', 'atracacao', 'saida', 'chegada', 'partida', 'abasteci\\w*', 'manutencao', 'revisao', 'vistoria', 'inspecao', 'limpeza', 'lavagem', 'polimento', 'pintura', 'reparo', 'conserto',
+    'troca', 'trocad\\w*', 'instalacao', 'instalad\\w*', 'documento\\w*', 'licenca', 'seguro', 'horimetro\\w*', 'litros', 'milhas', 'rpm', 'pressao', 'temperatura', 'arrefecimento', 'alarme\\w*', 'vazamento\\w*', 'cabine', 'convidad\\w*', 'tripulac\\w*', 'passageir\\w*', 'pessoas', 'equipe', 'tecnico\\w*',
+    'estaleiro', 'mecanico\\w*', 'agua', 'vento\\w*', 'mar', 'ondas?', 'mare', 'chuva', 'neblina', 'previsao', 'rota', 'destino', 'travessia', 'passeio', 'navegacao', 'velocidade', 'cabos?', 'corrente', 'defensas?', 'inversor', 'painel', 'display', 'sensor\\w*', 'sonda', 'gps', 'antena', 'fusivel\\w*', 'disjuntor\\w*',
+    'valvula\\w*', 'mangueira\\w*', 'geladeira', 'fogao', 'banheiro', 'luz', 'luzes', 'lampada\\w*', 'vela', 'climatizacao', 'condicionado', 'estabilizador', 'plotter', 'radar', 'vhf', 'radio', 'epirb', 'colete\\w*', 'extintor\\w*', 'salvatagem', 'piloto', 'dessalinizador',
+    'barco', 'lancha', 'bote', 'tender', 'jet', 'ski', 'toldo', 'flybridge', 'escada', 'corrimao', 'parafuso\\w*', 'piso', 'timao', 'bussola', 'tv', 'televisao', 'freezer', 'churrasqueira', 'gelo', 'mantimentos', 'comida', 'bebidas', 'cozinheira', 'fiscal', 'capitania',
+    'marinha', 'cliente\\w*', 'visita\\w*', 'lixo', 'golfinho\\w*', 'peixe\\w*', 'pescaria', 'mergulho', 'almoco', 'jantar', 'churrasco', 'festa', 'amigos', 'familia'].join('|') + ')(?= )');
+  var NOS_PASSADO = / (?!estamos|podemos|devemos|queremos|precisamos|gostamos|sabemos|achamos|pensamos|vamos|temos|vemos|somos)[a-z]{2,}(?:amos|emos|imos)(?= )/;
+  // o verbo no passado de quem conta o que houve («choveu bastante durante a noite», «a TV da sala quebrou», «cheguei às oito e saí às cinco»): 1ª ou 3ª pessoa, numa frase de 4 palavras ou mais; a fala que só conversa
+  // («estou vendo aqui», «ainda estou vendo o que aconteceu», «eu mudei de ideia agora», «não entendi o que você disse») não vale
+  var PASSADO_REG = / (?!(?:estou|falou|errei|aconteceu|mudei|pensei|entendi)(?= ))[a-z]{3,}(?:ou|eu|iu|ei|aram|eram|iram)(?= )/;
+  function falaDeBordo(n) {
+    var voc, ws, i;
+    ws = n.trim().split(/\s+/);
+    if (/\d/.test(n) || BORDO_REG.test(n) || NOS_PASSADO.test(n) || (ws.length >= 4 && PASSADO_REG.test(n))) return true;
+    voc = vocabEquip();
+    for (i = 0; i < ws.length; i++) if (voc[ws[i]]) return true;   // (nome, fabricante, modelo ou palavra do cadastro: «Garmin atualizado»)
+    return false;
+  }
   function textoDeRegistro(raw, n) {
     var ws = n.trim().split(/\s+/), conteudo = ws.filter(function (w) { return REG_FUNC.indexOf(' ' + w + ' ') === -1; }).length, fato = RELATO_FATO.test(n.replace(/ (?:que|quem)(?: [a-z]+){1,3}(?= )/g, ' '));
-    if (CONTROLE_REG.test(n) || PEDIDO_REG.test(n)) return false;
+    if (PEDIDO_REG.test(n) || !falaDeBordo(n)) return false;
     if (fato && ws.length >= 2) return true;
     return conteudo >= 2 && (/\d/.test(n) || ws.length > 3 || route(raw) === 'fallback');
   }
+  // A fala SOBRE o registro, não o texto dele (revisão 2 da P3F): a recusa («não precisa registrar», «melhor não registrar», «não vou registrar nada», «nem precisa anotar»), o «já está no diário» («isso já está no diário»,
+  // «já registrei»), a promessa ou o adiamento de quem fala («amanhã eu registro», «depois eu anoto», «a gente vê isso depois», «vou anotar mais tarde», «preciso ver uma coisa», «deixa eu ver») e a ordem de esperar ou
+  // deixar («espera um pouco aí que eu já falo», «peraí que…», «deixa pra mais tarde isso»). Cancela a espera: nada é gravado («Certo — nada registrado no diário.»). Os verbos são o infinitivo, o imperativo e a 1ª pessoa
+  // (registrar, registre, registro): «o sensor não registrou pressão» e «não precisa trocar o filtro ainda» são nota. O verbo de ver, pensar, lembrar, checar e conferir só vale no fim da fala ou antes de «isso», «uma coisa»,
+  // «depois»…; «vou conferir o nível do óleo amanhã» é nota. «Espera de duas horas na marina» também (a ordem de esperar não leva «de»).
+  var REG_FORMAS = '(?:registr(?:ar|e|a|o)|anot(?:ar|e|a|o)|grav(?:ar|e|a|o)|lanc(?:ar|e|a|o)|escrev(?:er|a|e|o))';
+  var REG_META_FORTE = '(?:' + REG_FORMAS + '|fal(?:ar|o|amos|aremos)|diz(?:er|emos)|dig(?:o|amos)|cont(?:ar|o|amos)|avis(?:ar|o|amos)|volt(?:ar|o|amos)|mand(?:ar|o|amos))';
+  var REG_META_FRACO = '(?:ve|vejo|vemos|ver|pens(?:ar|o|amos)|lembr(?:ar|o|amos)|cheq(?:uei|uemos|ar|o)|confer(?:ir|o|imos)|olh(?:ar|o|amos))(?= (?:isso|isto|uma coisa|um negocio|depois|aqui|ai|la|direito|primeiro|melhor|com calma|mais tarde|amanha|um pouco|so um)|$)';
+  var REG_META = [
+    new RegExp('(?:^| )(?:nao|nunca|jamais|nem|melhor nao|sem)(?: [a-z]+){0,3} ' + REG_FORMAS + '(?= |$)'),
+    / ja (?:registr\w*|anot\w*|grav\w*|lanc\w*|escrev\w*)(?= |$)| ja (?:esta|foi|ta|tem|existe|consta|fica)(?: [a-z]+){0,3} (?:no diario|registrad\w*|anotad\w*|gravad\w*|lancad\w*|escrit\w*)(?= |$)/,
+    new RegExp('(?:^| )(?:eu|a gente|nos|gente)(?: [a-z]+){0,3} (?:' + REG_META_FORTE + '|' + REG_META_FRACO + ')(?= |$)'),
+    new RegExp('(?:^| )(?:vou|vamos|preciso|precisa|precisamos|tenho que|temos que|quero|queria|deixa eu|deixe eu|me deixa|deixa a gente)(?: [a-z]+){0,2} (?:' + REG_META_FORTE + '|' + REG_META_FRACO + ')(?= |$)'),
+    /^ (?:(?:ahn|ahm|hm+|hum+|ei|opa|olha|bom|bem|entao|ta) )*(?:(?:espera|espere|esperar|aguarda|aguarde|aguardar)(?= (?:um|uns|so|ai|a|que|por favor|ate|pouco|momento|minuto|segundo|instante)| $)|perai|pera ai|calma|segura ai|deixa|deixe)(?= )/,
+    /^ (?:por enquanto |agora |no momento |ate agora )?nada(?: (?:por enquanto|por agora|agora|disso|mais|no momento|obrigado|obrigada|nao))* $/,   // «nada por enquanto», «por enquanto nada», «nada disso» (e não «nada a relatar», que é nota)
+    /^ (?:acho |eu acho )?melhor (?:deixar|esquecer|nao|parar|cancelar|ficar|esperar)(?= )/,
+    /^ (?:(?:ainda|eu|sinceramente|pois) )*(?:nao sei|nao tenho ideia|nao lembro|nao me lembro|esqueci)(?: [a-z]+){0,5} $/,
+    /^ (?:(?:ah|bom|entao|olha|ops|eh|nao) )*(?:mudei de ideia|pensei melhor|esquece|esqueca|esquecer|deixei pra la|deixa pra la)(?= )/
+  ];
+  function metaRegistro(n) { return REG_META.some(function (r) { return r.test(n); }); }
   function esperaRegistro(q, ctx) {
     var e = ESPERA_REG, raw, n;
     ESPERA_REG = null;
     if (!e || Date.now() - e.t > ESPERA_VALE || (ctx && (ctx.id || ctx.commit === false || ctx.faq))) return null;
     raw = String(q || '').trim(); n = pad(raw);
     if (!raw || querRegistrar(raw, n)) return null;
-    if (CANCELA_REG.test(n)) return 'relatoCancela';
+    if (CANCELA_REG.test(n) || metaRegistro(n)) return 'relatoCancela';
     if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;
     if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n)) return null;
     if (NAO_ESPERA[route(raw)] === 1) return null;
@@ -1855,9 +1901,9 @@
     relatoVerifica: function (p, ctx, q) {
       var nota = String(q || '').trim().replace(/^o que verificar e qual pode ser a causa[\s:,.—–-]*/i, ''), loc = null, al = ALVO_REL && Date.now() - ALVO_REL.t < 5000 ? achaTicket(ticketsCru(), ALVO_REL.id) : null, rp = al && al.estado === 'aberto' && al.origem === 'relato' ? { id: al.id } : relatoPendente();
       var acoes = rp ? [{ l: 'Registrar no diário', href: '#capitao-relato-registra-' + rp.id }, { l: 'Não registrar', href: '#capitao-relato-cancela-' + rp.id }] : [];
-      try { loc = respostaFaq(nota, p) || respostaBase(nota, p, null); } catch (e) { loc = null; }
+      try { loc = respostaFaq(nota, p) || respostaBase(nota, p, null) || respostaRelatoEquip(nota, p); } catch (e) { loc = null; }
       if (loc) return Object.assign({}, loc, { actions: acoes.concat(loc.actions || []) });
-      return { text: 'Para esse relato não achei um item do FAQ de bordo nem um trecho dos guias que case.\nPergunte pelo equipamento (“como limpar o filtro de água salgada?”) ou abra o FAQ de bordo.', src: 'Fonte: FAQ de bordo · guias de bordo', actions: acoes.concat(act(p, [['FAQ de bordo', 'faq']])) };
+      return { text: 'O que verificar: esse relato é para a IA de bordo analisar (precisa de internet); o FAQ de bordo e os guias não têm um item que case com ele.\nPergunte pelo equipamento (“como limpar o filtro de água salgada?”) ou abra o FAQ de bordo.', src: 'Fonte: FAQ de bordo · guias de bordo', actions: acoes.concat(act(p, [['FAQ de bordo', 'faq']])) };
     },
     // «não registrar» / «cancelar» (F16, F17): descarta o que espera (a proposta do relato é recusada, 0 linhas) ou a espera do «o que devo registrar?»: nada é gravado
     relatoCancela: function (p, ctx) {
@@ -2980,9 +3026,35 @@
     if (rs.length > 1 && rs[1].nota > r.nota * 0.85 && rs[1].it.secao !== r.it.secao) return null;
     return faqResposta(r.it, p);
   }
+  // O botão «O que verificar?» de um relato de defeito que não casa de perto com nenhum item (a frase inteira — quando, onde, quantas vezes — dilui a busca): o equipamento que o relato nomeia (D.equipamentos, menos
+  // os de segurança; o nome, o fabricante, o modelo ou uma das palavras do cadastro, com TODAS as palavras dela na frase — «bomba de porão» não é «a bomba de água doce» — e o que vem primeiro na frase) e, entre os
+  // itens do FAQ DELE, o que mais casa com o relato. O item de alarme, temperatura, pressão, fluxo, mensagem ou água (é o que se confere num defeito) vale 1,5 vez e entra com pontuação 7; os outros, só com 11 (a
+  // busca pesa o relato inteiro: abaixo disso o item só dividiria o assunto com o equipamento, e «o plotter não liga» viraria «Atualização de cartas»). Nunca o cartão de emergência. null = o relato não nomeia
+  // um equipamento ou o FAQ dele não casa bem (a IA, se houver, responde).
+  var FAQ_PROBLEMA = /alarme|temperatura alta|alta temperatura|pressao|pouco ar|fluxo|mensagem|engano|agua|falha/;
+  function equipamentoDoRelato(nota) {
+    var tk = tokens(nota), melhor = null, pos = 1e9;
+    (D.equipamentos || []).forEach(function (e) {
+      if (e.seguranca) return;
+      [e.nome, e.fabricante, e.modelo].concat(e.palavras || []).forEach(function (x) {
+        var ws = tokens(x), ks = ws.map(function (w) { return tk.indexOf(w); });
+        if (ws.length && ks.every(function (k) { return k !== -1; }) && Math.min.apply(null, ks) < pos) { pos = Math.min.apply(null, ks); melhor = e; }
+      });
+    });
+    return melhor;
+  }
+  function respostaRelatoEquip(nota, p) {
+    var eq = equipamentoDoRelato(nota), pre, rs;
+    if (EM_SOS || !eq) return null;
+    pre = norm(eq.nome);
+    rs = faqBusca(nota, 100).filter(function (r) { return !r.it.emerg && !r.it.seguranca && norm(r.it.equip || '').indexOf(pre) === 0; });
+    rs.forEach(function (r) { r.problema = FAQ_PROBLEMA.test(norm(r.it.titulo)); r.pontos = r.nota * (r.problema ? 1.5 : 1); });
+    rs = rs.filter(function (r) { return r.nota >= (r.problema ? 7 : 11); }).sort(function (x, y) { return y.pontos - x.pontos; });
+    return rs.length ? faqResposta(rs[0].it, p) : null;
+  }
   if (!EM_SOS) { if (window.requestIdleCallback) requestIdleCallback(carregaFaq, { timeout: 6000 }); else setTimeout(carregaFaq, 2500); }
 
-  function responde(q, ctx, espera) {
+  function responde(q, ctx, espera, fresco) {
     ctx = ctx || {};
     var p = ctx.platform || 'web';
     var key = null;
@@ -2998,7 +3070,8 @@
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
     var rota0 = key;
-    if (key === 'fallback' || (GENERICAS[key] && (ESPECIFICA.test(' ' + norm(q) + ' ') || (key === 'ais' && !AIS_STATUS.test(' ' + norm(q) + ' '))))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
+    var qEsp = fresco != null ? fresco : q;   // (a pergunta continuada com assunto próprio — «… — e o gerador?» — é «específica» pela fala nova, não pelo «como» da pergunta de antes)
+    if (key === 'fallback' || (GENERICAS[key] && (ESPECIFICA.test(' ' + norm(qEsp) + ' ') || (key === 'ais' && !AIS_STATUS.test(' ' + norm(qEsp) + ' '))))) { var kb = null; try { kb = respostaBase(q, p, key === 'fallback' ? null : key); } catch (e) {} if (kb) { a = kb; key = 'base'; } }
     // P3E (revisão 4): a cabeça de segurança sem rota própria (o botão DISTRESS, a baliza do EPIRB) com uma cauda que dilui a busca («o botão DISTRESS, checklist de saída»; ou que puxa um trecho de outro
     // assunto: «a baliza, nível dos tanques»): o trecho de segurança dela, pela cabeça, local (pedeIA false) — nunca o fallback, que iria à IA na nuvem, nem o trecho da cauda
     if (rota0 === 'fallback' && (key === 'fallback' || key === 'base') && !a.seguranca) { var cq = cabecaSemRota(pad(q)), kc = null; if (cq) { try { kc = respostaBase(cq, p, null); } catch (e) {} if (kc && kc.seguranca) { a = kc; key = 'base'; } } }
@@ -3018,6 +3091,9 @@
   // pronta do gerador. NOVA e ENCERRAR zeram (B.limpaConversa). O que o app não grava (commit false, link) e a emergência não entram.
   var CONV = { q: '', a: '', t: 0, pergunta: false, n: 0, reg: false };   // `reg`: a última fala foi um registro (a próxima é assunto novo)
   var CONV_VALE = 10 * 60e3;
+  // O que a conversa guarda (a pergunta até 500 letras, a resposta até 600): SEM coordenadas, e o filtro vem ANTES do corte — cortar primeiro deixa meia coordenada («048°») que o semCoord não reconhece
+  // (revisão 2 da P3F). O que o CONV guarda é o que vai à IA em `anterior` e em `junto`.
+  function guardaConv(t, max) { return semCoord(String(t == null ? '' : t)).slice(0, max); }
   function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
   function terminaEmPergunta(t) {
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
@@ -3025,14 +3101,14 @@
   }
   // A pergunta de emergência (SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio): ela e a resposta dela nunca entram no contexto, e ENCERRAM o que havia (a fala «o gerador» depois de
   // «mayday» é a resposta pronta do gerador, nunca a continuação da pergunta de antes da emergência).
-  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || EMERG[route(q)] === 1); }
+  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
   function conversa(q, texto) {
     if (EM_SOS || !String(q || '').trim()) return;
     if (perguntaEmerg(q)) { limpaConversa(); return; }
     // O relato que cai na IA (sem rota local) é respondido pela nuvem e a tela conta a conversa DEPOIS (esta função), que sobe o `n`: o «sim» curto da proposta (REL.n = a conversa dela) deixaria de valer. Realinha
     // só quando esta é a pergunta que abriu a proposta e nada mais foi respondido no meio (REL.n ainda é o da conversa de agora); outra pergunta no meio, ou outra pergunta agora, não realinha.
     var alinha = !!(REL && REL.q && REL.n === CONV.n && REL.q === limpaT(corrigeVoz(q), 500));
-    CONV = { q: String(q).trim().slice(0, 500), a: String(texto || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1, reg: false };
+    CONV = { q: guardaConv(String(q).trim(), 500), a: guardaConv(texto, 600), t: Date.now(), pergunta: terminaEmPergunta(texto), n: (CONV.n || 0) + 1, reg: false };
     if (alinha) REL.n = CONV.n;
   }
   // o vocabulário de equipamento: nome, fabricante, modelo e as palavras do cadastro (D.equipamentos), normalizados
@@ -3103,17 +3179,19 @@
   }
   function answer(q, ctx) {
     return congela(function () {
-      var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), ant = anteriorDe(ctx), a;
+      var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), fresco = junto && !SEG.raiz && !CONV.pergunta && route(q1) !== route(CONV.q) ? q1 : null, ant = anteriorDe(ctx), a, pe;
       if (!espera && junto && SEG.raiz) espera = route(CONV.q);   // F18: «e boreste?» não tem assunto: é a rota da pergunta anterior, com a fala nova
-      a = marca(responde(junto || q1, ctx, espera));
+      a = marca(responde(junto || q1, ctx, espera, fresco));   // (fresco: a fala nova de uma pergunta continuada (F18) com OUTRO assunto — o «como» ou o «alarme» da pergunta de antes não a torna «específica»; com o mesmo assunto, ou depois de «Qual equipamento?» (F31: «o gerador» continua «como ligar?»), a pergunta junta vale, como antes)
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
       // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
+      // (pe: a PERGUNTA é de emergência — o «registre no diário: tem fogo no motor» responde `diario` com os passos do SOS, chave que não é de emergência, mas a conversa também acaba nele: nem a pergunta nem a resposta vão à IA)
+      pe = !EM_SOS && perguntaEmerg(q1);
       if (!EM_SOS) {
-        if (emerg(a)) limpaConversa();
-        else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : String(q1 == null ? '' : q1).trim().slice(0, 500), a: String(a.text || '').slice(0, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1, reg: REG_KEYS[a.key] === 1 };
+        if (emerg(a) || pe) limpaConversa();
+        else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : guardaConv(String(q1 == null ? '' : q1).trim(), 500), a: guardaConv(a.text, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1, reg: REG_KEYS[a.key] === 1 };
       }
-      if (ant && !emerg(a)) { a.anterior = ant; a.junto = junto || ''; }   // F18: a pergunta e a resposta de antes vão com a resposta (a IA recebe; sem coordenadas); `junto` é a pergunta que a rota viu
+      if (ant && !emerg(a) && !pe) { a.anterior = ant; a.junto = junto || ''; }   // F18: a pergunta e a resposta de antes vão com a resposta (a IA recebe; sem coordenadas); `junto` é a pergunta que a rota viu
       acrescentaRelato(a, a.key, String(q1 == null ? '' : q1).trim(), ctx);   // F16: o relato vira proposta (a hora do instante já está na resposta)
       return a;
     });
@@ -3139,11 +3217,19 @@
     return !!String(q || '').trim() && !SO_OI.test(pad(q));
   }
   // O histórico que vai à IA (F18, PROMPT §2.8): as últimas 6 mensagens (não vazias) da conversa em {papel, texto}, cada texto SEM coordenadas (o semCoord corta antes do limite de 600 letras, para não deixar meia coordenada). A tela monta a lista (papel 'usuario' | 'capitao', ou role 'user' | 'bot'); aqui só se limpa. O cliente da IA repete o filtro antes de mandar (Fase 6).
+  // A emergência NUNCA entra no histórico (PROMPT §2.2, trava 10): o turno do usuário que é pergunta de emergência (perguntaEmerg: SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio, o botão DISTRESS, a baliza
+  // do EPIRB, e o «registre no diário: tem fogo no motor», que responde com os passos do SOS) sai, com a(s) resposta(s) do capitão que o seguem; a resposta que traz a instrução de segurança (abre com «Emergência —»,
+  // ou leva a ordem do MAYDAY ou os passos do óleo) sai mesmo que a pergunta dela tenha ficado fora da janela. Isto antes do corte nas 6 últimas.
+  function respostaEmerg(t) { var s1 = SOS_PASSOS.slice(0, 60), s2 = OLEO_PASSOS.slice(0, 40); return /^\s*Emergência\s—/.test(t) || (!!s1 && t.indexOf(s1) !== -1) || (!!s2 && t.indexOf(s2) !== -1); }   // (o trecho vazio acharia-se em todo texto)
   function historicoIA(msgs) {
+    var fora = false;
     return (Array.isArray(msgs) ? msgs : []).map(function (m) {
-      var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '';
-      return { papel: bot ? 'capitao' : 'usuario', texto: semCoord(String(t == null ? '' : t)).slice(0, 600) };
-    }).filter(function (m) { return m.texto.trim(); }).slice(-6);
+      var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto = String(t == null ? '' : t);
+      return { papel: bot ? 'capitao' : 'usuario', texto: semCoord(bruto).slice(0, 600), bruto: bruto };
+    }).filter(function (m) {
+      if (m.papel === 'usuario') fora = !!m.bruto.trim() && perguntaEmerg(m.bruto);
+      return m.texto.trim() && !fora && !(m.papel === 'capitao' && respostaEmerg(m.bruto));
+    }).map(function (m) { return { papel: m.papel, texto: m.texto }; }).slice(-6);
   }
   // O que o app faz, para a IA responder "o que você faz?", "como registro?", "onde vejo os documentos?".
   // A frase padrão de quem pergunta se os dados ou o barco são reais (decisão (f); PROMPT §2.6): a resposta da rota sobreDados (P3C) e o fecho do «Sobre o app» da ficha,
