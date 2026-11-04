@@ -198,7 +198,7 @@
     function contagens() {
       var c = { atrasadas: 0, d30: 0, d60: 0, d90: 0, emDia: 0, docsVencidos: 0, docsVencem90: 0, pendencias: 0, tarefasEquipe: 0 };
       try {
-        var hoje = diaN(A.relogio ? A.relogio.ms : Date.now()), feitas = local('capitao.executado.v1', {}), acoes = {}, linhas = local('capitao.diario.v1', []), eq = [];
+        var hoje = diaN(A.relogio ? A.relogio.ms : Date.now()), feitas = local('capitao.executado.v1', {}), acoes = {}, anuladas = {}, linhas = local('capitao.diario.v1', []), eq = [];
         var conta = function (dn) { c[dn < 0 ? 'atrasadas' : dn <= 30 ? 'd30' : dn <= 60 ? 'd60' : dn <= 90 ? 'd90' : 'emDia']++; };
         (D.agenda || []).forEach(function (t) { if (!feitas[t.id] && typeof t.dn === 'number') conta(t.dn); });
         (D.tarefasEquipe || []).forEach(function (t) { eq.push({ id: t.id, dn: t.dn }); });
@@ -208,7 +208,9 @@
         // pendência aberta: linha com pend (gerada, pelo id; do aparelho, pelo iso) cuja última ação por alvo (resolve/reabre) não é "resolve"
         linhas.slice().reverse().forEach(function (l) { if (l && (l.acao === 'resolve' || l.acao === 'reabre') && l.alvo) acoes[l.alvo] = l.acao; });
         (D.diario || []).forEach(function (x) { if (x.pend && acoes[x.id] !== 'resolve') c.pendencias++; });
-        linhas.forEach(function (l) { if (l && l.pend && !l.acao && acoes[l.iso] !== 'resolve') c.pendencias++; });
+        // (a linha com pend que um `anula` desfez — o Desfazer do relato — não conta: o cérebro a tira da lista vigente)
+        linhas.forEach(function (l) { if (l && l.acao === 'anula' && l.alvo) anuladas[l.alvo] = 1; });
+        linhas.forEach(function (l) { if (l && l.pend && !l.acao && !anuladas[l.iso] && acoes[l.iso] !== 'resolve') c.pendencias++; });
       } catch (e) {}
       return c;
     }

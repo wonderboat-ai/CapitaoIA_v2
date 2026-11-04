@@ -8144,6 +8144,11 @@ JS_P3G_PEND_CHAT = """() => { const B = window.CapitaoBrain, D = window.CapitaoD
   const ds = B.desfazTicket(id); o.relatoDes = [!!ds, ab(), B.loadTickets().map((t) => t.k + ':' + t.estado), B.loadDiario().filter((e) => e.acao === 'reabre').length];
   // 6) a API aceita (tela): o relato aceito devolve a linha com .pendencia
   localStorage.clear(); const t2 = B.addTicket({ k: 'diario', origem: 'relato', texto: 'Trocamos o rotor do gerador hoje de manhã' }), ac = B.aceitaTicket(t2.id); o.api = [ac.linha.pendencia && ac.linha.pendencia.alvo, ab(), ac.res.pend && ac.res.pend.alvo];
+  // 7) o Desfazer de um relato COM pend grava um `anula`: a linha sai da lista E da contagem do rodapé (a mesma conta, sem divergir)
+  localStorage.clear(); const A = window.CapitaoAgora, nab = () => B.pendenciasLista().filter((p) => p.aberta).length;
+  const t3 = B.addTicket({ k: 'diario', origem: 'relato', texto: 'Bomba de água doce com vazamento no compartimento de máquinas', prop: { pend: true } });
+  B.aceitaTicket(t3.id, { chat: true }); const reg = [nab(), A.contagens().pendencias];
+  B.desfazTicket(t3.id); o.anulaPend = reg.concat([nab(), A.contagens().pendencias, B.loadDiario().filter((e) => e.acao === 'anula').length]);
   return o; }"""
 FRASES_FECHAM = [('limpei o filtro de água salgada da climatização', 'd05'), ('Limpamos os filtros de água salgada do ar condicionado hoje cedo', 'd05'), ('o filtro da climatização foi limpo', 'd05'), ('fizemos o teste das bombas de porão', 'd07'),
                  ('a bomba de porão foi testada', 'd07'), ('trocamos o rotor do gerador', 'd03'), ('o impeller do gerador foi trocado', 'd03'), ('inspecionei o rotor impeller do gerador', 'd03'), ('feito o teste das bombas de porão', 'd07'),
@@ -8193,6 +8198,8 @@ def grupo_p3g_pendencias(b, muta, ped):
         ped('p3g pendências (relato): o relato confirmado É um registro — fecha a d05 e propõe o Executado; desfazer o relato (a linha anulada) reabre a pendência e recusa a proposta que ele abriu; a API do aceitaTicket devolve a linha com `.pendencia` e guarda o fechamento no ticket',
             c['relato'][:3] == [True, 'relatoRegistra', True] and c['relato'][3] is True and c['relato'][4] == 'd03,d07' and c['relato'][5] == ['exec:aberto', 'diario:aceito'] and c['relatoDes'][0] is True and c['relatoDes'][1] == 'd03,d05,d07' and sorted(c['relatoDes'][2]) == ['diario:aberto', 'exec:recusado'] and c['relatoDes'][3] == 1
             and c['api'] == ['d03', 'd05,d07', 'd03'], (c['relato'], c['relatoDes'], c['api']))
+        ped('p3g pendências (anula): o relato com `pend` confirmado soma uma pendência (3 → 4) na lista e em contagens(); o Desfazer grava UMA linha `anula` e as duas voltam a 3 JUNTAS (lista e contagem do rodapé não divergem)',
+            c['anulaPend'] == [4, 4, 3, 3, 1], c['anulaPend'])
     finally:
         pg.ctx.close()
 

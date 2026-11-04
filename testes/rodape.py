@@ -508,6 +508,8 @@ def contagens(b):
     pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', JSON.stringify([{ acao: 'reabre', alvo: 'd03', iso: 't4' }, { acao: 'resolve', alvo: 'X2', iso: 't3' }, { pend: true, iso: 'X2' },
       { acao: 'resolve', alvo: 'd03', iso: 't2' }, { pend: true, iso: 'X1' }]))""")
     ok('vale a última ação por alvo: d03 reaberta (3) + X1 aberta; X2 resolvida: 4', C()['pendencias'] == 4, C())
+    pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', JSON.stringify([{ acao: 'anula', alvo: 'X1', iso: 't5' }, { pend: true, iso: 'X1' }, { pend: true, iso: 'X3' }]))""")
+    ok('o `anula` do Desfazer de um relato com pend tira a linha da conta (X1 anulada, X3 aberta): 3 geradas + X3 = 4', C()['pendencias'] == 4, C())
     pg.evaluate("""() => localStorage.setItem('capitao.diario.v1', '{ não é json')""")
     ok('registro do aparelho ilegível: conta só as geradas, sem erro', C()['pendencias'] == 3 and not pg.erros, (C(), pg.erros))
     # Revisão do C7: JSON VÁLIDO de outra forma ('{}' onde se espera lista; lista, texto ou número onde se espera mapa) valia como
