@@ -941,6 +941,45 @@
   var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
   QUADRO['Alarmes pedidos'] = 1;   // (F12: a leitura dos alarmes pedidos é do quadro: a ficha de emergência não a leva)
   function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }   // (o cartão EM-01…09 do FAQ também: sem quadro, sem hora, encerra o contexto)
+  // ——— A conversa em emergência (P4A; PROMPT §2.2 «Conversa em emergência», itens (1) e (2); CLAUDE.md 10) ———
+  // Depois de uma resposta sos, oleo, canal16, epirb ou seafire, ou de um diário com alerta, a TELA marca emergenciaAte = agora + 15 min (B.JANELA_EMERG_MS; NOVA e ENCERRAR zeram) e, enquanto
+  // a marca vale, passa `{ emergencia: true }` a answer(q, ctx), answerAttachment(kind, file, ctx), pedeIA(a, q, opts), historicoIA(msgs, opts), resumoAgora(x) e ficha(p, q, a, ctx). A resposta que
+  // ABRE a janela traz `a.emerg === true` (salvatagem e mmsi não: são perguntas de rotina e já respondem sem posição; o trecho `base` de segurança também não). Dentro dela:
+  //  (1) pedeIA é false para tudo (nada vai à IA, nem a ficha nem o histórico);
+  //  (2) posição, rumo/COG, SOG, distância, ETA e o número de pessoas a bordo (posicao, navegacao, eta, destinos, pessoas, a posição da âncora, o rumo do piloto, a velocidade do checklist, a linha de
+  //      situação de bordo de contatos/fallback/anexos/tempo e maré sem conexão, o resumo do diário e a telemetria) viram protocolos.plotter, no texto E na fala (a 1ª linha é a instrução).
+  // A resposta dada dentro da janela traz `a.janela === true`: sem o instante dela (`_inst`), sem `anterior`/`junto` (e, a que abre com a instrução do plotter, sem a hora do quadro: a fala não a repete), e a ficha e o resumo dela saem como os de emergência.
+  // Vento, ondas, tempo e maré (reais) e a velocidade de cruzeiro do guia (autonomia, consumo) não são posição, rumo, SOG, ETA nem pessoas: ficam. Nada disto vale no SOS (EM_SOS), que já nunca lê o quadro.
+  var JANELA_MS = 15 * 60 * 1000;
+  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };
+  var JAN = { on: false };
+  function janela() { return JAN.on === true && !EM_SOS; }
+  function comJanela(ctx, f) {
+    var antes = JAN.on;
+    JAN.on = antes === true || !!(ctx && ctx.emergencia === true);
+    try { return f(); } finally { JAN.on = antes; }
+  }
+  function plotterTxt() { return (D.protocolos && D.protocolos.plotter) || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA'; }
+  // a 1ª linha (a falada) do fallback dentro da janela: sem rota e sem IA, a pergunta solta ("e agora?") recebe a instrução de segurança, não o "isso não está nas fontes"
+  var EM_PERIGO = 'Em perigo agora: SOS do app e VHF canal 16.';
+  function respostaJanela(p) {
+    return { janela: true, text: plotterTxt() + '\nNa emergência o app não repete o quadro de navegação nem o número de pessoas a bordo.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) };
+  }
+  // o texto livre do registro (linha do diário, pendência) lido dentro da janela: a velocidade, o rumo e o número de pessoas que ele cita trocam por «leia no plotter» / «conte agora»
+  var JAN_NAV = [[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'], [/\b(?:SOG|STW)\s+[\d.,]+\s*nós?/gi, 'velocidade: leia no plotter'],
+    [/\b(?:rumo|proa|COG|HDG)(?:\s*\(COG\))?\s+[\d.,]+\s*°/gi, 'rumo: leia no plotter']];
+  // (P4A) a telemetria dentro da janela: o texto de sempre SEM a posição, o SOG e a proa, o tempo a bordo e a tendência (que traz o SOG); a 1ª linha (a falada) é a instrução do plotter, e a hora do
+  // instante fica numa linha própria. As máquinas e os sistemas (motores, diesel, baterias, tanques, gerador, Seakeeper, porão, âncora, alarmes) seguem como estão.
+  function telemJanela(r, i, p) {
+    if (!janela()) return r;
+    if (!i) return respostaJanela(p);
+    r.text = plotterTxt() + '\nTelemetria às ' + i.hora + ' (sem posição, rumo nem velocidade):\n' + r.text.split('\n').slice(1).filter(function (l) { return !/^• (?:Posição|Vento)|^• Tendência/.test(l); }).join('\n');
+    r.janela = true;
+    return r;
+  }
+  // o diário com alerta (a nota casa emergencia() ou oleo() === 1) ABRE a janela como as chaves de emergência: a resposta traz `emerg: true`
+  function emergDiario(r, alerta) { if (alerta) r.emerg = true; return r; }
+  function semNavJanela(t) { var s = String(t == null ? '' : t); if (!janela()) return s; JAN_NAV.forEach(function (r) { s = s.replace(r[0], r[1]); }); return s; }
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
   // O sinal «+» colado a «55» e a mais um dígito («+551» rpm) é o prefixo de telefone da regex PESSOAIS do §3 (`\+55\s?\d`): só nesse caso um espaço fino separa o sinal do número (+ 551),
@@ -1897,7 +1936,10 @@
   // O resumo do instante (CONTRATO §1.23): até 300 letras, sem coordenadas. Com `{ semPosicao: true }` sem o lugar (as exceções da decisão (g)); com a resposta da
   // pergunta (`resumoAgora(a)`), o instante dela. Em /SOS-/ e com a resposta de uma chave de emergência (EMERG): a instrução do plotter, nunca quadro. Sem quadro vivo
   // (modo real), o do snapshot, sem coordenada.
-  function resumoAgora(x) {
+  // (P4A) Dentro da janela de 15 min o resumo também é a instrução do plotter: `resumoAgora({ emergencia: true })`, `resumoAgora(x, { emergencia: true })`, a resposta dada dentro dela (`a.janela`)
+  // ou a que a ABRE (`a.emerg`, o diário com alerta) e a chamada de dentro de answer() com a janela ligada.
+  function resumoAgora(x, ctx) {
+    if ((x && typeof x === 'object' && (x.emergencia === true || x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();
     if (emerg(x)) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';
     return congela(function () {
       var i = vivo();
@@ -1963,7 +2005,7 @@
   function semConexao() { var h = ultimaLeitura(); return 'Previsão e maré: sem conexão agora' + (h ? ' (última às ' + h + ')' : '') + ' — confira o boletim da Marinha antes de sair.'; }
   var MAR_SIM = ' · ondas: o app não tem previsão de mar — confira a previsão da Marinha antes de sair.';
   // a situação de bordo sem posição, para as respostas que a decisão (g) manda levar (tempo e maré sem conexão, contatos, fallback, anexos)
-  function linhaBordo() { return (vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ') + resumoAgora({ semPosicao: true }); }
+  function linhaBordo() { if (janela()) return plotterTxt(); return (vivo() ? 'Situação de bordo agora: ' : 'Última situação de bordo: ') + resumoAgora({ semPosicao: true }); }   // (P4A: dentro da janela de emergência a linha é a instrução do plotter)
   // «Posição 26°59,46'S 048°36,71'W.» (a 2ª linha da posição, só no texto da tela); o dado que falta já vem como «posição SEM LEITURA» (o caminho null), sem repetir a palavra
   function posicaoTxt() { return (/^posi/.test(SNAP.pos) ? '' : 'Posição ') + SNAP.pos + '.\n'; }
   function poraoTxt() { var PO = S.porao || {}; return typeof PO.bb_cm === 'number' && typeof PO.be_cm === 'number' ? 'BB ' + nb(PO.bb_cm) + ' cm · BE ' + nb(PO.be_cm) + ' cm' + (typeof PO.ciclos_h === 'number' ? ' · ' + (PO.ciclos_h ? PO.ciclos_h + (PO.ciclos_h === 1 ? ' ciclo' : ' ciclos') : 'nenhum ciclo') + ' da bomba na última hora' : '') : null; }
@@ -2485,6 +2527,7 @@
       return R_(n === 'normal' ? 'ok' : 'falta', x.t.prof + mn);
     },
     deriva: function (x) {
+      if (janela()) return R_('ler', 'velocidade sobre o fundo: leia no plotter');   // (P4A) a velocidade é da janela de emergência
       if (!x || typeof x.q.sog_nos !== 'number' || !x.t.sog) return R_('sem', SL);
       return x.q.sog_nos < 0.5 ? R_('ok', 'parado: velocidade sobre o fundo ' + x.t.sog) : R_('falta', 'navegando a ' + x.t.sog);
     }
@@ -2560,8 +2603,8 @@
         // F20/F15: o registro que conclui um serviço fecha a pendência que cita (com Desfazer) e propõe o Executado ou a tarefa; o texto de emergência, de pressão de óleo ou de cabeça de segurança (EPIRB, Seafire, rádio…) não mexe na agenda pelo chat
         reg = grava ? addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' }, alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }) : null;
         ef = efeitosNoChat(reg);
-        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
-          fala: falaRegistro(grava, alerta, pressao) + ef.fala };
+        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
+          fala: falaRegistro(grava, alerta, pressao) + ef.fala }, alerta || pressao);
       }
       var al = junto && emergencia(pad(nota)), pr = junto && oleo(pad(nota)) === 1;
       var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
@@ -2570,7 +2613,7 @@
         // «registre posição e hora, tem fogo no motor» (PROMPT §2.2, diário com alerta): a linha e a resposta NÃO usam o resumoAgora() (nada de coordenada, SOG, proa nem
         // leitura do quadro): a hora da linha, «posição: ler no plotter» no lugar da posição pedida, e os passos
         if (grava) addDiario({ sys: 'Diário', t: nota + ' · posição: ler no plotter', who: quem(), src: 'chat · voz/texto' });
-        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr) };
+        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr) }, true);
       }
       var t = resumoAgora();
       if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });
@@ -2773,6 +2816,7 @@
     // Destinos: a rota em andamento (destino, distância e ETA do quadro) e os destinos da base com tempo e diesel (a 18 nós, 68 L/h do guia dos motores §10); o juízo
     // compara a ida e volta com o diesel a bordo menos a reserva e a margem de manobra
     destinos: function (p) {
+      if (janela()) return respostaJanela(p);   // (P4A: a distância, a chegada prevista e o destino em andamento são da janela de emergência: leia no plotter)
       var i = vivo(), q = i && i.q, t = i && i.txt, c = CON.cruzeiro || {}, lista = D.destinos || [], R = EM_SOS ? null : D.rota, nos = c.nos, lph = c.lph, margem = typeof CON.margemManobra_l === 'number' ? CON.margemManobra_l : 0;
       var emRota = !!(t && t.destino && t.eta), util = typeof DI.litros === 'number' ? DI.litros * (1 - (typeof D.reserva === 'number' ? D.reserva : 0.1)) - margem : null;
       // o cruzeiro (nós e L/h do guia dos motores §10) que falta no dado: com a simulação o trecho some; no modo real é SEM DADOS (nunca «undefined nós»)
@@ -2845,7 +2889,7 @@
       var pend = pendencias(ctx), mesmas = {}, app;   // F20: só as ABERTAS (as resolvidas por linha nova saem); as do aparelho com `pend` entram uma vez só
       pend.forEach(function (x) { if (x.origem === 'aparelho') mesmas[x.iso] = 1; });
       app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t) && !tem(mesmas, e.iso); }).slice(0, 3);
-      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + (x.origem === 'aparelho' ? String(x.t).slice(0, 110) + ' (app)' : x.t); }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
+      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + (x.origem === 'aparelho' ? semNavJanela(String(x.t)).slice(0, 110) + ' (app)' : semNavJanela(x.t)); }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + semNavJanela(String(x.t)).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
     // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante — ou o que a pergunta nomeia («qual a
     // tendência do óleo?» abre com a pressão de óleo; se o nomeado está estável e outro pede atenção, a 1ª linha diz quantos). A lista de baixo segue a ordem de gravidade. Só lê: nada grava, nada abre.
@@ -2908,7 +2952,7 @@
     telemetria: function (p) {
       var T = S.tanques || {}, G = S.gerador || {}, K = S.seakeeper || {}, i = vivo(), t = i && i.txt, po = poraoTxt(), AN = S.ancora || {};
       var cab = i ? cap1(i.q.estado || 'Navegando') + (t.local ? ' ' + t.local : '') + (t.sog ? ', a ' + t.sog : '') + (t.rpm ? ', com os motores a ' + t.rpm : '') + ' — ' + i.hora + '.' : 'Leitura de ' + SNAP.quando + ': ' + min1(SNAP.local) + '.';
-      return { text: cab
+      return telemJanela({ text: cab
         + '\n• Posição ' + SNAP.pos + ' · SOG ' + nb(S.sog) + ' nós · proa ' + grau3(S.proa) + ' · profundidade ' + nb(S.profundidade) + ' m'
         + '\n• Vento ' + nb(S.vento) + ' nós de ' + grau3(S.ventoDe) + ' · pressão ' + nb(S.pressao, 0) + ' hPa · ar ' + nb(S.ar) + ' °C · mar ' + nb(S.agua) + ' °C'
         + '\n• Baterias 24 V ' + nb(S.bat24, 2) + ' V · 12 V ' + nb(S.bat12, 2) + ' V'
@@ -2918,11 +2962,12 @@
         + '\n• Gerador ' + (G.estado || SD) + ' · ' + (G.horas != null ? horas(G.horas) + ' h' : 'horímetro ' + SD) + ' · Seakeeper ' + (K.estado || SD)
         + '\n• Porão ' + (po || 'SEM LEITURA') + ' · âncora ' + (AN.estado ? AN.estado + (typeof AN.cabo_m === 'number' ? ', ' + mil(AN.cabo_m) + ' m de corrente' : '') : 'SEM LEITURA')
         + (i ? alarmesCl(i, '\n• Alarmes: ') + (t.tend ? '\n• Tendência — ' + t.tend : '') : ''),
-        src: FT.tele, actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) };
+        src: FT.tele, actions: act(p, [['Telemetria', 'console'], ['Manutenção', 'manut']]) }, i, p);
     },
     // Posição (PROMPT §2.8): a 1ª linha, a falada, é a posição RELATIVA («a 0,5 mn da Barra Sul, chegando»: só com a simulação, só de pontos com fonte) com o rumo e a velocidade; as coordenadas ficam
     // na 2ª linha, só no texto da tela. Sem quadro vivo (modo real): o estado e o lugar do snapshot, sem posição relativa (a rota não existe), e as coordenadas na 2ª linha.
     posicao: function (p) {
+      if (janela()) return respostaJanela(p);   // (P4A) a posição, o rumo e a velocidade são da janela de emergência: leia no plotter
       var i = vivo(), q = i && i.q, t = i && i.txt, parado, onde, l1, coord;
       if (i) {
         parado = typeof q.sog_nos === 'number' && q.sog_nos < 0.5; onde = t.relativa || t.local;
@@ -2987,15 +3032,15 @@
     ancora: function (p) {
       var AN = S.ancora || {}, i = vivo(), prof = S.profundidade, rec = AN.estado === 'recolhida', e = equip('ancora');
       var l1 = AN.estado ? 'Âncora ' + AN.estado + (rec ? ', sem corrente lançada no contador do guincho' : typeof AN.cabo_m === 'number' ? ', com ' + mil(AN.cabo_m) + ' m de corrente no contador do guincho' : '') + ' — ' + quando() + '.' : 'Sem sensor de âncora na rede NMEA — SEM LEITURA do ferro.';
-      return { text: l1 + '\n' + (S.estado || SD) + ' · ' + ((i && i.txt.relativa) || S.local || SD) + ' · profundidade ' + nb(prof) + ' m (' + quando() + ').\nAlarme de âncora: ative no plotter e defina o raio conforme a corrente lançada; o contador de corrente mostra os metros lançados no controle do guincho (' + guia('g_eletronicos') + ' §3).' + (rec && typeof prof === 'number' ? '\nPara fundear aqui: lance de 3 a 5 vezes a profundidade (' + guia('g_ancora') + ' §1), de ' + Math.round(3 * prof) + ' a ' + Math.round(5 * prof) + ' m de corrente.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + (e ? guia('g_ancora') + ' · ' : '') + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) };
+      return { text: l1 + '\n' + (S.estado || SD) + ' · ' + (janela() ? 'posição: leia no plotter' : (i && i.txt.relativa) || S.local || SD) + ' · profundidade ' + nb(prof) + ' m (' + quando() + ').\nAlarme de âncora: ative no plotter e defina o raio conforme a corrente lançada; o contador de corrente mostra os metros lançados no controle do guincho (' + guia('g_eletronicos') + ' §3).' + (rec && typeof prof === 'number' ? '\nPara fundear aqui: lance de 3 a 5 vezes a profundidade (' + guia('g_ancora') + ' §1), de ' + Math.round(3 * prof) + ' a ' + Math.round(5 * prof) + ' m de corrente.' : ''), src: 'Fonte: ' + guia('g_eletronicos') + ' §3 · ' + (e ? guia('g_ancora') + ' · ' : '') + SNAP.fonte, actions: act(p, [['FAQ eletrônicos', 'f3']]) };
     },
     // Revisão do C5: todos os guias do D.guias (16, um por equipamento, mais o checklist e o protocolo), sem o prefixo "Guia de bordo — ";
     // sai a lista fixa de 6 com "modelos não informados" e "Seafire e EPIRB: SEM DADOS", que a ficha mandava ao lado do ## Equipamentos.
     manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + demo() + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     diarioLer: function (p, ctx) {
       var mine = lerDiario(ctx), fonte = diarioFonte();
-      var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
-      var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + e.t.slice(0, 110); });
+      var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + semNavJanela(String(e.t || '')).slice(0, 110) + ' (app)'; });
+      var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + semNavJanela(e.t).slice(0, 110); });
       // a 1ª linha é a resposta numa frase falável (quantos registros e quantas pendências); os últimos registros vêm embaixo
       var tot = fonte.length + mine.length, pe = pendencias(ctx).length;
       return { text: 'Diário de bordo: ' + tot + (tot === 1 ? ' registro' : ' registros') + ' e ' + pe + (pe === 1 ? ' pendência aberta' : ' pendências abertas') + '.\nÚltimos registros:\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
@@ -3023,6 +3068,7 @@
     },
     // Chegada prevista, distância ao destino e ao próximo ponto, e o percorrido desde as 07:00 (rota em andamento do quadro). Sem rota no quadro (modo real, coletor sem destino): SEM DADOS.
     eta: function (p, ctx, qq) {
+      if (janela()) return respostaJanela(p);   // (P4A) a chegada prevista, a distância e o percorrido são da janela de emergência: leia no plotter
       var i = vivo(), q = i && i.q, R = rotaDoPlano(), wp = i && /waypoint|proximo ponto/.test(norm(qq)), pc = i && /percorrid|navegad|odometro|navegamos|percorremos|resumo d|balanco d|relatorio d|como foi|como esta indo|como esta sendo|como foram/.test(norm(qq)), dest, ponto, perc, fonte, an, cit, outro = null;
       if (!i || typeof q.destino !== 'string') {
         return { text: sim() && i ? 'O quadro de ' + i.hora + ' não trouxe destino nem chegada prevista — confira a rota no plotter.' : 'Destino, chegada prevista e próximo ponto: ' + SD + ' (nenhuma rota ativa na ' + quando() + ') — confira a rota no plotter.',
@@ -3095,6 +3141,7 @@
       else if (k === 'satelites') l = typeof q.gps_satelites === 'number' ? 'GPS com ' + q.gps_satelites + (q.gps_satelites === 1 ? ' satélite' : ' satélites') + fim : 'O GPS não trouxe a contagem de satélites às ' + i.hora + '.';
       else if (k === 'inclinacao') l = t.inclinacao ? 'Inclinação a bordo agora: ' + t.inclinacao + fim : 'Os sensores de inclinação não trouxeram leitura às ' + i.hora + '.';
       else if (k === 'marcha') l = q.marcha ? 'Marcha: ' + q.marcha + fim : 'O quadro não trouxe a marcha às ' + i.hora + '.';
+      else if (k === 'piloto' && janela()) l = plotterTxt() + '\nO rumo do piloto automático também: leia no plotter e no controle do piloto' + fim;   // (P4A) o rumo é da janela de emergência
       else if (k === 'piloto') {   // a pergunta do ESTADO («está ligado?», «engajado?») não recebe o rumo como se fosse a resposta: o quadro só traz o rumo do piloto, não se ele está engajado
         if (!t.piloto) l = 'O quadro não trouxe o rumo do piloto às ' + i.hora + '.';
         else if (ESTADO_PILOTO.test(pad(qq || ''))) l = 'O quadro traz o rumo do piloto automático, ' + t.piloto + ', mas não diz se está engajado ou em espera' + fim + '\nPara saber, veja no controle do piloto.';
@@ -3124,6 +3171,7 @@
     // Sem quadro vivo (modo real), é a telemetria do snapshot.
     navegacao: function (p, ctx, q) {
       var i = vivo(), t = i && i.txt, qd = i && i.q, ls = [], parado, onde, l1;
+      if (janela()) return respostaJanela(p);   // (P4A) «situação agora» na janela de emergência: leia no plotter
       if (!i) return ANSWERS.telemetria(p, ctx, q);
       parado = typeof qd.sog_nos === 'number' && qd.sog_nos < 0.5; onde = t.relativa || t.local;
       l1 = cap1(qd.estado || 'Navegando') + (t.sog ? ' a ' + t.sog : '') + (!parado && t.rumo ? ', rumo ' + t.rumo : '') + (onde ? ', ' + onde : '') + (t.eta ? '; chegada prevista às ' + t.eta : '') + ' — ' + i.hora + '.';
@@ -3137,6 +3185,7 @@
     },
     // Pessoas a bordo: o número do registro de saída do cadastro (nunca nas chaves de emergência, nem no quadro) e a lotação do barco
     pessoas: function (p) {
+      if (janela()) return respostaJanela(p);   // (P4A) o número de pessoas é da janela de emergência: conte agora
       var n = EM_SOS ? null : E.pessoasBordo, lot = EM_SOS ? null : E.lotacao, i = vivo();
       return { text: typeof n === 'number' ? n + (n === 1 ? ' pessoa a bordo' : ' pessoas a bordo') + ', pelo registro de saída' + (typeof lot === 'number' ? ' (lotação ' + lot + ')' : '') + (i ? ' — ' + i.hora : '') + '.\nSe alguém embarcou ou desembarcou depois da saída, conte de novo.' : 'Pessoas a bordo: ' + SD + ' (o registro de saída não traz o número).',
         src: 'Fonte: ' + (E.fonte || 'cadastro da embarcação') + ' · ' + FT.diario.replace('Fonte: ', ''), actions: act(p, [['Abrir diário', 'diario']]) };
@@ -3231,6 +3280,11 @@
       r.src = (r.src || '') + ' · alarmes pedidos neste aparelho';
       return r;
     };
+  })();
+  // (P4A) o fallback dentro da janela de emergência abre com a instrução de segurança (a 1ª linha é a falada): a pergunta solta («e agora?») não recebe o «isso não está nas fontes»
+  (function () {
+    var fallback0 = ANSWERS.fallback;
+    ANSWERS.fallback = function (p, ctx, q) { var r = fallback0(p, ctx, q); if (janela()) r.text = EM_PERIGO + '\n' + r.text; return r; };
   })();
   var CHAVES = Object.keys(ANSWERS);
   // AIS: a pergunta de status («quantos alvos?», «tem AIS?», «está ligado?») fica na resposta pronta; qualquer outra (modo silencioso, identificação, alvos no plotter) vai ao trecho do g_ais quando ele serve
@@ -4033,7 +4087,7 @@
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
     // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
-    if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
+    if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && a.janela !== true && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
     var rota0 = key;
     var qEsp = fresco != null ? fresco : q;   // (a pergunta continuada com assunto próprio — «… — e o gerador?» — é «específica» pela fala nova, não pelo «como» da pergunta de antes)
@@ -4050,7 +4104,12 @@
     return a;
   }
   // a resposta leva o instante dela (fora do JSON): a ficha(p, q, a) e o resumoAgora(a) da MESMA pergunta o reaproveitam
-  function marca(a) { if (a && typeof a === 'object' && !emerg(a)) { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} } return a; }
+  // (P4A) a resposta dada dentro da janela de emergência leva `janela: true` e NÃO leva o instante dela (o quadro tem lat e lon), como a de chave de emergência
+  function marca(a) {
+    if (a && typeof a === 'object' && janela()) a.janela = true;
+    if (a && typeof a === 'object' && !emerg(a) && a.emerg !== true && a.janela !== true) { try { Object.defineProperty(a, '_inst', { value: CONG.inst, enumerable: false, configurable: true }); } catch (e) {} }
+    return a;
+  }
   // ——— Contexto da conversa (F31; o F18 da P3F o estende) ———
   // O mínimo para a fala que só diz o equipamento: a última pergunta e a resposta que o app deu, por 10 min. A resposta local nunca termina em pergunta; a da IA na nuvem pode («Qual equipamento?»),
   // e o cérebro não a vê: a tela a conta com B.conversa(pergunta, texto). «O gerador» depois de «Qual equipamento?» continua a pergunta anterior («como ligar? — o gerador»); sozinha, é a resposta
@@ -4148,13 +4207,17 @@
     if (EM_SOS || !CONV.q || Date.now() - CONV.t > CONV_VALE || (ctx && (ctx.id || ctx.commit === false))) return null;
     return { p: semCoord(CONV.q), r: semCoord(CONV.a) };
   }
-  function answer(q, ctx) {
+  // (P4A) a resposta dentro da janela de emergência: `ctx.emergencia === true` liga a janela durante toda a chamada (comJanela), com ela solta no finally
+  function answer(q, ctx) { return comJanela(ctx, function () { return answerNaJanela(q, ctx); }); }
+  function answerNaJanela(q, ctx) {
     return congela(function () {
       var q1 = corrigeVoz(q), espera = esperaRegistro(q1, ctx), junto = espera ? null : seguimento(q1, ctx), fresco = junto && !SEG.raiz && !CONV.pergunta && route(q1) !== route(CONV.q) ? q1 : null, ant = anteriorDe(ctx), a, pe;
       if (!espera && junto && SEG.raiz) espera = route(CONV.q);   // F18: «e boreste?» não tem assunto: é a rota da pergunta anterior, com a fala nova
       a = marca(responde(junto || q1, ctx, espera, fresco));   // (fresco: a fala nova de uma pergunta continuada (F18) com OUTRO assunto — o «como» ou o «alarme» da pergunta de antes não a torna «específica»; com o mesmo assunto, ou depois de «Qual equipamento?» (F31: «o gerador» continua «como ligar?»), a pergunta junta vale, como antes)
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
+      if (a && typeof a === 'object' && ABRE_JANELA[a.key] === 1) a.emerg = true;   // (P4A) a resposta que ABRE a janela de 15 min (sos, oleo, canal16, epirb, seafire; o diário com alerta e o cartão EM do FAQ já trazem): a tela grava emergenciaAte
+      if (a && a.janela === true && String(a.text).split('\n')[0] === plotterTxt()) delete a.hora;   // (P4A) a resposta que abre com a instrução do plotter não leva a hora do quadro (a fala não a repete); a que segue dando um dado (autonomia, tanques…) leva a hora como sempre
       // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
       // (pe: a PERGUNTA é de emergência — o «registre no diário: tem fogo no motor» responde `diario` com os passos do SOS, chave que não é de emergência, mas a conversa também acaba nele: nem a pergunta nem a resposta vão à IA)
       pe = !EM_SOS && perguntaEmerg(q1);
@@ -4166,6 +4229,7 @@
         if (DESFAZ && DESFAZ.n === undefined) DESFAZ.n = CONV.n;
       }
       if (ant && !emerg(a) && !pe) { a.anterior = ant; a.junto = junto || ''; }   // F18: a pergunta e a resposta de antes vão com a resposta (a IA recebe; sem coordenadas); `junto` é a pergunta que a rota viu
+      if (a && a.janela === true) { delete a.anterior; delete a.junto; }   // (P4A) nada da conversa vai à IA dentro da janela (pedeIA false)
       acrescentaRelato(a, a.key, String(q1 == null ? '' : q1).trim(), ctx);   // F16: o relato vira proposta (a hora do instante já está na resposta)
       return a;
     });
@@ -4180,8 +4244,10 @@
   // Trecho de segurança no topo (a.seguranca, do respostaBase) nunca vai à IA: fica o trecho local, com a fonte (PROMPT §2.3).
   // Revisão do C5: vale qualquer que seja a chave. A tela manda junto o buscaBase(q, 3), e uma saudação com assunto ("como você me
   // ajuda com o teste da baliza?") levava o g_epirb §2 no topo; o respostaBase só marca a chave base.
-  function pedeIA(a, q) {
+  // (P4A) `opts.emergencia === true` (a janela de 15 min da conversa em emergência: a tela passa a marca) ou a resposta dada dentro dela (`a.janela`) ou que a ABRE (`a.emerg`): nunca vai à IA, qualquer que seja a pergunta
+  function pedeIA(a, q, opts) {
     var k = a && a.key;
+    if ((opts && opts.emergencia === true) || (a && typeof a === 'object' && (a.janela === true || a.emerg === true))) return false;
     if (a && a.seguranca) return false;
     if (cabecaEmerg(pad(String(q || '')))) return false;   // P3E (revisão 4): a pergunta de cabeça de emergência é local, qualquer que seja a rota que a tenha tomado (trava 10: nunca na IA)
     if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;
@@ -4195,7 +4261,22 @@
   // do EPIRB, e o «registre no diário: tem fogo no motor», que responde com os passos do SOS) sai, com a(s) resposta(s) do capitão que o seguem; a resposta que traz a instrução de segurança (abre com «Emergência —»,
   // ou leva a ordem do MAYDAY ou os passos do óleo) sai mesmo que a pergunta dela tenha ficado fora da janela. Isto antes do corte nas 6 últimas.
   function respostaEmerg(t) { var s1 = SOS_PASSOS.slice(0, 60), s2 = OLEO_PASSOS.slice(0, 40); return /^\s*Emergência\s—/.test(t) || (!!s1 && t.indexOf(s1) !== -1) || (!!s2 && t.indexOf(s2) !== -1); }   // (o trecho vazio acharia-se em todo texto)
-  function historicoIA(msgs) {
+  // (P4A) Dentro da janela de 15 min (`opts.emergencia === true`) nada vai à IA: o histórico é vazio. Fora dela, a resposta dada DENTRO da janela (leva a instrução do plotter no lugar da posição) sai com a
+  // pergunta que a provocou, como a de emergência: «qual a nossa posição?» e o «LEIA NO PLOTTER» que respondeu a ela não voltam à IA depois que a janela acaba (antes do corte nas 6 últimas).
+  function historicoIA(msgs, opts) {
+    if (opts && opts.emergencia === true) return [];
+    return historicoBase(semJanela(msgs));
+  }
+  function semJanela(msgs) {
+    var pl = plotterTxt(), fora = {}, ehBot = function (m) { return !!m && (m.papel === 'capitao' || m.role === 'bot'); };
+    if (!Array.isArray(msgs) || !pl) return msgs;
+    msgs.forEach(function (m, k) {
+      var t = m ? (m.texto != null ? m.texto : m.text) : '';
+      if (ehBot(m) && String(t == null ? '' : t).indexOf(pl) !== -1) { fora[k] = 1; if (k > 0 && !ehBot(msgs[k - 1])) fora[k - 1] = 1; }
+    });
+    return msgs.filter(function (m, k) { return !fora[k]; });
+  }
+  function historicoBase(msgs) {
     var fora = false;
     return (Array.isArray(msgs) ? msgs : []).map(function (m) {
       var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto = String(t == null ? '' : t);
@@ -4243,7 +4324,9 @@
   // seguro?") ou trecho do guia ("quando foi a última troca de óleo?"), a completa: a resumida tirava o dado pedido (1.0.7).
   var ASSUNTO = / (?:sobre|de|do|da|dos|das|no|na|com|quando|qual|quais|quanto|onde) (?!(?:voce|vc|app|aplicativo|capitao|ia|mim|tudo|bordo) )[a-z]/;
   function fichaResumida(q, a) { var s = pad(q); return !!a && a.key === 'saudacao' && SOBRE.test(s) && !ASSUNTO.test(s.replace(SOBRE, ' ')); }
-  function ficha(p, q, a) { try { return congela(function () { return ficha1(p, q, a); }, a && a._inst); } finally { EXEC_SEM_SIM = false; } }
+  // (P4A) `ctx.emergencia === true`, ou a resposta dada dentro da janela de 15 min (`a.janela`) ou que a ABRE (`a.emerg`): a ficha sai como a de emergência (sem os blocos do quadro) e os textos livres
+  // (diário) trocam velocidade, rumo e pessoas pela instrução do plotter. Na janela a IA nem é chamada (pedeIA false); a coerência é da API.
+  function ficha(p, q, a, ctx) { return comJanela({ emergencia: !!(ctx && ctx.emergencia === true) || !!(a && typeof a === 'object' && (a.janela === true || a.emergencia === true || a.emerg === true)) }, function () { try { return congela(function () { return ficha1(p, q, a); }, a && a._inst); } finally { EXEC_SEM_SIM = false; } }); }
   // O teto da ficha (letras). Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000. Medida nos 150 instantes do laço e em 4 instantes de cada uma das 576 voltas do dia:
   // 11.382 a 11.523 letras sem a previsão e a maré (a página sem o capitao-clima.js), 11.658 a 11.802 COM elas (o app real sempre as tem: o capitao-clima.js grava a leitura do dia e a série da maré) e
   // até 12.213 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js: `.slice(0, 12000)`) e os dois Workers cortam a ficha em 12.000
@@ -4281,7 +4364,7 @@
   }
   function ficha1(p, q, a) {
     p = p || 'app';
-    var out = [], emergencia = emerg(a), resumida = fichaResumida(q, a), semSim = !EM_SOS && D.simulacao === false;
+    var out = [], emergencia = emerg(a) || janela(), resumida = fichaResumida(q, a), semSim = !EM_SOS && D.simulacao === false;   // (P4A: dentro da janela de emergência a ficha também sai sem os blocos do quadro)
     EXEC_SEM_SIM = semSim;   // a execução com `sim: true` também fica fora (as respostas deste bloco leem a agenda); a ficha() desliga no fim
     // (no SOS nada lê a flag, CONTRATO §1.3) resposta de emergência: a ficha sai sem os blocos do quadro (Telemetria, Navegação agora, Horímetros, Autonomia e consumo)
     var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return; try { var a = f(); if (a && a.text) out.push('## ' + titulo + '\n' + semCoord(a.text) + (a.src ? '\n(' + semCoord(a.src) + ')' : '')); } catch (e) {} };
@@ -4324,7 +4407,7 @@
   }
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
-  function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }
+  function answerAttachment(kind, file, ctx) { return comJanela(ctx, function () { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }); }   // (P4A: ctx.emergencia liga a janela: a linha de situação de bordo do anexo é a instrução do plotter)
   // O texto que vai JUNTO com a foto ou o vídeo (F36; ctx.texto): a linha do diário é UMA só, «<texto> · foto anexada pelo chat: … A CONFIRMAR». O arquivo não é lido (só nome e tamanho) e não sai do aparelho.
   // Entram na linha: a legenda (a frase que descreve a foto, sem pergunta), o pedido de registro («registre no diário: …»), o relato, a legenda depois do «o que devo registrar?» e o relato que esperava o
   // «registrar» («sim, registra» leva o relato junto e fecha a proposta; «não» só a descarta). A pergunta, o pedido ao app, o reconhecimento, o cancelar, a emergência e o óleo NÃO entram: a foto
@@ -4859,7 +4942,7 @@
     // P3G (F15, F20, F12): a agenda (tarefas da equipe e propostas do diário), as pendências (resolver, reabrir, desfazer — linhas novas) e os alarmes pedidos (as regras, os ativos agora para a faixa)
     loadTarefas: loadTarefas, addTarefa: addTarefa, tarefasEquipe: tarefasEquipe, achaAgendar: achaAgendar, ticketDoRegistro: ticketDoRegistro, textoTicket: textoTicket, conclusao: conclusao,
     pendenciasLista: pendenciasLista, resolvePendencia: resolvePendencia, reabrePendencia: reabrePendencia, desfazPendencia: desfazPendencia, achaPendencia: achaPendencia,
-    alarmesPedidos: almVigentes, alarmesPedidosAtivos: almAtivos, criaAlarmePedido: almCria, apagaAlarmePedido: almApaga, alarmeTexto: almRegra, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+    alarmesPedidos: almVigentes, alarmesPedidosAtivos: almAtivos, criaAlarmePedido: almCria, apagaAlarmePedido: almApaga, alarmeTexto: almRegra, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, JANELA_EMERG_MS: JANELA_MS, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

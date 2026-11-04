@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -4072,7 +4072,7 @@ MUTANTES_3A = [
     # —— revisão da P3A (3): o óleo não cita o instante; a API da resposta de emergência (_inst, resumoAgora(a), ficha(p, q, a)) ——
     ('o óleo (queda ou alarme) cita o instante na fonte (comTele)', "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4'", "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4' + comTele()", ('forma',)),
     ('o óleo (queda ou alarme) cita o instante na fonte (FT.tele)', "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: 'Fonte: ' + guia('g_motores') + ' §4'", "OLEO_PASSOS + '\\n' + GRAVAR_AGORA, src: FT.tele + ' · ' + guia('g_motores') + ' §4'", ('forma',)),
-    ('a resposta de emergência leva o instante (marca sem a guarda)', "function marca(a) { if (a && typeof a === 'object' && !emerg(a)) {", "function marca(a) { if (a && typeof a === 'object') {", ('emerg', 'marca')),
+    ('a resposta de emergência leva o instante (marca sem a guarda)', "    if (a && typeof a === 'object' && !emerg(a) && a.emerg !== true && a.janela !== true) { try { Object.defineProperty(a, '_inst',", "    if (a && typeof a === 'object' && a.emerg !== true && a.janela !== true) { try { Object.defineProperty(a, '_inst',", ('emerg', 'marca')),   # (P4A: a guarda ganhou `a.emerg` e `a.janela`)
     ('o resumoAgora(a) de emergência devolve o quadro', "    if (emerg(x)) return P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER';\n", "", ('emerg',)),
     ('a ficha(p, q, a) de emergência leva o Telemetria', "    var bloco = function (titulo, f) { if (emergencia && QUADRO[titulo]) return;", "    var bloco = function (titulo, f) { if (false) return;", ('emerg',)),
     ('a ficha(p, q, a) de emergência leva só o Telemetria (a guarda esquece o Horímetros)', "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };", "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Autonomia e consumo': 1 };", ('emerg',)),
@@ -8687,6 +8687,427 @@ MUTANTES_P3G_REV2 = [
  ('p3g rev2 agendar: a resposta sem tarefa nem data diz só «Não entendi a data»', r"(ag.invalida ? 'Essa data não existe' : ag.n ? 'Não entendi a data' : 'Não entendi a tarefa nem a data')", r"(ag.invalida ? 'Essa data não existe' : 'Não entendi a data')", ('p3g_rev2',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3G_REV2
+
+
+# ——————————————— Fase 4, P4A: a conversa em emergência (PROMPT §2.2 «Conversa em emergência», itens (1) e (2); CLAUDE.md 10) ———————————————
+# Depois de uma resposta sos, oleo, canal16, epirb, seafire ou de um diário com alerta, a TELA marca emergenciaAte = agora + 15 min e passa `{ emergencia: true }` ao cérebro: (1) pedeIA é false
+# para tudo; (2) posição, rumo/COG, SOG, distância, ETA e o número de pessoas a bordo viram protocolos.plotter, no texto e na fala. A resposta que ABRE a janela traz `a.emerg === true`
+# (salvatagem e mmsi não); a dada dentro dela traz `a.janela === true` (sem `_inst`, sem hora, sem anterior/junto) e a ficha, o resumo e o histórico dela saem coerentes.
+# O que NÃO é posição, rumo, SOG, ETA nem pessoas fica como estava: o texto das outras respostas é IGUAL dentro e fora da janela (vento e ondas a bordo, a previsão real, a velocidade
+# de cruzeiro do guia na autonomia e no consumo).
+# A regex de «Travas de emergência» do PROMPT Fase 7 (PROMPT.md, «Testes novos e acréscimos»), como está
+R_TRAVA_EMERG = re.compile(r"710123456|último fix|\d+[.,]\d+\s*(?:mn|milhas?)|\d+[.,]?\d*\s*nós|°\s*\d{1,2}[,.]\d+\s*['′]|\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°|\bETA\b|\b\d+\s+(?:pessoas\s+)?a bordo\b")
+# O que a janela troca: as siglas SOG e STW, o rumo/proa/COG/HDG com número, a chegada prevista, a distância em milhas com decimal, o número de pessoas a bordo, a coordenada e o texto de
+# cada medida de navegação do instante (a velocidade, o rumo, a proa, o piloto, a posição relativa, o local, o destino, o próximo ponto, a chegada e o percorrido: i.txt)
+R_JAN_SENS = [re.compile(x) for x in (r"\b(?:SOG|STW)\b", r"\b\d+\s+pessoas?\s+a\s+bordo\b", r"\d+[.,]\d+\s*(?:mn|milhas?)", r"\bETA\b|[Cc]hegada prevista", r"\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°", r"último fix")]
+LIT_NAV = ('sog', 'stw', 'rumo', 'proa', 'piloto', 'relativa', 'local', 'destino', 'wp', 'eta', 'distancia')
+JAN_ABRE = ('sos', 'oleo', 'canal16', 'epirb', 'seafire')
+JAN_PLOTTER = 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA'
+# as chaves que respondem SÓ com a instrução do plotter dentro da janela (a 1ª linha, a falada, é ela)
+JAN_PLOTTER_SO = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas')
+# as chaves que levam a linha de situação de bordo (linhaBordo): contatos, fallback, o fora do barco, a pergunta sobre os dados e a maré e o clima sem conexão
+JAN_LINHA_BORDO = ('contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'clima')
+# as chaves cuja resposta TRAZ posição, rumo, SOG, ETA, distância ou pessoas num instante do laço (o que a janela troca): se uma faltar, a resposta deixou de trazer o dado ou a pergunta de exemplo mudou
+JAN_SENSIVEIS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'clima', 'diario', 'checklistFundeio', 'diarioLer', 'leituraBordo')
+# as chaves que a regex do PROMPT, SEM exceção, tem de deixar passar dentro da janela (as outras trazem vento, ondas, previsão ou a velocidade de cruzeiro do guia, que não são do que a janela troca)
+JAN_ESTRITAS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'diario', 'checklistFundeio', 'diarioLer', 'anomalias', 'leituraBordo')
+# a pergunta de cada chave, além das de PERGUNTA_CHAVE: a do rumo do piloto (leituraBordo) e as variantes de posição, rumo e velocidade
+JAN_EXTRAS = {
+    'leituraBordo': 'qual o rumo do piloto automático?', 'checklistFundeio': 'checklist de fundeio', 'diarioLer': 'ler o diário', 'diario': 'Registre no diário o resumo da navegação de agora e confirme.',
+}
+# A regex do PROMPT, aplicada sem exceção a TODAS as respostas dentro da janela, casa só nestas chaves, e só no que NÃO é posição, rumo, SOG, ETA nem pessoas: o vento e as ondas «a bordo agora» (seguro,
+# clima, ondas), a velocidade de CRUZEIRO do guia dos motores (autonomia, consumo: «a 18 nós»), «0 a bordo» das peças (pecas), o MMSI do cadastro na 2ª linha da rota mmsi (CLAUDE.md 8) e o vento do
+# pedido de alarme («vento acima de 25 nós — agora 11,3 nós»)
+JAN_BENIGNAS = {
+    'seguro': lambda m, ln: 'vento' in ln.lower() or m == '18 nós', 'clima': lambda m, ln: 'vento' in ln.lower(), 'ondas': lambda m, ln: 'vento' in ln.lower(),
+    'autonomia': lambda m, ln: m == '18 nós', 'consumo': lambda m, ln: m == '18 nós', 'pecas': lambda m, ln: 'pessoas' not in m,
+    'mmsi': lambda m, ln: ln.startswith('Cadastro do app: MMSI 710123456'), 'alarmePedido': lambda m, ln: 'ento' in ln,   # (o vento do pedido e a leitura de agora do vento)
+}
+JAN_PERGUNTAS_EXTRA = [
+    'qual a nossa posição?', 'onde estamos?', 'qual o rumo?', 'quantos nós estamos fazendo?', 'qual a velocidade?', 'qual o COG?', 'quantas pessoas a bordo?', 'quantas pessoas estão a bordo?', 'quantos a bordo?',
+    'e agora?', 'e aí?', 'como estamos?', 'situação agora', 'como está a navegação?', 'qual a hora de chegada?', 'quanto falta para chegar?', 'qual o ETA?', 'qual a distância até o destino?', 'para onde vamos?',
+    'quanto falta para o Estaleirinho?', 'qual o próximo waypoint?', 'quantas milhas percorremos hoje?', 'telemetria', 'como está o barco?', 'status do barco', 'quem chamar da equipe?', 'maré agora', 'previsão do tempo',
+    'esses dados são reais?', 'qual o preço do dólar?', 'como se faz um nó lais de guia?', 'quais equipamentos tem a bordo?', 'o que você faz?', 'âncora garrando?', 'qual a profundidade?', 'tem algum alarme ativo?',
+    'qual o rumo do piloto automático?', 'checklist de fundeio', 'checklist de chegada', 'ler o diário', 'pendências abertas', 'registre no diário o resumo da navegação de agora', 'quantos metros de corrente?',
+]
+JS_JAN = """([qs, emerg]) => { const B = window.CapitaoBrain, i = B.instante() || {}, tx = i.txt || {}, lit = {};
+  ['sog', 'stw', 'rumo', 'proa', 'piloto', 'relativa', 'local', 'destino', 'wp', 'eta', 'distancia'].forEach((k) => { lit[k] = tx[k] || null; });
+  const op = { platform: 'app', commit: false }; if (emerg) op.emergencia = true;
+  return { hora: i.hora, lit, plotter: B.DADOS.protocolos.plotter, ms: B.JANELA_EMERG_MS, out: qs.map((q) => { const a = B.answer(q, op), f = B.falaCurta(a);
+    return { q, key: a.key, text: a.text, src: a.src, fala: f, falavel: B.falavel(f), janela: a.janela === true, emerg: a.emerg === true, hora: Object.prototype.hasOwnProperty.call(a, 'hora'), ant: 'anterior' in a || 'junto' in a, inst: a._inst !== undefined,
+      pede: B.pedeIA(a, q), pedeOpt: B.pedeIA(a, q, { emergencia: true }) }; }) }; }"""
+JS_JAN_ABRE = """(qs) => { const B = window.CapitaoBrain; return qs.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }), c = B.answer(q, { platform: 'app', commit: true, emergencia: true });
+  return [q, a.key, a.emerg === true, a.janela === true, c.emerg === true, c.janela === true]; }); }"""
+
+
+def sens_jan(texto, lit):
+    """O que a janela troca e ainda aparece em `texto` (lista vazia = limpo)."""
+    ms = []
+    for r in R_JAN_SENS:
+        m = r.search(texto)
+        if m:
+            ms.append(m.group(0))
+    for k in LIT_NAV:
+        if lit.get(k) and lit[k] in texto:
+            ms.append('%s=%s' % (k, lit[k]))
+    m = confere.R_COORD.search(texto)
+    if m:
+        ms.append('coordenada=' + m.group(0))
+    return ms
+
+
+def espera_base_jan(pg):
+    """O guia (base-conhecimento.json) e o FAQ carregam depois da página; as respostas `base` e `faqEquip` só existem com eles — a janela tem de valer para elas também."""
+    pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); window.CapitaoBrain.carregaFaq().then(() => setTimeout(r, 500)); })")
+
+
+# a sessão do convidado: o cérebro lê o nome em CapitaoAuth.nome() (a tela de verdade o carrega do capitao-auth.js)
+AUTH_DEMO_JAN = ";window.CapitaoAuth = { nome: function () { return 'Convidado'; }, frase: function () { return ''; } };"
+
+
+def janela_lote(pg, base, rot, ped, real):
+    """O lote de perguntas dentro da janela contra o de fora: nada de posição, rumo, SOG, ETA, distância, pessoas nem coordenada; a IA nunca é chamada; `janela: true`; as respostas que não trazem o dado
+    ficam iguais; a regex do PROMPT não casa nas chaves estritas. `real`: sem quadro vivo (D.simulacao false), os literais do instante não existem."""
+    espera_base_jan(pg)
+    sem = pg.evaluate(JS_JAN, [base, False]); com = pg.evaluate(JS_JAN, [base, True])
+    lit = {} if real else com['lit']
+    sujas = []; pedem = []; sem_flag = []; difere = []; estritas = []; sensiveis = set()
+    for s, c in zip(sem['out'], com['out']):
+        alvo = c['text'] + '\n' + c['fala'] + '\n' + c['src']
+        if sens_jan(alvo, lit):
+            sujas.append((c['q'], c['key'], sens_jan(alvo, lit)[:3]))
+        if c['pede'] or c['pedeOpt']:
+            pedem.append((c['q'], c['key']))
+        if not c['janela'] or c['inst'] or c['ant']:
+            sem_flag.append((c['q'], c['key']))
+        if sens_jan(s['text'] + '\n' + s['fala'], lit):
+            sensiveis.add(c['key'])
+        elif c['text'] != s['text'] and not (real and c['key'] in ('ancora', 'checklistFundeio')):   # (sem quadro vivo a âncora troca o lugar do snapshot e o checklist de fundeio troca o «SEM LEITURA» da deriva, que não são literais do instante)
+            difere.append((c['q'], c['key']))
+        if c['key'] in JAN_ESTRITAS and R_TRAVA_EMERG.search(alvo):
+            estritas.append((c['q'], c['key'], R_TRAVA_EMERG.search(alvo).group(0)))
+    ped('%s: nenhuma das %d perguntas dentro da janela traz posição, rumo, SOG, ETA, distância, pessoas nem coordenada' % (rot, len(base)), not sujas, sujas[:5])
+    ped('%s: (1) pedeIA é false para tudo dentro da janela e toda resposta traz `janela: true`, sem instante e sem anterior' % rot, not pedem and not sem_flag, (pedem[:3], sem_flag[:3]))
+    ped('%s: o texto das respostas que não trazem o dado é IGUAL dentro e fora da janela' % rot, not difere, difere[:5])
+    ped('%s: a regex de «Travas de emergência» do PROMPT não casa nas chaves estritas' % rot, not estritas, estritas[:5])
+    ped('%s: a matriz cobre as chaves que trazem posição, rumo, SOG, ETA ou pessoas' % rot, {'posicao', 'telemetria', 'navegacao', 'eta', 'destinos', 'pessoas', 'contatos', 'fallback'} <= sensiveis, sorted(sensiveis))
+
+
+def grupo_janela(b, muta, ped):
+    base = list(dict.fromkeys([q for q, k in CASOS] + JAN_PERGUNTAS_EXTRA))
+    chaves = dict(PERGUNTA_CHAVE); chaves.update(JAN_EXTRAS)
+    pks = list(dict.fromkeys(list(PERGUNTA_CHAVE.values()) + list(JAN_EXTRAS.values())))
+    ped('janela: a base de perguntas tem 100+ (%d)' % len(base), len(base) >= 100 and len(pks) >= len(PERGUNTA_CHAVE), (len(base), len(pks)))
+    cobertas = set()
+    for x in ('60', '105'):
+        pg = pagina(b, muta=muta, fixo=x)
+        try:
+            espera_base_jan(pg)
+            sem = pg.evaluate(JS_JAN, [base, False]); com = pg.evaluate(JS_JAN, [base, True])
+            sem_k = pg.evaluate(JS_JAN, [pks, False]); com_k = pg.evaluate(JS_JAN, [pks, True])
+            lit = com['lit']; rot = 't=' + x
+            ped('janela (%s): o instante tem a navegação que a janela troca (SOG, rumo, proa, posição relativa, destino, chegada)' % rot, all(lit.get(k) for k in ('sog', 'rumo', 'proa', 'relativa', 'destino', 'eta')), lit)
+            ped('janela (%s): B.JANELA_EMERG_MS = 15 min' % rot, com['ms'] == 15 * 60 * 1000, com['ms'])
+            # ——— (1) e (2) em TODAS as perguntas da base (os CASOS e as extras) ———
+            sujas = []; sem_flag = []; pedem = []; rastro = []
+            for s, c in zip(sem['out'], com['out']):
+                alvo = c['text'] + '\n' + c['fala'] + '\n' + c['src']
+                if sens_jan(alvo, lit):
+                    sujas.append((c['q'], c['key'], sens_jan(alvo, lit)[:3]))
+                if not c['janela']:
+                    sem_flag.append((c['q'], c['key']))
+                if c['pede'] or c['pedeOpt']:
+                    pedem.append((c['q'], c['key']))
+                if c['inst'] or c['ant'] or (c['hora'] and c['text'].split('\n')[0] == com['plotter']) or (not c['hora'] and c['text'].split('\n')[0] != com['plotter'] and s['hora']):
+                    rastro.append((c['q'], c['key'], c['inst'], c['hora'], c['ant']))
+                if s['janela']:
+                    sem_flag.append(('controle: a de fora tem janela', s['q']))
+            ped('janela (%s): nenhuma das %d perguntas dentro da janela traz posição, rumo, SOG, ETA, distância, pessoas nem coordenada (texto, fala e fonte)' % (rot, len(base)), not sujas, sujas[:5])
+            casadas = []
+            for c in com['out']:
+                alvo = c['text'] + '\n' + c['fala'] + '\n' + c['src']
+                for m in R_TRAVA_EMERG.finditer(alvo):
+                    fim = alvo.find('\n', m.end())
+                    ln = alvo[alvo.rfind('\n', 0, m.start()) + 1: fim if fim >= 0 else len(alvo)]
+                    if c['key'] not in JAN_BENIGNAS or not JAN_BENIGNAS[c['key']](m.group(0), ln):
+                        casadas.append((c['q'], c['key'], m.group(0), ln[:80]))
+            ped('janela (%s): a regex de «Travas de emergência» do PROMPT, SEM exceção, nas %d respostas dentro da janela, só casa o que não é posição, rumo, SOG, ETA nem pessoas (vento a bordo, velocidade de cruzeiro do guia, peças, MMSI do cadastro na rota mmsi, o vento do pedido de alarme)' % (rot, len(base)), not casadas, casadas[:5])
+            ped('janela (%s): toda resposta dada dentro da janela traz `janela: true` (e a de fora não)' % rot, not sem_flag, sem_flag[:5])
+            ped('janela (%s): (1) pedeIA é false para tudo dentro da janela — B.pedeIA(a, q, { emergencia: true }) e B.pedeIA(a, q) da resposta dela (%d perguntas)' % (rot, len(base)), not pedem, pedem[:5])
+            ped('janela (%s): a resposta dada dentro da janela não leva o instante (_inst), anterior nem junto; a que abre com a instrução do plotter não leva a hora do quadro, e a que segue dando um dado leva a hora como fora da janela' % rot, not rastro, rastro[:5])
+            fora_pede = [q for q, s in zip(base, sem['out']) if s['pede']]
+            ped('janela (%s): controle — fora da janela a IA é chamada em perguntas de verdade (%d), então é a janela que a desliga' % (rot, len(fora_pede)), len(fora_pede) >= 20, len(fora_pede))
+            # ——— (2) a matriz por CHAVE ———
+            for s, c in zip(sem_k['out'], com_k['out']):
+                k = c['key']
+                ss = sens_jan(s['text'] + '\n' + s['fala'], lit)
+                nome = 'janela (%s) «%s» (%s)' % (rot, c['q'], k)
+                if ss:
+                    cobertas.add(k)
+                    ped(nome + ': traz o dado fora da janela (%s) e dentro dela não' % ss[0], not sens_jan(c['text'] + '\n' + c['fala'] + '\n' + c['src'], lit), sens_jan(c['text'], lit))
+                    ped(nome + ': a resposta dentro da janela é diferente da de fora', c['text'] != s['text'], c['text'][:80])
+                else:
+                    ped(nome + ': não traz o dado — o texto e a fala (com a hora do instante) são IGUAIS dentro e fora da janela', c['text'] == s['text'] and c['fala'] == s['fala'], (c['text'][:120], s['text'][:120], c['fala'][-40:], s['fala'][-40:]))
+                if k in JAN_PLOTTER_SO:
+                    ped(nome + ': a resposta é a instrução do plotter (protocolos.plotter), a 1ª linha e a fala; sem dígito na fala e sem a hora do quadro na fonte',
+                        c['text'].split('\n')[0] == com['plotter'] == JAN_PLOTTER and c['fala'] == JAN_PLOTTER and 'plotter' in c['falavel'] and not re.search(r'\d', c['falavel']) and 'consultado' not in c['src'] and not re.search(r'\d\d:\d\d:\d\d', c['src']),
+                        (c['text'][:100], c['falavel'], c['src']))
+                if k in JAN_ESTRITAS:
+                    m = R_TRAVA_EMERG.search(c['text'] + '\n' + c['fala'] + '\n' + c['src'])
+                    ped(nome + ': a regex de «Travas de emergência» do PROMPT não casa', not m, m and m.group(0))
+                if k in JAN_LINHA_BORDO and ss:
+                    ped(nome + ': a linha de situação de bordo é uma linha só, exatamente protocolos.plotter (sem o prefixo «Situação de bordo agora:» nem resumo)', com['plotter'] in c['text'].split('\n') and 'Situação de bordo' not in c['text'] and 'Última situação' not in c['text'], c['text'][-200:])
+                if k in ('telemetria', 'leituraBordo') and ss:
+                    ped(nome + ': a 1ª linha (a falada) é a instrução do plotter e a hora do instante segue no texto', c['text'].split('\n')[0] == JAN_PLOTTER and c['fala'] == JAN_PLOTTER and com['hora'] in c['text'], (c['text'][:160], com['hora']))
+            # ——— (c) a abertura da janela: a.emerg ———
+            ab = pg.evaluate(JS_JAN_ABRE, [c[0] for c in JAN_ABRE_CASOS])
+            ruins = [(q, k, e, j, ec, jc) for (q, k, e, j, ec, jc), (_, kesp, esp) in zip(ab, JAN_ABRE_CASOS) if k != kesp or e is not esp or j or ec is not esp or jc is not True]
+            ped('janela (%s): (c) a.emerg === true nas respostas que ABREM a janela (sos, oleo, canal16, epirb, seafire e o diário com alerta) e só nelas — salvatagem, mmsi, o diário sem alerta e as respostas de dado não; a de dentro da janela traz `janela: true`' % rot, not ruins, ruins[:4])
+        finally:
+            pg.ctx.close()
+    ped('janela: a matriz cobre as chaves que trazem posição, rumo, SOG, ETA ou pessoas (%s)' % ', '.join(JAN_SENSIVEIS), set(JAN_SENSIVEIS) <= cobertas, sorted(set(JAN_SENSIVEIS) - cobertas))
+    # ——— o modo real (simulacao false): a trava 10 vale nos dois modos; sem quadro vivo o dado vem do snapshot e a janela troca do mesmo jeito ———
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO, fixo='60')
+    try:
+        janela_lote(pg, base, 'janela (modo real)', ped, real=True)
+    finally:
+        pg.ctx.close()
+    # ——— a sessão do convidado (demo): o nome na ficha e nos contatos muda, a janela não ———
+    pg = pagina(b, muta=muta, extra=AUTH_DEMO_JAN, fixo='105')
+    try:
+        janela_lote(pg, base, 'janela (sessão demo, t=105)', ped, real=False)
+    finally:
+        pg.ctx.close()
+    grupo_janela_api(b, muta, ped)
+
+
+# (pergunta, chave esperada, abre a janela?)
+JAN_ABRE_CASOS = [
+    ('MAYDAY, homem ao mar!', 'sos', True), ('tem fogo na praça de máquinas', 'sos', True), ('está entrando água no casco', 'sos', True), ('pessoa caiu da lancha', 'sos', True),
+    ('o que fazer em caso de alagamento?', 'sos', True), ('tem água no porão', 'sos', True), ('pressão de óleo baixa no motor BB', 'oleo', True), ('alarme de óleo acendeu', 'oleo', True),
+    ('roteiro do canal 16', 'canal16', True), ('onde fica o EPIRB?', 'epirb', True), ('onde fica o seafire', 'seafire', True), ('o sistema fixo disparou', 'seafire', True),
+    ('registre no diário: homem ao mar', 'diario', True), ('Registre no diário: tem fogo no motor', 'diario', True), ('registre posição e hora, tem fogo no motor', 'diario', True),
+    ('registre no diário que a pressão de óleo caiu no BB', 'diario', True), ('registre posição e hora do MOB', 'diario', True),
+    ('onde ficam os coletes?', 'salvatagem', False), ('onde fica o extintor?', 'salvatagem', False), ('qual o MMSI do barco?', 'mmsi', False),
+    ('Registre no diário: saída com 4 pessoas', 'diario', False), ('registre no diário: o EPIRB foi testado', 'diario', False),
+    ('posição agora', 'posicao', False), ('Telemetria agora', 'telemetria', False), ('qual a pressão do óleo?', 'oleoLeitura', False), ('esses dados são reais?', 'sobreDados', False),
+    ('próximas manutenções', 'manutencao', False), ('e agora?', 'fallback', False), ('oi, bom dia', 'saudacao', False),
+]
+
+JS_JAN_API = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, plotter = D.protocolos.plotter, op = { platform: 'app', commit: false }, opj = { platform: 'app', commit: false, emergencia: true };
+  const titulos = (f) => (f.match(/^## .*$/mg) || []).map((t) => t.slice(3));
+  const out = { plotter };
+  // resumoAgora
+  const aj = B.answer('posição agora', opj), an = B.answer('posição agora', op), tel = B.answer('telemetria', op), tj = B.answer('telemetria', opj), ab = B.answer('registre no diário: tem fogo no motor', op);
+  out.resumo = { normal: B.resumoAgora(), sem: B.resumoAgora({ semPosicao: true }), emerg: B.resumoAgora({ emergencia: true }), emergSem: B.resumoAgora({ emergencia: true, semPosicao: true }), ctx: B.resumoAgora(null, { emergencia: true }),
+    ctx2: B.resumoAgora({ semPosicao: true }, { emergencia: true }), daJanela: B.resumoAgora(aj), daJanelaTel: B.resumoAgora(tj), deFora: B.resumoAgora(an), deForaTel: B.resumoAgora(tel), deAbre: B.resumoAgora(ab), textoSim: B.resumoAgora({ emergencia: 'true' }), depois: B.resumoAgora() };
+  // ficha
+  const f = (p, q, a, c) => { const t = B.ficha(p, q, a, c); return { t, titulos: titulos(t) }; };
+  out.ficha = { normal: f('app', 'telemetria', tel), daJanela: f('app', 'telemetria', tj), ctx: f('app', 'telemetria', null, { emergencia: true }), aberta: f('app', 'x', B.answer('registre no diário: tem fogo no motor', op)), semAbrir: f('app', 'x', null), emerg: f('app', 'x', B.answer('MAYDAY, homem ao mar!', op)),
+    janelaDiario: f('app', 'x', B.answer('ler o diário', opj)) };
+  // historicoIA
+  const u = (t) => ({ papel: 'usuario', texto: t }), c = (t) => ({ papel: 'capitao', texto: t }), pos = B.answer('qual a nossa posição?', opj), nos = B.answer('como se faz um nó lais de guia?', op);
+  const msgs = [u('quanto diesel temos?'), c('Autonomia de teste'), u('qual a nossa posição?'), c(pos.text), u('quantas pessoas a bordo?'), c(B.answer('quantas pessoas a bordo?', opj).text), u('como se faz um nó lais de guia?'), c(nos.text)];
+  out.hist = { janela: B.historicoIA(msgs, { emergencia: true }), fora: B.historicoIA(msgs), foraSemOpts: B.historicoIA(msgs, {}), msgs: msgs.map((m) => m.texto.slice(0, 40)), vazio: B.historicoIA([]), naoLista: B.historicoIA(null) };
+  // pedeIA
+  const nos2 = B.answer('como se faz um nó lais de guia?', op), ex = B.answer('MAYDAY, homem ao mar!', op);
+  out.pede = { fora: B.pedeIA(nos2, 'como se faz um nó lais de guia?'), opts: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: true }), optsFalso: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: false }), optsTexto: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: 'true' }),
+    semA: B.pedeIA(null, 'como se faz um nó lais de guia?', { emergencia: true }), abre: B.pedeIA({ key: 'fallback', emerg: true }, 'x'), dentro: B.pedeIA({ key: 'fallback', janela: true }, 'x'), ex: B.pedeIA(ex, 'MAYDAY, homem ao mar!') };
+  // o registro do aparelho lido dentro da janela: a linha que o usuário gravou antes, com pessoas e velocidade, volta sem eles (no diário e nas pendências)
+  B.addDiario({ t: 'Anomalia vista na saída com 5 pessoas a bordo, SOG 7,2 nós, proa 123° e rumo 110°', sys: 'Diário', pend: true });
+  const dl = B.answer('ler o diário', op), dlj = B.answer('ler o diário', opj), pa = B.answer('pendências abertas', op), paj = B.answer('pendências abertas', opj);
+  out.reg = { dl: dl.text, dlj: dlj.text, pa: pa.text, paj: paj.text, pend: B.pendenciasLista().map((x) => x.t).filter((t) => /6 pessoas/.test(t)).length };
+  // anexos
+  const file = { name: 'a.jpg', size: 2048 }, xn = B.answerAttachment('foto', file, op), xj = B.answerAttachment('foto', file, opj), vj = B.answerAttachment('video', file, opj);
+  out.anexo = { normal: xn.text, janela: xj.text, janelaFlag: xj.janela === true, janelaInst: xj._inst !== undefined, normalInst: xn._inst !== undefined, video: vj.text, videoFlag: vj.janela === true };
+  // a janela não vaza e só liga com `true`
+  const depois = B.answer('posição agora', op), txt = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 'true' }), um = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 1 }), falso = B.answer('posição agora', { platform: 'app', commit: false, emergencia: false });
+  out.vaza = { depois: depois.text, depoisJanela: depois.janela === true, texto: txt.text, um: um.text, falso: falso.text, normal: an.text };
+  // a exceção solta a janela (o finally)
+  let lancou = false; try { B.answer('posição agora', { get platform() { throw new Error('x'); }, emergencia: true }); } catch (e) { lancou = true; }
+  const apos = B.answer('posição agora', op);
+  out.excecao = { lancou, apos: apos.text, aposJanela: apos.janela === true, resumo: B.resumoAgora() };
+  return out; }"""
+
+
+# uma pendência do diário de bordo (a do arquivo gerado) que cita pessoas, velocidade e rumo: a janela troca os três quando a pendência é lida
+EXTRA_PEND_JAN = """;window.CapitaoDados.diario.push({ id: 'd99', diasAtras: 1, h: '09:00', sys: 'Equipamentos', tom: 'warn', who: 'técnico', pend: true, t: 'Anomalia no passeio com 6 pessoas a bordo, SOG 9,9 nós, proa 200° e rumo 190°.', palavras: [] });"""
+
+
+def grupo_janela_api(b, muta, ped):
+    for x in ('60', '105'):
+        pg = pagina(b, muta=muta, fixo=x, extra=EXTRA_PEND_JAN)
+        try:
+            a = pg.evaluate(JS_JAN_API)
+            rot = 'janela API (t=%s)' % x
+            pl = a['plotter']
+            r = a['resumo']
+            ped(rot + ': resumoAgora({ emergencia: true }) é protocolos.plotter (com e sem semPosicao), e resumoAgora(null, { emergencia: true }) e resumoAgora(x, { emergencia: true }) também',
+                r['emerg'] == pl == JAN_PLOTTER and r['emergSem'] == pl and r['ctx'] == pl and r['ctx2'] == pl, r)
+            ped(rot + ': resumoAgora(a) da resposta dada dentro da janela (a posição, a telemetria) é protocolos.plotter; o da resposta de fora é o quadro (SOG, proa)',
+                r['daJanela'] == pl and r['daJanelaTel'] == pl and r['deFora'] != pl and 'SOG' in r['deFora'] and r['deForaTel'] != pl, (r['daJanela'], r['deFora'][:60]))
+            ped(rot + ': resumoAgora(a) da resposta que ABRE a janela (o diário com alerta) também é protocolos.plotter (a.emerg), como o das chaves de emergência', r['deAbre'] == pl, r['deAbre'][:80])
+            ped(rot + ': controle — resumoAgora() sem a janela segue completo (SOG, proa), com e sem posição; `emergencia: "true"` (texto) não liga; depois da janela volta ao normal',
+                r['normal'] != pl and 'SOG' in r['normal'] and 'SOG' in r['sem'] and r['sem'] != pl and r['textoSim'] != pl and r['depois'] == r['normal'], r)
+            fi = a['ficha']
+            quadro = {'Telemetria', 'Navegação agora', 'Horímetros', 'Autonomia e consumo'}
+            ped(rot + ': ficha(p, q, a) da resposta dada dentro da janela e ficha(p, q, null, { emergencia: true }) saem como as de emergência: sem os blocos do quadro, sem navegação, sem coordenada e com o resto',
+                all(not (quadro & set(fi[k]['titulos'])) and not NAVEGACAO.search(fi[k]['t']) and not confere.R_COORD.search(fi[k]['t']) and {'Agora', 'Embarcação', 'Manutenção', 'Emergência'} <= set(fi[k]['titulos']) for k in ('daJanela', 'ctx', 'janelaDiario')),
+                [(k, sorted(quadro & set(fi[k]['titulos'])), NAVEGACAO.search(fi[k]['t']) and NAVEGACAO.search(fi[k]['t']).group(0)) for k in ('daJanela', 'ctx', 'janelaDiario')])
+            ped(rot + ': a ficha da janela não traz "N pessoas a bordo" (o diário lido na janela troca o número por «conte agora»)', not re.search(r'\b\d+\s+pessoas?\s+a\s+bordo\b', fi['daJanela']['t'] + fi['ctx']['t']), re.findall(r'.{30}pessoas a bordo.{20}', fi['ctx']['t'])[:2])
+            ped(rot + ': controle — a ficha de fora da janela traz o quadro (Telemetria, Navegação agora, Horímetros) e o diário com o número de pessoas',
+                quadro & set(fi['normal']['titulos']) >= {'Telemetria', 'Navegação agora', 'Horímetros'} and quadro & set(fi['semAbrir']['titulos']) >= {'Telemetria', 'Navegação agora'} and re.search(r'\b4\s+pessoas\s+a\s+bordo\b', fi['normal']['t']), (sorted(fi['normal']['titulos']), sorted(fi['semAbrir']['titulos'])))
+            ped(rot + ': a ficha da resposta que ABRE a janela (diário com alerta) sai sem o quadro, como a das chaves de emergência',
+                not (quadro & set(fi['aberta']['titulos'])) and not (quadro & set(fi['emerg']['titulos'])) and not NAVEGACAO.search(fi['aberta']['t']), (sorted(fi['aberta']['titulos']), sorted(fi['emerg']['titulos'])))
+            g = a['reg']
+            lixo = re.compile(r'[56] pessoas a bordo|SOG (?:7,2|9,9)|proa (?:123|200)|rumo (?:110|190)')
+            ped(rot + ': o registro do aparelho lido dentro da janela (ler o diário, pendências abertas) volta sem o número de pessoas, o SOG, a proa nem o rumo que o usuário escreveu — «conte agora» / «leia no plotter»',
+                not lixo.search(g['dlj']) and not lixo.search(g['paj']) and 'pessoas a bordo: conte agora' in g['dlj'] and 'velocidade: leia no plotter' in g['dlj'] and 'rumo: leia no plotter' in g['dlj']
+                and 'pessoas a bordo: conte agora' in g['paj'], (g['dlj'][:300], g['paj'][:300]))
+            ped(rot + ': controle — fora da janela o registro (do aparelho e do arquivo) volta como foi escrito (o diário só cresce; nada é apagado)', '5 pessoas a bordo' in g['dl'] and 'SOG 7,2' in g['dl'] and '5 pessoas a bordo' in g['pa'] and '6 pessoas a bordo' in g['pa'] and g['pend'] == 1, (g['dl'][:200], g['pa'][:300], g['pend']))
+            h = a['hist']
+            ped(rot + ': historicoIA(msgs, { emergencia: true }) é vazio — nada da conversa vai à IA dentro da janela', h['janela'] == [], h['janela'])
+            ped(rot + ': historicoIA(msgs) depois da janela tira a pergunta e a resposta que levaram a instrução do plotter («qual a nossa posição?», «quantas pessoas a bordo?») e guarda o resto',
+                [m['texto'][:20] for m in h['fora']] == ['quanto diesel temos?', 'Autonomia de teste', 'como se faz um nó la', 'Isso não está nas fo'] and h['foraSemOpts'] == h['fora'] and h['vazio'] == [] and h['naoLista'] == [], h['fora'])
+            p = a['pede']
+            ped(rot + ': pedeIA(a, q, { emergencia: true }) é false para a pergunta que vai à IA; só `true` liga; sem a janela volta true; a resposta que abre a janela e a de dentro nunca vão à IA',
+                p['fora'] is True and p['opts'] is False and p['optsFalso'] is True and p['optsTexto'] is True and p['semA'] is False and p['abre'] is False and p['dentro'] is False and p['ex'] is False, p)
+            x_ = a['anexo']
+            ped(rot + ': answerAttachment(kind, file, { emergencia: true }) troca a linha de situação de bordo pela instrução do plotter (foto e vídeo), com `janela: true` e sem o instante; fora da janela a linha leva o quadro',
+                pl in x_['janela'] and pl in x_['video'] and not sens_jan(x_['janela'] + x_['video'], {'sog': None}) and 'SOG' not in x_['janela'] and x_['janelaFlag'] and x_['videoFlag'] and not x_['janelaInst']
+                and pl not in x_['normal'] and 'SOG' in x_['normal'] and x_['normalInst'], (x_['janela'][:200], x_['normal'][:200]))
+            v = a['vaza']
+            ped(rot + ': a janela só liga com `emergencia === true` e não vaza para a pergunta seguinte (`"true"`, 1 e false não ligam; depois da janela a resposta volta ao normal)',
+                v['depois'] == v['normal'] == v['texto'] == v['um'] == v['falso'] and not v['depoisJanela'] and 'SOG' in v['normal'], v)
+            e = a['excecao']
+            ped(rot + ': uma exceção dentro da janela solta a janela (finally): a resposta e o resumo seguintes são os normais', e['lancou'] and e['apos'] == v['normal'] and not e['aposJanela'] and e['resumo'] != pl, e)
+        finally:
+            pg.ctx.close()
+    # ——— o fluxo da tela: «homem ao mar» abre a janela; as perguntas seguintes, com a marca, não trazem nem falam posição, rumo, velocidade nem pessoas, e não vão à IA ———
+    grupo_janela_fluxo(b, muta, ped)
+
+
+JS_JAN_FLUXO = """() => { const B = window.CapitaoBrain, out = {}, pl = B.DADOS.protocolos.plotter;
+  const h = B.answer('homem ao mar', { platform: 'app' });
+  out.abre = { key: h.key, emerg: h.emerg === true, ia: B.pedeIA(h, 'homem ao mar') };
+  const marca = h.emerg === true, ctx = () => ({ platform: 'app', emergencia: marca });
+  out.seg = ['qual a nossa posição?', 'quantas pessoas a bordo?', 'e agora?', 'quanto falta para chegar?', 'qual o rumo?', 'quantos nós estamos fazendo?', 'como está a navegação?', 'quem chamar da equipe?'].map((q) => {
+    const a = B.answer(q, ctx()), f = B.falaCurta(a); return { q, key: a.key, text: a.text, fala: f, falavel: B.falavel(f), janela: a.janela === true, ant: 'anterior' in a || 'junto' in a, ia: B.pedeIA(a, q, { emergencia: marca }), ia2: B.pedeIA(a, q) }; });
+  // o «e agora?» SOLTO (sem pergunta de antes para continuar): o fallback da janela, que abre com a instrução de segurança, local e sem IA
+  B.limpaConversa(); const solto = B.answer('e agora?', ctx()), fs = B.falaCurta(solto); out.solto = { key: solto.key, text: solto.text, fala: fs, janela: solto.janela === true, ia: B.pedeIA(solto, 'e agora?', { emergencia: marca }) };
+  // a pergunta de rotina (sem a marca): a conversa volta ao normal
+  const livre = B.answer('qual a nossa posição?', { platform: 'app' }); out.livre = { text: livre.text, janela: livre.janela === true };
+  // uma pergunta ANTES da janela (com o contexto F18) e «e boreste?» DENTRO dela: sem anterior/junto
+  B.limpaConversa(); B.answer('qual a pressão do óleo do motor BB?', { platform: 'app' }); const eb = B.answer('e boreste?', { platform: 'app', emergencia: true });
+  out.contexto = { key: eb.key, ant: 'anterior' in eb || 'junto' in eb, janela: eb.janela === true, text: eb.text.slice(0, 80) };
+  // o atalho do diário dentro da janela grava uma linha que não traz SOG, proa nem posição
+  B.limpaConversa(); const antes = B.loadDiario().length, d = B.answer('Registre no diário o resumo da navegação de agora e confirme.', { platform: 'app', emergencia: true }), lin = B.loadDiario();
+  out.diario = { text: d.text, n: lin.length - antes, linha: lin[0] && lin[0].t, sys: lin[0] && lin[0].sys };
+  return out; }"""
+
+
+def grupo_janela_fluxo(b, muta, ped):
+    for x in ('60', '105'):
+        pg = pagina(b, muta=muta, fixo=x)
+        try:
+            f = pg.evaluate(JS_JAN_FLUXO)
+            rot = 'janela fluxo (t=%s)' % x
+            ped(rot + ': «homem ao mar» é `sos`, abre a janela (a.emerg === true) e não vai à IA', f['abre']['key'] == 'sos' and f['abre']['emerg'] is True and f['abre']['ia'] is False, f['abre'])
+            suja = [(r['q'], r['key'], R_TRAVA_EMERG.search(r['text'] + '\n' + r['fala'] + '\n' + r['falavel']).group(0)) for r in f['seg'] if R_TRAVA_EMERG.search(r['text'] + '\n' + r['fala'] + '\n' + r['falavel'])]
+            ped(rot + ': depois de «homem ao mar», «qual a nossa posição?», «quantas pessoas a bordo?», «e agora?», «quanto falta para chegar?», «qual o rumo?», «quantos nós estamos fazendo?», «como está a navegação?» e «quem chamar da equipe?» — nenhuma fala nem texto com coordenada, nós, mn, rumo, ETA nem número de pessoas, e nenhuma vai à IA',
+                not suja and len(f['seg']) == 8 and all(r['janela'] and not r['ia'] and not r['ia2'] and not r['ant'] for r in f['seg']), (suja[:3], [(r['q'], r['janela'], r['ia'], r['ia2']) for r in f['seg'] if not r['janela'] or r['ia'] or r['ia2']]))
+            falas = {r['q']: r['fala'] for r in f['seg']}
+            ped(rot + ': a fala de «qual a nossa posição?», «quantas pessoas a bordo?», «e agora?» (que continua a pergunta de antes, F18), «quanto falta para chegar?», «qual o rumo?», «quantos nós estamos fazendo?» e «como está a navegação?» é a instrução do plotter',
+                all(falas[q] == JAN_PLOTTER for q in ('qual a nossa posição?', 'quantas pessoas a bordo?', 'e agora?', 'quanto falta para chegar?', 'qual o rumo?', 'quantos nós estamos fazendo?', 'como está a navegação?')), falas)
+            so = f['solto']
+            ped(rot + ': o «e agora?» solto é o fallback local da janela: abre com «Em perigo agora: SOS do app e VHF canal 16.» (a 1ª linha, a falada), sem a situação de bordo e sem IA',
+                so['key'] == 'fallback' and so['fala'] == 'Em perigo agora: SOS do app e VHF canal 16.' and so['text'].startswith('Em perigo agora: SOS do app e VHF canal 16.\n') and JAN_PLOTTER in so['text'] and so['janela'] and so['ia'] is False and not R_TRAVA_EMERG.search(so['text']), so)
+            ped(rot + ': sem a marca (a janela fechada) a mesma pergunta volta a responder o quadro', 'SOG' in f['livre']['text'] and not f['livre']['janela'], f['livre'])
+            ped(rot + ': «e boreste?» dentro da janela não leva anterior nem junto (a pergunta de antes não vai a lugar nenhum)', f['contexto']['janela'] and not f['contexto']['ant'], f['contexto'])
+            ped(rot + ': o atalho do diário dentro da janela grava UMA linha sem SOG, proa nem posição (o resumo é a instrução do plotter)', f['diario']['n'] == 1 and not sens_jan(f['diario']['linha'] or '', {}) and JAN_PLOTTER in (f['diario']['linha'] or '') and 'SOG' not in f['diario']['text'], f['diario'])
+        finally:
+            pg.ctx.close()
+    # ——— o SOS (S1/S2) não muda: a página dele nunca lê o quadro, com ou sem a marca ———
+    pg = pagina(b, extra=GETTERS_SOS, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, muta=muta)
+    try:
+        s = pg.evaluate("""(qs) => { const B = window.CapitaoBrain, o = {}; qs.forEach((q) => { const a = B.answer(q, { platform: 'app', commit: false }), j = B.answer(q, { platform: 'app', commit: false, emergencia: true }); o[q] = [a.text, j.text, a.janela === true, j.janela === true, B.resumoAgora({ emergencia: true }) === B.DADOS.protocolos.plotter]; });
+          return { o, lidas: Object.assign({}, window.__lidas), ms: B.JANELA_EMERG_MS }; }""", ['posição agora', 'telemetria', 'quantas pessoas a bordo?', 'MAYDAY, homem ao mar!', 'e agora?'])
+        ped('janela (SOS): na página do SOS a marca não muda nada (o texto é o mesmo com e sem ela; nada de `janela`) e nenhuma leitura de D.simulacao, D.replay, D.snapshot, D.rota nem D.campos',
+            all(v[0] == v[1] and not v[2] and not v[3] and v[4] for v in s['o'].values()) and all(n == 0 for n in s['lidas'].values()) and s['ms'] == 900000, ([(q, v[0][:60], v[1][:60]) for q, v in s['o'].items() if v[0] != v[1] or v[2] or v[3]], s['lidas']))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['janela'] = grupo_janela
+
+
+# ——— os mutantes da P4A (a conversa em emergência): o teste TEM de acusar cada um ———
+MUTANTES_P4A = [
+    # — o interruptor da janela —
+    ('p4a janela: o ctx.emergencia nunca liga a janela', r"    JAN.on = antes === true || !!(ctx && ctx.emergencia === true);", r"    JAN.on = antes === true;", ('janela',)),
+    ('p4a janela: qualquer ctx.emergencia (inclusive "true", 1) liga a janela', r"    JAN.on = antes === true || !!(ctx && ctx.emergencia === true);", r"    JAN.on = antes === true || !!(ctx && ctx.emergencia);", ('janela',)),
+    ('p4a janela: a janela não é solta no fim (sem o finally: vaza para a pergunta seguinte)', r"    try { return f(); } finally { JAN.on = antes; }", r"    var r = f(); return r;", ('janela',)),
+    ('p4a janela: a janela fica ligada depois da exceção (o restore só no caminho feliz)', r"    try { return f(); } finally { JAN.on = antes; }", r"    var r = f(); JAN.on = antes; return r;", ('janela',)),
+    ('p4a janela: a janela liga também na página do SOS (sem a guarda EM_SOS)', r"  function janela() { return JAN.on === true && !EM_SOS; }", r"  function janela() { return JAN.on === true; }", ('janela',)),
+    ('p4a janela: o answer não liga a janela (só o wrapper)', r"  function answer(q, ctx) { return comJanela(ctx, function () { return answerNaJanela(q, ctx); }); }", r"  function answer(q, ctx) { return answerNaJanela(q, ctx); }", ('janela',)),
+    ('p4a janela: 15 minutos viram 5', r"  var JANELA_MS = 15 * 60 * 1000;", r"  var JANELA_MS = 5 * 60 * 1000;", ('janela',)),
+    ('p4a janela: a resposta de dentro da janela não leva `janela: true`', r"    if (a && typeof a === 'object' && janela()) a.janela = true;", r"", ('janela',)),
+    ('p4a janela: a resposta de dentro da janela leva o instante dela (_inst com lat e lon)', r"!emerg(a) && a.emerg !== true && a.janela !== true) { try { Object.defineProperty(a, '_inst',", r"!emerg(a) && a.emerg !== true) { try { Object.defineProperty(a, '_inst',", ('janela',)),
+    ('p4a janela: a resposta que abre com a instrução do plotter leva a hora do quadro (a fala a repete no fim)', r"      if (a && a.janela === true && String(a.text).split('\n')[0] === plotterTxt()) delete a.hora;", r"", ('janela',)),
+    ('p4a janela: a resposta de dado dentro da janela perde a hora do quadro (a fala sai sem a hora)', r"      if (a && a.janela === true && String(a.text).split('\n')[0] === plotterTxt()) delete a.hora;", r"      if (a && a.janela === true) delete a.hora;", ('janela',)),
+    ('p4a janela: a resposta de dentro da janela leva anterior e junto (a pergunta de antes)', r"      if (a && a.janela === true) { delete a.anterior; delete a.junto; }", r"", ('janela',)),
+    ('p4a janela: a fonte da instrução leva o «consultado às» do instante', r"vivo() && a && a.src && a.janela !== true && !/", r"vivo() && a && a.src && !/", ('janela',)),
+    # — (c) a abertura —
+    ('p4a abre: a salvatagem também abre a janela', r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };", r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1 };", ('janela',)),
+    ('p4a abre: o mmsi também abre a janela', r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };", r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, mmsi: 1 };", ('janela',)),
+    ('p4a abre: o óleo não abre a janela', r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };", r"  var ABRE_JANELA = { sos: 1, canal16: 1, epirb: 1, seafire: 1 };", ('janela',)),
+    ('p4a abre: o seafire não abre a janela', r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };", r"  var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1 };", ('janela',)),
+    ('p4a abre: a resposta de emergência não traz a.emerg', r"      if (a && typeof a === 'object' && ABRE_JANELA[a.key] === 1) a.emerg = true;", r"", ('janela',)),
+    ('p4a abre: o diário com alerta não abre a janela', r"  function emergDiario(r, alerta) { if (alerta) r.emerg = true; return r; }", r"  function emergDiario(r, alerta) { return r; }", ('janela',)),
+    ('p4a abre: todo diário abre a janela (o sem alerta também)', r"  function emergDiario(r, alerta) { if (alerta) r.emerg = true; return r; }", r"  function emergDiario(r, alerta) { r.emerg = true; return r; }", ('janela',)),
+    # — (1) pedeIA —
+    ('p4a pedeIA: o opts.emergencia não desliga a IA', r"    if ((opts && opts.emergencia === true) || (a && typeof a === 'object' && (a.janela === true || a.emerg === true))) return false;", r"    if ((a && typeof a === 'object' && (a.janela === true || a.emerg === true))) return false;", ('janela',)),
+    ('p4a pedeIA: a resposta dada dentro da janela (a.janela) vai à IA sem o opts', r"(opts && opts.emergencia === true) || (a && typeof a === 'object' && (a.janela === true || a.emerg === true))) return false;", r"(opts && opts.emergencia === true) || (a && typeof a === 'object' && (a.emerg === true))) return false;", ('janela',)),
+    ('p4a pedeIA: qualquer opts.emergencia (inclusive "true") desliga a IA', r"    if ((opts && opts.emergencia === true) ||", r"    if ((opts && opts.emergencia) ||", ('janela',)),
+    ('p4a pedeIA: o opts liga a IA (== false por engano: sempre false mesmo sem a janela)', r"    if ((opts && opts.emergencia === true) ||", r"    if (opts || ", ('janela',)),
+    # — (2) as respostas da navegação —
+    ('p4a posicao: a posição dentro da janela é a do quadro', r"      if (janela()) return respostaJanela(p);   // (P4A) a posição, o rumo e a velocidade são da janela de emergência: leia no plotter", r"", ('janela',)),
+    ('p4a navegacao: a «situação agora» dentro da janela é a do quadro', r"      if (janela()) return respostaJanela(p);   // (P4A) «situação agora» na janela de emergência: leia no plotter", r"", ('janela',)),
+    ('p4a eta: a chegada prevista dentro da janela é a do quadro', r"      if (janela()) return respostaJanela(p);   // (P4A) a chegada prevista, a distância e o percorrido são da janela de emergência: leia no plotter", r"", ('janela',)),
+    ('p4a destinos: o destino e a distância dentro da janela são os do quadro', r"      if (janela()) return respostaJanela(p);   // (P4A: a distância, a chegada prevista e o destino em andamento são da janela de emergência: leia no plotter)", r"", ('janela',)),
+    ('p4a pessoas: o número de pessoas dentro da janela é o do cadastro', r"      if (janela()) return respostaJanela(p);   // (P4A) o número de pessoas é da janela de emergência: conte agora", r"", ('janela',)),
+    ('p4a telemetria: a telemetria dentro da janela leva posição e SOG', "    if (!janela()) return r;\n    if (!i) return respostaJanela(p);", "    if (true) return r;\n    if (!i) return respostaJanela(p);", ('janela',)),
+    ('p4a telemetria: a tendência (com o SOG) fica na telemetria da janela', r".filter(function (l) { return !/^• (?:Posição|Vento)|^• Tendência/.test(l); })", r".filter(function (l) { return !/^• (?:Posição|Vento)/.test(l); })", ('janela',)),
+    ('p4a telemetria: a linha da posição fica na telemetria da janela', r".filter(function (l) { return !/^• (?:Posição|Vento)|^• Tendência/.test(l); })", r".filter(function (l) { return !/^• (?:Vento)|^• Tendência/.test(l); })", ('janela',)),
+    ('p4a telemetria: a 1ª linha da janela não é a instrução do plotter', r"    r.text = plotterTxt() + '\nTelemetria às ' + i.hora + ' (sem posição, rumo nem velocidade):\n' +", r"    r.text = 'Telemetria às ' + i.hora + ' (sem posição, rumo nem velocidade):\n' + plotterTxt() + '\n' +", ('janela',)),
+    ('p4a ancora: a posição relativa da âncora fica na janela', r"(janela() ? 'posição: leia no plotter' : (i && i.txt.relativa) || S.local || SD)", r"((i && i.txt.relativa) || S.local || SD)", ('janela',)),
+    ('p4a piloto: o rumo do piloto fica na janela', r"      else if (k === 'piloto' && janela()) l = plotterTxt() +", r"      else if (k === 'piloto' && false) l = plotterTxt() +", ('janela',)),
+    ('p4a checklist: a velocidade sobre o fundo do item de deriva fica na janela', r"      if (janela()) return R_('ler', 'velocidade sobre o fundo: leia no plotter');", r"", ('janela',)),
+    # — a linha de situação de bordo (contatos, fallback, anexos, tempo e maré sem conexão, sobreDados, foraBarco) —
+    ('p4a linhaBordo: a linha de situação de bordo dentro da janela leva o resumo do quadro', r"  function linhaBordo() { if (janela()) return plotterTxt();", r"  function linhaBordo() { if (false) return plotterTxt();", ('janela',)),
+    ('p4a linhaBordo: a linha da janela leva o prefixo «Situação de bordo agora:» e o resumo sem posição', r"  function linhaBordo() { if (janela()) return plotterTxt(); return", r"  function linhaBordo() { if (janela()) return 'Situação de bordo agora: ' + resumoAgora({ semPosicao: true }); return", ('janela',)),
+    ('p4a fallback: o fallback da janela não abre com a instrução de segurança', r"if (janela()) r.text = EM_PERIGO + '\n' + r.text; return r; };", r"return r; };", ('janela',)),
+    ('p4a anexo: o anexo não liga a janela (a linha de situação de bordo leva o quadro)', r"function answerAttachment(kind, file, ctx) { return comJanela(ctx, function () { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }); }", r"function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }", ('janela',)),
+    # — o registro lido na janela —
+    ('p4a diário: a linha do diário lida na janela leva o número de pessoas', r"semNavJanela(e.t).slice(0, 110)", r"e.t.slice(0, 110)", ('janela',)),
+    ('p4a diário: a pendência lida na janela leva o número de pessoas (anomalias)', r"semNavJanela(x.t)); }).concat(", r"x.t); }).concat(", ('janela',)),
+    ('p4a diário: o semNavJanela não troca o número de pessoas', r"[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", r"[/\b\d+\s+zzqq\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
+    ('p4a diário: o semNavJanela troca fora da janela (sem a guarda)', r"if (!janela()) return s; JAN_NAV.forEach", r"JAN_NAV.forEach", ('janela',)),
+    # — resumoAgora, ficha, historicoIA —
+    ('p4a resumo: resumoAgora({ emergencia: true }) devolve o quadro', r"x.emergencia === true || x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", ('janela',)),
+    ('p4a resumo: resumoAgora(x, { emergencia: true }) devolve o quadro', r"|| (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"|| janela()) return plotterTxt();", ('janela',)),
+    ('p4a resumo: o resumoAgora de dentro de answer() (janela ligada) devolve o quadro', r"|| (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"|| (ctx && ctx.emergencia === true)) return plotterTxt();", ('janela',)),
+    ('p4a resumo: o resumoAgora(a) da resposta dada dentro da janela devolve o quadro', r"(x.emergencia === true || x.janela === true || x.emerg === true)", r"(x.emergencia === true || x.emerg === true)", ('janela',)),
+    ('p4a resumo: o resumoAgora(a) da resposta que ABRE a janela (diário com alerta) devolve o quadro', r"(x.emergencia === true || x.janela === true || x.emerg === true)", r"(x.emergencia === true || x.janela === true)", ('janela',)),
+    ('p4a ficha: a ficha da janela sai com o quadro (a ficha1 sem o janela())', r"emergencia = emerg(a) || janela(), resumida", r"emergencia = emerg(a), resumida", ('janela',)),
+    ('p4a ficha: a ficha(p, q, null, { emergencia: true }) não liga a janela', r"{ emergencia: !!(ctx && ctx.emergencia === true) || !!(a && typeof a === 'object' && (a.janela === true", r"{ emergencia: !!(a && typeof a === 'object' && (a.janela === true", ('janela',)),
+    ('p4a ficha: a ficha da resposta dada dentro da janela não liga a janela', r"(a.janela === true || a.emergencia === true || a.emerg === true)) }, function () { try { return congela", r"(a.emergencia === true || a.emerg === true)) }, function () { try { return congela", ('janela',)),
+    ('p4a histórico: o histórico dentro da janela vai à IA', "    if (opts && opts.emergencia === true) return [];\n    return historicoBase(semJanela(msgs));", "    return historicoBase(semJanela(msgs));", ('janela',)),
+    ('p4a histórico: a resposta dada dentro da janela volta à IA depois dela', r"    return historicoBase(semJanela(msgs));", r"    return historicoBase(msgs);", ('janela',)),
+    ('p4a histórico: a pergunta da resposta da janela fica sozinha no histórico', r"if (k > 0 && !ehBot(msgs[k - 1])) fora[k - 1] = 1; }", r"}", ('janela',)),
+    ('p4a histórico: o semJanela engole a lista que não é lista', r"    if (!Array.isArray(msgs) || !pl) return msgs;", r"    if (!pl) return msgs;", ('janela',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A
 
 
 def instante_3a(b):
