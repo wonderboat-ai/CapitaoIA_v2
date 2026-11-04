@@ -8695,6 +8695,9 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_P3G_REV2
 # (salvatagem e mmsi não); a dada dentro dela traz `a.janela === true` (sem `_inst`, sem hora, sem anterior/junto) e a ficha, o resumo e o histórico dela saem coerentes.
 # O que NÃO é posição, rumo, SOG, ETA nem pessoas fica como estava: o texto das outras respostas é IGUAL dentro e fora da janela (vento e ondas a bordo, a previsão real, a velocidade
 # de cruzeiro do guia na autonomia e no consumo).
+# (revisão) A velocidade sobre o fundo é também medida de alarme pedido (campo sog_nos): dentro da janela o pedido, a confirmação, a lista, «tem algum alarme ativo?», o apagar e alarmesPedidosAtivos(ms, { emergencia: true })
+# não trazem o limite nem a leitura dela (EXTRA_ALM_JAN semeia os alarmes; trava_estrita só perdoa o item do VENTO). O histórico vale nos dois formatos de mensagem ({papel, texto} e o {role, text} das telas) e o
+# trecho `base` de segurança NÃO abre a janela (JAN_ABRE_CASOS).
 # A regex de «Travas de emergência» do PROMPT Fase 7 (PROMPT.md, «Testes novos e acréscimos»), como está
 R_TRAVA_EMERG = re.compile(r"710123456|último fix|\d+[.,]\d+\s*(?:mn|milhas?)|\d+[.,]?\d*\s*nós|°\s*\d{1,2}[,.]\d+\s*['′]|\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}\d{2,3}\s*°|\bETA\b|\b\d+\s+(?:pessoas\s+)?a bordo\b")
 # O que a janela troca: as siglas SOG e STW, o rumo/proa/COG/HDG com número, a chegada prevista, a distância em milhas com decimal, o número de pessoas a bordo, a coordenada e o texto de
@@ -8708,9 +8711,12 @@ JAN_PLOTTER_SO = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas')
 # as chaves que levam a linha de situação de bordo (linhaBordo): contatos, fallback, o fora do barco, a pergunta sobre os dados e a maré e o clima sem conexão
 JAN_LINHA_BORDO = ('contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'clima')
 # as chaves cuja resposta TRAZ posição, rumo, SOG, ETA, distância ou pessoas num instante do laço (o que a janela troca): se uma faltar, a resposta deixou de trazer o dado ou a pergunta de exemplo mudou
-JAN_SENSIVEIS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'clima', 'diario', 'checklistFundeio', 'diarioLer', 'leituraBordo')
+JAN_SENSIVEIS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'clima', 'diario', 'checklistFundeio', 'diarioLer', 'leituraBordo',
+                 'alarmePedido', 'alarmesLista', 'alarmes', 'alarmeApaga')   # (revisão: a velocidade sobre o fundo é medida de alarme pedido: o pedido, a lista e «tem algum alarme ativo?» a trazem fora da janela)
 # as chaves que a regex do PROMPT, SEM exceção, tem de deixar passar dentro da janela (as outras trazem vento, ondas, previsão ou a velocidade de cruzeiro do guia, que não são do que a janela troca)
-JAN_ESTRITAS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'diario', 'checklistFundeio', 'diarioLer', 'anomalias', 'leituraBordo')
+JAN_ESTRITAS = ('posicao', 'navegacao', 'eta', 'destinos', 'pessoas', 'telemetria', 'ancora', 'contatos', 'fallback', 'foraBarco', 'sobreDados', 'mare', 'diario', 'checklistFundeio', 'diarioLer', 'anomalias', 'leituraBordo',
+                'alarmePedido', 'alarmesLista', 'alarmes', 'alarmeApaga')
+# das chaves estritas, as de alarme pedido têm UMA exceção: a linha do VENTO (o vento verdadeiro «a bordo agora» é real e vale, decisão 12: «vento acima de 25,0 nós — agora 11,3 nós»); a da velocidade não
 # a pergunta de cada chave, além das de PERGUNTA_CHAVE: a do rumo do piloto (leituraBordo) e as variantes de posição, rumo e velocidade
 JAN_EXTRAS = {
     'leituraBordo': 'qual o rumo do piloto automático?', 'checklistFundeio': 'checklist de fundeio', 'diarioLer': 'ler o diário', 'diario': 'Registre no diário o resumo da navegação de agora e confirme.',
@@ -8721,15 +8727,40 @@ JAN_EXTRAS = {
 JAN_BENIGNAS = {
     'seguro': lambda m, ln: 'vento' in ln.lower() or m == '18 nós', 'clima': lambda m, ln: 'vento' in ln.lower(), 'ondas': lambda m, ln: 'vento' in ln.lower(),
     'autonomia': lambda m, ln: m == '18 nós', 'consumo': lambda m, ln: m == '18 nós', 'pecas': lambda m, ln: 'pessoas' not in m,
-    'mmsi': lambda m, ln: ln.startswith('Cadastro do app: MMSI 710123456'), 'alarmePedido': lambda m, ln: 'ento' in ln,   # (o vento do pedido e a leitura de agora do vento)
+    'mmsi': lambda m, ln: ln.startswith('Cadastro do app: MMSI 710123456'), 'alarmePedido': lambda m, ln: bool(R_VENTO.search(ln)), 'alarmesLista': lambda m, ln: bool(R_VENTO.search(ln)), 'alarmeApaga': lambda m, ln: bool(R_VENTO.search(ln)),   # (o vento do pedido, da lista e a leitura de agora do vento; a linha da VELOCIDADE não)
 }
+R_VENTO = re.compile(r'\bvento\b', re.I)
+JAN_ESTRITAS_VENTO = ('alarmePedido', 'alarmesLista', 'alarmes', 'alarmeApaga')
+
+
+def ctx_item(alvo, m):
+    """O pedaço do ITEM de alarme em que `m` cai: do último '#', '•', ';' ou quebra de linha antes dela (até 120 letras) até ela — a fala junta os itens da lista numa linha só, e a exceção do vento não pode
+    esconder a velocidade que esteja ao lado dele."""
+    ini = max(alvo.rfind('\n', 0, m.start()) + 1, m.start() - 120)
+    pre = alvo[ini:m.start()]
+    cut = max(pre.rfind(x) for x in ('#', '•', ';'))
+    return pre[cut + 1:] if cut >= 0 else pre
+
+
+def trava_estrita(key, alvo):
+    """As casas da regex do PROMPT em `alvo`, SEM exceção — salvo, nas chaves de alarme pedido, o item do vento (lista vazia = limpo)."""
+    return [m.group(0) for m in R_TRAVA_EMERG.finditer(alvo) if not (key in JAN_ESTRITAS_VENTO and R_VENTO.search(ctx_item(alvo, m)))]
 JAN_PERGUNTAS_EXTRA = [
     'qual a nossa posição?', 'onde estamos?', 'qual o rumo?', 'quantos nós estamos fazendo?', 'qual a velocidade?', 'qual o COG?', 'quantas pessoas a bordo?', 'quantas pessoas estão a bordo?', 'quantos a bordo?',
     'e agora?', 'e aí?', 'como estamos?', 'situação agora', 'como está a navegação?', 'qual a hora de chegada?', 'quanto falta para chegar?', 'qual o ETA?', 'qual a distância até o destino?', 'para onde vamos?',
     'quanto falta para o Estaleirinho?', 'qual o próximo waypoint?', 'quantas milhas percorremos hoje?', 'telemetria', 'como está o barco?', 'status do barco', 'quem chamar da equipe?', 'maré agora', 'previsão do tempo',
     'esses dados são reais?', 'qual o preço do dólar?', 'como se faz um nó lais de guia?', 'quais equipamentos tem a bordo?', 'o que você faz?', 'âncora garrando?', 'qual a profundidade?', 'tem algum alarme ativo?',
     'qual o rumo do piloto automático?', 'checklist de fundeio', 'checklist de chegada', 'ler o diário', 'pendências abertas', 'registre no diário o resumo da navegação de agora', 'quantos metros de corrente?',
+    # (revisão) o alarme pedido de velocidade: o pedido, a lista e os ativos (EXTRA_ALM_JAN semeia um alarme de SOG ativo, um que nunca dispara e o do vento); o SOG ao vivo e o limite não saem na janela
+    'avise se a velocidade passar de 20 nós', 'alarme quando a SOG passar de 5 nós', 'me avise se o SOG passar de 20', 'alarme se a velocidade passar de 25 nós', 'me avise se a velocidade ficar abaixo de 3 nós',
+    'apagar todos os alarmes pedidos', 'avise se a velocidade passar de 20 graus', 'avise se a velocidade passar de 200 nós', 'me avise se a coisa passar de 20', 'meus alarmes', 'quais alarmes eu pedi?', 'alarmes pedidos', 'existe algum alarme ativo no barco?', 'alarmes ativos', 'alarmes',
 ]
+JAN_PERGUNTAS_ALM = JAN_PERGUNTAS_EXTRA[JAN_PERGUNTAS_EXTRA.index('avise se a velocidade passar de 20 nós'):]
+# os alarmes que a página da matriz já tem (capitao.alarmes.v1, antes do cérebro): o #1 de SOG acima de 10 nós (ATIVO nos dois instantes: 18 nós), o #2 do vento acima de 25 nós (benigno), o #3 de SOG acima
+# de 30 nós (nunca dispara) e o #4 da rotação do BB acima de 500 rpm (ATIVO, e NÃO é velocidade: sai igual dentro e fora da janela)
+EXTRA_ALM_JAN = """;try { localStorage.setItem('capitao.alarmes.v1', JSON.stringify([
+  { id: 'usr_1', campo: 'sog_nos', op: '>', limite: 10, iso: '2026-11-04T14:00:01.000Z', who: 'Lucas', sim: true }, { id: 'usr_2', campo: 'vento_verdadeiro_nos', op: '>', limite: 25, iso: '2026-11-04T14:00:02.000Z', who: 'Lucas', sim: true },
+  { id: 'usr_3', campo: 'sog_nos', op: '>', limite: 30, iso: '2026-11-04T14:00:03.000Z', who: 'Lucas', sim: true }, { id: 'usr_4', campo: 'motor_bb_rpm', op: '>', limite: 500, iso: '2026-11-04T14:00:04.000Z', who: 'Lucas', sim: true }])); } catch (e) {}"""
 JS_JAN = """([qs, emerg]) => { const B = window.CapitaoBrain, i = B.instante() || {}, tx = i.txt || {}, lit = {};
   ['sog', 'stw', 'rumo', 'proa', 'piloto', 'relativa', 'local', 'destino', 'wp', 'eta', 'distancia'].forEach((k) => { lit[k] = tx[k] || null; });
   const op = { platform: 'app', commit: false }; if (emerg) op.emergencia = true;
@@ -8784,8 +8815,8 @@ def janela_lote(pg, base, rot, ped, real):
             sensiveis.add(c['key'])
         elif c['text'] != s['text'] and not (real and c['key'] in ('ancora', 'checklistFundeio')):   # (sem quadro vivo a âncora troca o lugar do snapshot e o checklist de fundeio troca o «SEM LEITURA» da deriva, que não são literais do instante)
             difere.append((c['q'], c['key']))
-        if c['key'] in JAN_ESTRITAS and R_TRAVA_EMERG.search(alvo):
-            estritas.append((c['q'], c['key'], R_TRAVA_EMERG.search(alvo).group(0)))
+        if c['key'] in JAN_ESTRITAS and trava_estrita(c['key'], alvo):
+            estritas.append((c['q'], c['key'], trava_estrita(c['key'], alvo)[0]))
     ped('%s: nenhuma das %d perguntas dentro da janela traz posição, rumo, SOG, ETA, distância, pessoas nem coordenada' % (rot, len(base)), not sujas, sujas[:5])
     ped('%s: (1) pedeIA é false para tudo dentro da janela e toda resposta traz `janela: true`, sem instante e sem anterior' % rot, not pedem and not sem_flag, (pedem[:3], sem_flag[:3]))
     ped('%s: o texto das respostas que não trazem o dado é IGUAL dentro e fora da janela' % rot, not difere, difere[:5])
@@ -8796,11 +8827,11 @@ def janela_lote(pg, base, rot, ped, real):
 def grupo_janela(b, muta, ped):
     base = list(dict.fromkeys([q for q, k in CASOS] + JAN_PERGUNTAS_EXTRA))
     chaves = dict(PERGUNTA_CHAVE); chaves.update(JAN_EXTRAS)
-    pks = list(dict.fromkeys(list(PERGUNTA_CHAVE.values()) + list(JAN_EXTRAS.values())))
+    pks = list(dict.fromkeys(list(PERGUNTA_CHAVE.values()) + list(JAN_EXTRAS.values()) + JAN_PERGUNTAS_ALM))
     ped('janela: a base de perguntas tem 100+ (%d)' % len(base), len(base) >= 100 and len(pks) >= len(PERGUNTA_CHAVE), (len(base), len(pks)))
     cobertas = set()
     for x in ('60', '105'):
-        pg = pagina(b, muta=muta, fixo=x)
+        pg = pagina(b, muta=muta, fixo=x, extra=EXTRA_ALM_JAN)
         try:
             espera_base_jan(pg)
             sem = pg.evaluate(JS_JAN, [base, False]); com = pg.evaluate(JS_JAN, [base, True])
@@ -8829,6 +8860,8 @@ def grupo_janela(b, muta, ped):
                 for m in R_TRAVA_EMERG.finditer(alvo):
                     fim = alvo.find('\n', m.end())
                     ln = alvo[alvo.rfind('\n', 0, m.start()) + 1: fim if fim >= 0 else len(alvo)]
+                    if c['key'] in JAN_ESTRITAS_VENTO:
+                        ln = ctx_item(alvo, m)   # (o item do alarme em que o número cai: a fala junta a lista numa linha só)
                     if c['key'] not in JAN_BENIGNAS or not JAN_BENIGNAS[c['key']](m.group(0), ln):
                         casadas.append((c['q'], c['key'], m.group(0), ln[:80]))
             ped('janela (%s): a regex de «Travas de emergência» do PROMPT, SEM exceção, nas %d respostas dentro da janela, só casa o que não é posição, rumo, SOG, ETA nem pessoas (vento a bordo, velocidade de cruzeiro do guia, peças, MMSI do cadastro na rota mmsi, o vento do pedido de alarme)' % (rot, len(base)), not casadas, casadas[:5])
@@ -8853,8 +8886,8 @@ def grupo_janela(b, muta, ped):
                         c['text'].split('\n')[0] == com['plotter'] == JAN_PLOTTER and c['fala'] == JAN_PLOTTER and 'plotter' in c['falavel'] and not re.search(r'\d', c['falavel']) and 'consultado' not in c['src'] and not re.search(r'\d\d:\d\d:\d\d', c['src']),
                         (c['text'][:100], c['falavel'], c['src']))
                 if k in JAN_ESTRITAS:
-                    m = R_TRAVA_EMERG.search(c['text'] + '\n' + c['fala'] + '\n' + c['src'])
-                    ped(nome + ': a regex de «Travas de emergência» do PROMPT não casa', not m, m and m.group(0))
+                    m = trava_estrita(k, c['text'] + '\n' + c['fala'] + '\n' + c['src'])
+                    ped(nome + ': a regex de «Travas de emergência» do PROMPT não casa (nas chaves de alarme pedido, só o item do vento fica de fora)', not m, m)
                 if k in JAN_LINHA_BORDO and ss:
                     ped(nome + ': a linha de situação de bordo é uma linha só, exatamente protocolos.plotter (sem o prefixo «Situação de bordo agora:» nem resumo)', com['plotter'] in c['text'].split('\n') and 'Situação de bordo' not in c['text'] and 'Última situação' not in c['text'], c['text'][-200:])
                 if k in ('telemetria', 'leituraBordo') and ss:
@@ -8867,13 +8900,13 @@ def grupo_janela(b, muta, ped):
             pg.ctx.close()
     ped('janela: a matriz cobre as chaves que trazem posição, rumo, SOG, ETA ou pessoas (%s)' % ', '.join(JAN_SENSIVEIS), set(JAN_SENSIVEIS) <= cobertas, sorted(set(JAN_SENSIVEIS) - cobertas))
     # ——— o modo real (simulacao false): a trava 10 vale nos dois modos; sem quadro vivo o dado vem do snapshot e a janela troca do mesmo jeito ———
-    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO, fixo='60')
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO + EXTRA_ALM_JAN, fixo='60')
     try:
         janela_lote(pg, base, 'janela (modo real)', ped, real=True)
     finally:
         pg.ctx.close()
     # ——— a sessão do convidado (demo): o nome na ficha e nos contatos muda, a janela não ———
-    pg = pagina(b, muta=muta, extra=AUTH_DEMO_JAN, fixo='105')
+    pg = pagina(b, muta=muta, extra=AUTH_DEMO_JAN + EXTRA_ALM_JAN, fixo='105')
     try:
         janela_lote(pg, base, 'janela (sessão demo, t=105)', ped, real=False)
     finally:
@@ -8892,6 +8925,8 @@ JAN_ABRE_CASOS = [
     ('Registre no diário: saída com 4 pessoas', 'diario', False), ('registre no diário: o EPIRB foi testado', 'diario', False),
     ('posição agora', 'posicao', False), ('Telemetria agora', 'telemetria', False), ('qual a pressão do óleo?', 'oleoLeitura', False), ('esses dados são reais?', 'sobreDados', False),
     ('próximas manutenções', 'manutencao', False), ('e agora?', 'fallback', False), ('oi, bom dia', 'saudacao', False),
+    # (revisão) o trecho `base` COM seguranca (o guia de segurança de rotina: botão DISTRESS, baliza, governo, «antes de largar») NÃO abre a janela: o PROMPT §2.2 fecha a lista em sos, oleo, canal16, epirb, seafire e diário com alerta
+    ('botão distress', 'base', False), ('a baliza', 'base', False), ('sem governo', 'base', False), ('o que fazer antes de largar', 'base', False), ('o motor está queimando óleo', 'base', False),
 ]
 
 JS_JAN_API = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D = window.CapitaoDados, plotter = D.protocolos.plotter, op = { platform: 'app', commit: false }, opj = { platform: 'app', commit: false, emergencia: true };
@@ -8909,20 +8944,32 @@ JS_JAN_API = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay,
   const u = (t) => ({ papel: 'usuario', texto: t }), c = (t) => ({ papel: 'capitao', texto: t }), pos = B.answer('qual a nossa posição?', opj), nos = B.answer('como se faz um nó lais de guia?', op);
   const msgs = [u('quanto diesel temos?'), c('Autonomia de teste'), u('qual a nossa posição?'), c(pos.text), u('quantas pessoas a bordo?'), c(B.answer('quantas pessoas a bordo?', opj).text), u('como se faz um nó lais de guia?'), c(nos.text)];
   out.hist = { janela: B.historicoIA(msgs, { emergencia: true }), fora: B.historicoIA(msgs), foraSemOpts: B.historicoIA(msgs, {}), msgs: msgs.map((m) => m.texto.slice(0, 40)), vazio: B.historicoIA([]), naoLista: B.historicoIA(null) };
+  // o formato que as telas montam (Main e H2: { role: 'user' | 'bot', text }): o mesmo histórico, a mesma saída
+  const ur = (t) => ({ role: 'user', text: t }), cr = (t) => ({ role: 'bot', text: t }), msgsR = msgs.map((m) => (m.papel === 'capitao' ? cr(m.texto) : ur(m.texto)));
+  out.histRole = { janela: B.historicoIA(msgsR, { emergencia: true }), fora: B.historicoIA(msgsR), foraSemOpts: B.historicoIA(msgsR, {}), msgs: msgsR.map((m) => m.text.slice(0, 40)), misto: B.historicoIA([msgsR[0], msgs[1], msgs[2], msgsR[3], msgsR[6], msgsR[7]]) };
   // pedeIA
   const nos2 = B.answer('como se faz um nó lais de guia?', op), ex = B.answer('MAYDAY, homem ao mar!', op);
   out.pede = { fora: B.pedeIA(nos2, 'como se faz um nó lais de guia?'), opts: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: true }), optsFalso: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: false }), optsTexto: B.pedeIA(nos2, 'como se faz um nó lais de guia?', { emergencia: 'true' }),
     semA: B.pedeIA(null, 'como se faz um nó lais de guia?', { emergencia: true }), abre: B.pedeIA({ key: 'fallback', emerg: true }, 'x'), dentro: B.pedeIA({ key: 'fallback', janela: true }, 'x'), ex: B.pedeIA(ex, 'MAYDAY, homem ao mar!') };
   // o registro do aparelho lido dentro da janela: a linha que o usuário gravou antes, com pessoas e velocidade, volta sem eles (no diário e nas pendências)
   B.addDiario({ t: 'Anomalia vista na saída com 5 pessoas a bordo, SOG 7,2 nós, proa 123° e rumo 110°', sys: 'Diário', pend: true });
+  // a linha do aparelho que cita «anomalia» mas NÃO é pendência (sem `pend`): as pendências abertas a mostram pelo ramo «(app)» do texto
+  B.addDiario({ t: 'Anomalia na ré com 7 pessoas a bordo, SOG 8,8 nós, proa 321° e rumo 312°', sys: 'Diário' });
   const dl = B.answer('ler o diário', op), dlj = B.answer('ler o diário', opj), pa = B.answer('pendências abertas', op), paj = B.answer('pendências abertas', opj);
-  out.reg = { dl: dl.text, dlj: dlj.text, pa: pa.text, paj: paj.text, pend: B.pendenciasLista().map((x) => x.t).filter((t) => /6 pessoas/.test(t)).length };
+  out.reg = { dl: dl.text, dlj: dlj.text, pa: pa.text, paj: paj.text, pend: B.pendenciasLista().map((x) => x.t).filter((t) => /6 pessoas/.test(t)).length, semPend: B.pendenciasLista().map((x) => x.t).filter((t) => /7 pessoas/.test(t)).length };
+  // os alarmes pedidos (EXTRA_ALM_JAN): a leitura e o limite da VELOCIDADE saem dentro da janela — pela API (a faixa e o HUD das telas leem fora de answer(), com `ctx.emergencia`) e pelas respostas
+  const mk = (ctx) => B.alarmesPedidosAtivos(undefined, ctx).map((x) => ({ n: x.n, campo: x.campo, titulo: x.titulo, texto: x.texto, valor: x.valor, limite: x.limite, un: x.un, valorTxt: x.valorTxt, limiteTxt: x.limiteTxt, desdeTxt: x.desdeTxt })), reg = B.alarmesPedidos();
+  out.alm = { fora: mk(), ctx: mk({ emergencia: true }), ctxTexto: mk({ emergencia: 'true' }), ctxFalso: mk({ emergencia: false }), sem: B.alarmesPedidosAtivos().length, regra: reg.map((a) => B.alarmeTexto(a)), regraCtx: reg.map((a) => B.alarmeTexto(a, { emergencia: true })), regraTexto: reg.map((a) => B.alarmeTexto(a, { emergencia: 'true' })),
+    lista: B.answer('meus alarmes', op).text, listaJ: B.answer('meus alarmes', opj).text, ativos: B.answer('tem algum alarme ativo?', op).text, ativosJ: B.answer('tem algum alarme ativo?', opj).text, depois: mk() };
   // anexos
   const file = { name: 'a.jpg', size: 2048 }, xn = B.answerAttachment('foto', file, op), xj = B.answerAttachment('foto', file, opj), vj = B.answerAttachment('video', file, opj);
   out.anexo = { normal: xn.text, janela: xj.text, janelaFlag: xj.janela === true, janelaInst: xj._inst !== undefined, normalInst: xn._inst !== undefined, video: vj.text, videoFlag: vj.janela === true };
   // a janela não vaza e só liga com `true`
   const depois = B.answer('posição agora', op), txt = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 'true' }), um = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 1 }), falso = B.answer('posição agora', { platform: 'app', commit: false, emergencia: false });
   out.vaza = { depois: depois.text, depoisJanela: depois.janela === true, texto: txt.text, um: um.text, falso: falso.text, normal: an.text };
+  // o fluxo do alarme de velocidade DENTRO da janela (pedido, confirmar, lista, apagar): nenhuma resposta traz o limite nem a leitura, e o registro guarda o limite de verdade (a janela só esconde o texto)
+  const jc = { platform: 'app', commit: true, emergencia: true }, fl = ['avise se a velocidade passar de 15 nós', 'confirmar alarme', 'meus alarmes', 'apagar alarme #5'].map((q) => { const a = B.answer(q, jc); return { q, key: a.key, text: a.text, fala: B.falaCurta(a), src: a.src, janela: a.janela === true }; });
+  out.almFluxo = { respostas: fl, linhas: JSON.parse(localStorage.getItem('capitao.alarmes.v1')).filter((l) => l.id === 'usr_5').map((l) => [l.campo, l.op, l.limite, l.acao || '']), depois: B.alarmesPedidos().map((a) => a.n) };
   // a exceção solta a janela (o finally)
   let lancou = false; try { B.answer('posição agora', { get platform() { throw new Error('x'); }, emergencia: true }); } catch (e) { lancou = true; }
   const apos = B.answer('posição agora', op);
@@ -8936,7 +8983,7 @@ EXTRA_PEND_JAN = """;window.CapitaoDados.diario.push({ id: 'd99', diasAtras: 1, 
 
 def grupo_janela_api(b, muta, ped):
     for x in ('60', '105'):
-        pg = pagina(b, muta=muta, fixo=x, extra=EXTRA_PEND_JAN)
+        pg = pagina(b, muta=muta, fixo=x, extra=EXTRA_PEND_JAN + EXTRA_ALM_JAN)
         try:
             a = pg.evaluate(JS_JAN_API)
             rot = 'janela API (t=%s)' % x
@@ -8960,15 +9007,23 @@ def grupo_janela_api(b, muta, ped):
             ped(rot + ': a ficha da resposta que ABRE a janela (diário com alerta) sai sem o quadro, como a das chaves de emergência',
                 not (quadro & set(fi['aberta']['titulos'])) and not (quadro & set(fi['emerg']['titulos'])) and not NAVEGACAO.search(fi['aberta']['t']), (sorted(fi['aberta']['titulos']), sorted(fi['emerg']['titulos'])))
             g = a['reg']
-            lixo = re.compile(r'[56] pessoas a bordo|SOG (?:7,2|9,9)|proa (?:123|200)|rumo (?:110|190)')
+            lixo = re.compile(r'[567] pessoas a bordo|SOG (?:7,2|8,8|9,9)|proa (?:123|200|321)|rumo (?:110|190|312)')
             ped(rot + ': o registro do aparelho lido dentro da janela (ler o diário, pendências abertas) volta sem o número de pessoas, o SOG, a proa nem o rumo que o usuário escreveu — «conte agora» / «leia no plotter»',
                 not lixo.search(g['dlj']) and not lixo.search(g['paj']) and 'pessoas a bordo: conte agora' in g['dlj'] and 'velocidade: leia no plotter' in g['dlj'] and 'rumo: leia no plotter' in g['dlj']
                 and 'pessoas a bordo: conte agora' in g['paj'], (g['dlj'][:300], g['paj'][:300]))
-            ped(rot + ': controle — fora da janela o registro (do aparelho e do arquivo) volta como foi escrito (o diário só cresce; nada é apagado)', '5 pessoas a bordo' in g['dl'] and 'SOG 7,2' in g['dl'] and '5 pessoas a bordo' in g['pa'] and '6 pessoas a bordo' in g['pa'] and g['pend'] == 1, (g['dl'][:200], g['pa'][:300], g['pend']))
+            ped(rot + ': a linha do aparelho que cita «anomalia» e NÃO é pendência (o ramo «(app)» das pendências abertas) também volta sem o número de pessoas, o SOG, a proa nem o rumo',
+                g['semPend'] == 0 and 'Anomalia na ré com pessoas a bordo: conte agora' in g['paj'] and not lixo.search(g['paj']), (g['paj'][:500], g['semPend']))
+            ped(rot + ': controle — fora da janela o registro (do aparelho e do arquivo) volta como foi escrito (o diário só cresce; nada é apagado)', '5 pessoas a bordo' in g['dl'] and 'SOG 7,2' in g['dl'] and '5 pessoas a bordo' in g['pa'] and '6 pessoas a bordo' in g['pa'] and '7 pessoas a bordo' in g['pa'] and 'SOG 8,8' in g['pa'] and g['pend'] == 1 and g['semPend'] == 0, (g['dl'][:200], g['pa'][:300], g['pend'], g['semPend']))
             h = a['hist']
             ped(rot + ': historicoIA(msgs, { emergencia: true }) é vazio — nada da conversa vai à IA dentro da janela', h['janela'] == [], h['janela'])
             ped(rot + ': historicoIA(msgs) depois da janela tira a pergunta e a resposta que levaram a instrução do plotter («qual a nossa posição?», «quantas pessoas a bordo?») e guarda o resto',
                 [m['texto'][:20] for m in h['fora']] == ['quanto diesel temos?', 'Autonomia de teste', 'como se faz um nó la', 'Isso não está nas fo'] and h['foraSemOpts'] == h['fora'] and h['vazio'] == [] and h['naoLista'] == [], h['fora'])
+            hr = a['histRole']
+            ped(rot + ': o histórico no formato que as telas montam ({ role: \'user\' | \'bot\', text }): vazio dentro da janela e, fora dela, sem a pergunta e a resposta que levaram a instrução do plotter — a mesma saída do formato {papel, texto}',
+                hr['janela'] == [] and hr['fora'] == h['fora'] and hr['foraSemOpts'] == h['fora'] and [m['texto'][:20] for m in hr['fora']] == ['quanto diesel temos?', 'Autonomia de teste', 'como se faz um nó la', 'Isso não está nas fo']
+                and all('plotter' not in m['texto'].lower() for m in hr['fora']), (hr['fora'], hr['misto']))
+            ped(rot + ': o histórico com os dois formatos misturados ({papel, texto} e {role, text}) também tira o par pergunta/resposta do plotter',
+                [m['texto'][:20] for m in hr['misto']] == ['quanto diesel temos?', 'Autonomia de teste', 'como se faz um nó la', 'Isso não está nas fo'] and not any('LEIA NO PLOTTER' in m['texto'] for m in hr['misto']), hr['misto'])
             p = a['pede']
             ped(rot + ': pedeIA(a, q, { emergencia: true }) é false para a pergunta que vai à IA; só `true` liga; sem a janela volta true; a resposta que abre a janela e a de dentro nunca vão à IA',
                 p['fora'] is True and p['opts'] is False and p['optsFalso'] is True and p['optsTexto'] is True and p['semA'] is False and p['abre'] is False and p['dentro'] is False and p['ex'] is False, p)
@@ -8979,6 +9034,33 @@ def grupo_janela_api(b, muta, ped):
             v = a['vaza']
             ped(rot + ': a janela só liga com `emergencia === true` e não vaza para a pergunta seguinte (`"true"`, 1 e false não ligam; depois da janela a resposta volta ao normal)',
                 v['depois'] == v['normal'] == v['texto'] == v['um'] == v['falso'] and not v['depoisJanela'] and 'SOG' in v['normal'], v)
+            al = a['alm']
+            s_f = [x for x in al['fora'] if x['campo'] == 'sog_nos']; s_c = [x for x in al['ctx'] if x['campo'] == 'sog_nos']
+            o_f = [x for x in al['fora'] if x['campo'] != 'sog_nos']; o_c = [x for x in al['ctx'] if x['campo'] != 'sog_nos']
+            nav_ = re.compile(r'\bSOG\b|\bnós\b|\d')
+            ped(rot + ': controle — fora da janela o alarme de velocidade ATIVO traz a leitura e o limite (a faixa e o HUD leem assim): valor, limite, valorTxt, limiteTxt, texto; a rotação (#4) também; o #3 (nunca dispara) e o do vento (#2) não estão ativos',
+                len(s_f) == 1 and isinstance(s_f[0]['valor'], (int, float)) and s_f[0]['limite'] == 10 and s_f[0]['valorTxt'].endswith(' nós') and s_f[0]['limiteTxt'] == '10,0 nós' and 'SOG' in s_f[0]['texto'] and '(acima de 10,0 nós)' in s_f[0]['texto']
+                and [x['n'] for x in o_f] == [4] and al['sem'] == 2, al['fora'])
+            ped(rot + ': alarmesPedidosAtivos(undefined, { emergencia: true }): o alarme de velocidade ativo volta sem valor, limite, unidade, SOG nem nós (valor, limite null; valorTxt, limiteTxt, un vazios; titulo e texto sem dígito além do #n) e com o «desde»; a rotação (#4) sai igual',
+                len(s_c) == 1 and s_c[0]['valor'] is None and s_c[0]['limite'] is None and s_c[0]['valorTxt'] == '' and s_c[0]['limiteTxt'] == '' and s_c[0]['un'] == ''
+                and not nav_.search(re.sub(r'#\d+', '', s_c[0]['titulo'] + ' ' + s_c[0]['texto'])) and 'plotter' in s_c[0]['texto'] and 'plotter' in s_c[0]['titulo'] and s_c[0]['desdeTxt'] == s_f[0]['desdeTxt'] and o_c == o_f, al['ctx'])
+            ped(rot + ': `emergencia: "true"` (texto) e false não mascaram a velocidade, e depois da chamada com a janela o alarmesPedidosAtivos() volta completo',
+                al['ctxTexto'] == al['fora'] == al['ctxFalso'] == al['depois'], (al['ctxTexto'], al['depois']))
+            ped(rot + ': alarmeTexto(a, { emergencia: true }) troca a regra das duas de velocidade (#1 e #3: sem SOG, limite nem nós) e deixa a do vento e a da rotação; sem ctx ou com "true" a regra é a de sempre',
+                [x for k, x in enumerate(al['regraCtx']) if k in (0, 2)] == ['velocidade, com limite e leitura no plotter'] * 2 and al['regraCtx'][1] == al['regra'][1] == 'Vento verdadeiro acima de 25,0 nós' and al['regraCtx'][3] == al['regra'][3] == 'Rotação do motor BB acima de 500 rpm'
+                and al['regraTexto'] == al['regra'] and 'SOG' in al['regra'][0] and '10,0 nós' in al['regra'][0], (al['regraCtx'], al['regra']))
+            ped(rot + ': «meus alarmes» dentro da janela: a velocidade (#1 ATIVO desde, #3 sem disparar) sem valor nem limite; o vento (#2) e a rotação (#4) seguem com o número; fora da janela a velocidade traz «agora» e o limite',
+                bool(re.search(r'^• #1 [^\n0-9]*plotter — ATIVO desde \d\d:\d\d:\d\d$', al['listaJ'], re.M)) and bool(re.search(r'^• #3 [^\n0-9]*plotter — sem disparar$', al['listaJ'], re.M)) and not re.search(r'\bSOG\b', al['listaJ'])
+                and '• #2 Vento verdadeiro acima de 25,0 nós — agora ' in al['listaJ'] and 'Rotação do motor BB acima de 500 rpm — ATIVO desde' in al['listaJ'] and '(agora 2.049 rpm)' in al['listaJ']
+                and '• #1 Velocidade sobre o fundo (SOG) acima de 10,0 nós — ATIVO desde' in al['lista'] and '(agora 18,' in al['lista'], (al['listaJ'], al['lista']))
+            ped(rot + ': «tem algum alarme ativo?» dentro da janela: o alarme de velocidade ativo sem valor nem limite (com o «desde»), a rotação com o número; fora da janela traz o SOG e o limite',
+                bool(re.search(r'^• Alarme pedido #1 — [^\n0-9]*plotter — desde \d\d:\d\d:\d\d$', al['ativosJ'], re.M)) and not re.search(r'\bSOG\b|18[.,]\d', al['ativosJ']) and '• Alarme pedido #4 — Rotação do motor BB: 2.049 rpm (acima de 500 rpm)' in al['ativosJ']
+                and 'Velocidade sobre o fundo (SOG): 18,' in al['ativos'], (al['ativosJ'], al['ativos']))
+            fx = a['almFluxo']
+            ped(rot + ': o fluxo do alarme de velocidade dentro da janela (pedir, confirmar, meus alarmes, apagar #5): as 4 respostas (texto, fala e fonte) sem SOG, sem o limite de 15 nós e sem a leitura; o registro guarda o limite de verdade (sog_nos > 15, depois a linha «apaga»)',
+                [r['key'] for r in fx['respostas']] == ['alarmePedido', 'alarmeConfirma', 'alarmesLista', 'alarmeApaga'] and all(r['janela'] for r in fx['respostas'])
+                and not any(sens_jan(r['text'] + '\n' + r['fala'] + '\n' + r['src'], {}) or trava_estrita(r['key'], r['text'] + '\n' + r['fala'] + '\n' + r['src']) for r in fx['respostas'])
+                and [list(l) for l in fx['linhas']] == [['sog_nos', '>', 15, 'apaga'], ['sog_nos', '>', 15, '']] and 5 not in fx['depois'], fx)
             e = a['excecao']
             ped(rot + ': uma exceção dentro da janela solta a janela (finally): a resposta e o resumo seguintes são os normais', e['lancou'] and e['apos'] == v['normal'] and not e['aposJanela'] and e['resumo'] != pl, e)
         finally:
@@ -9108,6 +9190,50 @@ MUTANTES_P4A = [
     ('p4a histórico: o semJanela engole a lista que não é lista', r"    if (!Array.isArray(msgs) || !pl) return msgs;", r"    if (!pl) return msgs;", ('janela',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A
+
+# ——— os mutantes da revisão da P4A: a velocidade sobre o fundo é medida de alarme pedido (trava 10); o histórico no formato das telas; o diário «(app)»; o trecho `base` de segurança não abre a janela ———
+MUTANTES_P4A_REV = [
+    # — o interruptor do alarme de velocidade (almNavJan) —
+    ('p4a rev alarme: a velocidade não é medida de navegação (nada é trocado)', r"ALM_NAV[m.campos[0]] === 1 && !EM_SOS && (janela() || (!!ctx && ctx.emergencia === true)); }", r"ALM_NAV[m.campos[0]] === 7 && !EM_SOS && (janela() || (!!ctx && ctx.emergencia === true)); }", ('janela',)),
+    ('p4a rev alarme: a velocidade é trocada também fora da janela', r"ALM_NAV[m.campos[0]] === 1 && !EM_SOS && (janela() || (!!ctx && ctx.emergencia === true)); }", r"ALM_NAV[m.campos[0]] === 1 && !EM_SOS; }", ('janela',)),
+    ('p4a rev alarme: só o ctx.emergencia troca (as respostas de dentro da janela não)', r"(janela() || (!!ctx && ctx.emergencia === true))", r"(!!ctx && ctx.emergencia === true)", ('janela',)),
+    ('p4a rev alarme: só a janela troca (o ctx.emergencia da faixa e do HUD não)', r"(janela() || (!!ctx && ctx.emergencia === true))", r"janela()", ('janela',)),
+    ('p4a rev alarme: qualquer ctx.emergencia (inclusive "true") troca', r"(!!ctx && ctx.emergencia === true)", r"(!!ctx && !!ctx.emergencia)", ('janela',)),
+    # — os alarmes ativos (a faixa e o HUD) —
+    ('p4a rev alarme: almAtivos ignora o ctx.emergencia', r"nav = almNavJan(a.m, ctx);", r"nav = almNavJan(a.m);", ('janela',)),
+    ('p4a rev alarme: o texto do alarme ativo de velocidade leva o valor e o limite', r"texto: nav ? 'Alarme pedido #' + a.n + ' — ' + ALM_NAV_TXT", r"texto: false ? 'Alarme pedido #' + a.n + ' — ' + ALM_NAV_TXT", ('janela',)),
+    ('p4a rev alarme: o valorTxt do alarme ativo de velocidade leva a leitura', r"valorTxt: nav || v == null ? ''", r"valorTxt: v == null ? ''", ('janela',)),
+    ('p4a rev alarme: o limiteTxt do alarme ativo de velocidade leva o limite', r"limiteTxt: nav ? '' : almTxt(a.m, a.limite)", r"limiteTxt: almTxt(a.m, a.limite)", ('janela',)),
+    ('p4a rev alarme: o valor do alarme ativo de velocidade leva a leitura', r"valor: nav ? null : v,", r"valor: v,", ('janela',)),
+    ('p4a rev alarme: o limite do alarme ativo de velocidade leva o número', r"limite: nav ? null : a.limite,", r"limite: a.limite,", ('janela',)),
+    ('p4a rev alarme: a unidade do alarme ativo de velocidade fica (nós)', r"un: nav ? '' : a.m.un,", r"un: a.m.un,", ('janela',)),
+    ('p4a rev alarme: o título do alarme ativo de velocidade leva o nome com a sigla SOG', r"(nav ? ALM_NAV_TXT : a.m.nome)", r"a.m.nome", ('janela',)),
+    # — a regra, o pedido, a lista —
+    ('p4a rev alarme: alarmeTexto(a, ctx) ignora o ctx.emergencia', r"function almRegra(a, ctx) { return almDescr(a.m, a.op, a.limite, ctx); }", r"function almRegra(a, ctx) { return almDescr(a.m, a.op, a.limite); }", ('janela',)),
+    ('p4a rev alarme: a regra de velocidade na janela leva o limite (a descrição nunca troca)', r"function almDescr(m, op, limite, ctx) { return almNavJan(m, ctx) ? ALM_NAV_TXT :", r"function almDescr(m, op, limite, ctx) { return false ? ALM_NAV_TXT :", ('janela',)),
+    ('p4a rev alarme: o pedido de velocidade na janela traz «agora N nós» (a linha do bullet)', r"var v = i && i.q && !almNavJan(it.m) ? i.q[it.m.campos[0]] : null; return '• '", r"var v = i && i.q ? i.q[it.m.campos[0]] : null; return '• '", ('janela',)),
+    ('p4a rev alarme: o pedido de velocidade na janela fala «Leitura agora, às …: N nós»', r"(i && i.q && !almNavJan(pr.itens[0].m) && typeof", r"(i && i.q && typeof", ('janela',)),
+    ('p4a rev alarme: o pedido de velocidade na janela repete o limite que o usuário pediu', r"regras = pr.itens.map(function (it) { return almDescr(it.m, it.op, it.limite); });", r"regras = pr.itens.map(function (it) { return it.m.nome + ' ' + (it.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(it.m, it.limite); });", ('janela',)),
+    ('p4a rev alarme: a lista de alarmes na janela traz «agora N nós» da velocidade', r"val = tem1 && !nav ? almTxt(a.m, i.q[a.campo]) : '';", r"val = tem1 ? almTxt(a.m, i.q[a.campo]) : '';", ('janela',)),
+    ('p4a rev alarme: o alarme de velocidade que não dispara diz «sem leitura agora» na janela', r"nav && tem1 ? ' — sem disparar' : ' — sem leitura agora'", r"' — sem leitura agora'", ('janela',)),
+    ('p4a rev alarme: a faixa da velocidade (1 a 30 nós) sai na janela', r"pr.motivo === 'faixa' && almNavJan(m) ? 'Esse limite de velocidade", r"pr.motivo === 'faixa' && false ? 'Esse limite de velocidade", ('janela',)),
+    ('p4a rev alarme: a fala da faixa da velocidade sai na janela', r"(almNavJan(m) ? 'Esse limite está fora da faixa. Nada foi criado.' :", r"(false ? 'Esse limite está fora da faixa. Nada foi criado.' :", ('janela',)),
+    ('p4a rev alarme: a lista de medidas que o app vigia leva «(SOG)» na janela', r"min1(almNome(x))", r"min1(x.nome)", ('janela',)),
+    ('p4a rev alarme: a unidade da velocidade leva «(SOG)» na janela', r"'A unidade de ' + min1(almNome(m))", r"'A unidade de ' + min1(m.nome)", ('janela',)),
+    # — o registro lido na janela, o histórico no formato das telas, a abertura —
+    ('p4a rev diário: a linha do aparelho com «anomalia» que não é pendência (ramo «(app)») leva pessoas, SOG, proa e rumo', r"semNavJanela(String(x.t)).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas", r"String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas", ('janela',)),
+    ('p4a rev histórico: a mensagem {role: bot, text} não é do capitão (semJanela)', r"ehBot = function (m) { return !!m && (m.papel === 'capitao' || m.role === 'bot'); };", r"ehBot = function (m) { return !!m && (m.papel === 'capitao'); };", ('janela',)),
+    ('p4a rev histórico: a mensagem {role: bot, text} vira usuário (historicoBase)', r"var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto", r"var bot = m && (m.papel === 'capitao'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto", ('janela',)),
+    ('p4a rev histórico: o texto {text} da resposta do plotter não é lido (semJanela)', "var t = m ? (m.texto != null ? m.texto : m.text) : '';\n      if (ehBot(m)", "var t = m ? m.texto : '';\n      if (ehBot(m)", ('janela',)),
+    ('p4a rev abre: o trecho `base` de segurança abre a janela', r"if (a && typeof a === 'object' && ABRE_JANELA[a.key] === 1) a.emerg = true;", r"if (a && typeof a === 'object' && (ABRE_JANELA[a.key] === 1 || (a.key === 'base' && a.seguranca))) a.emerg = true;", ('janela',)),
+    ('p4a rev abre: toda resposta `base` abre a janela', r"var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };", r"var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, base: 1 };", ('janela',)),
+    # — o fluxo do alarme de velocidade dentro da janela (confirmar, apagar) —
+    ('p4a rev alarme: o «Alarme criado» de velocidade na janela leva o limite (texto)', r"return { text: 'Alarme criado: ' + r.criadas.map(function (a) { return '#' + a.n + ' ' + almRegra(a); }).join(' · ') + '.", r"return { text: 'Alarme criado: ' + r.criadas.map(function (a) { return '#' + a.n + ' ' + a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite); }).join(' · ') + '.", ('janela',)),
+    ('p4a rev alarme: o «Alarme criado» de velocidade na janela leva o limite (fala)', r"fala: 'Alarme criado: ' + r.criadas.map(function (a) { return 'número ' + a.n + ', ' + almRegra(a); }).join('; ') + '.' };", r"fala: 'Alarme criado: ' + r.criadas.map(function (a) { return 'número ' + a.n + ', ' + a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite); }).join('; ') + '.' };", ('janela',)),
+    ('p4a rev alarme: o «Alarme apagado» de velocidade na janela leva o limite', r"return { text: 'Alarme #' + n + ' apagado: ' + almRegra(a) + '.", r"return { text: 'Alarme #' + n + ' apagado: ' + a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite) + '.", ('janela',)),
+    ('p4a rev alarme: o «Você tem:» do apagar de velocidade na janela leva o limite', r"'\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + almRegra(x); }).join(' · ') + '.' : '\nVocê não tem alarmes pedidos.')", r"'\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + x.m.nome + ' ' + (x.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(x.m, x.limite); }).join(' · ') + '.' : '\nVocê não tem alarmes pedidos.')", ('janela',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV
 
 
 def instante_3a(b):

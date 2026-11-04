@@ -677,7 +677,7 @@
   // «me avise se a pressão do óleo do BB cair abaixo de 2 bar» → uma PROPOSTA (nada é gravado) que vira regra só no Confirmar. A lista de medidas é FECHADA e vem do dado gerado (D.alarmesPedidos.metricas:
   // nome, palavras, unidade, casas, faixa aceita para o limite, sentidos); a regra é a faixa própria da medida, não o D.replay.limites. capitao.alarmes.v1 = linhas { id: 'usr_<n>', campo, op, limite, iso, who, sim?,
   // acao?: 'apaga' }: a linha mais nova de cada id é o estado, e apagar é uma linha NOVA (nada se apaga; o número não volta a ser usado). Avaliado no aparelho contra o quadro do instante (e, com o replay, os últimos
-  // segundos): AVISO só na tela — nunca crítico, nunca abre o SOS nem a C3, nunca fala, nunca grava no diário, sem notificação. A faixa do topo (Fase 4) lê almAtivos().
+  // segundos): AVISO só na tela — nunca crítico, nunca abre o SOS nem a C3, nunca fala, nunca grava no diário, sem notificação. A faixa do topo (Fase 4) lê almAtivos(ms, ctx); com a marca da conversa em emergência valendo, ctx = { emergencia: true } (a velocidade sai sem valor nem limite: ver almNavJan).
   function almCfg() { var A = D.alarmesPedidos; return !EM_SOS && A && typeof A === 'object' && Array.isArray(A.metricas) ? A : null; }
   function almMetricas() {
     var A = almCfg();
@@ -725,7 +725,14 @@
   }
   function almNum(x, c) { return c === 0 ? mil(x) : nb(x, c); }
   function almTxt(m, v) { return almNum(v, m.casas) + ' ' + m.un; }
-  function almRegra(a) { return a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite); }
+  // (P4A, revisão) A velocidade sobre o fundo é medida de alarme pedido (campo sog_nos): dentro da janela de emergência (trava 10; `ctx.emergencia === true` para quem lê fora de answer(), como a faixa e o HUD das telas) a regra,
+  // o limite e a leitura dessa medida saem como «velocidade, com limite e leitura no plotter» — no pedido, na confirmação, na lista, em «tem algum alarme ativo?», no apagar e em almAtivos(). Sem dígito, sem «SOG» e sem «nós»;
+  // o «ATIVO desde» fica (é o estado do alarme, não a velocidade). Rumo, posição, ETA e pessoas não são medidas de alarme.
+  var ALM_NAV = { sog_nos: 1 }, ALM_NAV_TXT = 'velocidade, com limite e leitura no plotter';
+  function almNavJan(m, ctx) { return !!m && Array.isArray(m.campos) && ALM_NAV[m.campos[0]] === 1 && !EM_SOS && (janela() || (!!ctx && ctx.emergencia === true)); }
+  function almNome(m, ctx) { return almNavJan(m, ctx) ? 'velocidade' : m.nome; }
+  function almDescr(m, op, limite, ctx) { return almNavJan(m, ctx) ? ALM_NAV_TXT : m.nome + ' ' + (op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(m, limite); }
+  function almRegra(a, ctx) { return almDescr(a.m, a.op, a.limite, ctx); }
   function almMotorTxt(m) { return m.motor ? ' — só vale com o motor em cruzeiro (a partir de 1.000 rpm)' : ''; }
   // a regra que nunca dispara: «rotação abaixo de 800 rpm» — a rotação só é avaliada com o motor em cruzeiro (a partir de 1.000 rpm), então «abaixo de» 1.000 rpm ou menos não tem como valer (o motor apagando é o caso
   // que o usuário queria vigiar, e esse o app não avalia); o pedido é recusado com o motivo, e a API também não grava
@@ -872,7 +879,7 @@
   // 2 min 40 s» (ou «agora», no coletor) — nunca uma hora que anda com o relógio. Com o começo achado, `desdeTxt` é «desde HH:MM:SS». Sem quadro vivo (replay ou coletor), no SOS ou sem regra: [].
   var ALM_JANELA = 160;
   function almJanelaTxt() { return Math.floor(ALM_JANELA / 60) + ' min ' + (ALM_JANELA % 60) + ' s'; }
-  function almAtivos(ms) {
+  function almAtivos(ms, ctx) {
     var A = almCfg(), regras, i = instante(), R = window.CapitaoReplay, H, cache = {}, NIV = (window.CapitaoAlertas && window.CapitaoAlertas.NIVEL && window.CapitaoAlertas.NIVEL.aviso) || {};
     if (!A || !i || !i.q || VIVAS[i.fonte] !== 1) return [];
     regras = almVigentes(); if (!regras.length) return [];
@@ -890,10 +897,10 @@
       d = fechou ? ms - ini * 1000 : null;
       hora = fechou && A2 && A2.fmt ? A2.fmt.hora(d, true) : '';
       desdeTxt = hora ? 'desde ' + hora : i.fonte === 'replay' ? 'há mais de ' + almJanelaTxt() : 'agora';
-      var normal = ult > 0;   // a condição já não vale agora: o aviso só fecha 10 s depois de normalizar
+      var normal = ult > 0, nav = almNavJan(a.m, ctx);   // a condição já não vale agora: o aviso só fecha 10 s depois de normalizar; `nav`: a velocidade na janela de emergência (sem valor, limite nem unidade)
       return { id: a.id, n: a.n, nivel: 'aviso', rotulo: NIV.rotulo || 'AVISO', cor: NIV.cor || 'var(--cap-warn, #f0a63a)', rgb: NIV.rgb || 'var(--cap-warn-rgb, 240,166,58)', sistema: /^motor_/.test(a.campo) ? 'motores' : /^bateria_/.test(a.campo) ? 'elétrico' : /^tanque_/.test(a.campo) ? 'tanques' : a.campo === 'diesel_litros' ? 'combustível' : 'navegação',
-        lado: lado ? lado[1].toUpperCase() : undefined, campo: a.campo, titulo: 'Alarme pedido #' + a.n + ': ' + a.m.nome, valor: v, limite: a.limite, un: a.m.un, valorTxt: v == null ? '' : almTxt(a.m, v), limiteTxt: almTxt(a.m, a.limite), op: a.op,
-        normalizando: normal, texto: 'Alarme pedido #' + a.n + ' — ' + a.m.nome + (v == null ? '' : ': ' + almTxt(a.m, v)) + ' (' + (normal ? 'já voltou ' + (a.op === '<' ? 'acima' : 'abaixo') + ' de ' + almTxt(a.m, a.limite) + '; o aviso fecha ' + H + ' s depois de normalizar' : (a.op === '<' ? 'abaixo' : 'acima') + ' de ' + almTxt(a.m, a.limite)) + ')', desde: fechou ? new Date(d).toISOString() : '', desdeMs: fechou ? d : null, hora: hora, seg: fechou ? ini : i.fonte === 'replay' ? ALM_JANELA : 0, desdeAberto: !fechou, desdeTxt: desdeTxt,
+        lado: lado ? lado[1].toUpperCase() : undefined, campo: a.campo, titulo: 'Alarme pedido #' + a.n + ': ' + (nav ? ALM_NAV_TXT : a.m.nome), valor: nav ? null : v, limite: nav ? null : a.limite, un: nav ? '' : a.m.un, valorTxt: nav || v == null ? '' : almTxt(a.m, v), limiteTxt: nav ? '' : almTxt(a.m, a.limite), op: a.op,
+        normalizando: normal, texto: nav ? 'Alarme pedido #' + a.n + ' — ' + ALM_NAV_TXT + (normal ? ' (já normalizou; o aviso fecha ' + H + ' s depois)' : '') : 'Alarme pedido #' + a.n + ' — ' + a.m.nome + (v == null ? '' : ': ' + almTxt(a.m, v)) + ' (' + (normal ? 'já voltou ' + (a.op === '<' ? 'acima' : 'abaixo') + ' de ' + almTxt(a.m, a.limite) + '; o aviso fecha ' + H + ' s depois de normalizar' : (a.op === '<' ? 'abaixo' : 'acima') + ' de ' + almTxt(a.m, a.limite)) + ')', desde: fechou ? new Date(d).toISOString() : '', desdeMs: fechou ? d : null, hora: hora, seg: fechou ? ini : i.fonte === 'replay' ? ALM_JANELA : 0, desdeAberto: !fechou, desdeTxt: desdeTxt,
         guia: '', secao: '', passos: [], detalhe: '', fonte: A.fonte || 'alarme pedido no chat · avaliado neste aparelho', pedido: true };
     }).filter(Boolean);
   }
@@ -947,7 +954,8 @@
   // ABRE a janela traz `a.emerg === true` (salvatagem e mmsi não: são perguntas de rotina e já respondem sem posição; o trecho `base` de segurança também não). Dentro dela:
   //  (1) pedeIA é false para tudo (nada vai à IA, nem a ficha nem o histórico);
   //  (2) posição, rumo/COG, SOG, distância, ETA e o número de pessoas a bordo (posicao, navegacao, eta, destinos, pessoas, a posição da âncora, o rumo do piloto, a velocidade do checklist, a linha de
-  //      situação de bordo de contatos/fallback/anexos/tempo e maré sem conexão, o resumo do diário e a telemetria) viram protocolos.plotter, no texto E na fala (a 1ª linha é a instrução).
+  //      situação de bordo de contatos/fallback/anexos/tempo e maré sem conexão, o resumo do diário e a telemetria) viram protocolos.plotter, no texto E na fala (a 1ª linha é a instrução). A velocidade sobre o fundo também
+  //      é medida de alarme pedido: o pedido, a confirmação, a lista, os alarmes ativos e o apagar não trazem o limite nem a leitura dela (almNavJan); a faixa e o HUD passam ctx.emergencia a almAtivos() e alarmeTexto().
   // A resposta dada dentro da janela traz `a.janela === true`: sem o instante dela (`_inst`), sem `anterior`/`junto` (e, a que abre com a instrução do plotter, sem a hora do quadro: a fala não a repete), e a ficha e o resumo dela saem como os de emergência.
   // Vento, ondas, tempo e maré (reais) e a velocidade de cruzeiro do guia (autonomia, consumo) não são posição, rumo, SOG, ETA nem pessoas: ficam. Nada disto vale no SOS (EM_SOS), que já nunca lê o quadro.
   var JANELA_MS = 15 * 60 * 1000;
@@ -2730,24 +2738,25 @@
       if (!pr.ok) {
         var m = pr.m, t = pr.motivo === 'sentido' ? 'Faltou o sentido: abaixo de quanto, ou acima de quanto? ' + ex
           : pr.motivo === 'limite' ? 'Faltou o valor do limite. ' + ex
-          : pr.motivo === 'medida' ? 'Não achei a medida. Posso vigiar: ' + almMetricas().map(function (x) { return min1(x.nome); }).filter(function (x, k, v) { return v.indexOf(x) === k; }).join(' · ') + '. ' + ex
+          : pr.motivo === 'medida' ? 'Não achei a medida. Posso vigiar: ' + almMetricas().map(function (x) { return min1(almNome(x)); }).filter(function (x, k, v) { return v.indexOf(x) === k; }).join(' · ') + '. ' + ex
           : pr.motivo === 'ambigua' ? 'Um alarme por pedido: diga uma medida e um sentido (“abaixo de” ou “acima de”) de cada vez. ' + ex
-          : pr.motivo === 'unidade' ? 'A unidade de ' + min1(m.nome) + ' é ' + m.un + '. ' + ex
+          : pr.motivo === 'unidade' ? 'A unidade de ' + min1(almNome(m)) + ' é ' + m.un + '. ' + ex
+          : pr.motivo === 'faixa' && almNavJan(m) ? 'Esse limite de velocidade está fora da faixa que o app aceita para o alarme. Nada foi criado; depois da emergência, peça de novo para ver a faixa.'
           : pr.motivo === 'faixa' ? 'O limite de ' + min1(m.nome) + ' vai de ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + ' (a faixa que o app aceita para o alarme).'
           : pr.motivo === 'rpm' ? 'Abaixo de 1.000 rpm o app não avalia a rotação (só vale com o motor em cruzeiro, a partir de 1.000 rpm): um alarme de “abaixo de” 1.000 rpm ou menos nunca dispararia, e nada foi criado. Escolha um limite acima de 1.000 rpm; para o motor apagar, confira o painel dos motores e o plotter.'
-          : m.nome + ' não aceita esse sentido. ' + ex;
-        return { text: t, src: f, actions: abrir, fala: pr.motivo === 'faixa' ? 'Esse limite está fora da faixa. De ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + '.' : pr.motivo === 'rpm' ? 'Abaixo de mil rpm o app não avalia a rotação, e nada foi criado. Escolha um limite acima de mil rpm.' : 'Não consegui montar o alarme. Diga a medida, abaixo ou acima de, e o valor.' };
+          : almNome(m) + ' não aceita esse sentido. ' + ex;
+        return { text: t, src: f, actions: abrir, fala: pr.motivo === 'faixa' ? (almNavJan(m) ? 'Esse limite está fora da faixa. Nada foi criado.' : 'Esse limite está fora da faixa. De ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + '.') : pr.motivo === 'rpm' ? 'Abaixo de mil rpm o app não avalia a rotação, e nada foi criado. Escolha um limite acima de mil rpm.' : 'Não consegui montar o alarme. Diga a medida, abaixo ou acima de, e o valor.' };
       }
       dup = pr.itens.filter(function (it) { return ativas.some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); });
       if (dup.length === pr.itens.length) return { text: 'Esse alarme já existe: ' + ativas.filter(function (a) { return dup.some(function (it) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); }).map(function (a) { return '#' + a.n + ' ' + almRegra(a); }).join(' · ') + '. Nada foi criado.', src: f, actions: abrir, fala: 'Esse alarme já existe. Nada foi criado.' };
       if (ativas.length + pr.itens.length - dup.length > max) return { text: 'Você já tem ' + ativas.length + ' de ' + max + ' alarmes pedidos: não cabe mais ' + (pr.itens.length - dup.length) + '. Apague um com “apagar alarme #n” (veja os números em “meus alarmes”).', src: f, actions: abrir, fala: 'Você já tem ' + ativas.length + ' alarmes pedidos; apague um antes de criar outro.' };
-      regras = pr.itens.map(function (it) { return it.m.nome + ' ' + (it.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(it.m, it.limite); });
-      linhas = pr.itens.map(function (it) { var v = i && i.q ? i.q[it.m.campos[0]] : null; return '• ' + regras[pr.itens.indexOf(it)] + almMotorTxt(it.m) + (typeof v === 'number' ? ' — agora ' + almTxt(it.m, v) + ' (' + i.hora + ')' : ''); });
+      regras = pr.itens.map(function (it) { return almDescr(it.m, it.op, it.limite); });
+      linhas = pr.itens.map(function (it) { var v = i && i.q && !almNavJan(it.m) ? i.q[it.m.campos[0]] : null; return '• ' + regras[pr.itens.indexOf(it)] + almMotorTxt(it.m) + (typeof v === 'number' ? ' — agora ' + almTxt(it.m, v) + ' (' + i.hora + ')' : ''); });
       ALM_PEDIU = Date.now();
       pe = grava ? armaProp('alarme', { itens: pr.itens.map(function (it) { return { campo: it.m.campos[0], op: it.op, limite: it.limite }; }) }) : null;
       return { text: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join(' · ') + '.\n' + linhas.join('\n') + '\nAviso só na tela do app (nunca crítico: sem notificação, sem som, não abre o SOS nem grava no diário). ' + (grava ? 'Nada é gravado sem o seu Confirmar: toque em Confirmar ou diga “confirmar alarme”; para desistir, “cancelar”.' : 'Não criado — pedido vindo de link não cria alarme: digite o pedido aqui no chat para confirmar.') + ' Você tem ' + ativas.length + ' de ' + max + ' alarmes pedidos.',
         src: f, actions: (pe ? botoesProp(pe) : []).concat(abrir),
-        fala: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join('; ') + '.' + (i && i.q && typeof i.q[pr.itens[0].m.campos[0]] === 'number' ? ' Leitura agora, às ' + i.hora + ': ' + almTxt(pr.itens[0].m, i.q[pr.itens[0].m.campos[0]]) + '.' : '') + (grava ? ' Confirma?' : ' Não criei nada: pedido vindo de link.') };
+        fala: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join('; ') + '.' + (i && i.q && !almNavJan(pr.itens[0].m) && typeof i.q[pr.itens[0].m.campos[0]] === 'number' ? ' Leitura agora, às ' + i.hora + ': ' + almTxt(pr.itens[0].m, i.q[pr.itens[0].m.campos[0]]) + '.' : '') + (grava ? ' Confirma?' : ' Não criei nada: pedido vindo de link.') };
     },
     alarmeConfirma: function (p, ctx) {
       var grava = !ctx || ctx.commit !== false, pe = propVale(), al = alvoProp(), abrir = act(p, [['Meus alarmes', askHref(p, 'meus alarmes')], ['Telemetria', 'console']]), i = vivo(), f = 'Fonte: alarmes pedidos neste aparelho' + (i ? ' · ' + i.fonteTxt : ''), r, itens, A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10;
@@ -2773,8 +2782,8 @@
       var v = almVigentes(), at = almAtivos(), i = vivo(), A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10, h = i ? ' às ' + i.hora : '', f = 'Fonte: alarmes pedidos neste aparelho' + (i ? ' · ' + i.fonteTxt : ''), abrir = act(p, [['Telemetria', 'console']]);
       if (!v.length) return { text: 'Você não tem alarmes pedidos' + h + ' (0 de ' + max + ').\nPara criar um: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.', src: f, actions: abrir, fala: 'Você não tem alarmes pedidos' + h + '.' };
       return { text: v.length + (v.length === 1 ? ' alarme pedido' : ' alarmes pedidos') + h + ' (de ' + max + ' possíveis)' + (at.length ? ', ' + at.length + (at.length === 1 ? ' ativo agora' : ' ativos agora') : ', nenhum ativo agora') + ':\n' + v.map(function (a) {
-        var s = at.filter(function (x) { return x.id === a.id; })[0], val = i && i.q && typeof i.q[a.campo] === 'number' ? almTxt(a.m, i.q[a.campo]) : '';
-        return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO ' + s.desdeTxt + (val ? ' (agora ' + val + ')' : '') : val ? ' — agora ' + val + ', sem disparar' : ' — sem leitura agora');
+        var s = at.filter(function (x) { return x.id === a.id; })[0], nav = almNavJan(a.m), tem1 = !!(i && i.q && typeof i.q[a.campo] === 'number'), val = tem1 && !nav ? almTxt(a.m, i.q[a.campo]) : '';   // (P4A rev: a velocidade na janela de emergência não tem valor)
+        return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO ' + s.desdeTxt + (val ? ' (agora ' + val + ')' : '') : val ? ' — agora ' + val + ', sem disparar' : nav && tem1 ? ' — sem disparar' : ' — sem leitura agora');
       }).join('\n') + '\nPara apagar: “apagar alarme #n”.', src: f, actions: abrir };
     },
     alarmeApaga: function (p, ctx, q) {
