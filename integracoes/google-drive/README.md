@@ -8,7 +8,7 @@ Hoje com **dados fictícios de demonstração** (rótulo DEMO em cada arquivo). 
 
 | Pasta | Arquivo (DEMO) | Uso no app | Pode ir ao site público? |
 |---|---|---|---|
-| `01 Manuais e guias de bordo` | Guias de bordo (Gerador Onan, Estabilizador Seakeeper, Climatização, Eletrônicos Garmin/Fusion/VHF 315, Motores Volvo Penta), Checklist de saída e chegada, Inventário de bordo | trechos em `base-conhecimento.json`, FAQ (`D.faq`), inventário (`D.equipamentos`) | trechos técnicos, sim |
+| `01 Manuais e guias de bordo` | Guias de bordo (Gerador Onan, Estabilizador Seakeeper, Climatização, Eletrônicos Garmin/Fusion/Icom, Motores Volvo Penta), Checklist de saída e chegada, Inventário de bordo | trechos em `base-conhecimento.json`, FAQ (`D.faq`), inventário (`D.equipamentos`) | trechos técnicos, sim |
 | `02 Documentos` | Controle de documentos | `D.documentos` (situação e validade; sem números nem valores) | só o controle; documentos em si **não** |
 | `03 Agenda de manutenção` | Agenda preditiva | `D.agenda` (escada D-90 · D-60 · D-30 · D-0) | sim |
 | `04 Diário de bordo` | Diário de bordo | `D.diario` (linhas da fonte) | resumo, sem valores e sem terceiros |

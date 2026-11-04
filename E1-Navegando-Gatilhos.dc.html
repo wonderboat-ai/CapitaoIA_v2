@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Modo navegação (app)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -105,8 +107,9 @@ class Component extends DCLogic {
   // Layout: a barra SOS da moldura vem antes do conteúdo no DOM (order: 2 na tela) — é o 1º link de SOS, o que o SOS flutuante do capitao-app.js acompanha.
   state = { vivo: 0, reg: null, gravando: false };
   componentDidMount() {
-    // Telemetria ao vivo (se ligada): redesenha a cada leitura nova do coletor
-    this._tele = () => this.setState({ vivo: Date.now() });
+    // A cada tique da telemetria (replay ou coletor): redesenha só se o TEXTO que a tela exibe a partir dela mudou. O setState refaz a tela inteira
+    // (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa. A chave é o tele() puro.
+    this._tele = () => { const k = JSON.stringify(this.tele()); if (k !== this._teleK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._tele);
     this.whenBrain(() => this.setState({ vivo: Date.now() }));
   }
@@ -133,15 +136,14 @@ class Component extends DCLogic {
     const ok = !!(a && depois.length > antes && linha && /atalho|telemetria/.test(String(linha.src || '')));
     this.setState({ reg: ok ? { ok: true, d: n.d, t: n.t, texto: a.text, fonte: a.src } : { falhou: true, texto: 'Não consegui gravar no diário deste aparelho (armazenamento indisponível?). Anote posição e hora no Diário.', fonte: a ? a.src : '' } });
   }
-  renderVals() {
+  // O que a tela exibe e vem da telemetria, em texto puro (sem elementos React): é a chave do «só redesenha quando o texto exibido muda».
+  tele() {
     const D = window.CapitaoDados || {}, S = D.snapshot || {}, DI = S.diesel || {}, T = window.CapitaoTelemetria;
     const v = T && T.atual ? T.atual() : null;
-    const B = window.CapitaoBrain;
     const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
     const g3 = (x) => (typeof x === 'number' && isFinite(x) ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : '—');
     const mil = (x) => (typeof x === 'number' ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—');
     const ok = 'var(--cap-ok, #34c77a)', warn = 'var(--cap-warn, #f0a63a)';
-    const OLHO = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z';
     const hd = String(DI.hora || 'SEM DADOS');
     const diesel = typeof DI.bb === 'number' ? { k: 'DIESEL', v: nb(DI.bb, 0) + '/' + nb(DI.be, 0), u: ' %', s: 'às ' + hd.slice(-5), dica: 'Diesel BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % · ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' · ' + (DI.nota || 'última leitura') + ' ' + hd } : { k: 'DIESEL', v: 'SEM DADOS', u: '', s: 'sem leitura', dica: 'Diesel SEM DADOS' };
     let vigia, leituras;
@@ -159,8 +161,8 @@ class Component extends DCLogic {
       ];
     } else {
       vigia = { estado: 'Vigia automática inativa · SEM LEITURA ao vivo', chip: 'INATIVA', tone: warn, wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)', chipLine: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)',
-        sub: 'Última leitura real · snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'),
-        subLongo: 'Telemetria ao vivo desligada. Última leitura real: snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS') + ' · ' + (S.estado || 'SEM DADOS') + (S.local ? ' · ' + S.local : '') + '.',
+        sub: 'Última leitura · snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'),
+        subLongo: 'Telemetria ao vivo desligada. Última leitura: snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS') + ' · ' + (S.estado || 'SEM DADOS') + (S.local ? ' · ' + S.local : '') + '.',
         pos: (S.estado ? S.estado + ' · ' : '') + ((S.gps && S.gps.texto) || 'posição SEM LEITURA'),
         fonte: 'Fonte: ' + (S.fonte || 'SEM DADOS') + ' · leitura de ' + (S.quando || 'SEM DADOS') + ' (diesel ' + (DI.hora || 'SEM DADOS') + ', ' + (DI.nota || 'última leitura') + ') · telemetria ao vivo desligada' };
       const hs = S.hora || 'SEM DADOS';
@@ -172,6 +174,20 @@ class Component extends DCLogic {
         diesel
       ];
     }
+    return {
+      vigia: vigia, leituras: leituras,
+      especificado: 'o conjunto de botões muda sozinho com a telemetria (navegando × atracado) — ' + (v ? 'telemetria ao vivo ligada, mas a troca automática ainda não está ativa.' : 'inativo sem telemetria ao vivo.'),
+      especFonte: 'Fonte: especificação do modo navegação · telemetria: ' + (v ? 'coletor NMEA ao vivo' : 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'))
+    };
+  }
+  renderVals() {
+    const D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const B = window.CapitaoBrain;
+    const ok = 'var(--cap-ok, #34c77a)', warn = 'var(--cap-warn, #f0a63a)';
+    const OLHO = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z';
+    const tele = this.tele();
+    this._teleK = JSON.stringify(tele); // o que esta tela exibe agora: o ouvinte só chama setState se mudar
+    const vigia = tele.vigia, leituras = tele.leituras;
     vigia.ico = this.ico(OLHO, 20, 1.8, vigia.tone);
     const card = { bg: 'var(--cap-card, #0d1329)', ink: 'var(--cap-ink, #eaf1ff)', subTone: 'var(--cap-ink2, #b1bdd6)' };
     const tom = (rgb, cor) => ({ line: 'rgba(' + rgb + ', 0.65)', cor: cor });
@@ -199,8 +215,8 @@ class Component extends DCLogic {
         sub: r && r.ok ? 'Gravado às ' + r.t + ' · toque de novo = linha nova' : 'Grava posição e hora no diário de bordo', subTone: r && r.ok ? ok : 'var(--cap-ink2, #b1bdd6)',
         aria: 'Registrar posição e hora no diário de bordo' },
       conf: conf,
-      especificado: 'o conjunto de botões muda sozinho com a telemetria (navegando × atracado) — ' + (v ? 'telemetria ao vivo ligada, mas a troca automática ainda não está ativa nesta demonstração.' : 'inativo sem telemetria ao vivo.'),
-      especFonte: 'Fonte: especificação do modo navegação · telemetria: ' + (v ? 'coletor NMEA ao vivo' : 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'))
+      especificado: tele.especificado,
+      especFonte: tele.especFonte
     };
   }
 }

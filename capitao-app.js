@@ -3,7 +3,7 @@
    2) No site publicado (janela de topo): ajusta a prancheta à janela —
       celular = ocupa a largura da tela (rola se precisar; deitado fica em 1:1); computador/tablet = cabe inteira, centralizada.
    3) Registra o service worker no site publicado e em localhost (testes) — abre offline depois da 1ª visita.
-   4) Põe o rodapé (versão · selo DEMO · usuário · crédito) logo abaixo da prancheta — definido em capitao-auth.js.
+   4) Põe o rodapé (versão · usuário · crédito) logo abaixo da prancheta — definido em capitao-auth.js.
    5) Celular: SOS flutuante quando o SOS da tela sai da vista.
    Dentro do editor (iframe) só faz o passo 1. */
 (function () {

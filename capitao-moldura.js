@@ -9,7 +9,10 @@
      <capitao-topo-app titulo="…" voltar="…">  cabeçalho de 44 px: voltar · marca · título · leitura · tema · avatar
      <capitao-sos-app>              barra SOS · EMERGÊNCIA (acima da barra do assistente)
    Dados: capitao-dados.js (snapshot com hora) ou capitao-telemetria.js (ao vivo, se ligada). Sem dado → "—" / SEM DADOS.
-   Tudo em light DOM (sem shadow): o tema chega pelas variáveis --cap-* e o SOS flutuante (capitao-app.js) acha o link do SOS. */
+   Tudo em light DOM (sem shadow): o tema chega pelas variáveis --cap-* e o SOS flutuante (capitao-app.js) acha o link do SOS.
+   Montagem: o cabeçalho, a faixa e o topo do app montam o HTML UMA vez (connectedCallback) e guardam os nós de texto; a cada tique do motor
+   (1 s) só trocam o `data` do nó que mudou (e atributos/LED só quando o valor muda). Nada de textContent/innerText/innerHTML no tique: eles geram
+   mutação childList, que dispara o fit() do capitao-app.js e recria o <capitao-theme-toggle> e o avatar (o botão do tema perderia o foco do teclado). */
 (function () {
   if (window.CapitaoMoldura) return;
   var FONTE = '"Nimbus Sans","Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';
@@ -58,8 +61,16 @@
       '@media (prefers-reduced-motion:reduce){.cpm-led{animation:none!important}}';
     document.head.appendChild(s);
   }
-  function viva(el) { el._on = function () { el.render(); }; window.addEventListener('capitao-telemetria', el._on); window.addEventListener('capitao-sessao', el._on); }
-  function morta(el) { window.removeEventListener('capitao-telemetria', el._on); window.removeEventListener('capitao-sessao', el._on); }
+  // Ouvintes: um par por instância (cabeçalho e faixa da web são duas). Idempotente: ligar de novo desliga o anterior; desligar sem ter ligado não faz nada.
+  function viva(el) { morta(el); el._on = function () { el.atualiza(); }; window.addEventListener('capitao-telemetria', el._on); window.addEventListener('capitao-sessao', el._on); }
+  function morta(el) { if (!el._on) return; window.removeEventListener('capitao-telemetria', el._on); window.removeEventListener('capitao-sessao', el._on); el._on = null; }
+  // Nós de texto: `no` põe um nó Text vazio dentro do elemento marcado com data-cpm="k"; `poe` só escreve quando o valor mudou (escrever o mesmo valor
+  // também gera mutação de caractere); `atr` faz o mesmo com um atributo; `troca` substitui um nó por outro montado do HTML (o LED, só quando o estado vira).
+  function no(raiz, k) { var e = raiz.querySelector('[data-cpm="' + k + '"]'), t = document.createTextNode(''); e.appendChild(t); return t; }
+  function poe(t, v) { if (t.data !== v) t.data = v; }
+  function atr(e, k, v) { if (e.getAttribute(k) !== v) e.setAttribute(k, v); }
+  function cria(html) { var m = document.createElement('template'); m.innerHTML = html; return m.content.firstChild; }
+  function troca(velho, html) { var novo = cria(html); velho.parentNode.replaceChild(novo, velho); return novo; }
   function led(vivo, n) {
     return vivo ? '<span class="cpm-led" aria-hidden="true" style="width:' + n + 'px;height:' + n + 'px;flex-shrink:0;border-radius:50%;background:var(--cap-ok,#34c77a);box-shadow:0 0 0 4px rgba(var(--cap-ok-rgb,52,199,122),.22);animation:capMolduraVivo 2s ease-in-out infinite"></span>'
       : '<span aria-hidden="true" style="width:' + n + 'px;height:' + n + 'px;flex-shrink:0;box-sizing:border-box;border-radius:50%;border:1.5px solid var(--cap-ink3,#97a3c0)"></span>';
@@ -69,11 +80,13 @@
   function define(nome, C) { if (window.customElements && !customElements.get(nome)) customElements.define(nome, C); }
 
   // ——— Web · cabeçalho (68 px) ———
+  var DEMO_HTML = '<span style="font-size:10px;letter-spacing:.14em;font-weight:800;color:var(--cap-violeta,#b45cff);border:1px solid rgba(var(--cap-violeta-rgb,162,43,253),.55);background:rgba(var(--cap-violeta-rgb,162,43,253),.10);border-radius:6px;padding:4px 8px;white-space:nowrap">DEMO</span>';
+  function pilula(vivo) { return 'display:flex;align-items:center;gap:8px;padding:8px 14px;background:' + (vivo ? 'rgba(var(--cap-ok-rgb,52,199,122),.10)' : 'var(--cap-card,#0d1329)') + ';border:1px solid ' + (vivo ? 'transparent' : 'var(--cap-line,#1a2240)') + ';border-radius:999px;white-space:nowrap'; }
+  function pilulaTexto(vivo) { return 'font-size:12.5px;font-weight:600;color:' + (vivo ? 'var(--cap-ok,#34c77a)' : 'var(--cap-ink2,#b1bdd6)'); }
   define('capitao-cabecalho', class extends HTMLElement {
-    connectedCallback() { css(); viva(this); this.render(); }
+    connectedCallback() { css(); if (!this._n) this.monta(leitura()); viva(this); this.atualiza(); }
     disconnectedCallback() { morta(this); }
-    render() {
-      var d = D(), E = d.embarcacao || {}, L = leitura();
+    monta(L) {   // uma vez: o HTML com os lugares do texto vazios (data-cpm) e o estado do LED de agora; atualiza() preenche
       this.style.cssText = 'height:68px;flex-shrink:0;border-bottom:1px solid rgba(var(--cap-accent-rgb,0,161,254),.28);';
       this.innerHTML =
         '<header style="height:68px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 28px">' +
@@ -82,23 +95,41 @@
             '<span style="width:1px;height:30px;background:var(--cap-line2,#27315a)"></span>' +
             '<div style="display:flex;flex-direction:column">' +
               '<span style="font-size:17px;font-weight:800;letter-spacing:.02em;color:var(--cap-ink,#eaf1ff)">Capitão IA</span>' +
-              '<span style="font-size:11.5px;font-weight:500;color:var(--cap-ink3,#97a3c0)">Embarcação ' + esc(E.nome || 'SEM DADOS') + ' · registro ' + esc(E.registro || 'SEM DADOS') + '</span>' +
+              '<span data-cpm="emb" style="font-size:11.5px;font-weight:500;color:var(--cap-ink3,#97a3c0)"></span>' +
             '</div>' +
           '</div>' +
           '<div style="flex-grow:1;display:flex;justify-content:center;min-width:0">' +
             '<div style="display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--cap-card,#0d1329);border:1px solid var(--cap-line,#1a2240);border-radius:999px;white-space:nowrap;color:var(--cap-ink2,#b1bdd6)">' + svg(PIN, 16, 1.7) +
-              '<span style="font-size:13px;font-weight:600;color:var(--cap-ink,#eaf1ff)">' + esc(L.estado + (L.local ? ' · ' + L.local : '')) + '</span>' +
+              '<span data-cpm="estado" style="font-size:13px;font-weight:600;color:var(--cap-ink,#eaf1ff)"></span>' +
               '<span style="width:1px;height:14px;background:var(--cap-line2,#27315a)"></span>' +
-              '<span style="font-family:' + MONO + ';font-size:12px">' + esc(L.pos) + '</span>' +
+              '<span data-cpm="pos" style="font-family:' + MONO + ';font-size:12px"></span>' +
             '</div>' +
           '</div>' +
-          '<div style="display:flex;align-items:center;gap:12px">' +
-            (d.demo ? '<span title="' + esc(d.aviso || '') + '" style="font-size:10px;letter-spacing:.14em;font-weight:800;color:var(--cap-violeta,#b45cff);border:1px solid rgba(var(--cap-violeta-rgb,162,43,253),.55);background:rgba(var(--cap-violeta-rgb,162,43,253),.10);border-radius:6px;padding:4px 8px;white-space:nowrap">DEMO</span>' : '') +
-            '<span title="' + (L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor') + '" style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:' + (L.vivo ? 'rgba(var(--cap-ok-rgb,52,199,122),.10)' : 'var(--cap-card,#0d1329)') + ';border:1px solid ' + (L.vivo ? 'transparent' : 'var(--cap-line,#1a2240)') + ';border-radius:999px;white-space:nowrap">' + led(L.vivo, 8) +
-              '<span style="font-size:12.5px;font-weight:600;color:' + (L.vivo ? 'var(--cap-ok,#34c77a)' : 'var(--cap-ink2,#b1bdd6)') + '">' + esc(L.rotulo) + '</span></span>' +
+          '<div data-cpm="dir" style="display:flex;align-items:center;gap:12px">' +
+            '<span data-cpm="pilula" title="' + (L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor') + '" style="' + pilula(L.vivo) + '">' + led(L.vivo, 8) +
+              '<span data-cpm="rotulo" style="' + pilulaTexto(L.vivo) + '"></span></span>' +
             '<capitao-theme-toggle size="40"></capitao-theme-toggle>' + avatar(40, 13) +
           '</div>' +
         '</header>';
+      this._vivo = L.vivo; this._demo = null;
+      this._n = { emb: no(this, 'emb'), estado: no(this, 'estado'), pos: no(this, 'pos'), rotulo: no(this, 'rotulo'), pilula: this.querySelector('[data-cpm="pilula"]'), dir: this.querySelector('[data-cpm="dir"]') };
+    }
+    atualiza() {   // a cada tique: só os nós cujo valor mudou
+      var d = D(), E = d.embarcacao || {}, L = leitura(), n = this._n;
+      poe(n.emb, 'Embarcação ' + (E.nome || 'SEM DADOS') + ' · registro ' + (E.registro || 'SEM DADOS'));
+      poe(n.estado, L.estado + (L.local ? ' · ' + L.local : ''));
+      poe(n.pos, L.pos);
+      poe(n.rotulo, L.rotulo);
+      if (this._vivo !== L.vivo) {   // virou ao vivo ↔ leitura fixa: LED, cor e dica da pílula (nunca no tique de rotina)
+        this._vivo = L.vivo;
+        n.pilula.setAttribute('title', L.vivo ? 'Telemetria ao vivo do coletor' : 'Telemetria ao vivo desligada — leitura fixa do coletor');
+        n.pilula.setAttribute('style', pilula(L.vivo));
+        troca(n.pilula.firstElementChild, led(L.vivo, 8));
+        n.rotulo.parentNode.setAttribute('style', pilulaTexto(L.vivo));
+      }
+      if (d.demo && !this._demo) this._demo = n.dir.insertBefore(cria(DEMO_HTML), n.dir.firstChild);   // selo DEMO: só enquanto D.demo (a Fase 4 o tira das telas)
+      else if (!d.demo && this._demo) { n.dir.removeChild(this._demo); this._demo = null; }
+      if (this._demo) atr(this._demo, 'title', d.aviso || '');
     }
   });
 
@@ -119,17 +150,25 @@
 
   // ——— Web · faixa de leitura (44 px) ———
   define('capitao-faixa', class extends HTMLElement {
-    connectedCallback() { css(); viva(this); this.render(); }
+    connectedCallback() { css(); if (!this._n) this.monta(leitura()); viva(this); this.atualiza(); }
     disconnectedCallback() { morta(this); }
-    render() {
-      var d = D(), L = leitura();
+    monta(L) {   // uma vez (e de novo só se o conjunto de rótulos mudar): um nó de texto por valor da faixa e um para o estado
       this.style.cssText = 'height:44px;flex-shrink:0;';
       this.innerHTML = '<footer style="height:44px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 26px;border-top:1px solid rgba(var(--cap-hl-rgb,255,255,255),.05);font-size:11px;letter-spacing:.14em;color:var(--cap-ink4,#7985a6);white-space:nowrap;overflow:hidden">' +
-        L.faixa.map(function (f) { return '<span>' + f[0] + ' <b style="color:var(--cap-ink3,#97a3c0)">' + esc(f[1]) + '</b></span>'; }).join('') +
-        '<span style="overflow:hidden;text-overflow:ellipsis">' + esc((L.estado + (L.local ? ' · ' + L.local.replace(/^enseada de /i, '') : '')).toUpperCase() + ' · ' + L.hora + (L.vivo ? ' · AO VIVO' : d.demo ? ' · DEMO' : '')) + '</span>' +
+        L.faixa.map(function (f) { return '<span>' + esc(f[0]) + ' <b data-cpm="f" style="color:var(--cap-ink3,#97a3c0)"></b></span>'; }).join('') +
+        '<span data-cpm="estado" style="overflow:hidden;text-overflow:ellipsis"></span>' +
         '<span style="flex-grow:1"></span>' +
         '<a class="cpm-a" href="Main.dc.html" style="color:var(--cap-ink3,#97a3c0);font-weight:700;display:flex;align-items:center;gap:8px;text-decoration:none;min-height:44px;letter-spacing:.16em">' + svg(ANCORA, 15, 1.8, 'var(--cap-accent,#00a1fe)') + ' INÍCIO ›</a>' +
         '</footer>';
+      this._rot = L.faixa.map(function (f) { return f[0]; }).join('|');
+      this._n = { f: Array.prototype.map.call(this.querySelectorAll('[data-cpm="f"]'), function (b) { var t = document.createTextNode(''); b.appendChild(t); return t; }), estado: no(this, 'estado') };
+    }
+    atualiza() {   // a cada tique: só os nós cujo valor mudou
+      var d = D(), L = leitura(), rot = L.faixa.map(function (f) { return f[0]; }).join('|');
+      if (rot !== this._rot) this.monta(L);   // outro conjunto de campos (raro; nunca no tique de rotina)
+      var n = this._n;
+      L.faixa.forEach(function (f, i) { poe(n.f[i], f[1]); });
+      poe(n.estado, (L.estado + (L.local ? ' · ' + L.local.replace(/^enseada de /i, '') : '')).toUpperCase() + ' · ' + L.hora + (L.vivo ? ' · AO VIVO' : d.demo ? ' · DEMO' : ''));
     }
   });
 
@@ -144,20 +183,29 @@
 
   // ——— App · topo (44 px) ———
   define('capitao-topo-app', class extends HTMLElement {
-    connectedCallback() { css(); viva(this); this.render(); }
+    connectedCallback() { css(); if (!this._n) this.monta(leitura()); viva(this); this.atualiza(); }
     disconnectedCallback() { morta(this); }
     static get observedAttributes() { return ['titulo', 'voltar']; }
-    attributeChangedCallback() { if (this.isConnected) this.render(); }
-    render() {
-      var L = leitura(), t = this.getAttribute('titulo') || '', v = this.getAttribute('voltar') || 'H2-Home-Mobile.dc.html';
+    attributeChangedCallback() { if (this.isConnected && this._n) this.atualiza(); }   // troca só o título ou o href (nós/atributos que já existem)
+    monta(L) {   // uma vez: o HTML com o título vazio e o LED de agora; atualiza() preenche
       this.style.cssText = 'height:44px;flex-shrink:0;position:relative;';
       this.innerHTML = '<header style="height:44px;box-sizing:border-box;display:flex;align-items:center;gap:6px;padding:0 10px 0 4px;background:rgba(var(--cap-bar-rgb,10,15,34),.82);border-bottom:1px solid rgba(var(--cap-plat-rgb,211,220,239),.12);white-space:nowrap">' +
-        '<a class="cpm-a" href="' + esc(v) + '" aria-label="Voltar" style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--cap-ink2,#b1bdd6);text-decoration:none">' + svg(VOLTAR, 20, 2.2) + '</a>' +
+        '<a class="cpm-a" data-cpm="voltar" href="H2-Home-Mobile.dc.html" aria-label="Voltar" style="width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--cap-ink2,#b1bdd6);text-decoration:none">' + svg(VOLTAR, 20, 2.2) + '</a>' +
         '<a class="cpm-a" href="H2-Home-Mobile.dc.html" aria-label="Início" style="height:44px;display:flex;align-items:center;flex-shrink:0;text-decoration:none"><img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height:20px;width:47px;object-fit:contain;flex-shrink:0"></a>' +
-        '<span style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;padding-left:6px;font-size:15px;font-weight:800;letter-spacing:.01em;color:var(--cap-ink,#eaf1ff)">' + esc(t) + '</span>' +
-        '<span role="img" aria-label="' + esc(L.rotulo) + '" title="' + esc(L.rotulo) + '" style="display:flex;align-items:center;padding:0 4px">' + led(L.vivo, 7) + '</span>' +
+        '<span data-cpm="titulo" style="flex-grow:1;min-width:0;overflow:hidden;text-overflow:ellipsis;padding-left:6px;font-size:15px;font-weight:800;letter-spacing:.01em;color:var(--cap-ink,#eaf1ff)"></span>' +
+        '<span data-cpm="led" role="img" aria-label="' + esc(L.rotulo) + '" title="' + esc(L.rotulo) + '" style="display:flex;align-items:center;padding:0 4px">' + led(L.vivo, 7) + '</span>' +
         '<capitao-theme-toggle size="30"></capitao-theme-toggle>' + avatar(30, 9.5) +
         '</header>';
+      this._vivo = L.vivo;
+      this._n = { titulo: no(this, 'titulo'), voltar: this.querySelector('[data-cpm="voltar"]'), led: this.querySelector('[data-cpm="led"]') };
+    }
+    atualiza() {   // a cada tique: o título e o href só se o atributo mudou; o rótulo do LED (muda 1×/min); o LED só quando vira
+      var L = leitura(), n = this._n;
+      poe(n.titulo, this.getAttribute('titulo') || '');
+      atr(n.voltar, 'href', this.getAttribute('voltar') || 'H2-Home-Mobile.dc.html');
+      atr(n.led, 'aria-label', L.rotulo);
+      atr(n.led, 'title', L.rotulo);
+      if (this._vivo !== L.vivo) { this._vivo = L.vivo; troca(n.led.firstElementChild, led(L.vivo, 7)); }
     }
   });
 

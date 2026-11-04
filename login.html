@@ -29,7 +29,7 @@ html, body { min-height: 100%; }
 body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 .bg { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 40% 30% at 85% 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.10) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%); }
 .top { position: relative; display: flex; justify-content: flex-end; padding: max(14px, env(safe-area-inset-top, 0px)) 16px 0; }
-/* Compacto: o ENTRAR cabe na 1ª tela em 360×640 e o crédito inteiro em 390×844 e 1440×900 (a linha DEMO vem depois dele). */
+/* Compacto: o ENTRAR cabe na 1ª tela em 360×640 e o crédito inteiro em 390×844 e 1440×900. */
 main { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 10px 16px 24px; box-sizing: border-box; }
 .card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
 .brand { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
@@ -67,7 +67,6 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
 .msg:empty { display: none; }
 .msg.info { color: var(--cap-ink4, #7985a6); }
 .note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--cap-ink4, #7985a6); text-align: center; }
-.demo { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--cap-violeta, #b45cff); text-align: center; letter-spacing: 0.04em; }
 /* Crédito: as duas marcas lado a lado, cada uma com o seu arquivo oficial e espaço entre elas (manual da marca). */
 .credito { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .credito span { font-size: 10px; line-height: 1; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-ink4, #7985a6); }
@@ -104,7 +103,6 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
       </form>
       <p class="note">Com “manter conectado”, o acesso vale 30 dias neste aparelho. Sem ele, vale 12 horas.</p>
       <div class="credito"><span>DESIGN BY</span><div class="lado"><img class="wb" src="assets/logo-wonderboat-240.png" alt="Wonder BOAT" width="81" height="44"><i aria-hidden="true"></i><img class="wh" src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" width="74" height="43"></div></div>
-      <p class="demo">DEMO · DADOS FICTÍCIOS — demonstração da plataforma Capitão IA.</p>
     </div>
   </main>
   <capitao-rodape></capitao-rodape>
@@ -115,12 +113,14 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
   var m = document.getElementById('m'), go = document.getElementById('go'), eye = document.getElementById('eye'), box = document.getElementById('chips');
   var timer = 0;
   function msg(t, info) { m.textContent = t || ''; m.className = info ? 'msg info' : 'msg'; }
-  // Um botão por usuário da lista (capitao-auth.js) — nomes, sem senha.
+  // Um botão por usuário da lista (capitao-auth.js), sem senha: o texto é o nome exibido e o botão põe no campo a chave do
+  // usuário (data-u = id). Com o nome no campo, um nome que não é chave ("Convidado") contaria erro na trava de 5 tentativas.
   var lista = A && A.lista ? A.lista() : [];
-  lista.forEach(function (x) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.setAttribute('data-u', x.nome); b.setAttribute('aria-pressed', 'false'); b.textContent = x.nome.toUpperCase(); box.appendChild(b); });
+  lista.forEach(function (x) { var b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.setAttribute('data-u', x.id); b.setAttribute('aria-pressed', 'false'); b.textContent = x.nome.toUpperCase(); box.appendChild(b); });
   if (lista.length) u.placeholder = lista.map(function (x) { return x.nome; }).join(', ');
   var chips = [].slice.call(document.querySelectorAll('.chip'));
-  function marcar() { var v = u.value.trim().toLowerCase(); chips.forEach(function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-u').toLowerCase() === v ? 'true' : 'false'); }); }
+  // Marca o botão do usuário digitado pela mesma normalização do login ("Demo", " DEMO " e "Convidado" marcam o Convidado).
+  function marcar() { var v = A && A.idDe ? A.idDe(u.value) : u.value.trim().toLowerCase(); chips.forEach(function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-u') === v ? 'true' : 'false'); }); }
   function travado(ate) {
     clearInterval(timer);
     var tick = function () {
