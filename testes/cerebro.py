@@ -8147,8 +8147,8 @@ JS_P3G_PEND_CHAT = """() => { const B = window.CapitaoBrain, D = window.CapitaoD
   // 7) o Desfazer de um relato COM pend grava um `anula`: a linha sai da lista E da contagem do rodapé (a mesma conta, sem divergir)
   localStorage.clear(); const A = window.CapitaoAgora, nab = () => B.pendenciasLista().filter((p) => p.aberta).length;
   const t3 = B.addTicket({ k: 'diario', origem: 'relato', texto: 'Bomba de água doce com vazamento no compartimento de máquinas', prop: { pend: true } });
-  B.aceitaTicket(t3.id, { chat: true }); const reg = [nab(), A.contagens().pendencias];
-  B.desfazTicket(t3.id); o.anulaPend = reg.concat([nab(), A.contagens().pendencias, B.loadDiario().filter((e) => e.acao === 'anula').length]);
+  B.aceitaTicket(t3.id, { chat: true }); const regAn = [nab(), A.contagens().pendencias];
+  B.desfazTicket(t3.id); o.anulaPend = regAn.concat([nab(), A.contagens().pendencias, B.loadDiario().filter((e) => e.acao === 'anula').length]);
   return o; }"""
 FRASES_FECHAM = [('limpei o filtro de água salgada da climatização', 'd05'), ('Limpamos os filtros de água salgada do ar condicionado hoje cedo', 'd05'), ('o filtro da climatização foi limpo', 'd05'), ('fizemos o teste das bombas de porão', 'd07'),
                  ('a bomba de porão foi testada', 'd07'), ('trocamos o rotor do gerador', 'd03'), ('o impeller do gerador foi trocado', 'd03'), ('inspecionei o rotor impeller do gerador', 'd03'), ('feito o teste das bombas de porão', 'd07'),
