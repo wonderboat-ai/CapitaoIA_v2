@@ -52,7 +52,7 @@
   ];
   var ALL = DEFAULTS.concat(BANK);
 
-  var K = { atalhos: 'capitao.atalhos.v1', diario: 'capitao.diario.v1', equipe: 'capitao.equipe.v1', exec: 'capitao.executado.v1', docs: 'capitao.docs.v1', abast: 'capitao.abast.v1', tickets: 'capitao.tickets.v1' };
+  var K = { atalhos: 'capitao.atalhos.v1', diario: 'capitao.diario.v1', equipe: 'capitao.equipe.v1', exec: 'capitao.executado.v1', docs: 'capitao.docs.v1', abast: 'capitao.abast.v1', tickets: 'capitao.tickets.v1', tarefas: 'capitao.tarefas.v1', alarmes: 'capitao.alarmes.v1' };
   function read(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
   function write(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 
@@ -100,14 +100,18 @@
   // Carimbo `sim` (PROMPT §2.9, CLAUDE.md 14): a linha nova gravada com D.simulacao === true leva sim: true (lido AGORA, nunca na carga). O SOS não lê a flag (EM_SOS) e a linha do SOS (`src` web · SOS / app · SOS)
   // nunca leva `sim`, de qualquer tela; com simulacao false as linhas com `sim` ganham o selo «apresentação» (tela) e saem da ficha (lerDiario com semSim).
   function linhaDoSOS(e) { return /^(?:web|app) · SOS/.test(String(e && e.src || '')); }
-  function addDiario(e) { return congela(function () { return addDiario1(e); }); }
-  function addDiario1(e) { var n = now(); var list = loadDiario(); var entry, ms;
+  // `opts` (F20, F15): { pendencia: true } fecha a pendência que o texto cita com o verbo de conclusão (outra linha, acao 'resolve'); { agenda: true } abre a proposta que o texto faz (a tarefa feita ou o agendamento);
+  // `chat: true` = o desfazer vale 10 min (na tela, 10 s). O retorno é a linha gravada e, com essas opções e um efeito, uma CÓPIA dela com `pendencia`, `ticket` ou `ambigua` (a linha guardada não os leva).
+  function addDiario(e, opts) { return congela(function () { return addDiario1(e, opts); }); }
+  function addDiario1(e, opts) { var n = now(); var list = loadDiario(); var entry, ms, ef;
     if (e && e.acao !== undefined && !alvoValido(e, list)) return null;
     entry = Object.assign({ d: n.d, t: n.t, iso: n.iso, sys: 'Diário', tone: 'var(--cap-accent, #00a1fe)', who: quem(), src: 'app · texto' }, e);
     ms = Date.parse(entry.iso);
     while (isFinite(ms) && list.some(function (x) { return x.iso === entry.iso; })) { ms++; entry.iso = new Date(ms).toISOString(); }
     if (sim() && !linhaDoSOS(entry) && entry.sim == null) entry.sim = true;
-    list.unshift(entry); write(K.diario, list); return entry;
+    list.unshift(entry); write(K.diario, list);
+    if (opts && (opts.pendencia || opts.agenda) && !EM_SOS) { ef = efeitosDoRegistro(entry, opts); if (ef) return Object.assign({}, entry, ef); }
+    return entry;
   }
   function diarioFonte() { return (D.diario || []).map(function (x) { return { d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: (D.diarioFonte || 'diário') }; }); }
   function loadExec() { var v = read(K.exec, {}); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
@@ -152,9 +156,29 @@
   function novoIdTicket(cru) { var id; do { id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); } while (cru.some(function (t) { return t && t.id === id; })); return id; }
   // k → como a confirmação grava. O `diario` é a linha do diário com o texto do ticket (sys e tom da proposta); o `alarme` é a mesma linha, do alarme do replay. As propostas da agenda (F15) entram aqui.
   var TICKET_K = {
-    diario: function (t) { var p = t.prop || {}, e = { sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + (tem(ORIGEM_TICKET, t.origem) ? ORIGEM_TICKET[t.origem] : 'Relato').toLowerCase() + ')' }; if (p.pend === true) e.pend = true; return addDiario(e); },   // (o relato que conta um defeito abre pendência: `pend`, CONTRATO §1.9, F20)
-    alarme: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (alarme)' }); }
+    diario: function (t, ext, opts) { var p = t.prop || {}, e = { sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + (tem(ORIGEM_TICKET, t.origem) ? ORIGEM_TICKET[t.origem] : 'Relato').toLowerCase() + ')' }; if (p.pend === true) e.pend = true; var lin = addDiario(e, t.origem === 'relato' ? { pendencia: true, agenda: true, chat: !!(opts && opts.chat) } : undefined); if (lin && lin.pendencia && ext) ext.pend = { alvo: lin.pendencia.alvo, iso: lin.pendencia.linha.iso }; return lin; },   // (F20/F15: o relato confirmado é um registro: fecha a pendência que cita e propõe a agenda; a linha devolvida leva `.pendencia`/`.ticket`)   // (o relato que conta um defeito abre pendência: `pend`, CONTRATO §1.9, F20)
+    alarme: function (t) { var p = t.prop || {}; return addDiario({ sys: p.sys || 'Diário', tone: p.tone || tomDe(p.sys), t: t.texto, who: quem(), src: 'app · proposta confirmada (alarme)' }); },
+    // F15 (diário → agenda; CONTRATO §1.7, §1.25). `exec`: a tarefa da agenda que o registro diz ter feito vira Executado (markExec, como o toque do C1) e ganha 1 linha «Executado: …» no diário; `tarefa`: o
+    // agendamento vira a tarefa da equipe (capitao.tarefas.v1, vence em AAAA-MM-DD) e ganha 1 linha. O `ext` recebe o que o desfazer precisa para desmanchar (a execução e a tarefa que ESTA confirmação criou).
+    exec: function (t, ext) {
+      var p = t.prop || {}, ag = tarefa(p.tarefa), m, lin;
+      if (!ag || loadExec()[ag.id]) return null;   // a tarefa não existe mais, ou já foi executada noutro canto: não há o que marcar
+      m = markExec(ag.id);
+      lin = addDiario({ sys: 'Manutenção', tone: tomDe('Manutenção'), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + origemTxt(t) + ')', ref: ag.id });
+      if (!lin) { unmarkExec(ag.id); return null; }
+      ext.exec = { id: ag.id, iso: m[ag.id].iso };
+      return lin;
+    },
+    tarefa: function (t, ext) {
+      var p = t.prop || {}, r = criaTarefa({ n: p.n, vence: p.vence, quem: p.quem, sistema: p.sistema, origem: 'diario' }), lin;
+      if (!r) return null;
+      lin = addDiario({ sys: 'Manutenção', tone: tomDe('Manutenção'), t: t.texto, who: quem(), src: 'app · proposta confirmada (' + origemTxt(t) + ')', ref: r.item.id });
+      if (!lin) { if (r.novo) removeTarefa(r.item.id); return null; }
+      if (r.novo) ext.tarefa = r.item.id;
+      return lin;
+    }
   };
+  function origemTxt(t) { return (tem(ORIGEM_TICKET, t && t.origem) ? ORIGEM_TICKET[t.origem] : 'Relato').toLowerCase(); }
   function addTicket(t) {
     var cru, texto, id, ja, item;
     if (EM_SOS) return null;   // o SOS não propõe nada
@@ -180,14 +204,15 @@
   // CONFIRMAR (um toque): grava a linha (1) e a decisão (quem, quando, o que criou). {id, k, ja: true} se já estava confirmada (não grava outra); null se não existe, se foi recusada (a recusa não ressuscita) ou se
   // a linha não pôde ser gravada. `opts.chat`: a confirmação veio do chat, e o desfazer vale por 10 min (na tela, 10 s).
   function aceitaTicket(id, opts) {
-    var cru, t, lin, ate;
+    var cru, t, lin, ate, ext;
     if (EM_SOS) return null;
     cru = ticketsCru(); t = achaTicket(cru, id);
     if (!t || t.estado === 'recusado') return null;
     if (t.estado === 'aceito') return { id: id, k: t.k, ja: true, dec: t.dec || null, res: t.res || null };
-    lin = TICKET_K[t.k](t); if (!lin) return null;
+    ext = {}; lin = TICKET_K[t.k](t, ext, opts); if (!lin) return null;
+    cru = ticketsCru(); t = achaTicket(cru, id) || t;   // (a confirmação pode ter aberto outras propostas — o registro propõe a agenda —: a decisão parte do que está guardado AGORA, nunca da lista de antes, que as perderia)
     ate = Date.now() + (opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ);
-    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: ate }; t.res = { tipo: 'diario', id: lin.iso };
+    t.estado = 'aceito'; t.dec = { quem: quem(), iso: new Date().toISOString(), ate: ate }; t.res = Object.assign({ tipo: 'diario', id: lin.iso }, ext);
     write(K.tickets, cru);
     return { id: id, k: t.k, texto: t.texto, origem: t.origem, res: t.res, linha: lin, desfazAte: ate };
   }
@@ -205,8 +230,18 @@
     lin = loadDiario().filter(function (x) { return x.iso === t.res.id && !x.acao; })[0]; if (!lin) return null;
     an = addDiario({ sys: lin.sys, tone: lin.tone, t: 'Registro anulado (proposta desfeita): ' + limpaT(lin.t, 200), who: quem(), src: 'app · proposta desfeita', acao: 'anula', alvo: lin.iso });
     if (!an) return null;
+    desfazExtra(t);   // (F15) a execução e a tarefa que a confirmação criou, e a pendência que ela fechou; as propostas que o registro abriu são recusadas (escrevem em tickets: a decisão parte do guardado de novo)
+    cru = ticketsCru(); t = achaTicket(cru, id) || t;
     t.estado = 'aberto'; delete t.dec; delete t.res; write(K.tickets, cru);
     return { id: id, estado: 'aberto', anulada: an };
+  }
+  // O que a confirmação de uma proposta da agenda criou, desmanchado pelo desfazer: o Executado (só se ainda é o que ESTA confirmação marcou — uma execução nova feita noutro canto fica) e a tarefa da equipe
+  function desfazExtra(t) {
+    var r = t.res || {}, e;
+    if (r.pend && typeof r.pend.alvo === 'string') desfazPendencia({ alvo: r.pend.alvo, linha: { iso: r.pend.iso }, desfazAte: Infinity });   // (o relato confirmado fechou uma pendência: desfeito o registro, ela reabre)
+    if (r.id) ticketsAbertos().filter(function (x) { return x.origem === 'regra' && x.alvo && x.alvo.tipo === 'diario' && x.alvo.id === r.id; }).forEach(function (x) { recusaTicket(x.id); });   // (as propostas da agenda que o registro abriu perdem o registro de origem)
+    if (t.k === 'exec' && r.exec && typeof r.exec.id === 'string') { e = loadExec()[r.exec.id]; if (e && e.iso === r.exec.iso) unmarkExec(r.exec.id); }
+    else if (t.k === 'tarefa' && typeof r.tarefa === 'string') removeTarefa(r.tarefa);
   }
   // A proposta que a foto confirmou (F36: «sim, registra» junto com a foto): a linha da foto já leva o texto do relato, então a proposta fecha apontando essa linha, sem escrever outra
   function fechaTicketCom(id, lin) {
@@ -228,6 +263,520 @@
     if (!al) return null;
     try { dia = new Intl.DateTimeFormat('en-CA', { timeZone: E.fuso || 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(i.ms)).replace(/-/g, ''); } catch (e) { return null; }
     return addTicket({ id: 'tal_' + id + '_' + dia, k: 'alarme', origem: 'telemetria', texto: al.rotulo + ': ' + al.texto + ' desde ' + al.hora + '.', prop: { sys: al.sistema === 'motores' ? 'Motores' : 'Equipamentos', alarme: id, dia: dia, tone: al.nivel === 'critico' ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-warn, #f0a63a)' }, alvo: { tipo: 'alarme', id: id } });
+  }
+
+  // ——— P3G · o que fica guardado no aparelho (F15 tarefas da equipe, F12 alarmes pedidos) ———
+  // capitao.tarefas.v1 e capitao.alarmes.v1: a gravação parte do que está guardado (a linha de outra forma, de uma versão futura, fica como está) e o valor que não é lista é copiado para a chave `.antes`,
+  // não pisado (a mesma regra do capitao.tickets.v1). O registro só cresce: nenhuma chave é apagada nem renomeada.
+  function listaCru(chave) {
+    var s = null, v = null;
+    try { s = localStorage.getItem(chave); v = s ? JSON.parse(s) : []; } catch (e) { v = null; }
+    if (Array.isArray(v)) return v;
+    try { if (s && localStorage.getItem(chave + '.antes') === null) localStorage.setItem(chave + '.antes', s); } catch (e) {}   // valor que não é lista (nem JSON): guardado ao lado, não pisado
+    return [];
+  }
+  // ——— Datas (F15): o dia do barco é o do instante (fuso do barco); 'AAAA-MM-DD' é a forma guardada da tarefa ———
+  var MES_NUM = { janeiro: 1, fevereiro: 2, marco: 3, abril: 4, maio: 5, junho: 6, julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12 };
+  function diaIso(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+  function brData(iso) { var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(String(iso || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); }
+  // dia desde 1970 de uma data civil que existe (30/02 não existe: NaN)
+  function dataCivil(a, m, d) { var t = Date.UTC(a, m - 1, d), x = new Date(t); return m >= 1 && m <= 12 && d >= 1 && x.getUTCFullYear() === a && x.getUTCMonth() === m - 1 && x.getUTCDate() === d ? Math.floor(t / 86400000) : NaN; }
+  // «15/11» (sem ano: este ano, ou o próximo se já passou — agendar é futuro), «15/11/26», «15/11/2026». Com ano e no passado a data fica no passado (quem chama decide)
+  function diaDigitado(d, m, a) {
+    var hoje = diaDe(msAgora()), ano = a ? (+a < 100 ? 2000 + +a : +a) : +diaIso(hoje).slice(0, 4), n = dataCivil(ano, m, d);
+    if (!a && !isNaN(n) && n < hoje) n = dataCivil(ano + 1, m, d);
+    return n;
+  }
+  // ——— Tarefas da equipe (F15; CONTRATO §1.7, §1.25) ———
+  // capitao.tarefas.v1 = [{ id: 'g…', n, vence: 'AAAA-MM-DD', quem, sistema?, meses?, obs?, origem, iso, who, sim? }]. As 2 geradas (D.tarefasEquipe, g01 e g02) ficam no arquivo de dados; as do aparelho entram aqui por
+  // um toque (a tela) ou pelo CONFIRMAR de uma proposta (o agendamento do diário e do chat). O prazo é contado do dia do instante (CapitaoAgora.prazoDe), nunca guardado; CapitaoAgora.contagens() soma as
+  // duas listas (as executadas não contam). Executado da tarefa = markExec(id), como o da agenda.
+  var TAREFA_ID = /^g[A-Za-z0-9_-]{2,60}$/, ORIGEM_TAREFA = { chat: 1, diario: 1, tela: 1 };
+  function ehTarefa(t) { return !!t && typeof t === 'object' && typeof t.id === 'string' && TAREFA_ID.test(t.id) && typeof t.n === 'string' && !!t.n.trim() && typeof t.vence === 'string' && /^\d{4}-\d\d-\d\d$/.test(t.vence) && !isNaN(diaData(t.vence)); }
+  function loadTarefas() { return listaCru(K.tarefas).filter(ehTarefa); }
+  // grava a tarefa; { item, novo }: a mesma tarefa (nome e dia) ainda aberta não duplica — devolve a que já está (novo false). null = dado inválido (sem nome, data que não existe) ou o SOS.
+  function criaTarefa(x) {
+    var cru, n, ex, ja, item, id;
+    if (EM_SOS || !x || typeof x !== 'object') return null;
+    n = limpaT(x.n, 120);
+    if (!n || typeof x.vence !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(x.vence) || diaIso(diaData(x.vence)) !== x.vence) return null;
+    cru = listaCru(K.tarefas); ex = loadExec();
+    ja = cru.filter(function (t) { return ehTarefa(t) && norm(t.n) === norm(n) && t.vence === x.vence && !ex[t.id]; })[0];
+    if (ja) return { item: ja, novo: false };
+    do { id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); } while (cru.some(function (t) { return t && t.id === id; }) || (D.tarefasEquipe || []).some(function (t) { return t.id === id; }));
+    item = { id: id, n: n, vence: x.vence, quem: limpaT(x.quem, 40), origem: tem(ORIGEM_TAREFA, x.origem) ? x.origem : 'tela', iso: new Date().toISOString(), who: quem() };
+    if (x.sistema) item.sistema = limpaT(x.sistema, 30);
+    if (typeof x.meses === 'number' && isFinite(x.meses) && x.meses > 0) item.meses = Math.round(x.meses);
+    if (x.obs) item.obs = limpaT(x.obs, 300);
+    if (sim()) item.sim = true;
+    cru.unshift(item); write(K.tarefas, cru);
+    return { item: item, novo: true };
+  }
+  function addTarefa(x) { var r = criaTarefa(x); return r ? r.item : null; }
+  // só o desfazer de uma proposta confirmada tira a tarefa (dentro da janela): a tela não apaga tarefa
+  function removeTarefa(id) {
+    var cru = listaCru(K.tarefas), k;
+    if (EM_SOS) return false;
+    for (k = 0; k < cru.length; k++) if (ehTarefa(cru[k]) && cru[k].id === id) { cru.splice(k, 1); write(K.tarefas, cru); return true; }
+    return false;
+  }
+  // as tarefas da equipe (as 2 geradas e as do aparelho) com o prazo do dia do instante e se já foram executadas; `ctx.semSim`: as do aparelho gravadas com a simulação ligada ficam fora (simulacao false)
+  function tarefasEquipe(ctx) {
+    var ex = execVisivel(), semSim = !!(ctx && ctx.semSim);
+    var ger = (D.tarefasEquipe || []).map(function (t) { return { id: t.id, n: t.n, vence: t.vence, quem: t.quem, sistema: t.sistema, origem: 'equipe', aparelho: false }; });
+    var dev = loadTarefas().filter(function (t) { return !(semSim && t.sim === true); }).map(function (t) { return { id: t.id, n: t.n, vence: t.vence, quem: t.quem || '', sistema: t.sistema, origem: t.origem, aparelho: true, iso: t.iso, who: t.who }; });
+    return ger.concat(dev).map(function (t) {
+      var n = dnDe(t), d = isNaN(n) ? {} : prazoSt(n);
+      t.dn = n; t.st = d.st; t.rot = d.rot; t.tom = d.tom; t.feita = !!ex[t.id];
+      return t;
+    }).sort(function (a, b) { return ((isNaN(a.dn) ? 1e9 : a.dn) - (isNaN(b.dn) ? 1e9 : b.dn)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+  }
+  // as tarefas do aparelho ainda abertas, para as respostas da agenda e da ficha («Tarefas da equipe agendadas: …»); as 2 geradas ficam com a tela da equipe
+  function tarefasAgendadas(ctx) { return tarefasEquipe(ctx).filter(function (t) { return t.aparelho && !t.feita; }); }
+  // ——— O que o texto de um registro diz (F20, F15) ———
+  // «Frase de conclusão»: o verbo de quem FEZ o serviço (passado ou particípio), sem plano, dúvida, pergunta, negação nem defeito que continua. É a única regra que fecha uma pendência e que propõe o Executado;
+  // na dúvida NÃO conclui (a tela tem o Resolver e o Executado de um toque). «Limpei o filtro» fecha; «vou limpar o filtro», «será que limpei o filtro?», «não limpei o filtro» e «limpei o filtro, mas o fluxo
+  // continua fraco» não. As linhas do próprio app («Executado: … nada se apaga») levam «nada» e nunca concluem.
+  var FEITO = /\b(?:(?:limp|test|inspecion|revis|realiz|execut|finaliz|lav|ajust|instal|consert|atualiz|arrum|calibr|troc|verific)(?:ei|amos|ou|aram|ad[oa]s?)|troquei|verifiquei|fiz|fizemos|fez|fizeram|feit[oa]s?|conclu(?:i|imos|iu|iram|id[oa]s?)|substitu(?:i|imos|iu|iram|id[oa]s?)|corrig(?:i|imos|iu|iram|id[oa]s?)|resolv(?:i|emos|eu|eram|id[oa]s?)|limp[oa]s?|pront[oa]s?|normaliz(?:ou|aram|ad[oa]s?))\b/;
+  var CONC_FUTURO = /\b(?:vou|vamos|vai|irei|iremos|iria|precis(?:a|o|amos|am|ar)|necessit\w*|tem que|temos que|tenho que|tenha que|devo|devemos|deve|deveria|deveriamos|poderia|poderiamos|posso|podemos|pretend\w*|planej\w*|quero|queremos|queria|gostaria|lembrar|lembrete|amanha|semana que vem|mes que vem|proxim[oa]|em breve|logo mais|falta|faltam|faltou|pendente|aguardando|esperando|a fazer|por fazer|ate (?:segunda|terca|quarta|quinta|sexta|sabado|domingo))\b/;
+  var CONC_DUVIDA = /\?|\b(?:sera que|acho que|talvez|parece que|nao sei|duvid\w+|supostamente|aparentemente|creio que|imagino que|devo ter|deve ter|pode ser que|nao tenho certeza|nao lembro|quem sabe|se)\b/;
+  var CONC_NEGA = /\b(?:nao|nunca|jamais|nem|ninguem|nada)\b/;
+  var CONC_DEFEITO = /\b(?:continu\w+|segue|seguem|persist\w+|voltou a|voltaram a|ainda (?:esta|ta|estao|tao|nao|apresenta|com|tem|sujo|suja|vazando|falhando|fraco|fraca)|sem (?:sucesso|resultado|efeito|conseguir|solucao)|em vao|apesar de|mesmo assim|mesmo depois|pior\w*|danificad\w+|quebr\w+|entupid\w+|travad\w+|travou|trincad\w+|rachad\w+|vazand\w+|vazou|falhou|falhando|defeit\w+|mas|porem|contudo|entretanto|todavia)\b/;
+  function conclusao(texto) {
+    var raw = String(texto || ''), f = dobra(raw).replace(/[.,;:!()"“”]+/g, ' ').replace(/\s+/g, ' ');
+    return FEITO.test(f) && !CONC_FUTURO.test(f) && !CONC_DUVIDA.test(f) && !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);
+  }
+  // HH:MM de um instante ISO no fuso do barco (a linha do aparelho guarda o `iso`, não a hora); '' se não for data
+  function horaDe(iso) { var ms = Date.parse(iso), A = window.CapitaoAgora; if (isNaN(ms)) return ''; try { return A.fmt.hora(ms, false); } catch (e) { return ''; } }
+  // o texto dobrado letra a letra (sem acento, minúsculo, do MESMO tamanho): a posição achada nele vale no texto original, com os acentos e as maiúsculas do nome
+  function dobra(raw) { return Array.prototype.map.call(String(raw || ''), function (c) { var x = norm(c); return x.length === 1 ? x : ' '; }).join(''); }
+  // as palavras do texto sem o plural («filtros» = «filtro»): a frase da agenda e da pendência (palavras) casa em sequência, palavra a palavra
+  function stem(w) { return w.length > 3 ? w.replace(/s$/, '') : w; }
+  function raizes(s) { return norm(s).replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map(stem); }
+  function contemFrase(tk, frase) {
+    var ft = raizes(frase), i, j;
+    if (!ft.length) return false;
+    for (i = 0; i + ft.length <= tk.length; i++) { for (j = 0; j < ft.length && tk[i + j] === ft[j]; j++); if (j === ft.length) return true; }
+    return false;
+  }
+  function citaFrases(tk, frases) { return Array.isArray(frases) && frases.some(function (f) { return typeof f === 'string' && contemFrase(tk, f); }); }
+
+  // ——— Pendências (F20; CONTRATO §1.9, §1.25) ———
+  // A pendência é uma linha do diário com `pend: true`: as 3 do arquivo (d03, d05, d07, pelo id) e as do aparelho (pelo `iso`). O ESTADO vem das linhas de ação do aparelho (`acao`: resolve | reabre, `alvo`): vale a
+  // mais nova por alvo, e nada se apaga — resolver, reabrir e desfazer são linhas NOVAS. Aberta = sem ação ou com a última «reabre». CapitaoAgora.contagens().pendencias conta do mesmo jeito.
+  var PEND_OK = 'var(--cap-ok, #34c77a)';
+  function acoesDePend(linhas) {
+    var m = {};
+    linhas.forEach(function (l) { if (l && (l.acao === 'resolve' || l.acao === 'reabre') && typeof l.alvo === 'string' && !tem(m, l.alvo)) m[l.alvo] = l; });   // (mais nova primeiro: a 1ª ação de um alvo é a última)
+    return m;
+  }
+  function pendItem(x, alvo, origem, ac) {
+    var a = tem(ac, alvo) ? ac[alvo] : null;
+    return { alvo: alvo, origem: origem, id: origem === 'gerada' ? alvo : null, d: x.d, h: x.h || '', iso: x.iso, sys: x.sys || 'Diário', tom: x.tom || x.tone || 'accent', who: x.who || '', t: String(x.t),
+      ref: typeof x.ref === 'string' ? x.ref : null, palavras: Array.isArray(x.palavras) ? x.palavras.filter(function (f) { return typeof f === 'string'; }) : [], aberta: !a || a.acao === 'reabre', acao: a ? a.acao : null, acaoIso: a ? a.iso : null, sim: x.sim === true };
+  }
+  // todas as pendências (abertas e resolvidas), as do arquivo primeiro; `ctx.semSim`: as do aparelho gravadas com a simulação ligada ficam fora (simulacao false, na ficha)
+  function pendenciasLista(ctx) {
+    var linhas = loadDiario(), ac = acoesDePend(linhas), out = [];
+    (D.diario || []).forEach(function (x) { if (x && x.pend === true && typeof x.id === 'string') out.push(pendItem(x, x.id, 'gerada', ac)); });
+    vigente(linhas).forEach(function (l) { if (l.pend === true && typeof l.iso === 'string' && !(ctx && ctx.semSim && l.sim === true)) out.push(pendItem(l, l.iso, 'aparelho', ac)); });
+    return out;
+  }
+  function pendenciaDe(alvo, ctx) { return typeof alvo === 'string' ? pendenciasLista(ctx).filter(function (p) { return p.alvo === alvo; })[0] || null : null; }
+  function fimPend(t) { return limpaT(t, 140).replace(/[\s.!;:—–-]+$/, ''); }   // (o texto da pendência sem o ponto final: a frase seguinte começa por « — » ou « .»)
+  function linhaDePend(p, acao, extra) {
+    var e = { acao: acao, alvo: p.alvo, sys: p.sys || 'Diário', tone: acao === 'resolve' ? PEND_OK : 'var(--cap-warn, #f0a63a)', who: quem() };
+    return Object.assign(e, extra);
+  }
+  // RESOLVER (a tela, um toque; ou o registro que cita a pendência): linha nova `resolve`. null = a pendência não existe ou já está resolvida. `opts.de` = a linha do registro que a fechou.
+  function resolvePendencia(alvo, opts) {
+    var p = EM_SOS ? null : pendenciaDe(alvo), de = opts && opts.de, lin, e;
+    if (!p || !p.aberta) return null;
+    e = linhaDePend(p, 'resolve', { t: 'Pendência resolvida: ' + fimPend(p.t) + (de ? ' — fechada pelo registro de ' + de.d + (horaDe(de.iso) ? ' às ' + horaDe(de.iso) : '') + ' (' + (de.who || quem()) + ').' : ' — marcada como resolvida por ' + quem() + '.') + ' Linha nova, nada se apaga.',
+      src: de ? 'app · pendência resolvida pelo registro' : 'app · pendência resolvida' });
+    if (p.ref) e.ref = p.ref;
+    if (de && de.iso) e.de = de.iso;
+    lin = addDiario1(e);
+    return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin, desfazAte: Date.now() + (opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ) } : null;
+  }
+  // REABRIR (a tela): linha nova `reabre`. null = não existe ou já está aberta.
+  function reabrePendencia(alvo) {
+    var p = EM_SOS ? null : pendenciaDe(alvo), e, lin;
+    if (!p || p.aberta) return null;
+    e = linhaDePend(p, 'reabre', { t: 'Pendência reaberta: ' + fimPend(p.t) + ' — reaberta por ' + quem() + '. Linha nova, nada se apaga.', src: 'app · pendência reaberta' });
+    if (p.ref) e.ref = p.ref;
+    lin = addDiario1(e);
+    return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin } : null;
+  }
+  // DESFAZER o fechamento (dentro da janela: 10 s na tela, 10 min no chat): linha nova `reabre`. Recebe o que o registro devolveu em `.pendencia` (alvo, a linha do fechamento, o fim da janela); só desfaz se o último
+  // estado da pendência ainda é ESSE fechamento (uma ação mais nova, feita noutro canto, não é pisada). Fora da janela ou sem o fechamento: null, nada é escrito.
+  function desfazPendencia(r) {
+    var p = !EM_SOS && r && typeof r === 'object' ? pendenciaDe(r.alvo) : null, e, lin;
+    if (!p || p.aberta || p.acao !== 'resolve' || !r.linha || p.acaoIso !== r.linha.iso || typeof r.desfazAte !== 'number' || Date.now() > r.desfazAte) return null;
+    e = linhaDePend(p, 'reabre', { t: 'Pendência reaberta (fechamento desfeito): ' + fimPend(p.t) + '. Linha nova, nada se apaga.', src: 'app · pendência reaberta (desfeito)' });
+    if (p.ref) e.ref = p.ref;
+    lin = addDiario1(e);
+    return lin ? { alvo: p.alvo, linha: lin } : null;
+  }
+  // as tarefas da equipe que o usuário agendou neste aparelho (F15) e ainda estão abertas: no fim da resposta da manutenção e da ficha (as 2 geradas da equipe ficam com a tela da equipe); nenhuma = nada
+  function tarefasLinha() {
+    var l = tarefasAgendadas({ semSim: EXEC_SEM_SIM });
+    return l.length ? '\nTarefas da equipe agendadas (' + l.length + '): ' + l.slice(0, 5).map(function (t) { return t.n + ' — ' + (atrasadaN(t.dn) ? 'em atraso há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') : brData(t.vence) + ' (' + emDias(diaData(t.vence)) + ')') + (t.quem ? ' · ' + t.quem : ''); }).join(' | ') + (l.length > 5 ? ' | … e mais ' + (l.length - 5) : '') + '.' : '';
+  }
+  function pendencias(ctx) { return pendenciasLista(ctx).filter(function (p) { return p.aberta; }); }
+  // A pendência que o texto cita (as `palavras` dela; o plural vale): { p, fecha } com UMA citada, { ambigua } com duas ou mais abertas (nenhuma fecha; a resposta pergunta qual), null sem citação. Só as abertas contam.
+  function achaPendencia(texto) {
+    var tk = raizes(texto), cit = pendencias().filter(function (p) { return citaFrases(tk, p.palavras); });
+    if (!cit.length) return null;
+    if (cit.length > 1) return { ambigua: cit };
+    return { p: cit[0], fecha: conclusao(texto) };
+  }
+
+  // ——— Diário → agenda (F15) ———
+  // «agendar|agende|marcar|programar X para dd/mm [com Fulano]» (ou «X agendada para dd/mm») → { n, vence ('AAAA-MM-DD'), quem } ou { passada: true }; a data pode ser dd/mm[/aa|/aaaa], «15 de novembro»,
+  // «amanhã», «depois de amanhã», «daqui a N dias|semanas» e «dia 20». O pedido é o verbo no imperativo ou no infinitivo, sem pergunta (a cortesia «pode agendar…?» vale), sem negação e sem cancelamento.
+  var AG_VERBO = /\b(agend(?:ar|e|a|amos|ei|ou|aram)|marc(?:ar|a|amos)|marque|program(?:ar|e|a|amos))\b/g, AG_FEITO = /\b(agendad[oa]s?|marcad[oa]s?|programad[oa]s?)\b/;
+  var AG_AMBIGUO = /^(agenda|marca|programa)$/, AG_INICIO = /^[\s,]*(?:(?:por favor|favor|pode|poderia|voce|vc|consegue|da pra|da para|ok|entao|tambem|e|ai|capitao)[\s,]+)*$/, AG_NOME = /^\s+(de|do|da|dos|das)\b/, AG_ANOTA = /^\s*(?:(?:ai|la)\b|que\b|:)/;
+  var AG_CORTESIA = /(?:^|[\s,])(?:pode|poderia|podia|consegue|conseguiria|da pra|da para|daria pra|daria para|tem como|seria possivel)(?:\s+(?:me|por favor|voce|vc))?[\s,]*$/, AG_ANTES = /\b(o|a|os|as|um|uma|do|da|dos|das|no|na|nos|nas|de|meu|minha|seu|sua|esse|essa|este|esta|pelo|pela)\s+$/;
+  // a primeira data do texto dobrado: { ini, fim, dia (desde 1970) } — dd/mm, «15 de novembro», «amanhã», «daqui a N dias», «dia 20»; null se não há; dia NaN se a data não existe
+  function dataNoTexto(s) {
+    var m, hoje = diaDe(msAgora()), p, mes;
+    function r(grupo, dia) { var ini = m.index + m[0].length - grupo.length; return { ini: ini, fim: ini + grupo.length, dia: dia }; }
+    if ((m = /(?:^|[^0-9\/])((\d{1,2})\/(\d{1,2})(?:\/(\d{4}|\d{2}))?)(?![0-9\/])/.exec(s))) return r(m[1], diaDigitado(+m[2], +m[3], m[4]));
+    if ((m = /(?:^|[^0-9])((?:dia )?(\d{1,2}) de (janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?: de (\d{4}))?)(?![a-z0-9])/.exec(s))) return r(m[1], diaDigitado(+m[2], MES_NUM[m[3]], m[4]));
+    if ((m = /(?:^|[^a-z])(depois de amanha|amanha)(?![a-z])/.exec(s))) return r(m[1], hoje + (m[1] === 'amanha' ? 1 : 2));
+    if ((m = /(?:^|[^a-z0-9])((?:daqui a|em) (\d{1,3}) (dias?|semanas?))(?![a-z])/.exec(s))) return r(m[1], hoje + +m[2] * (/^semana/.test(m[3]) ? 7 : 1));
+    if ((m = /(?:^|[^a-z0-9])((?:(?:no|o|pro|para o|ate o|até o) )?dia (\d{1,2}))(?![0-9\/])/.exec(s))) {
+      p = +m[2]; mes = +diaIso(hoje).slice(5, 7);
+      var ano = +diaIso(hoje).slice(0, 4), n = dataCivil(ano, mes, p);
+      if (isNaN(n) || n < hoje) { mes++; if (mes > 12) { mes = 1; ano++; } n = dataCivil(ano, mes, p); }
+      return r(m[1], n);
+    }
+    return null;
+  }
+  function achaAgendar(texto) {
+    var raw = String(texto || '').slice(0, 1000), f = dobra(raw), re = new RegExp(AG_VERBO.source, 'g'), v = null, pp = null, x, dep, antes, ini, resto, d, hoje, n, depois, sem, q, quemT = '', w, lw;
+    while ((x = re.exec(f))) {
+      dep = f.slice(x.index + x[0].length); antes = f.slice(0, x.index);
+      if (AG_AMBIGUO.test(x[1]) && (!AG_INICIO.test(antes.replace(/\?/g, ' ')) || AG_NOME.test(dep))) continue;   // «a agenda de manutenção», «o programa do plotter»
+      if (/^mar[cq]/.test(x[1]) && AG_ANOTA.test(dep)) continue;   // «marca aí que troquei…» é anotar, não agendar
+      v = x; break;
+    }
+    // pergunta: só o pedido educado («pode agendar … para 15/11?»); «quando agendar…?» não é pedido
+    if (raw.indexOf('?') >= 0 && !(v && AG_CORTESIA.test(f.slice(0, v.index)) && f.slice(0, v.index).indexOf('?') < 0)) return null;
+    if (!v) pp = AG_FEITO.exec(f);
+    if (!v && !pp) return null;
+    if (/\b(nao|nunca)\b/.test(f.slice(0, v ? v.index : pp.index)) || /\b(cancel\w*|desmarc\w*)\b/.test(f)) return null;
+    if (v && AG_ANTES.test(f.slice(0, v.index))) return null;   // «a marca», «o programa»: substantivo
+    ini = v ? v.index + v[0].length : pp.index + pp[0].length; resto = f.slice(ini); d = dataNoTexto(resto);
+    if (!d || isNaN(d.dia)) return null;
+    hoje = diaDe(msAgora());
+    if (d.dia < hoje) return v ? { passada: true, vence: diaIso(d.dia) } : null;   // «revisão marcada para 10/09» (fato) já passado = registro antigo, não pedido
+    n = v ? raw.slice(ini, ini + d.ini) : raw.slice(0, pp.index).replace(/(?:\s+(?:est[áa]|est[ãa]o|foi|foram|ficou|ficaram|fica|j[áa]))+\s*$/i, '');   // («a revisão do gerador está agendada para 20/11»: o nome é «revisão do gerador»)
+    depois = raw.slice(ini + d.fim).replace(/\?+\s*$/, '');
+    sem = function (s) { return s.replace(/\s+(?:com|responsavel|responsável)\s*:?\s+.*$/i, ''); };
+    n = limpaNome(sem(n.replace(/(?:\s+(?:para|pra|pro|em|no|na|o|a|ate|até|dia|de|do|da))+\s*$/i, '')));
+    if (!n || n.length < 3) n = limpaNome(sem(depois));
+    if (!n || n.length < 3) return null;
+    // responsável: «com Rafael», «responsável: Lucas», «com a marina» (o papel conhecido ou o nome com maiúscula); «com urgência» não
+    q = /(?:^|\s)(?:[Cc]om|[Rr]espons[aá]vel)\s*:?\s+(?:[oa]\s+)?([A-Za-zÀ-ÿ][\wÀ-ÿ.-]*(?:\s+[A-ZÀ-Ý][\wÀ-ÿ.-]*)?)/.exec(raw.slice(ini));
+    if (q) { w = q[1]; lw = norm(w.split(/\s+/)[0]); if (/^(?:marina|tecnico|oficina|estaleiro|dealer|mecanico|eletricista|equipe)$/.test(lw)) quemT = lw === 'tecnico' ? 'técnico' : lw === 'mecanico' ? 'mecânico' : lw; else if (/^[A-ZÀ-Ý]/.test(w)) quemT = w; }
+    n = n.slice(0, 120); n = n.charAt(0).toUpperCase() + n.slice(1);
+    return { n: n, vence: diaIso(d.dia), quem: quemT.slice(0, 40) };
+  }
+  function limpaNome(s) { return String(s || '').replace(/^[\s,;:—–-]+|[\s,;:.!—–-]+$/g, '').replace(/^(?:(?:a|o|as|os|uma|um)\s+)/i, '').trim(); }
+  // as tarefas da agenda (as 14 geradas, ainda não executadas) que o texto cita pelas `palavras` delas
+  function tarefasDoTexto(texto) {
+    var tk = raizes(texto), ex = loadExec();
+    return (D.agenda || []).filter(function (t) { return !ex[t.id] && citaFrases(tk, t.palavras); });
+  }
+  var OUTRO_DIA = /\b(?:ontem|anteontem|semana passada|mes passado|\d{1,2}\/\d{1,2})\b/;
+  // A proposta que o texto de um registro faz: agendar (a tarefa nova) vence «foi feito» (o Executado). O Executado é datado na confirmação (markExec): o texto que cita OUTRO dia («ontem», «dd/mm») não
+  // propõe (a tela marca a tarefa com a data certa); e o texto que cita duas tarefas não propõe nenhuma.
+  function propostaDoTexto(texto) {
+    var ag = achaAgendar(texto), ts;
+    if (ag) {
+      if (ag.passada) return null;
+      if (loadTarefas().some(function (t) { return norm(t.n) === norm(ag.n) && t.vence === ag.vence && !loadExec()[t.id]; })) return null;   // já está na agenda
+      return { k: 'tarefa', prop: { n: ag.n, vence: ag.vence, quem: ag.quem, sistema: sistemaDoTexto(texto) || undefined } };
+    }
+    if (!conclusao(texto) || OUTRO_DIA.test(dobra(texto))) return null;
+    ts = tarefasDoTexto(texto); if (ts.length !== 1) return null;   // (as já executadas não entram em tarefasDoTexto)
+    return { k: 'exec', prop: { tarefa: ts[0].id } };
+  }
+  function sistemaDoTexto(texto) { var e = equipamentoDoRelato(texto); return e ? e.id : ''; }
+  // o texto da proposta = o que o CONFIRMAR grava no diário (ticketTela mostra este mesmo texto); a tela refaz o texto depois do ✎ (muda o prop) com B.textoTicket(k, prop)
+  function textoTicket(k, prop) {
+    var p = prop || {}, ag;
+    if (k === 'exec') { ag = tarefa(p.tarefa); return ag ? 'Executado: ' + ag.t + ' (' + ag.equip + ') — marcado a partir do registro do diário. Linha nova, nada se apaga.' : ''; }
+    if (k === 'tarefa') return p.n && p.vence ? 'Tarefa da equipe: ' + p.n + ' — vence ' + brData(p.vence) + (p.quem ? ' · responsável: ' + p.quem : '') + '. Agendada pelo diário — linha nova, nada se apaga.' : '';
+    return '';
+  }
+  // a proposta da agenda ainda aberta que é a MESMA (a mesma tarefa a executar; o mesmo nome e dia a agendar): não se propõe duas vezes
+  function ticketAberto(k, prop) {
+    return ticketsAbertos().filter(function (t) { var tp = t.prop || {}; return t.k === k && ((k === 'exec' && tp.tarefa === prop.tarefa) || (k === 'tarefa' && norm(tp.n) === norm(prop.n) && tp.vence === prop.vence)); })[0] || null;
+  }
+  // a proposta de um registro já gravado (a linha do diário que a originou é o alvo): a mesma proposta ainda aberta não duplica. null = o texto não propõe nada.
+  function ticketDoRegistro(e) {
+    var p = e && !EM_SOS ? propostaDoTexto(e.t) : null, txt, ja;
+    if (!p) return null;
+    txt = textoTicket(p.k, p.prop); if (!txt) return null;
+    ja = ticketAberto(p.k, p.prop);
+    return ja || addTicket({ k: p.k, origem: 'regra', texto: txt, prop: p.prop, alvo: { tipo: 'diario', id: e.iso } });
+  }
+  // O que o registro faz depois de gravado (addDiario com opts): fecha a pendência que cita e/ou abre a proposta de agenda. Nada disso vale para a linha de ação, a do SOS nem o texto de emergência ou de
+  // pressão de óleo (o diário com alerta traz os passos, não mexe na agenda). null = nenhum efeito.
+  function efeitosDoRegistro(entry, opts) {
+    var r = {}, n, pa, tk, feito = false;
+    if (EM_SOS || !entry || entry.acao || linhaDoSOS(entry) || typeof entry.t !== 'string') return null;
+    n = pad(entry.t);
+    if (emergencia(n) || oleo(n) === 1) return null;
+    if (opts.pendencia) {
+      pa = achaPendencia(entry.t);
+      if (pa && pa.ambigua) { r.ambigua = pa.ambigua; feito = true; }
+      else if (pa && pa.fecha) { r.pendencia = resolvePendencia(pa.p.alvo, { de: entry, chat: !!opts.chat }); feito = feito || !!r.pendencia; }
+    }
+    if (opts.agenda) { tk = ticketDoRegistro(entry); if (tk) { r.ticket = tk; feito = true; } }
+    return feito ? r : null;
+  }
+  // ——— A proposta que espera a resposta no chat (F15, F12) ———
+  // UMA por vez: o alarme pedido («me avise se…») e a proposta da agenda (a tarefa feita, o agendamento). Vale 10 min; o «sim» e o «não» curtos só valem LOGO depois (a conversa dela, sem outra pergunta no meio);
+  // «confirmar», «recusar» e os botões valem sempre dentro dos 10 min. `seq` identifica a proposta: o botão de uma antiga não age na nova. DESFAZ guarda o que acabou de ser confirmado ou fechado (10 min): «desfazer»
+  // desmancha. A emergência, o NOVA e o ENCERRAR zeram as duas (limpaConversa). Nada é gravado sem o Confirmar; o pedido de link (commit false) não arma nada.
+  var PEND_CHAT = null, DESFAZ = null, PROP_SEQ = 0, ALVO_PROP = null, PROP_VALE = 10 * 60e3;
+  function armaProp(tipo, dados) { PROP_SEQ++; PEND_CHAT = Object.assign({ tipo: tipo, seq: PROP_SEQ, ate: Date.now() + PROP_VALE, n: undefined }, dados); return PEND_CHAT; }
+  function armaDesfaz(tipo, dados, ate) { PROP_SEQ++; DESFAZ = Object.assign({ tipo: tipo, seq: PROP_SEQ, ate: ate, n: undefined }, dados); return DESFAZ; }
+  function propVale() { return PEND_CHAT && Date.now() < PEND_CHAT.ate ? PEND_CHAT : null; }
+  function desfazVale() { return DESFAZ && Date.now() < DESFAZ.ate ? DESFAZ : null; }
+  function botoesProp(p) { return [{ l: 'Confirmar', href: '#capitao-prop-confirma-' + p.seq }, { l: 'Recusar', href: '#capitao-prop-recusa-' + p.seq }]; }
+  function botaoDesfaz(d) { return { l: 'Desfazer', href: '#capitao-prop-desfaz-' + d.seq }; }
+  // o botão tocado vale 5 s como alvo da proposta: se a proposta mudou desde que ele foi desenhado, a resposta diz que é antiga e não age na nova
+  function alvoProp() { var a = ALVO_PROP; ALVO_PROP = null; return a && Date.now() - a.t < 5000 ? a : null; }
+  var PC_CONFIRMA = /^ (?:(?:sim|ok|pode|por favor|entao|capitao|isso|claro|certo|ta|beleza|manda|vai|so|e) )*(?:confirm(?:a|e|ar|o)|cri(?:a|e|ar)|agend(?:a|e|ar)|marc(?:a|ar)|marque|ativ(?:a|e|ar))(?: (?:isso|esse|este|essa|esta|o|a|alarme|aviso|tarefa|proposta|executado|executada|feito|feita|como|na|agenda|mesmo|agora|por favor|ai|pra mim|para mim|ja|tudo))* $/;   // (sem «um»/«uma»: «criar um alarme» é um pedido NOVO, não a confirmação do que espera)
+  var PC_SIM = /^ (?:(?:sim|pode|claro|confirmo|confirmado|pode ser|com certeza|positivo|perfeito|isso mesmo|por favor) ?)+ $/;
+  var PC_RECUSA = /^ (?:(?:nao|ok|por favor|entao|capitao|sim) )*(?:recus(?:a|e|ar)|cancel(?:a|e|ar)|descart(?:a|e|ar)|esquec(?:a|e|er)|nao (?:crie|criar|agende|agendar|marque|marcar|quero|precisa|confirme|confirmar))(?: (?:isso|esse|este|essa|esta|o|a|um|uma|alarme|aviso|tarefa|proposta|executado|agenda|mesmo|agora|por favor|ai))* $/;
+  var PC_NAO = /^ (?:nao|n|nope|negativo)(?: obrigad[oa])? $/;
+  var PC_DESFAZ = /^ (?:(?:ok|por favor|entao|capitao|pode|quero|preciso|vou|sim) )*(?:desfaz(?:er)?|desfaca|volta(?:r)? atras|anula(?:r)?)(?: (?:isso|esse|este|essa|esta|o|a|ultimo|ultima|registro|pendencia|proposta|tarefa|executado|agenda|ai|por favor|mesmo|agora))* $/;
+  // F26: «O que você pode fazer?», «quais são as suas funções?», «o que o app faz?»: a lista do que o app faz, local, sem IA e sem internet. A frase inteira (com cortesia): o que tem assunto («o que você pode fazer pelo
+  // gerador?») segue a rota dele. «O que você faz?», «o que você sabe?», «quem é você?» e «como você funciona?» continuam a saudação (a IA pode contar mais).
+  var CAP_PREF = '(?:(?:capitao|ia|oi|ola|entao|bom dia|boa tarde|boa noite|e|ai|me diga|me fala|me conta|diga|fale|conta|agora|por favor|quero saber|queria saber|gostaria de saber|pode me dizer|poderia me dizer|me explica|explica|me mostra|mostra) )*';
+  var CAPACIDADES = new RegExp('^ ' + CAP_PREF + '(?:(?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu|o capitao|o app|o aplicativo|a ia) (?:pode|consegue|e capaz de)(?: me)?(?: (?:fazer|ajudar|responder|me ajudar))*|do que (?:voce|vc|tu) e capaz|(?:o ?que|oq|q) (?:o capitao|o app|o aplicativo|a ia) faz|(?:quais|que) (?:sao )?(?:as )?(?:suas |tuas |as )?(?:funcoes|funcionalidades|capacidades|habilidades|comandos|recursos)(?: (?:do app|do aplicativo|do capitao|que (?:voce|vc) tem|disponiveis))?|(?:quais|que) funcoes (?:o app|o aplicativo|o capitao|voce|vc) tem|(?:o ?que|oq|q) (?:eu )?posso (?:te |lhe )?(?:perguntar|pedir)(?: (?:a voce|pra voce|para voce|ao capitao|ao app))?|(?:o ?que|oq|q) da pra fazer(?: (?:aqui|no app|neste app|nesse app))?|lista de funcoes(?: do app)?) (?:por favor )?$');
+  function capacidadesPergunta(q) { return !EM_SOS && CAPACIDADES.test(q); }
+  var PC_BTN_CONFIRMA = /^ confirmar a proposta $/, PC_BTN_RECUSA = /^ recusar a proposta $/;
+  var PC_SO_CONFIRMA = /^ (?:(?:sim|ok|pode|por favor|entao|capitao) )*confirm(?:a|e|ar|o)(?: (?:isso|esse|a proposta|o agendamento|por favor))* $/, PC_SO_RECUSA = /^ (?:(?:nao|ok|por favor|entao|capitao) )*recus(?:a|e|ar)(?: (?:isso|essa|a proposta|o agendamento|por favor))* $/;
+  var AL_CONFIRMA_EXP = /^ (?:(?:sim|ok|pode|por favor|entao|capitao) )*confirm(?:a|e|ar|o) (?:o )?alarme $/, AL_CANCELA_EXP = /^ (?:(?:nao|ok|por favor|entao|capitao) )*(?:cancel(?:a|e|ar)|recus(?:a|e|ar)|descart(?:a|e|ar)) (?:o )?(?:alarme|pedido de alarme) $/;
+  // a resposta do usuário à proposta que espera (ou o «desfazer»): a chave, ou null. Roda depois da emergência e do óleo (a pergunta de emergência zera tudo).
+  function propRota(qRaw, q) {
+    var p = propVale(), logo = !!p && p.n === CONV.n && !CONV.pergunta;
+    if (EM_SOS) return null;
+    if (PC_DESFAZ.test(q)) return 'ticketDesfaz';   // (sem o que desfazer, a resposta diz isso)
+    if (p) {
+      if (PC_CONFIRMA.test(q) || (logo && PC_SIM.test(q))) return p.tipo === 'alarme' ? 'alarmeConfirma' : 'ticketConfirma';
+      if (PC_RECUSA.test(q) || (logo && PC_NAO.test(q))) return p.tipo === 'alarme' ? 'alarmeCancela' : 'ticketRecusa';
+    }
+    if (AL_CONFIRMA_EXP.test(q)) return 'alarmeConfirma';
+    if (AL_CANCELA_EXP.test(q)) return 'alarmeCancela';
+    // a pergunta pronta de um botão velho (a proposta venceu, a página recarregou, outra pergunta zerou): a resposta local diz que não há proposta, nunca a IA
+    if (PC_BTN_CONFIRMA.test(q) || PC_SO_CONFIRMA.test(q)) return 'ticketConfirma';   // («confirmar» sozinho, sem proposta esperando, é resposta local: não há o que confirmar)
+    if (PC_BTN_RECUSA.test(q) || PC_SO_RECUSA.test(q)) return 'ticketRecusa';
+    return null;
+  }
+  function brDia(n) { return brData(diaIso(n)); }
+  function emDias(n) { var d = n - diaDe(msAgora()); return d === 0 ? 'hoje' : d === 1 ? 'amanhã' : d > 1 ? 'em ' + d + ' dias' : 'há ' + (-d) + (d === -1 ? ' dia' : ' dias'); }
+  function respTxt(prop) { return prop && prop.quem ? ' · responsável: ' + prop.quem : ''; }
+  // as linhas e os botões que um registro gravado acrescenta à resposta do chat (F20, F15): a pendência fechada (com o Desfazer), a citação ambígua e a proposta da agenda (com Confirmar e Recusar). Arma as duas
+  // esperas. Devolve { linhas, botoes, fala }.
+  function efeitosNoChat(reg, p) {
+    var r = { linhas: [], botoes: [], fala: '' }, pd, tk, d, pe, ag, t;
+    if (!reg) return r;
+    if (reg.ambigua) {
+      r.linhas.push('O registro cita mais de uma pendência aberta (' + reg.ambigua.map(function (x) { return limpaT(x.t, 60); }).join(' · ') + '): nenhuma foi fechada. Diga qual foi resolvida.');
+      r.fala += ' Citou mais de uma pendência; diga qual foi resolvida.';
+    }
+    if ((pd = reg.pendencia)) {
+      d = armaDesfaz('pend', { r: pd }, pd.desfazAte);
+      r.linhas.push('Pendência fechada: ' + fimPend(pd.t) + ' — o registro conclui o serviço (linha nova no diário). Se não era isso, diga “desfazer” ou toque em Desfazer.');
+      r.botoes.push(botaoDesfaz(d)); r.fala += ' Pendência fechada.';
+    }
+    if ((tk = reg.ticket)) {
+      pe = armaProp('ticket', { id: tk.id });
+      ag = tk.k === 'exec' ? tarefa(tk.prop && tk.prop.tarefa) : null;
+      t = tk.k === 'exec' ? 'Proposta: marcar “' + (ag ? ag.t : '') + '” como executada na agenda' : 'Proposta: agendar “' + (tk.prop && tk.prop.n) + '” para ' + brData(tk.prop && tk.prop.vence) + respTxt(tk.prop) + ' na agenda da equipe';
+      r.linhas.push(t + '. Nada é gravado sem o seu Confirmar: toque em Confirmar ou diga “confirmar” (ou “recusar”).');
+      r.botoes = r.botoes.concat(botoesProp(pe));
+      r.fala += tk.k === 'exec' ? ' Posso marcar a tarefa como executada. Confirma?' : ' Posso agendar a tarefa. Confirma?';
+    }
+    return r;
+  }
+  // ——— Alarmes pedidos no chat (F12; CONTRATO §1.21, §1.25) ———
+  // «me avise se a pressão do óleo do BB cair abaixo de 2 bar» → uma PROPOSTA (nada é gravado) que vira regra só no Confirmar. A lista de medidas é FECHADA e vem do dado gerado (D.alarmesPedidos.metricas:
+  // nome, palavras, unidade, casas, faixa aceita para o limite, sentidos); a regra é a faixa própria da medida, não o D.replay.limites. capitao.alarmes.v1 = linhas { id: 'usr_<n>', campo, op, limite, iso, who, sim?,
+  // acao?: 'apaga' }: a linha mais nova de cada id é o estado, e apagar é uma linha NOVA (nada se apaga; o número não volta a ser usado). Avaliado no aparelho contra o quadro do instante (e, com o replay, os últimos
+  // segundos): AVISO só na tela — nunca crítico, nunca abre o SOS nem a C3, nunca fala, nunca grava no diário, sem notificação. A faixa do topo (Fase 4) lê almAtivos().
+  function almCfg() { var A = D.alarmesPedidos; return !EM_SOS && A && typeof A === 'object' && Array.isArray(A.metricas) ? A : null; }
+  function almMetricas() {
+    var A = almCfg();
+    return A ? A.metricas.filter(function (m) { return m && typeof m.id === 'string' && Array.isArray(m.campos) && typeof m.campos[0] === 'string' && Array.isArray(m.faixa) && m.faixa.length === 2 && m.faixa[0] < m.faixa[1] && Array.isArray(m.ops) && Array.isArray(m.palavras) && typeof m.nome === 'string'; }) : [];
+  }
+  function almMetricaDeCampo(c) { return almMetricas().filter(function (m) { return m.campos[0] === c; })[0] || null; }
+  function ehAlarme(l) { return !!l && typeof l === 'object' && typeof l.id === 'string' && /^usr_\d{1,6}$/.test(l.id) && typeof l.iso === 'string' && (l.acao === 'apaga' || (typeof l.campo === 'string' && (l.op === '<' || l.op === '>') && typeof l.limite === 'number' && isFinite(l.limite))); }
+  function almN(l) { return +String(l.id).slice(4); }
+  // as regras ATIVAS (a linha mais nova de cada id não é «apaga»), da mais antiga à mais nova, com a medida; `ctx.semSim`: as gravadas com a simulação ligada ficam fora (simulacao false, na ficha)
+  function almVigentes(ctx) {
+    var vistos = {}, out = [];
+    if (!almCfg()) return out;
+    listaCru(K.alarmes).filter(ehAlarme).forEach(function (l) { if (!tem(vistos, l.id)) { vistos[l.id] = 1; if (l.acao !== 'apaga') out.push(l); } });   // (mais nova primeiro: a 1ª linha de um id é o estado)
+    return out.map(function (l) { var m = almMetricaDeCampo(l.campo); return m && !(ctx && ctx.semSim && l.sim === true) ? Object.assign({}, l, { n: almN(l), m: m }) : null; }).filter(Boolean).sort(function (a, b) { return a.n - b.n; });
+  }
+  function almProxN() { var mx = 0; listaCru(K.alarmes).forEach(function (l) { if (ehAlarme(l)) mx = Math.max(mx, almN(l)); }); return mx + 1; }
+  function almIsoUnico(cru, ms) { var iso = new Date(ms).toISOString(); while (cru.some(function (x) { return x && x.iso === iso; })) iso = new Date(++ms).toISOString(); return iso; }
+  // O CONFIRMAR: grava UMA linha por item ({ m, op, limite }); { criadas, erro } — erro 'max' (passa do máximo de ativos), 'indisponivel' (sem a lista, ou no SOS); o item fora da faixa, do sentido ou repetido não entra.
+  function almCria(itens) {
+    var A = almCfg(), cru, ativas, n, criadas = [];
+    if (!A) return { criadas: [], erro: 'indisponivel' };
+    ativas = almVigentes();
+    if (ativas.length + itens.length > (typeof A.max === 'number' ? A.max : 10)) return { criadas: [], erro: 'max' };
+    cru = listaCru(K.alarmes); n = almProxN();
+    itens.forEach(function (it) {
+      var lin;
+      if (!it || !it.m || (it.op !== '<' && it.op !== '>') || it.m.ops.indexOf(it.op) === -1 || typeof it.limite !== 'number' || !isFinite(it.limite) || it.limite < it.m.faixa[0] || it.limite > it.m.faixa[1]) return;
+      if (ativas.concat(criadas).some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; })) return;
+      lin = { id: 'usr_' + n++, campo: it.m.campos[0], op: it.op, limite: it.limite, iso: almIsoUnico(cru, Date.now()), who: quem() };
+      if (sim()) lin.sim = true;
+      cru.unshift(lin); criadas.push(lin);
+    });
+    if (criadas.length) write(K.alarmes, cru);
+    return { criadas: criadas.map(function (l) { return Object.assign({}, l, { n: almN(l), m: almMetricaDeCampo(l.campo) }); }) };
+  }
+  // APAGAR o alarme #n: linha nova «apaga» (nada se apaga). null = não existe, já foi apagado ou o SOS.
+  function almApaga(n) {
+    var v = almVigentes().filter(function (a) { return a.n === n; })[0], cru, lin;
+    if (!v) return null;
+    cru = listaCru(K.alarmes);
+    lin = { id: v.id, acao: 'apaga', campo: v.campo, op: v.op, limite: v.limite, iso: almIsoUnico(cru, Math.max(Date.now(), Date.parse(v.iso) + 1)), who: quem() };
+    if (sim()) lin.sim = true;
+    cru.unshift(lin); write(K.alarmes, cru);
+    return lin;
+  }
+  function almNum(x, c) { return c === 0 ? mil(x) : nb(x, c); }
+  function almTxt(m, v) { return almNum(v, m.casas) + ' ' + m.un; }
+  function almRegra(a) { return a.m.nome + ' ' + (a.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(a.m, a.limite); }
+  function almMotorTxt(m) { return m.motor ? ' — só vale com o motor em cruzeiro (a partir de 1.000 rpm)' : ''; }
+  // ——— entender o pedido ———
+  var ALM_CRIA = '(?:cri(?:e|a|ar)|configur(?:e|a|ar)|colo(?:que|ca|car)|ativ(?:e|a|ar)|program(?:e|a|ar)|mont(?:e|a|ar)|adicion(?:e|a|ar)|defin(?:a|ir))';
+  var ALM_GAT_A = / (?:me )?(?:avis(?:e|a|ar)|alert(?:e|a|ar)|notifi(?:que|ca|car))(?:-me| me)? /, ALM_COND = / (?:quando|se|caso|sempre que|assim que|toda vez que) /;
+  var ALM_GAT_B = new RegExp('^ (?:(?:por favor|entao|capitao|pode|poderia|voce pode|quero|queria|gostaria de|preciso|me ajuda a|ajuda a|vamos|ok) )*' + ALM_CRIA + ' (?:[a-z0-9]+ ){0,3}(?:alarmes?|alertas?|avisos?) | (?:quero|queria|gostaria de|preciso de|me d[ae]|faz|fazer|faca) (?:(?:um|uma|outro|outra|mais um|mais uma|novo|nova) )+(?:alarme|alerta|aviso) ');
+  var ALM_GAT_C = / (?:alarmes?|alertas?|avisos?) (?:quando|se|caso|sempre que|para quando) /;
+  var ALM_LT = / (?:abaixo d[eoa]s?|menos d[eoa]s?|menor(?:es)? (?:que|do que|d[eoa]s?)|inferior(?:es)? a|ca(?:irem|ir|iam|ia|i) (?:abaixo|para|a)|baixa(?:rem|r)? (?:de|abaixo|para|a)|baix(?:e|em) (?:de|abaixo|para)|desc(?:erem|er|am|a) (?:abaixo|para|a)|fica(?:rem|r)? (?:abaixo|menor|menos)|fiqu(?:e|em) (?:abaixo|menor|menos)|estiver(?:em)? (?:abaixo|menor|menos)|pass(?:arem|ar|em|e) abaixo)(?= )/;
+  var ALM_GT = / (?:acima d[eoa]s?|mais d[eoa]s?|maior(?:es)? (?:que|do que|d[eoa]s?)|superior(?:es)? a|pass(?:arem|ar|em|e) d[eoa]s?|pass(?:arem|ar|em|e) (?:acima|a)|ultrapass\w+|exced\w+|sub(?:irem|ir|am|a) (?:acima|para|a|de|ate)|fica(?:rem|r)? (?:acima|maior|mais)|fiqu(?:e|em) (?:acima|maior|mais)|estiver(?:em)? (?:acima|maior|mais))(?= )/;
+  // quem RELATA (está, caiu, acendeu, disparou, agora, luz vermelha…) não está configurando: o relato de pressão de óleo segue a instrução de segurança (oleo), nunca a proposta de alarme
+  var ALM_RELATO = / (?:esta|estao|ta|tao|estava|estavam|caiu|cairam|acendeu|acesa|acesas|disparou|soou|apagou|parou|agora|neste momento|nesse momento|urgente|socorro|ajuda|problema|falha|falhou|luz|vermelha|vermelho|zerou|zerada|sem pressao) /;
+  var ALM_PERGUNTA = / (?:como|onde|quando|qual|quais|quanto|porque|por que|o que|quem|sera|posso|devo) /;
+  function almGatilho(q) { return (ALM_GAT_A.test(q) && ALM_COND.test(q)) || ALM_GAT_B.test(q) || ALM_GAT_C.test(q); }
+  // o pedido COMPLETO na forma de configuração («me avise se … cair abaixo de 2 bar»): gatilho + sentido + número e nenhuma palavra de relato. É o que vale ANTES do óleo (o relato de queda de pressão
+  // segue a instrução de segurança; a configuração da regra não é relato) e o que o oleo() deixa de tratar como queda
+  function almPedidoLite(q) { return !EM_SOS && !!D.alarmesPedidos && almGatilho(q) && (ALM_LT.test(q) || ALM_GT.test(q)) && /\d/.test(q) && !ALM_RELATO.test(q); }
+  // (A cabeça de emergência — socorro, salvatagem, MMSI, EPIRB/baliza, Seafire, canal 16/rádio/DSC — nunca vira proposta de alarme: a route() as entrega às rotas de emergência ANTES de chegar aqui, e o oleo() devolver 0 não tira
+  // nada dessas perguntas, que o cabecaEmerg pega pelas outras palavras. O testes/cerebro.py (p3g_rotas) confere a pergunta mista, com o EPIRB, o Seafire, o rádio, a salvatagem e o perigo.)
+  // o pedido de alarme em geral (incompleto também: a resposta diz o que falta): gatilho + (sentido com número, ou uma medida da lista) ou o «criar um alarme» do começo da fala; nunca pergunta nem relato
+  function almPedido(q) {
+    if (EM_SOS || !almCfg() || ALM_RELATO.test(q)) return false;
+    if (ALM_GAT_B.test(q) && !ALM_PERGUNTA.test(q) && !/\?/.test(q)) return true;
+    if (!((ALM_GAT_A.test(q) && ALM_COND.test(q)) || ALM_GAT_C.test(q))) return false;
+    return ((ALM_LT.test(q) || ALM_GT.test(q)) && /\d/.test(q)) || !!almMedida(q).itens;
+  }
+  function almLado(tk) {
+    var bb = tk.indexOf('bb') !== -1 || tk.indexOf('bombordo') !== -1, be = tk.indexOf('be') !== -1 || tk.indexOf('boreste') !== -1 || tk.indexOf('estibordo') !== -1;
+    return bb && !be ? 'bb' : be && !bb ? 'be' : null;
+  }
+  function posFrase(tk, frase) {
+    var ft = raizes(frase), i, j;
+    if (!ft.length) return -1;
+    for (i = 0; i + ft.length <= tk.length; i++) { for (j = 0; j < ft.length && tk[i + j] === ft[j]; j++); if (j === ft.length) return i; }
+    return -1;
+  }
+  // a medida que o texto nomeia: a frase mais longa das `palavras` ganha; as medidas irmãs (óleo BB e BE, o banco sem dizer qual, águas cinzas e negras) que dividem a frase valem todas, e o lado dito (BB, BE,
+  // bombordo, boreste) escolhe uma. { itens: [metricas] } ou { erro: 'medida' | 'ambigua' } (nenhuma, ou duas medidas diferentes no mesmo pedido).
+  function almMedida(pq) {
+    var tk = raizes(pq), lado = almLado(tk), melhor = 0, ach = [], cands, lc, comum, span = {}, outra = false;
+    almMetricas().forEach(function (m) {
+      m.palavras.forEach(function (f) { var ft = raizes(f), i = posFrase(tk, f); if (i >= 0) { ach.push({ m: m, f: ft.join(' '), len: ft.length, ini: i }); melhor = Math.max(melhor, ft.length); } });
+    });
+    if (!melhor) return { erro: 'medida' };
+    cands = []; ach.forEach(function (a) { if (a.len === melhor && !cands.some(function (c) { return c.m === a.m; })) cands.push({ m: a.m, fr: [] }); });
+    ach.forEach(function (a) { if (a.len === melhor) cands.forEach(function (c) { if (c.m === a.m && c.fr.indexOf(a.f) === -1) c.fr.push(a.f); }); });
+    if (lado) { lc = cands.filter(function (c) { return new RegExp('_' + lado + '$').test(c.m.id); }); if (lc.length) cands = lc; }
+    if (cands.length > 1) { comum = cands[0].fr.filter(function (f) { return cands.every(function (c) { return c.fr.indexOf(f) !== -1; }); }); if (!comum.length) return { erro: 'ambigua' }; }
+    ach.forEach(function (a) { if (cands.some(function (c) { return c.m === a.m; }) && a.len === melhor) for (var k = a.ini; k < a.ini + a.len; k++) span[k] = 1; });
+    ach.forEach(function (a) { var k, livre = true; if (a.len >= 2 && !cands.some(function (c) { return c.m === a.m; })) { for (k = a.ini; k < a.ini + a.len; k++) if (span[k]) livre = false; if (livre) outra = true; } });
+    return outra ? { erro: 'ambigua' } : { itens: cands.map(function (c) { return c.m; }) };
+  }
+  var ALM_NUM = /(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?: ?(%|por cento|porcento|bar|volts?|v|graus?|°c|c|rpm|nos|knots?|kt|metros?|m|hpa|litros?|l))?(?= |$)/;
+  var ALM_UN = { '%': '%', 'por cento': '%', porcento: '%', bar: 'bar', volt: 'V', volts: 'V', v: 'V', grau: '°C', graus: '°C', '°c': '°C', c: '°C', rpm: 'rpm', nos: 'nós', knot: 'nós', knots: 'nós', kt: 'nós', metro: 'm', metros: 'm', m: 'm', hpa: 'hPa', litro: 'L', litros: 'L', l: 'L' };
+  function almValor(t) { return parseFloat(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t) ? t.replace(/\./g, '').replace(',', '.') : t.replace(',', '.')); }
+  // O pedido entendido: { ok: true, itens: [{ m, op, limite }] } ou { ok: false, motivo: 'sentido' | 'limite' | 'medida' | 'ambigua' | 'unidade' | 'faixa' | 'op', m? }. O texto original (com as vírgulas dos decimais) é o que se lê.
+  function almParse(raw) {
+    var s = ' ' + norm(raw).replace(/</g, ' menor que ').replace(/>/g, ' maior que ').replace(/[?!;:()"“”]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    var lt = ALM_LT.exec(s), gt = ALM_GT.exec(s), ref = lt || gt, op, nm, un, lim, med, i, m;
+    if (!ref) return { ok: false, motivo: 'sentido' };
+    if (lt && gt) return { ok: false, motivo: 'ambigua' };   // «cair abaixo de 60 ou passar de 90»: um alarme por pedido
+    op = lt ? '<' : '>';
+    nm = ALM_NUM.exec(s.slice(ref.index));
+    if (!nm) return { ok: false, motivo: 'limite' };
+    med = almMedida(pad(raw));
+    if (!med.itens) return { ok: false, motivo: med.erro };
+    lim = almValor(nm[1]); un = nm[2] ? ALM_UN[nm[2]] : null;
+    for (i = 0; i < med.itens.length; i++) {
+      m = med.itens[i];
+      if (un && un !== m.un) return { ok: false, motivo: 'unidade', m: m };
+      if (m.ops.indexOf(op) === -1) return { ok: false, motivo: 'op', m: m };
+      if (!(lim >= m.faixa[0] && lim <= m.faixa[1])) return { ok: false, motivo: 'faixa', m: m };
+    }
+    return { ok: true, itens: med.itens.map(function (m2) { return { m: m2, op: op, limite: lim }; }) };
+  }
+  // «apagar alarme #2», «remover o alarme 3», «excluir alarme usr_4»: o número; 0 sem número
+  var ALM_APAGA = /(?:^| )(?:apag(?:ue|a|ar)|remov(?:a|e|er)|exclu(?:a|i|ir)|delet(?:e|a|ar)|tir(?:e|a|ar)|retir(?:e|a|ar)|cancel(?:e|a|ar)|desativ(?:e|a|ar)) (?:o |esse |este |um |todos os |todas as |os |as )?(?:alarmes?|alertas?|avisos?)(?: pedid\w+| criad\w+)?(?: (?:numero|n|no|num))? ?[#]? ?(?:usr_)?(\d{1,6})?(?![0-9])/;
+  // só é o pedido de apagar quando traz o NÚMERO ou diz «pedido(s)/criado(s)»: «desligar o alarme», «apagar alarme» e «cancelar o alarme do porão» são do alarme do barco, nunca desta rota
+  function almApagaN(raw) {
+    var m = EM_SOS ? null : ALM_APAGA.exec(' ' + norm(raw).replace(/[?!;:()"“”]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ');
+    if (!m || !almCfg()) return -1;
+    return m[1] ? +m[1] : / (?:pedid|criad)\w+/.test(m[0]) ? 0 : -1;   // -1 = não é o pedido de apagar
+  }
+  var ALM_LISTA = / (?:meus|minhas) (?:[a-z]+ ){0,2}(?:alarmes?|alertas?|avisos?) | (?:alarmes?|alertas?|avisos?) (?:pedid\w+|criad\w+|configurad\w+|programad\w+|que (?:eu|nos|a gente) (?:pedi|pedimos|criei|criamos|configurei|configuramos|programei)) | (?:quais|que|ver|mostr\w+|list\w+|tenho|temos|tem) (?:[a-z]+ ){0,3}alarmes? (?:eu|nos) (?:pedi|criei|tenho|temos|configurei) | lista de alarmes pedid\w+ /;
+  function almLista(q) { return !EM_SOS && !!almCfg() && ALM_LISTA.test(q) && !ALM_RELATO.test(q); }
+  // ——— avaliar contra o quadro (F12; CONTRATO §1.21: histerese de 10 s, `motor: true` só a partir de 1.000 rpm) ———
+  function almCond(m, op, limite, q) {
+    var v = q ? q[m.campos[0]] : null, A = window.CapitaoAgora, rk, rpm;
+    if (typeof v !== 'number' || !isFinite(v)) return null;   // sem leitura: não avalia
+    v = A && A.fmt && typeof A.fmt.arred === 'function' ? A.fmt.arred(v, m.casas) : v;   // (a regra única do quadro compara o valor com as casas do campo)
+    if (m.motor) { rk = /^motor_(bb|be)_/.exec(m.campos[0]); rpm = rk ? q['motor_' + rk[1] + '_rpm'] : null; if (typeof rpm !== 'number' || rpm < 1000) return false; }
+    return op === '<' ? v < limite : v > limite;
+  }
+  // os alarmes pedidos ATIVOS no instante `ms` (o do instante da pergunta, o fixado ou agora): [{ id, n, nivel: 'aviso', rotulo, cor, rgb, sistema, lado?, campo, titulo, valor, limite, un, valorTxt, limiteTxt, texto, desde, desdeMs,
+  // hora, fonte, pedido: true, op }] — a forma dos alertas do CapitaoAlertas, para a faixa do topo (Fase 4) juntar à lista. Ativo = a condição vale agora ou valeu nos últimos `histerese_s` s (fecha só depois de 10 s
+  // sem valer); `desde` = o começo dessa sequência (até 160 s para trás, só com o replay). Sem quadro vivo (replay ou coletor), no SOS ou sem regra: [].
+  function almAtivos(ms) {
+    var A = almCfg(), regras, i = instante(), R = window.CapitaoReplay, H, cache = {}, NIV = (window.CapitaoAlertas && window.CapitaoAlertas.NIVEL && window.CapitaoAlertas.NIVEL.aviso) || {};
+    if (!A || !i || !i.q || VIVAS[i.fonte] !== 1) return [];
+    regras = almVigentes(); if (!regras.length) return [];
+    H = typeof A.histerese_s === 'number' && A.histerese_s >= 0 ? Math.min(A.histerese_s, 60) : 10;
+    ms = typeof ms === 'number' && isFinite(ms) ? ms : i.ms;
+    function quadro(k) { var t = ms - k * 1000; if (!tem(cache, 'k' + k)) cache['k' + k] = k === 0 && ms === i.ms ? i.q : (i.fonte === 'replay' && R && typeof R.em === 'function' ? R.em(t) : (k === 0 ? i.q : null)); return cache['k' + k]; }
+    return regras.map(function (a) {
+      var ser = [], k, ult, ini, gap, v, d, A2 = window.CapitaoAgora, lado = /^motor_(bb|be)_/.exec(a.campo), q0 = quadro(0);
+      for (k = 0; k <= 160; k++) { ser.push(almCond(a.m, a.op, a.limite, quadro(k)) === true); if (k >= H && !ser.slice(0, k + 1).some(Boolean)) break; if (i.fonte !== 'replay' && k === 0) break; }
+      ult = ser.indexOf(true);
+      if (ult < 0 || ult > H) return null;
+      ini = ult; gap = 0;
+      for (k = ult + 1; k < ser.length; k++) { if (ser[k]) { ini = k; gap = 0; } else if (++gap > H) break; }
+      v = q0 && typeof q0[a.campo] === 'number' ? q0[a.campo] : null;
+      d = ms - ini * 1000;
+      var normal = ult > 0;   // a condição já não vale agora: o aviso só fecha 10 s depois de normalizar
+      return { id: a.id, n: a.n, nivel: 'aviso', rotulo: NIV.rotulo || 'AVISO', cor: NIV.cor || 'var(--cap-warn, #f0a63a)', rgb: NIV.rgb || 'var(--cap-warn-rgb, 240,166,58)', sistema: /^motor_/.test(a.campo) ? 'motores' : /^bateria_/.test(a.campo) ? 'elétrico' : /^tanque_/.test(a.campo) ? 'tanques' : a.campo === 'diesel_litros' ? 'combustível' : 'navegação',
+        lado: lado ? lado[1].toUpperCase() : undefined, campo: a.campo, titulo: 'Alarme pedido #' + a.n + ': ' + a.m.nome, valor: v, limite: a.limite, un: a.m.un, valorTxt: v == null ? '' : almTxt(a.m, v), limiteTxt: almTxt(a.m, a.limite), op: a.op,
+        normalizando: normal, texto: 'Alarme pedido #' + a.n + ' — ' + a.m.nome + (v == null ? '' : ': ' + almTxt(a.m, v)) + ' (' + (normal ? 'já voltou ' + (a.op === '<' ? 'acima' : 'abaixo') + ' de ' + almTxt(a.m, a.limite) + '; o aviso fecha ' + H + ' s depois de normalizar' : (a.op === '<' ? 'abaixo' : 'acima') + ' de ' + almTxt(a.m, a.limite)) + ')', desde: new Date(d).toISOString(), desdeMs: d, hora: A2 && A2.fmt ? A2.fmt.hora(d, true) : '',
+        fonte: A.fonte || 'alarme pedido no chat · avaliado neste aparelho', pedido: true };
+    }).filter(Boolean);
   }
 
   // ——— números e textos a partir dos dados ———
@@ -271,6 +820,7 @@
   // plotter e a ficha(p, q, a) sai sem os blocos do quadro (QUADRO): a trava é da API, não de cada chamador (a IA, o diário, a CONVERSA).
   var EMERG = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };
   var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };
+  QUADRO['Alarmes pedidos'] = 1;   // (F12: a leitura dos alarmes pedidos é do quadro: a ficha de emergência não a leva)
   function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }   // (o cartão EM-01…09 do FAQ também: sem quadro, sem hora, encerra o contexto)
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
@@ -546,7 +1096,6 @@
   }
   // 1ª letra minúscula no meio da frase, menos a sigla («AIS (classe B)» não vira «aIS»)
   function min1(s) { s = String(s || ''); return /^[A-ZÀ-Ý]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1); }
-  function pendencias() { return diarioFonte().filter(function (x) { return x.pend; }); }
 
   // Frase normalizada com espaço nas pontas (palavra inteira = ' x ').
   function pad(s) { return ' ' + norm(s).replace(/[?!.,;:()"“”]+/g, ' ').replace(/\s+/g, ' ').trim() + ' '; }
@@ -807,6 +1356,7 @@
   function oleo(q) {
     q = q.replace(/ oleo (?:diesel|combustivel)(?= )/g, ' diesel'); // "óleo diesel" é combustível, não óleo do motor
     if (!has(q, [' oleo']) || has(q, ['barometr', 'atmosf', 'hpa', 'pneu', 'hidraul'])) return 0;
+    if (almPedidoLite(q)) return 0;   // F12: «me avise se a pressão do óleo cair abaixo de 2 bar» CONFIGURA um alarme, não relata queda (o relato, com «está», «caiu», «agora», «acendeu»…, segue em 1)
     if (!OLEO_SINAL.test(q) && has(q, ['porao', 'vazament', 'vazand', 'pingand'])) return 0; // óleo no porão / vazamento: rota própria
     if (has(q, ['gerador', ' onan ']) && !has(q, ['motor'])) return 0; // óleo do gerador: rota do gerador (' onan ': 'funcionando' contém 'onan')
     var pressao = has(q, ['pressao']);
@@ -1039,6 +1589,8 @@
   function relatoFalado(n, key, sys, defeito) { return !RELATO_SEGURO[key] && !RELATO_RISCO.test(n) && !RELATO_URGENTE.test(n) && !defeito && !/^(?:Segurança|Anomalia)$/.test(sys || '') && RELATO_PASSADO.test(n) && !RELATO_AGORA_PRES.test(n); }
   // as rotas que nunca recebem a proposta: emergência, o próprio registro, o diagnóstico, a saudação, o que não é do barco e a frase padrão sobre os dados
   var SEM_RELATO = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, saudacao: 1, diagnostico: 1, sobreDados: 1, foraBarco: 1, relatoVerifica: 1 };
+  // P3G: o alarme pedido, a agenda (e o confirmar/recusar/desfazer) e o que o app faz não recebem a proposta do relato
+  ['alarmePedido', 'alarmeConfirma', 'alarmeCancela', 'alarmesLista', 'alarmeApaga', 'agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'capacidades'].forEach(function (k) { SEM_RELATO[k] = 1; });
   var RELATO_VALE = 10 * 60e3, REL_VER = 'O que verificar e qual pode ser a causa: ';
   // A proposta do relato (um ticket aberto, k diario, origem relato); o mesmo texto ainda aberto não duplica. REL guarda a que espera o «registrar» (10 min): o botão leva o id do ticket (5 s: ALVO_REL)
   var REL = null, ALVO_REL = null;
@@ -1090,7 +1642,8 @@
   }
   // O que o botão da proposta pergunta ao chat (a tela manda esta pergunta como se fosse digitada): registrar, não registrar, ou o que verificar (o relato vai à IA). Guarda o alvo por 5 s.
   function perguntaDoBotao(href) {
-    var m = /#capitao-relato-(registra|cancela|verifica)-(t[A-Za-z0-9_-]{2,60})$/.exec(String(href || '')), t;
+    var m = /#capitao-relato-(registra|cancela|verifica)-(t[A-Za-z0-9_-]{2,60})$/.exec(String(href || '')), t, b = /#capitao-prop-(confirma|recusa|desfaz)-(\d{1,9})$/.exec(String(href || ''));
+    if (b) { ALVO_PROP = { seq: +b[2], t: Date.now() }; return b[1] === 'confirma' ? 'confirmar a proposta' : b[1] === 'recusa' ? 'recusar a proposta' : 'desfazer a proposta'; }   // (F15/F12: o botão leva o número da proposta; o de uma antiga não age na nova)
     if (!m) return '';
     ALVO_REL = { id: m[2], t: Date.now() };
     if (m[1] === 'registra') return 'registrar o relato';
@@ -1104,7 +1657,7 @@
   if (!EM_SOS && !window.__capitaoBotoesRelato) {   // o toque num botão da proposta vira a pergunta digitada (a tela escuta 'capitao-chat-pergunta'); o link não navega
     window.__capitaoBotoesRelato = true;
     try { document.addEventListener('click', function (e) {
-      var a = e.target && e.target.closest ? e.target.closest('a[href*="#capitao-relato-"]') : null, q = a ? perguntaDoBotao(a.getAttribute('href')) : '';
+      var a = e.target && e.target.closest ? e.target.closest('a[href*="#capitao-relato-"], a[href*="#capitao-prop-"]') : null, q = a ? perguntaDoBotao(a.getAttribute('href')) : '';
       if (!q) return;
       e.preventDefault();
       try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}
@@ -1165,6 +1718,7 @@
     return null;
   }
   var NAO_ESPERA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, relatoVerifica: 1 };
+  ['alarmePedido', 'alarmeConfirma', 'alarmeCancela', 'alarmesLista', 'alarmeApaga', 'agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'capacidades'].forEach(function (k) { NAO_ESPERA[k] = 1; });   // (P3G: a espera do registro não engole o pedido de alarme, a agenda nem o «o que você pode fazer?»)
 
   function A(platform, key) { return (HREF[platform] || HREF.web)[key]; }
   function act(platform, pairs) { return pairs.map(function (p) { return { l: p[0], href: p[1].indexOf('.html') !== -1 || p[1].indexOf('#') === 0 ? p[1] : A(platform, p[1]) }; }); }
@@ -1883,10 +2437,12 @@
       var como = 'Para registrar, diga ou digite aqui “registre no diário…” seguido do texto';
       var junto = resumoMais(nota); // nota que pede posição/hora: resumo + nota numa linha só
       if (nota && !junto) {
-        var alerta = emergencia(pad(nota)), pressao = oleo(pad(nota)) === 1; // relato de emergência / pressão de óleo: grava a nota e traz os passos
-        if (grava) addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' });
-        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']])),
-          fala: falaRegistro(grava, alerta, pressao) };
+        var alerta = emergencia(pad(nota)), pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência / pressão de óleo: grava a nota e traz os passos
+        // F20/F15: o registro que conclui um serviço fecha a pendência que cita (com Desfazer) e propõe o Executado ou a tarefa; o texto de emergência, de pressão de óleo ou de cabeça de segurança (EPIRB, Seafire, rádio…) não mexe na agenda pelo chat
+        reg = grava ? addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' }, alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }) : null;
+        ef = efeitosNoChat(reg);
+        return { text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
+          fala: falaRegistro(grava, alerta, pressao) + ef.fala };
       }
       var al = junto && emergencia(pad(nota)), pr = junto && oleo(pad(nota)) === 1;
       var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
@@ -1911,6 +2467,7 @@
     // «registrar o relato» / «sim, registra» depois da proposta do relato (F16): confirma a proposta que espera (1 linha, com o complemento ou a data que a frase trouxe); sem proposta, diz que não há
     relatoRegistra: function (p, ctx, q) {
       var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir diário', 'diario']]), rp = grava ? relatoAlvo() : relatoPendente(), n = now(), sb, t, r, ex;
+      var ef;
       if (!rp) return { text: 'Não há relato esperando para registrar. Para registrar, diga “registre no diário…” seguido do texto.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Não há relato esperando para registrar.' };
       if (rp.decidido) return relatoDecidido(rp, abrir);   // o botão velho de uma proposta já decidida: não registra a que espera
       if (!grava) return { text: 'Não registrado — pedido vindo de link não grava no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Pedido vindo de link não grava no diário.' };
@@ -1919,7 +2476,8 @@
       r = aceitaTicket(rp.id, { chat: true }); REL = null;
       if (!r) return { text: 'Esse relato não está mais esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato não está mais esperando; nada foi registrado.' };
       if (r.ja) return { text: 'Esse relato já está registrado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato já está registrado.' };
-      return { text: 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + r.linha.t + '”\nLinha nova — nada se apaga.', src: 'Fonte: relato de ' + quem() + ' · diário de bordo do app', actions: abrir, fala: 'Registrado no diário de bordo.' };
+      ef = efeitosNoChat(r.linha);   // F20/F15: o relato registrado fecha a pendência que cita e propõe a agenda
+      return { text: 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + r.linha.t + '”\nLinha nova — nada se apaga.' + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : ''), src: 'Fonte: relato de ' + quem() + ' · diário de bordo do app', actions: ef.botoes.concat(abrir), fala: 'Registrado no diário de bordo.' + ef.fala };
     },
     // O botão «O que verificar?» do relato (F16): o item do FAQ ou o trecho dos guias que casa com o texto do relato; a tela também manda a pergunta à IA (pedeIA). Sem item, diz onde procurar. Os botões
     // Registrar / Não registrar seguem na resposta enquanto a proposta espera.
@@ -1945,6 +2503,138 @@
       if (rp.decidido) return relatoDecidido(rp, abrir);   // o botão velho de uma proposta já decidida: não recusa a que espera
       if (grava) { recusaTicket(rp.id); REL = null; }
       return { text: 'Certo — relato não registrado; nada foi gravado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Certo, relato não registrado.' };
+    },
+    // F15 (diário → agenda): «agendar revisão do gerador para 15/11 com a marina» é a PROPOSTA da tarefa da equipe; nada é gravado sem o Confirmar (a tarefa em capitao.tarefas.v1 e 1 linha no diário)
+    agendar: function (p, ctx, q) {
+      var ag = achaAgendar(q), grava = !ctx || ctx.commit !== false, abrir = act(p, [['Abrir manutenção', 'manut']]), prop, sis, tk, pe, dia, fonte = 'Fonte: agenda da equipe do app';
+      var como = 'Para agendar, diga “agendar <tarefa> para dd/mm” — por exemplo “agendar revisão do gerador para 15/11 com a marina”.';
+      if (!ag) return { text: 'Não entendi a tarefa ou a data. ' + como, src: fonte, actions: abrir, fala: 'Não entendi a tarefa ou a data. Diga agendar, a tarefa e a data.' };
+      if (ag.passada) return { text: 'A data ' + brData(ag.vence) + ' já passou — diga uma data de hoje em diante. ' + como, src: fonte, actions: abrir, fala: 'Essa data já passou. Diga uma data de hoje em diante.' };
+      if (!grava) return { text: 'Não agendado — pedido vindo de link não grava na agenda.\n' + como, src: fonte, actions: abrir, fala: 'Pedido vindo de link não agenda.' };
+      prop = { n: ag.n, vence: ag.vence, quem: ag.quem }; sis = sistemaDoTexto(q); if (sis) prop.sistema = sis;
+      dia = diaData(ag.vence);
+      if (loadTarefas().some(function (t) { return norm(t.n) === norm(ag.n) && t.vence === ag.vence && !loadExec()[t.id]; })) return { text: 'Já está na agenda da equipe: ' + ag.n + ' — vence ' + brData(ag.vence) + ' (' + emDias(dia) + '). Nada foi criado.', src: fonte, actions: abrir, fala: 'Essa tarefa já está na agenda para ' + brData(ag.vence) + '.' };
+      tk = ticketAberto('tarefa', prop) || addTicket({ k: 'tarefa', origem: 'regra', texto: textoTicket('tarefa', prop), prop: prop });
+      if (!tk) return { text: 'Não consegui montar a proposta de agendamento; nada foi gravado.', src: fonte, actions: abrir, fala: 'Não consegui montar a proposta.' };
+      pe = armaProp('ticket', { id: tk.id });
+      return { text: 'Posso agendar na equipe: ' + ag.n + ' — vence ' + brData(ag.vence) + ' (' + emDias(dia) + ')' + respTxt(prop) + '.\nNada é gravado sem o seu Confirmar (entra na agenda da equipe e 1 linha no diário): toque em Confirmar ou diga “confirmar”; para desistir, “recusar”.',
+        src: fonte + ' · proposta ainda não gravada', actions: botoesProp(pe).concat(abrir), fala: 'Posso agendar ' + ag.n + ' para ' + brData(ag.vence) + ', ' + emDias(dia) + '. Confirma?' };
+    },
+    // CONFIRMAR a proposta da agenda (a tarefa feita ou o agendamento): aceitaTicket com o desfazer de 10 min; o botão de uma proposta antiga não age na nova
+    ticketConfirma: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, pe = propVale(), al = alvoProp(), abrir = act(p, [['Abrir manutenção', 'manut']]), r, tk, d, f = 'Fonte: agenda do app · diário de bordo do app', ex, dia, lin;
+      if (!pe || pe.tipo !== 'ticket') return { text: 'Não há proposta da agenda esperando confirmação. Para agendar, diga “agendar <tarefa> para dd/mm”.', src: f, actions: abrir, fala: 'Não há proposta esperando confirmação.' };
+      if (al && al.seq !== pe.seq) return { text: 'Essa proposta é antiga: nada mudou. A mais recente continua esperando.', src: f, actions: botoesProp(pe).concat(abrir), fala: 'Essa proposta é antiga. A mais recente continua esperando.' };
+      if (!grava) return { text: 'Não gravado — pedido vindo de link não confirma proposta.', src: f, actions: abrir, fala: 'Pedido vindo de link não confirma proposta.' };
+      r = aceitaTicket(pe.id, { chat: true }); PEND_CHAT = null;
+      if (!r) return { text: 'Não consegui gravar essa proposta (a tarefa já foi executada ou saiu da agenda); nada foi gravado.', src: f, actions: abrir, fala: 'Não consegui gravar essa proposta; nada foi gravado.' };
+      if (r.ja) return { text: 'Essa proposta já foi confirmada.', src: f, actions: abrir, fala: 'Essa proposta já foi confirmada.' };
+      tk = achaTicket(ticketsCru(), pe.id); d = armaDesfaz('ticket', { id: pe.id }, r.desfazAte);
+      if (tk && tk.k === 'exec') { var ag = tarefa(tk.prop && tk.prop.tarefa); ex = ag ? loadExec()[ag.id] : null; return { text: 'Executado: ' + (ag ? ag.t : '') + (ag ? ' (' + ag.equip + ')' : '') + (ex ? ' — marcado em ' + ex.d + ' às ' + ex.t : '') + '. A tarefa saiu das pendentes da agenda e entrou 1 linha no diário (linha nova, nada se apaga).\nSe foi engano, diga “desfazer” ou toque em Desfazer.', src: f, actions: [botaoDesfaz(d)].concat(abrir), fala: 'Marcado como executado. Se foi engano, diga desfazer.' }; }
+      lin = tk && tk.prop || {}; dia = diaData(lin.vence);
+      return { text: 'Tarefa agendada: ' + lin.n + ' — vence ' + brData(lin.vence) + ' (' + emDias(dia) + ')' + respTxt(lin) + '. Entrou na agenda da equipe e 1 linha no diário (linha nova, nada se apaga).\nSe foi engano, diga “desfazer” ou toque em Desfazer.', src: f, actions: [botaoDesfaz(d)].concat(abrir), fala: 'Tarefa agendada para ' + brData(lin.vence) + '. Se foi engano, diga desfazer.' };
+    },
+    ticketRecusa: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, pe = propVale(), al = alvoProp(), abrir = act(p, [['Abrir manutenção', 'manut']]), f = 'Fonte: agenda do app';
+      if (!pe || pe.tipo !== 'ticket') return { text: 'Não há proposta da agenda esperando; nada foi gravado.', src: f, actions: abrir, fala: 'Não há proposta esperando; nada foi gravado.' };
+      if (al && al.seq !== pe.seq) return { text: 'Essa proposta é antiga: nada mudou. A mais recente continua esperando.', src: f, actions: botoesProp(pe).concat(abrir), fala: 'Essa proposta é antiga. A mais recente continua esperando.' };
+      if (!grava) return { text: 'Pedido vindo de link não recusa proposta; nada mudou.', src: f, actions: abrir, fala: 'Pedido vindo de link não recusa proposta.' };
+      recusaTicket(pe.id); PEND_CHAT = null;
+      return { text: 'Certo — proposta recusada; nada foi gravado.', src: f, actions: abrir, fala: 'Certo, proposta recusada.' };
+    },
+    // DESFAZER o que acabou de ser confirmado ou fechado (10 min): a proposta da agenda volta a aberta (a tarefa sai ou volta para a agenda) ou a pendência fechada pelo registro reabre — sempre por linha nova
+    ticketDesfaz: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, d = desfazVale(), al = alvoProp(), abrir = act(p, [['Abrir manutenção', 'manut']]), f = 'Fonte: diário de bordo do app · agenda do app', r, tk;
+      if (!d) return { text: 'Não há nada para desfazer agora (o desfazer vale 10 minutos depois de confirmar uma proposta ou de fechar uma pendência).', src: f, actions: abrir, fala: 'Não há nada para desfazer agora.' };
+      if (al && al.seq !== d.seq) return { text: 'Essa ação é antiga: nada mudou.', src: f, actions: abrir, fala: 'Essa ação é antiga; nada mudou.' };
+      if (!grava) return { text: 'Pedido vindo de link não desfaz; nada mudou.', src: f, actions: abrir, fala: 'Pedido vindo de link não desfaz.' };
+      DESFAZ = null;
+      if (d.tipo === 'pend') {
+        r = desfazPendencia(d.r);
+        return r ? { text: 'Desfeito: a pendência “' + fimPend(d.r.t) + '” voltou a ficar aberta (linha nova no diário).', src: f, actions: act(p, [['Abrir diário', 'diario']]), fala: 'Desfeito. A pendência voltou a ficar aberta.' }
+          : { text: 'Não deu para desfazer: a pendência mudou de estado depois do fechamento; nada foi alterado.', src: f, actions: act(p, [['Abrir diário', 'diario']]), fala: 'Não deu para desfazer; nada foi alterado.' };
+      }
+      tk = achaTicket(ticketsCru(), d.id); r = desfazTicket(d.id);
+      return r ? { text: 'Desfeito: ' + (tk && tk.k === 'exec' ? 'a tarefa voltou para a agenda' : 'a tarefa saiu da agenda da equipe') + ' e a linha do diário foi anulada (linha nova). A proposta voltou a ficar aberta, mas só espera o Confirmar nas telas da agenda.', src: f, actions: abrir, fala: 'Desfeito.' }
+        : { text: 'Não deu para desfazer: a janela de 10 minutos acabou ou a proposta mudou; nada foi alterado.', src: f, actions: abrir, fala: 'Não deu para desfazer; nada foi alterado.' };
+    },
+    // F12 (alarmes pedidos): «me avise se a pressão do óleo do BB cair abaixo de 2 bar» é a PROPOSTA da regra (nada é gravado até o Confirmar); o que falta ou está fora da faixa recebe a explicação, local, sem IA
+    alarmePedido: function (p, ctx, q) {
+      var grava = !ctx || ctx.commit !== false, abrir = act(p, [['Meus alarmes', askHref(p, 'meus alarmes')], ['Telemetria', 'console']]), pr = almParse(q), i = vivo(), A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10, ativas = almVigentes(), f = 'Fonte: alarmes pedidos neste aparelho' + (i ? ' · ' + i.fonteTxt : '');
+      var ex = 'Exemplo: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.', pe, regras, dup, linhas;
+      if (!A) return { text: 'Os alarmes pedidos não estão disponíveis neste aparelho.', src: f, actions: abrir, fala: 'Os alarmes pedidos não estão disponíveis.' };
+      if (!pr.ok) {
+        var m = pr.m, t = pr.motivo === 'sentido' ? 'Faltou o sentido: abaixo de quanto, ou acima de quanto? ' + ex
+          : pr.motivo === 'limite' ? 'Faltou o valor do limite. ' + ex
+          : pr.motivo === 'medida' ? 'Não achei a medida. Posso vigiar: ' + almMetricas().map(function (x) { return min1(x.nome); }).filter(function (x, k, v) { return v.indexOf(x) === k; }).join(' · ') + '. ' + ex
+          : pr.motivo === 'ambigua' ? 'Um alarme por pedido: diga uma medida e um sentido (“abaixo de” ou “acima de”) de cada vez. ' + ex
+          : pr.motivo === 'unidade' ? 'A unidade de ' + min1(m.nome) + ' é ' + m.un + '. ' + ex
+          : pr.motivo === 'faixa' ? 'O limite de ' + min1(m.nome) + ' vai de ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + ' (a faixa que o app aceita para o alarme).'
+          : m.nome + ' não aceita esse sentido. ' + ex;
+        return { text: t, src: f, actions: abrir, fala: pr.motivo === 'faixa' ? 'Esse limite está fora da faixa. De ' + almTxt(m, m.faixa[0]) + ' a ' + almTxt(m, m.faixa[1]) + '.' : 'Não consegui montar o alarme. Diga a medida, abaixo ou acima de, e o valor.' };
+      }
+      dup = pr.itens.filter(function (it) { return ativas.some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); });
+      if (dup.length === pr.itens.length) return { text: 'Esse alarme já existe: ' + ativas.filter(function (a) { return dup.some(function (it) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; }); }).map(function (a) { return '#' + a.n + ' ' + almRegra(a); }).join(' · ') + '. Nada foi criado.', src: f, actions: abrir, fala: 'Esse alarme já existe. Nada foi criado.' };
+      if (ativas.length + pr.itens.length - dup.length > max) return { text: 'Você já tem ' + ativas.length + ' de ' + max + ' alarmes pedidos: não cabe mais ' + (pr.itens.length - dup.length) + '. Apague um com “apagar alarme #n” (veja os números em “meus alarmes”).', src: f, actions: abrir, fala: 'Você já tem ' + ativas.length + ' alarmes pedidos; apague um antes de criar outro.' };
+      regras = pr.itens.map(function (it) { return it.m.nome + ' ' + (it.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(it.m, it.limite); });
+      linhas = pr.itens.map(function (it) { var v = i && i.q ? i.q[it.m.campos[0]] : null; return '• ' + regras[pr.itens.indexOf(it)] + almMotorTxt(it.m) + (typeof v === 'number' ? ' — agora ' + almTxt(it.m, v) + ' (' + i.hora + ')' : ''); });
+      pe = grava ? armaProp('alarme', { itens: pr.itens.map(function (it) { return { campo: it.m.campos[0], op: it.op, limite: it.limite }; }) }) : null;
+      return { text: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join(' · ') + '.\n' + linhas.join('\n') + '\nAviso só na tela do app (nunca crítico: sem notificação, sem som, não abre o SOS nem grava no diário). ' + (grava ? 'Nada é gravado sem o seu Confirmar: toque em Confirmar ou diga “confirmar alarme”; para desistir, “cancelar”.' : 'Não criado — pedido vindo de link não cria alarme: digite o pedido aqui no chat para confirmar.') + ' Você tem ' + ativas.length + ' de ' + max + ' alarmes pedidos.',
+        src: f, actions: (pe ? botoesProp(pe) : []).concat(abrir),
+        fala: 'Posso criar ' + (pr.itens.length === 1 ? 'este alarme' : 'estes ' + pr.itens.length + ' alarmes') + ': ' + regras.join('; ') + '.' + (i && i.q && typeof i.q[pr.itens[0].m.campos[0]] === 'number' ? ' Leitura agora, às ' + i.hora + ': ' + almTxt(pr.itens[0].m, i.q[pr.itens[0].m.campos[0]]) + '.' : '') + (grava ? ' Confirma?' : ' Não criei nada: pedido vindo de link.') };
+    },
+    alarmeConfirma: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, pe = propVale(), al = alvoProp(), abrir = act(p, [['Meus alarmes', askHref(p, 'meus alarmes')], ['Telemetria', 'console']]), i = vivo(), f = 'Fonte: alarmes pedidos neste aparelho' + (i ? ' · ' + i.fonteTxt : ''), r, itens, A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10;
+      if (!pe || pe.tipo !== 'alarme') return { text: 'Nenhum alarme esperando confirmação. Peça de novo, por exemplo: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.', src: f, actions: abrir, fala: 'Nenhum alarme esperando confirmação.' };
+      if (al && al.seq !== pe.seq) return { text: 'Essa proposta é antiga: nada mudou. A mais recente continua esperando.', src: f, actions: botoesProp(pe).concat(abrir), fala: 'Essa proposta é antiga. A mais recente continua esperando.' };
+      if (!grava) return { text: 'Não criado — pedido vindo de link não cria alarme.', src: f, actions: abrir, fala: 'Pedido vindo de link não cria alarme.' };
+      itens = pe.itens.map(function (it) { return { m: almMetricaDeCampo(it.campo), op: it.op, limite: it.limite }; });
+      r = almCria(itens); PEND_CHAT = null;
+      if (r.erro === 'max') return { text: 'Não criei: você já tem ' + almVigentes().length + ' de ' + max + ' alarmes pedidos. Apague um com “apagar alarme #n”.', src: f, actions: abrir, fala: 'Não criei: o máximo de alarmes pedidos foi atingido.' };
+      if (!r.criadas.length) return { text: 'Nenhum alarme novo: esse pedido já existia ou saiu da faixa aceita. Veja “meus alarmes”.', src: f, actions: abrir, fala: 'Nenhum alarme novo foi criado.' };
+      return { text: 'Alarme criado: ' + r.criadas.map(function (a) { return '#' + a.n + ' ' + almRegra(a); }).join(' · ') + '.\nAviso só na tela do app (nunca crítico; sem notificação). Para ver: “meus alarmes”; para apagar: “apagar alarme #' + r.criadas[0].n + '”. Você tem ' + almVigentes().length + ' de ' + max + ' alarmes pedidos' + (i ? ' (' + i.hora + ')' : '') + '.',
+        src: f, actions: abrir, fala: 'Alarme criado: ' + r.criadas.map(function (a) { return 'número ' + a.n + ', ' + almRegra(a); }).join('; ') + '.' };
+    },
+    alarmeCancela: function (p, ctx) {
+      var grava = !ctx || ctx.commit !== false, pe = propVale(), al = alvoProp(), abrir = act(p, [['Meus alarmes', askHref(p, 'meus alarmes')]]), f = 'Fonte: alarmes pedidos neste aparelho';
+      if (!pe || pe.tipo !== 'alarme') return { text: 'Nenhum alarme esperando confirmação; nada foi gravado.', src: f, actions: abrir, fala: 'Nenhum alarme esperando confirmação.' };
+      if (al && al.seq !== pe.seq) return { text: 'Essa proposta é antiga: nada mudou. A mais recente continua esperando.', src: f, actions: botoesProp(pe).concat(abrir), fala: 'Essa proposta é antiga. A mais recente continua esperando.' };
+      if (!grava) return { text: 'Pedido vindo de link não cancela proposta; nada mudou.', src: f, actions: abrir, fala: 'Pedido vindo de link não cancela proposta.' };
+      PEND_CHAT = null;
+      return { text: 'Certo — alarme cancelado; nada foi gravado.', src: f, actions: abrir, fala: 'Certo, alarme cancelado.' };
+    },
+    alarmesLista: function (p) {
+      var v = almVigentes(), at = almAtivos(), i = vivo(), A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10, h = i ? ' às ' + i.hora : '', f = 'Fonte: alarmes pedidos neste aparelho' + (i ? ' · ' + i.fonteTxt : ''), abrir = act(p, [['Telemetria', 'console']]);
+      if (!v.length) return { text: 'Você não tem alarmes pedidos' + h + ' (0 de ' + max + ').\nPara criar um: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.', src: f, actions: abrir, fala: 'Você não tem alarmes pedidos' + h + '.' };
+      return { text: v.length + (v.length === 1 ? ' alarme pedido' : ' alarmes pedidos') + h + ' (de ' + max + ' possíveis)' + (at.length ? ', ' + at.length + (at.length === 1 ? ' ativo agora' : ' ativos agora') : ', nenhum ativo agora') + ':\n' + v.map(function (a) {
+        var s = at.filter(function (x) { return x.id === a.id; })[0], val = i && i.q && typeof i.q[a.campo] === 'number' ? almTxt(a.m, i.q[a.campo]) : '';
+        return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO desde ' + s.hora + (val ? ' (agora ' + val + ')' : '') : val ? ' — agora ' + val + ', sem disparar' : ' — sem leitura agora');
+      }).join('\n') + '\nPara apagar: “apagar alarme #n”.', src: f, actions: abrir };
+    },
+    alarmeApaga: function (p, ctx, q) {
+      var grava = !ctx || ctx.commit !== false, n = almApagaN(q), v = almVigentes(), f = 'Fonte: alarmes pedidos neste aparelho', abrir = act(p, [['Meus alarmes', askHref(p, 'meus alarmes')]]), lin, a, A = almCfg(), max = A && typeof A.max === 'number' ? A.max : 10;
+      if (n <= 0) return { text: 'Qual alarme pedido apagar? Diga o número: “apagar alarme #2”.' + (v.length ? '\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + almRegra(x); }).join(' · ') + '.' : '\nVocê não tem alarmes pedidos.'), src: f, actions: abrir, fala: v.length ? 'Qual alarme apagar? Diga o número.' : 'Você não tem alarmes pedidos.' };
+      if (!grava) return { text: 'Não apagado — pedido vindo de link não apaga alarme.', src: f, actions: abrir, fala: 'Pedido vindo de link não apaga alarme.' };
+      a = v.filter(function (x) { return x.n === n; })[0]; lin = a ? almApaga(n) : null;
+      if (!lin) return { text: 'Não há alarme pedido #' + n + ' ativo (não existe ou já foi apagado).' + (v.length ? '\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + almRegra(x); }).join(' · ') + '.' : ''), src: f, actions: abrir, fala: 'Não há alarme pedido número ' + n + ' ativo.' };
+      return { text: 'Alarme #' + n + ' apagado: ' + almRegra(a) + '. Linha nova no registro dos alarmes (nada se apaga); o número não volta a ser usado. Restam ' + almVigentes().length + ' de ' + max + ' alarmes pedidos.', src: f, actions: abrir, fala: 'Alarme número ' + n + ' apagado.' };
+    },
+    // F26: o que o app faz, para quem pergunta «o que você pode fazer?». Local, sem internet e sem IA; cada função citada tem a rota dela (o testes/cerebro.py confere cada pergunta de exemplo entre aspas)
+    capacidades: function (p) {
+      return { text: 'Sou o Capitão IA, o assistente de bordo. Posso:\n'
+        + '• Dizer como o barco está agora, com número e hora: “como está a navegação?”, “telemetria”, “posição agora”, “qual a profundidade?”, “qual a hora de chegada?”.\n'
+        + '• Avisar quando você pedir, só na tela do app: “me avise se a temperatura do motor passar de 90 graus”, “meus alarmes”, “apagar alarme #1”.\n'
+        + '• Mostrar os alarmes ativos e o que verificar primeiro: “tem algum alarme ativo?”; e as tendências dos motores e das baterias: “quais as tendências?”.\n'
+        + '• Cuidar da manutenção: “próximas manutenções”, “horímetros”, “quais peças temos a bordo?”; e agendar uma tarefa da equipe: “agendar revisão do gerador para 15/11 com a marina”.\n'
+        + '• Registrar no diário só quando você mandar: “registre no diário que limpamos o filtro de água salgada”. Se o registro conclui um serviço, fecho a pendência que ele cita e proponho marcar a tarefa como executada — tudo com Confirmar e Desfazer.\n'
+        + '• Documentos, abastecimento, consumo e autonomia: “documentos vencendo”, “consumo de diesel”, “autonomia”.\n'
+        + '• Checklists de saída, chegada, abastecimento e fundeio: “checklist de saída”.\n'
+        + '• Passo a passo dos equipamentos e dos guias de bordo: “como ligar o gerador?”, “guias de bordo”.\n'
+        + '• Clima e maré na posição de referência (precisam de internet) e a decisão de sair: “clima e vento”, “maré agora”, “é seguro sair hoje?”.\n'
+        + '• Emergência: o SOS, o canal 16 e os procedimentos padrão — em perigo, abra o SOS; “canal 16” traz a ordem da chamada.\n'
+        + 'O que está na lista acima funciona no aparelho, sem internet (menos o clima e a maré). Pergunta aberta, fora dela, vai para a IA de bordo quando há internet.',
+        src: 'Fonte: funções do app Capitão IA', actions: act(p, [['Console completo', 'console'], ['Manutenção', 'manut'], ['FAQ de bordo', 'faq'], ['Abrir SOS', 'sos']]),
+        fala: 'Respondo sobre a situação do barco agora, alarmes que você pedir, manutenção e agenda, diário, documentos, abastecimento, checklists, equipamentos, clima e maré, e emergência. A lista completa está na tela.' };
     },
     // Seguro para sair: as ressalvas (segurança primeiro), os alarmes do quadro e a previsão REAL de vento (§2.5); o vento e as ondas do quadro vão como «a bordo agora» e
     // não entram na decisão. O app não tem limite de vento com fonte: ele não diz «não» pelo vento. Alarme crítico ativo diz «Não».
@@ -1983,7 +2673,7 @@
       var at = atrasadas(), prox = agenda().filter(function (t) { return !atrasadaN(dnDe(t)); }).slice(0, 3), oleoM = tarefa('motores-oleo'), i = vivo(), alvo = tarefaPedida(qq), ql = pad(qq || ''), l1 = '';
       if (alvo) l1 = (/ (?:atrasad\w*|atraso) /.test(ql) ? (atrasadaN(dnDe(alvo)) ? 'Sim — ' : 'Não — ') : '') + linhaFalta(alvo, alvo.t + ' (' + alvo.equip + ')') + '\n';
       var linha = function (t) { return seg(t) ? '• ' + t.t + ' (' + t.quem + ') — ' + NOTA_ETIQUETA : '• ' + prazoTxt(t) + ' — ' + t.t + ' (' + t.quem + ')'; };
-      return { text: l1 + (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !execVisivel()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
+      return { text: l1 + (at.length ? 'Atrasadas (' + at.length + ')' + (i ? ' às ' + i.hora : '') + ':\n' + at.map(function (t) { return '• ' + t.t + ' · ' + t.equip + ' — ' + prazoTxt(t) + ' (' + t.quem + ')'; }).join('\n') : 'Nenhuma tarefa atrasada' + (i ? ' às ' + i.hora : '') + '.') + '\nPróximas:\n' + prox.map(linha).join('\n') + (oleoM && oleoM.horas && !execVisivel()[oleoM.id] ? '\nÓleo e filtros dos motores: ' + oleoM.vence + ' ou ' + oleoM.horas.limite + ' h — faltam ' + nb(faltam(oleoM)) + ' h.' : '') + tarefasLinha() + (D.agendaFalta && D.agendaFalta.length ? '\nFalta registrar: ' + D.agendaFalta.join(' · ') + '.' : ''), src: FT.agenda + ' · ' + (D.agenda || []).length + ' tarefas · horímetros ' + (M.hora || ''), actions: act(p, [['Abrir manutenção', 'manut']]) };
     },
     // A 1ª linha responde ao que foi perguntado: «quanto diesel tem?», «qual o nível do tanque de diesel?» abrem com o diesel a bordo (litros, % e a hora); a pergunta da autonomia, do alcance e do abastecimento, com a autonomia
     autonomia: function (p, ctx, qq) { var nivel = NIVEL_DIESEL.test(pad(qq || '')) && !has(pad(qq || ''), ['autonomia', 'alcance', 'abastec', 'nota fiscal', 'nf-e']), lDiesel = 'A bordo ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' (BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' %) — ' + SNAP.dieselHora + '.'; return { text: (nivel ? lDiesel + '\n' : '') + 'Autonomia ≈ ' + nb(AUT.horas) + ' h · ≈ ' + AUT.mn + ' mn a ' + CON.cruzeiro.nos + ' nós (' + mil(CON.cruzeiro.rpm) + ' rpm · ' + CON.cruzeiro.lph + ' L/h, dois motores), com reserva de ' + reservaPct() + ' %.' + (nivel ? '' : '\n' + lDiesel) + '\nEm marcha lenta (' + nb(CON.lenta.lph) + ' L/h) ≈ ' + AUT.lenta + ' h. Consumido desde o abastecimento de ' + CON.desdeAbast.desde.slice(0, 5) + ': ≈ ' + litrosTxt(CON.desdeAbast.litros) + ' L (' + CON.desdeAbast.horas + ').', src: 'Fonte: ' + tele() + ' (taxa de combustível dos dois motores, ' + (vivo() ? CON.fonte : CON.periodo) + ') · ' + FT.abast.replace('Fonte: ', '') + ' — estimativa; a nota fiscal é a fonte oficial', actions: act(p, [['Abastecimento', 'abast']]) }; },
@@ -2029,8 +2719,10 @@
       return { text: 'Acesso total: ' + per.map(function (x) { return x.nome + ' (' + x.papel + ')'; }).join(' · ') + '.\nApoio: ' + ap.map(function (a) { return min1(a.papel) + (a.para ? ' (' + a.para + ')' : ''); }).join(' · ') + '.\nTelefones: ' + (cad ? cad + ' cadastrado(s) neste aparelho — abra Equipe para ligar.' : 'ficam só neste aparelho (Equipe): cadastre ali para ligar direto.') + (ctx && ctx.semBordo ? '' : '\n' + linhaBordo()), src: 'Fonte: cadastro da equipe' + demo() + ' · telefones do aparelho', actions: act(p, [['Equipe e contatos', 'equipe']]) };
     },
     anomalias: function (p, ctx) {
-      var pend = pendencias(), app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }).slice(0, 3);
-      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + x.t; }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
+      var pend = pendencias(ctx), mesmas = {}, app;   // F20: só as ABERTAS (as resolvidas por linha nova saem); as do aparelho com `pend` entram uma vez só
+      pend.forEach(function (x) { if (x.origem === 'aparelho') mesmas[x.iso] = 1; });
+      app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t) && !tem(mesmas, e.iso); }).slice(0, 3);
+      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + (x.origem === 'aparelho' ? String(x.t).slice(0, 110) + ' (app)' : x.t); }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
     // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante — ou o que a pergunta nomeia («qual a
     // tendência do óleo?» abre com a pressão de óleo; se o nomeado está estável e outro pede atenção, a 1ª linha diz quantos). A lista de baixo segue a ordem de gravidade. Só lê: nada grava, nada abre.
@@ -2182,7 +2874,7 @@
       var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });
       var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + e.t.slice(0, 110); });
       // a 1ª linha é a resposta numa frase falável (quantos registros e quantas pendências); os últimos registros vêm embaixo
-      var tot = fonte.length + mine.length, pe = pendencias().length;
+      var tot = fonte.length + mine.length, pe = pendencias(ctx).length;
       return { text: 'Diário de bordo: ' + tot + (tot === 1 ? ' registro' : ' registros') + ' e ' + pe + (pe === 1 ? ' pendência aberta' : ' pendências abertas') + '.\nÚltimos registros:\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
     },
     // Diagnóstico deste aparelho: versões, internet, IA na nuvem e chave (só o tamanho). A tela de chat acrescenta o teste da
@@ -2403,12 +3095,28 @@
     };
   });
   // as chaves de ANSWERS (o teste varre uma pergunta de cada) e as que não levam a hora do instante na fonte (emergência, diagnóstico, saudação, checklists, registro)
+  // F12: os alarmes que o usuário pediu e estão ATIVOS agora entram na resposta dos alarmes (os do barco continuam como estavam); sem alarme pedido ativo, a resposta é a de sempre, palavra por palavra
+  (function () {
+    var alarmes0 = ANSWERS.alarmes;
+    ANSWERS.alarmes = function (p, ctx, qq) {
+      var r = alarmes0(p, ctx, qq), pa = almAtivos(), i, lista, cab;
+      if (!pa.length) return r;
+      i = vivo(); lista = pa.map(function (x) { return '• ' + x.texto + ' — desde ' + x.hora; }).join('\n');
+      cab = pa.length === 1 ? 'Há 1 alarme pedido por você ativo' : 'Há ' + pa.length + ' alarmes pedidos por você ativos';
+      if (/^Nenhum alarme ativo às /.test(r.text)) r.text = r.text.replace(/^Nenhum alarme ativo às ([0-9:]+)\./, 'Nenhum alarme do barco ativo às $1; ' + cab.charAt(0).toLowerCase() + cab.slice(1) + ':') + '\n' + lista;
+      else r.text = r.text + '\n' + cab + (i ? ' às ' + i.hora : '') + ':\n' + lista;
+      r.src = (r.src || '') + ' · alarmes pedidos neste aparelho';
+      return r;
+    };
+  })();
   var CHAVES = Object.keys(ANSWERS);
   // AIS: a pergunta de status («quantos alvos?», «tem AIS?», «está ligado?») fica na resposta pronta; qualquer outra (modo silencioso, identificação, alvos no plotter) vai ao trecho do g_ais quando ele serve
   var AIS_STATUS = /\b(?:quantos?|quantas?|quais|tem|temos|ha|algum|alguns|agora|ligado|ligada|funcionando|recebendo|vendo)\b/;
   // (a maré é do mundo real, §2.5: a hora dela é a da leitura salva, «lida às HH:MM» na fonte; o instante do replay nunca entra na fonte da maré)
   var SEM_HORA_NA_FONTE = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, checklist: 1, checklistChegada: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, relatoVerifica: 1, mare: 1 };
-  SEM_HORA_NA_FONTE.sobreDados = 1;   // (a frase padrão e a fonte «este aparelho · modo de apresentação» não levam o «consultado às»)
+  SEM_HORA_NA_FONTE.sobreDados = 1;
+  // P3G: as respostas de gestão (agendar e confirmar, apagar alarme, cancelar, desfazer, o que o app faz) não leem o quadro: sem «consultado às»; o pedido e a lista dos alarmes pedidos, que leem, trazem a hora no texto
+  ['agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'alarmeCancela', 'alarmeApaga', 'capacidades'].forEach(function (k) { SEM_HORA_NA_FONTE[k] = 1; });   // (a frase padrão e a fonte «este aparelho · modo de apresentação» não levam o «consultado às»)
 
   // Nomes de outra bomba que não a de porão (rota 'porao', abaixo): o app não tem resposta pronta para elas, e o guia delas está na base.
   // Revisão 7 do C5: "esgoto" saiu. "Bomba de esgoto" também é a de esgotamento do porão em português de bordo, e "a bomba de esgoto não
@@ -2742,9 +3450,12 @@
     if (!q.trim()) return 'saudacao';
     if (DIAGNOSTICO.test(semVocativo(q))) return 'diagnostico';
     // os botões da proposta do relato («registrar o relato», «não registrar o relato»): depois do diagnóstico, antes de qualquer pedido de registro; a emergência e o óleo vêm antes de tudo
-    if (!emergencia(q) && oleo(q) !== 1) { var rel = relatoRota(qRaw, q); if (rel) return rel; }
+    // F15/F12: a resposta à proposta que espera (confirmar, recusar, desfazer), no mesmo ponto e com a mesma guarda: a emergência e o óleo vêm antes de tudo
+    if (!emergencia(q) && oleo(q) !== 1) { var rel = relatoRota(qRaw, q); if (rel) return rel; var prp = propRota(qRaw, q); if (prp) return prp; }
     if (querRegistrar(qRaw, q)) return pedeTexto(qRaw) ? 'diarioPede' : 'diario';
     if (emergencia(q)) return 'sos';
+    // F12: o pedido de alarme na forma de CONFIGURAÇÃO («me avise se a pressão do óleo do BB cair abaixo de 2 bar») não é o relato de queda de pressão: o oleo() não o trata como queda (devolve 0) e a rota
+    // alarmePedido o toma mais abaixo, depois da cabeça de emergência; o relato, com «está», «caiu», «agora», «acendeu»…, segue em `oleo` (a instrução de segurança)
     var ol = oleo(q);
     if (ol === 1) return 'oleo';
     // F11: «qual a tendência do óleo?» é a tendência (o histórico de cruzeiro), não a leitura do manômetro; o relato de queda segue acima, em `oleo`
@@ -2768,6 +3479,12 @@
     // F16: o botão «O que verificar?» do relato: a busca no FAQ e nos guias pelo texto do relato (e a IA, se a tela a chamar), antes das rotas por palavra (depois da emergência e da cabeça de segurança)
     if (relatoVerificaPergunta(q)) return 'relatoVerifica';
     if (ol) return 'oleoLeitura';   // a leitura calma da pressão de óleo (o relato, ol === 1, já saiu lá em cima): depois da cabeça de equipamento de segurança, que ela não toma («onde fica o EPIRB, qual a pressão do óleo?»)
+    // F12/F15 (depois da cabeça de emergência: a pergunta de segurança nunca é delas): o pedido de alarme (incompleto também), o «apagar alarme #n», os alarmes pedidos e o «agendar … para dd/mm»
+    if (almPedido(q)) return 'alarmePedido';
+    if (almApagaN(qRaw) >= 0) return 'alarmeApaga';
+    if (almLista(q)) return 'alarmesLista';
+    if (!!achaAgendar(qRaw)) return 'agendar';
+    if (capacidadesPergunta(q)) return 'capacidades';   // F26
     if (has(q, ['seguro para sair', 'posso sair', 'da pra sair', 'da para sair', 'seguro sair', 'avalie vento', 'sair hoje', 'seguro navegar', 'seguro para navegar', 'posso navegar', 'podemos sair', 'podemos navegar', 'da pra navegar', 'da para navegar'])) return 'seguro';
     // P3C: as rotas da navegação e do cadastro, depois do «seguro para sair» e antes da telemetria («leituras da profundidade» é a profundidade). Nenhuma toma «checklist de chegada»,
     // «alarme de óleo acendeu» (o óleo vem antes), «temperatura hoje» (o clima) nem «alarme de fluxo da climatização» (a resposta pronta cede ao trecho do guia).
@@ -3220,7 +3937,7 @@
   // O que a conversa guarda (a pergunta até 500 letras, a resposta até 600): SEM coordenadas, e o filtro vem ANTES do corte — cortar primeiro deixa meia coordenada («048°») que o semCoord não reconhece
   // (revisão 2 da P3F). O que o CONV guarda é o que vai à IA em `anterior` e em `junto`.
   function guardaConv(t, max) { return semCoord(String(t == null ? '' : t)).slice(0, max); }
-  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
+  function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; PEND_CHAT = null; DESFAZ = null; ALVO_PROP = null; }   // NOVA e ENCERRAR zeram também o «o que devo registrar?» e a proposta de relato que espera
   function terminaEmPergunta(t) {
     var ls = String(t || '').split(/\n+/).map(function (l) { return l.trim(); }).filter(Boolean);
     return ls.length > 0 && /\?["”')\]]*$/.test(ls[ls.length - 1]);
@@ -3271,6 +3988,7 @@
   var SEGUE_OK = ' e tambem mas o a os as um uma de do da dos das no na nos nas em para pra por pelo pela bb be bombordo boreste estibordo esquerdo esquerda direito direita outro outra outros outras ambos ambas lado lados servico partida principal principais amanha ontem hoje agora depois antes semana mes dia noite manha tarde hora horas proximo proxima ultimo ultima mesmo mesma ';
   var BANCO_SEGUE = /^ (?:e|tambem|mas) .*? (?:servico|partida|12 ?v|12 volts?|24 ?v|24 volts?) /, AR_AGUA_SEGUE = /^ (?:e|tambem|mas) (?:(?:a|o|do|da|de) )*(?:ar|agua|mar)(?: (?:externo|do mar))? $/;
   var RAIZ_NAO = { fallback: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1, relatoVerifica: 1, sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1, diagnostico: 1, saudacao: 1, foraBarco: 1, sobreDados: 1 };
+  ['alarmePedido', 'alarmeConfirma', 'alarmeCancela', 'alarmesLista', 'alarmeApaga', 'agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'capacidades'].forEach(function (k) { RAIZ_NAO[k] = 1; });   // (P3G: «e boreste?» não continua um pedido de alarme, uma proposta nem a lista do que o app faz)
   function seguimento(q, ctx) {
     var n, rq, rr, w, junto;
     SEG.raiz = false;
@@ -3320,6 +4038,9 @@
       if (!EM_SOS) {
         if (emerg(a) || pe) limpaConversa();
         else if (!ctx || ctx.commit !== false) CONV = { q: junto ? CONV.q : guardaConv(String(q1 == null ? '' : q1).trim(), 500), a: guardaConv(a.text, 600), t: Date.now(), pergunta: terminaEmPergunta(a.text), n: (CONV.n || 0) + 1, reg: REG_KEYS[a.key] === 1 };
+        // a proposta que esta resposta armou (alarme pedido, agendamento) e o que ela acabou de confirmar/fechar valem a partir da conversa seguinte: o «sim» curto só vale LOGO depois
+        if (PEND_CHAT && PEND_CHAT.n === undefined) PEND_CHAT.n = CONV.n;
+        if (DESFAZ && DESFAZ.n === undefined) DESFAZ.n = CONV.n;
       }
       if (ant && !emerg(a) && !pe) { a.anterior = ant; a.junto = junto || ''; }   // F18: a pergunta e a resposta de antes vão com a resposta (a IA recebe; sem coordenadas); `junto` é a pergunta que a rota viu
       acrescentaRelato(a, a.key, String(q1 == null ? '' : q1).trim(), ctx);   // F16: o relato vira proposta (a hora do instante já está na resposta)
@@ -3430,6 +4151,11 @@
     r = [cap1(q.estado || 'Navegando') + ' às ' + i.hora, t.sog ? 'SOG ' + t.sog : '', t.rumo ? 'rumo (COG) ' + t.rumo : '', t.relativa || '', t.rpm ? 'motores ' + t.rpm : '', t.alarmes ? 'alarmes: ' + t.alarmes : ''].filter(Boolean).join(' · ');
     return { text: r, src: 'Fonte: ' + i.fonteTxt };
   }
+  function fichaAlarmes(semSim) {
+    var v = almVigentes({ semSim: semSim }), at = almAtivos(), i = vivo();
+    if (!v.length) return null;
+    return { text: v.map(function (a) { var s = at.filter(function (x) { return x.id === a.id; })[0]; return '• #' + a.n + ' ' + almRegra(a) + (s ? ' — ATIVO desde ' + s.hora + (s.valorTxt ? ' (agora ' + s.valorTxt + ')' : '') : ''); }).join('\n') + (i ? '\n(às ' + i.hora + ')' : ''), src: 'Fonte: alarmes pedidos neste aparelho' };
+  }
   function ficha1(p, q, a) {
     p = p || 'app';
     var out = [], emergencia = emerg(a), resumida = fichaResumida(q, a), semSim = !EM_SOS && D.simulacao === false;
@@ -3459,7 +4185,8 @@
       return { text: a.text + (ab.length ? '\nAbastecimentos registrados: ' + ab.map(function (x) { return x.d + ' · ' + mil(x.litros) + ' L de ' + (x.combustivel || 'diesel') + ' · ' + (x.local || SD) + (x.st ? ' · ' + x.st : ''); }).join(' | ') + '.\nRegra: ' + (D.regraAbast || SD) + '.' : ''), src: a.src };
     });
     bloco('Documentos', function () { return ANSWERS.docsvenc(p); });
-    bloco('Pendências', function () { return ANSWERS.anomalias(p, { semSim: semSim }); });   // simulacao false: as linhas do aparelho com `sim: true` (gravadas com a simulação ligada) ficam fora da ficha
+    bloco('Pendências', function () { return ANSWERS.anomalias(p, { semSim: semSim }); });
+    bloco('Alarmes pedidos', function () { return fichaAlarmes(semSim); });   // F12: as regras que o usuário pediu e as ativas agora (só existe com alarme pedido)   // simulacao false: as linhas do aparelho com `sim: true` (gravadas com a simulação ligada) ficam fora da ficha
     bloco('Diário de bordo', function () { return ANSWERS.diarioLer(p, { semSim: semSim }); });
     bloco('Equipe e contatos', function () { return ANSWERS.contatos(p, { semBordo: true }); });   // (a situação de bordo da resposta não vai na ficha: o bloco Telemetria já a traz, e a ficha de emergência não leva o quadro)
     bloco('Clima e maré', function () {
@@ -3943,6 +4670,7 @@
   // do mundo real, §2.5), a lista da equipe, as perguntas de fora do barco e sobre os dados, o fallback, o trecho do guia e as do cadastro sem quadro (áudio, guias). A hora é a do instante da
   // PRÓPRIA resposta (`a.hora`, posta pelo answer()): a fala é montada depois, com o relógio já andado, e a tela copia a resposta antes de falar.
   var FALA_SEM_HORA = { clima: 1, contatos: 1, foraBarco: 1, fallback: 1, sobreDados: 1, base: 1, faqEquip: 1, audio: 1, manual: 1, ia: 1, foto: 1, video: 1, relato: 1, diario: 1, diarioPede: 1, relatoRegistra: 1, relatoCancela: 1 };
+  ['agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'alarmeCancela', 'alarmeApaga', 'capacidades'].forEach(function (k) { FALA_SEM_HORA[k] = 1; });   // (P3G: as respostas de gestão não leem o quadro: a fala não leva a hora)
   function comHoraNaFala(a, t) {
     var h = a && typeof a === 'object' && typeof a.hora === 'string' ? a.hora : '';
     if (!sim() || !/^\d\d:\d\d:\d\d$/.test(h) || !a.key || SEM_HORA_NA_FONTE[a.key] || FALA_SEM_HORA[a.key] || !t || /\d\d:\d\d:\d\d/.test(t)) return t;
@@ -4004,7 +4732,11 @@
     stopSpeaking();
   }
 
-  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, perguntaDoBotao: perguntaDoBotao, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+  window.CapitaoBrain = { VERSAO: VERSAO, DADOS: D, BASE: BASE, buscaBase: buscaBase, carregaBase: carregaBase, DEFAULTS: DEFAULTS, BANK: BANK, ALL: ALL, HREF: HREF, loadShortcuts: loadShortcuts, saveShortcuts: saveShortcuts, resetShortcuts: resetShortcuts, bankFor: bankFor, loadDiario: loadDiario, addDiario: addDiario, diarioFonte: diarioFonte, loadExec: loadExec, markExec: markExec, unmarkExec: unmarkExec, loadEquipe: loadEquipe, saveEquipe: saveEquipe, loadDocs: loadDocs, addDoc: addDoc, loadAbast: loadAbast, addAbast: addAbast, loadTickets: loadTickets, addTicket: addTicket, editaTicket: editaTicket, aceitaTicket: aceitaTicket, recusaTicket: recusaTicket, desfazTicket: desfazTicket, ticketsAbertos: ticketsAbertos, ticketTela: ticketTela, propoeAlarme: propoeAlarme, perguntaDoBotao: perguntaDoBotao,
+    // P3G (F15, F20, F12): a agenda (tarefas da equipe e propostas do diário), as pendências (resolver, reabrir, desfazer — linhas novas) e os alarmes pedidos (as regras, os ativos agora para a faixa)
+    loadTarefas: loadTarefas, addTarefa: addTarefa, tarefasEquipe: tarefasEquipe, achaAgendar: achaAgendar, ticketDoRegistro: ticketDoRegistro, textoTicket: textoTicket, conclusao: conclusao,
+    pendenciasLista: pendenciasLista, resolvePendencia: resolvePendencia, reabrePendencia: reabrePendencia, desfazPendencia: desfazPendencia, achaPendencia: achaPendencia,
+    alarmesPedidos: almVigentes, alarmesPedidosAtivos: almAtivos, criaAlarmePedido: almCria, apagaAlarmePedido: almApaga, alarmeTexto: almRegra, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();

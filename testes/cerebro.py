@@ -1824,7 +1824,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -2440,10 +2440,14 @@ PERGUNTA_CHAVE = {
     'diarioPede': 'registrar no diário que', 'relatoRegistra': 'registrar o relato', 'relatoCancela': 'não registrar o relato',
     # P3F (revisão): o botão «O que verificar?» do relato (a pergunta pronta; vai à IA, ou ao guia se a IA não responde)
     'relatoVerifica': 'O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado',
+    # P3G: os alarmes pedidos (F12), a agenda (F15: o agendamento e a resposta à proposta, «desfazer») e o que o app faz (F26). Na pergunta de exemplo sem proposta esperando, a resposta diz que não há
+    'alarmePedido': 'me avise se a pressão do óleo do BB cair abaixo de 2 bar', 'alarmeConfirma': 'confirmar alarme', 'alarmeCancela': 'cancelar alarme', 'alarmesLista': 'meus alarmes', 'alarmeApaga': 'apagar alarme #1',
+    'agendar': 'agendar revisão do gerador para 15/11', 'ticketConfirma': 'confirmar a proposta', 'ticketRecusa': 'recusar a proposta', 'ticketDesfaz': 'desfazer', 'capacidades': 'o que você pode fazer?',
 }
 # as chaves cuja resposta não traz a hora do instante: emergência (nada do quadro), diagnóstico (do aparelho) e a saudação.
 # Fase 3 (P3E, F09): os checklists saíram daqui — o item conferido pelo quadro muda com o instante («item conferido muda com o replay», PARIDADE F09), então a resposta traz a hora e os números dele
-SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica')   # (P3F: o pedido de registro e os botões do relato não trazem dado de bordo)
+SEM_HORA = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica',
+            'alarmeCancela', 'alarmeApaga', 'agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'capacidades')   # (P3G: as respostas de gestão — agendar, confirmar, recusar, desfazer, apagar/cancelar alarme e o que o app faz — não leem o quadro; o pedido, a confirmação e a lista dos alarmes pedidos levam a hora (na fonte ou no texto))   # (P3F: o pedido de registro e os botões do relato não trazem dado de bordo)
 # as respostas cujos números mudam de 12:01:00 para 12:01:45 (vento, SOG, rpm, arrefecimento, volante, tensão, nível do porão, distância do destino, diesel)
 MUDAM = ('telemetria', 'seguro', 'motores', 'oleoLeitura', 'clima', 'eletrico', 'estabilizador', 'gerador', 'posicao', 'tanques', 'porao', 'destinos', 'ancora', 'consumo', 'autonomia',
          'profundidade', 'eta', 'alarmes', 'arrefecimento', 'navegacao', 'sobreDados', 'foraBarco', 'preditiva',
@@ -3773,7 +3777,8 @@ GRUPOS_3A['termos'] = grupo_termos
 # As chaves cuja fala é só a frase (sem a hora do instante): as de FALA_INTEIRA e de emergência, as do (g) (tempo e maré, contatos, fora do barco, sobre os dados, o fallback), o trecho
 # do guia, o cadastro sem quadro (áudio, guias), a saudação, o diagnóstico e o registro (Fase 3, P3E, F09: os checklists saíram daqui — a fala deles traz a hora do instante). As outras são de dado de bordo: a fala traz o número e a hora do instante.
 VOZ_SO_FRASE = ('sos', 'oleo', 'salvatagem', 'epirb', 'seafire', 'canal16', 'mmsi', 'diagnostico', 'saudacao', 'sobreDados', 'foraBarco', 'fallback', 'mare', 'clima',
-                'contatos', 'manual', 'audio', 'diario', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica')   # (P3F: o pedido de registro e os botões do relato — a fala é a pergunta «o que devo registrar?» ou o aviso de que não há relato esperando)
+                'contatos', 'manual', 'audio', 'diario', 'diarioPede', 'relatoRegistra', 'relatoCancela', 'relatoVerifica',
+                'alarmeCancela', 'alarmeApaga', 'agendar', 'ticketConfirma', 'ticketRecusa', 'ticketDesfaz', 'capacidades')   # (P3F: o pedido de registro e os botões do relato — a fala é a pergunta «o que devo registrar?» ou o aviso de que não há relato esperando) (P3G: as respostas de gestão — agendar, confirmar/recusar/desfazer, cancelar/apagar alarme — e o que o app faz não leem o quadro: a fala é o aviso ou a pergunta «confirma?»; o pedido e a lista dos alarmes pedidos leem o quadro e dizem o número e a hora)
 # perguntas que caem numa chave que já tem outra pergunta acima, mas com a 1ª linha própria (a chave `eta` abre com «Percorrido desde as 07:00: …» na pergunta de distância)
 VOZ_EXTRA = {'etaPercorrido': 'quantas milhas percorremos hoje?', 'etaProximoPonto': 'qual o próximo waypoint?', 'situacaoAgora': 'situação agora'}
 PERGUNTAS_VOZ = dict(PERGUNTA_CHAVE, **VOZ_EXTRA)
@@ -4535,7 +4540,7 @@ MUTANTES_3D = [
     ('a ficha volta a levar o selo e o aviso da flag antiga', r"out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem());", r"out.push('## Agora\n' + agoraBR() + ' · usuário: ' + quem() + (D.demo ? '\n' + (D.selo || 'DEMO') + ': ' + (D.aviso || '') : ''));", ('ficha',)),
     ('a ficha do modo real leva as linhas com sim: true (semSim sempre falso)', r"semSim = !EM_SOS && D.simulacao === false;", r"semSim = false;", ('ficha',)),
     ('a ficha da simulação tira as linhas com sim: true (o filtro sempre ligado)', r"return ctx && ctx.semSim ? v.filter(function (e) { return e.sim !== true; }) : v; }", r"return v.filter(function (e) { return e.sim !== true; }); }", ('ficha',)),
-    ('o registro perde as linhas sim: true ao gravar (o addDiario relê o diário filtrado)', r"function addDiario1(e) { var n = now(); var list = loadDiario();", r"function addDiario1(e) { var n = now(); var list = lerDiario({ semSim: D.simulacao === false });", ('ficha',)),
+    ('o registro perde as linhas sim: true ao gravar (o addDiario relê o diário filtrado)', r"function addDiario1(e, opts) { var n = now(); var list = loadDiario();", r"function addDiario1(e, opts) { var n = now(); var list = lerDiario({ semSim: D.simulacao === false });", ('ficha',)),
     ('o teto da ficha fica nos 12.000 do cliente (a ficha com a previsão e a maré passa de 11.500: a decisão (i) manda 16.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 12000;", ('ficha',)),
     ('o teto da ficha cai abaixo da ficha (8.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 8000;", ('ficha',)),
     ('o cérebro não exporta o teto da ficha', r"FICHA_MAX: FICHA_MAX,", r"", ('ficha',)),
@@ -4644,7 +4649,7 @@ MUTANTES_3D_VOZ = [
     ('a resposta de emergência não encerra o contexto de antes (a CONV da pergunta anterior fica)', """        if (emerg(a) || pe) limpaConversa();
         else if (!ctx || ctx.commit !== false) CONV = {""", """        if (!emerg(a) && !pe && (!ctx || ctx.commit !== false)) CONV = {""", ('voz',)),
     ('a continuação vale com a correção («não, o gerador»)', r"/^ (?:e|nao)(?= )/.test(n) ||", r"", ('voz',)),
-    ('a continuação vale depois do NOVA (o limpaConversa não zera)', r"function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }", r"function limpaConversa() { }", ('voz',)),   # (P3F: o NOVA zera também a espera do registro e a proposta do relato)
+    ('a continuação vale depois do NOVA (o limpaConversa não zera)', r"function limpaConversa() { CONV = { q: '', a: '', t: 0, pergunta: false, n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; PEND_CHAT = null; DESFAZ = null; ALVO_PROP = null; }", r"function limpaConversa() { }", ('voz',)),   # (P3F: o NOVA zera também a espera do registro e a proposta do relato)
     ('a continuação pega a pergunta («o gerador?»)', r"|| /\?\s*$/.test(String(q)) ||", r"||", ('voz',)),
     ('o cérebro não exporta o contexto da conversa', r"corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa,", r"corrigeVoz: corrigeVoz,", ('voz',)),
     # —— revisão: a hora seguida de «:» de pontuação e o +55 da tendência ——
@@ -6158,7 +6163,7 @@ JS_P3F_VIGENTE = """() => { const B = window.CapitaoBrain; localStorage.clear();
 # —— as propostas A CONFIRMAR (F14) ——
 JS_P3F_TICKET = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const n = () => B.loadDiario().length, n0 = n();
   const t1 = B.addTicket({ k: 'diario', origem: 'relato', texto: '  Trocamos   o filtro de ar do gerador hoje de manhã  ', prop: { sys: 'Manutenção' } });
-  o.t1 = t1; o.invalidos = [B.addTicket(null), B.addTicket({ k: 'diario' }), B.addTicket({ k: 'diario', texto: '   ' }), B.addTicket({ k: 'xyz', texto: 'a' }), B.addTicket({ k: 'exec', texto: 'a' })];
+  o.t1 = t1; o.invalidos = [B.addTicket(null), B.addTicket({ k: 'diario' }), B.addTicket({ k: 'diario', texto: '   ' }), B.addTicket({ k: 'xyz', texto: 'a' }), B.addTicket({ k: 'categoria', texto: 'a' })];   // (P3G: o tipo `exec` passou a existir — F15, a tarefa feita que o registro propõe —; o probe de tipo desconhecido usa `categoria`, que segue sem existir)
   o.mesmoId = B.addTicket({ id: 'tabc12', k: 'diario', texto: 'primeiro' }).texto + '|' + B.addTicket({ id: 'tabc12', k: 'diario', texto: 'segundo' }).texto + '|' + B.loadTickets().filter((t) => t.id === 'tabc12').length;
   o.idRuim = B.addTicket({ id: 'x/../y', k: 'diario', texto: 'id sem o t' }).id;
   o.abertos0 = B.ticketsAbertos().length; o.linhas0 = n() - n0;                       // propor não grava nada
@@ -6280,7 +6285,7 @@ def grupo_p3f_tickets(b, muta, ped):
     try:
         o = pg.evaluate(JS_P3F_TICKET)
         t1, r, d = o['t1'], o['r'], o['d']
-        ped('p3f tickets: a proposta nasce aberta, com o texto limpo, quem, quando, a origem e o carimbo sim; propor não grava linha nenhuma; texto vazio, tipo desconhecido (exec ainda não existe), null e o id repetido não criam outra',
+        ped('p3f tickets: a proposta nasce aberta, com o texto limpo, quem, quando, a origem e o carimbo sim; propor não grava linha nenhuma; texto vazio, tipo desconhecido (categoria não existe), null e o id repetido não criam outra',
             t1['estado'] == 'aberto' and t1['k'] == 'diario' and t1['origem'] == 'relato' and t1['texto'] == 'Trocamos o filtro de ar do gerador hoje de manhã' and t1['sim'] is True and t1['who'] and t1['iso'] and re.match(r't[A-Za-z0-9_-]{2,60}$', t1['id'])
             and all(x is None for x in o['invalidos']) and o['mesmoId'] == 'primeiro|primeiro|1' and re.match(r't[A-Za-z0-9_-]+$', o['idRuim']) and o['idRuim'] != 'x/../y' and o['linhas0'] == 0, o)
         ped('p3f tickets: ✎ muda só o texto da proposta aberta (vazio e inexistente devolvem null)', o['edit']['texto'] == 'Trocamos o filtro de ar do gerador hoje às 09:30' and o['editVazio'] is None and o['editFalta'] is None, (o['edit'], o['editVazio']))
@@ -6350,7 +6355,9 @@ ROTAS_P3F_F17 = [
     ('registrar no diário é fácil', 'diarioLer'), ('registrar no diário pode demorar', 'diarioLer'), ('gravar um vídeo', 'fallback'), ('lançar a âncora', 'ancora'), ('registrar o alarme', 'fallback'),
     ('registrar no diário que horas foram?', 'diarioLer'), ('registrar no diário todo dia é bom', 'diarioLer'), ('gravar: um vídeo do motor', 'motores'), ('lançar: a âncora', 'ancora'),
 ]
-JS_P3F_F17 = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().length, dia = () => B.loadDiario().map((e) => e.t);
+# (P3G, F20: `n` conta os REGISTROS — as linhas sem `acao`. O registro que conclui um serviço fecha a pendência que cita com uma linha de ação (resolve), que não é registro: «trocamos o rotor do gerador»
+# fecha a d03, «a bomba de porão foi testada» a d07 e «filtro de água salgada limpo» a d05. A conferência «1 linha cada» passa a ser «1 registro cada»; a linha de ação é conferida nos grupos p3g.)
+JS_P3F_F17 = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, n = () => B.loadDiario().filter((e) => !e.acao).length, dia = () => B.loadDiario().map((e) => e.t);
   const r = (q, c) => { const a = B.answer(q, c || op); return [a.key, a.text, B.falaCurta(a), a]; };
   // 1) o pedido sem o texto arma a espera; a próxima frase é gravada (1 linha) e a seguinte não
   let a = r('registrar no diário que'); o.pede = [a[0], a[1], a[2], n()];
@@ -6460,7 +6467,8 @@ JS_P3F_RELATO = """([relatos, nao]) => { const B = window.CapitaoBrain, o = {}; 
   // pedido de link (commit false), chip (id) e FAQ: nenhuma proposta
   localStorage.clear(); const a1 = res(q0, { platform: 'app', commit: false }), a2 = res(q0, { platform: 'app', id: 'diario' }); o.semProposta = [!!a1.relato, a1.text.indexOf('relato para o diário') >= 0, B.loadTickets().length];
   return o; }"""
-JS_P3F_RELATO_FLUXO = """([relatos]) => { const B = window.CapitaoBrain, o = {}; const op = { platform: 'app' }, n = () => B.loadDiario().length, tk = () => B.loadTickets(), est = () => tk().map((t) => t.estado);
+# (P3G, F20: `n` conta os REGISTROS, sem as linhas de ação — o relato «limpamos o filtro de água salgada…» confirmado fecha a pendência d05 com uma linha `resolve`; ver o JS_P3F_F17)
+JS_P3F_RELATO_FLUXO = """([relatos]) => { const B = window.CapitaoBrain, o = {}; const op = { platform: 'app' }, n = () => B.loadDiario().filter((e) => !e.acao).length, tk = () => B.loadTickets(), est = () => tk().map((t) => t.estado);
   const R = relatos[0], R2 = relatos[2];
   const prop = (q) => { const a = B.answer(q, op); return a.relato && a.relato.id; };
   const diz = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), linhas: n() }; };
@@ -7021,7 +7029,7 @@ MUTANTES_P3F = [
     ('p3f tickets: a proposta sem texto é criada', r"if (!tem(TICKET_K, t.k) || !texto) return null;", r"if (!tem(TICKET_K, t.k)) return null;", ('p3f_tickets',)),
     ('p3f tickets: o tipo desconhecido é criado', r"if (!tem(TICKET_K, t.k) || !texto) return null;", r"if (!texto) return null;", ('p3f_tickets',)),
     ('p3f tickets: o SOS propõe', r"    if (EM_SOS) return null;   // o SOS não propõe nada", r"", ('p3f_registro',)),
-    ('p3f tickets: a proposta sem o carimbo sim', r"    if (sim()) item.sim = true;", r"", ('p3f_tickets',)),
+    ('p3f tickets: a proposta sem o carimbo sim', "    if (sim()) item.sim = true;\n    cru.unshift(item); write(K.tickets, cru);", "    cru.unshift(item); write(K.tickets, cru);", ('p3f_tickets',)),   # (P3G: o mesmo carimbo existe na tarefa da agenda: a âncora inclui a gravação dos tickets)
     ('p3f tickets: o id da tela não é conferido', r"id = typeof t.id === 'string' && /^t[A-Za-z0-9_-]{2,60}$/.test(t.id) ? t.id : novoIdTicket(cru);", r"id = typeof t.id === 'string' ? t.id : novoIdTicket(cru);", ('p3f_tickets',)),
     ('p3f tickets: confirmar duas vezes grava duas linhas', r"    if (t.estado === 'aceito') return { id: id, k: t.k, ja: true, dec: t.dec || null, res: t.res || null };", r"", ('p3f_tickets',)),
     ('p3f tickets: a proposta recusada ressuscita ao confirmar', "    if (!t || t.estado === 'recusado') return null;\n    if (t.estado === 'aceito')", "    if (!t) return null;\n    if (t.estado === 'aceito')", ('p3f_tickets',)),
@@ -7033,8 +7041,8 @@ MUTANTES_P3F = [
     ('p3f tickets: o desfazer escreve a correção e não a anulação', r"src: 'app · proposta desfeita', acao: 'anula', alvo: lin.iso });", r"src: 'app · proposta desfeita', acao: 'corrige', alvo: lin.iso });", ('p3f_tickets',)),
     ('p3f tickets: o desfazer não reabre a proposta', r"    t.estado = 'aberto'; delete t.dec; delete t.res; write(K.tickets, cru);", r"    write(K.tickets, cru);", ('p3f_tickets',)),
     ('p3f tickets: o desfazer apaga a linha confirmada (o registro não pode encolher)', r"    an = addDiario({ sys: lin.sys,", r"    write(K.diario, loadDiario().filter(function (x) { return x.iso !== lin.iso; })); an = addDiario({ sys: lin.sys,", ('p3f_tickets',)),
-    ('p3f tickets: a janela do chat é a da tela', r"(opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ)", r"TICKET_DESFAZ", ('p3f_tickets',)),
-    ('p3f tickets: a janela da tela é a do chat', r"(opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ)", r"TICKET_DESFAZ_CHAT", ('p3f_tickets',)),
+    ('p3f tickets: a janela do chat é a da tela', r"    ate = Date.now() + (opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ);", r"    ate = Date.now() + TICKET_DESFAZ;", ('p3f_tickets',)),   # (P3G: a mesma conta existe no desfazer da pendência: a âncora é a do aceitaTicket)
+    ('p3f tickets: a janela da tela é a do chat', r"    ate = Date.now() + (opts && opts.chat ? TICKET_DESFAZ_CHAT : TICKET_DESFAZ);", r"    ate = Date.now() + TICKET_DESFAZ_CHAT;", ('p3f_tickets',)),
     ('p3f tickets: a gravação perde as linhas de outra forma (parte do filtrado)', r"    cru.unshift(item); write(K.tickets, cru);", r"    cru = cru.filter(ehTicket); cru.unshift(item); write(K.tickets, cru);", ('p3f_tickets',)),
     ('p3f tickets: o valor que não é lista é pisado sem cópia', r"try { if (s && localStorage.getItem(K.tickets + '.antes') === null) localStorage.setItem(K.tickets + '.antes', s); } catch (e) {}", r"", ('p3f_tickets',)),
     ('p3f tickets: o selo «apresentação» aparece com a simulação ligada', r"apresentacao: !!(t && t.sim === true && !EM_SOS && D.simulacao === false)", r"apresentacao: !!(t && t.sim === true)", ('p3f_tickets',)),
@@ -7067,7 +7075,7 @@ MUTANTES_P3F_F17 = [
     ('p3f F17: a pergunta sem «?» vira o texto do registro', r"if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;", r"if (/\?\s*$/.test(raw) || ACK.test(n)) return null;", ('p3f_f17',)),
     ('p3f F17: a pergunta com «?» vira o texto do registro', r"if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;", r"if (PERGUNTA.test(n) || ACK.test(n)) return null;", ('p3f_f17',)),
     ('p3f F17: o cancelar vira o texto do registro', r"    if (CANCELA_REG.test(n) || metaRegistro(n)) return 'relatoCancela';", r"    if (metaRegistro(n)) return 'relatoCancela';", ('p3f_f17',)),
-    ('p3f F17: o NOVA não zera a espera', r"n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; }", r"n: (CONV.n || 0) + 1, reg: false }; REL = null; }", ('p3f_f17',)),
+    ('p3f F17: o NOVA não zera a espera', r"n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; PEND_CHAT", r"n: (CONV.n || 0) + 1, reg: false }; REL = null; PEND_CHAT", ('p3f_f17',)),
     ('p3f F17: a fala do registro volta à 1ª linha com a data', r"    return 'Registrado no diário de bordo.' + (alerta", r"    return 'Registrado no diário de bordo · ' + now().d + ' ' + now().t + (alerta", ('p3f_f17',)),
     ('p3f F17: a fala do registro de emergência não manda abrir o SOS', r"(alerta ? ' Se a emergência é agora, abra o SOS.' : '')", r"''", ('p3f_f17',)),
     ('p3f F17: a fala do registro de óleo não traz a instrução', r"(pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '')", r"''", ('p3f_f17',)),
@@ -7127,10 +7135,10 @@ MUTANTES_P3F_F16 = [
     ('p3f F16: o botão Registrar pergunta «não registrar»', r"    if (m[1] === 'registra') return 'registrar o relato';", r"    if (m[1] === 'registra') return 'não registrar o relato';", ('p3f_relato',)),
     ('p3f F16: o toque no botão navega (sem preventDefault)', "      if (!q) return;\n      e.preventDefault();", "      if (!q) return;", ('p3f_relato',)),
     ('p3f F16: o toque no botão não manda a pergunta', r"      try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}", r"", ('p3f_relato',)),
-    ('p3f F16: o NOVA não zera a proposta que espera', r"ESPERA_REG = null; REL = null; }   // NOVA e ENCERRAR", r"ESPERA_REG = null; }   // NOVA e ENCERRAR", ('p3f_relato',)),
+    ('p3f F16: o NOVA não zera a proposta que espera', r"ESPERA_REG = null; REL = null; PEND_CHAT = null; DESFAZ = null; ALVO_PROP = null; }   // NOVA e ENCERRAR", r"ESPERA_REG = null; PEND_CHAT = null; DESFAZ = null; ALVO_PROP = null; }   // NOVA e ENCERRAR", ('p3f_relato',)),
     ('p3f F16: a emergência não encerra a proposta que espera', "        if (emerg(a) || pe) limpaConversa();\n        else if", "        if (false) limpaConversa();\n        else if", ('p3f_relato',)),
     ('p3f F16: o botão da proposta não existe sem proposta (a rota some)', "    if (RELATO_BTN_NAO.test(q)) return 'relatoCancela';\n    if (RELATO_BTN.test(q)) return 'relatoRegistra';", "", ('p3f_relato',)),
-    ('p3f F16: sem a simulação a proposta leva o carimbo sim', r"    if (sim()) item.sim = true;", r"    item.sim = true;", ('p3f_relato',)),
+    ('p3f F16: sem a simulação a proposta leva o carimbo sim', "    if (sim()) item.sim = true;\n    cru.unshift(item); write(K.tickets, cru);", "    item.sim = true;\n    cru.unshift(item); write(K.tickets, cru);", ('p3f_relato',)),
     ('p3f F16: o defeito não abre pendência na linha', r"pend: defeito ? true : undefined, q0: limpaT(q, 200) } });", r"q0: limpaT(q, 200) } });", ('p3f_relato',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_F16
@@ -7605,6 +7613,734 @@ MUTANTES_P3F_REV3 = [
     ('p3f rev3 rotas: o rumo do piloto é o COG', r"'Piloto automático com rumo ' + t.piloto + fim", r"'Piloto automático com rumo ' + t.rumo + fim", ('p3f_rev3_rotas',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P3F_REV3
+
+
+# ——————————————— Fase 3, P3G: alarmes pedidos (F12), agenda (F15), pendências (F20) e o que o app faz (F26) ———————————————
+# (PARIDADE F12, F15, F20, F26; CONTRATO §1.7, §1.9, §1.21, §1.25; PROMPT §2.2, §2.3.) Só o cérebro: a faixa dos alarmes pedidos, as telas da agenda e os botões Resolver/Reabrir são da Fase 4 (aqui a API e o
+# estado). O registro só cresce: confirmar = linhas novas, apagar/resolver/reabrir/desfazer = linhas NOVAS; o esperado de prazo e de alarme sai do dado e do replay (R.em), nunca de um número escrito aqui.
+
+# —— as perguntas (a chave e o PEDE_IA): o pedido de alarme, o apagar, a lista, o agendar, o que o app faz e o que elas NÃO roubam ——
+ROTAS_P3G = [
+    # a resposta a uma proposta (confirmar, recusar, desfazer): PRIMEIRO, antes de qualquer pedido que abra proposta — este laço não limpa a conversa, e com uma proposta esperando o «confirmar a proposta» GRAVARIA
+    # (é o comando explícito dela; aqui a conferência é só a rota, e a trava «só o comando explícito» do laço, linhas do diário = 1, não pode ver essas escritas)
+    ('confirmar a proposta', 'ticketConfirma', False), ('recusar a proposta', 'ticketRecusa', False), ('desfazer', 'ticketDesfaz', False), ('desfazer a proposta', 'ticketDesfaz', False),
+    # F12: o pedido na forma de configuração (antes do óleo: o relato de queda segue a instrução de segurança), incompleto também
+    ('me avise se a pressão do óleo do BB cair abaixo de 2 bar', 'alarmePedido', False), ('me avisa quando o diesel ficar abaixo de 300 litros', 'alarmePedido', False),
+    ('avise-me se a bateria de partida cair abaixo de 24 volts', 'alarmePedido', False), ('crie um alarme para o vento acima de 25 nós', 'alarmePedido', False),
+    ('configure um alarme de temperatura do motor acima de 90 graus', 'alarmePedido', False), ('quero um alarme de profundidade abaixo de 3 metros', 'alarmePedido', False),
+    ('alarme quando a rotação passar de 2.200 rpm', 'alarmePedido', False), ('me avise se o tanque de água doce ficar abaixo de 20%', 'alarmePedido', False),
+    ('criar um alarme', 'alarmePedido', False), ('me avise quando o diesel estiver baixo', 'alarmePedido', False), ('capitão, me avise se a pressão do óleo do BE cair para menos de 3 bar', 'alarmePedido', False),
+    # …e o que ela NÃO toma: o relato de óleo (segurança), o alarme que soa, o alarme do porão, a pergunta de como ativar, o alarme de fluxo
+    ('a pressão do óleo caiu abaixo de 2 bar agora', 'oleo', False), ('me avise se a pressão do óleo cair abaixo de 2 bar agora', 'oleo', False), ('alarme de óleo acendeu', 'oleo', False),
+    ('me avise se a pressão do óleo cair', 'oleo', False), ('o alarme do porão disparou', 'sos', False), ('tem algum alarme ativo?', 'alarmes', False), ('como ativar o alarme do porão', 'base', True),
+    ('qual o alarme de fluxo da climatização', 'base', True), ('me avise quando chegarmos', 'fallback', True),
+    # F12: confirmar, cancelar, a lista e o apagar (só com o NÚMERO ou «pedido»: «desligar o alarme» e «apagar alarme» são do alarme do barco)
+    ('confirmar alarme', 'alarmeConfirma', False), ('cancelar alarme', 'alarmeCancela', False), ('meus alarmes', 'alarmesLista', False), ('quais alarmes eu pedi', 'alarmesLista', False),
+    ('quais são os alarmes que eu criei?', 'alarmesLista', False), ('apagar alarme #1', 'alarmeApaga', False), ('apagar o alarme 2', 'alarmeApaga', False), ('remova o alarme #3', 'alarmeApaga', False),
+    ('apagar todos os alarmes pedidos', 'alarmeApaga', False), ('excluir alarme usr_4', 'alarmeApaga', False),
+    ('desligar o alarme', 'base', True), ('apagar alarme', 'fallback', True), ('desligue o alarme de fumaça', 'sos', False),
+    # F15: agendar (o verbo, a data e a tarefa) e o que não é pedido de agendar
+    ('agendar revisão do gerador para 15/11', 'agendar', False), ('agende a limpeza do casco para dia 20/12 com a marina', 'agendar', False), ('pode agendar a troca de anodos para 10 de dezembro?', 'agendar', False),
+    ('marcar teste das bombas de porão para amanhã', 'agendar', False), ('agendar visita do técnico para 10/10', 'agendar', False), ('programar a lavagem do convés para daqui a 2 semanas', 'agendar', False),
+    ('a revisão do gerador está agendada para 20/11', 'agendar', False),
+    ('quando devo agendar a revisão do gerador?', 'gerador', False), ('não agendar nada para 15/11', 'manutencao', False), ('a agenda de manutenção', 'manutencao', False), ('agenda de manutenção para 15/11', 'manutencao', False), ('agendar revisão do gerador', 'gerador', False),
+    ('cancelar a revisão marcada para 15/11', 'motores', False),
+    # F26: o que o app faz (local, sem IA) e o que continua a saudação (a IA pode contar mais) ou a rota de assunto
+    ('o que você pode fazer?', 'capacidades', False), ('O que vc consegue fazer', 'capacidades', False), ('o que você pode fazer', 'capacidades', False), ('quais são as suas funções?', 'capacidades', False),
+    ('o que o app faz?', 'capacidades', False), ('o que eu posso te perguntar?', 'capacidades', False), ('capitão, o que você pode fazer?', 'capacidades', False), ('quais as funcionalidades do app?', 'capacidades', False),
+    ('do que você é capaz?', 'capacidades', False), ('o que dá pra fazer aqui?', 'capacidades', False), ('lista de funções', 'capacidades', False),
+    ('o que você pode fazer pelo gerador?', 'gerador', False), ('o que você pode fazer se o motor apagar?', 'motores', False), ('o que você faz?', 'saudacao', True), ('quem é você?', 'saudacao', True),
+    ('o que vc sabe fazer?', 'saudacao', True), ('como você funciona?', 'saudacao', True), ('pra que serve esse app?', 'saudacao', True), ('o que você sabe sobre o seguro?', 'saudacao', True),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3G]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3G})
+
+
+def grupo_p3g_rotas(b, muta, ped):
+    pg = pagina(b, muta=muta)
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in ROTAS_P3G])
+        ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(ROTAS_P3G, res) if key != esp or ia != ia_esp]
+        ped('p3g rotas: as %d perguntas (alarme pedido, apagar, lista, agendar, desfazer, o que o app faz — e as que elas não roubam: o relato de óleo, o alarme que soa, o do porão, a saudação, a rota de assunto) caem na chave certa, e as novas são locais (sem IA)' % len(ROTAS_P3G), not ruins, ruins[:6])
+        # a emergência vem antes de tudo: nem o pedido de alarme nem o de agendar toma a pergunta de socorro, de salvatagem, do EPIRB, do Seafire, do canal 16 ou do MMSI
+        mistas = ['me avise se o EPIRB disparar, quando abaixo de 2 bar', 'agendar o teste do EPIRB para 20/11', 'agendar o disparo do Seafire para 20/11', 'agendar teste do rádio VHF para 20/11', 'me avise se o canal 16 cair abaixo de 2 bar',
+                  'agendar a revisão dos coletes para 20/11', 'tem fogo na praça de máquinas, agendar revisão para 20/11', 'homem ao mar, me avise se a pressão do óleo cair abaixo de 2 bar']
+        k = pg.evaluate(JS_P3C_CHAVES, [[q] for q in mistas])
+        ped('p3g rotas: o pedido de alarme ou de agendar junto de EPIRB, Seafire, rádio/canal 16, salvatagem ou perigo segue a rota de emergência (local, a instrução de segurança) — nunca a proposta', all(key in ('epirb', 'seafire', 'canal16', 'salvatagem', 'sos') and not ia for key, ia in k), list(zip(mistas, k)))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_rotas'] = grupo_p3g_rotas
+
+
+# —— F12: o pedido propõe (não grava), o Confirmar grava UMA linha por item, a lista, o apagar (linha nova), o máximo, o duplicado e os erros ——
+JS_P3G_ALM = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, o = {}; localStorage.clear(); const op = { platform: 'app' };
+  const lin = () => JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]'), nd = () => B.loadDiario().length, nt = () => localStorage.getItem('capitao.tickets.v1');
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), ia: B.pedeIA(a, q), acoes: (a.actions || []).map((x) => x.l), href: (a.actions || []).map((x) => x.href) }; };
+  o.max = D.alarmesPedidos.max;
+  // 1) o pedido propõe e NÃO grava; o Confirmar grava 1 linha; o diário e os tickets não mudam
+  o.pedido = r('me avise se a pressão do óleo do BB cair abaixo de 2 bar'); o.aposPedido = [lin().length, nd(), nt()];
+  o.confirma = r('confirmar alarme'); o.l1 = lin(); o.aposConfirma = [nd(), nt()];
+  // 2) sem o lado: um alarme para cada motor; «sim» LOGO depois confirma
+  o.sem = r('me avise se a temperatura do motor passar de 90 graus'); o.sim = r('sim'); o.l2 = lin().map((x) => [x.id, x.campo, x.op, x.limite]);
+  o.lista = r('meus alarmes');
+  // 3) apagar = linha nova (nada se apaga); o número não volta; apagar de novo diz que não há
+  o.apaga = r('apagar alarme #1'); o.l3 = lin().map((x) => [x.id, x.acao || null, x.campo, x.op, x.limite]); o.apaga2 = r('apagar alarme #1'); o.listaApos = r('meus alarmes');
+  o.novo = r('me avise se o vento passar de 25 nós'); r('confirmar alarme'); o.l4 = lin().map((x) => x.id);
+  o.ativos4 = B.alarmesPedidos().map((a) => a.id + ':' + a.n);
+  // 4) o duplicado não entra
+  o.dup = r('me avise se o vento passar de 25 nós'); o.dupN = lin().length;
+  // 5) o erro não grava nem arma: a faixa, a unidade, o sentido, a medida, duas medidas
+  const erros = ['me avise se a pressão do óleo do BB cair abaixo de 0,1 bar', 'me avise se a pressão do óleo do BB cair abaixo de 20 graus', 'me avise quando o diesel estiver baixo', 'me avise se o convés cair abaixo de 3',
+    'me avise se o óleo cair abaixo de 2 bar ou o diesel passar de 100 litros', 'me avise se o vento passar de 70 nós', 'me avise se a profundidade passar de 3 metros e cair abaixo de 2', 'me avise se a temperatura da água e a pressão atmosférica passarem de 30'];
+  const n5 = lin().length; o.erros = erros.map((q) => { const x = r(q); return [q, x.key, x.text, x.acoes]; }); o.errosNada = [lin().length - n5, r('confirmar alarme').text];
+  // 5b) o número NÃO volta a ser usado (apagou o mais novo, #4: o seguinte é o #5) e a API recusa o que não cabe (fora da faixa, sentido que a medida não tem, limite que não é número)
+  r('apagar alarme #4'); r('me avise se o vento passar de 21 nós'); r('confirmar alarme'); o.reuso = lin()[0].id; const M = D.alarmesPedidos.metricas, nA = lin().length;
+  o.api = [B.criaAlarmePedido([{ m: M[0], op: '<', limite: 99 }, { m: M[0], op: '=', limite: 2 }, { m: M[0], op: '<', limite: 'x' }, { m: M[0], op: '>', limite: 0.1 }, { m: M[6], op: '<', limite: 24 }]).criadas.map((a) => a.campo), lin().length - nA];
+  o.apiDup = [B.criaAlarmePedido([{ m: M[6], op: '<', limite: 24 }]).criadas.length, B.criaAlarmePedido([{ m: M[7], op: '<', limite: 25 }, { m: M[7], op: '<', limite: 25 }]).criadas.length];   // (a regra que já existe e a repetida no mesmo lote não entram)
+  const op0 = M[0].ops; M[0].ops = ['<']; o.opsRestrito = [B.criaAlarmePedido([{ m: M[0], op: '>', limite: 3 }]).criadas.length, r('me avise se a pressão do óleo do BB passar de 3 bar').text.split('\\n')[0]]; M[0].ops = op0;   // (a medida que só aceita «abaixo de»)
+  r('me avise se a pressão do óleo do BE cair abaixo de 2,5 bar'); r('confirmar alarme'); const d1 = lin()[0].limite; r('me avise se a rotação do motor BB passar de 2.200 rpm'); r('confirmar alarme'); o.decimais = [d1, lin()[0].limite, lin()[0].campo];   // (a vírgula do decimal e o ponto do milhar)
+  // 6) o máximo (D.alarmesPedidos.max): completa até o máximo e o seguinte é recusado, sem gravar
+  let i = 0; while (B.alarmesPedidos().length < o.max && i < 30) { r('me avise se o diesel cair abaixo de ' + (200 + 10 * i) + ' litros'); r('confirmar alarme'); i++; }
+  o.cheio = [B.alarmesPedidos().length, lin().length]; o.onze = r('me avise se o diesel cair abaixo de 900 litros'); o.onzeN = lin().length; o.onzeConf = r('confirmar alarme').key;
+  o.apos11 = (B.alarmesPedidos().length);
+  const nB = lin().length, ax = B.criaAlarmePedido([{ m: M[8], op: '<', limite: 12 }]); o.apiMax = [ax.criadas.length, ax.erro, lin().length - nB];   // (cheio: a API também recusa o que passa do máximo)
+  return o; }"""
+# o pedido de ontem não vale hoje, o «sim» só vale LOGO depois, a emergência e o NOVA zeram, o botão de uma proposta antiga não age na nova, o link não grava
+JS_P3G_ALM_ESPERA = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); const op = { platform: 'app' }, real = Date.now;
+  const lin = () => JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]'), Q = 'me avise se o vento passar de 25 nós';
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text.split('\\n')[0], full: a.text, acoes: (a.actions || []).map((x) => x.l), href: (a.actions || []).map((x) => x.href) }; };
+  r(Q); r('qual a autonomia?'); o.simDepois = [r('sim').key, lin().length]; o.confirmaDepois = [r('confirmar alarme').key, lin().length];                     // 1) o «sim» só vale LOGO depois; «confirmar alarme» vale dentro dos 10 min
+  localStorage.clear(); r(Q); Date.now = () => real() + 11 * 60e3; o.venceu = [r('confirmar alarme').key, r('confirmar alarme').text, lin().length]; Date.now = real;  // 2) vence em 10 min
+  localStorage.clear(); r(Q); r('homem ao mar'); o.emerg = [r('confirmar alarme').text, lin().length];                                                          // 3) a emergência zera
+  localStorage.clear(); r(Q); B.limpaConversa(); o.nova = [r('confirmar alarme').text, lin().length];                                                              // 4) NOVA/ENCERRAR zeram
+  localStorage.clear(); const a1 = r(Q), s1 = a1.href[0]; const a2 = r('me avise se o vento passar de 20 nós'), s2 = a2.href[0];                                   // 5) o botão da proposta antiga
+  o.botoes = [s1, s2]; const qa = B.perguntaDoBotao(s1); o.antiga = [qa, r(qa).text, lin().length]; const qb = B.perguntaDoBotao(s2); o.nova2 = [qb, r(qb).key, lin().map((x) => x.limite)];
+  localStorage.clear(); r(Q); o.novoPedido = [r('criar um alarme').key, r('confirmar alarme').key, lin().length];                                                                   // 5b) «criar um alarme» com uma proposta esperando é pedido NOVO, não a confirmação dela
+  localStorage.clear(); r(Q); const qc = B.perguntaDoBotao(a1.href[1]); o.recusaBotao = [qc, r(qc).key, lin().length, r('confirmar alarme').text];                  // 6) Recusar (botão antigo → nova proposta recusada)
+  localStorage.clear(); r(Q); o.cancela = [r('cancelar alarme').text, lin().length, r('confirmar alarme').text];                                                   // 7) cancelar
+  localStorage.clear(); const l = r(Q, { platform: 'app', commit: false }); o.link = [l.key, l.full, l.acoes, lin().length, r('confirmar alarme').text];            // 8) link: mostra a proposta, não arma nem grava
+  o.lixo = [B.perguntaDoBotao('#capitao-prop-confirma-'), B.perguntaDoBotao('#capitao-prop-apaga-3'), B.perguntaDoBotao('#capitao-prop-confirma-x')];
+  o.velho = ['confirmar a proposta', 'recusar a proposta'].map((q) => { localStorage.clear(); B.limpaConversa(); return r(q).text; });                              // 9) botão velho sem proposta: resposta local
+  return o; }"""
+# o replay: o esperado sai de R.em (reimplementado aqui: o arredondamento do campo, o motor em cruzeiro, a histerese de 10 s)
+JS_P3G_ALM_REPLAY = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, R = window.CapitaoReplay, A = window.CapitaoAgora, o = {}; localStorage.clear(); const op = { platform: 'app' };
+  const dia = (q) => B.answer(q, op), M = D.alarmesPedidos.metricas;
+  const cand = ['0', '5', '10', '140', '145', '149', '105'], baseline = {}; cand.forEach((x) => { R.fixar(x); baseline[x] = dia('tem algum alarme ativo?').text; });
+  dia('me avise se a temperatura do motor BE passar de 85 graus'); dia('confirmar alarme'); dia('me avise se a pressão do óleo do BB cair abaixo de 4 bar'); dia('confirmar alarme');
+  const arred = (x, c) => Math.floor(x * Math.pow(10, c) + 0.5) / Math.pow(10, c);
+  const cond = (q, r) => { const v = arred(q[r.campo], r.c), rpm = r.lado ? q['motor_' + r.lado + '_rpm'] : 1e9; return rpm >= 1000 && (r.op === '<' ? v < r.lim : v > r.lim); };
+  // a série dos 150 instantes: os ativos de B.alarmesPedidosAtivos() contra o esperado por R.em (a regra, o motor em cruzeiro, a histerese de 10 s e o começo da sequência)
+  const serieDe = (regs) => { const ser = [], formas = []; for (let t = 0; t < 150; t++) {
+      R.fixar(String(t)); const i = B.instante(), at = B.alarmesPedidosAtivos().filter((a) => regs.some((r) => r.id === a.id)), ex = {}, desdeEx = {}, gate = [];
+      regs.forEach((r) => {
+        const s = []; for (let k = 0; k <= 160; k++) { const q = R.em(i.ms - k * 1000); s.push(!!q && cond(q, r)); }
+        const q0 = R.em(i.ms); if (r.lado && r.op === '<' && arred(q0[r.campo], r.c) < r.lim && q0['motor_' + r.lado + '_rpm'] < 1000) gate.push(r.id);   // (valor dentro da regra com o motor abaixo de 1.000 rpm: a regra não vale)
+        const ult = s.indexOf(true); if (ult < 0 || ult > 10) return; ex[r.id] = 1; let ini = ult, gap = 0;
+        for (let k = ult + 1; k < s.length; k++) { if (s[k]) { ini = k; gap = 0; } else if (++gap > 10) break; } desdeEx[r.id] = i.ms - ini * 1000; });
+      ser.push([t, at.map((a) => a.id).sort().join(','), Object.keys(ex).sort().join(','), at.map((a) => [a.id, a.desdeMs - desdeEx[a.id]]).filter((x) => x[1] !== 0), gate.length]);
+      if (t === 105) at.forEach((a) => formas.push({ k: Object.keys(a).sort(), id: a.id, n: a.n, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, lado: a.lado, campo: a.campo, un: a.un, valorTxt: a.valorTxt, limiteTxt: a.limiteTxt, texto: a.texto, hora: a.hora, desde: a.desde, fonte: a.fonte, pedido: a.pedido, normalizando: a.normalizando, valor: a.valor, limite: a.limite, op: a.op })); }
+    return { ser: ser, formas: formas }; };
+  const n0 = B.loadDiario().length;
+  const regs12 = [{ id: 'usr_1', campo: 'motor_be_arref_c', lado: 'be', op: '>', lim: 85, c: 1 }, { id: 'usr_2', campo: 'motor_bb_oleo_bar', lado: 'bb', op: '<', lim: 4, c: 1 }];
+  const s12 = serieDe(regs12); o.serie = s12.ser; o.formas = s12.formas; o.gate = o.serie.filter((x) => x[4] > 0).length;
+  // a resposta dos alarmes: sem alarme pedido ativo é a de sempre, palavra por palavra; com ele, a de sempre + o bloco dos pedidos (a regra do banco de 24 V, que fica ativa o laço todo, só entra depois)
+  const dep = {}; cand.forEach((x) => { R.fixar(x); dep[x] = dia('tem algum alarme ativo?').text; }); o.baseline = baseline; o.dep = dep; o.livres = cand.filter((x) => x !== '105' && o.serie[+x][1] === '');
+  R.fixar('105'); o.lista105 = dia('meus alarmes').text; o.ficha105 = B.ficha('app', 'x', null); R.fixar('60'); o.ficha60 = B.ficha('app', 'x', null);
+  // …e um sinal RUIDOSO (o banco de serviço de 24 V abaixo de 27,31 V: 11 sequências separadas por falhas curtas): o `desde` junta as falhas de até 10 s; a regra do banco não tem o motor em cruzeiro
+  B.criaAlarmePedido([{ m: M[6], op: '<', limite: 27.31 }]);
+  o.serie3 = serieDe([{ id: 'usr_3', campo: 'bateria_0_tensao_v', lado: null, op: '<', lim: 27.31, c: 2 }]).ser;
+  // o ARREDONDAMENTO: a regra compara o valor do campo com as casas dele (1), não o bruto — o gancho de teste do replay (capitao.replay.sobre) mescla um valor ao quadro do instante fixado: 85,04 (arredonda a 85,0:
+  // não passa de 85) e 85,06 (85,1: passa); o bruto 85,04 passaria
+  const ids = () => B.alarmesPedidosAtivos().map((a) => a.id).filter((x) => x !== 'usr_3').sort().join(',');
+  let volta = 7; const com = (v) => { localStorage.setItem('capitao.replay.sobre', JSON.stringify(v)); R.fixar('60@' + (volta++)); return ids(); };   // (uma volta que a série acima não visitou, e uma volta nova a cada valor: o instante de cada segundo fixado fica guardado)
+  o.sobre = [com({ motor_be_arref_c: 85.04, motor_be_rpm: 2000 }), com({ motor_be_arref_c: 85.06, motor_be_rpm: 2000 }), com({ motor_be_arref_c: 85.06, motor_be_rpm: 900 })]; localStorage.removeItem('capitao.replay.sobre'); R.fixar('60');
+  // nunca crítico, nunca grava, nunca abre o SOS nem a C3: o diário e os tickets não mudaram depois das leituras
+  o.nada = [B.loadDiario().length - n0, localStorage.getItem('capitao.tickets.v1'), location.pathname.indexOf('SOS') === -1];
+  localStorage.clear(); o.fichaSem = B.ficha('app', 'x', null);
+  R.fixar('105'); dia('me avise se a temperatura do motor BE passar de 85 graus'); dia('confirmar alarme'); const emerg = dia('homem ao mar'); o.fichaEmerg = B.ficha('app', 'homem ao mar', emerg);
+  return o; }"""
+
+
+def grupo_p3g_alarmes(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        o = pg.evaluate(JS_P3G_ALM)
+        p, c = o['pedido'], o['confirma']
+        ped('p3g alarme: o pedido («me avise se a pressão do óleo do BB cair abaixo de 2 bar») é a PROPOSTA: local (sem IA), diz a regra, a leitura de agora com a hora e o aviso só na tela, traz Confirmar e Recusar — e não grava nada (nem alarme, nem diário, nem ticket)',
+            p['key'] == 'alarmePedido' and p['ia'] is False and p['text'].startswith('Posso criar este alarme: Pressão de óleo BB abaixo de 2,0 bar.') and 'agora ' in p['text'] and '(12:01:00)' in p['text'] and 'nunca crítico' in p['text']
+            and p['acoes'][:2] == ['Confirmar', 'Recusar'] and p['href'][0].startswith('#capitao-prop-confirma-') and '12:01:00' in p['fala'] and p['fala'].endswith('Confirma?') and o['aposPedido'] == [0, 0, None], (p, o['aposPedido']))
+        l1 = o['l1']
+        ped('p3g alarme: o Confirmar grava UMA linha {id usr_1, campo, op, limite, iso, who, sim}; o diário e os tickets não mudam (o alarme pedido nunca grava no diário)',
+            c['key'] == 'alarmeConfirma' and len(l1) == 1 and sorted(l1[0].keys()) == ['campo', 'id', 'iso', 'limite', 'op', 'sim', 'who'] and l1[0]['id'] == 'usr_1' and l1[0]['campo'] == 'motor_bb_oleo_bar' and l1[0]['op'] == '<' and l1[0]['limite'] == 2
+            and l1[0]['sim'] is True and l1[0]['who'] and c['text'].startswith('Alarme criado: #1 Pressão de óleo BB abaixo de 2,0 bar.') and o['aposConfirma'] == [0, None], (c, l1, o['aposConfirma']))
+        ped('p3g alarme: sem o lado, o pedido abre um alarme para cada motor (BB e BE) e o «sim» LOGO depois confirma (2 linhas, usr_2 e usr_3); a lista diz os 3 e a leitura de cada um',
+            o['sem']['text'].startswith('Posso criar estes 2 alarmes: Arrefecimento do motor BB acima de 90,0 °C · Arrefecimento do motor BE acima de 90,0 °C.') and o['sim']['key'] == 'alarmeConfirma'
+            and sorted(o['l2'])[1:] == [['usr_2', 'motor_bb_arref_c', '>', 90], ['usr_3', 'motor_be_arref_c', '>', 90]] and o['lista']['text'].startswith('3 alarmes pedidos às 12:01:00 (de %d possíveis), nenhum ativo agora:' % o['max'])
+            and '• #1 Pressão de óleo BB abaixo de 2,0 bar — agora ' in o['lista']['text'] and '• #3 Arrefecimento do motor BE acima de 90,0 °C — agora ' in o['lista']['text'] and 'sem disparar' in o['lista']['text'], (o['sem']['text'], o['l2'], o['lista']['text']))
+        ped('p3g alarme: APAGAR é uma linha NOVA (id usr_1, acao apaga, com o campo, o sentido e o limite): nada se apaga (4 linhas), a lista perde o #1, apagar de novo diz que não há, e o número não volta a ser usado (o seguinte é usr_4)',
+            o['apaga']['key'] == 'alarmeApaga' and o['apaga']['text'].startswith('Alarme #1 apagado: Pressão de óleo BB abaixo de 2,0 bar.') and 'Restam 2 de' in o['apaga']['text'] and o['l3'][0] == ['usr_1', 'apaga', 'motor_bb_oleo_bar', '<', 2] and len(o['l3']) == 4
+            and o['apaga2']['text'].startswith('Não há alarme pedido #1 ativo') and o['listaApos']['text'].startswith('2 alarmes pedidos às 12:01:00') and '#1 ' not in o['listaApos']['text'].split('\n', 1)[1] and o['l4'][0] == 'usr_4' and o['ativos4'] == ['usr_2:2', 'usr_3:3', 'usr_4:4'], (o['apaga'], o['l3'], o['apaga2'], o['l4'], o['ativos4']))
+        ped('p3g alarme: o número NÃO volta a ser usado (apagado o #4, o seguinte é o #5) e a API recusa o que não cabe — o limite fora da faixa, o sentido que a medida não tem, o limite que não é número —, gravando só o que cabe', o['reuso'] == 'usr_5' and o['api'] == [['bateria_0_tensao_v'], 1], (o['reuso'], o['api']))
+        ped('p3g alarme: a API não grava a regra que já existe nem a repetida no mesmo lote; a medida que só aceita «abaixo de» recusa o «acima de» (API e pedido); o decimal («2,5 bar») e o milhar («2.200 rpm») são lidos como o português escreve; cheio, a API recusa com o erro «max»',
+            o['apiDup'] == [0, 1] and o['opsRestrito'][0] == 0 and o['opsRestrito'][1].startswith('Pressão de óleo BB não aceita esse sentido.') and o['decimais'] == [2.5, 2200, 'motor_bb_rpm'] and o['apiMax'] == [0, 'max', 0], (o['apiDup'], o['opsRestrito'], o['decimais'], o['apiMax']))
+        ped('p3g alarme: o pedido repetido (a mesma regra ativa) diz que já existe e não grava', o['dup']['text'].startswith('Esse alarme já existe: #4 Vento verdadeiro acima de 25,0 nós.') and o['dupN'] == 5, (o['dup']['text'], o['dupN']))
+        e = {q: (k, t, a) for q, k, t, a in o['erros']}
+        qs = [q for q, _, _, _ in o['erros']]
+        ped('p3g alarme: o que falta ou não cabe NÃO vira proposta e não grava: o limite fora da faixa diz a faixa («de 0,5 bar a 6,0 bar»), a unidade errada diz a da medida, sem o sentido pergunta «abaixo ou acima», a medida que não existe lista as medidas, duas medidas ou dois sentidos pedem um por vez; nenhum pede Confirmar',
+            all(e[q][0] == 'alarmePedido' and 'Confirmar' not in e[q][2] for q in qs) and 'vai de 0,5 bar a 6,0 bar' in e[qs[0]][1] and 'A unidade de pressão de óleo BB é bar.' in e[qs[1]][1] and e[qs[2]][1].startswith('Faltou o sentido') and e[qs[3]][1].startswith('Não achei a medida. Posso vigiar: pressão de óleo BB')
+            and e[qs[4]][1].startswith('Um alarme por pedido') and 'vai de 5,0 nós a 50,0 nós' in e[qs[5]][1] and e[qs[6]][1].startswith('Um alarme por pedido') and e[qs[7]][1].startswith('Um alarme por pedido') and o['errosNada'] == [0, 'Nenhum alarme esperando confirmação. Peça de novo, por exemplo: “me avise se a pressão do óleo do BB cair abaixo de 2 bar”.'], (e, o['errosNada']))
+        ped('p3g alarme: o máximo (D.alarmesPedidos.max = %d alarmes ativos): o seguinte é recusado com o caminho («apagar alarme #n»), não grava e o «confirmar» não cria nada' % o['max'],
+            o['cheio'][0] == o['max'] and o['onze']['text'].startswith('Você já tem %d de %d alarmes pedidos' % (o['max'], o['max'])) and 'apagar alarme #n' in o['onze']['text'] and o['onzeN'] == o['cheio'][1] and o['onzeConf'] == 'alarmeConfirma' and o['apos11'] == o['max'], (o['cheio'], o['onze']['text'], o['onzeN'], o['apos11']))
+        w = pg.evaluate(JS_P3G_ALM_ESPERA)
+        ped('p3g alarme (espera): o «sim» só vale LOGO depois do pedido (com outra pergunta no meio não grava), mas «confirmar alarme» vale dentro dos 10 min; passados os 10 min o pedido venceu e nada é gravado',
+            w['simDepois'][1] == 0 and w['simDepois'][0] != 'alarmeConfirma' and w['confirmaDepois'] == ['alarmeConfirma', 1] and w['venceu'][0] == 'alarmeConfirma' and w['venceu'][1].startswith('Nenhum alarme esperando confirmação') and w['venceu'][2] == 0, (w['simDepois'], w['confirmaDepois'], w['venceu']))
+        ped('p3g alarme (espera): a emergência no meio e o NOVA/ENCERRAR zeram o pedido (o «confirmar alarme» seguinte não cria nada)', w['emerg'][0].startswith('Nenhum alarme esperando confirmação') and w['emerg'][1] == 0 and w['nova'][0].startswith('Nenhum alarme esperando confirmação') and w['nova'][1] == 0, (w['emerg'], w['nova']))
+        ped('p3g alarme (botões): o botão leva o número da proposta (#capitao-prop-confirma-<n>); o de uma proposta ANTIGA diz «é antiga: nada mudou» e não grava, o da nova grava; as hrefs fora do formato não viram pergunta',
+            re.match(r'#capitao-prop-confirma-\d+$', w['botoes'][0]) and w['botoes'][0] != w['botoes'][1] and w['antiga'][0] == 'confirmar a proposta' and w['antiga'][1].startswith('Essa proposta é antiga: nada mudou') and w['antiga'][2] == 0
+            and w['nova2'][1] == 'alarmeConfirma' and w['nova2'][2] == [20] and w['lixo'] == ['', '', ''], w)
+        ped('p3g alarme (recusar/cancelar): o botão Recusar de uma proposta antiga não age na nova; «cancelar alarme» descarta o pedido (nada gravado, e o «confirmar» seguinte diz que não há)',
+            w['recusaBotao'][1] in ('alarmeCancela', 'ticketRecusa') and w['recusaBotao'][2] == 0 and w['cancela'][0] == 'Certo — alarme cancelado; nada foi gravado.' and w['cancela'][1] == 0 and w['cancela'][2].startswith('Nenhum alarme esperando confirmação'), (w['recusaBotao'], w['cancela']))
+        ped('p3g alarme (espera): «criar um alarme» com uma proposta esperando é um pedido NOVO (a explicação), não a confirmação dela; o «confirmar alarme» seguinte confirma a que esperava', w['novoPedido'] == ['alarmePedido', 'alarmeConfirma', 1], w['novoPedido'])
+        ped('p3g alarme (link): o pedido vindo de link (commit false) mostra a proposta mas diz «não criado», não leva Confirmar, não arma nada e não grava', w['link'][0] == 'alarmePedido' and 'pedido vindo de link não cria alarme' in w['link'][1] and 'Confirmar' not in w['link'][2] and w['link'][3] == 0 and w['link'][4].startswith('Nenhum alarme esperando'), w['link'])
+        ped('p3g alarme (botão velho): «confirmar a proposta» e «recusar a proposta» sem proposta esperando (a página recarregou, a proposta venceu) são resposta local, nunca a IA', all(t.startswith('Não há proposta') for t in w['velho']), w['velho'])
+    finally:
+        pg.ctx.close()
+    # —— o replay: a regra avaliada contra o quadro (histerese de 10 s, o motor em cruzeiro, o arredondamento do campo), sem nunca gravar nem abrir nada ——
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='0')
+    try:
+        y = pg.evaluate(JS_P3G_ALM_REPLAY)
+        ruins = [x for x in y['serie'] if x[1] != x[2] or x[3]]
+        ped('p3g alarme (replay): nos 150 instantes do laço, os alarmes pedidos ATIVOS são exatamente os esperados por R.em — a condição vale agora ou valeu nos últimos 10 s (histerese), o motor só conta a partir de 1.000 rpm e o valor é o arredondado do campo — e o `desde` é o começo da sequência', not ruins, ruins[:5])
+        ped('p3g alarme (replay): a regra compara o valor do campo ARREDONDADO (1 casa), não o bruto: 85,04 °C não passa de 85 (arredonda a 85,0), 85,06 passa (85,1), e com o motor a 900 rpm (abaixo do cruzeiro) nem o 85,06 conta', y['sobre'] == ['usr_2', 'usr_1,usr_2', 'usr_2'], y['sobre'])
+        ruins3 = [x for x in y['serie3'] if x[1] != x[2] or x[3]]
+        usr3 = [x[0] for x in y['serie3'] if x[1]]
+        ped('p3g alarme (replay, sinal ruidoso): o banco de serviço de 24 V abaixo de 27,31 V (várias sequências separadas por falhas curtas, sem motor em cruzeiro) fica ativo nas falhas de até 10 s e o `desde` é o começo da sequência esperado por R.em — nos 150 instantes', not ruins3 and len(usr3) > 40, (ruins3[:4], len(usr3)))
+        usr1 = [x[0] for x in y['serie'] if 'usr_1' in x[1]]
+        usr2 = [x[0] for x in y['serie'] if 'usr_2' in x[1]]
+        ped('p3g alarme (replay): o arrefecimento do BE acima de 85 °C dispara na janela do AVISO (a pressão de óleo do BB abaixo de 4 bar, na janela do cruzeiro) e fica fora dela; o motor abaixo de 1.000 rpm não conta (valor abaixo do limite com o motor lento: %d instantes)' % y['gate'],
+            bool(usr1) and len(usr1) < 60 and usr1 == list(range(usr1[0], usr1[-1] + 1)) and 90 <= usr1[0] <= 100 and 0 not in usr1 and 149 not in usr1 and bool(usr2) and 0 not in usr2 and y['gate'] > 0, (usr1[:3], usr1[-3:], len(usr2), y['gate']))
+        f = [x for x in y['formas'] if x['id'] == 'usr_1'][0]
+        ped('p3g alarme (API da faixa): cada ativo tem a forma dos alertas — nivel aviso (nunca crítico), rotulo AVISO, o sistema e o lado, o campo, o valor e o limite com a unidade, o texto, a hora de início e a fonte — e o `pedido: true`',
+            f['nivel'] == 'aviso' and f['rotulo'] == 'AVISO' and f['sistema'] == 'motores' and f['lado'] == 'BE' and f['campo'] == 'motor_be_arref_c' and f['un'] == '°C' and f['limiteTxt'] == '85,0 °C' and re.match(r'^\d+,\d °C$', f['valorTxt']) and f['pedido'] is True
+            and f['texto'].startswith('Alarme pedido #1 — Arrefecimento do motor BE: ' + f['valorTxt'] + ' (acima de 85,0 °C') and re.match(r'^\d\d:\d\d:\d\d$', f['hora']) and f['fonte'] == 'alarme pedido no chat · avaliado neste aparelho' and f['op'] == '>' and f['limite'] == 85
+            and sorted(f['k']) == sorted(['id', 'n', 'nivel', 'rotulo', 'cor', 'rgb', 'sistema', 'lado', 'campo', 'titulo', 'valor', 'limite', 'un', 'valorTxt', 'limiteTxt', 'op', 'normalizando', 'texto', 'desde', 'desdeMs', 'hora', 'fonte', 'pedido']), f)
+        ped('p3g alarme (nunca age sozinho): depois de 150 leituras com alarmes ativos o diário não ganhou linha, nenhum ticket foi criado e a página continua onde estava (nunca abre o SOS, a C3 nem fala)', y['nada'] == [0, None, True], y['nada'])
+        ped('p3g alarme (a resposta dos alarmes): sem alarme pedido ativo é a de sempre, palavra por palavra (nos instantes sem alarme pedido ativo, ao menos 2); com ele (t=105) vem a de sempre mais o bloco «Há N alarme(s) pedido(s) por você ativo(s)»',
+            len(y['livres']) >= 2 and all(y['dep'][x] == y['baseline'][x] and 'pedidos por você' not in y['baseline'][x] + y['dep'][x] and 'Há 0 ' not in y['dep'][x] for x in y['livres']) and y['dep']['105'].startswith(y['baseline']['105'].split('\n')[0]) and 'alarmes pedidos por você ativos às 12:01:45' in y['dep']['105'] and '• Alarme pedido #1 — Arrefecimento do motor BE: ' in y['dep']['105'], (y['baseline']['105'][:200], y['dep']['105'][-400:]))
+        ped('p3g alarme (lista e ficha): «meus alarmes» marca o ATIVO desde HH:MM:SS; a ficha da IA tem o bloco «## Alarmes pedidos» só com alarme pedido (e nunca na ficha de uma emergência)',
+            '• #1 Arrefecimento do motor BE acima de 85,0 °C — ATIVO desde ' in y['lista105'] and '## Alarmes pedidos' in y['ficha105'] and '#1 Arrefecimento do motor BE acima de 85,0 °C — ATIVO desde ' in y['ficha105'] and '## Alarmes pedidos' in y['ficha60'] and '## Alarmes pedidos' not in y['fichaSem'] and '## Alarmes pedidos' not in y['fichaEmerg'], (y['lista105'], '## Alarmes pedidos' in y['fichaSem'], '## Alarmes pedidos' in y['fichaEmerg']))
+    finally:
+        pg.ctx.close()
+    # —— o SOS e o modo real ——
+    pg = pagina(b, muta=muta, scripts=('capitao-dados.js', 'capitao-brain.js'), caminho='SOS-cerebro.html', fixo=None, extra=GETTERS_SOS)
+    try:
+        t = pg.evaluate("""() => { const B = window.CapitaoBrain; localStorage.clear(); const it = [{ m: window.CapitaoDados.alarmesPedidos.metricas[0], op: '<', limite: 2 }];
+          return [B.alarmesPedidos(), B.alarmesPedidosAtivos(), B.criaAlarmePedido(it), B.apagaAlarmePedido(1), localStorage.getItem('capitao.alarmes.v1'), B.answer('me avise se o vento passar de 25 nós', { platform: 'app' }).key, B.loadTarefas(), B.addTarefa({ n: 'x', vence: '2030-01-01' }), B.ticketDoRegistro({ t: 'agendar revisão do gerador para 15/11', iso: 'x' }), localStorage.getItem('capitao.tarefas.v1')]; }""")
+        ped('p3g alarme/agenda (SOS): no SOS nada existe — nenhum alarme pedido (lista, ativos, criar, apagar), nenhuma tarefa, nenhuma proposta, nenhuma chave gravada, e o pedido não vira proposta (a leitura da flag `simulacao` não acontece)', t[:5] == [[], [], {'criadas': [], 'erro': 'indisponivel'}, None, None] and t[5] != 'alarmePedido' and t[6] == [] and t[7] is None and t[8] is None and t[9] is None, t)
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO, fixo='105')
+    try:
+        t = pg.evaluate("""() => { const B = window.CapitaoBrain; localStorage.clear(); const op = { platform: 'app' };
+          B.answer('me avise se o vento passar de 6 nós', op); const c = B.answer('confirmar alarme', op); return [c.key, JSON.parse(localStorage.getItem('capitao.alarmes.v1')).map((x) => x.sim), B.alarmesPedidosAtivos(), B.answer('meus alarmes', op).text, B.ficha('app').indexOf('## Alarmes pedidos'), B.instante().fonte, B.instante().q.vento_verdadeiro_nos]; }""")
+        ped('p3g alarme (simulacao false): a regra grava SEM o carimbo sim, o replay inerte não dispara nada (nenhum ativo), a lista diz que não há leitura agora e a ficha traz a regra',
+            t[0] == 'alarmeConfirma' and t[1] == [None] and t[2] == [] and 'sem leitura agora' in t[3] and t[4] > 0 and t[5] == 'snapshot' and t[6] > 6, t)   # (o vento do snapshot passa de 6 nós: a regra só não dispara porque a leitura antiga não é leitura de agora)
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        t = pg.evaluate("""() => { const B = window.CapitaoBrain, op = { platform: 'app' }, K = 'capitao.alarmes.v1'; localStorage.clear();
+          const futura = { id: 'usr_9', campo: 'motor_bb_oleo_bar', op: '<', limite: 2, iso: '2026-01-01T00:00:00.000Z', who: 'x', extra: 'de uma versão futura' }, lixo = ['lixo', null, { sem: 'id' }, { id: 'usr_8', campo: 'campo_que_nao_existe', op: '<', limite: 1, iso: '2026-01-01T00:00:01.000Z' }];
+          localStorage.setItem(K, JSON.stringify([futura].concat(lixo)));
+          B.answer('me avise se o vento passar de 25 nós', op); B.answer('confirmar alarme', op); const a = JSON.parse(localStorage.getItem(K));
+          const r1 = [a.length, a[0].id, a[1] && a[1].extra, a.slice(2), B.alarmesPedidos().map((x) => x.id)];
+          localStorage.clear(); localStorage.setItem(K, '{"nao":"e lista"}'); B.answer('me avise se o vento passar de 25 nós', op); B.answer('confirmar alarme', op);
+          const r2 = [localStorage.getItem(K + '.antes'), JSON.parse(localStorage.getItem(K)).length];
+          localStorage.clear(); localStorage.setItem(K, 'isto nem é JSON'); B.answer('me avise se o vento passar de 25 nós', op); B.answer('confirmar alarme', op); const r3 = localStorage.getItem(K + '.antes');
+          return [r1, r2, r3]; }""")
+        ped('p3g alarme (guardado): a gravação parte do que está guardado — a linha de uma versão futura, o lixo e a regra de uma medida que não existe ficam; só a nossa entra (o id seguinte ao maior, usr_10) — e o valor que não é lista é copiado para `.antes`, nunca pisado',
+            t[0][0] == 6 and t[0][1] == 'usr_10' and t[0][2] == 'de uma versão futura' and t[0][3] == ['lixo', None, {'sem': 'id'}, {'id': 'usr_8', 'campo': 'campo_que_nao_existe', 'op': '<', 'limite': 1, 'iso': '2026-01-01T00:00:01.000Z'}] and t[0][4] == ['usr_9', 'usr_10']
+            and t[1] == ['{"nao":"e lista"}', 1] and t[2] == 'isto nem é JSON', t)
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_alarmes'] = grupo_p3g_alarmes
+
+
+# —— F15: diário → agenda. O agendamento e a tarefa feita são PROPOSTAS (tickets); nada vira dado sem o Confirmar; confirmar = a tarefa em capitao.tarefas.v1 ou o Executado + 1 linha; o prazo vem de CapitaoAgora ——
+JS_P3G_AGD = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, C = window.CapitaoAgora, R = window.CapitaoReplay, o = {}; localStorage.clear(); const op = { platform: 'app' };
+  const tar = () => JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]'), tk = () => B.loadTickets(), nd = () => B.loadDiario().length, ex = () => B.loadExec(), cont = () => C.contagens();
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), ia: B.pedeIA(a, q), acoes: (a.actions || []).map((x) => x.l), href: (a.actions || []).map((x) => x.href) }; };
+  const dn = (iso) => Math.round((Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(+C.relogio.hojeIso.slice(0, 4), +C.relogio.hojeIso.slice(5, 7) - 1, +C.relogio.hojeIso.slice(8, 10))) / 86400000);
+  const balde = (n) => n < 0 ? 'atrasadas' : n <= 30 ? 'd30' : n <= 60 ? 'd60' : n <= 90 ? 'd90' : 'emDia';
+  o.hoje = C.relogio.hojeIso; o.c0 = cont();
+  // 1) «agendar … para 15/11» é a PROPOSTA: um ticket aberto (k tarefa), nenhuma tarefa, nenhuma linha
+  o.pede = r('agendar revisão do gerador para 15/11'); const t0 = tk()[0]; o.apos1 = [tar().length, nd(), tk().length, t0 && [t0.k, t0.estado, t0.origem, t0.prop, t0.texto]];
+  // 2) o «sim» LOGO depois confirma: a tarefa (vence AAAA-MM-DD), 1 linha, o prazo recalculado em CapitaoAgora.contagens(), e a manutenção a lista
+  o.sim = r('sim'); o.tarefa = tar(); o.linha = B.loadDiario()[0]; o.nd2 = nd(); o.c1 = cont(); o.balde = balde(dn('2026-11-15')); o.tk1 = tk()[0].estado; o.manut = r('próximas manutenções').text;
+  o.equipe = B.tarefasEquipe().map((t) => [t.id, t.n, t.vence, t.dn, t.st, t.rot, t.tom, t.aparelho, t.feita]);
+  // 3) o prazo recalculado: 20 dias depois a mesma tarefa está ATRASADA em todas as telas (contagens) — e sem ela (desfeita) a conta volta
+  const ms0 = C.relogio.ms; C.rebase(ms0 + 20 * 86400000, true); o.cDepois = cont(); const des = r('desfazer'); o.cDepoisSem = cont(); C.rebase(ms0, true);
+  o.des = des; o.c2 = cont(); o.tarefaApos = tar().length; o.vig = r('diário de bordo').text; o.cru = B.loadDiario().slice(0, 2).map((e) => [e.acao || null, e.alvo === B.loadDiario()[1].iso]); o.tk2 = tk()[0].estado;
+  // 4) recusar: 0 linhas, a proposta fica recusada; a recusada não ressuscita
+  localStorage.clear(); const n0 = nd(); r('agendar limpeza do casco para dia 20/12 com a marina'); const rc = r('recusar'); o.rec = [rc.key, tar().length, nd() - n0, tk()[0].estado, r('sim').key];
+  // 5) o pedido de link não propõe nem arma; o agendar sem data/passada/30-02 não propõe
+  localStorage.clear(); const lk = r('agendar revisão do gerador para 15/11', { platform: 'app', commit: false }); o.link = [lk.key, lk.text, tk().length, r('confirmar').text];
+  localStorage.clear(); r('agendar vistoria para 20/12'); const lc = r('confirmar', { platform: 'app', commit: false }); o.confLink = [lc.text.split('\\n')[0], tar().length, tk()[0].estado, r('confirmar').key, tar().length];   // (o link não confirma a proposta que espera; a digitada confirma)
+  localStorage.clear(); r('agendar vistoria para 20/12'); r('confirmar'); const idT = tar()[0].id; B.markExec(idT); o.feitaSai = [r('próximas manutenções').text.indexOf('Tarefas da equipe agendadas') === -1, B.tarefasEquipe().filter((t) => t.id === idT)[0].feita, C.contagens().tarefasEquipe];
+  localStorage.clear(); o.passada = [r('agendar revisão do gerador para 01/10/2025').text, tk().length]; o.trinta = [r('agendar revisão para 30/02').key, tk().length];
+  // 6) a mesma tarefa já agendada: «já está na agenda»; a proposta repetida ainda aberta não duplica
+  localStorage.clear(); r('agendar revisão do gerador para 15/11'); r('agendar revisão do gerador para 15/11'); o.dupProp = [tk().length, tk().map((t) => t.estado)]; r('confirmar'); const ja = r('agendar revisão do gerador para 15/11'); o.ja = [ja.text.split('\\n')[0], tar().length, tk().length];
+  // 7) a espera: com outra pergunta no meio o «sim» não confirma mas «confirmar» sim; passados 10 min, venceu; o NOVA e a emergência zeram
+  localStorage.clear(); const real = Date.now; r('agendar vistoria para 20/12'); r('qual a autonomia?'); o.simMeio = [r('sim').key, tar().length]; o.confMeio = [r('confirmar').key, tar().length];
+  localStorage.clear(); r('agendar vistoria para 20/12'); Date.now = () => real() + 11 * 60e3; o.venceu = [r('confirmar').text.split('\\n')[0], tar().length]; Date.now = real;
+  localStorage.clear(); r('agendar vistoria para 20/12'); r('socorro'); o.emerg = [r('confirmar').text.split('\\n')[0], tar().length]; localStorage.clear(); r('agendar vistoria para 20/12'); B.limpaConversa(); o.nova = [r('confirmar').text.split('\\n')[0], tar().length];
+  return o; }"""
+JS_P3G_DATAS = """(xs) => { const B = window.CapitaoBrain, C = window.CapitaoAgora; localStorage.clear(); return { hoje: C.relogio.hojeIso, r: xs.map((q) => [q, B.achaAgendar(q)]) }; }"""
+DATAS_P3G = ['agendar revisão do gerador para 15/11', 'Agende a limpeza do casco para o dia 20/12 com a marina', 'agendar troca de anodos em 10/12/2026', 'agendar troca de anodos em 10/12/26', 'agendar teste das bombas de porão para amanhã',
+             'agendar inspeção do rotor para depois de amanhã com o técnico', 'agendar troca de óleo para daqui a 2 semanas', 'agendar lavagem do convés para 5 de dezembro', 'agendar vistoria para dia 28', 'agendar vistoria para o dia 1',
+             'agendar revisão do gerador para 15/11 com Rafael', 'a revisão do gerador está agendada para 20/11', 'agendar revisão para 30/02', 'agendar revisão do gerador para 01/10', 'agendar revisão do gerador para 01/10/2025',
+             'pode agendar a limpeza do casco para 12/12?', 'quando agendar a limpeza do casco para 12/12?', 'marca aí que troquei o filtro em 12/10', 'a agenda de 15/11', 'agenda de manutenção para 15/11', 'cancelar a revisão marcada para 15/11', 'não agendar a revisão para 15/11',
+             'agendar revisão do gerador', 'agendar para 15/11', 'agendar a revisão do gerador, para 15/11, com a oficina de motores', 'programar a limpeza do filtro para 3 de janeiro de 2027']
+JS_P3G_REGISTRO = """([notas]) => { const B = window.CapitaoBrain, C = window.CapitaoAgora, o = {}; const op = { platform: 'app' };
+  const tar = () => JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]'), tk = () => B.loadTickets(), nd = () => B.loadDiario().length, ex = () => B.loadExec(), cont = () => C.contagens();
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), acoes: (a.actions || []).map((x) => x.l) }; };
+  // 1) «limpei o filtro de água salgada da climatização» no diário: fecha a pendência d05, propõe o Executado (aberto, com o registro de origem); nada é marcado até o Confirmar
+  localStorage.clear(); o.c0 = cont(); o.reg = r('registre no diário que limpei o filtro de água salgada da climatização'); const t = tk(); o.tk = t.map((x) => [x.k, x.estado, x.origem, x.prop, x.alvo && x.alvo.tipo, x.alvo && x.alvo.id === B.loadDiario().filter((e) => !e.acao)[0].iso]); o.exec0 = ex(); o.c1 = cont();
+  o.acoes = o.reg.acoes;
+  // 2) confirmar: markExec + 1 linha «Executado: …» com a ref; a tarefa sai das atrasadas; a manutenção não a lista
+  const nd0 = nd(); o.conf = r('confirmar'); o.exec1 = ex(); o.linha = B.loadDiario()[0]; o.nd = nd() - nd0; o.c2 = cont(); o.manut = r('próximas manutenções').text; o.tk1 = tk()[0].estado; o.res = tk()[0].res;
+  // 3) desfazer: o Executado sai (só o que ESTA confirmação marcou), a linha é anulada, a tarefa volta às atrasadas
+  o.des = r('desfazer'); o.exec2 = ex(); o.c3 = cont(); const anul = new Set(B.loadDiario().filter((e) => e.acao === 'anula').map((e) => e.alvo)); o.vig = B.loadDiario().filter((e) => !e.acao && !anul.has(e.iso) && /Executado: Limpeza do filtro/.test(e.t)).length; o.cru3 = B.loadDiario().filter((e) => e.acao === 'anula').length; o.tk2 = tk()[0].estado;
+  // 4) uma execução NOVA feita noutro canto depois da confirmação não é pisada pelo desfazer
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); r('confirmar'); const x1 = ex()['clima-filtro'], m = ex(); m['clima-filtro'] = Object.assign({}, x1, { iso: '2030-01-01T00:00:00.000Z' }); localStorage.setItem('capitao.executado.v1', JSON.stringify(m)); r('desfazer'); o.naoPisa = [x1.iso !== '2030-01-01T00:00:00.000Z', !!ex()['clima-filtro']];
+  // 5) o texto que NÃO propõe: plano, dúvida, pergunta, negação, defeito que continua, outro dia, duas tarefas, a tarefa que já foi executada
+  o.nada = notas.map((n) => { localStorage.clear(); r('registre no diário que ' + n); return [n, tk().length, Object.keys(ex()).length]; });
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); r('confirmar'); r('registre no diário que limpei de novo o filtro de água salgada da climatização'); o.jaFeita = [tk().filter((x) => x.estado === 'aberto').length, tk().length];
+  // 5b) o mesmo registro duas vezes não duplica a proposta aberta; a tarefa executada noutro canto antes do Confirmar: o Confirmar não grava nada
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); r('registre no diário que limpei o filtro de água salgada da climatização'); o.dupReg = [tk().filter((x) => x.estado === 'aberto').length, tk().length];
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); B.markExec('clima-filtro'); const nj = nd(), cj = r('confirmar'); o.jaExec = [cj.text.split('\\n')[0], nd() - nj, tk()[0].estado];
+  // 6) recusar: 0 linhas e a tarefa segue atrasada
+  localStorage.clear(); r('registre no diário que fizemos o teste das bombas de porão'); const n1 = nd(); const rc = r('recusar'); o.recusa = [rc.key, nd() - n1, tk()[0].estado, Object.keys(ex()).length];
+  // 7) o texto de emergência ou de pressão de óleo no registro não mexe na agenda nem nas pendências; o registro com cabeça de segurança (EPIRB) não propõe pelo chat
+  localStorage.clear(); r('registre no diário que tem fogo na praça de máquinas e limpei o filtro de água salgada da climatização'); o.fogo = [tk().length, B.pendenciasLista().filter((p) => p.aberta).length];
+  localStorage.clear(); r('registre no diário que fiz o autoteste do EPIRB'); o.epirbChat = [tk().length];
+  return o; }"""
+NOTAS_NAO_PROPOE = ['vou limpar o filtro de água salgada da climatização', 'precisamos limpar o filtro de água salgada da climatização', 'será que limpei o filtro de água salgada da climatização?', 'não limpei o filtro de água salgada da climatização',
+                    'limpei o filtro de água salgada da climatização mas o fluxo continua fraco', 'o filtro de água salgada da climatização continua sujo', 'limpei o filtro de água salgada da climatização ontem', 'limpei o filtro de água salgada da climatização dia 10/10',
+                    'limpamos o filtro de água salgada da climatização e fizemos o teste das bombas de porão', 'comprei um filtro novo',
+                    'vou limpar o filtro de água salgada da climatização, o último que limpei foi há dois meses', 'amanhã limpamos o filtro de água salgada da climatização', 'precisamos limpar o filtro de água salgada da climatização, o do gerador limpei ontem', 'acho que limpei o filtro de água salgada da climatização', 'tentei limpar o filtro de água salgada da climatização sem sucesso']
+
+
+def grupo_p3g_agenda(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        o = pg.evaluate(JS_P3G_AGD)
+        hoje = o['hoje']
+        d15 = (datetime.date(2026, 11, 15) - datetime.date.fromisoformat(hoje)).days
+        p = o['pede']
+        ped('p3g agendar: «agendar revisão do gerador para 15/11» é a PROPOSTA — local (sem IA), diz a tarefa, a data completa e «em N dias» (contados de hoje), traz Confirmar e Recusar, e não grava (nenhuma tarefa, nenhuma linha); o ticket fica aberto (k tarefa, origem regra, o equipamento citado)',
+            p['key'] == 'agendar' and p['ia'] is False and p['text'].startswith('Posso agendar na equipe: Revisão do gerador — vence 15/11/2026 (em %d dias).' % d15) and p['acoes'][:2] == ['Confirmar', 'Recusar'] and p['fala'] == 'Posso agendar Revisão do gerador para 15/11/2026, em %d dias. Confirma?' % d15
+            and o['apos1'][0] == 0 and o['apos1'][1] == 0 and o['apos1'][2] == 1 and o['apos1'][3][:3] == ['tarefa', 'aberto', 'regra'] and o['apos1'][3][3] == {'n': 'Revisão do gerador', 'vence': '2026-11-15', 'quem': '', 'sistema': 'gerador'}, (p, o['apos1']))
+        t = o['tarefa']
+        ped('p3g agendar: o «sim» LOGO depois confirma — a tarefa entra em capitao.tarefas.v1 {id g…, n, vence AAAA-MM-DD, quem, sistema, origem diario, iso, who, sim}, entra 1 linha no diário («Tarefa da equipe: …» com a ref da tarefa), o ticket fica aceito e a resposta traz o Desfazer',
+            o['sim']['key'] == 'ticketConfirma' and len(t) == 1 and re.match(r'^g[a-z0-9]{6,}$', t[0]['id']) and t[0]['n'] == 'Revisão do gerador' and t[0]['vence'] == '2026-11-15' and t[0]['origem'] == 'diario' and t[0]['sistema'] == 'gerador' and t[0]['sim'] is True and t[0]['who']
+            and o['sim']['text'].startswith('Tarefa agendada: Revisão do gerador — vence 15/11/2026 (em %d dias).' % d15) and o['sim']['acoes'][0] == 'Desfazer' and o['nd2'] == 1 and o['linha']['t'].startswith('Tarefa da equipe: Revisão do gerador — vence 15/11/2026')
+            and o['linha']['ref'] == t[0]['id'] and o['linha']['src'] == 'app · proposta confirmada (regra)' and o['tk1'] == 'aceito', (o['sim'], t, o['linha']))
+        bal = o['balde']
+        quer = dict(o['c0']); quer[bal] += 1; quer['tarefasEquipe'] += 1
+        ped('p3g agendar: o prazo é recalculado em todas as telas — CapitaoAgora.contagens() soma a tarefa (tarefasEquipe +1 e a faixa do prazo +1: %s); a manutenção lista as «Tarefas da equipe agendadas» e tarefasEquipe() dá o prazo pelo prazoDe' % bal,
+            o['c1'] == quer and 'Tarefas da equipe agendadas (1): Revisão do gerador — 15/11/2026 (em %d dias).' % d15 in o['manut'] and [e for e in o['equipe'] if e[7]] == [[t[0]['id'], 'Revisão do gerador', '2026-11-15', d15, 'D-30' if d15 <= 30 else 'D-60', 'D-%d' % d15, 'warn' if d15 <= 30 else 'accent', True, False]] and [e[0] for e in o['equipe']][:2] in (['g02', 'g01'], ['g02', t[0]['id']], [t[0]['id'], 'g01'], ['g02', 'g01']) , (o['c0'], o['c1'], o['manut'][-160:], o['equipe']))
+        ped('p3g agendar: 20 dias depois a tarefa está ATRASADA na contagem (e sem ela a conta volta); «desfazer» tira a tarefa, anula a linha (linha nova; a confirmada fica guardada) e a proposta volta a aberta; a contagem volta à de antes',
+            o['cDepois']['atrasadas'] == o['cDepoisSem']['atrasadas'] + 1 and o['cDepois']['tarefasEquipe'] == o['cDepoisSem']['tarefasEquipe'] + 1 and o['des']['key'] == 'ticketDesfaz' and o['des']['text'].startswith('Desfeito: a tarefa saiu da agenda da equipe') and o['tarefaApos'] == 0
+            and o['c2'] == o['c0'] and 'Tarefa da equipe' not in o['vig'] and o['cru'][0][0] == 'anula' and o['cru'][0][1] is True and o['cru'][1][0] is None and o['tk2'] == 'aberto', (o['cDepois'], o['cDepoisSem'], o['des']['text'], o['cru']))
+        ped('p3g agendar: RECUSAR grava 0 linhas e a tarefa não entra; a recusada não ressuscita («sim» depois não confirma)', o['rec'][0] == 'ticketRecusa' and o['rec'][1] == 0 and o['rec'][2] == 0 and o['rec'][3] == 'recusado' and o['rec'][4] != 'ticketConfirma', o['rec'])
+        ped('p3g agendar (link, data, duplicado): o pedido de link não propõe nem arma («não agendado»); a data que já passou («01/10/2025») e a que não existe («30/02») não viram proposta; a proposta repetida ainda aberta não duplica e a tarefa já agendada diz «já está na agenda»',
+            o['link'][0] == 'agendar' and 'pedido vindo de link não grava na agenda' in o['link'][1] and o['link'][2] == 0 and o['link'][3].startswith('Não há proposta') and o['passada'][0].startswith('A data 01/10/2025 já passou') and o['passada'][1] == 0 and o['trinta'][0] != 'agendar' and o['trinta'][1] == 0
+            and o['dupProp'] == [1, ['aberto']] and o['ja'][0].startswith('Já está na agenda da equipe: Revisão do gerador — vence 15/11/2026') and o['ja'][1] == 1, (o['link'], o['passada'], o['trinta'], o['dupProp'], o['ja']))
+        ped('p3g agendar (espera): o «sim» só vale LOGO depois (com outra pergunta no meio não grava), «confirmar» vale dentro dos 10 min, passados 10 min venceu, e a emergência e o NOVA zeram',
+            o['simMeio'][1] == 0 and o['simMeio'][0] != 'ticketConfirma' and o['confMeio'] == ['ticketConfirma', 1] and o['venceu'] == ['Não há proposta da agenda esperando confirmação. Para agendar, diga “agendar <tarefa> para dd/mm”.', 0] and o['emerg'][1] == 0 and o['nova'][1] == 0
+            and o['emerg'][0].startswith('Não há proposta') and o['nova'][0].startswith('Não há proposta'), (o['simMeio'], o['confMeio'], o['venceu'], o['emerg'], o['nova']))
+        ped('p3g agendar (link, execução): «confirmar» vindo de link não confirma a proposta (não grava a tarefa) e a digitada confirma; a tarefa do aparelho executada (markExec) sai das «Tarefas da equipe agendadas» e das contagens, e tarefasEquipe() a marca como feita',
+            o['confLink'][0] == 'Não gravado — pedido vindo de link não confirma proposta.' and o['confLink'][1] == 0 and o['confLink'][2] == 'aberto' and o['confLink'][3] == 'ticketConfirma' and o['confLink'][4] == 1 and o['feitaSai'][0] is True and o['feitaSai'][1] is True and o['feitaSai'][2] == 2, (o['confLink'], o['feitaSai']))
+        x = pg.evaluate(JS_P3G_DATAS, DATAS_P3G)
+        hj = datetime.date.fromisoformat(x['hoje'])
+        add = lambda n: (hj + datetime.timedelta(days=n)).isoformat()
+        e = {q: v for q, v in x['r']}
+        proximo = lambda m, d: datetime.date(hj.year if datetime.date(hj.year, m, d) >= hj else hj.year + 1, m, d).isoformat()
+        quer_datas = {
+            'agendar revisão do gerador para 15/11': ('Revisão do gerador', proximo(11, 15), ''), 'Agende a limpeza do casco para o dia 20/12 com a marina': ('Limpeza do casco', proximo(12, 20), 'marina'),
+            'agendar troca de anodos em 10/12/2026': ('Troca de anodos', '2026-12-10', ''), 'agendar troca de anodos em 10/12/26': ('Troca de anodos', '2026-12-10', ''), 'agendar teste das bombas de porão para amanhã': ('Teste das bombas de porão', add(1), ''),
+            'agendar inspeção do rotor para depois de amanhã com o técnico': ('Inspeção do rotor', add(2), 'técnico'), 'agendar troca de óleo para daqui a 2 semanas': ('Troca de óleo', add(14), ''), 'agendar lavagem do convés para 5 de dezembro': ('Lavagem do convés', proximo(12, 5), ''),
+            'agendar revisão do gerador para 15/11 com Rafael': ('Revisão do gerador', proximo(11, 15), 'Rafael'), 'a revisão do gerador está agendada para 20/11': ('Revisão do gerador', proximo(11, 20), ''),
+            'agendar revisão do gerador para 01/10': ('Revisão do gerador', proximo(10, 1), ''), 'pode agendar a limpeza do casco para 12/12?': ('Limpeza do casco', proximo(12, 12), ''),
+            'agendar a revisão do gerador, para 15/11, com a oficina de motores': ('Revisão do gerador', proximo(11, 15), 'oficina'), 'programar a limpeza do filtro para 3 de janeiro de 2027': ('Limpeza do filtro', '2027-01-03', ''),
+        }
+        ruins = [(q, e[q], v) for q, v in quer_datas.items() if not e[q] or (e[q].get('n'), e[q].get('vence'), e[q].get('quem')) != v]
+        ped('p3g agendar (datas): dd/mm (sem ano: este ano, ou o próximo se já passou), dd/mm/aa e dd/mm/aaaa, «5 de dezembro», «amanhã», «depois de amanhã», «daqui a 2 semanas», o responsável («com a marina», «com o técnico», «com Rafael», «com a oficina de motores») e o fato («está agendada para 20/11»): o nome da tarefa, o dia e o responsável', not ruins, ruins[:4])
+        d28 = e['agendar vistoria para dia 28']; d1 = e['agendar vistoria para o dia 1']
+        d28q = datetime.date(hj.year + (1 if hj.month == 12 and hj.day > 28 else 0), hj.month if hj.day <= 28 else (hj.month % 12) + 1, 28)
+        ped('p3g agendar (datas): «dia 28» é o dia 28 deste mês, ou do próximo se já passou; a data que já passou com ano («01/10/2025») vira «passada» e a que não existe («30/02») não é pedido',
+            d28 and d28['vence'] == d28q.isoformat() and d1 and d1['vence'] > x['hoje'] and e['agendar revisão do gerador para 01/10/2025'] == {'passada': True, 'vence': '2025-10-01'} and e['agendar revisão para 30/02'] is None, (d28, d1, e['agendar revisão do gerador para 01/10/2025'], e['agendar revisão para 30/02']))
+        ped('p3g agendar (o que NÃO é pedido): a pergunta («quando agendar…?»), o «marca aí que troquei…», a agenda como substantivo, o cancelamento, a negação e a frase sem data não propõem nada',
+            all(e[q] is None for q in ('quando agendar a limpeza do casco para 12/12?', 'marca aí que troquei o filtro em 12/10', 'a agenda de 15/11', 'agenda de manutenção para 15/11', 'cancelar a revisão marcada para 15/11', 'não agendar a revisão para 15/11', 'agendar revisão do gerador', 'agendar para 15/11')), {q: e[q] for q in e if e[q] is not None and q in ('quando agendar a limpeza do casco para 12/12?', 'marca aí que troquei o filtro em 12/10', 'a agenda de 15/11', 'agenda de manutenção para 15/11', 'cancelar a revisão marcada para 15/11', 'não agendar a revisão para 15/11', 'agendar revisão do gerador', 'agendar para 15/11')})
+        y = pg.evaluate(JS_P3G_REGISTRO, [NOTAS_NAO_PROPOE])
+        ped('p3g exec: o registro que CONCLUI um serviço da agenda («limpei o filtro de água salgada da climatização») propõe o Executado — um ticket aberto (k exec, origem regra, a tarefa clima-filtro, o registro de origem), sem marcar nada até o Confirmar',
+            y['reg']['key'] == 'diario' and 'Proposta: marcar “Limpeza do filtro de água salgada da climatização” como executada na agenda.' in y['reg']['text'] and y['reg']['acoes'][:3] == ['Desfazer', 'Confirmar', 'Recusar']
+            and y['tk'] == [['exec', 'aberto', 'regra', {'tarefa': 'clima-filtro'}, 'diario', True]] and y['exec0'] == {} and y['c1']['atrasadas'] == y['c0']['atrasadas'], (y['reg']['text'], y['tk'], y['exec0'], y['c0'], y['c1']))
+        ped('p3g exec: confirmar marca o Executado (sim), grava 1 linha «Executado: … (equipamento)» com a ref da tarefa, a tarefa sai das atrasadas (a contagem cai 1) e da manutenção; o ticket guarda o que criou',
+            y['conf']['key'] == 'ticketConfirma' and 'clima-filtro' in y['exec1'] and y['exec1']['clima-filtro'].get('sim') is True and y['nd'] == 1 and y['linha']['t'].startswith('Executado: Limpeza do filtro de água salgada da climatização (Climatização ') and y['linha']['ref'] == 'clima-filtro'
+            and y['c2']['atrasadas'] == y['c0']['atrasadas'] - 1 and 'Limpeza do filtro de água salgada da climatização' not in y['manut'] and y['tk1'] == 'aceito' and y['res']['exec']['id'] == 'clima-filtro' and y['res']['tipo'] == 'diario', (y['conf']['text'], y['exec1'], y['linha'], y['c0'], y['c2'], y['res']))
+        ped('p3g exec: «desfazer» tira o Executado, anula a linha (linha nova), a tarefa volta às atrasadas e a proposta volta a aberta; uma execução NOVA feita noutro canto depois da confirmação não é pisada pelo desfazer',
+            y['des']['key'] == 'ticketDesfaz' and y['exec2'] == {} and y['c3']['atrasadas'] == y['c0']['atrasadas'] and y['vig'] == 0 and y['cru3'] == 1 and y['tk2'] == 'aberto' and y['naoPisa'] == [True, True], (y['des']['text'], y['exec2'], y['c3'], y['vig'], y['cru3'], y['naoPisa']))
+        ped('p3g exec: o plano, a obrigação, a dúvida, a negação, o defeito que continua, o outro dia («ontem», dd/mm), duas tarefas no mesmo registro e a compra NÃO propõem o Executado (0 tickets, nada marcado); a tarefa já executada não é proposta de novo',
+            all(x[1] == 0 and x[2] == 0 for x in y['nada']) and y['jaFeita'][0] == 0, ([x for x in y['nada'] if x[1] != 0 or x[2] != 0], y['jaFeita']))
+        ped('p3g exec: o mesmo registro duas vezes não duplica a proposta aberta (1 ticket aberto); a tarefa executada noutro canto antes do Confirmar: o Confirmar diz que não deu e não grava nada (a proposta fica aberta)', y['dupReg'] == [1, 1] and y['jaExec'] == ['Não consegui gravar essa proposta (a tarefa já foi executada ou saiu da agenda); nada foi gravado.', 0, 'aberto'], (y['dupReg'], y['jaExec']))
+        ped('p3g exec: recusar grava 0 linhas e a tarefa segue atrasada; o texto com perigo (fogo, pressão de óleo) não mexe na agenda nem nas pendências; a nota com cabeça de segurança (EPIRB) não propõe pelo chat',
+            y['recusa'][0] == 'ticketRecusa' and y['recusa'][1] == 0 and y['recusa'][2] == 'recusado' and y['recusa'][3] == 0 and y['fogo'] == [0, 3] and y['epirbChat'] == [0], (y['recusa'], y['fogo'], y['epirbChat']))
+    finally:
+        pg.ctx.close()
+    # —— a API do registro (as telas da Fase 4 chamam addDiario com as opções): devolve o efeito, a linha guardada não o leva; sem as opções nada muda; o SOS nunca ——
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        z = pg.evaluate("""() => { const B = window.CapitaoBrain, C = window.CapitaoAgora; localStorage.clear(); const nd = () => B.loadDiario().length, o = {};
+          const sem = B.addDiario({ t: 'Limpei o filtro de água salgada da climatização' }); o.sem = [Object.keys(sem).sort().join(','), B.loadTickets().length, B.pendenciasLista().filter((p) => p.aberta).length];
+          localStorage.clear(); const com = B.addDiario({ t: 'Limpei o filtro de água salgada da climatização' }, { pendencia: true, agenda: true });
+          o.com = [Object.keys(com).filter((k) => /pendencia|ticket|ambigua/.test(k)).sort(), com.pendencia && [com.pendencia.alvo, com.pendencia.id, com.pendencia.linha.acao, com.pendencia.desfazAte - Date.now()], com.ticket && [com.ticket.k, com.ticket.estado], B.loadDiario().filter((e) => /pendencia|ticket/.test(Object.keys(e).join(','))).length, nd()];
+          localStorage.clear(); const so = B.addDiario({ t: 'Limpei o filtro de água salgada da climatização', src: 'web · SOS · MAYDAY' }, { pendencia: true, agenda: true }); o.sos = [Object.keys(so).filter((k) => /pendencia|ticket|ambigua/.test(k)), B.loadTickets().length, nd()];
+          localStorage.clear(); const base = B.addDiario({ t: 'uma linha qualquer' }); const ac = B.addDiario({ t: 'Limpei o filtro de água salgada da climatização', acao: 'anula', alvo: base.iso }, { pendencia: true, agenda: true }); o.acao = [Object.keys(ac).filter((k) => /pendencia|ticket|ambigua/.test(k)), B.loadTickets().length, B.pendenciasLista().filter((p) => p.aberta).length];
+          localStorage.clear(); const em = B.addDiario({ t: 'tem fogo, limpei o filtro de água salgada da climatização' }, { pendencia: true, agenda: true }); o.emerg = [Object.keys(em).filter((k) => /pendencia|ticket/.test(k)), B.pendenciasLista().filter((p) => p.aberta).length];
+          localStorage.clear(); const ep = B.addDiario({ t: 'Fiz o autoteste do EPIRB' }, { agenda: true }); o.epirb = [ep.ticket && [ep.ticket.k, ep.ticket.prop.tarefa]];
+          // a tarefa da equipe (API): valida nome e data, não duplica, o id não colide com g01/g02, o prazo vem do prazoDe
+          localStorage.clear(); const t1 = B.addTarefa({ n: '  Lavar   o convés ', vence: '2026-11-20', quem: 'marina', origem: 'tela' }), t2 = B.addTarefa({ n: 'Lavar o convés', vence: '2026-11-20' });
+          o.tarefa = [t1 && [t1.n, t1.vence, t1.quem, t1.origem, t1.sim, /^g[a-z0-9]+$/.test(t1.id), t1.id !== 'g01' && t1.id !== 'g02'], t2 && t2.id === t1.id, JSON.parse(localStorage.getItem('capitao.tarefas.v1')).length];
+          o.invalidas = [B.addTarefa(null), B.addTarefa({ n: '', vence: '2026-11-20' }), B.addTarefa({ n: 'x', vence: '2026-02-30' }), B.addTarefa({ n: 'x', vence: '20/11/2026' }), B.addTarefa({ n: 'x' }), B.addTarefa({ n: 'x', vence: '2026-11-20', origem: 'constructor' }).origem];
+          o.eq = B.tarefasEquipe().map((t) => [t.id, t.aparelho, t.feita, t.st === C.prazoDe(t.dn).st]); B.markExec(t1.id); o.eq2 = B.tarefasEquipe().filter((t) => t.id === t1.id).map((t) => t.feita);
+          o.cont = C.contagens().tarefasEquipe;
+          // storage: valor que não é lista fica em .antes; a linha de outra forma fica
+          localStorage.clear(); localStorage.setItem('capitao.tarefas.v1', '{"x":1}'); B.addTarefa({ n: 'Outra', vence: '2026-11-20' }); o.antes = [localStorage.getItem('capitao.tarefas.v1.antes'), JSON.parse(localStorage.getItem('capitao.tarefas.v1')).length];
+          localStorage.clear(); localStorage.setItem('capitao.tarefas.v1', JSON.stringify([{ id: 'gfut', n: 'Futura', vence: '2026-12-01', extra: 1 }, 'lixo', { id: 'gsem', n: 'Sem data' }])); B.addTarefa({ n: 'Outra', vence: '2026-11-20' }); o.guardado = [JSON.parse(localStorage.getItem('capitao.tarefas.v1')).length, B.loadTarefas().map((t) => t.id).length];
+          return o; }""")
+        ped('p3g agenda (API): addDiario(linha) sem opções não faz nada; com { pendencia, agenda } devolve a CÓPIA com .pendencia (alvo, linha resolve, janela de 10 s) e .ticket — e a linha guardada não os leva; a linha do SOS, a linha de ação e o texto de emergência nunca; o EPIRB propõe na API (a tela), não no chat',
+            z['sem'] == ['d,iso,src,sys,t,tone,who', 0, 3] if False else (z['sem'][1:] == [0, 3] and 'pendencia' not in z['sem'][0] and 'ticket' not in z['sem'][0]) and z['com'][0] == ['pendencia', 'ticket'] and z['com'][1][:3] == ['d05', 'd05', 'resolve'] and 9000 <= z['com'][1][3] <= 10000 and z['com'][2] == ['exec', 'aberto'] and z['com'][3] == 0 and z['com'][4] == 2
+            and z['sos'] == [[], 0, 1] and z['acao'] == [[], 0, 3] and z['emerg'] == [[], 3] and z['epirb'] == [['exec', 'epirb-teste']], z)
+        ped('p3g agenda (tarefa da equipe): addTarefa valida (nome vazio, 30/02, forma errada, null: null), não duplica (nome e dia iguais devolvem a mesma), o id é g… e nunca g01/g02, a origem que é chave do protótipo cai em «tela», tarefasEquipe() traz as 2 geradas e a do aparelho com o prazo do prazoDe, a executada (markExec) sai das contagens',
+            z['tarefa'][0] == ['Lavar o convés', '2026-11-20', 'marina', 'tela', True, True, True] and z['tarefa'][1] is True and z['tarefa'][2] == 1 and z['invalidas'][:5] == [None] * 5 and z['invalidas'][5] == 'tela'
+            and [e[:2] for e in z['eq']].count(['g01', False]) == 1 and [e[:2] for e in z['eq']].count(['g02', False]) == 1 and sum(1 for e in z['eq'] if e[1]) == 2 and all(e[3] for e in z['eq']) and z['eq2'] == [True], (z['tarefa'], z['invalidas'], z['eq'], z['eq2']))
+        ped('p3g agenda (guardado): o valor que não é lista é copiado para capitao.tarefas.v1.antes (nada se perde) e a linha de outra forma (versão futura, lixo, sem data) fica guardada — só a que o app entende conta', z['antes'] == ['{"x":1}', 1] and z['guardado'][0] == 4 and z['guardado'][1] == 2, (z['antes'], z['guardado']))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_agenda'] = grupo_p3g_agenda
+
+
+# —— F20: pendências. O estado vem das linhas de ação (resolve/reabre + alvo): resolver, reabrir e desfazer são linhas NOVAS; o registro que cita a pendência e CONCLUI o serviço a fecha (com Desfazer) ——
+JS_P3G_PEND = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, C = window.CapitaoAgora, o = {}; localStorage.clear(); const op = { platform: 'app' };
+  const nd = () => B.loadDiario().length, ab = () => B.pendenciasLista().filter((p) => p.aberta).map((p) => p.alvo), cont = () => C.contagens().pendencias;
+  const r = (q) => { const a = B.answer(q, op); return { key: a.key, text: a.text, fala: B.falaCurta(a), acoes: (a.actions || []).map((x) => x.l) }; };
+  o.lista0 = B.pendenciasLista().map((p) => [p.alvo, p.origem, p.aberta, p.sys, p.ref, p.palavras.length > 0, p.id, p.acao]); o.c0 = cont(); o.anom0 = r('pendências abertas').text; o.dl0 = r('diário de bordo').text.split('\\n')[0];
+  const n0 = nd(); const rs = B.resolvePendencia('d05'); o.rs = rs && [rs.alvo, rs.id, rs.linha.acao, rs.linha.alvo, rs.linha.sys, rs.linha.ref, rs.linha.sim, rs.desfazAte - Date.now() > 9000, rs.linha.src, rs.linha.t]; o.nd1 = nd() - n0; o.ab1 = ab(); o.c1 = cont();
+  o.anom = r('pendências abertas').text; o.dl = r('diário de bordo').text.split('\\n')[0]; o.ficha = B.ficha('app').split('## Pendências')[1].split('\\n\\n')[0];
+  o.rs2 = B.resolvePendencia('d05'); o.ruim = [B.resolvePendencia('d99'), B.resolvePendencia(null), B.resolvePendencia('d04'), B.resolvePendencia('constructor'), B.resolvePendencia(5), B.reabrePendencia('d03'), B.reabrePendencia('d99'), B.desfazPendencia(null), B.desfazPendencia('d05'), B.desfazPendencia({ alvo: 'd05' })]; o.nd2 = nd() - n0;
+  const rb = B.reabrePendencia('d05'); o.rb = rb && [rb.alvo, rb.linha.acao, rb.linha.alvo]; o.ab2 = ab(); o.c2 = cont(); o.nd3 = nd() - n0;
+  // o diário só cresce (nada se apaga); a leitura não mostra as linhas de ação como registros
+  o.cru = B.loadDiario().filter((e) => e.acao).map((e) => [e.acao, e.alvo]); o.vig = r('diário de bordo').text.match(/^Diário de bordo: (\\d+) registros/)[1]; o.rawN = nd();
+  // desfazer o fechamento: a janela (o objeto que o resolve devolveu), a ação mais nova no meio, o fechamento só uma vez
+  localStorage.clear(); const a1 = B.resolvePendencia('d03'); o.des1 = [!!B.desfazPendencia(a1), ab().indexOf('d03') !== -1, B.desfazPendencia(a1), B.loadDiario()[0].acao, B.loadDiario()[0].alvo];
+  const a2 = B.resolvePendencia('d03'); B.reabrePendencia('d03'); B.resolvePendencia('d03'); o.des2 = [B.desfazPendencia(a2), ab().indexOf('d03') === -1];
+  const a3 = B.resolvePendencia('d07'); a3.desfazAte = Date.now() - 1; const n3 = nd(); o.des3 = [B.desfazPendencia(a3), nd() - n3, ab().indexOf('d07') === -1];
+  // a linha do aparelho com pend: entra na lista pelo iso, conta em contagens, fecha pelas palavras dela; sem palavras só o Resolver (a API) fecha; a anulada sai
+  localStorage.clear(); const dev = B.addDiario({ t: 'Anomalia: vazamento na bomba de água doce da cabine de popa', pend: true, palavras: ['bomba de agua doce'], sys: 'Equipamentos' }), sg = B.addDiario({ t: 'Barulho estranho no guincho', pend: true });
+  o.dev = [B.pendenciasLista().filter((p) => p.origem === 'aparelho').map((p) => [p.alvo === dev.iso || p.alvo === sg.iso, p.aberta, p.palavras.length]), ab().length, cont(), r('pendências abertas').text.split('\\n').filter((l) => /\\(app\\)/.test(l)).length];
+  const fc = B.addDiario({ t: 'Trocamos a bomba de água doce' }, { pendencia: true }); o.devFecha = [fc.pendencia && fc.pendencia.alvo === dev.iso, ab().indexOf(dev.iso) === -1, ab().indexOf(sg.iso) !== -1, cont()];
+  const sf = B.addDiario({ t: 'Consertamos o guincho' }, { pendencia: true }); o.semPalavras = [sf.pendencia, ab().indexOf(sg.iso) !== -1, !!B.resolvePendencia(sg.iso), ab().indexOf(sg.iso) === -1];
+  B.addDiario({ acao: 'anula', alvo: dev.iso, t: 'anulada' }); o.anulada = B.pendenciasLista().filter((p) => p.alvo === dev.iso).length;
+  // a linha do SOS e a linha de ação nunca fecham nada; o texto de emergência também não
+  localStorage.clear(); const so = B.addDiario({ t: 'limpei o filtro de água salgada da climatização', src: 'app · SOS · MAYDAY' }, { pendencia: true }); o.sos = [so.pendencia, ab().length];
+  // com a simulação desligada a linha do aparelho gravada com sim:true sai da ficha (CLAUDE.md 14), mas a pendência segue na lista
+  localStorage.clear(); B.addDiario({ t: 'Vazamento na gaxeta do eixo de boreste', pend: true }); const antes = B.ficha('app').indexOf('Vazamento na gaxeta') !== -1; D.simulacao = false; const depois = B.ficha('app').indexOf('Vazamento na gaxeta') !== -1; o.semSim = [antes, depois, B.pendenciasLista().filter((p) => /gaxeta/.test(p.t)).length]; D.simulacao = true;
+  return o; }"""
+JS_P3G_PEND_FRASES = """([pos, neg, amb]) => { const B = window.CapitaoBrain, op = { platform: 'app' }; const ab = () => B.pendenciasLista().filter((p) => p.aberta).map((p) => p.alvo).sort().join(','), res = () => B.loadDiario().filter((e) => e.acao === 'resolve').map((e) => e.alvo);
+  const f = (t) => { localStorage.clear(); const a = B.answer('registre no diário que ' + t, op); return { ab: ab(), res: res(), text: a.text, acoes: (a.actions || []).map((x) => x.l), fala: B.falaCurta(a) }; };
+  return { pos: pos.map(([t, d]) => [t, d, f(t)]), neg: neg.map((t) => [t, f(t)]), amb: amb.map((t) => [t, f(t)]) }; }"""
+JS_P3G_PEND_CHAT = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, C = window.CapitaoAgora, o = {}; localStorage.clear(); const op = { platform: 'app' }, real = Date.now;
+  const nd = () => B.loadDiario().length, ab = () => B.pendenciasLista().filter((p) => p.aberta).map((p) => p.alvo).sort().join(','), cont = () => C.contagens().pendencias;
+  const r = (q, c) => { const a = B.answer(q, c || op); return { key: a.key, text: a.text, fala: B.falaCurta(a), acoes: (a.actions || []).map((x) => x.l), href: (a.actions || []).map((x) => x.href) }; };
+  // 1) o registro fecha a d05; o Desfazer (chat) reabre com uma linha NOVA
+  const reg = r('registre no diário que limpei o filtro de água salgada da climatização'); o.reg = [reg.text.indexOf('Pendência fechada: Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada) — o registro conclui o serviço') !== -1, reg.acoes[0], reg.fala.indexOf('Pendência fechada.') !== -1, ab(), cont()];
+  const lines = B.loadDiario().map((e) => [e.acao || null, e.alvo || null, !!e.de]); o.linhas = lines.slice(0, 2);
+  const d = r('desfazer'); o.desfaz = [d.key, d.text.startsWith('Desfeito: a pendência “Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada)” voltou a ficar aberta'), ab(), cont(), B.loadDiario().slice(0, 3).map((e) => e.acao || 'registro'), nd()];
+  o.depois = r('desfazer').text;
+  // 2) o botão antigo não age na ação nova; fora da janela (10 min) não desfaz
+  localStorage.clear(); const g1 = r('registre no diário que limpei o filtro de água salgada da climatização'), b1 = g1.href[0]; const g2 = r('registre no diário que fizemos o teste das bombas de porão'), b2 = g2.href[0];
+  const q1 = B.perguntaDoBotao(b1); o.antiga = [q1, r(q1).text, ab()]; const q2 = B.perguntaDoBotao(b2); o.nova = [q2, r(q2).key, ab()];
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); Date.now = () => real() + 11 * 60e3; o.venceu = [r('desfazer').text, ab()]; Date.now = real;
+  // 3) a emergência e o NOVA zeram o desfazer
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); r('mayday'); o.emerg = [r('desfazer').text.slice(0, 40), ab()];
+  localStorage.clear(); r('registre no diário que limpei o filtro de água salgada da climatização'); B.limpaConversa(); o.nova2 = [r('desfazer').text.slice(0, 40), ab()];
+  // 4) a citação de duas pendências: nenhuma fecha, a resposta pergunta qual
+  localStorage.clear(); const am = r('registre no diário que fizemos o teste das bombas de porão e limpamos o filtro de água salgada da climatização'); o.amb = [am.text.indexOf('O registro cita mais de uma pendência aberta') !== -1, ab(), am.acoes.slice(0, 1), am.fala];
+  // 5) o relato confirmado É um registro: fecha a pendência e propõe a agenda; desfazer o relato reabre a pendência e recusa a proposta
+  localStorage.clear(); const rel = r('Hoje limpamos o filtro de água salgada da climatização e o fluxo voltou ao normal'); const id = B.loadTickets()[0].id; const rr = r('registrar'); o.relato = [rel.text.indexOf('relato para o diário') !== -1, rr.key, rr.text.indexOf('Pendência fechada') !== -1, rr.text.indexOf('Proposta: marcar') !== -1, ab(), B.loadTickets().map((t) => t.k + ':' + t.estado)];
+  const ds = B.desfazTicket(id); o.relatoDes = [!!ds, ab(), B.loadTickets().map((t) => t.k + ':' + t.estado), B.loadDiario().filter((e) => e.acao === 'reabre').length];
+  // 6) a API aceita (tela): o relato aceito devolve a linha com .pendencia
+  localStorage.clear(); const t2 = B.addTicket({ k: 'diario', origem: 'relato', texto: 'Trocamos o rotor do gerador hoje de manhã' }), ac = B.aceitaTicket(t2.id); o.api = [ac.linha.pendencia && ac.linha.pendencia.alvo, ab(), ac.res.pend && ac.res.pend.alvo];
+  return o; }"""
+FRASES_FECHAM = [('limpei o filtro de água salgada da climatização', 'd05'), ('Limpamos os filtros de água salgada do ar condicionado hoje cedo', 'd05'), ('o filtro da climatização foi limpo', 'd05'), ('fizemos o teste das bombas de porão', 'd07'),
+                 ('a bomba de porão foi testada', 'd07'), ('trocamos o rotor do gerador', 'd03'), ('o impeller do gerador foi trocado', 'd03'), ('inspecionei o rotor impeller do gerador', 'd03'), ('feito o teste das bombas de porão', 'd07'),
+                 ('verifiquei o filtro de água salgada: ok', 'd05'), ('Limpei o filtro de água salgada que estava sujo', 'd05'),
+                 ('limpei o filtro de água salgada da climatização ontem', 'd05'), ('limpei o filtro de água salgada da climatização dia 10/10', 'd05')]
+FRASES_NAO_FECHAM = [x for x in NOTAS_NAO_PROPOE if not x.endswith('ontem') and 'dia 10/10' not in x] + ['compramos um rotor do gerador novo', 'o rotor do gerador está desgastado', 'rotor do gerador em falta no estoque', 'o teste das bombas de porão ficou para a semana que vem', 'precisa trocar o rotor do gerador',
+                                        'deve ter sujeira no filtro de água salgada', 'a limpeza do filtro de água salgada está atrasada', 'vamos fazer o teste das bombas de porão amanhã', 'agendar o teste das bombas de porão para 15/11',
+                                        'reparei que o filtro de água salgada está sujo', 'nunca fizemos o teste das bombas de porão', 'o rotor do gerador quebrou', 'falta limpar o filtro de água salgada da climatização']
+FRASES_AMBIGUAS = ['fizemos o teste das bombas de porão e limpamos o filtro de água salgada da climatização', 'trocamos o rotor do gerador e limpamos o filtro de água salgada']
+
+
+def grupo_p3g_pendencias(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        o = pg.evaluate(JS_P3G_PEND)
+        ped('p3g pendências: as 3 do arquivo (d03, d05, d07) estão abertas, com as palavras que ligam o registro a elas, a ref da tarefa e o sistema; contagens().pendencias, «pendências abertas» e o diário dizem 3',
+            sorted(o['lista0']) == sorted([['d03', 'gerada', True, 'Manutenção', 'gerador-rotor', True, 'd03', None], ['d05', 'gerada', True, 'Equipamentos', 'clima-filtro', True, 'd05', None], ['d07', 'gerada', True, 'Segurança', 'porao-teste', True, 'd07', None]]) and o['c0'] == 3
+            and o['anom0'].startswith('Pendências abertas (3):') and o['dl0'].endswith('e 3 pendências abertas.'), (o['lista0'], o['c0'], o['anom0'][:60], o['dl0']))
+        ped('p3g pendências: RESOLVER (a API da tela) escreve UMA linha nova {acao resolve, alvo d05, sys, ref, sim} com a janela de 10 s; a pendência sai das abertas, de contagens() (3 → 2), da resposta «pendências abertas (2)», da contagem do diário e da ficha; resolver de novo, o alvo que não existe, a que não é pendência e a chave do protótipo: null, nada escrito',
+            o['rs'] and o['rs'][:7] == ['d05', 'd05', 'resolve', 'd05', 'Equipamentos', 'clima-filtro', True] and o['rs'][7] is True and o['rs'][8] == 'app · pendência resolvida' and o['rs'][9].startswith('Pendência resolvida: Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada) — marcada como resolvida por')
+            and o['nd1'] == 1 and o['ab1'] == ['d03', 'd07'] and o['c1'] == 2 and o['anom'].startswith('Pendências abertas (2):') and 'fluxo fraco' not in o['anom'] and o['dl'].endswith('e 2 pendências abertas.') and 'fluxo fraco' not in o['ficha'] and o['rs2'] is None and all(x is None for x in o['ruim']) and o['nd2'] == 1, (o['rs'], o['ab1'], o['c1'], o['anom'][:80], o['dl'], o['ruim'], o['nd2']))
+        ped('p3g pendências: REABRIR é outra linha nova (acao reabre): a pendência volta às abertas (3) e à contagem; o diário só cresce (2 linhas de ação guardadas, nenhuma apagada) e a leitura não mostra as linhas de ação como registros',
+            o['rb'] == ['d05', 'reabre', 'd05'] and o['ab2'] == ['d03', 'd05', 'd07'] and o['c2'] == 3 and o['nd3'] == 2 and o['cru'] == [['reabre', 'd05'], ['resolve', 'd05']] and int(o['vig']) == 9 and o['rawN'] == 2, (o['rb'], o['ab2'], o['c2'], o['cru'], o['vig'], o['rawN']))
+        ped('p3g pendências: DESFAZER o fechamento (API) escreve a linha reabre dentro da janela, uma vez só; com uma ação MAIS NOVA no meio (reabriu e resolveu de novo) ou fora da janela não faz nada',
+            o['des1'] == [True, True, None, 'reabre', 'd03'] and o['des2'] == [None, True] and o['des3'] == [None, 0, True], (o['des1'], o['des2'], o['des3']))
+        ped('p3g pendências: a linha do aparelho com `pend` entra na lista pelo iso e na contagem (3 + 2 = 5), aparece uma vez em «pendências abertas»; o registro com as palavras dela a fecha; a sem palavras só o Resolver fecha; a linha anulada sai da lista; a gravada com a simulação e vista sem ela sai da ficha',
+            sorted(o['dev'][0]) == [[True, True, 0], [True, True, 1]] and o['dev'][1] == 5 and o['dev'][2] == 5 and o['dev'][3] == 2 and o['devFecha'][:3] == [True, True, True] and o['devFecha'][3] == 4 and o['semPalavras'] == [None, True, True, True] and o['anulada'] == 0 and o['semSim'] == [True, False, 1], (o['dev'], o['devFecha'], o['semPalavras'], o['anulada'], o['semSim']))
+        ped('p3g pendências: a linha do SOS nunca fecha pendência (src do SOS) e não deixa linha de ação', o['sos'] == [None, 3], o['sos'])
+        f = pg.evaluate(JS_P3G_PEND_FRASES, [FRASES_FECHAM, FRASES_NAO_FECHAM, FRASES_AMBIGUAS])
+        ruins = [(t, d, x['ab'], x['res']) for t, d, x in f['pos'] if x['res'] != [d] or d in x['ab'].split(',') or len(x['ab'].split(',')) != 2]
+        ped('p3g pendências (frases de conclusão): %d frases de quem FEZ o serviço («limpei», «limpamos», «foi limpo», «foi testada», «trocamos», «inspecionei», «feito», «verifiquei», «que estava sujo») fecham a pendência que citam — só ela' % len(FRASES_FECHAM), not ruins, ruins[:4])
+        ruins = [(t, x['ab'], x['res']) for t, x in f['neg'] if x['res'] != [] or x['ab'] != 'd03,d05,d07']
+        ped('p3g pendências (frases que NÃO fecham): %d frases de plano, obrigação, dúvida, pergunta, negação, defeito que continua, conserto sem sucesso, «falta», compra ou desgaste citam a pendência e NÃO a fecham (as 3 seguem abertas, nenhuma linha de ação)' % len(FRASES_NAO_FECHAM), not ruins, ruins[:5])
+        ruins = [(t, x['ab'], x['res'], x['text'][:140]) for t, x in f['amb'] if x['res'] != [] or x['ab'] != 'd03,d05,d07' or 'O registro cita mais de uma pendência aberta' not in x['text']]
+        ped('p3g pendências (ambígua): o registro que cita DUAS pendências abertas não fecha nenhuma e a resposta pergunta qual foi resolvida', not ruins, ruins[:3])
+        c = pg.evaluate(JS_P3G_PEND_CHAT)
+        ped('p3g pendências (chat): «registre no diário que limpei o filtro de água salgada da climatização» grava o registro, FECHA a d05 (linha resolve, com o registro de origem) e diz «Pendência fechada: …» com o botão Desfazer — a fala também; «desfazer» reabre com uma linha NOVA (reabre) e a pendência volta (3); desfazer de novo diz que não há nada',
+            c['reg'][0] is True and c['reg'][1] == 'Desfazer' and c['reg'][2] is True and c['reg'][3] == 'd03,d07' and c['reg'][4] == 2 and c['linhas'] == [['resolve', 'd05', True], [None, None, False]] and c['desfaz'][0] == 'ticketDesfaz' and c['desfaz'][1] is True and c['desfaz'][2] == 'd03,d05,d07' and c['desfaz'][3] == 3
+            and c['desfaz'][4] == ['reabre', 'resolve', 'registro'] and c['desfaz'][5] == 3 and c['depois'].startswith('Não há nada para desfazer agora'), (c['reg'], c['linhas'], c['desfaz'], c['depois']))
+        ped('p3g pendências (chat): o botão Desfazer de uma ação ANTIGA diz «é antiga: nada mudou» e não reabre; o da ação nova reabre; passados 10 min, a emergência e o NOVA, «desfazer» não faz nada',
+            c['antiga'][0] == 'desfazer a proposta' and c['antiga'][1].startswith('Essa ação é antiga: nada mudou') and c['antiga'][2] == 'd03' and c['nova'][1] == 'ticketDesfaz' and c['nova'][2] == 'd03,d07' and c['venceu'][0].startswith('Não há nada para desfazer agora') and c['venceu'][1] == 'd03,d07'
+            and c['emerg'][0].startswith('Não há nada para desfazer') and c['emerg'][1] == 'd03,d07' and c['nova2'][0].startswith('Não há nada para desfazer') and c['nova2'][1] == 'd03,d07', (c['antiga'], c['nova'], c['venceu'], c['emerg'], c['nova2']))
+        ped('p3g pendências (chat): o registro que cita DUAS pendências diz «cita mais de uma pendência aberta», não fecha nenhuma e a fala pede qual', c['amb'][0] is True and c['amb'][1] == 'd03,d05,d07' and 'diga qual foi resolvida' in c['amb'][3], c['amb'])
+        ped('p3g pendências (relato): o relato confirmado É um registro — fecha a d05 e propõe o Executado; desfazer o relato (a linha anulada) reabre a pendência e recusa a proposta que ele abriu; a API do aceitaTicket devolve a linha com `.pendencia` e guarda o fechamento no ticket',
+            c['relato'][:3] == [True, 'relatoRegistra', True] and c['relato'][3] is True and c['relato'][4] == 'd03,d07' and c['relato'][5] == ['exec:aberto', 'diario:aceito'] and c['relatoDes'][0] is True and c['relatoDes'][1] == 'd03,d05,d07' and sorted(c['relatoDes'][2]) == ['diario:aberto', 'exec:recusado'] and c['relatoDes'][3] == 1
+            and c['api'] == ['d03', 'd05,d07', 'd03'], (c['relato'], c['relatoDes'], c['api']))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_pendencias'] = grupo_p3g_pendencias
+
+
+# —— F26: «O que você pode fazer?» — a lista do que o app faz, local, sem IA; cada função citada tem a pergunta de exemplo entre aspas, e o teste confere que a pergunta cai na rota certa ——
+CAP_EXEMPLOS = {
+    'como está a navegação?': ('navegacao',), 'telemetria': ('telemetria',), 'posição agora': ('posicao',), 'qual a profundidade?': ('profundidade',), 'qual a hora de chegada?': ('eta',),
+    'me avise se a temperatura do motor passar de 90 graus': ('alarmePedido',), 'meus alarmes': ('alarmesLista',), 'apagar alarme #1': ('alarmeApaga',), 'tem algum alarme ativo?': ('alarmes',), 'quais as tendências?': ('preditiva',),
+    'próximas manutenções': ('manutencao',), 'horímetros': ('horimetros',), 'quais peças temos a bordo?': ('pecas',), 'agendar revisão do gerador para 15/11 com a marina': ('agendar',),
+    'registre no diário que limpamos o filtro de água salgada': ('diario',), 'documentos vencendo': ('docsvenc',), 'consumo de diesel': ('consumo',), 'autonomia': ('autonomia',), 'checklist de saída': ('checklist',),
+    'como ligar o gerador?': ('base', 'gerador', 'faqEquip'), 'guias de bordo': ('manual',), 'clima e vento': ('clima',), 'maré agora': ('mare',), 'é seguro sair hoje?': ('seguro',), 'canal 16': ('canal16',),
+}
+JS_P3G_CAP = """([exemplos]) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }; const a = B.answer('O que você pode fazer?', op);
+  return { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, 'O que você pode fazer?'), acoes: (a.actions || []).map((x) => x.l), hora: a.hora || null, exemplos: exemplos.map((q) => [q, B.answer(q, op).key]),
+    mesmo: ['o que você pode fazer', 'quais são as suas funções?', 'o que o app faz?'].map((q) => B.answer(q, op).text === a.text) }; }"""
+
+
+def grupo_p3g_capacidades(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='60')
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); window.CapitaoBrain.carregaFaq().then(() => setTimeout(r, 400)); })")
+        c = pg.evaluate(JS_P3G_CAP, [list(CAP_EXEMPLOS)])
+        citadas = re.findall(r'“([^”]+)”', c['text'])
+        ped('p3g capacidades: «O que você pode fazer?» é a rota local `capacidades` (sem IA, sem internet), abre com «Sou o Capitão IA, o assistente de bordo. Posso:», a fonte é «funções do app» e a fala é uma frase curta sem número',
+            c['key'] == 'capacidades' and c['ia'] is False and c['text'].startswith('Sou o Capitão IA, o assistente de bordo. Posso:\n') and c['src'] == 'Fonte: funções do app Capitão IA' and c['fala'].startswith('Respondo sobre a situação do barco agora') and not re.search(r'\d', c['fala']) and all(c['mesmo']), (c['key'], c['ia'], c['text'][:80], c['src'], c['fala']))
+        ped('p3g capacidades: CADA função citada tem a pergunta de exemplo entre aspas (%d) e cada uma cai na rota dela — o texto não promete o que o app não faz, e não falta exemplo para o que ele cita' % len(CAP_EXEMPLOS),
+            sorted(set(citadas)) == sorted(CAP_EXEMPLOS) and all(k in CAP_EXEMPLOS[q] for q, k in c['exemplos']), ([q for q in citadas if q not in CAP_EXEMPLOS], [q for q in CAP_EXEMPLOS if q not in citadas], [(q, k) for q, k in c['exemplos'] if k not in CAP_EXEMPLOS[q]]))
+        ped('p3g capacidades: a lista cobre as funções novas desta fase (alarmes pedidos, agendar, pendência fechada pelo registro, Desfazer) e diz o que precisa de internet (o clima e a maré) e para onde vai a pergunta aberta',
+            all(x in c['text'] for x in ('Avisar quando você pedir, só na tela do app', 'agendar uma tarefa da equipe', 'fecho a pendência que ele cita e proponho marcar a tarefa como executada', 'tudo com Confirmar e Desfazer', '(precisam de internet)', 'vai para a IA de bordo quando há internet')), c['text'])
+    finally:
+        pg.ctx.close()
+    pg = pagina(b, muta=muta, extra=SEM_SIMULACAO, fixo='60')
+    try:
+        c2 = pg.evaluate(JS_P3G_CAP, [[]])
+        ped('p3g capacidades (simulacao false): a mesma resposta local, sem IA', c2['key'] == 'capacidades' and c2['ia'] is False and c2['text'] == c['text'], (c2['key'], c2['ia']))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p3g_capacidades'] = grupo_p3g_capacidades
+
+
+# ——— os mutantes da P3G (alarmes pedidos, agenda, pendências, capacidades): o teste TEM de acusar cada um ———
+MUTANTES_P3G = [
+    # — F12: o pedido de alarme (rota e entendimento) —
+    ('p3g alarme: o pedido com «agora» (relato) vira proposta de alarme (sem a guarda do relato)', r"&& /\d/.test(q) && !ALM_RELATO.test(q); }", r"&& /\d/.test(q); }", ('p3g_rotas',)),
+    ('p3g alarme: o oleo() trata a configuração como queda (o «confirmar alarme» seguinte perde a proposta)', r"    if (almPedidoLite(q)) return 0;   // F12: «me avise se a pressão do óleo cair", r"    if (false) return 0;   // F12: «me avise se a pressão do óleo cair", ('p3g_alarmes',)),
+    ('p3g alarme: o pedido incompleto («criar um alarme», «quando o diesel estiver baixo») não tem rota', r"    if (almPedido(q)) return 'alarmePedido';", r"", ('p3g_rotas',)),
+    ('p3g alarme: o apagar vale sem o número («desligar o alarme», «apagar alarme»)', r"return m[1] ? +m[1] : / (?:pedid|criad)\w+/.test(m[0]) ? 0 : -1;", r"return m[1] ? +m[1] : 0;", ('p3g_rotas',)),
+    ('p3g alarme: a lista dos alarmes pedidos não tem rota', r"    if (almLista(q)) return 'alarmesLista';", r"", ('p3g_rotas',)),
+    ('p3g alarme: o limite fora da faixa é aceito (o parse não confere a faixa)', r"      if (!(lim >= m.faixa[0] && lim <= m.faixa[1])) return { ok: false, motivo: 'faixa', m: m };", r"", ('p3g_alarmes',)),
+    ('p3g alarme: a unidade errada é aceita', r"      if (un && un !== m.un) return { ok: false, motivo: 'unidade', m: m };", r"", ('p3g_alarmes',)),
+    ('p3g alarme: dois sentidos no mesmo pedido («passar de 3 e cair abaixo de 2») viram um só', r"    if (lt && gt) return { ok: false, motivo: 'ambigua' };", r"", ('p3g_alarmes',)),
+    ('p3g alarme: duas medidas no mesmo pedido («óleo … ou o diesel …») viram uma só', r"    return outra ? { erro: 'ambigua' } : { itens: cands.map(function (c) { return c.m; }) };", r"    return { itens: cands.map(function (c) { return c.m; }) };", ('p3g_alarmes',)),
+    ('p3g alarme: o lado dito (BB, BE) não escolhe o motor (o pedido abre os dois)', r"    if (lado) { lc = cands.filter(function (c) { return new RegExp('_' + lado + '$').test(c.m.id); }); if (lc.length) cands = lc; }", r"", ('p3g_alarmes',)),
+    ('p3g alarme: o pedido sem lado abre só um motor (as medidas irmãs não valem)', r"    cands = []; ach.forEach(function (a) { if (a.len === melhor && !cands.some(function (c) { return c.m === a.m; })) cands.push({ m: a.m, fr: [] }); });", r"    cands = []; ach.forEach(function (a) { if (a.len === melhor && !cands.length) cands.push({ m: a.m, fr: [] }); });", ('p3g_alarmes',)),
+    ('p3g alarme: o decimal com vírgula («2,5 bar») vira 2.5 errado (o valor não troca a vírgula)', r"t.replace(',', '.')); }", r"t); }", ('p3g_alarmes',)),
+    ('p3g alarme: a proposta já grava no pedido (arma e cria no mesmo passo)', r"      pe = grava ? armaProp('alarme', {", r"      if (grava) almCria(pr.itens); pe = grava ? armaProp('alarme', {", ('p3g_alarmes',)),
+    ('p3g alarme: o pedido de link arma a proposta (o «confirmar alarme» seguinte cria)', r"      pe = grava ? armaProp('alarme', {", r"      pe = armaProp('alarme', {", ('p3g_alarmes',)),
+    # — F12: gravar, apagar, o máximo, a faixa de defesa, o número —
+    ('p3g alarme: o Confirmar grava a linha com o carimbo sim sempre (também sem a simulação)', r"""      if (sim()) lin.sim = true;
+      cru.unshift(lin); criadas.push(lin);""", r"""      lin.sim = true;
+      cru.unshift(lin); criadas.push(lin);""", ('p3g_alarmes',)),
+    ('p3g alarme: o máximo de alarmes ativos não vale', r"    if (ativas.length + itens.length > (typeof A.max === 'number' ? A.max : 10)) return { criadas: [], erro: 'max' };", r"", ('p3g_alarmes',)),
+    ('p3g alarme: o duplicado entra', r"      if (ativas.concat(criadas).some(function (a) { return a.campo === it.m.campos[0] && a.op === it.op && a.limite === it.limite; })) return;", r"", ('p3g_alarmes',)),
+    ('p3g alarme: a API aceita o limite fora da faixa', r"""it.limite < it.m.faixa[0] || it.limite > it.m.faixa[1]) return;
+      if (ativas""", r"""false) return;
+      if (ativas""", ('p3g_alarmes',)),
+    ('p3g alarme: a API aceita o sentido que a medida não tem', r"it.m.ops.indexOf(it.op) === -1 || typeof it.limite", r"false || typeof it.limite", ('p3g_alarmes',)),
+    ('p3g alarme: apagar não deixa a linha «apaga» (a linha guardada não muda de acao)', r"lin = { id: v.id, acao: 'apaga', campo: v.campo,", r"lin = { id: v.id, acao: 'apaga2', campo: v.campo,", ('p3g_alarmes',)),
+    ('p3g alarme: o número volta a ser usado (o próximo id é o maior ATIVO + 1)', r"function almProxN() { var mx = 0; listaCru(K.alarmes).forEach(function (l) { if (ehAlarme(l)) mx = Math.max(mx, almN(l)); }); return mx + 1; }", r"function almProxN() { var mx = 0; almVigentes().forEach(function (l) { mx = Math.max(mx, l.n); }); return mx + 1; }", ('p3g_alarmes',)),
+    ('p3g alarme: a regra apagada continua ativa (o estado não é a linha mais nova do id)', r"if (!tem(vistos, l.id)) { vistos[l.id] = 1; if (l.acao !== 'apaga') out.push(l); }", r"if (l.acao !== 'apaga') out.push(l);", ('p3g_alarmes',)),
+    ('p3g alarme: o valor guardado que não é lista é pisado (sem o `.antes`)', r"""  function listaCru(chave) {
+    var s = null, v = null;
+    try { s = localStorage.getItem(chave); v = s ? JSON.parse(s) : []; } catch (e) { v = null; }
+    if (Array.isArray(v)) return v;
+    try { if (s &&""", r"""  function listaCru(chave) {
+    var s = null, v = null;
+    try { s = localStorage.getItem(chave); v = s ? JSON.parse(s) : []; } catch (e) { v = null; }
+    if (Array.isArray(v)) return v;
+    try { if (false &&""", ('p3g_alarmes', 'p3g_agenda')),
+    # — F12: avaliar contra o quadro (histerese, motor em cruzeiro, arredondamento, início) —
+    ('p3g alarme: sem a histerese (fecha assim que a condição deixa de valer)', r"      if (ult < 0 || ult > H) return null;", r"      if (ult !== 0) return null;", ('p3g_alarmes',)),
+    ('p3g alarme: a histerese é de 5 s, não de 10', r"      if (ult < 0 || ult > H) return null;", r"      if (ult < 0 || ult > H / 2) return null;", ('p3g_alarmes',)),
+    ('p3g alarme: o motor lento também vale (sem o regime de cruzeiro)', r"    if (m.motor) { rk = /^motor_(bb|be)_/.exec(m.campos[0]); rpm = rk ? q['motor_' + rk[1] + '_rpm'] : null; if (typeof rpm !== 'number' || rpm < 1000) return false; }", r"", ('p3g_alarmes',)),
+    ('p3g alarme: o cruzeiro começa em 500 rpm', r"if (typeof rpm !== 'number' || rpm < 1000) return false; }", r"if (typeof rpm !== 'number' || rpm < 500) return false; }", ('p3g_alarmes',)),
+    ('p3g alarme: a regra compara o valor bruto, sem o arredondamento do campo', r"    v = A && A.fmt && typeof A.fmt.arred === 'function' ? A.fmt.arred(v, m.casas) : v;", r"", ('p3g_alarmes',)),
+    ('p3g alarme: a comparação troca o sentido (<  com  >)', r"    return op === '<' ? v < limite : v > limite;", r"    return op === '<' ? v > limite : v < limite;", ('p3g_alarmes',)),
+    ('p3g alarme: o `desde` é o último instante com a condição, não o começo da sequência', r"      for (k = ult + 1; k < ser.length; k++) { if (ser[k]) { ini = k; gap = 0; } else if (++gap > H) break; }", r"", ('p3g_alarmes',)),
+    ('p3g alarme: a sequência quebra no primeiro segundo sem a condição (o `desde` recomeça a cada falha)', r"else if (++gap > H) break; }", r"else if (++gap > 0) break; }", ('p3g_alarmes',)),
+    ('p3g alarme: o alarme pedido sai crítico', r"return { id: a.id, n: a.n, nivel: 'aviso', rotulo: NIV.rotulo || 'AVISO',", r"return { id: a.id, n: a.n, nivel: 'critico', rotulo: NIV.rotulo || 'AVISO',", ('p3g_alarmes',)),
+    ('p3g alarme: a regra avalia no SOS/sem quadro vivo (a guarda do quadro cai)', r"    if (!A || !i || !i.q || VIVAS[i.fonte] !== 1) return [];", r"    if (!A || !i || !i.q) return [];", ('p3g_alarmes',)),
+    ('p3g alarme: a resposta dos alarmes não traz o bloco dos pedidos', r"""      if (!pa.length) return r;
+      i = vivo();""", r"""      return r;
+      i = vivo();""", ('p3g_alarmes',)),
+    ('p3g alarme: a resposta dos alarmes traz o bloco mesmo sem alarme pedido ativo', r"""      if (!pa.length) return r;
+      i = vivo();""", r"""      if (false) return r;
+      i = vivo();""", ('p3g_alarmes',)),
+    ('p3g alarme: a ficha não leva o bloco «Alarmes pedidos»', r"    bloco('Alarmes pedidos', function () { return fichaAlarmes(semSim); });", r"", ('p3g_alarmes',)),
+    ('p3g alarme: a ficha de emergência leva o bloco dos alarmes pedidos (com a leitura do quadro)', r"QUADRO['Alarmes pedidos'] = 1;", r"", ('p3g_alarmes',)),
+    # — F12/F15: a proposta que espera (a conversa) —
+    ('p3g espera: o «sim» curto vale sem estar LOGO depois da proposta', r"(logo && PC_SIM.test(q))) return p.tipo === 'alarme'", r"PC_SIM.test(q)) return p.tipo === 'alarme'", ('p3g_alarmes', 'p3g_agenda')),
+    ('p3g espera: a proposta nunca vence (10 min)', r"  function propVale() { return PEND_CHAT && Date.now() < PEND_CHAT.ate ? PEND_CHAT : null; }", r"  function propVale() { return PEND_CHAT ? PEND_CHAT : null; }", ('p3g_alarmes', 'p3g_agenda')),
+    ('p3g espera: o desfazer nunca vence (10 min)', r"  function desfazVale() { return DESFAZ && Date.now() < DESFAZ.ate ? DESFAZ : null; }", r"  function desfazVale() { return DESFAZ ? DESFAZ : null; }", ('p3g_pendencias',)),
+    ('p3g espera: a emergência/NOVA não zeram a proposta nem o desfazer', r"ESPERA_REG = null; REL = null; PEND_CHAT = null; DESFAZ = null; ALVO_PROP = null; }", r"ESPERA_REG = null; REL = null; }", ('p3g_alarmes', 'p3g_agenda', 'p3g_pendencias')),
+    ('p3g espera: a conversa seguinte não alinha a proposta (o «sim» logo depois nunca vale)', r"        if (PEND_CHAT && PEND_CHAT.n === undefined) PEND_CHAT.n = CONV.n;", r"", ('p3g_alarmes', 'p3g_agenda')),
+    ('p3g espera: o botão de uma proposta antiga age na nova (alarme)', r"""      if (al && al.seq !== pe.seq) return { text: 'Essa proposta é antiga: nada mudou. A mais recente continua esperando.', src: f, actions: botoesProp(pe).concat(abrir), fala: 'Essa proposta é antiga. A mais recente continua esperando.' };
+      if (!grava) return { text: 'Não criado""", r"      if (!grava) return { text: 'Não criado", ('p3g_alarmes',)),
+    ('p3g espera: o botão de uma ação antiga desfaz a nova', r"      if (al && al.seq !== d.seq) return { text: 'Essa ação é antiga: nada mudou.', src: f, actions: abrir, fala: 'Essa ação é antiga; nada mudou.' };", r"", ('p3g_pendencias',)),
+    ('p3g espera: o botão da proposta não leva o número (#capitao-prop-…)', r"function botoesProp(p) { return [{ l: 'Confirmar', href: '#capitao-prop-confirma-' + p.seq }, { l: 'Recusar', href: '#capitao-prop-recusa-' + p.seq }]; }", r"function botoesProp(p) { return [{ l: 'Confirmar', href: '#capitao-prop-confirma-0' }, { l: 'Recusar', href: '#capitao-prop-recusa-0' }]; }", ('p3g_alarmes',)),
+    ('p3g espera: «criar um alarme» com a proposta esperando vira a confirmação dela', r"(?:isso|esse|este|essa|esta|o|a|alarme|aviso|tarefa|proposta|executado|executada|feito|feita|como|na|agenda|mesmo|agora|por favor|ai|pra mim|para mim|ja|tudo))* $/;   // (sem «um»", r"(?:isso|esse|este|essa|esta|o|a|um|uma|alarme|aviso|tarefa|proposta|executado|executada|feito|feita|como|na|agenda|mesmo|agora|por favor|ai|pra mim|para mim|ja|tudo))* $/;   // (sem «um»", ('p3g_alarmes',)),
+    ('p3g espera: o botão velho «confirmar a proposta» sem proposta vai à IA (sem a resposta local)', r"    if (PC_BTN_CONFIRMA.test(q) || PC_SO_CONFIRMA.test(q)) return 'ticketConfirma';", r"", ('p3g_alarmes', 'p3g_agenda')),
+    ('p3g espera: o link (commit false) confirma a proposta da agenda', r"      if (!grava) return { text: 'Não gravado — pedido vindo de link não confirma proposta.', src: f, actions: abrir, fala: 'Pedido vindo de link não confirma proposta.' };", r"", ('p3g_agenda',)),
+    # — F15: agendar e tarefas da equipe —
+    ('p3g agendar: o pedido de link propõe e arma', r"      if (!grava) return { text: 'Não agendado — pedido vindo de link não grava na agenda.\n' + como, src: fonte, actions: abrir, fala: 'Pedido vindo de link não agenda.' };", r"", ('p3g_agenda',)),
+    ('p3g agendar: a data que já passou (com ano) vira proposta', r"    if (d.dia < hoje) return v ? { passada: true, vence: diaIso(d.dia) } : null;", r"", ('p3g_agenda',)),
+    ('p3g agendar: o dd/mm sem ano que já passou fica no passado (não vai para o ano que vem)', r"    if (!a && !isNaN(n) && n < hoje) n = dataCivil(ano + 1, m, d);", r"", ('p3g_agenda',)),
+    ('p3g agendar: «amanhã» é daqui a dois dias', r"return r(m[1], hoje + (m[1] === 'amanha' ? 1 : 2));", r"return r(m[1], hoje + (m[1] === 'amanha' ? 2 : 2));", ('p3g_agenda',)),
+    ('p3g agendar: «daqui a 2 semanas» conta dias', r"hoje + +m[2] * (/^semana/.test(m[3]) ? 7 : 1));", r"hoje + +m[2] * (/^semana/.test(m[3]) ? 1 : 1));", ('p3g_agenda',)),
+    ('p3g agendar: a data que não existe (30/02) é aceita', r"function dataCivil(a, m, d) { var t = Date.UTC(a, m - 1, d), x = new Date(t); return m >= 1 && m <= 12 && d >= 1 && x.getUTCFullYear() === a && x.getUTCMonth() === m - 1 && x.getUTCDate() === d ? Math.floor(t / 86400000) : NaN; }", r"function dataCivil(a, m, d) { var t = Date.UTC(a, m - 1, d); return Math.floor(t / 86400000); }", ('p3g_agenda',)),
+    ('p3g agendar: a pergunta («quando agendar…?») é pedido', r"    if (raw.indexOf('?') >= 0 && !(v && AG_CORTESIA.test(f.slice(0, v.index)) && f.slice(0, v.index).indexOf('?') < 0)) return null;", r"", ('p3g_agenda', 'p3g_rotas')),
+    ('p3g agendar: o «não agendar» é pedido', r"    if (/\b(nao|nunca)\b/.test(f.slice(0, v ? v.index : pp.index)) || /\b(cancel\w*|desmarc\w*)\b/.test(f)) return null;", r"", ('p3g_agenda', 'p3g_rotas')),
+    ('p3g agendar: o «marca aí que troquei…» é agendar', r"      if (/^mar[cq]/.test(x[1]) && AG_ANOTA.test(dep)) continue;   // «marca aí que troquei…» é anotar, não agendar", r"", ('p3g_agenda',)),
+    ('p3g agendar: a agenda como substantivo («a agenda de 15/11») é pedido', r"      if (AG_AMBIGUO.test(x[1]) && (!AG_INICIO.test(antes.replace(/\?/g, ' ')) || AG_NOME.test(dep))) continue;", r"", ('p3g_agenda',)),
+    ('p3g agendar: o fato («está agendada para 20/11») leva o «está» no nome', r"raw.slice(0, pp.index).replace(/(?:\s+(?:est[áa]|est[ãa]o|foi|foram|ficou|ficaram|fica|j[áa]))+\s*$/i, '');", r"raw.slice(0, pp.index);", ('p3g_agenda',)),
+    ('p3g agendar: a proposta repetida ainda aberta duplica', r"      tk = ticketAberto('tarefa', prop) || addTicket({ k: 'tarefa',", r"      tk = addTicket({ k: 'tarefa',", ('p3g_agenda',)),
+    ('p3g agendar: a tarefa já agendada é proposta de novo', r"      if (loadTarefas().some(function (t) { return norm(t.n) === norm(ag.n) && t.vence === ag.vence && !loadExec()[t.id]; })) return { text: 'Já está na agenda", r"      if (false) return { text: 'Já está na agenda", ('p3g_agenda',)),
+    ('p3g agenda: a tarefa duplicada (nome e dia) entra duas vezes', r"    if (ja) return { item: ja, novo: false };", r"", ('p3g_agenda',)),
+    ('p3g agenda: a tarefa com data que não existe (2026-02-30) é gravada', r"|| diaIso(diaData(x.vence)) !== x.vence) return null;", r"|| false) return null;", ('p3g_agenda',)),
+    ('p3g agenda: a origem que é chave do protótipo é gravada', r"origem: tem(ORIGEM_TAREFA, x.origem) ? x.origem : 'tela',", r"origem: x.origem || 'tela',", ('p3g_agenda',)),
+    ('p3g agenda: a tarefa do aparelho não conta o carimbo sim', r"""    if (sim()) item.sim = true;
+    cru.unshift(item); write(K.tarefas, cru);""", r"    cru.unshift(item); write(K.tarefas, cru);", ('p3g_agenda',)),
+    ('p3g agenda: a manutenção não lista as tarefas agendadas', r"+ tarefasLinha() + (D.agendaFalta", r"+ (D.agendaFalta", ('p3g_agenda',)),
+    ('p3g agenda: a tarefa executada ainda aparece nas agendadas', r"function tarefasAgendadas(ctx) { return tarefasEquipe(ctx).filter(function (t) { return t.aparelho && !t.feita; }); }", r"function tarefasAgendadas(ctx) { return tarefasEquipe(ctx).filter(function (t) { return t.aparelho; }); }", ('p3g_agenda',)),
+    # — F15: confirmar e desfazer a proposta (exec e tarefa) —
+    ('p3g exec: o Confirmar da tarefa já executada noutro canto grava outra linha', r"      if (!ag || loadExec()[ag.id]) return null;   // a tarefa não existe mais", r"      if (!ag) return null;   // a tarefa não existe mais", ('p3g_agenda',)),
+    ('p3g exec: o desfazer pisa a execução nova feita noutro canto', r"if (e && e.iso === r.exec.iso) unmarkExec(r.exec.id); }", r"if (e) unmarkExec(r.exec.id); }", ('p3g_agenda',)),
+    ('p3g agenda: o desfazer não tira a tarefa criada', r"    else if (t.k === 'tarefa' && typeof r.tarefa === 'string') removeTarefa(r.tarefa);", r"", ('p3g_agenda',)),
+    ('p3g agenda: o Confirmar não guarda o que criou (o desfazer não acha a tarefa)', r"      if (r.novo) ext.tarefa = r.item.id;", r"", ('p3g_agenda',)),
+    ('p3g agenda: o Confirmar não guarda a execução que criou', r"      ext.exec = { id: ag.id, iso: m[ag.id].iso };", r"", ('p3g_agenda',)),
+    ('p3g exec: o texto que cita outro dia («ontem», dd/mm) propõe o Executado', r"    if (!conclusao(texto) || OUTRO_DIA.test(dobra(texto))) return null;", r"    if (!conclusao(texto)) return null;", ('p3g_agenda',)),
+    ('p3g exec: o texto que cita duas tarefas propõe a primeira', r"    ts = tarefasDoTexto(texto); if (ts.length !== 1) return null;", r"    ts = tarefasDoTexto(texto); if (ts.length < 1) return null;", ('p3g_agenda',)),
+    ('p3g exec: o texto sem o verbo de conclusão propõe o Executado', r"    if (!conclusao(texto) || OUTRO_DIA", r"    if (OUTRO_DIA", ('p3g_agenda',)),
+    ('p3g exec: o registro duas vezes duplica a proposta aberta', r"""    ja = ticketAberto(p.k, p.prop);
+    return ja || addTicket(""", r"    return addTicket(", ('p3g_agenda',)),
+    ('p3g exec: o registro de emergência/óleo propõe e fecha (sem a guarda do texto)', r"""    if (emergencia(n) || oleo(n) === 1) return null;
+    if (opts.pendencia) {""", r"    if (opts.pendencia) {", ('p3g_agenda', 'p3g_pendencias')),
+    ('p3g exec: a linha do SOS propõe e fecha', r"    if (EM_SOS || !entry || entry.acao || linhaDoSOS(entry) || typeof entry.t !== 'string') return null;", r"    if (EM_SOS || !entry || entry.acao || typeof entry.t !== 'string') return null;", ('p3g_agenda', 'p3g_pendencias')),
+    ('p3g exec: o registro da linha de ação propõe', r"    if (EM_SOS || !entry || entry.acao || linhaDoSOS(entry) ||", r"    if (EM_SOS || !entry || linhaDoSOS(entry) ||", ('p3g_agenda',)),
+    ('p3g exec: o chat propõe a agenda para a nota com cabeça de segurança (EPIRB)', r"alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }", r"alerta || pressao ? undefined : { pendencia: true, agenda: true, chat: true }", ('p3g_agenda',)),
+    ('p3g exec: a confirmação que abre outras propostas as perde (a decisão parte da lista de antes)', r"    cru = ticketsCru(); t = achaTicket(cru, id) || t;   // (a confirmação pode ter aberto", r"    /* cru = ticketsCru(); t = achaTicket(cru, id) || t; */   // (a confirmação pode ter aberto", ('p3g_pendencias',)),
+    ('p3g exec: o desfazer perde a recusa das propostas que o registro abriu', r"""    cru = ticketsCru(); t = achaTicket(cru, id) || t;
+    t.estado = 'aberto'; delete t.dec; delete t.res;""", r"    t.estado = 'aberto'; delete t.dec; delete t.res;", ('p3g_pendencias',)),
+    ('p3g exec: o desfazer do relato não recusa as propostas que o registro abriu', r"    if (r.id) ticketsAbertos().filter(function (x) { return x.origem === 'regra'", r"    if (false) ticketsAbertos().filter(function (x) { return x.origem === 'regra'", ('p3g_pendencias',)),
+    ('p3g exec: o desfazer do relato não reabre a pendência que ele fechou', r"    if (r.pend && typeof r.pend.alvo === 'string') desfazPendencia(", r"    if (false) desfazPendencia(", ('p3g_pendencias',)),
+    ('p3g exec: o relato confirmado não fecha pendência nem propõe (o registro sem as opções)', r"var lin = addDiario(e, t.origem === 'relato' ? { pendencia: true, agenda: true, chat: !!(opts && opts.chat) } : undefined);", r"var lin = addDiario(e);", ('p3g_pendencias',)),
+    # — F20: pendências —
+    ('p3g pendência: o verbo de conclusão não é exigido (qualquer citação fecha)', r"    return FEITO.test(f) && !CONC_FUTURO.test(f)", r"    return !CONC_FUTURO.test(f)", ('p3g_pendencias',)),
+    ('p3g pendência: o plano («vou limpar», «precisa trocar») fecha', r"&& !CONC_FUTURO.test(f) && !CONC_DUVIDA.test(f)", r"&& !CONC_DUVIDA.test(f)", ('p3g_pendencias',)),
+    ('p3g pendência: a dúvida («será que», «acho que», «?») fecha', r"&& !CONC_DUVIDA.test(f) && !CONC_NEGA.test(f)", r"&& !CONC_NEGA.test(f)", ('p3g_pendencias',)),
+    ('p3g pendência: a negação («não limpei») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);", r"&& !CONC_DEFEITO.test(f);", ('p3g_pendencias',)),
+    ('p3g pendência: o defeito que continua («continua fraco», «mas», «sem sucesso») fecha', r"&& !CONC_NEGA.test(f) && !CONC_DEFEITO.test(f);", r"&& !CONC_NEGA.test(f);", ('p3g_pendencias',)),
+    ('p3g pendência: «fizemos» não é verbo de conclusão', r"|troquei|verifiquei|fiz|fizemos|fez|fizeram|feit[oa]s?|", r"|troquei|verifiquei|fiz|fez|fizeram|feit[oa]s?|", ('p3g_pendencias',)),
+    ('p3g pendência: o plural («filtros») não cita a pendência', r"function stem(w) { return w.length > 3 ? w.replace(/s$/, '') : w; }", r"function stem(w) { return w; }", ('p3g_pendencias',)),
+    ('p3g pendência: o registro que cita duas pendências fecha a primeira', r"    if (cit.length > 1) return { ambigua: cit };", r"", ('p3g_pendencias',)),
+    ('p3g pendência: a frase da pendência casa solta no meio das palavras (não em sequência)', r"""    for (i = 0; i + ft.length <= tk.length; i++) { for (j = 0; j < ft.length && tk[i + j] === ft[j]; j++); if (j === ft.length) return true; }
+    return false;
+  }
+  function citaFrases""", r"""    for (i = 0; i + ft.length <= tk.length; i++) { for (j = 0; j < ft.length && tk[i + j] === ft[j]; j++); if (j >= 1) return true; }
+    return false;
+  }
+  function citaFrases""", ('p3g_pendencias', 'p3g_agenda')),
+    ('p3g pendência: resolver uma pendência já resolvida escreve outra linha', r"""    if (!p || !p.aberta) return null;
+    e = linhaDePend(p, 'resolve'""", r"""    if (!p) return null;
+    e = linhaDePend(p, 'resolve'""", ('p3g_pendencias',)),
+    ('p3g pendência: reabrir uma pendência aberta escreve linha', r"""    if (!p || p.aberta) return null;
+    e = linhaDePend(p, 'reabre'""", r"""    if (!p) return null;
+    e = linhaDePend(p, 'reabre'""", ('p3g_pendencias',)),
+    ('p3g pendência: o desfazer vale sobre uma ação mais nova (sem conferir a linha do fechamento)', r"|| p.acao !== 'resolve' || !r.linha || p.acaoIso !== r.linha.iso ||", r"|| p.acao !== 'resolve' || !r.linha ||", ('p3g_pendencias',)),
+    ('p3g pendência: o desfazer vale fora da janela', r"typeof r.desfazAte !== 'number' || Date.now() > r.desfazAte) return null;", r"typeof r.desfazAte !== 'number') return null;", ('p3g_pendencias',)),
+    ('p3g pendência: a última ação por alvo não vale (a primeira, a mais antiga, manda)', r"    linhas.forEach(function (l) { if (l && (l.acao === 'resolve' || l.acao === 'reabre') && typeof l.alvo === 'string' && !tem(m, l.alvo)) m[l.alvo] = l; });", r"    linhas.slice().reverse().forEach(function (l) { if (l && (l.acao === 'resolve' || l.acao === 'reabre') && typeof l.alvo === 'string' && !tem(m, l.alvo)) m[l.alvo] = l; });", ('p3g_pendencias',)),
+    ('p3g pendência: a pendência reaberta continua fechada (aberta = sem ação)', r"aberta: !a || a.acao === 'reabre',", r"aberta: !a,", ('p3g_pendencias',)),
+    ('p3g pendência: a anomalia lista as resolvidas (anomalias sem o filtro das abertas)', r"function pendencias(ctx) { return pendenciasLista(ctx).filter(function (p) { return p.aberta; }); }", r"function pendencias(ctx) { return pendenciasLista(ctx); }", ('p3g_pendencias',)),
+    ('p3g pendência: a linha do aparelho com pend aparece duas vezes em «pendências abertas»', r"return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t) && !tem(mesmas, e.iso); }", r"return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }", ('p3g_pendencias',)),
+    ('p3g pendência: a pendência do aparelho gravada com a simulação continua na ficha sem ela', r"vigente(linhas).forEach(function (l) { if (l.pend === true && typeof l.iso === 'string' && !(ctx && ctx.semSim && l.sim === true))", r"vigente(linhas).forEach(function (l) { if (l.pend === true && typeof l.iso === 'string')", ('p3g_pendencias',)),
+    ('p3g pendência: o desfazer do chat é só uma frase (sem o texto do que reabriu)', r"text: 'Desfeito: a pendência “' + fimPend(d.r.t) + '” voltou a ficar aberta (linha nova no diário).'", r"text: 'Desfeito.'", ('p3g_pendencias',)),
+    ('p3g pendência: o registro não diz que a pendência foi fechada', r"r.linhas.push('Pendência fechada: ' + fimPend(pd.t) + ' — o registro conclui o serviço", r"r.linhas.push('Registro gravado: ' + fimPend(pd.t) + ' — o registro conclui o serviço", ('p3g_pendencias',)),
+    ('p3g pendência: o registro fecha a pendência sem a linha de ação (só o texto)', r"""    lin = addDiario1(e);
+    return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin, desfazAte:""", r"""    lin = addDiario1(Object.assign(e, { acao: undefined }));
+    return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin, desfazAte:""", ('p3g_pendencias',)),
+    # — F26: o que o app faz —
+    ('p3g capacidades: «consegue» não é pedido de capacidades', r"(?:pode|consegue|e capaz de)(?: me)?(?: (?:fazer|ajudar|responder|me ajudar))*|do que", r"(?:pode|e capaz de)(?: me)?(?: (?:fazer|ajudar|responder|me ajudar))*|do que", ('p3g_rotas',)),
+    ('p3g capacidades: «o que o app faz» não é pedido de capacidades', r"|(?:o ?que|oq|q) (?:o capitao|o app|o aplicativo|a ia) faz|", r"|", ('p3g_rotas',)),
+    ('p3g capacidades: «quais são as suas funções» não é pedido de capacidades', r"|(?:quais|que) (?:sao )?(?:as )?(?:suas |tuas |as )?(?:funcoes|funcionalidades|capacidades|habilidades|comandos|recursos)", r"|(?:quais|que) (?:sao )?(?:as )?(?:suas |tuas |as )?(?:zzqq)", ('p3g_rotas',)),
+    ('p3g capacidades: a pergunta com assunto («o que você pode fazer pelo gerador?») é a lista (sem o fim da frase)', r"lista de funcoes(?: do app)?) (?:por favor )?$');", r"lista de funcoes(?: do app)?) (?:por favor )?(?:[a-z0-9]+ ){0,4}$');", ('p3g_rotas',)),
+    ('p3g capacidades: «o que você faz» passa a ser capacidades (a saudação perde a IA)', r"(?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu|o capitao|o app|o aplicativo|a ia) (?:pode|consegue|e capaz de)", r"(?:o ?que|oq|q) (?:e que )?(?:voce|vc|tu|o capitao|o app|o aplicativo|a ia) (?:faz|sabe|pode|consegue|e capaz de)", ('p3g_rotas',)),
+    ('p3g capacidades: o texto cita uma função com exemplo que não cai na rota (canal 16 → roteiro)', r"“canal 16” traz a ordem da chamada", r"“sirene do porão” traz a ordem da chamada", ('p3g_capacidades',)),
+    ('p3g capacidades: o texto promete uma função que o app não tem (o exemplo «relatório em PDF» cai no fallback)', r"“quais peças temos a bordo?”;", r"“quais peças temos a bordo?”, “relatório em PDF”;", ('p3g_capacidades',)),
+    ('p3g capacidades: a lista some a função nova dos alarmes pedidos', r"Avisar quando você pedir, só na tela do app: “me avise se a temperatura do motor passar de 90 graus”, “meus alarmes”, “apagar alarme #1”.", r"Avisar quando você pedir.", ('p3g_capacidades',)),
+    ('p3g capacidades: a pergunta de capacidades vai à IA (pedeIA)', r"    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;", r"    if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica' && k !== 'capacidades') return false;", ('p3g_rotas', 'p3g_capacidades')),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P3G
 
 
 def instante_3a(b):
