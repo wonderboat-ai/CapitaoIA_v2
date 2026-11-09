@@ -8388,8 +8388,8 @@ MUTANTES_P3G = [
     ('p3g pendência: a anomalia lista as resolvidas (anomalias sem o filtro das abertas)', r"function pendencias(ctx) { return pendenciasLista(ctx).filter(function (p) { return p.aberta; }); }", r"function pendencias(ctx) { return pendenciasLista(ctx); }", ('p3g_pendencias',)),
     ('p3g pendência: a linha do aparelho com pend aparece duas vezes em «pendências abertas»', r"return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t) && !tem(mesmas, e.iso); }", r"return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t); }", ('p3g_pendencias',)),
     ('p3g pendência: a pendência do aparelho gravada com a simulação continua na ficha sem ela', r"vigente(linhas).forEach(function (l) { if (l.pend === true && typeof l.iso === 'string' && !(ctx && ctx.semSim && l.sim === true))", r"vigente(linhas).forEach(function (l) { if (l.pend === true && typeof l.iso === 'string')", ('p3g_pendencias',)),
-    ('p3g pendência: o desfazer do chat é só uma frase (sem o texto do que reabriu)', r"text: 'Desfeito: a pendência “' + fimPend(d.r.t) + '” voltou a ficar aberta (linha nova no diário).'", r"text: 'Desfeito.'", ('p3g_pendencias',)),
-    ('p3g pendência: o registro não diz que a pendência foi fechada', r"r.linhas.push('Pendência fechada: ' + fimPend(pd.t) + ' — o registro conclui o serviço", r"r.linhas.push('Registro gravado: ' + fimPend(pd.t) + ' — o registro conclui o serviço", ('p3g_pendencias',)),
+    ('p3g pendência: o desfazer do chat é só uma frase (sem o texto do que reabriu)', r"text: 'Desfeito: a pendência “' + fimPend(semNavJanela(d.r.t)) + '” voltou a ficar aberta (linha nova no diário).'", r"text: 'Desfeito.'", ('p3g_pendencias',)),
+    ('p3g pendência: o registro não diz que a pendência foi fechada', r"r.linhas.push('Pendência fechada: ' + fimPend(semNavJanela(pd.t)) + ' — o registro conclui o serviço", r"r.linhas.push('Registro gravado: ' + fimPend(pd.t) + ' — o registro conclui o serviço", ('p3g_pendencias',)),
     ('p3g pendência: o registro fecha a pendência sem a linha de ação (só o texto)', r"""    lin = addDiario1(e);
     return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin, desfazAte:""", r"""    lin = addDiario1(Object.assign(e, { acao: undefined }));
     return lin ? { alvo: p.alvo, id: p.id, t: p.t, sys: p.sys, linha: lin, desfazAte:""", ('p3g_pendencias',)),
@@ -9067,6 +9067,7 @@ def grupo_janela_api(b, muta, ped):
             pg.ctx.close()
     # ——— o fluxo da tela: «homem ao mar» abre a janela; as perguntas seguintes, com a marca, não trazem nem falam posição, rumo, velocidade nem pessoas, e não vão à IA ———
     grupo_janela_fluxo(b, muta, ped)
+    grupo_janela_registro(b, muta, ped)
 
 
 JS_JAN_FLUXO = """() => { const B = window.CapitaoBrain, out = {}, pl = B.DADOS.protocolos.plotter;
@@ -9120,6 +9121,134 @@ def grupo_janela_fluxo(b, muta, ped):
         pg.ctx.close()
 
 
+# ——— (revisão 2) O REGISTRO lido dentro da janela: o que o próprio app gravou (o resumo do atalho DIÁRIO DE BORDO, que guarda o lugar, a velocidade e a proa do instante) e o que a pessoa digitou (chegada prevista,
+# milhas, nós, coordenada, pessoas) voltam sem navegação. A causa é uma só: o registro guarda o que o quadro dizia na hora da gravação — então a troca é por estrutura e padrão (semNavJanela), e vale para a linha
+# gravada em OUTRO instante (o lugar dela não é o do instante de agora). ———
+# duas pendências geradas (d05, d07) com navegação no texto: o eco delas (a citação ambígua, «Pendência fechada», o desfazer) lê o registro dentro da janela
+EXTRA_ECO_JAN = """;(function () { const D = window.CapitaoDados, d5 = D.diario.filter((x) => x.id === 'd05')[0], d7 = D.diario.filter((x) => x.id === 'd07')[0];
+  d5.t = 'Fluxo fraco a 18 nós na climatização da cabine, a 0,5 mn da Barra Sul. Suspeita: filtro de água salgada sujo (limpeza atrasada).'; d7.t = 'Teste das bombas de porão adiado, SOG 9,9 nós, 7 pessoas a bordo.'; })();"""
+JAN_PAD = 'Anomalias ' + 'ronda ' * 15   # 100 letras: o «SOG 18,1 nós» começa na 101ª; trocado por «velocidade: leia no plotter», o corte de 110 cai no meio da palavra (e, fora da janela, no meio de «nós»)
+JAN_PHRASE_RESUMO = 'Resumo registrado pelo atalho: posição, rumo e velocidade: leia no plotter'
+# (id, como grava, o texto, a lista que o mostra, o que a linha lida dentro da janela TEM de trazer, o que NÃO pode trazer)
+JAN_SEMENTES = [
+    ('atalho', 'resp', 'Registre no diário o resumo da navegação de agora e confirme.', 'dl', [JAN_PHRASE_RESUMO + ' · motores BB'], ['Navegando', 'ao largo', 'Barra Sul', 'chegando']),
+    ('atalhoOutro', 'outro', 'Registre no diário o resumo da navegação de agora e confirme.', 'dl', [JAN_PHRASE_RESUMO + ' · motores BB'], ['Navegando', 'ao largo', 'Barra Sul', 'chegando']),
+    ('junto', 'resp', 'registre no diário a posição e a hora, anomalia na ré', 'dl', ['anomalia na ré · resumo: posição, rumo e velocidade: leia no plotter · motores BB'], ['Navegando', 'ao largo', 'Barra Sul', 'chegando']),
+    ('unico', 'add', 'Resumo registrado pelo atalho: Fundeado na enseada de Balneário Camboriú — 10:12:00.', 'dl', [JAN_PHRASE_RESUMO + ' — 10:12:00.'], ['Fundeado', 'enseada']),
+    ('velho', 'add', 'Resumo registrado pelo atalho: Fundeado na enseada de Balneário Camboriú · SOG 0,0 nós · proa 190° · motores BB 700 · BE 690 rpm · vento 4,1 nós de 120° — leitura de 26/09/2026 10:12.', 'dl',
+     [JAN_PHRASE_RESUMO + ' · motores BB 700 · BE 690 rpm'], ['Fundeado', 'enseada', '190', '0,0']),
+    ('eta', 'resp', 'Registre no diário: Anomalia: chegada prevista às 12:03, a 0,5 mn da Barra Sul', 'dl', ['Anomalia: chegada: leia no plotter, posição: leia no plotter'], ['12:03', '0,5', 'Barra Sul']),
+    ('nos', 'resp', 'Registre no diário: Anomalia: estamos a 18 nós com 7 pessoas a bordo', 'dl', ['Anomalia: estamos velocidade: leia no plotter com pessoas a bordo: conte agora'], ['18 nós', '7 pessoas']),
+    ('coord', 'resp', "Registre no diário: Anomalia: fundeamos em 26°59,46'S 048°36,71'W", 'dl', ['Anomalia: fundeamos em posição: leia no plotter posição: leia no plotter'], ['26°', '048°', "46'"]),
+    ('vento', 'resp', 'Registre no diário: Anomalia: vento 12 nós de 050° na saída', 'dl', ['Anomalia: vento: leia no instrumento na saída'], ['12 nós', '050']),
+    ('eta2', 'resp', 'Registre no diário: Anomalia: ETA 12:03, 65,1 milhas', 'dl', ['Anomalia: chegada: leia no plotter, distância: leia no plotter'], ['12:03', '65,1']),
+    ('eta3', 'resp', 'Registre no diário: Anomalia: ETA: 12:03 e chegada prevista às 12h', 'dl', ['Anomalia: chegada: leia no plotter e chegada: leia no plotter'], ['12:03', '12h']),
+    ('eta4', 'resp', 'Registre no diário: Anomalia: ETA em 15 min na saída', 'dl', ['Anomalia: chegada: leia no plotter na saída'], ['15 min']),
+    ('rumo2', 'resp', 'Registre no diário: Anomalia: rumo 207° e proa 206°', 'dl', ['Anomalia: rumo: leia no plotter e rumo: leia no plotter'], ['207', '206']),
+    ('vel', 'resp', 'Registre no diário: Anomalia: velocidade de 18 nós na volta', 'dl', ['Anomalia: velocidade: leia no plotter na volta'], ['18 nós', 'velocidade de velocidade', 'velocidade velocidade']),
+    ('abordo', 'resp', 'Registre no diário: Anomalia: ficamos 7 a bordo', 'dl', ['Anomalia: ficamos pessoas a bordo: conte agora'], ['7 a bordo']),
+    ('corta', 'add', JAN_PAD + 'SOG 18,1 nós na volta', 'dl', [JAN_PAD.strip()], ['velocida']),
+    ('pend1', 'pend', 'Vazamento visto a 18 nós, a 0,5 mn da Barra Sul, 7 pessoas a bordo', 'pa', ['Vazamento visto velocidade: leia no plotter, posição: leia no plotter, pessoas a bordo: conte agora'], ['18 nós', '0,5', 'Barra Sul', '7 pessoas']),
+    ('pend2', 'pend', 'Chegada prevista às 12:03 com SOG 9,9 nós e proa 200°', 'pa', ['chegada: leia no plotter com velocidade: leia no plotter e rumo: leia no plotter'], ['12:03', '9,9', '200']),
+]
+JS_JAN_REG = """([x, outro, sementes]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, opj = { platform: 'app', commit: false, emergencia: true }, jc = { platform: 'app', commit: true }, jcj = { platform: 'app', commit: true, emergencia: true };
+  const lit = () => { const t = (B.instante() || {}).txt || {}, o = {}; ['local', 'relativa', 'destino', 'sog', 'rumo', 'proa', 'eta', 'distancia', 'wp'].forEach((k) => { o[k] = t[k] || null; }); return o; };
+  const aqui = lit(); R.fixar(outro); const alheio = lit(); R.fixar(x);
+  const le = (q, c) => { const a = B.answer(q, c); return { key: a.key, text: a.text, fala: B.falaCurta(a), src: a.src, janela: a.janela === true }; };
+  const blocos = (a) => B.ficha('app', 'x', a, { emergencia: true }).split(/\\n\\n(?=## )/).filter((b) => /^## (?:Pendências|Diário de bordo)/.test(b)).join('\\n\\n');
+  // a tarefa da equipe agendada no aparelho (a tela da agenda grava o nome como a pessoa digitou): «Tarefas da equipe agendadas» em «próximas manutenções» e na ficha
+  B.addTarefa({ n: 'Revisar o hélice a 0,5 mn da Barra Sul, SOG 18,1 nós, 7 pessoas a bordo, chegada prevista às 12:03', vence: '2027-03-20', quem: 'Lucas', sistema: 'Navegação' });
+  const tarefa = { fora: le('próximas manutenções', op), dentro: le('próximas manutenções', opj), fic: B.ficha('app', 'x', B.answer('próximas manutenções', opj), { emergencia: true }).split(/\\n\\n(?=## )/).filter((b) => /^## Manutenção/.test(b)).join('\\n\\n') };
+  const lin = sementes.map((s) => {
+    if (s[1] === 'resp') B.answer(s[2], jc); else if (s[1] === 'outro') { R.fixar(outro); B.answer(s[2], jc); R.fixar(x); } else B.addDiario({ t: s[2], sys: s[1] === 'pend' ? 'Equipamentos' : 'Navegação', pend: s[1] === 'pend' ? true : undefined, src: s[1] === 'pend' ? 'app · texto' : 'atalho · telemetria' });
+    const guardada = B.loadDiario()[0].t, dl = le('ler o diário', opj), pa = le('pendências abertas', opj), fora = le('ler o diário', op), fic = blocos(B.answer('ler o diário', opj));
+    return { id: s[0], guardada, dl, pa, fora, fic, depois: B.loadDiario()[0].t };
+  });
+  // o eco do registro nas respostas de pendência (a citação ambígua, «Pendência fechada», o desfazer): d05 e d07 (EXTRA_ECO_JAN) trazem navegação no texto
+  const eco = {}; B.limpaConversa();
+  eco.ambigua = le('registre no diário que limpei o filtro de água salgada da climatização e testei as bombas de porão', jcj); eco.fecha = le('registre no diário que limpei o filtro de água salgada da climatização', jcj); eco.desfaz = le('desfazer', jcj);
+  // o relato proposto FORA da janela (um ticket aberto com o texto como a pessoa escreveu) e registrado DENTRO dela («registrar o relato»): o eco da linha
+  B.limpaConversa(); const RELATO = 'A bomba de água doce começou a fazer barulho ontem à noite, a 0,5 mn da Barra Sul, SOG 18,1 nós, 7 pessoas a bordo';
+  const relato = { prop: le(RELATO, jc), abertos: B.loadTickets().filter((t) => t.estado === 'aberto' && t.texto === RELATO).length }; relato.reg = le('registrar o relato', jcj); relato.guardada = B.loadDiario()[0].t;
+  return { aqui, alheio, lin, eco, tarefa, relato, nLinhas: B.loadDiario().length }; }"""
+
+
+def grupo_janela_registro(b, muta, ped):
+    for x, outro in (('60', '105'), ('105', '60')):
+        pg = pagina(b, muta=muta, fixo=x, extra=EXTRA_ECO_JAN)
+        try:
+            espera_base_jan(pg)
+            r = pg.evaluate(JS_JAN_REG, [x, outro, [list(s[:3]) for s in JAN_SEMENTES]])
+            rot = 'janela registro (t=%s, linhas de t=%s)' % (x, outro)
+            lits = (r['aqui'], r['alheio'])
+            ped(rot + ': os dois instantes têm lugar, posição relativa e destino diferentes o bastante para a linha de OUTRO instante provar a troca por estrutura', r['aqui']['local'] and r['alheio']['local'] and r['aqui']['local'] != r['alheio']['local'] and r['aqui']['relativa'] != r['alheio']['relativa'], (r['aqui'], r['alheio']))
+            suja = []; falta = []; sobra = []; borda = []; guarda = []; ctrl = []
+            for l, (sid, _, texto, onde, tem_, nao) in zip(r['lin'], JAN_SEMENTES):
+                lida = l[onde]
+                alvo = lida['text'] + '\n' + lida['fala'] + '\n' + lida['src']
+                bullets = [ln for ln in lida['text'].split('\n') if ln.startswith('• ')]   # a linha da semente: a 1ª dos últimos registros (a mais nova), ou a pendência que traz a frase de troca
+                propria = (bullets[0] if bullets else '') if onde == 'dl' else ' '.join(ln for ln in bullets if tem_[0][:24] in ln)
+                for lit in lits:
+                    ss = sens_jan(alvo, lit) + sens_jan(l['fic'], lit)
+                    if ss:
+                        suja.append((sid, ss[:3]))
+                est = trava_estrita('diarioLer' if onde == 'dl' else 'anomalias', alvo) + trava_estrita('ficha', l['fic'])
+                if est:
+                    suja.append((sid, 'regex do PROMPT', est[:2]))
+                if not all(t in propria for t in tem_):
+                    falta.append((sid, [t for t in tem_ if t not in propria], propria))
+                if not propria or any(t in propria for t in nao):
+                    sobra.append((sid, [t for t in nao if t in propria], propria[:200]))
+                if not l['fic'] or not l['dl']['janela'] or not l['pa']['janela']:
+                    suja.append((sid, 'sem janela/ficha'))
+                if l['guardada'] != l['depois'] or (sid in ('atalho', 'atalhoOutro', 'junto', 'velho', 'corta') and not re.search(r'SOG \d', l['guardada'])) or (sid == 'atalho' and r['aqui']['local'] not in l['guardada']):
+                    guarda.append((sid, l['guardada'][:140]))
+                # fora da janela o registro volta como foi escrito (o diário só cresce): a mesma linha, sem troca
+                if sid in ('atalho', 'junto', 'velho', 'eta', 'nos', 'coord', 'vento', 'eta2', 'vel', 'abordo', 'corta'):
+                    if l['guardada'][:110] not in l['fora']['text']:
+                        ctrl.append((sid, l['guardada'][:100], l['fora']['text'][-300:]))
+                # o corte de 110 letras dentro da janela cai antes da palavra incompleta e sem separador pendurado; fora dela é o corte de sempre
+                for ln in lida['text'].split('\n'):
+                    if ln.endswith(' (app)') and re.search(r'[·,;:—–-]\s\(app\)$', ln):
+                        borda.append((sid, ln[-60:]))
+                if sid == 'corta':
+                    esperado = texto.replace('SOG 18,1 nós', 'velocidade: leia no plotter')
+                    mostrada = [ln[ln.index(' — ') + 3:-len(' (app)')] for ln in lida['text'].split('\n') if ln.endswith(' (app)') and 'ronda' in ln]
+                    if len(mostrada) != 1 or not esperado.startswith(mostrada[0]) or len(mostrada[0]) > 110 or esperado[len(mostrada[0]):len(mostrada[0]) + 1] not in ' :·,;—-' or not mostrada[0].rstrip().endswith('ronda'):
+                        borda.append((sid, mostrada))
+                    if l['guardada'][:110] not in l['fora']['text']:
+                        ctrl.append((sid, 'o corte de fora da janela mudou', l['fora']['text'][-160:]))
+            ped(rot + ': a linha que o app gravou e a que a pessoa digitou — lidas em «ler o diário», «pendências abertas» e na ficha dentro da janela — não trazem lugar, posição relativa, destino, SOG, proa, rumo, chegada, milhas, nós, coordenada nem pessoas (nenhum literal de t=%s nem de t=%s; a regex do PROMPT não casa)' % (x, outro), not suja, suja[:4])
+            ped(rot + ': cada tipo de linha vem com a frase de troca (o resumo do atalho vira «posição, rumo e velocidade: leia no plotter» e fica com motores, diesel…; chegada, posição relativa, nós, milhas, rumo, coordenada, vento e pessoas trocam)', not falta, falta[:3])
+            ped(rot + ': nenhum pedaço da navegação que a linha trazia fica no texto (Navegando, ao largo, Barra Sul, os números)', not sobra, sobra[:4])
+            ped(rot + ': o corte de 110 letras dentro da janela não deixa meia frase trocada («velocidade: lei») nem separador pendurado; o corte de fora da janela é o de sempre', not borda, borda[:4])
+            ped(rot + ': a janela só esconde o texto — a linha guardada continua como foi escrita (SOG, lugar) e é a mesma depois da leitura', not guarda, guarda[:3])
+            ped(rot + ': controle — fora da janela a mesma leitura traz a linha como foi escrita (o diário só cresce)', not ctrl, ctrl[:3])
+            # ——— o eco do registro: citação ambígua, «Pendência fechada», desfazer ———
+            e = r['eco']
+            ecos = [(k, v) for k, v in e.items()]
+            sujo = [(k, sens_jan(v['text'] + '\n' + v['fala'] + '\n' + v['src'], lit)[:3]) for k, v in ecos for lit in lits if sens_jan(v['text'] + '\n' + v['fala'] + '\n' + v['src'], lit)]
+            sujo += [(k, 'regex do PROMPT', trava_estrita('diario', v['text'] + '\n' + v['fala'])[:2]) for k, v in ecos if trava_estrita('diario', v['text'] + '\n' + v['fala'])]
+            ped(rot + ': o eco do registro nas respostas de pendência (a citação de mais de uma, «Pendência fechada: …», o desfazer) dentro da janela não traz a velocidade, a distância, a posição relativa nem as pessoas que o texto da pendência cita',
+                not sujo and 'cita mais de uma pendência' in e['ambigua']['text'] and 'Pendência fechada: Fluxo fraco velocidade: leia no plotter' in e['fecha']['text'] and 'posição: leia no plotter' in e['fecha']['text']
+                and e['desfaz']['key'] == 'ticketDesfaz' and 'Desfeito: a pendência “Fluxo fraco velocidade: leia no plotter' in e['desfaz']['text'] and 'velocidade: leia no plotter' in e['ambigua']['text'], (sujo[:3], e))
+            # ——— a tarefa agendada no aparelho: o nome que a pessoa digitou ———
+            tf = r['tarefa']; alvo_t = tf['dentro']['text'] + '\n' + tf['dentro']['fala'] + '\n' + tf['fic']
+            sujo_t = [sens_jan(alvo_t, lit)[:3] for lit in lits if sens_jan(alvo_t, lit)] + [trava_estrita('manutencao', alvo_t)[:2]] * bool(trava_estrita('manutencao', alvo_t))
+            ped(rot + ': a tarefa agendada no aparelho com navegação no nome — lida em «próximas manutenções» e na ficha dentro da janela — vem sem posição relativa, SOG, chegada nem pessoas (e fora da janela vem como foi digitada)',
+                not sujo_t and 'Tarefas da equipe agendadas (1): Revisar o hélice posição: leia no plotter, velocidade: leia no plotter, pessoas a bordo: conte agora, chegada: leia no plotter —' in tf['dentro']['text']
+                and 'Revisar o hélice posição: leia no plotter' in tf['fic'] and 'Revisar o hélice a 0,5 mn da Barra Sul, SOG 18,1 nós' in tf['fora']['text'], (sujo_t, tf['dentro']['text'][-400:], tf['fic'][-300:], tf['fora']['text'][-300:]))
+            # ——— o relato proposto fora da janela e registrado dentro dela ———
+            rl = r['relato']; alvo_r = rl['reg']['text'] + '\n' + rl['reg']['fala'] + '\n' + rl['reg']['src']
+            sujo_r = [sens_jan(alvo_r, lit)[:3] for lit in lits if sens_jan(alvo_r, lit)] + [trava_estrita('diario', alvo_r)[:2]] * bool(trava_estrita('diario', alvo_r))
+            ped(rot + ': o relato com navegação proposto fora da janela e registrado dentro dela («registrar o relato») repete o texto sem posição relativa, SOG nem pessoas — e a linha guardada é a que a pessoa escreveu',
+                rl['abertos'] == 1 and rl['reg']['key'] == 'relatoRegistra' and not sujo_r
+                and '“A bomba de água doce começou a fazer barulho ontem à noite, posição: leia no plotter, velocidade: leia no plotter, pessoas a bordo: conte agora”' in rl['reg']['text']
+                and rl['guardada'].endswith('a 0,5 mn da Barra Sul, SOG 18,1 nós, 7 pessoas a bordo'), (sujo_r, rl['abertos'], rl['reg']['key'], rl['reg']['text'][:300], rl['guardada']))
+        finally:
+            pg.ctx.close()
+
+
 GRUPOS_3A['janela'] = grupo_janela
 
 
@@ -9171,10 +9300,10 @@ MUTANTES_P4A = [
     ('p4a fallback: o fallback da janela não abre com a instrução de segurança', r"if (janela()) r.text = EM_PERIGO + '\n' + r.text; return r; };", r"return r; };", ('janela',)),
     ('p4a anexo: o anexo não liga a janela (a linha de situação de bordo leva o quadro)', r"function answerAttachment(kind, file, ctx) { return comJanela(ctx, function () { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }); }", r"function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }", ('janela',)),
     # — o registro lido na janela —
-    ('p4a diário: a linha do diário lida na janela leva o número de pessoas', r"semNavJanela(e.t).slice(0, 110)", r"e.t.slice(0, 110)", ('janela',)),
+    ('p4a diário: a linha do diário lida na janela leva o número de pessoas', r"linhaReg(e.t, 110)", r"e.t.slice(0, 110)", ('janela',)),
     ('p4a diário: a pendência lida na janela leva o número de pessoas (anomalias)', r"semNavJanela(x.t)); }).concat(", r"x.t); }).concat(", ('janela',)),
-    ('p4a diário: o semNavJanela não troca o número de pessoas', r"[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", r"[/\b\d+\s+zzqq\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
-    ('p4a diário: o semNavJanela troca fora da janela (sem a guarda)', r"if (!janela()) return s; JAN_NAV.forEach", r"JAN_NAV.forEach", ('janela',)),
+    ('p4a diário: o semNavJanela não troca o número de pessoas', r"[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", r"[/\b\d+\s+zzqq\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
+    ('p4a diário: o semNavJanela troca fora da janela (sem a guarda)', "if (!janela()) return s;\n    s = resumoJanela(s);\n    JAN_NAV.forEach", "s = resumoJanela(s);\n    JAN_NAV.forEach", ('janela',)),
     # — resumoAgora, ficha, historicoIA —
     ('p4a resumo: resumoAgora({ emergencia: true }) devolve o quadro', r"x.emergencia === true || x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", ('janela',)),
     ('p4a resumo: resumoAgora(x, { emergencia: true }) devolve o quadro', r"|| (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"|| janela()) return plotterTxt();", ('janela',)),
@@ -9221,7 +9350,7 @@ MUTANTES_P4A_REV = [
     ('p4a rev alarme: a lista de medidas que o app vigia leva «(SOG)» na janela', r"min1(almNome(x))", r"min1(x.nome)", ('janela',)),
     ('p4a rev alarme: a unidade da velocidade leva «(SOG)» na janela', r"'A unidade de ' + min1(almNome(m))", r"'A unidade de ' + min1(m.nome)", ('janela',)),
     # — o registro lido na janela, o histórico no formato das telas, a abertura —
-    ('p4a rev diário: a linha do aparelho com «anomalia» que não é pendência (ramo «(app)») leva pessoas, SOG, proa e rumo', r"semNavJanela(String(x.t)).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas", r"String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas", ('janela',)),
+    ('p4a rev diário: a linha do aparelho com «anomalia» que não é pendência (ramo «(app)») leva pessoas, SOG, proa e rumo', r"linhaReg(String(x.t), 110) + ' (app)'; })).join('\n') + '\nAtrasadas", r"String(x.t).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas", ('janela',)),
     ('p4a rev histórico: a mensagem {role: bot, text} não é do capitão (semJanela)', r"ehBot = function (m) { return !!m && (m.papel === 'capitao' || m.role === 'bot'); };", r"ehBot = function (m) { return !!m && (m.papel === 'capitao'); };", ('janela',)),
     ('p4a rev histórico: a mensagem {role: bot, text} vira usuário (historicoBase)', r"var bot = m && (m.papel === 'capitao' || m.role === 'bot'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto", r"var bot = m && (m.papel === 'capitao'), t = m ? (m.texto != null ? m.texto : m.text) : '', bruto", ('janela',)),
     ('p4a rev histórico: o texto {text} da resposta do plotter não é lido (semJanela)', "var t = m ? (m.texto != null ? m.texto : m.text) : '';\n      if (ehBot(m)", "var t = m ? m.texto : '';\n      if (ehBot(m)", ('janela',)),
@@ -9234,6 +9363,37 @@ MUTANTES_P4A_REV = [
     ('p4a rev alarme: o «Você tem:» do apagar de velocidade na janela leva o limite', r"'\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + almRegra(x); }).join(' · ') + '.' : '\nVocê não tem alarmes pedidos.')", r"'\nVocê tem: ' + v.map(function (x) { return '#' + x.n + ' ' + x.m.nome + ' ' + (x.op === '<' ? 'abaixo de ' : 'acima de ') + almTxt(x.m, x.limite); }).join(' · ') + '.' : '\nVocê não tem alarmes pedidos.')", ('janela',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV
+
+# ——— os mutantes da revisão 2 da P4A: o REGISTRO lido dentro da janela (o resumo que o app gravou e o que a pessoa digitou) não traz lugar, posição relativa, SOG, proa, rumo, chegada, milhas, nós, coordenada nem pessoas ———
+MUTANTES_P4A_REV2 = [
+    ('p4a rev2 resumo: o resumo do atalho não perde o lugar, a velocidade e a proa', '    s = resumoJanela(s);\n', r"", ('janela',)),
+    ('p4a rev2 resumo: a linha «<nota> · resumo: …» (junto) não é reconhecida', r"(Resumo registrado pelo atalho:\s*|·\s*resumo:\s*)", r"(Resumo registrado pelo atalho:\s*)", ('janela',)),
+    ('p4a rev2 resumo: os itens SOG e proa depois do lugar não saem juntos', r"while (k < it.length && /^(?:SOG|STW|proa|rumo|COG|HDG)\b/i.test(it[k])) k++;", r";", ('janela',)),
+    ('p4a rev2 resumo: o resumo de um item só perde a hora', r"fim = k >= it.length ? (RESUMO_FIM.exec(m[2]) || [''])[0] : '';", r"fim = '';", ('janela',)),
+    ('p4a rev2 resumo: o resto do resumo (motores, diesel…) some', r"(k < it.length ? ' · ' + it.slice(k).join(' · ') : fim)", r"(k < it.length ? '' : fim)", ('janela',)),
+    ('p4a rev2 nav: a chegada prevista e o ETA não trocam', r"[/\b(?:[Cc]hegada\s+prevista|ETA)\b", r"[/\b(?:[Cc]hegadaZ\s+prevista|ETAZ)\b", ('janela',)),
+    ('p4a rev2 nav: o vento não tem frase própria', r"[/\bvento(?:\s+(?:verdadeiro|aparente))?", r"[/\bventoZ(?:\s+(?:verdadeiro|aparente))?", ('janela',)),
+    ('p4a rev2 nav: a posição relativa («a 0,5 mn da Barra Sul») não troca', r"[/\ba\s+[\d.,]+\s*(?:mn|milhas?(?:\s+náuticas?)?)\s+d[aeo]s?", r"[/\ba\s+[\d.,]+\s*(?:mnZ|milhasZ?(?:\s+náuticas?)?)\s+d[aeo]s?", ('janela',)),
+    ('p4a rev2 nav: a distância em milhas não troca', r"[/\d[\d.,]*\s*(?:mn|milhas?(?:\s+náuticas?)?)\b/gi, 'distância", r"[/\d[\d.,]*\s*(?:mnZ|milhasZ(?:\s+náuticas?)?)\b/gi, 'distância", ('janela',)),
+    ('p4a rev2 nav: «velocidade de N nós» não tem frase própria', r"[/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?", r"[/\bvelocidadeZ(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?", ('janela',)),
+    ('p4a rev2 nav: «N nós» solto não troca', r"[/(?:\ba\s+)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter']];", r"[/(?:\ba\s+)?\d[\d.,]*\s*nósZ/gi, 'velocidade: leia no plotter']];", ('janela',)),
+    ('p4a rev2 nav: a coordenada não troca', r"return s.replace(COORD_RX, 'posição: leia no plotter');", r"return s;", ('janela',)),
+    ('p4a rev2 nav: «N a bordo» (sem «pessoas») não troca', r"[[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi", r"[[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi", ('janela',)),
+    ('p4a rev2 corte: a palavra incompleta fica no fim da linha lida na janela', r"if (!/\s/.test(s.charAt(n))) c = c.replace(/\s+\S*$/, '');", r";", ('janela',)),
+    ('p4a rev2 corte: o separador pendurado fica no fim da linha lida na janela', r"return c.replace(/[\s·,;:—–-]+$/, '');", r"return c;", ('janela',)),
+    ('p4a rev2 corte: o corte de fora da janela (e o da linha que a janela não trocou) também apara a palavra', '    if (s === o) return c;\n', r"", ('janela',)),
+    ('p4a rev2 eco: a citação ambígua de pendências leva a navegação', r"linhaReg(limpaT(x.t, 400), 60)", r"limpaT(x.t, 60)", ('janela',)),
+    ('p4a rev2 eco: «Pendência fechada» leva a navegação', r"fimPend(semNavJanela(pd.t))", r"fimPend(pd.t)", ('janela',)),
+    ('p4a rev2 eco: o desfazer da pendência leva a navegação', r"fimPend(semNavJanela(d.r.t))", r"fimPend(d.r.t)", ('janela',)),
+    ('p4a rev2 pendências: a linha do aparelho (pend) lida na janela leva a navegação', r"(x.origem === 'aparelho' ? linhaReg(String(x.t), 110) + ' (app)'", r"(x.origem === 'aparelho' ? String(x.t).slice(0, 110) + ' (app)'", ('janela',)),
+    ('p4a rev2 pendências: a linha «(app)» das pendências lida na janela leva a navegação', r"' — ' + linhaReg(String(x.t), 110) + ' (app)'; })).join('\n')", r"' — ' + String(x.t).slice(0, 110) + ' (app)'; })).join('\n')", ('janela',)),
+    ('p4a rev2 diário: a linha do aparelho do diário lida na janela leva a navegação', r"' — ' + linhaReg(String(e.t || ''), 110) + ' (app)'; });", r"' — ' + String(e.t || '').slice(0, 110) + ' (app)'; });", ('janela',)),
+    ('p4a rev2 relato: o eco do relato registrado dentro da janela leva a navegação', r"'\n“' + semNavJanela(r.linha.t) + '”\nLinha nova", r"'\n“' + r.linha.t + '”\nLinha nova", ('janela',)),
+    ('p4a rev2 tarefa: o nome da tarefa agendada no aparelho lido na janela leva a navegação', r"return semNavJanela(t.n) + ' — ' + (atrasadaN(t.dn)", r"return t.n + ' — ' + (atrasadaN(t.dn)", ('janela',)),
+    ('p4a rev2 nav: a chegada com dois-pontos, hora cheia ou duração («ETA: 12:03», «às 12h», «em 15 min») não troca', r"(?:\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b))?/g, 'chegada", r"(?:\s+(?:para\s+|às\s+|as\s+|em\s+)?\d{1,2}[:h]\d{2}(?::\d{2})?)?/g, 'chegada", ('janela',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV2
+
 
 
 def instante_3a(b):

@@ -455,7 +455,7 @@
   // as tarefas da equipe que o usuário agendou neste aparelho (F15) e ainda estão abertas: no fim da resposta da manutenção e da ficha (as 2 geradas da equipe ficam com a tela da equipe); nenhuma = nada
   function tarefasLinha() {
     var l = tarefasAgendadas({ semSim: EXEC_SEM_SIM });
-    return l.length ? '\nTarefas da equipe agendadas (' + l.length + '): ' + l.slice(0, 5).map(function (t) { return t.n + ' — ' + (atrasadaN(t.dn) ? 'em atraso há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') : brData(t.vence) + ' (' + emDias(diaData(t.vence)) + ')') + (t.quem ? ' · ' + t.quem : ''); }).join(' | ') + (l.length > 5 ? ' | … e mais ' + (l.length - 5) : '') + '.' : '';
+    return l.length ? '\nTarefas da equipe agendadas (' + l.length + '): ' + l.slice(0, 5).map(function (t) { return semNavJanela(t.n) + ' — ' + (atrasadaN(t.dn) ? 'em atraso há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') : brData(t.vence) + ' (' + emDias(diaData(t.vence)) + ')') + (t.quem ? ' · ' + t.quem : ''); }).join(' | ') + (l.length > 5 ? ' | … e mais ' + (l.length - 5) : '') + '.' : '';
   }
   function pendencias(ctx) { return pendenciasLista(ctx).filter(function (p) { return p.aberta; }); }
   // A pendência que o texto cita (as `palavras` dela; o plural vale): { p, fecha } com UMA citada, { ambigua } com duas ou mais abertas (nenhuma fecha; a resposta pergunta qual), null sem citação. Só as abertas contam.
@@ -655,12 +655,12 @@
     var r = { linhas: [], botoes: [], fala: '' }, pd, tk, d, pe, ag, t;
     if (!reg) return r;
     if (reg.ambigua) {
-      r.linhas.push('O registro cita mais de uma pendência aberta (' + reg.ambigua.map(function (x) { return limpaT(x.t, 60); }).join(' · ') + '): nenhuma foi fechada. Diga qual foi resolvida.');
+      r.linhas.push('O registro cita mais de uma pendência aberta (' + reg.ambigua.map(function (x) { return linhaReg(limpaT(x.t, 400), 60); }).join(' · ') + '): nenhuma foi fechada. Diga qual foi resolvida.');
       r.fala += ' Citou mais de uma pendência; diga qual foi resolvida.';
     }
     if ((pd = reg.pendencia)) {
       d = armaDesfaz('pend', { r: pd }, pd.desfazAte);
-      r.linhas.push('Pendência fechada: ' + fimPend(pd.t) + ' — o registro conclui o serviço (linha nova no diário). Se não era isso, diga “desfazer” ou toque em Desfazer.');
+      r.linhas.push('Pendência fechada: ' + fimPend(semNavJanela(pd.t)) + ' — o registro conclui o serviço (linha nova no diário). Se não era isso, diga “desfazer” ou toque em Desfazer.');
       r.botoes.push(botaoDesfaz(d)); r.fala += ' Pendência fechada.';
     }
     if ((tk = reg.ticket)) {
@@ -973,9 +973,31 @@
   function respostaJanela(p) {
     return { janela: true, text: plotterTxt() + '\nNa emergência o app não repete o quadro de navegação nem o número de pessoas a bordo.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos']]) };
   }
-  // o texto livre do registro (linha do diário, pendência) lido dentro da janela: a velocidade, o rumo e o número de pessoas que ele cita trocam por «leia no plotter» / «conte agora»
-  var JAN_NAV = [[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'], [/\b(?:SOG|STW)\s+[\d.,]+\s*nós?/gi, 'velocidade: leia no plotter'],
-    [/\b(?:rumo|proa|COG|HDG)(?:\s*\(COG\))?\s+[\d.,]+\s*°/gi, 'rumo: leia no plotter']];
+  // O texto do REGISTRO (linha do diário, pendência) lido dentro da janela, seja o que a pessoa digitou ou o que o próprio app gravou: nada dele diz onde o barco estava nem como andava. A causa é uma só (o registro guarda o
+  // que o quadro dizia no instante da gravação), então a troca é por estrutura e por padrão, não por instante: (1) o resumo que o app gravou («Resumo registrado pelo atalho: <estado e lugar> · SOG … · proa … · motores …»
+  // e «<nota> · resumo: …») perde o lugar, a velocidade e a proa e fica com uma frase só (resumoJanela); (2) em qualquer linha, a velocidade, o rumo, a chegada prevista, a distância em milhas, a posição relativa
+  // («a 0,5 mn da Barra Sul»), a coordenada e o número de pessoas a bordo trocam por «leia no plotter» / «conte agora» (JAN_NAV); o vento gravado também troca (a leitura guardada não é a de agora). O que sobra bate com a regex de «Travas de emergência» do PROMPT. Vale para todo texto que o registro devolve:
+  // as linhas do diário e das pendências (diarioLer, anomalias, a ficha), o eco das pendências (citação ambígua, «Pendência fechada», o desfazer), o nome da tarefa agendada no aparelho (tarefasLinha) e o relato registrado (relatoRegistra).
+  // O eco da frase DESTE turno («registre no diário: …») não é leitura do registro: é o que a pessoa acabou de dizer, e a linha guardada nunca muda (a janela só esconde).
+  var PLOTTER_NAV = 'posição, rumo e velocidade: leia no plotter';
+  var JAN_NAV = [[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi, 'pessoas a bordo: conte agora'], [/\b(?:SOG|STW)\s+[\d.,]+\s*nós?/gi, 'velocidade: leia no plotter'],
+    [/\b(?:rumo|proa|COG|HDG)(?:\s*\(COG\))?\s+[\d.,]+\s*°/gi, 'rumo: leia no plotter'],
+    [/\b(?:[Cc]hegada\s+prevista|ETA)\b(?:\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b))?/g, 'chegada: leia no plotter'],
+    [/\bvento(?:\s+(?:verdadeiro|aparente))?\s+[\d.,]+\s*nós?(?:\s+(?:de|a)\s+[\d.,]+\s*°)?/gi, 'vento: leia no instrumento'],
+    [/\ba\s+[\d.,]+\s*(?:mn|milhas?(?:\s+náuticas?)?)\s+d[aeo]s?\s+[^,.;·—\n(]+/gi, 'posição: leia no plotter'],
+    [/\d[\d.,]*\s*(?:mn|milhas?(?:\s+náuticas?)?)\b/gi, 'distância: leia no plotter'],
+    [/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?\s*(?:de\s+|:\s*)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter'],
+    [/(?:\ba\s+)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter']];
+  var RESUMO_APP = /(Resumo registrado pelo atalho:\s*|·\s*resumo:\s*)([^]*)$/, RESUMO_FIM = /\s—\s\d{1,2}:\d{2}(?::\d{2})?\.?\s*$/;
+  // o resumo gravado pelo atalho: o 1º item («Navegando ao largo da Ilha das Cabras, a caminho da Barra Sul») e os itens de SOG e proa que vêm logo depois viram PLOTTER_NAV; os demais (motores, diesel, óleo…) ficam
+  function resumoJanela(s) {
+    var m = RESUMO_APP.exec(s), it, k = 1, fim;
+    if (!m) return s;
+    it = m[2].split(' · ');
+    while (k < it.length && /^(?:SOG|STW|proa|rumo|COG|HDG)\b/i.test(it[k])) k++;
+    fim = k >= it.length ? (RESUMO_FIM.exec(m[2]) || [''])[0] : '';
+    return s.slice(0, m.index) + m[1] + PLOTTER_NAV + (k < it.length ? ' · ' + it.slice(k).join(' · ') : fim);
+  }
   // (P4A) a telemetria dentro da janela: o texto de sempre SEM a posição, o SOG e a proa, o tempo a bordo e a tendência (que traz o SOG); a 1ª linha (a falada) é a instrução do plotter, e a hora do
   // instante fica numa linha própria. As máquinas e os sistemas (motores, diesel, baterias, tanques, gerador, Seakeeper, porão, âncora, alarmes) seguem como estão.
   function telemJanela(r, i, p) {
@@ -987,7 +1009,23 @@
   }
   // o diário com alerta (a nota casa emergencia() ou oleo() === 1) ABRE a janela como as chaves de emergência: a resposta traz `emerg: true`
   function emergDiario(r, alerta) { if (alerta) r.emerg = true; return r; }
-  function semNavJanela(t) { var s = String(t == null ? '' : t); if (!janela()) return s; JAN_NAV.forEach(function (r) { s = s.replace(r[0], r[1]); }); return s; }
+  function semNavJanela(t) {
+    var s = String(t == null ? '' : t);
+    if (!janela()) return s;
+    s = resumoJanela(s);
+    JAN_NAV.forEach(function (r) { s = s.replace(r[0], r[1]); });
+    return s.replace(COORD_RX, 'posição: leia no plotter');   // (por último: «proa 207° 18,1 nós» já saiu e não vira coordenada)
+  }
+  // a linha do registro como a resposta a mostra: o texto sem a navegação, cortado em `n` letras. A linha que a janela trocou é cortada antes da palavra incompleta e sem separador pendurado (não sobra «velocidade: lei» nem
+  // «rpm ·»); a que não mudou (e toda linha, fora da janela) leva o corte de sempre: o texto das respostas sem navegação é o mesmo dentro e fora da janela.
+  function linhaReg(t, n) {
+    var o = String(t == null ? '' : t), s = semNavJanela(o), c;
+    if (s.length <= n) return s;
+    c = s.slice(0, n);
+    if (s === o) return c;
+    if (!/\s/.test(s.charAt(n))) c = c.replace(/\s+\S*$/, '');
+    return c.replace(/[\s·,;:—–-]+$/, '');
+  }
   function casas(c) { var d = D.campos && D.campos[c]; return d && typeof d.casas === 'number' ? d.casas : 0; }
   function vivo() { var i = CONG.inst; return i && VIVAS[i.fonte] === 1 && i.q && i.txt ? i : null; }   // o instante com quadro vivo (replay ou coletor)
   // O sinal «+» colado a «55» e a mais um dígito («+551» rpm) é o prefixo de telefone da regex PESSOAIS do §3 (`\+55\s?\d`): só nesse caso um espaço fino separa o sinal do número (+ 551),
@@ -2647,7 +2685,7 @@
       if (!r) return { text: 'Esse relato não está mais esperando; nada foi registrado.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato não está mais esperando; nada foi registrado.' };
       if (r.ja) return { text: 'Esse relato já está registrado no diário.', src: 'Fonte: diário de bordo do app', actions: abrir, fala: 'Esse relato já está registrado.' };
       ef = efeitosNoChat(r.linha);   // F20/F15: o relato registrado fecha a pendência que cita e propõe a agenda
-      return { text: 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + r.linha.t + '”\nLinha nova — nada se apaga.' + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : ''), src: 'Fonte: relato de ' + quem() + ' · diário de bordo do app', actions: ef.botoes.concat(abrir), fala: 'Registrado no diário de bordo.' + ef.fala };
+      return { text: 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + semNavJanela(r.linha.t) + '”\nLinha nova — nada se apaga.' + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : ''), src: 'Fonte: relato de ' + quem() + ' · diário de bordo do app', actions: ef.botoes.concat(abrir), fala: 'Registrado no diário de bordo.' + ef.fala };
     },
     // O botão «O que verificar?» do relato (F16): o item do FAQ ou o trecho dos guias que casa com o texto do relato; a tela também manda a pergunta à IA (pedeIA). Sem item, diz onde procurar. Os botões
     // Registrar / Não registrar seguem na resposta enquanto a proposta espera.
@@ -2723,7 +2761,7 @@
       DESFAZ = null;
       if (d.tipo === 'pend') {
         r = desfazPendencia(d.r);
-        return r ? { text: 'Desfeito: a pendência “' + fimPend(d.r.t) + '” voltou a ficar aberta (linha nova no diário).', src: f, actions: act(p, [['Abrir diário', 'diario']]), fala: 'Desfeito. A pendência voltou a ficar aberta.' }
+        return r ? { text: 'Desfeito: a pendência “' + fimPend(semNavJanela(d.r.t)) + '” voltou a ficar aberta (linha nova no diário).', src: f, actions: act(p, [['Abrir diário', 'diario']]), fala: 'Desfeito. A pendência voltou a ficar aberta.' }
           : { text: 'Não deu para desfazer: a pendência mudou de estado depois do fechamento; nada foi alterado.', src: f, actions: act(p, [['Abrir diário', 'diario']]), fala: 'Não deu para desfazer; nada foi alterado.' };
       }
       tk = achaTicket(ticketsCru(), d.id); r = desfazTicket(d.id);
@@ -2898,7 +2936,7 @@
       var pend = pendencias(ctx), mesmas = {}, app;   // F20: só as ABERTAS (as resolvidas por linha nova saem); as do aparelho com `pend` entram uma vez só
       pend.forEach(function (x) { if (x.origem === 'aparelho') mesmas[x.iso] = 1; });
       app = lerDiario(ctx).filter(function (e) { return /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(e.t) && !tem(mesmas, e.iso); }).slice(0, 3);
-      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + (x.origem === 'aparelho' ? semNavJanela(String(x.t)).slice(0, 110) + ' (app)' : semNavJanela(x.t)); }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + semNavJanela(String(x.t)).slice(0, 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
+      return { text: 'Pendências abertas (' + (pend.length + app.length) + '):\n' + pend.map(function (x) { return '• ' + x.d + ' · ' + x.sys + ' — ' + (x.origem === 'aparelho' ? linhaReg(String(x.t), 110) + ' (app)' : semNavJanela(x.t)); }).concat(app.map(function (x) { return '• ' + x.d + ' · ' + (x.sys || 'Diário') + ' — ' + linhaReg(String(x.t), 110) + ' (app)'; })).join('\n') + '\nAtrasadas na agenda: ' + atrasadas().length + ' (veja Manutenção).', src: FT.diario + ' · diário do app', actions: act(p, [['Abrir diário', 'diario'], ['Manutenção', 'manut']]) };
     },
     // Tendências (F11): os achados por regra fixa (preditivaLista), do mais grave ao estável; a 1ª linha, a falada, é o achado mais grave com a hora do instante — ou o que a pergunta nomeia («qual a
     // tendência do óleo?» abre com a pressão de óleo; se o nomeado está estável e outro pede atenção, a 1ª linha diz quantos). A lista de baixo segue a ordem de gravidade. Só lê: nada grava, nada abre.
@@ -3048,8 +3086,8 @@
     manual: function (p) { var g = D.guias || {}, ks = Object.keys(g); return { text: 'Guias de bordo carregados' + demo() + (ks.length ? ' (' + ks.length + ')' : '') + ' — orientação de bordo, não substituem o manual do fabricante:\n' + (ks.length ? ks.map(function (k) { return '• ' + String(g[k]).replace(/^Guia de bordo — /, ''); }).join('\n') : SD), src: 'Fonte: ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || ''), actions: act(p, [['FAQ de bordo', 'faq']]) }; },
     diarioLer: function (p, ctx) {
       var mine = lerDiario(ctx), fonte = diarioFonte();
-      var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + semNavJanela(String(e.t || '')).slice(0, 110) + ' (app)'; });
-      var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + semNavJanela(e.t).slice(0, 110); });
+      var lines = mine.slice(0, 3).map(function (e) { return '• ' + (e.d || '') + ' · ' + (e.sys || 'Diário') + ' — ' + linhaReg(String(e.t || ''), 110) + ' (app)'; });
+      var fixed = fonte.map(function (e) { return '• ' + e.d + ' ' + e.h + ' · ' + e.sys + ' — ' + linhaReg(e.t, 110); });
       // a 1ª linha é a resposta numa frase falável (quantos registros e quantas pendências); os últimos registros vêm embaixo
       var tot = fonte.length + mine.length, pe = pendencias(ctx).length;
       return { text: 'Diário de bordo: ' + tot + (tot === 1 ? ' registro' : ' registros') + ' e ' + pe + (pe === 1 ? ' pendência aberta' : ' pendências abertas') + '.\nÚltimos registros:\n' + lines.concat(fixed).slice(0, 4).join('\n') + '\nPara registrar, diga “registre no diário…” ou toque no atalho DIÁRIO DE BORDO.', src: FT.diario + ' + registros do app', actions: act(p, [['Abrir diário', 'diario']]) };
