@@ -148,16 +148,16 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = (
     'Main', 'H2-Home-Mobile', 'C3-Leme-Alerta',
-    'A1-Ponte-Web', 'A2-Ponte-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web',
+    'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web',
     'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
     'E2-Navegando-Sintoma', 'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
     'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (25 telas em 09/11/2026, depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+)   # (23 telas em 09/11/2026, depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
 PENDENTES_MUDA = ('C3-Leme-Alerta',)
-MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
+MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
 # Sem faixa global de alerta: o SOS (nunca muda de lugar), o Manual (apresentação) e a C3 (a própria tela do alerta)
 SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta')
 MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
@@ -723,6 +723,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4c' in sys.argv or '--mutantes-p4c' in sys.argv:   # só as conferências da P4C (e, com --mutantes-p4c, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4c' in sys.argv:
+                falhas = mutantes_p4c(b)
+            else:
+                for nome, prob in p4c_conferencias(b, list(TELAS_P4C)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     fotos = '--fotos' in sys.argv
     offline = '--offline' in sys.argv or '--so-offline' in sys.argv
@@ -823,12 +836,17 @@ def main():
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'moldura sem corte', 'prob': prob[:6]})
                     print('FALHA moldura sem corte', tela, ' | '.join(prob[:3]))
-            for tela in [t for t in ('A1-Ponte-Web', 'A2-Ponte-Mobile') if t in lista]:   # F06: o selo do coletor pela cor
+            for tela in [t for t in ('A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile') if t in lista]:   # F06: o selo do coletor pela cor (a moldura e, nas telas que têm, o da página)
                 total += 1
                 prob = teste_selo_coletor(b, tela)
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'selo do coletor', 'prob': prob})
                     print('FALHA selo do coletor', tela, ' | '.join(prob))
+            for nome, prob in p4c_conferencias(b, lista):   # P4C: gráfico, Ponte, sensores, ramo simulacao:false e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4C', 'prob': prob[:8]})
+                    print('FALHA P4C ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -1009,7 +1027,8 @@ def teste_corte_moldura(b, tela):
 LE_SELO = """() => { const L = window.CapitaoMoldura.leitura(), D = window.CapitaoDados, pil = document.querySelector('[data-cpm=pilula]'), led = document.querySelector('capitao-topo-app [data-cpm=led]');
   const bola = pil ? pil.firstElementChild : led ? led.firstElementChild : null, cs = bola ? getComputedStyle(bola) : null, S = D.snapshot || {};
   return { vivo: L.vivo, rotulo: L.rotulo, texto: pil ? pil.innerText : led ? led.getAttribute('aria-label') : '', titulo: pil ? pil.title : led ? led.title : '', cor: cs ? cs.backgroundColor : '',
-    pulsa: !!(bola && bola.classList.contains('cpm-led')), ultima: 'Última leitura · ' + String(S.quando || '').slice(0, 5) + ' ' + (S.hora || ''), replay: typeof window.CapitaoReplay }; }"""
+    pulsa: !!(bola && bola.classList.contains('cpm-led')), ultima: 'Última leitura · ' + String(S.quando || '').slice(0, 5) + ' ' + (S.hora || ''), replay: typeof window.CapitaoReplay,
+    nota: (() => { const n = document.querySelector('[data-selo]'); return n ? { tom: n.getAttribute('data-selo'), texto: n.innerText.trim(), cor: getComputedStyle(n.firstElementChild).backgroundColor } : null; })() }; }"""
 
 
 def cor_do_selo(rgb):
@@ -1044,8 +1063,13 @@ def teste_selo_coletor(b, tela):
     def le(pg):
         return pg.evaluate(LE_SELO)
 
-    def confere(rot, r, vivo):
+    def confere(rot, r, vivo, com_nota=False):
         cor = cor_do_selo(r['cor'])
+        if com_nota and r['nota'] is not None:   # P4C (F06): o selo da própria página (A1, A4, A5) pela mesma cor: verde «Ao vivo · HH:MM», âmbar «Última leitura · dd/mm HH:MM»
+            n = r['nota']
+            if n['tom'] != ('ok' if vivo else 'warn') or cor_do_selo(n['cor']) != ('verde' if vivo else 'amarelo'): prob.append('%s: o selo da página é %s/%s (esperado %s)' % (rot, n['tom'], cor_do_selo(n['cor']), 'verde' if vivo else 'âmbar'))
+            if vivo and not re.fullmatch(r'Ao vivo · \d\d:\d\d', n['texto']): prob.append('%s: o selo da página diz %r (esperado «Ao vivo · HH:MM»)' % (rot, n['texto']))
+            if not vivo and n['texto'] != r['ultima']: prob.append('%s: o selo da página diz %r (esperado «%s»)' % (rot, n['texto'], r['ultima']))
         if r['vivo'] is not vivo: prob.append('%s: leitura().vivo = %s (esperado %s)' % (rot, r['vivo'], vivo))
         if cor != ('verde' if vivo else 'amarelo'): prob.append('%s: o LED é %s (%s), esperado %s' % (rot, cor, r['cor'], 'verde' if vivo else 'amarelo'))
         if r['pulsa'] is not vivo: prob.append('%s: o LED %s (verde pulsa, amarelo fica parado)' % (rot, 'pulsa' if r['pulsa'] else 'não pulsa'))
@@ -1056,19 +1080,19 @@ def teste_selo_coletor(b, tela):
         if not vivo and re.search(r'snapshot|desligad|fixa|demo', r['texto'] + ' ' + r['titulo'], re.I): prob.append('%s: o selo ou a dica usa palavra de rótulo: %r %r' % (rot, r['texto'], r['titulo']))
 
     ctx, pg, erros = abre(False)
-    confere('replay ao vivo', le(pg), True)
+    confere('replay ao vivo', le(pg), True, True)
     pg.evaluate("() => { window.CapitaoDados.simulacao = false; window.dispatchEvent(new CustomEvent('capitao-sessao')); }")
     pg.wait_for_timeout(300)
     confere('replay desligado (D.simulacao false)', le(pg), False)
     pg.evaluate("() => { window.CapitaoDados.simulacao = true; window.dispatchEvent(new CustomEvent('capitao-sessao')); }")
     pg.wait_for_timeout(300)
-    confere('replay de volta', le(pg), True)
+    confere('replay de volta', le(pg), True, True)
     if erros: prob.append('erro de script: ' + erros[0])
     ctx.close()
     ctx, pg, erros = abre(True)
     r = le(pg)
     if r['replay'] != 'undefined': prob.append('o teste não vale: o capitao-replay.js carregou (typeof %s)' % r['replay'])
-    confere('replay que falhou ao carregar', r, False)
+    confere('replay que falhou ao carregar', r, False, True)
     if erros: prob.append('sem o capitao-replay.js: erro de script ' + erros[0])
     ctx.close()
     return prob
@@ -1919,6 +1943,550 @@ def teste_equipe_convidado(b, tela):
     return prob
 
 
+# ——— P4C: a Ponte (A1 a A5), o gráfico compartilhado (capitao-grafico.js) e o mapa de sensores (capitao-sensores.js) ———
+# PROMPT Fase 4 «Gráficos» e linha P4C; PARIDADE F05 (lista de alertas), F06 (selo), F07/F33 (gráfico), F08 (sensores), F11 (tendências). Cada conferência abaixo tem um defeito plantado que a faz falhar
+# (MUTANTES_P4C, rodados com --mutantes-p4c): o teste só vale se acusa o defeito.
+TELAS_PONTE = ('A1-Ponte-Web', 'A2-Ponte-Mobile')
+TELAS_SENSORES = ('A4-Sensores-Web', 'A5-Sensores-Mobile')
+TELAS_P4C = TELAS_PONTE + ('A3-Ponte-Editar',) + TELAS_SENSORES
+
+
+def abre_tela(b, tela, w=None, h=None, fixo='60', tema='escuro', depois='', hash_='', ls=None):
+    """A tela com sessão, o replay congelado em `fixo` s (None = livre), o tema, `depois` somado ao fim do capitao-dados.js (a flag, o inventário…) e localStorage `ls` posto antes da carga."""
+    movel = eh_app(tela)
+    if w is None: w, h = (390, 844) if movel else (1440, 900)
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+    init = SESSAO + ";localStorage.setItem('capitao.tema.v1', '%s');localStorage.setItem('capitao.plataforma.v1', '%s');" % (tema, 'app' if movel else 'web')
+    if fixo: init += "try { localStorage.setItem('capitao.replay.fixo', '%s'); } catch (e) {}" % fixo
+    for k, v in (ls or {}).items(): init += "localStorage.setItem(%s, %s);" % (json.dumps(k), json.dumps(v))
+    ctx.add_init_script(init)
+    ctx.add_init_script(ESPIA_FALA)
+    aplica_mut(ctx)
+    if depois:
+        def injeta(route):
+            r = route.fetch()
+            route.fulfill(response=r, body=r.text() + '\n' + depois)
+        ctx.route('**/capitao-dados.js', injeta)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    pg.goto(BASE + tela + '.dc.html' + hash_, wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception:
+        erros.append('prancheta não desenhou em 15 s')
+    pg.wait_for_timeout(1300)
+    return ctx, pg, erros
+
+
+# o JS comum: o instante, o texto de cada campo (a mesma CapitaoAgora.fmt.campo da moldura e do cérebro) e um achatador de espaços
+JS_BASE = """const A = window.CapitaoAgora, F = A.fmt, I = A.instante(), q = I.q, D = window.CapitaoDados, T = {}; Object.keys(D.campos).forEach((c) => { T[c] = F.campo(q, c); });
+  const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim();"""
+
+# ——— o gráfico: cada métrica × cada janela, nos dois temas, com o cursor, o ponto «agora» e sem NaN ———
+CLICA_GRUPO = """([grupo, texto]) => { const g = document.querySelector('[role=group][aria-label="' + grupo + '"]'); const bt = g && [...g.querySelectorAll('button')].find((x) => x.innerText.trim() === texto);
+  if (!bt) return false; bt.click(); return true; }"""
+LE_GRAFICO = """() => { """ + JS_BASE + """
+  const raiz = document.querySelector('[data-capitao-grafico]'), svg = raiz && raiz.querySelector('svg');
+  if (!svg) return { sem: true, vazio: raiz ? raiz.getAttribute('data-vazio') : null, texto: raiz ? lin(raiz.innerText) : '' };
+  const html = svg.outerHTML, pts = (d) => [...d.matchAll(/[ML]([-\\d.]+),([-\\d.]+)/g)].map((m) => [+m[1], +m[2]]);
+  const linhas = [...svg.querySelectorAll('path[d]')].filter((p) => p.getAttribute('fill') === 'none' && p.getAttribute('stroke-width') === '2').map((p) => ({ d: p.getAttribute('d'), n: (p.getAttribute('d').match(/M/g) || []).length, pts: pts(p.getAttribute('d')) }));
+  const dots = [...svg.querySelectorAll('circle[data-agora]')].map((c) => ({ campo: c.getAttribute('data-campo'), v: c.getAttribute('data-agora'), esperado: T[c.getAttribute('data-campo')], cx: +c.getAttribute('cx'), cy: +c.getAttribute('cy') }));
+  const leg = raiz.querySelector('[data-legenda]'), vb = svg.getAttribute('viewBox').split(' ').map(Number);
+  return { met: raiz.getAttribute('data-capitao-grafico'), jan: raiz.getAttribute('data-janela'), ruim: /NaN|undefined|Infinity|null/.test(html), linhas, dots, nTexto: svg.querySelectorAll('text').length, vb,
+    legenda: leg ? lin(leg.innerText) : '', titulo: leg ? leg.getAttribute('title') : '', aria: svg.getAttribute('aria-label') }; }"""
+JAN_ID = {'150 s': '150S', '1 D': '1D', '7 D': '7D', '30 D': '30D', '1 A': '1A'}
+SO150 = ('Rotação', 'Óleo', 'Arrefecimento')
+CURSOR_JS = """async (x) => { const svg = document.querySelector('[data-capitao-grafico] svg'), r = svg.getBoundingClientRect(), n0 = svg.querySelectorAll('line').length;
+  const ev = (t, fx) => svg.dispatchEvent(new PointerEvent(t, { bubbles: true, clientX: r.left + fx * r.width, clientY: r.top + r.height / 2, pointerType: 'mouse', relatedTarget: t === 'pointerout' ? document.body : null }));
+  ev('pointermove', x); await new Promise((ok) => setTimeout(ok, 120));
+  const cx = document.querySelector('[data-cursor=caixa]'), dentro = { texto: cx ? cx.innerText.replace(/\\s+/g, ' ').trim() : null, linhas: svg.querySelectorAll('line').length - n0, pontos: svg.querySelectorAll('circle').length };
+  ev('pointerout', x); await new Promise((ok) => setTimeout(ok, 120));
+  return { dentro, saiu: document.querySelector('[data-cursor=caixa]') === null }; }"""
+CONTRASTE_JS = """() => { const raiz = document.querySelector('[data-capitao-grafico]'), card = raiz.closest('section'), svg = raiz.querySelector('svg');
+  const rgb = (s) => (s.match(/[\\d.]+/g) || []).slice(0, 3).map(Number), lum = (c) => { const f = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; };
+  const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }, bg = rgb(getComputedStyle(card).backgroundColor);
+  return { bg, txt: Math.min(...[...svg.querySelectorAll('text')].map((t) => cr(rgb(getComputedStyle(t).fill), bg))), linha: Math.min(...[...svg.querySelectorAll('path[stroke-width="2"]')].map((p) => cr(rgb(getComputedStyle(p).stroke), bg))), tema: document.documentElement.getAttribute('data-capitao-tema') }; }"""
+
+
+def teste_grafico(b, tela):
+    prob = []
+    ctx, pg, erros = abre_tela(b, tela)
+    ordem = pg.evaluate("() => window.CapitaoGrafico.ORDEM")
+    nomes = pg.evaluate("() => window.CapitaoGrafico.ORDEM.map((k) => window.CapitaoGrafico.rotulo(k))")
+    if len(ordem) != 10: prob.append('as métricas do gráfico são %d (esperado 10: baterias, temperaturas, vento, pressão, água, servidas, diesel, rotação, óleo e arrefecimento)' % len(ordem))
+    n = 0
+    for k, nome in zip(ordem, nomes):
+        if not pg.evaluate(CLICA_GRUPO, ['Série', nome]): prob.append('sem o botão da série %s' % nome); continue
+        for jr, jid in JAN_ID.items():
+            esperada = '150S' if nome in SO150 else jid
+            pg.evaluate(CLICA_GRUPO, ['Período', jr])
+            try:
+                pg.wait_for_function("([m, j]) => { const r = document.querySelector('[data-capitao-grafico]'); return !!r && r.getAttribute('data-capitao-grafico') === m && r.getAttribute('data-janela') === j; }", arg=[k, esperada], timeout=4000)
+            except Exception:
+                prob.append('%s × %s: o gráfico não trocou para %s/%s' % (nome, jr, k, esperada)); continue
+            r = pg.evaluate(LE_GRAFICO)
+            rot = '%s × %s' % (nome, jr)
+            n += 1
+            if r.get('sem'): prob.append('%s: sem gráfico (%s %s)' % (rot, r.get('vazio'), r.get('texto'))); continue
+            if r['ruim']: prob.append('%s: NaN, undefined, Infinity ou null dentro do SVG' % rot)
+            if not r['linhas'] or len(r['linhas']) != len(r['dots']): prob.append('%s: %d linhas para %d pontos «agora»' % (rot, len(r['linhas']), len(r['dots'])))
+            for ln in r['linhas']:
+                if len(ln['pts']) < 2:   # (uma linha com NaN no d não tem pontos que a regex leia)
+                    prob.append('%s: linha sem pontos legíveis: %s' % (rot, ln['d'][:80])); continue
+                xs = [p[0] for p in ln['pts']]
+                if ln['n'] != 1 or len(xs) < 2: prob.append('%s: a linha não é contínua (%d trechos, %d pontos)' % (rot, ln['n'], len(xs)))
+                if any(b_ < a_ for a_, b_ in zip(xs, xs[1:])): prob.append('%s: a linha volta no tempo' % rot)
+                if any(not (0 <= v <= r['vb'][2]) for v in xs) or any(not (0 <= p[1] <= r['vb'][3]) for p in ln['pts']): prob.append('%s: ponto da linha fora do desenho' % rot)
+                if not any(abs(ln['pts'][-1][0] - dt['cx']) <= 0.2 and abs(ln['pts'][-1][1] - dt['cy']) <= 0.2 for dt in r['dots']): prob.append('%s: o ponto «agora» não está no fim da linha' % rot)
+            for dt in r['dots']:
+                if dt['v'] != dt['esperado']: prob.append('%s: o último ponto de %s é %r e o quadro de agora diz %r' % (rot, dt['campo'], dt['v'], dt['esperado']))
+            if r['nTexto'] < 4: prob.append('%s: só %d rótulos de eixo' % (rot, r['nTexto']))
+            if len(r['legenda']) < 8 or not re.search(r'\d', r['legenda']): prob.append('%s: legenda vazia ou sem número: %r' % (rot, r['legenda']))
+            if not r['aria'] or 'NaN' in r['aria']: prob.append('%s: aria-label do gráfico: %r' % (rot, r['aria']))
+        if nome in SO150:   # as métricas do laço só têm a janela de 150 s: os outros botões ficam desativados
+            off = pg.evaluate("() => [...document.querySelectorAll('[role=group][aria-label=\"Período\"] button')].map((x) => [x.innerText.trim(), x.getAttribute('aria-disabled')])")
+            if [x[0] for x in off if x[1] == 'true'] != ['1 D', '7 D', '30 D', '1 A']: prob.append('%s: botões desativados %s (esperado 1 D, 7 D, 30 D e 1 A)' % (nome, off))
+    # o cursor: linha no instante, pontos nas séries, caixa com a hora e os valores com unidade; some ao sair
+    for met, jr, formato in (('Baterias', '7 D', r'\d\d/\d\d \d\d:\d\d'), ('Rotação', '150 s', r'\d\d:\d\d:\d\d')):
+        pg.evaluate(CLICA_GRUPO, ['Série', met]); pg.evaluate(CLICA_GRUPO, ['Período', jr]); pg.wait_for_timeout(200)
+        c = pg.evaluate(CURSOR_JS, 0.5)
+        tx = c['dentro']['texto']
+        if not tx or not re.search(formato, tx) or not re.search(r'\d', tx.split(' ', 2)[-1]): prob.append('cursor de %s × %s: caixa %r (esperado a hora no formato %s e os valores)' % (met, jr, tx, formato))
+        elif met == 'Baterias' and not all(u in tx for u in ('serviço 24 V', 'partida 24 V', 'banco 12 V', ' V')): prob.append('cursor das baterias sem as 3 séries com unidade: %r' % tx)
+        elif met == 'Rotação' and not all(u in tx for u in ('motor BB', 'motor BE', 'rpm')): prob.append('cursor da rotação sem os dois motores com unidade: %r' % tx)
+        if c['dentro']['linhas'] < 1 or c['dentro']['pontos'] < 2: prob.append('cursor de %s: sem a linha vertical (%s) ou os pontos nas séries (%s)' % (met, c['dentro']['linhas'], c['dentro']['pontos']))
+        if not c['saiu']: prob.append('cursor de %s: a caixa não some ao sair' % met)
+    if erros: prob += erros[:2]
+    ctx.close()
+    # claro e escuro: texto do eixo ≥ 3:1 e linhas das séries ≥ 3:1 contra o cartão (as variáveis do tema chegam ao SVG)
+    for tema in ('escuro', 'claro'):
+        ctx, pg, erros = abre_tela(b, tela, tema=tema)
+        pg.evaluate(CLICA_GRUPO, ['Série', 'Baterias']); pg.wait_for_timeout(300)
+        c = pg.evaluate(CONTRASTE_JS)
+        if c['tema'] != tema or c['txt'] < 3 or c['linha'] < 3: prob.append('gráfico no tema %s: contraste do texto %.1f e das linhas %.1f contra o cartão %s (esperado ≥ 3)' % (tema, c['txt'], c['linha'], c['bg']))
+        if erros: prob += erros[:2]
+        ctx.close()
+    # livre: a janela de 150 s anda com o replay (a linha muda em 1,6 s e o último ponto avança)
+    ctx, pg, erros = abre_tela(b, tela, fixo=None)
+    pg.evaluate(CLICA_GRUPO, ['Série', 'Rotação']); pg.evaluate(CLICA_GRUPO, ['Período', '150 s']); pg.wait_for_timeout(600)
+    d1 = pg.evaluate("() => [document.querySelector('[data-capitao-grafico] path[stroke-width=\"2\"]').getAttribute('d'), window.CapitaoGrafico.dados('rpm', '150S').t1]")
+    pg.wait_for_timeout(1700)
+    d2 = pg.evaluate("() => [document.querySelector('[data-capitao-grafico] path[stroke-width=\"2\"]').getAttribute('d'), window.CapitaoGrafico.dados('rpm', '150S').t1]")
+    if d1[0] == d2[0] or d2[1] - d1[1] < 1000: prob.append('livre: a janela de 150 s não andou em 1,7 s (linha igual %s, último ponto +%d ms)' % (d1[0] == d2[0], d2[1] - d1[1]))
+    if erros: prob += erros[:2]
+    ctx.close()
+    if n != 50: prob.append('%d combinações métrica × janela conferidas (esperado 50: 10 métricas × 5 janelas; as do laço de 150 s caem na janela de 150 s)' % n)
+    return prob
+
+
+# ——— A1 e A2: os blocos ao vivo, a lista de alertas, as tendências e o cartão do mapa de sensores ———
+FAB_FALSOS = ("(() => { const E = window.CapitaoDados.equipamentos, z = { motores: 'Zyxmotor', gerador: 'Zyxgerador', estabilizador: 'Zyxestab' }; "
+              "E.forEach((e) => { if (z[e.id]) { e.fabricante = z[e.id]; e.modelo = z[e.id] + ' Mod9'; } }); })();")
+PED_FOGO = [{'id': 'usr_1', 'campo': 'motor_bb_arref_c', 'op': '>', 'limite': 80, 'iso': '2026-11-09T10:00:00-03:00', 'who': 'Lucas', 'sim': True}]
+LE_A1 = """() => { """ + JS_BASE + """
+  const art = (nome) => [...document.querySelectorAll('article')].find((a) => { const h = a.querySelector('h2'); return h && lin(h.innerText).indexOf(nome) === 0; });
+  const t = (nome) => lin((art(nome) || { innerText: '' }).innerText);
+  const chips = [...document.querySelectorAll('section[aria-label="Mapa de sensores"] [title]')].filter((e) => /\\bna rede\\b|SEM LEITURA/.test(e.getAttribute('title') || '')).map((e) => ({ texto: lin(e.innerText), titulo: e.getAttribute('title') }));
+  const mapa = document.querySelector('section[aria-label="Mapa de sensores"] > a');
+  const tit = document.querySelector('[data-alertas=titulo]'), itens = [...document.querySelectorAll('[data-alerta]')].map((e) => ({ id: e.getAttribute('data-alerta'), texto: lin(e.innerText), href: e.getAttribute('href'), aria: e.getAttribute('aria-label') }));
+  const fx = document.getElementById('capitao-faixa-alertas'), nota = document.querySelector('[data-selo]'), tab = (n) => [...document.querySelectorAll('[role=tab]')].find((b) => lin(b.innerText).indexOf(n) === 0);
+  const cel = (txt) => [...document.querySelectorAll('article[aria-label="Motores"] span')].find((e) => e.children.length === 0 && lin(e.innerText) === txt);
+  const probe = document.createElement('span'); probe.style.color = 'var(--cap-warn, #f0a63a)'; document.body.appendChild(probe); const warn = getComputedStyle(probe).color; probe.remove();
+  return { T, fase: I.fase ? I.fase.nome : '', coord: F.coord(q.lat, q.lon), q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos, marcha: q.marcha, estado: q.estado, local: q.local }, nav: t('Navegação'), amb: t('Ambiente'), ene: t('Energia'), tan: t('Tanques'), mot: t('Motores'), chips,
+    mapa: mapa ? { href: mapa.getAttribute('href'), texto: lin(mapa.innerText) } : null, alertasTitulo: tit ? lin(tit.innerText) : null, itens, faixa: fx && !fx.hidden ? lin(fx.innerText) : '',
+    nota: nota ? { tom: nota.getAttribute('data-selo'), texto: lin(nota.innerText) } : null, abas: [...document.querySelectorAll('[role=tab]')].map((x) => [lin(x.innerText), x.getAttribute('aria-selected')]),
+    corArref: (() => { const c = cel(T.motor_be_arref_c); return c ? getComputedStyle(c).color : null; })(), warn, texto: lin(document.body.innerText),
+    ativos: window.CapitaoAlertas.ativos().map((a) => ({ id: a.id, texto: a.texto, hora: a.hora, detalhe: a.detalhe })), pedidos: window.CapitaoBrain.alarmesPedidosAtivos().map((a) => ({ id: a.id, texto: a.texto, desdeTxt: a.desdeTxt })), eqs: D.equipamentos.map((e) => [e.id, e.fabricante, e.modelo]) }; }"""
+LE_TENDENCIAS = """() => { const B = window.CapitaoBrain, lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), el = [...document.querySelectorAll('[data-tendencia]')];
+  const lk = [...document.querySelectorAll('[role=tabpanel] a')].find((a) => /Ver tendências/.test(a.innerText));
+  return { itens: el.map((e) => ({ id: e.getAttribute('data-tendencia'), texto: lin(e.innerText), fonte: e.getAttribute('title') })), api: B.preditiva().map((x) => ({ id: x.id, nivel: x.nivel, texto: x.texto, titulo: x.titulo })), href: lk ? lk.getAttribute('href') : null }; }"""
+
+
+def sem_rotulo(txt):
+    """Os termos do §3 (VARREDURA) no texto da tela: o mesmo critério do roda_tela."""
+    return achados_termos('A1-Ponte-Web', txt)
+
+
+def teste_ponte_web(b):
+    """A1: o texto de cada bloco é o do quadro (CapitaoAgora.fmt.campo, a mesma conta da moldura e do cérebro), sem rótulo, o selo F06 pela cor, a lista de alertas igual à faixa, as tendências do
+    cérebro e o cartão do mapa de sensores; fabricante e modelo de D.equipamentos (nunca fixos); tudo a 60 s e a 105 s."""
+    prob = []
+    guarda = {}
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', fixo=fixo)
+        r = pg.evaluate(LE_A1)
+        T = r['T']
+        rot = 'A1 a %s s' % fixo
+        achei = lambda txt, *xs: [x for x in xs if x not in txt]
+        f = achei(r['nav'], T['sog_nos'], T['proa_graus'] + '°', r['coord'], T['profundidade_m'] + ' m', T['gps_satelites'], 'Navegando')
+        if f: prob.append('%s: o bloco Navegação não mostra %s: %r' % (rot, f, r['nav']))
+        f = achei(r['amb'], T['vento_verdadeiro_nos'] + ' nós', T['pressao_barometrica_hpa'] + ' hPa', T['temp_ar_externo_c'] + ' °C', T['temp_agua_c'] + ' °C', 'A bordo agora')
+        if f: prob.append('%s: o bloco Ambiente não mostra %s: %r' % (rot, f, r['amb']))
+        f = achei(r['ene'], T['bateria_0_tensao_v'] + ' V', T['bateria_2_tensao_v'] + ' V', 'ligado · ' + T['gerador_kw'] + ' kW', T['gerador_horimetro_h'] + ' h', 'ligado · ' + T['seakeeper_volante_pct'] + ' %')
+        if f: prob.append('%s: o bloco Energia não mostra %s: %r' % (rot, f, r['ene']))
+        f = achei(r['tan'], T['tanque_agua_pct'] + ' %', T['tanque_cinzas_pct'] + ' %', T['tanque_negras_pct'] + ' %', T['diesel_bb_pct'] + ' %', T['diesel_be_pct'] + ' %', T['diesel_litros'] + ' L')
+        if f: prob.append('%s: o bloco Tanques não mostra %s: %r' % (rot, f, r['tan']))
+        nums = [T[c] for c in ('motor_bb_rpm', 'motor_be_rpm', 'motor_bb_oleo_bar', 'motor_be_oleo_bar', 'motor_bb_arref_c', 'motor_be_arref_c', 'motor_bb_carga_pct', 'motor_be_carga_pct', 'motor_bb_horimetro_h', 'motor_be_horimetro_h')]
+        f = achei(r['mot'], *nums)
+        if f: prob.append('%s: o bloco Motores não mostra %s: %r' % (rot, f, r['mot']))
+        if not re.search(r'Ligados · %s · marcha %s' % (r['fase'], r['q']['marcha']), r['mot']): prob.append('%s: o estado dos motores devia ser «Ligados · %s · marcha %s»: %r' % (rot, r['fase'], r['q']['marcha'], r['mot'][:120]))
+        if r['fase'] != 'cruzeiro': prob.append('%s: a fase do replay é %r (esperado cruzeiro)' % (rot, r['fase']))
+        if re.search(r'última leitura|ultima leitura', r['mot'], re.I): prob.append('%s: o bloco dos motores ainda fala de «última leitura»' % rot)
+        # os 12 sensores com valor, o porão e a âncora também
+        if len(r['chips']) != 12 or any(re.search(r'SEM LEITURA|—', c['texto']) for c in r['chips']): prob.append('%s: %d sensores no mapa, com SEM LEITURA ou «—»: %s' % (rot, len(r['chips']), [c['texto'] for c in r['chips'] if re.search(r'SEM LEITURA|—', c['texto'])]))
+        porao = [c for c in r['chips'] if c['texto'].startswith('Porão')]
+        ancora = [c for c in r['chips'] if c['texto'].startswith('Âncora')]
+        if not porao or 'BB ' + T['porao_bb_nivel'] + ' · BE ' + T['porao_be_nivel'] + ' cm' not in porao[0]['texto']: prob.append('%s: o chip do porão não mostra o nível do quadro: %s' % (rot, porao))
+        if not ancora or r['q']['ancora'] not in ancora[0]['texto']: prob.append('%s: o chip da âncora não mostra %r: %s' % (rot, r['q']['ancora'], ancora))
+        if not r['mapa'] or r['mapa']['href'] != 'A4-Sensores-Web.dc.html' or 'Mapa de sensores ›' not in r['mapa']['texto'] or '22 de 22 na rede' not in r['mapa']['texto']: prob.append('%s: o cartão «Mapa de sensores ›» → A4: %s' % (rot, r['mapa']))
+        # selo F06 e o texto de cada alerta
+        if not r['nota'] or r['nota']['tom'] != 'ok' or not re.fullmatch(r'Ao vivo · \d\d:\d\d', r['nota']['texto']): prob.append('%s: o selo da página devia ser verde «Ao vivo · HH:MM»: %s' % (rot, r['nota']))
+        ach = sem_rotulo(r['texto'])
+        if ach: prob.append('%s: termo do §3 no texto: %s' % (rot, ach))
+        if fixo == '60':
+            if r['alertasTitulo'] != 'Nenhum alerta ativo' or r['itens']: prob.append('A1 a 60 s: devia ter «Nenhum alerta ativo», e tem %r %s' % (r['alertasTitulo'], r['itens']))
+        else:
+            ids = [i['id'] for i in r['itens']]
+            if r['alertasTitulo'] != '1 alerta ativo' or ids != ['arref_be']: prob.append('A1 a 105 s: a lista tem %r %s (esperado 1 alerta ativo: arref_be)' % (r['alertasTitulo'], ids))
+            a0 = r['itens'][0] if r['itens'] else {}
+            if not r['ativos'] or r['ativos'][0]['texto'] not in a0.get('texto', '') or ('desde ' + r['ativos'][0]['hora']) not in a0.get('texto', ''): prob.append('A1 a 105 s: o 1º item devia ser o da CapitaoAlertas (%s) com «desde %s»: %s' % (r['ativos'][:1], r['ativos'][0]['hora'] if r['ativos'] else '', a0))
+            if a0.get('href') != 'C3-Leme-Alerta.dc.html#alarme=arref_be': prob.append('A1 a 105 s: o alerta leva a %r (esperado a C3 com #alarme=arref_be)' % a0.get('href'))
+            if r['ativos'] and r['ativos'][0]['texto'] not in r['faixa']: prob.append('A1 a 105 s: a faixa do topo diz %r e a lista %r: não são a mesma lista' % (r['faixa'], r['ativos'][0]['texto']))
+            if r['corArref'] != r['warn']: prob.append('A1 a 105 s: o arrefecimento do BE (%s) não está na cor de AVISO (%s): %s' % (T['motor_be_arref_c'], r['warn'], r['corArref']))
+        # as tendências: a aba, os 5 achados do cérebro (na ordem dele) e o link
+        pg.evaluate("() => [...document.querySelectorAll('[role=tab]')].find((x) => /^Tendências/.test(x.innerText.trim())).click()")
+        pg.wait_for_selector('[data-tendencia]', timeout=4000)
+        td = pg.evaluate(LE_TENDENCIAS)
+        if [i['id'] for i in td['itens']] != [x['id'] for x in td['api']] or len(td['itens']) != 5: prob.append('%s: as tendências da tela %s não são as 5 do cérebro %s' % (rot, [i['id'] for i in td['itens']], [x['id'] for x in td['api']]))
+        if not td['href'] or not td['href'].startswith('Main.dc.html#q='): prob.append('%s: o link «Ver tendências ›» leva a %r' % (rot, td['href']))
+        if any(not i['fonte'] for i in td['itens']): prob.append('%s: tendência sem a fonte no title' % rot)
+        guarda[fixo] = {i['id']: i['texto'] for i in td['itens']}
+        ach = sem_rotulo(pg.evaluate("() => document.body.innerText"))
+        if ach: prob.append('%s: termo do §3 na aba Tendências: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # com um alarme pedido no chat (arrefecimento do BB acima de 80 °C): a lista junta os dois, na ordem da faixa (o mais antigo primeiro: o pedido começou antes do aviso do BE)
+    ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', fixo='105', ls={'capitao.alarmes.v1': json.dumps(PED_FOGO)})
+    r = pg.evaluate(LE_A1)
+    ids = [i['id'] for i in r['itens']]
+    if r['alertasTitulo'] != '2 alertas ativos' or ids != ['usr_1', 'arref_be']: prob.append('A1 a 105 s com o alarme pedido: a lista tem %r %s (esperado 2 alertas ativos: usr_1 e arref_be, o mais antigo primeiro)' % (r['alertasTitulo'], ids))
+    if not r['pedidos'] or not r['itens'] or not r['itens'][0]['href'].startswith('Main.dc.html#q=') or r['pedidos'][0]['texto'] not in r['itens'][0]['texto'] or r['pedidos'][0]['texto'] not in r['faixa'] or r['pedidos'][0]['desdeTxt'] not in r['itens'][0]['texto']:
+        prob.append('A1 com o alarme pedido: o 1º item da lista %s não é o que a faixa mostra (%r) nem o do cérebro %s' % (r['itens'][:1], r['faixa'], r['pedidos'][:1]))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o alarme pedido sem começo conhecido (a SOG acima de 2 nós vale há mais de 160 s: desdeMs null) vai para o FIM da lista e diz «há mais de …» (o desdeTxt do cérebro), como na faixa
+    ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', fixo='105', ls={'capitao.alarmes.v1': json.dumps([dict(PED_FOGO[0], campo='sog_nos', limite=2)])})
+    r = pg.evaluate(LE_A1)
+    ids = [i['id'] for i in r['itens']]
+    if ids != ['arref_be', 'usr_1'] or not r['pedidos'] or not r['pedidos'][0]['desdeTxt'].startswith('há mais de') or r['pedidos'][0]['desdeTxt'] not in r['itens'][-1]['texto']:
+        prob.append('A1 com o alarme pedido sem começo conhecido: a lista %s (esperado arref_be e, no fim, usr_1 com «há mais de …»); o cérebro diz %s' % ([(i['id'], i['texto'][-40:]) for i in r['itens']], r['pedidos'][:1]))
+    if erros: prob += erros[:2]
+    ctx.close()
+    a60, a105 = guarda['60'].get('arref_agora', ''), guarda['105'].get('arref_agora', '')
+    if 'dentro da faixa normal' not in a60 or 'AVISO desde' not in a105 or a60 == a105: prob.append('as tendências não mudam de 60 s para 105 s: %r → %r (o arrefecimento sai da faixa e vira AVISO)' % (a60, a105))
+    # o fabricante e o modelo vêm do D.equipamentos (nunca fixos na tela): trocados na carga, a tela mostra os trocados
+    ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', depois=FAB_FALSOS)
+    r = pg.evaluate(LE_A1)
+    if not r['mot'].startswith('Motores Zyxmotor') or 'modelo Zyxmotor Mod9' not in r['mot']: prob.append('fabricante e modelo dos motores trocados no D.equipamentos e a A1 não os mostra (título e modelo): %r' % r['mot'][:120])
+    if 'Zyxgerador Mod9' not in r['ene'] or 'Zyxestab Mod9' not in r['ene']: prob.append('fabricante do gerador e do estabilizador trocados no D.equipamentos e a A1 não os mostra: %r' % r['ene'][-90:])
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o hash #alertas (o ABRIR › da faixa para os alarmes pedidos) abre a página sem erro
+    ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', hash_='#alertas')
+    if not pg.evaluate("() => !!document.getElementById('alertas') && !!document.querySelector('[data-alertas=titulo]')"): prob.append('A1#alertas: sem a seção de alertas')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+LE_A2 = """() => { """ + JS_BASE + """
+  const blocos = {}; [...document.querySelectorAll('a[aria-label]')].forEach((a) => { const m = /^([^—]+) — (.*)$/.exec(a.getAttribute('aria-label')); if (m) blocos[m[1].trim()] = m[2]; });
+  const tit = document.querySelector('[data-alertas=titulo]'), itens = [...document.querySelectorAll('[data-alerta]')].map((e) => ({ id: e.getAttribute('data-alerta'), texto: lin(e.innerText), href: e.getAttribute('href') }));
+  const tend = [...document.querySelectorAll('[data-tendencia]')].map((e) => e.getAttribute('data-tendencia')), fx = document.getElementById('capitao-faixa-alertas');
+  const mapa = [...document.querySelectorAll('a[href]')].find((a) => /A5-Sensores-Mobile/.test(a.getAttribute('href')));
+  const eq = (id) => D.equipamentos.find((e) => e.id === id) || {};
+  return { T, blocos, alertasTitulo: tit ? lin(tit.innerText) : null, itens, tend, faixa: fx && !fx.hidden ? lin(fx.innerText) : '', mapa: mapa ? { href: mapa.getAttribute('href'), texto: lin(mapa.innerText) } : null, texto: lin(document.body.innerText),
+    ativos: window.CapitaoAlertas.ativos().map((a) => ({ id: a.id, texto: a.texto })), api: window.CapitaoBrain.preditiva().map((x) => x.id), hhmm: I.hhmm, estado: q.estado, fab: { gerador: eq('gerador').fabricante, motores: eq('motores').fabricante }, nEq: D.equipamentos.length,
+    ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }; }"""
+
+
+def teste_ponte_app(b):
+    """A2: o estado de cada bloco do console é o do quadro (telemetria, navegação, gerador, sistemas, porão), sem rótulo; lista de alertas, tendências e o cartão do mapa de sensores."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'A2-Ponte-Mobile', fixo=fixo, ls={'capitao.blocos.v1': json.dumps([{'id': i, 'label': i, 'icon': 'motor'} for i in ('telemetria', 'navegacao', 'gerador', 'sistemas', 'porao', 'estabilizador', 'posicao', 'clima')])})
+        r = pg.evaluate(LE_A2)
+        T = r['T']
+        rot = 'A2 a %s s' % fixo
+        if r['blocos'].get('Telemetria') != 'ao vivo ' + r['hhmm']: prob.append('%s: o bloco Telemetria diz %r (esperado «ao vivo %s»)' % (rot, r['blocos'].get('Telemetria'), r['hhmm']))
+        esp = '%s · %s nós · %s°' % (r['estado'].lower(), T['sog_nos'], T['proa_graus'])
+        if r['blocos'].get('Navegação') != esp: prob.append('%s: o bloco Navegação diz %r (esperado %r: estado, SOG e proa do quadro)' % (rot, r['blocos'].get('Navegação'), esp))
+        esp = '%s · %s kW · %s h' % (r['fab']['gerador'], T['gerador_kw'], T['gerador_horimetro_h'])
+        if not (r['blocos'].get('Gerador') or '').startswith(esp): prob.append('%s: o bloco Gerador diz %r (esperado %r: fabricante do inventário, kW e horas de agora)' % (rot, r['blocos'].get('Gerador'), esp))
+        sis = r['blocos'].get('Sistemas') or ''
+        if 'SEM DADOS' in sis or str(r['nEq']) + ' equipamentos' not in sis: prob.append('%s: o bloco Sistemas diz %r' % (rot, sis))
+        esp = 'BB %s · BE %s cm · bomba %s %s/h' % (T['porao_bb_nivel'], T['porao_be_nivel'], r['ciclos'], 'ciclo' if r['ciclos'] == 1 else 'ciclos')
+        if not (r['blocos'].get('Porão') or '').startswith(esp): prob.append('%s: o bloco Porão diz %r (esperado %r: nível e ciclos da bomba)' % (rot, r['blocos'].get('Porão'), esp))
+        if 'Estabilizador' in r['blocos'] and (T['seakeeper_volante_pct'] + ' %') not in r['blocos']['Estabilizador']: prob.append('%s: o bloco Estabilizador diz %r' % (rot, r['blocos']['Estabilizador']))
+        ach = achados_termos('A2-Ponte-Mobile', r['texto'] + ' ' + ' '.join(r['blocos'].values()))
+        if ach: prob.append('%s: termo do §3: %s' % (rot, ach))
+        if fixo == '60' and (r['alertasTitulo'] != 'Nenhum alerta ativo' or r['itens']): prob.append('A2 a 60 s: devia ter «Nenhum alerta ativo»: %r %s' % (r['alertasTitulo'], r['itens']))
+        if fixo == '105':
+            if r['alertasTitulo'] != '1 alerta ativo' or [i['id'] for i in r['itens']] != ['arref_be'] or r['itens'][0]['href'] != 'C3-Leme-Alerta.dc.html#alarme=arref_be': prob.append('A2 a 105 s: a lista de alertas %r %s (esperado o arref_be com o link da C3)' % (r['alertasTitulo'], r['itens']))
+            if r['ativos'] and r['ativos'][0]['texto'] not in r['faixa']: prob.append('A2 a 105 s: a faixa %r e a lista %r não são a mesma' % (r['faixa'], r['ativos'][0]['texto']))
+        if r['tend'] != r['api'] or len(r['tend']) != 5: prob.append('%s: as tendências da tela %s não são as 5 do cérebro %s' % (rot, r['tend'], r['api']))
+        if not r['mapa'] or r['mapa']['href'] != 'A5-Sensores-Mobile.dc.html' or 'Mapa de sensores ›' not in r['mapa']['texto'] or '22 de 22 sensores na rede' not in r['mapa']['texto']: prob.append('%s: o cartão «Mapa de sensores ›» → A5: %s' % (rot, r['mapa']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    ctx, pg, erros = abre_tela(b, 'A2-Ponte-Mobile', depois=FAB_FALSOS, ls={'capitao.blocos.v1': json.dumps([{'id': 'gerador', 'label': 'Gerador', 'icon': 'motor'}, {'id': 'estabilizador', 'label': 'Estabilizador', 'icon': 'motor'}])})
+    r = pg.evaluate(LE_A2)
+    if not (r['blocos'].get('Gerador') or '').startswith('Zyxgerador') or 'Zyxestab Mod9' not in (r['blocos'].get('Estabilizador') or ''): prob.append('fabricante trocado no D.equipamentos e a A2 não o mostra: %s' % r['blocos'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+# ——— A4 e A5: o mapa de sensores ———
+LE_SENS = """() => { """ + JS_BASE + """
+  const re = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }, nome = (s) => (s || '').replace(/\\s+/g, ' ').trim();
+  const sec = (e) => e.closest('section'), regiao = (e) => e.closest('[role=region]') || sec(e);
+  const blocos = [...document.querySelectorAll('[data-bloco]')].map((e) => { const l1 = e.querySelector('[data-l1]'), l2 = e.querySelector('[data-l2]'); return Object.assign({ id: e.getAttribute('data-bloco'), l1: nome(l1.innerText), l2: nome(l2.innerText), c1: l1.scrollWidth <= l1.clientWidth + 1, c2: l2.scrollWidth <= l2.clientWidth + 1, titulo: e.getAttribute('title'),
+    cartao: sec(e).getAttribute('aria-label'), dentro: (() => { const r = re(e), s = re(regiao(e)), rolavel = !!e.closest('[role=region]'); return (rolavel || (r.l >= s.l - 0.5 && r.r <= s.r + 0.5)) && r.t >= s.t - 0.5 && r.b <= s.b + 0.5; })() }, re(e)); });
+  const pontos = [...document.querySelectorAll('[data-ponto]')].map((e) => { e.scrollIntoView({ block: 'center', inline: 'center' }); const r = e.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2, topo = document.elementFromPoint(cx, cy);
+    return { id: e.getAttribute('data-ponto'), nivel: e.getAttribute('data-nivel'), visivel: topo === e || e.contains(topo), esq: parseFloat(e.style.left) + parseFloat(e.style.width) / 2, topo: parseFloat(e.style.top) + parseFloat(e.style.height) / 2 }; });
+  const linhas = [...document.querySelectorAll('[data-linha]')].map((e) => ({ id: e.getAttribute('data-linha'), esq: parseFloat(e.style.left), topo: parseFloat(e.style.top) + 0.5 }));
+  window.scrollTo(0, 0);
+  const num = (e, k) => parseFloat(e.style[k]), colide = [];
+  document.querySelectorAll('[data-desenho]').forEach((cx) => { const bl = [...cx.querySelectorAll(':scope > [data-bloco]')].map((e) => ({ id: e.getAttribute('data-bloco'), l: num(e, 'left'), t: num(e, 'top'), r: num(e, 'left') + num(e, 'width'), b: num(e, 'top') + num(e, 'height') }));
+    cx.querySelectorAll(':scope > [data-ponto]').forEach((d) => { const x = num(d, 'left') + num(d, 'width') / 2, y = num(d, 'top') + num(d, 'height') / 2, m = num(d, 'width') / 2 + 1;
+      bl.forEach((q) => { if (x > q.l - m && x < q.r + m && y > q.t - m && y < q.b + m) colide.push(d.getAttribute('data-ponto') + ' dentro do bloco ' + q.id); }); }); });
+  return { T, colide, q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }, blocos, pontos, linhas, lista: [...document.querySelectorAll('[data-sensor]')].map((e) => nome(e.innerText)), desenhos: [...document.querySelectorAll('[data-desenho]')].map((e) => e.getAttribute('data-desenho')),
+    texto: nome(document.body.innerText), D: { sens: D.sensores.pontos.map((p) => [p.id, p.vista]), mapa: [D.sensores.perfil, D.sensores.planta] },
+    selo: (() => { const n = document.querySelector('[data-selo]'); return n ? [n.getAttribute('data-selo'), nome(n.innerText)] : null; })() }; }"""
+LIVRE_DE_SALVATAGEM = re.compile(r'colete|balsa|boia|extintor|sinalizador|epirb|radiobaliza|seafire|supress|incêndio|incendio|salva-?vidas', re.I)
+
+
+def esperado_sensores(T, q, app):
+    """O texto de cada miniquadro (2ª linha), refeito a partir do texto de cada campo do quadro: o bloco mostra os 2 primeiros campos do sensor (o 1º no app), o inclinômetro roll, pitch e yaw."""
+    e = {'gps': [T['gps_satelites'] + ' satélites'], 'radar': ['ligado'], 'meteo': [T['vento_verdadeiro_nos'] + ' nós', T['vento_verdadeiro_angulo'] + '°'], 'sonda': [T['profundidade_m'] + ' m', T['temp_agua_c'] + ' °C'],
+         'estabilizador': [T['seakeeper_volante_rpm'] + ' rpm', T['seakeeper_volante_pct'] + ' %'], 'praca': [T['temp_praca_maquinas_c'] + ' °C'],
+         'motor_bb': [T['motor_bb_rpm'] + ' rpm', T['motor_bb_oleo_bar'] + ' bar'], 'motor_be': [T['motor_be_rpm'] + ' rpm', T['motor_be_oleo_bar'] + ' bar'], 'gerador': [T['gerador_kw'] + ' kW', T['gerador_horimetro_h'] + ' h'],
+         'diesel_bb': [T['diesel_bb_pct'] + ' %'], 'diesel_be': [T['diesel_be_pct'] + ' %'], 'agua': [T['tanque_agua_pct'] + ' %'], 'servidas': [T['tanque_cinzas_pct'] + ' %', T['tanque_negras_pct'] + ' %'],
+         'b24s': [T['bateria_0_tensao_v'] + ' V'], 'b24p': [T['bateria_1_tensao_v'] + ' V'], 'b12': [T['bateria_2_tensao_v'] + ' V'], 'porao_bb': [T['porao_bb_nivel'] + ' cm'],
+         'leme': [T['leme_graus'] + '°', T['piloto_rumo'] + '°'], 'guincho': [q['ancora']], 'dessal': ['desligado']}
+    e['porao_be'] = [T['porao_be_nivel'] + ' cm', T['bomba_porao_ciclos'] + ' ciclos']
+    out = {k: ' · '.join(v[:1] if app else v[:2]) for k, v in e.items()}
+    out['inclinometro'] = 'R %s° P %s° Y %s°' % (T['jogo_graus'], T['caimento_graus'], T['proa_graus'])
+    return out
+
+
+def interseca(a, b):
+    return a['l'] < b['r'] - 0.5 and b['l'] < a['r'] - 0.5 and a['t'] < b['b'] - 0.5 and b['t'] < a['b'] - 0.5
+
+
+def problemas_sensores(r, tela, rot):
+    prob = []
+    app = tela.startswith('A5')
+    ids = sorted(x[0] for x in r['D']['sens'])
+    if sorted(p['id'] for p in r['pontos']) != ids or sorted(b_['id'] for b_ in r['blocos']) != ids or len(r['lista']) != 22 or len(r['linhas']) != 22:
+        prob.append('%s: %d pontos, %d blocos, %d linhas e %d itens na lista (esperado 22 de cada, os do D.sensores)' % (rot, len(r['pontos']), len(r['blocos']), len(r['linhas']), len(r['lista'])))
+    if r['desenhos'] != ['assets/sensores-perfil.svg', 'assets/sensores-planta.svg']: prob.append('%s: desenhos %s' % (rot, r['desenhos']))
+    por = {}
+    for b_ in r['blocos']: por.setdefault(b_['cartao'], []).append(b_)
+    if {k: len(v) for k, v in por.items()} != {'Perfil do barco': 7, 'Planta do barco': 15}: prob.append('%s: blocos por vista %s (esperado perfil 7 e planta 15)' % (rot, {k: len(v) for k, v in por.items()}))
+    for vista, bl in por.items():
+        for i, a in enumerate(bl):
+            for c in bl[i + 1:]:
+                if interseca(a, c): prob.append('%s: os blocos %s e %s se sobrepõem na %s' % (rot, a['id'], c['id'], vista))
+    esp = esperado_sensores(r['T'], r['q'], app)
+    for b_ in r['blocos']:
+        if b_['l2'] != esp.get(b_['id']): prob.append('%s: o bloco %s mostra %r (esperado %r, do quadro)' % (rot, b_['id'], b_['l2'], esp.get(b_['id'])))
+        if not (b_['c1'] and b_['c2']): prob.append('%s: o texto do bloco %s está cortado (%r / %r)' % (rot, b_['id'], b_['l1'], b_['l2']))
+        if not b_['dentro']: prob.append('%s: o bloco %s sai do cartão (cortado pela borda)' % (rot, b_['id']))
+    if r['colide']: prob.append('%s: ponto dentro de um bloco (o texto do bloco ficaria sob o ponto): %s' % (rot, r['colide'][:4]))
+    for p in r['pontos']:
+        if not p['visivel']: prob.append('%s: o ponto %s está coberto por outro elemento' % (rot, p['id']))
+        if p['nivel'] not in ('normal', 'aviso', 'critico'): prob.append('%s: o ponto %s sem nível (%r)' % (rot, p['id'], p['nivel']))
+    pontos = {p['id']: p for p in r['pontos']}
+    for ln in r['linhas']:
+        p = pontos.get(ln['id'])
+        if not p or abs(ln['esq'] - p['esq']) > 0.6 or abs(ln['topo'] - p['topo']) > 0.6: prob.append('%s: a linha do bloco %s não sai do ponto (%s × %s)' % (rot, ln['id'], ln, p and (p['esq'], p['topo'])))
+    if LIVRE_DE_SALVATAGEM.search(' '.join(r['lista'])): prob.append('%s: sensor de salvatagem ou de incêndio na lista: %s' % (rot, LIVRE_DE_SALVATAGEM.findall(' '.join(r['lista']))))
+    ach = achados_termos(tela, r['texto'])
+    if ach: prob.append('%s: termo do §3 no texto: %s' % (rot, ach))
+    if not r['selo'] or r['selo'][0] != 'ok' or not re.fullmatch(r'Ao vivo · \d\d:\d\d', r['selo'][1]): prob.append('%s: o selo da página devia ser verde «Ao vivo · HH:MM»: %s' % (rot, r['selo']))
+    return prob
+
+
+def teste_sensores(b, tela):
+    prob = []
+    movel = eh_app(tela)
+    for tema, (w, h), fixo in [('escuro', ((390, 844) if movel else (1440, 900)), '60'), ('claro', ((390, 844) if movel else (1440, 900)), '105')] + [('escuro', t, '60') for t in ([(360, 640), (844, 390), (430, 932)] if movel else [(1280, 720), (1920, 1080), (1024, 768)])]:
+        ctx, pg, erros = abre_tela(b, tela, w, h, fixo=fixo, tema=tema)
+        r = pg.evaluate(LE_SENS)
+        prob += problemas_sensores(r, tela, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
+        if erros: prob += erros[:2]
+        ctx.close()
+    return prob
+
+
+# O desenho (assets/sensores-*.svg) segue a `referencia` do D.sensores (CONTRATO §1.19): o viewBox é o w × h do dado, a popa e a proa nas frações, a quilha e o topo do mastro (perfil), o eixo e a meia-boca (planta);
+# e cada ponto cai a menos de 24 px de traço. O SVG é rasterizado no navegador, sem rede.
+DESENHO_JS = """async () => { const D = window.CapitaoDados.sensores, out = {};
+  for (const k of ['perfil', 'planta']) {
+    const v = D[k], im = new Image(); im.src = v.img; await im.decode();
+    const c = document.createElement('canvas'); c.width = v.w; c.height = v.h; const g = c.getContext('2d'); g.drawImage(im, 0, 0, v.w, v.h);
+    const d = g.getImageData(0, 0, v.w, v.h).data, a = (x, y) => d[(y * v.w + x) * 4 + 3] > 40;
+    const caixa = (x0, x1, y0, y1) => { let mx = 1e9, Mx = -1, my = 1e9, My = -1; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (a(x, y)) { mx = Math.min(mx, x); Mx = Math.max(Mx, x); my = Math.min(my, y); My = Math.max(My, y); } return { mx, Mx, my, My }; };
+    const r = D.referencia, W = v.w, H = v.h, res = { w: v.w, h: v.h, nat: [im.naturalWidth, im.naturalHeight] };
+    if (k === 'perfil') { const q = caixa(300, 780, 0, H - 1), m = caixa(540, 660, 0, 120), po = caixa(0, 120, 205, 280), pr = caixa(1100, W - 1, 200, 240);
+      res.quilha = [q.My, r.quilha_y * H]; res.topo = [m.my, r.topo_y * H]; res.popa = [po.mx, r.popa_x * W]; res.proa = [pr.Mx, r.proa_x * W]; }
+    else { const m = caixa(400, 600, 0, H - 1), po = caixa(0, 100, 110, 140), pr = caixa(1100, W - 1, 205, 215);
+      res.topo = [m.my, (r.eixo_y - r.meia_boca) * H]; res.quilha = [m.My, (r.eixo_y + r.meia_boca) * H]; res.popa = [po.mx, r.popa_x * W]; res.proa = [pr.Mx, r.proa_x * W]; }
+    res.pontos = D.pontos.filter((p) => p.vista === k).map((p) => { const x = Math.round(p.x * W), y = Math.round(p.y * H), cx = caixa(Math.max(0, x - 24), Math.min(W - 1, x + 24), Math.max(0, y - 24), Math.min(H - 1, y + 24)); return [p.id, cx.Mx >= 0]; });
+    out[k] = res;
+  } return out; }"""
+
+
+def teste_sensores_desenho(b):
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'A4-Sensores-Web')
+    r = pg.evaluate(DESENHO_JS)
+    for k, v in r.items():
+        if v['nat'] != [v['w'], v['h']] and v['nat'] != [0, 0]: prob.append('%s: o SVG tem %s e o D.sensores diz %dx%d' % (k, v['nat'], v['w'], v['h']))
+        for nome, tol in (('quilha', 6), ('topo', 6), ('popa', 10), ('proa', 10)):
+            obs, esp = v[nome]
+            if abs(obs - esp) > tol: prob.append('%s: %s do desenho em %.1f e a referência do D.sensores em %.1f (tolerância %d)' % (k, nome, obs, esp, tol))
+        longe = [p[0] for p in v['pontos'] if not p[1]]
+        if longe: prob.append('%s: pontos a mais de 24 px de qualquer traço: %s' % (k, longe))
+    for arq in ('assets/sensores-perfil.svg', 'assets/sensores-planta.svg'):
+        t = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
+        if re.search(r'<image|href=|xlink|<script|data:', t, re.I): prob.append('%s: referência externa ou script dentro do SVG' % arq)
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+# ——— o ramo simulacao:false: a Ponte e o mapa de sensores mantêm o caminho `null` → SEM DADOS e a última leitura salva (o D.snapshot), sem erro e sem dizer «ao vivo» ———
+def teste_ponte_real(b, lista=TELAS_P4C):
+    prob = []
+    for tela in TELAS_P4C:
+        if tela == 'A3-Ponte-Editar' or tela not in lista: continue
+        ctx, pg, erros = abre_tela(b, tela, fixo=None, depois='window.CapitaoDados.simulacao = false;')
+        r = pg.evaluate("""() => { const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), n = document.querySelector('[data-selo]'), g = document.querySelector('[data-capitao-grafico],[data-vazio]');
+          return { texto: lin(document.body.innerText), nota: n ? [n.getAttribute('data-selo'), lin(n.innerText)] : null, replay: window.CapitaoReplay ? window.CapitaoReplay.ativo() : null, grafico: g ? lin(g.innerText) : null,
+            ultima: (() => { const S = window.CapitaoDados.snapshot; return 'Última leitura · ' + S.quando.slice(0, 5) + ' ' + S.hora; })() }; }""")
+        rot = '%s com simulacao false' % tela
+        if r['replay']: prob.append('%s: o replay ainda anda' % rot)
+        if re.search(r'NaN|undefined|\[object', r['texto']): prob.append('%s: NaN, undefined ou [object na tela' % rot)
+        if r['nota'] and (r['nota'][0] != 'warn' or not r['nota'][1].startswith('Última leitura · 26/09')): prob.append('%s: o selo diz %s (esperado âmbar, «Última leitura · 26/09 …»)' % (rot, r['nota']))
+        if tela.startswith('A1'):
+            if 'lançada · 30 m' not in r['texto'] or 'BB 1,2 · BE 0,9 cm' not in r['texto']: prob.append('%s: o chip da âncora e o do porão devem mostrar o que o D.snapshot tem (lançada · 30 m; BB 1,2 · BE 0,9 cm)' % rot)
+            if not r['grafico'] or 'SEM DADOS' not in r['grafico']: prob.append('%s: sem replay o gráfico devia dizer SEM DADOS: %r' % (rot, r['grafico']))
+        if tela.startswith('A2') and (not r['grafico'] or 'SEM DADOS' not in r['grafico']): prob.append('%s: sem replay o gráfico devia dizer SEM DADOS: %r' % (rot, r['grafico']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+# ——— o código das telas e dos dois arquivos novos ———
+def teste_codigo_ponte():
+    prob = []
+    def le_(a):   # o arquivo do disco, com o defeito plantado (MUT_ARQ) se houver
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    for t in TELAS_P4C:
+        h = le_(t + '.dc.html')
+        if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % t)
+        if t in ('A3-Ponte-Editar',): continue
+        mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+        if "addEventListener('capitao-telemetria'" not in h[mont:desm] or "removeEventListener('capitao-telemetria'" not in h[desm:]: prob.append('%s: não assina o capitao-telemetria no componentDidMount e remove no componentWillUnmount' % t)
+        if 'document.hidden' not in h: prob.append('%s: não pausa com document.hidden' % t)
+        if 'if (k === this._k) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('%s: não compara o texto antes do setState' % t)
+        if h.count('setInterval') > (1 if t.startswith(('A1', 'A2')) else 0): prob.append('%s: setInterval novo (%d)' % (t, h.count('setInterval')))
+        if re.search(r'D\.snapshot|\.snapshot\b', h) and t not in ('A1-Ponte-Web',): prob.append('%s: lê o D.snapshot' % t)
+    for arq in ('capitao-grafico.js', 'capitao-sensores.js'):
+        src = le_(arq)
+        sem_com = re.sub(r'(?s)/\*.*?\*/', '', src)
+        if '(?<' in src or '\\w' in src: prob.append('%s: lookbehind ou \\w' % arq)
+        if 'setInterval' in sem_com: prob.append('%s: setInterval' % arq)
+        if re.search(r'localStorage|sessionStorage|indexedDB|speechSynthesis|location\s*(\.\s*(href|assign|replace|reload)|=)|window\s*\.\s*open', sem_com): prob.append('%s: escreve no aparelho, fala ou troca de tela' % arq)
+        if 'EM_SOS' not in src or 'SOS-' not in src: prob.append('%s: não sai em /SOS-/' % arq)
+    sw = le_('sw.js')
+    for x in ("'./capitao-grafico.js'", "'./capitao-sensores.js'", "'./assets/sensores-perfil.svg'", "'./assets/sensores-planta.svg'", "'A4-Sensores-Web'", "'A5-Sensores-Mobile'"):
+        if x not in sw: prob.append('sw.js sem %s' % x)
+    if 'A4-Sensores-Web.dc.html' not in le_('index.html') or 'A5-Sensores-Mobile.dc.html' not in le_('index.html'): prob.append('index.html sem A4 e A5')
+    if "'A4-Sensores-Web': 'A5-Sensores-Mobile'" not in le_('capitao-app.js'): prob.append('capitao-app.js sem o par A4 → A5 no mapa APP')
+    for t in TELAS_SENSORES:
+        h = le_(t + '.dc.html')
+        ordem = [h.find(x) for x in ('<script src="./capitao-dados.js">', '<script src="./capitao-replay.js">', '<script src="./capitao-alertas.js"></script>', '<script src="./support.js">')]
+        if ordem != sorted(ordem) or -1 in ordem or h.count('capitao-replay.js') != 1: prob.append('%s: <head> fora da ordem das outras telas (dados, replay, alertas, …, support)' % t)
+    return prob
+
+
+def p4c_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4C para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_P4C): out.append(('código da Ponte, do gráfico e dos sensores', teste_codigo_ponte()))
+    for tela in [t for t in TELAS_PONTE if t in lista]: out.append(('gráfico em ' + tela, teste_grafico(b, tela)))
+    if 'A1-Ponte-Web' in lista: out.append(('A1 · blocos, alertas, tendências e mapa', teste_ponte_web(b)))
+    if 'A2-Ponte-Mobile' in lista: out.append(('A2 · estados, alertas, tendências e mapa', teste_ponte_app(b)))
+    for tela in [t for t in TELAS_SENSORES if t in lista]: out.append(('sensores em ' + tela, teste_sensores(b, tela)))
+    if 'A4-Sensores-Web' in lista: out.append(('desenho dos sensores × referência', teste_sensores_desenho(b)))
+    if any(t in lista for t in TELAS_P4C): out.append(('simulacao false na Ponte e nos sensores', teste_ponte_real(b, lista)))
+    return out
+
+
+# Defeitos plantados da P4C: cada um é servido no lugar do arquivo (MUT_ARQ) e a conferência que cuida dele TEM de acusar (--mutantes-p4c; um mutante vivo reprova).
+MUTANTES_P4C = [
+    ('o último ponto do gráfico é o penúltimo (não é o quadro de agora)', 'capitao-grafico.js', [("agora: pts[pts.length - 1],", "agora: pts[pts.length - 2],")], 'grafico'),
+    ('NaN na janela de 1 A', 'capitao-grafico.js', [("var xdoT = function (t) { return X0 + (t - d.t0) / (d.t1 - d.t0) * (X1 - X0); };", "var xdoT = function (t) { return X0 + (t - d.t0) / (d.t1 - d.t0) * (X1 - X0) * (jan === '1A' ? NaN : 1); };")], 'grafico'),
+    ('sem cursor (o ponteiro não faz nada)', 'capitao-grafico.js', [("onPointerMove: aoPonteiro, onPointerDown: aoPonteiro,", "onPointerDown: aoPonteiro,")], 'grafico'),
+    ('texto do eixo numa cor fixa escura (some no tema escuro)', 'capitao-grafico.js', [("var ink4 = { fill: 'var(--cap-ink4, #7985a6)' };", "var ink4 = { fill: '#2b3350' };")], 'grafico'),
+    ('a lista de alertas da A1 sem os alarmes pedidos no chat', 'A1-Ponte-Web.dc.html', [("pedidos.forEach((a) => { if (a && typeof a.id === 'string' && a.nivel === 'aviso') itens.push(", "pedidos.slice(0, 0).forEach((a) => { if (a && typeof a.id === 'string' && a.nivel === 'aviso') itens.push(")], 'ponte_web'),
+    ('o alerta sem começo conhecido (desdeMs null) no COMEÇO da lista da A1', 'A1-Ponte-Web.dc.html', [("inf = (x) => (x === null || x === undefined ? Infinity : x);", "inf = (x) => (x === null || x === undefined ? 0 : x);")], 'ponte_web'),
+    ('o estado dos motores da A1 sem a fase da reprodução («ligados · cruzeiro»)', 'A1-Ponte-Web.dc.html', [("(ligados && fase ? ' · ' + fase : '')", "''")], 'ponte_web'),
+    ('o fabricante dos motores fixo na A1 (Cummins)', 'A1-Ponte-Web.dc.html', [("t: 'Motores ' + (eM.fabricante || falta('(fabricante ' + SD + ')'))", "t: 'Motores Cummins'")], 'ponte_web'),
+    ('o fabricante do gerador fixo na A2 (Onan)', 'A2-Ponte-Mobile.dc.html', [("(equip('gerador').fabricante || falta(SD))", "'Onan'")], 'ponte_app'),
+    ('os blocos dos sensores sem a faixa livre (cobrem o radar e a estação meteorológica)', 'capitao-sensores.js', [("      while (!livre(sc, 'cima') && sc < 0.2 * H) sc += passo;\n", "")], 'sensores_web'),
+    ('o inclinômetro sem o yaw (só roll e pitch)', 'capitao-sensores.js', [("linha2 = j !== null && c !== null && y !== null ? 'R ' + j + ' P ' + c + ' Y ' + y : falta(SL);", "linha2 = j !== null && c !== null ? 'R ' + j + ' P ' + c : falta(SL);")], 'sensores_web'),
+    ('blocos largos demais (se sobrepõem e cortam o texto)', 'capitao-sensores.js', [("bw = Math.floor(0.1 * W) - 4;", "bw = Math.floor(0.16 * W) - 4;")], 'sensores_app'),
+    ('capitao-grafico.js fora do CORE do sw.js', 'sw.js', [("'./capitao-grafico.js', ", "")], 'codigo'),
+]
+
+
+def mutantes_p4c(b):
+    global MUT_ARQ
+    vivos = []
+    for nome, arq, trocas, qual in MUTANTES_P4C:
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = {'grafico': lambda: teste_grafico(b, 'A1-Ponte-Web'), 'ponte_web': lambda: teste_ponte_web(b), 'ponte_app': lambda: teste_ponte_app(b),
+                    'sensores_web': lambda: teste_sensores(b, 'A4-Sensores-Web'), 'sensores_app': lambda: teste_sensores(b, 'A5-Sensores-Mobile'), 'codigo': lambda: teste_codigo_ponte()}[qual]()
+        except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um defeito do teste): o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4C), len(vivos)))
+    return vivos
+
+
 def teste_offline(b, lista, paginas=()):
     """1ª visita com internet (SW instala), confere no cache da instalação cada tela e página da rodada, depois abre cada tela sem
     rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele. Com "dados" na lista: a página dos Dados do aparelho também abre
@@ -1944,6 +2512,9 @@ def teste_offline(b, lista, paginas=()):
     # P4B: o motor da reprodução também sai do cache da instalação (o cache HTTP do navegador esconderia a falta na abertura sem rede, como no React)
     if not pg.evaluate('(u) => caches.match(u).then(Boolean)', BASE + 'capitao-replay.js'):
         prob.append('capitao-replay.js fora do CORE do sw.js: a instalação não o guardou (offline a tela não anda)')
+    # P4C: o gráfico, o mapa de sensores e os dois desenhos também saem do cache da instalação (offline a Ponte não desenha o histórico e A4/A5 não desenham o barco)
+    for arq in ('capitao-grafico.js', 'capitao-sensores.js', 'assets/sensores-perfil.svg', 'assets/sensores-planta.svg'):
+        if not pg.evaluate('(u) => caches.match(u).then(Boolean)', BASE + arq): prob.append('%s fora do CORE do sw.js: a instalação não o guardou' % arq)
     # Cada tela e página desta rodada no cache da instalação (TELAS/CORE do sw.js), conferido no cache como o React: depois da
     # 1ª página aberta sem rede, o modo offline do Playwright nem sempre alcança o SW (que busca na rede e abre a tela), então só
     # a abertura sem rede abaixo deixava passar uma tela fora do cache — menos a 1ª da lista.
@@ -1985,6 +2556,11 @@ def teste_offline(b, lista, paginas=()):
             if tela in TELAS_SOS:
                 if rp['tipo'] != 'undefined': prob.append('%s offline: o SOS carregou o CapitaoReplay' % tela)
             elif rp['tipo'] != 'object' or not rp['quadro']: prob.append('%s offline: CapitaoReplay.quadro() nulo (typeof %s)' % (tela, rp['tipo']))
+            if tela in TELAS_PONTE or tela in TELAS_SENSORES:   # P4C: o gráfico monta a série e o mapa desenha os 22 pontos sobre o SVG da cópia guardada
+                gx = pg2.evaluate("""async () => ({ grafico: window.CapitaoGrafico ? window.CapitaoGrafico.dados('rpm', '150S').ok : null, svg: await Promise.all(['assets/sensores-perfil.svg', 'assets/sensores-planta.svg'].map((u) => fetch('./' + u).then((r) => r.status, () => 'falhou'))),
+                  pontos: document.querySelectorAll('[data-ponto]').length, svgs: document.querySelectorAll('[data-capitao-grafico] svg').length })""")
+                if tela in TELAS_PONTE and (gx['grafico'] is not True or gx['svgs'] != 1): prob.append('%s offline: o gráfico não monta a série (%s)' % (tela, gx))
+                if tela in TELAS_SENSORES and (gx['svg'] != [200, 200] or gx['pontos'] != 22): prob.append('%s offline: desenhos %s e %d pontos (esperado 200, 200 e 22)' % (tela, gx['svg'], gx['pontos']))
         except Exception as e:
             prob.append(tela + ' offline: ' + str(e)[:120])
         if erros:

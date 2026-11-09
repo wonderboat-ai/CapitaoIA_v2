@@ -1623,11 +1623,12 @@ def codigo_faixa():
 
 
 # Main, H2 e E1 se redesenham a cada setState (o __setLogicState do support.js sempre troca o __v): só dão setState quando o texto exibido muda.
-GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegando-Gatilhos', 360, 640))
+GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegando-Gatilhos', 360, 640),
+                ('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('A4-Sensores-Web', 1440, 900), ('A5-Sensores-Mobile', 390, 844))   # (P4C: a Ponte e o mapa de sensores)
 
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
-    print('Main, H2 e E1: setState só quando o texto exibido muda')
+    print('Main, H2, E1, A1, A2, A4 e A5: setState só quando o texto exibido muda')
     pgs = [(nome, abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
            for nome, w, h in telas]
     pgs[0][1].wait_for_timeout(3500)
@@ -1649,7 +1650,7 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
-        if not nome.startswith('H2'):
+        if not nome.startswith(('H2', 'A5')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores)
             ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
         ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
     for nome, pg in pgs:
@@ -1660,7 +1661,8 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
 def telas(b):
     print('Telas de verdade (com sessão): o motor carrega, anda e não dá erro de script')
     for nome, vp in (('Main', {'width': 1440, 'height': 900}), ('A1-Ponte-Web', {'width': 1440, 'height': 900}), ('E1-Navegando-Gatilhos', {'width': 1440, 'height': 900}),
-                     ('H2-Home-Mobile', {'width': 390, 'height': 844}), ('C3-Leme-Alerta', {'width': 390, 'height': 844}), ('Manual-Capitao-IA', {'width': 1440, 'height': 900})):
+                     ('H2-Home-Mobile', {'width': 390, 'height': 844}), ('C3-Leme-Alerta', {'width': 390, 'height': 844}), ('Manual-Capitao-IA', {'width': 1440, 'height': 900}),
+                     ('A2-Ponte-Mobile', {'width': 390, 'height': 844}), ('A4-Sensores-Web', {'width': 1440, 'height': 900}), ('A5-Sensores-Mobile', {'width': 390, 'height': 844})):
         pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, viewport=vp, espera='() => window.CapitaoReplay')
         pg.wait_for_timeout(1500)
         r = pg.evaluate("() => ({ obj: typeof window.CapitaoReplay, ativo: window.CapitaoReplay.ativo(), inst: window.CapitaoAgora.instante().fonte, n: window.__conta('capitao-telemetria'), t: window.CapitaoTelemetria ? window.CapitaoTelemetria.fonte() : 'sem' })")
@@ -2236,6 +2238,15 @@ MUTANTES_ARQ = [
      [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
     ('a H2 dando setState a cada tique, sem comparar o LED', 'H2-Home-Mobile.dc.html',
      [("if (k !== this._vivoK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
+    # P4C: a Ponte e o mapa de sensores só dão setState quando o texto exibido muda
+    ('a A1 dando setState a cada tique, sem comparar o texto', 'A1-Ponte-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    ('a A2 dando setState a cada tique, sem comparar o texto', 'A2-Ponte-Mobile.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    ('a A4 dando setState a cada tique, sem comparar o texto', 'A4-Sensores-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    ('a A5 dando setState a cada tique, sem comparar o texto', 'A5-Sensores-Mobile.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
 ]
 
 

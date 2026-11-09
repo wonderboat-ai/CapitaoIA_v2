@@ -257,7 +257,7 @@ class Component extends DCLogic {
       banco: banco,
       restaurar: () => this.gravar(this.padrao(), 'Padrão restaurado: ' + this.PADRAO.length + ' blocos', 'var(--cap-ok, #34c77a)', { aberto: '' }),
       comoFunciona: 'toque no ícone para trocar · setas mudam a ordem · − devolve o bloco ao banco. Grava na hora, em capitao.blocos.v1, só neste aparelho — outro celular ou computador mantém os blocos dele. SOS e a barra do assistente são fixos.',
-      fonte: 'Fonte: catálogo de ' + this.CATALOGO.length + ' blocos do Capitão IA (' + this.PADRAO.length + ' padrão + ' + (this.CATALOGO.length - this.PADRAO.length) + ' no banco) · estado de cada bloco no Console, a partir de capitao-dados.js' + ((window.CapitaoDados || {}).demo ? ' (DEMO)' : '')
+      fonte: 'Fonte: catálogo de ' + this.CATALOGO.length + ' blocos do Capitão IA (' + this.PADRAO.length + ' padrão + ' + (this.CATALOGO.length - this.PADRAO.length) + ' no banco) · estado de cada bloco no Console, do instante da leitura e dos dados de bordo'
     };
   }
 }

@@ -753,9 +753,15 @@ SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar[, o que não pode
 CHIPS_A1 = """() => [...document.querySelectorAll('[title]')].filter((e) => /^(Porão|Âncora)\\b/.test(e.innerText.trim())).map((e) => [e.innerText.replace(/\\s+/g, ' ').trim(), e.getAttribute('title')])"""
 
 
+# Fase 4 (P4C): a A1 lê o INSTANTE (a reprodução, ao vivo); o D.snapshot, com os objetos de porão e âncora que este teste vigia, só chega por ela na última leitura salva, que é o ramo
+# simulacao false (o instante cai no snapshot.quadro e o chip da âncora ganha o cabo lançado do snapshot aninhado). A A1 abre aqui nesse ramo: as mesmas asserções, o mesmo dado; com a
+# reprodução andando, o chip do porão e o da âncora são do quadro (verificar.py › teste_ponte_web).
+SIMULACAO_FALSE = {'A1-Ponte-Web': 'window.CapitaoDados.simulacao = false;'}
+
+
 def snapshot_sem_null(b, local):
     for tela, app, deve, *resto in SNAPSHOT_TELAS:
-        pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
+        pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None, depois=SIMULACAO_FALSE.get(tela, ''))
         pg.wait_for_timeout(1800)
         todo = pg.evaluate(TITULOS)
         ok('%s: sem erro de script' % tela, not pg.erros, pg.erros)

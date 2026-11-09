@@ -74,7 +74,7 @@
     if (v === 'web' || v === 'app') { pick = v; try { localStorage.setItem(K, v); } catch (e) {} }
     if (pick === 'web' || lista) return;
     var APP = {
-      'Main': 'H2-Home-Mobile', 'A1-Ponte-Web': 'A2-Ponte-Mobile', 'B1-Carta-Web': 'B2-Carta-Mobile', 'C1-Leme-Web': 'C2-Leme-Mobile',
+      'Main': 'H2-Home-Mobile', 'A1-Ponte-Web': 'A2-Ponte-Mobile', 'A4-Sensores-Web': 'A5-Sensores-Mobile', 'B1-Carta-Web': 'B2-Carta-Mobile', 'C1-Leme-Web': 'C2-Leme-Mobile',
       'F1-FAQ-Hub-Web': 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web': 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web': 'F3-FAQ-Eletronicos',
       'F4-FAQ-Gerador-Web': 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web': 'F5-FAQ-Climatizacao',
       'G1-Documentos-Web': 'G1-Documentos-Mobile', 'G2-Abastecimento-Web': 'G2-Abastecimento-Mobile', 'G3-Diario-Web': 'G3-Diario-Mobile',
