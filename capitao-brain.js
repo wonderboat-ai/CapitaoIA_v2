@@ -951,7 +951,7 @@
   // ——— A conversa em emergência (P4A; PROMPT §2.2 «Conversa em emergência», itens (1) e (2); CLAUDE.md 10) ———
   // Depois de uma resposta sos, oleo, canal16, epirb ou seafire, ou de um diário com alerta, a TELA marca emergenciaAte = agora + 15 min (B.JANELA_EMERG_MS; NOVA e ENCERRAR zeram) e, enquanto
   // a marca vale, passa `{ emergencia: true }` a answer(q, ctx), answerAttachment(kind, file, ctx), pedeIA(a, q, opts), historicoIA(msgs, opts), resumoAgora(x) e ficha(p, q, a, ctx). A resposta que
-  // ABRE a janela traz `a.emerg === true` (salvatagem e mmsi não: são perguntas de rotina e já respondem sem posição; o trecho `base` de segurança também não). Dentro dela:
+  // ABRE a janela traz `a.abreJanela === true` (e, as de emergência, `a.emerg === true`; salvatagem e mmsi não: são perguntas de rotina e já respondem sem posição; o trecho `base` de segurança e o cartão de Salvatagem do FAQ também não). Dentro dela:
   //  (1) pedeIA é false para tudo (nada vai à IA, nem a ficha nem o histórico);
   //  (2) posição, rumo/COG, SOG, distância, ETA e o número de pessoas a bordo (posicao, navegacao, eta, destinos, pessoas, a posição da âncora, o rumo do piloto, a velocidade do checklist, a linha de
   //      situação de bordo de contatos/fallback/anexos/tempo e maré sem conexão, o resumo do diário e a telemetria) viram protocolos.plotter, no texto E na fala (a 1ª linha é a instrução). A velocidade sobre o fundo também
@@ -960,6 +960,11 @@
   // Vento, ondas, tempo e maré (reais) e a velocidade de cruzeiro do guia (autonomia, consumo) não são posição, rumo, SOG, ETA nem pessoas: ficam. Nada disto vale no SOS (EM_SOS), que já nunca lê o quadro.
   var JANELA_MS = 15 * 60 * 1000;
   var ABRE_JANELA = { sos: 1, oleo: 1, canal16: 1, epirb: 1, seafire: 1 };
+  // O SINAL de abertura é `a.abreJanela === true`: a tela grava emergenciaAte quando ele vem (a.emerg diz outra coisa: a resposta é de emergência, sem quadro e sem hora, e o cartão de Salvatagem também é).
+  // Os que abrem: as chaves de ABRE_JANELA (que levam também `emerg`), o diário com alerta e o cartão de emergência do FAQ (EM-01…09, aberto pelo toque, ctx.faq, ou achado pela pergunta), com UMA exceção: o cartão
+  // de Salvatagem (EM-09: coletes, balsa e extintores) é a rota `salvatagem` em cartão, pergunta de rotina, e a trava 10 diz que salvatagem não liga a janela. Ele segue de emergência (`emerg: true`, sem quadro e sem
+  // hora, como a rota) mas não traz `abreJanela`. O que separa os dois é o equipamento do cartão (`equip`), não o código: o gerador pode renumerar os cartões.
+  function faqAbreJanela(it) { return !!it.emerg && norm(it.equip || '') !== 'salvatagem'; }
   var JAN = { on: false };
   function janela() { return JAN.on === true && !EM_SOS; }
   function comJanela(ctx, f) {
@@ -975,19 +980,43 @@
   }
   // O texto do REGISTRO (linha do diário, pendência) lido dentro da janela, seja o que a pessoa digitou ou o que o próprio app gravou: nada dele diz onde o barco estava nem como andava. A causa é uma só (o registro guarda o
   // que o quadro dizia no instante da gravação), então a troca é por estrutura e por padrão, não por instante: (1) o resumo que o app gravou («Resumo registrado pelo atalho: <estado e lugar> · SOG … · proa … · motores …»
-  // e «<nota> · resumo: …») perde o lugar, a velocidade e a proa e fica com uma frase só (resumoJanela); (2) em qualquer linha, a velocidade, o rumo, a chegada prevista, a distância em milhas, a posição relativa
-  // («a 0,5 mn da Barra Sul»), a coordenada e o número de pessoas a bordo trocam por «leia no plotter» / «conte agora» (JAN_NAV); o vento gravado também troca (a leitura guardada não é a de agora). O que sobra bate com a regex de «Travas de emergência» do PROMPT. Vale para todo texto que o registro devolve:
+  // e «<nota> · resumo: …») perde o lugar, a velocidade e a proa e fica com uma frase só (resumoJanela); (2) em qualquer linha, a velocidade, o rumo, a chegada prevista, a distância, a posição relativa
+  // («a 0,5 mn da Barra Sul»), a coordenada e o número de pessoas a bordo trocam por «leia no plotter» / «conte agora» (JAN_NAV); o vento gravado também troca (a leitura guardada não é a de agora).
+  // O texto é digitado à mão, então o padrão não pode ser mais estreito que a regex de «Travas de emergência» do PROMPT nem que as formas do dia a dia: a regex do PROMPT aceita até 12 letras entre «rumo»/«proa»/«COG»/«HDG»
+  // e o número («rumo de 110°», «proa em 123°»), e o texto livre traz kt, kn e knots, km, «graus», «SOG 7,2» sem unidade, «Lat 26.99 S lon 48.61 W», «sete pessoas a bordo», «chegada às 12:03». Cada família abaixo cobre
+  // a forma da regex do PROMPT E as variantes, e o que sobra não casa essa regex (o MMSI do cadastro, que não é navegação, fica fora). Vale para todo texto que o registro devolve:
   // as linhas do diário e das pendências (diarioLer, anomalias, a ficha), o eco das pendências (citação ambígua, «Pendência fechada», o desfazer), o nome da tarefa agendada no aparelho (tarefasLinha) e o relato registrado (relatoRegistra).
   // O eco da frase DESTE turno («registre no diário: …») não é leitura do registro: é o que a pessoa acabou de dizer, e a linha guardada nunca muda (a janela só esconde).
   var PLOTTER_NAV = 'posição, rumo e velocidade: leia no plotter';
-  var JAN_NAV = [[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi, 'pessoas a bordo: conte agora'], [/\b(?:SOG|STW)\s+[\d.,]+\s*nós?/gi, 'velocidade: leia no plotter'],
-    [/\b(?:rumo|proa|COG|HDG)(?:\s*\(COG\))?\s+[\d.,]+\s*°/gi, 'rumo: leia no plotter'],
-    [/\b(?:[Cc]hegada\s+prevista|ETA)\b(?:\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b))?/g, 'chegada: leia no plotter'],
-    [/\bvento(?:\s+(?:verdadeiro|aparente))?\s+[\d.,]+\s*nós?(?:\s+(?:de|a)\s+[\d.,]+\s*°)?/gi, 'vento: leia no instrumento'],
-    [/\ba\s+[\d.,]+\s*(?:mn|milhas?(?:\s+náuticas?)?)\s+d[aeo]s?\s+[^,.;·—\n(]+/gi, 'posição: leia no plotter'],
-    [/\d[\d.,]*\s*(?:mn|milhas?(?:\s+náuticas?)?)\b/gi, 'distância: leia no plotter'],
-    [/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?\s*(?:de\s+|:\s*)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter'],
-    [/(?:\ba\s+)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter']];
+  var JAN_NAV = [
+    // pessoas a bordo: «7 a bordo», «7 pessoas a bordo», «sete tripulantes a bordo», «7 pessoas no barco», «POB 7»
+    [/\b\d+\s+(?:(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+)?(?:a\s+bordo|abordo)\b/gi, 'pessoas a bordo: conte agora'],
+    [/\b(?:\d+|um|uma|dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte)\s+(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+(?:a\s+bordo|abordo|(?:no|na)\s+(?:barco|embarca[çc][ãa]o|lancha|iate))\b/gi, 'pessoas a bordo: conte agora'],
+    [/\bPOB\b[\s:=]*\d+/g, 'pessoas a bordo: conte agora'],
+    // velocidade sobre o fundo com a sigla: «SOG 18,1 nós», «SOG: 7,2», «STW de 7 kt»
+    [/\b(?:SOG|STW)\b[\s:=]*(?:(?:de|em|a)\s+)?\d+(?:[.,]\d+)*(?:\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b))?/gi, 'velocidade: leia no plotter'],
+    // rumo: a forma da regex do PROMPT (a palavra, até 12 letras e N°), a com palavras no meio e «graus» («rumo magnético 110 graus») e o COG/HDG ou o rumo/proa de 3 dígitos sem unidade («COG 190», «proa 207»)
+    [/\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}?\d{2,3}\s*°/gi, 'rumo: leia no plotter'],
+    [/\b(?:rumo|proa|COG|HDG)\b[^\d\n]{0,24}?\d{1,3}(?:[.,]\d+)?\s*(?:°|º|graus?\b)/gi, 'rumo: leia no plotter'],
+    [/\b(?:COG|HDG)\b[\s:=]*\d{1,3}(?:[.,]\d+)?\b/gi, 'rumo: leia no plotter'],
+    [/\b(?:rumo|proa)\b(?:\s+(?:magn[ée]tic[oa]|verdadeir[oa]))?(?:\s+(?:de|em|para|a|ao))?[\s:=]*\d{3}(?:[.,]\d+)?\b/gi, 'rumo: leia no plotter'],
+    // chegada: «ETA», «chegada prevista/estimada», «previsão de chegada» (com ou sem a hora ou a duração) e «chegada» com a hora («chegada às 12:03», «chegada em 15 min»)
+    [/\b(?:[Pp]revis[ãa]o\s+de\s+[Cc]hegada|[Cc]hegada\s+(?:prevista|estimada)|ETA)\b(?:\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b))?/g, 'chegada: leia no plotter'],
+    [/\b[Cc]hegada\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b)/g, 'chegada: leia no plotter'],
+    // vento gravado (nós, kt, knots, km/h, com a direção)
+    [/\bvento(?:\s+(?:verdadeiro|aparente))?\s+\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)(?:\s+(?:de|a)\s+\d+(?:[.,]\d+)*\s*°)?/gi, 'vento: leia no instrumento'],
+    // posição relativa («a 0,5 mn da Barra Sul», «a 4 km da costa») e distância (mn, nm, milhas, km, quilômetros)
+    [/\ba\s+\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\s+d[aeo]s?\s+[^,.;·—\n(]+/gi, 'posição: leia no plotter'],
+    [/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância: leia no plotter'],
+    // velocidade: «velocidade de 7 kt», «18 nós», «a 7 knots», «40 km/h»
+    [/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?\s*(?:de\s+|:\s*)?\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)/gi, 'velocidade: leia no plotter'],
+    [/(?:\ba\s+)?\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)/gi, 'velocidade: leia no plotter'],
+    // coordenada decimal sem o sinal de grau: «Lat 26.99 S lon 48.61 W», «26,99 S 48,61 W», «26,99°S», «-26.99, -48.61» e o «último fix» (a de graus e minutos é a do COORD_RX, no fim de semNavJanela)
+    [/\b(?:[Ll]at(?:itude)?|LAT|[Ll]on(?:g(?:itude)?)?|LON|LONG)\b\.?[\s:=]*-?\d{1,3}(?:[.,]\d+)?(?:\s*[°º])?(?:\s*[NSEWLO]\b)?/g, 'posição: leia no plotter'],
+    [/-?\d{1,3}[.,]\d{2,}\s*[°º]?\s*[NSEWO]\b(?![a-zà-ú])/g, 'posição: leia no plotter'],
+    [/-?\d{1,3}(?:[.,]\d+)?\s*[°º]\s*[NSEWLO]\b(?![a-zà-ú])/g, 'posição: leia no plotter'],
+    [/-\d{1,3}[.,]\d{2,}\s*[,;\/]\s*-\d{1,3}[.,]\d{2,}/g, 'posição: leia no plotter'],
+    [/último\s+fix\b/gi, 'posição: leia no plotter']];
   var RESUMO_APP = /(Resumo registrado pelo atalho:\s*|·\s*resumo:\s*)([^]*)$/, RESUMO_FIM = /\s—\s\d{1,2}:\d{2}(?::\d{2})?\.?\s*$/;
   // o resumo gravado pelo atalho: o 1º item («Navegando ao largo da Ilha das Cabras, a caminho da Barra Sul») e os itens de SOG e proa que vêm logo depois viram PLOTTER_NAV; os demais (motores, diesel, óleo…) ficam
   function resumoJanela(s) {
@@ -1007,8 +1036,8 @@
     r.janela = true;
     return r;
   }
-  // o diário com alerta (a nota casa emergencia() ou oleo() === 1) ABRE a janela como as chaves de emergência: a resposta traz `emerg: true`
-  function emergDiario(r, alerta) { if (alerta) r.emerg = true; return r; }
+  // o diário com alerta (a nota casa emergencia() ou oleo() === 1) ABRE a janela como as chaves de emergência: a resposta traz `emerg: true` e `abreJanela: true`
+  function emergDiario(r, alerta) { if (alerta) { r.emerg = true; r.abreJanela = true; } return r; }
   function semNavJanela(t) {
     var s = String(t == null ? '' : t);
     if (!janela()) return s;
@@ -4083,7 +4112,7 @@
     var text = (it.titulo && !it.emerg ? it.titulo + ' — ' : '') + it.resposta + (passos.length ? '\n' + passos.slice(0, max).map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + (passos.length > max ? '\n… mais ' + (passos.length - max) + ' passos no FAQ (' + it.id + ').' : '') : '')
       + (it.atencao ? '\nAtenção: ' + it.atencao : '') + (it.senao ? '\nSe não resolver: ' + it.senao : '') + (it.obs ? '\nObservação: ' + it.obs : '');
     return { key: 'faqEquip', text: text, src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length ? ' · ' + fs.join(' · ') : ''), actions: act(p, [['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])),
-      faq: it.id, emerg: !!it.emerg, seguranca: !!it.seguranca, ref: fs[0] || '' };
+      faq: it.id, emerg: !!it.emerg, abreJanela: faqAbreJanela(it), seguranca: !!it.seguranca, ref: fs[0] || '' };
   }
   // A pergunta que casa BEM de perto com UM item: todas as palavras dela estão no item, a maioria no título, na pergunta ou nas variantes, e todas no título ou na resposta; e o 2º colocado, de
   // outra seção, não empata (pergunta genérica como «como silenciar o alarme?» fica com a IA). null = nenhum.
@@ -4263,7 +4292,7 @@
       a = marca(responde(junto || q1, ctx, espera, fresco));   // (fresco: a fala nova de uma pergunta continuada (F18) com OUTRO assunto — o «como» ou o «alarme» da pergunta de antes não a torna «específica»; com o mesmo assunto, ou depois de «Qual equipamento?» (F31: «o gerador» continua «como ligar?»), a pergunta junta vale, como antes)
       // a hora do instante da resposta (HH:MM:SS), em campo comum: a tela copia a resposta (Object.assign) e a cópia perde o `_inst`, que não é enumerável; a fala precisa dela. Nunca na emergência.
       if (a && typeof a === 'object' && !emerg(a) && sim() && vivo()) a.hora = vivo().hora;
-      if (a && typeof a === 'object' && ABRE_JANELA[a.key] === 1) a.emerg = true;   // (P4A) a resposta que ABRE a janela de 15 min (sos, oleo, canal16, epirb, seafire; o diário com alerta e o cartão EM do FAQ já trazem): a tela grava emergenciaAte
+      if (a && typeof a === 'object' && ABRE_JANELA[a.key] === 1) { a.emerg = true; a.abreJanela = true; }   // (P4A) a resposta que ABRE a janela de 15 min (sos, oleo, canal16, epirb, seafire; o diário com alerta e o cartão EM do FAQ já trazem `abreJanela`): a tela grava emergenciaAte
       if (a && a.janela === true && String(a.text).split('\n')[0] === plotterTxt()) delete a.hora;   // (P4A) a resposta que abre com a instrução do plotter não leva a hora do quadro (a fala não a repete); a que segue dando um dado (autonomia, tanques…) leva a hora como sempre
       // a resposta de emergência (qualquer chave de EMERG, com ou sem commit) encerra o contexto anterior; as outras o regravam, se o app grava
       // (pe: a PERGUNTA é de emergência — o «registre no diário: tem fogo no motor» responde `diario` com os passos do SOS, chave que não é de emergência, mas a conversa também acaba nele: nem a pergunta nem a resposta vão à IA)
