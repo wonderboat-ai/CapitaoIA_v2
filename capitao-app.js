@@ -6,7 +6,8 @@
    4) Põe o rodapé (versão · usuário · crédito) logo abaixo da prancheta — definido em capitao-auth.js.
    5) Celular: SOS flutuante quando o SOS da tela sai da vista.
    6) Faixa global de alerta (F05): o alerta aberto no topo de toda tela de uso, «ABRIR ›» → C3; a prancheta começa abaixo dela (nunca no SOS, no Manual nem na C3).
-   Dentro do editor (iframe) só faz o passo 1. */
+   7) `window.CapitaoEmergencia`: a marca ÚNICA da janela de conversa em emergência (15 min), que as telas de conversa gravam e a faixa lê (trava 10).
+   Dentro do editor (iframe) só faz o passo 1 (e define a marca do passo 7, que não toca a tela). */
 (function () {
   if (window.__capitaoApp) return; window.__capitaoApp = true;
   var d = document, head = d.head || d.documentElement;
@@ -32,6 +33,30 @@
   link('manifest', './manifest.webmanifest');
   link('icon', './assets/wonderhub-favicon.ico'); // ∞ WonderHUB.AI, 16/32/48 px
   link('apple-touch-icon', './assets/wonderhub-apple-touch-icon.png');
+
+  // ——— A marca da janela de conversa em emergência (P4A; PROMPT §2.2; CLAUDE.md 10) ———
+  // Depois de uma resposta que traz `a.abreJanela === true` (sos, oleo, canal16, epirb, seafire, diário com alerta, cartão EM do FAQ), a TELA DE CONVERSA chama CapitaoEmergencia.marca() (agora + 15 min,
+  // B.JANELA_EMERG_MS) e CapitaoEmergencia.zera() em NOVA e ENCERRAR; enquanto valendo() é true ela passa `{ emergencia: true }` ao cérebro (answer, pedeIA, ficha, resumoAgora, …). É a mesma marca para
+  // todo mundo: a faixa global lê aqui (não tem a tela de conversa por perto) e passa `{ emergencia: true }` a B.alarmesPedidosAtivos — o alarme pedido de velocidade sai sem limite nem leitura. A marca vale
+  // pela aba (sessionStorage `capitao.emergenciaAte`, o fim em ms; sem storage, só nesta página), com o relógio de verdade (Date.now: a janela é de conversa, não do quadro) e avisa com o evento
+  // 'capitao-emergencia' {ate, valendo}. Nada é gravado em localStorage, no registro nem fora do aparelho.
+  (function () {
+    var K = 'capitao.emergenciaAte', JANELA = 15 * 60 * 1000, mem = 0;
+    function le() {
+      var v = mem;
+      try { var s = sessionStorage.getItem(K); if (s !== null && s !== '') { var n = Number(s); if (isFinite(n) && n > v) v = n; } } catch (e) {}
+      return v > 0 ? v : 0;
+    }
+    function avisa() { try { window.dispatchEvent(new CustomEvent('capitao-emergencia', { detail: { ate: le(), valendo: valendo() } })); } catch (e) {} }
+    function valendo() { return le() > Date.now(); }
+    function marca(ate) {   // sem argumento: agora + 15 min; com um número (ms do relógio), esse fim (nunca mais de 15 min adiante)
+      var t = Date.now(), n = typeof ate === 'number' && isFinite(ate) ? Math.min(ate, t + JANELA) : t + JANELA;
+      mem = n; try { sessionStorage.setItem(K, String(n)); } catch (e) {}
+      avisa(); return n;
+    }
+    function zera() { mem = 0; try { sessionStorage.removeItem(K); } catch (e) {} avisa(); }
+    window.CapitaoEmergencia = { JANELA_MS: JANELA, CHAVE: K, ate: le, valendo: valendo, marca: marca, zera: zera };
+  })();
 
   var topWin = true; try { topWin = window.top === window.self; } catch (e) { topWin = false; }
   if (!topWin) return;
@@ -114,7 +139,7 @@
   // nunca abre a C3 sozinha, nunca fala (nada de speechSynthesis), nunca grava no registro e não tem timer: acompanha o 'capitao-telemetria' (1 s) e o 'capitao-alerta' do replay.
   // Fora: S1/S2 (nem carregam o capitao-alertas.js: o SOS nunca muda de lugar), o Manual, a própria C3, o deck-stage e as páginas que não são tela. Com a CONVERSA aberta
   // (ocupado()) a faixa se mantém e as regiões do leitor de tela calam até ela fechar. Os textos entram em nós Text (a troca de caractere não dispara o fit() do MutationObserver).
-  var FX = 'capitao-faixa-alertas', ARQ = '', faixa = null, fx = null, fxStatus = null, fxAlerta = null, fxAltura = -1, fxSig = '', fxFalado = '', fxDitos = Object.create(null);
+  var FX = 'capitao-faixa-alertas', ARQ = '', faixa = null, fx = null, fxStatus = null, fxAlerta = null, fxAltura = -1, fxSig = '', fxFalado = '', fxEm = false, fxDitos = Object.create(null);
   try { ARQ = decodeURIComponent(location.pathname.split('/').pop() || ''); } catch (e) { ARQ = ''; }
   var FX_CSS = '#' + FX + '{position:fixed;left:0;right:0;top:0;z-index:60;box-sizing:border-box;margin:0;padding-top:env(safe-area-inset-top,0px);font:600 13.5px/1.3 "Nimbus Sans","Helvetica Neue",Helvetica,Arial,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;letter-spacing:0;text-align:left;color:var(--cap-ink,#eaf1ff);background:linear-gradient(rgba(var(--cap-warn-rgb,240,166,58),.16),rgba(var(--cap-warn-rgb,240,166,58),.16)),var(--cap-card,#0d1329);box-shadow:inset 0 -2px 0 var(--cap-warn,#f0a63a),0 6px 18px rgba(0,0,0,.22)}' +
     '#' + FX + '[hidden]{display:none}' +
@@ -147,8 +172,9 @@
     if (!B || typeof B.alarmesPedidosAtivos !== 'function') return [];
     try { v = localStorage.getItem('capitao.alarmes.v1') || ''; } catch (e) { return []; }
     if (v.length < 3) return [];
-    try { var l = B.alarmesPedidosAtivos(); return Array.isArray(l) ? l : []; } catch (e) { return []; }
+    try { var l = B.alarmesPedidosAtivos(undefined, { emergencia: emergenciaValendo() }); return Array.isArray(l) ? l : []; } catch (e) { return []; }   // com a janela de emergência valendo a velocidade sai sem limite nem leitura (CLAUDE.md 10)
   }
+  function emergenciaValendo() { var E = window.CapitaoEmergencia; try { return !!(E && E.valendo()); } catch (e) { return false; } }
   function fxLista() {
     var A = window.CapitaoAlertas, l = [];
     try { l = A && typeof A.ativos === 'function' ? A.ativos() : []; } catch (e) { l = []; }
@@ -206,7 +232,12 @@
   function fxRenderiza() {
     if (!d.body) return;
     if (!temFaixa()) { fxEsconde(); return; }
-    var l = fxLista(), a = l[0], n, sig, novos, msg;
+    var l = fxLista(), a = l[0], n, sig, novos, msg, em = emergenciaValendo();
+    if (em !== fxEm) {   // a janela de emergência abriu ou fechou: o que as regiões do leitor de tela disseram antes (com a leitura de velocidade) sai de lá; limpar não anuncia nada
+      fxEm = em;
+      if (fxStatus) fxStatus.textContent = '';
+      if (fxAlerta) fxAlerta.textContent = '';
+    }
     if (!l.length) { fxEsconde(); return; }
     fxMonta(); fxRegioes();
     n = l.length - 1; fx.alerta = a;
@@ -234,7 +265,7 @@
   function fxLiga() {
     if (!d.body || !temFaixa()) return;
     fxRegioes();
-    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase', 'capitao-sessao'].forEach(function (e) { window.addEventListener(e, fxRenderiza); });
+    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase', 'capitao-sessao', 'capitao-emergencia'].forEach(function (e) { window.addEventListener(e, fxRenderiza); });
     d.addEventListener('visibilitychange', function () { if (!d.hidden) fxRenderiza(); });
     window.addEventListener('resize', fxPosiciona);
     fxRenderiza();   // o 1º tique da página sai antes de qualquer ouvinte: lê já o que está aberto
@@ -318,7 +349,7 @@
   }
   // Celular: a prancheta tem altura fixa e, com a barra do navegador, o SOS da tela pode ficar abaixo da dobra.
   // Enquanto o SOS da página não estiver à vista, um SOS fixo no canto leva à mesma tela de emergência.
-  var sosEl = null, sosVisto = null, sosObs = null;
+  var sosEl = null, sosVisto = null, sosObs = null, SOS_VISTA = 0.95;
   function sosFixo(el) {
     // A barra SOS da tela (fixa, acima do assistente) manda; link de SOS dentro do conteúdo rolável só na falta dela.
     var alvo = el.querySelector('capitao-sos-app a[href*="SOS-"]') || el.querySelector('a[href*="SOS-"]');
@@ -327,7 +358,9 @@
       sosEl = d.createElement('a'); sosEl.textContent = 'SOS'; sosEl.setAttribute('aria-label', 'SOS — emergência');
       sosEl.style.cssText = 'position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom, 0px));z-index:50;width:64px;height:64px;border-radius:50%;background:var(--cap-crit-fill, #d32f27);color:#fff;display:none;align-items:center;justify-content:center;text-decoration:none;font:800 16px/1 "Nimbus Sans","Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:.08em;box-shadow:0 0 0 4px rgba(255,59,48,.3),0 10px 28px rgba(211,47,39,.5);';
       d.body.appendChild(sosEl);
-      sosObs = new IntersectionObserver(function (es) { var v = es[es.length - 1].isIntersecting; sosEl.style.display = v ? 'none' : 'flex'; });
+      // A barra só conta como «à vista» quando está (quase) inteira: com a faixa de alerta empurrando a prancheta, ou numa tela mais baixa, sobra um filete dela na dobra (isIntersecting já é true com
+      // 1 px) e o SOS fixo ficava escondido justamente nessa hora. 0,95 e não 1: a zoom da prancheta arredonda a borda em meio pixel.
+      sosObs = new IntersectionObserver(function (es) { var e = es[es.length - 1], v = e.isIntersecting && e.intersectionRatio >= SOS_VISTA; sosEl.style.display = v ? 'none' : 'flex'; }, { threshold: [0, 0.25, 0.5, 0.75, 0.9, SOS_VISTA, 1] });
     }
     sosEl.href = alvo.getAttribute('href');
     if (sosVisto !== alvo) { if (sosVisto) sosObs.unobserve(sosVisto); sosVisto = alvo; sosObs.observe(alvo); }

@@ -587,6 +587,66 @@ def problemas_faixa(tela, fixo, f):
     return prob
 
 
+# SOS ao alcance (P4B, revisão). App: a barra SOS da tela (capitao-sos-app) fica TODA à vista (≥ 95 % dentro da janela) ou, se não, o SOS fixo do canto está ligado (display flex) e dentro da janela.
+# Com a faixa de alerta a 105 s a prancheta desce 64 px: na H2 (390×844 e 430×932) a barra sobrava 12 px na dobra, e o observador do SOS fixo contava 1 px como «à vista». Web: o fit() faz a prancheta
+# caber inteira abaixo da faixa, então o SOS circular (capitao-sos-web) tem de estar dentro da janela e abaixo dela.
+LE_SOS_ALCANCE = """() => { const el = document.querySelector('#dc-root capitao-sos-app a[href*="SOS-"], #dc-root capitao-sos-web a[href*="SOS-"]') || document.querySelector('#dc-root a[href*="SOS-"]');
+  const fx = [...document.querySelectorAll('body > a')].find((a) => a.textContent.trim() === 'SOS' && a.style.position === 'fixed');
+  const r = el ? el.getBoundingClientRect() : null, vh = window.innerHeight, vw = document.documentElement.clientWidth;
+  const f = fx ? fx.getBoundingClientRect() : null, cs = fx ? getComputedStyle(fx) : null;
+  const fe = document.getElementById('capitao-faixa-alertas'), fb = fe && !fe.hidden ? fe.getBoundingClientRect().bottom : 0;
+  return { link: !!el, vis: r && r.height > 0 ? Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height : null, topo: r && r.top, fim: r && r.bottom, esq: r && r.left, dir: r && r.right, vw, vh, faixaFim: fb,
+    fixo: fx ? cs.display : null, fixoDentro: !!f && f.width > 0 && f.top >= -0.5 && f.bottom <= vh + 0.5 && f.left >= -0.5 && f.right <= vw + 0.5, fixoHref: fx ? fx.getAttribute('href') : null,
+    faixa: (() => { const e = document.getElementById('capitao-faixa-alertas'); return e && !e.hidden ? e.offsetHeight : 0; })() }; }"""
+
+
+def problemas_sos_alcance(pg, tela):
+    """App: a barra SOS da tela inteira à vista, ou o SOS fixo ligado e dentro da janela. Web: a prancheta cabe inteira (fit), então o SOS circular fica dentro da janela e abaixo da faixa de
+    alerta. Nunca nas telas do SOS nem no Manual."""
+    if tela in TELAS_SOS or tela.startswith('Manual-'): return []
+    pg.wait_for_timeout(350)   # o observador de interseção responde um quadro depois do fit()
+    r = pg.evaluate(LE_SOS_ALCANCE)
+    if not r['link']: return ['a tela não tem o link do SOS (a[href*="SOS-"]): SOS em todas as telas']
+    if not eh_app(tela):
+        if r['esq'] < -0.5 or r['dir'] > r['vw'] + 0.5 or r['topo'] < r['faixaFim'] - 0.5 or r['fim'] > r['vh'] + 0.5:
+            return ['o SOS da web fica fora da janela ou sob a faixa de alerta (de %.0f a %.0f na vertical e de %.0f a %.0f na horizontal, janela %d×%d, a faixa termina em %.0f)' % (r['topo'], r['fim'], r['esq'], r['dir'], r['vw'], r['vh'], r['faixaFim'])]
+        return []
+    if r['vis'] is not None and r['vis'] >= 0.95: return []
+    if r['fixo'] != 'flex' or not r['fixoDentro']:
+        return ['o SOS fica fora do alcance: a barra está %.0f %% à vista (de %.0f a %.0f numa janela de %d px, faixa de %d px) e o SOS fixo do canto está %s%s'
+                % (100 * (r['vis'] or 0), r['topo'], r['fim'], r['vh'], r['faixa'], r['fixo'] or 'ausente', '' if r['fixoDentro'] or r['fixo'] != 'flex' else ' mas fora da janela')]
+    return []
+
+
+# Texto cortado em silêncio na moldura (P4B, revisão): na faixa de leitura, o estado e o local do quadro («AO LARGO DA ILHA DAS CABRAS, A CAMINHO DA BARRA SUL…») empurravam «HH:MM:SS · AO VIVO»
+# para fora (reticências no fim do nó único) em 43 % do laço. Agora só o estado/local encolhe (com reticências E a dica com o texto inteiro) e a hora nunca; o resto da moldura não corta nada.
+LE_CORTE = r"""() => { const out = [], raizes = [...document.querySelectorAll('capitao-faixa,capitao-cabecalho,capitao-topo-app')];
+  const dentro = (e) => !!e.closest('capitao-theme-toggle');   // o anel do botão do tema passa 2 px do botão: não é texto
+  for (const raiz of raizes) {
+    const rt = raiz.tagName.toLowerCase();
+    for (const e of [raiz, ...raiz.querySelectorAll('*')]) {
+      if (dentro(e) || !(e.clientWidth > 0) || !(e.scrollWidth > e.clientWidth + 1)) continue;
+      const txt = (e.innerText || '').replace(/\s+/g, ' ').trim(), tit = (e.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+      const reticencias = getComputedStyle(e).textOverflow === 'ellipsis';
+      if (!(reticencias && tit && tit === txt)) out.push(rt + ' › ' + e.tagName.toLowerCase() + (e.getAttribute('data-cpm') ? '[' + e.getAttribute('data-cpm') + ']' : '') + ' cortado (' + e.scrollWidth + ' px de conteúdo em ' + e.clientWidth + ')'
+        + (reticencias ? ' com reticências e sem a dica do texto inteiro' : '') + ': «' + txt.slice(-70) + '»');
+    }
+  }
+  const f = document.querySelector('capitao-faixa'), h = f ? f.querySelector('[data-cpm="hora"]') : null;
+  if (f) {
+    const rf = f.getBoundingClientRect(), rh = h ? h.getBoundingClientRect() : null, t = h ? h.innerText.trim() : '';
+    if (!h || !/^\d\d:\d\d:\d\d · (AO VIVO|ÚLTIMA LEITURA)$/.test(t)) out.push('faixa › a hora «' + t + '» não está inteira num nó só dela («HH:MM:SS · AO VIVO»)');
+    else if (rh.left < rf.left - 0.5 || rh.right > rf.right + 0.5) out.push('faixa › a hora «' + t + '» passa da borda da faixa (' + Math.round(rh.left) + ' a ' + Math.round(rh.right) + ' de ' + Math.round(rf.left) + ' a ' + Math.round(rf.right) + ')');
+    const ini = [...f.querySelectorAll('a')].find((a) => /INÍCIO/.test(a.innerText)), ri = ini ? ini.getBoundingClientRect() : null;
+    if (ri && (ri.right > rf.right + 0.5 || ri.left < rf.left - 0.5)) out.push('faixa › INÍCIO passa da borda da faixa');
+  }
+  return out; }"""
+
+
+def problemas_corte(pg):
+    return pg.evaluate(LE_CORTE)
+
+
 def aplica_mut(ctx):
     """Serve o arquivo do site com o defeito plantado (MUT_ARQ) neste contexto; sem mutação, nada muda."""
     def para(trocas):
@@ -642,6 +702,8 @@ def roda_tela(b, tela, tema, w, h, fixo='60', fotos=False):
         if r['replay'] != 'undefined': prob.append('o SOS carregou o CapitaoReplay (typeof %s): ele nunca lê a reprodução' % r['replay'])
     elif r['replay'] != 'object': prob.append('typeof CapitaoReplay = %s (esperado object)' % r['replay'])
     prob += problemas_faixa(tela, fixo, pg.evaluate(LE_FAIXA))
+    prob += problemas_corte(pg)
+    prob += problemas_sos_alcance(pg, tela)
     ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
     n_ach = sum(len(v) for v in ach.values())
     if ach and tela not in PENDENTES_ROTULO and tela not in FORA_ATE_FASE_8:
@@ -655,7 +717,9 @@ def roda_tela(b, tela, tema, w, h, fixo='60', fotos=False):
 # A passada a 105 s (a janela do alarme, só AVISO): 2 tamanhos no tema escuro e o menor no claro, onde um número longo ou a faixa de alerta podem puxar rolagem lateral
 def tamanhos_105(tela):
     t = [(360, 640), (844, 390)] if eh_app(tela) else [(1024, 768), (1440, 900)]
-    return [('escuro', t[0]), ('escuro', t[1]), ('claro', t[0])]
+    r = [('escuro', t[0]), ('escuro', t[1]), ('claro', t[0])]
+    if eh_app(tela): r += [('escuro', (390, 844)), ('escuro', (430, 932))]   # as duas telas altas, onde a faixa empurra a barra SOS para a dobra (P4B, revisão)
+    return r
 
 
 def main():
@@ -753,6 +817,12 @@ def main():
                 if prob:
                     falhas.append({'tela': tela, 'tema': 'leitura viva', 'prob': prob})
                     print('FALHA leitura viva', tela, ' | '.join(prob))
+            for tela in [t for t in ('G3-Diario-Web', 'A1-Ponte-Web', 'A2-Ponte-Mobile') if t in lista]:   # a moldura não corta texto em silêncio, em nenhum ponto do laço (P4B, revisão)
+                total += 1
+                prob = teste_corte_moldura(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'moldura sem corte', 'prob': prob[:6]})
+                    print('FALHA moldura sem corte', tela, ' | '.join(prob[:3]))
             for tela in [t for t in ('A1-Ponte-Web', 'A2-Ponte-Mobile') if t in lista]:   # F06: o selo do coletor pela cor
                 total += 1
                 prob = teste_selo_coletor(b, tela)
@@ -901,6 +971,36 @@ def teste_muda_sem_fixo(b, tela):
         if mudou: prob.append('a leitura já muda em 1,5 s sem congelar: retire a tela de PENDENTES_MUDA')
     elif not mudou:
         prob.append('a leitura não mudou em 1,5 s sem congelar o replay (3 tentativas): o quadro do replay não chega à tela')
+    return prob
+
+
+# O laço inteiro na moldura da web (P4B, revisão): o estado e o local mudam de comprimento com o quadro («AO LARGO DA ILHA DAS CABRAS, A CAMINHO DA BARRA SUL» só nos primeiros 70 s), então um instante só
+# não pega o corte. Uma página só por tamanho: CapitaoReplay.fixar(t) refaz a moldura no mesmo instante (o tique sai dentro da chamada). 0, 5, 10, 20, 30, 45, 60, 80, 105, 120 e 149 s, a 1440×900 e 1280×720.
+INSTANTES_CORTE = (0, 5, 10, 20, 30, 45, 60, 80, 105, 120, 149)
+
+
+def teste_corte_moldura(b, tela):
+    prob = []
+    movel = eh_app(tela)
+    for (w, h) in ([(390, 844), (360, 640)] if movel else [(1440, 900), (1280, 720)]):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+        ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.plataforma.v1', '" + ('app' if movel else 'web') + "');try { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {}")
+        aplica_mut(ctx)
+        pg = ctx.new_page()
+        erros = []
+        pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+        pg.goto(BASE + tela + '.dc.html', wait_until='load')
+        try:
+            pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0 && window.CapitaoReplay", timeout=15000)
+        except Exception:
+            erros.append('prancheta não desenhou em 15 s')
+        pg.wait_for_timeout(700)
+        for t in INSTANTES_CORTE:
+            pg.evaluate("(t) => window.CapitaoReplay.fixar(t)", t)
+            for x in problemas_corte(pg):
+                prob.append('%s %dx%d, t = %d s: %s' % (tela, w, h, t, x))
+        if erros: prob += ['%s %dx%d: %s' % (tela, w, h, e) for e in erros[:2]]
+        ctx.close()
     return prob
 
 

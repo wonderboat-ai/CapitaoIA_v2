@@ -174,19 +174,22 @@
       this.style.cssText = 'height:44px;flex-shrink:0;';
       this.innerHTML = '<footer style="height:44px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 26px;border-top:1px solid rgba(var(--cap-hl-rgb,255,255,255),.05);font-size:11px;letter-spacing:.14em;color:var(--cap-ink4,#7985a6);white-space:nowrap;overflow:hidden">' +
         L.faixa.map(function (f) { return '<span>' + esc(f[0]) + ' <b data-cpm="f" style="color:var(--cap-ink3,#97a3c0)"></b></span>'; }).join('') +
-        '<span data-cpm="estado" style="overflow:hidden;text-overflow:ellipsis"></span>' +
+        '<span data-cpm="estado" style="min-width:0;overflow:hidden;text-overflow:ellipsis"></span>' +   // o que encolhe (e ganha reticências) é só o estado e o local
+        '<span data-cpm="hora" style="flex-shrink:0"></span>' +   // «HH:MM:SS · AO VIVO» nunca encolhe nem é cortado
         '<span style="flex-grow:1"></span>' +
         '<a class="cpm-a" href="Main.dc.html" style="color:var(--cap-ink3,#97a3c0);font-weight:700;display:flex;align-items:center;gap:8px;text-decoration:none;min-height:44px;letter-spacing:.16em">' + svg(ANCORA, 15, 1.8, 'var(--cap-accent,#00a1fe)') + ' INÍCIO ›</a>' +
         '</footer>';
       this._rot = L.faixa.map(function (f) { return f[0]; }).join('|');
-      this._n = { f: Array.prototype.map.call(this.querySelectorAll('[data-cpm="f"]'), function (b) { var t = document.createTextNode(''); b.appendChild(t); return t; }), estado: no(this, 'estado') };
+      this._n = { f: Array.prototype.map.call(this.querySelectorAll('[data-cpm="f"]'), function (b) { var t = document.createTextNode(''); b.appendChild(t); return t; }), estado: no(this, 'estado'), hora: no(this, 'hora'), estadoEl: this.querySelector('[data-cpm="estado"]') };
     }
     atualiza() {   // a cada tique: só os nós cujo valor mudou
       var L = leitura(), rot = L.faixa.map(function (f) { return f[0]; }).join('|');
       if (rot !== this._rot) this.monta(L);   // outro conjunto de campos (raro; nunca no tique de rotina)
-      var n = this._n;
+      var n = this._n, est = (L.estado + (L.local ? ' · ' + L.local.replace(/^enseada de /i, '') : '')).toUpperCase();
       L.faixa.forEach(function (f, i) { poe(n.f[i], f[1]); });
-      poe(n.estado, (L.estado + (L.local ? ' · ' + L.local.replace(/^enseada de /i, '') : '')).toUpperCase() + ' · ' + L.hora + (L.vivo ? ' · AO VIVO' : ' · ÚLTIMA LEITURA'));
+      poe(n.estado, est);
+      atr(n.estadoEl, 'title', est);   // o local comprido perde o fim em reticências (a hora ao lado não): a dica traz o texto inteiro
+      poe(n.hora, L.hora + (L.vivo ? ' · AO VIVO' : ' · ÚLTIMA LEITURA'));
     }
   });
 

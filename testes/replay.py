@@ -1338,7 +1338,8 @@ def moldura_estados(b):
 # nenhum rótulo do §3 (nem «Snapshot», «DEMO», «SEM DADOS»). O esperado é refeito aqui em Python (o port `confere.em`), com as casas do D.campos, não lido da tela.
 MOLDURA_QUADRO_JS = """() => { const A = window.CapitaoAgora, R = window.CapitaoReplay, T = (s) => Array.from(document.querySelectorAll(s)).map((e) => e.innerText).join('\\n');
   const led = document.querySelector('capitao-topo-app [role=img]'), pil = document.querySelector('[data-cpm=pilula]'), ms = R.agora();
-  return { ms, anc: A.ancora(ms), cab: T('capitao-cabecalho'), faixa: T('capitao-faixa'), led: led ? led.getAttribute('aria-label') + '|' + led.title : '', pil: pil ? pil.title : '' }; }"""
+  return { ms, anc: A.ancora(ms), cab: T('capitao-cabecalho'), faixa: T('capitao-faixa'), led: led ? led.getAttribute('aria-label') + '|' + led.title : '', pil: pil ? pil.title : '',
+    faixa_dica: (document.querySelector('capitao-faixa [data-cpm=estado]') || { title: '' }).title }; }"""
 
 
 def br_num(x, casas, mil=False):
@@ -1367,7 +1368,7 @@ def moldura_esperada(q, hora):
     return {'faixa': ['SOG %s NÓS' % br_num(q['sog_nos'], 1), 'PROA %03d°' % (math.floor(((q['proa_graus'] % 360) + 360) % 360 + 0.5) % 360), 'VENTO %s NÓS' % br_num(q['vento_verdadeiro_nos'], 1),
                       '24 V %s V' % br_num(q['bateria_0_tensao_v'], 2), 'ÁGUA DOCE %s %%' % br_num(q['tanque_agua_pct'], 1),
                       'DIESEL %s L (%s %%)' % (br_num(q['diesel_litros'], 0, True), br_num(C.arred(q['diesel_litros'] / cap * 100, 1), 1))],
-            'estado': ('%s · %s' % (q['estado'], re.sub(r'^enseada de ', '', q['local'], flags=re.I))).upper() + ' · ' + hora + ' · AO VIVO',
+            'estado': ('%s · %s' % (q['estado'], re.sub(r'^enseada de ', '', q['local'], flags=re.I))).upper(), 'hora': hora + ' · AO VIVO',   # (dois nós: só o estado e o local encolhem; a hora nunca é cortada)
             'cab_estado': '%s · %s' % (q['estado'], q['local']), 'pos': graus_min(q['lat'], 'N', 'S', 2) + ' ' + graus_min(q['lon'], 'E', 'W', 3),
             'emb': 'Embarcação %s · registro %s' % (D['embarcacao']['nome'], D['embarcacao']['registro']), 'rotulo': 'Ao vivo · ' + hora}
 
@@ -1392,7 +1393,8 @@ def moldura_quadro(b, fixos=('60', '105')):
             if w >= 1000:
                 faltam = [x for x in e['faixa'] if x not in r['faixa']]
                 ok('%s: a faixa mostra os valores do quadro (SOG, PROA, VENTO, 24 V, ÁGUA DOCE e DIESEL em litros e %%): %s' % (rot, ' · '.join(e['faixa'])), not faltam, (faltam, r['faixa']))
-                ok('%s: o estado e o local da faixa são os do quadro, com a hora do instante e «AO VIVO»: «%s»' % (rot, e['estado']), e['estado'] in r['faixa'], (e['estado'], r['faixa'][-160:]))
+                ok('%s: o estado e o local da faixa são os do quadro («%s») e a hora do instante com «AO VIVO» vem inteira, em nó próprio: «%s»' % (rot, e['estado'], e['hora']),
+                   e['estado'] in r['faixa'] and e['hora'] in r['faixa'].split('\n') and e['estado'] == r['faixa_dica'], (e['estado'], e['hora'], r['faixa'][-160:], r['faixa_dica']))
                 ok('%s: o cabeçalho mostra a embarcação e o registro, o estado e o local do quadro, a posição e «%s»' % (rot, e['rotulo']),
                    all(x in r['cab'] for x in (e['emb'], e['cab_estado'], e['pos'], e['rotulo'])), (e, r['cab']))
                 ok('%s: a dica da pílula não fala de snapshot, coletor desligado nem leitura fixa' % rot, r['pil'] == 'Telemetria ao vivo — atualiza a cada segundo', r['pil'])
@@ -1419,8 +1421,8 @@ ARREF_BE = {'id': 'arref_be', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'b
 ARREF_BB = {'id': 'arref_bb', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'bb', 'campo': 'motor_bb_arref_c', 'valor': 90.4, 'limite': 88}
 
 
-def abre_faixa(b, nome, vp, fixo=None, sobre=None, critico=False, pedidos=None, deslocamento=None):
-    init = MOLDURA_JS + ESPIA_FALA_JS
+def abre_faixa(b, nome, vp, fixo=None, sobre=None, critico=False, pedidos=None, deslocamento=None, extra=''):
+    init = MOLDURA_JS + ESPIA_FALA_JS + extra
     if fixo: init += "try { localStorage.setItem('capitao.replay.fixo', '%s'); } catch (e) {}" % fixo
     if sobre is not None: init += "localStorage.setItem('capitao.replay.sobre', %s);" % json.dumps(json.dumps(sobre))
     if pedidos is not None: init += "localStorage.setItem('capitao.alarmes.v1', %s);" % json.dumps(json.dumps(pedidos))
@@ -1535,6 +1537,73 @@ def faixa_global(b):
         pg.wait_for_timeout(500)
         c2 = pg.evaluate(FAIXA_LE)
         ok('%s: fechada a conversa, a região educada diz o aviso que ficou calado' % rot, bool(c2['status']) and 'Aviso' in c2['status'], c2)
+        fecha(pg)
+
+
+# ——— a faixa e a janela de conversa em emergência (P4B, revisão; CLAUDE.md 10; capitao-brain.js › almNavJan) ———
+# O alarme pedido de velocidade (SOG) é medida de navegação: dentro dos 15 min da conversa em emergência o limite e a leitura dela não aparecem — nem no texto da faixa, nem no aria-label do link, nem
+# nas regiões do leitor de tela. A marca da janela é UMA só, `window.CapitaoEmergencia` (capitao-app.js, sessionStorage `capitao.emergenciaAte`): as telas de conversa a gravam, a faixa global a lê e
+# passa `{ emergencia: true }` a B.alarmesPedidosAtivos (ela não tem a tela de conversa por perto). Sem a marca o texto traz a velocidade com número (o controle que prova que o teste enxerga o vazamento).
+PED_SOG = [{'id': 'usr_1', 'campo': 'sog_nos', 'op': '>', 'limite': 2, 'iso': '2026-11-09T10:00:00-03:00', 'who': 'Lucas', 'sim': True}]
+FRASE_NAV = 'velocidade, com limite e leitura no plotter'
+CHAVE_EMERG = 'capitao.emergenciaAte'
+
+
+def vazou_sog(c, sog):
+    """Onde o texto da faixa (visível, aria-label ou regiões do leitor de tela) deixa a leitura da SOG, o limite (2,0) ou a unidade."""
+    campos = {'texto': c['texto'], 'aria': c['aria'] or '', 'status': c['status'] or '', 'anuncio': c['anuncio'] or ''}
+    return {k: v for k, v in campos.items() if sog in v or '2,0' in v or 'nós' in v}
+
+
+def faixa_emergencia(b):
+    print('Faixa global × janela de conversa em emergência: o alarme pedido de velocidade sai sem limite nem leitura enquanto a marca vale (CapitaoEmergencia)')
+    for nome, vp in (('A1-Ponte-Web', VP_WEB), ('A2-Ponte-Mobile', VP_APP)):
+        rot = '%s (%d×%d)' % (nome, vp['width'], vp['height'])
+        # 1. controle e marca ligada com a página aberta; zera() devolve a leitura
+        pg = abre_faixa(b, nome, vp, fixo='60', pedidos=PED_SOG)
+        sog = pg.evaluate("() => window.CapitaoAgora.instante().q.sog_nos.toFixed(1).replace('.', ',')")
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: controle, sem a marca: a faixa diz o alarme pedido de velocidade COM a leitura (%s nós) e o limite (2,0 nós)' % (rot, sog), c['existe'] and not c['oculta'] and sog in c['texto'] and '2,0' in c['texto'] and sog in (c['status'] or ''), c)
+        e0 = pg.evaluate("() => ({ obj: typeof window.CapitaoEmergencia, v: window.CapitaoEmergencia && window.CapitaoEmergencia.valendo(), ate: window.CapitaoEmergencia && window.CapitaoEmergencia.ate() })")
+        ok('%s: a marca existe (window.CapitaoEmergencia) e começa sem valer' % rot, e0['obj'] == 'object' and e0['v'] is False and e0['ate'] == 0, e0)
+        pg.evaluate("() => window.CapitaoEmergencia.marca()")
+        pg.wait_for_timeout(350)   # o evento 'capitao-emergencia' refaz a faixa na hora (não espera o tique de 1 s)
+        c = pg.evaluate(FAIXA_LE)
+        m = pg.evaluate("() => ({ v: window.CapitaoEmergencia.valendo(), falta: window.CapitaoEmergencia.ate() - Date.now(), ss: sessionStorage.getItem('%s'), ls: Object.keys(localStorage).filter((k) => /emerg/i.test(k)) })" % CHAVE_EMERG)
+        ok('%s: marca() liga a janela por 15 min (valendo, faltam %.0f s), guarda o fim no sessionStorage e nada no localStorage' % (rot, m['falta'] / 1000), m['v'] and 880e3 <= m['falta'] <= 900.5e3 and (m['ss'] or '').isdigit() and m['ls'] == [], m)
+        ok('%s: com a marca valendo a faixa diz «%s» e não deixa nenhuma leitura da SOG, o limite nem «nós» (texto, aria-label, região educada e região assertiva): %s' % (rot, FRASE_NAV, vazou_sog(c, sog) or 'limpo'),
+           FRASE_NAV in c['texto'] and not vazou_sog(c, sog) and FRASE_NAV in (c['aria'] or ''), (c, vazou_sog(c, sog)))
+        ok('%s: com a marca valendo a faixa continua AVISO, sem fala e sem registro' % rot, c['nivel'] == 'aviso' and c['falas'] == 0 and c['registro'] == [], c)
+        pg.evaluate("() => window.CapitaoEmergencia.zera()")
+        pg.wait_for_timeout(350)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: zera() fecha a janela (NOVA e ENCERRAR) e a faixa volta a dizer a leitura (%s nós)' % (rot, sog), sog in c['texto'] and not pg.evaluate("() => window.CapitaoEmergencia.valendo()") and pg.evaluate("() => sessionStorage.getItem('%s')" % CHAVE_EMERG) is None, c)
+        pg.evaluate("() => window.CapitaoEmergencia.marca(Date.now() + 3600e3)")
+        ate = pg.evaluate("() => window.CapitaoEmergencia.ate() - Date.now()")
+        ok('%s: a janela nunca passa de 15 min (marca com 1 h pedida: faltam %.0f s)' % (rot, ate / 1000), ate <= 900.5e3, ate)
+        ok('%s: sem erro de script' % rot, not pg.erros, pg.erros)
+        fecha(pg)
+        # 2. a marca já valia ao abrir a página (a janela atravessa a navegação, pela aba): nenhuma região do leitor de tela chega a dizer a SOG
+        pg = abre_faixa(b, nome, vp, fixo='60', pedidos=PED_SOG, extra="try { sessionStorage.setItem('%s', String(Date.now() + 600e3)); } catch (e) {}" % CHAVE_EMERG)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: com a marca já valendo ao abrir a página, a faixa, o aria-label e a região educada (que anuncia o aviso uma vez) não trazem a SOG: %s' % (rot, vazou_sog(c, sog) or 'limpo'),
+           c['existe'] and not c['oculta'] and FRASE_NAV in c['texto'] and FRASE_NAV in (c['status'] or '') and not vazou_sog(c, sog), (c, vazou_sog(c, sog)))
+        fecha(pg)
+        # 3. a janela acaba pelo relógio de verdade: sem o evento de zerar, o próximo tique volta à leitura
+        pg = abre_faixa(b, nome, vp, fixo='60', pedidos=PED_SOG, extra="try { sessionStorage.setItem('%s', String(Date.now() + 2500)); } catch (e) {}" % CHAVE_EMERG)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: marca que vence em 2,5 s: no começo a faixa ainda não diz a SOG' % rot, FRASE_NAV in c['texto'] and sog not in c['texto'], c)
+        pg.wait_for_timeout(2600)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: vencida a janela, o tique seguinte devolve a leitura (%s nós) à faixa' % (rot, sog), sog in c['texto'] and '2,0' in c['texto'], c)
+        fecha(pg)
+        # 4. a marca que estava lá antes da faixa dizer a SOG: a região educada guardava o texto com a leitura e a janela a esvazia
+        pg = abre_faixa(b, nome, vp, fixo='60', pedidos=PED_SOG)
+        antes = pg.evaluate(FAIXA_LE)
+        pg.evaluate("() => window.CapitaoEmergencia.marca()")
+        pg.wait_for_timeout(350)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: a região educada já tinha dito a SOG (%s): ao abrir a janela ela é esvaziada, sem anunciar nada novo' % (rot, 'sim' if sog in (antes['status'] or '') else 'NÃO'), sog in (antes['status'] or '') and not (c['status'] or '').strip() and not (c['anuncio'] or '').strip(), (antes['status'], c))
         fecha(pg)
 
 
@@ -2153,6 +2222,16 @@ MUTANTES_ARQ = [
      [("fxFalado = 's' + sig; fxStatus.textContent = ''; fxStatus.textContent = msg;", "fxFalado = 's' + sig; fxStatus.textContent = ''; fxStatus.textContent = msg; try { speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); } catch (e) {}")], 'faixa'),
     ('o alarme pedido sem começo conhecido na frente (desdeMs null como 0 em vez do fim)', 'capitao-app.js',
      [("var dx = x.desdeMs === null ? Infinity : x.desdeMs, dy = y.desdeMs === null ? Infinity : y.desdeMs;\n    return fxPeso", "var dx = x.desdeMs === null ? 0 : x.desdeMs, dy = y.desdeMs === null ? 0 : y.desdeMs;\n    return fxPeso")], 'faixa'),
+    ('a faixa não passa a marca da janela de emergência ao cérebro (a SOG sai com número)', 'capitao-app.js',
+     [("B.alarmesPedidosAtivos(undefined, { emergencia: emergenciaValendo() })", "B.alarmesPedidosAtivos()")], 'emerg'),
+    ('a marca não avisa a faixa (sem o evento capitao-emergencia)', 'capitao-app.js',
+     [("'capitao-sessao', 'capitao-emergencia'].forEach", "'capitao-sessao'].forEach")], 'emerg'),
+    ('a região educada guarda o texto de antes da janela (com a SOG)', 'capitao-app.js',
+     [("      if (fxStatus) fxStatus.textContent = '';\n      if (fxAlerta) fxAlerta.textContent = '';\n", "")], 'emerg'),
+    ('a janela sem teto de 15 min', 'capitao-app.js',
+     [("Math.min(ate, t + JANELA)", "ate")], 'emerg'),
+    ('a janela que não vence pelo relógio', 'capitao-app.js',
+     [("function valendo() { return le() > Date.now(); }", "function valendo() { return le() > 0; }")], 'emerg'),
     ('a Main dando setState a cada tique, sem comparar o texto da faixa', 'Main.dc.html',
      [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
     ('a H2 dando setState a cada tique, sem comparar o LED', 'H2-Home-Mobile.dc.html',
@@ -2181,6 +2260,8 @@ def mutantes_arq(b):
                     moldura_quadro(b, fixos=('60',))
                 elif qual == 'faixa':
                     faixa_global(b)
+                elif qual == 'emerg':
+                    faixa_emergencia(b)
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
@@ -2247,6 +2328,7 @@ def main():
         moldura_estados(browser)
         moldura_quadro(browser)
         faixa_global(browser)
+        faixa_emergencia(browser)
         gating(browser)
         codigo()
         codigo_faixa()
