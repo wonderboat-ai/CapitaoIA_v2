@@ -24,8 +24,8 @@
   function demo_() { return D.demo && !sim() ? ' DEMO' : ''; }   // dentro de parênteses: "(leitura DEMO 26/09 10:12)", sem parêntese aninhado
 
   var HREF = {
-    web: { home: 'Main.dc.html', console: 'A1-Ponte-Web.dc.html', gestao: 'B1-Carta-Web.dc.html', manut: 'C1-Leme-Web.dc.html', docs: 'G1-Documentos-Web.dc.html', abast: 'G2-Abastecimento-Web.dc.html', diario: 'G3-Diario-Web.dc.html', equipe: 'G4-Equipe-Web.dc.html', faq: 'F1-FAQ-Hub-Web.dc.html', f2: 'F2-FAQ-Estabilizador-Web.dc.html', f3: 'F3-FAQ-Eletronicos-Web.dc.html', f4: 'F4-FAQ-Gerador-Web.dc.html', f5: 'F5-FAQ-Climatizacao-Web.dc.html', sos: 'S1-SOS-Web.dc.html', atalhos: 'H3-Atalhos-Editar-Web.dc.html' },
-    app: { home: 'H2-Home-Mobile.dc.html', console: 'A2-Ponte-Mobile.dc.html', gestao: 'B2-Carta-Mobile.dc.html', manut: 'C2-Leme-Mobile.dc.html', docs: 'G1-Documentos-Mobile.dc.html', abast: 'G2-Abastecimento-Mobile.dc.html', diario: 'G3-Diario-Mobile.dc.html', equipe: 'G4-Equipe-Mobile.dc.html', faq: 'F1-FAQ-Hub.dc.html', f2: 'F2-FAQ-Estabilizador.dc.html', f3: 'F3-FAQ-Eletronicos.dc.html', f4: 'F4-FAQ-Gerador.dc.html', f5: 'F5-FAQ-Climatizacao.dc.html', sos: 'S2-SOS-Mobile.dc.html', atalhos: 'H3-Atalhos-Editar.dc.html' }
+    web: { home: 'Main.dc.html', console: 'A1-Ponte-Web.dc.html', gestao: 'B1-Carta-Web.dc.html', manut: 'C1-Leme-Web.dc.html', check: 'C4-Checklist-Web.dc.html', docs: 'G1-Documentos-Web.dc.html', abast: 'G2-Abastecimento-Web.dc.html', diario: 'G3-Diario-Web.dc.html', equipe: 'G4-Equipe-Web.dc.html', faq: 'F1-FAQ-Hub-Web.dc.html', f2: 'F2-FAQ-Estabilizador-Web.dc.html', f3: 'F3-FAQ-Eletronicos-Web.dc.html', f4: 'F4-FAQ-Gerador-Web.dc.html', f5: 'F5-FAQ-Climatizacao-Web.dc.html', sos: 'S1-SOS-Web.dc.html', atalhos: 'H3-Atalhos-Editar-Web.dc.html' },
+    app: { home: 'H2-Home-Mobile.dc.html', console: 'A2-Ponte-Mobile.dc.html', gestao: 'B2-Carta-Mobile.dc.html', manut: 'C2-Leme-Mobile.dc.html', check: 'C4-Checklist-Mobile.dc.html', docs: 'G1-Documentos-Mobile.dc.html', abast: 'G2-Abastecimento-Mobile.dc.html', diario: 'G3-Diario-Mobile.dc.html', equipe: 'G4-Equipe-Mobile.dc.html', faq: 'F1-FAQ-Hub.dc.html', f2: 'F2-FAQ-Estabilizador.dc.html', f3: 'F3-FAQ-Eletronicos.dc.html', f4: 'F4-FAQ-Gerador.dc.html', f5: 'F5-FAQ-Climatizacao.dc.html', sos: 'S2-SOS-Mobile.dc.html', atalhos: 'H3-Atalhos-Editar.dc.html' }
   };
 
   var DEFAULTS = [
@@ -2644,7 +2644,8 @@
     var tp = checkTipo(tipo), l = checklistItens(tipo), i = vivo(), f, nao, mais, acoes;
     if (!tp || !l.length) return { text: 'Esse checklist não está cadastrado neste aparelho.', src: 'Fonte: nenhuma — ' + SD + ' de checklist', actions: act(p, [['FAQ de bordo', 'faq']]) };
     f = l.filter(function (x) { return x.feito; }).length; nao = l.filter(function (x) { return !x.feito && x.auto && x.auto.estado === 'falta'; }).map(function (x) { return x.c; });
-    acoes = act(p, [['FAQ de bordo', 'faq']].concat(tipo === 'abastecimento' ? [['Abastecimento', 'abast']] : [], tipo === 'chegada' ? [['Fechar no diário', 'diario']] : [['Diário', 'diario']]));
+    // (P4E) «Checklist guiado» abre a tela C4 já na aba do tipo (#tipo=saida|chegada|abastecimento|fundeio): item a item, com o ✓ do quadro e o CONCLUIR (1 linha nova no diário, só com o toque)
+    acoes = act(p, [['Checklist guiado', A(p, 'check') + '#tipo=' + tipo], ['FAQ de bordo', 'faq']].concat(tipo === 'abastecimento' ? [['Abastecimento', 'abast']] : [], tipo === 'chegada' ? [['Fechar no diário', 'diario']] : [['Diário', 'diario']]));
     mais = l.map(function (x, k) {
       var m = x.feito ? '✓' : x.auto && x.auto.estado === 'falta' ? '✗' : '•', v = x.auto ? ' — ' + x.auto.valor : '', por = x.manual ? ' (conferido por você)' : '';
       return (k + 1) + '. ' + m + ' ' + (v ? x.t.replace(/\.$/, '') : x.t) + v + por + ' (' + x.fonte + (x.faq ? ' · FAQ ' + x.faq : '') + ')';

@@ -14,6 +14,7 @@
 <x-dc>
 <helmet>
 <script src="./capitao-app.js"></script>
+<script src="./capitao-telemetria.js"></script>
 <style>
 body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #050816; -webkit-font-smoothing: antialiased; }
 a { color: #00a1fe; } a:hover { color: #5cc2ff; }
@@ -21,9 +22,9 @@ a:focus-visible, button:focus-visible { outline: 2px solid #ffffff; outline-offs
 button { font: inherit; }
 @keyframes capBrilho { 0%, 100% { box-shadow: 0 0 0 1px rgba(255,90,80,0.3), 0 8px 24px rgba(255,40,30,0.2); } 50% { box-shadow: 0 0 0 1px rgba(255,120,110,0.55), 0 8px 30px rgba(255,40,30,0.45); } }
 @keyframes capPisca { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-.cap-brilho { animation: capBrilho 1.6s ease-in-out infinite; }
-.cap-pisca { animation: capPisca 1.6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .cap-brilho, .cap-pisca { animation: none; } }
+[data-brilho="1"] { animation: capBrilho 1.6s ease-in-out infinite; }
+[data-pisca="1"] { animation: capPisca 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { [data-brilho="1"], [data-pisca="1"] { animation: none; } }
 </style>
 </helmet>
 <div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #050816; color: #eaf1ff; overflow: hidden; position: relative;">
@@ -33,71 +34,83 @@ button { font: inherit; }
   </div>
   <div style="order: 1; flex-grow: 1; min-height: 0; box-sizing: border-box; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto;">
 
-    <div role="note" style="flex-shrink: 0; box-sizing: border-box; padding: 9px 12px; border-radius: 12px; border: 1.5px dashed #f0a63a; background: rgba(240,166,58,0.12); display: flex; align-items: center; gap: 10px;">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 5h16v11H4z M9 20h6 M12 16v4 M4 5l16 11" stroke="#f0a63a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-        <span style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.10em; line-height: 1.3; color: #f0a63a;">MODELO DE ALERTA · NADA O DISPARA SEM TELEMETRIA AO VIVO</span>
-        <span style="font-size: 11px; line-height: 1.35; color: #d7c3a3;">{{seloSub}}</span>
-      </span>
-    </div>
-
-    <div class="cap-brilho" style="position: relative; flex-shrink: 0; box-sizing: border-box; padding: 14px 16px 16px; background: #d32f27; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; color: #ffffff;">
-      <a href="H2-Home-Mobile.dc.html" aria-label="Fechar o alerta e voltar ao início" style="position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.18); color: #ffffff; display: flex; align-items: center; justify-content: center; text-decoration: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 6l12 12 M18 6L6 18" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"></path></svg></a>
+    <div data-c3="cartao" data-estado="{{estado}}" data-nivel="{{nivel}}" data-brilho="{{brilho}}" style="position: relative; flex-shrink: 0; box-sizing: border-box; padding: 14px 16px 16px; background: {{cartaoBg}}; border: 1.5px solid {{cartaoLinha}}; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; color: {{cartaoInk}};">
+      <a href="H2-Home-Mobile.dc.html" aria-label="Fechar e voltar ao início" style="position: absolute; top: 8px; right: 8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.14); color: {{cartaoInk}}; display: flex; align-items: center; justify-content: center; text-decoration: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 6l12 12 M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></svg></a>
       <div style="display: flex; align-items: center; gap: 10px; padding-right: 48px; min-height: 30px;">
-        <span class="cap-pisca" style="width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%; background: #ffffff; box-shadow: 0 0 0 5px rgba(255,255,255,0.28);"></span>
-        <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em;">ALERTA CRÍTICO · MODELO</span>
+        <span data-pisca="{{piscaPonto}}" style="width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%; background: {{cartaoAcc}}; box-shadow: 0 0 0 5px {{cartaoHalo}};"></span>
+        <span data-c3="selo" style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em; color: {{cartaoAcc}};">{{selo}}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 14px;">
-        <span style="width: 54px; height: 54px; flex-shrink: 0; border-radius: 17px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></span>
+        <span style="width: 54px; height: 54px; flex-shrink: 0; border-radius: 17px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center;">{{icone}}</span>
         <span style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
-          <span style="font-size: 12px; font-weight: 700; color: #ffe0dd;">Anomalia · propulsão</span>
-          <span style="font-size: 23px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em;">Pressão de óleo baixa (motor)</span>
+          <span data-c3="kicker" style="font-size: 12px; font-weight: 700; color: {{cartaoSub}};">{{kicker}}</span>
+          <span data-c3="titulo" style="font-size: 23px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere;">{{titulo}}</span>
         </span>
       </div>
-      <span style="font-size: 12px; line-height: 1.4; color: #ffe0dd;">{{motorSub}}</span>
+      <span data-c3="situacao" style="font-size: 12.5px; font-weight: 600; line-height: 1.4; color: {{cartaoSub}}; font-variant-numeric: tabular-nums;">{{situacao}}</span>
+      <sc-if value="{{temEquip}}" hint-placeholder-val="{{true}}">
+        <span data-c3="equip" style="font-size: 12px; line-height: 1.4; color: {{cartaoSub}};">{{equip}}</span>
+      </sc-if>
     </div>
 
-    <div style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: #eaf1ff; border-radius: 20px; color: #050816; display: flex; flex-direction: column; gap: 9px;">
-      <span style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800; color: #b3261e;">Faça agora</span><span style="font-size: 11.5px; font-weight: 600; color: #3b4766;">se a pressão cair ou o alarme acender</span></span>
-      <sc-for list="{{passos}}" as="p" hint-placeholder-count="4">
-        <span style="display: flex; gap: 11px; align-items: flex-start;">
-          <span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #050816; color: #ffffff; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{p.n}}</span>
-          <span style="font-size: 14px; font-weight: 600; line-height: 1.38; padding-top: 2px;">{{p.t}}</span>
-        </span>
-      </sc-for>
-      <span style="padding-top: 8px; border-top: 1px solid #c9d3e6; font-size: 11px; line-height: 1.45; color: #3b4766;">{{fontePassos}}</span>
-    </div>
+    <sc-if value="{{temPassos}}" hint-placeholder-val="{{true}}">
+      <div data-c3="passos" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: #eaf1ff; border-radius: 20px; color: #050816; display: flex; flex-direction: column; gap: 9px;">
+        <span style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800; color: {{passosCor}};">{{passosTitulo}}</span><span style="font-size: 11.5px; font-weight: 600; color: #3b4766;">{{passosSub}}</span></span>
+        <sc-for list="{{passos}}" as="p" hint-placeholder-count="4">
+          <span style="display: flex; gap: 11px; align-items: flex-start;">
+            <span style="width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; background: #050816; color: #ffffff; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{p.n}}</span>
+            <span style="font-size: 14px; font-weight: 600; line-height: 1.38; padding-top: 2px;">{{p.t}}</span>
+          </span>
+        </sc-for>
+        <span style="padding-top: 8px; border-top: 1px solid #c9d3e6; font-size: 11px; line-height: 1.45; color: #3b4766;">{{passosFonte}}</span>
+      </div>
+    </sc-if>
 
-    <div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: #0d1329; border: 1px solid #1a2240; border-radius: 18px; display: flex; flex-direction: column; gap: 10px;">
-      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
-        <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+    <sc-if value="{{temLeitura}}" hint-placeholder-val="{{true}}">
+      <div style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: #0d1329; border: 1px solid #1a2240; border-radius: 18px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
           <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">LEITURA AGORA</span>
-          <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: #f0a63a;">SEM LEITURA</span>
-          <span style="font-size: 11px; line-height: 1.35; color: #97a3c0;">telemetria ao vivo desligada</span>
+          <span data-c3="leitura" data-pisca="{{piscaLeitura}}" style="font-size: 24px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.12; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: {{leituraCor}};">{{leitura}}</span>
+          <span data-c3="leitura-sub" style="font-size: 11px; line-height: 1.35; color: #97a3c0;">{{leituraSub}}</span>
         </div>
-        <div style="min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+        <div style="height: 1px; background: #1a2240;"></div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
           <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">FAIXA NORMAL</span>
-          <span style="font-size: 21px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.1; color: #f0a63a;">SEM DADOS</span>
-          <span style="font-size: 11px; line-height: 1.35; color: #97a3c0;">{{faixaSub}}</span>
+          <span data-c3="faixa" style="font-size: 19px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: #34c77a;">{{faixa}}</span>
+          <span data-c3="faixa-sub" style="font-size: 11px; line-height: 1.4; color: #97a3c0;">{{faixaSub}}</span>
         </div>
+        <sc-if value="{{temTendencia}}" hint-placeholder-val="{{true}}">
+          <div style="height: 1px; background: #1a2240;"></div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            {{spark}}
+            <span style="min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">TENDÊNCIA · ÚLTIMOS 10 S</span>
+              <span data-c3="tendencia" style="font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: #eaf1ff; overflow-wrap: anywhere;">{{tendencia}}</span>
+              <sc-if value="{{temTend30}}" hint-placeholder-val="{{false}}"><span data-c3="tendencia30" style="font-size: 11px; line-height: 1.35; color: #97a3c0; font-variant-numeric: tabular-nums;">{{tendencia30}}</span></sc-if>
+            </span>
+          </div>
+        </sc-if>
+        <span data-c3="fonte" style="font-size: 10.5px; line-height: 1.4; color: #7985a6; overflow-wrap: anywhere;">{{fonte}}</span>
       </div>
-      <div style="height: 1px; background: #1a2240;"></div>
-      <div style="display: flex; flex-direction: column; gap: 3px;">
-        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: #b1bdd6;">{{ultRotulo}}</span>
-        <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: #eaf1ff;">{{ultValor}}</span>
-        <span style="font-size: 11px; line-height: 1.4; color: #97a3c0;">{{ultSub}}</span>
-        <span style="font-size: 10.5px; line-height: 1.4; color: #7985a6; overflow-wrap: anywhere;">{{ultFonte}}</span>
+    </sc-if>
+
+    <sc-if value="{{temInfo}}" hint-placeholder-val="{{false}}">
+      <div data-c3="info" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: #0d1329; border: 1px solid #1a2240; border-radius: 18px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 14px; font-weight: 700;">{{infoTitulo}}</span>
+        <span style="font-size: 13px; line-height: 1.5; color: #b1bdd6;">{{infoTexto}}</span>
       </div>
-    </div>
+    </sc-if>
 
     <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 8px;">
-      <sc-if value="{{naoRegistrado}}" hint-placeholder-val="{{true}}">
-        <button type="button" onClick="{{registrar}}" aria-label="Registrar este alerta no diário de bordo — cria uma linha nova" style="height: 52px; border-radius: 16px; border: none; background: #eaf1ff; color: #050816; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 15.5px; font-weight: 800;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11 M9 9h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{registrarLabel}}</button>
+      <sc-if value="{{podeRegistrar}}" hint-placeholder-val="{{true}}">
+        <sc-if value="{{naoRegistrado}}" hint-placeholder-val="{{true}}">
+          <button type="button" data-c3="registrar" onClick="{{registrar}}" aria-label="Registrar este alerta no diário de bordo — cria uma linha nova" style="height: 52px; border-radius: 16px; border: none; background: #eaf1ff; color: #050816; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-size: 15.5px; font-weight: 800;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11 M9 9h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>{{registrarLabel}}</button>
+        </sc-if>
+        <sc-if value="{{registrado}}" hint-placeholder-val="{{false}}">
+          <a href="G3-Diario-Mobile.dc.html" data-c3="registrado" style="height: 52px; box-sizing: border-box; border-radius: 16px; border: 1.5px solid rgba(52,199,122,0.55); background: rgba(52,199,122,0.12); color: #34c77a; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.06em;">{{registradoLabel}}</a>
+        </sc-if>
       </sc-if>
-      <sc-if value="{{registrado}}" hint-placeholder-val="{{false}}">
-        <a href="G3-Diario-Mobile.dc.html" style="height: 52px; box-sizing: border-box; border-radius: 16px; border: 1.5px solid rgba(52,199,122,0.55); background: rgba(52,199,122,0.12); color: #34c77a; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font-size: 13px; font-weight: 800; letter-spacing: 0.06em;">{{registradoLabel}}</a>
-      </sc-if>
-      <span role="status" style="font-size: 12px; font-weight: 700; line-height: 1.4; color: {{notaTone}}; min-height: 0;">{{nota}}</span>
+      <span data-c3="nota" role="status" style="font-size: 12px; font-weight: 700; line-height: 1.4; color: {{notaTone}}; min-height: 0;">{{nota}}</span>
       <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
         <a href="G4-Equipe-Mobile.dc.html" style="min-width: 0; height: 50px; box-sizing: border-box; border-radius: 14px; border: 1px solid #34406a; background: #131a33; color: #eaf1ff; display: flex; align-items: center; justify-content: center; gap: 7px; text-decoration: none; font-size: 13px; font-weight: 700;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"></path></svg>Contatos</a>
         <a href="S2-SOS-Mobile.dc.html" style="min-width: 0; height: 50px; box-sizing: border-box; border-radius: 14px; border: 1px solid rgba(255,59,48,0.6); background: #2a1520; color: #ff6a60; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; font-weight: 800;">Abrir SOS</a>
@@ -109,8 +122,23 @@ button { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  state = { reg: null, gravando: false, nota: '', notaTone: '#97a3c0' };
-  componentWillUnmount() { this._dead = true; clearInterval(this._b); }
+  state = { reg: null, gravando: false, nota: '', notaTone: '#97a3c0', vivo: '' };
+  componentDidMount() {
+    // #alarme=<id> escolhe o alerta; sem ele, o que estiver tocando (o mais grave). Assina o tique da telemetria (a leitura anda) e o 'capitao-alerta' (início, mudança de nível e fim); só chama setState
+    // quando o texto exibido muda, não gira timer nenhum e pausa com a aba oculta. A tela nunca se fecha sozinha: quando o alarme acaba, o selo vira NORMALIZADO e a tela fica.
+    this._onTele = () => { if (!document.hidden) this.atualiza(); };
+    this._onHash = () => this.atualiza();
+    window.addEventListener('capitao-telemetria', this._onTele);
+    window.addEventListener('capitao-alerta', this._onTele);
+    window.addEventListener('capitao-rebase', this._onTele);
+    window.addEventListener('hashchange', this._onHash);
+    this.atualiza();
+  }
+  componentWillUnmount() {
+    window.removeEventListener('capitao-telemetria', this._onTele); window.removeEventListener('capitao-alerta', this._onTele); window.removeEventListener('capitao-rebase', this._onTele);
+    window.removeEventListener('hashchange', this._onHash);
+    this._dead = true; clearInterval(this._b);
+  }
   // Tela leve e sempre escura: o cérebro só entra se a pessoa tocar em "Registrar no diário".
   whenBrain(cb, fail) {
     if (window.CapitaoBrain) return cb(window.CapitaoBrain);
@@ -121,48 +149,168 @@ class Component extends DCLogic {
       if (n === 1 && !document.querySelector('script[src*="capitao-brain.js"]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
-  guia() { const D = window.CapitaoDados || {}; return (D.guias && D.guias.g_motores) || 'guia dos motores SEM DADOS'; }
-  // Registro só cresce: uma linha nova por toque. Só diz "registrado" se a linha está no diário.
+  atualiza() {
+    const d = this.dinamico(), k = JSON.stringify(d);
+    if (k === this._k) return;
+    this._k = k; this._din = d; this._fresco = true;
+    this.setState({ vivo: k });
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  // a tendência dos últimos 10 s como um traço pequeno (elemento React, nunca {{…}} em atributo de SVG): a faixa do alarme em linha tracejada, o ponto de agora cheio
+  spark(vals, lim, cor) {
+    const h = React.createElement, w = 96, a = 36, n = vals.length;
+    if (n < 2) return null;
+    const todos = vals.concat(typeof lim === 'number' ? [lim] : []), mn = Math.min.apply(null, todos), mx = Math.max.apply(null, todos), f = (mx - mn) || 1;
+    const px = (i) => 3 + i / (n - 1) * (w - 6), py = (v) => a - 4 - (v - mn) / f * (a - 8);
+    return h('svg', { width: w, height: a, viewBox: '0 0 ' + w + ' ' + a, 'aria-hidden': 'true', 'data-c3': 'spark', style: { flexShrink: 0, display: 'block' } },
+      typeof lim === 'number' ? h('line', { x1: 2, x2: w - 2, y1: py(lim), y2: py(lim), stroke: '#7985a6', strokeWidth: 1, strokeDasharray: '3 3' }) : null,
+      h('polyline', { points: vals.map((v, i) => px(i).toFixed(1) + ',' + py(v).toFixed(1)).join(' '), fill: 'none', stroke: cor, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      h('circle', { cx: px(n - 1), cy: py(vals[n - 1]), r: 3, fill: cor }));
+  }
+  // O que a tela mostra, em texto puro. O alerta e o fim dele vêm do CapitaoAlertas e do CapitaoReplay.janela (nunca da leitura fixa de 26/09); a leitura, do instante do CapitaoAgora (o mesmo texto da moldura e do
+  // cérebro); a faixa normal, de D.replay.limites; o equipamento, de D.equipamentos (nunca fabricante fixo); os passos e a fonte, do catálogo D.replay.alertas.
+  dinamico() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, R = window.CapitaoReplay, AL = window.CapitaoAlertas, s = this.state;
+    let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
+    const q = I && I.q ? I.q : null, sim = D.simulacao === true, SL = 'SEM LEITURA', falta = (rot) => (sim ? '—' : rot), ms = I && typeof I.ms === 'number' ? I.ms : undefined;
+    const num = (x) => typeof x === 'number' && isFinite(x), cap1 = (t) => { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }, dono = (o, k) => !!o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
+    const cat = (D.replay && D.replay.alertas) || {}, lim = (D.replay && D.replay.limites) || {};
+    const hora = (t, seg) => { try { return F.hora ? F.hora(t, !!seg) : ''; } catch (e) { return ''; } };
+    const dur = (t) => (t < 60 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60 ? (t % 60) + ' s' : '').trim()).trim();
+    let ativos = []; try { ativos = AL && typeof AL.ativos === 'function' ? AL.ativos(ms) : []; } catch (e) { ativos = []; }
+    // qual alerta: o do endereço; sem ele, o primeiro que tocar (e fica nele, mesmo depois de normalizado)
+    const m = /alarme=([^&]*)/.exec(location.hash || '');
+    let h = ''; try { h = m ? decodeURIComponent(m[1]) : ''; } catch (e) { h = m ? m[1] : ''; }
+    if (h !== this._hash) { this._hash = h; this._id = h || null; }
+    if (!this._id && ativos[0]) this._id = ativos[0].id;
+    const id = this._id, e1 = id && dono(cat, id) ? cat[id] : null;
+    let a = null; try { a = id && AL && typeof AL.porId === 'function' ? AL.porId(id, ms) : null; } catch (e) { a = null; }
+    let j = null; if (!a && e1) { try { j = R && typeof R.janela === 'function' ? R.janela(id, ms) : null; } catch (e) { j = null; } }
+    // sem a reprodução (simulacao false) ninguém avalia os limites: o alerta só existe com a API de alertas andando; sem ela a tela diz que não há alarme, nunca «dentro da faixa»
+    const anda = !!(AL && typeof AL.ativo === 'function' && AL.ativo());
+    const estado = !anda ? 'nenhum' : a ? 'ativo' : e1 ? (j && num(j.ate) ? 'normalizado' : 'normal') : 'nenhum';
+    const campo = a ? a.campo : e1 ? e1.campo : '', cf = campo && D.campos ? D.campos[campo] : null, un = cf && cf.un ? cf.un : '', casas = cf && num(cf.casas) ? cf.casas : 0;
+    const lado = a ? a.lado : e1 ? e1.lado : '', sistema = a ? a.sistema : e1 ? e1.sistema : '';
+    const eq = (D.equipamentos || []).filter((x) => x.id === sistema)[0] || null;
+    const nivel = a ? a.nivel : '';
+    const horaI = I ? I.hora : '';
+    const base = { estado: estado, nivel: nivel, id: id || '', horaI: horaI, ms: ms === undefined ? null : ms };
+
+    if (estado === 'nenhum') {
+      return Object.assign(base, { selo: 'SEM ALARME ATIVO', kicker: 'Alertas', titulo: 'Nenhum alarme ativo agora', situacao: anda && I ? 'Tudo dentro da faixa às ' + I.hora + ' · ' + cap1(I.fonteTxt) : 'Alarmes ' + falta(SL) + (I ? ' · ' + cap1(I.fonteTxt) : ''),
+        infoTitulo: 'Quando um alarme abrir', infoTexto: 'Esta tela mostra a leitura agora, a faixa normal, a tendência dos últimos 10 s e o que fazer, e avisa quando a leitura normaliza. Ela nunca se fecha sozinha.' });
+    }
+    // a leitura agora: «BB 1,6 bar · 14:05:31» (o lado, o valor do alarme e a hora do quadro)
+    const valor = a && a.valorTxt ? a.valorTxt : q && F.campo && F.campo(q, campo) !== null && F.campo(q, campo) !== undefined ? F.campo(q, campo) + (un ? ' ' + un : '') : falta(SL);
+    const leitura = (lado ? String(lado).toUpperCase() + ' ' : '') + valor + (horaI ? ' · ' + horaI : '');
+    // a faixa normal do campo (D.replay.limites): no óleo, a do regime do giro de agora
+    const decs = (x) => { const s0 = String(x), i = s0.indexOf('.'); return i < 0 ? 0 : Math.min(s0.length - i - 1, 3); };
+    const nbf = (x, c) => { if (!num(x)) return '—'; return F.nb ? F.nb(x, c == null ? decs(x) : c, !!(cf && cf.mil)) : String(x); };
+    const u = un ? ' ' + un : '';
+    const faixaDe = (R_) => { const n = R_ && R_.normal; if (!n) return ''; const c = Math.max(num(n.de) ? decs(n.de) : 0, num(n.ate) ? decs(n.ate) : 0); return num(n.de) && num(n.ate) ? 'de ' + nbf(n.de, c) + ' a ' + nbf(n.ate, c) + u : num(n.ate) ? 'até ' + nbf(n.ate, c) + u : num(n.de) ? 'a partir de ' + nbf(n.de, c) + u : ''; };
+    const foraDe = (o, rot) => { if (!o) return ''; const c = Math.max(num(o.abaixo) ? decs(o.abaixo) : 0, num(o.acima) ? decs(o.acima) : 0); return rot + ' ' + [num(o.abaixo) ? 'abaixo de ' + nbf(o.abaixo, c) + u : '', num(o.acima) ? 'acima de ' + nbf(o.acima, c) + u : ''].filter(Boolean).join(' ou '); };
+    const rpmTxt = (x) => (F.nb ? F.nb(x, 0, true) : String(x));
+    const L = campo && dono(lim, campo) ? lim[campo] : null;
+    let faixa = falta(SL), faixaSub = '';
+    if (L) {
+      let Rg = L, regTxt = '';
+      if (Array.isArray(L.regimes)) {
+        const r = q ? Math.round(q[(L.regimes[0] || {}).rpm_campo]) : NaN;
+        Rg = L.regimes.filter((g) => num(r) && (!num(g.rpm_de) || r >= g.rpm_de) && (!num(g.rpm_ate) || r < g.rpm_ate))[0] || null;
+        regTxt = Rg ? (num(Rg.rpm_ate) && !num(Rg.rpm_de) ? ' (abaixo de ' + rpmTxt(Rg.rpm_ate) + ' rpm)' : num(Rg.rpm_de) && !num(Rg.rpm_ate) ? ' (a partir de ' + rpmTxt(Rg.rpm_de) + ' rpm)' : '') : '';
+        if (!Rg) { faixa = L.regimes.map((g) => faixaDe(g)).join(' · '); faixaSub = 'conforme o giro do motor'; }
+      }
+      if (Rg) { faixa = faixaDe(Rg) + regTxt; faixaSub = [foraDe(Rg.aviso, 'aviso'), foraDe(Rg.critico, 'crítico')].filter(Boolean).join(' · '); }
+    }
+    // a tendência dos últimos 10 s (q(agora) − q(agora − 10 s) do replay, com as casas do campo; o contador que atravessa o abastecimento das 07:00 fica de fora) e, onde o cérebro a tem, a de 30 s
+    let serie = [], tendencia = '', tend30 = '';
+    try {
+      if (R && typeof R.em === 'function' && num(ms) && campo) {
+        const atual = a && num(a.valor) ? a.valor : q ? q[campo] : NaN, contador = !!(cf && cf.origem === 'contador'), cruza = (t) => contador && t < A.ancora(ms);
+        const c2 = contador ? Math.max(1, casas + 1) : casas, arr = (x, c) => (F.arred ? F.arred(x, c) : Math.round(x * Math.pow(10, c)) / Math.pow(10, c));
+        const sinal = (x, c) => { const v = arr(x, c), t = F.nb ? F.nb(Math.abs(v), c, false) : String(Math.abs(v)); return (v > 0 ? '+' + (/^55\d/.test(t) ? '\u2009' : '') : v < 0 ? '−' : '') + t; };
+        for (let k = 10; k >= 1; k--) { const qq = R.em(ms - k * 1000); serie.push(qq && num(qq[campo]) ? qq[campo] : NaN); }
+        serie.push(atual);
+        if (serie.every(num) && !cruza(ms - 10000)) {
+          const d10 = atual - serie[0], dir = arr(d10, c2) > 0 ? 'subindo' : arr(d10, c2) < 0 ? 'caindo' : 'estável';
+          tendencia = sinal(d10, c2) + u + ' · ' + dir + ' (' + (F.nb ? F.nb(serie[0], c2, false) : serie[0]) + ' → ' + (F.nb ? F.nb(atual, c2, false) : atual) + ')';
+        } else serie = [];
+        const q30 = R.em(ms - 30000);
+        if (['motor_bb_rpm', 'motor_be_rpm', 'motor_bb_oleo_bar', 'motor_be_oleo_bar', 'motor_bb_arref_c', 'motor_be_arref_c'].indexOf(campo) >= 0 && q30 && num(q30[campo]) && num(atual)) tend30 = 'últimos 30 s: ' + sinal(atual - q30[campo], casas) + u;
+      }
+    } catch (e) { serie = []; tendencia = ''; tend30 = ''; }
+    // o selo, a cor e a situação de cada estado
+    let selo, situacao, regTxt = '', passosTitulo = '', passosSub = '';
+    if (estado === 'ativo') {
+      selo = a.nivel === 'critico' ? 'ALERTA CRÍTICO' : 'AVISO';
+      situacao = (a.valorTxt || '') + (a.limiteTxt ? ' · ' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt : '') + ' · desde ' + a.hora + ' · há ' + dur(a.seg);
+      regTxt = (a.valorTxt || '') + (a.limiteTxt ? ' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt + ')' : '') + ', ' + (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ' desde ' + a.hora;
+      passosTitulo = 'Faça agora'; passosSub = 'enquanto o alarme durar';
+    } else if (estado === 'normalizado') {
+      selo = 'NORMALIZADO às ' + hora(j.ate, false).slice(0, 5);
+      situacao = 'normalizou às ' + hora(j.ate, true) + ' · ficou ' + dur(Math.round((j.ate - j.desde) / 1000)) + ' fora da faixa (desde ' + hora(j.desde, true) + ')';
+      regTxt = 'normalizado às ' + hora(j.ate, true) + ' (ficou ' + dur(Math.round((j.ate - j.desde) / 1000)) + ' fora da faixa, desde ' + hora(j.desde, true) + ')';
+      passosTitulo = 'Depois do alarme'; passosSub = 'o que conferir';
+    } else { selo = 'DENTRO DA FAIXA'; situacao = 'nenhum alarme aberto para este item agora'; }
+    const equip = eq ? [eq.nome, (num(eq.qtd) && eq.qtd > 1 ? eq.qtd + ' ×' : ''), eq.fabricante, eq.lados ? '(' + eq.lados + ')' : '', '· modelo ' + eq.modelo].filter(Boolean).join(' ') + (lado ? ' · lado: ' + String(lado).toUpperCase() : '') : '';
+    const passos = (a ? a.passos : e1 ? (Array.isArray(e1.passos) ? e1.passos : []) : []).map((t, i) => ({ n: String(i + 1), t: String(t) }));
+    const fonteP = a ? a.fonte : e1 ? e1.fonte : '';
+    const fonte = I ? cap1(I.fonteTxt) + (L && L.fonte ? ' · faixa: ' + L.fonte : '') : '';
+    const chave = id + '@' + (a ? a.desdeMs : j ? j.desde : '');
+    return Object.assign(base, {
+      selo: selo, kicker: [eq ? eq.nome : cap1(sistema || 'Alertas'), lado ? String(lado).toUpperCase() : ''].filter(Boolean).join(' · '), titulo: a ? a.titulo : e1.titulo, situacao: situacao, equip: equip,
+      passos: estado === 'normal' ? [] : passos, passosTitulo: passosTitulo, passosSub: passosSub, passosFonte: fonteP ? 'Fonte: ' + fonteP : '',
+      leitura: leitura, leituraSub: I ? (estado === 'ativo' ? 'fora da faixa agora · ' : 'dentro da faixa · ') + I.fonteTxt : '', faixa: faixa, faixaSub: faixaSub,
+      serie: serie, limite: a && num(a.limite) ? a.limite : null, tendencia: tendencia, tendencia30: tend30, fonte: fonte,
+      registravel: estado === 'ativo' || estado === 'normalizado', chave: chave, regTxt: regTxt, ladoTxt: lado ? String(lado).toUpperCase() : '',
+      sysDiario: sistema === 'motores' ? 'Motores' : sistema === 'eletronicos' ? 'Eletrônicos' : 'Equipamentos'
+    });
+  }
+  // Registro só cresce: uma linha nova por toque, com o valor, o lado e a hora reais do quadro de agora. Só diz "registrado" se a linha está no diário. Nunca grava sozinho.
   registrar() {
-    if (this.state.gravando || this.state.reg) return;
+    const d = this.dinamico();
+    if (this.state.gravando || !d.registravel || (this.state.reg && this.state.reg.chave === d.chave)) return;
     this.setState({ gravando: true, nota: 'Gravando no diário…', notaTone: '#97a3c0' });
     this.whenBrain((B) => {
       if (this._dead) return;
-      const n = B.now(), quem = B.quem ? B.quem() : 'Lucas';
+      const n = B.now(), quem = B.quem ? B.quem() : 'Lucas', x = this.dinamico();
       let e = null;
       try {
-        e = B.addDiario({ sys: 'Motores', tone: 'var(--cap-crit, #ff3b30)', who: quem, src: 'app · alerta',
-          t: 'Alerta de pressão de óleo baixa (motor) registrado no app às ' + n.t + ' por ' + quem + ' — leitura SEM LEITURA no app (telemetria ao vivo desligada): conferir lado e valor no painel. Passos: ' + this.guia() + ' §4 · Pressão de óleo baixa. Linha nova, nada se apaga.' });
-      } catch (x) {}
-      const ok = !!e && B.loadDiario().some((x) => x.iso === e.iso && x.src === 'app · alerta');
-      if (!ok) { this.setState({ gravando: false, nota: 'Não gravado — anote hora e lado no diário de bordo.', notaTone: '#f0a63a' }); return; }
-      this.setState({ gravando: false, reg: { t: n.t, d: n.d }, nota: 'Linha nova no diário · ' + n.d + ' ' + n.t + ' · ' + quem, notaTone: '#34c77a' });
-    }, () => { if (!this._dead) this.setState({ gravando: false, nota: 'Não gravado (cérebro indisponível) — anote hora e lado no diário de bordo.', notaTone: '#f0a63a' }); });
+        e = B.addDiario({ sys: x.sysDiario, tone: x.nivel === 'critico' ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-warn, #f0a63a)', who: quem, src: 'app · alerta',
+          t: 'Alerta registrado no app às ' + n.t + ' por ' + quem + ' — ' + x.titulo + (x.ladoTxt ? ' (lado ' + x.ladoTxt + ')' : '') + ': ' + x.regTxt + ' · leitura às ' + x.horaI + ' (telemetria ao vivo). Passos: ' + (x.passosFonte || '').replace(/^Fonte: /, '') + '. Linha nova, nada se apaga.' });
+      } catch (z) {}
+      const ok = !!e && B.loadDiario().some((l) => l.iso === e.iso && l.src === 'app · alerta');
+      if (!ok) { this.setState({ gravando: false, nota: 'Não gravado — anote hora, lado e valor no diário de bordo.', notaTone: '#f0a63a' }); return; }
+      this.setState({ gravando: false, reg: { t: n.t, d: n.d, chave: x.chave }, nota: 'Linha nova no diário · ' + n.d + ' ' + n.t + ' · ' + quem, notaTone: '#34c77a' });
+    }, () => { if (!this._dead) this.setState({ gravando: false, nota: 'Não gravado (cérebro indisponível) — anote hora, lado e valor no diário de bordo.', notaTone: '#f0a63a' }); });
   }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {}, M = S.motores || {}, SD = 'SEM DADOS', DEMO = D.demo ? ' DEMO' : '';
-    const eq = (D.equipamentos || []).filter((e) => e.id === 'motores')[0] || {};
-    const nb = (x) => (typeof x === 'number' && isFinite(x) ? x.toFixed(1).replace('.', ',') : '—');
-    const oleo = M.oleo && M.oleo.length > 1;
+    const s = this.state;
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (registro, nota) refaz o texto agora
+    let d = this._din;
+    if (!this._fresco || !d) { d = this._din = this.dinamico(); this._k = JSON.stringify(d); }
+    this._fresco = false;
+    const E = {
+      ativo: d.nivel === 'critico' ? { bg: '#d32f27', linha: 'rgba(255,255,255,0.20)', ink: '#ffffff', acc: '#ffffff', sub: '#ffe0dd', halo: 'rgba(255,255,255,0.28)' } : { bg: 'rgba(240,166,58,0.13)', linha: '#f0a63a', ink: '#fff1d6', acc: '#f0a63a', sub: '#e9d3a8', halo: 'rgba(240,166,58,0.28)' },
+      normalizado: { bg: 'rgba(52,199,122,0.12)', linha: 'rgba(52,199,122,0.55)', ink: '#eaf1ff', acc: '#34c77a', sub: '#b9e6cd', halo: 'rgba(52,199,122,0.25)' },
+      normal: { bg: '#0d1329', linha: '#1a2240', ink: '#eaf1ff', acc: '#34c77a', sub: '#b1bdd6', halo: 'rgba(52,199,122,0.20)' },
+      nenhum: { bg: '#0d1329', linha: '#1a2240', ink: '#eaf1ff', acc: '#00f4fd', sub: '#b1bdd6', halo: 'rgba(0,244,253,0.18)' }
+    }[d.estado] || { bg: '#0d1329', linha: '#1a2240', ink: '#eaf1ff', acc: '#00f4fd', sub: '#b1bdd6', halo: 'rgba(0,244,253,0.18)' };
+    const ativo = d.estado === 'ativo', aviso = ativo && d.nivel !== 'critico';
+    const leituraCor = ativo ? (d.nivel === 'critico' ? '#ff6a60' : '#f0a63a') : '#34c77a';
+    const ICO = { ativo: 'M12 4 21 20H3z M12 10v4 M12 17h.01', normalizado: 'M5 12.5l4.5 4.5L19 7.5', normal: 'M5 12.5l4.5 4.5L19 7.5', nenhum: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8 12.5l3 3 5-6' };
+    const reg = s.reg && s.reg.chave === d.chave ? s.reg : null;
     return {
-      seloSub: 'Mostra como o alerta aparece. Sem leitura agora — confira o painel.',
-      motorSub: 'Motores ' + (eq.qtd ? eq.qtd + ' × ' : '') + (eq.fabricante || 'fabricante ' + SD) + (eq.lados ? ' (' + eq.lados + ')' : '') + ' · modelo ' + (eq.modelo || SD) + ' · lado: SEM LEITURA',
-      faixaSub: 'manual ' + (eq.fabricante || 'do fabricante') + ' · modelo ' + (eq.modelo || SD),
-      ultRotulo: 'ÚLTIMA LEITURA COM MOTORES LIGADOS · ' + (M.hora || SD),
-      ultValor: oleo ? 'Óleo BB ' + nb(M.oleo[0]) + ' bar · BE ' + nb(M.oleo[1]) + ' bar' : 'Óleo SEM LEITURA',
-      ultSub: (M.rpm ? M.rpm.join('/') + ' rpm em ' + (M.marcha || 'neutro') + ' · arrefecimento ' + (M.arref ? M.arref.join('/') : '—') + ' °C · ' : '') + 'motores ' + (M.estado || SD),
-      ultFonte: 'Fonte: ' + (S.fonte || SD) + ' · snapshot' + DEMO + ' ' + (S.quando || SD),
-      // Passos do guia (§4 · Pressão de óleo baixa), resumidos exatamente como no cérebro (capitao-brain.js · OLEO_PASSOS)
-      passos: [
-        { n: '1', t: 'Reduza para marcha lenta e observe se a pressão sobe.' },
-        { n: '2', t: 'Compare BB e BE no mesmo giro — só um lado baixo aponta o motor.' },
-        { n: '3', t: 'Com o motor parado: procure vazamento e confira o nível de óleo.' },
-        { n: '4', t: 'Persistindo: desligue o motor afetado, siga com o outro e chame a oficina Volvo Penta.' }
-      ],
-      fontePassos: 'Fonte: ' + this.guia() + ' · §4 · Pressão de óleo baixa' + (D.drive && D.drive.pastas ? ' · ' + (D.drive.raiz || 'Drive') + ' › ' + D.drive.pastas.manuais : '') + ' · faixa oficial: manual do fabricante (modelo ' + (eq.modelo || SD) + ')',
-      naoRegistrado: !s.reg, registrado: !!s.reg,
+      estado: d.estado, nivel: d.nivel, brilho: ativo && d.nivel === 'critico' ? '1' : '0', piscaPonto: ativo ? '1' : '0', piscaLeitura: ativo ? '1' : '0',
+      cartaoBg: E.bg, cartaoLinha: E.linha, cartaoInk: E.ink, cartaoAcc: E.acc, cartaoSub: E.sub, cartaoHalo: E.halo,
+      selo: d.selo, kicker: d.kicker, titulo: d.titulo, situacao: d.situacao, equip: d.equip || '', temEquip: !!d.equip, icone: this.ico(ICO[d.estado] || ICO.nenhum, 30, 1.8, E.ink),
+      temPassos: !!(d.passos && d.passos.length), passos: d.passos || [], passosTitulo: d.passosTitulo, passosSub: d.passosSub, passosFonte: d.passosFonte, passosCor: ativo ? (d.nivel === 'critico' ? '#b3261e' : '#8a5a00') : '#1f7a4a',
+      temLeitura: d.estado !== 'nenhum', leitura: d.leitura, leituraSub: d.leituraSub, leituraCor: leituraCor, faixa: d.faixa, faixaSub: d.faixaSub,
+      temTendencia: !!d.tendencia, tendencia: d.tendencia, temTend30: !!d.tendencia30, tendencia30: d.tendencia30, spark: d.serie && d.serie.length ? this.spark(d.serie, aviso || d.nivel === 'critico' ? d.limite : null, leituraCor) : null, fonte: d.fonte,
+      temInfo: d.estado === 'nenhum', infoTitulo: d.infoTitulo || '', infoTexto: d.infoTexto || '',
+      podeRegistrar: !!d.registravel, naoRegistrado: !reg, registrado: !!reg,
       registrar: () => this.registrar(), registrarLabel: s.gravando ? 'Gravando…' : 'Registrar no diário',
-      registradoLabel: s.reg ? 'REGISTRADO ' + s.reg.d + ' ' + s.reg.t + ' · ABRIR DIÁRIO ›' : '',
+      registradoLabel: reg ? 'REGISTRADO ' + reg.d + ' ' + reg.t + ' · ABRIR DIÁRIO ›' : '',
       nota: s.nota, notaTone: s.notaTone
     };
   }

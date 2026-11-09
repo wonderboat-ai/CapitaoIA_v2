@@ -1203,7 +1203,7 @@ MOLDURA_PARADA = """() => { const m = window.__m; m.parada = 0; m.mo2 = new Muta
 
 
 def telas_moldura():
-    """As 30 telas que importam a moldura (todas menos Main, H2, C3, Manual e S1/S2), com a largura do $preview: 1440 = web (1440×900), o resto = app (360×640)."""
+    """As 34 telas que importam a moldura (todas menos Main, H2, C3, Manual e S1/S2; 30 até a P4C, que trouxe A4 e A5, e a P4E, que trouxe a C4 web e app), com a largura do $preview: 1440 = web (1440×900), o resto = app (360×640)."""
     out = []
     for arq in sorted(f for f in os.listdir(RAIZ) if f.endswith('.dc.html')):
         h = le(arq)
@@ -1259,10 +1259,11 @@ def confere_moldura(nome, w, r, segundos=10):
 
 def moldura(b):
     todas = '--moldura' in sys.argv
-    itens = telas_moldura() if todas else [t for t in telas_moldura() if t[0] in ('A2-Ponte-Mobile', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos')]
+    so = [x for x in os.environ.get('MOLDURA_TELAS', '').split(',') if x]   # (P4E) só estas telas, para medir uma tela nova sem rodar as 34 (a contagem das 34 fica de fora)
+    itens = [t for t in telas_moldura() if t[0] in so] if so else telas_moldura() if todas else [t for t in telas_moldura() if t[0] in ('A2-Ponte-Mobile', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos')]
     print('Moldura em nós Text, em 10 s de replay (%s)' % ('as %d telas com moldura' % len(itens) if todas else '3 telas: A2 em 360×640, A1 em 1440×900 e E1; todas as 30 com --moldura'))
-    if todas:
-        ok('são 30 as telas que importam a moldura (A1–A3, B1–B3, C1, C2, E1, E2, F1–F5, G1–G4 e H3, web e app)', len(itens) == 30, [t[0] for t in itens])
+    if todas and not so:
+        ok('são 34 as telas que importam a moldura (A1–A5, B1–B3, C1, C2, C4, E1, E2, F1–F5, G1–G4 e H3, web e app)', len(itens) == 34, [t[0] for t in itens])
     larg = {n: w for n, w, _ in itens}
     for i in range(0, len(itens), 3):   # 3 telas por vez: abre ao mesmo tempo, mas sem passar dos núcleos da máquina (a long task mede a tela, não a fila)
         lote = itens[i:i + 3]

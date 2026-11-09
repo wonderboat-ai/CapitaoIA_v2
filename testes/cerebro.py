@@ -5349,6 +5349,10 @@ JS_CK = """(xs) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, D 
   return { tipos: B.checklistTipos(), dados: D.checklists, docs: D.documentos.map((d) => ({ id: d.id, vence: d.vence })), eqval: D.equipamentos.filter((e) => e.seguranca === true && e.validade).map((e) => e.validade), r: xs.map((x) => { R.fixar(x); const i = B.instante(), o = { x, hora: i.hora, txt: i.txt, q: { sog: i.q.sog_nos, bb: i.q.diesel_bb_pct }, itens: {}, resp: {} };
     T.forEach((t) => { o.itens[t] = B.checklistItens(t).map(pega); const a = B.answer(P[t], op); o.resp[t] = { key: a.key, text: a.text, src: a.src, fala: B.falaCurta(a), ia: B.pedeIA(a, P[t]) }; });
     return o; }) }; }""" % json.dumps(PERGUNTA_CK)
+# (P4E) as ações das 4 respostas dos checklists, nas duas plataformas, e o HREF.check do cérebro: a ação «Checklist guiado» abre a C4 (web e app) já na aba do tipo
+JS_CK_ACOES = """() => { const B = window.CapitaoBrain, P = %s, o = { href: { web: B.HREF.web.check, app: B.HREF.app.check }, resp: {} };
+  ['web', 'app'].forEach((pl) => { o.resp[pl] = {}; Object.keys(P).forEach((t) => { const a = B.answer(P[t], { platform: pl, commit: false }); o.resp[pl][t] = { key: a.key, acoes: (a.actions || []).map((x) => [x.l, x.href]) }; }); });
+  return o; }""" % json.dumps(PERGUNTA_CK)
 # (cada quadro adulterado num segundo próprio — 62, 64, 66…: o instante fixado fica guardado por segundo, e o do 60 volta limpo no fim)
 JS_CK_SOBRE = """(sobres) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, T = ['saida', 'chegada', 'abastecimento', 'fundeio'];
   const r = sobres.map((s, k) => { localStorage.setItem('capitao.replay.sobre', JSON.stringify(s)); R.fixar(String(62 + 2 * k)); const o = {};
@@ -5478,6 +5482,21 @@ def grupo_checklist(b, muta, ped):
         ped('checklist: tipo que não existe — marca e CONCLUIR devolvem null e não gravam', w['ruim'] is None and w['semTipo'] is None, (w['ruim'], w['semTipo']))
         ped('checklist: JSON ruim no aparelho (lista, texto, marca que não é mapa, tipo que não é objeto) vale como sem marcas e os 14 itens seguem; nunca lança', w['lixo1'] == [14, {}] and w['lixo2'] == [14, '{}'] and w['lixo3'] == [14, '{}', '{}'], (w['lixo1'], w['lixo2'], w['lixo3']))
         ped('checklist (CONCLUIR): a linha gravada (e a pior, com todos os rótulos pendentes) de cada tipo não casa a lista SOS, não é o relato de óleo e não vira diário com alerta', all(r == [False, r_[1], False] and r_[1] not in ('sos', 'oleo') for t in TIPOS_CK for r_ in [w['emerg'][t][0], w['emerg'][t][1]] for r in [r_]), w['emerg'])
+    finally:
+        pg.ctx.close()
+    # (P4E) a ação «Checklist guiado» das 4 respostas (saída, chegada, abastecimento, fundeio) abre a C4 na aba do tipo: C4-Checklist-Web no computador e C4-Checklist-Mobile no app, a 1ª ação; as outras seguem
+    pg = pagina(b, muta=muta)
+    try:
+        r = pg.evaluate(JS_CK_ACOES)
+        raiz = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+        sw = open(os.path.join(raiz, 'sw.js'), encoding='utf-8').read()
+        ped('checklist (P4E): HREF.check é a C4 (web e app), os dois arquivos existem e estão nas TELAS do sw.js',
+            r['href'] == {'web': 'C4-Checklist-Web.dc.html', 'app': 'C4-Checklist-Mobile.dc.html'} and all(os.path.exists(os.path.join(raiz, f)) and "'%s'" % f[:-8] in sw for f in r['href'].values()), r['href'])
+        for pl, arq in (('web', 'C4-Checklist-Web.dc.html'), ('app', 'C4-Checklist-Mobile.dc.html')):
+            for t in TIPOS_CK:
+                x = r['resp'][pl][t]
+                ped('checklist (P4E): %s, %s: a 1ª ação é «Checklist guiado» → %s#tipo=%s e a 2ª segue a «FAQ de bordo»' % (pl, t, arq, t),
+                    x['key'] == CHAVE_CK[t] and x['acoes'][:2] == [['Checklist guiado', arq + '#tipo=' + t], x['acoes'][1]] and x['acoes'][1][0] == 'FAQ de bordo' and len(x['acoes']) >= 3, x)
     finally:
         pg.ctx.close()
     # com a leitura do dia e a maré salvas (o capitao-clima.js da Main e da H2, Open-Meteo real; aqui a cópia plantada): a previsão (s01) e a maré (f06) mostram a leitura e NUNCA dão ✓ sozinhas (§2.5)
@@ -9546,6 +9565,15 @@ MUTANTES_P4A_REV3 = [
     ('p4a rev3 abre: o diário com alerta não leva a.abreJanela', r"if (alerta) { r.emerg = true; r.abreJanela = true; } return r;", r"if (alerta) { r.emerg = true; } return r;", ('janela',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV3
+
+# Mutantes da P4E (a ação «Checklist guiado» e o HREF.check): cada um tem de ser acusado pelo grupo `checklist`
+MUTANTES_P4E = [
+    ('p4e checklist: a ação «Checklist guiado» sem o tipo no endereço (a C4 abriria sempre na saída)', "['Checklist guiado', A(p, 'check') + '#tipo=' + tipo]", "['Checklist guiado', A(p, 'check')]", ('checklist',)),
+    ('p4e checklist: a ação «Checklist guiado» do app aponta para a C4 web (a plataforma ignorada)', "['Checklist guiado', A(p, 'check') + '#tipo=' + tipo]", "['Checklist guiado', HREF.web.check + '#tipo=' + tipo]", ('checklist',)),
+    ('p4e checklist: o HREF.check da web aponta para a Manutenção (C1) e não para a C4', "check: 'C4-Checklist-Web.dc.html'", "check: 'C1-Leme-Web.dc.html'", ('checklist',)),
+    ('p4e checklist: a ação «Checklist guiado» some das respostas', "acoes = act(p, [['Checklist guiado', A(p, 'check') + '#tipo=' + tipo], ['FAQ de bordo', 'faq']]", "acoes = act(p, [['FAQ de bordo', 'faq']]", ('checklist',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4E
 
 
 

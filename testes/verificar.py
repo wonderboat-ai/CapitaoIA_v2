@@ -87,6 +87,16 @@ conversa em emergência (CapitaoEmergencia: abre com sos, óleo, canal 16, EPIRB
 botão de uma resposta (#capitao-prop-… e #capitao-relato-…) que vira a pergunta sem gravar, e nenhum link vazio. Sem congelar o replay, a propulsão da B1 e da B2 muda em 1,5 s; com simulacao false
 as duas leem a última leitura salva (D.snapshot).
 
+Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 35 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
+da agenda gerada), os 3 cartões iguais às contagens do CapitaoAgora (a agenda e as tarefas da equipe, as do aparelho também; Executado acompanha e o Executado da tarefa do aparelho grava 1 linha nova com sim);
+C2 com as atrasadas, o horímetro de agora (BB, BE e gerador) e as mesmas horas até a troca; C3 como alerta vivo: o AVISO a 105 s com a leitura «BE 89,6 °C · 12:01:45» (o lado, o valor do alarme e a hora do
+quadro), a faixa normal do guia (a do regime do giro, no óleo), a tendência dos 10 s (o quadro do segundo 95 da volta) e dos 30 s (+7,5 °C, a do cérebro), os passos e a fonte do catálogo, o equipamento de
+D.equipamentos, o pisca; o NORMALIZADO às 11:59 a 60 s (o fim da volta anterior, 11:59:27) e às 12:01 ao fixar 120 s com a tela aberta, sem navegação, fala nem registro; sem alarme e id fora do catálogo
+(neutro, sem rótulo), o alerta sem janela («dentro da faixa»), o crítico plantado (cenário alarme-critico injetado: cartão vermelho que brilha); registrar() só com o toque (1 linha com valor, lado e hora reais,
+sim; dois toques seguidos não duplicam; nem ao abrir nem a cada mudança de estado), sempre escura (tema claro) e leve (sem tema, sem cérebro até o toque); C4 nos 4 tipos a 60 e a 105 s: itens, fonte, verificação do
+quadro (s02: ✓ a 60 s, ✗ a 105 s), marcas, desmarca do ✓ do quadro, Recomeçar sem diário, CONCLUIR = 1 linha nova (dois toques seguidos não duplicam), links do FAQ e do app; simulacao false nas 5 telas.
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -95,6 +105,7 @@ Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py --so-offline        só o teste offline (sem a matriz)
 Navegador: Edge instalado (channel="msedge").
 """
+import datetime
 import json
 import os
 import re
@@ -155,17 +166,16 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; o P4K a deixa só com o que a Fase 8 reescreve). O Manual é a apresentação,
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = (
-    'Main', 'H2-Home-Mobile', 'C3-Leme-Alerta',
-    'C1-Leme-Web',
+    'Main', 'H2-Home-Mobile',
     'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
     'E2-Navegando-Sintoma', 'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
     'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (21 telas em 09/11/2026, depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+)   # (19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
-PENDENTES_MUDA = ('C3-Leme-Alerta',)
-MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
+PENDENTES_MUDA = ()   # (a C3 saiu na P4E: virou alerta vivo)
+MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile', 'C3-Leme-Alerta', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos')
 # Sem faixa global de alerta: o SOS (nunca muda de lugar), o Manual (apresentação) e a C3 (a própria tela do alerta)
 SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta')
 MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
@@ -731,6 +741,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4e' in sys.argv or '--mutantes-p4e' in sys.argv:   # só as conferências da P4E (e, com --mutantes-p4e, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4e' in sys.argv:
+                falhas = mutantes_p4e(b)
+            else:
+                for nome, prob in p4e_conferencias(b, list(TELAS_P4E)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4d' in sys.argv or '--mutantes-p4d' in sys.argv:   # só as conferências da P4D (e, com --mutantes-p4d, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -873,6 +896,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4D', 'prob': prob[:8]})
                     print('FALHA P4D ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4e_conferencias(b, lista):   # P4E: o Leme (C1 a C3, o alerta vivo) e os checklists C4: leituras, alerta, marcas, CONCLUIR, ramo simulacao:false e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4E', 'prob': prob[:8]})
+                    print('FALHA P4E ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -2925,6 +2953,660 @@ def mutantes_p4d(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4D), len(vivos)))
+    return vivos
+
+
+# ——— P4E: o Leme (C1 Manutenção, C2, C3 alerta vivo) e os checklists (C4 web e app) ———
+# PROMPT Fase 4 e linha P4E (MAPA §6 C1, C2, C3; PARIDADE F05 e F09; CONTRATO §1.18, §1.22 a §1.25). Cada conferência abaixo tem defeito plantado que a faz falhar (MUTANTES_P4E, rodados com
+# --mutantes-p4e): o teste só vale se acusa o defeito. `--so-p4e` roda só as conferências da P4E.
+TELAS_P4E = ('C1-Leme-Web', 'C2-Leme-Mobile', 'C3-Leme-Alerta', 'C4-Checklist-Web', 'C4-Checklist-Mobile')
+CRITICO_PLANTADO = "window.CapitaoDados.replay.cenario = 'alarme-critico'; window.CapitaoDados.replay.limites.motor_be_arref_c.critico = { acima: 85 };"   # o crítico só existe com o cenário (desligado no gerador)
+MARCAS_FIXAS = re.compile(r'Volvo|Penta|Cummins|Onan|Seakeeper|Webasto|Garmin|Victron|Lewmar|Raymarine|Icom|Fusion|Schenker|Ocean Signal|em-trak')   # fabricante nunca fixo na tela (vem de D.equipamentos)
+
+
+def pl(n, um, varios):
+    return '%d %s' % (n, um if n == 1 else varios)
+
+
+# C1 e C2: o texto que a tela mostra de cada bloco, o instante, as contagens do CapitaoAgora e o que o cérebro tem das tarefas da equipe
+LE_LEME = """() => { """ + JS_BASE + """
+  const un = (s) => { const e = document.querySelector(s); return e ? lin(e.innerText) : null; }, C = A.contagens(), B = window.CapitaoBrain;
+  const live = {}; document.querySelectorAll('[data-live]').forEach((e) => { live[e.getAttribute('data-live')] = lin(e.innerText); });
+  const linhas = {}, ids = []; document.querySelectorAll('[data-tarefa]').forEach((e) => { linhas[e.getAttribute('data-tarefa')] = lin(e.innerText); ids.push(e.getAttribute('data-tarefa')); });
+  const cartoes = [...document.querySelectorAll('section button[aria-pressed]')].filter((e) => /filtr|filtro/.test(e.innerText)).map((e) => lin(e.innerText));
+  const eq = B && B.tarefasEquipe ? B.tarefasEquipe().map((t) => ({ id: t.id, dn: t.dn, n: t.n })) : [];
+  const fm = {}; D.agenda.filter((t) => t.horas).forEach((t) => { fm[t.id] = { faltam: F.nb(I.calc.faltam[t.id], 1, false), limite: F.nb(t.horas.limite, 0, true), agenda: F.nb(t.horas.faltam, 1, false) }; });
+  const atr = D.agenda.filter((t) => t.dn < 0).map((t) => t.equip.split(' (')[0] + ' · ' + (-t.dn) + ' d');
+  return { T, hora: I.hora, fase: I.fase && I.fase.nome, C, live, linhas, ids, idsEsp: D.agenda.map((t) => t.id).concat(eq.map((t) => t.id)), cartoes, eq, fm, atr, versao: D.versao, nAg: D.agenda.length, nEq: D.tarefasEquipe.length,
+    resumo: un('[data-c1=resumo]'), leituraSub: un('[data-c1=leitura-sub]'), atrSub: un('[data-c2=atr-sub]'), hor: un('[data-c2=horimetros-txt]'), horSub: un('[data-c2=horimetros-sub]'),
+    texto: lin(document.body.innerText), executado: localStorage.getItem('capitao.executado.v1'), diario: localStorage.getItem('capitao.diario.v1') }; }"""
+ORACULO_FALTAM = {'motores-oleo': '32,4', 'gerador-revisao': '58,6'}   # CONTRATO §1.23: as horas que faltam às 12:01:00 e 12:01:45 (a agenda gerada diz 37,4 e 63,6)
+
+
+def esperado_live_c1(r):
+    T, f = r['T'], r['fase']
+    return {'sog': 'Velocidade %s nós navegando · %s' % (T['sog_nos'], f), 'proa': 'Proa %s° %s satélites' % (T['proa_graus'], T['gps_satelites']),
+            'vento': 'Vento %s nós a bordo agora · verdadeiro de %s°' % (T['vento_verdadeiro_nos'], T['vento_verdadeiro_angulo']),
+            'bateria': 'Banco 24 V %s V banco 12 V %s V' % (T['bateria_0_tensao_v'], T['bateria_2_tensao_v']),
+            'agua-mar': 'Água do mar %s °C ar %s °C · %s hPa' % (T['temp_agua_c'], T['temp_ar_externo_c'], T['pressao_barometrica_hpa']),
+            'agua-doce': 'Água doce %s %% cinzas %s %% · negras %s %%' % (T['tanque_agua_pct'], T['tanque_cinzas_pct'], T['tanque_negras_pct'])}
+
+
+def problemas_faltam(r, rot, prob):
+    for id_, f in r['fm'].items():
+        esp = 'ou %s h (faltam %s h)' % (f['limite'], f['faltam'])
+        if f['faltam'] != ORACULO_FALTAM.get(id_, f['faltam']): prob.append('%s: calc.faltam de %s é %s (o contrato diz %s)' % (rot, id_, f['faltam'], ORACULO_FALTAM[id_]))
+        if esp not in r['linhas'].get(id_, ''): prob.append('%s: a linha de %s devia ter «%s» (as horas do horímetro de agora, não as %s da agenda gerada): %r' % (rot, id_, esp, f['agenda'], r['linhas'].get(id_)))
+
+
+def teste_leme_c1(b):
+    """C1: as 6 leituras de agora são as do quadro (CapitaoAgora.fmt.campo; o vento «a bordo agora»), o resumo e a fonte da leitura sem rótulo, as horas que faltam são as do horímetro de agora, os 3 cartões
+    iguais às contagens do CapitaoAgora (a agenda gerada e as tarefas da equipe, as do aparelho também; Executado acompanha) e o Executado de uma tarefa do aparelho grava 1 linha nova; tudo a 60 s e a 105 s."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', fixo=fixo)
+        r = pg.evaluate(LE_LEME)
+        rot, C, h = 'C1 a %s s' % fixo, r['C'], r['hora']
+        esp = 'Telemetria ao vivo · %s · %d tarefas · %s · horímetros BB %s h · BE %s h · prazos contados a partir de %s' % (h, r['nAg'] + r['nEq'], pl(C['atrasadas'], 'atrasada', 'atrasadas'), r['T']['motor_bb_horimetro_h'], r['T']['motor_be_horimetro_h'], r['versao'])
+        if r['resumo'] != esp: prob.append('%s: o resumo diz %r (esperado %r)' % (rot, r['resumo'], esp))
+        if r['leituraSub'] != 'Telemetria ao vivo · ' + h: prob.append('%s: a fonte da leitura diz %r (esperado «Telemetria ao vivo · %s»)' % (rot, r['leituraSub'], h))
+        for k, v in esperado_live_c1(r).items():
+            if r['live'].get(k) != v: prob.append('%s: o cartão %s diz %r (esperado %r, do quadro)' % (rot, k, r['live'].get(k), v))
+        problemas_faltam(r, rot, prob)
+        if sorted(r['ids']) != sorted(r['idsEsp']): prob.append('%s: a lista tem %d tarefas (esperado %d: a agenda e as da equipe)' % (rot, len(r['ids']), len(r['idsEsp'])))
+        n = [int(re.match(r'\d+', c).group(0)) for c in r['cartoes']]
+        if n != [C['atrasadas'], C['d30'], C['d60'] + C['d90'] + C['emDia']]: prob.append('%s: os cartões mostram %s (esperado %s, as contagens do CapitaoAgora)' % (rot, n, [C['atrasadas'], C['d30'], C['d60'] + C['d90'] + C['emDia']]))
+        ach = achados_termos('C1-Leme-Web', pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if r['executado'] or r['diario']: prob.append('%s: a tela gravou no registro ao abrir (Executado %r, diário %r)' % (rot, r['executado'], r['diario']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # Executado acompanha as contas e o «em dia»
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', ls={'capitao.executado.v1': json.dumps({'porao-teste': {'d': '09/11', 't': '12:00'}})})
+    r = pg.evaluate(LE_LEME)
+    if r['C']['atrasadas'] != 2 or not r['cartoes'][0].startswith('2 ') or 'Bombas de porão' in r['cartoes'][0] or 'feito · 09/11' not in r['linhas']['porao-teste'] or 'inclui 1 executada' not in r['cartoes'][2]:
+        prob.append('C1 com o teste do porão executado: os cartões dizem %s (esperado 2 atrasadas, sem as bombas, «feito · 09/11» na linha e «inclui 1 executada»): %r' % (r['cartoes'], r['linhas'].get('porao-teste')))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # tarefa do aparelho (F15): entra na lista e nas contas como no CapitaoAgora; o Executado dela é 1 linha nova no diário
+    vence = (datetime.date.today() + datetime.timedelta(days=10)).isoformat()
+    tarefa = [{'id': 'gptest1', 'n': 'Trocar a lâmpada de navegação', 'vence': vence, 'quem': 'Lucas', 'sistema': 'Casco', 'origem': 'tela', 'iso': '2026-11-09T10:00:00-03:00', 'who': 'Lucas', 'sim': True}]
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', ls={'capitao.tarefas.v1': json.dumps(tarefa)})
+    r = pg.evaluate(LE_LEME)
+    t = next((x for x in r['eq'] if x['id'] == 'gptest1'), None)
+    n = [int(re.match(r'\d+', c).group(0)) for c in r['cartoes']]
+    if not t or 'gptest1' not in r['linhas'] or ('D-%d' % t['dn']) not in r['linhas']['gptest1']: prob.append('C1 com uma tarefa do aparelho: a linha não aparece com o prazo do dia (D-%s): %r' % (t and t['dn'], r['linhas'].get('gptest1')))
+    if r['C']['tarefasEquipe'] != 3 or n != [r['C']['atrasadas'], r['C']['d30'], r['C']['d60'] + r['C']['d90'] + r['C']['emDia']]: prob.append('C1 com uma tarefa do aparelho: os cartões %s não são as contagens do CapitaoAgora (%s)' % (n, r['C']))
+    if t and 'gptest1' in r['linhas']:
+        pg.evaluate("() => [...document.querySelectorAll('[data-tarefa=gptest1] button')].find((x) => x.innerText.trim() === 'Executado').click()")
+        pg.wait_for_timeout(400)
+        r2 = pg.evaluate(LE_LEME)
+        linhas = json.loads(r2['diario'] or '[]')
+        if len(linhas) != 1 or not linhas[0]['t'].startswith('Executado: Trocar a lâmpada de navegação (Casco)') or linhas[0].get('sim') is not True: prob.append('C1: o Executado da tarefa do aparelho devia gravar 1 linha nova com sim: %r' % linhas)
+        if 'gptest1' not in json.loads(r2['executado'] or '{}') or 'feito' not in r2['linhas']['gptest1']: prob.append('C1: a tarefa executada não ficou feita na lista: %r' % r2['linhas'].get('gptest1'))
+        if r2['C']['tarefasEquipe'] != 2: prob.append('C1: a tarefa executada ainda conta nas da equipe (%s)' % r2['C']['tarefasEquipe'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o filtro do endereço (#f=atrasadas)
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', hash_='#f=atrasadas')
+    r = pg.evaluate(LE_LEME)
+    if len(r['ids']) != r['C']['atrasadas']: prob.append('C1#f=atrasadas: %d linhas (esperado %d)' % (len(r['ids']), r['C']['atrasadas']))
+    ctx.close()
+    return prob
+
+
+def teste_leme_c2(b):
+    """C2: o cartão das atrasadas e a lista iguais ao CapitaoAgora, o horímetro de agora (BB, BE e gerador) com a fonte do instante, as horas que faltam do horímetro de agora, sem rótulo; a 60 s e a 105 s."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'C2-Leme-Mobile', fixo=fixo)
+        r = pg.evaluate(LE_LEME)
+        rot, C, T, h = 'C2 a %s s' % fixo, r['C'], r['T'], r['hora']
+        esp = 'BB %s h · BE %s h · gerador %s h' % (T['motor_bb_horimetro_h'], T['motor_be_horimetro_h'], T['gerador_horimetro_h'])
+        if r['hor'] != esp: prob.append('%s: os horímetros dizem %r (esperado %r, do quadro)' % (rot, r['hor'], esp))
+        if r['horSub'] != 'Horímetros de agora · Telemetria ao vivo · ' + h: prob.append('%s: a fonte dos horímetros diz %r (esperado «Horímetros de agora · Telemetria ao vivo · %s»)' % (rot, r['horSub'], h))
+        if r['atrSub'] != ' · '.join(r['atr']): prob.append('%s: as atrasadas dizem %r (esperado %r)' % (rot, r['atrSub'], ' · '.join(r['atr'])))
+        if len(r['ids']) != C['atrasadas'] or C['atrasadas'] != 3: prob.append('%s: %d linhas na lista das atrasadas (esperado %d = CapitaoAgora)' % (rot, len(r['ids']), C['atrasadas']))
+        pg.evaluate("() => [...document.querySelectorAll('button')].find((x) => x.innerText.trim() === 'Todas').click()"); pg.wait_for_timeout(400)
+        r = pg.evaluate(LE_LEME)
+        if len(r['ids']) != r['nAg'] + r['nEq']: prob.append('%s: «Todas» mostra %d linhas (esperado %d)' % (rot, len(r['ids']), r['nAg'] + r['nEq']))
+        problemas_faltam(r, rot, prob)
+        ach = achados_termos('C2-Leme-Mobile', pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    ctx, pg, erros = abre_tela(b, 'C2-Leme-Mobile', ls={'capitao.executado.v1': json.dumps({'porao-teste': {'d': '09/11', 't': '12:00'}})})
+    r = pg.evaluate(LE_LEME)
+    if r['C']['atrasadas'] != 2 or 'Bombas de porão' in r['atrSub'] or 'EXECUTADO 09/11' not in r['linhas'].get('porao-teste', '') or not r['atrSub'].startswith('Climatização'):
+        prob.append('C2 com o teste do porão executado: atrasadas %r, linha do porão %r (esperado 2 atrasadas sem as bombas, e a linha com «EXECUTADO 09/11»)' % (r['atrSub'], r['linhas'].get('porao-teste')))
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_leme_real(b):
+    """Ramo simulacao false (C1, C2, C3 e C4): sem NaN, undefined nem [object; a C1 e a C2 leem a última leitura salva (horímetros de 26/09 10:12) e a C3 não diz «tudo dentro da faixa»."""
+    prob = []
+    for tela, hash_ in (('C1-Leme-Web', ''), ('C2-Leme-Mobile', ''), ('C3-Leme-Alerta', '#alarme=arref_be'), ('C4-Checklist-Web', ''), ('C4-Checklist-Mobile', '')):
+        ctx, pg, erros = abre_tela(b, tela, fixo=None, depois='window.CapitaoDados.simulacao = false;', hash_=hash_)
+        r = pg.evaluate("() => ({ replay: window.CapitaoReplay.ativo(), texto: document.body.innerText, fonte: window.CapitaoAgora.instante().fonte })")
+        rot = '%s com simulacao false' % tela
+        if r['replay'] or r['fonte'] != 'snapshot': prob.append('%s: o replay ainda anda (%s)' % (rot, r['fonte']))
+        if re.search(r'NaN|undefined|\[object|Infinity', r['texto']): prob.append('%s: NaN, undefined ou [object na tela' % rot)
+        if tela.startswith('C1'):
+            t = pg.evaluate(LE_LEME)
+            if t['leituraSub'] != 'Última leitura · 26/09 10:12' or 'horímetros BB 412,6 h · BE 409,8 h' not in t['resumo']: prob.append('%s: a leitura diz %r e o resumo %r (esperado a última leitura salva)' % (rot, t['leituraSub'], t['resumo']))
+        if tela.startswith('C3') and ('Tudo dentro da faixa' in r['texto'] or 'SEM ALARME ATIVO' not in r['texto']): prob.append('%s: sem a reprodução ninguém avalia os limites: %r' % (rot, r['texto'][:160]))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+# C3: o que a tela mostra do alerta, e o que a API de alertas e o replay dizem no mesmo instante
+LE_C3 = """() => { """ + JS_BASE + """
+  const AL = window.CapitaoAlertas, R = window.CapitaoReplay, g = (s) => { const e = document.querySelector('[data-c3=' + s + ']'); return e ? lin(e.innerText) : null; };
+  const c = document.querySelector('[data-c3=cartao]'), lt = document.querySelector('[data-c3=leitura]'), pa = document.querySelector('[data-c3=passos]'), sp = document.querySelector('[data-c3=spark]');
+  const kids = pa ? [...pa.children] : [], porId = (id) => AL.porId(id), a = AL.ativos()[0] || null;
+  const cat = D.replay.alertas.arref_be, lim = D.replay.limites;
+  return { hora: I.hora, ms: I.ms, fonteTxt: I.fonteTxt, selo: g('selo'), kicker: g('kicker'), titulo: g('titulo'), situacao: g('situacao'), equip: g('equip'), leitura: g('leitura'), leituraSub: g('leitura-sub'), faixa: g('faixa'), faixaSub: g('faixa-sub'),
+    tendencia: g('tendencia'), tend30: g('tendencia30'), fonte: g('fonte'), info: g('info'), nota: g('nota'), registrado: g('registrado'), temRegistrar: !!document.querySelector('[data-c3=registrar]'),
+    estado: c ? c.getAttribute('data-estado') : null, nivel: c ? c.getAttribute('data-nivel') : null, brilho: c ? c.getAttribute('data-brilho') : null, bg: c ? getComputedStyle(c).backgroundColor : null,
+    pisca: lt ? lt.getAttribute('data-pisca') : null, anim: lt ? getComputedStyle(lt).animationName : null, cor: lt ? getComputedStyle(lt).color : null, corpo: getComputedStyle(document.body).backgroundColor,
+    passos: pa ? { titulo: lin(kids[0].innerText), passos: kids.slice(1, -1).map((k) => lin(k.innerText)), fonte: lin(kids[kids.length - 1].innerText) } : null,
+    spark: sp ? { pontos: (sp.querySelector('polyline').getAttribute('points').match(/ /g) || []).length + 1, limite: !!sp.querySelector('line') } : null,
+    ativo: a ? { id: a.id, nivel: a.nivel, valorTxt: a.valorTxt, limiteTxt: a.limiteTxt, hora: a.hora, seg: a.seg, lado: a.lado } : null,
+    janela: R.janela('arref_be'), cat: { titulo: cat.titulo, passos: cat.passos, fonte: cat.fonte, campo: cat.campo }, q95: R.quadro(95).motor_be_arref_c, q30: R.em(I.ms - 30000).motor_be_arref_c, agora: q.motor_be_arref_c,
+    eq: D.equipamentos.filter((e) => e.id === 'motores').map((e) => [e.nome, e.qtd, e.fabricante, e.lados, e.modelo])[0], hora6: F.hora(R.janela('arref_be') ? R.janela('arref_be').ate || 0 : 0, true),
+    url: location.href, cerebro: typeof window.CapitaoBrain, scripts: [...document.scripts].map((s) => s.getAttribute('src') || '').filter(Boolean), tema: document.documentElement.getAttribute('data-capitao-tema'),
+    diario: localStorage.getItem('capitao.diario.v1'), falas: window.__falas || 0, texto: lin(document.body.innerText), faixaGlobal: !!document.getElementById('capitao-faixa-alertas') }; }"""
+RGB_AVISO_CARTAO = 'rgba(240, 166, 58, 0.13)'
+
+
+def nb1(x, c=1):
+    return ('%.*f' % (c, abs(x))).replace('.', ',')
+
+
+def sinal1(x, c=1):
+    v = round(x, c)
+    return ('+' if v > 0 else '−' if v < 0 else '') + nb1(v, c)
+
+
+def problemas_c3_aviso(r, rot, equip=('Motores', 2, 'Cummins', 'BB e BE', 'QSB6.7 305')):
+    """O AVISO do arrefecimento do BE a 105 s (12:01:45, desde 12:01:39): selo, título, situação, leitura «BE 89,6 °C · 12:01:45», faixa, tendência dos 10 s e dos 30 s, passos, equipamento e o pisca."""
+    prob = []
+    esp = {'selo': 'AVISO', 'kicker': 'Motores · BE', 'titulo': 'Temperatura do motor BE', 'situacao': '89,6 °C · acima de 88 °C · desde 12:01:39 · há 6 s', 'leitura': 'BE 89,6 °C · 12:01:45',
+           'leituraSub': 'fora da faixa agora · telemetria ao vivo · 12:01:45', 'faixa': 'até 88 °C', 'faixaSub': 'aviso acima de 88 °C · crítico acima de 97 °C',
+           'estado': 'ativo', 'nivel': 'aviso', 'brilho': '0', 'pisca': '1', 'anim': 'capPisca'}
+    for k, v in esp.items():
+        if r[k] != v: prob.append('%s: %s diz %r (esperado %r)' % (rot, k, r[k], v))
+    nome, qtd, fab, lados, mod = equip
+    if r['equip'] != '%s %d × %s (%s) · modelo %s · lado: BE' % (nome, qtd, fab, lados, mod): prob.append('%s: o equipamento diz %r (esperado o de D.equipamentos: %s × %s (%s) · modelo %s)' % (rot, r['equip'], qtd, fab, lados, mod))
+    d10 = r['agora'] - r['q95']
+    dir_ = 'subindo' if round(d10, 1) > 0 else 'caindo' if round(d10, 1) < 0 else 'estável'
+    esp_t = '%s °C · %s (%s → %s)' % (sinal1(d10), dir_, nb1(r['q95']), nb1(r['agora']))
+    if r['tendencia'] != esp_t: prob.append('%s: a tendência de 10 s diz %r (esperado %r: o quadro de 10 s atrás é o do segundo 95 da volta)' % (rot, r['tendencia'], esp_t))
+    if r['tend30'] != 'últimos 30 s: +7,5 °C': prob.append('%s: a tendência de 30 s diz %r (esperado «últimos 30 s: +7,5 °C», o do cérebro, CONTRATO §1.23)' % (rot, r['tend30']))
+    if not r['spark'] or r['spark']['pontos'] != 11 or not r['spark']['limite']: prob.append('%s: o traço dos últimos 10 s não tem os 11 pontos e a linha do limite: %r' % (rot, r['spark']))
+    p = r['passos']
+    if not p or p['titulo'] != 'Faça agora enquanto o alarme durar' or [re.sub(r'^\d+ ', '', x) for x in p['passos']] != r['cat']['passos'] or p['fonte'] != 'Fonte: ' + r['cat']['fonte']:
+        prob.append('%s: os passos não são os do catálogo (%s): %r' % (rot, r['cat']['titulo'], p))
+    if r['fonte'] != 'Telemetria ao vivo · 12:01:45 · faixa: Guia de bordo — Motores Cummins §9 · Faixas de operação': prob.append('%s: a fonte diz %r' % (rot, r['fonte']))
+    return prob
+
+
+def teste_c3_estados(b):
+    """C3: o AVISO a 105 s (leitura com o lado e a hora, faixa normal, tendência, passos e equipamento de D.equipamentos; pisca), o NORMALIZADO a 60 s (às 11:59, o fim da volta anterior), sem alarme
+    (neutro, sem rótulo), id fora do catálogo, id sem janela («dentro da faixa»), o alarme que estiver tocando quando não há #alarme, e a faixa do óleo pelo giro."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be')
+    r = pg.evaluate(LE_C3)
+    prob += problemas_c3_aviso(r, 'C3 a 105 s')
+    if r['bg'] != RGB_AVISO_CARTAO: prob.append('C3 a 105 s: o cartão do AVISO tem o fundo %s (esperado o âmbar translúcido, nunca o vermelho do crítico)' % r['bg'])
+    if r['faixaGlobal']: prob.append('C3: a faixa global de alerta aparece na tela do próprio alerta')
+    ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+    if ach: prob.append('C3 a 105 s: termo do §3 na tela: %s' % ach)
+    if r['diario'] or r['falas']: prob.append('C3 a 105 s: gravou no diário (%r) ou falou (%d)' % (r['diario'], r['falas']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o mesmo alerta com o equipamento trocado no D.equipamentos: nada de fabricante fixo
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', depois=FAB_FALSOS)
+    r = pg.evaluate(LE_C3)
+    if r['equip'] != 'Motores 2 × Zyxmotor (BB e BE) · modelo Zyxmotor Mod9 · lado: BE': prob.append('C3: fabricante e modelo trocados no D.equipamentos e a tela diz %r' % r['equip'])
+    ctx.close()
+    # 60 s: o alarme acabou na volta anterior (11:59:27): NORMALIZADO, sem pisca, a leitura de agora dentro da faixa
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=arref_be')
+    r = pg.evaluate(LE_C3)
+    esp = {'selo': 'NORMALIZADO às 11:59', 'estado': 'normalizado', 'nivel': '', 'pisca': '0', 'anim': 'none', 'titulo': 'Temperatura do motor BE', 'situacao': 'normalizou às 11:59:27 · ficou 18 s fora da faixa (desde 11:59:09)',
+           'leituraSub': 'dentro da faixa · telemetria ao vivo · 12:01:00', 'faixa': 'até 88 °C', 'brilho': '0'}
+    for k, v in esp.items():
+        if r[k] != v: prob.append('C3 a 60 s: %s diz %r (esperado %r)' % (k, r[k], v))
+    if r['leitura'] != 'BE %s °C · 12:01:00' % nb1(r['agora']): prob.append('C3 a 60 s: a leitura diz %r (esperado «BE %s °C · 12:01:00»)' % (r['leitura'], nb1(r['agora'])))
+    if r['cor'] != 'rgb(52, 199, 122)': prob.append('C3 a 60 s: a leitura dentro da faixa devia ser verde: %s' % r['cor'])
+    if not r['passos'] or r['passos']['titulo'] != 'Depois do alarme o que conferir': prob.append('C3 a 60 s: os passos dizem %r' % (r['passos'] and r['passos']['titulo']))
+    if not r['temRegistrar']: prob.append('C3 a 60 s: sem o botão de registrar a ocorrência')
+    if erros: prob += erros[:2]
+    ctx.close()
+    # sem #alarme: a 60 s nenhum alarme (estado neutro, sem leitura nem rótulo); a 105 s o que estiver tocando
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60')
+    r = pg.evaluate(LE_C3)
+    if r['estado'] != 'nenhum' or r['selo'] != 'SEM ALARME ATIVO' or r['titulo'] != 'Nenhum alarme ativo agora' or r['leitura'] is not None or r['temRegistrar'] or not r['info'] or not r['situacao'].startswith('Tudo dentro da faixa às 12:01:00'):
+        prob.append('C3 a 60 s sem #alarme: estado %r, selo %r, leitura %r, situação %r (esperado o estado neutro, sem leitura nem registrar)' % (r['estado'], r['selo'], r['leitura'], r['situacao']))
+    ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+    if ach: prob.append('C3 a 60 s sem #alarme: termo do §3 na tela: %s' % ach)
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105')
+    r = pg.evaluate(LE_C3)
+    prob += problemas_c3_aviso(r, 'C3 a 105 s sem #alarme (o que estiver tocando)')
+    ctx.close()
+    # id que não existe (nem 'constructor', nem '__proto__'): neutro, sem erro
+    for h in ('#alarme=zzz', '#alarme=constructor', '#alarme=__proto__', '#alarme=%E0%A4%A'):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_=h)
+        r = pg.evaluate(LE_C3)
+        if r['estado'] not in ('nenhum', 'ativo') or (h != '#alarme=%E0%A4%A' and r['estado'] != 'nenhum') or re.search(r'NaN|undefined|\[object', r['texto']): prob.append('C3 com %s: estado %r (esperado neutro, sem NaN)' % (h, r['estado']))
+        if erros: prob += ['C3 com %s: %s' % (h, e) for e in erros[:2]]
+        ctx.close()
+    # alerta do catálogo sem janela no cenário aviso (o banco de 12 V): dentro da faixa, com a faixa do guia
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=b12')
+    r = pg.evaluate(LE_C3)
+    if r['selo'] != 'DENTRO DA FAIXA' or r['estado'] != 'normal' or r['faixa'] != 'de 12,2 a 14,7 V' or not r['leitura'].endswith(' V · 12:01:00') or r['passos'] is not None:
+        prob.append('C3#alarme=b12 a 60 s: selo %r, faixa %r, leitura %r, passos %r (esperado DENTRO DA FAIXA, «de 12,2 a 14,7 V» e sem passos)' % (r['selo'], r['faixa'], r['leitura'], r['passos']))
+    ctx.close()
+    # a faixa do óleo é a do regime do giro (a partir de 1.000 rpm: 2,4 a 6,0 bar), com o aviso e o crítico do regime
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=oleo_bb')
+    r = pg.evaluate(LE_C3)
+    if r['faixa'] != 'de 2,4 a 6,0 bar (a partir de 1.000 rpm)' or r['faixaSub'] != 'aviso abaixo de 2,4 bar ou acima de 6,0 bar · crítico abaixo de 1,4 bar': prob.append('C3#alarme=oleo_bb: a faixa diz %r / %r (esperado a do regime de 1.000 rpm ou mais)' % (r['faixa'], r['faixaSub']))
+    ctx.close()
+    return prob
+
+
+def teste_c3_critico(b):
+    """C3 com o alarme CRÍTICO plantado (o cenário alarme-critico, desligado no gerador, injetado): selo, cartão vermelho que brilha, leitura vermelha, limite e faixa; nunca abre o SOS, fala ou grava."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', depois=CRITICO_PLANTADO)
+    r = pg.evaluate(LE_C3)
+    esp = {'selo': 'ALERTA CRÍTICO', 'estado': 'ativo', 'nivel': 'critico', 'brilho': '1', 'bg': 'rgb(211, 47, 39)', 'cor': 'rgb(255, 106, 96)', 'pisca': '1', 'leitura': 'BE 89,6 °C · 12:01:45',
+           'faixaSub': 'aviso acima de 88 °C · crítico acima de 85 °C'}
+    for k, v in esp.items():
+        if r[k] != v: prob.append('C3 crítico: %s diz %r (esperado %r)' % (k, r[k], v))
+    if not r['situacao'].startswith('89,6 °C · acima de 85 °C · desde '): prob.append('C3 crítico: a situação diz %r (esperado o limite de 85 °C)' % r['situacao'])
+    if not r['ativo'] or r['ativo']['nivel'] != 'critico': prob.append('C3 crítico: o plantio não valeu (a API de alertas diz %r)' % r['ativo'])
+    if r['url'].split('#')[0].endswith('S1-SOS-Web.dc.html') or 'SOS-' in r['url'].split('#')[0] or r['falas'] or r['diario']: prob.append('C3 crítico: abriu o SOS, falou ou gravou sozinha (%s, %d falas, diário %r)' % (r['url'], r['falas'], r['diario']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_c3_transicao(b):
+    """C3 viva: com a tela aberta, o alarme acaba (fixar 105 → 120) e o selo vira NORMALIZADO às 12:01 SEM sair da tela nem recarregar (nada de navegação, fala ou registro); e reabre (120 → 105)."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be')
+    pg.evaluate("() => { window.__marca = 'viva'; window.__href0 = location.href; }")
+    seq = []
+    for t, esp in (('105', ('AVISO', 'ativo')), ('120', ('NORMALIZADO às 12:01', 'normalizado')), ('105', ('AVISO', 'ativo'))):
+        try:
+            pg.evaluate("(t) => window.CapitaoReplay.fixar(t)", t)
+            pg.wait_for_timeout(600)
+            r = pg.evaluate(LE_C3)
+        except Exception as e:   # a página foi trocada no meio (navegação): é a falha que este teste procura
+            prob.append('C3 ao fixar %s s: a tela foi trocada ou recarregada (%s)' % (t, str(e).splitlines()[0][:100]))
+            break
+        seq.append((r['selo'], r['estado']))
+        if (r['selo'], r['estado']) != esp: prob.append('C3 ao fixar %s s: %r (esperado %r)' % (t, (r['selo'], r['estado']), esp))
+        if t == '120' and not (r['situacao'] or '').startswith('normalizou às 12:01:57 · ficou 18 s fora da faixa (desde 12:01:39)'): prob.append('C3 a 120 s: a situação diz %r (esperado «normalizou às 12:01:57 · ficou 18 s…»)' % r['situacao'])
+    try:
+        m = pg.evaluate("() => [window.__marca, location.href === window.__href0, window.__falas || 0, localStorage.getItem('capitao.diario.v1')]")
+    except Exception:
+        m = ['trocada']
+    if m != ['viva', True, 0, None]: prob.append('C3: a tela foi trocada, recarregada, falou ou gravou ao normalizar: %r' % m)
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_c3_registrar(b):
+    """C3: registrar() grava UMA linha nova só com o toque (nunca ao abrir nem enquanto o alarme dura), com o valor, o lado e a hora reais do quadro, sim: true e a fonte; o 2º toque não duplica;
+    depois do registro a tela mostra o link do diário; a ocorrência normalizada também se registra."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be')
+    for t in ('120', '105'):   # o alarme acaba e volta com a tela aberta: nem ao abrir nem a cada mudança de estado a tela grava sozinha
+        pg.evaluate("(t) => window.CapitaoReplay.fixar(t)", t); pg.wait_for_timeout(500)
+    pg.wait_for_timeout(1200)
+    r0 = pg.evaluate(LE_C3)
+    if r0['diario'] is not None or r0['cerebro'] != 'undefined': prob.append('C3: gravou no diário ou carregou o cérebro sem o toque (diário %r, cérebro %s)' % (r0['diario'], r0['cerebro']))
+    if prob:   # gravou sozinha: o botão já não existe e o resto do teste não vale
+        ctx.close()
+        return prob
+    pg.evaluate("() => { const bt = document.querySelector('[data-c3=registrar]'); bt.click(); bt.click(); }")   # dois toques seguidos: uma linha só
+    pg.wait_for_function("() => !!document.querySelector('[data-c3=registrado]')", timeout=8000)
+    pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C3)
+    linhas = json.loads(r['diario'] or '[]')
+    if len(linhas) != 1: prob.append('C3: o registrar gravou %d linhas (esperado 1)' % len(linhas))
+    else:
+        e = linhas[0]
+        if not re.fullmatch(r'Alerta registrado no app às \d\d:\d\d por Lucas — Temperatura do motor BE \(lado BE\): 89,6 °C \(acima de 88 °C\), AVISO desde 12:01:39 · leitura às 12:01:45 \(telemetria ao vivo\)\. Passos: Guia de bordo — Motores Cummins §5 · Temperatura alta\. Linha nova, nada se apaga\.', e['t']):
+            prob.append('C3: a linha gravada não tem o valor, o lado e a hora do quadro: %r' % e['t'])
+        if e.get('sim') is not True or e['src'] != 'app · alerta' or e['sys'] != 'Motores' or e['who'] != 'Lucas': prob.append('C3: a linha gravada devia ter sim: true, src «app · alerta», sys Motores e who Lucas: %r' % {k: e.get(k) for k in ('sim', 'src', 'sys', 'who')})
+        if re.search(r'SEM DADOS|SEM LEITURA|DEMO|snapshot|MODELO', e['t']): prob.append('C3: rótulo na linha gravada: %r' % e['t'])
+    if r['temRegistrar'] or not (r['registrado'] or '').startswith('REGISTRADO'): prob.append('C3: depois do registro a tela devia trocar o botão pelo link «REGISTRADO …»: %r' % r['registrado'])
+    if r['falas']: prob.append('C3: falou ao registrar')
+    if erros: prob += erros[:2]
+    ctx.close()
+    # a ocorrência normalizada (60 s) também se registra, com o fim dela
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=arref_be')
+    pg.evaluate("() => document.querySelector('[data-c3=registrar]').click()")
+    pg.wait_for_function("() => !!document.querySelector('[data-c3=registrado]')", timeout=8000)
+    linhas = json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") or '[]')
+    if len(linhas) != 1 or 'normalizado às 11:59:27 (ficou 18 s fora da faixa, desde 11:59:09)' not in linhas[0]['t']: prob.append('C3 a 60 s: a linha do alerta normalizado diz %r' % [x['t'] for x in linhas])
+    ctx.close()
+    return prob
+
+
+def teste_c3_leve(b):
+    """C3 sempre escura e leve: com o tema claro o fundo segue #050816, sem o capitao-theme.js; o cérebro só entra no toque de registrar; carrega o capitao-telemetria.js; assina o evento."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', tema='claro', hash_='#alarme=arref_be')
+    r = pg.evaluate(LE_C3)
+    if r['corpo'] != 'rgb(5, 8, 22)': prob.append('C3 com o tema claro: o fundo é %s (esperado a prancheta escura rgb(5, 8, 22))' % r['corpo'])
+    if any('capitao-theme.js' in s or 'capitao-brain.js' in s for s in r['scripts']) or r['cerebro'] != 'undefined': prob.append('C3: carrega o tema ou o cérebro na abertura (não é leve): %s' % [s for s in r['scripts'] if 'theme' in s or 'brain' in s])
+    if not any('capitao-telemetria.js' in s for s in r['scripts']): prob.append('C3: não carrega o capitao-telemetria.js')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_c3_codigo():
+    prob = []
+    def le_(a):
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    h = le_('C3-Leme-Alerta.dc.html')
+    mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+    for ev in ('capitao-telemetria', 'capitao-alerta'):
+        if "addEventListener('%s'" % ev not in h[mont:desm] or "removeEventListener('%s'" % ev not in h[desm:]: prob.append('C3: não assina o %s no componentDidMount e remove no componentWillUnmount' % ev)
+    if 'document.hidden' not in h: prob.append('C3: não pausa com document.hidden')
+    if 'if (k === this._k) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('C3: não compara o texto antes do setState')
+    if h.count('setInterval') != 1: prob.append('C3: setInterval a mais (%d; só o do whenBrain)' % h.count('setInterval'))
+    if re.search(r'D\.demo|\.demo\b|DEMO|D\.snapshot|\.snapshot\b', h): prob.append('C3: lê D.demo ou D.snapshot (ou escreve DEMO) no código')
+    if MARCAS_FIXAS.search(h): prob.append('C3: fabricante fixo no código: %s' % MARCAS_FIXAS.search(h).group(0))
+    if re.search(r'location\s*\.\s*(href|assign|replace|reload)|window\s*\.\s*open|speechSynthesis|history\s*\.\s*(push|replace)State', h): prob.append('C3: troca de tela, abre janela ou fala sozinha')
+    if h.count('addDiario') != 1 or h.find('addDiario') < h.find('registrar() {') or 'onClick="{{registrar}}"' not in h: prob.append('C3: grava no diário fora do registrar() ou sem ser pelo toque')
+    if 'capitao-theme.js' in h or re.search(r'<script src="\./capitao-brain\.js"', h): prob.append('C3: carrega o tema ou o cérebro no <head> (é sempre escura e leve)')
+    if 'capitao-faixa-alertas' in h: prob.append('C3: tem a faixa global de alerta')
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    if GEOM.search(h): prob.append('C3: {{…}} em atributo geométrico de SVG')
+    return prob
+
+
+# C4: os 4 checklists, item a item
+LE_C4 = """() => { const B = window.CapitaoBrain, lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), g = (s) => { const e = document.querySelector('[data-c4=' + s + ']'); return e ? lin(e.innerText) : null; };
+  const tipo = (location.hash.match(/tipo=([a-z]+)/) || [])[1] || 'saida', itens = {};
+  document.querySelectorAll('[data-c4=item]').forEach((e) => { const a = e.querySelector('[data-c4=auto-rotulo]'), v = e.querySelector('[data-c4=auto-valor]'), l = e.querySelector('[data-c4=link]'), m = e.querySelector('[data-c4=marca]');
+    itens[e.getAttribute('data-item')] = { feito: e.getAttribute('data-feito'), texto: lin(e.innerText), auto: a ? lin(a.innerText) : null, valor: v ? lin(v.innerText) : null, fonte: lin(e.querySelector('[data-c4=fonte]').innerText), link: l ? [l.getAttribute('href'), lin(l.innerText)] : null,
+      pressed: m.getAttribute('aria-pressed'), aria: m.getAttribute('aria-label') }; });
+  const abas = [...document.querySelectorAll('[data-c4=aba]')].map((e) => ({ tipo: e.getAttribute('data-tipo'), sel: e.getAttribute('aria-selected'), conta: lin(e.querySelector('[data-c4=aba-conta]').innerText) }));
+  const T = B.checklistTipos(), cur = T.find((t) => t.id === tipo) || T[0];
+  const api = {}; T.forEach((t) => { api[t.id] = B.checklistItens(t.id).map((i) => ({ id: i.id, c: i.c, t: i.t, fonte: i.fonte, faq: i.faq || null, link: i.link || null, feito: i.feito, manual: i.manual, anulado: i.anulado, porQuadro: i.porQuadro, auto: i.auto })); });
+  const faq = {}; api[cur.id].forEach((i) => { if (i.faq) { const f = B.faqItem(i.faq); faq[i.faq] = f ? f.pergunta : null; } });
+  return { tipo: cur.id, tipos: T, abas, itens, api, faq, titulo: g('titulo'), conta: g('conta'), pend: g('pend'), aviso: g('aviso'), resumo: g('resumo'), agora: [...document.querySelectorAll('[data-c4=agora]')].map((e) => lin(e.innerText)),
+    linha: B.checklistLinha(cur.id), hash: location.hash, diario: localStorage.getItem('capitao.diario.v1'), marcas: localStorage.getItem('capitao.checklist.v1'), texto: lin(document.body.innerText), temConcluir: !!document.querySelector('[data-c4=concluir]') }; }"""
+EST_ROTULO = {'ok': 'TELEMETRIA ✓', 'falta': 'ATENÇÃO', 'ler': 'CONFIRA'}
+
+
+def problemas_c4_itens(r, rot, app):
+    """Cada item da tela é o do cérebro (B.checklistItens): o texto, a fonte, o rótulo e a leitura da verificação pelo quadro, o estado (conferido pelo quadro, pela pessoa, desmarcado), o link do FAQ e do app."""
+    prob = []
+    api = r['api'][r['tipo']]
+    if list(r['itens']) != [i['id'] for i in api]: prob.append('%s: os itens da tela são %s (esperado %s, na ordem do D.checklists)' % (rot, list(r['itens']), [i['id'] for i in api])); return prob
+    for i in api:
+        e = r['itens'][i['id']]
+        est = 'quadro' if i['porQuadro'] else 'pessoa' if i['manual'] else 'anulado' if i['anulado'] else 'aberto'
+        if e['feito'] != est or e['pressed'] != ('true' if i['feito'] else 'false'): prob.append('%s: o item %s está %r/%r (esperado %r)' % (rot, i['id'], e['feito'], e['pressed'], est))
+        if i['t'] not in e['texto'] or e['fonte'] != 'Fonte: ' + i['fonte']: prob.append('%s: o item %s não traz o texto e a fonte do guia: %r' % (rot, i['id'], e['texto'][:80]))
+        a = i['auto']
+        if (e['auto'], e['valor']) != ((EST_ROTULO[a['estado']], a['valor']) if a and a['estado'] in EST_ROTULO else (None, None)): prob.append('%s: o item %s mostra %r / %r (esperado a verificação do quadro %r)' % (rot, i['id'], e['auto'], e['valor'], a))
+        if i['faq']:
+            esp = ('H2-Home-Mobile.dc.html' if app else 'Main.dc.html') + '#q=' + urllib.parse.quote(r['faq'][i['faq']] or '', safe="!~*'()")
+            if not r['faq'][i['faq']] or e['link'] != [esp, 'FAQ %s — passo a passo ›' % i['faq']]: prob.append('%s: o link do FAQ de %s é %r (esperado %r)' % (rot, i['id'], e['link'], [esp, 'FAQ %s — passo a passo ›' % i['faq']]))
+        elif i['link']:
+            arq = 'G3-Diario' if i['link'] == 'G3-Diario' else 'G2-Abastecimento'
+            if e['link'] != [arq + ('-Mobile' if app else '-Web') + '.dc.html', 'Abrir o Diário ›' if arq == 'G3-Diario' else 'Abrir Abastecimento ›']: prob.append('%s: o link do item %s é %r (esperado %s da %s)' % (rot, i['id'], e['link'], arq, 'app' if app else 'web'))
+    f = sum(1 for i in api if i['feito'])
+    if r['conta'] != '%d/%d' % (f, len(api)): prob.append('%s: o andamento diz %r (esperado %d/%d)' % (rot, r['conta'], f, len(api)))
+    pend = [i['c'] for i in api if not i['feito']]
+    if not (r['pend'] or '').startswith('Pendentes: ' + ', '.join(pend) + '.' if pend else 'Tudo conferido'): prob.append('%s: os pendentes dizem %r (esperado %s)' % (rot, r['pend'], pend))
+    ab = {a['tipo']: a for a in r['abas']}
+    for t in r['tipos']:
+        n = sum(1 for i in r['api'][t['id']] if i['feito'])
+        if ab.get(t['id'], {}).get('conta') != '%d/%d' % (n, len(r['api'][t['id']])) or (ab.get(t['id'], {}).get('sel') == 'true') != (t['id'] == r['tipo']): prob.append('%s: a aba %s diz %r (esperado %d/%d e selecionada só a do tipo atual)' % (rot, t['id'], ab.get(t['id']), n, len(r['api'][t['id']])))
+    return prob
+
+
+def teste_c4(b, tela):
+    """C4: a aba pelo #tipo=, os itens do cérebro com a fonte do guia, o ✓ do quadro que muda com o replay (s02: ✓ a 60 s, ✗ a 105 s), a marca da pessoa, a desmarca do ✓ do quadro, o CONCLUIR (UMA linha
+    nova no diário só com o toque, mesmo com dois toques; sim: true; as marcas somem), o Recomeçar sem diário, o FAQ e os links, e sem rótulo nos 4 tipos; tudo a 60 s e a 105 s."""
+    app = tela.endswith('Mobile')
+    prob = []
+    for fixo in ('60', '105'):
+        for tipo in ('saida', 'chegada', 'abastecimento', 'fundeio'):
+            ctx, pg, erros = abre_tela(b, tela, fixo=fixo, hash_='#tipo=' + tipo)
+            r = pg.evaluate(LE_C4)
+            rot = '%s %s a %s s' % (tela.split('-')[0], tipo, fixo)
+            if r['tipo'] != tipo: prob.append('%s: a aba aberta é %s' % (rot, r['tipo']))
+            prob += problemas_c4_itens(r, rot, app)
+            if r['diario'] or r['marcas']: prob.append('%s: gravou no registro só de abrir (diário %r, marcas %r)' % (rot, r['diario'], r['marcas']))
+            ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+            if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+            if tipo == 'saida':
+                s02 = r['itens'].get('s02', {})
+                esp = ('quadro', 'TELEMETRIA ✓', 'nenhum alarme ativo') if fixo == '60' else ('aberto', 'ATENÇÃO', 'AVISO: Temperatura do motor BE: 89,6 °C (acima de 88 °C)')
+                if (s02.get('feito'), s02.get('auto'), s02.get('valor')) != esp: prob.append('%s: o item dos alertas (s02) diz %r (esperado %r: o ✓ do quadro muda com o replay)' % (rot, (s02.get('feito'), s02.get('auto'), s02.get('valor')), esp))
+                if not app:
+                    if not r['agora'] or not any(x.startswith('Alarmes ') for x in r['agora']): prob.append('%s: o painel «agora a bordo» não tem os alarmes: %s' % (rot, r['agora']))
+                    if any(re.search(r'nós|rumo|proa|SOG|\d+°', x) for x in r['agora']): prob.append('%s: o painel «agora a bordo» traz posição, rumo ou velocidade: %s' % (rot, r['agora']))
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    # a aba que não existe cai na saída; trocar de aba muda o endereço sem recarregar
+    ctx, pg, erros = abre_tela(b, tela, hash_='#tipo=xyz')
+    r = pg.evaluate(LE_C4)
+    if r['tipo'] != 'saida' or [a['tipo'] for a in r['abas'] if a['sel'] == 'true'] != ['saida']: prob.append('%s #tipo=xyz: devia cair na saída: %s' % (tela, [a for a in r['abas'] if a['sel'] == 'true']))
+    pg.evaluate("() => { window.__marca = 'viva'; [...document.querySelectorAll('[data-c4=aba]')].find((e) => e.getAttribute('data-tipo') === 'fundeio').click(); }")
+    pg.wait_for_timeout(500)
+    r = pg.evaluate(LE_C4)
+    if r['hash'] != '#tipo=fundeio' or r['tipo'] != 'fundeio' or pg.evaluate("() => window.__marca") != 'viva': prob.append('%s: a aba Fundeio não mudou o endereço sem recarregar: %r' % (tela, r['hash']))
+    ctx.close()
+    # as marcas, a desmarca do ✓ do quadro, o Recomeçar e o CONCLUIR
+    ctx, pg, erros = abre_tela(b, tela, hash_='#tipo=saida')
+    clica = "(id) => document.querySelector('[data-item=' + id + '] [data-c4=marca]').click()"
+    f0 = sum(1 for i in pg.evaluate(LE_C4)['api']['saida'] if i['feito'])   # os conferidos pelo quadro antes de qualquer toque (o s02 conta a 60 s)
+    pg.evaluate(clica, 's03'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C4)
+    m = json.loads(r['marcas'] or '{}')
+    if m.get('saida', {}).get('m') != {'s03': 1} or r['itens']['s03']['feito'] != 'pessoa' or r['conta'] != '%d/14' % (f0 + 1): prob.append('%s: marcar o s03 devia gravar {s03: 1}, deixar o item «pessoa» e o andamento %d/14: %r %r %r' % (tela, f0 + 1, m, r['itens']['s03']['feito'], r['conta']))
+    if r['diario']: prob.append('%s: marcar um item gravou no diário' % tela)
+    pg.evaluate(clica, 's05'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C4)
+    m = json.loads(r['marcas'] or '{}')
+    if m['saida']['m'].get('s05') != 'n' or r['itens']['s05']['feito'] != 'anulado' or r['conta'] != '%d/14' % f0 or 'NÃO conferido' not in (r['aviso'] or ''): prob.append('%s: tocar no ✓ do quadro (s05) devia marcar «n», deixar o item desmarcado (%d/14) e avisar: %r %r %r' % (tela, f0, m, r['itens']['s05']['feito'], r['aviso']))
+    pg.evaluate(clica, 's05'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C4)
+    if 's05' in json.loads(r['marcas'])['saida']['m'] or r['itens']['s05']['feito'] != 'quadro': prob.append('%s: tocar de novo devia voltar ao ✓ automático: %r' % (tela, r['itens']['s05']['feito']))
+    pg.evaluate("() => [...document.querySelectorAll('[data-c4=zera]')][0].click()"); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C4)
+    if 'saida' in json.loads(r['marcas'] or '{}') or r['diario'] or r['itens']['s03']['feito'] == 'pessoa': prob.append('%s: o Recomeçar devia apagar as marcas sem gravar no diário: marcas %r, diário %r' % (tela, r['marcas'], r['diario']))
+    pg.evaluate(clica, 's03'); pg.wait_for_timeout(300)
+    linha = pg.evaluate(LE_C4)['linha']
+    pg.evaluate("() => { const bt = document.querySelector('[data-c4=concluir]'); bt.click(); bt.click(); }")   # dois toques seguidos: uma linha só
+    pg.wait_for_timeout(700)
+    r = pg.evaluate(LE_C4)
+    d = json.loads(r['diario'] or '[]')
+    if len(d) != 1: prob.append('%s: o CONCLUIR gravou %d linhas no diário (esperado 1, mesmo com dois toques)' % (tela, len(d)))
+    else:
+        e = d[0]
+        if e['t'] != linha['t'] or e['sys'] != linha['sys'] or e.get('sim') is not True or not e['src'].startswith('checklist de bordo') or e['who'] != 'Lucas': prob.append('%s: a linha do CONCLUIR devia ser %r (sys %s, sim: true): %r' % (tela, linha['t'], linha['sys'], {k: e.get(k) for k in ('t', 'sys', 'sim', 'src', 'who')}))
+        if not re.fullmatch(r'Checklist de saída concluído · %d/14 \(%d pela telemetria\) · pendentes: .+' % (f0 + 1, f0), e['t']): prob.append('%s: o formato da linha do CONCLUIR: %r (esperado %d/14, %d pela telemetria)' % (tela, e['t'], f0 + 1, f0))
+    if 'saida' in json.loads(r['marcas'] or '{}'): prob.append('%s: o CONCLUIR devia apagar as marcas do tipo: %r' % (tela, r['marcas']))
+    if 'No diário: Checklist de saída concluído' not in (r['aviso'] or '') or 'VER NO DIÁRIO' not in (r['aviso'] or ''): prob.append('%s: depois do CONCLUIR a tela devia avisar e levar ao diário: %r' % (tela, r['aviso']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_c4_vivo(b):
+    """Sem congelar o replay, a C4 anda sozinha (a fonte e a hora do quadro mudam em 1,5 s): assina o capitao-telemetria."""
+    prob = []
+    for tela in ('C4-Checklist-Web', 'C4-Checklist-Mobile'):
+        ctx, pg, erros = abre_tela(b, tela, fixo=None)
+        mudou = False
+        for _ in range(3):
+            a = pg.evaluate("() => document.querySelector('[data-c4=resumo]').innerText")
+            pg.wait_for_timeout(1500)
+            if a != pg.evaluate("() => document.querySelector('[data-c4=resumo]').innerText"): mudou = True; break
+        if not mudou: prob.append('%s: a hora do quadro não mudou em 1,5 s sem congelar o replay (3 tentativas)' % tela)
+        if erros: prob += erros[:2]
+        ctx.close()
+    return prob
+
+
+def teste_c4_codigo():
+    prob = []
+    def le_(a):
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    for t in ('C4-Checklist-Web', 'C4-Checklist-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile'):
+        h = le_(t + '.dc.html')
+        mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+        if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % t)
+        if re.search(r'D\.demo|\.demo\b|DEMO|D\.snapshot|\.snapshot\b', h): prob.append('%s: lê D.demo ou D.snapshot (ou escreve DEMO) no código' % t)
+        if MARCAS_FIXAS.search(h): prob.append('%s: fabricante fixo no código: %s' % (t, MARCAS_FIXAS.search(h).group(0)))
+        for ev in ('capitao-telemetria', 'capitao-rebase'):
+            if t.startswith('C4'):   # a C4 guarda os eventos numa lista (a telemetria, o alerta e a virada do dia)
+                lista = "['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.%sEventListener(ev, this._onTele))"
+                ok_ = (lista % 'add') in h[mont:desm] and (lista % 'remove') in h[desm:]
+            else:
+                ok_ = ("addEventListener('%s'" % ev) in h[mont:desm] and ("removeEventListener('%s'" % ev) in h[desm:]
+            if not ok_: prob.append('%s: não assina o %s no componentDidMount e remove no componentWillUnmount' % (t, ev))
+        if 'document.hidden' not in h: prob.append('%s: não pausa com document.hidden' % t)
+        if 'if (k === this._k) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('%s: não compara o texto antes do setState' % t)
+        if h.count('setInterval') > 1: prob.append('%s: setInterval novo (%d)' % (t, h.count('setInterval')))
+        if t.startswith('C4'):
+            if h.count('checklistConcluir') != 1 or h.find('checklistConcluir') < h.find('  conclui() {') or 'onClick="{{conclui}}"' not in h: prob.append('%s: grava no diário fora do conclui() ou sem ser pelo toque' % t)
+            if re.search(r'localStorage\s*\.\s*setItem|addDiario|apagaDiario|removeItem', h): prob.append('%s: grava no aparelho direto (o cérebro grava)' % t)
+            if 'Date.now() - (this._tq || 0) < 1500' not in h: prob.append('%s: sem o intervalo entre dois CONCLUIR' % t)
+    return prob
+
+
+def p4e_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4E para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_P4E): out.append(('código da P4E (C1 a C4)', teste_c4_codigo() + (teste_c3_codigo() if 'C3-Leme-Alerta' in lista else [])))
+    if 'C1-Leme-Web' in lista: out.append(('C1 · leituras de agora, contas, horas que faltam e tarefas da equipe', teste_leme_c1(b)))
+    if 'C2-Leme-Mobile' in lista: out.append(('C2 · atrasadas, horímetros de agora e horas que faltam', teste_leme_c2(b)))
+    if 'C3-Leme-Alerta' in lista:
+        out.append(('C3 · o alerta vivo: AVISO, NORMALIZADO, sem alarme e a faixa do óleo', teste_c3_estados(b)))
+        out.append(('C3 · o alarme crítico plantado (o cenário desligado)', teste_c3_critico(b)))
+        out.append(('C3 · normaliza com a tela aberta, sem sair dela', teste_c3_transicao(b)))
+        out.append(('C3 · registrar só com o toque, com o valor, o lado e a hora do quadro', teste_c3_registrar(b)))
+        out.append(('C3 · sempre escura e leve', teste_c3_leve(b)))
+    for tela in ('C4-Checklist-Web', 'C4-Checklist-Mobile'):
+        if tela in lista: out.append(('%s · itens, ✓ do quadro, marcas, CONCLUIR e links' % tela, teste_c4(b, tela)))
+    if any(t.startswith('C4') for t in lista): out.append(('C4 · anda sem congelar o replay', teste_c4_vivo(b)))
+    if any(t in lista for t in TELAS_P4E): out.append(('simulacao false no Leme e nos checklists', teste_leme_real(b)))
+    return out
+
+
+# Defeitos plantados da P4E: cada um é servido no lugar do arquivo (MUT_ARQ) e a conferência que cuida dele TEM de acusar (--mutantes-p4e; um mutante vivo reprova).
+MUTANTES_P4E = [
+    # —— C1 ——
+    ('a velocidade da C1 fixa em 0,0 (a leitura de agora não anda)', 'C1-Leme-Web.dc.html', [("{ id: 'sog', k: 'Velocidade', v: c('sog_nos'),", "{ id: 'sog', k: 'Velocidade', v: '0,0',")], 'c1'),
+    ('o vento da C1 sem «a bordo agora» (trava 12)', 'C1-Leme-Web.dc.html', [("'a bordo agora · verdadeiro de '", "'verdadeiro de '")], 'c1'),
+    ('as horas que faltam da C1 só da agenda gerada (não do horímetro de agora)', 'C1-Leme-Web.dc.html', [("const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null;", "return num(h.faltam) ? h.faltam : null;")], 'c1'),
+    ('a C1 conta a tarefa executada como atrasada', 'C1-Leme-Web.dc.html', [("grupo(t.dn) === g && !ex[t.id] && !t.feita);", "grupo(t.dn) === g && !t.feita);")], 'c1'),
+    ('a C1 sem as tarefas da equipe do aparelho', 'C1-Leme-Web.dc.html', [(".concat(equipe.map((t) => ({ id: t.id, t: t.n,", ".concat([].map((t) => ({ id: t.id, t: t.n,")], 'c1'),
+    ('o resumo da C1 de volta com «snapshot DEMO»', 'C1-Leme-Web.dc.html', [("const resumo = fonteTxt + ' · '", "const resumo = 'snapshot DEMO · ' + fonteTxt + ' · '")], 'c1'),
+    ('a fonte da leitura da C1 de volta com «telemetria ao vivo desligada»', 'C1-Leme-Web.dc.html', [("resumo: resumo, leituraSub: fonteTxt,", "resumo: resumo, leituraSub: 'Coletor NMEA · snapshot · telemetria ao vivo desligada',")], 'c1'),
+    ('a C1 sem assinar o capitao-telemetria', 'C1-Leme-Web.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'c1_vivo'),
+    # —— C2 ——
+    ('os horímetros da C2 fixos no snapshot (BB 412,6 h)', 'C2-Leme-Mobile.dc.html', [("horimetros: 'BB ' + c('motor_bb_horimetro_h')", "horimetros: 'BB 412,6'")], 'c2'),
+    ('as horas que faltam da C2 só da agenda gerada', 'C2-Leme-Mobile.dc.html', [("const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null;", "return num(h.faltam) ? h.faltam : null;")], 'c2'),
+    ('a C2 conta a tarefa executada como atrasada', 'C2-Leme-Mobile.dc.html', [("t.dn < 0 && !ex[t.id] && !t.feita)", "t.dn < 0 && !t.feita)")], 'c2'),
+    ('a C2 sem assinar o capitao-telemetria', 'C2-Leme-Mobile.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'c2_codigo'),
+    # —— C3 ——
+    ('a leitura agora da C3 sem a hora do quadro', 'C3-Leme-Alerta.dc.html', [("(horaI ? ' · ' + horaI : '')", "''")], 'c3'),
+    ('a leitura agora da C3 sem o lado (BB/BE)', 'C3-Leme-Alerta.dc.html', [("(lado ? String(lado).toUpperCase() + ' ' : '') + valor", "valor")], 'c3'),
+    ('a leitura da C3 não pisca com o alarme ativo', 'C3-Leme-Alerta.dc.html', [("piscaLeitura: ativo ? '1' : '0'", "piscaLeitura: '0'")], 'c3'),
+    ('o NORMALIZADO da C3 diz a hora do começo da janela (e não a do fim) na situação', 'C3-Leme-Alerta.dc.html', [("situacao = 'normalizou às ' + hora(j.ate, true)", "situacao = 'normalizou às ' + hora(j.desde, true)")], 'c3'),
+    ('o NORMALIZADO da C3 sem o fim (a janela esquecida: sempre «dentro da faixa»)', 'C3-Leme-Alerta.dc.html', [("(j && num(j.ate) ? 'normalizado' : 'normal')", "'normal'")], 'c3'),
+    ('a C3 fecha a tela sozinha quando o alarme normaliza', 'C3-Leme-Alerta.dc.html', [("    this.setState({ vivo: k });\n  }\n  ico(", "    this.setState({ vivo: k });\n    if (d.estado === 'normalizado') location.replace('H2-Home-Mobile.dc.html');\n  }\n  ico(")], 'c3_transicao'),
+    ('o fabricante dos motores fixo na C3 (Volvo Penta)', 'C3-Leme-Alerta.dc.html', [("(num(eq.qtd) && eq.qtd > 1 ? eq.qtd + ' ×' : ''), eq.fabricante,", "(num(eq.qtd) && eq.qtd > 1 ? eq.qtd + ' ×' : ''), 'Volvo Penta',")], 'c3'),
+    ('a C3 registra sozinha quando o estado muda para ativo (sem o toque)', 'C3-Leme-Alerta.dc.html', [("    this._k = k; this._din = d; this._fresco = true;\n    this.setState({ vivo: k });", "    this._k = k; this._din = d; this._fresco = true;\n    if (d.estado === 'ativo' && !this._auto) { this._auto = 1; setTimeout(() => this.registrar(), 0); }\n    this.setState({ vivo: k });")], 'c3_registrar'),
+    ('o registrar da C3 grava o valor fixo (1,6 bar) e não o do quadro', 'C3-Leme-Alerta.dc.html', [("': ' + x.regTxt + ' · leitura às '", "': 1,6 bar · leitura às '")], 'c3_registrar'),
+    ('a faixa normal da C3 fixa (até 6 bar)', 'C3-Leme-Alerta.dc.html', [("if (Rg) { faixa = faixaDe(Rg) + regTxt;", "if (Rg) { faixa = 'até 6 bar';")], 'c3'),
+    ('a tendência da C3 olha 30 s atrás no lugar de 10 s', 'C3-Leme-Alerta.dc.html', [("const qq = R.em(ms - k * 1000);", "const qq = R.em(ms - k * 3000);")], 'c3'),
+    ('a C3 de volta com o texto fixo «MODELO DE ALERTA»', 'C3-Leme-Alerta.dc.html', [('<span data-c3="selo" style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em; color: {{cartaoAcc}};">{{selo}}</span>', '<span data-c3="selo" style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em; color: {{cartaoAcc}};">MODELO DE ALERTA · {{selo}}</span>')], 'c3'),
+    ('a C3 carrega o cérebro na abertura (deixa de ser leve)', 'C3-Leme-Alerta.dc.html', [('<script src="./capitao-telemetria.js"></script>\n<style>', '<script src="./capitao-telemetria.js"></script>\n<script src="./capitao-brain.js"></script>\n<style>')], 'c3_leve'),
+    ('o alerta crítico da C3 sem o fundo vermelho', 'C3-Leme-Alerta.dc.html', [("d.nivel === 'critico' ? { bg: '#d32f27',", "d.nivel === 'critico' ? { bg: 'rgba(240,166,58,0.13)',")], 'c3_critico'),
+    ('a C3 sem assinar o capitao-alerta', 'C3-Leme-Alerta.dc.html', [("    window.addEventListener('capitao-alerta', this._onTele);\n", "")], 'c3_codigo'),
+    # —— C4 ——
+    ('a C4 sem o ✓ do quadro (os itens sem a verificação)', 'C4-Checklist-Web.dc.html', [("aEstado: i.auto ? i.auto.estado : '', aValor: i.auto ? String(i.auto.valor) : '',", "aEstado: '', aValor: '',")], 'c4_web'),
+    ('o CONCLUIR da C4 grava duas linhas', 'C4-Checklist-Web.dc.html', [("try { r = B.checklistConcluir(this._tipo); } catch (e) { r = null; }", "try { r = B.checklistConcluir(this._tipo); B.checklistConcluir(this._tipo); } catch (e) { r = null; }")], 'c4_web'),
+    ('a C4 sem o intervalo entre dois CONCLUIR', 'C4-Checklist-Web.dc.html', [("Date.now() - (this._tq || 0) < 1500", "false")], 'c4_web'),
+    ('a C4 conclui o checklist de saída ao abrir (sem o toque)', 'C4-Checklist-Web.dc.html', [("this.whenBrain((B) => { try { if (B.carregaFaq)", "this.whenBrain((B) => { try { B.checklistConcluir('saida'); } catch (e) {} try { if (B.carregaFaq)")], 'c4_web'),
+    ('o toque no ✓ do quadro da C4 não desmarca (marca como conferido)', 'C4-Checklist-Web.dc.html', [("B.checklistMarca(tipo, i.id, 'n'); this.atualiza(); return", "B.checklistMarca(tipo, i.id, 1); this.atualiza(); return")], 'c4_web'),
+    ('a C4 do app com o link do diário da web', 'C4-Checklist-Mobile.dc.html', [("'G3-Diario': ['G3-Diario-Mobile.dc.html',", "'G3-Diario': ['G3-Diario-Web.dc.html',")], 'c4_app'),
+    ('a C4 do app sem assinar o capitao-telemetria', 'C4-Checklist-Mobile.dc.html', [("['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'c4_vivo'),
+    ('o Recomeçar da C4 grava no diário', 'C4-Checklist-Mobile.dc.html', [("zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistZera(this._tipo);", "zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistConcluir(this._tipo); B.checklistZera(this._tipo);")], 'c4_app'),
+]
+QUAL_P4E = {'c1': lambda b: teste_leme_c1(b), 'c1_vivo': lambda b: teste_leme_vivo(b), 'c2': lambda b: teste_leme_c2(b), 'c2_codigo': lambda b: teste_c4_codigo(),
+            'c3': lambda b: teste_c3_estados(b) + teste_c3_codigo(), 'c3_critico': lambda b: teste_c3_critico(b), 'c3_transicao': lambda b: teste_c3_transicao(b), 'c3_registrar': lambda b: teste_c3_registrar(b),
+            'c3_leve': lambda b: teste_c3_leve(b) + teste_c3_codigo(), 'c3_codigo': lambda b: teste_c3_codigo(),
+            'c4_web': lambda b: teste_c4(b, 'C4-Checklist-Web'), 'c4_app': lambda b: teste_c4(b, 'C4-Checklist-Mobile'), 'c4_vivo': lambda b: teste_c4_vivo(b) + teste_c4_codigo()}
+
+
+def teste_leme_vivo(b):
+    """Sem congelar o replay, a C1 anda sozinha (a leitura de agora muda em 1,5 s): assina o capitao-telemetria."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', fixo=None)
+    mudou = False
+    for _ in range(3):
+        a = pg.evaluate("() => document.querySelector('[data-c1=leitura-sub]').innerText")
+        pg.wait_for_timeout(1500)
+        if a != pg.evaluate("() => document.querySelector('[data-c1=leitura-sub]').innerText"): mudou = True; break
+    if not mudou: prob.append('C1: a leitura de agora não mudou em 1,5 s sem congelar o replay (3 tentativas): a tela não assina o capitao-telemetria')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob + teste_c4_codigo()
+
+
+def mutantes_p4e(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
+    for nome, arq, trocas, qual in MUTANTES_P4E:
+        if filtro and filtro not in nome: continue
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = QUAL_P4E[qual](b)
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4E), len(vivos)))
     return vivos
 
 

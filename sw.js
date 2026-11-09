@@ -9,7 +9,7 @@ const CACHE = 'capitao-site-v1.0.9';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
-  'C1-Leme-Web', 'C2-Leme-Mobile', 'E1-Navegando-Gatilhos', 'E2-Navegando-Sintoma',
+  'C1-Leme-Web', 'C2-Leme-Mobile', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos', 'E2-Navegando-Sintoma',
   'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
   'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
   'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile',
