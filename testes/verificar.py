@@ -70,6 +70,15 @@ visível nem nos atributos (title, aria-label, alt, href), nem completa (dd/mm/a
 "vencimento" (a A1 listava a agenda inteira com "vence 09/11" e "vence 16/03"); em C1 e G1 a data aparece (controle: a conferência
 não vale se o detector não a enxerga onde ela pode estar).
 
+Fase 4, P4B (base compartilhada das telas; PROMPT Fase 4 e Fase 7 «verificar.py»): a matriz roda com o replay congelado em 60 s (cruzeiro, sem alarme) e uma passada
+a 105 s (a janela do alarme: só AVISO) em 2 tamanhos e 2 temas por tela; em cada instante, a varredura do texto visível, do title, do aria-label, do placeholder e do alt
+pelas regex ROTULOS, AUTENTICIDADE, VAZIOS e VISIVEL do testes/proibidos.json (cada uma com a flag dela), a tela com `typeof CapitaoReplay === 'object'` (o filtro de
+«Failed to load resource» esconde o script ausente; S1/S2 sem ele) e a faixa global de alerta: ausente em 60 s, presente em 105 s (AVISO, «ABRIR ›» → C3-Leme-Alerta.dc.html#alarme=<id>,
+com a hora «desde», empurrando a prancheta, sem fala nem registro) e sempre ausente em S1/S2, no Manual e na C3. PENDENTES_ROTULO lista as telas que ainda têm rótulo (cada item da
+Fase 4 retira as suas; uma tela da lista que já está limpa reprova, para a lista só encolher). Sem congelar, a leitura da Main, da A1 e da E1 muda em 1,5 s (a C3, que a Fase 4
+ainda não tornou viva, está em PENDENTES_MUDA). Selo do coletor pela cor (F06): verde com o replay ao vivo, amarelo com a última leitura (replay desligado ou que falhou ao carregar).
+Offline: capitao-replay.js responde 200 e CapitaoReplay.quadro() não é nulo em cada tela (o SOS só confere o arquivo). Login com o botão de SOS (S2 no celular, S1 no computador).
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -132,11 +141,33 @@ def corta_unpkg(ctx):
     return pedidos
 
 
+# Fase 4 (P4B): as regex do §3 (testes/proibidos.json, a mesma fonte de todas as varreduras), cada uma com a flag dela
+TERMOS = confere.carrega_termos()
+VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
+# Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; o P4K a deixa só com o que a Fase 8 reescreve). O Manual é a apresentação,
+# reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
+PENDENTES_ROTULO = (
+    'Main', 'H2-Home-Mobile', 'C3-Leme-Alerta',
+    'A1-Ponte-Web', 'A2-Ponte-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web',
+    'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
+    'E2-Navegando-Sintoma', 'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
+    'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
+)   # (25 telas em 09/11/2026, depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+#  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
+FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
+# Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
+PENDENTES_MUDA = ('C3-Leme-Alerta',)
+MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
+# Sem faixa global de alerta: o SOS (nunca muda de lugar), o Manual (apresentação) e a C3 (a própria tela do alerta)
+SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta')
+MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 # páginas fora das TELAS do sw.js: nome → (endereço, com sessão). O login com sessão redireciona; a lista precisa de ?v=lista.
 PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True), 'dados': ('dados.html', True)}
 MEDE_LOGIN = """() => { const q = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().bottom : null; };
-  return { go: q('#go'), credito: q('.credito') }; }"""
+  const a = document.querySelector('a[href*="SOS-"]'), r = a ? a.getBoundingClientRect() : null;
+  return { go: q('#go'), credito: q('.credito'), sos: a ? { href: a.getAttribute('href'), aria: a.getAttribute('aria-label'), txt: a.textContent.trim(), w: r.width, h: r.height, topo: r.top, fim: r.bottom, esq: r.left, dir: r.right,
+    cor: getComputedStyle(a).backgroundColor, vw: document.documentElement.clientWidth } : null }; }"""
 # Dados do aparelho: o SOS do topo à vista (≥ 44 px) no alto e depois de rolar até o fim; fundo e tema.
 MEDE_DADOS = """() => {
   const de = document.documentElement, a = document.querySelector('header a[href*="SOS-"]');
@@ -205,7 +236,9 @@ CHECA = """() => {
   const S = (window.CapitaoDados || {}).snapshot || {};
   const ultima = S.quando ? ('ÚLTIMA LEITURA · ' + S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : null;
   const seloTexto = """ + SELO_TEXTO + """, afirma = """ + AFIRMA_TEXTO + """;
-  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima, seloTexto: seloTexto, afirma: afirma };
+  const fx = document.getElementById('capitao-faixa-alertas');
+  return { lateral: lateral, deform: deform, prancheta: prancheta, titulo: document.title, rodape: rodape, rodapeTxt: rodapeTxt, selos: selos, ultima: ultima, seloTexto: seloTexto, afirma: afirma,
+           replay: typeof window.CapitaoReplay, alertas: typeof window.CapitaoAlertas, faixa: fx ? (fx.hidden ? 'oculta' : 'visivel') : null };
 }"""
 # SOS sem o registro gerado (trava §2.1; C4): o embarcacao.registro e "REG." no texto visível e nos atributos de S1/S2.
 # Revisão do C4: o roteiro MAYDAY (<sc-if value="{{mayday}}">) e os passos de cada cartão (<sc-if value="{{p.open}}">) só existem
@@ -497,6 +530,134 @@ def problemas_selo(tela, r):
     return prob
 
 
+# Varredura de termos (P4B): o texto visível, o title, o aria-label, o placeholder e o alt de cada tela, pelas regex do §3 com a flag de cada uma. Python, sobre o
+# texto lido na página (as mesmas fontes do cérebro, dos Workers e do cliente; a conferência dos casos é o testes/proibidos.py da Fase 7).
+LE_TEXTOS = """() => { const o = [document.body.innerText];
+  document.querySelectorAll('[title],[aria-label],[placeholder],[alt]').forEach((e) => ['title', 'aria-label', 'placeholder', 'alt'].forEach((a) => { const v = e.getAttribute(a); if (v) o.push(v); }));
+  return o.join('\\n'); }"""
+# «telefone … não cadastrado — abrir Equipe para cadastrar» é o texto do SOS da 1b (o contato sem número neste aparelho), não dado de bordo vazio: o SOS não se mexe na Fase 4.
+# É a única exceção da varredura, só no SOS e só dessa frase; qualquer outro termo do §3 no SOS reprova.
+EXCECAO_SOS_VAZIOS = re.compile(r'n[ãa]o cadastrad')
+
+
+def achados_termos(tela, texto):
+    """{regex: [trecho com contexto]} dos termos do §3 (VARREDURA) no texto, cada regex com a flag dela; vazio quando a tela está limpa."""
+    out = {}
+    for nome in VARREDURA:
+        ms = [texto[max(0, m.start() - 25):m.end() + 25].replace('\n', ' | ') for m in TERMOS[nome].finditer(texto)]
+        if tela in TELAS_SOS and nome == 'VAZIOS':
+            ms = [x for x in ms if not EXCECAO_SOS_VAZIOS.search(x)]
+        if ms:
+            out[nome] = ms
+    return out
+
+
+# A faixa global de alerta (P4B, capitao-app.js; PROMPT «Faixa global de alerta»): o que a tela mostra e o que a API de alertas diz no mesmo instante
+LE_FAIXA = """() => { const f = document.getElementById('capitao-faixa-alertas'), A = window.CapitaoAlertas, a = A && typeof A.ativos === 'function' ? A.ativos() : [];
+  const art = [...document.querySelectorAll('#dc-root [style*="width: 1440px"],#dc-root [style*="width: 390px"],#dc-root [style*="width: 2380px"]')].find((c) => /px$/.test(c.style.width) && parseFloat(c.style.height) >= 600);
+  const r = f ? f.getBoundingClientRect() : null, p = art ? art.getBoundingClientRect() : null, lk = f ? f.querySelector('a') : null;
+  return { existe: !!f, oculta: f ? f.hidden : null, nivel: f ? f.getAttribute('data-nivel') : null, texto: f ? f.innerText : '', href: lk ? lk.getAttribute('href') : null,
+    alerta: a[0] ? { id: a[0].id, texto: a[0].texto, nivel: a[0].nivel, detalhe: a[0].detalhe, hora: a[0].hora } : null, n: a.length, fim: r ? r.bottom : 0, alt: r ? r.height : 0, topoArt: p ? p.top : null,
+    falas: window.__falas || 0, registro: Object.keys(localStorage).filter((k) => /^capitao\\.(diario|executado|tickets|tarefas)\\.v1$/.test(k)), replay: typeof window.CapitaoReplay }; }"""
+ESPIA_FALA = "(() => { window.__falas = 0; try { const o = speechSynthesis.speak.bind(speechSynthesis); speechSynthesis.speak = function () { window.__falas++; return o.apply(this, arguments); }; } catch (e) {} })()"
+
+
+def problemas_faixa(tela, fixo, f):
+    """A faixa global de alerta (F05): em 60 s nenhuma (cruzeiro, sem alarme); em 105 s o AVISO do instante, e nunca no SOS, no Manual nem na C3."""
+    prob = []
+    if tela in SEM_FAIXA:
+        if f['existe']: prob.append('%s tem a faixa de alerta (nunca no SOS, no Manual nem na C3)' % tela)
+        return prob
+    if fixo == '60':
+        if f['existe'] and not f['oculta']: prob.append('faixa de alerta visível em t = 60 (cruzeiro: nenhum alarme): %r' % f['texto'][:80])
+        return prob
+    a = f['alerta']
+    if not a or f['n'] < 1: return ['sem alarme no instante 105 s (a API de alertas devolveu %d): o teste da faixa não vale' % f['n']]
+    if not f['existe'] or f['oculta']: return ['sem a faixa de alerta em t = 105 (o AVISO %r está aberto)' % a['texto']]
+    if a['nivel'] != 'aviso' or f['nivel'] != 'aviso': prob.append('a faixa não é AVISO (crítico só com o cenário alarme-critico, desligado): %s / %s' % (a['nivel'], f['nivel']))
+    if a['texto'] not in f['texto']: prob.append('a faixa não diz o alerta «%s»: %r' % (a['texto'], f['texto'][:120]))
+    if 'desde ' + a['hora'] not in f['texto']: prob.append('a faixa não diz «desde %s»: %r' % (a['hora'], f['texto'][:120]))
+    if 'ABRIR' not in f['texto']: prob.append('a faixa sem «ABRIR»: %r' % f['texto'][:120])
+    if f['href'] != 'C3-Leme-Alerta.dc.html#alarme=' + a['id'] or a['detalhe'] != f['href']:
+        prob.append('ABRIR leva a %r (esperado C3-Leme-Alerta.dc.html#alarme=%s)' % (f['href'], a['id']))
+    if f['alt'] < 44: prob.append('a faixa tem %d px de altura (o toque pede 44)' % f['alt'])
+    if f['topoArt'] is None or f['topoArt'] < f['fim'] - 0.5: prob.append('a faixa cobre a prancheta (a prancheta começa em %s, a faixa termina em %s)' % (f['topoArt'], f['fim']))
+    if f['falas']: prob.append('a faixa falou (speechSynthesis.speak %d vez(es)): nunca fala sem gesto' % f['falas'])
+    if f['registro']: prob.append('a faixa gravou no registro: %s' % f['registro'])
+    return prob
+
+
+def aplica_mut(ctx):
+    """Serve o arquivo do site com o defeito plantado (MUT_ARQ) neste contexto; sem mutação, nada muda."""
+    def para(trocas):
+        def trata(route):
+            r = route.fetch()
+            corpo = r.text()
+            for velho, novo in trocas:
+                corpo = corpo.replace(velho, novo, 1)
+            route.fulfill(response=r, body=corpo)
+        return trata
+    for arq, trocas in MUT_ARQ.items():
+        ctx.route('**/' + arq, para(trocas))
+
+
+def roda_tela(b, tela, tema, w, h, fixo='60', fotos=False):
+    """Uma tela num tema e num tamanho, com o replay congelado em `fixo` s: erro de script, rolagem lateral, imagem deformada, prancheta, selo, SOS, validade,
+    typeof CapitaoReplay, a faixa de alerta e a varredura dos termos do §3. Devolve (problemas, quantos termos do §3 a tela mostra)."""
+    movel = eh_app(tela)  # celular, inclusive deitado (844×390): toque + UA móvel
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
+                        is_mobile=movel, has_touch=movel, service_workers='block')
+    ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.tema.v1', '" + tema + "');localStorage.setItem('capitao.plataforma.v1', '" + ('app' if movel else 'web') + "');"
+                        "try { localStorage.setItem('capitao.replay.fixo', '" + fixo + "'); } catch (e) {}")
+    ctx.add_init_script(ESPIA_FALA)
+    aplica_mut(ctx)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception:
+        erros.append('prancheta não desenhou em 15 s')
+    pg.wait_for_timeout(900)
+    r = pg.evaluate(CHECA)
+    url = pg.url
+    prob = []
+    if erros: prob += erros
+    if r['lateral'] > 1: prob.append('rolagem lateral de %d px' % r['lateral'])
+    if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
+    if not r['prancheta']: prob.append('prancheta ausente')
+    if not url.split('#')[0].endswith(tela + '.dc.html'): prob.append('redirecionou para ' + url)
+    if tela in ('Main', 'H2-Home-Mobile') and 'dados.html' not in r['rodape']:
+        prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
+    # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
+    if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
+    if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
+    if tela.startswith('F3-FAQ-Eletronicos'): prob += problemas_f3_mmsi(pg)
+    if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
+    if not tela.startswith('Manual-'): prob += problemas_validade(pg, tela)
+    # P4B: o replay carregou (o filtro de «Failed to load resource» esconde o script ausente) e o SOS não o carregou
+    if tela in TELAS_SOS:
+        if r['replay'] != 'undefined': prob.append('o SOS carregou o CapitaoReplay (typeof %s): ele nunca lê a reprodução' % r['replay'])
+    elif r['replay'] != 'object': prob.append('typeof CapitaoReplay = %s (esperado object)' % r['replay'])
+    prob += problemas_faixa(tela, fixo, pg.evaluate(LE_FAIXA))
+    ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+    n_ach = sum(len(v) for v in ach.values())
+    if ach and tela not in PENDENTES_ROTULO and tela not in FORA_ATE_FASE_8:
+        prob.append('termo do §3 no texto da tela em t = %s (%s): %s' % (fixo, ' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:300]))
+    if fotos:
+        pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d%s.png' % (tela, tema, w, h, '' if fixo == '60' else '_' + fixo)))
+    ctx.close()
+    return prob, n_ach
+
+
+# A passada a 105 s (a janela do alarme, só AVISO): 2 tamanhos no tema escuro e o menor no claro, onde um número longo ou a faixa de alerta podem puxar rolagem lateral
+def tamanhos_105(tela):
+    t = [(360, 640), (844, 390)] if eh_app(tela) else [(1024, 768), (1440, 900)]
+    return [('escuro', t[0]), ('escuro', t[1]), ('claro', t[0])]
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     fotos = '--fotos' in sys.argv
@@ -510,47 +671,16 @@ def main():
     t0 = time.time()
     with sync_playwright() as p:
         b = p.chromium.launch(channel='msedge', headless=True)
+        ach_total = {}   # tela → quantos termos do §3 ela mostrou em todas as rodadas (os instantes 60 s e 105 s): a lista PENDENTES_ROTULO só encolhe
         for tema in (() if so_offline else ('escuro', 'claro')):
             for tela in lista:
-                tamanhos = APP if eh_app(tela) else WEB
-                for (w, h) in tamanhos:
+                for (w, h) in (APP if eh_app(tela) else WEB):
                     total += 1
-                    movel = eh_app(tela)  # celular, inclusive deitado (844×390): toque + UA móvel
-                    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
-                                        is_mobile=movel, has_touch=movel, service_workers='block')
-                    ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.tema.v1', '" + tema + "');localStorage.setItem('capitao.plataforma.v1', '" + ('app' if eh_app(tela) else 'web') + "');")
-                    pg = ctx.new_page()
-                    erros = []
-                    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
-                    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
-                    pg.goto(BASE + tela + '.dc.html', wait_until='load')
-                    try:
-                        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
-                    except Exception:
-                        erros.append('prancheta não desenhou em 15 s')
-                    pg.wait_for_timeout(900)
-                    r = pg.evaluate(CHECA)
-                    url = pg.url
-                    prob = []
-                    if erros: prob += erros
-                    if r['lateral'] > 1: prob.append('rolagem lateral de %d px' % r['lateral'])
-                    if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
-                    if not r['prancheta']: prob.append('prancheta ausente')
-                    if not url.split('#')[0].endswith(tela + '.dc.html'): prob.append('redirecionou para ' + url)
-                    if tela in ('Main', 'H2-Home-Mobile') and 'dados.html' not in r['rodape']:
-                        prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
-                    # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
-                    if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
-                    if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
-                    if tela.startswith('F3-FAQ-Eletronicos'): prob += problemas_f3_mmsi(pg)
-                    if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
-                    if not tela.startswith('Manual-'): prob += problemas_validade(pg, tela)
-                    if fotos:
-                        pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (tela, tema, w, h)))
+                    prob, n_ach = roda_tela(b, tela, tema, w, h, '60', fotos)
+                    ach_total[tela] = ach_total.get(tela, 0) + n_ach
                     if prob:
                         falhas.append({'tela': tela, 'tema': tema, 'tam': '%dx%d' % (w, h), 'prob': prob})
                         print('FALHA', tela, tema, '%dx%d' % (w, h), ' | '.join(prob))
-                    ctx.close()
             for nome in paginas:
                 end, com_sessao = PAGINAS[nome]
                 for (w, h) in WEB + APP:
@@ -559,6 +689,7 @@ def main():
                     ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
                                         is_mobile=movel, has_touch=movel, service_workers='block')
                     ctx.add_init_script((SESSAO + ';' if com_sessao else '') + "localStorage.setItem('capitao.tema.v1', '" + tema + "');")
+                    aplica_mut(ctx)
                     pg = ctx.new_page()
                     erros = []
                     pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
@@ -571,6 +702,8 @@ def main():
                     if r['deform']: prob.append('deformado: ' + '; '.join(r['deform'][:4]))
                     if not pg.url.split('#')[0].endswith(end): prob.append('redirecionou para ' + pg.url)
                     prob += problemas_selo(nome, r)
+                    ach = achados_termos(nome, pg.evaluate(LE_TEXTOS))   # P4B: a mesma varredura do §3 (a página não lê o replay: um instante só)
+                    if ach: prob.append('termo do §3 no texto da página (%s): %s' % (' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:300]))
                     # o texto da prévia do link (WhatsApp, busca): meta description, og: e twitter:, que o innerText não lê
                     metas = pg.evaluate("""() => [...document.querySelectorAll('meta[name="description"],meta[property^="og:"],meta[name^="twitter:"]')]
   .map((m) => (m.getAttribute('name') || m.getAttribute('property')) + ': ' + (m.getAttribute('content') || ''))""")
@@ -583,6 +716,9 @@ def main():
                         m = pg.evaluate(MEDE_LOGIN)
                         if h >= 640 and (m['go'] is None or m['go'] > h): prob.append('ENTRAR fora da 1ª tela (borda %s > %d)' % (m['go'], h))
                         if h >= 844 and (m['credito'] is None or m['credito'] > h): prob.append('crédito cortado (borda %s > %d)' % (m['credito'], h))
+                        prob += problemas_login_sos(m['sos'], movel, h)
+                    if nome == 'index' and 'Alerta crítico' not in pg.evaluate("() => document.body.innerText"):
+                        prob.append('a lista não tem a linha «Alerta crítico» (C3): o «Modelo de alerta crítico» saiu na Fase 4')
                     if nome == 'dados':
                         m = pg.evaluate(MEDE_DADOS)
                         esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
@@ -599,6 +735,30 @@ def main():
                         print('FALHA', nome, tema, '%dx%d' % (w, h), ' | '.join(prob))
                     ctx.close()
         if not so_offline:
+            for tela in lista:   # a passada a 105 s: a janela do alarme (só AVISO), com a faixa de alerta
+                for tema, (w, h) in tamanhos_105(tela):
+                    total += 1
+                    prob, n_ach = roda_tela(b, tela, tema, w, h, '105', fotos)
+                    ach_total[tela] = ach_total.get(tela, 0) + n_ach
+                    if prob:
+                        falhas.append({'tela': tela, 'tema': tema + ' · t = 105 s', 'tam': '%dx%d' % (w, h), 'prob': prob})
+                        print('FALHA', tela, tema, '%dx%d' % (w, h), 't = 105 s', ' | '.join(prob))
+            for tela in [t for t in lista if t in PENDENTES_ROTULO and ach_total.get(t, 0) == 0]:   # a lista só encolhe
+                total += 1
+                falhas.append({'tela': tela, 'tema': 'PENDENTES_ROTULO', 'prob': ['a tela não tem termo do §3 em t = 60 nem em t = 105: retire-a de PENDENTES_ROTULO']})
+                print('FALHA', tela, 'PENDENTES_ROTULO: a tela está limpa, retire-a da lista')
+            for tela in [t for t in lista if t in MUDA_SEM_FIXO]:   # sem congelar, a leitura anda (em 1,5 s)
+                total += 1
+                prob = teste_muda_sem_fixo(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'leitura viva', 'prob': prob})
+                    print('FALHA leitura viva', tela, ' | '.join(prob))
+            for tela in [t for t in ('A1-Ponte-Web', 'A2-Ponte-Mobile') if t in lista]:   # F06: o selo do coletor pela cor
+                total += 1
+                prob = teste_selo_coletor(b, tela)
+                if prob:
+                    falhas.append({'tela': tela, 'tema': 'selo do coletor', 'prob': prob})
+                    print('FALHA selo do coletor', tela, ' | '.join(prob))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -624,6 +784,11 @@ def main():
                     falhas.append({'tela': 'S2-SOS-Mobile', 'tema': 'reserva do React', 'prob': prob})
                     print('FALHA reserva do React', ' | '.join(prob))
             if 'login' in paginas:
+                total += 1
+                prob = teste_login_sos(b)
+                if prob:
+                    falhas.append({'tela': 'login', 'tema': 'SOS sem login', 'prob': prob})
+                    print('FALHA login · SOS sem login', ' | '.join(prob))
                 for nome, prob in teste_login(b).items():
                     total += 1
                     if prob:
@@ -661,6 +826,152 @@ def main():
     with open(os.path.join(RAIZ, 'testes', 'saida-ultima.json'), 'w', encoding='utf-8') as f:
         json.dump({'total': total, 'falhas': falhas}, f, ensure_ascii=False, indent=1)
     sys.exit(1 if falhas else 0)
+
+
+def problemas_login_sos(m, movel, h):
+    """O botão de SOS do login (SOS em todas as telas, PROMPT Fase 4): vermelho, S2 no celular e S1 no computador, à vista na 1ª tela, com alvo de 44 px e sem
+    passar da largura; o ENTRAR continua na 1ª tela a partir de 640 px (conferido ao lado, em MEDE_LOGIN)."""
+    if not m: return ['o login não tem o botão de SOS (a[href*="SOS-"])']
+    prob = []
+    esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
+    if m['href'] != esperado: prob.append('SOS do login leva a %r (esperado %s)' % (m['href'], esperado))
+    if not m['txt'].startswith('SOS') or m['aria'] != 'SOS — emergência': prob.append('SOS do login com texto %r e aria-label %r' % (m['txt'], m['aria']))
+    if m['w'] < 43.5 or m['h'] < 43.5: prob.append('SOS do login com alvo de %.0f×%.0f px (o toque pede 44)' % (m['w'], m['h']))
+    if m['topo'] < 0 or m['fim'] > h + 0.5: prob.append('SOS do login fora da 1ª tela (%.0f a %.0f de %d)' % (m['topo'], m['fim'], h))
+    if m['esq'] < 0 or m['dir'] > m['vw'] + 0.5: prob.append('SOS do login passa da largura (%.0f a %.0f de %d)' % (m['esq'], m['dir'], m['vw']))
+    cor = [int(x) for x in re.findall(r'\d+', m['cor'])[:3]]
+    if len(cor) != 3 or not (cor[0] > 150 and cor[0] > cor[1] + 80 and cor[0] > cor[2] + 80): prob.append('SOS do login não é vermelho: %s' % m['cor'])
+    return prob
+
+
+def teste_login_sos(b):
+    """O SOS do login abre sem login (nenhuma sessão): a tela de emergência certa para o aparelho, com o roteiro do canal 16, sem voltar ao login."""
+    prob = []
+    for (w, h), movel in (((1440, 900), False), ((390, 844), True)):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+        aplica_mut(ctx)
+        pg = ctx.new_page()
+        erros = []
+        pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+        pg.goto(BASE + 'login.html', wait_until='load')
+        pg.click('a[href*="SOS-"]')
+        esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
+        try:
+            pg.wait_for_function("() => /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
+        except Exception:
+            prob.append('%dx%d: o SOS do login não abriu o roteiro (url %s)' % (w, h, pg.url))
+        if not pg.url.split('#')[0].endswith(esperado): prob.append('%dx%d: o SOS do login abriu %s (esperado %s, sem passar pelo login)' % (w, h, pg.url, esperado))
+        if erros: prob.append('%dx%d: erro de script %s' % (w, h, erros[0]))
+        ctx.close()
+    return prob
+
+
+# A leitura da tela anda sem o replay congelado (P4B): em 1,5 s o texto (ou o aria-label/title) da tela muda (o tique é de 1 s). A C3 vira alerta vivo na Fase 4: até lá está em
+# PENDENTES_MUDA e, se já mudar, reprova (retire-a da lista).
+LE_MUDA = """() => ({ t: document.body.innerText, a: [...document.querySelectorAll('[aria-label],[title]')].map((e) => (e.getAttribute('aria-label') || '') + '|' + (e.title || '')).join('~') })"""
+
+
+def teste_muda_sem_fixo(b, tela):
+    movel = eh_app(tela)
+    w, h = (390, 844) if movel else (1440, 900)
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+    ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.plataforma.v1', '" + ('app' if movel else 'web') + "');")   # sem o 'capitao.replay.fixo': o replay anda
+    aplica_mut(ctx)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    try:
+        pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception:
+        erros.append('prancheta não desenhou em 15 s')
+    pg.wait_for_timeout(2500)
+    fixo = pg.evaluate("() => { try { return localStorage.getItem('capitao.replay.fixo'); } catch (e) { return 'erro'; } }")
+    mudou = False
+    for _ in range(3):   # um tique de 1 s cai dentro de qualquer janela de 1,5 s; a repetição só cobre o valor que por acaso não mudou no segundo
+        a = pg.evaluate(LE_MUDA)
+        pg.wait_for_timeout(1500)
+        if a != pg.evaluate(LE_MUDA):
+            mudou = True
+            break
+    ctx.close()
+    prob = list(erros)
+    if fixo: prob.append('o teste não vale: o replay estava fixado (%r)' % fixo)
+    if tela in PENDENTES_MUDA:
+        if mudou: prob.append('a leitura já muda em 1,5 s sem congelar: retire a tela de PENDENTES_MUDA')
+    elif not mudou:
+        prob.append('a leitura não mudou em 1,5 s sem congelar o replay (3 tentativas): o quadro do replay não chega à tela')
+    return prob
+
+
+# F06 — selo do coletor pela cor: verde (e LED que pulsa) com o replay ao vivo; amarelo (LED parado, «Última leitura · dd/mm HH:MM») quando só há a última leitura salva:
+# com a flag D.simulacao desligada com a página aberta, e com o capitao-replay.js que não carregou (a reprodução falhou). Volta a verde quando a flag volta.
+LE_SELO = """() => { const L = window.CapitaoMoldura.leitura(), D = window.CapitaoDados, pil = document.querySelector('[data-cpm=pilula]'), led = document.querySelector('capitao-topo-app [data-cpm=led]');
+  const bola = pil ? pil.firstElementChild : led ? led.firstElementChild : null, cs = bola ? getComputedStyle(bola) : null, S = D.snapshot || {};
+  return { vivo: L.vivo, rotulo: L.rotulo, texto: pil ? pil.innerText : led ? led.getAttribute('aria-label') : '', titulo: pil ? pil.title : led ? led.title : '', cor: cs ? cs.backgroundColor : '',
+    pulsa: !!(bola && bola.classList.contains('cpm-led')), ultima: 'Última leitura · ' + String(S.quando || '').slice(0, 5) + ' ' + (S.hora || ''), replay: typeof window.CapitaoReplay }; }"""
+
+
+def cor_do_selo(rgb):
+    c = [int(x) for x in re.findall(r'\d+', rgb or '')[:3]]
+    if len(c) != 3: return '?'
+    if c[1] > c[0] + 30 and c[1] > c[2]: return 'verde'
+    if c[0] > c[1] > c[2] and c[0] - c[2] > 60: return 'amarelo'
+    return '?'
+
+
+def teste_selo_coletor(b, tela):
+    movel = eh_app(tela)
+    w, h = (390, 844) if movel else (1440, 900)
+    tema = 'claro' if movel else 'escuro'   # os dois temas ficam cobertos (a A1 no escuro, a A2 no claro)
+    prob = []
+
+    def abre(sem_replay):
+        ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+        ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.tema.v1', '" + tema + "');localStorage.setItem('capitao.plataforma.v1', '" + ('app' if movel else 'web') + "');"
+                            "try { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {}")
+        aplica_mut(ctx)
+        if sem_replay:
+            ctx.route('**/capitao-replay.js', lambda rt: rt.abort('connectionrefused'))
+        pg = ctx.new_page()
+        erros = []
+        pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+        pg.goto(BASE + tela + '.dc.html', wait_until='load')
+        pg.wait_for_function("() => document.querySelector('capitao-theme-toggle button') && window.CapitaoMoldura", timeout=15000)
+        pg.wait_for_timeout(1500)
+        return ctx, pg, erros
+
+    def le(pg):
+        return pg.evaluate(LE_SELO)
+
+    def confere(rot, r, vivo):
+        cor = cor_do_selo(r['cor'])
+        if r['vivo'] is not vivo: prob.append('%s: leitura().vivo = %s (esperado %s)' % (rot, r['vivo'], vivo))
+        if cor != ('verde' if vivo else 'amarelo'): prob.append('%s: o LED é %s (%s), esperado %s' % (rot, cor, r['cor'], 'verde' if vivo else 'amarelo'))
+        if r['pulsa'] is not vivo: prob.append('%s: o LED %s (verde pulsa, amarelo fica parado)' % (rot, 'pulsa' if r['pulsa'] else 'não pulsa'))
+        if vivo:
+            if not re.fullmatch(r'Ao vivo · \d\d:\d\d:\d\d', r['texto'].strip()) : prob.append('%s: o selo diz %r (esperado «Ao vivo · HH:MM:SS»)' % (rot, r['texto']))
+        elif r['texto'].strip() != r['ultima']:
+            prob.append('%s: o selo diz %r (esperado «%s»)' % (rot, r['texto'], r['ultima']))
+        if not vivo and re.search(r'snapshot|desligad|fixa|demo', r['texto'] + ' ' + r['titulo'], re.I): prob.append('%s: o selo ou a dica usa palavra de rótulo: %r %r' % (rot, r['texto'], r['titulo']))
+
+    ctx, pg, erros = abre(False)
+    confere('replay ao vivo', le(pg), True)
+    pg.evaluate("() => { window.CapitaoDados.simulacao = false; window.dispatchEvent(new CustomEvent('capitao-sessao')); }")
+    pg.wait_for_timeout(300)
+    confere('replay desligado (D.simulacao false)', le(pg), False)
+    pg.evaluate("() => { window.CapitaoDados.simulacao = true; window.dispatchEvent(new CustomEvent('capitao-sessao')); }")
+    pg.wait_for_timeout(300)
+    confere('replay de volta', le(pg), True)
+    if erros: prob.append('erro de script: ' + erros[0])
+    ctx.close()
+    ctx, pg, erros = abre(True)
+    r = le(pg)
+    if r['replay'] != 'undefined': prob.append('o teste não vale: o capitao-replay.js carregou (typeof %s)' % r['replay'])
+    confere('replay que falhou ao carregar', r, False)
+    if erros: prob.append('sem o capitao-replay.js: erro de script ' + erros[0])
+    ctx.close()
+    return prob
 
 
 def teste_sem_unpkg(b, tela):
@@ -714,7 +1025,7 @@ LE_CLIMA = """() => {
   const r = el.getBoundingClientRect(), hora = el.querySelector('b').getBoundingClientRect(), vr = vento ? vento.getBoundingClientRect() : null;
   return { prob, lateral: de.scrollWidth - de.clientWidth, vento: vento ? vento.textContent : null, titulo: vento ? vento.title : '',
            titulos: links.map((a) => a.title), links: links.map((a) => [a.href, a.target, a.rel]), texto: el.textContent,
-           duasLinhas: !!vr && vr.top > hora.bottom - 1, altura: r.height / (H.height || 1) };
+           duasLinhas: !!vr && vr.top > hora.bottom - 1, altura: r.height / (H.height || 1), local: (window.CapitaoDados.posicaoRef || {}).nome };
 }"""
 
 
@@ -732,6 +1043,7 @@ def teste_clima(b, tela):
         ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None,
                             is_mobile=movel, has_touch=movel, service_workers='block')
         ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.tema.v1', '" + tema + "');")
+        aplica_mut(ctx)
         if salva:  # leitura salva (sem a data e a hora, que o próprio navegador põe: dia no fuso do barco, em = 3 h atrás)
             ctx.add_init_script("(() => { const c = %s; c.em = Date.now() - 3 * 3600e3; localStorage.setItem('capitao.clima.v1', JSON.stringify(c)); })()" % json.dumps(salva))
         pedidos = []
@@ -778,6 +1090,12 @@ def teste_clima(b, tela):
                 prob.append(tag + ': toques do clima, vento e maré não abrem o windy.com na referência em nova aba: %s' % r['links'])
             if 'ECMWF via Open-Meteo, lida às' not in r['titulo'] or 'até 12 nós de NE, rajadas até 19 nós' not in r['titulo']:
                 prob.append(tag + ': title do vento sem fonte e hora: ' + r['titulo'])
+            # P4B (§2.5): o lugar dos title é o D.posicaoRef.nome (não um nome escrito no código) e nenhum title leva termo do §3
+            prev = [t for t in r['titulos'] if t.startswith('Previsão de hoje')]   # (no celular a maré vem antes do clima: a ordem dos links muda)
+            if not r['local'] or len(prev) != 1 or any(r['local'] not in t for t in (prev[0], r['titulo'])) or 'Balneário Camboriú: ' in r['titulo']:
+                prob.append(tag + ': os title do clima e do vento não dizem o lugar de D.posicaoRef.nome (%r): %s' % (r['local'], r['titulos'][:3]))
+            ach = achados_termos('clima', '\n'.join(r['titulos']))
+            if ach: prob.append(tag + ': termo do §3 nos title do clima, do vento ou da maré: %s' % ach)
             if r['prob']: prob.append(tag + ': ' + '; '.join(r['prob'][:4]))
             if r['lateral'] > 1: prob.append(tag + ': rolagem lateral de %d px' % r['lateral'])
             if movel and not r['duasLinhas']: prob.append(tag + ': no celular o vento vai na 2ª linha')
@@ -792,7 +1110,12 @@ def teste_clima(b, tela):
     else:
         if r['vento'] != '—/—KT': prob.append('sem rede, sem leitura de hoje: vento %r (esperado —/— KT)' % r['vento'])
         if any(ch.isdigit() for ch in r['texto'][5:]): prob.append('sem rede, sem leitura de hoje: número fora da hora (HH:MM): %r' % r['texto'])
-        if 'SEM DADOS' not in r['titulo']: prob.append('sem rede: title do vento sem SEM DADOS: ' + r['titulo'])
+        # P4B (§2.5): sem rede e sem leitura de hoje, os três title dizem a frase de tempo e maré sem conexão (com a hora da última leitura salva), nunca SEM DADOS
+        for t in r['titulos']:
+            if 'Previsão e maré: sem conexão agora (última às ' + r['hora_salva'] + ') — confira o boletim da Marinha antes de sair' not in t:
+                prob.append('sem rede: title sem a frase do §2.5 com a última leitura às %s: %s' % (r['hora_salva'], t))
+        ach = achados_termos('clima', '\n'.join(r['titulos']))
+        if ach: prob.append('sem rede: termo do §3 nos title: %s' % ach)
     # sem rede com a leitura salva de hoje: ela, com a hora dela
     r, _ = abre(w, h, 'claro', 'sem rede', {'dia': hoje, 'max': 26, 'min': 17, 'vento': 8.4, 'raj': 14.6, 'dir': 200, 'modelo': 'ECMWF'})
     if r is None:
@@ -1503,6 +1826,7 @@ def teste_offline(b, lista, paginas=()):
     prob = []
     ctx = b.new_context(viewport={'width': 1440, 'height': 900})
     ctx.add_init_script(SESSAO)
+    aplica_mut(ctx)
     unpkg = corta_unpkg(ctx)
     pg = ctx.new_page()
     pg.goto(BASE + 'Main.dc.html', wait_until='load')
@@ -1517,6 +1841,9 @@ def teste_offline(b, lista, paginas=()):
     guardou = pg.evaluate('(us) => Promise.all(us.map((u) => caches.match(u).then(Boolean)))', [REACT_LOCAL + arq for arq in REACT_ARQS])
     if guardou != [True, True]:
         prob.append('React fora do CORE do sw.js: a instalação não guardou %s' % ', '.join(arq for arq, g in zip(REACT_ARQS, guardou) if not g))
+    # P4B: o motor da reprodução também sai do cache da instalação (o cache HTTP do navegador esconderia a falta na abertura sem rede, como no React)
+    if not pg.evaluate('(u) => caches.match(u).then(Boolean)', BASE + 'capitao-replay.js'):
+        prob.append('capitao-replay.js fora do CORE do sw.js: a instalação não o guardou (offline a tela não anda)')
     # Cada tela e página desta rodada no cache da instalação (TELAS/CORE do sw.js), conferido no cache como o React: depois da
     # 1ª página aberta sem rede, o modo offline do Playwright nem sempre alcança o SW (que busca na rede e abre a tela), então só
     # a abertura sem rede abaixo deixava passar uma tela fora do cache — menos a 1ª da lista.
@@ -1550,6 +1877,14 @@ def teste_offline(b, lista, paginas=()):
                 prob.append(tela + ' offline sem: ' + ', '.join(falta))
             if tela in TELAS_SOS:
                 prob += [tela + ' offline: ' + x for x in problemas_barco_sos(pg2)]
+            # P4B: o motor da reprodução vem da cópia guardada (CORE do sw.js) e anda sem rede: o arquivo responde 200 e o quadro() não é nulo (o SOS só confere o arquivo)
+            rp = pg2.evaluate("""async () => { const st = await fetch('./capitao-replay.js').then((r) => r.status, () => 'falhou'); let q = null;
+  try { q = window.CapitaoReplay && typeof window.CapitaoReplay.quadro === 'function' ? window.CapitaoReplay.quadro() : null; } catch (e) {}
+  return { st, tipo: typeof window.CapitaoReplay, quadro: !!q && typeof q.sog_nos === 'number' }; }""")
+            if rp['st'] != 200: prob.append('%s offline: capitao-replay.js respondeu %s (esperado 200)' % (tela, rp['st']))
+            if tela in TELAS_SOS:
+                if rp['tipo'] != 'undefined': prob.append('%s offline: o SOS carregou o CapitaoReplay' % tela)
+            elif rp['tipo'] != 'object' or not rp['quadro']: prob.append('%s offline: CapitaoReplay.quadro() nulo (typeof %s)' % (tela, rp['tipo']))
         except Exception as e:
             prob.append(tela + ' offline: ' + str(e)[:120])
         if erros:
@@ -1575,6 +1910,20 @@ def teste_offline(b, lista, paginas=()):
         if erros5:
             prob.append('dados.html offline com erro: ' + erros5[0])
         pg5.close()
+    # P4B: o SOS do login abre sem rede e sem login: o login guardado (CORE) tem o botão e ele leva à tela de emergência do computador (S1), com o roteiro do canal 16
+    pg6 = ctx.new_page()
+    erros6 = []
+    pg6.on('pageerror', lambda e: erros6.append(str(e)[:200]))
+    try:
+        pg6.goto(BASE + 'login.html', wait_until='load', timeout=20000)
+        pg6.click('a[href*="SOS-"]', timeout=5000)
+        pg6.wait_for_function("() => /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
+        if not pg6.url.split('#')[0].endswith('S1-SOS-Web.dc.html'): prob.append('o SOS do login offline abriu %s (esperado S1-SOS-Web.dc.html, sem login)' % pg6.url)
+    except Exception as e:
+        prob.append('o SOS do login não abriu offline: ' + str(e)[:120])
+    if erros6:
+        prob.append('o SOS do login offline com erro: ' + erros6[0])
+    pg6.close()
     # lista (index.html): a assinatura sai da cópia guardada (CORE)
     pg4 = ctx.new_page()
     try:
