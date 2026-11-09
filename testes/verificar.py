@@ -857,7 +857,7 @@ def teste_login_sos(b):
         pg.click('a[href*="SOS-"]')
         esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
         try:
-            pg.wait_for_function("() => /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
+            pg.wait_for_function("() => document.body && /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
         except Exception:
             prob.append('%dx%d: o SOS do login não abriu o roteiro (url %s)' % (w, h, pg.url))
         if not pg.url.split('#')[0].endswith(esperado): prob.append('%dx%d: o SOS do login abriu %s (esperado %s, sem passar pelo login)' % (w, h, pg.url, esperado))
@@ -1917,7 +1917,7 @@ def teste_offline(b, lista, paginas=()):
     try:
         pg6.goto(BASE + 'login.html', wait_until='load', timeout=20000)
         pg6.click('a[href*="SOS-"]', timeout=5000)
-        pg6.wait_for_function("() => /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
+        pg6.wait_for_function("() => document.body && /CANAL 16|MAYDAY/.test(document.body.innerText)", timeout=15000)
         if not pg6.url.split('#')[0].endswith('S1-SOS-Web.dc.html'): prob.append('o SOS do login offline abriu %s (esperado S1-SOS-Web.dc.html, sem login)' % pg6.url)
     except Exception as e:
         prob.append('o SOS do login não abriu offline: ' + str(e)[:120])
