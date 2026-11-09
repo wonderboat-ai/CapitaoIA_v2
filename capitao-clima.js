@@ -8,11 +8,14 @@
      NÃO é a tábua oficial da Marinha (DHN): serve de referência rápida, não para passar em canal raso.
    Posição: a de referência do capitao-dados.js (centro de Balneário Camboriú — Open-Meteo Geocoding), não o GPS do barco.
    Sem internet: usa a última leitura salva (clima e vento do mesmo dia, com a hora da leitura; maré enquanto a série de 48 h
-   cobrir a hora). Sem dado → "—". Tocar no clima, no vento ou na maré abre o windy.com na posição de referência (nova aba).
+   cobrir a hora). Sem nenhuma → "—" e, no title, a frase do PROMPT §2.5: «Previsão e maré: sem conexão agora (última às HH:MM) — confira o boletim da
+   Marinha antes de sair». Nunca valor simulado: nem o ar e a água do quadro da reprodução entram aqui, só o Open-Meteo real ou a leitura salva dele.
+   O nome do lugar nos title é o de D.posicaoRef.nome. Tocar no clima, no vento ou na maré abre o windy.com na posição de referência (nova aba).
    Celular (tamanho < 13): duas linhas — hora e maré em cima, temperatura e vento embaixo; numa linha só não cabe com o vento. */
 (function () {
   if (window.CapitaoClima) return;
   var D = window.CapitaoDados || {};
+  var SD = 'SEM DADOS';   // só do caminho null do ramo simulacao:false (sem posição de referência no D); o title do chip nunca o escreve
   var ref = D.posicaoRef || null;
   var POS = ref && typeof ref.lat === 'number' && typeof ref.lon === 'number' ? { lat: ref.lat, lon: ref.lon } : null;
   // A grade do modelo de mar (≈ 8 km) pode tratar a costa como terra: tenta a referência, a enseada e o mar aberto, nessa ordem.
@@ -111,6 +114,15 @@
     var m = c.modelo === 'ECMWF' ? 'ECMWF via Open-Meteo' : c.modelo ? 'melhor modelo do Open-Meteo (o ECMWF não respondeu)' : 'Open-Meteo';
     return m + (typeof c.em === 'number' ? ', lida às ' + horaDe(c.em) : '');
   }
+  // A hora da última leitura salva do clima ou da maré (de qualquer dia: o `em` que o próprio capitao-clima.js grava), «HH:MM»; '' se o aparelho nunca leu.
+  function ultima() {
+    var ms = 0;
+    [E.clima, E.mare].forEach(function (v) { if (v && typeof v.em === 'number' && isFinite(v.em) && v.em > ms) ms = v.em; });
+    return ms ? horaDe(ms) : '';
+  }
+  // Sem leitura de hoje (e sem rede ou ainda sem resposta): a frase do §2.5 — a mesma do cérebro (capitao-brain.js › semConexao).
+  function semConexao() { var h = ultima(); return 'Previsão e maré: sem conexão agora' + (h ? ' (última às ' + h + ')' : '') + ' — confira o boletim da Marinha antes de sair'; }
+  function onde() { return ref && ref.nome ? ' em ' + ref.nome : ''; }   // o lugar dos title: o nome da posição de referência (D.posicaoRef.nome), nunca um nome escrito aqui
   function metro(x) {
     var r = Math.round(x * 10) / 10; // −0,04 → "0,0m", nunca "-0,0m"
     return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r).toFixed(1).replace('.', ',') + 'm';
@@ -130,7 +142,7 @@
     if (!e || e.key === K.clima || e.key === K.mare) { E.clima = ler(K.clima); E.mare = ler(K.mare); avisa(); }
   });
 
-  window.CapitaoClima = { POS: POS, TZ: TZ, WINDY: WINDY, hora: hora, horaDe: horaDe, clima: clima, rumo: rumo, fonte: fonte, mareAgora: mareAgora, mareProximas: mareProximas, metro: metro, atualiza: atualiza, fonteRef: ref ? ref.nome + ' — ' + ref.fonte : 'SEM DADOS' };
+  window.CapitaoClima = { POS: POS, TZ: TZ, WINDY: WINDY, hora: hora, horaDe: horaDe, clima: clima, rumo: rumo, fonte: fonte, mareAgora: mareAgora, mareProximas: mareProximas, metro: metro, atualiza: atualiza, fonteRef: ref ? ref.nome + ' — ' + ref.fonte : SD, ultima: ultima, semConexao: semConexao };
 
   if (!window.customElements || customElements.get('capitao-hora-clima')) return;
   var NS = 'http://www.w3.org/2000/svg';
@@ -183,18 +195,18 @@
       this._h.setAttribute('aria-label', 'Hora local ' + t);
       var c = clima();
       this._cMax.textContent = c ? grau(c.max) : '—'; this._cMin.textContent = c ? grau(c.min) : '—';
-      var tc = c ? 'Previsão de hoje em Balneário Camboriú · máx ' + grau(c.max) + ' · mín ' + grau(c.min) + ' (' + fonte(c) + ') — abrir o windy.com' : 'Previsão de hoje: SEM DADOS (sem internet ou sem posição) — abrir o windy.com';
+      var tc = c ? 'Previsão de hoje' + onde() + ' · máx ' + grau(c.max) + ' · mín ' + grau(c.min) + ' (' + fonte(c) + ') — abrir o windy.com' : semConexao() + ' — abrir o windy.com';
       this._c.title = tc; this._c.setAttribute('aria-label', tc);
       var temV = c && typeof c.vento === 'number', dr = temV ? rumo(c.dir) : '', temR = temV && typeof c.raj === 'number';
       this._wD.textContent = dr; this._wD.style.display = dr ? '' : 'none';
       this._wV.textContent = temV ? nos(c.vento) : '—'; this._wR.textContent = temR ? nos(c.raj) : '—';
-      var tw = temV ? 'Vento previsto hoje em Balneário Camboriú: até ' + nos(c.vento) + ' nós' + (dr ? ' de ' + dr : '') +
-        (temR ? ', rajadas até ' + nos(c.raj) + ' nós' + (c.rajModelo ? ' (rajada: melhor modelo do Open-Meteo — o ECMWF não trouxe)' : '') : ', rajadas: SEM DADOS') +
-        ' (' + fonte(c) + ') — abrir o windy.com' : 'Vento previsto: SEM DADOS' + (c ? ' (a leitura de hoje não traz o vento)' : ' (sem internet ou sem posição)') + ' — abrir o windy.com';
+      var tw = temV ? 'Vento previsto hoje' + onde() + ': até ' + nos(c.vento) + ' nós' + (dr ? ' de ' + dr : '') +
+        (temR ? ', rajadas até ' + nos(c.raj) + ' nós' + (c.rajModelo ? ' (rajada: melhor modelo do Open-Meteo — o ECMWF não trouxe)' : '') : ', sem previsão de rajada') +
+        ' (' + fonte(c) + ') — abrir o windy.com' : (c ? 'Vento previsto: a leitura de hoje não traz o vento — confira o boletim da Marinha antes de sair' : semConexao()) + ' — abrir o windy.com';
       this._w.title = tw; this._w.setAttribute('aria-label', tw);
       var x = mareAgora();
       this._mV.textContent = x == null ? '—' : metro(x);
-      var tm = x == null ? 'Maré agora: SEM DADOS — abrir o windy.com' : 'Maré agora ' + metro(x) + ' em relação ao nível médio do mar (modelo Open-Meteo, não é a tábua da Marinha) — abrir o windy.com';
+      var tm = x == null ? semConexao() + ' — abrir o windy.com' : 'Maré agora ' + metro(x) + ' em relação ao nível médio do mar (modelo Open-Meteo, não é a tábua oficial da Marinha (DHN)) — abrir o windy.com';
       this._m.title = tm; this._m.setAttribute('aria-label', tm);
     }
   });

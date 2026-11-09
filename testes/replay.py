@@ -33,7 +33,7 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
 - a moldura em nós Text (P2B; PROMPT Fase 2 «Desempenho», CONTRATO §6.6): em 10 s de replay, a 360×640 nas telas de app e a 1440×900 nas web (3 telas por padrão: A2, A1 e E1; as
   30 com `--moldura`), o `<capitao-theme-toggle>` e o avatar são o mesmo nó (isSameNode), o foco do teclado fica no botão do tema, o `fit()` roda no máximo 2 vezes, nenhuma long task
   passa de 50 ms e nenhuma mutação childList entra na moldura (só troca de caractere dos textos que mudaram); com o instante fixado, 3 tiques não mexem em nada (nem um caractere ou
-  atributo: só se escreve quando o valor mudou); a moldura mostra o `CapitaoMoldura.leitura()` do tique, e o estado montado aos poucos (LED que vira, selo DEMO que entra e sai,
+  atributo: só se escreve quando o valor mudou); a moldura mostra o `CapitaoMoldura.leitura()` do tique, e o estado montado aos poucos (LED que vira de verde para amarelo e volta,
   título e href do topo) é igual ao de uma moldura montada do zero naquele estado; Main, H2 e E1 só dão setState quando o texto exibido muda (o React.Component.prototype.setState
   contado: livre, nunca mais que um por tique; instante fixado, nenhum); 6 mutantes da P2B que esses testes têm de acusar;
 - a API de alertas (capitao-alertas.js; P2C, F05; CONTRATO §1.24): a lista vem do `alarmes()` do replay e do catálogo `D.replay.alertas`, só dentro da janela de 99 a 116 s, um id por
@@ -68,6 +68,7 @@ Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "
 """
 import copy
 import json
+import math
 import os
 import random
 import re
@@ -1269,7 +1270,7 @@ def moldura(b):
             confere_moldura(nome, larg[nome], r)
 
 
-# O estado montado aos poucos (tiques, LED que vira, selo DEMO que entra e sai, título e href do topo) tem de ser IGUAL ao de uma moldura montada do zero naquele estado:
+# O estado montado aos poucos (tiques, LED que vira de verde para amarelo e volta, D.demo que nunca põe selo, título e href do topo) tem de ser IGUAL ao de uma moldura montada do zero naquele estado:
 # o innerHTML (sem o marcador data-cpm) e o style do elemento. O instante fica fixado em 60 s para o quadro não mudar entre as duas montagens.
 MOLDURA_ESTADOS = """async () => {
   const D = window.CapitaoDados, M = window.CapitaoMoldura, sel = 'capitao-cabecalho,capitao-faixa,capitao-topo-app', limpa = (h) => h.replace(/ data-cpm="[^"]*"/g, '');
@@ -1303,7 +1304,7 @@ MOLDURA_ESTADOS = """async () => {
 
 
 def moldura_estados(b):
-    print('Moldura: o estado montado aos poucos é igual ao montado do zero (replay, leitura fixa, selo DEMO, título do topo)')
+    print('Moldura: o estado montado aos poucos é igual ao montado do zero (replay, última leitura, D.demo sem selo, título do topo)')
     for nome, w, h in (('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 360, 640)):
         pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS + "\ntry { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {}", viewport={'width': w, 'height': h}, espera=ESPERA_MOLDURA)
         pg.wait_for_timeout(2500)
@@ -1320,16 +1321,236 @@ def moldura_estados(b):
                 ok('%s: LED ao vivo, sem selo DEMO' % rot, e['vivo'] is True and not e['demo'], e)
             if e['rot'] == 'sem replay (leitura fixa)':
                 ok('%s: LED de leitura fixa (vivo false), sem selo' % rot, e['vivo'] is False and not e['demo'], e)
-            if e['rot'] == 'leitura fixa com D.demo' and w >= 1000:   # só o cabeçalho e a faixa da web têm o selo; o topo do app não
-                ok('%s: o selo DEMO entrou (cabeçalho e faixa mostram DEMO)' % rot, e['demo'] is True, e)
+            if e['rot'] in ('leitura fixa com D.demo', 'replay com D.demo'):   # Fase 4 (P4B): a moldura não tem mais o selo DEMO (PROMPT §1, decisão b): D.demo e D.aviso não escrevem nada
+                ok('%s: D.demo e D.aviso não põem selo nenhum (o texto da moldura não diz DEMO)' % rot, e['demo'] is False, e)
             if e['rot'] == 'replay sem D.demo':
-                ok('%s: o selo DEMO saiu' % rot, e['demo'] is False, e)
+                ok('%s: sem selo DEMO' % rot, e['demo'] is False, e)
             if e['rot'].startswith('sem dado nenhum'):
                 ok('%s: sem dado, o texto mostra «—» ou SEM DADOS e nunca NaN, undefined nem [object' % rot, ('—' in e['texto'] or 'SEM DADOS' in e['texto']) and not re.search(r'NaN|undefined|\[object', e['texto']), e['texto'])
             if e['rot'].startswith('título'):
                 ok('%s: o título e o voltar do topo acompanham os atributos' % rot, e['topo']['texto'].split('\n')[0].strip() == 'Outro título' and e['topo']['href'] == 'A1-Ponte-Web.dc.html', e['topo'])
         ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
         fecha(pg)
+
+
+# ——— a moldura lê o QUADRO do instante (P4B; PROMPT Fase 4 «capitao-moldura.js», CONTRATO §1.22–§1.23) ———
+# Diesel, estado, local, posição e hora (com segundos) da moldura são os do quadro do instante fixado, não os do D.snapshot de 26/09, e o texto dela não carrega
+# nenhum rótulo do §3 (nem «Snapshot», «DEMO», «SEM DADOS»). O esperado é refeito aqui em Python (o port `confere.em`), com as casas do D.campos, não lido da tela.
+MOLDURA_QUADRO_JS = """() => { const A = window.CapitaoAgora, R = window.CapitaoReplay, T = (s) => Array.from(document.querySelectorAll(s)).map((e) => e.innerText).join('\\n');
+  const led = document.querySelector('capitao-topo-app [role=img]'), pil = document.querySelector('[data-cpm=pilula]'), ms = R.agora();
+  return { ms, anc: A.ancora(ms), cab: T('capitao-cabecalho'), faixa: T('capitao-faixa'), led: led ? led.getAttribute('aria-label') + '|' + led.title : '', pil: pil ? pil.title : '' }; }"""
+
+
+def br_num(x, casas, mil=False):
+    """O número como a tela mostra (floor(x·10^c + 0,5)), em pt-BR, com o ponto de milhar se `mil`."""
+    v = C.arred(x, casas)
+    s = ('%.*f' % (casas, abs(v))).replace('.', ',')
+    if mil:
+        i, _, dec = s.partition(',')
+        s = '{:,}'.format(int(i)).replace(',', '.') + (',' + dec if dec else '')
+    return ('-' if v < 0 else '') + s
+
+
+def graus_min(v, pos, neg, g):
+    """O `grausMin` do CapitaoAgora (59,995′ já é o grau seguinte): 26°59,46'S / 048°36,71'W."""
+    a = abs(v)
+    gr = math.floor(a)
+    mi = math.floor((a - gr) * 6000 + 0.5) / 100
+    if mi >= 60:
+        gr, mi = gr + 1, 0
+    return str(gr).zfill(g) + '°' + ('0' if mi < 10 else '') + ('%.2f' % mi).replace('.', ',') + "'" + (neg if v < 0 else pos)
+
+
+def moldura_esperada(q, hora):
+    """O texto que a moldura tem de mostrar para o quadro `q` do replay (diesel em litros e %, estado e local, posição e hora)."""
+    cap = D['embarcacao']['tanques']['diesel_l']
+    return {'faixa': ['SOG %s NÓS' % br_num(q['sog_nos'], 1), 'PROA %03d°' % (math.floor(((q['proa_graus'] % 360) + 360) % 360 + 0.5) % 360), 'VENTO %s NÓS' % br_num(q['vento_verdadeiro_nos'], 1),
+                      '24 V %s V' % br_num(q['bateria_0_tensao_v'], 2), 'ÁGUA DOCE %s %%' % br_num(q['tanque_agua_pct'], 1),
+                      'DIESEL %s L (%s %%)' % (br_num(q['diesel_litros'], 0, True), br_num(C.arred(q['diesel_litros'] / cap * 100, 1), 1))],
+            'estado': ('%s · %s' % (q['estado'], re.sub(r'^enseada de ', '', q['local'], flags=re.I))).upper() + ' · ' + hora + ' · AO VIVO',
+            'cab_estado': '%s · %s' % (q['estado'], q['local']), 'pos': graus_min(q['lat'], 'N', 'S', 2) + ' ' + graus_min(q['lon'], 'E', 'W', 3),
+            'emb': 'Embarcação %s · registro %s' % (D['embarcacao']['nome'], D['embarcacao']['registro']), 'rotulo': 'Ao vivo · ' + hora}
+
+
+TELAS_MOLDURA_QUADRO = (('A1-Ponte-Web', 1440, 900), ('C1-Leme-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('G3-Diario-Mobile', 390, 844))
+
+
+def moldura_quadro(b, fixos=('60', '105')):
+    print('Moldura: diesel, estado, local, posição e hora vêm do quadro do instante (60 s e 105 s), sem rótulo do §3')
+    termos = C.carrega_termos()
+    for nome, w, h in TELAS_MOLDURA_QUADRO:
+        for fixo in fixos:
+            pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init="try { localStorage.setItem('capitao.replay.fixo', '%s'); } catch (e) {}" % fixo, viewport={'width': w, 'height': h}, espera=ESPERA_MOLDURA)
+            pg.wait_for_timeout(1500)
+            r = pg.evaluate(MOLDURA_QUADRO_JS)
+            erros = list(pg.erros)
+            fecha(pg)
+            q = C.em(P, (r['ms'] - r['anc']) // 1000, ancora_s=r['anc'] // 1000)   # o segundo do dia de bordo (desde a âncora de 07:00)
+            hora = datetime.fromtimestamp(r['ms'] / 1000, BR).strftime('%H:%M:%S')
+            e = moldura_esperada(q, hora)
+            rot = '%s (%d×%d, instante %s s = %s)' % (nome, w, h, fixo, hora)
+            if w >= 1000:
+                faltam = [x for x in e['faixa'] if x not in r['faixa']]
+                ok('%s: a faixa mostra os valores do quadro (SOG, PROA, VENTO, 24 V, ÁGUA DOCE e DIESEL em litros e %%): %s' % (rot, ' · '.join(e['faixa'])), not faltam, (faltam, r['faixa']))
+                ok('%s: o estado e o local da faixa são os do quadro, com a hora do instante e «AO VIVO»: «%s»' % (rot, e['estado']), e['estado'] in r['faixa'], (e['estado'], r['faixa'][-160:]))
+                ok('%s: o cabeçalho mostra a embarcação e o registro, o estado e o local do quadro, a posição e «%s»' % (rot, e['rotulo']),
+                   all(x in r['cab'] for x in (e['emb'], e['cab_estado'], e['pos'], e['rotulo'])), (e, r['cab']))
+                ok('%s: a dica da pílula não fala de snapshot, coletor desligado nem leitura fixa' % rot, r['pil'] == 'Telemetria ao vivo — atualiza a cada segundo', r['pil'])
+            else:
+                ok('%s: o rótulo do LED (aria-label e title) é «%s», com os segundos do instante' % (rot, e['rotulo']), r['led'] == e['rotulo'] + '|' + e['rotulo'], r['led'])
+            achados = [(k, m.group(0)) for k, rx in termos.items() if k in ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL') for m in rx.finditer('\n'.join([r['cab'], r['faixa'], r['led'], r['pil']]))]
+            ok('%s: nenhum termo do §3 (ROTULOS, AUTENTICIDADE, VAZIOS, VISIVEL) na moldura' % rot, not achados, achados)
+            ok('%s: sem erro de script' % rot, not erros, erros)
+
+
+# ——— a faixa global de alerta (P4B; capitao-app.js; PROMPT Fase 4 «Faixa global de alerta»; PARIDADE F05) ———
+# Nas telas de verdade (A1 na web e A2 no app): some em 60 s e aparece em 105 s empurrando a prancheta (sem cobri-la) e volta ao normal; viva (relógio deslocado para a janela do alarme) o
+# texto troca sem mutação childList e sem fit() por segundo; o crítico (só plantado, no cenário alarme-critico injetado) vem primeiro, vermelho, assertivo, com «+N»; o alarme pedido
+# no chat (capitao.alarmes.v1) entra na lista, sempre AVISO, e leva à lista da Ponte; a CONVERSA aberta cala as regiões do leitor de tela mas a faixa fica; nunca fala, nunca grava, não tem timer.
+ESPIA_FALA_JS = "(() => { window.__falas = 0; try { const o = speechSynthesis.speak.bind(speechSynthesis); speechSynthesis.speak = function () { window.__falas++; return o.apply(this, arguments); }; } catch (e) {} })();"
+FAIXA_LE = """() => { const f = document.getElementById('capitao-faixa-alertas'), st = document.getElementById('capitao-faixa-status'), an = document.getElementById('capitao-faixa-anuncio'), lk = f && f.querySelector('a');
+  const art = [...document.querySelectorAll('#dc-root [style*="width: 1440px"],#dc-root [style*="width: 390px"],#dc-root [style*="width: 2380px"]')].find((c) => /px$/.test(c.style.width) && parseFloat(c.style.height) >= 600);
+  const r = f ? f.getBoundingClientRect() : null, p = art ? art.getBoundingClientRect() : null;
+  return { existe: !!f, oculta: f ? f.hidden : null, nivel: f ? f.getAttribute('data-nivel') : null, texto: f ? f.innerText : '', href: lk ? lk.getAttribute('href') : null, aria: lk ? lk.getAttribute('aria-label') : null,
+    fim: r ? r.bottom : 0, topoArt: p ? p.top : null, fundo: f ? getComputedStyle(f).backgroundColor : '', status: st ? st.textContent : null, anuncio: an ? an.textContent : null,
+    falas: window.__falas || 0, fit: window.__fit, ticks: window.__ticks, registro: Object.keys(localStorage).filter((k) => /^capitao\\.(diario|executado|tickets|tarefas)\\.v1$/.test(k)) }; }"""
+VP_WEB, VP_APP = {'width': 1440, 'height': 900}, {'width': 390, 'height': 844}
+ARREF_BE = {'id': 'arref_be', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'be', 'campo': 'motor_be_arref_c', 'valor': 91.2, 'limite': 88}
+ARREF_BB = {'id': 'arref_bb', 'nivel': 'aviso', 'sistema': 'motores', 'lado': 'bb', 'campo': 'motor_bb_arref_c', 'valor': 90.4, 'limite': 88}
+
+
+def abre_faixa(b, nome, vp, fixo=None, sobre=None, critico=False, pedidos=None, deslocamento=None):
+    init = MOLDURA_JS + ESPIA_FALA_JS
+    if fixo: init += "try { localStorage.setItem('capitao.replay.fixo', '%s'); } catch (e) {}" % fixo
+    if sobre is not None: init += "localStorage.setItem('capitao.replay.sobre', %s);" % json.dumps(json.dumps(sobre))
+    if pedidos is not None: init += "localStorage.setItem('capitao.alarmes.v1', %s);" % json.dumps(json.dumps(pedidos))
+    if deslocamento is not None: init += "(() => { const o = Date.now.bind(Date); Date.now = () => o() + %d; })();" % deslocamento
+    pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=init, depois="window.CapitaoDados.replay.cenario = 'alarme-critico';" if critico else '', viewport=vp, espera=ESPERA_MOLDURA)
+    pg.wait_for_timeout(1800)
+    return pg
+
+
+def desloca_para(fase_ms):
+    """O deslocamento do relógio (ms) que põe a página na fase `fase_ms` (ms desde a âncora de 07:00, mod 150 s) quando ela carrega."""
+    agora = datetime.now(BR)
+    anc = agora.replace(hour=7, minute=0, second=0, microsecond=0)
+    if agora < anc: anc -= timedelta(days=1)
+    return (fase_ms - int((agora - anc).total_seconds() * 1000)) % (VOLTA * 1000)
+
+
+def vermelho(rgb):
+    c = [int(x) for x in re.findall(r'\d+', rgb or '')[:3]]
+    return len(c) == 3 and c[0] > 150 and c[0] > c[1] + 80 and c[0] > c[2] + 80
+
+
+def faixa_global(b):
+    print('Faixa global de alerta (capitao-app.js): aparece e some com o alarme, empurra a prancheta, crítico plantado, alarme pedido, CONVERSA aberta, nunca fala nem grava')
+    for nome, vp in (('A1-Ponte-Web', VP_WEB), ('A2-Ponte-Mobile', VP_APP)):
+        rot = '%s (%d×%d)' % (nome, vp['width'], vp['height'])
+        ponte = 'A2-Ponte-Mobile.dc.html#alertas' if vp['width'] < 1000 else 'A1-Ponte-Web.dc.html#alertas'
+        # 1. 60 s → 105 s → 60 s no mesmo documento
+        pg = abre_faixa(b, nome, vp, fixo='60')
+        a = pg.evaluate(FAIXA_LE)
+        ok('%s: em 60 s (cruzeiro, sem alarme) não há faixa visível' % rot, not a['existe'] or a['oculta'], a)
+        top0 = a['topoArt']
+        pg.evaluate("() => { window.__fit = 0; window.CapitaoReplay.fixar(105); }")
+        pg.wait_for_timeout(1600)
+        c = pg.evaluate(FAIXA_LE)
+        al = pg.evaluate("() => { const x = window.CapitaoAlertas.ativos()[0]; return { id: x.id, texto: x.texto, hora: x.hora, detalhe: x.detalhe, nivel: x.nivel }; }")
+        ok('%s: ao entrar na janela do alarme (105 s) a faixa aparece com o AVISO «%s», «desde %s» e «ABRIR ›»' % (rot, al['texto'], al['hora']),
+           c['existe'] and not c['oculta'] and c['nivel'] == 'aviso' and al['texto'] in c['texto'] and ('desde ' + al['hora']) in c['texto'] and 'ABRIR' in c['texto'] and 'AVISO' in c['texto'], (c, al))
+        ok('%s: ABRIR leva a %s (o aria-label do link repete o alerta)' % (rot, al['detalhe']), c['href'] == al['detalhe'] == 'C3-Leme-Alerta.dc.html#alarme=arref_be' and al['texto'] in (c['aria'] or ''), (c['href'], c['aria']))
+        ok('%s: a faixa empurra a prancheta (começa em %s, a faixa termina em %s) e o fit() rodou no máximo 2 vezes (rodou %s)' % (rot, c['topoArt'], round(c['fim'], 1), c['fit']),
+           c['topoArt'] is not None and c['topoArt'] >= c['fim'] - 0.5 and c['fim'] >= 44 and c['fit'] <= 2, c)
+        ok('%s: não é crítico (sem o cenário alarme-critico): fundo da faixa não é vermelho e a região assertiva fica vazia' % rot, not vermelho(c['fundo']) and not c['anuncio'], c)
+        ok('%s: nunca fala (speechSynthesis.speak 0 vez) e não grava no registro (sem diário, Executado, tickets nem tarefas)' % rot, c['falas'] == 0 and c['registro'] == [], c)
+        ok('%s: o leitor de tela é avisado uma vez pela região educada (role=status), com o AVISO' % rot, bool(c['status']) and al['texto'] in c['status'] and 'Aviso' in c['status'], c['status'])
+        # instante fixado: o quadro não muda, então 3 tiques não podem mexer em nada da faixa (nem um caractere, atributo ou nó: só se escreve quando o valor mudou)
+        pg.evaluate("""() => { const f = document.getElementById('capitao-faixa-alertas'); window.__par = 0; window.__mof = new MutationObserver((rs) => { window.__par += rs.length; });
+          window.__mof.observe(f, { childList: true, subtree: true, characterData: true, attributes: true }); window.__ticks = 0; }""")
+        pg.wait_for_timeout(3300)
+        par = pg.evaluate("() => { window.__mof.disconnect(); return { n: window.__par, ticks: window.__ticks }; }")
+        ok('%s: com o instante fixado em 105 s, 3 tiques não mexem em nada da faixa (0 mutações; tiques: %d)' % (rot, par['ticks']), par['n'] == 0 and par['ticks'] >= 3, par)
+        pg.evaluate("() => { window.__fit = 0; window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(1600)
+        d_ = pg.evaluate(FAIXA_LE)
+        ok('%s: ao sair da janela a faixa some e a prancheta volta ao lugar de antes (%s → %s)' % (rot, c['topoArt'], d_['topoArt']), d_['oculta'] and abs(d_['topoArt'] - top0) <= 1 and d_['fit'] <= 2, (d_, top0))
+        ok('%s: sem erro de script' % rot, not pg.erros, pg.erros)
+        fecha(pg)
+        # 2. viva: o relógio deslocado para 100,4 s da volta (o alarme dura até 116 s): o texto troca por segundo, sem childList na faixa e sem fit() a cada tique
+        pg = abre_faixa(b, nome, vp, deslocamento=desloca_para(100400))
+        pg.evaluate("""() => { const f = document.getElementById('capitao-faixa-alertas'); window.__fx = { ini: f ? f.innerText : null, child: 0, dados: 0, textos: new Set() };
+          if (f) { const m = window.__fx; new MutationObserver((rs) => rs.forEach((r) => { if (r.type === 'childList') m.child++; else if (r.type === 'characterData') m.dados++; })).observe(f, { childList: true, subtree: true, characterData: true }); }
+          window.__fit = 0; window.__ticks = 0; window.addEventListener('capitao-telemetria', () => { const e = document.getElementById('capitao-faixa-alertas'); if (e && !e.hidden) window.__fx.textos.add(e.innerText); }); }""")
+        pg.wait_for_timeout(7000)
+        v = pg.evaluate("() => ({ fx: { ini: window.__fx.ini, child: window.__fx.child, dados: window.__fx.dados, n: window.__fx.textos.size }, fit: window.__fit, ticks: window.__ticks, f: document.getElementById('capitao-faixa-alertas') && !document.getElementById('capitao-faixa-alertas').hidden })")
+        ok('%s: ao vivo (%d tiques em 7 s), a faixa já estava aberta e o texto trocou %d vezes: sem mutação childList na faixa (só caracteres: %d) e o fit() rodou no máximo 2 vezes (%d)' % (rot, v['ticks'], v['fx']['n'], v['fx']['dados'], v['fit']),
+           v['f'] and v['fx']['ini'] and v['ticks'] >= 5 and v['fx']['n'] >= 2 and v['fx']['child'] == 0 and v['fx']['dados'] >= 1 and v['fit'] <= 2, v)
+        ok('%s: sem erro de script (ao vivo)' % rot, not pg.erros, pg.erros)
+        fecha(pg)
+        # 3. crítico (plantado no cenário alarme-critico injetado) e aviso mais novo: crítico primeiro, vermelho, «+1», região assertiva
+        crit = dict(ARREF_BE, nivel='critico', valor=96.4, limite=92, desde='2026-11-09T14:59:00Z')
+        pg = abre_faixa(b, nome, vp, fixo='60', critico=True, sobre={'alarmes': [dict(ARREF_BB, desde='2026-11-09T14:58:00Z'), crit]})
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: com um AVISO mais antigo e um CRÍTICO plantados, o crítico vem primeiro: «CRÍTICO», fundo vermelho, «+1», o outro some da frase' % rot,
+           c['existe'] and not c['oculta'] and c['nivel'] == 'critico' and 'CRÍTICO' in c['texto'] and 'Temperatura do motor BE: 96,4 °C' in c['texto'] and '+1' in c['texto'] and 'BB' not in c['texto'] and vermelho(c['fundo']), c)
+        ok('%s: o crítico novo sai uma vez na região assertiva (role=alert), com «e mais 1 alerta», e a região educada fica calada' % rot,
+           (c['anuncio'] or '').startswith('Alerta crítico: Temperatura do motor BE') and 'E mais 1 alerta' in c['anuncio'] and not c['status'] and c['falas'] == 0, c)
+        ok('%s: sem erro de script (crítico)' % rot, not pg.erros, pg.erros)
+        fecha(pg)
+        # 4. ordem entre avisos: o mais antigo primeiro
+        pg = abre_faixa(b, nome, vp, fixo='60', sobre={'alarmes': [dict(ARREF_BE, desde='2026-11-09T14:59:30Z'), dict(ARREF_BB, desde='2026-11-09T14:58:00Z')]})
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: dois AVISOS: o mais antigo (BB) vem primeiro e a faixa diz «+1»' % rot, c['existe'] and 'Temperatura do motor BB' in c['texto'] and '+1' in c['texto'] and c['nivel'] == 'aviso', c)
+        fecha(pg)
+        # 5. alarme pedido no chat (a Fase 3: capitao.alarmes.v1): AVISO, desdeTxt do cérebro, leva à lista da Ponte; sem começo conhecido vai para o fim
+        ped = [{'id': 'usr_1', 'campo': 'motor_bb_arref_c', 'op': '>', 'limite': 80, 'iso': '2026-11-09T10:00:00-03:00', 'who': 'Lucas', 'sim': True}]
+        pg = abre_faixa(b, nome, vp, fixo='60', pedidos=ped)
+        c = pg.evaluate(FAIXA_LE)
+        pa = pg.evaluate("() => window.CapitaoBrain.alarmesPedidosAtivos().map((x) => ({ id: x.id, texto: x.texto, desdeTxt: x.desdeTxt, nivel: x.nivel, detalhe: x.detalhe }))")
+        ok('%s: o alarme pedido no chat (#1, arrefecimento BB acima de 80 °C) está ativo em 60 s e a faixa o mostra como AVISO, com o desdeTxt do cérebro e «ABRIR» → %s' % (rot, ponte),
+           len(pa) == 1 and pa[0]['detalhe'] == '' and c['existe'] and not c['oculta'] and c['nivel'] == 'aviso' and pa[0]['texto'] in c['texto'] and pa[0]['desdeTxt'] in c['texto'] and c['href'] == ponte, (c, pa))
+        pg.evaluate("() => { window.CapitaoReplay.fixar(105); }")
+        pg.wait_for_timeout(1600)
+        c = pg.evaluate(FAIXA_LE)
+        pa = pg.evaluate("() => window.CapitaoBrain.alarmesPedidosAtivos().map((x) => ({ texto: x.texto, desdeTxt: x.desdeTxt, desdeMs: x.desdeMs }))")
+        primeiro = pa[0]['texto'] if pa and pa[0]['desdeMs'] is not None and pa[0]['desdeMs'] < pg.evaluate("() => window.CapitaoAlertas.ativos()[0].desdeMs") else None
+        ok('%s: em 105 s, com o alarme do replay e o pedido juntos, a faixa diz «+1» e começa pelo mais antigo (o pedido, que começou antes: %s)' % (rot, pa[0]['desdeTxt'] if pa else '?'),
+           primeiro is not None and primeiro in c['texto'] and '+1' in c['texto'] and c['href'] == ponte, (c, pa))
+        fecha(pg)
+        ped2 = [{'id': 'usr_2', 'campo': 'pressao_barometrica_hpa', 'op': '<', 'limite': 1040, 'iso': '2026-11-09T10:00:00-03:00', 'who': 'Lucas', 'sim': True}]
+        pg = abre_faixa(b, nome, vp, fixo='105', pedidos=ped2)
+        c = pg.evaluate(FAIXA_LE)
+        pa = pg.evaluate("() => window.CapitaoBrain.alarmesPedidosAtivos().map((x) => ({ texto: x.texto, desdeTxt: x.desdeTxt, desdeMs: x.desdeMs }))")
+        ok('%s: o alarme pedido que vale há mais de 160 s não tem começo conhecido («%s»): vai para o fim, atrás do alarme do replay (que dá a faixa e a ABRIR → C3)' % (rot, pa[0]['desdeTxt'] if pa else '?'),
+           pa and pa[0]['desdeMs'] is None and 'há mais de' in pa[0]['desdeTxt'] and 'Temperatura do motor BE' in c['texto'] and '+1' in c['texto'] and c['href'].startswith('C3-Leme-Alerta'), (c, pa))
+        fecha(pg)
+        # 6. CONVERSA aberta: a faixa fica (visível), a região do leitor de tela cala; fechada a conversa, ela diz
+        pg = abre_faixa(b, nome, vp, fixo='60')
+        pg.evaluate("() => { const x = document.createElement('div'); x.className = 'cpz on'; x.id = 'cpz-teste'; document.body.appendChild(x); window.CapitaoReplay.fixar(105); }")
+        pg.wait_for_timeout(1600)
+        c = pg.evaluate(FAIXA_LE)
+        ok('%s: com a CONVERSA aberta (.cpz.on) a faixa aparece e as duas regiões do leitor de tela ficam caladas' % rot, c['existe'] and not c['oculta'] and not c['status'] and not c['anuncio'], c)
+        pg.evaluate("() => { document.getElementById('cpz-teste').remove(); window.dispatchEvent(new CustomEvent('capitao-sessao')); }")
+        pg.wait_for_timeout(500)
+        c2 = pg.evaluate(FAIXA_LE)
+        ok('%s: fechada a conversa, a região educada diz o aviso que ficou calado' % rot, bool(c2['status']) and 'Aviso' in c2['status'], c2)
+        fecha(pg)
+
+
+def codigo_faixa():
+    print('O código da faixa global (capitao-app.js): sem timer, sem fala, sem registro, sem troca de tela; dentro das exclusões')
+    src = le('capitao-app.js')
+    i, j = src.index('// ——— Faixa global de alerta'), src.index('// Versões misturadas')
+    blo = re.sub(r'/\*.*?\*/', '', src[i:j], flags=re.S)
+    blo = re.sub(r'(?m)^\s*//.*$|\s//\s.*$', '', blo)
+    ok('o bloco da faixa não tem setInterval, setTimeout nem requestAnimationFrame (acompanha os eventos do replay)', not re.search(r'setInterval|setTimeout|requestAnimationFrame', blo), re.findall(r'.{15}(?:setInterval|setTimeout).{15}', blo)[:2])
+    ok('nunca fala, grava, troca de tela nem abre o SOS ou a C3 sozinha (speechSynthesis, speak, localStorage.setItem, addDiario, location.href/assign/replace/reload, window.open)',
+       not re.search(r'speechSynthesis|\.speak\(|localStorage\s*\.\s*setItem|addDiario|markExec|location\s*(\.\s*(href|assign|replace|reload)|=)|window\s*\.\s*open|history\s*\.\s*(push|replace)State', blo), re.findall(r'.{15}(?:speak|setItem|location|window\s*\.\s*open).{15}', blo)[:3])
+    ok('a faixa só nasce onde há a API de alertas e a tela não é S1/S2, o Manual nem a C3 (temFaixa)', "!/^(Manual-|C3-|S[12]-SOS-)/.test(ARQ)" in blo and '!!window.CapitaoAlertas' in blo and "!/SOS-/.test(location.pathname)" in blo and r"/\.dc\.html$/.test(ARQ)" in blo)
+    ok('os textos entram em nós Text (data) e os atributos só mudam quando o valor muda (nenhum innerHTML com dado; textContent só no <style> e nas duas regiões do leitor de tela)',
+       "t.data !== v) t.data = v" in blo and not re.search(r'innerHTML\s*=\s*[^;]*(?:a\.texto|a\.desdeTxt|texto)', blo) and set(re.findall(r'(\w+)\.textContent', blo)) == {'st', 'fxAlerta', 'fxStatus'}, set(re.findall(r'(\w+)\.textContent', blo)))
+    ok('só a prancheta já desenhada (art()) e o fit() reservam a altura da faixa (topo()), e o capitao-topo junta os pedidos num schedule()', "var tp = topo();" in src and "+ tp;" in src and "addEventListener('capitao-topo', schedule)" in src)
 
 
 # Main, H2 e E1 se redesenham a cada setState (o __setLogicState do support.js sempre troca o __v): só dão setState quando o texto exibido muda.
@@ -1904,6 +2125,34 @@ MUTANTES_ARQ = [
      [("el._on = function () { el.atualiza(); };", "el._on = function () { if (el.monta) el.monta(leitura()); el.atualiza(); };")], 'moldura'),
     ('o LED trocado a cada tique em vez de só quando vira', 'capitao-moldura.js',
      [("if (this._vivo !== L.vivo) { this._vivo = L.vivo; troca(n.led.firstElementChild, led(L.vivo, 7)); }", "{ this._vivo = L.vivo; troca(n.led.firstElementChild, led(L.vivo, 7)); }")], 'moldura'),
+    # P4B: o texto da moldura vem do quadro do instante, e o selo e a dica não carregam rótulo (acusados por moldura_quadro)
+    ('o diesel da faixa do D.snapshot (848 L de 26/09) em vez do quadro', 'capitao-moldura.js',
+     [("var litros = f(q, 'diesel_litros')", "var litros = f(d.snapshot.quadro, 'diesel_litros')")], 'quadro'),
+    ('o estado e o local da moldura do D.snapshot em vez do quadro', 'capitao-moldura.js',
+     [("estado: typeof q.estado === 'string' && q.estado ? q.estado : falta(SD), local: typeof q.local === 'string' ? q.local : '',", "estado: (d.snapshot || {}).estado, local: (d.snapshot || {}).local,")], 'quadro'),
+    ('a posição da moldura do D.snapshot (26°59,58\'S) em vez do quadro', 'capitao-moldura.js',
+     [("pos: typeof q.lat === 'number' && typeof q.lon === 'number' && cf ? cf(q.lat, q.lon) : falta(SL),", "pos: ((d.snapshot || {}).gps || {}).texto,")], 'quadro'),
+    ('a hora do rótulo sem os segundos (o instante tem HH:MM:SS)', 'capitao-moldura.js',
+     [("rotulo: sentenca(I.selo && I.selo.texto) ||", "rotulo: sentenca('AO VIVO · ' + I.hhmm) ||")], 'quadro'),
+    ('a dica da pílula de volta com DEMO (rótulo proibido)', 'capitao-moldura.js',
+     [("var TIT_VIVO = 'Telemetria ao vivo — atualiza a cada segundo'", "var TIT_VIVO = 'Telemetria ao vivo DEMO — atualiza a cada segundo'")], 'quadro'),
+    # P4B: a faixa global de alerta (capitao-app.js), acusada por faixa_global
+    ('a faixa nunca aparece (o hidden não sai)', 'capitao-app.js',
+     [("if (faixa.hidden) faixa.hidden = false;", "")], 'faixa'),
+    ('a faixa não reserva a altura no topo (a prancheta fica por baixo dela)', 'capitao-app.js',
+     [("return Math.max(0, Math.ceil(e.getBoundingClientRect().bottom));", "return 0;")], 'faixa'),
+    ('o nó de texto da faixa escrito sem comparar (mutação de caractere a cada tique)', 'capitao-app.js',
+     [("function fxEscreve(t, v) { if (t.data !== v) t.data = v; }", "function fxEscreve(t, v) { t.data = v; }")], 'faixa'),
+    ('ABRIR leva sempre à lista da Ponte, nunca à C3', 'capitao-app.js',
+     [("function fxDestino(a) { return a ? (a.detalhe || ponte()) : ponte(); }", "function fxDestino(a) { return ponte(); }")], 'faixa'),
+    ('o aviso antes do crítico na ordem da faixa', 'capitao-app.js',
+     [("return fxPeso(y.nivel) - fxPeso(x.nivel) ||", "return fxPeso(x.nivel) - fxPeso(y.nivel) ||")], 'faixa'),
+    ('a CONVERSA aberta não cala as regiões do leitor de tela', 'capitao-app.js',
+     [("    if (conversaAberta()) return;   // (antes do fxNovos: o que ficou calado continua novo e é dito quando a conversa fechar)\n", "")], 'faixa'),
+    ('a faixa fala o alerta (speechSynthesis) sem gesto', 'capitao-app.js',
+     [("fxFalado = 's' + sig; fxStatus.textContent = ''; fxStatus.textContent = msg;", "fxFalado = 's' + sig; fxStatus.textContent = ''; fxStatus.textContent = msg; try { speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); } catch (e) {}")], 'faixa'),
+    ('o alarme pedido sem começo conhecido na frente (desdeMs null como 0 em vez do fim)', 'capitao-app.js',
+     [("var dx = x.desdeMs === null ? Infinity : x.desdeMs, dy = y.desdeMs === null ? Infinity : y.desdeMs;\n    return fxPeso", "var dx = x.desdeMs === null ? 0 : x.desdeMs, dy = y.desdeMs === null ? 0 : y.desdeMs;\n    return fxPeso")], 'faixa'),
     ('a Main dando setState a cada tique, sem comparar o texto da faixa', 'Main.dc.html',
      [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
     ('a H2 dando setState a cada tique, sem comparar o LED', 'H2-Home-Mobile.dc.html',
@@ -1928,6 +2177,10 @@ def mutantes_arq(b):
                 if qual == 'moldura':
                     for n_, r_ in moldura_lote(b, [A2], segundos=5).items():
                         confere_moldura(n_, A2[1], r_, segundos=5)
+                elif qual == 'quadro':
+                    moldura_quadro(b, fixos=('60',))
+                elif qual == 'faixa':
+                    faixa_global(b)
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
@@ -1992,8 +2245,11 @@ def main():
         desempenho(browser)
         moldura(browser)
         moldura_estados(browser)
+        moldura_quadro(browser)
+        faixa_global(browser)
         gating(browser)
         codigo()
+        codigo_faixa()
         telas(browser)
         a_alertas_volta(browser)
         a_alertas_varios(browser)

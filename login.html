@@ -28,7 +28,12 @@
 html, body { min-height: 100%; }
 body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 .bg { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 50% -10%, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0) 62%), radial-gradient(ellipse 40% 30% at 85% 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0.10) 0%, rgba(var(--cap-violeta-rgb, 162,43,253), 0) 70%); }
-.top { position: relative; display: flex; justify-content: flex-end; padding: max(14px, env(safe-area-inset-top, 0px)) 16px 0; }
+.top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 0; }
+/* SOS em todas as telas, inclusive neste: abre sem login e sem rede (a tela de emergência do aparelho: S2 no celular, S1 no computador — o script abaixo troca o endereço). */
+.sos { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 64px; min-height: 44px; padding: 0 14px; box-sizing: border-box; border-radius: 14px; background: var(--cap-crit-fill, #d32f27); color: #fff; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.10em; box-shadow: 0 0 0 3px rgba(var(--cap-crit-rgb, 255,59,48), 0.28); }
+.sos:hover { color: #fff; filter: brightness(1.08); }
+.sos:focus-visible { outline: 2px solid var(--cap-ink, #eaf1ff); outline-offset: 2px; }
+.sos i { font-style: normal; font-size: 11.5px; font-weight: 700; letter-spacing: 0.10em; }
 /* Compacto: o ENTRAR cabe na 1ª tela em 360×640 e o crédito inteiro em 390×844 e 1440×900. */
 main { position: relative; flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 10px 16px 24px; box-sizing: border-box; }
 .card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 16px; }
@@ -78,7 +83,7 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
 </head>
 <body>
   <div class="bg" aria-hidden="true"></div>
-  <div class="top"><capitao-theme-toggle size="40"></capitao-theme-toggle></div>
+  <div class="top"><a class="sos" id="sos" href="S1-SOS-Web.dc.html" aria-label="SOS — emergência">SOS<i>EMERGÊNCIA</i></a><capitao-theme-toggle size="40"></capitao-theme-toggle></div>
   <main>
     <div class="card">
       <div class="brand">
@@ -109,6 +114,16 @@ button.go:disabled { opacity: 0.55; cursor: progress; }
 <script>
 (function () {
   var A = window.CapitaoAuth;
+  // SOS: celular → tela do app (S2), computador → web (S1), com a mesma escolha "Sempre web/app" do index.html (a mesma regra do dados.html e do capitao-app.js).
+  (function () {
+    var pick = null; try { pick = localStorage.getItem('capitao.plataforma.v1'); } catch (e) {}
+    var ua = navigator.userAgent || '', uad = navigator.userAgentData;
+    var movel = uad && typeof uad.mobile === 'boolean' ? uad.mobile : /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
+    var curto = Math.min(screen.width || 9999, screen.height || 9999);
+    var toque = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    var estreita = Math.min(window.innerWidth || 9999, document.documentElement.clientWidth || 9999) < 900;
+    if (pick === 'app' || (pick !== 'web' && (movel || (toque && curto < 600) || estreita))) document.getElementById('sos').href = 'S2-SOS-Mobile.dc.html';
+  })();
   var f = document.getElementById('f'), u = document.getElementById('u'), p = document.getElementById('p'), k = document.getElementById('k');
   var m = document.getElementById('m'), go = document.getElementById('go'), eye = document.getElementById('eye'), box = document.getElementById('chips');
   var timer = 0;
