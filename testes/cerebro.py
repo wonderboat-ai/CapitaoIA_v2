@@ -4078,7 +4078,7 @@ MUTANTES_3A = [
     ('a ficha(p, q, a) de emergência leva só o Telemetria (a guarda esquece o Horímetros)', "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Horímetros': 1, 'Autonomia e consumo': 1 };", "var QUADRO = { 'Telemetria': 1, 'Navegação agora': 1, 'Autonomia e consumo': 1 };", ('emerg',)),
     ('a guarda de emergência esquece o óleo', "var EMERG = { sos: 1, oleo: 1, canal16: 1,", "var EMERG = { sos: 1, canal16: 1,", ('emerg', 'forma')),
     ('a guarda de emergência esquece o seafire', "epirb: 1, seafire: 1, salvatagem: 1, mmsi: 1 };", "epirb: 1, salvatagem: 1, mmsi: 1 };", ('emerg',)),
-    ('a guarda de emergência vale para qualquer chave (EMERG[a.key] sem === 1)', "return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }", "return !!a && typeof a === 'object'; }", ('emerg', 'uma')),   # (P3E, F10: texto novo do emerg(), mesma mutação)
+    ('a guarda de emergência vale para qualquer chave (EMERG[a.key] sem === 1)', "return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && (a.emerg === true || a.semQuadro === true))); }", "return !!a && typeof a === 'object'; }", ('emerg', 'uma')),   # (P3E, F10: texto novo do emerg(), mesma mutação; P4A rev3: com o `semQuadro` do cartão de Salvatagem)
 ]
 
 
@@ -4544,7 +4544,7 @@ MUTANTES_3D = [
     ('o teto da ficha fica nos 12.000 do cliente (a ficha com a previsão e a maré passa de 11.500: a decisão (i) manda 16.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 12000;", ('ficha',)),
     ('o teto da ficha cai abaixo da ficha (8.000)', r"var FICHA_MAX = 16000;", r"var FICHA_MAX = 8000;", ('ficha',)),
     ('o cérebro não exporta o teto da ficha', r"FICHA_MAX: FICHA_MAX,", r"", ('ficha',)),
-    ('a ficha completa não é cortada pela fala do sos (a resposta de emergência sem a guarda do EMERG)', r"function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && a.emerg === true)); }", r"function emerg(a) { return false; }", ('ficha', 'emerg')),   # (P3E, F10: o emerg() ganhou o cartão EM do FAQ; mesma mutação, texto novo)
+    ('a ficha completa não é cortada pela fala do sos (a resposta de emergência sem a guarda do EMERG)', r"function emerg(a) { return !!a && typeof a === 'object' && (EMERG[a.key] === 1 || (a.key === 'faqEquip' && (a.emerg === true || a.semQuadro === true))); }", r"function emerg(a) { return false; }", ('ficha', 'emerg')),   # (P3E, F10: o emerg() ganhou o cartão EM do FAQ; mesma mutação, texto novo; P4A rev3: com o `semQuadro`)
     # —— semCoord (§2.8) ——
     ('o semCoord não tira nada', r"function semCoord(s) { return String(s || '').replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }", r"function semCoord(s) { return String(s || ''); }", ('semcoord', 'ficha')),
     ('o semCoord perde o decimal de 4 casas (-26.9931)', r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]", r"|-?\d{1,3}[.,]\d{3,}\s*[;\/]", ('semcoord',)),
@@ -5689,7 +5689,7 @@ def grupo_faq(b, muta, ped):
 GRUPOS_3A['faq'] = grupo_faq
 MUTANTES_3E_F10 = [
     ('p3e faq: o item de segurança do FAQ vai à IA', "    if (a && a.seguranca) return false;\n    if (cabecaEmerg", "    if (a && a.seguranca && a.key !== 'faqEquip') return false;\n    if (cabecaEmerg", ('faq',)),
-    ('p3e faq: o cartão de emergência do FAQ leva o quadro na ficha', " || (a.key === 'faqEquip' && a.emerg === true));", ");", ('faq',)),
+    ('p3e faq: o cartão de emergência do FAQ leva o quadro na ficha', " || (a.key === 'faqEquip' && (a.emerg === true || a.semQuadro === true)));", ");", ('faq',)),
     ('p3e faq: o FAQ responde também no lugar do trecho do guia', "if (key === 'fallback' && !cabecaEmerg(pad(q))) { var fq = null;", "if ((key === 'fallback' || key === 'base') && !cabecaEmerg(pad(q))) { var fq = null;", ('faq',)),
     ('p3e faq: a cobertura solta toma a pergunta genérica', "if (!r || r.cobre < 1 || r.principal < 1 || r.titulo < 0.6) return null;", "if (!r || r.cobre < 0.34 || r.principal < 0.34 || r.titulo < 0.2) return null;", ('faq',)),
     ('p3e faq: o empate de seções não barra', "if (rs.length > 1 && rs[1].nota > r.nota * 0.85 && rs[1].it.secao !== r.it.secao) return null;", "", ('faq',)),
@@ -8824,6 +8824,16 @@ def janela_lote(pg, base, rot, ped, real):
     ped('%s: a matriz cobre as chaves que trazem posição, rumo, SOG, ETA ou pessoas' % rot, {'posicao', 'telemetria', 'navegacao', 'eta', 'destinos', 'pessoas', 'contatos', 'fallback'} <= sensiveis, sorted(sensiveis))
 
 
+# os cartões EM do FAQ (faq-equipamentos.json) abertos pelo toque (ctx.faq), fora e dentro da janela: o que a tela lê (a.emerg) e o que o cérebro faz com o cartão (sem quadro, sem hora, sem IA, resumo, ficha)
+JS_JAN_FAQ = """() => { const B = window.CapitaoBrain, D = B.faqDados(), P = B.DADOS.protocolos, itens = D.itens;
+  const em = itens.filter((it) => it.emerg).map((it) => it.id), salv = itens.filter((it) => it.emerg && /salvatagem/i.test(it.equip)).map((it) => it.id), normais = itens.filter((it) => !it.emerg && !it.seguranca).slice(0, 3).map((it) => it.id);
+  const quadro = (t) => /^## (?:Telemetria|Navegação agora|Horímetros|Autonomia e consumo)/m.test(t);
+  const lê = (a) => ({ key: a.key, emerg: a.emerg === true, semQuadro: a.semQuadro === true, janela: a.janela === true, inst: a._inst !== undefined, hora: a.hora || '', pede: B.pedeIA(a, 'x'), pedeJ: B.pedeIA(a, 'x', { emergencia: true }), resumo: B.resumoAgora(a), quadro: quadro(B.ficha('app', 'x', a)) });
+  const card = (id, jan) => { const c = { platform: 'app', commit: false, faq: id }; if (jan) c.emergencia = true; return Object.assign({ id }, lê(B.answer('x', c))); };
+  const ids = em.concat(normais), rota = B.answer('onde ficam os coletes?', { platform: 'app', commit: false });
+  return { em, salv, normais, plotter: P.plotter, fora: ids.map((id) => card(id, false)), dentro: ids.map((id) => card(id, true)), rota: Object.assign({ key: rota.key }, lê(rota)) }; }"""
+
+
 def grupo_janela(b, muta, ped):
     base = list(dict.fromkeys([q for q, k in CASOS] + JAN_PERGUNTAS_EXTRA))
     chaves = dict(PERGUNTA_CHAVE); chaves.update(JAN_EXTRAS)
@@ -8896,6 +8906,24 @@ def grupo_janela(b, muta, ped):
             ab = pg.evaluate(JS_JAN_ABRE, [c[0] for c in JAN_ABRE_CASOS])
             ruins = [(q, k, e, j, ec, jc) for (q, k, e, j, ec, jc), (_, kesp, esp) in zip(ab, JAN_ABRE_CASOS) if k != kesp or e is not esp or j or ec is not esp or jc is not True]
             ped('janela (%s): (c) a.emerg === true nas respostas que ABREM a janela (sos, oleo, canal16, epirb, seafire e o diário com alerta) e só nelas — salvatagem, mmsi, o diário sem alerta e as respostas de dado não; a de dentro da janela traz `janela: true`' % rot, not ruins, ruins[:4])
+            # ——— (c) o cartão de emergência do FAQ aberto pelo toque (ctx.faq): EM-01…08 abrem a janela; o de Salvatagem (EM-09) não, e responde como a rota `salvatagem` (sem quadro, sem hora) ———
+            fq = pg.evaluate(JS_JAN_FAQ)
+            ped('janela (%s): o FAQ tem os 9 cartões EM e eles são os únicos de emergência; o de Salvatagem é um só (equipamento «Salvatagem»)' % rot,
+                fq['em'] == ['EM-0%d' % k for k in range(1, 10)] and fq['salv'] == ['EM-09'] and len(fq['normais']) >= 2, (fq['em'], fq['salv'], fq['normais']))
+            ped_f = fq['plotter']
+            for x_, d_ in (('fora', fq['fora']), ('dentro', fq['dentro'])):
+                ems = [r for r in d_ if r['id'] in fq['em']]
+                outros = [r for r in d_ if r['id'] not in fq['em']]
+                nome = 'janela (%s) FAQ ctx.faq %s da janela' % (rot, x_)
+                ped(nome + ': os 8 cartões EM de socorro (MAYDAY, PAN-PAN, DSC, homem ao mar, incêndio, água, abandono, EPIRB) trazem a.emerg === true — a tela grava emergenciaAte', all(r['key'] == 'faqEquip' and r['emerg'] for r in ems if r['id'] != 'EM-09') and len([r for r in ems if r['emerg']]) == 8, [(r['id'], r['key'], r['emerg']) for r in ems])
+                ped(nome + ': o cartão de Salvatagem (EM-09) NÃO traz a.emerg — salvatagem não liga a janela (trava 10) —, como a rota `salvatagem`', [r for r in ems if r['id'] == 'EM-09'][0]['emerg'] is False and fq['rota']['emerg'] is False, ([r['emerg'] for r in ems if r['id'] == 'EM-09'], fq['rota']))
+                ped(nome + ': os 9 cartões respondem SEM quadro e SEM hora (sem _inst, sem hora), nunca vão à IA e o resumo e a ficha são os de emergência (o EM-09 também: `semQuadro`)',
+                    all(r['semQuadro'] and not r['inst'] and not r['hora'] and not r['pede'] and not r['pedeJ'] and r['resumo'] == ped_f and not r['quadro'] for r in ems), [(r['id'], r['semQuadro'], r['inst'], r['hora'], r['pede'], r['pedeJ'], r['resumo'][:30], r['quadro']) for r in ems if not (r['semQuadro'] and not r['inst'] and not r['hora'] and not r['pede'] and not r['pedeJ'] and r['resumo'] == ped_f and not r['quadro'])])
+                ped(nome + ': o cartão de Salvatagem responde como a rota `salvatagem` (mesmas marcas: sem quadro, sem hora, sem IA, sem a.emerg)', fq['rota']['inst'] is False and not fq['rota']['hora'] and fq['rota']['pede'] is False and fq['rota']['resumo'] == ped_f and fq['rota']['emerg'] is False, fq['rota'])
+                ped(nome + ': controle — o cartão que NÃO é de emergência não traz a.emerg nem `semQuadro` e a ficha dele leva o quadro (fora da janela; dentro dela, não)',
+                    all(not r['emerg'] and not r['semQuadro'] and (r['quadro'] is (x_ == 'fora')) for r in outros) and len(outros) >= 2, [(r['id'], r['emerg'], r['semQuadro'], r['quadro']) for r in outros])
+            ped('janela (%s): o cartão EM dentro da janela leva `janela: true` e o de fora não; a.emerg do cartão é o mesmo dentro e fora' % rot,
+                all(r['janela'] for r in fq['dentro']) and not any(r['janela'] for r in fq['fora']) and [r['emerg'] for r in fq['dentro']] == [r['emerg'] for r in fq['fora']], (fq['dentro'][0], fq['fora'][0]))
         finally:
             pg.ctx.close()
     ped('janela: a matriz cobre as chaves que trazem posição, rumo, SOG, ETA ou pessoas (%s)' % ', '.join(JAN_SENSIVEIS), set(JAN_SENSIVEIS) <= cobertas, sorted(set(JAN_SENSIVEIS) - cobertas))
@@ -9068,6 +9096,7 @@ def grupo_janela_api(b, muta, ped):
     # ——— o fluxo da tela: «homem ao mar» abre a janela; as perguntas seguintes, com a marca, não trazem nem falam posição, rumo, velocidade nem pessoas, e não vão à IA ———
     grupo_janela_fluxo(b, muta, ped)
     grupo_janela_registro(b, muta, ped)
+    grupo_janela_formas(b, muta, ped)
 
 
 JS_JAN_FLUXO = """() => { const B = window.CapitaoBrain, out = {}, pl = B.DADOS.protocolos.plotter;
@@ -9150,6 +9179,19 @@ JAN_SEMENTES = [
     ('corta', 'add', JAN_PAD + 'SOG 18,1 nós na volta', 'dl', [JAN_PAD.strip()], ['velocida']),
     ('pend1', 'pend', 'Vazamento visto a 18 nós, a 0,5 mn da Barra Sul, 7 pessoas a bordo', 'pa', ['Vazamento visto velocidade: leia no plotter, posição: leia no plotter, pessoas a bordo: conte agora'], ['18 nós', '0,5', 'Barra Sul', '7 pessoas']),
     ('pend2', 'pend', 'Chegada prevista às 12:03 com SOG 9,9 nós e proa 200°', 'pa', ['chegada: leia no plotter com velocidade: leia no plotter e rumo: leia no plotter'], ['12:03', '9,9', '200']),
+    # (revisão 3) as formas do TEXTO LIVRE que a regex do PROMPT aceita (até 12 letras entre «rumo» e o número) e as do dia a dia (kt, kn, knots, km, «graus», «SOG 7,2» sem unidade, coordenada decimal, «sete pessoas a bordo»,
+    # «chegada às 12:03»): a linha lida dentro da janela não as traz; cada linha fica abaixo de 110 letras (o corte de linhaReg não esconde nada)
+    ('rumo3', 'resp', 'Registre no diário: Anomalia: rumo de 110°, velocidade 7 kt, chegada 12:03', 'dl', ['Anomalia: rumo: leia no plotter, velocidade: leia no plotter, chegada: leia no plotter'], ['110', '7 kt', '12:03', 'velocidade velocidade']),
+    ('rumo4', 'resp', 'Registre no diário: Anomalia: rumo: 110° proa em 123° COG: 110 HDG 110°', 'dl', ['Anomalia: rumo: leia no plotter rumo: leia no plotter rumo: leia no plotter'], ['110', '123']),
+    ('kt', 'resp', 'Registre no diário: Anomalia: 7 kt, 8 knots e 9 kn', 'dl', ['Anomalia: velocidade: leia no plotter, velocidade: leia no plotter e velocidade: leia no plotter'], ['7 kt', 'knots', '9 kn']),
+    ('sog0', 'resp', 'Registre no diário: Anomalia: SOG 7,2 na saída', 'dl', ['Anomalia: velocidade: leia no plotter na saída'], ['7,2', 'SOG']),
+    ('km', 'resp', 'Registre no diário: Anomalia: a 4 km da costa, 3 quilômetros ao sul', 'dl', ['Anomalia: posição: leia no plotter, distância: leia no plotter ao sul'], ['4 km', 'costa', 'quil']),
+    ('latlon', 'resp', 'Registre no diário: Anomalia: Lat 26.99 S lon 48.61 W fundeados', 'dl', ['Anomalia: posição: leia no plotter posição: leia no plotter fundeados'], ['26.99', '48.61', 'Lat']),
+    ('latlon2', 'resp', 'Registre no diário: Anomalia: -26.99, -48.61 na enseada', 'dl', ['Anomalia: posição: leia no plotter na enseada'], ['26.99', '48.61']),
+    ('graus', 'resp', 'Registre no diário: Anomalia: rumo magnético 110 graus e proa 207 graus', 'dl', ['Anomalia: rumo: leia no plotter e rumo: leia no plotter'], ['110', '207', 'graus']),
+    ('sete', 'resp', 'Registre no diário: Anomalia: sete pessoas a bordo e POB 7', 'dl', ['Anomalia: pessoas a bordo: conte agora e pessoas a bordo: conte agora'], ['sete', 'POB', ' 7']),
+    ('prev', 'resp', 'Registre no diário: Anomalia: previsão de chegada 12:03 e chegada às 12h', 'dl', ['Anomalia: chegada: leia no plotter e chegada: leia no plotter'], ['12:03', '12h', 'previsão']),
+    ('ventokt', 'resp', 'Registre no diário: Anomalia: vento 12 kt de 050° na saída', 'dl', ['Anomalia: vento: leia no instrumento na saída'], ['12 kt', '050']),
 ]
 JS_JAN_REG = """([x, outro, sementes]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, opj = { platform: 'app', commit: false, emergencia: true }, jc = { platform: 'app', commit: true }, jcj = { platform: 'app', commit: true, emergencia: true };
   const lit = () => { const t = (B.instante() || {}).txt || {}, o = {}; ['local', 'relativa', 'destino', 'sog', 'rumo', 'proa', 'eta', 'distancia', 'wp'].forEach((k) => { o[k] = t[k] || null; }); return o; };
@@ -9204,7 +9246,7 @@ def grupo_janela_registro(b, muta, ped):
                 if l['guardada'] != l['depois'] or (sid in ('atalho', 'atalhoOutro', 'junto', 'velho', 'corta') and not re.search(r'SOG \d', l['guardada'])) or (sid == 'atalho' and r['aqui']['local'] not in l['guardada']):
                     guarda.append((sid, l['guardada'][:140]))
                 # fora da janela o registro volta como foi escrito (o diário só cresce): a mesma linha, sem troca
-                if sid in ('atalho', 'junto', 'velho', 'eta', 'nos', 'coord', 'vento', 'eta2', 'vel', 'abordo', 'corta'):
+                if sid in ('atalho', 'junto', 'velho', 'eta', 'nos', 'coord', 'vento', 'eta2', 'vel', 'abordo', 'corta', 'rumo3', 'rumo4', 'kt', 'sog0', 'km', 'latlon', 'latlon2', 'graus', 'sete', 'prev', 'ventokt'):
                     if l['guardada'][:110] not in l['fora']['text']:
                         ctrl.append((sid, l['guardada'][:100], l['fora']['text'][-300:]))
                 # o corte de 110 letras dentro da janela cai antes da palavra incompleta e sem separador pendurado; fora dela é o corte de sempre
@@ -9247,6 +9289,78 @@ def grupo_janela_registro(b, muta, ped):
                 and rl['guardada'].endswith('a 0,5 mn da Barra Sul, SOG 18,1 nós, 7 pessoas a bordo'), (sujo_r, rl['abertos'], rl['reg']['key'], rl['reg']['text'][:300], rl['guardada']))
         finally:
             pg.ctx.close()
+
+
+# ——— (revisão 3) A VARREDURA DE FORMAS: o registro é texto digitado, e o padrão que o troca não pode ser mais estreito que a regex do PROMPT nem que o jeito de a pessoa escrever. Cada frase entra no diário e é lida dentro da janela:
+# nada que ela traga de navegação (a família inteira da regex do PROMPT: «rumo»/«proa»/«COG»/«HDG» + até 12 letras + N°, inclusive com dígito no meio; kt, kn, knots, km/h; mn, nm, milhas, km, quilômetros; «SOG 7,2» sem
+# unidade; coordenada decimal; pessoas e tripulantes por extenso; ETA e chegada com hora) pode sobrar, a frase em volta fica, a linha guardada não muda e, fora da janela, volta como foi escrita. ———
+# o que NÃO pode sobrar, pelo jeito de escrever (independente dos padrões do cérebro; a regex do PROMPT e o R_JAN_SENS entram junto)
+R_JAN_FORMAS = [re.compile(x, re.I) for x in (
+    r"\d\s*nós?", r"\d\s*(?:knots?|kn|kts?|km/h|mn|nm|milhas?|km|quil[ôo]metros?)\b", r"\b(?:SOG|STW)\b", r"\b(?:rumo|proa|COG|HDG)\b[^\n]{0,30}\d{1,3}\s*(?:°|º|graus?)", r"\b(?:COG|HDG)\b\W{0,3}\d",
+    r"\b(?:rumo|proa)\b[^\d\n]{0,24}?\d{3}\b", r"\b(?:lat|latitude|lon|long|longitude)\b\.?\W{0,3}-?\d", r"\b(?:\d+|um|uma|dois|duas|três|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|vinte)\s+(?:pessoas?|tripulantes?|passageiros?)\b",
+    r"\bPOB\b", r"/h\b", r"\bETA\b", r"chegada[^\n]{0,15}\d{1,2}\s*(?:[:h]|min)", r"último fix")] + [re.compile(r"\d[.,]\d+\s*[°º]?\s*[NSEWO]\b(?![a-zà-ú])"), re.compile(r"\d{1,3}\s*[°º]\s*[NSEWLO]\b(?![a-zà-ú])")]   # (o hemisfério, só maiúscula: «0,5 o» é o artigo; a 2ª é «26° S 48° W», graus inteiros)
+
+
+def jan_formas():
+    """(frases da família da regex do PROMPT, as outras formas): todas entram em «Anomalia: <frase> na saída»."""
+    prompt = []
+    for p in ('rumo', 'proa', 'COG', 'HDG'):   # (a regex do PROMPT não tem a flag i: só estas grafias)
+        for e in (' ', ': ', ' de ', ' em ', ' = ', ' (COG) ', ' magnético ', ' verdadeiro ', ' de fundeio ', ' 5 em ', '  ', ':', ' ao norte, ', ' aprox. ', ' a ', ' em 1 e '):
+            for n in ('45', '110', '207'):
+                prompt.append('%s%s%s°' % (p, e, n))
+    o = []
+    for n in ('7', '7,2', '18.5'):
+        for u in ('nós', 'nó', 'kt', 'kts', 'kn', 'knots', 'knot', 'km/h'):
+            o += ['%s %s' % (n, u), '%s%s' % (n, u), 'velocidade de %s %s' % (n, u), 'SOG %s %s' % (n, u), 'STW: %s %s' % (n, u), 'vento %s %s' % (n, u), 'vento verdadeiro %s %s de 050°' % (n, u)]
+        o += ['SOG %s' % n, 'SOG: %s' % n, 'sog de %s' % n]
+    for n in ('0,5', '2', '12.5'):
+        for u in ('mn', 'MN', 'nm', 'NM', 'milha', 'milhas', 'milhas náuticas', 'km', 'quilômetros', 'quilometro'):
+            o += ['%s %s' % (n, u), 'a %s %s da costa,' % (n, u), 'a %s %s de Itajaí,' % (n, u), 'faltam %s %s' % (n, u)]   # (a posição relativa leva o nome do lugar até a pontuação: a vírgula fecha a frase)
+    o += ['Lat 26.99 S lon 48.61 W', 'lat: -26.99 lon: -48.61', 'Latitude 26,99 S Longitude 48,61 O', '26.99 S 48.61 W', '26,99 S, 48,61 W', '-26.99, -48.61', '-26,9931 / -48,6140', "26°59,6'S 048°36,8'W", '26° S 48° W',
+          '26,99°S 48,61°W', 'LAT 26.99 LON 48.61', 'LONG 48.61', 'último fix às 10:12', 'Último fix GPS']
+    for n in ('7', 'sete', 'três', 'dez', 'vinte'):
+        o += ['%s pessoas a bordo' % n, '%s tripulantes a bordo' % n, '%s passageiros abordo' % n, '%s pessoas no barco' % n, '%s pessoas na embarcação' % n]
+    o += ['POB 7', 'POB: 12', '7 a bordo', 'estamos em 7 a bordo']
+    o += ['ETA 12:03', 'ETA: 12h', 'ETA em 15 min', 'ETA para 12h30', 'chegada 12:03', 'chegada às 12:03', 'chegada: 12h', 'chegada em 15 min', 'chegada prevista 12:03', 'chegada prevista', 'chegada estimada às 12:03',
+          'previsão de chegada às 12h', 'Previsão de chegada 12:03']
+    o += ['Rumo 110°', 'PROA 207°', 'Proa: 207°', 'cog 190°', 'COG 190', 'HDG: 190', 'cog 190', 'rumo 190', 'proa: 207', 'rumo magnético 110 graus', 'proa 207 graus', 'rumo verdadeiro 110º', 'rumo de 110°', 'proa a 123°', 'rumo 110 graus verdadeiros', 'rumo (COG) 207°']
+    return prompt, o
+
+
+JAN_FORMAS_PROMPT, JAN_FORMAS_OUTRAS = jan_formas()
+JS_JAN_FORMAS = """(frases) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }, opj = { platform: 'app', commit: false, emergencia: true };
+  const ln = (a) => (a.text.split('\\n').filter((l) => l.startsWith('• '))[0] || '');
+  return frases.map((t) => { B.addDiario({ t, sys: 'Navegação', src: 'atalho · telemetria' }); const guardada = B.loadDiario()[0].t;
+    return { t, guardada, dentro: ln(B.answer('ler o diário', opj)), fora: ln(B.answer('ler o diário', op)) }; }); }"""
+
+
+def grupo_janela_formas(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        espera_base_jan(pg)
+        frases = ['Anomalia: %s na saída' % f for f in JAN_FORMAS_PROMPT + JAN_FORMAS_OUTRAS]
+        rot = 'janela formas'
+        ped(rot + ': a família da regex do PROMPT (%d frases) está dentro dela — cada frase casa R_TRAVA_EMERG — e as outras formas são %d' % (len(JAN_FORMAS_PROMPT), len(JAN_FORMAS_OUTRAS)),
+            all(R_TRAVA_EMERG.search(f) for f in JAN_FORMAS_PROMPT) and len(JAN_FORMAS_PROMPT) >= 190 and len(JAN_FORMAS_OUTRAS) >= 200, (len(JAN_FORMAS_PROMPT), len(JAN_FORMAS_OUTRAS), [f for f in JAN_FORMAS_PROMPT if not R_TRAVA_EMERG.search(f)][:3]))
+        out = pg.evaluate(JS_JAN_FORMAS, frases)
+        sobra = []; perde = []; guarda = []; ctrl = []
+        for r in out:
+            achou = [m.group(0) for rx in R_JAN_FORMAS for m in [rx.search(r['dentro'])] if m] + [m.group(0) for m in [R_TRAVA_EMERG.search(r['dentro'])] if m] + sens_jan(r['dentro'], {})
+            if achou:
+                sobra.append((r['t'], r['dentro'][-90:], achou[:2]))
+            if not r['dentro'].startswith('• ') or ' — Anomalia: ' not in r['dentro'] or not r['dentro'].endswith(' na saída (app)'):
+                perde.append((r['t'], r['dentro'][-90:]))
+            if r['guardada'] != r['t']:
+                guarda.append((r['t'], r['guardada']))
+            if r['t'][:110] not in r['fora']:
+                ctrl.append((r['t'], r['fora'][-90:]))
+        ped(rot + ': nenhuma das %d frases digitadas — a família da regex do PROMPT (rumo, proa, COG, HDG com até 12 letras até o N°, dígito no meio), kt, kn, knots, km/h, mn, nm, km, «SOG 7,2» sem unidade, coordenada decimal, tripulantes por extenso, POB, ETA e chegada com hora — sobra na linha lida dentro da janela (nem a regex do PROMPT casa)' % len(frases),
+            not sobra, sobra[:4])
+        ped(rot + ': a frase em volta fica («Anomalia: … na saída») e a linha cabe nas 110 letras (o corte não esconde nada)', not perde, perde[:4])
+        ped(rot + ': a linha guardada é a que a pessoa digitou (a janela só esconde)', not guarda, guarda[:3])
+        ped(rot + ': controle — fora da janela a mesma leitura traz cada frase como foi escrita', not ctrl, ctrl[:3])
+    finally:
+        pg.ctx.close()
 
 
 GRUPOS_3A['janela'] = grupo_janela
@@ -9302,7 +9416,7 @@ MUTANTES_P4A = [
     # — o registro lido na janela —
     ('p4a diário: a linha do diário lida na janela leva o número de pessoas', r"linhaReg(e.t, 110)", r"e.t.slice(0, 110)", ('janela',)),
     ('p4a diário: a pendência lida na janela leva o número de pessoas (anomalias)', r"semNavJanela(x.t)); }).concat(", r"x.t); }).concat(", ('janela',)),
-    ('p4a diário: o semNavJanela não troca o número de pessoas', r"[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", r"[/\b\d+\s+zzqq\s+a\s+bordo\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
+    ('p4a diário: o semNavJanela não troca «N a bordo» nem «N pessoas a bordo» sem o substantivo extenso', r"[/\b\d+\s+(?:(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+)?(?:a\s+bordo|abordo)\b/gi, 'pessoas a bordo: conte agora'],", r"[/\b\d+\s+zzqq\s+(?:a\s+bordo|abordo)\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
     ('p4a diário: o semNavJanela troca fora da janela (sem a guarda)', "if (!janela()) return s;\n    s = resumoJanela(s);\n    JAN_NAV.forEach", "s = resumoJanela(s);\n    JAN_NAV.forEach", ('janela',)),
     # — resumoAgora, ficha, historicoIA —
     ('p4a resumo: resumoAgora({ emergencia: true }) devolve o quadro', r"x.emergencia === true || x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", r"x.janela === true || x.emerg === true)) || (ctx && ctx.emergencia === true) || janela()) return plotterTxt();", ('janela',)),
@@ -9371,14 +9485,14 @@ MUTANTES_P4A_REV2 = [
     ('p4a rev2 resumo: os itens SOG e proa depois do lugar não saem juntos', r"while (k < it.length && /^(?:SOG|STW|proa|rumo|COG|HDG)\b/i.test(it[k])) k++;", r";", ('janela',)),
     ('p4a rev2 resumo: o resumo de um item só perde a hora', r"fim = k >= it.length ? (RESUMO_FIM.exec(m[2]) || [''])[0] : '';", r"fim = '';", ('janela',)),
     ('p4a rev2 resumo: o resto do resumo (motores, diesel…) some', r"(k < it.length ? ' · ' + it.slice(k).join(' · ') : fim)", r"(k < it.length ? '' : fim)", ('janela',)),
-    ('p4a rev2 nav: a chegada prevista e o ETA não trocam', r"[/\b(?:[Cc]hegada\s+prevista|ETA)\b", r"[/\b(?:[Cc]hegadaZ\s+prevista|ETAZ)\b", ('janela',)),
+    ('p4a rev2 nav: a chegada prevista e o ETA não trocam', r"[/\b(?:[Pp]revis[ãa]o\s+de\s+[Cc]hegada|[Cc]hegada\s+(?:prevista|estimada)|ETA)\b", r"[/\b(?:[Pp]revis[ãa]o\s+de\s+[Cc]hegadaZ|[Cc]hegadaZ\s+(?:prevista|estimada)|ETAZ)\b", ('janela',)),
     ('p4a rev2 nav: o vento não tem frase própria', r"[/\bvento(?:\s+(?:verdadeiro|aparente))?", r"[/\bventoZ(?:\s+(?:verdadeiro|aparente))?", ('janela',)),
-    ('p4a rev2 nav: a posição relativa («a 0,5 mn da Barra Sul») não troca', r"[/\ba\s+[\d.,]+\s*(?:mn|milhas?(?:\s+náuticas?)?)\s+d[aeo]s?", r"[/\ba\s+[\d.,]+\s*(?:mnZ|milhasZ?(?:\s+náuticas?)?)\s+d[aeo]s?", ('janela',)),
-    ('p4a rev2 nav: a distância em milhas não troca', r"[/\d[\d.,]*\s*(?:mn|milhas?(?:\s+náuticas?)?)\b/gi, 'distância", r"[/\d[\d.,]*\s*(?:mnZ|milhasZ(?:\s+náuticas?)?)\b/gi, 'distância", ('janela',)),
+    ('p4a rev2 nav: a posição relativa («a 0,5 mn da Barra Sul») não troca', r"[/\ba\s+\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\s+d[aeo]s?", r"[/\ba\s+\d+(?:[.,]\d+)*\s*(?:mnZ|nmZ|milhasZ?(?:\s+náuticas?)?|kmZ|quilZ[ôo]metrosZ?)\s+d[aeo]s?", ('janela',)),
+    ('p4a rev2 nav: a distância em milhas não troca', r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância", r"[/\d+(?:[.,]\d+)*\s*(?:mnZ|nmZ|milhasZ(?:\s+náuticas?)?|kmZ|quilZ[ôo]metrosZ?)\b/gi, 'distância", ('janela',)),
     ('p4a rev2 nav: «velocidade de N nós» não tem frase própria', r"[/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?", r"[/\bvelocidadeZ(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?", ('janela',)),
-    ('p4a rev2 nav: «N nós» solto não troca', r"[/(?:\ba\s+)?\d[\d.,]*\s*nós?/gi, 'velocidade: leia no plotter']];", r"[/(?:\ba\s+)?\d[\d.,]*\s*nósZ/gi, 'velocidade: leia no plotter']];", ('janela',)),
+    ('p4a rev2 nav: «N nós» solto não troca', r"[/(?:\ba\s+)?\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)/gi, 'velocidade: leia no plotter'],", r"[/(?:\ba\s+)?\d+(?:[.,]\d+)*\s*nósZ/gi, 'velocidade: leia no plotter'],", ('janela',)),
     ('p4a rev2 nav: a coordenada não troca', r"return s.replace(COORD_RX, 'posição: leia no plotter');", r"return s;", ('janela',)),
-    ('p4a rev2 nav: «N a bordo» (sem «pessoas») não troca', r"[[/\b\d+\s+(?:pessoas?\s+)?a\s+bordo\b/gi", r"[[/\b\d+\s+pessoas?\s+a\s+bordo\b/gi", ('janela',)),
+    ('p4a rev2 nav: «N a bordo» (sem «pessoas») não troca', r"[/\b\d+\s+(?:(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+)?(?:a\s+bordo|abordo)\b/gi", r"[/\b\d+\s+(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+(?:a\s+bordo|abordo)\b/gi", ('janela',)),
     ('p4a rev2 corte: a palavra incompleta fica no fim da linha lida na janela', r"if (!/\s/.test(s.charAt(n))) c = c.replace(/\s+\S*$/, '');", r";", ('janela',)),
     ('p4a rev2 corte: o separador pendurado fica no fim da linha lida na janela', r"return c.replace(/[\s·,;:—–-]+$/, '');", r"return c;", ('janela',)),
     ('p4a rev2 corte: o corte de fora da janela (e o da linha que a janela não trocou) também apara a palavra', '    if (s === o) return c;\n', r"", ('janela',)),
@@ -9393,6 +9507,40 @@ MUTANTES_P4A_REV2 = [
     ('p4a rev2 nav: a chegada com dois-pontos, hora cheia ou duração («ETA: 12:03», «às 12h», «em 15 min») não troca', r"(?:\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b))?/g, 'chegada", r"(?:\s+(?:para\s+|às\s+|as\s+|em\s+)?\d{1,2}[:h]\d{2}(?::\d{2})?)?/g, 'chegada", ('janela',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV2
+
+# ——— os mutantes da revisão 3 da P4A: (1) o REGISTRO lido dentro da janela não pode ser mais estreito que a regex do PROMPT nem que o texto livre (rumo de 110°, kt, km, SOG sem unidade, coordenada decimal, pessoas por extenso,
+# chegada com hora); (2) o cartão de Salvatagem do FAQ (EM-09) não abre a janela, mas responde sem quadro e sem hora, como a rota `salvatagem` ———
+MUTANTES_P4A_REV3 = [
+    ('p4a rev3 rumo: a forma da regex do PROMPT (até 12 letras, com dígito no meio: «proa 5 em 207°») não troca', r"[/\b(?:rumo|proa|COG|HDG)\b[^\n]{0,12}?\d{2,3}\s*°/gi, 'rumo: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 rumo: «rumo magnético 110 graus» (palavras no meio, graus) não troca', r"[/\b(?:rumo|proa|COG|HDG)\b[^\d\n]{0,24}?\d{1,3}(?:[.,]\d+)?\s*(?:°|º|graus?\b)/gi, 'rumo: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 rumo: o enchimento de «rumo magnético 110 graus» cabe em 2 letras só', r"[^\d\n]{0,24}?\d{1,3}(?:[.,]\d+)?\s*(?:°|º|graus?\b)/gi", r"[^\d\n]{0,2}?\d{1,3}(?:[.,]\d+)?\s*(?:°|º|graus?\b)/gi", ('janela',)),
+    ('p4a rev3 rumo: «COG 190» e «HDG: 190» sem unidade não trocam', r"[/\b(?:COG|HDG)\b[\s:=]*\d{1,3}(?:[.,]\d+)?\b/gi, 'rumo: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 rumo: «rumo 190» e «proa: 207» sem unidade não trocam', r"[/\b(?:rumo|proa)\b(?:\s+(?:magn[ée]tic[oa]|verdadeir[oa]))?(?:\s+(?:de|em|para|a|ao))?[\s:=]*\d{3}(?:[.,]\d+)?\b/gi, 'rumo: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 velocidade: «SOG 7,2» sem unidade não troca', r"(?:(?:de|em|a)\s+)?\d+(?:[.,]\d+)*(?:\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b))?/gi", r"(?:(?:de|em|a)\s+)?\d+(?:[.,]\d+)*(?:\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b))/gi", ('janela',)),
+    ('p4a rev3 velocidade: kt, kn, knots e km/h soltos não trocam (só nós)', r"[/(?:\ba\s+)?\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)/gi, 'velocidade: leia no plotter'],", r"[/(?:\ba\s+)?\d+(?:[.,]\d+)*\s*nós?/gi, 'velocidade: leia no plotter'],", ('janela',)),
+    ('p4a rev3 velocidade: «velocidade de 7 kt» só troca em nós (a frase própria some)', r"[/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?\s*(?:de\s+|:\s*)?\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)", r"[/\bvelocidade(?:\s+(?:sobre\s+o\s+fundo|de\s+cruzeiro))?\s*(?:de\s+|:\s*)?\d+(?:[.,]\d+)*\s*nós?", ('janela',)),
+    ('p4a rev3 vento: «vento 12 kt» só troca em nós (a frase própria some)', r"[/\bvento(?:\s+(?:verdadeiro|aparente))?\s+\d+(?:[.,]\d+)*\s*(?:nós?|(?:knots?|kn|kts?|km\/h)\b)", r"[/\bvento(?:\s+(?:verdadeiro|aparente))?\s+\d+(?:[.,]\d+)*\s*nós?", ('janela',)),
+    ('p4a rev3 distância: km e quilômetros não trocam', r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância", r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?)\b/gi, 'distância", ('janela',)),
+    ('p4a rev3 distância: «nm» não troca', r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância", r"[/\d+(?:[.,]\d+)*\s*(?:mn|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância", ('janela',)),
+    ('p4a rev3 distância: «40 km/h» vira distância («distância: leia no plotter/h»)', r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\b/gi, 'distância", r"[/\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km|quil[ôo]metros?)\b/gi, 'distância", ('janela',)),
+    ('p4a rev3 posição relativa: «a 4 km da costa» não vira posição (km e quilômetros fora)', r"[/\ba\s+\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?|km(?!\/)|quil[ôo]metros?)\s+d[aeo]s?", r"[/\ba\s+\d+(?:[.,]\d+)*\s*(?:mn|nm|milhas?(?:\s+náuticas?)?)\s+d[aeo]s?", ('janela',)),
+    ('p4a rev3 coordenada: «Lat 26.99 S lon 48.61 W» (com a palavra) não vira posição', r"[/\b(?:[Ll]at(?:itude)?|LAT|[Ll]on(?:g(?:itude)?)?|LON|LONG)\b\.?[\s:=]*-?\d{1,3}(?:[.,]\d+)?(?:\s*[°º])?(?:\s*[NSEWLO]\b)?/g, 'posição: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 coordenada: «26.99 S 48.61 W» (decimal com hemisfério) não troca', r"[/-?\d{1,3}[.,]\d{2,}\s*[°º]?\s*[NSEWO]\b(?![a-zà-ú])/g, 'posição: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 coordenada: «26° S 48° W» (graus inteiros com hemisfério) não troca', r"[/-?\d{1,3}(?:[.,]\d+)?\s*[°º]\s*[NSEWLO]\b(?![a-zà-ú])/g, 'posição: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 coordenada: «-26.99, -48.61» (par decimal negativo) não troca', r"[/-\d{1,3}[.,]\d{2,}\s*[,;\/]\s*-\d{1,3}[.,]\d{2,}/g, 'posição: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 coordenada: o «último fix» não troca', r"[/último\s+fix\b/gi, 'posição: leia no plotter']];", r"];", ('janela',)),
+    ('p4a rev3 pessoas: «sete pessoas a bordo» (por extenso) não troca', r"vinte)\s+(?:pessoas?|tripulantes?|passageiros?|adultos?|crian[çc]as?)\s+(?:a\s+bordo|abordo|(?:no|na)", r"vinte)\s+zzqq\s+(?:a\s+bordo|abordo|(?:no|na)", ('janela',)),
+    ('p4a rev3 pessoas: «7 pessoas no barco» não troca', r"|(?:no|na)\s+(?:barco|embarca[çc][ãa]o|lancha|iate))\b/gi, 'pessoas a bordo: conte agora'],", r")\b/gi, 'pessoas a bordo: conte agora'],", ('janela',)),
+    ('p4a rev3 pessoas: «POB 7» não troca', r"[/\bPOB\b[\s:=]*\d+/g, 'pessoas a bordo: conte agora'],", r"", ('janela',)),
+    ('p4a rev3 chegada: «chegada às 12:03» (sem «prevista») não troca', r"[/\b[Cc]hegada\s*[:=]?\s*(?:(?:para|às|as|em)\s+)?\d{1,2}(?:[:h]\d{2}(?::\d{2})?|\s*(?:h(?:oras?)?|min(?:utos?)?)\b)/g, 'chegada: leia no plotter'],", r"", ('janela',)),
+    ('p4a rev3 chegada: «previsão de chegada» não tem frase própria', r"[Pp]revis[ãa]o\s+de\s+[Cc]hegada|", r"", ('janela',)),
+    # — (2) o cartão de Salvatagem do FAQ —
+    ('p4a rev3 faq: o cartão de Salvatagem (EM-09) também abre a janela (a.emerg)', r"function faqAbreJanela(it) { return !!it.emerg && norm(it.equip || '') !== 'salvatagem'; }", r"function faqAbreJanela(it) { return !!it.emerg; }", ('janela',)),
+    ('p4a rev3 faq: nenhum cartão EM abre a janela', r"function faqAbreJanela(it) { return !!it.emerg && norm(it.equip || '') !== 'salvatagem'; }", r"function faqAbreJanela(it) { return false; }", ('janela',)),
+    ('p4a rev3 faq: o cartão de Salvatagem responde COM quadro e hora (o emerg() só olha a.emerg)', r"(a.emerg === true || a.semQuadro === true)", r"a.emerg === true", ('janela',)),
+    ('p4a rev3 faq: o cartão de Salvatagem não leva `semQuadro`', r"semQuadro: !!it.emerg,", r"semQuadro: false,", ('janela',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4A_REV3
 
 
 
