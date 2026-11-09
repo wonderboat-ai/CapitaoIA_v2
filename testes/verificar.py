@@ -79,7 +79,7 @@ Fase 4 retira as suas; uma tela da lista que já está limpa reprova, para a lis
 ainda não tornou viva, está em PENDENTES_MUDA). Selo do coletor pela cor (F06): verde com o replay ao vivo, amarelo com a última leitura (replay desligado ou que falhou ao carregar).
 Offline: capitao-replay.js responde 200 e CapitaoReplay.quadro() não é nulo em cada tela (o SOS só confere o arquivo). Login com o botão de SOS (S2 no celular, S1 no computador).
 
-Fase 4, P4D (a Carta: B1 Gestão, B2 Sistemas, B3 Resposta por voz; `--so-p4d` roda só as conferências dela e `--mutantes-p4d` planta 24 defeitos, todos acusados): B1 com a propulsão, o diesel,
+Fase 4, P4D (a Carta: B1 Gestão, B2 Sistemas, B3 Resposta por voz; `--so-p4d` roda só as conferências dela e `--mutantes-p4d` planta 26 defeitos, todos acusados): B1 com a propulsão, o diesel,
 o consumo, a autonomia e as horas até a troca do óleo do quadro (nada do snapshot de 26/09), o dia do instante, os 4 cartões iguais às contagens do CapitaoAgora e do cérebro (Executado e pendência
 resolvida por linha nova acompanham); B2 com o estado de cada um dos 11 sistemas do quadro e de D.equipamentos (áudio e VHF), EPIRB e Seafire só com o procedimento padrão e a nota da etiqueta, o
 fabricante e o modelo de D.equipamentos em toda linha (as bombas e as baterias também); B3 com a hora da resposta (calculada uma vez por pergunta; nunca na emergência), a marca da janela de
@@ -2762,6 +2762,31 @@ def teste_carta_resposta(b):
     return prob
 
 
+# B1 nos 4 tamanhos da web: a leitura de cada motor (2 linhas, com o arrefecimento) e a linha do diesel não são cortadas, e o último texto de cada cartão fica dentro dele
+LE_CORTE_B1 = """() => { const secs = [...document.querySelectorAll('main section')].filter((s) => getComputedStyle(s).overflow === 'hidden');
+  const folga = secs.map((s) => { const r = s.getBoundingClientRect(); let maxb = 0; s.querySelectorAll('*').forEach((e) => { if (e.children.length === 0 && (e.innerText || '').trim()) maxb = Math.max(maxb, e.getBoundingClientRect().bottom); });
+    return { t: (s.innerText || '').trim().slice(0, 14).replace(/\\n/g, ' '), folga: Math.round((r.bottom - maxb) * 10) / 10 }; });
+  return { motor: [...document.querySelectorAll('[data-b1=motor-leitura]')].map((e) => ({ h: e.scrollHeight > e.clientHeight + 1, w: e.scrollWidth > e.clientWidth + 1, texto: (e.innerText || '').trim() })),
+    diesel: (() => { const e = document.querySelector('[data-b1=diesel-tanques]'); return e ? { w: e.scrollWidth > e.clientWidth + 1, texto: e.innerText.trim() } : null; })(), folga }; }"""
+
+
+def teste_carta_corte(b):
+    prob = []
+    for (w, h) in WEB:
+        for fixo in ('60', '105'):
+            ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', w=w, h=h, fixo=fixo)
+            r = pg.evaluate(LE_CORTE_B1)
+            rot = 'B1 %dx%d a %s s' % (w, h, fixo)
+            for m in r['motor']:
+                if m['h'] or m['w']: prob.append('%s: a leitura do motor está cortada: %r' % (rot, m['texto']))
+            if not r['diesel'] or r['diesel']['w']: prob.append('%s: a linha do diesel está cortada: %r' % (rot, r['diesel']))
+            ruins = [x for x in r['folga'] if x['folga'] < 1]
+            if ruins: prob.append('%s: o texto passa da borda de baixo do cartão: %s' % (rot, ruins))
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    return prob
+
+
 def teste_carta_vivo(b):
     """Sem congelar o replay, o que a B1 e a B2 mostram do quadro muda em 1,5 s (as telas assinam o capitao-telemetria; a moldura sozinha já muda)."""
     prob = []
@@ -2837,6 +2862,7 @@ def p4d_conferencias(b, lista):
     out = []
     if any(t in lista for t in TELAS_P4D): out.append(('código da Carta', teste_carta_codigo()))
     if 'B1-Carta-Web' in lista: out.append(('B1 · propulsão, diesel, cartões e prazos', teste_carta_web(b)))
+    if 'B1-Carta-Web' in lista: out.append(('B1 · nada cortado nos 4 tamanhos da web', teste_carta_corte(b)))
     if 'B2-Carta-Mobile' in lista: out.append(('B2 · estado de cada sistema', teste_carta_app(b)))
     if 'B3-Carta-Resposta' in lista: out.append(('B3 · hora da resposta, janela de emergência e botões', teste_carta_resposta(b)))
     if 'B1-Carta-Web' in lista or 'B2-Carta-Mobile' in lista: out.append(('B1 e B2 · a propulsão anda sem congelar o replay', teste_carta_vivo(b)))
@@ -2854,6 +2880,8 @@ MUTANTES_P4D = [
     ('a B1 conta a tarefa executada como atrasada', 'B1-Carta-Web.dc.html', [("const abertas = tarefas.filter((t) => !ex[t.id] && !t.feita && num(t.dn))", "const abertas = tarefas.filter((t) => !t.feita && num(t.dn))")], 'web'),
     ('o fabricante dos motores fixo na B1 (Cummins)', 'B1-Carta-Web.dc.html', [("(eM.fabricante || falta('fabricante ' + SD))", "'Cummins'")], 'web'),
     ('a B1 sem a cor de AVISO no motor (o arrefecimento do BE a 105 s)', 'B1-Carta-Web.dc.html', [("tomK: ligados ? pior : ''", "tomK: ''")], 'web'),
+    ('a leitura do motor da B1 numa linha só (o arrefecimento cortado)', 'B1-Carta-Web.dc.html', [("display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;\">{{m.s}}", "white-space: nowrap; overflow: hidden; text-overflow: ellipsis;\">{{m.s}}")], 'corte'),
+    ('a linha do diesel da B1 de volta com o desenho dos tanques (BE cortado)', 'B1-Carta-Web.dc.html', [("dieselS: tem('diesel_bb_pct') ? 'de ' + mil(CAP) + ' L · BB '", "dieselS: tem('diesel_bb_pct') ? 'de ' + mil(CAP) + ' L (' + nDiesel + ' × ' + mil(CAP / nDiesel) + ' L) · BB '")], 'corte'),
     ('a B1 sem assinar o capitao-telemetria', 'B1-Carta-Web.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'vivo'),
     ('a B2 sem assinar o capitao-telemetria', 'B2-Carta-Mobile.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'vivo'),
     ('o estado do EPIRB da B2 de volta com SEM DADOS', 'B2-Carta-Mobile.dc.html', [("estado: PADRAO + ' · ' + notaEtiqueta(eq('epirb'), 'epirb')", "estado: 'SEM DADOS — modelo, localização a bordo, acionamento e validade da bateria não carregados'")], 'app'),
@@ -2886,7 +2914,7 @@ def mutantes_p4d(b):
         prob = []
         try:
             sys.stdout = open(os.devnull, 'w')
-            prob = {'web': lambda: teste_carta_web(b), 'app': lambda: teste_carta_app(b), 'resposta': lambda: teste_carta_resposta(b), 'vivo': lambda: teste_carta_vivo(b) + teste_carta_codigo(), 'codigo': lambda: teste_carta_codigo()}[qual]()
+            prob = {'web': lambda: teste_carta_web(b), 'app': lambda: teste_carta_app(b), 'resposta': lambda: teste_carta_resposta(b), 'corte': lambda: teste_carta_corte(b), 'vivo': lambda: teste_carta_vivo(b) + teste_carta_codigo(), 'codigo': lambda: teste_carta_codigo()}[qual]()
         except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um defeito do teste): o mutante fica vivo
             sys.stdout = sai
             print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))

@@ -93,7 +93,7 @@ button { font: inherit; }
               <div data-motor="{{m.id}}" title="{{m.title}}" style="min-width: 0; padding: 8px 12px; background: var(--cap-row, #10162e); border-radius: 12px; display: flex; flex-direction: column; gap: 1px;">
                 <span style="font-size: 12px; font-weight: 600; color: var(--cap-ink2, #b1bdd6);">{{m.l}}</span>
                 <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">{{m.h}} <span style="font-size: 13px; font-weight: 600; color: var(--cap-ink3, #97a3c0); letter-spacing: 0;">h</span></span>
-                <span data-b1="motor-leitura" style="font-size: 11px; color: {{m.tone}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{m.s}}</span>
+                <span data-b1="motor-leitura" style="font-size: 11px; line-height: 1.3; color: {{m.tone}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">{{m.s}}</span>
               </div>
             </sc-for>
           </div>
@@ -146,7 +146,7 @@ button { font: inherit; }
           </div>
           <span style="display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; min-width: 0;">
             <span data-b1="diesel" style="flex-shrink: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums;">{{dieselL}} <span style="font-size: 14px; font-weight: 600; color: var(--cap-ink3, #97a3c0); letter-spacing: 0;">L</span></span>
-            <span style="min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{dieselS}}</span>
+            <span data-b1="diesel-tanques" title="{{dieselTitle}}" style="min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{dieselS}}</span>
           </span>
           <span data-b1="diesel-hora" style="flex-shrink: 0; font-size: 11.5px; color: var(--cap-ink3, #97a3c0);">{{dieselH}}</span>
           <div style="display: flex; flex-direction: column; gap: 2px; flex-shrink: 0;">
@@ -365,7 +365,8 @@ class Component extends DCLogic {
       docsFonte: 'Fonte: ' + (D.docsFonte || falta(SD)),
       abastSub: cap1(D.regraAbast || falta('regra de abastecimento ' + SD)),
       dieselL: tem('diesel_litros') ? '≈ ' + c('diesel_litros') : falta(SL),
-      dieselS: tem('diesel_bb_pct') ? 'de ' + mil(CAP) + ' L' + (nDiesel ? ' (' + nDiesel + ' × ' + mil(CAP / nDiesel) + ' L)' : '') + ' · BB ' + c('diesel_bb_pct', ' %') + ' · BE ' + c('diesel_be_pct', ' %') : '',
+      dieselS: tem('diesel_bb_pct') ? 'de ' + mil(CAP) + ' L · BB ' + c('diesel_bb_pct', ' %') + ' · BE ' + c('diesel_be_pct', ' %') : '',
+      dieselTitle: tem('diesel_bb_pct') ? 'Diesel: ' + c('diesel_litros', ' L') + ' de ' + mil(CAP) + ' L' + (nDiesel ? ' (' + nDiesel + ' tanques de ' + mil(CAP / nDiesel) + ' L)' : '') + ' · BB ' + c('diesel_bb_pct', ' %') + ' · BE ' + c('diesel_be_pct', ' %') + ' · ' + agoraTxt : '',
       dieselH: (I ? (reserva ? 'Última leitura · ' + lei : 'Ao vivo · ' + I.hora) : falta(SL)) + (st.abastApp ? ' · ' + st.abastApp + ' registro(s) no app (A CONFIRMAR)' : ''),
       abast: abast,
       consumoTxt: 'Consumo: ' + (ligados && tem('consumo_lph') ? 'agora ' + c('consumo_lph', ' L/h') + ' · ' : '') + (num(cru.lph) ? 'cruzeiro ' + cru.lph + ' L/h a ' + cru.nos + ' nós' : falta(SD)) + ' · lenta ' + nb(len.lph) + ' L/h' + (des ? ' · ≈ ' + mil(des.litros) + ' L desde ' + String(des.desde || '').slice(0, 5) : ''),
@@ -407,7 +408,7 @@ class Component extends DCLogic {
       resumo: d.resumo, kpis: kpis, manut: manut, manutVazio: d.manutVazio, manutSub: d.manutSub, manutFonte: d.manutFonte,
       propSub: d.propSub, propEstado: d.propEstado, motores: motores, oleo: oleo, rev: rev, propFonte: d.propFonte,
       docs: docs, docsSub: d.docsSub, docsFonte: d.docsFonte,
-      abastSub: d.abastSub, dieselL: d.dieselL, dieselS: d.dieselS, dieselH: d.dieselH, abast: abast,
+      abastSub: d.abastSub, dieselL: d.dieselL, dieselS: d.dieselS, dieselTitle: d.dieselTitle, dieselH: d.dieselH, abast: abast,
       consumoTxt: d.consumoTxt, consumoTitle: d.consumoTitle, autonomiaTxt: d.autonomiaTxt, autonomiaTitle: d.autonomiaTitle, abastFonte: d.abastFonte,
       log: log, diarioSub: d.diarioSub, pendLabel: d.pendLabel, pendTxt: d.pendTxt, pendTitle: d.pendTitle, diarioFonte: d.diarioFonte
     };
