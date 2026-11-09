@@ -79,6 +79,14 @@ Fase 4 retira as suas; uma tela da lista que já está limpa reprova, para a lis
 ainda não tornou viva, está em PENDENTES_MUDA). Selo do coletor pela cor (F06): verde com o replay ao vivo, amarelo com a última leitura (replay desligado ou que falhou ao carregar).
 Offline: capitao-replay.js responde 200 e CapitaoReplay.quadro() não é nulo em cada tela (o SOS só confere o arquivo). Login com o botão de SOS (S2 no celular, S1 no computador).
 
+Fase 4, P4D (a Carta: B1 Gestão, B2 Sistemas, B3 Resposta por voz; `--so-p4d` roda só as conferências dela e `--mutantes-p4d` planta 24 defeitos, todos acusados): B1 com a propulsão, o diesel,
+o consumo, a autonomia e as horas até a troca do óleo do quadro (nada do snapshot de 26/09), o dia do instante, os 4 cartões iguais às contagens do CapitaoAgora e do cérebro (Executado e pendência
+resolvida por linha nova acompanham); B2 com o estado de cada um dos 11 sistemas do quadro e de D.equipamentos (áudio e VHF), EPIRB e Seafire só com o procedimento padrão e a nota da etiqueta, o
+fabricante e o modelo de D.equipamentos em toda linha (as bombas e as baterias também); B3 com a hora da resposta (calculada uma vez por pergunta; nunca na emergência), a marca da janela de
+conversa em emergência (CapitaoEmergencia: abre com sos, óleo, canal 16, EPIRB e Seafire, não com salvatagem nem MMSI; dentro dela posição, SOG, chegada e pessoas viram «LEIA NO PLOTTER»), o
+botão de uma resposta (#capitao-prop-… e #capitao-relato-…) que vira a pergunta sem gravar, e nenhum link vazio. Sem congelar o replay, a propulsão da B1 e da B2 muda em 1,5 s; com simulacao false
+as duas leem a última leitura salva (D.snapshot).
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -148,16 +156,16 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = (
     'Main', 'H2-Home-Mobile', 'C3-Leme-Alerta',
-    'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web',
+    'C1-Leme-Web',
     'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
     'E2-Navegando-Sintoma', 'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
     'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (23 telas em 09/11/2026, depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+)   # (21 telas em 09/11/2026, depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
 PENDENTES_MUDA = ('C3-Leme-Alerta',)
-MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
+MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'E1-Navegando-Gatilhos', 'C3-Leme-Alerta')
 # Sem faixa global de alerta: o SOS (nunca muda de lugar), o Manual (apresentação) e a C3 (a própria tela do alerta)
 SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta')
 MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
@@ -723,6 +731,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4d' in sys.argv or '--mutantes-p4d' in sys.argv:   # só as conferências da P4D (e, com --mutantes-p4d, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4d' in sys.argv:
+                falhas = mutantes_p4d(b)
+            else:
+                for nome, prob in p4d_conferencias(b, list(TELAS_P4D)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4c' in sys.argv or '--mutantes-p4c' in sys.argv:   # só as conferências da P4C (e, com --mutantes-p4c, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -847,6 +868,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4C', 'prob': prob[:8]})
                     print('FALHA P4C ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4d_conferencias(b, lista):   # P4D: a Carta (B1 a B3): propulsão, estados, hora da resposta, janela de emergência, ramo simulacao:false e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4D', 'prob': prob[:8]})
+                    print('FALHA P4D ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -2484,6 +2510,393 @@ def mutantes_p4c(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4C), len(vivos)))
+    return vivos
+
+
+# ——— P4D: a Carta (B1 Gestão, B2 Sistemas, B3 Resposta por voz) ———
+# PROMPT Fase 4 e linha P4D (MAPA §6 B1, B2, B3); a janela de conversa em emergência (PROMPT §2.2, CLAUDE.md 10) e a decisão 17 (EPIRB e Seafire só com o procedimento padrão). Cada conferência abaixo
+# tem um defeito plantado que a faz falhar (MUTANTES_P4D, rodados com --mutantes-p4d): o teste só vale se acusa o defeito.
+TELAS_P4D = ('B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta')
+PADRAO_SEG = 'procedimento padrão — confirmar com o protocolo de bordo'
+NOTA_ETIQUETA = 'modelo, validade e acionamento: veja a etiqueta do equipamento'
+
+# B1: o texto de cada bloco refeito do quadro (a mesma CapitaoAgora.fmt.campo da moldura e do cérebro) e dos números que o instante calcula (calc), os 4 cartões contra as contagens do CapitaoAgora
+LE_B1 = """() => { """ + JS_BASE + """
+  const un = (s) => { const e = document.querySelector(s); return e ? lin(e.innerText) : null; }, B = window.CapitaoBrain, C = A.contagens(), nb = F.nb, calc = I.calc;
+  const mot = {}; document.querySelectorAll('[data-motor]').forEach((e) => { const l = e.querySelector('[data-b1=motor-leitura]'); mot[e.getAttribute('data-motor')] = { texto: lin(e.innerText), leitura: lin(l.innerText), cor: getComputedStyle(l).color, titulo: e.getAttribute('title') }; });
+  const kpi = {}; document.querySelectorAll('[data-kpi]').forEach((e) => { kpi[e.getAttribute('data-kpi')] = { v: lin(e.querySelectorAll(':scope > span')[1].innerText), texto: lin(e.innerText), href: e.getAttribute('href') }; });
+  const m = /Pendências abertas \\((\\d+)\\)/.exec(B.answer('Anomalias abertas', { platform: 'web', commit: false }).text);
+  const dia = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: A.fuso }).format(new Date(I.ms)), ddmm = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', timeZone: A.fuso }).format(new Date(I.ms));
+  const warn = (() => { const e = document.createElement('i'); e.style.color = 'var(--cap-warn, #f0a63a)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; })();
+  const tOleo = D.agenda.find((t) => t.id === 'motores-oleo'), hMax = (campos) => Math.max(...campos.map((c) => q[c]));
+  const manut = [...document.querySelectorAll('a[href*="C1-Leme-Web.dc.html#f="]')].filter((a) => !a.hasAttribute('data-kpi') && a.querySelector('b')).map((a) => lin(a.innerText));
+  return { T, I: { hora: I.hora, hhmm: I.hhmm, fase: I.fase && I.fase.nome }, marcha: q.marcha, mot, kpi, C, anom: m ? +m[1] : null, warn, texto: lin(document.body.innerText),
+    resumo: un('[data-b1=resumo]'), propSub: un('[data-b1=prop-sub]'), estado: un('[data-b1=prop-estado]'), diesel: un('[data-b1=diesel]'), dieselHora: un('[data-b1=diesel-hora]'), consumo: un('[data-b1=consumo]'),
+    autonomia: un('[data-b1=autonomia]'), oleo: un('[data-b1=oleo-s]'), manut, versao: D.versao,
+    esp: { dia: dia.charAt(0).toUpperCase() + dia.slice(1) + ', ' + ddmm, aut: calc.autonomia ? '≈ ' + nb(calc.autonomia.horas, 1) + ' h · ≈ ' + nb(calc.autonomia.mn, 0, true) + ' mn' : null,
+      desde: calc.desdeAbast ? '≈ ' + nb(calc.desdeAbast.litros, 0, true) + ' L desde' : null, oleoHoras: nb(hMax(tOleo.horas.campos), 1, true), oleoFaltam: nb(calc.faltam['motores-oleo'], 1) } }; }"""
+
+
+def teste_carta_web(b):
+    """B1: propulsão, diesel, consumo e autonomia do quadro (nada do snapshot de 26/09), as horas até a troca do horímetro de agora, o dia do instante, os 4 cartões iguais às contagens do CapitaoAgora e
+    do cérebro, sem rótulo, o arrefecimento do BE em AVISO a 105 s; Executado e pendência resolvida acompanham; fabricante e modelo de D.equipamentos."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', fixo=fixo)
+        r = pg.evaluate(LE_B1)
+        T, rot = r['T'], 'B1 a %s s' % fixo
+        if not re.fullmatch(r'Ligados · cruzeiro · marcha avante · ao vivo %s' % re.escape(r['I']['hora']), r['estado'] or ''): prob.append('%s: o estado da propulsão devia ser «Ligados · cruzeiro · marcha avante · ao vivo %s»: %r' % (rot, r['I']['hora'], r['estado']))
+        for lado, k in (('bb', 'BB'), ('be', 'BE')):
+            m = r['mot'].get(lado, {})
+            esp = '%s rpm · óleo %s bar · %s °C' % (T['motor_%s_rpm' % lado], T['motor_%s_oleo_bar' % lado], T['motor_%s_arref_c' % lado])
+            if m.get('leitura') != esp: prob.append('%s: o motor %s diz %r (esperado %r, do quadro)' % (rot, k, m.get('leitura'), esp))
+            if (T['motor_%s_horimetro_h' % lado] + ' h') not in m.get('texto', ''): prob.append('%s: o horímetro do %s não é o do quadro (%s): %r' % (rot, k, T['motor_%s_horimetro_h' % lado], m.get('texto')))
+            if 'ao vivo ' + r['I']['hora'] not in (m.get('titulo') or ''): prob.append('%s: a dica do motor %s não leva a hora do quadro: %r' % (rot, k, m.get('titulo')))
+        if r['diesel'] != '≈ %s L' % T['diesel_litros']: prob.append('%s: o diesel diz %r (esperado «≈ %s L», do quadro)' % (rot, r['diesel'], T['diesel_litros']))
+        if 'BB %s %% · BE %s %%' % (T['diesel_bb_pct'], T['diesel_be_pct']) not in r['texto']: prob.append('%s: os tanques de diesel BB %s e BE %s não estão na tela' % (rot, T['diesel_bb_pct'], T['diesel_be_pct']))
+        if not (r['dieselHora'] or '').startswith('Ao vivo · ' + r['I']['hora']): prob.append('%s: a hora do diesel diz %r (esperado «Ao vivo · %s»)' % (rot, r['dieselHora'], r['I']['hora']))
+        if ('agora ' + T['consumo_lph'] + ' L/h') not in (r['consumo'] or '') or r['esp']['desde'] not in (r['consumo'] or ''): prob.append('%s: o consumo %r não tem «agora %s L/h» nem «%s»' % (rot, r['consumo'], T['consumo_lph'], r['esp']['desde']))
+        if r['esp']['aut'] not in (r['autonomia'] or ''): prob.append('%s: a autonomia diz %r (esperado %r, do instante)' % (rot, r['autonomia'], r['esp']['aut']))
+        if ('Horímetro %s h · faltam %s h' % (r['esp']['oleoHoras'], r['esp']['oleoFaltam'])) not in (r['oleo'] or ''): prob.append('%s: a troca de óleo diz %r (esperado «Horímetro %s h · faltam %s h», do horímetro de agora)' % (rot, r['oleo'], r['esp']['oleoHoras'], r['esp']['oleoFaltam']))
+        if r['esp']['dia'] not in (r['resumo'] or '') or ('Telemetria ao vivo · ' + r['I']['hhmm']) not in (r['resumo'] or '') or ('prazos contados a partir de ' + r['versao']) not in (r['resumo'] or ''):
+            prob.append('%s: o resumo %r devia ter «%s», «Telemetria ao vivo · %s» e «prazos contados a partir de %s»' % (rot, r['resumo'], r['esp']['dia'], r['I']['hhmm'], r['versao']))
+        C = r['C']
+        for k, v in (('atrasadas', C['atrasadas']), ('d30', C['d30']), ('docs', C['docsVencidos'] + C['docsVencem90']), ('pendencias', r['anom'])):
+            if r['kpi'].get(k, {}).get('v') != str(v): prob.append('%s: o cartão %s mostra %r (esperado %s: %s)' % (rot, k, r['kpi'].get(k, {}).get('v'), v, 'a contagem do CapitaoAgora' if k != 'pendencias' else 'o que o cérebro conta em «Anomalias abertas»'))
+        if r['kpi'].get('pendencias', {}).get('v') != str(C['pendencias']): prob.append('%s: as pendências do cartão (%s) não são as do CapitaoAgora.contagens() (%s)' % (rot, r['kpi'].get('pendencias', {}).get('v'), C['pendencias']))
+        if len(r['manut']) != 6: prob.append('%s: a lista da manutenção tem %d linhas (esperado 6)' % (rot, len(r['manut'])))
+        cor_be = r['mot'].get('be', {}).get('cor')
+        if fixo == '105' and cor_be != r['warn']: prob.append('%s: o arrefecimento do BE (%s °C) devia estar na cor de AVISO (%s): %s' % (rot, T['motor_be_arref_c'], r['warn'], cor_be))
+        if fixo == '60' and cor_be == r['warn']: prob.append('%s: o BE está em AVISO a 60 s (cruzeiro, sem alarme)' % rot)
+        ach = achados_termos('B1-Carta-Web', pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # Executado no aparelho tira a tarefa da conta (o mesmo número do CapitaoAgora); pendência resolvida por linha nova sai da contagem (a mesma do chat)
+    ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', ls={'capitao.executado.v1': json.dumps({'porao-teste': {'d': '09/11', 't': '12:00'}})})
+    r = pg.evaluate(LE_B1)
+    if r['C']['atrasadas'] != 2 or r['kpi']['atrasadas']['v'] != '2' or 'Bombas de porão' in r['kpi']['atrasadas']['texto']: prob.append('B1 com o teste do porão executado: os atrasados são %r (esperado 2, sem as bombas de porão): %s' % (r['kpi']['atrasadas']['v'], r['kpi']['atrasadas']['texto']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    resolve = [{'id': 'x1', 'acao': 'resolve', 'alvo': 'd05', 't': 'Pendência resolvida: Climatização da cabine de proa com fluxo fraco — marcada como resolvida por Lucas. Linha nova, nada se apaga.', 'iso': '2026-11-09T11:00:00-03:00', 'd': '09/11', 'who': 'Lucas', 'sys': 'Equipamentos', 'sim': True}]
+    ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', ls={'capitao.diario.v1': json.dumps(resolve)})
+    r = pg.evaluate(LE_B1)
+    if r['kpi']['pendencias']['v'] != '2' or r['anom'] != 2 or r['C']['pendencias'] != 2: prob.append('B1 com a pendência da climatização resolvida: o cartão mostra %r, o cérebro conta %s e o CapitaoAgora %s (esperado 2 nos três)' % (r['kpi']['pendencias']['v'], r['anom'], r['C']['pendencias']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # fabricante e modelo vêm do D.equipamentos (nunca fixos na tela)
+    ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', depois=FAB_FALSOS)
+    r = pg.evaluate(LE_B1)
+    if r['propSub'] != '2 × Zyxmotor · modelo Zyxmotor Mod9': prob.append('fabricante e modelo dos motores trocados no D.equipamentos e a B1 diz %r' % r['propSub'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+# B2: o estado de cada um dos 11 sistemas, refeito do quadro e de D.equipamentos
+LE_B2 = """() => { """ + JS_BASE + """
+  const un = (s) => { const e = document.querySelector(s); return e ? lin(e.innerText) : null; }, C = A.contagens(), eq = (id) => D.equipamentos.find((e) => e.id === id) || {};
+  const rows = {}; document.querySelectorAll('[data-sistema]').forEach((e) => { const est = e.querySelector('[data-b2=estado]'); rows[e.getAttribute('data-sistema')] = { fab: lin(e.querySelector('[data-b2=fab]').innerText), estado: lin(est.innerText), cor: getComputedStyle(est).color,
+    texto: lin(e.innerText), hrefs: [...e.querySelectorAll('a')].map((a) => a.getAttribute('href')) }; });
+  const warn = (() => { const e = document.createElement('i'); e.style.color = 'var(--cap-warn, #f0a63a)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; })();
+  const atr = document.querySelector('[data-b2=atrasadas]');
+  return { T, I: { hora: I.hora, hhmm: I.hhmm, fase: I.fase && I.fase.nome }, q: { clima: q.climatizacao_ativa, radar: q.radar_ativo, ais: q.ais_alvos, ciclos: q.bomba_porao_ciclos }, rows, warn, C, agora: un('[data-b2=agora]'), atr: atr ? lin(atr.innerText) : null,
+    nota: lin(document.body.innerText), D: { guia: D.guias.g_eletronicos, canal: D.protocolos.canal16, zonas: eq('audio').nominal.zonas, licenca: D.documentos.find((d) => /VHF/.test(d.n)), cartas: D.diario.find((x) => /cartas/i.test(x.t)).d,
+      fab: Object.fromEntries(['motores', 'gerador', 'estabilizador', 'porao', 'eletrico', 'epirb', 'seafire'].map((id) => [id, [eq(id).fabricante, eq(id).modelo, eq(id).qtd, eq(id).lados]])), nSis: D.equipamentos.length } }; }"""
+
+
+def teste_carta_app(b):
+    """B2: o estado de cada sistema é o do quadro (motores, gerador, estabilizador, climatização, eletrônicos, porão, baterias) ou de D.equipamentos (áudio, VHF), sem «SEM LEITURA» nem «SEM DADOS»;
+    EPIRB e Seafire só com o procedimento padrão e a nota da etiqueta; fabricante e modelo de D.equipamentos (as bombas e as baterias também); tudo a 60 s e a 105 s."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'B2-Carta-Mobile', fixo=fixo)
+        r = pg.evaluate(LE_B2)
+        T, rot, R = r['T'], 'B2 a %s s' % fixo, r['rows']
+        if sorted(R) != sorted(['motores', 'gerador', 'estabilizador', 'climatizacao', 'eletronicos', 'audio', 'vhf', 'epirb', 'seafire', 'porao', 'baterias']): prob.append('%s: os sistemas da tela são %s' % (rot, sorted(R)))
+        esp = {
+            'motores': 'Ligados · %s · %s/%s rpm · óleo %s/%s bar · arrefecimento %s/%s °C' % (r['I']['fase'], T['motor_bb_rpm'], T['motor_be_rpm'], T['motor_bb_oleo_bar'], T['motor_be_oleo_bar'], T['motor_bb_arref_c'], T['motor_be_arref_c']),
+            'gerador': 'Ligado · %s kW · %s h' % (T['gerador_kw'], T['gerador_horimetro_h']),
+            'estabilizador': 'Ligado · %s %% · %s rpm' % (T['seakeeper_volante_pct'], T['seakeeper_volante_rpm']),
+            'eletronicos': 'GPS: %s satélites · AIS %s %s · radar %s' % (T['gps_satelites'], T['ais_alvos'], 'alvo' if r['q']['ais'] == 1 else 'alvos', 'ligado' if r['q']['radar'] else 'desligado'),
+            'porao': 'porão: BB %s cm · BE %s cm · bomba %s %s/h' % (T['porao_bb_nivel'], T['porao_be_nivel'], r['q']['ciclos'], 'ciclo' if r['q']['ciclos'] == 1 else 'ciclos'),
+            'baterias': '24 V %s V · 12 V %s V' % (T['bateria_0_tensao_v'], T['bateria_2_tensao_v'])}
+        for k, e in esp.items():
+            if not R.get(k, {}).get('estado', '').startswith(e): prob.append('%s: o estado de %s diz %r (esperado «%s…», do quadro)' % (rot, k, R.get(k, {}).get('estado'), e))
+        if not R['climatizacao']['estado'].startswith('Ligada' if r['q']['clima'] else 'Desligada') or 'diário' not in R['climatizacao']['estado']: prob.append('%s: o estado da climatização diz %r (esperado o do quadro, com a linha do diário)' % (rot, R['climatizacao']['estado']))
+        if '%s zonas de áudio · %s' % (r['D']['zonas'], r['D']['guia']) != R['audio']['estado']: prob.append('%s: o áudio diz %r (esperado as zonas e o guia do D.equipamentos)' % (rot, R['audio']['estado']))
+        L = r['D']['licenca']
+        if not R['vhf']['estado'].startswith('Canal %s · %s MHz' % (r['D']['canal']['canal'], r['D']['canal']['mhz'])) or ('licença de estação vence %s (D-%d)' % (L['vence'], L['dn'])) not in R['vhf']['estado']: prob.append('%s: o VHF diz %r (esperado o canal 16 e a licença de estação)' % (rot, R['vhf']['estado']))
+        for k in ('epirb', 'seafire'):   # decisão 17: só o procedimento padrão e a nota da etiqueta; fabricante e modelo ficam na linha de cima (Equipamentos)
+            if R[k]['estado'] != '%s · %s' % (PADRAO_SEG, NOTA_ETIQUETA): prob.append('%s: o estado de %s diz %r (esperado só «%s · %s»)' % (rot, k, R[k]['estado'], PADRAO_SEG, NOTA_ETIQUETA))
+        # fabricante e modelo de D.equipamentos em toda linha (as bombas e as baterias também), nunca «SEM DADOS»
+        for k, id_ in (('motores', 'motores'), ('gerador', 'gerador'), ('estabilizador', 'estabilizador'), ('porao', 'porao'), ('baterias', 'eletrico'), ('epirb', 'epirb'), ('seafire', 'seafire')):
+            f, m_, qtd, lados = r['D']['fab'][id_]
+            nome = m_ if m_.lower().startswith(f.lower()) else f + ' ' + m_   # o fabricante não se repete quando o modelo já começa por ele («Seakeeper 3»)
+            if nome not in R[k]['fab']: prob.append('%s: a linha de %s não tem %r (fabricante e modelo do D.equipamentos): %r' % (rot, k, nome, R[k]['fab']))
+            if qtd > 1 and ('%d unidades' % qtd) not in R[k]['fab']: prob.append('%s: a linha de %s não diz %d unidades: %r' % (rot, k, qtd, R[k]['fab']))
+        if r['agora'] != 'ao vivo · ' + r['I']['hora']: prob.append('%s: o rótulo da hora diz %r (esperado «ao vivo · %s»)' % (rot, r['agora'], r['I']['hora']))
+        if r['atr'] is None or not re.search(r'3 manutenções atrasadas', r['atr']) or r['C']['atrasadas'] != 3: prob.append('%s: a faixa de atrasadas diz %r e o CapitaoAgora conta %s (esperado 3)' % (rot, r['atr'], r['C']['atrasadas']))
+        warn_motores = R['motores']['cor'] == r['warn']
+        if fixo == '105' and not warn_motores: prob.append('%s: o estado dos motores (BE a %s °C) devia estar na cor de AVISO: %s' % (rot, T['motor_be_arref_c'], R['motores']['cor']))
+        if fixo == '60' and warn_motores: prob.append('%s: o estado dos motores está em AVISO a 60 s' % rot)
+        ach = achados_termos('B2-Carta-Mobile', pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # Executado tira a tarefa dos atrasados (e da etiqueta do porão); a lista segue o CapitaoAgora
+    ctx, pg, erros = abre_tela(b, 'B2-Carta-Mobile', ls={'capitao.executado.v1': json.dumps({'porao-teste': {'d': '09/11', 't': '12:00'}})})
+    r = pg.evaluate(LE_B2)
+    if '2 manutenções atrasadas' not in (r['atr'] or '') or r['C']['atrasadas'] != 2 or 'Teste das bombas' in (r['atr'] or '') or 'EXECUTADO' not in r['rows']['porao']['texto']: prob.append('B2 com o teste do porão executado: %r (esperado 2 atrasadas, sem as bombas, e a etiqueta EXECUTADO no porão)' % r['atr'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'B2-Carta-Mobile', depois=FAB_FALSOS)
+    r = pg.evaluate(LE_B2)
+    if 'Zyxmotor Mod9' not in r['rows']['motores']['fab'] or 'Zyxgerador Mod9' not in r['rows']['gerador']['fab'] or 'Zyxestab Mod9' not in r['rows']['estabilizador']['fab']: prob.append('fabricante trocado no D.equipamentos e a B2 não o mostra: %s' % [r['rows'][k]['fab'] for k in ('motores', 'gerador', 'estabilizador')])
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+# B3: a pergunta, a hora da resposta, o aviso de emergência (a marca CapitaoEmergencia) e o texto da resposta
+LE_B3 = """() => { const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), A = window.CapitaoAgora, E = window.CapitaoEmergencia, h = document.querySelector('[data-b3=hora]'), pr = document.querySelector('[data-b3=pergunta]');
+  const rot = [...document.querySelectorAll('#dc-root span')].find((s) => lin(s.innerText) === 'AÇÕES'), fala = document.querySelector('#dc-root [aria-live=polite]'), raiz = document.getElementById('dc-root');
+  const ate = E.ate(), dia = A.instante();
+  return { hora: h ? lin(h.innerText) : null, horaTitulo: h ? h.getAttribute('title') : null, pergunta: pr ? lin(pr.innerText) : null, valendo: E.valendo(), ate: ate, agora: Date.now(), inst: dia ? dia.hora : null,
+    acoes: rot ? [...rot.parentElement.querySelectorAll('a')].map((a) => ({ l: lin(a.innerText), href: a.getAttribute('href') })) : null, fala: fala ? lin(fala.innerText) : null, texto: raiz ? lin(raiz.innerText) : '', hash: location.hash,
+    origem: pr ? lin(pr.parentElement.parentElement.querySelector(':scope > span:last-child').innerText) : null, diario: localStorage.getItem('capitao.diario.v1'), aviso: sessionStorage.getItem('capitao.emergenciaAte') }; }"""
+
+
+def pergunta_b3(pg, q):
+    """Pergunta pelo endereço (#q=…), como a H2 e os cartões da B2 fazem, e espera a tela mostrar a pergunta."""
+    pg.evaluate("(q) => { location.hash = '#q=' + encodeURIComponent(q); }", q)
+    pg.wait_for_function("(q) => { const e = document.querySelector('[data-b3=pergunta]'); return !!e && e.innerText.trim() === q; }", arg=q, timeout=6000)
+    pg.wait_for_timeout(400)
+    return pg.evaluate(LE_B3)
+
+
+R_POSICAO = confere.R_COORD
+R_NAV = re.compile(r'\d+(?:,\d+)?\s*nós|rumo\s*\d|proa\s*\d|\d+\s*pessoas|SOG\s*\d|\d+\s*mn\b', re.I)
+
+
+def teste_carta_resposta(b):
+    """B3: a resposta diz o segundo do instante em que foi calculada (uma vez por pergunta, nunca na emergência); depois de uma resposta que abre a janela de emergência a marca vale 15 min e posição, rumo,
+    SOG, ETA e pessoas viram «LEIA NO PLOTTER»; salvatagem e MMSI não abrem a janela; o botão de uma resposta (#capitao-prop-… e #capitao-relato-…) vira a pergunta e nunca grava; sem link vazio."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'B3-Carta-Resposta', fixo=fixo)
+        r = pg.evaluate(LE_B3)
+        rot = 'B3 a %s s' % fixo
+        if r['hora'] != 'respondida às ' + r['inst']: prob.append('%s: a resposta diz %r (esperado «respondida às %s», o segundo do instante)' % (rot, r['hora'], r['inst']))
+        if ('Resposta calculada às ' + r['inst']) not in r['texto']: prob.append('%s: o texto de cálculo não diz «Resposta calculada às %s»' % (rot, r['inst']))
+        if not r['fala'] or r['inst'] not in r['fala']: prob.append('%s: a 1ª linha falada não traz a hora do quadro: %r' % (rot, r['fala']))
+        ach = achados_termos('B3-Carta-Resposta', r['texto'])
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # a resposta é calculada uma vez por pergunta (o valor é o do momento dela, com a hora): sem congelar, o texto não anda sozinho; perguntar de novo recalcula
+    ctx, pg, erros = abre_tela(b, 'B3-Carta-Resposta', fixo=None)
+    a = pg.evaluate(LE_B3)
+    pg.wait_for_timeout(2300)
+    c = pg.evaluate(LE_B3)
+    if a['hora'] != c['hora'] or a['texto'] != c['texto']: prob.append('B3 livre: a resposta mudou sozinha em 2,3 s (%r → %r): devia ser calculada uma vez' % (a['hora'], c['hora']))
+    pg.evaluate("() => [...document.querySelectorAll('#dc-root button')].find((x) => x.innerText.trim() === 'Motores').click()")
+    pg.wait_for_timeout(700)
+    d = pg.evaluate(LE_B3)
+    if d['hora'] == a['hora'] or not d['hora']: prob.append('B3 livre: perguntar de novo não recalculou (hora %r → %r)' % (a['hora'], d['hora']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # a janela de conversa em emergência
+    ctx, pg, erros = abre_tela(b, 'B3-Carta-Resposta')
+    PLOTTER = pg.evaluate("() => window.CapitaoDados.protocolos.plotter")
+    normal = {q: pergunta_b3(pg, q) for q in ('qual a velocidade?', 'quanto falta para chegar?')}
+    for q, r in normal.items():
+        if not R_NAV.search(r['texto']): prob.append('controle: «%s» fora da janela devia dar número (nós, mn…) e deu %r' % (q, r['texto'][:160]))
+    pos0 = pergunta_b3(pg, 'qual a nossa posição?')
+    if not R_POSICAO.search(pos0['texto']) or pos0['valendo']: prob.append('controle: a posição fora da janela devia ter coordenada, sem a marca: %r (marca %s)' % (pos0['texto'][:140], pos0['valendo']))
+    for chave in ('mayday', 'canal 16', 'epirb', 'seafire', 'Pressão de óleo baixa: o que verificar primeiro?'):
+        pg.evaluate("() => window.CapitaoEmergencia.zera()")
+        r = pergunta_b3(pg, chave)
+        rot = 'B3 «%s»' % chave
+        if not r['valendo'] or not (r['agora'] < r['ate'] <= r['agora'] + 15 * 60 * 1000 + 2000): prob.append('%s: a resposta devia abrir a janela de 15 min (marca %s, fim %s, agora %s)' % (rot, r['valendo'], r['ate'], r['agora']))
+        if r['hora'] is not None: prob.append('%s: a resposta de emergência leva a hora do quadro: %r' % (rot, r['hora']))
+        if R_POSICAO.search(r['texto']) or R_NAV.search(r['texto'].replace('canal 16', '')): prob.append('%s: a resposta de emergência traz posição, rumo, SOG ou pessoas: %s' % (rot, (R_POSICAO.findall(r['texto']) or R_NAV.findall(r['texto']))[:3]))
+    # dentro da janela (a marca do último passo vale): a posição, a velocidade, a chegada e as pessoas viram a instrução do plotter, sem número
+    for q in ('qual a nossa posição?', 'qual a velocidade?', 'quanto falta para chegar?', 'quantas pessoas a bordo?'):
+        r = pergunta_b3(pg, q)
+        if PLOTTER not in r['texto'] or R_POSICAO.search(r['texto']) or R_NAV.search(r['texto']): prob.append('B3 na janela: «%s» devia dar só «%s» e deu %r' % (q, PLOTTER, r['texto'][:200]))
+        if r['hora'] is not None: prob.append('B3 na janela: «%s» leva a hora do quadro (%r)' % (q, r['hora']))
+    # fora da janela de novo (a marca zerada): a posição volta com coordenada (o que muda a resposta é a marca)
+    pg.evaluate("() => window.CapitaoEmergencia.zera()")
+    r = pergunta_b3(pg, 'qual a nossa posição?')
+    if not R_POSICAO.search(r['texto']) or r['valendo']: prob.append('B3 com a marca zerada: a posição devia voltar com coordenada: %r' % r['texto'][:140])
+    # salvatagem e MMSI são perguntas de rotina: não ligam a janela e não levam a hora do quadro
+    for q in ('onde ficam os coletes salva-vidas?', 'qual o MMSI do barco?'):
+        pg.evaluate("() => window.CapitaoEmergencia.zera()")
+        r = pergunta_b3(pg, q)
+        if r['valendo']: prob.append('B3 «%s»: a pergunta de rotina abriu a janela de emergência' % q)
+        if r['hora'] is not None: prob.append('B3 «%s»: a resposta de segurança leva a hora do quadro: %r' % (q, r['hora']))
+    # a ação sem destino (o checklist guiado ainda não tem tela) não vira link vazio
+    r = pergunta_b3(pg, 'onde ficam os coletes salva-vidas?')
+    if r['acoes'] is None or any(not a['href'] for a in r['acoes']): prob.append('B3: a resposta tem ação sem destino: %s' % r['acoes'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o botão de uma resposta vira a pergunta (o cérebro escuta o clique e avisa a tela) e esta tela nunca grava no diário
+    ctx, pg, erros = abre_tela(b, 'B3-Carta-Resposta')
+    ant = pg.evaluate("() => localStorage.getItem('capitao.diario.v1')")
+    pg.evaluate("() => window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: 'Autonomia' } }))")
+    pg.wait_for_timeout(700)
+    r = pg.evaluate(LE_B3)
+    if r['pergunta'] != 'Autonomia' or r['origem'] is None or 'Botão da resposta' not in r['origem']: prob.append('B3: o evento capitao-chat-pergunta não virou a pergunta (pergunta %r, origem %r)' % (r['pergunta'], r['origem']))
+    for href, esperado in (('#capitao-relato-registra-tabc123', 'registrar o relato'), ('#capitao-relato-cancela-tabc123', 'não registrar o relato'), ('#capitao-prop-confirma-7', 'confirmar a proposta'), ('#capitao-prop-recusa-7', 'recusar a proposta')):
+        pg.evaluate("(h) => { const a = document.createElement('a'); a.href = h; a.id = 'bt'; a.textContent = 'x'; document.body.appendChild(a); }", href)
+        pg.click('#bt')
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(LE_B3)
+        pg.evaluate("() => document.getElementById('bt').remove()")
+        if r['pergunta'] != esperado: prob.append('B3: o botão %s devia perguntar «%s» e perguntou %r' % (href, esperado, r['pergunta']))
+        if r['diario'] != ant: prob.append('B3: o botão %s gravou no diário' % href)
+        if r['hash'].startswith('#capitao-'): prob.append('B3: o botão %s ficou no endereço (%s): o link não devia navegar' % (href, r['hash']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_carta_vivo(b):
+    """Sem congelar o replay, o que a B1 e a B2 mostram do quadro muda em 1,5 s (as telas assinam o capitao-telemetria; a moldura sozinha já muda)."""
+    prob = []
+    for tela, sel in (('B1-Carta-Web', '[data-motor=bb] [data-b1=motor-leitura]'), ('B2-Carta-Mobile', '[data-sistema=motores] [data-b2=estado]')):
+        ctx, pg, erros = abre_tela(b, tela, fixo=None)
+        mudou = False
+        for _ in range(3):
+            a = pg.evaluate("(s) => document.querySelector(s).innerText", sel)
+            pg.wait_for_timeout(1500)
+            if a != pg.evaluate("(s) => document.querySelector(s).innerText", sel): mudou = True; break
+        if not mudou: prob.append('%s: a propulsão não mudou em 1,5 s sem congelar o replay (3 tentativas): a tela não assina o capitao-telemetria' % tela)
+        if erros: prob += erros[:2]
+        ctx.close()
+    return prob
+
+
+def teste_carta_real(b):
+    """Ramo simulacao false: o instante cai na última leitura salva (o D.snapshot): motores desligados, âncora e porão do que o snapshot tem, sem NaN, undefined nem [object Object]."""
+    prob = []
+    for tela, JS in (('B1-Carta-Web', LE_B1), ('B2-Carta-Mobile', LE_B2)):
+        ctx, pg, erros = abre_tela(b, tela, fixo=None, depois='window.CapitaoDados.simulacao = false;')
+        r = pg.evaluate("() => ({ replay: window.CapitaoReplay.ativo(), texto: document.body.innerText, fonte: window.CapitaoAgora.instante().fonte })")
+        rot = '%s com simulacao false' % tela
+        if r['replay'] or r['fonte'] != 'snapshot': prob.append('%s: o replay ainda anda (%s)' % (rot, r['fonte']))
+        if re.search(r'NaN|undefined|\[object', r['texto']): prob.append('%s: NaN, undefined ou [object na tela' % rot)
+        if tela.startswith('B1'):
+            t = pg.evaluate(JS)
+            if not (t['estado'] or '').startswith('Desligados · marcha neutro · última leitura 26/09 10:12'): prob.append('%s: o estado diz %r (esperado «Desligados · marcha neutro · última leitura 26/09 10:12»)' % (rot, t['estado']))
+            if t['diesel'] != '≈ 848 L' or not (t['dieselHora'] or '').startswith('Última leitura · 26/09 10:12'): prob.append('%s: o diesel diz %r %r (esperado a última leitura salva: 848 L)' % (rot, t['diesel'], t['dieselHora']))
+            if 'Sábado, 26/09' not in (t['resumo'] or '') or 'Última leitura · 26/09 10:12' not in (t['resumo'] or ''): prob.append('%s: o resumo diz %r (esperado o dia e a hora da última leitura)' % (rot, t['resumo']))
+        else:
+            t = pg.evaluate(JS)
+            if t['rows']['porao']['estado'] != 'porão: BB 1,2 cm · BE 0,9 cm · bomba 0 ciclos/h' or t['agora'] != 'última leitura 26/09 10:12': prob.append('%s: o porão diz %r e o rótulo %r (esperado a última leitura salva)' % (rot, t['rows']['porao']['estado'], t['agora']))
+            if not t['rows']['motores']['estado'].startswith('Desligados · horímetros BB 412,6 · BE 409,8 h'): prob.append('%s: os motores dizem %r' % (rot, t['rows']['motores']['estado']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+# o código das três telas
+def teste_carta_codigo():
+    prob = []
+    def le_(a):   # o arquivo do disco, com o defeito plantado (MUT_ARQ) se houver
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    for t in TELAS_P4D:
+        h = le_(t + '.dc.html')
+        if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % t)
+        if re.search(r'D\.demo|\.demo\b|DEMO', h): prob.append('%s: lê D.demo ou escreve DEMO no código' % t)
+        if re.search(r'D\.snapshot|\.snapshot\b', h): prob.append('%s: lê o D.snapshot (o dado vem do instante)' % t)
+        mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+        if t != 'B3-Carta-Resposta':
+            for ev in ('capitao-telemetria', 'capitao-rebase'):
+                if "addEventListener('%s'" % ev not in h[mont:desm] or "removeEventListener('%s'" % ev not in h[desm:]: prob.append('%s: não assina o %s no componentDidMount e remove no componentWillUnmount' % (t, ev))
+            if 'document.hidden' not in h: prob.append('%s: não pausa com document.hidden' % t)
+            if 'if (k === this._k) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('%s: não compara o texto antes do setState' % t)
+            if h.count('setInterval') > 1: prob.append('%s: setInterval novo (%d)' % (t, h.count('setInterval')))
+        else:
+            if "addEventListener('capitao-chat-pergunta'" not in h[mont:desm] or "removeEventListener('capitao-chat-pergunta'" not in h[desm:]: prob.append('%s: não escuta o capitao-chat-pergunta (os botões das respostas)' % t)
+            if 'a.abreJanela === true' not in h or 'E.marca()' not in h: prob.append('%s: não marca a janela de emergência quando a resposta a abre' % t)
+            if 'emergencia: emergencia' not in h or 'E.valendo()' not in h: prob.append('%s: não passa a marca da janela ao cérebro (answer com emergencia)' % t)
+            if 'commit: false' not in h: prob.append('%s: a resposta deixou de ser commit:false (esta tela não grava)' % t)
+            if re.search(r'localStorage\s*\.\s*setItem|addDiario|markExec|addDoc\b|addAbast|addTarefa|criaAlarmePedido|apagaAlarmePedido', h): prob.append('%s: grava no aparelho' % t)
+            if 'capitao-ia' in h: prob.append('%s: carrega a IA na nuvem (esta tela responde só com o cérebro local; a IA é das telas de conversa)' % t)
+            if '.filter((x) => x && x.l && x.href)' not in h: prob.append('%s: não tira a ação sem destino' % t)
+    return prob
+
+
+def p4d_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4D para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_P4D): out.append(('código da Carta', teste_carta_codigo()))
+    if 'B1-Carta-Web' in lista: out.append(('B1 · propulsão, diesel, cartões e prazos', teste_carta_web(b)))
+    if 'B2-Carta-Mobile' in lista: out.append(('B2 · estado de cada sistema', teste_carta_app(b)))
+    if 'B3-Carta-Resposta' in lista: out.append(('B3 · hora da resposta, janela de emergência e botões', teste_carta_resposta(b)))
+    if 'B1-Carta-Web' in lista or 'B2-Carta-Mobile' in lista: out.append(('B1 e B2 · a propulsão anda sem congelar o replay', teste_carta_vivo(b)))
+    if 'B1-Carta-Web' in lista or 'B2-Carta-Mobile' in lista: out.append(('simulacao false na B1 e na B2', teste_carta_real(b)))
+    return out
+
+
+# Defeitos plantados da P4D: cada um é servido no lugar do arquivo (MUT_ARQ) e a conferência que cuida dele TEM de acusar (--mutantes-p4d; um mutante vivo reprova).
+MUTANTES_P4D = [
+    ('o diesel da B1 fixo no snapshot (848 L)', 'B1-Carta-Web.dc.html', [("dieselL: tem('diesel_litros') ? '≈ ' + c('diesel_litros') : falta(SL),", "dieselL: '≈ 848',")], 'web'),
+    ('as horas até a troca do óleo da B1 só da agenda gerada (não do horímetro de agora)', 'B1-Carta-Web.dc.html', [("const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null;", "return num(h.faltam) ? h.faltam : null;")], 'web'),
+    ('a propulsão da B1 sem a fase da reprodução («ligados · cruzeiro»)', 'B1-Carta-Web.dc.html', [("(ligados && fase ? ' · ' + fase : '')", "''")], 'web'),
+    ('a B1 com o dia fixo do snapshot (sábado, 26/09)', 'B1-Carta-Web.dc.html', [("const ms = I && !reserva ? I.ms : q ? Date.parse(q.timestamp_utc) : NaN,", "const ms = Date.parse('2026-09-26T10:12:00-03:00'),")], 'web'),
+    ('a B1 conta as pendências sem tirar as resolvidas por linha nova', 'B1-Carta-Web.dc.html', [("B.pendenciasLista().filter((p) => p.aberta) : null;", "B.pendenciasLista() : null;")], 'web'),
+    ('a B1 conta a tarefa executada como atrasada', 'B1-Carta-Web.dc.html', [("const abertas = tarefas.filter((t) => !ex[t.id] && !t.feita && num(t.dn))", "const abertas = tarefas.filter((t) => !t.feita && num(t.dn))")], 'web'),
+    ('o fabricante dos motores fixo na B1 (Cummins)', 'B1-Carta-Web.dc.html', [("(eM.fabricante || falta('fabricante ' + SD))", "'Cummins'")], 'web'),
+    ('a B1 sem a cor de AVISO no motor (o arrefecimento do BE a 105 s)', 'B1-Carta-Web.dc.html', [("tomK: ligados ? pior : ''", "tomK: ''")], 'web'),
+    ('a B1 sem assinar o capitao-telemetria', 'B1-Carta-Web.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'vivo'),
+    ('a B2 sem assinar o capitao-telemetria', 'B2-Carta-Mobile.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'vivo'),
+    ('o estado do EPIRB da B2 de volta com SEM DADOS', 'B2-Carta-Mobile.dc.html', [("estado: PADRAO + ' · ' + notaEtiqueta(eq('epirb'), 'epirb')", "estado: 'SEM DADOS — modelo, localização a bordo, acionamento e validade da bateria não carregados'")], 'app'),
+    ('o estado do Seafire da B2 sem a nota da etiqueta', 'B2-Carta-Mobile.dc.html', [("estado: PADRAO + ' · ' + notaEtiqueta(eq('seafire'), 'seafire')", "estado: PADRAO")], 'app'),
+    ('o fabricante do gerador fixo na B2 (Onan)', 'B2-Carta-Mobile.dc.html', [("fab: fab(eq('gerador')),", "fab: 'Onan QD 9',")], 'app'),
+    ('as bombas de porão da B2 sem fabricante nem modelo (de volta ao texto fixo)', 'B2-Carta-Mobile.dc.html', [("fab: fab(eq('porao'), 'Bombas de porão'),", "fab: 'Bombas de porão · fabricante SEM DADOS · modelo SEM DADOS',")], 'app'),
+    ('a climatização da B2 de volta com SEM LEITURA', 'B2-Carta-Mobile.dc.html', [("(q && typeof q.climatizacao_ativa === 'boolean' ? (q.climatizacao_ativa ? 'Ligada' : 'Desligada') : falta(SL))", "'SEM LEITURA no coletor'")], 'app'),
+    ('o estado dos motores da B2 sem a fase («ligados · cruzeiro»)', 'B2-Carta-Mobile.dc.html', [("'Ligados' + (fase ? ' · ' + fase : '') + ' · '", "'Ligados · '")], 'app'),
+    ('a B2 conta a tarefa executada como atrasada', 'B2-Carta-Mobile.dc.html', [("t.dn < 0 && !ex[t.id] && !t.feita)", "t.dn < 0 && !t.feita)")], 'app'),
+    ('o rótulo da hora da B2 de volta com «snapshot … ao vivo desligado»', 'B2-Carta-Mobile.dc.html', [("snapLabel: I ? (reserva ? 'última leitura ' + lei : 'ao vivo · ' + I.hora) : falta(SL),", "snapLabel: 'snapshot 26/09 10:12 · ao vivo desligado',")], 'app'),
+    ('a B3 sem passar a marca da janela de emergência ao cérebro (a posição sai com coordenada)', 'B3-Carta-Resposta.dc.html', [("emergencia: emergencia }", "emergencia: false }")], 'resposta'),
+    ('a B3 não marca a janela quando a resposta a abre', 'B3-Carta-Resposta.dc.html', [("if (E) E.marca();", "")], 'resposta'),
+    ('a B3 mostra o segundo do quadro também na resposta de emergência', 'B3-Carta-Resposta.dc.html', [("const hora = a && typeof a.hora === 'string' ? a.hora : '',", "const hora = a && typeof a.hora === 'string' ? a.hora : (window.CapitaoAgora.instante() || {}).hora || '',")], 'resposta'),
+    ('a B3 sem escutar os botões das respostas (capitao-chat-pergunta)', 'B3-Carta-Resposta.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'resposta'),
+    ('a B3 com link vazio na ação sem destino', 'B3-Carta-Resposta.dc.html', [(".filter((x) => x && x.l && x.href)", "")], 'resposta'),
+    ('a B3 sem dizer a hora da resposta', 'B3-Carta-Resposta.dc.html', [("temHora: !!hora,", "temHora: false,")], 'resposta'),
+]
+
+
+def mutantes_p4d(b):
+    global MUT_ARQ
+    vivos = []
+    for nome, arq, trocas, qual in MUTANTES_P4D:
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = {'web': lambda: teste_carta_web(b), 'app': lambda: teste_carta_app(b), 'resposta': lambda: teste_carta_resposta(b), 'vivo': lambda: teste_carta_vivo(b) + teste_carta_codigo(), 'codigo': lambda: teste_carta_codigo()}[qual]()
+        except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um defeito do teste): o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4D), len(vivos)))
     return vivos
 
 

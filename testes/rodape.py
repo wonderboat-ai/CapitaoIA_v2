@@ -755,8 +755,9 @@ CHIPS_A1 = """() => [...document.querySelectorAll('[title]')].filter((e) => /^(P
 
 # Fase 4 (P4C): a A1 lê o INSTANTE (a reprodução, ao vivo); o D.snapshot, com os objetos de porão e âncora que este teste vigia, só chega por ela na última leitura salva, que é o ramo
 # simulacao false (o instante cai no snapshot.quadro e o chip da âncora ganha o cabo lançado do snapshot aninhado). A A1 abre aqui nesse ramo: as mesmas asserções, o mesmo dado; com a
-# reprodução andando, o chip do porão e o da âncora são do quadro (verificar.py › teste_ponte_web).
-SIMULACAO_FALSE = {'A1-Ponte-Web': 'window.CapitaoDados.simulacao = false;'}
+# reprodução andando, o chip do porão e o da âncora são do quadro (verificar.py › teste_ponte_web). Fase 4 (P4D): a B2 também lê o instante (a linha do porão é o nível do quadro); o
+# «porão: BB 1,2 cm · BE 0,9 cm» do D.snapshot só chega a ela na última leitura salva, e abre nesse ramo (com a reprodução andando: verificar.py › teste_carta_app).
+SIMULACAO_FALSE = {'A1-Ponte-Web': 'window.CapitaoDados.simulacao = false;', 'B2-Carta-Mobile': 'window.CapitaoDados.simulacao = false;'}
 
 
 def snapshot_sem_null(b, local):
