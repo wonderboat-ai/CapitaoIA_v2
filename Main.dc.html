@@ -181,8 +181,9 @@ class Component extends DCLogic {
     this._onEncerra = () => { this.limpaContexto(); if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
     window.addEventListener('capitao-voz-encerrar', this._onEncerra);
     // A cada tique da telemetria (replay ou coletor) e na virada do dia de bordo (os prazos dos cartões): redesenha só se o TEXTO que a tela exibe a partir deles (a leitura() da faixa, com o resumo dos cartões)
-    // mudou. O setState refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa; com o instante fixado, nenhum.
-    this._onTele = () => { const k = JSON.stringify(this.leitura()); if (k !== this._leitK) this.setState({ vivo: k }); };
+    // mudou. O setState refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa; com o instante fixado, nenhum; com a aba escondida (document.hidden),
+    // nenhum: o motor já pausa o tique e dá um na volta à frente, que põe a tela em dia.
+    this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.leitura()); if (k !== this._leitK) this.setState({ vivo: k }); };
     ['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));
     // O botão de uma resposta (os links #capitao-prop-… e #capitao-relato-…): o cérebro (document, click) o transforma na pergunta e avisa com este evento; o link não navega. Aqui o toque vale: a pergunta sai como se
     // tivesse sido digitada (Confirmar, Recusar, Desfazer, Registrar, Não registrar, O que verificar?) e o cérebro grava só o que o botão pede; ela não leva o anexo nem apaga o que está sendo digitado.

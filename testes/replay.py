@@ -1681,7 +1681,12 @@ def home_rebase(b, telas=HOME_REBASE):
         ok('%s: 5 viradas do dia com o prazo igual não redesenham nada (%d setState)' % (nome, r['sets']), r['sets'] == 0, r)
         antes_rotor = ('ROTOR · 2 D' in r['txt']) if nome == 'Main' else any('rotor em atraso' in t for t in r['titulos'])
         ok('%s: o rotor aparece em atraso antes do Executado (o teste vale)' % nome, antes_rotor, r['chips'] if nome == 'Main' else r['titulos'])
-        # logo depois de um tique (o próximo vem só 1 s depois: nenhum tique redesenha dentro da janela de 150 ms, então quem atualiza o cartão é a virada do dia)
+        # aba escondida (document.hidden, só durante a chamada, que é síncrona: o motor segue o relógio de verdade): a virada do dia não dá setState nem com o prazo mudado (o Executado volta ao que era no fim da chamada)
+        sets_escondida = pg.evaluate("""(ex) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          try { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); return window.__sets; }
+          finally { localStorage.removeItem('capitao.executado.v1'); delete document.hidden; } }""", EXEC_ROTOR)
+        ok('%s: com a aba escondida a virada do dia não dá setState (%d), mesmo com o prazo mudado' % (nome, sets_escondida), sets_escondida == 0, sets_escondida)
+        # de volta à frente, logo depois de um tique (o próximo vem só 1 s depois: nenhum tique redesenha dentro da janela de 150 ms, então quem atualiza o cartão é a virada do dia)
         pg.evaluate("() => new Promise((res) => { const f = () => { window.removeEventListener('capitao-telemetria', f); res(true); }; window.addEventListener('capitao-telemetria', f); })")
         pg.evaluate("(ex) => { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }", EXEC_ROTOR)
         pg.wait_for_timeout(150)
@@ -2303,6 +2308,10 @@ MUTANTES_ARQ = [
      [("if (k !== this._cartK) this.setState({ cart: k });", "this.setState({ cart: k });")], 'home_rebase'),
     ('a H2 sem ouvir a virada do dia', 'H2-Home-Mobile.dc.html',
      [("    window.addEventListener('capitao-rebase', this._onReb);\n", "")], 'home_rebase'),
+    ('a Main redesenhando com a aba escondida (sem o document.hidden)', 'Main.dc.html',
+     [("this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.leitura());", "this._onTele = () => { const k = JSON.stringify(this.leitura());")], 'home_rebase'),
+    ('a H2 redesenhando a virada do dia com a aba escondida (sem o document.hidden)', 'H2-Home-Mobile.dc.html',
+     [("this._onReb = () => { if (document.hidden) return; const k = this.chaveCartoes();", "this._onReb = () => { const k = this.chaveCartoes();")], 'home_rebase'),
 ]
 
 

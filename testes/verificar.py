@@ -109,7 +109,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 45 defeitos, todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 47 defeitos, todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -4773,6 +4773,7 @@ def teste_home_codigo():
         for ev in ('capitao-telemetria', 'capitao-rebase', 'capitao-chat-pergunta'):
             if "'%s'" % ev not in h[mont:desm] or "'%s'" % ev not in h[desm:desm + 700]: prob.append('%s: não assina o %s no componentDidMount e remove no componentWillUnmount' % (n, ev))
         if h.count('setInterval') != 1: prob.append('%s: setInterval a mais (%d; só o do whenBrain)' % (n, h.count('setInterval')))
+        if h.count('if (document.hidden) return;') < (1 if n == 'Main' else 2): prob.append('%s: o tique da telemetria (e a virada do dia) não pausa com document.hidden' % n)
         if re.search(r'D\.demo|\.demo\b|DEMO|D\.aviso|D\.snapshot|\.snapshot\b|demoTip', cod): prob.append('%s: lê D.demo, D.aviso ou D.snapshot (ou escreve DEMO) no código' % n)
         if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (n, MARCAS_FIXAS.search(cod).group(0)))
         for l in cod.split('\n'):   # SEM DADOS / SEM LEITURA só no ramo simulacao:false (falta() ou sim ?)
@@ -4853,6 +4854,8 @@ MUTANTES_P4G = [
     ('o atraso do filtro na H2 ignora o Executado', 'H2-Home-Mobile.dc.html', [("const atr = (t) => !!(t && !feitas[t.id] && typeof t.dn === 'number' && t.dn < 0);", "const atr = (t) => !!(t && typeof t.dn === 'number' && t.dn < 0);")], 'dados'),
     ('o LED da H2 sem o selo do coletor (sempre verde)', 'H2-Home-Mobile.dc.html', [("return !!(I && I.q && !(I.fonte === 'replay' && D.simulacao !== true) && (!I.selo || I.selo.tom === 'ok'));", "return true;")], 'real'),
     ('a H2 não remove o ouvinte da virada do dia', 'H2-Home-Mobile.dc.html', [("    window.removeEventListener('capitao-rebase', this._onReb);\n", "")], 'ouvintes'),
+    ('a Main redesenha com a aba escondida (o tique sem o document.hidden)', 'Main.dc.html', [("this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.leitura());", "this._onTele = () => { const k = JSON.stringify(this.leitura());")], 'codigo'),
+    ('a H2 redesenha o LED com a aba escondida (o tique sem o document.hidden)', 'H2-Home-Mobile.dc.html', [("this._onTele = () => { if (document.hidden) return; const k = this.vivoTele();", "this._onTele = () => { const k = this.vivoTele();")], 'codigo'),
     # —— o chat (Main e H2) ——
     ('a Main manda a IA o 3º argumento vazio (sem a leitura de agora)', 'Main.dc.html', [("B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', {", "'', {")], 'ia'),
     ('a H2 manda a IA o 3º argumento vazio (sem a leitura de agora)', 'H2-Home-Mobile.dc.html', [("B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', {", "'', {")], 'ia'),
@@ -4881,7 +4884,7 @@ MUTANTES_P4G = [
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
             'vivo': lambda b, t: teste_home_vivo(b, t) + teste_home_codigo(), 'ouvintes': lambda b, t: teste_home_ouvintes(b, t) + teste_home_codigo(), 'ia': lambda b, t: teste_home_ia(b, t),
-            'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t)}
+            'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t), 'codigo': lambda b, t: teste_home_codigo()}
 
 
 def mutantes_p4g(b):

@@ -181,10 +181,11 @@ class Component extends DCLogic {
     this._onEncerra = () => { this.limpaContexto(); if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
     window.addEventListener('capitao-voz-encerrar', this._onEncerra);
     // A cada tique da telemetria (replay ou coletor) e na virada do dia de bordo (os prazos dos cartões): redesenha só se o que a tela exibe a partir deles mudou. Da telemetria é só o LED e a dica (vivo ou não);
-    // dos prazos, o resumo dos cartões: o setState refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa.
-    this._onTele = () => { const k = this.vivoTele(); if (k !== this._vivoK) this.setState({ vivo: k }); };
+    // dos prazos, o resumo dos cartões: o setState refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa; com a aba escondida
+    // (document.hidden) nenhum: o motor já pausa o tique e dá um na volta à frente, que põe a tela em dia.
+    this._onTele = () => { if (document.hidden) return; const k = this.vivoTele(); if (k !== this._vivoK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._onTele);
-    this._onReb = () => { const k = this.chaveCartoes(); if (k !== this._cartK) this.setState({ cart: k }); };
+    this._onReb = () => { if (document.hidden) return; const k = this.chaveCartoes(); if (k !== this._cartK) this.setState({ cart: k }); };
     window.addEventListener('capitao-rebase', this._onReb);
     // O botão de uma resposta (os links #capitao-prop-… e #capitao-relato-…): o cérebro (document, click) o transforma na pergunta e avisa com este evento; o link não navega. Aqui o toque vale: a pergunta sai como se
     // tivesse sido digitada (Confirmar, Recusar, Desfazer, Registrar, Não registrar, O que verificar?) e o cérebro grava só o que o botão pede; ela não leva o anexo nem apaga o que está sendo digitado.
