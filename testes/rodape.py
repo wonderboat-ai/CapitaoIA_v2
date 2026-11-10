@@ -692,7 +692,8 @@ def telas(b):
         ruins = [x for x in ('Falta registrar: .', 'FALTA REGISTRAR · nada', 'falta registrar: nada', 'SEM DADOS: .', '[object Object]') if x in txt]
         ok('%s: sem "falta registrar" vazio (a agendaFalta saiu) nem [object Object]' % tela, not ruins and (not tela.startswith(('C1', 'C2')) or 'FALTA REGISTRAR' not in txt), ruins)
         if tela.startswith('C1'):
-            ok('%s: as 14 tarefas, com o autoteste do EPIRB e a inspeção do sistema fixo' % tela, '14 tarefas' in txt, [l for l in txt.split('\n') if 'tarefas' in l][:2])
+            # (P4E: a C1 lista também as 2 tarefas da equipe do cadastro, g01 e g02, ao lado das 14 da agenda: «16 tarefas». A conferência dizia 14 e não rodou na P4E; o que ela vigia segue: o autoteste do EPIRB e a inspeção do sistema fixo na lista)
+            ok('%s: as 14 tarefas da agenda e as 2 da equipe (16), com o autoteste do EPIRB e a inspeção do sistema fixo' % tela, '16 tarefas' in txt and 'Autoteste do EPIRB' in txt and 'Inspeção anual do sistema fixo' in txt, [l for l in txt.split('\n') if 'tarefas' in l][:2])
         if tela.startswith('C2'):
             ok('%s: as 3 atrasadas (porão, filtro da climatização, rotor do gerador) com as datas de hoje' % tela,
                all(x in txt for x in ('vence 02/10/2026', 'vence 11/10/2026', 'vence 25/10/2026')) and '25 dias atrás' in txt, txt[:300])
