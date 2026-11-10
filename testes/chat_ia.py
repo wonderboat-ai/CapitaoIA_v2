@@ -30,6 +30,8 @@ import confere  # noqa: E402
 URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capitao-ia.js'), encoding='utf-8').read()).group(1)
 # Fase 3 (P3B): o fallback local não diz mais «Não encontrei esse dado … SEM DADOS» (decisão 5); a conferência «a tela mostra a resposta da IA e não o texto local» passa a procurar o texto novo
 FALLBACK_LOCAL = 'Isso não está nas fontes de bordo'
+# Fase 4 (P4H, F6): o toque numa pergunta do FAQ dos equipamentos abre o chat com o código do item (#q=<pergunta>&faq=<código>)
+FAQ_ITENS = {it['id']: it for it in json.load(open(os.path.join(RAIZ, 'faq-equipamentos.json'), encoding='utf-8'))['itens']}
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 # Fase 3 (P3A, PROMPT Fase 7 «Mudanças nos testes»: «:254 ("≈ 11,2 h") com o quadro congelado»): a autonomia da resposta lê o instante do
 # replay. Congelado em 12:01:00 (fixar('60')), são 1.333 L menos a reserva de 10 %: 17,6 h a 18 nós (CapitaoAgora.instante().calc).
@@ -198,12 +200,12 @@ def main():
                     abre(chave, modo)
                     return envia(q)
 
-                def por_link(q, interno):
-                    """Pergunta por link #q=: de fora (sem referrer) ou de dentro do app (referrer da mesma origem)."""
+                def por_link(q, interno, extra=''):
+                    """Pergunta por link #q=: de fora (sem referrer) ou de dentro do app (referrer da mesma origem); `extra` vai depois da pergunta (&faq=<código>: o toque no FAQ)."""
                     estado['modo'] = 'ok'
                     prepara(True)
                     antes = len(estado['pedidos'])
-                    alvo = base + tela + '.dc.html#q=' + urllib.parse.quote(q)
+                    alvo = base + tela + '.dc.html#q=' + urllib.parse.quote(q) + extra
                     if interno:
                         pg.evaluate('(u) => { location.href = u; }', alvo)  # sai do README.md (mesma origem) → referrer interno
                         pg.wait_for_url(re.compile(re.escape(tela)), timeout=15000)
@@ -492,6 +494,11 @@ def main():
                 ok(tela + ': link de fora (#q=, sem referrer) não chama a IA', n == 0 and 'PARTIDA' in t, 'pedidos=%d' % n)
                 t, n = por_link('como ligar o gerador?', interno=True)
                 ok(tela + ': link de dentro do app (#q=, referrer da mesma origem) usa a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
+                # P4H (F6): o toque numa pergunta do FAQ (de dentro do app, com a IA ligada) responde com o item, o código e a fonte e NÃO chama a IA (a Fase 6 liga, com o item como trecho [1]);
+                # o cartão de emergência (EM-06) abre local, sem nenhum pedido ao Worker
+                for cod in ('MO-02', 'EM-06'):
+                    t, n = por_link(FAQ_ITENS[cod]['pergunta'], interno=True, extra='&faq=' + cod)
+                    ok(tela + ': o toque no FAQ (#q=…&faq=%s, de dentro do app, IA ligada) mostra o item com o código e a fonte e não chama a IA' % cod, n == 0 and ('Fonte: FAQ dos equipamentos ' + cod) in t and TEXTO_IA not in t, 'pedidos=%d · %s' % (n, t[-160:]))
                 ok(tela + ': sem erro de script', not erros, '; '.join(erros))
                 ctx.close()
             # Sem sessão: o login não pode levar nada do #ia= para o ?next= (vai ao servidor e ao histórico).

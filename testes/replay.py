@@ -49,7 +49,7 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
 - D.replay PARCIAL (chave, rota, tanque, velocidade ou contador ausente; chave curta; ETA infinita): a tabela se recusa na carga (`ativo()` false, tudo null, nenhum tique, o
   `instante()` cai no snapshot) e, com o D em uso quebrado depois da carga, a guarda de cada saída (quadro, contadores, consumo por faixa, série) devolve null, nunca NaN/Infinity;
 - nunca lança erro (argumentos absurdos, D quebrado, localStorage que lança); desempenho do `em()`; o código (sem lookbehind, sem snapshot, sem
-  `window.CapitaoTelemetria =`); as 34 telas com o <script> no lugar certo, S1/S2 sem ele, e o CORE do sw.js.
+  `window.CapitaoTelemetria =`); as 36 telas com o <script> no lugar certo, S1/S2 sem ele, e o CORE do sw.js.
 
 Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 não toca):
 - o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
@@ -1119,7 +1119,7 @@ def desempenho(b):
 
 
 def codigo():
-    print('O arquivo: sem lookbehind, sem snapshot, sem window.CapitaoTelemetria =; nas 34 telas e no CORE do sw.js')
+    print('O arquivo: sem lookbehind, sem snapshot, sem window.CapitaoTelemetria =; nas 36 telas e no CORE do sw.js')
     src = le('capitao-replay.js')
     codigo_ = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
     codigo_ = re.sub(r'(?m)^\s*//.*$|\s//\s.*$', '', codigo_)
@@ -1203,7 +1203,7 @@ MOLDURA_PARADA = """() => { const m = window.__m; m.parada = 0; m.mo2 = new Muta
 
 
 def telas_moldura():
-    """As 34 telas que importam a moldura (todas menos Main, H2, C3, Manual e S1/S2; 30 até a P4C, que trouxe A4 e A5, e a P4E, que trouxe a C4 web e app), com a largura do $preview: 1440 = web (1440×900), o resto = app (360×640)."""
+    """As 36 telas que importam a moldura (todas menos Main, H2, C3, Manual e S1/S2; 30 até a P4C, que trouxe A4 e A5, 34 com a P4E, que trouxe a C4 web e app, e 36 com a P4H, que trouxe a F6 web e app), com a largura do $preview: 1440 = web (1440×900), o resto = app (360×640)."""
     out = []
     for arq in sorted(f for f in os.listdir(RAIZ) if f.endswith('.dc.html')):
         h = le(arq)
@@ -1259,11 +1259,11 @@ def confere_moldura(nome, w, r, segundos=10):
 
 def moldura(b):
     todas = '--moldura' in sys.argv
-    so = [x for x in os.environ.get('MOLDURA_TELAS', '').split(',') if x]   # (P4E) só estas telas, para medir uma tela nova sem rodar as 34 (a contagem das 34 fica de fora)
+    so = [x for x in os.environ.get('MOLDURA_TELAS', '').split(',') if x]   # (P4E) só estas telas, para medir uma tela nova sem rodar as 36 (a contagem das 36 fica de fora)
     itens = [t for t in telas_moldura() if t[0] in so] if so else telas_moldura() if todas else [t for t in telas_moldura() if t[0] in ('A2-Ponte-Mobile', 'A1-Ponte-Web', 'E1-Navegando-Gatilhos')]
     print('Moldura em nós Text, em 10 s de replay (%s)' % ('as %d telas com moldura' % len(itens) if todas else '3 telas: A2 em 360×640, A1 em 1440×900 e E1; todas as 30 com --moldura'))
     if todas and not so:
-        ok('são 34 as telas que importam a moldura (A1–A5, B1–B3, C1, C2, C4, E1, E2, F1–F5, G1–G4 e H3, web e app)', len(itens) == 34, [t[0] for t in itens])
+        ok('são 36 as telas que importam a moldura (A1–A5, B1–B3, C1, C2, C4, E1, E2, F1–F6, G1–G4 e H3, web e app)', len(itens) == 36, [t[0] for t in itens])
     larg = {n: w for n, w, _ in itens}
     for i in range(0, len(itens), 3):   # 3 telas por vez: abre ao mesmo tempo, mas sem passar dos núcleos da máquina (a long task mede a tela, não a fila)
         lote = itens[i:i + 3]
@@ -1627,11 +1627,12 @@ def codigo_faixa():
 GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegando-Gatilhos', 360, 640),
                 ('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('A4-Sensores-Web', 1440, 900), ('A5-Sensores-Mobile', 390, 844),   # (P4C: a Ponte e o mapa de sensores)
                 ('B1-Carta-Web', 1440, 900), ('B2-Carta-Mobile', 390, 844),   # (P4D: a Gestão e os Sistemas)
-                ('E2-Navegando-Sintoma', 390, 844, '#sis=motores'))   # (P4F: a triagem, com o sistema dos motores aberto: a leitura de agora é o texto que anda; o 4º item é o endereço)
+                ('E2-Navegando-Sintoma', 390, 844, '#sis=motores'),   # (P4F: a triagem, com o sistema dos motores aberto: a leitura de agora é o texto que anda; o 4º item é o endereço)
+                ('F2-FAQ-Estabilizador-Web', 1440, 900), ('F3-FAQ-Eletronicos', 390, 844), ('F4-FAQ-Gerador-Web', 1440, 900), ('F5-FAQ-Climatizacao', 390, 844))   # (P4H: o estado a bordo dos FAQs; uma por número, web ou app)
 
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
-    print('Main, H2, E1, E2, A1, A2, A4, A5, B1 e B2: setState só quando o texto exibido muda')
+    print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2 e F2 a F5: setState só quando o texto exibido muda')
     pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
            for t in telas]
     pgs[0][1].wait_for_timeout(3500)
@@ -1653,10 +1654,12 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
-        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores)
+        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2', 'F')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores; os FAQs, a hora do instante)
             ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
         if nome.startswith(('B1', 'B2', 'E2')):   # (P4D: a Gestão e os Sistemas mostram a rotação dos motores, não o SOG; P4F: a triagem, com os motores abertos, também)
             ok('%s: a tela mostra a rotação do BB do instante fixado (%s rpm): não deixou de se atualizar' % (nome, f['rpm']), f['temRpm'], f)
+        if nome[0] == 'F' and nome[1] in '2345':   # (P4H: o estado a bordo dos FAQs mostra a hora do instante fixado)
+            ok('%s: a tela mostra a hora do instante fixado (12:01:00): não deixou de se atualizar' % nome, pg.evaluate("() => document.body.innerText.indexOf('Telemetria ao vivo · 12:01:00') >= 0"), f)
         ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
     for nome, pg in pgs:
         fecha(pg)
@@ -2097,7 +2100,7 @@ def a_alertas_telas(b):
 
 
 def codigo_alertas():
-    print('O arquivo capitao-alertas.js: sem lookbehind, sem snapshot, sem avaliar limite, sem evento nem timer; nas 34 telas e no CORE do sw.js')
+    print('O arquivo capitao-alertas.js: sem lookbehind, sem snapshot, sem avaliar limite, sem evento nem timer; nas 36 telas e no CORE do sw.js')
     src = le('capitao-alertas.js')
     cod = re.sub(r'/\*.*?\*/', '', src, flags=re.S)
     cod = re.sub(r'(?m)^\s*//.*$|\s//\s.*$', '', cod)
@@ -2299,6 +2302,15 @@ MUTANTES_ARQ = [
      [("if (!forca && k === this._k) return;", "")], 'gating'),
     ('a E2 dando setState a cada tique, sem comparar a leitura de agora', 'E2-Navegando-Sintoma.dc.html',
      [("if (k === this._refK) return;", "")], 'gating'),
+    # P4H: o estado a bordo dos FAQs (F2 a F5) só dá setState quando o texto exibido muda (cada mutante na tela que o gating mede)
+    ('a F2 dando setState a cada tique, sem comparar o texto', 'F2-FAQ-Estabilizador-Web.dc.html',
+     [("if (k !== this._bk) { this._bk = k; this.setState({ vivo: k }); }", "{ this._bk = k; this.setState({ vivo: k }); }")], 'gating'),
+    ('a F3 dando setState a cada tique, sem comparar o texto', 'F3-FAQ-Eletronicos.dc.html',
+     [("if (k !== this._bk) { this._bk = k; this.setState({ vivo: k }); }", "{ this._bk = k; this.setState({ vivo: k }); }")], 'gating'),
+    ('a F4 dando setState a cada tique, sem comparar o texto', 'F4-FAQ-Gerador-Web.dc.html',
+     [("if (k !== this._bk) { this._bk = k; this.setState({ vivo: k }); }", "{ this._bk = k; this.setState({ vivo: k }); }")], 'gating'),
+    ('a F5 dando setState a cada tique, sem comparar o texto', 'F5-FAQ-Climatizacao.dc.html',
+     [("if (k !== this._bk) { this._bk = k; this.setState({ vivo: k }); }", "{ this._bk = k; this.setState({ vivo: k }); }")], 'gating'),
     # P4G: a Home só dá setState na virada do dia quando o prazo exibido muda (Main e H2 são LF)
     ('a Main dando setState a cada virada do dia, sem comparar o texto exibido', 'Main.dc.html',
      [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'home_rebase'),

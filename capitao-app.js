@@ -76,7 +76,7 @@
     var APP = {
       'Main': 'H2-Home-Mobile', 'A1-Ponte-Web': 'A2-Ponte-Mobile', 'A4-Sensores-Web': 'A5-Sensores-Mobile', 'B1-Carta-Web': 'B2-Carta-Mobile', 'C1-Leme-Web': 'C2-Leme-Mobile', 'C4-Checklist-Web': 'C4-Checklist-Mobile',
       'F1-FAQ-Hub-Web': 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web': 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web': 'F3-FAQ-Eletronicos',
-      'F4-FAQ-Gerador-Web': 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web': 'F5-FAQ-Climatizacao',
+      'F4-FAQ-Gerador-Web': 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web': 'F5-FAQ-Climatizacao', 'F6-FAQ-Equipamentos-Web': 'F6-FAQ-Equipamentos',
       'G1-Documentos-Web': 'G1-Documentos-Mobile', 'G2-Abastecimento-Web': 'G2-Abastecimento-Mobile', 'G3-Diario-Web': 'G3-Diario-Mobile',
       'G4-Equipe-Web': 'G4-Equipe-Mobile', 'H3-Atalhos-Editar-Web': 'H3-Atalhos-Editar', 'S1-SOS-Web': 'S2-SOS-Mobile'
     };

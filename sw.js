@@ -11,12 +11,12 @@ const TELAS = [
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
   'C1-Leme-Web', 'C2-Leme-Mobile', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos', 'E2-Navegando-Sintoma',
   'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
-  'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
+  'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao', 'F6-FAQ-Equipamentos-Web', 'F6-FAQ-Equipamentos',
   'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile',
   'G3-Diario-Web', 'G3-Diario-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile', 'H3-Atalhos-Editar-Web', 'H3-Atalhos-Editar'
 ];
 const CORE = [
-  './', './index.html', './login.html', './dados.html', './support.js', './capitao-dados.js', './capitao-replay.js', './capitao-alertas.js', './capitao-grafico.js', './capitao-sensores.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
+  './', './index.html', './login.html', './dados.html', './support.js', './capitao-dados.js', './capitao-replay.js', './capitao-alertas.js', './capitao-grafico.js', './capitao-sensores.js', './capitao-faq.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
   './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json', './faq-equipamentos.json',
   './capitao-simbolo.js', './capitao-rosto.js', './deck-stage.js', './manifest.webmanifest',
   './assets/wonderhub-simbolo.png', './assets/wonderhub-assinatura.jpg', './assets/logo-wonderboat-240.png', './assets/wonderhub-favicon.ico',

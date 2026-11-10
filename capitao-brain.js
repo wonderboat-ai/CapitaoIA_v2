@@ -24,8 +24,8 @@
   function demo_() { return D.demo && !sim() ? ' DEMO' : ''; }   // dentro de parênteses: "(leitura DEMO 26/09 10:12)", sem parêntese aninhado
 
   var HREF = {
-    web: { home: 'Main.dc.html', console: 'A1-Ponte-Web.dc.html', gestao: 'B1-Carta-Web.dc.html', manut: 'C1-Leme-Web.dc.html', check: 'C4-Checklist-Web.dc.html', docs: 'G1-Documentos-Web.dc.html', abast: 'G2-Abastecimento-Web.dc.html', diario: 'G3-Diario-Web.dc.html', equipe: 'G4-Equipe-Web.dc.html', faq: 'F1-FAQ-Hub-Web.dc.html', f2: 'F2-FAQ-Estabilizador-Web.dc.html', f3: 'F3-FAQ-Eletronicos-Web.dc.html', f4: 'F4-FAQ-Gerador-Web.dc.html', f5: 'F5-FAQ-Climatizacao-Web.dc.html', sos: 'S1-SOS-Web.dc.html', atalhos: 'H3-Atalhos-Editar-Web.dc.html' },
-    app: { home: 'H2-Home-Mobile.dc.html', console: 'A2-Ponte-Mobile.dc.html', gestao: 'B2-Carta-Mobile.dc.html', manut: 'C2-Leme-Mobile.dc.html', check: 'C4-Checklist-Mobile.dc.html', docs: 'G1-Documentos-Mobile.dc.html', abast: 'G2-Abastecimento-Mobile.dc.html', diario: 'G3-Diario-Mobile.dc.html', equipe: 'G4-Equipe-Mobile.dc.html', faq: 'F1-FAQ-Hub.dc.html', f2: 'F2-FAQ-Estabilizador.dc.html', f3: 'F3-FAQ-Eletronicos.dc.html', f4: 'F4-FAQ-Gerador.dc.html', f5: 'F5-FAQ-Climatizacao.dc.html', sos: 'S2-SOS-Mobile.dc.html', atalhos: 'H3-Atalhos-Editar.dc.html' }
+    web: { home: 'Main.dc.html', console: 'A1-Ponte-Web.dc.html', gestao: 'B1-Carta-Web.dc.html', manut: 'C1-Leme-Web.dc.html', check: 'C4-Checklist-Web.dc.html', docs: 'G1-Documentos-Web.dc.html', abast: 'G2-Abastecimento-Web.dc.html', diario: 'G3-Diario-Web.dc.html', equipe: 'G4-Equipe-Web.dc.html', faq: 'F1-FAQ-Hub-Web.dc.html', f2: 'F2-FAQ-Estabilizador-Web.dc.html', f3: 'F3-FAQ-Eletronicos-Web.dc.html', f4: 'F4-FAQ-Gerador-Web.dc.html', f5: 'F5-FAQ-Climatizacao-Web.dc.html', f6: 'F6-FAQ-Equipamentos-Web.dc.html', sos: 'S1-SOS-Web.dc.html', atalhos: 'H3-Atalhos-Editar-Web.dc.html' },
+    app: { home: 'H2-Home-Mobile.dc.html', console: 'A2-Ponte-Mobile.dc.html', gestao: 'B2-Carta-Mobile.dc.html', manut: 'C2-Leme-Mobile.dc.html', check: 'C4-Checklist-Mobile.dc.html', docs: 'G1-Documentos-Mobile.dc.html', abast: 'G2-Abastecimento-Mobile.dc.html', diario: 'G3-Diario-Mobile.dc.html', equipe: 'G4-Equipe-Mobile.dc.html', faq: 'F1-FAQ-Hub.dc.html', f2: 'F2-FAQ-Estabilizador.dc.html', f3: 'F3-FAQ-Eletronicos.dc.html', f4: 'F4-FAQ-Gerador.dc.html', f5: 'F5-FAQ-Climatizacao.dc.html', f6: 'F6-FAQ-Equipamentos.dc.html', sos: 'S2-SOS-Mobile.dc.html', atalhos: 'H3-Atalhos-Editar.dc.html' }
   };
 
   var DEFAULTS = [
@@ -4112,7 +4112,7 @@
     // emergência (EM-01…09) não: abre com a instrução de segurança, inteira (trava 10)
     var text = (it.titulo && !it.emerg ? it.titulo + ' — ' : '') + it.resposta + (passos.length ? '\n' + passos.slice(0, max).map(function (x, i) { return (i + 1) + '. ' + x; }).join('\n') + (passos.length > max ? '\n… mais ' + (passos.length - max) + ' passos no FAQ (' + it.id + ').' : '') : '')
       + (it.atencao ? '\nAtenção: ' + it.atencao : '') + (it.senao ? '\nSe não resolver: ' + it.senao : '') + (it.obs ? '\nObservação: ' + it.obs : '');
-    return { key: 'faqEquip', text: text, src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length ? ' · ' + fs.join(' · ') : ''), actions: act(p, [['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])),
+    return { key: 'faqEquip', text: text, src: 'Fonte: FAQ dos equipamentos ' + it.id + (fs.length ? ' · ' + fs.join(' · ') : ''), actions: act(p, [['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [], [['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id]])),
       faq: it.id, emerg: !!it.emerg, abreJanela: faqAbreJanela(it), seguranca: !!it.seguranca, ref: fs[0] || '' };
   }
   // A pergunta que casa BEM de perto com UM item: todas as palavras dela estão no item, a maioria no título, na pergunta ou nas variantes, e todas no título ou na resposta; e o 2º colocado, de

@@ -5633,6 +5633,20 @@ def grupo_faq(b, muta, ped):
             if r['ia'] != (not it.get('seguranca')):
                 ruins.append((r['id'], 'ia', r['ia']))
         ped('faq: o item pedido pelo código (ctx.faq) é o item: key faqEquip, o código, a resposta, os passos (até 8), a atenção e a fonte com o código; só o cartão de emergência tem o botão do SOS', not ruins, ruins[:12])
+        # (P4H, F6) HREF.f6 e a ação que abre o item no FAQ dos equipamentos: a ÚLTIMA ação de todo item, nas duas plataformas (a tela da plataforma, com o código no endereço); o cartão de emergência tem o SOS antes dela
+        f6 = pg.evaluate("""() => { const B = window.CapitaoBrain, d = B.faqDados(), o = { href: { web: B.HREF.web.f6, app: B.HREF.app.f6 }, ult: [] };
+          ['web', 'app'].forEach((pl) => d.itens.forEach((it) => { const a = B.answer('x', { platform: pl, commit: false, faq: it.id }); o.ult.push([pl, it.id, (a.actions || []).map((x) => [x.l, x.href])]); })); return o; }""")
+        raiz = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+        sw = open(os.path.join(raiz, 'sw.js'), encoding='utf-8').read()
+        ped('faq (F6): HREF.f6 é a F6 da plataforma (web e app), os dois arquivos existem e estão nas TELAS do sw.js',
+            f6['href'] == {'web': 'F6-FAQ-Equipamentos-Web.dc.html', 'app': 'F6-FAQ-Equipamentos.dc.html'} and all(os.path.exists(os.path.join(raiz, f)) and "'%s'" % f[:-8] in sw for f in f6['href'].values()), f6['href'])
+        ruins = []
+        for pl, i, ac in f6['ult']:
+            esp = ['Abrir %s no FAQ' % i, f6['href'][pl] + '#id=' + i]
+            if not (ac and ac[-1] == esp and ac[0][0] == 'FAQ de bordo' and (['Abrir SOS'] == [x[0] for x in ac if x[0] == 'Abrir SOS']) == bool(por[i].get('emerg')) and len(ac) == (3 if por[i].get('emerg') else 2)):
+                ruins.append((pl, i, ac))
+            if por[i].get('emerg') and ac and [x[0] for x in ac[:2]] != ['FAQ de bordo', 'Abrir SOS']: ruins.append((pl, i, 'o SOS vem antes do FAQ', ac))
+        ped('faq (F6): os 91 itens, nas duas plataformas, terminam com «Abrir <código> no FAQ» → <F6 da plataforma>#id=<código>; o cartão de emergência tem «Abrir SOS» antes dela e o comum não tem', not ruins, ruins[:4])
         # (revisão 4) a 1ª linha (a falada) abre com o TÍTULO do item, menos o cartão de emergência, que abre com a instrução de segurança: «Ligar o estabilizador antes de sair — Ligue pelo display…» e não «Ligue pelo display…»
         ruins = [r['id'] for r in x['todos'] if not (r['text'].split('\n')[0].startswith(por[r['id']]['titulo'] + ' — ' + por[r['id']]['resposta'][:30]) if not por[r['id']].get('emerg') else r['text'].startswith(por[r['id']]['resposta'][:30]))]
         sk = next(r for r in x['todos'] if r['id'] == 'SK-02')
@@ -9574,6 +9588,16 @@ MUTANTES_P4E = [
     ('p4e checklist: a ação «Checklist guiado» some das respostas', "acoes = act(p, [['Checklist guiado', A(p, 'check') + '#tipo=' + tipo], ['FAQ de bordo', 'faq']]", "acoes = act(p, [['FAQ de bordo', 'faq']]", ('checklist',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4E
+
+
+# Mutantes da P4H (HREF.f6 e a ação que abre o item no FAQ dos equipamentos): cada um tem de ser acusado pelo grupo `faq`
+MUTANTES_P4H = [
+    ('p4h faq: a ação «Abrir <código> no FAQ» sem o código no endereço (a F6 abriria a lista)', "[['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id]]", "[['Abrir ' + it.id + ' no FAQ', A(p, 'f6')]]", ('faq',)),
+    ('p4h faq: a ação do FAQ do app abre a F6 da web (a plataforma ignorada)', "A(p, 'f6') + '#id=' + it.id", "HREF.web.f6 + '#id=' + it.id", ('faq',)),
+    ('p4h faq: o HREF.f6 da web aponta para o hub (F1) e não para a F6', "f6: 'F6-FAQ-Equipamentos-Web.dc.html'", "f6: 'F1-FAQ-Hub-Web.dc.html'", ('faq',)),
+    ('p4h faq: a ação do FAQ vem antes do SOS no cartão de emergência', "[['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [], [['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id]])", "[['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id], ['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])", ('faq',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4H
 
 
 

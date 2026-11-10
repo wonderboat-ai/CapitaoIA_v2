@@ -24,6 +24,8 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 #faq-busca-caixa:focus-within { border-color: var(--cap-accent, #00a1fe) !important; box-shadow: 0 0 0 3px rgba(var(--cap-accent-rgb, 0,161,254), 0.18); }
 </style>
 <script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+<script src="./capitao-faq.js"></script>
 </helmet>
 
 <div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
@@ -44,16 +46,16 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 
     <sc-if value="{{semBusca}}" hint-placeholder-val="{{true}}">
       <sc-for list="{{cartoes}}" as="c" hint-placeholder-count="9">
-        <a href="{{c.href}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+        <a href="{{c.href}}" data-faq="cartao" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
           <span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: {{c.wash}}; display: flex; align-items: center; justify-content: center;">{{c.ico}}</span>
           <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
             <span style="display: flex; align-items: flex-start; gap: 8px; min-width: 0;">
-              <span style="flex-grow: 1; min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3; padding-top: 1px;">{{c.nome}}</span>
-              <span style="flex-shrink: 0; font-size: 8.5px; letter-spacing: 0.10em; font-weight: 800; color: {{c.ctom}}; border: 1px solid {{c.clinha}}; background: {{c.cwash}}; border-radius: 5px; padding: 3px 6px; white-space: nowrap;">{{c.chip}}<span style="color: var(--cap-violeta, #b45cff);">{{c.chipDemo}}</span></span>
+              <span data-faq="c-nome" style="flex-grow: 1; min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.3; padding-top: 1px;">{{c.nome}}</span>
+              <span data-faq="c-chip" style="flex-shrink: 0; font-size: 8.5px; letter-spacing: 0.10em; font-weight: 800; color: {{c.ctom}}; border: 1px solid {{c.clinha}}; background: {{c.cwash}}; border-radius: 5px; padding: 3px 6px; white-space: nowrap;">{{c.chip}}</span>
             </span>
-            <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{c.fab}}</span>
-            <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{c.acao}}</span>
-            <span style="font-size: 10px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{c.fonte}}</span>
+            <span data-faq="c-fab" style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{c.fab}}</span>
+            <span data-faq="c-acao" style="font-size: 11.5px; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{c.acao}}</span>
+            <span data-faq="c-fonte" style="font-size: 10px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{c.fonte}}</span>
           </span>
         </a>
       </sc-for>
@@ -62,7 +64,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
     <sc-if value="{{temBusca}}" hint-placeholder-val="{{false}}">
       <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 700; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">{{resTituloApp}}</span>
       <sc-for list="{{resultados}}" as="r" hint-placeholder-count="3">
-        <a href="{{r.href}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 10px 8px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+        <a href="{{r.href}}" data-faq="resultado" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 8px 10px 8px 12px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
           <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; background: {{r.wash}}; display: flex; align-items: center; justify-content: center;">{{r.ico}}</span>
           <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
             <span style="font-size: 13px; font-weight: 700; line-height: 1.3;">{{r.q}}</span>
@@ -71,6 +73,9 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink4, #7985a6);"></path></svg>
         </a>
       </sc-for>
+      <sc-if value="{{verTodos}}" hint-placeholder-val="{{false}}">
+        <a href="{{f6Busca}}" data-faq="ver-todos" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; min-height: 52px; padding: 8px 12px; border-radius: 14px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); text-decoration: none; color: var(--cap-accent, #00a1fe); font-size: 13px; font-weight: 700;">{{f6BuscaTxt}}</a>
+      </sc-if>
       <a href="{{chatBusca}}" style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 10px 8px 12px; border-radius: 14px; border: 1px dashed rgba(var(--cap-accent-rgb, 0,161,254), 0.45); text-decoration: none; color: var(--cap-accent, #00a1fe);">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <span style="flex-grow: 1; min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{chatBuscaTxt}}</span>
@@ -92,10 +97,10 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
-// FAQ de bordo — hub (app): todos os equipamentos de D.equipamentos com o estado do FAQ (D.faq · D.guias).
-// PRONTO · DEMO = passo a passo do guia de demonstração; GUIA DE BORDO = guia existe, sem tela de FAQ; SEM DADOS = sem manual carregado.
-// Busca rápida: filtra as perguntas de D.faq; Enter (ou o botão) manda a pergunta ao chat.
-const CFG = { plat: 'app', chat: 'H2-Home-Mobile.dc.html', suf: '', max: 6 };
+// FAQ de bordo — hub (app): os equipamentos de D.equipamentos com o estado do FAQ (D.faq · D.guias), o FAQ completo e as emergências (F6) e a busca nos 91 itens do FAQ dos equipamentos.
+// PRONTO = passo a passo do guia de bordo; GUIA DE BORDO = o guia existe e o chat responde por ele. Plotters, áudio e rádios VHF são UM cartão («Eletrônicos»), o F3.
+// Busca rápida: os itens do FAQ (a busca do cérebro, a mesma do chat e do F6); Enter (ou o botão) manda a pergunta ao chat.
+const CFG = { plat: 'app', chat: 'H2-Home-Mobile.dc.html', suf: '', max: 6 , ic: 20, ir: 19 };
 const TOM = {
   crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'],
   warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
@@ -109,7 +114,6 @@ const cor = (k) => TOM[k] || TOM.accent;
 const SD = 'SEM DADOS';
 const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
 const mil = (x, d) => { if (typeof x !== 'number' || !isFinite(x)) return '—'; const p = x.toFixed(d == null ? 1 : d).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p[1] ? ',' + p[1] : ''); };
-const secao = (x) => (x ? '§' + String(x).replace(/^(\d+)\s*·\s*/, '$1 ') : 'seção ' + SD);
 
 const TELA = { estabilizador: 'F2-FAQ-Estabilizador', eletronicos: 'F3-FAQ-Eletronicos', gerador: 'F4-FAQ-Gerador', climatizacao: 'F5-FAQ-Climatizacao' };
 const NOME_FAQ = { estabilizador: 'Estabilizador', eletronicos: 'Eletrônicos', gerador: 'Gerador', climatizacao: 'Climatização' };
@@ -124,16 +128,38 @@ const comFab = (t, e) => t + (e.fabricante ? ' ' + e.fabricante : '');
 const PERGUNTA_EQ = { seafire: () => 'sistema fixo de supressão', ais: (e) => comFab('transponder', e), ancora: (e) => comFab('como lançar com o guincho', e),
   radar: (e) => comFab('como ligar o radar', e), piloto: (e) => comFab('como engatar o piloto automático', e) };
 const perguntaEq = (e, padrao) => (PERGUNTA_EQ[e.id] ? PERGUNTA_EQ[e.id](e) : e.seguranca ? e.nome : padrao);
-const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const PARADAS = ' o a os as de do da dos das e em no na nos nas como que um uma para pra com por se ao aos qual quais quando eu meu minha me faz fazer tem ter o que '.split(' ').reduce((m, w) => { if (w) m[w] = 1; return m; }, {});
+// os equipamentos do cartão único «Eletrônicos» (plotters, áudio e rádios VHF: o FAQ deles é um só, o F3) e os ícones do FAQ completo, das emergências e dos resultados por seção
+const UNICO = ['eletronicos', 'audio', 'vhf'];
+const ICONES = Object.assign({}, ICON, { faq: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11 M9 8h6 M9 11h4', emerg: 'M12 3l9 16H3z M12 10v4 M12 17h.01', ancora: 'M12 4v14 M6 12a6 6 0 0 0 12 0 M9 7h6', checklist: 'M5 12.5l4.5 4.5L19 7.5 M5 5h14' });
+const SEC_ICON = { 1: 'emerg', 2: 'motores', 3: 'gerador', 4: 'estabilizador', 5: 'climatizacao', 6: 'eletronicos', 7: 'ancora', 8: 'seafire', 9: 'checklist' };
+const TOM_SEC = { 2: 'accent', 3: 'violeta', 4: 'tele', 5: 'tele', 6: 'accent', 7: 'accent', 8: 'warn', 9: 'ok' };
 class Component extends DCLogic {
-  state = { busca: '', nota: '', notaTom: 'var(--cap-ok, #34c77a)' };
+  state = { busca: '', nota: '', notaTom: 'var(--cap-ok, #34c77a)', f6: 0 };
   buscaRef = React.createRef();
-  componentWillUnmount() { clearTimeout(this._n); }
+  componentDidMount() {
+    // o FAQ dos equipamentos (F6) vem do cérebro: a busca do hub e os números dos cartões leem dele; quando o arquivo chega, a tela redesenha
+    this._f6 = () => { if (!this._dead) this.setState({ f6: Date.now() }); };
+    window.addEventListener('capitao-faq', this._f6);
+    this.quando(() => window.CapitaoFAQ.carrega().then(() => this._f6()));
+  }
+  componentWillUnmount() { this._dead = true; window.removeEventListener('capitao-faq', this._f6); clearTimeout(this._n); clearInterval(this._b); }
+  // o cérebro e o módulo do FAQ entram pelo <head> da tela; se algum atrasar, espera (até 6 s) e, passados 0,3 s, pede o arquivo que faltar
+  quando(cb) {
+    const pronto = () => window.CapitaoBrain && window.CapitaoFAQ;
+    if (pronto()) return cb();
+    let n = 0;
+    this._b = setInterval(() => {
+      if (pronto() || ++n > 120) { clearInterval(this._b); if (pronto()) cb(); return; }
+      if (n === 6) [['capitao-brain.js', window.CapitaoBrain], ['capitao-faq.js', window.CapitaoFAQ]].forEach(([f, ja]) => {
+        if (!ja && !document.querySelector('script[data-capitao-faq-tela="' + f + '"]')) { const s = document.createElement('script'); s.src = './' + f; s.setAttribute('data-capitao-faq-tela', f); document.head.appendChild(s); }
+      });
+    }, 50);
+  }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
   toast(msg, tone) { this.setState({ nota: msg, notaTom: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 4000); }
   chat(q) { return CFG.chat + (q ? '#q=' + encodeURIComponent(q) : ''); }
   tela(k, p) { return TELA[k] + CFG.suf + '.dc.html' + (p ? '#p=' + p : ''); }
+  f6(h) { return 'F6-FAQ-Equipamentos' + CFG.suf + '.dc.html' + (h || ''); }
   texto() { const el = this.buscaRef.current; return String((el && el.value) || this.state.busca || '').trim(); }
   // Enter / botão: a pergunta vai para o chat (Main na web, H2 no app), que responde pelas fontes de bordo
   enviar() {
@@ -142,22 +168,11 @@ class Component extends DCLogic {
     window.location.href = this.chat(q.slice(0, 200));
   }
   limpar() { const el = this.buscaRef.current; if (el) { el.value = ''; el.focus(); } this.setState({ busca: '' }); }
-  // Busca nas perguntas de D.faq: todos os termos precisam aparecer (pergunta, seção, equipamento ou passo)
+  // Busca nos 91 itens do FAQ dos equipamentos (a busca do cérebro, a mesma do chat e do F6); null = o arquivo ainda não chegou
   achar(busca) {
-    const D = window.CapitaoDados || {}, FAQ = D.faq || {};
-    const termos = norm(busca).replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w && !PARADAS[w] && (w.length > 1 || /\d/.test(w)));
-    if (!termos.length) return [];
-    const out = [];
-    Object.keys(FAQ).forEach((k) => {
-      const F = FAQ[k] || {}, te = norm(F.equip);
-      (F.perguntas || []).forEach((p, i) => {
-        const passos = p.passos || [], tq = norm(p.q), ts = norm(passos.map((x) => x.secao).join(' ')), tt = norm(passos.map((x) => x.t).join(' '));
-        let pts = 0, todos = true;
-        termos.forEach((w) => { let v = 0; if (tq.indexOf(w) !== -1) v += 4; if (ts.indexOf(w) !== -1) v += 2; if (te.indexOf(w) !== -1) v += 2; if (tt.indexOf(w) !== -1) v += 1; if (!v) todos = false; pts += v; });
-        if (todos) out.push({ k: k, i: i, p: p, F: F, pts: pts });
-      });
-    });
-    return out.sort((a, b) => b.pts - a.pts).slice(0, CFG.max);
+    const F = window.CapitaoFAQ;
+    if (!F || !F.pronto()) return null;
+    return F.busca(busca, CFG.max).map((r) => r.it);
   }
   faqDe(e) {
     const D = window.CapitaoDados || {}, FAQ = D.faq || {}, G = D.guias || {};
@@ -167,57 +182,63 @@ class Component extends DCLogic {
     return null;
   }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, FAQ = D.faq || {}, G = D.guias || {}, EQ = D.equipamentos || [];
-    const demo = D.demo ? ' · DEMO' : '';
-    const pasta = ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || SD);
+    const s = this.state, D = window.CapitaoDados || {}, FAQ = D.faq || {}, G = D.guias || {}, EQ = D.equipamentos || [], sim = D.simulacao === true, falta = (r) => (sim ? '' : r);
+    const F6 = window.CapitaoFAQ, D6 = F6 && F6.pronto() ? F6.dados() : null, tot = D6 ? D6.itens.length : 0, emIt = D6 ? D6.itens.filter((x) => x.emerg) : [];
+    const pasta = ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || falta(SD));
     const chipOk = { ctom: cor('ok')[0], clinha: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.07)' };
+    const chipAc = { ctom: cor('accent')[0], clinha: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)', cwash: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.07)' };
+    const chipEm = { ctom: cor('crit')[0], clinha: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', cwash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.07)' };
+    // fabricante + modelo sem repetir o fabricante («Seakeeper Seakeeper 3» vira «Seakeeper 3»)
+    const fabMod = (x) => (x.fabricante && x.modelo && x.modelo.toLowerCase().indexOf(x.fabricante.toLowerCase()) === 0 ? x.modelo : [x.fabricante, x.modelo].filter(Boolean).join(' '));
     let prontos = 0;
-    const cartoes = EQ.map((e) => {
-      const k = this.faqDe(e), F = k ? FAQ[k] : null, g = e.guia ? G[e.guia] : null, t = cor(TOM_EQ[e.id] || 'ink');
+    // os dois cartões do FAQ completo (F6): tudo e as emergências (a cada um, o que o arquivo gerado traz; sem ele, o texto geral)
+    const base = [
+      { nome: 'FAQ completo dos equipamentos', fab: D6 ? tot + ' perguntas e respostas dos guias de bordo' : 'Perguntas e respostas dos guias de bordo', ico: this.ico(ICONES.faq, CFG.ic, 1.7, cor('accent')[0]), wash: cor('accent')[1],
+        chip: D6 ? tot + ' ITENS' : 'FAQ', ...chipAc, sub: 'Busca, filtros por seção e o passo a passo de cada item, com a fonte no guia de bordo.', acao: 'Abrir o FAQ ›', href: this.f6(''), fonte: 'Fonte: guias de bordo · ' + pasta },
+      { nome: 'Emergências', fab: emIt.length ? emIt[0].id + ' a ' + emIt[emIt.length - 1].id + ' · procedimento padrão — confirmar com o protocolo de bordo' : 'cartões de emergência · procedimento padrão — confirmar com o protocolo de bordo', ico: this.ico(ICONES.emerg, CFG.ic, 1.7, cor('crit')[0]), wash: cor('crit')[1],
+        chip: 'EMERGÊNCIA', ...chipEm, sub: emIt.length ? emIt.map((x) => x.titulo.split(':')[0].replace(/ \(.*$/, '')).join(' · ') : 'MAYDAY, PAN-PAN, homem ao mar, incêndio, água entrando, abandono, EPIRB e salvatagem.', acao: 'Abrir os cartões ›', href: this.f6('#s=1'), fonte: 'Fonte: ' + (G.protocolo || 'protocolo de emergência — procedimento padrão') }
+    ];
+    const cartoes = base.concat(EQ.filter((e) => e.id !== 'audio' && e.id !== 'vhf').map((e) => {   // o cartão «Eletrônicos» (plotters, áudio e rádios VHF) é um só: o áudio e o VHF entram nele
+      const k = this.faqDe(e), F = k ? FAQ[k] : null, g = e.guia ? G[e.guia] : null, t = cor(TOM_EQ[e.id] || 'ink'), unico = e.id === 'eletronicos';
       // EPIRB e Seafire (seguranca): a nota da etiqueta no lugar de fabricante e modelo, também nos links do chat (CONTRATO §1.4)
-      const fab = (e.seguranca ? e.nota : (e.fabricante || 'fabricante ' + SD) + ' · modelo ' + (e.modelo || SD)) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '');
-      const c = { nome: e.nome, fab: fab, ico: this.ico(ICON[e.id] || 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', 20, 1.7, t[0]), wash: t[1], chipDemo: '' };
+      const fab = unico ? EQ.filter((x) => UNICO.indexOf(x.id) !== -1).map(fabMod).join(' · ')
+        : (e.seguranca ? e.nota : (e.fabricante || falta('fabricante ' + SD)) + ' · modelo ' + (e.modelo || falta(SD))) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd + (e.lados ? ' (' + e.lados + ')' : '') : '');
+      const c = { nome: unico ? 'Eletrônicos' : e.nome, fab: fab, ico: this.ico(ICON[e.id] || 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', CFG.ic, 1.7, t[0]), wash: t[1] };
       const pronto = F && F.status === 'PRONTO', P = F && Array.isArray(F.perguntas) ? F.perguntas : [];
       if (F && k === e.id) {
         if (pronto) prontos++;
-        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || SD), chipDemo: pronto && D.demo ? ' · DEMO' : '',
-          sub: P.map((p) => p.q).join(' · ') || SD, acao: P.length + (P.length === 1 ? ' pergunta ›' : ' perguntas ›'),
-          href: this.tela(k), fonte: 'Fonte: ' + (F.fonte || SD) });
+        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || falta(SD)),
+          sub: P.map((p) => p.q).join(' · ') || falta(SD), acao: P.length + (P.length === 1 ? ' pergunta ›' : ' perguntas ›'),
+          href: this.tela(k), fonte: 'Fonte: ' + (F.fonte || falta(SD)) });
       } else if (F) {
-        // Áudio e VHF: respondidos no FAQ de eletrônicos (mesmo guia) — abre direto na pergunta que cita uma das palavras do
-        // equipamento (D.equipamentos[].palavras: fabricante, modelo e nome comum; as com espaço nas pontas valem palavra inteira)
-        const kws = (e.palavras && e.palavras.length ? e.palavras : [e.modelo || e.fabricante || e.nome]).map((w) => norm(w)), idx = [];
-        P.forEach((p, i) => { const tx = ' ' + norm(p.q + ' ' + (p.passos || []).map((x) => x.secao).join(' ')) + ' '; if (kws.some((w) => tx.indexOf(w) !== -1)) idx.push(i); });
-        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || SD), chipDemo: pronto && D.demo ? ' · DEMO' : '',
-          sub: 'No FAQ de ' + (NOME_FAQ[k] || k) + ': ' + (idx.map((i) => P[i].q).join(' · ') || 'passo a passo do guia'),
-          acao: 'No FAQ de ' + (NOME_FAQ[k] || k) + ' ›',
-          href: this.tela(k, idx.length ? idx[0] + 1 : 0), fonte: 'Fonte: ' + (F.fonte || SD) });
+        // (o hub tem um cartão só dos eletrônicos; aqui chega o equipamento cujo FAQ é de outro cartão)
+        Object.assign(c, pronto ? chipOk : { ctom: cor('ink')[0], clinha: 'var(--cap-line2, #27315a)', cwash: 'transparent' }, { chip: pronto ? 'PRONTO' : (F.status || falta(SD)),
+          sub: 'No FAQ de ' + (NOME_FAQ[k] || k), acao: 'No FAQ de ' + (NOME_FAQ[k] || k) + ' ›', href: this.tela(k), fonte: 'Fonte: ' + (F.fonte || falta(SD)) });
       } else if (g) {
         // Guia de bordo sem tela de FAQ (motores, porão, âncora…) — o chat responde pelo guia
-        Object.assign(c, { chip: 'GUIA DE BORDO', ctom: cor('accent')[0], clinha: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)', cwash: 'rgba(var(--cap-accent-rgb, 0,161,254), 0.07)',
-          sub: g + ' carregado · passo a passo ainda sem tela de FAQ — pergunte ao barco.', acao: 'Perguntar ao barco ›',
+        Object.assign(c, { chip: 'GUIA DE BORDO', ...chipAc,
+          sub: g + ' carregado · passo a passo no FAQ completo e no chat — pergunte ao barco.', acao: 'Perguntar ao barco ›',
           href: this.chat(perguntaEq(e, e.nome + (e.fabricante ? ' ' + e.fabricante : ''))), fonte: 'Fonte: ' + g });
       } else {
-        Object.assign(c, { chip: SD, ctom: cor('ink')[0], clinha: 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.45)', cwash: 'transparent',
-          sub: 'Sem manual carregado — passo a passo ' + SD + '. Envie o manual ou a foto da etiqueta pelo chat.', acao: 'Perguntar ao barco ›',
-          href: this.chat(perguntaEq(e, e.fabricante || e.nome)), fonte: 'Fonte: nenhuma — ' + SD });
+        Object.assign(c, { chip: sim ? 'FAQ' : SD, ctom: cor('ink')[0], clinha: 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.45)', cwash: 'transparent',
+          sub: sim ? 'Pergunte ao barco: o chat busca nas fontes de bordo.' : 'Sem manual carregado — passo a passo ' + SD + '. Envie o manual ou a foto da etiqueta pelo chat.', acao: 'Perguntar ao barco ›',
+          href: this.chat(perguntaEq(e, e.fabricante || e.nome)), fonte: 'Fonte: ' + (sim ? 'fontes de bordo' : 'nenhuma — ' + SD) });
       }
       return c;
-    });
+    }));
     const nPerg = Object.keys(FAQ).reduce((n, k) => n + ((FAQ[k] && FAQ[k].perguntas) || []).length, 0);
-    const busca = String(s.busca || '').trim(), achados = busca ? this.achar(busca) : [];
-    const fontesRes = []; achados.forEach((a) => { if (a.F.fonte && fontesRes.indexOf(a.F.fonte) === -1) fontesRes.push(a.F.fonte); });
-    const resultados = achados.map((a) => {
-      const t = cor(TOM_EQ[a.k] || 'accent'), passos = a.p.passos || [], secs = [];
-      passos.forEach((x) => { const v = secao(x.secao); if (x.secao && secs.indexOf(v) === -1) secs.push(v); });
-      const pr = a.F.status === 'PRONTO';
-      return { q: a.p.q, meta: (a.F.equip || SD) + ' · ' + passos.length + (passos.length === 1 ? ' passo' : ' passos') + (secs.length ? ' · ' + secs.join(' · ') : ''),
-        href: this.tela(a.k, a.i + 1), ico: this.ico(ICON[a.k] || ICON.eletronicos, 19, 1.7, t[0]), wash: t[1], selo: pr ? 'PRONTO' : (a.F.status || SD), seloDemo: pr && D.demo ? ' · DEMO' : '' };
+    const busca = String(s.busca || '').trim(), achados = busca ? this.achar(busca) : [], carregando = !!busca && achados === null;
+    const sec = (n) => ((D6 && D6.secoes && D6.secoes[n - 1]) || {}).titulo || '';
+    const resultados = (achados || []).map((it) => {
+      const t = it.emerg ? cor('crit') : cor(TOM_SEC[it.secao] || 'accent');
+      return { q: it.titulo, meta: it.id + ' · ' + it.equip + (sec(it.secao) ? ' · ' + sec(it.secao) : ''), href: this.f6('#id=' + encodeURIComponent(it.id)), ico: this.ico(ICONES[SEC_ICON[it.secao]] || ICONES.faq, CFG.ir, 1.7, t[0]), wash: t[1],
+        selo: it.emerg ? 'EMERGÊNCIA' : it.id, seloTom: it.emerg ? cor('crit')[0] : cor('ok')[0], seloLinha: it.emerg ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)' };
     });
+    const fontesRes = []; (achados || []).forEach((it) => (it.fontes || []).forEach((f) => { if (f.texto && fontesRes.length < 3 && fontesRes.indexOf(f.texto) === -1) fontesRes.push(f.texto); }));
     const nR = resultados.length;
     return {
       nota: s.nota, notaTom: s.notaTom,
-      resumo: EQ.length + ' equipamentos · ' + prontos + ' com passo a passo PRONTO' + demo + ' (' + nPerg + ' perguntas) · guias de bordo' + (D.demo ? ' de demonstração' : '') + ' — confirmar no manual do fabricante',
+      resumo: EQ.length + ' equipamentos · ' + prontos + ' com passo a passo PRONTO (' + nPerg + ' perguntas)' + (tot ? ' · ' + tot + ' itens no FAQ completo' : '') + ' · guias de bordo — confirmar no manual do fabricante',
       perguntarHref: this.chat('Quais guias de bordo estão carregados?'),
       buscaRef: this.buscaRef,
       onBusca: (e) => this.setState({ busca: e.target.value }),
@@ -226,11 +247,13 @@ class Component extends DCLogic {
       temBusca: !!busca, semBusca: !busca,
       cartoes: cartoes,
       resultados: resultados,
-      resTitulo: nR ? nR + (nR === 1 ? ' pergunta do FAQ' : ' perguntas do FAQ') + ' com “' + busca + '”' : 'Nenhuma pergunta do FAQ com “' + busca + '”',
-      resTituloApp: (nR ? nR + (nR === 1 ? ' PERGUNTA' : ' PERGUNTAS') : 'NENHUMA PERGUNTA') + ' NO FAQ',
+      resTitulo: carregando ? 'Carregando o FAQ…' : nR ? nR + (nR === 1 ? ' item do FAQ' : ' itens do FAQ') + ' com “' + busca + '”' : 'Nenhum item do FAQ com “' + busca + '”',
+      resTituloApp: carregando ? 'CARREGANDO O FAQ…' : (nR ? nR + (nR === 1 ? ' ITEM' : ' ITENS') : 'NENHUM ITEM') + ' NO FAQ',
+      verTodos: nR > 0, f6Busca: this.f6('#busca=' + encodeURIComponent(busca.slice(0, 120))), f6BuscaTxt: 'Ver todos no FAQ completo ›',
       chatBusca: this.chat(busca.slice(0, 200)), chatBuscaTxt: 'Perguntar ao barco: “' + busca + '” ›',
-      resFonte: fontesRes.length ? 'Fonte: ' + fontesRes.join(' · ') : 'Fonte: nenhuma pergunta do FAQ — o barco procura nas outras fontes de bordo',
-      regra: 'sem guia carregado, a resposta é ' + SD + ' e aponta onde buscar — nada é inventado. ' + (D.equipNota || ''),
+      resFonte: fontesRes.length ? 'Fonte: ' + fontesRes.join(' · ') : 'Fonte: nenhum item do FAQ — o barco procura nas outras fontes de bordo',
+      regra: sim ? 'cada resposta cita o guia de bordo e a seção; o que não está nos guias o barco busca nas outras fontes de bordo. ' + (D.equipNota || '')
+        : 'sem guia carregado, a resposta é ' + SD + ' e aponta onde buscar — nada é inventado. ' + (D.equipNota || ''),
       regraFonte: 'Fonte: ' + pasta
     };
   }

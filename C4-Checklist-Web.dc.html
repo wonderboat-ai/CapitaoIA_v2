@@ -231,7 +231,7 @@ class Component extends DCLogic {
       line: x.ativa ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' : 'var(--cap-line, #1a2240)', on: () => this.aba(x.id) }));
     const itens = (d.itens || []).map((i) => {
       const e = i.aEstado ? EST[i.aEstado] || EST.sem : null, falta = i.aEstado === 'falta' && !i.feito;
-      const link = i.link && LINK[i.link] ? LINK[i.link] : i.link === 'faq' && i.faqPergunta ? ['Main.dc.html#q=' + encodeURIComponent(i.faqPergunta), 'FAQ ' + i.faq + ' — passo a passo ›'] : null;
+      const link = i.link && LINK[i.link] ? LINK[i.link] : i.link === 'faq' && i.faqPergunta ? ['F6-FAQ-Equipamentos-Web.dc.html#id=' + encodeURIComponent(i.faq), 'FAQ ' + i.faq + ' — passo a passo ›'] : null;
       return { id: i.id, t: i.t, fonte: i.fonte, feito: i.feito, feitoTxt: i.feito ? (i.porQuadro ? 'quadro' : 'pessoa') : i.anulado ? 'anulado' : 'aberto', temAuto: !!e, aRot: e ? e[0] : '', aTone: e ? e[1] : '', aWash: e ? e[2] : '', aValor: i.aValor,
         tTone: i.feito ? 'var(--cap-ink2, #b1bdd6)' : 'var(--cap-ink, #eaf1ff)',
         line: falta ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)' : i.feito ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.30)' : 'var(--cap-line, #1a2240)',

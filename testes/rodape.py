@@ -757,7 +757,10 @@ CHIPS_A1 = """() => [...document.querySelectorAll('[title]')].filter((e) => /^(P
 # simulacao false (o instante cai no snapshot.quadro e o chip da âncora ganha o cabo lançado do snapshot aninhado). A A1 abre aqui nesse ramo: as mesmas asserções, o mesmo dado; com a
 # reprodução andando, o chip do porão e o da âncora são do quadro (verificar.py › teste_ponte_web). Fase 4 (P4D): a B2 também lê o instante (a linha do porão é o nível do quadro); o
 # «porão: BB 1,2 cm · BE 0,9 cm» do D.snapshot só chega a ela na última leitura salva, e abre nesse ramo (com a reprodução andando: verificar.py › teste_carta_app).
-SIMULACAO_FALSE = {'A1-Ponte-Web': 'window.CapitaoDados.simulacao = false;', 'B2-Carta-Mobile': 'window.CapitaoDados.simulacao = false;'}
+# Fase 4 (P4H): as duas F3 (FAQ de eletrônicos) leem o instante no «Estado a bordo» (o ferro do quadro é «RECOLHIDA»; o «LANÇADA · 30 m» do D.snapshot só chega nelas na última leitura salva, com o cabo do snapshot
+# aninhado, como na A1): abrem nesse ramo, com as mesmas asserções (com a reprodução andando: verificar.py › teste_f2f5).
+SIMULACAO_FALSE = {'A1-Ponte-Web': 'window.CapitaoDados.simulacao = false;', 'B2-Carta-Mobile': 'window.CapitaoDados.simulacao = false;',
+                  'F3-FAQ-Eletronicos': 'window.CapitaoDados.simulacao = false;', 'F3-FAQ-Eletronicos-Web': 'window.CapitaoDados.simulacao = false;'}
 
 
 def snapshot_sem_null(b, local):
