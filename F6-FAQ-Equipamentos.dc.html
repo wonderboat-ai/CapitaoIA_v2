@@ -64,14 +64,14 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
             <span style="flex-shrink: 0; min-width: 38px; font-family: ui-monospace, SF Mono, Menlo, Consolas, monospace; font-size: 10.5px; font-weight: 700; color: var(--cap-ink3, #97a3c0); padding-top: 2px;">{{f.id}}</span>
             <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
               <span class="f6-txt" style="font-size: 13.5px; font-weight: 700; line-height: 1.3;">{{f.titulo}}</span>
-              <span class="f6-txt" style="font-size: 11px; line-height: 1.35; color: var(--cap-ink3, #97a3c0); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{f.sub}}</span>
+              <span data-f6="previa" class="f6-txt" style="font-size: 11px; line-height: 1.35; color: var(--cap-ink3, #97a3c0); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{f.sub}}</span>
             </span>
             <span style="flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
               <sc-if value="{{f.emerg}}" hint-placeholder-val="{{false}}">
-                <span style="font-size: 8.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-crit, #ff3b30); border: 1px solid rgba(var(--cap-crit-rgb, 255,59,48), 0.45); border-radius: 5px; padding: 3px 5px; white-space: nowrap;">EMERGÊNCIA</span>
+                <span data-f6="selo-emerg" style="font-size: 8.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-crit, #ff3b30); border: 1px solid rgba(var(--cap-crit-rgb, 255,59,48), 0.45); border-radius: 5px; padding: 3px 5px; white-space: nowrap;">EMERGÊNCIA</span>
               </sc-if>
               <sc-if value="{{f.seg}}" hint-placeholder-val="{{false}}">
-                <span style="font-size: 8.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-warn, #f0a63a); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.45); border-radius: 5px; padding: 3px 5px; white-space: nowrap;">SEGURANÇA</span>
+                <span data-f6="selo-seg" style="font-size: 8.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-warn, #f0a63a); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.45); border-radius: 5px; padding: 3px 5px; white-space: nowrap;">SEGURANÇA</span>
               </sc-if>
             </span>
           </button>
@@ -208,6 +208,13 @@ class Component extends DCLogic {
     window.removeEventListener('capitao-faq', this._faq);
     clearInterval(this._b);
   }
+  // o item mudou (ou fechou): o painel volta ao topo (o cartão de emergência abre com a ação imediata e o botão SOS à vista); ao fechar, a lista volta para onde estava
+  componentDidUpdate() {
+    if (this._selAnt === this.state.sel) return;
+    const antes = this._selAnt, e = document.querySelector('[data-f6=painel]');
+    this._selAnt = this.state.sel;
+    if (e) e.scrollTop = !this.state.sel && antes ? (this._listaTop || 0) : 0;
+  }
   // o cérebro e o módulo do FAQ entram pelo <head> da tela; se algum atrasar, espera (até 6 s) e, passados 0,3 s, pede o arquivo que faltar
   quando(cb) {
     const pronto = () => window.CapitaoBrain && window.CapitaoFAQ;
@@ -222,7 +229,8 @@ class Component extends DCLogic {
   }
   // troca o estado e o endereço (replaceState: sem recarregar e sem empilhar histórico)
   set(p) {
-    const s = Object.assign({}, this.state, p);
+    const s = Object.assign({}, this.state, p), e = document.querySelector('[data-f6=painel]');
+    if (e && p.sel && !this.state.sel) this._listaTop = e.scrollTop;
     this.setState(p);
     let h = '';
     if (s.sel) h = '#id=' + encodeURIComponent(s.sel);

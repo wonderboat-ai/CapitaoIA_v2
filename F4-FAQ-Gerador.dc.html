@@ -112,7 +112,7 @@ button { font: inherit; }
 
   <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
   <div style="flex-shrink: 0; box-sizing: border-box; padding: 26px 16px 12px; border-top: 1px solid var(--cap-line, #1a2240);">
-    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" prefixo="Gerador Onan: " hint-size="358px,108px"></x-import>
+    <x-import component-from-global-scope="capitao-barra-chat" from="./capitao-barra.js" prefixo="{{prefixoBarra}}" hint-size="358px,108px"></x-import>
   </div>
 </div>
 </x-dc>
@@ -230,6 +230,9 @@ class Component extends DCLogic {
     const chat = (q) => CFG.chat + '#q=' + encodeURIComponent(q);
     const EQ = (D.equipamentos || []).filter((e) => CFG.ids.indexOf(e.id) !== -1);
     const prefixo = CFG.semPrefixo || !F.equip ? '' : F.equip + ': ';
+    // o começo da pergunta digitada na barra: o equipamento e o fabricante de D.equipamentos (nunca fixos no HTML)
+    const eqBarra = (D.equipamentos || []).filter((e) => e.id === 'gerador')[0] || {};
+    const prefixoBarra = 'Gerador' + (eqBarra.fabricante ? ' ' + eqBarra.fabricante : '') + ': ';
     const geral = CFG.semPrefixo ? (EQ[0] ? EQ[0].nome + (EQ[0].fabricante ? ' ' + EQ[0].fabricante : '') : CFG.nome) + ': passo a passo' : (F.equip || CFG.nome) + ': passo a passo';
     const PERG = Array.isArray(F.perguntas) ? F.perguntas : [], ab = s.abertos || {};
     const eqLinhas = EQ.length ? EQ.map((e) => ({ n: e.nome + (e.fabricante ? ' ' + e.fabricante : ''), m: [e.fabricante ? '' : falta('fabricante ' + SD), e.modelo ? 'modelo ' + e.modelo : falta('modelo ' + SD), e.qtd && e.qtd !== SD ? 'qtd ' + e.qtd : ''].filter(Boolean).join(' · ') }))
@@ -254,6 +257,7 @@ class Component extends DCLogic {
     const todas = this.todasAbertas();
     return {
       nota: s.nota, notaTom: s.notaTom,
+      prefixoBarra: prefixoBarra,
       titulo: CFG.nome + ' · FAQ de bordo',
       resumo: eqLinhas.map((e) => e.n + (e.m ? ' · ' + e.m : '')).join(' / ') + ' · ' + PERG.length + (PERG.length === 1 ? ' pergunta' : ' perguntas') + ' · ' + (F.fonte || falta(SD)),
       eqIco: this.ico(CFG.d, 23, 1.7, cor(CFG.tom)[0]), eqWash: cor(CFG.tom)[1], eqLinhas: eqLinhas,
