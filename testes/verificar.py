@@ -109,7 +109,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 47 defeitos, todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 66 defeitos (47 da P4G e 19 da revisão final), todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -4850,7 +4850,8 @@ def teste_home_dados(b, tela):
     for z in ('Zyxgerador Mod9', 'Zyxclima Mod9', 'Zyxestab Mod9'):
         if z not in txt: prob.append('%s: o fabricante e o modelo plantados (%s) não aparecem' % (tela, z))
     if 'Zyxeletro · Zyxaudio · Zyxvhf' not in txt: prob.append('%s: os fabricantes dos eletrônicos plantados não aparecem (esperado «Zyxeletro · Zyxaudio · Zyxvhf»)' % tela)
-    if re.search(r'Onan|Webasto|Seakeeper|Garmin|Icom|Fusion', txt): prob.append('%s: sobrou fabricante fixo: %s' % (tela, re.search(r'Onan|Webasto|Seakeeper|Garmin|Icom|Fusion', txt).group(0)))
+    FIXO = re.compile(r'Onan|Webasto|Seakeeper|Garmin|Icom|Fusion|Volvo|Cummins', re.I)   # (sem diferenciar maiúscula: o rótulo curto do cartão é em caixa alta, «SEAKEEPER»; revisão final da P4G)
+    if FIXO.search(txt): prob.append('%s: sobrou fabricante fixo: %s' % (tela, FIXO.search(txt).group(0)))
     ctx.close()
     ctx, pg, erros = abre_tela(b, tela, fixo='60')   # a tarefa do rotor e a do filtro executadas (Executado): saem do atraso
     r0 = pg.evaluate(LE_HOME)
@@ -5162,6 +5163,150 @@ def teste_home_botoes(b, tela):
     return prob
 
 
+# ——— Revisão final da P4G: a foto com texto (F36 e a trava 10), a resposta tardia da IA e o botão de uma proposta antiga ———
+ANEXO_HOME = {'name': 'etiqueta.png', 'mimeType': 'image/png', 'buffer': PNG_1X1}
+SITUACAO_DE_BORDO = re.compile(r'SOG|proa \d|Situação de bordo|Última situação|\brpm\b')   # o que a trava 10 proíbe nas respostas de emergência (o quadro: SOG, proa, rotações)
+
+
+def foto_e_texto(b, tela, texto, **kw):
+    """Abre a Home, anexa a foto e envia `texto` junto: devolve (ctx, pg, mensagens, estado, pedidos à IA, erros)."""
+    ctx, pg, erros, est = abre_home(b, tela, **kw)
+    pg.set_input_files('input[type=file][accept="image/*"]', ANEXO_HOME)
+    pg.wait_for_timeout(300)
+    m = pergunta_home(pg, tela, texto)
+    return ctx, pg, m, pg.evaluate(LE_ESTADO_HOME), est, erros
+
+
+def abre_resposta(t):
+    """O texto da resposta sem o nome do assistente que a bolha escreve na frente."""
+    return re.sub(r'^CAPITÃO IA\s*', '', t or '')
+
+
+def teste_home_anexo(b, tela):
+    """A foto com texto na Home. (1) Trava 10: a pergunta de emergência dita com a foto (fogo, óleo, pessoa desaparecida, salvatagem) abre a resposta com a instrução de segurança — nada de «Foto recebida», SOG, proa nem situação de
+    bordo antes dela —, marca a janela de 15 min (menos a salvatagem) e não grava o texto no diário. (2) F36: a legenda e o pedido de registro entram na MESMA linha da foto (1 linha, o texto da pessoa dentro) e a tela não grava uma 2ª
+    linha ao responder de novo. (3) A pergunta de rotina leva a nota da foto na frente e a janela fica fechada."""
+    prob = []
+    rot = tela
+    for texto, prefixo, janela in (('tem fogo no motor', 'Emergência', True), ('pressão de óleo baixa no motor BB', 'Se a pressão de óleo', True), ('pessoa desaparecida a bordo', 'Emergência', True), ('a Ana desapareceu', 'Emergência', True),
+                                   ('onde estão os coletes?', 'Em perigo agora', False)):
+        ctx, pg, m, s, est, erros = foto_e_texto(b, tela, texto)
+        r = abre_resposta(m[-1]['txt'])
+        if not r.startswith(prefixo): prob.append('%s: foto + «%s»: a resposta devia abrir com a instrução de segurança («%s…»), abre com %r' % (rot, texto, prefixo, r[:90]))
+        if SITUACAO_DE_BORDO.search(r): prob.append('%s: foto + «%s»: a resposta traz a situação de bordo do quadro (%s): %r' % (rot, texto, SITUACAO_DE_BORDO.search(r).group(0), r[:200]))
+        if s['emerg'] != janela: prob.append('%s: foto + «%s»: a janela de emergência devia %s (valendo %r)' % (rot, texto, 'ficar marcada' if janela else 'ficar fechada', s['emerg']))
+        if len(s['diario']) != 1 or not s['diario'][0].get('t', '').startswith('Foto anexada pelo chat') or re.search(r'fogo|óleo|desaparec|Ana|coletes', s['diario'][0].get('t', '')): prob.append('%s: foto + «%s»: devia gravar só a linha da foto, sem o texto de emergência: %s' % (rot, texto, [x.get('t') for x in s['diario']]))
+        if est['pedidos']: prob.append('%s: foto + «%s»: a emergência foi à IA' % (rot, texto))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # F36: a legenda e o pedido de registro dentro da linha da foto
+    for texto, dentro in (('etiqueta do filtro de óleo do gerador', 'Etiqueta do filtro de óleo do gerador'), ('registre no diário: o rotor da bomba foi trocado ontem', 'O rotor da bomba foi trocado ontem')):
+        ctx, pg, m, s, est, erros = foto_e_texto(b, tela, texto)
+        r = abre_resposta(m[-1]['txt'])
+        if len(s['diario']) != 1 or dentro not in s['diario'][0].get('t', '') or 'foto anexada pelo chat' not in s['diario'][0].get('t', ''): prob.append('%s: foto + «%s»: devia gravar UMA linha com a foto e o texto da pessoa dentro (%r): %s' % (rot, texto, dentro, [x.get('t') for x in s['diario']]))
+        if 'Seu texto entrou na mesma linha do diário' not in r: prob.append('%s: foto + «%s»: a resposta devia dizer que o texto entrou na mesma linha: %r' % (rot, texto, r[:160]))
+        if s['emerg']: prob.append('%s: foto + «%s» marcou a janela de emergência' % (rot, texto))
+        ctx.close()
+    # a pergunta de rotina: a nota da foto vem na frente, a janela fica fechada
+    ctx, pg, m, s, est, erros = foto_e_texto(b, tela, 'qual o rumo agora?')
+    r = abre_resposta(m[-1]['txt'])
+    if not r.startswith('Foto recebida') or s['emerg'] or len(s['diario']) != 1: prob.append('%s: foto + «qual o rumo agora?»: a nota da foto devia abrir a resposta, sem janela e com 1 linha no diário: %r · janela %r · %d linhas' % (rot, r[:80], s['emerg'], len(s['diario'])))
+    ctx.close()
+    return prob
+
+
+def abre_home_retida(b, tela):
+    """A Home com o Worker da IA de mentira que SEGURA a resposta: cada pedido fica em `seg` até o teste liberá-lo (libera(seg, texto)); espia o B.conversa em window.__conv."""
+    seg = []
+    ctx, pg, erros = abre_tela(b, tela, ls={'capitao.ia.chave.v1': 'chave-de-teste'})
+    cab = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
+    def rota(route):
+        if route.request.method == 'OPTIONS': return route.fulfill(status=204, headers=cab)
+        seg.append(route)
+    ctx.route(URL_IA.rstrip('/') + '**', rota)
+    pg.evaluate("() => { window.__conv = []; const B = window.CapitaoBrain, f = B.conversa; B.conversa = function () { window.__conv.push([].slice.call(arguments)); return f.apply(this, arguments); }; }")
+    return ctx, pg, erros, seg, cab
+
+
+def libera(seg, cab, texto='Qual equipamento você quer ligar?'):
+    for rt in seg:
+        rt.fulfill(status=200, content_type='application/json', headers=cab, body=json.dumps({'texto': texto + '\nFonte: ficha de bordo', 'provedor': 'Workers AI', 'modelo': 'teste', 'parou': 'fim'}))
+    del seg[:]
+
+
+def pergunta_a_caminho(pg, tela, seg, q):
+    """Envia a pergunta que vai à IA e espera o pedido chegar ao Worker de mentira (a resposta fica segurada)."""
+    pg.fill(CAMPO_HOME[tela], q); pg.press(CAMPO_HOME[tela], 'Enter')
+    for _ in range(60):
+        if seg: return True
+        pg.wait_for_timeout(100)
+    return False
+
+
+def teste_home_tardio(b, tela):
+    """A resposta da IA que chega DEPOIS do NOVA, do ENCERRAR ou de uma emergência não recoloca no cérebro o contexto que eles zeraram (B.conversa só conta a conversa que continua): o controle conta a resposta (1 chamada) e,
+    depois do NOVA, «o gerador» volta a ser a resposta pronta do gerador, não a continuação do «como ligar?»."""
+    prob = []
+    rot = tela
+    ctx, pg, erros, seg, cab = abre_home_retida(b, tela)
+    if not pergunta_a_caminho(pg, tela, seg, 'como ligar?'): prob.append('%s: o pedido não chegou ao Worker (o teste não vale)' % rot)
+    libera(seg, cab); pg.wait_for_timeout(700)
+    if len(pg.evaluate('() => window.__conv')) != 1: prob.append('%s: o controle (sem NOVA nem ENCERRAR) devia contar a resposta da IA ao cérebro 1 vez: %s' % (rot, pg.evaluate('() => window.__conv')))
+    ctx.close()
+    for cenario in ('NOVA', 'ENCERRAR', 'emergência'):
+        ctx, pg, erros, seg, cab = abre_home_retida(b, tela)
+        if not pergunta_a_caminho(pg, tela, seg, 'como ligar?'): prob.append('%s: o pedido não chegou ao Worker (o teste não vale)' % rot); ctx.close(); continue
+        if cenario == 'NOVA': pg.click('[aria-label="Nova conversa"]')
+        elif cenario == 'ENCERRAR': pg.evaluate("() => window.dispatchEvent(new CustomEvent('capitao-voz-encerrar'))")
+        else:   # (sem esperar a resposta: a anterior segue a caminho e a espera de 20 s estouraria o prazo do cliente da IA)
+            pergunta_home(pg, tela, 'mayday, homem ao mar', espera=False); pg.wait_for_timeout(1500)
+            if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o teste não vale (o SOS não marcou a janela)' % rot)
+        pg.wait_for_timeout(300)
+        libera(seg, cab); pg.wait_for_timeout(700)
+        n = pg.evaluate('() => window.__conv')
+        if n: prob.append('%s: a resposta da IA que chegou depois do %s foi contada ao cérebro (B.conversa %s): ela recoloca o contexto que foi zerado' % (rot, cenario, n))
+        if cenario != 'emergência':
+            pg.evaluate("() => localStorage.removeItem('capitao.ia.chave.v1')")
+            m = pergunta_home(pg, tela, 'o gerador')
+            if 'PARTIDA até o motor pegar' in m[-1]['txt']: prob.append('%s: depois do %s «o gerador» continuou o «como ligar?» da resposta tardia (devia ser a resposta pronta do gerador)' % (rot, cenario))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_home_proposta_antiga(b, tela):
+    """O botão de uma proposta ANTIGA não age na nova (CONTRATO F12 e F15): com duas propostas de alarme esperando, o «Confirmar» da primeira diz que ela é antiga e não grava nada (o da última grava o alarme que ele mostra);
+    com o relato descartado e outro relato proposto, o «Registrar no diário» do descartado diz que já foi descartado e não grava o novo. O <head> roda o capitao-brain.js duas vezes e o ouvinte de clique é o da 1ª cópia: o alvo do botão
+    tem de ir para a cópia que responde (window.CapitaoBrain)."""
+    prob = []
+    rot = tela
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'me avise quando a temperatura do motor passar de 95 graus')
+    pergunta_home(pg, tela, 'me avise quando a pressão do óleo ficar abaixo de 2 bar')
+    if pg.locator('[data-home=acao]:has-text("Confirmar")').count() != 2: prob.append('%s: o teste não vale (as 2 propostas de alarme não ficaram esperando)' % rot)
+    pg.locator('[data-home=acao]:has-text("Confirmar")').first.click(); pg.wait_for_timeout(1500)
+    r = pg.evaluate(LE_MSGS)[-1]['txt']
+    if 'antiga' not in r or pg.evaluate(LE_ESTADO_HOME)['alarmes']: prob.append('%s: o «Confirmar» da proposta ANTIGA devia dizer que ela é antiga e não gravar nada (alarmes %s): %r' % (rot, pg.evaluate(LE_ESTADO_HOME)['alarmes'], r[:120]))
+    pg.locator('[data-home=acao]:has-text("Confirmar")').last.click(); pg.wait_for_timeout(1500)
+    al = [a.get('campo') for a in pg.evaluate(LE_ESTADO_HOME)['alarmes'] if not a.get('acao')]
+    if sorted(al) != ['motor_bb_oleo_bar', 'motor_be_oleo_bar']: prob.append('%s: o «Confirmar» da proposta mais recente devia gravar os alarmes de óleo (gravou %s)' % (rot, al))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, RELATO_DEFEITO)
+    clica_acao(pg, 'Não registrar')
+    pergunta_home(pg, tela, 'O ar condicionado da cabine parou de gelar duas vezes hoje de manhã quando ligamos o gerador')
+    if pg.locator('[data-home=acao]:has-text("Registrar no diário")').count() != 2: prob.append('%s: o teste não vale (o 2º relato não virou proposta)' % rot)
+    pg.locator('[data-home=acao]:has-text("Registrar no diário")').first.click(); pg.wait_for_timeout(1500)
+    r = pg.evaluate(LE_MSGS)[-1]['txt']
+    if 'já foi descartado' not in r or pg.evaluate(LE_ESTADO_HOME)['diario']: prob.append('%s: o «Registrar no diário» do relato DESCARTADO devia dizer que já foi descartado e não gravar o relato novo (diário %s): %r' % (rot, [x.get('t') for x in pg.evaluate(LE_ESTADO_HOME)['diario']], r[:120]))
+    pg.locator('[data-home=acao]:has-text("Registrar no diário")').last.click(); pg.wait_for_timeout(1500)
+    d = [x.get('t', '') for x in pg.evaluate(LE_ESTADO_HOME)['diario']]
+    if len(d) != 1 or 'ar condicionado da cabine' not in d[0]: prob.append('%s: o «Registrar no diário» do relato novo devia gravar o relato dele (1 linha): %s' % (rot, d))
+    ctx.close()
+    return prob
+
+
 def teste_home_codigo():
     prob = []
     def le_(a):
@@ -5179,7 +5324,8 @@ def teste_home_codigo():
         if h.count('setInterval') != 1: prob.append('%s: setInterval a mais (%d; só o do whenBrain)' % (n, h.count('setInterval')))
         if h.count('if (document.hidden) return;') < (1 if n == 'Main' else 2): prob.append('%s: o tique da telemetria (e a virada do dia) não pausa com document.hidden' % n)
         if re.search(r'D\.demo|\.demo\b|DEMO|D\.aviso|D\.snapshot|\.snapshot\b|demoTip', cod): prob.append('%s: lê D.demo, D.aviso ou D.snapshot (ou escreve DEMO) no código' % n)
-        if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (n, MARCAS_FIXAS.search(cod).group(0)))
+        marca_ci = re.compile(MARCAS_FIXAS.pattern, re.I).search(cod)   # (sem diferenciar maiúscula: o rótulo curto do cartão da H2 era «SEAKEEPER» em caixa alta e a busca só via «Seakeeper»; as duas telas não têm nenhum id em minúscula)
+        if marca_ci: prob.append('%s: fabricante fixo no código: %s' % (n, marca_ci.group(0)))
         for l in cod.split('\n'):   # SEM DADOS / SEM LEITURA só no ramo simulacao:false (falta() ou sim ?)
             if re.search(r'SEM (?:DADOS|LEITURA)', l) and not re.search(r'falta\(|sim \?', l): prob.append('%s: rótulo fora do ramo simulacao false: %s' % (n, l.strip()[:100]))
         if re.search(r'Não consegui responder agora|Fonte: nenhuma', cod): prob.append('%s: o texto de erro ao montar a resposta ainda leva o rótulo' % n)
@@ -5213,6 +5359,18 @@ def teste_h3(b, tela):
         if x['h'] < 43.5: prob.append('%s: o atalho %s tem %.0f px de altura (< 44)' % (tela, x['id'], x['h']))
     if r['lateral'] > 1: prob.append('%s: rola para o lado (%d px)' % (tela, r['lateral']))
     if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+    if web:   # os links à vista, sem rolar: o centro de cada um é o próprio link (o elementFromPoint não acha o cartão de baixo nem o fundo da página) e a seção de rolagem interna não corta nada
+        VISAO = """() => [...document.querySelectorAll('[data-h3^=tela-]')].map((e) => { const r = e.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            let rolagem = false; for (let n = e.parentElement; n && n !== document.body; n = n.parentElement) { const s = getComputedStyle(n); if (/(auto|scroll)/.test(s.overflowY) && n.scrollHeight > n.clientHeight + 1) rolagem = true; }
+            return { id: e.dataset.h3, dentro: r.top >= 0 && r.bottom <= innerHeight && r.left >= 0 && r.right <= innerWidth, topo: !!t && (t === e || e.contains(t)), rolagem }; })"""
+        ctx.close()
+        for w, h in ((1440, 900), (1280, 720)):
+            ctx, pg, erros = abre_tela(b, tela, w=w, h=h, fixo='60')
+            for x in pg.evaluate(VISAO):
+                if not x['dentro'] or not x['topo']: prob.append('%s a %dx%d: o atalho %s não está à vista (dentro da página %r, no topo %r): o quadro «Abrem direto» ficou escondido' % (tela, w, h, x['id'], x['dentro'], x['topo']))
+                if x['rolagem']: prob.append('%s a %dx%d: o atalho %s está dentro de uma área que rola (o comandante não acha o quadro)' % (tela, w, h, x['id'], w, h))
+            ctx.close()
+        return prob
     ctx.close()
     return prob
 
@@ -5230,6 +5388,9 @@ def p4g_conferencias(b, lista):
         out.append((tela + ' · a IA: leitura de agora, histórico do cérebro, ditado corrigido e a conversa', teste_home_ia(b, tela)))
         out.append((tela + ' · a janela de conversa em emergência, o NOVA e o ENCERRAR', teste_home_janela(b, tela)))
         out.append((tela + ' · os botões das propostas e do «O que verificar?»', teste_home_botoes(b, tela)))
+        out.append((tela + ' · o botão de uma proposta antiga não age na nova (alarme e relato)', teste_home_proposta_antiga(b, tela)))
+        out.append((tela + ' · a foto com o texto: F36 e a instrução de segurança antes da situação de bordo', teste_home_anexo(b, tela)))
+        out.append((tela + ' · a resposta tardia da IA não recoloca o contexto zerado (NOVA, ENCERRAR, emergência)', teste_home_tardio(b, tela)))
     for tela in [t for t in TELAS_H3 if t in lista]:
         out.append((tela + ' · sem rótulo e com o atalho das telas novas', teste_h3(b, tela)))
     return out
@@ -5284,14 +5445,35 @@ MUTANTES_P4G = [
     ('o botão de uma resposta na H2 leva o anexo e apaga o que se digita (modo de pergunta digitada)', 'H2-Home-Mobile.dc.html', [("this.ask(d.q, null, 'botao')", "this.ask(d.q)")], 'botoes'),
     ('a Main não escuta o botão de uma resposta (sem capitao-chat-pergunta)', 'Main.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'botoes'),
     ('a H2 não escuta o botão de uma resposta (sem capitao-chat-pergunta)', 'H2-Home-Mobile.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'botoes'),
+    # —— revisão final: a foto com o texto, a resposta tardia da IA, o botão de uma proposta antiga e o rótulo do estabilizador ——
+    ('a Main não passa o texto da pessoa ao answerAttachment (F36: a legenda some da linha e o registro grava duas)', 'Main.dc.html', [("{ platform: 'web', emergencia: emg, texto: q });", "{ platform: 'web', emergencia: emg });")], 'anexo'),
+    ('a H2 não passa o texto da pessoa ao answerAttachment (F36: a legenda some da linha e o registro grava duas)', 'H2-Home-Mobile.dc.html', [("{ platform: 'app', emergencia: emg, texto: q });", "{ platform: 'app', emergencia: emg });")], 'anexo'),
+    ('a Main responde de novo o texto que o cérebro já tratou (pedido: grava a 2ª linha do registro)', 'Main.dc.html', [("if (q && a.pedido !== true) {", "if (q) {")], 'anexo'),
+    ('a H2 responde de novo o texto que o cérebro já tratou (pedido: grava a 2ª linha do registro)', 'H2-Home-Mobile.dc.html', [("if (q && a.pedido !== true) {", "if (q) {")], 'anexo'),
+    ('a Main põe a nota da foto (com a situação de bordo) antes da resposta de emergência', 'Main.dc.html', [("const seg = a.janela === true || b.emerg === true || b.abreJanela === true;", "const seg = false;")], 'anexo'),
+    ('a H2 põe a nota da foto (com a situação de bordo) antes da resposta de emergência', 'H2-Home-Mobile.dc.html', [("const seg = a.janela === true || b.emerg === true || b.abreJanela === true;", "const seg = false;")], 'anexo'),
+    ('a Main perde o abreJanela da resposta composta (foto + texto de emergência não marca a janela)', 'Main.dc.html', [("              if (b.abreJanela === true) a.abreJanela = true;\n", "")], 'anexo'),
+    ('a H2 perde o abreJanela da resposta composta (foto + texto de emergência não marca a janela)', 'H2-Home-Mobile.dc.html', [("              if (b.abreJanela === true) a.abreJanela = true;\n", "")], 'anexo'),
+    ('a Main conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'Main.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && !emAgora) {")], 'tardio'),
+    ('a H2 conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'H2-Home-Mobile.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && !emAgora) {")], 'tardio'),
+    ('a Main conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'Main.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && ctxN === (this._ctxN || 0)) {")], 'tardio'),
+    ('a H2 conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'H2-Home-Mobile.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && ctxN === (this._ctxN || 0)) {")], 'tardio'),
+    ('o ENCERRAR e o NOVA da Main não contam o zerar do contexto (o contador não anda)', 'Main.dc.html', [("    this._ctxN = (this._ctxN || 0) + 1;   // a resposta da IA que ainda está a caminho não recoloca no cérebro o contexto que acabou de ser zerado (ask: ctxN)\n", "")], 'tardio'),
+    ('o ENCERRAR e o NOVA da H2 não contam o zerar do contexto (o contador não anda)', 'H2-Home-Mobile.dc.html', [("    this._ctxN = (this._ctxN || 0) + 1;   // a resposta da IA que ainda está a caminho não recoloca no cérebro o contexto que acabou de ser zerado (ask: ctxN)\n", "")], 'tardio'),
+    ('o ouvinte de clique do cérebro usa o perguntaDoBotao da 1ª cópia (o botão de uma proposta antiga age na nova) — na Main', 'capitao-brain.js@Main', [("q = a ? pdb(a.getAttribute('href')) : '';", "q = a ? perguntaDoBotao(a.getAttribute('href')) : '';")], 'antiga'),
+    ('o ouvinte de clique do cérebro usa o perguntaDoBotao da 1ª cópia (o botão de uma proposta antiga age na nova) — na H2', 'capitao-brain.js@H2-Home-Mobile', [("q = a ? pdb(a.getAttribute('href')) : '';", "q = a ? perguntaDoBotao(a.getAttribute('href')) : '';")], 'antiga'),
+    ('o cartão do estabilizador da H2 de volta com o rótulo «SEAKEEPER» fixo no código (caixa alta)', 'H2-Home-Mobile.dc.html', [("{ short: 'ESTABIL.', n: '4 · ESTABILIZADOR'", "{ short: 'SEAKEEPER', n: '4 · ESTABILIZADOR'")], 'dados'),
     # —— H3 ——
     ('o resumo da H3 web de volta com « · DEMO»', 'H3-Atalhos-Editar-Web.dc.html', [("iguais no console e no app',", "iguais no console e no app' + (window.CapitaoDados.demo ? ' · DEMO' : ''),")], 'h3'),
     ('o atalho do checklist da H3 app leva à C4 web', 'H3-Atalhos-Editar.dc.html', [('<a href="C4-Checklist-Mobile.dc.html" data-h3="tela-checklist"', '<a href="C4-Checklist-Web.dc.html" data-h3="tela-checklist"')], 'h3'),
+    ('o quadro «Abrem direto» da H3 web fora da área visível (empurrado para baixo do cartão)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="margin-top: 700px; display: flex;')], 'h3'),
+    ('o quadro «Abrem direto» da H3 web cortado pelo próprio quadro (altura de 40 px com o excesso escondido)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="max-height: 40px; overflow: hidden; display: flex;')], 'h3'),
 ]
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
             'vivo': lambda b, t: teste_home_vivo(b, t) + teste_home_codigo(), 'ouvintes': lambda b, t: teste_home_ouvintes(b, t) + teste_home_codigo(), 'ia': lambda b, t: teste_home_ia(b, t),
-            'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t), 'codigo': lambda b, t: teste_home_codigo()}
+            'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t), 'codigo': lambda b, t: teste_home_codigo(),
+            'anexo': lambda b, t: teste_home_anexo(b, t), 'tardio': lambda b, t: teste_home_tardio(b, t), 'antiga': lambda b, t: teste_home_proposta_antiga(b, t)}
 
 
 def mutantes_p4g(b):
@@ -5300,6 +5482,7 @@ def mutantes_p4g(b):
     filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
     for nome, arq, trocas, qual in MUTANTES_P4G:
         if filtro and filtro not in nome: continue
+        arq, _, tela_ = arq.partition('@')   # «capitao-brain.js@Main»: o defeito é no arquivo do cérebro e a conferência roda na tela depois do @
         src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
         faltam = [x for x, _ in trocas if src.count(x) != 1]
         if faltam:
@@ -5309,7 +5492,7 @@ def mutantes_p4g(b):
         prob = []
         try:
             sys.stdout = open(os.devnull, 'w')
-            prob = QUAL_P4G[qual](b, arq.replace('.dc.html', ''))
+            prob = QUAL_P4G[qual](b, tela_ or arq.replace('.dc.html', ''))
         except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
             sys.stdout = sai
             print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))

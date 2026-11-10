@@ -712,6 +712,23 @@ ROTAS_P3C_REV4 = [(q, 'sobreDados', False) for q in SOBRE_DADOS_SIM_REV4] + [
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV4]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV4})
 
+# Revisão final da P4G (trava 10). Pessoa desaparecida ou perdida a bordo é socorro: a rota sos, local, sem IA e com a janela de 15 min. Antes, «pessoa desaparecida a bordo», «perdi um passageiro», «não encontramos o João, acho
+# que caiu», «cadê a Maria? não está a bordo» e «a Ana desapareceu» caíam no fallback e iam à IA com o SOG e a proa do quadro (a lista SOS só tinha «sumiu um tripulante», «perdi um tripulante» e parentes). O nome próprio só vale com a
+# inicial maiúscula e o artigo (a normalização perde a maiúscula); a marca de um equipamento, a palavra de bordo com maiúscula e o objeto («acho que caiu atrás do armário», «cadê o extintor? não está a bordo») não são pessoa.
+ROTAS_P4G_REV = [(q, 'sos', False) for q in (
+    'pessoa desaparecida a bordo', 'tripulante desaparecido', 'passageiro sumido', 'desaparecimento de passageiro', 'perdi um passageiro', 'perdemos o meu amigo', 'perdemos uma pessoa', 'perdi o meu filho',
+    'o passageiro não está a bordo', 'ela não está a bordo', 'cadê a menina? não está a bordo', 'cadê a menina de azul? não está a bordo', 'onde está o tripulante de boné, não está no barco',
+    'não encontramos o João, acho que caiu', 'não achamos a Maria, parece que caiu no mar', 'não vejo o meu pai, acho que caiu',
+    'a Ana desapareceu', 'o João sumiu', 'a Maria Clara desapareceu', 'cadê a Maria? não está a bordo', 'Cadê o João? Ele não está no barco',
+    # as formas que a lista SOS já tinha seguem as mesmas
+    'sumiu um tripulante', 'perdi um tripulante', 'alguém caiu do barco', 'tem alguém na água', 'pessoa ao mar')] + [
+    # sem pessoa: a rota que já tinham (nada disto vira socorro)
+    ('o waypoint sumiu', 'fallback', True), ('o alarme desapareceu', 'fallback', True), ('o ícone do gerador desapareceu da tela', 'gerador', False), ('perdi o manual do gerador', 'gerador', False),
+    ('cadê o fusível? não está a bordo', 'pecas', False), ('cadê o extintor? não está a bordo', 'salvatagem', False), ('não encontro o manual, acho que caiu atrás do armário', 'manual', False), ('o gerador não está a bordo', 'gerador', False),
+    ('o Garmin sumiu da tela', 'eletronicos', False), ('a Fusion desapareceu', 'audio', False), ('o Plotter sumiu', 'eletronicos', False), ('o Alarme desapareceu', 'fallback', True), ('perdi o sinal do GPS', 'posicao', False)]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P4G_REV]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P4G_REV})
+
 # O relato com número ou estado NÃO é a pergunta da leitura: nenhuma destas perguntas pode voltar «dentro da faixa normal», «Profundidade de 10,8 m», «Ondas de 0,8 m» nem a água do mar a 20 °C
 # (trava 10: relato de falha sem leitura calma). Vão ao guia, ao fallback, à IA ou à rota do assunto (não importa qual; importa que não seja a leitura).
 RELATOS_P3C = [
@@ -3249,7 +3266,7 @@ def grupo_p3c(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         # (1) a chave e o PEDE_IA de cada pergunta: as rotas novas respondem no aparelho e não roubam as vizinhas
-        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3 + ROTAS_P3C_REV4
+        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3 + ROTAS_P3C_REV4 + ROTAS_P4G_REV
         res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in todas])
         ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(todas, res) if key != esp or ia != ia_esp]
         ped('p3c: as %d perguntas das rotas novas (e as que elas não podem roubar) caem na chave certa e com o PEDE_IA certo' % len(todas), not ruins, ruins[:6])
@@ -4023,7 +4040,7 @@ MUTANTES_3A = [
     ('o «faltam» da manutenção volta ao da agenda', "' h — faltam ' + nb(faltam(oleoM)) + ' h.'", "' h — faltam ' + nb(oleoM.horas.faltam) + ' h.'", ('forma',)),
     ('a hora da leitura do diesel some (DI.hora vazio)', "hora: v.hora, nota: 'leitura' } : { capacidade: cap, tanques: dieselN },", "hora: '', nota: 'leitura' } : { capacidade: cap, tanques: dieselN },", ('forma',)),
     ('canal16 cita a telemetria na fonte (FT.tele)', "src: FT.proto + ' · canal 16 e MMSI do rádio de bordo'", "src: FT.tele + ' · canal 16 e MMSI do rádio de bordo'", ('forma',)),
-    ('o anexo não leva o instante dele (answerAttachment sem marca)', "return congela(function () { return marca(anexo1(kind, file, ctx)); }); }", "return congela(function () { return anexo1(kind, file, ctx); }); }", ('uma',)),
+    ('o anexo não leva o instante dele (answerAttachment sem marca)', "return congela(function () { return marca(anexo1(kind, file, c)); }); });", "return congela(function () { return anexo1(kind, file, c); }); });", ('uma',)),
     ('cada chamada aninhada lê o instante de novo (CONG.n === 0 → true)', "    if (CONG.n === 0) {\n      CONG.inst = de || lerInstante();", "    if (true) {\n      CONG.inst = de || lerInstante();", ('aninhadas',)),
     ('a reserva não repõe o S (S = S0)', "      S = S0; AUT = AUT0; CON = CON0;", "      AUT = AUT0; CON = CON0;", ('transicao',)),
     ('a reserva não repõe a autonomia (AUT = AUT0)', "      S = S0; AUT = AUT0; CON = CON0;", "      S = S0; CON = CON0;", ('transicao',)),
@@ -4433,7 +4450,7 @@ MUTANTES_3C_REV3 = [
     ('a embarcação do barco pega a definição («o que é a lotação do barco?»)', r"return !DEFINICAO.test(q) && q.trim().split(' ').every(function (w) { return ok.indexOf", r"return q.trim().split(' ').every(function (w) { return ok.indexOf", ('p3c',)),
     ('a leitura pega a definição («o que é ETA?»)', r"var DEFINICAO = / (?:o que|oque|oq) (?:e|eh|sao|significa|quer dizer) | significa ", r"var DEFINICAO = / significa ", ('p3c',)),
     # —— o pedido de socorro que a lista SOS não pega ——
-    ('o pedido de socorro implícito sai da route()', r"    if (socorroImplicito(q)) return 'sos';" "\n", r"", ('p3c',)),
+    ('o pedido de socorro implícito sai da route()', r"    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';" "\n", r"", ('p3c',)),
     ('o pedido de socorro sem «estamos em risco»', r"var EM_RISCO = /\b(?:(?:estamos|estou|ficamos)(?: todos)? em (?:risco|apuros)|", r"var EM_RISCO = /\b(?:(?:xestamos|xestou|xficamos)(?: todos)? em (?:risco|apuros)|", ('p3c',)),
     ('o pedido de socorro sem «o barco está em risco»', r"|(?:o barco|a lancha|a embarcacao) (?:esta|ta) em (?:risco|apuros))", r"|(?:xo barco|xa lancha|xa embarcacao) (?:esta|ta) em (?:risco|apuros))", ('p3c',)),
     ('o pedido de socorro sem «corremos risco»', r"|(?:corremos|corro|correndo|corre|correm|correu|corriam) risco|", r"|(?:xcorremos|xcorro|xcorrendo|xcorre|xcorrem|xcorreu|xcorriam) risco|", ('p3c',)),
@@ -4645,7 +4662,7 @@ MUTANTES_3D_VOZ = [
     ('a continuação vale sem a pergunta na resposta anterior', "    if (CONV.pergunta) {   // (1)", "    if (true) {   // (1)", ('voz',)),
     ('a continuação pega fala com conteúdo («o gerador está desligado»)', r"|| !soNomeia(n) || emergencia(n)", r"|| emergencia(n)", ('voz',)),
     ('a continuação vale com o app sem gravar (commit false)', "|| (ctx && (ctx.id || ctx.commit === false))) return null;\n    n = pad(q);", "|| (ctx && ctx.id)) return null;\n    n = pad(q);", ('voz',)),
-    ('a continuação vale depois de uma emergência (a pergunta de emergência nunca é emergência para o contexto)', r"function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || EMERG[route(q)] === 1); }", r"function perguntaEmerg(q) { return false; }", ('voz',)),
+    ('a continuação vale depois de uma emergência (a pergunta de emergência nunca é emergência para o contexto)', r"function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || nomeSumiu(q) || EMERG[route(q)] === 1); }", r"function perguntaEmerg(q) { return false; }", ('voz',)),
     ('a resposta de emergência não encerra o contexto de antes (a CONV da pergunta anterior fica)', """        if (emerg(a) || pe) limpaConversa();
         else if (!ctx || ctx.commit !== false) CONV = {""", """        if (!emerg(a) && !pe && (!ctx || ctx.commit !== false)) CONV = {""", ('voz',)),
     ('a continuação vale com a correção («não, o gerador»)', r"/^ (?:e|nao)(?= )/.test(n) ||", r"", ('voz',)),
@@ -6783,7 +6800,7 @@ JS_P3F_FOTO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.cle
   o.agua = foto('foto', 'a água do mar está entrando pelo casco da popa devagar agora'); o.aguaNivel = foto('foto', 'o nível de água na sala de máquinas subiu bastante nos últimos minutos desde que saímos'); o.ticketsAgua = B.loadTickets().length;
   o.perguntaMarca = foto('foto', 'esta etiqueta está legível?'); o.pedidoApp = foto('foto', 'confira a etiqueta desta foto do gerador'); o.pedidoResumoMais = foto('foto', 'registre no diário posição e hora, saída com 4 pessoas');
   o.semCat = foto('foto', 'vista bonita do pier ao entardecer'); o.longaLegenda = foto('foto', 'legenda '.repeat(90));
-  o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB');
+  o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB'); o.sumiu = foto('foto', 'a Ana desapareceu'); o.sumida = foto('foto', 'perdi um passageiro');
   B.answer('registrar no diário que', op); o.link = foto('foto', 'filtro sujo', { commit: false }); o.depoisDoLink = foto('foto', 'o gerador foi ligado às sete');   // o pedido de link não consome a espera
   B.answer('registrar no diário que', op); const real = Date.now; Date.now = () => real() + 121000; o.esperaVelha = foto('foto', 'o gerador foi ligado às sete'); Date.now = real;   // a espera vale 2 min
   // a espera do «o que devo registrar?»: a legenda é o registro (uma vez só)
@@ -6819,8 +6836,8 @@ def grupo_p3f_foto(b, muta, ped):
             and o['relato']['linhas'] == 1 and o['relato']['linha']['t'].startswith('Trocamos o filtro de ar do gerador hoje de manhã na marina · foto anexada') and o['relato']['pedido'] is True and o['tickets0'] == 0, (o['pedidoReg'], o['pedidoResumo'], o['relato']['linha']))
         ped('p3f F36 (revisão): o texto de perigo com água (a água do mar entrando, o nível de água subindo) dito com a foto NÃO é relato tratado: o pedido é falso (a tela responde ao texto, que pode ser socorro) e nenhuma proposta nasce',
             o['agua']['pedido'] is False and o['aguaNivel']['pedido'] is False and o['agua']['linhas'] == 1 and o['aguaNivel']['linhas'] == 1 and o['ticketsAgua'] == 0, (o['agua']['pedido'], o['aguaNivel']['pedido'], o['ticketsAgua']))
-        sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo')
-        ped('p3f F36: a pergunta, o reconhecimento, a emergência e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
+        sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo', 'sumiu', 'sumida')
+        ped('p3f F36: a pergunta, o reconhecimento, a emergência, a pessoa desaparecida («a Ana desapareceu», «perdi um passageiro») e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
             all(o[k]['linhas'] == 1 and o[k]['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o[k]['nota'] and not o[k]['pedido'] for k in sem_texto), {k: o[k]['linha']['t'] for k in sem_texto})
         ped('p3f F36: o pedido de link (commit false) não grava nada, diz que não anexou e não consome a espera do «o que devo registrar?» (a foto seguinte ainda é o registro); a espera vencida (121 s) não vira registro', o['link']['linhas'] == 0 and 'pedido vindo de link' in o['link']['text'] and o['depoisDoLink']['pedido'] is True and o['depoisDoLink']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada') and o['esperaVelha']['pedido'] is False and o['esperaVelha']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada'), (o['link']['linhas'], o['link']['text'][:160], o['depoisDoLink']['pedido'], o['esperaVelha']['pedido']))
         ped('p3f F36: a legenda sem categoria fica em Equipamentos; a legenda enorme (700 letras) entra com no máximo 600', o['semCat']['linha']['sys'] == 'Equipamentos' and o['semCat']['linha']['t'].startswith('Vista bonita do pier ao entardecer · foto anexada') and 0 < len(o['longaLegenda']['linha']['t'].split(' · foto anexada')[0]) <= 600, (o['semCat']['linha']['sys'], len(o['longaLegenda']['linha']['t'])))
@@ -7186,7 +7203,7 @@ MUTANTES_P3F_F36 = [
     ('p3f F36: a pergunta dita com a foto entra na linha', r"|| /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n)", r"|| RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n)", ('p3f_foto',)),
     ('p3f F36: o pedido ao app dito com a foto entra na linha', r"/\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) ||", r"/\?/.test(raw) || RELATO_NAO.test(n) ||", ('p3f_foto',)),
     ('p3f F36: o reconhecimento dito com a foto entra na linha', r"RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;", r"RELATO_NAO.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;", ('p3f_foto',)),
-    ('p3f F36: a emergência dita com a foto entra na linha', r"    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw)", r"    if (/\?/.test(raw)", ('p3f_foto',)),
+    ('p3f F36: a emergência dita com a foto entra na linha', r"    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || nomeSumiu(raw) || cabecaEmerg(n) || /\?/.test(raw)", r"    if (/\?/.test(raw)", ('p3f_foto',)),
     ('p3f F36: a legenda comum é tratada como pedido (a tela não responde)', r"    return { nota: notaRelato(raw), pedido: false };   // a legenda", r"    return { nota: notaRelato(raw), pedido: true };   // a legenda", ('p3f_foto',)),
     ('p3f F36: o relato dito com a foto não é tratado (pedido falso)', r"    if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };", r"", ('p3f_foto',)),
     ('p3f F36: o pedido de registro dito com a foto não é tratado', r"    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"", ('p3f_foto',)),
@@ -7330,7 +7347,7 @@ MUTANTES_P3F_REV2 = [
     ('p3f rev2 espera: a ordem ao app com palavra de bordo («fica de olho no diesel», «desliga o gerador») vira linha', r"|fica de olho|fique de olho|me avis[ae]|avis[ae]|me lembr[ae]|lembr[ae]|toca|toque|liga|deslig[ae]|abaix[ae]|aument[ae]|cham[ae]|explic(?:a|ue|ar)|ensin(?:a|e|ar)|ajud(?:a|e|ar))(?= )/;", r")(?= )/;", ('p3f_rev2', 'p3f_rev3')),
     ('p3f rev2 emergência: o diário com emergência não encerra a conversa (a pergunta e a resposta ficam em `anterior`)', r"if (emerg(a) || pe) limpaConversa();", r"if (emerg(a)) limpaConversa();", ('p3f_rev2',)),
     ('p3f rev2 emergência: a nota de emergência do diário leva a pergunta de antes (anterior)', r"if (ant && !emerg(a) && !pe) { a.anterior = ant;", r"if (ant && !emerg(a)) { a.anterior = ant;", ('p3f_rev2',)),
-    ('p3f rev2 emergência: a cabeça de segurança (o botão DISTRESS) não é pergunta de emergência', r"return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || EMERG[route(q)] === 1); }", r"return !!(emergencia(n) || oleo(n) === 1 || EMERG[route(q)] === 1); }", ('p3f_rev2',)),
+    ('p3f rev2 emergência: a cabeça de segurança (o botão DISTRESS) não é pergunta de emergência', r"return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || nomeSumiu(q) || EMERG[route(q)] === 1); }", r"return !!(emergencia(n) || oleo(n) === 1 || nomeSumiu(q) || EMERG[route(q)] === 1); }", ('p3f_rev2',)),
     ('p3f rev2 histórico: a pergunta de emergência e as respostas dela ficam no histórico da IA', r"if (m.papel === 'usuario') fora = !!m.bruto.trim() && perguntaEmerg(m.bruto);", r"", ('p3f_rev2',)),
     ('p3f rev2 histórico: só a pergunta sai, a resposta de emergência fica', r"return m.texto.trim() && !fora && !(m.papel === 'capitao' && respostaEmerg(m.bruto));", r"return m.texto.trim() && !(m.papel === 'usuario' && fora);", ('p3f_rev2',)),
     ('p3f rev2 histórico: a resposta de emergência sem a pergunta (fora da janela) fica', r"return m.texto.trim() && !fora && !(m.papel === 'capitao' && respostaEmerg(m.bruto));", r"return m.texto.trim() && !fora;", ('p3f_rev2',)),
@@ -9028,6 +9045,11 @@ JS_JAN_API = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay,
   // anexos
   const file = { name: 'a.jpg', size: 2048 }, xn = B.answerAttachment('foto', file, op), xj = B.answerAttachment('foto', file, opj), vj = B.answerAttachment('video', file, opj);
   out.anexo = { normal: xn.text, janela: xj.text, janelaFlag: xj.janela === true, janelaInst: xj._inst !== undefined, normalInst: xn._inst !== undefined, video: vj.text, videoFlag: vj.janela === true };
+  // o TEXTO que vai com a foto (revisão final da P4G): a pergunta de emergência (SOS, óleo, salvatagem, MMSI, pessoa desaparecida) liga a janela na resposta da foto — a janela só abre DEPOIS, na resposta da pergunta, e a foto vinha
+  // com o SOG e a proa do quadro antes da instrução de segurança; a pergunta de rotina e a legenda não ligam. (commit false: nenhuma linha vai ao diário.)
+  const tx = (texto) => { const r = B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: texto }), v = B.answerAttachment('video', file, { platform: 'app', commit: false, texto: texto }); return { texto, foto: r.text, fotoJanela: r.janela === true, fotoInst: r._inst !== undefined, video: v.text, videoJanela: v.janela === true }; };
+  out.anexoTexto = { emerg: ['tem fogo no motor', 'pressão de óleo baixa no motor BB', 'onde estão os coletes?', 'qual o MMSI do rádio?', 'pessoa desaparecida a bordo', 'a Ana desapareceu'].map(tx), rotina: ['qual o rumo agora?', 'filtro de água salgada sujo e com limo', 'o que é isso?'].map(tx),
+    ja: (() => { const r = B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: 'qual o rumo agora?', emergencia: true }); return { foto: r.text, janela: r.janela === true }; })(), semTexto: B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: '   ' }).text };
   // a janela não vaza e só liga com `true`
   const depois = B.answer('posição agora', op), txt = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 'true' }), um = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 1 }), falso = B.answer('posição agora', { platform: 'app', commit: false, emergencia: false });
   out.vaza = { depois: depois.text, depoisJanela: depois.janela === true, texto: txt.text, um: um.text, falso: falso.text, normal: an.text };
@@ -9095,6 +9117,11 @@ def grupo_janela_api(b, muta, ped):
             ped(rot + ': answerAttachment(kind, file, { emergencia: true }) troca a linha de situação de bordo pela instrução do plotter (foto e vídeo), com `janela: true` e sem o instante; fora da janela a linha leva o quadro',
                 pl in x_['janela'] and pl in x_['video'] and not sens_jan(x_['janela'] + x_['video'], {'sog': None}) and 'SOG' not in x_['janela'] and x_['janelaFlag'] and x_['videoFlag'] and not x_['janelaInst']
                 and pl not in x_['normal'] and 'SOG' in x_['normal'] and x_['normalInst'], (x_['janela'][:200], x_['normal'][:200]))
+            at = a['anexoTexto']
+            ped(rot + ': answerAttachment com o TEXTO de uma pergunta de emergência (fogo, óleo, salvatagem, MMSI do rádio, pessoa desaparecida), foto e vídeo, sai como a da janela: a instrução do plotter no lugar da situação de bordo, `janela: true`, sem SOG, proa, «Situação de bordo» nem o instante',
+                all(pl in x['foto'] and pl in x['video'] and x['fotoJanela'] and x['videoJanela'] and not x['fotoInst'] and not re.search(r'SOG|proa \d|Situação de bordo|rpm', x['foto'] + x['video']) for x in at['emerg']), [(x['texto'], x['foto'][-160:]) for x in at['emerg'] if not (pl in x['foto'] and x['fotoJanela'])][:3])
+            ped(rot + ': answerAttachment com o texto de rotina (rumo, legenda, «o que é isso?») leva o quadro como sempre: SOG, a situação de bordo e o instante, sem `janela`; com a janela marcada pela tela (`emergencia: true`) a mesma pergunta sai com o plotter; o texto em branco não liga nada',
+                all('SOG' in x['foto'] and x['fotoInst'] and not x['fotoJanela'] and not x['videoJanela'] and pl not in x['foto'] for x in at['rotina']) and pl in at['ja']['foto'] and at['ja']['janela'] and 'SOG' not in at['ja']['foto'] and 'SOG' in at['semTexto'], (at['rotina'][0]['foto'][-120:], at['ja']))
             v = a['vaza']
             ped(rot + ': a janela só liga com `emergencia === true` e não vaza para a pergunta seguinte (`"true"`, 1 e false não ligam; depois da janela a resposta volta ao normal)',
                 v['depois'] == v['normal'] == v['texto'] == v['um'] == v['falso'] and not v['depoisJanela'] and 'SOG' in v['normal'], v)
@@ -9448,7 +9475,9 @@ MUTANTES_P4A = [
     ('p4a linhaBordo: a linha de situação de bordo dentro da janela leva o resumo do quadro', r"  function linhaBordo() { if (janela()) return plotterTxt();", r"  function linhaBordo() { if (false) return plotterTxt();", ('janela',)),
     ('p4a linhaBordo: a linha da janela leva o prefixo «Situação de bordo agora:» e o resumo sem posição', r"  function linhaBordo() { if (janela()) return plotterTxt(); return", r"  function linhaBordo() { if (janela()) return 'Situação de bordo agora: ' + resumoAgora({ semPosicao: true }); return", ('janela',)),
     ('p4a fallback: o fallback da janela não abre com a instrução de segurança', r"if (janela()) r.text = EM_PERIGO + '\n' + r.text; return r; };", r"return r; };", ('janela',)),
-    ('p4a anexo: o anexo não liga a janela (a linha de situação de bordo leva o quadro)', r"function answerAttachment(kind, file, ctx) { return comJanela(ctx, function () { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }); }", r"function answerAttachment(kind, file, ctx) { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }", ('janela',)),
+    ('p4a anexo: o anexo não liga a janela (a linha de situação de bordo leva o quadro)', r"    return comJanela(c, function () { return congela(function () { return marca(anexo1(kind, file, c)); }); });", r"    return congela(function () { return marca(anexo1(kind, file, c)); });", ('janela',)),
+    ('p4g anexo: o texto de emergência que vai com a foto não liga a janela (a foto traz o SOG e a proa antes da instrução)', r"typeof ctx.texto === 'string' && ctx.texto.trim() && perguntaEmerg(ctx.texto.slice(0, 600))) {", r"typeof ctx.texto === 'string' && ctx.texto.trim() && false) {", ('janela',)),
+    ('p4g anexo: o texto que vai com a foto liga a janela sem ser emergência (a rotina também)', r"typeof ctx.texto === 'string' && ctx.texto.trim() && perguntaEmerg(ctx.texto.slice(0, 600))) {", r"typeof ctx.texto === 'string' && ctx.texto.trim()) {", ('janela',)),
     # — o registro lido na janela —
     ('p4a diário: a linha do diário lida na janela leva o número de pessoas', r"linhaReg(e.t, 110)", r"e.t.slice(0, 110)", ('janela',)),
     ('p4a diário: a pendência lida na janela leva o número de pessoas (anomalias)', r"semNavJanela(x.t)); }).concat(", r"x.t); }).concat(", ('janela',)),
@@ -9598,6 +9627,25 @@ MUTANTES_P4H = [
     ('p4h faq: a ação do FAQ vem antes do SOS no cartão de emergência', "[['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [], [['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id]])", "[['Abrir ' + it.id + ' no FAQ', A(p, 'f6') + '#id=' + it.id], ['FAQ de bordo', 'faq']].concat(it.emerg ? [['Abrir SOS', 'sos']] : [])", ('faq',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4H
+
+
+# Mutantes da revisão final da P4G (a pessoa desaparecida ou perdida a bordo é socorro, e o texto de emergência dito com a foto): cada um tem de ser acusado pelo grupo `p3c` (as rotas) ou `p3f_foto` (a foto)
+MUTANTES_P4G_REV = [
+    ('p4g pessoa: sem o adjetivo («pessoa desaparecida a bordo», «tripulante desaparecido», «passageiro sumido»)', r"(?:desaparecid[oa]s?|sumid[oa]s?|perdid[oa]s?|extraviad[oa]s?) '", r"(?:xdesaparecid[oa]s?|xsumid[oa]s?|xperdid[oa]s?|xextraviad[oa]s?) '", ('p3c',)),
+    ('p4g pessoa: sem «desaparecimento de passageiro»', r"' desaparecimento d[eao]s? '", r"' xdesaparecimento d[eao]s? '", ('p3c',)),
+    ('p4g pessoa: sem «perdi um passageiro» (a lista SOS só tem tripulante, criança, filho e menino)', r"' (?:perdi|perdemos|perdeu|perderam) ' + DET + PES_ELE + ' ',", r"' (?:xperdi|xperdemos|xperdeu|xperderam) ' + DET + PES_ELE + ' ',", ('p3c',)),
+    ('p4g pessoa: sem «não encontramos o João, acho que caiu»', r"' nao (?:encontr[a-z]*|ach[a-z]*|vej[a-z]*|vemos|vi|vimos|acho) '", r"' nao (?:xencontr[a-z]*|xach[a-z]*|xvej[a-z]*|xvemos|xvi|xvimos|xacho) '", ('p3c',)),
+    ('p4g pessoa: «acho que caiu atrás do armário» vira socorro (o palpite sem o fim da frase nem a água)', r"(?:ao|no|na|pro|pra|para o|pela|do|da) (?:mar|agua|borda|barco|lancha|embarcacao))? $',", r"(?:ao|no|na|pro|pra|para o|pela|do|da) (?:mar|agua|borda|barco|lancha|embarcacao))?',", ('p3c',)),
+    ('p4g pessoa: sem «cadê a menina? não está a bordo»', r"' (?:cade|onde esta) ' + DET + PES_ELE", r"' (?:xcade|xonde esta) ' + DET + PES_ELE", ('p3c',)),
+    ('p4g pessoa: sem «o passageiro não está a bordo» e «ela não está a bordo»', r"' (?:' + PES_ELE + '|ele|ela|eles|elas) nao (?:esta|estao|ta|tao)", r"' (?:' + PES_ELE + 'x|xele|xela|xeles|xelas) nao (?:esta|estao|ta|tao)", ('p3c',)),
+    ('p4g pessoa: a pessoa desaparecida fora do socorro implícito (o cabeça de emergência não a conhece)', r"|| SOCORRO_AJUDA.test(q) || pessoaSumida(q); }", r"|| SOCORRO_AJUDA.test(q); }", ('p3c',)),
+    ('p4g nome: o nome com inicial maiúscula fora da route() («a Ana desapareceu»)', r"if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", r"if (socorroImplicito(q)) return 'sos';", ('p3c',)),
+    ('p4g nome: a marca do equipamento é pessoa («o Garmin sumiu da tela», «a Fusion desapareceu»)', r"return !nome.split(' ').some(function (w) { return marcas.some(function (f) { return f === w || f.split(' ').indexOf(w) !== -1; }); });", r"return true;", ('p3c',)),
+    ('p4g nome: a palavra de bordo com maiúscula é pessoa («o Plotter sumiu», «o Alarme desapareceu»)', r"      if (NAO_NOME.indexOf(' ' + nome + ' ') !== -1) return false;" "\n", r"", ('p3c',)),
+    ('p4g nome: sem «cadê a Maria? não está a bordo» (a 2ª forma do nome)', r"(?:[Cc]ad[êé]|[Oo]nde est[áa])", r"(?:[Cc]xad[êé]|[Oo]xnde est[áa])", ('p3c',)),
+    ('p4g nome: o nome dito com a foto vira legenda (o texto de emergência entra na linha)', r"socorroImplicito(n) || nomeSumiu(raw) || cabecaEmerg(n) || /\?/.test(raw)", r"socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw)", ('p3f_foto',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV
 
 
 

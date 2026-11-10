@@ -1890,7 +1890,10 @@
   if (!EM_SOS && !window.__capitaoBotoesRelato) {   // o toque num botão da proposta vira a pergunta digitada (a tela escuta 'capitao-chat-pergunta'); o link não navega
     window.__capitaoBotoesRelato = true;
     try { document.addEventListener('click', function (e) {
-      var a = e.target && e.target.closest ? e.target.closest('a[href*="#capitao-relato-"], a[href*="#capitao-prop-"]') : null, q = a ? perguntaDoBotao(a.getAttribute('href')) : '';
+      // (O <head> das telas de chat roda este arquivo duas vezes e a 2ª cópia assume o window.CapitaoBrain: o ouvinte é da 1ª, mas quem responde à pergunta é a cópia de AGORA. O alvo do botão (ALVO_PROP, ALVO_REL) tem de
+      // ser gravado nela, senão o toque numa proposta antiga age na nova: o perguntaDoBotao é o da cópia que está em window.CapitaoBrain.)
+      var Bc = window.CapitaoBrain, pdb = Bc && typeof Bc.perguntaDoBotao === 'function' ? Bc.perguntaDoBotao : perguntaDoBotao;
+      var a = e.target && e.target.closest ? e.target.closest('a[href*="#capitao-relato-"], a[href*="#capitao-prop-"]') : null, q = a ? pdb(a.getAttribute('href')) : '';
       if (!q) return;
       e.preventDefault();
       try { window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } })); } catch (x) {}
@@ -3513,7 +3516,43 @@
   var SOCORRO_AJUDA = /\bajudem\b|\balguem (?:me |nos )?(?:ajuda|ajude)(?: por favor| aqui| agora)? $|\bpelo amor de deus\b.*\b(?:ajuda|ajudem|ajude|socorro)\b/;
   // o pedido de ajuda junto de um dado que o MAYDAY pede (posição, rumo, ETA, pessoas a bordo) também é socorro: a posição é a do plotter, nunca a do quadro
   var DADOS_MAYDAY = ['posicao', 'onde estamos', 'onde estou', 'coordenada', 'latitude', 'longitude', ' rumo ', ' eta ', 'chegada', 'pessoas a bordo', 'quantas pessoas', 'quantos a bordo', 'quantos tripulantes', 'quantos passageiros'];
-  function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q); }
+  // Pessoa desaparecida ou perdida a bordo (revisão final da P4G). A lista SOS (a do gerador, que não muda aqui) só pega «sumiu/desapareceu» logo antes ou depois de uma palavra de pessoa, e «perdi» com tripulante, criança, filho
+  // ou menino; «pessoa desaparecida a bordo», «perdi um passageiro», «não encontramos o João, acho que caiu» e «cadê a Maria? não está a bordo» caíam no fallback e iam à IA com o SOG e a proa do quadro. Toda forma abaixo é socorro
+  // (rota sos, local, janela de 15 min), como «sumiu um tripulante». O texto aqui é o normalizado (sem acento, minúsculo): o nome próprio dito com inicial maiúscula («a Ana desapareceu») só aparece no texto original
+  // e é o nomeSumiu, mais abaixo. A pergunta sem pessoa («o ícone sumiu», «o waypoint sumiu», «cadê o extintor? não está a bordo») e a de rotina («perdi o manual») não entram.
+  var PES_ELE = '(?:' + PESSOA + '|' + PARENTE + ')';
+  var PESSOA_SUMIDA = [
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} (?:desaparecid[oa]s?|sumid[oa]s?|perdid[oa]s?|extraviad[oa]s?) ',   // «pessoa desaparecida a bordo», «tripulante sumido», «passageiro perdido»
+    ' desaparecimento d[eao]s? ' + DET + PES_ELE + ' ',   // «desaparecimento de passageiro»
+    ' (?:perdi|perdemos|perdeu|perderam) ' + DET + PES_ELE + ' ',   // «perdi um passageiro», «perdemos o meu amigo» (a lista SOS só tem tripulante, criança, filho e menino)
+    // «não encontramos o João, acho que caiu»: quem não se acha e o palpite da queda, que fecha a frase ou diz a água («acho que caiu atrás do armário» é um objeto)
+    ' nao (?:encontr[a-z]*|ach[a-z]*|vej[a-z]*|vemos|vi|vimos|acho) ' + DET + '[a-z]+(?: [a-z0-9]+){0,3} (?:acho|acha|achamos|parece|talvez|deve|pode)(?: ter)?(?: que)?(?: ele| ela)? (?:ca[a-z]+|pul[a-z]+)(?: (?:ao|no|na|pro|pra|para o|pela|do|da) (?:mar|agua|borda|barco|lancha|embarcacao))? $',
+    ' (?:cade|onde esta) ' + DET + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:esta|estao|ta|tao) (?:a bordo|abordo|no barco|na lancha|na embarcacao) ',   // «cadê a menina? não está a bordo»
+    ' (?:' + PES_ELE + '|ele|ela|eles|elas) nao (?:esta|estao|ta|tao) (?:a bordo|abordo|no barco|na lancha|na embarcacao) '   // «o passageiro não está a bordo», «ela não está a bordo»
+  ].map(function (s) { return new RegExp(s); });
+  function pessoaSumida(q) { return PESSOA_SUMIDA.some(function (r) { return r.test(q); }); }
+  // O nome próprio com inicial maiúscula («a Ana desapareceu», «o João sumiu», «cadê a Maria? não está a bordo»): só no texto original (a maiúscula some na normalização) e só com o artigo na frente. A marca de um equipamento
+  // («o Garmin sumiu da tela») e as palavras de bordo escritas com inicial maiúscula («o Plotter sumiu») não são pessoa. O que fica de fora (nome sem artigo, tudo em minúsculas) segue as outras formas.
+  var NOME_CAP = '[A-ZÀ-Ý][a-zà-ÿ]{2,}';
+  var NOME_INI = '(?:^|[\\s,;:.!?(])';
+  var NOME_FIM = '(?![A-Za-zÀ-ÿ])';
+  var NOME_SUMIU = [
+    new RegExp(NOME_INI + '[AaOo]s?\\s+(' + NOME_CAP + '(?:\\s+' + NOME_CAP + ')?)\\s+(?:desapareceu|sumiu|desapareceram|sumiram)' + NOME_FIM),
+    new RegExp(NOME_INI + '(?:[Cc]ad[êé]|[Oo]nde est[áa])\\s+(?:[AaOo]s?\\s+)?(' + NOME_CAP + ')[?,.!\\s]{1,3}(?:(?:ele|ela)\\s+)?[Nn][ãa]o est[áa]o? (?:a bordo|abordo|no barco|na lancha|na embarca[çc][ãa]o)' + NOME_FIM)
+  ];
+  var NAO_NOME = ' plotter radar radio gps ais vhf dsc app aplicativo alarme sinal icone painel tela mapa carta mensagem sistema sensor motor motores gerador seakeeper internet wifi luz leme barco lancha porao bomba filtro oleo piloto sonda display menu botao alerta aviso grafico extintor ';
+  function nomeSumiu(raw) {
+    var s = String(raw == null ? '' : raw).slice(0, 600), marcas = null;
+    return NOME_SUMIU.some(function (r) {
+      var m = r.exec(s), nome;
+      if (!m) return false;
+      nome = norm(m[1]).trim();
+      if (NAO_NOME.indexOf(' ' + nome + ' ') !== -1) return false;
+      if (!marcas) marcas = (D.equipamentos || []).map(function (e) { return norm(e.fabricante || '').trim(); }).filter(Boolean);
+      return !nome.split(' ').some(function (w) { return marcas.some(function (f) { return f === w || f.split(' ').indexOf(w) !== -1; }); });
+    });
+  }
+  function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q) || pessoaSumida(q); }
   // O equipamento de segurança na pergunta (EPIRB, Seafire, canal 16, PAN-PAN, DSC): a pergunta mista («acionar o EPIRB, quantas pessoas a bordo?», «pan-pan, qual o ETA?») é do equipamento, com o procedimento e
   // a janela de emergência da chave dele; as rotas de dados da navegação e do cadastro (que levam ETA, pessoas, profundidade, alarmes…) não a tomam.
   var SEAFIRE_PALAVRAS = ['seafire', 'sea fire', 'sea-fire', 'sistema de incendio', 'supressao', 'disparo manual'];
@@ -3715,7 +3754,7 @@
     // F11: «qual a tendência do óleo?» é a tendência (o histórico de cruzeiro), não a leitura do manômetro; o relato de queda segue acima, em `oleo`
     if (tendenciaPergunta(q)) return 'preditiva';
     // pedido de socorro que a lista SOS não pega («isso é real, preciso de ajuda», «isso não é um teste», «estamos em risco»): a instrução de segurança, local (revisão 3 da P3C)
-    if (socorroImplicito(q)) return 'sos';
+    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';
     // "Situação e vencimento do documento: <nome>" é a pergunta do botão "Perguntar sobre" da G1 (web e app): papelada, seja qual for o nome.
     // Com o doc-epirb (C7, "Certificado do EPIRB…") ela caía na rota `epirb` (a resposta do procedimento e, depois da 1b, a que liga a
     // conversa em emergência por 15 min: um toque na papelada abriria o modo emergência). Vem depois da emergência e do óleo (segurança
@@ -4203,7 +4242,7 @@
   }
   // A pergunta de emergência (SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio): ela e a resposta dela nunca entram no contexto, e ENCERRAM o que havia (a fala «o gerador» depois de
   // «mayday» é a resposta pronta do gerador, nunca a continuação da pergunta de antes da emergência).
-  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
+  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || nomeSumiu(q) || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
   function conversa(q, texto) {
     if (EM_SOS || !String(q || '').trim()) return;
     if (perguntaEmerg(q)) { limpaConversa(); return; }
@@ -4484,7 +4523,14 @@
   }
 
   // Anexos (foto/vídeo): não saem do aparelho — viram linha A CONFIRMAR no diário.
-  function answerAttachment(kind, file, ctx) { return comJanela(ctx, function () { return congela(function () { return marca(anexo1(kind, file, ctx)); }); }); }   // (P4A: ctx.emergencia liga a janela: a linha de situação de bordo do anexo é a instrução do plotter)
+  // (P4A: ctx.emergencia liga a janela: a linha de situação de bordo do anexo é a instrução do plotter.) (Revisão final da P4G: o TEXTO que vai com a foto também liga: «tem fogo no motor» + foto é pergunta de emergência, e a
+  // resposta da foto não pode trazer SOG e proa do quadro antes da instrução de segurança — a janela só abre depois, na resposta da pergunta, e a tela põe a foto na frente. Vale a mesma regra do cérebro, perguntaEmerg: SOS, óleo,
+  // canal 16, EPIRB, Seafire, salvatagem e MMSI do rádio. A tela põe a resposta da pergunta ANTES desta; o anexo sai `janela: true`, sem o instante.)
+  function answerAttachment(kind, file, ctx) {
+    var c = ctx;
+    if (!EM_SOS && ctx && ctx.emergencia !== true && typeof ctx.texto === 'string' && ctx.texto.trim() && perguntaEmerg(ctx.texto.slice(0, 600))) { c = {}; Object.keys(ctx).forEach(function (k) { c[k] = ctx[k]; }); c.emergencia = true; }
+    return comJanela(c, function () { return congela(function () { return marca(anexo1(kind, file, c)); }); });
+  }
   // O texto que vai JUNTO com a foto ou o vídeo (F36; ctx.texto): a linha do diário é UMA só, «<texto> · foto anexada pelo chat: … A CONFIRMAR». O arquivo não é lido (só nome e tamanho) e não sai do aparelho.
   // Entram na linha: a legenda (a frase que descreve a foto, sem pergunta), o pedido de registro («registre no diário: …»), o relato, a legenda depois do «o que devo registrar?» e o relato que esperava o
   // «registrar» («sim, registra» leva o relato junto e fecha a proposta; «não» só a descarta). A pergunta, o pedido ao app, o reconhecimento, o cancelar, a emergência e o óleo NÃO entram: a foto
@@ -4501,7 +4547,7 @@
       if (t && (r === 'sim' || (sb && !sb.duvida))) return { nota: comExtra(t.texto, sb), pedido: true, doRelato: rp.id };
     }
     if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
-    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;
+    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || nomeSumiu(raw) || cabecaEmerg(n) || /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;
     if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }
     if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };
     return { nota: notaRelato(raw), pedido: false };   // a legenda

@@ -274,7 +274,7 @@ class Component extends DCLogic {
     if (!link && !botao && this.inputRef.current) this.inputRef.current.value = '';
     const um = { role: 'user', text: (att ? '[' + (att.kind === 'video' ? 'vídeo' : 'foto') + ' · ' + att.name + '] ' : '') + q };
     this.setState((s) => ({ thread: s.thread.concat([um]), pending: (s.pending || 0) + 1, thinking: true, attachment: link || botao ? s.attachment : null, note: '' }), () => this.scrollThread());
-    const ger = this._ger || 0;
+    const ger = this._ger || 0, ctxN = this._ctxN || 0;   // ctxN: quantas vezes o NOVA ou o ENCERRAR zeraram o contexto do cérebro até aqui
     const t = setTimeout(() => {
       this._pend = (this._pend || []).filter((x) => x !== t);
       if (this._dead) return;
@@ -285,8 +285,17 @@ class Component extends DCLogic {
       let a;
       try {
         if (att) {
-          a = B.answerAttachment(att.kind, att.file, { platform: 'web', emergencia: emg });
-          if (q) { const b = B.answer(q, { platform: 'web', emergencia: emg }); if (b.key !== 'fallback' && b.key !== 'saudacao') { a = { key: b.key, text: a.text + '\n\n' + b.text, src: b.src, actions: b.actions }; if (b.abreJanela === true) a.abreJanela = true; } }
+          // F36: a foto leva o texto da pessoa (a legenda, o pedido de registro, o relato): o cérebro o põe na MESMA linha do diário. `pedido` = o texto já foi tratado: a tela não o responde de novo (gravaria outra linha).
+          // O texto de emergência liga a janela na resposta da foto (o cérebro troca a situação de bordo pela instrução do plotter: `janela`) e a resposta da pergunta vem ANTES: a instrução de segurança abre a resposta (CLAUDE.md 10).
+          a = B.answerAttachment(att.kind, att.file, { platform: 'web', emergencia: emg, texto: q });
+          if (q && a.pedido !== true) {
+            const b = B.answer(q, { platform: 'web', emergencia: emg });
+            if (b.key !== 'fallback' && b.key !== 'saudacao') {
+              const seg = a.janela === true || b.emerg === true || b.abreJanela === true;
+              a = { key: b.key, text: seg ? b.text + '\n\n' + a.text : a.text + '\n\n' + b.text, src: b.src, actions: b.actions };
+              if (b.abreJanela === true) a.abreJanela = true;
+            }
+          }
         } else a = B.answer(q, link ? { platform: 'web', id: id, commit: false, emergencia: emg, faq: faq } : { platform: 'web', id: id, emergencia: emg });
       } catch (e) { a = { key: 'erro', text: 'Não consegui montar a resposta agora. Tente de novo.', src: 'Fonte: este aparelho — erro ao montar a resposta', actions: [] }; }
       if (a && a.abreJanela === true) { try { if (EM) EM.marca(); } catch (e) {} }
@@ -338,8 +347,12 @@ class Component extends DCLogic {
       IA.perguntar(qc, B.buscaBase(qc, 3), B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', { ficha: B.ficha ? B.ficha('web', qc, a, { emergencia: emg }) : '', historico: this.historico(um, emg) }).then((r) => {
         // Resposta sem dado da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca a resposta genérica.
         // O cérebro não vê a resposta da IA: a tela a conta (B.conversa), para «o gerador» continuar uma pergunta que a IA fez.
-        if (r && !(r.semDados && (a.key === 'base' || a.key === 'faqEquip'))) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' || a.key === 'faqEquip' ? a.actions : [] }, true); }
-        else {
+        // A resposta tardia não recoloca o que o NOVA ou o ENCERRAR zeraram (ctxN) nem o que a emergência que abriu no meio encerrou (a janela vale agora).
+        if (r && !(r.semDados && (a.key === 'base' || a.key === 'faqEquip'))) {
+          let emAgora = false; try { emAgora = !!(EM && EM.valendo()); } catch (e) { emAgora = false; }
+          if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} }
+          entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' || a.key === 'faqEquip' ? a.actions : [] }, true);
+        } else {
           const nota = r ? '' : IA.falha ? IA.falha() : '', fin = local(nota);
           if (nota && this.state.conversa) fin.extraFala = nota.replace(/ — /g, ', ') + '.'; // na voz, o motivo também é falado
           entrega(fin, true);
@@ -357,6 +370,7 @@ class Component extends DCLogic {
   // NOVA e ENCERRAR: zeram o contexto da conversa no cérebro (a pergunta e a resposta de antes, a proposta que espera) e a marca da janela de conversa em emergência.
   limpaContexto() {
     const B = window.CapitaoBrain, E = window.CapitaoEmergencia;
+    this._ctxN = (this._ctxN || 0) + 1;   // a resposta da IA que ainda está a caminho não recoloca no cérebro o contexto que acabou de ser zerado (ask: ctxN)
     try { if (B && B.limpaConversa) B.limpaConversa(); } catch (e) {}
     try { if (E) E.zera(); } catch (e) {}
   }
