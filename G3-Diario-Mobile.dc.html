@@ -18,8 +18,8 @@
 <style>
 body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
 a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
-button { font: inherit; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button, input, textarea { font: inherit; }
 .cap-chips { scrollbar-width: none; } .cap-chips::-webkit-scrollbar { display: none; }
 </style>
 <script src="./capitao-telemetria.js"></script>
@@ -34,52 +34,120 @@ button { font: inherit; }
       <span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
       <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
         <span style="font-size: 14px; font-weight: 800;">Só cresce · quem, quando e fonte</span>
-        <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{resumo}}</span>
+        <span data-g3="resumo" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{resumo}}</span>
       </span>
       <button type="button" onClick="{{toggleVoz}}" aria-pressed="{{ouvindo}}" aria-label="{{vozAria}}" title="{{vozTitle}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 13px; border: 1px solid {{vozLine}}; background: {{vozBg}}; color: {{vozTone}}; opacity: {{vozOpac}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z M5 11a7 7 0 0 0 14 0 M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
     </div>
-    <span role="status" style="font-size: 11.5px; font-weight: 700; color: {{noteTone}}; min-height: 15px; line-height: 1.35; flex-shrink: 0; overflow-wrap: anywhere;">{{note}}</span>
 
-    <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.30); border-radius: 16px; flex-shrink: 0;">
-      <button type="button" onClick="{{togglePend}}" aria-expanded="{{pendAberto}}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; margin: -6px -4px; padding: 0 4px; border: none; background: transparent; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left;">
-        <span style="flex-grow: 1; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-warn, #f0a63a);">{{pendTitulo}}</span>
+    <sc-if value="{{temAviso}}" hint-placeholder-val="{{false}}">
+      <div style="display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--cap-card, #0d1329); border: 1px solid {{avisoLine}}; flex-shrink: 0;">
+        <span role="status" data-g3="aviso" style="flex: 1 1 170px; min-width: 0; font-size: 12px; font-weight: 700; line-height: 1.35; color: {{noteTone}}; overflow-wrap: anywhere;">{{aviso}}</span>
+        <span style="display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto;">
+          <sc-if value="{{temOferta}}" hint-placeholder-val="{{false}}"><button type="button" data-g3="oferta" onClick="{{confirmaOferta}}" style="height: 44px; padding: 0 14px; border-radius: 999px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 11.5px; font-weight: 800; cursor: pointer; flex-shrink: 0;">CONFIRMAR</button></sc-if>
+          <sc-if value="{{temUndo}}" hint-placeholder-val="{{false}}"><button type="button" data-g3="desfaz" onClick="{{desfazer}}" style="height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: transparent; color: var(--cap-accent, #00a1fe); font-size: 11.5px; font-weight: 800; cursor: pointer; flex-shrink: 0;">DESFAZER</button></sc-if>
+        </span>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{temTickets}}" hint-placeholder-val="{{false}}">
+      <div id="confirmar" data-g3="confirmar" ref="{{confRef}}" style="flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 10px 11px; background: rgba(var(--cap-warn-rgb, 240,166,58), 0.06); border: 1px solid {{confLine}}; border-radius: 14px;">
+        <span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;"><span data-g3="conf-titulo" style="font-size: 12.5px; font-weight: 800; color: var(--cap-warn, #f0a63a);">{{confTitulo}}</span><span style="font-size: 10px; color: var(--cap-ink4, #7985a6);">só vale com o CONFIRMAR</span></span>
+        <sc-for list="{{tickets}}" as="k" hint-placeholder-count="0">
+          <div data-g3="ticket" data-id="{{k.id}}" data-k="{{k.k}}" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0 2px; border-top: 1px solid var(--cap-line, #1a2240);">
+            <span style="display: flex; align-items: center; gap: 8px; min-width: 0;"><span data-g3="t-origem" style="flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: {{k.oWash}}; color: {{k.oTone}}; font-size: 9.5px; letter-spacing: 0.08em; font-weight: 800;">{{k.origem}}</span><span style="min-width: 0; font-size: 10px; color: var(--cap-ink4, #7985a6); overflow-wrap: anywhere;">{{k.sub}}</span><sc-if value="{{k.temSelo}}" hint-placeholder-val="{{false}}"><span data-g3="selo" style="flex-shrink: 0; font-size: 9px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">APRESENTAÇÃO</span></sc-if></span>
+            <sc-if value="{{k.ler}}" hint-placeholder-val="{{true}}">
+              <span data-g3="t-texto" style="font-size: 12.5px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere;">{{k.texto}}</span>
+              <span style="display: flex; gap: 6px;">
+                <button type="button" data-g3="t-confirma" onClick="{{k.onConfirma}}" aria-label="{{k.ariaC}}" style="flex-grow: 1; height: 44px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;">CONFIRMAR</button>
+                <button type="button" data-g3="t-edita" onClick="{{k.onEdita}}" aria-label="Ajustar antes de confirmar" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20h4L19 9l-4-4L4 16z M13.5 6.5l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+                <button type="button" data-g3="t-recusa" onClick="{{k.onRecusa}}" aria-label="{{k.ariaR}}" style="height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11.5px; font-weight: 700; cursor: pointer; flex-shrink: 0;">RECUSAR</button>
+              </span>
+            </sc-if>
+            <sc-if value="{{k.editando}}" hint-placeholder-val="{{false}}">
+              <sc-for list="{{k.campos}}" as="c" hint-placeholder-count="0">
+                <sc-if value="{{c.area}}" hint-placeholder-val="{{false}}"><label style="display: flex; flex-direction: column; gap: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--cap-ink3, #97a3c0);">{{c.l}}<textarea data-g3="t-campo" data-c="{{c.k}}" value="{{c.val}}" onChange="{{c.onChange}}" rows="4" maxlength="600" aria-label="{{c.aria}}" style="display: block; min-height: 88px; box-sizing: border-box; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 16px; line-height: 1.4; letter-spacing: 0; outline: none; width: 100%; resize: vertical; overflow-wrap: anywhere;"></textarea></label></sc-if>
+                <sc-if value="{{c.linha}}" hint-placeholder-val="{{true}}"><label style="display: flex; flex-direction: column; gap: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--cap-ink3, #97a3c0);">{{c.l}}<input data-g3="t-campo" data-c="{{c.k}}" value="{{c.val}}" onChange="{{c.onChange}}" maxlength="120" aria-label="{{c.aria}}" autocomplete="off" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 16px; letter-spacing: 0; outline: none; width: 100%;"></label></sc-if>
+              </sc-for>
+              <sc-if value="{{k.erro}}" hint-placeholder-val="{{false}}"><span data-g3="t-erro" role="alert" style="font-size: 11.5px; font-weight: 700; color: var(--cap-warn, #f0a63a);">{{k.erro}}</span></sc-if>
+              <span style="display: flex; gap: 6px;">
+                <button type="button" data-g3="t-salva" onClick="{{k.onSalva}}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12px; font-weight: 800; cursor: pointer;">SALVAR</button>
+                <button type="button" data-g3="t-cancela" onClick="{{k.onCancela}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12px; font-weight: 700; cursor: pointer;">Cancelar</button>
+              </span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div data-g3="pendencias" style="display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.30); border-radius: 16px; flex-shrink: 0;">
+      <button type="button" data-g3="pend-toggle" onClick="{{togglePend}}" aria-expanded="{{pendAberto}}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; margin: -6px -4px; padding: 0 4px; border: none; background: transparent; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left;">
+        <span data-g3="pend-titulo" style="flex-grow: 1; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-warn, #f0a63a);">{{pendTitulo}}</span>
         <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{pendAcao}}</span>
       </button>
       <sc-if value="{{pendAberto}}" hint-placeholder-val="{{true}}">
         <sc-for list="{{pend}}" as="p" hint-placeholder-count="3">
-          <button type="button" onClick="{{p.onClick}}" aria-label="{{p.aria}}" style="display: flex; gap: 9px; align-items: flex-start; min-height: 44px; padding: 8px 10px; background: var(--cap-row, #10162e); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; color: var(--cap-ink, #eaf1ff); text-align: left; cursor: pointer; flex-shrink: 0;">
-            <span style="width: 8px; height: 8px; margin-top: 5px; flex-shrink: 0; border-radius: 50%; background: {{p.tone}};"></span>
-            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 12.5px; font-weight: 600; line-height: 1.35;">{{p.t}}</span><span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0);">{{p.s}}</span></span>
-          </button>
+          <div data-g3="pend" data-alvo="{{p.alvo}}" data-aberta="{{p.abertaTxt}}" style="display: flex; gap: 8px; align-items: center; padding: 8px 8px 8px 10px; background: var(--cap-row, #10162e); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; flex-shrink: 0;">
+            <button type="button" onClick="{{p.onClick}}" aria-label="{{p.aria}}" style="display: flex; gap: 9px; align-items: flex-start; flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; border: none; background: transparent; color: var(--cap-ink, #eaf1ff); text-align: left; cursor: pointer;">
+              <span style="width: 8px; height: 8px; margin-top: 5px; flex-shrink: 0; border-radius: 50%; background: {{p.dot}};"></span>
+              <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;"><span style="font-size: 12.5px; font-weight: 600; line-height: 1.35; color: {{p.ink}}; text-decoration: {{p.risco}}; overflow-wrap: anywhere;">{{p.t}}</span><span data-g3="p-estado" style="font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: {{p.stTone}}; overflow-wrap: anywhere;">{{p.st}}</span><span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0); overflow-wrap: anywhere;">{{p.s}}</span></span>
+            </button>
+            <button type="button" data-g3="p-troca" onClick="{{p.onTroca}}" aria-label="{{p.trocaAria}}" style="min-width: 84px; height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid {{p.btnLine}}; background: transparent; color: {{p.btnTone}}; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; flex-shrink: 0;">{{p.acao}}</button>
+          </div>
         </sc-for>
-        <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">Andamento ou solução = linha nova · {{fontePend}}</span>
+        <sc-if value="{{semPend}}" hint-placeholder-val="{{false}}"><span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0);">Nenhuma pendência no registro.</span></sc-if>
+        <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">Resolver, reabrir e desfazer = linhas novas · {{fontePend}}</span>
       </sc-if>
     </div>
 
     <div role="group" aria-label="Filtrar por sistema" class="cap-chips" style="display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; margin: 0 -16px; padding: 0 16px;">
       <sc-for list="{{filtros}}" as="f" hint-placeholder-count="6">
-        <button type="button" onClick="{{f.onClick}}" aria-pressed="{{f.active}}" style="min-height: 44px; padding: 0 13px; border-radius: 999px; border: 1px solid {{f.line}}; background: {{f.bg}}; color: {{f.cor}}; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0;"><span aria-hidden="true" style="width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: {{f.tone}};"></span>{{f.l}}</button>
+        <button type="button" data-g3="filtro" onClick="{{f.onClick}}" aria-pressed="{{f.active}}" style="min-height: 44px; padding: 0 13px; border-radius: 999px; border: 1px solid {{f.line}}; background: {{f.bg}}; color: {{f.cor}}; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap; flex-shrink: 0;"><span aria-hidden="true" style="width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: {{f.tone}};"></span>{{f.l}}</button>
       </sc-for>
     </div>
 
     <sc-for list="{{linhas}}" as="e" hint-placeholder-count="6">
-      <div style="box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{e.line}}; border-radius: 14px; flex-shrink: 0;">
-        <span style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-variant-numeric: tabular-nums;"><span style="font-size: 12px; font-weight: 800;">{{e.d}}</span><span style="font-size: 10.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">{{e.h}}</span><span style="width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: {{e.tone}};"></span></span>
+      <div data-g3="linha" data-iso="{{e.iso}}" data-acao="{{e.acao}}" data-estado="{{e.estado}}" data-ori="{{e.ori}}" style="box-sizing: border-box; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{e.line}}; border-radius: 14px; flex-shrink: 0;">
+        <span style="width: 40px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; font-variant-numeric: tabular-nums;"><span data-g3="l-dia" style="font-size: 12px; font-weight: 800;">{{e.d}}</span><span data-g3="l-hora" style="font-size: 10.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">{{e.h}}</span><span style="width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: {{e.tone}};"></span></span>
         <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
           <span style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
             <span style="font-size: 10px; letter-spacing: 0.10em; font-weight: 800; color: {{e.tone}};">{{e.sysUp}}</span>
             <span style="padding: 1px 6px; border-radius: 5px; border: 1px solid {{e.oriLine}}; color: {{e.oriTone}}; font-size: 8.5px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap;">{{e.origem}}</span>
-            <sc-if value="{{e.pend}}" hint-placeholder-val="{{false}}"><span style="padding: 1px 6px; border-radius: 5px; border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.45); background: rgba(var(--cap-warn-rgb, 240,166,58), 0.10); color: var(--cap-warn, #f0a63a); font-size: 8.5px; letter-spacing: 0.12em; font-weight: 800;">PENDENTE</span></sc-if>
+            <sc-for list="{{e.tags}}" as="g" hint-placeholder-count="0"><span data-g3="tag" style="padding: 1px 6px; border-radius: 5px; border: 1px solid {{g.line}}; background: {{g.wash}}; color: {{g.tone}}; font-size: 8.5px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap;">{{g.l}}</span></sc-for>
           </span>
-          <span style="font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere;">{{e.t}}</span>
-          <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.who}} · {{e.src}}</span>
+          <sc-if value="{{e.ler}}" hint-placeholder-val="{{true}}">
+            <span data-g3="l-texto" style="font-size: 12.5px; line-height: 1.4; overflow-wrap: anywhere; text-decoration: {{e.risco}}; color: {{e.ink}};">{{e.t}}</span>
+            <sc-if value="{{e.sub}}" hint-placeholder-val="{{false}}"><span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); overflow-wrap: anywhere;">{{e.sub}}</span></sc-if>
+          </sc-if>
+          <sc-if value="{{e.editando}}" hint-placeholder-val="{{false}}">
+            <textarea data-g3="l-campo" value="{{e.editVal}}" onChange="{{e.onDigita}}" rows="4" maxlength="500" aria-label="Corrigir o registro (a correção é uma linha nova)" style="display: block; min-height: 88px; box-sizing: border-box; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 16px; line-height: 1.4; outline: none; width: 100%; resize: vertical; overflow-wrap: anywhere;"></textarea>
+            <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">A correção vira uma linha nova; o registro de antes continua guardado.</span>
+            <span style="display: flex; gap: 6px;">
+              <button type="button" data-g3="l-salva" onClick="{{e.onSalva}}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12px; font-weight: 800; cursor: pointer;">SALVAR</button>
+              <button type="button" data-g3="l-cancela" onClick="{{e.onCancela}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12px; font-weight: 700; cursor: pointer;">Cancelar</button>
+            </span>
+          </sc-if>
+          <sc-if value="{{e.anulando}}" hint-placeholder-val="{{false}}">
+            <span style="font-size: 12px; font-weight: 600; color: var(--cap-crit, #ff3b30); line-height: 1.4;">Anular este registro? Vira uma linha de anulação; o texto continua guardado.</span>
+            <span style="display: flex; gap: 6px;">
+              <button type="button" data-g3="l-anula-ok" onClick="{{e.onConfirma}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: var(--cap-crit-fill, #d32f27); color: #ffffff; font-size: 12px; font-weight: 800; cursor: pointer;">ANULAR</button>
+              <button type="button" data-g3="l-cancela" onClick="{{e.onCancela}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12px; font-weight: 700; cursor: pointer;">Cancelar</button>
+            </span>
+          </sc-if>
+          <span title="{{e.srcFull}}" style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{e.who}} · {{e.src}}</span>
+          <sc-if value="{{e.acoes}}" hint-placeholder-val="{{false}}">
+            <span style="display: flex; gap: 6px;">
+              <button type="button" data-g3="l-edita" onClick="{{e.onEdita}}" aria-label="Corrigir o registro (linha nova)" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;">CORRIGIR</button>
+              <button type="button" data-g3="l-anula" onClick="{{e.onAnula}}" aria-label="Anular o registro (linha nova)" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;">ANULAR</button>
+            </span>
+          </sc-if>
         </span>
       </div>
     </sc-for>
     <sc-if value="{{vazio}}" hint-placeholder-val="{{false}}">
       <div style="padding: 14px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; font-size: 12px; color: var(--cap-ink4, #7985a6); text-align: center; flex-shrink: 0;">Nenhum registro neste filtro.</div>
     </sc-if>
-    <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4; padding: 2px 2px 4px; flex-shrink: 0;">{{fonteLista}}</span>
+    <span data-g3="fonte" style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.4; padding: 2px 2px 4px; flex-shrink: 0;">{{fonteLista}}</span>
+    <input type="file" data-g3="foto-arq" accept="{{fotoAccept}}" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
   </div>
 
   <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>
@@ -90,14 +158,22 @@ button { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
-  state = { app: [], filtro: 'Todos', ouvindo: false, pendAberto: true, note: '', noteTone: 'var(--cap-ok, #34c77a)' };
-  rolaRef = React.createRef();
+  // O diário (F14, F20, F36): o registro só cresce. Corrigir e anular são linhas NOVAS (acao corrige / anula, alvo = o iso da linha), resolver e reabrir uma pendência também; a lista mostra a versão VIGENTE de cada linha
+  // (corrigida, anulada) e as linhas de ação como linhas de verdade. As propostas A CONFIRMAR (relato, diário → agenda, alarme) só viram registro com o toque em CONFIRMAR (10 s de DESFAZER).
+  state = { filtro: 'Todos', ouvindo: false, pendAberto: true, note: '', noteTone: 'var(--cap-ok, #34c77a)', undo: null, oferta: null, form: null, fv: {}, ferro: '', editId: '', editTxt: '', anulaId: '', realce: false, fotoTipo: 'foto', vivo: '' };
+  rolaRef = React.createRef(); confRef = React.createRef(); fotoRef = React.createRef();
   componentDidMount() {
-    this.whenBrain(() => this.setState({ app: window.CapitaoBrain.loadDiario() }));
-    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.diario.v1')) this.setState({ app: window.CapitaoBrain.loadDiario() }); };
+    this.whenBrain(() => { this.atualiza(); this.ancora(); });
+    // Linha, proposta, tarefa ou Executado gravados em outra aba/tela (Manutenção, SOS, Equipe, o chat): recarrega só se o que a tela mostra mudou
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || /^capitao\.(diario|tickets|tarefas|executado)\.v1$/.test(e.key))) this.atualiza(); };
     window.addEventListener('storage', this._st);
-    // Barra do assistente (capitao-barra.js, prefixo "Registre no diário: "): texto enviado grava direto no diário e fica nesta tela.
-    // VOZ→TEXTO dita para o diário aqui mesmo; conversa, foto e vídeo seguem para a home.
+    this._onHash = () => this.ancora();
+    window.addEventListener('hashchange', this._onHash);
+    // o dia vira (07:00 e meia-noite, ou ao fixar o instante): as datas do diário gerado se refazem; a tela só se redesenha se o texto mudou. Sem timer e sem o tique de 1 s (nenhuma leitura anda aqui).
+    this._onRebase = () => { if (!document.hidden) this.atualiza(); };
+    window.addEventListener('capitao-rebase', this._onRebase);
+    // Barra do assistente (capitao-barra.js, prefixo "Registre no diário: "): texto enviado grava direto no diário e fica nesta tela. VOZ→TEXTO dita para o diário aqui mesmo; FOTO e VÍDEO anexam aqui
+    // (o texto da barra entra na mesma linha); a conversa segue para a home.
     this._barra = (e) => {
       const d = (e && e.detail) || {};
       if (d.texto) {
@@ -106,24 +182,59 @@ class Component extends DCLogic {
         if (this.registrar(t, 'app · texto')) this.limpaBarra();
         return;
       }
-      if (d.modo === 'voz') { e.preventDefault(); this.toggleVoz(); }
+      if (d.modo === 'voz') { e.preventDefault(); this.toggleVoz(); return; }
+      if (d.modo === 'foto' || d.modo === 'video') { e.preventDefault(); this.setState({ fotoTipo: d.modo }, () => { if (this.fotoRef.current) this.fotoRef.current.click(); }); }
     };
     window.addEventListener('capitao-barra', this._barra);
+    this.atualiza();
   }
-  componentWillUnmount() { window.removeEventListener('storage', this._st); window.removeEventListener('capitao-barra', this._barra); clearTimeout(this._n); this.calarVoz(); }
+  componentWillUnmount() {
+    window.removeEventListener('storage', this._st); window.removeEventListener('hashchange', this._onHash); window.removeEventListener('capitao-rebase', this._onRebase); window.removeEventListener('capitao-barra', this._barra);
+    clearTimeout(this._n); clearTimeout(this._r); clearInterval(this._b); this.calarVoz();
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
-    const t = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
+  atualiza() {
+    const k = JSON.stringify(this.dinamico());
+    if (k === this._k) return;
+    this._k = k;
+    this.setState({ vivo: k });
+  }
+  // #confirmar (o selo «n a confirmar» da tela inicial): leva ao bloco das propostas e o realça por um instante
+  ancora() {
+    if (location.hash !== '#confirmar') return;
+    this.setState({ realce: true }, () => { const el = this.confRef.current; if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); });
+    clearTimeout(this._r); this._r = setTimeout(() => this.setState({ realce: false }), 4000);
+  }
   barra() { return document.querySelector('capitao-barra-chat .cpb-in'); }
   limpaBarra() { const el = this.barra(); if (el) el.value = ''; }
-  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); return window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'; }
-  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 4500); }
-  // Registro só cresce: sempre linha nova (addDiario). Nada se edita nem se apaga.
+  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'sem sessão'; } }
+  // o aviso do alto: texto + os botões do momento (CONFIRMAR da proposta que o registro abriu, DESFAZER dentro dos 10 s); some sozinho
+  aviso(msg, tone, extra, ms) {
+    this.setState(Object.assign({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)', undo: null, oferta: null, vivo: String(Date.now()) }, extra || {}));
+    clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '', undo: null, oferta: null, vivo: String(Date.now()) }), ms || 4500);
+  }
+  toast(msg, tone, ms) { this.aviso(msg, tone, {}, ms); }
+  topo() { const el = this.rolaRef.current; if (el) el.scrollTop = 0; }
+  // Tudo o que a tela mostra, em dado puro (nenhum elemento React): o que o cérebro e o arquivo gerado dizem agora
+  dinamico() {
+    const B = window.CapitaoBrain, D = window.CapitaoDados || {}, A = window.CapitaoAgora;
+    let app = [], tickets = [], pend = [];
+    if (B) {
+      app = B.loadDiario();
+      tickets = B.ticketsAbertos().map((t) => { const v = B.ticketTela(t); return { id: t.id, k: t.k, origem: v.origem, texto: v.texto, apresentacao: v.apresentacao, iso: t.iso, who: t.who, doDiario: !!(t.alvo && t.alvo.tipo === 'diario'), prop: t.prop || {} }; });
+      pend = B.pendenciasLista();
+    }
+    const fonte = (D.diario || []).map((x) => ({ id: x.id || '', d: x.d, h: x.h, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: x.pend === true, t: x.t, ref: x.ref || '' }));
+    return { app: app, tickets: tickets, pend: pend, fonte: fonte, fonteArq: D.diarioFonte || 'diário de bordo', sim: D.simulacao === true, dia: A && A.relogio ? A.relogio.hoje : '' };
+  }
+  // Registro só cresce: sempre linha nova (addDiario). O registro que cita uma pendência e diz que foi feito a fecha (linha nova) e o que diz «feito» ou «agendar» abre a proposta (A CONFIRMAR).
   registrar(texto, src) {
     const B = window.CapitaoBrain;
     if (!B) { this.toast('Carregando o diário — tente de novo em instantes', 'var(--cap-warn, #f0a63a)'); return false; }
@@ -131,9 +242,14 @@ class Component extends DCLogic {
     if (!texto) { this.toast('Escreva ou fale o que registrar', 'var(--cap-warn, #f0a63a)'); return false; }
     if (this.rec && src !== 'app · voz') this.calarVoz();
     const quem = this.quem();
-    B.addDiario({ sys: 'Diário', t: texto.slice(0, 500), who: quem, src: src || 'app · texto' });
-    this.setState({ app: B.loadDiario(), filtro: 'Todos', ouvindo: false }, () => { const el = this.rolaRef.current; if (el) el.scrollTop = 0; });
-    this.toast('Registrado no diário · ' + quem + ' · linha nova, nada se apaga');
+    const r = B.addDiario({ sys: 'Diário', t: texto.slice(0, 500), who: quem, src: src || 'app · texto' }, { pendencia: true, agenda: true });
+    this.setState({ filtro: 'Todos', ouvindo: false }, () => this.topo());
+    if (!r) { this.toast('Não consegui gravar o registro', 'var(--cap-warn, #f0a63a)'); return false; }
+    const pd = r.pendencia ? 'Pendência «' + String(r.pendencia.t || '').replace(/[\s.]+$/, '').slice(0, 80) + '» marcada como resolvida pelo registro' : '';
+    if (r.ticket) this.aviso((pd ? pd + ' · ' : '') + 'Proposta: ' + r.ticket.texto, 'var(--cap-accent, #00a1fe)', { oferta: r.ticket.id, undo: r.pendencia ? { tipo: 'pend', r: r.pendencia } : null }, 15000);
+    else if (r.pendencia) this.aviso(pd, 'var(--cap-ok, #34c77a)', { undo: { tipo: 'pend', r: r.pendencia } }, 10000);
+    else if (r.ambigua) this.aviso('O registro cita mais de uma pendência aberta (' + r.ambigua.map((p) => String(p.t).slice(0, 40)).join(' · ') + '): use RESOLVER na lista para a certa', 'var(--cap-warn, #f0a63a)', {}, 9000);
+    else this.toast('Registrado no diário · ' + quem + ' · linha nova, nada se apaga');
     return true;
   }
   calarVoz() { const d = this.rec; this.rec = null; if (d) { try { d.cancelar(); } catch (e) {} } }
@@ -149,53 +265,199 @@ class Component extends DCLogic {
     if (!d) return this.toast('Voz indisponível neste navegador — digite na barra abaixo', 'var(--cap-warn, #f0a63a)');
     this.rec = d; clearTimeout(this._n); this.setState({ ouvindo: true, note: 'Ouvindo… fale e faça uma pausa para gravar', noteTone: 'var(--cap-accent, #00a1fe)' });
   }
+  // Foto ou vídeo da barra (F36): UMA linha do diário com o texto que está na barra e o anexo, A CONFIRMAR (o app não lê a imagem). O arquivo não sai do aparelho: só o nome e o tamanho entram na linha.
+  onFoto(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { e.target.value = ''; } catch (x) {}
+    const B = window.CapitaoBrain;
+    if (!B) return this.toast('Carregando o diário — tente de novo em instantes', 'var(--cap-warn, #f0a63a)');
+    const el = this.barra(), texto = String(el ? el.value : '').replace(/^\s*Registre no diário:\s*/i, ''), kind = /^video\//.test(f.type || '') ? 'video' : 'foto', nome = kind === 'video' ? 'Vídeo' : 'Foto';
+    let r = null; try { r = B.answerAttachment(kind, f, { platform: 'app', texto: texto }); } catch (x) { r = null; }
+    if (!r) return this.toast('Não consegui anexar agora — tente de novo', 'var(--cap-warn, #f0a63a)');
+    if (r.nota) this.limpaBarra();   // o texto entrou na mesma linha
+    this.setState({ filtro: 'Todos' }, () => this.topo());
+    if (r.nota) this.toast(nome + ' e texto na mesma linha do diário · identificação A CONFIRMAR · o arquivo fica só neste aparelho');
+    else if (String(texto).trim()) this.toast(nome + ' anexada ao diário sem o texto (ele não parece um registro: envie pela barra) · identificação A CONFIRMAR', 'var(--cap-warn, #f0a63a)', 7000);
+    else this.toast(nome + ' anexada ao diário · identificação A CONFIRMAR · o arquivo fica só neste aparelho');
+  }
+  // ——— as propostas A CONFIRMAR ———
+  confirma(id) {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (this._tk && this._tk.id === id && Date.now() - this._tk.t < 1500) return; this._tk = { id: id, t: Date.now() };   // toque duplo
+    const r = B.aceitaTicket(id);
+    if (!r) return this.toast('Essa proposta não está mais aqui — nada foi gravado', 'var(--cap-warn, #f0a63a)');
+    if (r.ja) return this.toast('Já confirmada' + (r.dec && r.dec.quem ? ' por ' + r.dec.quem : '') + ' — nada mudou', 'var(--cap-warn, #f0a63a)');
+    this.aviso('Confirmado: ' + r.texto, 'var(--cap-ok, #34c77a)', { undo: { tipo: 'ticket', r: r } }, 10000);
+  }
+  recusa(id) {
+    const B = window.CapitaoBrain; if (!B) return;
+    const r = B.recusaTicket(id);
+    if (!r) return this.toast('Essa proposta não está mais aqui — nada foi gravado', 'var(--cap-warn, #f0a63a)');
+    this.toast('Proposta recusada — nada foi gravado');
+  }
+  dataIso(v) { const m = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(v || ''); if (!m) return ''; const a = +m[3], mm = +m[2], d = +m[1], x = new Date(Date.UTC(a, mm - 1, d)); return x.getUTCFullYear() === a && x.getUTCMonth() === mm - 1 && x.getUTCDate() === d ? a + '-' + (mm < 10 ? '0' : '') + mm + '-' + (d < 10 ? '0' : '') + d : ''; }
+  // ✎ antes de confirmar: o texto da proposta (a tarefa, o dia e o responsável, se for agendamento); o texto que o CONFIRMAR grava é o que está na caixa
+  camposDe(t) {
+    const p = t.prop || {}, br = (iso) => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; };
+    if (t.k === 'tarefa') return [{ k: 'n', l: 'TAREFA', val: p.n || '' }, { k: 'vence', l: 'VENCE (DD/MM/AAAA)', val: br(p.vence) }, { k: 'quem', l: 'RESPONSÁVEL', val: p.quem || '' }];
+    return [{ k: 'texto', l: 'TEXTO DO REGISTRO', val: t.texto, area: true }];
+  }
+  abreForm(t) { const v = {}; this.camposDe(t).forEach((c) => { v[c.k] = c.val; }); this.setState({ form: { id: t.id }, fv: v, ferro: '' }); }
+  salvaForm() {
+    const B = window.CapitaoBrain, f = this.state.form, fv = this.state.fv || {};
+    const t = f && B ? B.ticketsAbertos().filter((x) => x.id === f.id)[0] : null;
+    if (!t) return this.setState({ form: null, ferro: '' }, () => this.toast('Essa proposta não está mais aqui — nada foi gravado', 'var(--cap-warn, #f0a63a)'));
+    let r = null;
+    if (t.k === 'tarefa') {
+      const n = String(fv.n || '').replace(/\s+/g, ' ').trim(), vence = this.dataIso(fv.vence);
+      if (!n) return this.setState({ ferro: 'Digite o nome da tarefa.' });
+      if (!vence) return this.setState({ ferro: 'Data inválida: use DD/MM/AAAA, um dia que existe.' });
+      const prop = Object.assign({}, t.prop || {}, { n: n, vence: vence, quem: String(fv.quem || '').replace(/\s+/g, ' ').trim() });
+      r = B.editaTicket(t.id, { texto: B.textoTicket('tarefa', prop), prop: prop });
+    } else {
+      if (!String(fv.texto || '').trim()) return this.setState({ ferro: 'O texto não pode ficar vazio (para tirar a proposta, use RECUSAR).' });
+      r = B.editaTicket(t.id, { texto: fv.texto });
+    }
+    this.setState({ form: null, ferro: '' });
+    this.toast(r ? 'Proposta ajustada — confira e toque em CONFIRMAR' : 'Não foi possível ajustar a proposta', r ? undefined : 'var(--cap-warn, #f0a63a)');
+  }
+  // DESFAZER (10 s): a confirmação da proposta ou o fechamento da pendência vira uma linha nova que reverte; fora da janela o cérebro recusa e nada é escrito
+  desfazer() {
+    const B = window.CapitaoBrain, u = this.state.undo; if (!B || !u) return;
+    this._tk = null; this._tq = null;   // o toque duplo só vale para o mesmo gesto: depois do DESFAZER o CONFIRMAR e o RESOLVER já podem repetir
+    if (u.tipo === 'ticket') { const dz = B.desfazTicket(u.r); return dz ? this.toast('Desfeito — a proposta voltou para A CONFIRMAR') : this.toast('Não deu para desfazer: passou da janela de 10 s', 'var(--cap-warn, #f0a63a)'); }
+    const dz = B.desfazPendencia(u.r);
+    this.toast(dz ? 'Desfeito — a pendência voltou ao estado anterior (linha nova)' : 'Não deu para desfazer: passou da janela de 10 s ou a pendência já mudou', dz ? undefined : 'var(--cap-warn, #f0a63a)');
+  }
+  // ——— as pendências ———
+  trocaPend(p) {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (this._tq && this._tq.id === p.alvo && Date.now() - this._tq.t < 1500) return; this._tq = { id: p.alvo, t: Date.now() };
+    if (p.aberta) {
+      const r = B.resolvePendencia(p.alvo);
+      if (!r) return this.toast('Essa pendência já mudou — nada foi gravado', 'var(--cap-warn, #f0a63a)');
+      return this.aviso('Pendência resolvida: ' + String(p.t).replace(/[\s.]+$/, '').slice(0, 100) + ' (linha nova)', 'var(--cap-ok, #34c77a)', { undo: { tipo: 'pend', r: r } }, 10000);
+    }
+    const r = B.reabrePendencia(p.alvo);
+    this.toast(r ? 'Pendência reaberta (linha nova): ' + String(p.t).replace(/[\s.]+$/, '').slice(0, 100) : 'Essa pendência já mudou — nada foi gravado', r ? undefined : 'var(--cap-warn, #f0a63a)');
+  }
+  // ——— corrigir e anular uma linha do aparelho: linha NOVA (acao corrige / anula, alvo = o iso), nada se apaga ———
+  salvaEdit() {
+    const B = window.CapitaoBrain, id = this.state.editId; if (!B || !id) return;
+    const v = String(this.state.editTxt || '').replace(/\s+/g, ' ').trim();
+    const ln = B.loadDiario().filter((x) => x.iso === id && !x.acao)[0];
+    if (!ln) return this.setState({ editId: '' }, () => this.toast('Registro não encontrado', 'var(--cap-warn, #f0a63a)'));
+    if (!v) return this.toast('Texto vazio — para tirar o registro, use ANULAR', 'var(--cap-warn, #f0a63a)');
+    const r = B.addDiario({ sys: ln.sys || 'Diário', tone: ln.tone, t: v.slice(0, 500), who: this.quem(), src: 'app · correção', acao: 'corrige', alvo: id });
+    this.setState({ editId: '', editTxt: '' });
+    this.toast(r ? 'Correção gravada como linha nova — o registro de antes continua guardado' : 'Não foi possível gravar a correção', r ? undefined : 'var(--cap-warn, #f0a63a)');
+  }
+  anula() {
+    const B = window.CapitaoBrain, id = this.state.anulaId; if (!B || !id) return;
+    const ln = B.loadDiario().filter((x) => x.iso === id && !x.acao)[0];
+    if (!ln) return this.setState({ anulaId: '' }, () => this.toast('Registro não encontrado', 'var(--cap-warn, #f0a63a)'));
+    const r = B.addDiario({ sys: ln.sys || 'Diário', tone: ln.tone, t: 'Registro anulado: ' + String(ln.t).replace(/\s+/g, ' ').slice(0, 200), who: this.quem(), src: 'app · anulação', acao: 'anula', alvo: id });
+    this.setState({ anulaId: '' });
+    this.toast(r ? 'Anulação gravada como linha nova — o texto continua guardado' : 'Não foi possível gravar a anulação', r ? undefined : 'var(--cap-warn, #f0a63a)');
+  }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, B = window.CapitaoBrain;
+    const s = this.state, d = this.dinamico();
+    this._k = JSON.stringify(d);
     const TOM = { crit: 'var(--cap-crit, #ff3b30)', warn: 'var(--cap-warn, #f0a63a)', tele: 'var(--cap-tele, #00f4fd)', accent: 'var(--cap-accent, #00a1fe)', ok: 'var(--cap-ok, #34c77a)' };
     const tomOk = (x) => (typeof x === 'string' && /^var\(--cap-[a-z0-9-]+, #[0-9a-fA-F]{3,8}\)$/.test(x) ? x : TOM.accent);
     const p2 = (n) => (n < 10 ? '0' : '') + n;
-    const horaDe = (iso) => { const t = Date.parse(iso || ''); if (isNaN(t)) return ''; const x = new Date(t); return p2(x.getHours()) + ':' + p2(x.getMinutes()); };
-    const DEMO = D.demo ? ' DEMO' : '';
-    const fonteArq = D.diarioFonte || 'SEM DADOS';
-    const fonteSrc = B ? B.diarioFonte() : (D.diario || []).map((x) => ({ d: x.d, h: x.h, t: x.t, iso: x.iso, sys: x.sys, tom: x.tom, who: x.who, pend: !!x.pend, src: fonteArq }));
+    // o dia e a hora de uma linha do aparelho no fuso do BARCO (o mesmo relógio do cabeçalho e do texto que o cérebro grava), não no do aparelho
+    const A = window.CapitaoAgora;
+    const diaHora = (iso) => {
+      const t = Date.parse(iso || ''); if (isNaN(t)) return { d: '', h: '' };
+      try { return { d: new Intl.DateTimeFormat('pt-BR', { timeZone: A.fuso, day: '2-digit', month: '2-digit' }).format(new Date(t)), h: A.fmt.hora(t, false) }; } catch (e) {}
+      const x = new Date(t); return { d: p2(x.getDate()) + '/' + p2(x.getMonth() + 1), h: p2(x.getHours()) + ':' + p2(x.getMinutes()) };
+    };
+    const horaDe = (iso) => diaHora(iso).h, diaDe = (iso) => diaHora(iso).d;
+    const real = !d.sim;   // o selo «apresentação»: a linha gravada com a simulação ligada, vista com ela desligada
+    const AC = { resolve: 'PENDÊNCIA RESOLVIDA', reabre: 'PENDÊNCIA REABERTA', corrige: 'CORREÇÃO', anula: 'ANULAÇÃO' };
+    const anul = {}, corr = {}, porIso = {}, pendPor = {};
+    d.app.forEach((x) => { porIso[x.iso] = x; if (x.acao === 'anula' && typeof x.alvo === 'string') anul[x.alvo] = x; else if (x.acao === 'corrige' && typeof x.alvo === 'string' && !corr[x.alvo]) corr[x.alvo] = x; });
+    d.pend.forEach((p) => { pendPor[p.alvo] = p; });
+    const sosLinha = (x) => /^(?:web|app) · SOS/.test(String(x.src || ''));
     let seq = 0;
-    // Linhas do app: t = texto e a hora vem do iso (addDiario). Linhas da fonte: h = hora.
-    const app = (s.app || []).map((e) => ({ seq: seq++, ts: Date.parse(e.iso || ''), d: e.d || '—', h: horaDe(e.iso) || '—', sys: e.sys || 'Diário', tone: tomOk(e.tone), t: e.t, who: e.who || 'SEM DADOS', src: e.src || 'app', ori: 'app', pend: false }));
-    const fonte = fonteSrc.map((e) => ({ seq: seq++, ts: Date.parse(e.iso || ''), d: e.d || '—', h: e.h || horaDe(e.iso) || '—', sys: e.sys || 'SEM DADOS', tone: TOM[e.tom] || TOM.accent, t: e.t, who: e.who || 'SEM DADOS', src: String(e.src || fonteArq).split(' · ')[0], ori: 'fonte', pend: !!e.pend }));
+    const COR = { crit: ['var(--cap-crit, #ff3b30)', 'var(--cap-crit-rgb, 255,59,48)'], ok: ['var(--cap-ok, #34c77a)', 'var(--cap-ok-rgb, 52,199,122)'], warn: ['var(--cap-warn, #f0a63a)', 'var(--cap-warn-rgb, 240,166,58)'] };
+    const tag = (l, tom) => { const c = COR[tom]; return c ? { l: l, tone: c[0], line: 'rgba(' + c[1] + ', 0.45)', wash: 'rgba(' + c[1] + ', 0.10)' } : { l: l, tone: 'var(--cap-ink3, #97a3c0)', line: 'var(--cap-line2, #27315a)', wash: 'transparent' }; };
+    const linhasApp = d.app.map((e) => {
+      const ac = e.acao || '', alvoL = ac && porIso[e.alvo] ? porIso[e.alvo] : null, anulada = !ac && !!anul[e.iso], corrigida = !ac && !anulada && !!corr[e.iso], pd = !ac && e.pend === true ? pendPor[e.iso] : null;
+      const tags = [];
+      if (ac) tags.push(tag(AC[ac] || ac.toUpperCase(), ac === 'resolve' ? 'ok' : ac === 'anula' ? 'crit' : 'warn'));
+      if (anulada) tags.push(tag('ANULADO', 'crit'));
+      if (corrigida) tags.push(tag('CORRIGIDO', 'warn'));
+      if (pd) tags.push(pd.aberta ? tag('PENDENTE', 'warn') : tag('RESOLVIDA', 'ok'));
+      if (!ac && /^app · (?:foto|video)$/.test(String(e.src || ''))) tags.push(tag(e.src === 'app · video' ? 'VÍDEO' : 'FOTO', 'ink'));
+      if (e.sim === true && real) tags.push(tag('APRESENTAÇÃO', 'ink'));
+      const sub = ac === 'corrige' || ac === 'anula' ? 'do registro de ' + (alvoL ? (diaDe(alvoL.iso) || alvoL.d || '—') + ' ' + (horaDe(alvoL.iso) || '') : 'antes') : ac ? 'linha nova, nada se apaga' : '';
+      const sos = sosLinha(e);
+      return { seq: seq++, iso: e.iso, ts: Date.parse(e.iso || ''), d: diaDe(e.iso) || e.d || '—', h: horaDe(e.iso) || '—', sys: e.sys || 'Diário', tone: tomOk(e.tone), t: corrigida ? corr[e.iso].t : e.t, who: e.who || '—', srcFull: e.src || 'app', ori: 'app', acao: ac, estado: anulada ? 'anulado' : corrigida ? 'corrigido' : ac ? 'acao' : 'vigente', tags: tags, sub: sub,
+        pode: !ac && !anulada && !sos };
+    });
+    const linhasFonte = d.fonte.map((e) => { const pd = e.pend && e.id ? pendPor[e.id] : null; return { seq: seq++, iso: e.iso || '', ts: Date.parse(e.iso || ''), d: e.d || '—', h: e.h || horaDe(e.iso) || '—', sys: e.sys || 'Diário', tone: TOM[e.tom] || TOM.accent, t: e.t, who: e.who || '—', srcFull: d.fonteArq, ori: 'fonte', acao: '', estado: 'vigente',
+      tags: pd ? [pd.aberta ? tag('PENDENTE', 'warn') : tag('RESOLVIDA', 'ok')] : (e.pend ? [tag('PENDENTE', 'warn')] : []), sub: '', pode: false }; });
     const chave = (e) => (isNaN(e.ts) ? (e.ori === 'app' ? Infinity : -Infinity) : e.ts);
-    const todas = app.concat(fonte).sort((a, b) => { const x = chave(a), y = chave(b); if (x !== y) return y > x ? 1 : -1; return a.seq - b.seq; });
+    const todas = linhasApp.concat(linhasFonte).sort((a, b) => { const x = chave(a), y = chave(b); if (x !== y) return y > x ? 1 : -1; return a.seq - b.seq; });
     const ORDEM = ['Navegação', 'Manutenção', 'Equipamentos', 'Eletrônicos', 'Combustível', 'Segurança', 'Documentos', 'Diário', 'Equipe'];
     const cont = {}, corSys = {};
     todas.forEach((e) => { cont[e.sys] = (cont[e.sys] || 0) + 1; if (!corSys[e.sys]) corSys[e.sys] = e.tone; });
     const sistemas = Object.keys(cont).sort((a, b) => { const ia = ORDEM.indexOf(a), ib = ORDEM.indexOf(b); return ((ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)) || a.localeCompare(b); });
     const filtro = s.filtro !== 'Todos' && !cont[s.filtro] ? 'Todos' : s.filtro;
     const vis = filtro === 'Todos' ? todas : todas.filter((e) => e.sys === filtro);
-    const setF = (k) => () => this.setState({ filtro: k });
+    const setF = (k) => () => this.setState({ filtro: k }, () => this.topo());
     const chip = (k, l, tone) => { const on = filtro === k; return { l: l, onClick: setF(k), active: on, tone: tone, line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', cor: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; };
-    const pendentes = fonte.filter((e) => e.pend).sort((a, b) => chave(b) - chave(a));
+    const reg = todas.filter((e) => !e.acao && e.estado !== 'anulado'), nApp = reg.filter((e) => e.ori === 'app').length, nFonte = reg.filter((e) => e.ori === 'fonte').length;
+    const abertas = d.pend.filter((p) => p.aberta).length;
     const temVoz = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const ORI = { 'Relato': ['var(--cap-accent, #00a1fe)', 'var(--cap-accent-rgb, 0,161,254)'], 'Telemetria': ['var(--cap-tele, #00f4fd)', 'var(--cap-tele-rgb, 0,244,253)'], 'Regra': ['var(--cap-warn, #f0a63a)', 'var(--cap-warn-rgb, 240,166,58)'], 'IA': ['var(--cap-accent, #00a1fe)', 'var(--cap-accent-rgb, 0,161,254)'] };
+    const quando = (iso) => (diaDe(iso) ? diaDe(iso) + ' ' + horaDe(iso) : '');
+    const tickets = d.tickets.map((t) => {
+      const ed = !!(s.form && s.form.id === t.id), c = ORI[t.origem] || ORI['Relato'];
+      const tk = { id: t.id, k: t.k, prop: t.prop, texto: t.texto };
+      return { id: t.id, k: t.k, origem: t.origem.toUpperCase(), oTone: c[0], oWash: 'rgba(' + c[1] + ', 0.12)', texto: t.texto, temSelo: t.apresentacao === true,
+        sub: [quando(t.iso), t.who, t.doDiario ? 'do registro do diário' : ''].filter(Boolean).join(' · '), ler: !ed, editando: ed, ariaC: 'Confirmar: ' + t.texto, ariaR: 'Recusar: ' + t.texto,
+        campos: ed ? this.camposDe(tk).map((cc) => ({ k: cc.k, l: cc.l, val: (s.fv || {})[cc.k] != null ? s.fv[cc.k] : cc.val, area: !!cc.area, linha: !cc.area, aria: cc.l.toLowerCase(),
+          onChange: (ev) => { const v = ev.target.value; this.setState((st) => ({ fv: Object.assign({}, st.fv, { [cc.k]: v }) })); } })) : [],
+        erro: ed ? s.ferro : '', onConfirma: () => this.confirma(t.id), onRecusa: () => this.recusa(t.id), onEdita: () => this.abreForm(tk), onSalva: () => this.salvaForm(), onCancela: () => this.setState({ form: null, ferro: '' }) };
+    });
+    // as pendências: abertas primeiro, resolvidas no fim (riscadas, com quem e quando)
+    const pendOrd = d.pend.filter((p) => p.aberta).concat(d.pend.filter((p) => !p.aberta));
+    const pendRows = pendOrd.map((p) => {
+      const acL = !p.aberta && p.acaoIso ? porIso[p.acaoIso] : null, rea = p.aberta && p.acao === 'reabre' && p.acaoIso ? porIso[p.acaoIso] : null, h = p.origem === 'aparelho' ? horaDe(p.iso) : (p.h || '');
+      const st = !p.aberta ? 'RESOLVIDA' + (acL ? ' ' + (diaDe(acL.iso) || acL.d || '') + ' ' + (horaDe(acL.iso) || '') + (acL.who ? ' · ' + acL.who : '') : '') : rea ? 'REABERTA ' + (diaDe(rea.iso) || rea.d || '') + ' ' + (horaDe(rea.iso) || '') + (rea.who ? ' · ' + rea.who : '') : 'ABERTA';
+      return { alvo: p.alvo, abertaTxt: p.aberta ? 'sim' : 'nao', aberta: p.aberta, t: p.t, dot: p.aberta ? tomOk(TOM[p.tom] || TOM.warn) : TOM.ok, ink: p.aberta ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', risco: p.aberta ? 'none' : 'line-through',
+        st: st.replace(/\s+/g, ' ').trim(), stTone: p.aberta ? TOM.warn : TOM.ok, s: [(p.origem === 'aparelho' ? diaDe(p.iso) || p.d || '' : p.d || '') + (h ? ' ' + h : ''), p.sys, p.who].filter(Boolean).join(' · ') + (p.sim === true && real ? ' · apresentação' : ''), aria: p.t + ' — mostrar os registros de ' + p.sys,
+        onClick: setF(p.sys), acao: p.aberta ? 'RESOLVER' : 'REABRIR', trocaAria: (p.aberta ? 'Marcar como resolvida: ' : 'Reabrir: ') + p.t,
+        btnLine: p.aberta ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.55)' : 'var(--cap-line2, #27315a)', btnTone: p.aberta ? TOM.ok : 'var(--cap-ink2, #b1bdd6)', onTroca: () => this.trocaPend({ alvo: p.alvo, aberta: p.aberta, t: p.t }) };
+    });
     return {
-      rolaRef: this.rolaRef,
-      note: s.note, noteTone: s.noteTone,
-      resumo: todas.length + ' registros · ' + app.length + ' do app · ' + fonte.length + ' da fonte' + DEMO + ' · registre pela barra ou pelo microfone',
+      rolaRef: this.rolaRef, confRef: this.confRef, fotoRef: this.fotoRef, fotoAccept: s.fotoTipo === 'video' ? 'video/*' : 'image/*', onFoto: (e) => this.onFoto(e),
+      aviso: s.note, noteTone: s.noteTone, temAviso: !!s.note, avisoLine: s.noteTone === TOM.ok ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.35)' : 'var(--cap-line2, #27315a)', temOferta: !!(s.oferta && s.note), confirmaOferta: () => this.confirma(s.oferta), temUndo: !!(s.undo && s.note), desfazer: () => this.desfazer(),
+      resumo: reg.length + ' registros · ' + nApp + ' do app · ' + nFonte + ' da fonte · registre pela barra ou pelo microfone',
       toggleVoz: () => this.toggleVoz(), ouvindo: s.ouvindo,
       vozAria: s.ouvindo ? 'Parar e gravar o que ouvi' : 'Registrar por voz',
       vozTitle: temVoz ? 'Ditado: fale e faça uma pausa' : 'Voz indisponível neste navegador',
       vozLine: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' : 'var(--cap-line2, #27315a)', vozBg: s.ouvindo ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)' : 'var(--cap-elev, #131a33)', vozTone: s.ouvindo ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ink2, #b1bdd6)', vozOpac: temVoz ? '1' : '0.55',
+      temTickets: tickets.length > 0, tickets: tickets, confTitulo: 'A CONFIRMAR · ' + tickets.length, confLine: s.realce ? 'var(--cap-accent, #00a1fe)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.35)',
       pendAberto: s.pendAberto, togglePend: () => this.setState({ pendAberto: !s.pendAberto }),
-      pendTitulo: 'PENDÊNCIAS ABERTAS · ' + pendentes.length, pendAcao: s.pendAberto ? 'Ocultar' : 'Ver ›',
-      pend: pendentes.map((p) => ({ t: p.t, s: p.d + ' ' + p.h + ' · ' + p.sys + ' · ' + p.who, tone: p.tone, aria: 'Mostrar registros de ' + p.sys + ' — pendência de ' + p.d, onClick: setF(p.sys) })),
-      fontePend: 'Fonte: ' + fonteArq.split(' · ')[0],
+      pendTitulo: 'PENDÊNCIAS · ' + abertas + (abertas === 1 ? ' ABERTA' : ' ABERTAS'), pendAcao: s.pendAberto ? 'Ocultar' : 'Ver ›', pend: pendRows, semPend: pendRows.length === 0,
+      fontePend: 'Fonte: ' + String(d.fonteArq).split(' · ')[0] + ' + ações deste aparelho',
       filtros: [chip('Todos', 'Todos · ' + todas.length, 'var(--cap-ink3, #97a3c0)')].concat(sistemas.map((k) => chip(k, k + ' · ' + cont[k], corSys[k]))),
-      linhas: vis.map((e) => Object.assign({}, e, {
-        sysUp: e.sys.toUpperCase(),
-        origem: e.ori === 'app' ? 'APP' : 'FONTE' + DEMO,
-        oriTone: e.ori === 'app' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-violeta, #b45cff)',
-        oriLine: e.ori === 'app' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)',
-        line: e.ori === 'app' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.35)' : 'var(--cap-line, #1a2240)'
-      })),
+      linhas: vis.map((e) => {
+        const ed = s.editId === e.iso && e.pode, ap = s.anulaId === e.iso && e.pode, ap2 = e.ori === 'app';
+        return Object.assign({}, e, { sysUp: e.sys.toUpperCase(), src: e.ori === 'fonte' ? String(e.srcFull).split(' · ')[0] : e.srcFull, origem: ap2 ? 'APP' : 'FONTE',
+          oriTone: ap2 ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-violeta, #b45cff)', oriLine: ap2 ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)',
+          line: ap ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)' : ap2 ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.35)' : 'var(--cap-line, #1a2240)',
+          risco: e.estado === 'anulado' ? 'line-through' : 'none', ink: e.estado === 'anulado' ? 'var(--cap-ink3, #97a3c0)' : 'var(--cap-ink, #eaf1ff)',
+          ler: !ed && !ap, editando: ed, anulando: ap, acoes: e.pode && !ed && !ap, editVal: s.editTxt,
+          onEdita: () => this.setState({ editId: e.iso, editTxt: e.t, anulaId: '' }), onAnula: () => this.setState({ anulaId: e.iso, editId: '' }), onDigita: (ev) => this.setState({ editTxt: ev.target.value }),
+          onSalva: () => this.salvaEdit(), onCancela: () => this.setState({ editId: '', anulaId: '' }), onConfirma: () => this.anula() });
+      }),
       vazio: vis.length === 0,
-      fonteLista: 'Fonte: ' + fonteArq + ' · linhas do app: este aparelho · nada se edita nem se apaga'
+      fonteLista: 'Fonte: ' + d.fonteArq + ' · linhas do app: este aparelho · nada se edita nem se apaga'
     };
   }
 }

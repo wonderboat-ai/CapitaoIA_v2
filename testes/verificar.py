@@ -131,6 +131,17 @@ abastecimento, o consumido desde ele e a autonomia do instante (não a leitura d
 meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
 (SEM DADOS só ali); os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
 
+Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 49 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto; sem Worker): G3 com o diário gerado na ordem do tempo e as 3 pendências do CapitaoAgora (nada gravado só por abrir; o alarme de 105 s nunca vira proposta sozinho), as propostas
+A CONFIRMAR (relato, agendamento e alarme: CONFIRMAR grava UMA linha com o texto do cérebro, DESFAZER de 10 s é uma linha nova de anulação e o confirmado fica guardado, RECUSAR não grava, ✎ ajusta o texto ou a tarefa, o dia e o
+responsável com o dia que existe, o agendamento confirmado cria a tarefa e a conta de contagens() sobe, o toque duplo grava uma só e o aviso some em 10 s), as pendências como linhas novas (RESOLVER, REABRIR, DESFAZER dentro da
+janela e fora dela recusado, o registro que cita a pendência e diz que foi feito a fecha e propõe o Executado; dúvida e futuro não fecham), corrigir e anular uma linha do aparelho (linhas novas, o texto fica guardado, nada na linha
+do diário gerado, da ação nem do SOS), foto + texto na mesma linha (A CONFIRMAR, abre pendência, o arquivo não sai do aparelho: nenhuma marca dele no armazenamento nem em pedido algum) e o selo «apresentação» (linha, proposta e
+execução com sim só com simulacao false); G4 com os 6 contatos de apoio, o estado e a contagem de tarefas feitos aqui com o prazo do dia do INSTANTE (a agenda e as tarefas da equipe), nenhum telefone na tela nem no capitao-dados.js,
+os prestadores (+ PRESTADOR, ✎, OCULTAR e RESTAURAR sem apagar nada; o telefone só em capitao.equipe.v1; a linha do diário e a ficha da IA sem nome nem número; o que o app não entende no armazenamento fica como estava), + TAREFA da equipe
+(o nome, o dia que existe e não passou, o responsável; UMA tarefa em capitao.tarefas.v1 e UMA linha; contagens() sobe; os prazos se refazem com o dia virado sem recarregar; o Executado vira FEITA) e o selo; a Main e a H2 com o selo
+«n A CONFIRMAR» (conta só as abertas, leva ao #confirmar do Diário, some quando a última é decidida em outra aba); os estados de dentro em 3 tamanhos e 2 temas; e o código. PENDENTES_ROTULO fica vazia.
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -198,11 +209,9 @@ def corta_unpkg(ctx):
 # Fase 4 (P4B): as regex do §3 (testes/proibidos.json, a mesma fonte de todas as varreduras), cada uma com a flag dela
 TERMOS = confere.carrega_termos()
 VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
-# Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; o P4K a deixa só com o que a Fase 8 reescreve). O Manual é a apresentação,
+# Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; vazia desde a P4J, e o P4K só a reabre para o que a Fase 8 reescreve). O Manual é a apresentação,
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
-PENDENTES_ROTULO = (
-    'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (2 telas em 10/11/2026, depois da P4I: G1 e G2 (web e app) saíram; só a G4 ainda tem rótulo. 6 telas em 10/11/2026, depois da P4H: F1 a F5 (web e app) saíram; 16 telas depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+PENDENTES_ROTULO = ()   # (vazia em 10/11/2026, depois da P4J: a G4 (web e app) saiu — o «TELEFONE A CADASTRAR» virou «+ ADICIONAR TELEFONE» — e a G3 já estava limpa. 2 telas em 10/11/2026, depois da P4I: G1 e G2 (web e app) saíram; só a G4 ainda tinha rótulo. 6 telas em 10/11/2026, depois da P4H: F1 a F5 (web e app) saíram; 16 telas depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
@@ -778,6 +787,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4j' in sys.argv or '--mutantes-p4j' in sys.argv:   # só as conferências da P4J (e, com --mutantes-p4j, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4j' in sys.argv:
+                falhas = mutantes_p4j(b)
+            else:
+                for nome, prob in p4j_conferencias(b, [a for a in sys.argv[1:] if a in TELAS_P4J + TELAS_INICIO] or list(TELAS_P4J + TELAS_INICIO)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4i' in sys.argv or '--mutantes-p4i' in sys.argv:   # só as conferências da P4I (e, com --mutantes-p4i, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -1010,6 +1032,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4I', 'prob': prob[:8]})
                     print('FALHA P4I ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4j_conferencias(b, lista):   # P4J: o Diário (G3) com propostas, pendências, correção e foto + texto, a Equipe (G4) com prestadores e tarefas, e o selo A CONFIRMAR do início
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4J', 'prob': prob[:8]})
+                    print('FALHA P4J ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -6519,6 +6546,1022 @@ def mutantes_p4i(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4I), len(vivos)))
+    return vivos
+
+
+# ═══ Fase 4, P4J: Diário (G3) com propostas e pendências e Equipe (G4) com prestadores e tarefas, web e app, e o selo A CONFIRMAR do início ═══
+# `--so-p4j [Tela…]` roda só as conferências dela; `--mutantes-p4j` planta os defeitos (todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto).
+# As expectativas saem do D e do instante da própria página (CapitaoAgora, CapitaoBrain, D.diario, D.agenda, D.tarefasEquipe, D.equipe) e de contas feitas aqui em Python (os prazos, o estado das
+# pendências, os textos que o cérebro grava), nunca do texto que a tela escreve. Sem Worker (a IA nem entra) e sem valor em dinheiro.
+TELAS_G3 = ('G3-Diario-Web', 'G3-Diario-Mobile')
+TELAS_G4 = ('G4-Equipe-Web', 'G4-Equipe-Mobile')
+TELAS_INICIO = ('Main', 'H2-Home-Mobile')
+TELAS_P4J = TELAS_G3 + TELAS_G4
+LE_G3 = r"""() => { const lin = (s) => (s || '').replace(/\s+/g, ' ').trim(), q = (s) => document.querySelector(s), qa = (s) => [...document.querySelectorAll(s)];
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, tx = (e, s) => { const x = e.querySelector(s); return x ? lin(x.innerText) : ''; };
+  const conf = q('[data-g3=confirmar]');
+  return { aviso: lin((q('[data-g3=aviso]') || {}).innerText), oferta: !!q('[data-g3=oferta]'), desfaz: !!q('[data-g3=desfaz]'), resumo: lin((q('[data-g3=resumo]') || {}).innerText),
+    confirmar: !!conf, confTitulo: lin((q('[data-g3=conf-titulo]') || {}).innerText), confBorda: conf ? getComputedStyle(conf).borderTopColor : '',
+    tickets: qa('[data-g3=ticket]').map((e) => ({ id: e.dataset.id, k: e.dataset.k, origem: tx(e, '[data-g3=t-origem]'), texto: tx(e, '[data-g3=t-texto]'), selo: !!e.querySelector('[data-g3=selo]'), editando: !!e.querySelector('[data-g3=t-salva]'),
+      campos: [...e.querySelectorAll('[data-g3=t-campo]')].map((c) => [c.dataset.c, c.value]), erro: tx(e, '[data-g3=t-erro]') })),
+    linhas: qa('[data-g3=linha]').map((e) => ({ iso: e.dataset.iso, acao: e.dataset.acao, estado: e.dataset.estado, ori: e.dataset.ori, d: tx(e, '[data-g3=l-dia]'), h: tx(e, '[data-g3=l-hora]'), texto: tx(e, '[data-g3=l-texto]'),
+      tags: [...e.querySelectorAll('[data-g3=tag]')].map((t) => lin(t.innerText)), edita: !!e.querySelector('[data-g3=l-edita]'), anula: !!e.querySelector('[data-g3=l-anula]'), campo: !!e.querySelector('[data-g3=l-campo]'), todo: lin(e.innerText) })),
+    pend: qa('[data-g3=pend]').map((e) => ({ alvo: e.dataset.alvo, aberta: e.dataset.aberta, estado: tx(e, '[data-g3=p-estado]'), botao: tx(e, '[data-g3=p-troca]'), texto: lin(e.innerText) })), pendTitulo: lin((q('[data-g3=pend-titulo]') || {}).innerText),
+    selos: qa('[data-g3=selo]').length, diarioLs: ls('capitao.diario.v1'), ticketsLs: ls('capitao.tickets.v1'), tarefasLs: ls('capitao.tarefas.v1'), execLs: ls('capitao.executado.v1'), texto: document.body.innerText }; }"""
+ESP_G3 = r"""() => { const D = window.CapitaoDados, A = window.CapitaoAgora, B = window.CapitaoBrain;
+  return { fonte: D.diario.map((x) => ({ id: x.id, d: x.d, h: x.h, iso: x.iso, t: x.t, pend: x.pend === true, sys: x.sys })), cont: A.contagens(), sim: D.simulacao === true, hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso,
+    pend: B.pendenciasLista().map((p) => ({ alvo: p.alvo, aberta: p.aberta, t: p.t })), tickets: B.ticketsAbertos().map((t) => ({ id: t.id, k: t.k, origem: t.origem, texto: B.ticketTela(t).texto, rotulo: B.ticketTela(t).origem })) }; }"""
+# o dia e a hora de uma linha do aparelho no fuso do barco: o mesmo relógio do cabeçalho e do texto que o cérebro grava
+DH_G3 = r"""(iso) => { const A = window.CapitaoAgora, t = Date.parse(iso); return { d: new Intl.DateTimeFormat('pt-BR', { timeZone: A.fuso, day: '2-digit', month: '2-digit' }).format(new Date(t)), h: A.fmt.hora(t, false) }; }"""
+ENVELHECE = "(ms) => { const o = Date.now.bind(Date); Date.now = () => o() + ms; }"   # passa a janela de 10 s do DESFAZER sem esperar
+PLANTA_TK = "(lista) => { localStorage.setItem('capitao.tickets.v1', JSON.stringify(lista)); window.dispatchEvent(new StorageEvent('storage', { key: 'capitao.tickets.v1' })); }"
+PLANTA_LS = "([k, v]) => { localStorage.setItem(k, v); window.dispatchEvent(new StorageEvent('storage', { key: k })); }"
+
+
+def abre_g3(b, tela, fixo='60', depois='', hash_='', ls=None):
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, depois=depois, hash_=hash_, ls=ls)
+    try: pg.wait_for_function("() => document.querySelector('[data-g3=linha]')", timeout=10000)
+    except Exception: pass
+    pg.wait_for_timeout(250)
+    return ctx, pg, erros
+
+
+def g3_envia(pg, app, texto):
+    """O registro como a pessoa faz: o campo e REGISTRAR na web; a barra (com o prefixo «Registre no diário: ») e o envio no app."""
+    if app: pg.fill('.cpb-in', texto); pg.click('.cpb-go')
+    else: pg.fill('[data-g3=campo]', texto); pg.click('[data-g3=registrar]')
+    pg.wait_for_timeout(450)
+    return pg.evaluate(LE_G3)
+
+
+def g3_clica(pg, sel):
+    pg.click(sel); pg.wait_for_timeout(380)
+    return pg.evaluate(LE_G3)
+
+
+def g3_acoes(r):
+    return [l for l in (r['diarioLs'] or []) if l.get('acao')]
+
+
+def g3_nums(txt):
+    """{'registros': n, 'app': n, 'fonte': n} do resumo das duas telas («9 registros (0 do app · 9 da fonte)» na web, «9 registros · 0 do app · 9 da fonte · …» no app)."""
+    g = lambda p: int(re.search(p, txt).group(1)) if re.search(p, txt) else None
+    return {'registros': g(r'(\d+) registros'), 'app': g(r'(\d+) do app'), 'fonte': g(r'(\d+) da fonte')}
+
+
+def teste_g3_abertura(b, tela):
+    """G3, a abertura nos dois instantes (60 s e 105 s): nenhum termo do §3, as 9 linhas do diário gerado na ordem do tempo com o dia e a hora do arquivo, o resumo e a lista de pendências iguais ao cérebro e ao
+    CapitaoAgora.contagens() (3 abertas), cada pendência aberta com o botão RESOLVER, nenhuma proposta, nenhum botão solto, nenhum selo, e nada gravado só por abrir (nem o alarme de 105 s vira proposta sem um toque)."""
+    prob = []
+    app = eh_app(tela)
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_g3(b, tela, fixo=fixo)
+        r, E = pg.evaluate(LE_G3), pg.evaluate(ESP_G3)
+        rot = '%s a %s s' % (tela, fixo)
+        ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        fonte = [l for l in r['linhas'] if l['ori'] == 'fonte']
+        esp = sorted(E['fonte'], key=lambda x: x['iso'], reverse=True)
+        if [l['iso'] for l in fonte] != [x['iso'] for x in esp]: prob.append('%s: as linhas do diário gerado são %s (esperado %d, da mais nova para a mais velha)' % (rot, [l['iso'][5:16] for l in fonte], len(esp)))
+        else:
+            for l, x in zip(fonte, esp):
+                if l['d'] != x['d'] or l['h'] != x['h'] or l['texto'] != x['t'].strip(): prob.append('%s: a linha %s mostra %r %r %r (esperado %r %r)' % (rot, x['id'], l['d'], l['h'], l['texto'][:50], x['d'], x['h']))
+                if ('PENDENTE' in l['tags']) != x['pend']: prob.append('%s: a linha %s %s o selo PENDENTE' % (rot, x['id'], 'perdeu' if x['pend'] else 'ganhou'))
+        n = g3_nums(r['resumo'])
+        if n != {'registros': len(esp), 'app': 0, 'fonte': len(esp)}: prob.append('%s: o resumo diz %s (esperado %d registros, 0 do app, %d da fonte): %r' % (rot, n, len(esp), len(esp), r['resumo']))
+        abertas = [p for p in E['pend'] if p['aberta']]
+        if [p['alvo'] for p in r['pend']] != [p['alvo'] for p in E['pend']] or any(p['aberta'] != 'sim' or p['botao'] != 'RESOLVER' or p['estado'] != 'ABERTA' for p in r['pend']):
+            prob.append('%s: as pendências são %s (esperado %s, todas ABERTA com RESOLVER)' % (rot, [(p['alvo'], p['estado'], p['botao']) for p in r['pend']], [p['alvo'] for p in E['pend']]))
+        if len(abertas) != E['cont']['pendencias'] or str(len(abertas)) not in r['pendTitulo']: prob.append('%s: o título das pendências diz %r e o CapitaoAgora.contagens() conta %d (a lista do cérebro, %d)' % (rot, r['pendTitulo'], E['cont']['pendencias'], len(abertas)))
+        if r['confirmar'] or r['tickets'] or r['oferta'] or r['desfaz'] or r['selos'] or r['aviso']: prob.append('%s: a tela já abre com proposta, botão de aviso ou selo (%s %s %s %s %r)' % (rot, r['confirmar'], len(r['tickets']), r['oferta'] or r['desfaz'], r['selos'], r['aviso'][:60]))
+        if r['diarioLs'] or r['ticketsLs'] or r['tarefasLs'] or r['execLs']: prob.append('%s: abrir a tela gravou no aparelho: diário %s, propostas %s, tarefas %s, Executado %s' % (rot, r['diarioLs'], r['ticketsLs'], r['tarefasLs'], r['execLs']))
+        if pg.evaluate("() => window.__falas || 0"): prob.append('%s: a tela falou sem um gesto' % rot)
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_g3_propostas(b, tela):
+    """G3, as propostas A CONFIRMAR (F14): o relato, o agendamento (regra) e o alarme de 105 s só viram propostas com um gesto e ficam na lista, a mais nova primeiro, com a origem e o texto do cérebro. CONFIRMAR grava UMA linha
+    nova com esse texto (o aviso tem o DESFAZER); DESFAZER escreve uma linha de anulação (o confirmado continua guardado) e a proposta volta; fora dos 10 s o DESFAZER é recusado e não grava; RECUSAR grava nada; ✎ muda o texto
+    (no agendamento, a tarefa, o dia e o responsável, com o dia que existe) e o CONFIRMAR grava o ajustado; confirmar o agendamento cria a tarefa da equipe (capitao.tarefas.v1) e a conta do CapitaoAgora sobe."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g3(b, tela, fixo='105')
+    rot = tela
+    r0 = pg.evaluate(LE_G3)
+    if r0['ticketsLs']: prob.append('%s: o alarme de 105 s virou proposta sem um toque: %s' % (rot, r0['ticketsLs']))
+    # as três propostas: o relato do chat, o agendamento do registro e o alarme (só com o gesto de «Registrar» da C3)
+    pg.evaluate("""() => { const B = window.CapitaoBrain; B.addTicket({ id: 'tg3rel1', k: 'diario', origem: 'relato', texto: 'Ruído no mancal do eixo de boreste ao sair da marina hoje cedo', prop: { sys: 'Equipamentos' } }); }""")
+    pg.wait_for_timeout(15)
+    pg.evaluate("""() => { const B = window.CapitaoBrain, A = window.CapitaoAgora, d = new Date(A.relogio.hojeIso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 10);
+      const prop = { n: 'Revisar a vedação do alçapão da praça de máquinas', vence: d.toISOString().slice(0, 10), quem: 'técnico' };
+      B.addTicket({ id: 'tg3tar1', k: 'tarefa', origem: 'regra', texto: B.textoTicket('tarefa', prop), prop: prop }); }""")
+    pg.wait_for_timeout(15)
+    pg.evaluate("""() => { const B = window.CapitaoBrain, al = window.CapitaoAlertas.ativos()[0]; B.propoeAlarme(al.id, true); }""")
+    pg.wait_for_timeout(15)
+    pg.evaluate("""() => { const B = window.CapitaoBrain; B.addTicket({ id: 'tg3rel2', k: 'diario', origem: 'relato', texto: 'Mancha de óleo no porão de boreste, perto da bomba', prop: { sys: 'Equipamentos' } }); }""")
+    pg.evaluate("() => window.dispatchEvent(new StorageEvent('storage', { key: 'capitao.tickets.v1' }))"); pg.wait_for_timeout(350)
+    r, E = pg.evaluate(LE_G3), pg.evaluate(ESP_G3)
+    if r['confTitulo'] != 'A CONFIRMAR · 4': prob.append('%s: o título do bloco é %r (esperado A CONFIRMAR · 4)' % (rot, r['confTitulo']))
+    if [t['id'] for t in r['tickets']] != [t['id'] for t in E['tickets']] or [t['id'] for t in r['tickets']][0] != 'tg3rel2' or [t['id'] for t in r['tickets']][-1] != 'tg3rel1':
+        prob.append('%s: as propostas estão em %s (esperado a mais nova primeiro: %s)' % (rot, [t['id'] for t in r['tickets']], [t['id'] for t in E['tickets']]))
+    for t, x in zip(r['tickets'], E['tickets']):
+        if t['texto'] != x['texto'] or t['origem'] != x['rotulo'].upper(): prob.append('%s: a proposta %s diz %r de %r (o cérebro: %r de %r)' % (rot, x['id'], t['texto'][:50], t['origem'], x['texto'][:50], x['rotulo'].upper()))
+    if {t['origem'] for t in r['tickets']} != {'RELATO', 'REGRA', 'TELEMETRIA'}: prob.append('%s: as origens são %s (esperado relato, regra e telemetria)' % (rot, [t['origem'] for t in r['tickets']]))
+    if r['selos']: prob.append('%s: o selo «apresentação» apareceu com a simulação ligada' % rot)
+    if r['diarioLs'] or r['tarefasLs']: prob.append('%s: propor gravou linha ou tarefa: %s %s' % (rot, r['diarioLs'], r['tarefasLs']))
+    # CONFIRMAR o relato
+    texto1 = 'Ruído no mancal do eixo de boreste ao sair da marina hoje cedo'
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3rel1] [data-g3=t-confirma]')
+    linhas = r['diarioLs'] or []
+    if len(linhas) != 1 or linhas[0].get('t') != texto1 or linhas[0].get('src') != 'app · proposta confirmada (relato)' or linhas[0].get('sys') != 'Equipamentos' or linhas[0].get('who') != 'Lucas' or linhas[0].get('sim') is not True:
+        prob.append('%s: CONFIRMAR devia gravar UMA linha {texto, app · proposta confirmada (relato), Equipamentos, Lucas, sim}: %s' % (rot, [(l.get('t', '')[:40], l.get('src'), l.get('acao')) for l in linhas]))
+    if not r['aviso'].startswith('Confirmado: ' + texto1) or not r['desfaz']: prob.append('%s: depois do CONFIRMAR o aviso diz %r e o DESFAZER %s' % (rot, r['aviso'][:70], 'está' if r['desfaz'] else 'não está'))
+    if 'tg3rel1' in [t['id'] for t in r['tickets']] or r['confTitulo'] != 'A CONFIRMAR · 3': prob.append('%s: a proposta confirmada devia sair da lista: %s %r' % (rot, [t['id'] for t in r['tickets']], r['confTitulo']))
+    tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+    if tl.get('tg3rel1', {}).get('estado') != 'aceito' or (tl.get('tg3rel1', {}).get('res') or {}).get('id') != (linhas[0].get('iso') if linhas else None): prob.append('%s: a proposta guardada devia estar «aceito» com a linha que criou: %s' % (rot, tl.get('tg3rel1')))
+    # DESFAZER: linha NOVA de anulação, o confirmado fica, a proposta volta
+    iso1 = linhas[0].get('iso') if linhas else ''
+    if not pg.query_selector('[data-g3=desfaz]'): return prob + ['%s: sem o botão DESFAZER depois do CONFIRMAR' % rot]
+    r = g3_clica(pg, '[data-g3=desfaz]')
+    ln = r['diarioLs'] or []
+    ac = g3_acoes(r)
+    if len(ln) != 2 or len(ac) != 1 or ac[0].get('acao') != 'anula' or ac[0].get('alvo') != iso1 or not any(l.get('iso') == iso1 and l.get('t') == texto1 and not l.get('acao') for l in ln):
+        prob.append('%s: DESFAZER devia ACRESCENTAR uma linha de anulação (alvo = a linha confirmada) e manter a confirmada (o registro só cresce): %s' % (rot, [(l.get('acao'), l.get('alvo', '')[:19]) for l in ln]))
+    if 'tg3rel1' not in [t['id'] for t in r['tickets']] or r['desfaz'] or 'Desfeito' not in r['aviso']: prob.append('%s: depois do DESFAZER a proposta devia voltar à lista, o botão sumir e o aviso dizer «Desfeito»: %s %r' % (rot, [t['id'] for t in r['tickets']], r['aviso'][:60]))
+    orig = [l for l in r['linhas'] if l['iso'] == iso1]
+    if not orig or orig[0]['estado'] != 'anulado' or 'ANULADO' not in orig[0]['tags']: prob.append('%s: a linha desfeita devia aparecer ANULADO na lista: %s' % (rot, orig))
+    # CONFIRMAR de novo e o DESFAZER fora dos 10 s: recusado, nada grava
+    if not pg.query_selector('[data-g3=ticket][data-id=tg3rel1] [data-g3=t-confirma]'): return prob
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3rel1] [data-g3=t-confirma]')
+    n3 = len(r['diarioLs'] or [])
+    if not pg.query_selector('[data-g3=desfaz]'): return prob + ['%s: o segundo CONFIRMAR não mostrou o DESFAZER (o aviso diz %r)' % (rot, r['aviso'][:60])]
+    pg.evaluate(ENVELHECE, 11000)
+    r = g3_clica(pg, '[data-g3=desfaz]')
+    if 'Não deu para desfazer' not in r['aviso'] or len(r['diarioLs'] or []) != n3: prob.append('%s: o DESFAZER depois dos 10 s devia ser recusado e não gravar: %r (linhas %d → %d)' % (rot, r['aviso'][:60], n3, len(r['diarioLs'] or [])))
+    # RECUSAR: nada grava
+    n4 = len(r['diarioLs'] or [])
+    alarme = [t for t in r['tickets'] if t['k'] == 'alarme'][0]['id']
+    r = g3_clica(pg, '[data-g3=ticket][data-id="%s"] [data-g3=t-recusa]' % alarme)
+    tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+    if len(r['diarioLs'] or []) != n4 or tl.get(alarme, {}).get('estado') != 'recusado' or alarme in [t['id'] for t in r['tickets']] or 'recusada' not in r['aviso']: prob.append('%s: RECUSAR devia fechar a proposta sem gravar linha: %s %r' % (rot, tl.get(alarme, {}).get('estado'), r['aviso'][:60]))
+    # ✎ do relato: só o texto; o CONFIRMAR grava o ajustado
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3rel2] [data-g3=t-edita]')
+    t2 = [t for t in r['tickets'] if t['id'] == 'tg3rel2'][0]
+    if not t2['editando'] or [c[0] for c in t2['campos']] != ['texto'] or t2['campos'][0][1] != 'Mancha de óleo no porão de boreste, perto da bomba': prob.append('%s: o ✎ do relato devia abrir só o texto com o texto da proposta: %s' % (rot, t2['campos']))
+    pg.fill('[data-g3=ticket][data-id=tg3rel2] [data-g3=t-campo][data-c=texto]', '   '); pg.click('[data-g3=ticket][data-id=tg3rel2] [data-g3=t-salva]'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G3)
+    t2 = [t for t in r['tickets'] if t['id'] == 'tg3rel2'][0]
+    guardado = [t.get('texto') for t in (r['ticketsLs'] or []) if t.get('id') == 'tg3rel2']
+    if not t2['editando'] or 'não pode ficar vazio' not in t2['erro'] or guardado != ['Mancha de óleo no porão de boreste, perto da bomba']: prob.append('%s: o texto vazio no ✎ devia dar o erro, manter o ✎ aberto e não mudar a proposta: %r %r' % (rot, t2['erro'], guardado))
+    if not t2['editando']: return prob
+    pg.fill('[data-g3=ticket][data-id=tg3rel2] [data-g3=t-campo][data-c=texto]', 'Mancha de óleo no porão de boreste, perto da bomba (ajustado)'); pg.click('[data-g3=ticket][data-id=tg3rel2] [data-g3=t-salva]'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G3)
+    if [t['texto'] for t in r['tickets'] if t['id'] == 'tg3rel2'] != ['Mancha de óleo no porão de boreste, perto da bomba (ajustado)']: prob.append('%s: depois do SALVAR a proposta devia ter o texto ajustado: %s' % (rot, [t['texto'] for t in r['tickets'] if t['id'] == 'tg3rel2']))
+    n5 = len(r['diarioLs'] or [])
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3rel2] [data-g3=t-confirma]')
+    novas = (r['diarioLs'] or [])[:len(r['diarioLs'] or []) - n5]
+    if len(novas) != 1 or novas[0].get('t') != 'Mancha de óleo no porão de boreste, perto da bomba (ajustado)': prob.append('%s: o CONFIRMAR depois do ✎ devia gravar UMA linha com o texto ajustado: %s' % (rot, [(l.get('t', '')[:40]) for l in novas]))
+    # ✎ do agendamento: tarefa, dia e responsável; dia que não existe é recusado
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3tar1] [data-g3=t-edita]')
+    t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
+    if [c[0] for c in t3['campos']] != ['n', 'vence', 'quem'] or t3['campos'][0][1] != 'Revisar a vedação do alçapão da praça de máquinas' or t3['campos'][2][1] != 'técnico': prob.append('%s: o ✎ do agendamento devia abrir tarefa, dia e responsável: %s' % (rot, t3['campos']))
+    sel = '[data-g3=ticket][data-id=tg3tar1] [data-g3=t-campo][data-c=%s]'
+    pg.fill(sel % 'n', 'Revisar a vedação do alçapão (ajustada)'); pg.fill(sel % 'vence', '31/02/2027'); pg.click('[data-g3=ticket][data-id=tg3tar1] [data-g3=t-salva]'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G3)
+    t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
+    tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+    if 'Data inválida' not in t3['erro'] or tl['tg3tar1']['prop']['n'] != 'Revisar a vedação do alçapão da praça de máquinas' or not t3['editando']: prob.append('%s: o dia 31/02 devia dar «Data inválida», manter o ✎ aberto e não mudar a proposta: %r %s' % (rot, t3['erro'], tl['tg3tar1']['prop']))
+    if not t3['editando']: return prob
+    pg.fill(sel % 'vence', '25/12/2026'); pg.fill(sel % 'quem', 'marina'); pg.click('[data-g3=ticket][data-id=tg3tar1] [data-g3=t-salva]'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G3)
+    t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
+    tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+    pr = tl['tg3tar1']['prop']
+    if (pr['n'], pr['vence'], pr['quem']) != ('Revisar a vedação do alçapão (ajustada)', '2026-12-25', 'marina') or 'vence 25/12/2026' not in t3['texto'] or 'ajustada' not in t3['texto'] or 'marina' not in t3['texto']:
+        prob.append('%s: depois do ✎ a proposta devia ter a tarefa, o dia e o responsável novos e o texto refeito: %s | %r' % (rot, pr, t3['texto'][:90]))
+    c0 = pg.evaluate("() => window.CapitaoAgora.contagens().tarefasEquipe")
+    nl = len(r['diarioLs'] or [])
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3tar1] [data-g3=t-confirma]')
+    tar = r['tarefasLs'] or []
+    if len(tar) != 1 or (tar[0].get('n'), tar[0].get('vence'), tar[0].get('quem'), tar[0].get('sim')) != ('Revisar a vedação do alçapão (ajustada)', '2026-12-25', 'marina', True) or len(r['diarioLs'] or []) != nl + 1:
+        prob.append('%s: confirmar o agendamento devia criar UMA tarefa da equipe (nome, dia e responsável ajustados) e UMA linha: tarefas %s, linhas %d → %d' % (rot, tar, nl, len(r['diarioLs'] or [])))
+    if pg.evaluate("() => window.CapitaoAgora.contagens().tarefasEquipe") != c0 + 1: prob.append('%s: o CapitaoAgora.contagens() devia contar a tarefa nova (%d → %d)' % (rot, c0, pg.evaluate("() => window.CapitaoAgora.contagens().tarefasEquipe")))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g3_ancora_e_janela(b, tela):
+    """G3, o #confirmar do selo da tela inicial leva ao bloco e o realça por 4 s (sem a âncora, nenhum realce); o aviso do DESFAZER some sozinho em 10 s (a janela do cérebro); e a mesma proposta confirmada duas vezes seguidas
+    num toque duplo grava UMA linha só."""
+    prob = []
+    tk = [{'id': 'tg3rel9', 'k': 'diario', 'origem': 'relato', 'texto': 'Cheiro de diesel na casa de máquinas depois da saída', 'prop': {'sys': 'Equipamentos'}, 'estado': 'aberto', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas'}]
+    ctx, pg, erros = abre_g3(b, tela, hash_='#confirmar', ls={'capitao.tickets.v1': json.dumps(tk)})
+    pg.wait_for_timeout(300)
+    r1 = pg.evaluate(LE_G3); pg.wait_for_timeout(4500); r2 = pg.evaluate(LE_G3)
+    if not r1['confirmar'] or r1['confBorda'] == r2['confBorda']: prob.append('%s: com #confirmar o bloco devia ficar realçado por um instante (borda %s → %s)' % (tela, r1['confBorda'], r2['confBorda']))
+    ctx.close()
+    ctx, pg, erros = abre_g3(b, tela, ls={'capitao.tickets.v1': json.dumps(tk)})
+    pg.wait_for_timeout(300)
+    r1 = pg.evaluate(LE_G3); pg.wait_for_timeout(4500); r2 = pg.evaluate(LE_G3)
+    if r1['confBorda'] != r2['confBorda']: prob.append('%s: sem #confirmar o bloco não devia piscar (borda %s → %s)' % (tela, r1['confBorda'], r2['confBorda']))
+    # toque duplo no CONFIRMAR: uma linha
+    pg.evaluate("() => { const b = document.querySelector('[data-g3=ticket][data-id=tg3rel9] [data-g3=t-confirma]'); b.click(); b.click(); }"); pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_G3)
+    if len(r['diarioLs'] or []) != 1: prob.append('%s: o toque duplo no CONFIRMAR gravou %d linhas (esperado 1)' % (tela, len(r['diarioLs'] or [])))
+    if not r['desfaz']: prob.append('%s: o DESFAZER devia estar à vista logo depois do CONFIRMAR' % tela)
+    pg.wait_for_timeout(10300)
+    r = pg.evaluate(LE_G3)
+    if r['desfaz'] or r['aviso']: prob.append('%s: o aviso com o DESFAZER devia sumir depois dos 10 s (a janela do cérebro): %r' % (tela, r['aviso'][:50]))
+    prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g3_pendencias(b, tela):
+    """G3, as pendências (F20): RESOLVER uma pendência grava UMA linha nova (acao resolve, alvo = o id dela), a lista a mostra RESOLVIDA com quem e quando (no fuso do barco) e o botão vira REABRIR, a linha de ação aparece na lista
+    como linha nova e o CapitaoAgora.contagens() desce; DESFAZER (10 s) é uma linha NOVA que reabre (a de fechar continua); REABRIR é outra linha nova; o registro que cita a pendência e diz que foi feito a fecha sozinho (e abre a proposta
+    do Executado, que o CONFIRMAR grava); e o registro que não diz que foi feito, ou que é dúvida, não fecha."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g3(b, tela)
+    rot = tela
+    E = pg.evaluate(ESP_G3)
+    c0 = E['cont']['pendencias']
+    r = g3_clica(pg, '[data-g3=pend][data-alvo=d03] [data-g3=p-troca]')
+    ac = g3_acoes(r)
+    if len(ac) != 1 or ac[0].get('acao') != 'resolve' or ac[0].get('alvo') != 'd03' or ac[0].get('sim') is not True: prob.append('%s: RESOLVER devia gravar UMA linha {acao resolve, alvo d03, sim}: %s' % (rot, ac))
+    p = [x for x in r['pend'] if x['alvo'] == 'd03'][0]
+    dh = pg.evaluate(DH_G3, ac[0]['iso']) if ac else {'d': '?', 'h': '?'}
+    if p['aberta'] != 'nao' or p['botao'] != 'REABRIR' or p['estado'] != 'RESOLVIDA %s %s · Lucas' % (dh['d'], dh['h']): prob.append('%s: depois do RESOLVER a d03 diz %r / %r (esperado RESOLVIDA %s %s · Lucas / REABRIR)' % (rot, p['estado'], p['botao'], dh['d'], dh['h']))
+    if [x['alvo'] for x in r['pend']][-1] != 'd03': prob.append('%s: a pendência resolvida devia ir para o fim da lista: %s' % (rot, [x['alvo'] for x in r['pend']]))
+    if pg.evaluate("() => window.CapitaoAgora.contagens().pendencias") != c0 - 1 or str(c0 - 1) not in r['pendTitulo']: prob.append('%s: as pendências abertas deviam descer para %d (contagens e título): %r' % (rot, c0 - 1, r['pendTitulo']))
+    li = [l for l in r['linhas'] if l['acao'] == 'resolve']
+    if len(li) != 1 or 'PENDÊNCIA RESOLVIDA' not in li[0]['tags'] or li[0]['edita'] or li[0]['anula']: prob.append('%s: a linha de ação devia aparecer na lista como linha nova (PENDÊNCIA RESOLVIDA, sem ✎ nem 🗑): %s' % (rot, li))
+    if not r['desfaz'] or 'Pendência resolvida' not in r['aviso']: prob.append('%s: o aviso do RESOLVER devia ter o DESFAZER: %r' % (rot, r['aviso'][:60]))
+    # DESFAZER: linha nova que reabre; a de fechar fica
+    if not pg.query_selector('[data-g3=desfaz]'): return prob + ['%s: sem o botão DESFAZER depois do RESOLVER (o aviso diz %r): o resto não vale' % (rot, r['aviso'][:60])]
+    r = g3_clica(pg, '[data-g3=desfaz]')
+    ac = g3_acoes(r)
+    if [a.get('acao') for a in ac] != ['reabre', 'resolve'] or any(a.get('alvo') != 'd03' for a in ac): prob.append('%s: o DESFAZER devia ACRESCENTAR uma linha reabre (a resolve continua): %s' % (rot, [(a.get('acao'), a.get('alvo')) for a in ac]))
+    p = [x for x in r['pend'] if x['alvo'] == 'd03'][0]
+    if p['aberta'] != 'sim' or p['botao'] != 'RESOLVER' or pg.evaluate("() => window.CapitaoAgora.contagens().pendencias") != c0: prob.append('%s: depois do DESFAZER a d03 devia voltar a ABERTA e a conta a %d: %s' % (rot, c0, p))
+    # RESOLVER de novo, o DESFAZER fora da janela é recusado; REABRIR é outra linha nova
+    if p['aberta'] != 'sim': return prob   # (o DESFAZER não reabriu: o que falta depende dele)
+    pg.wait_for_timeout(1600)
+    r = g3_clica(pg, '[data-g3=pend][data-alvo=d03] [data-g3=p-troca]')
+    if not pg.query_selector('[data-g3=desfaz]'): return prob + ['%s: o segundo RESOLVER não mostrou o DESFAZER (o aviso diz %r)' % (rot, r['aviso'][:60])]
+    pg.evaluate(ENVELHECE, 11000)
+    n = len(g3_acoes(pg.evaluate(LE_G3)))
+    r = g3_clica(pg, '[data-g3=desfaz]')
+    if 'Não deu para desfazer' not in r['aviso'] or len(g3_acoes(r)) != n: prob.append('%s: o DESFAZER da pendência depois dos 10 s devia ser recusado e não gravar: %r (%d → %d)' % (rot, r['aviso'][:60], n, len(g3_acoes(r))))
+    pg.wait_for_timeout(1600)
+    r = g3_clica(pg, '[data-g3=pend][data-alvo=d03] [data-g3=p-troca]')
+    ac = g3_acoes(r)
+    p = [x for x in r['pend'] if x['alvo'] == 'd03'][0]
+    if len(ac) != n + 1 or ac[0].get('acao') != 'reabre' or p['aberta'] != 'sim' or not p['estado'].startswith('REABERTA'): prob.append('%s: REABRIR devia gravar UMA linha nova reabre e a lista dizer REABERTA: %s %r' % (rot, [a.get('acao') for a in ac][:3], p['estado']))
+    if 'PENDÊNCIA REABERTA' not in [t for l in r['linhas'] if l['acao'] == 'reabre' for t in l['tags']]: prob.append('%s: a linha reabre devia aparecer na lista com o selo PENDÊNCIA REABERTA' % rot)
+    # o registro que cita a pendência e diz que foi feito a fecha; o Executado vira proposta e o CONFIRMAR grava
+    r = g3_envia(pg, app, 'Limpei o filtro de água salgada da climatização')
+    d05 = [x for x in r['pend'] if x['alvo'] == 'd05'][0]
+    if not r['oferta']: return prob + ['%s: o registro que cita o filtro devia mostrar o CONFIRMAR do Executado (o aviso diz %r), com a pendência d05 %s' % (rot, r['aviso'][:100], d05['estado'])]
+    if d05['aberta'] != 'nao' or not d05['estado'].startswith('RESOLVIDA'): prob.append('%s: o registro que cita o filtro e diz que foi feito devia fechar a d05: %s' % (rot, d05))
+    if not r['oferta'] or not r['desfaz'] or 'Proposta: Executado:' not in r['aviso'] or 'marcada como resolvida pelo registro' not in r['aviso']: prob.append('%s: o registro devia mostrar o aviso com o CONFIRMAR do Executado e o DESFAZER da pendência: %r' % (rot, r['aviso'][:120]))
+    if r['execLs']: prob.append('%s: propor o Executado gravou antes do toque: %s' % (rot, r['execLs']))
+    r = g3_clica(pg, '[data-g3=oferta]')
+    ex = r['execLs'] or {}
+    if list(ex.keys()) != ['clima-filtro'] or ex['clima-filtro'].get('sim') is not True: prob.append('%s: o CONFIRMAR do Executado devia marcar a tarefa clima-filtro (sim): %s' % (rot, ex))
+    if not any((l.get('t') or '').startswith('Executado: Limpeza do filtro de água salgada') for l in (r['diarioLs'] or [])): prob.append('%s: o Executado confirmado devia gravar a linha «Executado: …» no diário' % rot)
+    # texto que NÃO fecha: dúvida e futuro
+    n = len(g3_acoes(r))
+    for txt in ('Será que limpei o rotor do gerador?', 'Vou inspecionar o rotor do gerador amanhã'):
+        r = g3_envia(pg, app, txt)
+        if len(g3_acoes(r)) != n or [x for x in r['pend'] if x['alvo'] == 'd03'][0]['aberta'] != 'sim': prob.append('%s: «%s» não devia fechar pendência nenhuma (%d → %d linhas de ação)' % (rot, txt, n, len(g3_acoes(r))))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g3_linhas(b, tela):
+    """G3, corrigir e anular uma linha do aparelho (PARIDADE §6.2): ✎ grava uma linha NOVA (acao corrige, alvo = o iso) e a lista mostra o texto novo com CORRIGIDO, a correção como linha à parte e o original guardado; 🗑 pede a confirmação e
+    grava uma linha de anulação (a lista risca a linha e diz ANULADO, o total desce, o texto continua guardado); Cancelar não grava; a linha do diário gerado, a linha de ação e a linha do SOS não têm ✎ nem 🗑."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g3(b, tela)
+    rot = tela
+    r = g3_envia(pg, app, 'Troquei a lâmpada de navegação de boreste')
+    n0 = g3_nums(r['resumo'])
+    li = [l for l in r['linhas'] if l['ori'] == 'app']
+    if len(li) != 1 or not li[0]['edita'] or not li[0]['anula']: prob.append('%s: a linha do aparelho devia ter ✎ e 🗑: %s' % (rot, li))
+    if any(l['edita'] or l['anula'] for l in r['linhas'] if l['ori'] == 'fonte'): prob.append('%s: a linha do diário gerado não podia ter ✎ nem 🗑' % rot)
+    iso = li[0]['iso']
+    # Cancelar não grava
+    pg.click('[data-g3=linha][data-iso="%s"] [data-g3=l-edita]' % iso); pg.wait_for_timeout(250)
+    pg.fill('[data-g3=l-campo]', 'texto que não vale'); pg.click('[data-g3=l-cancela]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G3)
+    if g3_acoes(r) or r['linhas'][0]['texto'] != 'Troquei a lâmpada de navegação de boreste': prob.append('%s: Cancelar no ✎ não devia gravar nada: %s' % (rot, g3_acoes(r)))
+    # ✎ + SALVAR
+    pg.click('[data-g3=linha][data-iso="%s"] [data-g3=l-edita]' % iso); pg.wait_for_timeout(250)
+    if pg.input_value('[data-g3=l-campo]') != 'Troquei a lâmpada de navegação de boreste': prob.append('%s: o ✎ devia abrir com o texto atual' % rot)
+    pg.fill('[data-g3=l-campo]', 'Troquei a lâmpada de navegação de bombordo'); pg.click('[data-g3=l-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G3)
+    ac = g3_acoes(r)
+    orig = [l for l in (r['diarioLs'] or []) if l.get('iso') == iso]
+    if len(ac) != 1 or ac[0].get('acao') != 'corrige' or ac[0].get('alvo') != iso or ac[0].get('t') != 'Troquei a lâmpada de navegação de bombordo' or not orig or orig[0].get('t') != 'Troquei a lâmpada de navegação de boreste':
+        prob.append('%s: SALVAR devia gravar UMA linha corrige (alvo = o iso) e deixar o original como estava: %s' % (rot, [(a.get('acao'), a.get('t', '')[:30]) for a in ac]))
+    v = [l for l in r['linhas'] if l['iso'] == iso]
+    if not v or v[0]['texto'] != 'Troquei a lâmpada de navegação de bombordo' or 'CORRIGIDO' not in v[0]['tags'] or v[0]['estado'] != 'corrigido': prob.append('%s: a linha devia mostrar o texto novo com CORRIGIDO: %s' % (rot, v))
+    cr = [l for l in r['linhas'] if l['acao'] == 'corrige']
+    if len(cr) != 1 or 'CORREÇÃO' not in cr[0]['tags'] or cr[0]['edita'] or cr[0]['anula']: prob.append('%s: a correção devia ser uma linha à parte, sem ✎ nem 🗑: %s' % (rot, cr))
+    if g3_nums(r['resumo']) != n0: prob.append('%s: corrigir não muda o total (%s → %s)' % (rot, n0, g3_nums(r['resumo'])))
+    # 🗑: confirmação, depois a linha de anulação
+    pg.click('[data-g3=linha][data-iso="%s"] [data-g3=l-anula]' % iso); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G3)
+    if len(g3_acoes(r)) != 1: prob.append('%s: o 🗑 só pede a confirmação, não grava' % rot)
+    if not pg.query_selector('[data-g3=l-anula-ok]'): return prob
+    pg.click('[data-g3=l-anula-ok]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G3)
+    ac = g3_acoes(r)
+    orig = [l for l in (r['diarioLs'] or []) if l.get('iso') == iso]
+    if len(ac) != 2 or ac[0].get('acao') != 'anula' or ac[0].get('alvo') != iso or not orig or orig[0].get('t') != 'Troquei a lâmpada de navegação de boreste': prob.append('%s: ANULAR devia gravar UMA linha anula e manter o texto guardado: %s' % (rot, [(a.get('acao')) for a in ac]))
+    v = [l for l in r['linhas'] if l['iso'] == iso]
+    if not v or v[0]['estado'] != 'anulado' or 'ANULADO' not in v[0]['tags'] or v[0]['edita'] or v[0]['anula']: prob.append('%s: a linha anulada devia dizer ANULADO e perder o ✎ e o 🗑: %s' % (rot, v))
+    n1 = g3_nums(r['resumo'])
+    if n1['registros'] != n0['registros'] - 1 or n1['app'] != n0['app'] - 1: prob.append('%s: anular devia descer o total (%s → %s)' % (rot, n0, n1))
+    # a linha do SOS não se corrige nem se anula
+    pg.evaluate(PLANTA_LS, ['capitao.diario.v1', json.dumps([{'d': '10/11', 'iso': '2026-11-10T08:30:00.000Z', 'sys': 'Segurança', 'who': 'Lucas', 'src': 'web · SOS · MAYDAY', 't': 'MAYDAY aberto: a posição é a do plotter agora.'}] + (r['diarioLs'] or []))]); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G3)
+    sos = [l for l in r['linhas'] if l['iso'] == '2026-11-10T08:30:00.000Z']
+    if len(sos) != 1 or sos[0]['edita'] or sos[0]['anula']: prob.append('%s: a linha do SOS não podia ter ✎ nem 🗑: %s' % (rot, sos))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def foto_png():
+    """Um PNG de 1×1 com uma marca nos bytes: se ela aparecer no localStorage ou no corpo de algum pedido, o arquivo saiu do aparelho."""
+    import base64
+    return base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==') + b'MARCA-FOTO-NAO-SAI-0451'
+
+
+def teste_g3_foto(b, tela):
+    """G3, foto + texto na mesma linha (F36): com texto, UMA linha do diário leva o texto da pessoa e o anexo (nome e tamanho, A CONFIRMAR, abre pendência, carimbada sim) e o campo se limpa; sem texto, a linha do anexo; com texto que é
+    pergunta, a foto vai sozinha e o texto fica no campo, com o aviso; o vídeo vai com a etiqueta VÍDEO; e o arquivo não sai do aparelho (nenhuma marca dele no armazenamento nem em pedido algum)."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g3(b, tela)
+    pedidos = []
+    pg.on('request', lambda rq: pedidos.append((rq.method, rq.url, rq.post_data or '')))
+    rot = tela
+    def envia(nome, mime, texto):
+        if app: pg.fill('.cpb-in', texto)
+        else: pg.fill('[data-g3=campo]', texto)
+        with pg.expect_file_chooser() as fc:
+            pg.click('.cpb-modos [data-m=%s]' % ('video' if mime.startswith('video') else 'foto') if app else '[data-g3=foto]')
+        fc.value.set_files({'name': nome, 'mimeType': mime, 'buffer': foto_png()})
+        pg.wait_for_timeout(500)
+        return pg.evaluate(LE_G3)
+    r = envia('casco.png', 'image/png', 'Mancha de ferrugem no suporte da âncora')
+    ln = r['diarioLs'] or []
+    if len(ln) != 1: prob.append('%s: foto com texto devia gravar UMA linha, gravou %d: %s' % (rot, len(ln), [l.get('t', '')[:40] for l in ln]))
+    else:
+        t = ln[0].get('t', '')
+        if 'Mancha de ferrugem no suporte da âncora' not in t or 'casco.png' not in t or 'A CONFIRMAR' not in t or ln[0].get('src') != 'app · foto' or ln[0].get('pend') is not True or ln[0].get('sim') is not True:
+            prob.append('%s: a linha devia levar o texto, o nome do arquivo e «A CONFIRMAR», src app · foto, pend e sim: %s' % (rot, ln[0]))
+    if (pg.input_value('.cpb-in') if app else pg.input_value('[data-g3=campo]')) != '': prob.append('%s: o texto entrou na linha e o campo devia ficar vazio' % rot)
+    li = r['linhas'][0]
+    if 'FOTO' not in li['tags'] or 'PENDENTE' not in li['tags'] or 'Mancha de ferrugem' not in li['texto']: prob.append('%s: a linha da foto devia aparecer com FOTO e PENDENTE e o texto da pessoa: %s' % (rot, li))
+    if 'FOTO' not in r['aviso'].upper() and 'Foto' not in r['aviso']: prob.append('%s: o aviso devia falar da foto: %r' % (rot, r['aviso'][:80]))
+    r = envia('etiqueta.png', 'image/png', '')
+    ln = r['diarioLs'] or []
+    if len(ln) != 2 or 'etiqueta.png' not in ln[0].get('t', '') or ln[0].get('t', '').startswith(' ') or 'Mancha' in ln[0].get('t', ''): prob.append('%s: foto sem texto devia gravar a linha só do anexo: %s' % (rot, [l.get('t', '')[:60] for l in ln]))
+    r = envia('aviso.png', 'image/png', 'O que é isso?')
+    ln = r['diarioLs'] or []
+    if len(ln) != 3 or 'O que é isso' in ln[0].get('t', '') or 'sem o texto' not in r['aviso']: prob.append('%s: o texto que é pergunta não entra na linha: o aviso devia dizer que foi sem o texto: %r | %s' % (rot, r['aviso'][:90], ln[0].get('t', '')[:60]))
+    if (pg.input_value('.cpb-in') if app else pg.input_value('[data-g3=campo]')) != 'O que é isso?': prob.append('%s: o texto da pergunta devia continuar no campo' % rot)
+    if app: pg.fill('.cpb-in', '')
+    else: pg.fill('[data-g3=campo]', '')
+    r = envia('baia.mp4', 'video/mp4', 'Barulho estranho no motor de bombordo ao acelerar')
+    ln = r['diarioLs'] or []
+    if len(ln) != 4 or ln[0].get('src') != 'app · video' or 'baia.mp4' not in ln[0].get('t', '') or 'VÍDEO' not in r['linhas'][0]['tags']: prob.append('%s: o vídeo devia gravar UMA linha (src app · video, VÍDEO): %s' % (rot, [(l.get('src'), l.get('t', '')[:40]) for l in ln][:2]))
+    tudo = pg.evaluate("() => JSON.stringify(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)]))")
+    if 'MARCA-FOTO' in tudo or 'iVBORw0' in tudo: prob.append('%s: o conteúdo do arquivo apareceu no armazenamento do aparelho' % rot)
+    mal = [(m, u[:60]) for m, u, d in pedidos if m not in ('GET', 'HEAD') or 'MARCA-FOTO' in d or 'MARCA-FOTO' in u or 'casco.png' in u]
+    if mal: prob.append('%s: pedido de saída durante o envio da foto: %s' % (rot, mal[:3]))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g3_real(b, tela):
+    """G3, o selo «apresentação» (CLAUDE.md 14): a linha, a proposta e a execução gravadas com a simulação ligada (sim: true) ganham o selo com simulacao false, nunca com a simulação, e a linha gravada sem sim nunca o tem; o
+    ramo simulacao false mantém as pendências do arquivo e sem rótulo nenhum de selo antigo."""
+    prob = []
+    rot = tela
+    linhas = [{'d': '10/11', 'iso': '2026-11-10T08:10:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'app · proposta confirmada (regra)', 't': 'Executado: Limpeza do filtro de água salgada da climatização — marcado a partir do registro do diário. Linha nova, nada se apaga.', 'sim': True},
+              {'d': '10/11', 'iso': '2026-11-10T08:05:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'Registro de uma linha gravada fora da simulação'}]
+    tks = [{'id': 'tg3sim1', 'k': 'diario', 'origem': 'relato', 'texto': 'Proposta gravada com a simulação ligada', 'prop': {}, 'estado': 'aberto', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas', 'sim': True},
+           {'id': 'tg3sim2', 'k': 'diario', 'origem': 'relato', 'texto': 'Proposta gravada fora da simulação', 'prop': {}, 'estado': 'aberto', 'iso': '2026-11-10T07:59:00.000Z', 'who': 'Lucas'}]
+    ls = {'capitao.diario.v1': json.dumps(linhas), 'capitao.tickets.v1': json.dumps(tks)}
+    for modo, depois in (('simulação', ''), ('simulacao false', 'window.CapitaoDados.simulacao = false;')):
+        ctx, pg, erros = abre_g3(b, tela, depois=depois, ls=ls)
+        r = pg.evaluate(LE_G3)
+        sel = [l['iso'] for l in r['linhas'] if 'APRESENTAÇÃO' in l['tags']]
+        tsel = [t['id'] for t in r['tickets'] if t['selo']]
+        if modo == 'simulação':
+            if sel or tsel or r['selos']: prob.append('%s (simulação): o selo «apresentação» não podia aparecer: linhas %s propostas %s' % (rot, sel, tsel))
+        else:
+            if sel != ['2026-11-10T08:10:00.000Z'] or tsel != ['tg3sim1']: prob.append('%s (simulacao false): o selo devia estar só na linha e na proposta com sim: true (linhas %s, propostas %s)' % (rot, sel, tsel))
+            pend = [p for p in r['pend'] if p['aberta'] == 'sim']
+            if not pend: prob.append('%s (simulacao false): as pendências do arquivo somem?' % rot)
+            if any('apresentação' in p['texto'] for p in r['pend']): prob.append('%s (simulacao false): pendência do arquivo com selo' % rot)
+        ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+        if modo == 'simulação' and ach: prob.append('%s: termo do §3: %s' % (rot, ach))
+        prob += ['%s (%s): %s' % (rot, modo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_g3_codigo():
+    """O código das duas telas G3: ouve o storage, a âncora (hashchange) e a virada do dia (capitao-rebase) e tira os três ao desmontar, só dá setState se o texto mudou (k === this._k) e nunca com a aba escondida na virada;
+    nenhum timer novo; as chamadas do cérebro (aceitaTicket, desfazTicket, recusaTicket, editaTicket, textoTicket, resolvePendencia, reabrePendencia, desfazPendencia, answerAttachment com o texto, addDiario com pendência e agenda);
+    nada lê o D.snapshot nem escreve DEMO, R$ ou {{…}} em atributo geométrico de SVG; o app guarda o LF e o botão FOTO do app é tratado na própria tela."""
+    prob = []
+    for tela in TELAS_G3:
+        arq = tela + '.dc.html'
+        t = le_arq(arq).replace('\r\n', '\n')
+        for ev in ('capitao-rebase', 'storage', 'hashchange'):
+            if t.count("addEventListener('%s'" % ev) != 1 or t.count("removeEventListener('%s'" % ev) != 1: prob.append('%s: devia ouvir e tirar o ouvinte de %r uma vez' % (arq, ev))
+        if "if (!document.hidden)" not in t: prob.append('%s: a virada do dia sem a guarda de document.hidden' % arq)
+        if 'if (k === this._k) return;' not in t or t.count('setInterval') != 1: prob.append('%s: só dá setState quando o texto muda (k === this._k) e o único setInterval é a espera do cérebro' % arq)
+        cod = re.sub(r'//[^\n]*', '', t.split('<script type="text/x-dc"')[1])
+        if re.search(r'D\.demo|\.demo\b|D\.aviso|D\.snapshot', cod): prob.append('%s: lê D.demo, D.aviso ou o D.snapshot' % arq)
+        if re.search(r'DEMO|R\$|demonstra|fict[ií]ci', t): prob.append('%s: DEMO, R$, demonstração ou fictício no código da tela' % arq)
+        if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (arq, MARCAS_FIXAS.search(cod).group(0)))
+        for l in cod.split('\n'):
+            if re.search(r'SEM (?:DADOS|LEITURA)', l): prob.append('%s: rótulo SEM DADOS/SEM LEITURA no código: %s' % (arq, l.strip()[:100]))
+        if GEOM_SVG.search(t): prob.append('%s: {{…}} em atributo geométrico de SVG' % arq)
+        for f in ('B.aceitaTicket(', 'B.desfazTicket(', 'B.recusaTicket(', 'B.editaTicket(', 'B.textoTicket(', 'B.resolvePendencia(', 'B.reabrePendencia(', 'B.desfazPendencia(', 'B.answerAttachment(', 'B.pendenciasLista()', 'B.ticketsAbertos()', 'B.ticketTela('):
+            if f not in t: prob.append('%s: sem a chamada %s do cérebro' % (arq, f))
+        if "{ pendencia: true, agenda: true }" not in t: prob.append('%s: o registro devia passar { pendencia: true, agenda: true } ao addDiario' % arq)
+        if "texto: texto" not in t: prob.append('%s: a foto devia passar o texto da pessoa ao answerAttachment' % arq)
+        if "acao: 'corrige'" not in t or "acao: 'anula'" not in t: prob.append('%s: corrigir e anular devem gravar linhas de ação (corrige, anula)' % arq)
+        if '\r' in t or le_arq(arq).count('\r'): prob.append('%s: o arquivo ganhou CR (os G3 são LF)' % arq)
+        if arq.endswith('Mobile.dc.html') and "d.modo === 'foto' || d.modo === 'video'" not in t: prob.append('%s: a FOTO e o VÍDEO da barra devem anexar nesta tela (o diário recebe a foto com o texto)' % arq)
+    return prob
+
+
+LE_G4 = r"""() => { const lin = (s) => (s || '').replace(/\s+/g, ' ').trim(), q = (s) => document.querySelector(s), qa = (s) => [...document.querySelectorAll(s)];
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, tx = (e, s) => { const x = e.querySelector(s); return x ? lin(x.innerText) : ''; };
+  const val = (s) => { const x = q(s); return x ? x.value : null; };
+  return { resumo: lin((q('[data-g4=resumo]') || {}).innerText), nota: lin((q('[data-g4=nota]') || {}).innerText), hash: location.hash,
+    abas: qa('[data-g4=aba]').map((e) => [e.dataset.aba, e.getAttribute('aria-selected')]),
+    apoio: qa('[data-g4=apoio]').map((e) => ({ id: e.dataset.id, origem: e.dataset.origem, nome: tx(e, '[data-g4=a-nome]'), st: tx(e, '[data-g4=a-st]'), detalhe: tx(e, '[data-g4=a-detalhe]'), fone: tx(e, '[data-g4=a-fone]'), selo: !!e.querySelector('[data-g4=selo]'),
+      cad: !!e.querySelector('[data-g4=fone-cadastra]'), edita: !!e.querySelector('[data-g4=a-edita]'), oculta: !!e.querySelector('[data-g4=a-oculta]'), todo: lin(e.innerText) })),
+    restaura: q('[data-g4=restaura]') ? lin(q('[data-g4=restaura]').innerText) : '', form: !!q('[data-g4=form-prest]'), formTitulo: lin((q('[data-g4=form-titulo]') || {}).innerText), foneNoForm: !!q('[data-g4=f-fone]'),
+    campos: { n: val('[data-g4=f-n]'), role: val('[data-g4=f-role]'), s: val('[data-g4=f-s]'), fone: val('[data-g4=f-fone]') }, erro: lin((q('[data-g4=f-erro]') || {}).innerText),
+    tarefas: qa('[data-g4=tarefa]').map((e) => ({ id: e.dataset.id, feita: e.dataset.feita, origem: e.dataset.origem, nome: tx(e, '[data-g4=t-nome]'), meta: tx(e, '[data-g4=t-meta]'), prazo: tx(e, '[data-g4=t-prazo]'), origemTxt: tx(e, '[data-g4=t-origem]'), selo: !!e.querySelector('[data-g4=selo]') })),
+    formTar: !!q('[data-g4=form-tarefa]'), tErro: lin((q('[data-g4=t-erro]') || {}).innerText), tarefasSub: lin((q('[data-g4=tarefas-sub]') || {}).innerText), tMin: q('[data-g4=t-vence]') ? q('[data-g4=t-vence]').getAttribute('min') : null,
+    quem: qa('[data-g4=t-quem] option').map((o) => [o.value, lin(o.innerText)]), perfis: qa('[data-g4=perfil]').map((e) => lin(e.innerText)),
+    prestLs: ls('capitao.prestadores.v1'), prestCru: localStorage.getItem('capitao.prestadores.v1'), prestAntes: localStorage.getItem('capitao.prestadores.v1.antes'), equipeLs: ls('capitao.equipe.v1'), tarefasLs: ls('capitao.tarefas.v1'), execLs: ls('capitao.executado.v1'),
+    diarioLs: ls('capitao.diario.v1'), texto: document.body.innerText }; }"""
+ESP_G4 = r"""() => { const D = window.CapitaoDados, A = window.CapitaoAgora, B = window.CapitaoBrain;
+  return { hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso, apoio: D.equipe.apoio, agenda: D.agenda.map((t) => ({ id: t.id, t: t.t, quem: t.quem, dn: t.dn, rot: t.rot })), equipe: D.tarefasEquipe.map((t) => ({ id: t.id, n: t.n, quem: t.quem, vence: t.vence })),
+    exec: Object.keys(B.loadExec()), cont: A.contagens(), ab: (D.abastecimentos || [])[0] || null, perfis: D.equipe.perfis, nota: D.equipe.nota, sim: D.simulacao === true }; }"""
+QUEM_G4 = {'marina': 'marina', 'oficina': 'oficina de motores', 'tecnico': 'técnico', 'eletronica': 'técnico de eletrônicos', 'refrigeracao': 'técnico de refrigeração', 'posto': 'posto de combustível'}
+
+
+def nrm(s):
+    import unicodedata
+    return ''.join(c for c in unicodedata.normalize('NFD', str(s or '').lower()) if unicodedata.category(c) != 'Mn')
+
+
+def dn_iso(vence, hoje_iso): return (datetime.date.fromisoformat(vence) - datetime.date.fromisoformat(hoje_iso)).days
+def rot_dn(n): return 'ATRASADA · %d D' % -n if n < 0 else 'D-%d' % n
+
+
+def abre_g4(b, tela, fixo='60', depois='', hash_='', ls=None, aba=None):
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, depois=depois, hash_=hash_, ls=ls)
+    try: pg.wait_for_function("() => document.querySelector('[data-g4=apoio]')", timeout=10000)
+    except Exception: pass
+    pg.wait_for_timeout(250)
+    if aba and not eh_app(tela): pg.click('[data-g4=aba][data-aba=%s]' % aba); pg.wait_for_timeout(250)
+    return ctx, pg, erros
+
+
+def g4_aba(pg, tela, aba):
+    if not eh_app(tela): pg.click('[data-g4=aba][data-aba=%s]' % aba); pg.wait_for_timeout(250)
+
+
+def g4_clica(pg, sel):
+    pg.click(sel); pg.wait_for_timeout(350)
+    return pg.evaluate(LE_G4)
+
+
+def g4_tarefas_abertas(E, quem_id=None):
+    """As tarefas abertas (agenda + equipe geradas) como a tela as conta, com o prazo do dia do instante: [(nome, dn, id)]."""
+    out = []
+    for t in E['agenda']:
+        if t['id'] not in E['exec']: out.append((t['t'], t['dn'], t['id'], t['quem']))
+    for t in E['equipe']:
+        if t['id'] not in E['exec']: out.append((t['n'], dn_iso(t['vence'], E['hojeIso']), t['id'], t['quem']))
+    return out
+
+
+def g4_esp_apoio(E, a, extra=()):
+    """O estado e o começo do detalhe de um contato de apoio, contado aqui: tarefas abertas cujo responsável é ele, a pior atrasada ou o prazo mais curto."""
+    alvo = {nrm(QUEM_G4.get(a['id'], a['papel'])), nrm(a['papel'])}
+    ts = [t for t in g4_tarefas_abertas(E) + list(extra) if nrm(t[3]) in alvo]
+    atr = sorted([t for t in ts if t[1] < 0], key=lambda t: t[1]); prox = sorted([t for t in ts if t[1] >= 0], key=lambda t: t[1])
+    if ts: return ('%d ATRASADA%s' % (len(atr), '' if len(atr) == 1 else 'S') if atr else 'D-%d' % prox[0][1] if prox else 'EM DIA'), '%d tarefa%s na agenda' % (len(ts), '' if len(ts) == 1 else 's')
+    if a['id'] == 'posto' and E['ab']: return 'ÚLTIMO ' + E['ab']['d'][:5], 'Último abastecimento ' + E['ab']['d']
+    return 'SEM TAREFAS', 'Nenhuma tarefa na agenda'
+
+
+def teste_g4_abertura(b, tela):
+    """G4, a abertura nos dois instantes: nenhum termo do §3 (nem «A CADASTRAR»), os 6 contatos de apoio na ordem do arquivo com o estado e a contagem de tarefas feitos aqui (a agenda e as tarefas da equipe, o prazo do dia do
+    instante), o telefone «ficam só no aparelho», nenhum telefone na tela nem no capitao-dados.js, as tarefas g01 e g02 com o prazo do CapitaoAgora, o perfil do dono com as tarefas dele, e nada gravado só por abrir."""
+    prob = []
+    app = eh_app(tela)
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_g4(b, tela, fixo=fixo)
+        r, E = pg.evaluate(LE_G4), pg.evaluate(ESP_G4)
+        rot = '%s a %s s' % (tela, fixo)
+        ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if [a['id'] for a in r['apoio']] != [a['id'] for a in E['apoio']]: prob.append('%s: os contatos são %s (esperado %s)' % (rot, [a['id'] for a in r['apoio']], [a['id'] for a in E['apoio']]))
+        else:
+            for card, a in zip(r['apoio'], E['apoio']):
+                st, det = g4_esp_apoio(E, a)
+                if card['st'] != st or det not in card['detalhe'] or card['origem'] != 'fixo' or not card['edita'] or not card['oculta'] or not card['cad'] or card['fone']:
+                    prob.append('%s: o contato %s mostra %r / %r (esperado %r e «%s…»), editar %s ocultar %s' % (rot, a['id'], card['st'], card['detalhe'][:70], st, det, card['edita'], card['oculta']))
+                if a['papel'] not in card['nome']: prob.append('%s: o contato %s perdeu o papel %r: %r' % (rot, a['id'], a['papel'], card['nome']))
+        if E['nota'] not in r['texto'] or 'ficam só no aparelho' not in E['nota']: prob.append('%s: a nota dos telefones devia ser «ficam só no aparelho (Equipe)»: %r' % (rot, E['nota']))
+        if TERMOS['PESSOAIS'].search(r['texto']): prob.append('%s: telefone, e-mail ou documento na tela: %s' % (rot, TERMOS['PESSOAIS'].search(r['texto']).group(0)))
+        dados = pg.evaluate("() => JSON.stringify(window.CapitaoDados)")
+        if TERMOS['PESSOAIS'].search(dados) or re.search(r'whats[Aa]pp|"fone"|"telefone"', dados): prob.append('%s: telefone ou contato no capitao-dados.js: %s' % (rot, (TERMOS['PESSOAIS'].search(dados) or re.search(r'whats[Aa]pp|"fone"|"telefone"', dados)).group(0)))
+        g4_aba(pg, tela, 'tarefas')
+        r = pg.evaluate(LE_G4)
+        esp = sorted([(dn_iso(t['vence'], E['hojeIso']), t['id'], t['n'], t['quem'], t['vence']) for t in E['equipe']])
+        if [t['id'] for t in r['tarefas']] != [x[1] for x in esp]: prob.append('%s: as tarefas da equipe são %s (esperado %s, pelo prazo)' % (rot, [t['id'] for t in r['tarefas']], [x[1] for x in esp]))
+        else:
+            for t, x in zip(r['tarefas'], esp):
+                if t['prazo'] != rot_dn(x[0]) or t['nome'] != x[2] or 'Responsável: ' + x[3] not in t['meta'] or x[4].split('-')[2] + '/' + x[4].split('-')[1] + '/' + x[4].split('-')[0] not in t['meta'] or t['feita'] != 'nao' or t['origemTxt'] != 'EQUIPE':
+                    prob.append('%s: a tarefa %s mostra %r / %r (esperado %s, prazo %s, de hoje %s)' % (rot, x[1], t['nome'], t['prazo'], x[2], rot_dn(x[0]), E['hoje']))
+        if len(E['equipe']) != E['cont']['tarefasEquipe']: prob.append('%s: o CapitaoAgora.contagens() conta %d tarefas da equipe e o arquivo tem %d' % (rot, E['cont']['tarefasEquipe'], len(E['equipe'])))
+        if str(E['hoje']) not in r['tarefasSub']: prob.append('%s: a linha das tarefas devia dizer o dia de hoje do instante (%s): %r' % (rot, E['hoje'], r['tarefasSub']))
+        n = len(g4_tarefas_abertas(E)); n_eq = len(E['equipe'])
+        m = re.search(r'(\d+) (?:tarefa|tarefas) da equipe aberta|(\d+) tarefas? abertas?', r['resumo'])
+        if not m or int(m.group(1) or m.group(2)) != n_eq: prob.append('%s: o resumo devia contar %d tarefas da equipe abertas: %r' % (rot, n_eq, r['resumo']))
+        p = r['perfis'][0] if r['perfis'] else ''
+        mine = [t for t in g4_tarefas_abertas(E) if nrm(t[3]) == nrm(E['perfis'][0]['nome'].split(' ')[0])]
+        if '%d tarefa' % len(mine) not in p: prob.append('%s: o perfil do dono devia contar as %d tarefas dele: %r' % (rot, len(mine), p[:120]))
+        if r['prestLs'] or r['equipeLs'] or r['tarefasLs'] or r['diarioLs']: prob.append('%s: abrir a tela gravou no aparelho: %s %s %s %s' % (rot, r['prestLs'], r['equipeLs'], r['tarefasLs'], r['diarioLs']))
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_g4_prestadores(b, tela):
+    """G4, os prestadores (F21): + PRESTADOR pede o nome e confere o telefone; grava a linha em capitao.prestadores.v1 (id r…, nome, serviço, observação, quem, quando, sim) e o telefone SÓ em capitao.equipe.v1; o cartão aparece com o
+    LIGAR; a linha do diário não leva nome nem número; ✎ edita o cadastrado no lugar e dá um nome e um serviço ao contato de apoio (vazio volta ao original); OCULTAR esconde (apoio ou cadastrado) sem apagar nada e RESTAURAR devolve; o que
+    o app não entende no armazenamento fica como estava (chave de topo, linha de outra forma, valor que não é objeto); nada do prestador vai à ficha da IA nem sai em pedido algum."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g4(b, tela)
+    pedidos = []
+    pg.on('request', lambda rq: pedidos.append((rq.method, rq.url, rq.post_data or '')))
+    rot = tela
+    NOME, FONE = 'Estaleiro Camboriú Teste', '(47) 98877-6655'
+    r = pg.evaluate(LE_G4); n_apoio = len(r['apoio'])
+    pg.click('[data-g4=novo-prest]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if not r['form'] or r['formTitulo'] != 'NOVO PRESTADOR' or not r['foneNoForm']: prob.append('%s: + PRESTADOR devia abrir o formulário NOVO PRESTADOR com o telefone: %s %r' % (rot, r['form'], r['formTitulo']))
+    pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'Digite o nome' not in r['erro'] or r['prestLs']: prob.append('%s: sem o nome devia dar o erro e não gravar: %r %s' % (rot, r['erro'], r['prestLs']))
+    pg.fill('[data-g4=f-n]', NOME); pg.fill('[data-g4=f-role]', 'casco e pintura'); pg.fill('[data-g4=f-s]', 'atende de segunda a sexta'); pg.fill('[data-g4=f-fone]', '123'); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'Telefone inválido' not in r['erro'] or r['prestLs'] or r['equipeLs']: prob.append('%s: telefone de 3 dígitos devia dar «Telefone inválido» e não gravar: %r' % (rot, r['erro']))
+    if not r['form']: return prob
+    pg.fill('[data-g4=f-fone]', FONE); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_G4)
+    novos = (r['prestLs'] or {}).get('novos') or []
+    if len(novos) != 1 or not re.match(r'^r[a-z0-9]+$', novos[0].get('id', '')) or (novos[0].get('n'), novos[0].get('role'), novos[0].get('s'), novos[0].get('who'), novos[0].get('sim')) != (NOME, 'casco e pintura', 'atende de segunda a sexta', 'Lucas', True) or not novos[0].get('iso') or 'fone' in json.dumps(novos[0]).lower() or FONE in json.dumps(r['prestLs']):
+        prob.append('%s: o cadastro devia gravar {id r…, n, role, s, iso, who, sim} e nenhum telefone em capitao.prestadores.v1: %s' % (rot, novos))
+    pid = novos[0]['id'] if novos else 'x'
+    if ((r['equipeLs'] or {}).get('fones') or {}).get(pid) != FONE: prob.append('%s: o telefone devia estar em capitao.equipe.v1 (fones[%s]): %s' % (rot, pid, r['equipeLs']))
+    card = [a for a in r['apoio'] if a['id'] == pid]
+    if len(r['apoio']) != n_apoio + 1 or len(card) != 1 or card[0]['origem'] != 'novo' or NOME not in card[0]['nome'] or 'casco e pintura' not in card[0]['nome'] or card[0]['fone'] != FONE or 'atende de segunda a sexta' not in card[0]['detalhe']:
+        prob.append('%s: o cartão do prestador novo devia aparecer com o nome, o serviço, a observação e o telefone: %s' % (rot, card))
+    if r['form']: prob.append('%s: o formulário devia fechar depois de salvar' % rot)
+    li = r['diarioLs'] or []
+    if len(li) != 1 or NOME in li[0].get('t', '') or FONE in li[0].get('t', '') or re.search(r'\d{4}', li[0].get('t', '')) or 'só neste aparelho' not in li[0].get('t', ''): prob.append('%s: a linha do diário devia dizer só que um prestador foi cadastrado (sem nome nem número): %s' % (rot, [l.get('t') for l in li]))
+    if str(n_apoio + 1) not in r['resumo']: prob.append('%s: o resumo devia contar %d contatos: %r' % (rot, n_apoio + 1, r['resumo']))
+    # ficha da IA e pedidos
+    ficha = pg.evaluate("() => window.CapitaoBrain.ficha('web', 'Quem eu chamo para o casco?', null)")
+    if NOME in ficha or FONE in ficha or '98877' in ficha: prob.append('%s: a ficha da IA traz o nome ou o telefone do prestador' % rot)
+    mal = [(m, u[:70]) for m, u, d in pedidos if m not in ('GET', 'HEAD') or '98877' in u or '98877' in d or 'Estaleiro' in u or 'Estaleiro' in d]
+    if mal: prob.append('%s: o cadastro gerou pedido de saída ou levou nome/telefone: %s' % (rot, mal[:3]))
+    # ✎ do cadastrado: no lugar
+    pg.click('[data-g4=apoio][data-id=%s] [data-g4=a-edita]' % pid); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if r['formTitulo'] != 'EDITAR PRESTADOR' or r['campos']['n'] != NOME or r['campos']['role'] != 'casco e pintura' or r['campos']['s'] != 'atende de segunda a sexta' or r['foneNoForm']: prob.append('%s: o ✎ devia abrir com os dados do cadastro (sem o campo do telefone, que tem o próprio botão): %s %s' % (rot, r['formTitulo'], r['campos']))
+    pg.fill('[data-g4=f-s]', 'atende também aos sábados'); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    novos = (r['prestLs'] or {}).get('novos') or []
+    if len(novos) != 1 or novos[0].get('id') != pid or novos[0].get('s') != 'atende também aos sábados' or novos[0].get('n') != NOME: prob.append('%s: o ✎ devia mudar a linha no lugar (1 prestador, mesmo id): %s' % (rot, novos))
+    # ✎ do contato de apoio: dá um nome e um serviço; vazio volta ao original
+    pg.click('[data-g4=apoio][data-id=marina] [data-g4=a-edita]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if r['campos']['n'] != '' or r['campos']['role'] != '': prob.append('%s: o ✎ de um contato de apoio devia abrir vazio (o texto original vale): %s' % (rot, r['campos']))
+    pg.fill('[data-g4=f-n]', 'Marina Azul'); pg.fill('[data-g4=f-role]', 'marina da base (vaga)'); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    fx = (r['prestLs'] or {}).get('fixos') or {}
+    mar = [a for a in r['apoio'] if a['id'] == 'marina']
+    if fx.get('marina') != {'n': 'Marina Azul', 'role': 'marina da base (vaga)'} or not mar or 'Marina Azul · marina da base (vaga)' not in mar[0]['nome']: prob.append('%s: o ✎ da marina devia gravar fixos.marina e mudar o título: %s | %s' % (rot, fx.get('marina'), mar[0]['nome'] if mar else None))
+    pg.click('[data-g4=apoio][data-id=marina] [data-g4=a-edita]'); pg.wait_for_timeout(250)
+    pg.fill('[data-g4=f-n]', ''); pg.fill('[data-g4=f-role]', ''); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    if 'marina' in ((r['prestLs'] or {}).get('fixos') or {}): prob.append('%s: nome e serviço vazios deviam tirar a mudança da marina: %s' % (rot, (r['prestLs'] or {}).get('fixos')))
+    # OCULTAR (apoio e cadastrado) e RESTAURAR
+    pg.click('[data-g4=apoio][data-id=oficina] [data-g4=a-oculta]'); pg.wait_for_timeout(300)
+    pg.click('[data-g4=apoio][data-id=%s] [data-g4=a-oculta]' % pid); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G4)
+    fx = (r['prestLs'] or {}).get('fixos') or {}
+    if 'oficina' in [a['id'] for a in r['apoio']] or pid in [a['id'] for a in r['apoio']] or len(r['apoio']) != n_apoio - 1 or fx.get('oficina') != {'oculto': True} or fx.get(pid) != {'oculto': True} or r['restaura'] != '↺ RESTAURAR (2)':
+        prob.append('%s: OCULTAR devia esconder a oficina e o cadastrado (2 ocultos) e guardar a marca sem apagar: %s %s %r' % (rot, [a['id'] for a in r['apoio']], fx, r['restaura']))
+    if len((r['prestLs'] or {}).get('novos') or []) != 1 or ((r['equipeLs'] or {}).get('fones') or {}).get(pid) != FONE: prob.append('%s: ocultar não apaga o cadastro nem o telefone (o registro só cresce): %s' % (rot, r['prestLs']))
+    pg.click('[data-g4=restaura]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    if 'oficina' not in [a['id'] for a in r['apoio']] or pid not in [a['id'] for a in r['apoio']] or len(r['apoio']) != n_apoio + 1 or r['restaura'] or (r['prestLs'] or {}).get('fixos'): prob.append('%s: RESTAURAR devia devolver os dois e tirar o botão: %s %r %s' % (rot, [a['id'] for a in r['apoio']], r['restaura'], (r['prestLs'] or {}).get('fixos')))
+    for t in ('Prestador cadastrado', 'Prestador editado', 'Prestador ocultado', 'Prestadores restaurados'):
+        if not any(l.get('t', '').startswith(t) for l in (r['diarioLs'] or [])): prob.append('%s: faltou a linha «%s…» no diário' % (rot, t))
+    if any(NOME in l.get('t', '') or FONE in l.get('t', '') or 'Marina Azul' in l.get('t', '') for l in (r['diarioLs'] or [])): prob.append('%s: alguma linha do diário leva nome ou telefone do prestador' % rot)
+    # o que o app não entende fica como estava
+    ctx2, pg2, erros2 = abre_g4(b, tela, ls={'capitao.prestadores.v1': json.dumps({'novos': [{'id': 'rabc1', 'n': 'Oficina Lateral Teste', 'role': 'vela', 's': '', 'iso': '2026-11-01T10:00:00.000Z', 'who': 'Lucas'}, 'lixo', {'id': 7}], 'fixos': {}, 'futuro': {'v': 2}})})
+    r = pg2.evaluate(LE_G4)
+    if [a['id'] for a in r['apoio']][-1:] != ['rabc1']: prob.append('%s: o cadastro guardado antes devia aparecer (e as linhas ruins ficarem de fora): %s' % (rot, [a['id'] for a in r['apoio']]))
+    pg2.click('[data-g4=apoio][data-id=posto] [data-g4=a-oculta]'); pg2.wait_for_timeout(350)
+    r = pg2.evaluate(LE_G4); ls_ = r['prestLs'] or {}
+    if ls_.get('futuro') != {'v': 2} or ls_.get('novos', [None, None, None])[1:] != ['lixo', {'id': 7}] or (ls_.get('fixos') or {}).get('posto') != {'oculto': True}: prob.append('%s: a gravação devia manter a chave de topo e as linhas que não entende: %s' % (rot, ls_))
+    ctx2.close()
+    ctx3, pg3, erros3 = abre_g4(b, tela, ls={'capitao.prestadores.v1': 'isto nao e json'})
+    pg3.click('[data-g4=apoio][data-id=posto] [data-g4=a-oculta]'); pg3.wait_for_timeout(350)
+    r = pg3.evaluate(LE_G4)
+    if r['prestAntes'] != 'isto nao e json' or (r['prestLs'] or {}).get('fixos', {}).get('posto') != {'oculto': True}: prob.append('%s: o valor que não é um objeto devia ir para a chave .antes e a tela seguir: antes %r, agora %s' % (rot, r['prestAntes'], r['prestLs']))
+    ctx3.close()
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g4_telefones(b, tela):
+    """G4, o telefone de cada contato de apoio (já existia): cadastrar valida os 8 a 15 dígitos, grava só em capitao.equipe.v1, mostra LIGAR (tel:), a linha do diário não leva o número, corrigir e remover funcionam; sem «A CADASTRAR»."""
+    prob = []
+    ctx, pg, erros = abre_g4(b, tela)
+    rot = tela
+    pg.click('[data-g4=apoio][data-id=marina] [data-g4=fone-cadastra]'); pg.wait_for_timeout(250)
+    pg.fill('[data-g4=fone-campo]', '12ab'); pg.click('[data-g4=fone-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if r['equipeLs'] or 'Telefone inválido' not in r['nota']: prob.append('%s: telefone inválido devia avisar e não gravar: %r %s' % (rot, r['nota'], r['equipeLs']))
+    if not pg.query_selector('[data-g4=fone-campo]'): return prob
+    pg.fill('[data-g4=fone-campo]', '(47) 3333-4444'); pg.click('[data-g4=fone-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    mar = [a for a in r['apoio'] if a['id'] == 'marina'][0]
+    lig = pg.evaluate("() => document.querySelector('[data-g4=apoio][data-id=marina] [data-g4=a-ligar]').getAttribute('href')")
+    if ((r['equipeLs'] or {}).get('fones') or {}).get('marina') != '(47) 3333-4444' or mar['fone'] != '(47) 3333-4444' or lig != 'tel:4733334444': prob.append('%s: o telefone devia ficar em capitao.equipe.v1 e o LIGAR ser tel:4733334444: %s %s' % (rot, r['equipeLs'], lig))
+    if not any('Telefone de Marina da base cadastrado' in (l.get('t') or '') and '3333' not in (l.get('t') or '') for l in (r['diarioLs'] or [])): prob.append('%s: a linha do diário devia dizer só que o telefone foi cadastrado, sem o número: %s' % (rot, [l.get('t') for l in (r['diarioLs'] or [])]))
+    pg.click('[data-g4=apoio][data-id=marina] [data-g4=fone-edita]'); pg.wait_for_timeout(250)
+    pg.fill('[data-g4=fone-campo]', ''); pg.click('[data-g4=fone-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    if ((r['equipeLs'] or {}).get('fones') or {}).get('marina') or not [a for a in r['apoio'] if a['id'] == 'marina'][0]['cad']: prob.append('%s: o campo vazio devia remover o telefone: %s' % (rot, r['equipeLs']))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g4_tarefas(b, tela):
+    """G4, + TAREFA da equipe (F15): pede o nome, o dia que existe e que não passou, o responsável (os papéis do arquivo e o primeiro nome dos perfis, como a agenda os escreve); grava UMA tarefa em capitao.tarefas.v1 (id g…,
+    nome, dia AAAA-MM-DD, responsável, origem tela, sim) e UMA linha no diário; o prazo vem do CapitaoAgora no dia do instante (D-n) e a conta de contagens() sobe; a tarefa entra no estado do contato de apoio dela e no perfil do
+    responsável; com o dia virado (fixar 60@1152) os prazos de todas se refazem sem recarregar; o Executado de uma tarefa do aparelho aparece FEITA."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g4(b, tela)
+    rot = tela
+    E0 = pg.evaluate(ESP_G4)
+    g4_aba(pg, tela, 'tarefas')
+    pg.click('[data-g4=nova-tarefa]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if not r['formTar'] or r['tMin'] != E0['hojeIso']: prob.append('%s: + TAREFA devia abrir o formulário com o dia mínimo = hoje do instante (%s): %s %s' % (rot, E0['hojeIso'], r['formTar'], r['tMin']))
+    esp_quem = [(v, v) for v in []]
+    q_ok = [o[0] for o in r['quem']]
+    if q_ok != ['Lucas'] + [QUEM_G4[a['id']] for a in E0['apoio']]: prob.append('%s: os responsáveis são %s (esperado o perfil e os papéis do arquivo, como a agenda os escreve)' % (rot, q_ok))
+    pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'Digite o nome' not in r['tErro'] or r['tarefasLs']: prob.append('%s: sem o nome devia dar o erro e não gravar: %r' % (rot, r['tErro']))
+    pg.fill('[data-g4=t-n]', 'Revisar o extintor da cabine'); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'Escolha o dia' not in r['tErro'] or r['tarefasLs']: prob.append('%s: sem o dia devia dar o erro e não gravar: %r' % (rot, r['tErro']))
+    ontem = (datetime.date.fromisoformat(E0['hojeIso']) - datetime.timedelta(days=1)).isoformat()
+    pg.fill('[data-g4=t-vence]', ontem); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'já passou' not in r['tErro'] or r['tarefasLs']: prob.append('%s: o dia de ontem devia dar «já passou» e não gravar: %r %s' % (rot, r['tErro'], r['tarefasLs']))
+    if not pg.query_selector('[data-g4=t-vence]'): return prob
+    vence = (datetime.date.fromisoformat(E0['hojeIso']) + datetime.timedelta(days=12)).isoformat()
+    pg.fill('[data-g4=t-vence]', vence); pg.select_option('[data-g4=t-quem]', 'marina')
+    c0 = E0['cont']
+    pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(400)
+    r, E = pg.evaluate(LE_G4), pg.evaluate(ESP_G4)
+    tar = r['tarefasLs'] or []
+    if len(tar) != 1 or not re.match(r'^g[a-z0-9]+$', tar[0].get('id', '')) or (tar[0].get('n'), tar[0].get('vence'), tar[0].get('quem'), tar[0].get('origem'), tar[0].get('sim'), tar[0].get('who')) != ('Revisar o extintor da cabine', vence, 'marina', 'tela', True, 'Lucas'):
+        prob.append('%s: + TAREFA devia gravar UMA tarefa {g…, n, vence AAAA-MM-DD, quem marina, origem tela, sim, who}: %s' % (rot, tar))
+    li = r['diarioLs'] or []
+    br = '/'.join(reversed(vence.split('-')))
+    if len(li) != 1 or 'Revisar o extintor da cabine' not in li[0].get('t', '') or 'vence ' + br not in li[0].get('t', '') or li[0].get('sys') != 'Manutenção': prob.append('%s: a tarefa devia gravar UMA linha «Tarefa da equipe: …» no diário (Manutenção): %s' % (rot, [(l.get('sys'), l.get('t', '')[:60]) for l in li]))
+    nova = [t for t in r['tarefas'] if t['nome'] == 'Revisar o extintor da cabine']
+    if len(nova) != 1 or nova[0]['prazo'] != rot_dn(12) or nova[0]['origemTxt'] != 'APP' or 'Responsável: marina' not in nova[0]['meta'] or nova[0]['feita'] != 'nao': prob.append('%s: a tarefa nova devia aparecer com D-12, APP e o responsável: %s' % (rot, nova))
+    if E['cont']['tarefasEquipe'] != c0['tarefasEquipe'] + 1 or E['cont']['d30'] != c0['d30'] + 1: prob.append('%s: contagens() devia subir a tarefa da equipe e a faixa D-30 (%s → %s)' % (rot, c0, E['cont']))
+    if r['form'] or r['formTar']: prob.append('%s: o formulário devia fechar depois de agendar' % rot)
+    ts = g4_tarefas_abertas(E)
+    ts = ts + [(t['n'], dn_iso(t['vence'], E['hojeIso']), t['id'], t['quem']) for t in tar]
+    g4_aba(pg, tela, 'apoio')
+    r = pg.evaluate(LE_G4)
+    mar = [a for a in r['apoio'] if a['id'] == 'marina'][0]
+    g4_aba(pg, tela, 'tarefas')
+    st, det = g4_esp_apoio(E, [a for a in E['apoio'] if a['id'] == 'marina'][0], [(t['n'], dn_iso(t['vence'], E['hojeIso']), t['id'], t['quem']) for t in tar])
+    if mar['st'] != st or det not in mar['detalhe']: prob.append('%s: a tarefa nova devia entrar na marina (%r, «%s…»): %r %r' % (rot, st, det, mar['st'], mar['detalhe'][:80]))
+    # o dia vira: os prazos se refazem sem recarregar
+    pg.evaluate("() => { window.__marca = 'viva'; window.CapitaoReplay.fixar('60@1152'); }"); pg.wait_for_timeout(900)
+    E2 = pg.evaluate(ESP_G4)
+    if E2['hojeIso'] == E['hojeIso']: prob.append('%s: o teste não vale: fixar 60@1152 não mudou o dia' % rot)
+    r = pg.evaluate(LE_G4)   # (sem tocar na tela antes: um clique redesenha com o dado novo e esconderia o ouvinte da virada do dia que faltasse)
+    for t in r['tarefas']:
+        venc = [x['vence'] for x in E2['equipe'] if x['id'] == t['id']] or [v for v in [tt.get('vence') for tt in (r['tarefasLs'] or []) if tt['id'] == t['id']]]
+        if venc and t['prazo'] != rot_dn(dn_iso(venc[0], E2['hojeIso'])): prob.append('%s: com o dia virado a tarefa %s devia dizer %s e diz %s' % (rot, t['id'], rot_dn(dn_iso(venc[0], E2['hojeIso'])), t['prazo']))
+    if pg.evaluate("() => window.__marca") != 'viva': prob.append('%s: a virada do dia recarregou a tela' % rot)
+    # o Executado de uma tarefa do aparelho: FEITA
+    gid = tar[0]['id'] if tar else 'x'
+    pg.evaluate(PLANTA_LS, ['capitao.executado.v1', json.dumps({gid: {'d': '10/11', 't': '10:00', 'iso': '2026-11-10T13:00:00.000Z', 'sim': True}})]); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G4)
+    feita = [t for t in r['tarefas'] if t['id'] == gid]
+    if not feita or feita[0]['feita'] != 'sim' or feita[0]['prazo'] != 'FEITA' or r['tarefas'][-1]['id'] != gid: prob.append('%s: a tarefa executada devia ir para o fim e dizer FEITA: %s' % (rot, feita))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g4_real(b, tela):
+    """G4, o selo «apresentação»: o prestador, a tarefa e o Executado gravados com sim: true ganham o selo só com simulacao false (nunca com a simulação), os gravados sem sim nunca; e o resto do ramo (os contatos e o convidado) segue sem rótulo."""
+    prob = []
+    rot = tela
+    pres = {'novos': [{'id': 'rsim1', 'n': 'Prestador com selo', 'role': 'vela', 's': '', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas', 'sim': True}, {'id': 'rsem1', 'n': 'Prestador sem selo', 'role': 'casco', 's': '', 'iso': '2026-11-10T07:00:00.000Z', 'who': 'Lucas'}], 'fixos': {}}
+    tars = [{'id': 'gsim1', 'n': 'Tarefa com selo', 'vence': '2026-12-20', 'quem': 'marina', 'origem': 'tela', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas', 'sim': True},
+            {'id': 'gsem1', 'n': 'Tarefa sem selo', 'vence': '2026-12-21', 'quem': 'marina', 'origem': 'tela', 'iso': '2026-11-10T07:00:00.000Z', 'who': 'Lucas'},
+            {'id': 'gexe1', 'n': 'Tarefa feita com selo', 'vence': '2026-12-22', 'quem': 'marina', 'origem': 'tela', 'iso': '2026-11-10T06:00:00.000Z', 'who': 'Lucas'}]
+    ls = {'capitao.prestadores.v1': json.dumps(pres), 'capitao.tarefas.v1': json.dumps(tars), 'capitao.executado.v1': json.dumps({'gexe1': {'d': '10/11', 't': '10:00', 'iso': '2026-11-10T13:00:00.000Z', 'sim': True}})}
+    for modo, depois in (('simulação', ''), ('simulacao false', 'window.CapitaoDados.simulacao = false;')):
+        ctx, pg, erros = abre_g4(b, tela, depois=depois, ls=ls)
+        r = pg.evaluate(LE_G4)
+        ap = sorted(a['id'] for a in r['apoio'] if a['selo'])
+        g4_aba(pg, tela, 'tarefas')
+        r = pg.evaluate(LE_G4)
+        ta = sorted(t['id'] for t in r['tarefas'] if t['selo'])
+        if modo == 'simulação':
+            if ap or ta: prob.append('%s (simulação): o selo «apresentação» não podia aparecer: prestadores %s tarefas %s' % (rot, ap, ta))
+            ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+            if ach: prob.append('%s (simulação): termo do §3: %s' % (rot, ach))
+        else:
+            if ap != ['rsim1'] or ta != ['gexe1', 'gsim1']: prob.append('%s (simulacao false): o selo devia estar no prestador rsim1 e nas tarefas gsim1 e gexe1 (a executada com sim): prestadores %s tarefas %s' % (rot, ap, ta))
+        prob += ['%s (%s): %s' % (rot, modo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_selo_inicio(b, tela):
+    """O selo «n A CONFIRMAR» da tela inicial (F14; Main e H2): aparece só com proposta aberta, conta as abertas (não as aceitas nem as recusadas), leva ao Diário (G3#confirmar da web ou do app) e some quando o último
+    CONFIRMAR ou RECUSAR é dado em outra aba (o storage); sem proposta nenhuma, a tela inicial não ganha nada."""
+    prob = []
+    app = eh_app(tela)
+    alvo = 'G3-Diario-Mobile.dc.html#confirmar' if app else 'G3-Diario-Web.dc.html#confirmar'
+    mk = lambda i, est: {'id': 'tini%d' % i, 'k': 'diario', 'origem': 'relato', 'texto': 'Proposta de teste número %d' % i, 'prop': {}, 'estado': est, 'iso': '2026-11-10T08:0%d:00.000Z' % i, 'who': 'Lucas'}
+    ctx, pg, erros = abre_tela(b, tela)
+    pg.wait_for_timeout(300)
+    LE = "() => { const a = document.querySelector('[data-home=confirmar]'); return a ? { txt: a.innerText.replace(/\\s+/g, ' ').trim(), href: a.getAttribute('href'), h: a.getBoundingClientRect().height } : null; }"
+    if pg.evaluate(LE) is not None: prob.append('%s: o selo A CONFIRMAR não devia aparecer sem proposta' % tela)
+    pg.evaluate(PLANTA_TK, [mk(1, 'aberto'), mk(2, 'aberto'), mk(3, 'aceito'), mk(4, 'recusado')]); pg.wait_for_timeout(500)
+    s = pg.evaluate(LE)
+    if not s or s['txt'] != '2 A CONFIRMAR ›' or s['href'] != alvo or (app and s['h'] < 44): prob.append('%s: o selo devia dizer «2 A CONFIRMAR ›» (só as abertas), levar a %s e ter 44 px no app: %s' % (tela, alvo, s))
+    pg.evaluate(PLANTA_TK, [mk(1, 'recusado'), mk(2, 'aceito')]); pg.wait_for_timeout(500)
+    if pg.evaluate(LE) is not None: prob.append('%s: o selo devia sumir quando a última proposta é decidida (outra aba)' % tela)
+    ctx.close()
+    ctx, pg, erros2 = abre_tela(b, tela, ls={'capitao.tickets.v1': json.dumps([mk(1, 'aberto')])})
+    pg.wait_for_timeout(400)
+    pg.click('[data-home=confirmar]'); pg.wait_for_timeout(1500)
+    if '#confirmar' not in pg.url or 'G3-Diario' not in pg.url: prob.append('%s: o toque no selo devia abrir o Diário em #confirmar: %s' % (tela, pg.url))
+    prob += ['%s: %s' % (tela, e) for e in (erros + erros2)[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g4_codigo():
+    """O código das duas telas G4: ouve o storage, a virada do dia (capitao-rebase) e a sessão e tira os ouvintes ao desmontar (a web também o hashchange das abas), só dá setState se o texto mudou (k === this._k) e nunca com a aba escondida
+    na virada; nenhum timer novo; as tarefas vêm do cérebro (loadTarefas, addTarefa) com o prazo do CapitaoAgora (prazoDe, relogio.hojeIso), nunca do D.snapshot nem de dn fixo; nenhum telefone, fabricante ou DEMO no código; a linha do
+    diário de uma ação não leva o nome nem o número; ocultar e restaurar não apagam (só a marca oculto); o app guarda o LF e a web, também."""
+    prob = []
+    for tela in TELAS_G4:
+        arq = tela + '.dc.html'
+        t = le_arq(arq).replace('\r\n', '\n')
+        web = tela.endswith('Web')
+        for ev in ('capitao-rebase', 'storage', 'capitao-sessao') + (('hashchange',) if web else ()):
+            if t.count("addEventListener('%s'" % ev) != 1 or t.count("removeEventListener('%s'" % ev) != 1: prob.append('%s: devia ouvir e tirar o ouvinte de %r uma vez' % (arq, ev))
+        if "if (!document.hidden)" not in t: prob.append('%s: a virada do dia sem a guarda de document.hidden' % arq)
+        if 'if (k === this._k) return;' not in t or t.count('setInterval') != 1: prob.append('%s: só dá setState quando o texto muda (k === this._k) e o único setInterval é a espera do cérebro' % arq)
+        cod = re.sub(r'//[^\n]*', '', t.split('<script type="text/x-dc"')[1])
+        if re.search(r'D\.demo|\.demo\b|D\.aviso|D\.snapshot', cod): prob.append('%s: lê D.demo, D.aviso ou o D.snapshot' % arq)
+        if re.search(r'DEMO|R\$|demonstra|fict[ií]ci|A CADASTRAR', t): prob.append('%s: DEMO, R$, demonstração, fictício ou «A CADASTRAR» no código da tela' % arq)
+        if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (arq, MARCAS_FIXAS.search(cod).group(0)))
+        if TERMOS['PESSOAIS'].search(cod): prob.append('%s: telefone, e-mail ou documento escrito no código: %s' % (arq, TERMOS['PESSOAIS'].search(cod).group(0)))
+        for l in cod.split('\n'):
+            if re.search(r'SEM (?:DADOS|LEITURA)', l): prob.append('%s: rótulo SEM DADOS/SEM LEITURA no código: %s' % (arq, l.strip()[:100]))
+        for f in ('B.loadTarefas()', 'B.addTarefa(', 'B.loadEquipe()', 'B.saveEquipe(', 'A.prazoDe(', 'A.relogio.hojeIso', 'capitao.prestadores.v1'):
+            if f not in t: prob.append('%s: sem %s' % (arq, f))
+        if 'B.tarefasEquipe(' in t: prob.append('%s: lê B.tarefasEquipe() (o dia do cérebro é o do relógio, não o do instante): o prazo vem do CapitaoAgora' % arq)
+        if re.search(r'\.dn\b[^;\n]*\bfixo\b|dn: *-?\d', cod): prob.append('%s: prazo (dn) fixo no código' % arq)
+        if "removeItem('capitao.prestadores" in t or "localStorage.removeItem" in t or 'delete r.novos' in t or 'novos.splice' in t or 'novos.filter(' in cod.split('gravaPrest(fn)')[1].split('quem()')[0]: prob.append('%s: apaga prestador (ocultar e restaurar só ligam e desligam a marca oculto)' % arq)
+        if '\r' in t or le_arq(arq).count('\r'): prob.append('%s: o arquivo ganhou CR (os G4 são LF)' % arq)
+        if GEOM_SVG.search(t): prob.append('%s: {{…}} em atributo geométrico de SVG' % arq)
+        if "this.diario('Prestador" not in t: prob.append('%s: sem a linha do diário das ações de prestador' % arq)
+        for seg in re.findall(r"this\.diario\(('Prestador.*?)\);", cod):   # só os literais e a ação (cadastrado, editado…): nenhum identificador do nome, do serviço, da observação nem do telefone
+            if re.search(r'\b(?:fN|fRole|fS|fFone|fone|obs|role|n|c)\b', re.sub(r"'[^']*'", '', seg)): prob.append('%s: a linha do diário de uma ação de prestador não pode levar o nome, o serviço nem o telefone: %s' % (arq, seg[:80]))
+    for tela in TELAS_INICIO:
+        arq = tela + '.dc.html'
+        t = le_arq(arq).replace('\r\n', '\n')
+        if t.count("addEventListener('storage'") != 1 or t.count("removeEventListener('storage'") != 1: prob.append('%s: devia ouvir e tirar o ouvinte do storage uma vez (o selo A CONFIRMAR chega de outra aba)' % arq)
+        if 'B.ticketsAbertos()' not in t or 'data-home="confirmar"' not in t or '#confirmar' not in t: prob.append('%s: sem o selo A CONFIRMAR que conta B.ticketsAbertos() e leva ao #confirmar do Diário' % arq)
+    return prob
+
+
+LE_LAYOUT_P4J = LE_LAYOUT_P4I.replace('!(e.clientWidth > 0)', '!(e.clientWidth > 3)')   # (o rótulo só para leitor de tela, de 1 px, não é texto à vista)
+
+
+def teste_p4j_layout(b, tela):
+    """Os estados de dentro das telas G3 e G4, que a matriz (só a abertura) não vê: G3 com propostas (lista, ✎ do relato e do agendamento com o erro), ✎ de uma linha, o 🗑 pedindo a confirmação e o aviso com os botões; G4 com o
+    formulário de prestador (novo e com o erro), as tarefas, o formulário de tarefa com o erro e o selo apresentação. Em 3 tamanhos e 2 temas: nenhuma rolagem lateral, nenhum texto cortado em silêncio."""
+    prob = []
+    app = eh_app(tela)
+    g3 = tela.startswith('G3')
+    tk = [{'id': 'tlay1', 'k': 'diario', 'origem': 'relato', 'texto': 'Ruído constante e forte no mancal do eixo de boreste ao sair da marina hoje cedo, com vibração no casco até o regime de planeio e piora ao passar de dois mil rpm', 'prop': {'sys': 'Equipamentos'}, 'estado': 'aberto', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas'},
+          {'id': 'tlay2', 'k': 'tarefa', 'origem': 'regra', 'texto': 'Tarefa da equipe: Revisar a vedação do alçapão — vence 25/12/2026 · responsável: marina. Agendada pelo diário — linha nova, nada se apaga.', 'prop': {'n': 'Revisar a vedação do alçapão', 'vence': '2026-12-25', 'quem': 'marina'}, 'estado': 'aberto', 'iso': '2026-11-10T07:00:00.000Z', 'who': 'Lucas'}]
+    ls = {'capitao.tickets.v1': json.dumps(tk), 'capitao.diario.v1': json.dumps([{'d': '10/11', 'iso': '2026-11-10T08:10:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'Linha do aparelho com um texto bem comprido para conferir a quebra: ' + 'verifiquei os filtros e as mangueiras do porão de boreste e de bombordo ' * 3}])} if g3 else \
+         {'capitao.prestadores.v1': json.dumps({'novos': [{'id': 'rlay1', 'n': 'Estaleiro com um nome bem comprido para conferir o corte do título na lista', 'role': 'casco, pintura e polimento', 's': 'atende de segunda a sábado nas docas do fundo da marina da base', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas', 'sim': True}], 'fixos': {}}),
+                'capitao.tarefas.v1': json.dumps([{'id': 'glay1', 'n': 'Tarefa com um nome bem comprido para conferir a quebra na lista da equipe e o selo ao lado', 'vence': '2026-12-20', 'quem': 'marina', 'origem': 'tela', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas', 'sim': True}])}
+    for w, h, tema in ([(360, 640, 'escuro'), (844, 390, 'escuro'), (390, 844, 'claro')] if app else [(1024, 768, 'escuro'), (1440, 900, 'escuro'), (1280, 720, 'claro')]):
+        ctx, pg, erros = abre_tela(b, tela, w=w, h=h, tema=tema, ls=ls, depois='' if g3 else 'window.CapitaoDados.simulacao = false;')
+        pg.wait_for_timeout(500)
+        def olha(estado):
+            r = pg.evaluate(LE_LAYOUT_P4J)
+            if r['lateral'] > 1: prob.append('%s %dx%d %s · %s: rola para o lado (%d px)' % (tela, w, h, tema, estado, r['lateral']))
+            prob.extend('%s %dx%d %s · %s: %s' % (tela, w, h, tema, estado, x) for x in r['cortes'][:3])
+        olha('abertura')
+        if g3:
+            pg.click('[data-g3=ticket][data-id=tlay1] [data-g3=t-edita]'); pg.wait_for_timeout(250); olha('✎ do relato')
+            pg.click('[data-g3=ticket][data-id=tlay1] [data-g3=t-cancela]'); pg.wait_for_timeout(200)
+            pg.click('[data-g3=ticket][data-id=tlay2] [data-g3=t-edita]'); pg.wait_for_timeout(250)
+            pg.fill('[data-g3=ticket][data-id=tlay2] [data-g3=t-campo][data-c=vence]', '31/02/2027'); pg.click('[data-g3=ticket][data-id=tlay2] [data-g3=t-salva]'); pg.wait_for_timeout(250); olha('✎ do agendamento com o erro')
+            pg.click('[data-g3=ticket][data-id=tlay2] [data-g3=t-cancela]'); pg.wait_for_timeout(200)
+            pg.click('[data-g3=ticket][data-id=tlay2] [data-g3=t-confirma]'); pg.wait_for_timeout(300); olha('aviso com o DESFAZER')
+            pg.click('[data-g3=linha][data-ori=app][data-acao=""] [data-g3=l-edita]'); pg.wait_for_timeout(250); olha('✎ da linha')
+            pg.click('[data-g3=l-cancela]'); pg.wait_for_timeout(200)
+            pg.click('[data-g3=linha][data-ori=app][data-acao=""] [data-g3=l-anula]'); pg.wait_for_timeout(250); olha('🗑 pedindo a confirmação')
+        else:
+            pg.click('[data-g4=novo-prest]'); pg.wait_for_timeout(250); olha('+ PRESTADOR aberto')
+            pg.fill('[data-g4=f-fone]', '12'); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(250); olha('+ PRESTADOR com o erro')
+            pg.click('[data-g4=f-cancela]'); pg.wait_for_timeout(200)
+            g4_aba(pg, tela, 'tarefas'); olha('tarefas')
+            pg.click('[data-g4=nova-tarefa]'); pg.wait_for_timeout(250); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(250); olha('+ TAREFA com o erro')
+        prob += ['%s %dx%d: %s' % (tela, w, h, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def p4j_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4J para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_P4J + TELAS_INICIO): out.append(('código das telas G3, G4 e do selo do início (ouvintes, timers, DEMO, SVG, LF, o cérebro, o que nunca se apaga)', teste_g3_codigo() + teste_g4_codigo()))
+    for tela in [t for t in TELAS_P4J if t in lista]:
+        out.append((tela + ' · os estados de dentro (propostas, ✎, 🗑, aviso, formulários, erros, tarefas, selo): sem rolagem lateral nem texto cortado em silêncio, em 3 tamanhos e 2 temas', teste_p4j_layout(b, tela)))
+    for tela in [t for t in TELAS_G3 if t in lista]:
+        out.append((tela + ' · a abertura: o diário gerado, o resumo, as pendências do CapitaoAgora, nada gravado só por abrir', teste_g3_abertura(b, tela)))
+        out.append((tela + ' · as propostas A CONFIRMAR: CONFIRMAR, DESFAZER (10 s), RECUSAR, ✎, a tarefa da equipe', teste_g3_propostas(b, tela)))
+        out.append((tela + ' · o #confirmar, o toque duplo e o aviso de 10 s', teste_g3_ancora_e_janela(b, tela)))
+        out.append((tela + ' · as pendências: RESOLVER, REABRIR, DESFAZER e o registro que fecha como linhas novas', teste_g3_pendencias(b, tela)))
+        out.append((tela + ' · corrigir e anular uma linha (linhas novas, o texto fica guardado)', teste_g3_linhas(b, tela)))
+        out.append((tela + ' · foto + texto na mesma linha (A CONFIRMAR, o arquivo fica no aparelho)', teste_g3_foto(b, tela)))
+        out.append((tela + ' · o selo apresentação (simulacao false)', teste_g3_real(b, tela)))
+    for tela in [t for t in TELAS_G4 if t in lista]:
+        out.append((tela + ' · a abertura: os contatos de apoio, as tarefas da equipe com o prazo do instante, nenhum telefone', teste_g4_abertura(b, tela)))
+        out.append((tela + ' · os prestadores: + PRESTADOR, ✎, OCULTAR e RESTAURAR, o telefone só no aparelho', teste_g4_prestadores(b, tela)))
+        out.append((tela + ' · o telefone de cada contato de apoio', teste_g4_telefones(b, tela)))
+        out.append((tela + ' · + TAREFA da equipe: o prazo do CapitaoAgora, contagens(), a virada do dia e o Executado', teste_g4_tarefas(b, tela)))
+        out.append((tela + ' · o selo apresentação (simulacao false)', teste_g4_real(b, tela)))
+    for tela in [t for t in TELAS_INICIO if t in lista]:
+        out.append((tela + ' · o selo A CONFIRMAR do início', teste_selo_inicio(b, tela)))
+    return out
+
+
+MUTANTES_P4J = [
+    # —— G3: a abertura e as pendências ——
+    ('a G3 web não marca PENDENTE nas linhas do arquivo', 'G3-Diario-Web.dc.html', [("tags: pd ? [pd.aberta ? tag('PENDENTE', 'warn') : tag('RESOLVIDA', 'ok')] : (e.pend ? [tag('PENDENTE', 'warn')] : []), sub: ''", "tags: [], sub: ''")], 'abertura'),
+    ('a G3 do app ordena o diário do mais velho para o mais novo', 'G3-Diario-Mobile.dc.html', [("if (x !== y) return y > x ? 1 : -1;", "if (x !== y) return y > x ? -1 : 1;")], 'abertura'),
+    ('o título das pendências da G3 web conta as resolvidas também', 'G3-Diario-Web.dc.html', [("const abertas = d.pend.filter((p) => p.aberta).length;", "const abertas = d.pend.length;")], 'pend'),
+    ('o RESOLVER da G3 web chama o REABRIR do cérebro', 'G3-Diario-Web.dc.html', [("const r = B.resolvePendencia(p.alvo);", "const r = B.reabrePendencia(p.alvo);")], 'pend'),
+    ('o DESFAZER da pendência na G3 do app não chama o cérebro', 'G3-Diario-Mobile.dc.html', [("const dz = B.desfazPendencia(u.r);", "const dz = u.r;")], 'pend'),
+    ('a G3 web mostra a hora da linha em UTC (e não a do barco)', 'G3-Diario-Web.dc.html', [("h: A.fmt.hora(t, false) }; } catch (e) {}", "h: new Date(t).toISOString().slice(11, 16) }; } catch (e) {}")], 'pend'),
+    ('o registro da G3 web não deixa o cérebro fechar a pendência nem propor a agenda', 'G3-Diario-Web.dc.html', [("{ pendencia: true, agenda: true });", "{});")], 'pend'),
+    # —— G3: as propostas ——
+    ('o CONFIRMAR da G3 web confirma duas vezes (a 2ª diz que já estava)', 'G3-Diario-Web.dc.html', [("const r = B.aceitaTicket(id);", "B.aceitaTicket(id); const r = B.aceitaTicket(id);")], 'propostas'),
+    ('o DESFAZER da proposta na G3 web não chama o cérebro', 'G3-Diario-Web.dc.html', [("const dz = B.desfazTicket(u.r); return dz ?", "const dz = u.r; return dz ?")], 'propostas'),
+    ('o RECUSAR da G3 do app confirma a proposta', 'G3-Diario-Mobile.dc.html', [("const r = B.recusaTicket(id);", "const r = B.aceitaTicket(id);")], 'propostas'),
+    ('o ✎ do agendamento da G3 web não refaz o texto da proposta', 'G3-Diario-Web.dc.html', [("r = B.editaTicket(t.id, { texto: B.textoTicket('tarefa', prop), prop: prop });", "r = B.editaTicket(t.id, { prop: prop });")], 'propostas'),
+    ('o ✎ da G3 do app aceita o dia 31/02', 'G3-Diario-Mobile.dc.html', [("x.getUTCFullYear() === a && x.getUTCMonth() === mm - 1 && x.getUTCDate() === d ?", "true ?")], 'propostas'),
+    ('a G3 web mostra o selo apresentação em toda proposta, também com a simulação', 'G3-Diario-Web.dc.html', [("temSelo: t.apresentacao === true,", "temSelo: true,")], 'propostas'),
+    ('o ✎ da G3 do app grava o texto vazio sem o aviso', 'G3-Diario-Mobile.dc.html', [("if (!String(fv.texto || '').trim()) return this.setState({ ferro: 'O texto não pode ficar vazio (para tirar a proposta, use RECUSAR).' });", "")], 'propostas'),
+    ('a G3 do app não leva ao bloco com #confirmar', 'G3-Diario-Mobile.dc.html', [("this.whenBrain(() => { this.atualiza(); this.ancora(); });", "this.whenBrain(() => { this.atualiza(); });")], 'ancora'),
+    ('o toque duplo no CONFIRMAR da G3 web não é contido', 'G3-Diario-Web.dc.html', [("if (this._tk && this._tk.id === id && Date.now() - this._tk.t < 1500) return; this._tk = { id: id, t: Date.now() };", "")], 'ancora'),
+    ('o aviso da G3 web nunca some sozinho', 'G3-Diario-Web.dc.html', [("vivo: String(Date.now()) }), ms || 4500);", "vivo: String(Date.now()) }), 4500e6);")], 'ancora'),
+    # —— G3: corrigir, anular e a foto ——
+    ('a correção da G3 web é gravada sem o alvo certo', 'G3-Diario-Web.dc.html', [("src: 'console · correção', acao: 'corrige', alvo: id", "src: 'console · correção', acao: 'corrige', alvo: 'x'")], 'linhas'),
+    ('o 🗑 da G3 do app anula na hora, sem pedir a confirmação', 'G3-Diario-Mobile.dc.html', [("onAnula: () => this.setState({ anulaId: e.iso, editId: '' })", "onAnula: () => this.setState({ anulaId: e.iso, editId: '' }, () => this.anula())")], 'linhas'),
+    ('a linha anulada da G3 web continua contando no total', 'G3-Diario-Web.dc.html', [("const reg = todas.filter((e) => !e.acao && e.estado !== 'anulado')", "const reg = todas.filter((e) => !e.acao)")], 'linhas'),
+    ('a G3 do app deixa ✎ e 🗑 na linha do SOS', 'G3-Diario-Mobile.dc.html', [("pode: !ac && !anulada && !sos };", "pode: !ac && !anulada };")], 'linhas'),
+    ('a foto da G3 web não leva o texto da pessoa', 'G3-Diario-Web.dc.html', [("B.answerAttachment(kind, f, { platform: 'web', texto: texto })", "B.answerAttachment(kind, f, { platform: 'web' })")], 'foto'),
+    ('a G3 do app limpa a barra mesmo quando o texto não entrou na linha', 'G3-Diario-Mobile.dc.html', [("if (r.nota) this.limpaBarra();   // o texto entrou na mesma linha", "this.limpaBarra();   // o texto entrou na mesma linha")], 'foto'),
+    ('a foto da G3 web grava duas linhas', 'G3-Diario-Web.dc.html', [("let r = null; try { r = B.answerAttachment(kind, f, { platform: 'web', texto: texto }); }", "let r = null; try { B.answerAttachment(kind, f, { platform: 'web' }); r = B.answerAttachment(kind, f, { platform: 'web', texto: texto }); }")], 'foto'),
+    # —— G3: o selo e o código ——
+    ('a G3 web mostra o selo da linha também com a simulação', 'G3-Diario-Web.dc.html', [("if (e.sim === true && real) tags.push(tag('APRESENTAÇÃO', 'ink'));", "if (e.sim === true) tags.push(tag('APRESENTAÇÃO', 'ink'));")], 'real_g3'),
+    ('a G3 do app põe o selo em toda linha do aparelho com simulacao false', 'G3-Diario-Mobile.dc.html', [("if (e.sim === true && real) tags.push(tag('APRESENTAÇÃO', 'ink'));", "if (real) tags.push(tag('APRESENTAÇÃO', 'ink'));")], 'real_g3'),
+    ('a G3 web não tira o ouvinte da virada do dia ao desmontar', 'G3-Diario-Web.dc.html', [("window.removeEventListener('capitao-rebase', this._onRebase);", "")], 'codigo'),
+    ('a G3 do app redesenha a virada do dia com a aba escondida', 'G3-Diario-Mobile.dc.html', [("this._onRebase = () => { if (!document.hidden) this.atualiza(); };", "this._onRebase = () => { this.atualiza(); };")], 'codigo'),
+    # —— G4: a abertura e os telefones ——
+    ('a G4 web esquece as tarefas da equipe no estado dos contatos', 'G4-Equipe-Web.dc.html', [(".concat(tarAb.filter((t) => idDe(t.quem) === a.id))", "")], 'g4_abertura'),
+    ('a G4 do app conta o prazo pelo dia do relógio (não o do instante)', 'G4-Equipe-Mobile.dc.html', [("const hojeIso = A && A.relogio ? A.relogio.hojeIso : '',", "const hojeIso = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),")], 'g4_abertura'),
+    ('a G4 web escreve TELEFONE A CADASTRAR de novo', 'G4-Equipe-Web.dc.html', [("+ ADICIONAR TELEFONE</button>", "TELEFONE A CADASTRAR +</button>")], 'g4_abertura'),
+    ('o telefone da G4 do app aceita qualquer texto', 'G4-Equipe-Mobile.dc.html', [("return !v || (/^\\+?[\\d ().-]+$/.test(v) && dg.length >= 8 && dg.length <= 15); }", "return true; }")], 'g4_fone'),
+    # —— G4: os prestadores ——
+    ('o cadastro da G4 web guarda o telefone junto do prestador', 'G4-Equipe-Web.dc.html', [("const row = { id: id, n: n, role: role, s: obs, iso: new Date().toISOString(), who: this.quem() };", "const row = { id: id, n: n, role: role, s: obs, fone: fone, iso: new Date().toISOString(), who: this.quem() };")], 'g4_prest'),
+    ('a linha do diário da G4 do app leva o nome do prestador', 'G4-Equipe-Mobile.dc.html', [("this.diario('Prestador ' + acao + ' em Equipe (nome, serviço e telefone ficam só neste aparelho).');", "this.diario('Prestador ' + acao + ' ' + n + ' em Equipe (nome, serviço e telefone ficam só neste aparelho).');")], 'g4_prest'),
+    ('o OCULTAR da G4 web apaga o cadastro', 'G4-Equipe-Web.dc.html', [("r.fixos[c.id] = Object.assign({}, r.fixos[c.id] || {}, { oculto: true });", "r.fixos[c.id] = { oculto: true }; r.novos = r.novos.filter((x) => x.id !== c.id);")], 'g4_prest'),
+    ('o RESTAURAR da G4 do app não devolve o prestador cadastrado', 'G4-Equipe-Mobile.dc.html', [("if (o && o.oculto) { n++;", "if (o && o.oculto && !/^r/.test(k)) { n++;")], 'g4_prest'),
+    ('a gravação da G4 web apaga as chaves que não conhece', 'G4-Equipe-Web.dc.html', [("const raiz = ok ? v : {};", "const raiz = ok ? { novos: v.novos, fixos: v.fixos } : {};")], 'g4_prest'),
+    ('a G4 do app pisa o valor ruim do armazenamento sem guardar o .antes', 'G4-Equipe-Mobile.dc.html', [("localStorage.setItem(K + '.antes', s)", "0")], 'g4_prest'),
+    ('o + PRESTADOR da G4 web não confere o telefone', 'G4-Equipe-Web.dc.html', [("if (f.modo === 'novo' && !this.valFone(fone)) return this.setState({ prestErro: 'Telefone inválido — 8 a 15 dígitos com DDD · números e + ( ) . -' });", "")], 'g4_prest'),
+    # —— G4: + TAREFA, o prazo, a virada do dia e o selo ——
+    ('a + TAREFA da G4 web aceita um dia que já passou', 'G4-Equipe-Web.dc.html', [("if (hoje && v < hoje) return this.setState", "if (false) return this.setState")], 'g4_tar'),
+    ('a + TAREFA da G4 do app não grava a linha do diário', 'G4-Equipe-Mobile.dc.html', [("this.diario('Tarefa da equipe: ' + t.n", "(() => {})('Tarefa da equipe: ' + t.n")], 'g4_tar'),
+    ('a G4 web põe as tarefas feitas antes das abertas', 'G4-Equipe-Web.dc.html', [("d.tarefas.filter((t) => !t.feita).concat(d.tarefas.filter((t) => t.feita))", "d.tarefas.filter((t) => t.feita).concat(d.tarefas.filter((t) => !t.feita))")], 'g4_tar'),
+    ('a G4 do app nunca mostra a tarefa como FEITA', 'G4-Equipe-Mobile.dc.html', [("feita: !!ex[t.id] });", "feita: false });")], 'g4_tar'),
+    ('a G4 web não ouve a virada do dia (os prazos ficam os de antes)', 'G4-Equipe-Web.dc.html', [("window.addEventListener('capitao-rebase', this._onRebase);", "")], 'g4_tar'),
+    ('a G4 web mostra o selo do prestador também com a simulação', 'G4-Equipe-Web.dc.html', [("temSelo: c.sim === true && real,", "temSelo: c.sim === true,")], 'g4_real'),
+    ('a G4 do app não mostra o selo da execução gravada com sim', 'G4-Equipe-Mobile.dc.html', [("temSelo: real && (tarSimMap[t.id] === true || exSim) };", "temSelo: real && tarSimMap[t.id] === true };")], 'g4_real'),
+    # —— o selo A CONFIRMAR do início ——
+    ('o selo da Main conta também as propostas decididas', 'Main.dc.html', [("return B && typeof B.ticketsAbertos === 'function' ? B.ticketsAbertos().length : 0;", "return B && typeof B.loadTickets === 'function' ? B.loadTickets().length : 0;")], 'inicio'),
+    ('o selo da H2 leva ao Diário da web', 'H2-Home-Mobile.dc.html', [('href="G3-Diario-Mobile.dc.html#confirmar"', 'href="G3-Diario-Web.dc.html#confirmar"')], 'inicio'),
+    ('a Main não ouve o storage (o selo só muda ao recarregar)', 'Main.dc.html', [("    window.addEventListener('storage', this._onSt);\n", "")], 'inicio'),
+]
+QUAL_P4J = {'abertura': teste_g3_abertura, 'propostas': teste_g3_propostas, 'ancora': teste_g3_ancora_e_janela, 'pend': teste_g3_pendencias, 'linhas': teste_g3_linhas, 'foto': teste_g3_foto, 'real_g3': teste_g3_real,
+            'g4_abertura': teste_g4_abertura, 'g4_prest': teste_g4_prestadores, 'g4_fone': teste_g4_telefones, 'g4_tar': teste_g4_tarefas, 'g4_real': teste_g4_real, 'inicio': teste_selo_inicio,
+            'codigo': lambda b, t: teste_g3_codigo() + teste_g4_codigo()}
+
+
+def mutantes_p4j(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
+    for nome, arq, trocas, qual in MUTANTES_P4J:
+        if filtro and not any(f in nome for f in filtro.split('|')): continue
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = QUAL_P4J[qual](b, arq.replace('.dc.html', ''))
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4J), len(vivos)))
     return vivos
 
 

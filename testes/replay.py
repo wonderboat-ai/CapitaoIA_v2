@@ -1732,6 +1732,59 @@ def g1_rebase(b, telas=G1_REBASE):
         fecha(pg)
 
 
+# P4J: a virada do dia de bordo (o evento 'capitao-rebase' do motor) na Equipe e no Diário. Os prazos das tarefas da equipe e da agenda (G4) e as datas do diário gerado (G3) só se refazem quando o dia vira: a tela só dá
+# setState se o texto que exibe mudou. Com o instante fixado e o prazo igual, 5 viradas não redesenham nada; com a aba escondida, nem com o prazo mudado; com a tarefa g02 executada (Executado), 1 redesenho e a tarefa diz FEITA.
+G4_REBASE = (('G4-Equipe-Web', 1440, 900, '#aba=tarefas'), ('G4-Equipe-Mobile', 390, 844, ''))
+G3_REBASE = (('G3-Diario-Web', 1440, 900), ('G3-Diario-Mobile', 390, 844))
+EXEC_G02 = '{"g02": {"iso": "2026-11-10T09:00:00-03:00", "t": "09:00", "d": "10/11", "sim": true}}'
+LE_G4R = """() => ({ sets: window.__sets, tar: [...document.querySelectorAll('[data-g4=tarefa]')].map((e) => [e.dataset.id, e.dataset.feita, (e.querySelector('[data-g4=t-prazo]') || {}).innerText]) })"""
+
+
+def g4_rebase(b, telas=G4_REBASE):
+    print('G4 (web e app): a virada do dia de bordo (capitao-rebase) só redesenha quando o prazo exibido muda')
+    for nome, w, h, hash_ in telas:
+        pg = abre(b, caminho='/%s.dc.html%s' % (nome, hash_), sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1")
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(2500)
+        pg.evaluate("() => { window.__sets = 0; for (let i = 0; i < 5; i++) window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }")
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(LE_G4R)
+        ok('%s: 5 viradas do dia com o prazo igual não redesenham nada (%d setState)' % (nome, r['sets']), r['sets'] == 0, r)
+        ok('%s: a tarefa g02 aparece aberta antes do Executado (o teste vale)' % nome, any(t[0] == 'g02' and t[1] == 'nao' for t in r['tar']), r['tar'])
+        sets_escondida = pg.evaluate("""(ex) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          try { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); return window.__sets; }
+          finally { localStorage.removeItem('capitao.executado.v1'); delete document.hidden; } }""", EXEC_G02)
+        ok('%s: com a aba escondida a virada do dia não dá setState (%d), mesmo com o prazo mudado' % (nome, sets_escondida), sets_escondida == 0, sets_escondida)
+        pg.evaluate("(ex) => { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }", EXEC_G02)
+        pg.wait_for_timeout(200)
+        r = pg.evaluate(LE_G4R)
+        ok('%s: com a g02 executada a virada do dia redesenha uma vez (%d setState) e a tarefa diz FEITA' % (nome, r['sets']), r['sets'] == 1 and any(t[0] == 'g02' and t[1] == 'sim' and t[2] == 'FEITA' for t in r['tar']), r)
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
+LE_G3R = """() => ({ sets: window.__sets, datas: [...document.querySelectorAll('[data-g3=linha][data-ori=fonte] [data-g3=l-dia]')].map((e) => e.innerText.trim()), pend: document.querySelectorAll('[data-g3=pend]').length })"""
+
+
+def g3_rebase(b, telas=G3_REBASE):
+    print('G3 (web e app): a virada do dia de bordo (capitao-rebase) só redesenha quando o texto exibido muda')
+    for nome, w, h in telas:
+        pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1")
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(2500)
+        r0 = pg.evaluate(LE_G3R)
+        pg.evaluate("() => { window.__sets = 0; for (let i = 0; i < 5; i++) window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }")
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(LE_G3R)
+        ok('%s: 5 viradas do dia com as mesmas datas não redesenham nada (%d setState)' % (nome, r['sets']), r['sets'] == 0, r)
+        pg.evaluate("() => { window.__sets = 0; window.CapitaoReplay.fixar('60@1152'); }")   # o dia seguinte: o arquivo gerado refaz as datas
+        pg.wait_for_timeout(900)
+        r1 = pg.evaluate(LE_G3R)
+        ok('%s: com o dia virado as datas do diário gerado se refazem (%s → %s) com um redesenho só (%d setState)' % (nome, r0['datas'][:2], r1['datas'][:2], r1['sets']), r1['datas'] != r0['datas'] and r1['sets'] >= 1, [r0, r1])
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
 # ——— 12. as telas de verdade ———
 def telas(b):
     print('Telas de verdade (com sessão): o motor carrega, anda e não dá erro de script')
@@ -1740,7 +1793,8 @@ def telas(b):
                      ('A2-Ponte-Mobile', {'width': 390, 'height': 844}), ('A4-Sensores-Web', {'width': 1440, 'height': 900}), ('A5-Sensores-Mobile', {'width': 390, 'height': 844}),
                      ('B1-Carta-Web', {'width': 1440, 'height': 900}), ('B2-Carta-Mobile', {'width': 390, 'height': 844}), ('B3-Carta-Resposta', {'width': 390, 'height': 844}),   # (P4D: a Carta)
                      ('E2-Navegando-Sintoma', {'width': 390, 'height': 844}),   # (P4F: a triagem)
-                     ('G1-Documentos-Web', {'width': 1440, 'height': 900}), ('G1-Documentos-Mobile', {'width': 390, 'height': 844}), ('G2-Abastecimento-Web', {'width': 1440, 'height': 900}), ('G2-Abastecimento-Mobile', {'width': 390, 'height': 844})):   # (P4I: os Documentos e o Abastecimento)
+                     ('G1-Documentos-Web', {'width': 1440, 'height': 900}), ('G1-Documentos-Mobile', {'width': 390, 'height': 844}), ('G2-Abastecimento-Web', {'width': 1440, 'height': 900}), ('G2-Abastecimento-Mobile', {'width': 390, 'height': 844}),   # (P4I: os Documentos e o Abastecimento)
+                     ('G3-Diario-Web', {'width': 1440, 'height': 900}), ('G3-Diario-Mobile', {'width': 390, 'height': 844}), ('G4-Equipe-Web', {'width': 1440, 'height': 900}), ('G4-Equipe-Mobile', {'width': 390, 'height': 844})):   # (P4J: o Diário e a Equipe)
         pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, viewport=vp, espera='() => window.CapitaoReplay')
         pg.wait_for_timeout(1500)
         r = pg.evaluate("() => ({ obj: typeof window.CapitaoReplay, ativo: window.CapitaoReplay.ativo(), inst: window.CapitaoAgora.instante().fonte, n: window.__conta('capitao-telemetria'), t: window.CapitaoTelemetria ? window.CapitaoTelemetria.fonte() : 'sem' })")
@@ -2369,6 +2423,17 @@ MUTANTES_ARQ = [
     # (os arquivos do app são CRLF: o trecho é de uma linha só, que o corpo servido casa)
     ('a G2 do app dando setState a cada tique, sem comparar o texto', 'G2-Abastecimento-Mobile.dc.html',
      [("if (k === this._k) return;", "")], 'gating'),
+    # P4J: a Equipe e o Diário só dão setState na virada do dia quando o texto exibido muda
+    ('a G4 web dando setState a cada virada do dia, sem comparar o texto', 'G4-Equipe-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k;\n    this.setState({ vivo: k });", "    this._k = k;\n    this.setState({ vivo: k });")], 'g4_rebase'),
+    ('a G4 web redesenhando a virada do dia com a aba escondida (sem o document.hidden)', 'G4-Equipe-Web.dc.html',
+     [("this._onRebase = () => { if (!document.hidden) this.atualiza(); };", "this._onRebase = () => { this.atualiza(); };")], 'g4_rebase'),
+    ('a G4 do app sem ouvir a virada do dia (a tarefa executada não atualiza)', 'G4-Equipe-Mobile.dc.html',
+     [("    window.addEventListener('capitao-rebase', this._onRebase);\n", "")], 'g4_rebase'),
+    ('a G3 web dando setState a cada virada do dia, sem comparar o texto', 'G3-Diario-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k;\n    this.setState({ vivo: k });", "    this._k = k;\n    this.setState({ vivo: k });")], 'g3_rebase'),
+    ('a G3 do app sem ouvir a virada do dia (as datas do diário gerado ficam as de antes)', 'G3-Diario-Mobile.dc.html',
+     [("    window.addEventListener('capitao-rebase', this._onRebase);\n", "")], 'g3_rebase'),
 ]
 
 
@@ -2399,6 +2464,10 @@ def mutantes_arq(b):
                     home_rebase(b, telas=[t_ for t_ in HOME_REBASE if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]])
                 elif qual == 'g1_rebase':
                     g1_rebase(b, telas=[t_ for t_ in G1_REBASE if t_[0] == arq.replace('.dc.html', '')])
+                elif qual == 'g4_rebase':
+                    g4_rebase(b, telas=[t_ for t_ in G4_REBASE if t_[0] == arq.replace('.dc.html', '')])
+                elif qual == 'g3_rebase':
+                    g3_rebase(b, telas=[t_ for t_ in G3_REBASE if t_[0] == arq.replace('.dc.html', '')])
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
@@ -2469,6 +2538,8 @@ def main():
         gating(browser)
         home_rebase(browser)
         g1_rebase(browser)
+        g4_rebase(browser)
+        g3_rebase(browser)
         codigo()
         codigo_faixa()
         telas(browser)

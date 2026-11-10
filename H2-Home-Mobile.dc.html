@@ -61,6 +61,9 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
           <span style="width: 70px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0) 100%);"></span>
         </div>
         <div style="font-style: italic; font-size: 15px; line-height: 1.35; color: var(--cap-greet, #8d98b8); margin: 2px 0 8px; text-align: center; padding: 0 8px;"><x-import component-from-global-scope="capitao-saudacao"></x-import></div>
+        <sc-if value="{{temConfirmar}}" hint-placeholder-val="{{false}}">
+          <a data-home="confirmar" href="G3-Diario-Mobile.dc.html#confirmar" title="Propostas do relato, da regra ou do alarme esperando o CONFIRMAR de alguém da equipe" style="margin: -4px 0 4px; min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.55); background: rgba(var(--cap-warn-rgb, 240,166,58), 0.10); color: var(--cap-warn, #f0a63a); font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; display: flex; align-items: center; text-decoration: none; white-space: nowrap;"><span>{{confirmarTxt}} ›</span></a>
+        </sc-if>
       </div>
     </sc-if>
 
@@ -185,6 +188,9 @@ class Component extends DCLogic {
     // (document.hidden) nenhum: o motor já pausa o tique e dá um na volta à frente, que põe a tela em dia.
     this._onTele = () => { if (document.hidden) return; const k = this.vivoTele(); if (k !== this._vivoK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._onTele);
+    // As propostas A CONFIRMAR (F14) esperando o toque: o selo do início conta as abertas; a proposta criada em outra aba chega pelo 'storage' (a daqui, pelo redesenho da própria conversa)
+    this._onSt = (e) => { if (!e || e.key === null || e.key === 'capitao.tickets.v1') this.setState({ vivo: String(Date.now()) }); };
+    window.addEventListener('storage', this._onSt);
     this._onReb = () => { if (document.hidden) return; const k = this.chaveCartoes(); if (k !== this._cartK) this.setState({ cart: k }); };
     window.addEventListener('capitao-rebase', this._onReb);
     // O botão de uma resposta (os links #capitao-prop-… e #capitao-relato-…): o cérebro (document, click) o transforma na pergunta e avisa com este evento; o link não navega. Aqui o toque vale: a pergunta sai como se
@@ -220,6 +226,7 @@ class Component extends DCLogic {
     window.removeEventListener('hashchange', this._onHash);
     window.removeEventListener('capitao-voz-encerrar', this._onEncerra);
     window.removeEventListener('capitao-telemetria', this._onTele);
+    window.removeEventListener('storage', this._onSt);
     window.removeEventListener('capitao-rebase', this._onReb);
     window.removeEventListener('capitao-chat-pergunta', this._chat);
     this.stopRec();
@@ -431,6 +438,8 @@ class Component extends DCLogic {
     try { return A.contagens ? A.contagens().atrasadas : (D.agenda || []).filter((t) => !feitas[t.id] && t.dn < 0).length; } catch (e) { return 0; }
   }
   // Há leitura ao vivo agora (o selo do coletor, F06: verde com o replay ou o coletor; âmbar só com a última leitura salva)? É a única coisa que a H2 exibe do instante (LED e dica).
+  // quantas propostas A CONFIRMAR (F14) esperam o toque: o selo do início leva ao Diário
+  nConfirmar() { const B = window.CapitaoBrain; try { return B && typeof B.ticketsAbertos === 'function' ? B.ticketsAbertos().length : 0; } catch (e) { return 0; } }
   vivoTele() {
     const D = window.CapitaoDados || {}, I = this.agora();
     return !!(I && I.q && !(I.fonte === 'replay' && D.simulacao !== true) && (!I.selo || I.selo.tom === 'ok'));
@@ -438,6 +447,7 @@ class Component extends DCLogic {
   renderVals() {
     const s = this.state;
     const D = window.CapitaoDados || {};
+    const nConf = this.nConfirmar();
     const vivo = this.vivoTele();
     this._vivoK = vivo; // o que o LED exibe agora: o ouvinte da telemetria só chama setState se mudar
     const atalhos = (s.atalhos || this.FALLBACK).slice(0, 8);
@@ -462,6 +472,7 @@ class Component extends DCLogic {
     const atr = this.atrasadas();
     this._cartK = this.chaveCartoes();   // o que os cartões exibem agora: a virada do dia de bordo só chama setState se mudar
     return {
+      temConfirmar: nConf > 0, confirmarTxt: nConf + ' A CONFIRMAR',
       sweep: fx.sweep, led: vivo ? fx.ledVivo : fx.ledSnap,
       liveTip: vivo ? 'Telemetria ao vivo — atualiza a cada segundo' : 'Sem leitura ao vivo agora — mostrando a última leitura salva',
       idle: !chatting, chatting: chatting, thinking: s.thinking,

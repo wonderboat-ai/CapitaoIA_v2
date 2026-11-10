@@ -66,6 +66,9 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
         <span style="width: 150px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0) 100%);"></span>
       </div>
       <div style="font-style: italic; font-size: 21px; color: var(--cap-greet, #8d98b8); margin: 12px 0 22px; font-weight: 400; text-align: center;"><x-import component-from-global-scope="capitao-saudacao"></x-import></div>
+      <sc-if value="{{temConfirmar}}" hint-placeholder-val="{{false}}">
+        <a data-home="confirmar" href="G3-Diario-Web.dc.html#confirmar" title="Propostas do relato, da regra ou do alarme esperando o CONFIRMAR de alguém da equipe" style="margin: -10px 0 18px; height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.55); background: rgba(var(--cap-warn-rgb, 240,166,58), 0.10); color: var(--cap-warn, #f0a63a); font-size: 11px; letter-spacing: 0.14em; font-weight: 800; display: flex; align-items: center; text-decoration: none; white-space: nowrap;"><span>{{confirmarTxt}} ›</span></a>
+      </sc-if>
       <div style="display: grid; grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr)); gap: 14px; width: 1250px;">
         <sc-for list="{{buttons}}" as="b" hint-placeholder-count="5">
           <a data-home="cartao" href="{{b.href}}" title="{{b.tip}}" style="box-sizing: border-box; min-height: 150px; padding: 16px 16px 14px; background: {{b.bg}}; border: 1px solid {{b.line}}; border-radius: 16px; text-decoration: none; color: var(--cap-ink, #eaf1ff); display: flex; flex-direction: column; justify-content: space-between; gap: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 10px 30px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.35 * var(--cap-shadow-k, 1))); transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s;" style-hover="transform: translateY(-4px); border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 22px 44px rgba(var(--cap-shadow-rgb, 0,0,0), calc(0.5 * var(--cap-shadow-k, 1))), 0 0 0 1px rgba(var(--cap-plat-rgb, 211,220,239), 0.16);">
@@ -185,6 +188,9 @@ class Component extends DCLogic {
     // nenhum: o motor já pausa o tique e dá um na volta à frente, que põe a tela em dia.
     this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.leitura()); if (k !== this._leitK) this.setState({ vivo: k }); };
     ['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));
+    // As propostas A CONFIRMAR (F14) esperando o toque: o selo do início conta as abertas; a proposta criada em outra aba chega pelo 'storage' (a daqui, pelo redesenho da própria conversa)
+    this._onSt = (e) => { if (!e || e.key === null || e.key === 'capitao.tickets.v1') this.setState({ vivo: String(Date.now()) }); };
+    window.addEventListener('storage', this._onSt);
     // O botão de uma resposta (os links #capitao-prop-… e #capitao-relato-…): o cérebro (document, click) o transforma na pergunta e avisa com este evento; o link não navega. Aqui o toque vale: a pergunta sai como se
     // tivesse sido digitada (Confirmar, Recusar, Desfazer, Registrar, Não registrar, O que verificar?) e o cérebro grava só o que o botão pede; ela não leva o anexo nem apaga o que está sendo digitado.
     this._chat = (e) => { const d = (e && e.detail) || {}; if (d.q && String(d.q).trim()) this.ask(d.q, null, 'botao'); };
@@ -218,6 +224,7 @@ class Component extends DCLogic {
     window.removeEventListener('hashchange', this._onHash);
     window.removeEventListener('capitao-voz-encerrar', this._onEncerra);
     ['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));
+    window.removeEventListener('storage', this._onSt);
     window.removeEventListener('capitao-chat-pergunta', this._chat);
     this.stopRec();
     (this._pend || []).forEach(clearTimeout); clearTimeout(this._fl);
@@ -413,6 +420,8 @@ class Component extends DCLogic {
   fmt(nome) { try { const A = window.CapitaoAgora; return A && A.fmt && typeof A.fmt[nome] === 'function' ? A.fmt[nome] : null; } catch (e) { return null; } }
   // Leituras da faixa, sempre com a hora e a origem. Com a simulação o dado existe (o que falta vira «—»); o caminho `null` → SEM DADOS / SEM LEITURA é do ramo simulacao:false (falta()).
   // `cartoes` (o texto dos 5 cartões que vem de dado vivo ou de prazo) entra aqui para a tela se redesenhar só quando o que ela exibe muda.
+  // quantas propostas A CONFIRMAR (F14) esperam o toque: o selo do início leva ao Diário
+  nConfirmar() { const B = window.CapitaoBrain; try { return B && typeof B.ticketsAbertos === 'function' ? B.ticketsAbertos().length : 0; } catch (e) { return 0; } }
   leitura() {
     const D = window.CapitaoDados || {}, sim = D.simulacao === true, falta = (r) => (sim ? '—' : r), I = this.agora(), f = this.fmt('campo'), nbf = this.fmt('nb');
     const cartoes = this.botoes().map((b) => b.eq + '|' + b.chip);
@@ -459,6 +468,7 @@ class Component extends DCLogic {
     const atalhos = s.atalhos || this.FALLBACK;
     const chatting = s.thread.length > 0 || s.thinking;
     const att = s.attachment;
+    const nConf = this.nConfirmar();
     const L = this.leitura();
     this._leitK = JSON.stringify(L); // o que a faixa exibe agora: o ouvinte da telemetria só chama setState se mudar
     const modeBase = { tone: 'var(--cap-ink2, #b1bdd6)', bg: 'var(--cap-elev, #131a33)', line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)' };
@@ -468,6 +478,7 @@ class Component extends DCLogic {
     const re = s.note ? s.realce : ''; // botão indicado pela dica do link (#mode=)
     const pulso = (m) => (re === m ? 'capPulse 1.6s ease-in-out infinite' : 'none');
     return {
+      temConfirmar: nConf > 0, confirmarTxt: nConf + ' A CONFIRMAR',
       sweep: fx.sweep, led: L.vivo ? fx.ledVivo : fx.ledSnap, orbit: fx.orbit, spot: fx.spot,
       local: (E.base || (sim ? '' : 'SEM DADOS')).replace(/\s*\(.*\)$/, '').toUpperCase(),
       liveLabel: L.selo,
