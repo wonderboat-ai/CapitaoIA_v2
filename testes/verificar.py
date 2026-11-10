@@ -141,6 +141,12 @@ execução com sim só com simulacao false); G4 com os 6 contatos de apoio, o es
 os prestadores (+ PRESTADOR, ✎, OCULTAR e RESTAURAR sem apagar nada; o telefone só em capitao.equipe.v1; a linha do diário e a ficha da IA sem nome nem número; o que o app não entende no armazenamento fica como estava), + TAREFA da equipe
 (o nome, o dia que existe e não passou, o responsável; UMA tarefa em capitao.tarefas.v1 e UMA linha; contagens() sobe; os prazos se refazem com o dia virado sem recarregar; o Executado vira FEITA) e o selo; a Main e a H2 com o selo
 «n A CONFIRMAR» (conta só as abertas, leva ao #confirmar do Diário, some quando a última é decidida em outra aba); os estados de dentro em 3 tamanhos e 2 temas; e o código. PENDENTES_ROTULO fica vazia.
+Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 48 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
+nome tem o texto; sem Worker): o relatorio.html é uma PÁGINA (PAGINAS: a matriz o abre em 8 tamanhos e 2 temas, com o SOS do topo à vista, as 6 seções e, com --offline, sem rede) e tem as suas conferências: o conteúdo contra o cadastro
+(capa, cartões = contagens(), agenda, histórico, documentos, abastecimentos, peças; nenhum termo do §3, R$, coordenada, telefone nem MMSI; nunca o replay, a telemetria nem a faixa de alerta), os prazos de hoje (relógio 40 dias adiante),
+a privacidade (telefone, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora), o diário vigente e o selo apresentação, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
+O fechamento (rodada completa): o registro das telas novas e do relatório (TELAS, CORE, lista, mapa APP, manifest), PENDENTES_ROTULO e PENDENTES_MUDA vazias, nenhum {{…}} em atributo de SVG, nenhum setInterval novo e a varredura do §3 em
+TODAS as telas com o replay SOLTO em 4 pontos da volta de 150 s (a faixa de alerta nunca no SOS, no Manual nem na C3).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -222,7 +228,7 @@ SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta
 MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
 # páginas fora das TELAS do sw.js: nome → (endereço, com sessão). O login com sessão redireciona; a lista precisa de ?v=lista.
-PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True), 'dados': ('dados.html', True)}
+PAGINAS = {'login': ('login.html', False), 'index': ('index.html?v=lista', True), 'dados': ('dados.html', True), 'relatorio': ('relatorio.html', True)}
 MEDE_LOGIN = """() => { const q = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().bottom : null; };
   const a = document.querySelector('a[href*="SOS-"]'), r = a ? a.getBoundingClientRect() : null;
   return { go: q('#go'), credito: q('.credito'), sos: a ? { href: a.getAttribute('href'), aria: a.getAttribute('aria-label'), txt: a.textContent.trim(), w: r.width, h: r.height, topo: r.top, fim: r.bottom, esq: r.left, dir: r.right,
@@ -787,6 +793,21 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4k' in sys.argv or '--mutantes-p4k' in sys.argv:   # só as conferências da P4K (e, com --mutantes-p4k, os defeitos plantados delas); sem argumento, o relatório, o fechamento e o replay livre de todas as telas
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4k' in sys.argv:
+                falhas = mutantes_p4k(b)
+            else:
+                args4k = [a for a in sys.argv[1:] if not a.startswith('--')]
+                telas4k = [a for a in args4k if a in telas()] if args4k else telas()
+                for nome, prob in p4k_conferencias(b, telas4k, [a for a in args4k if a == 'relatorio'] if args4k else ['relatorio'], not args4k):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4j' in sys.argv or '--mutantes-p4j' in sys.argv:   # só as conferências da P4J (e, com --mutantes-p4j, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -951,15 +972,16 @@ def main():
                         prob += problemas_login_sos(m['sos'], movel, h)
                     if nome == 'index' and 'Alerta crítico' not in pg.evaluate("() => document.body.innerText"):
                         prob.append('a lista não tem a linha «Alerta crítico» (C3): o «Modelo de alerta crítico» saiu na Fase 4')
-                    if nome == 'dados':
+                    if nome in ('dados', 'relatorio'):
                         m = pg.evaluate(MEDE_DADOS)
                         esperado = 'S2-SOS-Mobile.dc.html' if movel else 'S1-SOS-Web.dc.html'
                         if m['sos'] != esperado or m['texto'] != 'SOS': prob.append('SOS do topo %r %r (esperado %s)' % (m['sos'], m['texto'], esperado))
                         if not m['topo']: prob.append('SOS fora da 1ª tela')
                         if not m['fim']: prob.append('SOS some ao rolar até o fim')
                         if m['tema'] != tema or m['fundo'] != FUNDO[tema]: prob.append('tema %s com fundo %s (esperado %s)' % (m['tema'], m['fundo'], FUNDO[tema]))
-                        if m['titulo'] != 'Dados do aparelho · Capitão IA': prob.append('título %r' % m['titulo'])
-                        if 'lendo' in m['lista'] or not m['lista'].strip(): prob.append('lista do aparelho não montou: %r' % m['lista'][:80])
+                        if m['titulo'] != {'dados': 'Dados do aparelho · Capitão IA', 'relatorio': REL_TITULO}[nome]: prob.append('título %r' % m['titulo'])
+                        if nome == 'dados' and ('lendo' in m['lista'] or not m['lista'].strip()): prob.append('lista do aparelho não montou: %r' % m['lista'][:80])
+                        if nome == 'relatorio' and pg.evaluate("() => document.querySelectorAll('[data-rel=secao]').length") != len(REL_SECOES): prob.append('o relatório não montou as %d seções' % len(REL_SECOES))
                     if fotos:
                         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d.png' % (nome, tema, w, h)))
                     if prob:
@@ -1037,6 +1059,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4J', 'prob': prob[:8]})
                     print('FALHA P4J ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4k_conferencias(b, lista, paginas, not args):   # P4K: o relatório (conteúdo, prazos, privacidade, vigente, real, atualização, impressão, layout, código), o fechamento da fase e o replay livre de cada tela
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4K', 'prob': prob[:8]})
+                    print('FALHA P4K ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -4877,11 +4904,12 @@ def teste_h3(b, tela):
     if re.search(r'\bDEMO\b|SEM DADOS|SEM LEITURA|snapshot|fict[ií]ci', r['texto'], re.I): prob.append('%s: rótulo na tela: %s' % (tela, re.search(r'\bDEMO\b|SEM DADOS|SEM LEITURA|snapshot|fict[ií]ci', r['texto'], re.I).group(0)))
     # (P4H) o FAQ dos equipamentos (F6) entrou no quadro «Abrem direto», como a P4G deixou combinado
     esperado = {'tela-sensores': 'A4-Sensores-Web.dc.html' if web else 'A5-Sensores-Mobile.dc.html', 'tela-checklist': 'C4-Checklist-Web.dc.html' if web else 'C4-Checklist-Mobile.dc.html',
-                'tela-faq': 'F6-FAQ-Equipamentos-Web.dc.html' if web else 'F6-FAQ-Equipamentos.dc.html'}
+                'tela-faq': 'F6-FAQ-Equipamentos-Web.dc.html' if web else 'F6-FAQ-Equipamentos.dc.html', 'tela-relatorio': 'relatorio.html'}   # (P4K: o relatório, como a P4G combinou, entra no quadro «Abrem direto»)
     if {x['id']: x['href'] for x in r['a']} != esperado: prob.append('%s: os atalhos das telas novas são %s (esperado %s)' % (tela, {x['id']: x['href'] for x in r['a']}, esperado))
     sw = open(os.path.join(RAIZ, 'sw.js'), encoding='utf-8').read()
     for x in r['a']:
-        if not os.path.exists(os.path.join(RAIZ, x['href'])) or ("'%s'" % x['href'].replace('.dc.html', '')) not in sw: prob.append('%s: o destino %s não existe ou não está no TELAS do sw.js' % (tela, x['href']))
+        no_sw = ("'./%s'" % x['href']) in sw if x['href'] == 'relatorio.html' else ("'%s'" % x['href'].replace('.dc.html', '')) in sw   # (o relatório é uma página: está no CORE, as telas, no TELAS)
+        if not os.path.exists(os.path.join(RAIZ, x['href'])) or not no_sw: prob.append('%s: o destino %s não existe ou não está no TELAS (telas) nem no CORE (relatório) do sw.js' % (tela, x['href']))
         if x['h'] < 43.5: prob.append('%s: o atalho %s tem %.0f px de altura (< 44)' % (tela, x['id'], x['h']))
     if r['lateral'] > 1: prob.append('%s: rola para o lado (%d px)' % (tela, r['lateral']))
     if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
@@ -7565,6 +7593,779 @@ def mutantes_p4j(b):
     return vivos
 
 
+# ——— Fase 4, P4K: o relatório (F24, relatorio.html) e o fechamento da fase ———
+# `--so-p4k [Tela|relatorio…]` roda só as conferências dela (sem argumento, o relatório e a varredura de todas as telas); `--mutantes-p4k` planta os defeitos de MUTANTES_P4K, cada um servido no lugar do arquivo
+# (MUT_ARQ; os testes estáticos leem por le_arq) e acusado pela conferência que cuida dele. `MUT_FILTRO=texto` (ou `a|b`) refaz só os mutantes cujo nome tem o texto.
+# O relatório é uma PÁGINA (PAGINAS, como o dados.html), não uma tela da prancheta: papel branco nos dois temas, atrás do login, abre offline (CORE), nunca lê o replay, a telemetria nem a faixa de alerta.
+REL = 'relatorio.html'
+REL_TITULO = 'Relatório do barco · Capitão IA'
+REL_SECOES = ['resumo', 'agenda', 'historico', 'documentos', 'abastecimentos', 'pecas']
+SYS_MANUT_REL = ('Manutenção', 'Motores', 'Equipamentos', 'Eletrônicos')
+COORD_REL = re.compile(r"\d{1,3}\s*[°º]\s*\d|-?\d{1,3}[.,]\d{4,}(?!\d)")
+FONE_REL = re.compile(r"\b\d{4,5}[-\s]\d{4}\b|\(\d{2}\)\s?\d|\+55")
+LE_REL = r"""() => {
+  const T = (e) => ((e && e.innerText) || '').replace(/\s+/g, ' ').trim(), q = (s, r) => (r || document).querySelector(s);
+  const rows = (s) => [...document.querySelectorAll('tr[data-rel=linha][data-sec="' + s + '"]')].map((tr) => ({ id: tr.getAttribute('data-id'), c: [...tr.children].map(T), chips: [...tr.querySelectorAll('.st')].map(T), html: tr.innerHTML }));
+  const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, B = window.CapitaoBrain || {}, capa = q('[data-rel=capa]');
+  const cartoes = {}; document.querySelectorAll('[data-rel=cartao]').forEach((c) => { cartoes[c.getAttribute('data-id')] = [T(q('.v', c)), T(q('.s', c))]; });
+  let eq = [], ps = [], pend = [], cont = {}, quem = ''; try { eq = B.tarefasEquipe(); ps = B.pecas(); pend = B.pendenciasLista(); cont = A.contagens(); quem = String(window.CapitaoAuth.nome()); } catch (e) {}
+  const sim = (a) => (a || []).map((x) => x);
+  return { titulo: document.title, sec: [...document.querySelectorAll('[data-rel=secao]')].map((s) => s.getAttribute('data-secao')), agenda: rows('agenda'), historico: rows('historico'), documentos: rows('documentos'), abastecimentos: rows('abastecimentos'),
+    consumo: rows('consumo'), pecas: rows('pecas'), cartoes: cartoes, h1: capa ? T(q('h1', capa)) : '', barco: capa ? T(q('.barco', capa)) : '', dl: capa ? [...capa.querySelectorAll('dt')].map((d) => [T(d), T(d.nextElementSibling)]) : [],
+    gerado: T(q('[data-rel=gerado]')), nota: capa ? T(q('.nota', capa)) : '', regra: T(q('[data-rel=regra]')), fonteConsumo: T(q('[data-rel=fonte-consumo]')), vazios: [...document.querySelectorAll('[data-rel=vazio]')].map(T), rodape: T(q('[data-rel=rodape]')),
+    texto: document.getElementById('rel').innerText, pagina: document.body.innerText, atributos: [...document.querySelectorAll('[title],[aria-label],[alt],[placeholder]')].map((e) => ['title', 'aria-label', 'alt', 'placeholder'].map((a) => e.getAttribute(a) || '').join(' ')).join('\n'),
+    tipos: { replay: typeof window.CapitaoReplay, alertas: typeof window.CapitaoAlertas, tele: typeof window.CapitaoTelemetria }, faixa: !!document.getElementById('capitao-faixa-alertas'),
+    lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    sos: (q('header a[href*="SOS-"]') || {}).getAttribute ? q('header a[href*="SOS-"]').getAttribute('href') : null,
+    dd: { agenda: (D.agenda || []).map((t) => ({ id: t.id, t: t.t, equip: t.equip, quem: t.quem, intervalo: t.intervalo, vence: t.vence, dn: t.dn, hl: t.horas ? t.horas.limite : null, ultima: t.ultima })),
+      equipe: eq.map((t) => ({ id: t.id, n: t.n, vence: t.vence, dn: t.dn, quem: t.quem, sistema: t.sistema, feita: t.feita })),
+      docs: (D.documentos || []).map((x) => ({ id: x.id, n: x.n, cat: x.cat, vence: x.vence, dn: typeof x.dn === 'number' ? x.dn : null, st: x.st, numero: x.numero, nota: x.nota, emitido: x.emitido, docSt: typeof x.dn === 'number' ? A.docDe(x.dn).st : null })),
+      abast: (D.abastecimentos || []).map((a) => ({ id: a.id, d: a.d, h: a.h, litros: a.litros, local: a.local, combustivel: a.combustivel, nota: a.nota, nivelDepois: a.nivelDepois, st: a.st })),
+      pecas: ps.map((p) => ({ id: p.id, n: p.n, qtd: p.qtd, min: p.min, local: p.local, obs: p.obs, tarefas: p.tarefas, nivel: p.nivel, st: p.st })), diario: (D.diario || []).map((x) => ({ id: x.id, sys: x.sys, ref: x.ref, iso: x.iso, h: x.h, t: x.t, who: x.who, pend: x.pend })),
+      cont: cont, hoje: A.relogio ? A.relogio.hoje : '', hojeIso: A.relogio ? A.relogio.hojeIso : '', consumo: D.consumo || {}, regra: D.regraAbast || '', emb: D.embarcacao || {}, quem: quem, exec: B.loadExec ? B.loadExec() : {},
+      pend: pend.map((p) => ({ alvo: p.alvo, aberta: p.aberta })), sim: D.simulacao, agoraMs: Date.now(), fonteAg: D.agendaFonte, fonteDocs: D.docsFonte, fonteAb: D.abastFonte, fonteDi: D.diarioFonte, versao: window.CapitaoAuth ? window.CapitaoAuth.VERSAO : null } };
+}"""
+
+
+def abre_rel(b, w=1280, h=900, tema='escuro', ls=None, depois='', dias=0, plataforma=None, sem_sessao=False):
+    """O relatório com sessão, o tema, `ls` posto antes da carga, `depois` somado ao fim do capitao-dados.js e o relógio `dias` dias adiante (o deslocamento entra ANTES da sessão, que usa o mesmo relógio)."""
+    movel = w < 500
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+    init = ''
+    if dias: init += "(() => { const n = Date.now.bind(Date); Date.now = () => n() + %d; })();" % (dias * 86400000)
+    if not sem_sessao: init += SESSAO + ";"
+    init += "localStorage.setItem('capitao.tema.v1', '%s');localStorage.setItem('capitao.plataforma.v1', '%s');" % (tema, plataforma or ('app' if movel else 'web'))
+    for k, v in (ls or {}).items(): init += "localStorage.setItem(%s, %s);" % (json.dumps(k), json.dumps(v))
+    ctx.add_init_script(init)
+    aplica_mut(ctx)
+    if depois:
+        def injeta(route):
+            r = route.fetch()
+            route.fulfill(response=r, body=r.text() + '\n' + depois)
+        ctx.route('**/capitao-dados.js', injeta)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    pg.goto(BASE + REL, wait_until='load')
+    try: pg.wait_for_selector('[data-rel=secao][data-secao=pecas], [data-rel=vazio]', state='attached', timeout=15000)
+    except Exception: erros.append('o relatório não montou em 15 s')
+    pg.wait_for_timeout(250)
+    return ctx, pg, erros
+
+
+def rel_nb(x, c=0, mil=True): return nbp(x, c, mil)
+def rel_br(iso): return '/'.join(reversed(iso.split('-')))
+
+
+def rel_esperado_agenda(dd):
+    """As linhas da agenda como o relatório as põe: as abertas por prazo e id, as executadas por último; (id, nome, detalhe, resp., vence, situação, última execução)."""
+    L = []
+    for t in dd['agenda']:
+        L.append({'id': t['id'], 'nome': t['t'], 'det': ' · '.join(x for x in (t.get('equip'), t.get('intervalo')) if x), 'quem': t.get('quem') or 'equipe', 'dn': t['dn'],
+                  'vence': t['vence'] + (' ou %s h' % rel_nb(t['hl']) if t.get('hl') is not None else ''), 'ult': t.get('ultima') or '', 'gerada': True})
+    for t in dd['equipe']:
+        L.append({'id': t['id'], 'nome': t['n'], 'det': 'tarefa da equipe' + (' · ' + t['sistema'] if t.get('sistema') else ''), 'quem': t.get('quem') or 'equipe', 'dn': t['dn'], 'vence': rel_br(t['vence']), 'ult': '', 'gerada': False})
+    for x in L: x['feita'] = x['id'] in dd['exec']
+    L.sort(key=lambda x: (x['feita'], x['dn'] if x['dn'] is not None else 1e9, x['id']))
+    return L
+
+
+def rel_situacao(x):
+    if x['feita']: return 'FEITA', ''
+    if x['dn'] < 0: return 'ATRASADA', 'há %d %s' % (-x['dn'], 'dia' if x['dn'] == -1 else 'dias')
+    if x['dn'] <= 30: return 'D-%d' % x['dn'], ''
+    return 'EM DIA', 'D-%d' % x['dn']
+
+
+def rel_confere_agenda(r, dd, rot):
+    prob = []
+    esp = rel_esperado_agenda(dd)
+    if [x['id'] for x in r['agenda']] != [x['id'] for x in esp]:
+        return ['%s: as linhas da agenda são %s (esperado %s: as abertas por prazo, as executadas por último)' % (rot, [x['id'] for x in r['agenda']], [x['id'] for x in esp])]
+    for lin, x in zip(r['agenda'], esp):
+        st, dt = rel_situacao(x)
+        c = lin['c']
+        if not (c[0].startswith(x['nome']) and x['det'] in c[0]): prob.append('%s %s: tarefa «%s» (esperado %s · %s)' % (rot, x['id'], c[0][:90], x['nome'], x['det']))
+        if c[1] != x['quem']: prob.append('%s %s: responsável %r (esperado %r)' % (rot, x['id'], c[1], x['quem']))
+        if c[2] != x['vence']: prob.append('%s %s: vence %r (esperado %r)' % (rot, x['id'], c[2], x['vence']))
+        if lin['chips'][:1] != [st] or c[3] != (st + (' ' + dt if dt else '')): prob.append('%s %s: situação %r (esperado %r %r)' % (rot, x['id'], c[3], st, dt))
+        if x['feita']: continue
+        ult = (x['ult'] + ' pela agenda') if x['gerada'] else 'ainda não executada'
+        if c[4] != ult: prob.append('%s %s: última execução %r (esperado %r)' % (rot, x['id'], c[4], ult))
+    return prob
+
+
+def rel_esperado_docs(dd, envios=()):
+    dated = sorted([x for x in dd['docs'] if x['dn'] is not None], key=lambda x: x['dn'])
+    return dated + list(envios) + [x for x in dd['docs'] if x['dn'] is None]
+
+
+def rel_confere_docs(r, dd, rot):
+    prob = []
+    ordem = rel_esperado_docs(dd)
+    if [x['id'] for x in r['documentos']] != [x['id'] for x in ordem]:
+        return ['%s: os documentos são %s (esperado %s: os com prazo por dia, depois os sem prazo)' % (rot, [x['id'] for x in r['documentos']], [x['id'] for x in ordem])]
+    for lin, x in zip(r['documentos'], ordem):
+        st = x['docSt'] if x['dn'] is not None else 'CONFERIDA'
+        venc = x['vence'] or 'sem prazo'
+        if lin['c'][0] != x['n']: prob.append('%s %s: nome %r' % (rot, x['id'], lin['c'][0]))
+        if lin['c'][2] != venc or lin['chips'] != [st]: prob.append('%s %s: vencimento %r e situação %s (esperado %r e %s)' % (rot, x['id'], lin['c'][2], lin['chips'], venc, st))
+        for parte in (x.get('cat'), ('nº ' + x['numero']) if x.get('numero') else '', x.get('nota')):
+            if parte and parte not in lin['c'][1]: prob.append('%s %s: o detalhe não diz %r: %r' % (rot, x['id'], parte, lin['c'][1][:100]))
+    return prob
+
+
+def rel_confere_abast(r, dd, rot):
+    prob = []
+    ab = sorted(dd['abast'], key=lambda a: (-(datetime.datetime.strptime(a['d'], '%d/%m/%Y').toordinal()), -(int(a['h'][:2]) * 60 + int(a['h'][3:5]) if a.get('h') else 0)))
+    if len(r['abastecimentos']) != len(ab): return ['%s: %d linhas de abastecimento (esperado %d)' % (rot, len(r['abastecimentos']), len(ab))]
+    for lin, a in zip(r['abastecimentos'], ab):
+        c = lin['c']
+        if not c[0].startswith(a['d']) or (a.get('h') and a['h'] not in c[0]): prob.append('%s: data e hora %r (esperado %s %s)' % (rot, c[0], a['d'], a.get('h')))
+        if a['local'] not in c[1] or (a.get('combustivel') and a['combustivel'] not in c[1]): prob.append('%s: posto %r' % (rot, c[1][:90]))
+        if c[2] != rel_nb(a['litros']) or c[3] != rel_nb(a['nivelDepois'], 1) + ' %' or lin['chips'] != [a['st']]: prob.append('%s: litros %r, tanques depois %r e situação %s (esperado %s, %s %%, %s)' % (rot, c[2], c[3], lin['chips'], rel_nb(a['litros']), rel_nb(a['nivelDepois'], 1), a['st']))
+    C = dd['consumo']
+    esp = [('Cruzeiro', C['cruzeiro']), ('Marcha lenta', C['lenta']), ('Máxima', C['maxima'])]
+    got = [(x['c'][0], x['c'][1], x['c'][2], x['c'][3]) for x in r['consumo']]
+    want = [(n, '%s nós' % rel_nb(c['nos']), '%s rpm' % rel_nb(c['rpm']), '%s L/h' % rel_nb(c['lph'], 1 if c['lph'] < 10 else 0)) for n, c in esp]
+    if got != want: prob.append('%s: o consumo de referência é %s (esperado %s)' % (rot, got, want))
+    regra = dd['regra'][:1].upper() + dd['regra'][1:] + '. Gerador: %s L/h.' % rel_nb(C['gerador_lph'], 1)
+    if r['regra'] != regra: prob.append('%s: a regra é %r (esperado %r)' % (rot, r['regra'], regra))
+    if r['fonteConsumo'] != 'Fonte: %s.' % C['fonte']: prob.append('%s: a fonte do consumo é %r' % (rot, r['fonteConsumo']))
+    return prob
+
+
+def rel_confere_pecas(r, dd, rot):
+    prob = []
+    ag = {t['id']: t for t in dd['agenda']}
+    if [x['id'] for x in r['pecas']] != [p['id'] for p in dd['pecas']]: return ['%s: as peças são %s (esperado as do estoque, na ordem do cérebro)' % (rot, [x['id'] for x in r['pecas']])]
+    for lin, p in zip(r['pecas'], dd['pecas']):
+        c = lin['c']
+        if lin['chips'][:1] != [p['st']] or not c[0].startswith(p['n']): prob.append('%s %s: peça %r (esperado %s · %s)' % (rot, p['id'], c[0][:80], p['n'], p['st']))
+        if c[1] != '%d / %d' % (p['qtd'], p['min']): prob.append('%s %s: a bordo/mínimo %r (esperado %d / %d)' % (rot, p['id'], c[1], p['qtd'], p['min']))
+        if p['local'] not in c[2]: prob.append('%s %s: local %r' % (rot, p['id'], c[2]))
+        for tid in p.get('tarefas') or []:
+            t = ag.get(tid)
+            if not t: continue
+            if dd['exec'].get(tid): esp = t['t'] + ' (executada)'
+            else: esp = t['t'] + ' (' + ('atrasada há %d %s' % (-t['dn'], 'dia' if t['dn'] == -1 else 'dias') if t['dn'] < 0 else 'D-%d' % t['dn']) + ' · vence ' + t['vence'][:5] + ')'
+            if esp not in c[3]: prob.append('%s %s: a tarefa ligada devia dizer %r: %r' % (rot, p['id'], esp, c[3][:120]))
+        if not (p.get('tarefas') or []) and 'nenhuma tarefa da agenda' not in c[3]: prob.append('%s %s: peça sem tarefa devia dizer «nenhuma tarefa da agenda»: %r' % (rot, p['id'], c[3]))
+    return prob
+
+
+def rel_historico_ids(dd):
+    ids = {t['id'] for t in dd['agenda']}
+    sel = [x for x in dd['diario'] if x['sys'] in SYS_MANUT_REL or (x.get('ref') and x['ref'] in ids)]
+    return [x['id'] for x in sorted(sel, key=lambda x: x['iso'], reverse=True)]
+
+
+def rel_termos_proibidos(texto):
+    """Termos do §3 que o relatório nunca escreve (a varredura de telas, o DINHEIRO e o PESSOAIS), mais o R$, a coordenada e o telefone com a forma de telefone. {nome: [trecho]}."""
+    out = achados_termos('relatorio', texto)
+    for nome, rx in (('DINHEIRO', TERMOS['DINHEIRO']), ('PESSOAIS', TERMOS['PESSOAIS']), ('COORDENADA', COORD_REL), ('TELEFONE', FONE_REL)):
+        ms = [texto[max(0, m.start() - 25):m.end() + 25].replace('\n', ' | ') for m in rx.finditer(texto)]
+        if ms: out[nome] = ms
+    if 'R$' in texto: out['R$'] = ['R$']
+    if '710123456' in texto: out['MMSI'] = ['710123456']
+    return out
+
+
+def teste_rel_conteudo(b):
+    """O relatório de agora, sem registro do aparelho: a capa (nome, modelo, registro, base, hora do barco, quem gerou), os 4 cartões (iguais a CapitaoAgora.contagens() e às peças), a agenda (as 14 tarefas geradas e as 2 da
+    equipe, o prazo de hoje, as horas do limite, a última execução), o histórico (só manutenção e equipamentos, a data e a hora do barco, as pendências), os documentos (A.docDe), os abastecimentos (sem R$) com o consumo de referência,
+    as peças com as tarefas ligadas; nenhum termo do §3, nenhum R$, coordenada nem telefone; nenhuma leitura ao vivo (sem replay, telemetria nem faixa de alerta); SOS à vista e certo."""
+    prob = []
+    ctx, pg, erros = abre_rel(b)
+    r = pg.evaluate(LE_REL)
+    dd = r['dd']
+    rot = 'relatório'
+    if r['titulo'] != REL_TITULO: prob.append('%s: título %r' % (rot, r['titulo']))
+    if r['sec'] != REL_SECOES: prob.append('%s: as seções são %s (esperado %s)' % (rot, r['sec'], REL_SECOES))
+    # capa
+    E = dd['emb']
+    if r['h1'] != E['nome']: prob.append('%s: o título da capa é %r (esperado %r)' % (rot, r['h1'], E['nome']))
+    if r['barco'] != E['rotulo'] + ' · ' + E['motorizacao']: prob.append('%s: modelo e motorização %r' % (rot, r['barco']))
+    dl = dict((k, v) for k, v in r['dl'])
+    for k, v in (('Estaleiro', E['fabricante']), ('Registro', E['registro']), ('Base', E['base']), ('Gerado por', dd['quem']), ('Prazos', 'contados a partir de %s (hoje)' % dd['hoje'])):
+        if dl.get(k) != v: prob.append('%s: capa «%s» = %r (esperado %r)' % (rot, k, dl.get(k), v))
+    agora = datetime.datetime.fromtimestamp(dd['agoraMs'] / 1000.0, datetime.timezone.utc) - datetime.timedelta(hours=3)
+    quando = [(agora - datetime.timedelta(minutes=m)).strftime('%d/%m/%Y às %H:%M (Brasília)') for m in (0, 1, 2)]
+    if r['gerado'] not in quando: prob.append('%s: «Gerado em» %r (esperado a hora do barco, %s)' % (rot, r['gerado'], quando[0]))
+    if dd['hoje'] != agora.strftime('%d/%m/%Y'): prob.append('%s: hoje no CapitaoAgora é %s e no relógio do barco %s' % (rot, dd['hoje'], agora.strftime('%d/%m/%Y')))
+    # cartões = contagens() e peças
+    c = dd['cont']
+    z = sum(1 for p in dd['pecas'] if p['nivel'] == 'zero'); bx = sum(1 for p in dd['pecas'] if p['nivel'] == 'baixa')
+    esp = {'atrasadas': [str(c['atrasadas']), 'vencem em 30 dias: %d' % c['d30']], 'docs': [str(c['docsVencidos']), 'vencem em 90 dias: %d' % c['docsVencem90']],
+           'pecas': [str(z), 'no mínimo ou abaixo: %d' % bx], 'pendencias': [str(c['pendencias']), 'no Diário de bordo']}
+    if r['cartoes'] != esp: prob.append('%s: os cartões são %s (esperado %s, de CapitaoAgora.contagens() e das peças)' % (rot, r['cartoes'], esp))
+    n_atr = sum(1 for x in r['agenda'] if x['chips'][:1] == ['ATRASADA'])
+    if n_atr != c['atrasadas']: prob.append('%s: %d linhas ATRASADA na agenda e contagens().atrasadas = %d' % (rot, n_atr, c['atrasadas']))
+    # as tabelas
+    prob += rel_confere_agenda(r, dd, rot)
+    ids = rel_historico_ids(dd)
+    if [x['id'] for x in r['historico']] != ids: prob.append('%s: o histórico é %s (esperado %s: manutenção, motores, equipamentos, eletrônicos e as tarefas da agenda, do mais novo ao mais velho)' % (rot, [x['id'] for x in r['historico']], ids))
+    else:
+        gerad = {x['id']: x for x in dd['diario']}
+        abertas = {p['alvo'] for p in dd['pend'] if p['aberta']}
+        for lin in r['historico']:
+            x = gerad[lin['id']]
+            d = datetime.datetime.fromisoformat(x['iso']).strftime('%d/%m/%Y')
+            if not lin['c'][0].startswith(d) or x['h'] not in lin['c'][0] or not lin['c'][1].startswith(x['t']): prob.append('%s %s: data, hora ou texto do registro %r' % (rot, lin['id'], lin['c'][:2]))
+            if (('PENDENTE' in lin['chips']) != (x['id'] in abertas)): prob.append('%s %s: chip PENDENTE %s e a pendência aberta é %s' % (rot, lin['id'], 'PENDENTE' in lin['chips'], x['id'] in abertas))
+    prob += rel_confere_docs(r, dd, rot)
+    prob += rel_confere_abast(r, dd, rot)
+    prob += rel_confere_pecas(r, dd, rot)
+    if r['vazios']: prob.append('%s: seção vazia na simulação: %s' % (rot, r['vazios']))
+    # o que nunca aparece
+    ach = rel_termos_proibidos(r['pagina'] + '\n' + r['atributos'])
+    if ach: prob.append('%s: termo proibido no texto: %s' % (rot, '; '.join('%s %s' % (k, v[:2]) for k, v in ach.items())[:300]))
+    if r['tipos'] != {'replay': 'undefined', 'alertas': 'undefined', 'tele': 'undefined'} or r['faixa']: prob.append('%s: o relatório lê a leitura ao vivo (typeof %s) ou tem a faixa de alerta (%s): é um documento do registro' % (rot, r['tipos'], r['faixa']))
+    if r['sos'] != 'S1-SOS-Web.dc.html': prob.append('%s: o SOS do topo leva a %r (computador: S1)' % (rot, r['sos']))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_rel_dias(b):
+    """Os prazos são os de HOJE: o cadastro guarda o prazo relativo (venceEm) e o CapitaoAgora refaz a DATA de vencimento a cada dia; com o relógio 40 dias adiante, a data de cada tarefa e de cada documento anda os mesmos 40 dias, o prazo
+    (há 25 dias, D-17) fica, a situação bate com o calendário (a data menos o dia de hoje, calculada aqui sem o dn do cadastro) e as contagens e os cartões acompanham; um documento vencido há 10 dias e uma tarefa atrasada há 1 dia
+    (injetados no cadastro) saem VENCIDO e «há 1 dia», e o cartão de documentos vencidos conta 1."""
+    prob = []
+    injeta = ("window.CapitaoDados.documentos.push({ id: 'vencido-teste', n: 'Documento vencido do teste', cat: 'Registro', venceEm: -10, fonte: 'Controle de documentos' });"
+              " window.CapitaoDados.agenda.push({ id: 'atraso-1-teste', t: 'Tarefa de ontem do teste', equip: 'Casco', quem: 'marina', intervalo: 'mensal', venceEm: -1, ultimaHa: 31, fonte: 'Agenda preditiva' });"
+              " window.CapitaoAgora.rebase(Date.now(), true);")
+    por = {}
+    for dias in (0, 40):
+        ctx, pg, erros = abre_rel(b, dias=dias, depois=injeta)
+        r = pg.evaluate(LE_REL)
+        dd = r['dd']
+        por[dias] = r
+        hoje = (datetime.datetime.fromtimestamp(dd['agoraMs'] / 1000.0, datetime.timezone.utc) - datetime.timedelta(hours=3)).date()
+        if dd['hojeIso'] != hoje.isoformat(): prob.append('+%d d: hoje no CapitaoAgora é %s e no relógio %s' % (dias, dd['hojeIso'], hoje.isoformat()))
+        for t in dd['agenda']:
+            n = (datetime.datetime.strptime(t['vence'], '%d/%m/%Y').date() - hoje).days
+            lin = [x for x in r['agenda'] if x['id'] == t['id']]
+            st, dt = rel_situacao({'feita': False, 'dn': n})
+            if len(lin) != 1 or lin[0]['c'][3] != st + (' ' + dt if dt else '') or lin[0]['c'][2].split(' ou ')[0] != t['vence']: prob.append('+%d d · %s: a situação devia ser %s %s (vence %s): %s' % (dias, t['id'], st, dt, t['vence'], lin[0]['c'][2:4] if lin else 'sem linha'))
+        for x in dd['docs']:
+            if x['vence'] is None: continue
+            n = (datetime.datetime.strptime(x['vence'], '%d/%m/%Y').date() - hoje).days
+            st = 'VENCIDO' if n < 0 else 'VENCE EM %d D' % n if n <= 90 else 'EM DIA'
+            lin = [y for y in r['documentos'] if y['id'] == x['id']]
+            if len(lin) != 1 or lin[0]['chips'] != [st] or lin[0]['c'][2] != x['vence']: prob.append('+%d d · %s: o documento devia estar %s: %s' % (dias, x['id'], st, lin[0]['chips'] if lin else 'sem linha'))
+        n_atr = sum(1 for x in r['agenda'] if x['chips'][:1] == ['ATRASADA'])
+        if n_atr != dd['cont']['atrasadas'] or r['cartoes']['atrasadas'][0] != str(dd['cont']['atrasadas']): prob.append('+%d d: %d linhas ATRASADA, cartão %s e contagens().atrasadas %d' % (dias, n_atr, r['cartoes']['atrasadas'][0], dd['cont']['atrasadas']))
+        if r['cartoes']['docs'][0] != '1' or dd['cont']['docsVencidos'] != 1: prob.append('+%d d: o cartão de documentos vencidos é %s e contagens() %d (esperado 1: o documento vencido do teste)' % (dias, r['cartoes']['docs'][0], dd['cont']['docsVencidos']))
+        a1 = [x for x in r['agenda'] if x['id'] == 'atraso-1-teste']
+        if len(a1) != 1 or a1[0]['c'][3] != 'ATRASADA há 1 dia': prob.append('+%d d: a tarefa atrasada há 1 dia devia dizer «ATRASADA há 1 dia»: %s' % (dias, a1 and a1[0]['c'][3]))
+        v1 = [x for x in r['documentos'] if x['id'] == 'vencido-teste']
+        if len(v1) != 1 or v1[0]['chips'] != ['VENCIDO']: prob.append('+%d d: o documento vencido do teste devia estar VENCIDO: %s' % (dias, v1 and v1[0]['chips']))
+        prob += ['+%d d: %s' % (dias, e) for e in erros[:2]]
+        ctx.close()
+    # a data anda com o relógio (o prazo, não)
+    if len(por) == 2:
+        for t in por[0]['agenda']:
+            u = [x for x in por[40]['agenda'] if x['id'] == t['id']]
+            if len(u) != 1 or not t['c'][2][:10].count('/') == 2: continue
+            d0 = datetime.datetime.strptime(t['c'][2][:10], '%d/%m/%Y').date(); d1 = datetime.datetime.strptime(u[0]['c'][2][:10], '%d/%m/%Y').date()
+            if (d1 - d0).days != 40 or u[0]['c'][3] != t['c'][3]: prob.append('%s: com o relógio 40 dias adiante a data devia andar 40 dias (%s → %s) e o prazo ficar (%s → %s)' % (t['id'], t['c'][2][:10], u[0]['c'][2][:10], t['c'][3], u[0]['c'][3]))
+    return prob
+
+
+def rel_semente(sim=True):
+    """O registro deste aparelho com tudo o que o relatório não pode mostrar (telefone, e-mail, CPF, valor, coordenada, a linha do SOS, o que não é manutenção) e o que ele tem de mostrar."""
+    S = "Troca do filtro concluída; custou R$ 1.250,00 e o técnico (47) 99999-1234 confirmou. Posição 26°59,56'S 048°38,07'W e -26.99261, -48.63456; email tecnico@exemplo.com; CPF 123.456.789-09; tel 3333-4444; cel: 47 98888-7777; preço 99,90 o litro."
+    dia = [
+        {'d': '10/11', 'iso': '2026-11-10T12:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': S},
+        {'d': '10/11', 'iso': '2026-11-10T11:00:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'LINHA_DIARIO_GERAL passeio de domingo'},
+        {'d': '10/11', 'iso': '2026-11-10T10:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'web · SOS', 't': 'SOSMARCA posição 26°59,56\'S 048°38,07\'W'},
+    ]
+    return {
+        'capitao.diario.v1': json.dumps(dia),
+        'capitao.docs.v1': json.dumps([{'n': 'laudo 47 99999-1234 foto.pdf', 's': '120 KB', 'dd': '10/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos', 'fonte': 'enviado no console por Lucas'}]),
+        'capitao.abast.v1': json.dumps([{'n': 'nf 47 98888-7777 posto.jpg', 'd': '10/11/2026', 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no app'}]),
+        'capitao.pecas.v1': json.dumps({'novas': [{'id': 'upriv', 'n': 'Peça do teste de privacidade', 'qtd': 3, 'min': 1, 'local': 'prateleira (47) 97777-6666', 'obs': 'falar com joao@exemplo.com', 'tarefas': []}], 'movs': []}),
+        'capitao.tarefas.v1': json.dumps([{'id': 'gpriv1', 'n': 'Tarefa do teste R$ 300,00', 'vence': '2026-12-01', 'quem': 'ligar 47 96666-5555', 'origem': 'tela', 'iso': '2026-11-10T09:00:00.000Z', 'who': 'Lucas'}]),
+        'capitao.equipe.v1': json.dumps({'fones': {'marina': '+55 47 95555-4444'}, 'convites': [{'nome': 'Fulano Convidado Teste', 'acesso': 'convidado', 'canal': 'WhatsApp', 'iso': '2026-11-10T09:00:00.000Z'}]}),
+        'capitao.prestadores.v1': json.dumps({'novos': [{'id': 'rpriv1', 'n': 'Prestador Teste Alfa', 'role': 'casco', 's': 'obs', 'iso': '2026-11-10T09:00:00.000Z', 'who': 'Lucas'}], 'fixos': {}}),
+    }
+
+
+REL_SEGREDOS = ['99999-1234', '98888-7777', '97777-6666', '96666-5555', '95555-4444', '3333-4444', 'tecnico@exemplo', 'joao@exemplo', '123.456.789', 'R$', '1.250', '250,00', '99,90', '9,90', "26°59", '26.99261', '48.63456', 'SOSMARCA',
+                'LINHA_DIARIO_GERAL', 'Fulano', 'Prestador Teste Alfa', '710123456']
+
+
+def teste_rel_privacidade(b):
+    """Sem telefone, e-mail, CPF, valor em dinheiro nem coordenada: o texto livre do aparelho (diário, nome de arquivo, local e observação de peça, responsável da tarefa) passa pelo PESSOAIS e pelo DINHEIRO do §3 e pelo semCoord do
+    cérebro; o valor sai inteiro (não sobra «250» do «R$ 1.250,00»); a linha do SOS e a que não é manutenção não entram; a Equipe (telefones, convites, prestadores) nunca aparece; o resto da frase fica."""
+    prob = []
+    ctx, pg, erros = abre_rel(b, ls=rel_semente())
+    r = pg.evaluate(LE_REL)
+    t = r['pagina'] + '\n' + r['atributos']
+    for s in REL_SEGREDOS:
+        if s in t: prob.append('o relatório mostra %r' % s)
+    ach = rel_termos_proibidos(t)
+    if ach: prob.append('termo proibido com o registro do aparelho: %s' % '; '.join('%s %s' % (k, v[:2]) for k, v in ach.items())[:300])
+    linha = [x for x in r['historico'] if 'Troca do filtro concluída' in x['c'][1]]
+    if len(linha) != 1: prob.append('a linha de manutenção do aparelho devia aparecer uma vez, apareceu %d' % len(linha))
+    else:
+        c = linha[0]['c'][1]
+        if 'confirmou' not in c or '[valor omitido]' not in c or c.count('[contato omitido]') < 4 or '(coordenadas só na tela do app)' not in c: prob.append('a linha de manutenção devia manter o texto e marcar o que saiu (valor, contatos, coordenada): %r' % c[:260])
+    if len([x for x in r['historico'] if 'SOSMARCA' in x['c'][1]]) or len([x for x in r['historico'] if 'LINHA_DIARIO_GERAL' in x['c'][1]]): prob.append('entrou no histórico a linha do SOS ou a que não é de manutenção')
+    for sec, chave in (('documentos', 'laudo'), ('abastecimentos', 'posto.jpg'), ('pecas', 'Peça do teste de privacidade'), ('agenda', 'Tarefa do teste')):
+        if not any(chave in x['c'][0] + ' ' + x['c'][1] for x in r[sec]): prob.append('%s: a linha do aparelho (%s) sumiu em vez de perder só o contato' % (sec, chave))
+    if 'A CONFERIR' not in ' '.join(x['c'][3] for x in r['documentos']): prob.append('o documento enviado devia ficar A CONFERIR')
+    prob += ['privacidade: %s' % e for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def rel_semente_vigente():
+    base = {'d': '10/11', 'who': 'Lucas', 'src': 'console · manutenção', 'sys': 'Manutenção'}
+    L = [dict(base, iso='2026-11-10T14:00:00.000Z', t='Registro L5 com selo', sim=True),
+         dict(base, iso='2026-11-10T13:00:00.000Z', t='Registro L4 pendente', pend=True),
+         dict(base, iso='2026-11-10T12:30:00.000Z', t='Registro L3 com pendência', pend=True),
+         dict(base, iso='2026-11-10T12:20:00.000Z', t='Pendência resolvida: Registro L3 (linha de ação)', acao='resolve', alvo='2026-11-10T12:30:00.000Z'),
+         dict(base, iso='2026-11-10T12:00:00.000Z', t='Texto original L2 corrigido'),
+         dict(base, iso='2026-11-10T11:30:00.000Z', t='Texto novo da correção L2', acao='corrige', alvo='2026-11-10T12:00:00.000Z'),
+         dict(base, iso='2026-11-10T11:00:00.000Z', t='Registro L1 que foi anulado'),
+         dict(base, iso='2026-11-10T10:30:00.000Z', t='Registro anulado: L1', acao='anula', alvo='2026-11-10T11:00:00.000Z')]
+    L.sort(key=lambda x: x['iso'], reverse=True)
+    return L
+
+
+def teste_rel_vigente(b):
+    """A versão vigente do diário: a linha anulada sai, a corrigida mostra o texto novo (CORRIGIDO), as linhas de ação não são registros, a pendência aberta é PENDENTE e a resolvida, RESOLVIDA; o selo «apresentação» (linha, tarefa,
+    peça, documento, abastecimento e execução com sim) só com simulacao false, nunca na linha sem sim."""
+    prob = []
+    for sim, depois in ((True, ''), (False, 'window.CapitaoDados.simulacao = false;')):
+        ls = {'capitao.diario.v1': json.dumps(rel_semente_vigente()),
+              'capitao.docs.v1': json.dumps([{'n': 'Doc com sim', 's': '1 KB', 'dd': '10/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos', 'sim': True}, {'n': 'Doc sem sim', 's': '1 KB', 'dd': '10/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos'}]),
+              'capitao.abast.v1': json.dumps([{'n': 'nf com sim.jpg', 'd': '10/11/2026', 'st': 'A CONFIRMAR', 'sim': True}, {'n': 'nf sem sim.jpg', 'd': '10/11/2026', 'st': 'A CONFIRMAR'}]),
+              'capitao.pecas.v1': json.dumps({'novas': [{'id': 'usim', 'n': 'Peça com sim', 'qtd': 2, 'min': 1, 'sim': True}, {'id': 'usem', 'n': 'Peça sem sim', 'qtd': 2, 'min': 1}], 'movs': []}),
+              'capitao.tarefas.v1': json.dumps([{'id': 'gsim1', 'n': 'Tarefa com sim', 'vence': '2026-12-01', 'quem': 'Lucas', 'origem': 'tela', 'iso': '2026-11-10T09:00:00.000Z', 'who': 'Lucas', 'sim': True},
+                                                {'id': 'gsem1', 'n': 'Tarefa sem sim', 'vence': '2026-12-02', 'quem': 'Lucas', 'origem': 'tela', 'iso': '2026-11-10T09:01:00.000Z', 'who': 'Lucas'}]),
+              'capitao.executado.v1': json.dumps({'casco-anodos': {'d': '10/11', 't': '08:15', 'iso': '2026-11-10T11:15:00.000Z', 'sim': True}})}
+        ctx, pg, erros = abre_rel(b, ls=ls, depois=depois)
+        r = pg.evaluate(LE_REL)
+        modo = 'simulação' if sim else 'simulacao false'
+        txt = {x['id']: x for x in r['historico']}
+        por = lambda sec, frag: [x for x in r[sec] if frag in x['c'][0]]
+        textos = ' | '.join(x['c'][1] for x in r['historico'])
+        if 'Registro L1 que foi anulado' in textos or 'Texto original L2' in textos or 'Registro anulado: L1' in textos or 'linha de ação' in textos: prob.append('%s: a linha anulada, a original corrigida ou uma linha de ação entrou no histórico: %s' % (modo, textos[:200]))
+        l2 = [x for x in r['historico'] if 'Texto novo da correção L2' in x['c'][1]]
+        if len(l2) != 1 or 'CORRIGIDO' not in l2[0]['chips']: prob.append('%s: a linha corrigida devia mostrar o texto novo com o chip CORRIGIDO: %s' % (modo, [x['c'][1][:60] for x in r['historico']]))
+        l3 = [x for x in r['historico'] if x['c'][1].startswith('Registro L3 com pendência')]
+        l4 = [x for x in r['historico'] if x['c'][1].startswith('Registro L4 pendente')]
+        if len(l3) != 1 or l3[0]['chips'] != ['RESOLVIDA'] or len(l4) != 1 or l4[0]['chips'] != ['PENDENTE']: prob.append('%s: pendência resolvida %s / aberta %s (esperado RESOLVIDA / PENDENTE)' % (modo, l3 and l3[0]['chips'], l4 and l4[0]['chips']))
+        selos = {'histórico com sim': ([x for x in r['historico'] if x['c'][1].startswith('Registro L5')], True), 'histórico sem sim': (l4, False), 'documento com sim': (por('documentos', 'Doc com sim'), True), 'documento sem sim': (por('documentos', 'Doc sem sim'), False),
+                 'nota com sim': ([x for x in r['abastecimentos'] if 'nf com sim' in x['c'][1]], True), 'nota sem sim': ([x for x in r['abastecimentos'] if 'nf sem sim' in x['c'][1]], False), 'peça com sim': (por('pecas', 'Peça com sim'), True),
+                 'peça sem sim': (por('pecas', 'Peça sem sim'), False), 'tarefa com sim': (por('agenda', 'Tarefa com sim'), True), 'tarefa sem sim': (por('agenda', 'Tarefa sem sim'), False),
+                 'execução com sim': ([x for x in r['agenda'] if x['id'] == 'casco-anodos'], True)}
+        for nome, (xs, com_sim) in selos.items():
+            if len(xs) != 1: prob.append('%s: %s devia ter uma linha, tem %d' % (modo, nome, len(xs))); continue
+            tem = 'APRESENTAÇÃO' in xs[0]['html']
+            quer = (not sim) and com_sim
+            if tem != quer: prob.append('%s: %s %s o selo «apresentação» (esperado %s)' % (modo, nome, 'tem' if tem else 'não tem', 'ter' if quer else 'não ter'))
+        p8 = [x for x in r['pecas'] if x['id'] == 'p08']
+        if len(p8) != 1 or 'Limpeza de casco e troca de anodos (executada)' not in p8[0]['c'][3]: prob.append('%s: a peça ligada à tarefa executada devia dizer «(executada)» e não o prazo: %s' % (modo, p8 and p8[0]['c'][3]))
+        ex = [x for x in r['agenda'] if x['id'] == 'casco-anodos']
+        if not ex or 'FEITA' not in ex[0]['chips'] or '10/11/2026 às 08:15' not in ex[0]['c'][4]: prob.append('%s: a tarefa executada devia ser FEITA, com a execução em 10/11/2026 às 08:15 (hora do barco): %s' % (modo, ex and ex[0]['c'][3:]))
+        if r['agenda'][-1]['id'] != 'casco-anodos': prob.append('%s: a tarefa executada devia ser a última da agenda: %s' % (modo, [x['id'] for x in r['agenda']][-3:]))
+        if r['cartoes']['atrasadas'][0] != str(r['dd']['cont']['atrasadas']): prob.append('%s: o cartão de atrasadas não bate com contagens()' % modo)
+        prob += ['%s: %s' % (modo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_rel_real(b):
+    """O caminho `null` → SEM DADOS é do ramo simulacao false: sem cadastro nenhum, cada seção diz «SEM DADOS: …»; na simulação a mesma lacuna não escreve rótulo (a tela fala só do que existe) e o documento sem prazo diz «sem prazo»."""
+    prob = []
+    vazio = ("window.CapitaoDados.agenda = []; window.CapitaoDados.tarefasEquipe = []; window.CapitaoDados.documentos = []; window.CapitaoDados.abastecimentos = []; window.CapitaoDados.pecas = []; window.CapitaoDados.diario = []; "
+             "window.CapitaoDados.consumo = {}; window.CapitaoDados.regraAbast = '';")
+    doc = "window.CapitaoDados.documentos.push({ id: 'sem-prazo-teste', n: 'Documento sem prazo do teste', cat: 'Registro', nota: 'teste', fonte: 'Controle de documentos' });"
+    for sim, flag in ((True, ''), (False, ' window.CapitaoDados.simulacao = false;')):
+        modo = 'simulação' if sim else 'simulacao false'
+        ctx, pg, erros = abre_rel(b, depois=vazio + flag)
+        r = pg.evaluate(LE_REL)
+        tem = [v for v in r['vazios'] if v.startswith('SEM DADOS')]
+        if sim and (tem or len(r['vazios']) != 4): prob.append('%s: sem cadastro devia haver 4 avisos de seção vazia (o dia de bordo devolve o documento e os abastecimentos), sem SEM DADOS: %s' % (modo, r['vazios']))
+        if not sim and len(tem) != 6: prob.append('%s: sem cadastro devia haver 6 avisos «SEM DADOS: …»: %s' % (modo, r['vazios']))
+        if sim and re.search(r'\bSEM (?:DADOS|LEITURA)\b', r['pagina']): prob.append('%s: a simulação escreve SEM DADOS ou SEM LEITURA' % modo)
+        prob += ['%s: %s' % (modo, e) for e in erros[:2]]
+        ctx.close()
+        ctx, pg, erros = abre_rel(b, depois=doc + flag)
+        r = pg.evaluate(LE_REL)
+        x = [d for d in r['documentos'] if d['id'] == 'sem-prazo-teste']
+        esp = 'sem prazo' if sim else 'SEM DADOS'
+        if len(x) != 1 or x[0]['c'][2] != esp or x[0]['chips'] != [esp]: prob.append('%s: o documento sem prazo devia dizer %r no vencimento e na situação: %s' % (modo, esp, x and (x[0]['c'][2], x[0]['chips'])))
+        if sim and re.search(r'\bSEM (?:DADOS|LEITURA)\b', r['pagina']): prob.append('%s: a simulação escreve SEM DADOS com o documento sem prazo' % modo)
+        ctx.close()
+    return prob
+
+
+def teste_rel_atualiza(b):
+    """Sem timer: o relatório se refaz ao voltar para a aba, quando o registro muda em outra aba (storage) e antes de imprimir; uma peça cadastrada agora entra na lista nas três; nada redesenha sem motivo."""
+    prob = []
+    ctx, pg, erros = abre_rel(b)
+    n0 = len(pg.evaluate(LE_REL)['documentos'])
+    def novo(i, evento):
+        pg.evaluate("""([i, ev]) => { const k = 'capitao.docs.v1', v = JSON.parse(localStorage.getItem(k) || '[]'); v.unshift({ n: 'Documento de agora ' + i, s: '1 KB', dd: '10/11/2026', st: 'A CONFERIR', cat: 'Laudos' }); localStorage.setItem(k, JSON.stringify(v));
+          if (ev === 'storage') window.dispatchEvent(new StorageEvent('storage', { key: k })); else if (ev === 'visibilitychange') document.dispatchEvent(new Event('visibilitychange')); else window.dispatchEvent(new Event('beforeprint')); }""", [i, evento])
+        pg.wait_for_timeout(200)
+        return len(pg.evaluate(LE_REL)['documentos'])
+    for i, ev in enumerate(('visibilitychange', 'storage', 'beforeprint'), 1):
+        n = novo(i, ev)
+        if n != n0 + i: prob.append('depois de «%s» o relatório tem %d documentos (esperado %d): não se refez com o registro novo' % (ev, n, n0 + i))
+    # sem motivo, o texto não é regravado (a lista de linhas é a mesma)
+    mudou = pg.evaluate("""async () => { const rel = document.getElementById('rel'); let n = 0; const o = new MutationObserver((m) => { n += m.length; }); o.observe(rel, { childList: true, subtree: true }); await new Promise((ok) => setTimeout(ok, 2500)); o.disconnect(); return n; }""")
+    if mudou: prob.append('o relatório mexeu no DOM %d vez(es) em 2,5 s sem motivo (sem timer: só com a aba, o registro ou a impressão)' % mudou)
+    prob += ['atualização: %s' % e for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_rel_impressao(b):
+    """Papel: com a mídia de impressão o topo, o aviso e o rodapé somem, o fundo é branco, a folha ocupa a largura e o cabeçalho das tabelas se repete; a página sai A4 e com mais de uma folha, e o PDF não leva telefone, valor nem
+    coordenada (lido com pdftotext, quando existe)."""
+    prob = []
+    ctx, pg, erros = abre_rel(b, ls=rel_semente())
+    pg.emulate_media(media='print')
+    m = pg.evaluate("""() => { const d = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).display : null; }, f = document.querySelector('.folha'), cs = getComputedStyle(f);
+      return { topo: d('header.top'), barra: d('.barra'), rodape: d('capitao-rodape'), fundo: getComputedStyle(document.body).backgroundColor, folhaFundo: cs.backgroundColor, sombra: cs.boxShadow, max: cs.maxWidth, margem: cs.marginLeft, raio: cs.borderTopLeftRadius,
+        thead: d('thead'), cor: cs.color, lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }""")
+    if m['topo'] != 'none' or m['barra'] != 'none' or m['rodape'] != 'none': prob.append('impressão: topo %s, aviso %s e rodapé %s (esperado none nos três)' % (m['topo'], m['barra'], m['rodape']))
+    if m['fundo'] != 'rgb(255, 255, 255)' or m['folhaFundo'] != 'rgb(255, 255, 255)': prob.append('impressão: fundo %s e folha %s (esperado branco)' % (m['fundo'], m['folhaFundo']))
+    if m['max'] != 'none' or m['raio'] != '0px': prob.append('impressão: a folha tem largura máxima %s e raio %s (esperado none e 0px)' % (m['max'], m['raio']))
+    if m['thead'] != 'table-header-group': prob.append('impressão: o cabeçalho da tabela é %s (esperado table-header-group, para se repetir em cada folha)' % m['thead'])
+    pdf = pg.pdf(prefer_css_page_size=True, print_background=True)
+    mb = re.search(rb'/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]', pdf)
+    if not mb or abs(float(mb.group(1)) - 595.28) > 1.5 or abs(float(mb.group(2)) - 841.89) > 1.5: prob.append('PDF: a página não é A4 (MediaBox %s)' % (str(mb.groups() if mb else None),))
+    folhas = len(re.findall(rb'/Type\s*/Page\b', pdf))
+    if folhas < 2: prob.append('PDF: %d folha(s) (esperado 2 ou mais com a agenda, os documentos e as peças)' % folhas)
+    import shutil, subprocess, tempfile
+    if shutil.which('pdftotext'):
+        with tempfile.TemporaryDirectory() as d:
+            arq = os.path.join(d, 'r.pdf'); open(arq, 'wb').write(pdf)
+            txt = subprocess.run(['pdftotext', '-layout', arq, '-'], capture_output=True, text=True).stdout
+        for s in REL_SEGREDOS:
+            if s in txt: prob.append('PDF: o texto leva %r' % s)
+        for s in ('Agenda de manutenção', 'Histórico de manutenção', 'Documentos', 'Abastecimentos', 'Peças a bordo'):
+            if s not in txt: prob.append('PDF: falta a seção %r' % s)
+    ctx.close()
+    prob += ['impressão: %s' % e for e in erros[:2]]
+    return prob
+
+
+def teste_rel_layout(b):
+    """Nada passa da folha com texto comprido sem espaço (nome de arquivo, local de peça) em 6 tamanhos e nos 2 temas: sem rolagem lateral e nenhuma célula com o conteúdo para fora; o SOS do topo à vista (≥ 44 px, certo para a
+    plataforma) no alto e depois de rolar até o fim; no celular a tabela vira blocos com o nome da coluna."""
+    prob = []
+    longo = 'X' * 90
+    ls = {'capitao.docs.v1': json.dumps([{'n': 'laudo-' + longo + '.pdf', 's': '1 KB', 'dd': '10/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos'}]),
+          'capitao.pecas.v1': json.dumps({'novas': [{'id': 'ulong', 'n': 'Peça ' + longo, 'qtd': 1, 'min': 1, 'local': 'local-' + longo, 'obs': 'obs-' + longo}], 'movs': []}),
+          'capitao.diario.v1': json.dumps([{'d': '10/11', 'iso': '2026-11-10T12:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': 'registro-' + longo}])}
+    for w, h, tema in ((1440, 900, 'escuro'), (1024, 768, 'claro'), (1920, 1080, 'escuro'), (390, 844, 'escuro'), (360, 640, 'claro'), (844, 390, 'escuro')):
+        ctx, pg, erros = abre_rel(b, w=w, h=h, tema=tema, ls=ls)
+        m = pg.evaluate(MEDE_DADOS)
+        c = pg.evaluate("""() => { const f = document.querySelector('.folha').getBoundingClientRect(), de = document.documentElement, fora = [...document.querySelectorAll('td, th, .cartao, .capa dd')].filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.tagName + ':' + (e.innerText || '').slice(0, 30));
+          const td = document.querySelector('tr[data-sec=agenda] td'), lab = td && td.nextElementSibling ? getComputedStyle(td.nextElementSibling, '::before').content : '';
+          return { lateral: de.scrollWidth - de.clientWidth, fora: fora, folhaDir: f.right, vw: de.clientWidth, bloco: td ? getComputedStyle(td).display : null, rotulo: lab }; }""")
+        rot = '%dx%d %s' % (w, h, tema)
+        if c['lateral'] > 1: prob.append('%s: rola para o lado (%d px)' % (rot, c['lateral']))
+        if c['fora']: prob.append('%s: conteúdo para fora da célula: %s' % (rot, c['fora'][:3]))
+        if c['folhaDir'] > c['vw'] + 0.5: prob.append('%s: a folha passa da janela (%.0f de %d)' % (rot, c['folhaDir'], c['vw']))
+        esperado = 'S2-SOS-Mobile.dc.html' if w < 500 else 'S1-SOS-Web.dc.html'
+        if m['sos'] != esperado or not m['topo'] or not m['fim']: prob.append('%s: SOS do topo %r (esperado %s), à vista no alto %s e no fim %s' % (rot, m['sos'], esperado, m['topo'], m['fim']))
+        if w <= 640 and (c['bloco'] != 'block' or not c['rotulo'] or c['rotulo'] == 'none'): prob.append('%s: no celular a tabela devia virar blocos com o nome da coluna (td %s, ::before %r)' % (rot, c['bloco'], c['rotulo']))
+        if w > 640 and c['bloco'] != 'table-cell': prob.append('%s: no computador a tabela devia ficar em colunas (td %s)' % (rot, c['bloco']))
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_rel_codigo():
+    """O código do relatório: só as 5 fontes do site (dados, auth, tema, app e o cérebro), nenhum motor de leitura (replay, alertas, telemetria, moldura); nenhum timer; nenhuma data nem prazo escrito no HTML; o DINHEIRO e o PESSOAIS vêm de
+    B.TERMOS_FONTES (sem regex própria de dinheiro); os 3 ouvintes (aba, registro, impressão); @media print e @page A4; nenhum {{…}}, DEMO, R$ nem SEM DADOS fora do ramo simulacao false."""
+    prob = []
+    h = le_arq(REL)
+    srcs = re.findall(r'<script src="\./([^"]+)"', h)
+    if srcs != ['capitao-dados.js', 'capitao-auth.js', 'capitao-theme.js', 'capitao-app.js', 'capitao-brain.js']: prob.append('os scripts do relatório são %s (esperado dados, auth, tema, app e cérebro, nesta ordem)' % srcs)
+    for nome in ('replay', 'alertas', 'telemetria', 'moldura', 'voz', 'barra', 'clima', 'ia'):
+        if 'capitao-%s.js' % nome in h: prob.append('o relatório carrega o capitao-%s.js (é um documento do registro: nada de leitura ao vivo, voz, clima nem IA)' % nome)
+    if re.search(r'setInterval|setTimeout|requestAnimationFrame', h): prob.append('o relatório tem timer (setInterval/setTimeout/requestAnimationFrame): redesenha só pela aba, pelo registro e pela impressão')
+    for ev in ('visibilitychange', 'storage', 'beforeprint'):
+        if h.count("addEventListener('%s'" % ev) != 1: prob.append('devia ouvir %r uma vez' % ev)
+    if "B.TERMOS_FONTES" not in h or "rx('PESSOAIS')" not in h or "rx('DINHEIRO'" not in h or 'B.semCoord' not in h: prob.append('o texto livre devia passar pelo PESSOAIS e pelo DINHEIRO do §3 (B.TERMOS_FONTES) e pelo B.semCoord')
+    if re.search(r'R\\\$|US\\\$|reais|d[óo]lar', h.split('<script>')[1]): prob.append('o script tem regex ou texto de dinheiro próprio (a regra é a do §3)')
+    if not re.search(r'@page\s*\{[^}]*size:\s*A4', h) or '@media print' not in h or '.sem-print' not in h: prob.append('faltam @media print, .sem-print ou @page com size A4')
+    if '{{' in h: prob.append('{{…}} no relatório (não é tela de prancheta)')
+    corpo = re.sub(r'<!--.*?-->', '', h, flags=re.S)
+    if re.search(r'\bDEMO\b|snapshot|fict[ií]ci|simulad|demonstra[çc]', corpo, re.I): prob.append('rótulo ou palavra de selo no código do relatório: %s' % re.findall(r'\bDEMO\b|snapshot|fict[ií]ci|simulad|demonstra[çc]', corpo, re.I)[:3])
+    if re.search(r'\b\d{2}/\d{2}/20\d\d\b|\b20\d\d-\d\d-\d\d\b', corpo): prob.append('data escrita no HTML do relatório: %s (os prazos vêm do CapitaoAgora)' % re.findall(r'\b\d{2}/\d{2}/20\d\d\b|\b20\d\d-\d\d-\d\d\b', corpo)[:3])
+    if re.search(r"\bdn\s*:\s*-?\d|dn\s*=\s*-?\d", corpo): prob.append('prazo fixo (dn) no relatório')
+    if re.search(r'D\.snapshot|\.snapshot\b', corpo): prob.append('o relatório lê o D.snapshot')
+    if 'A.rebase(Date.now())' not in h or "A.contagens()" not in h or 'A.docDe(' not in h: prob.append('os prazos e as contagens devem vir do CapitaoAgora (rebase, contagens, docDe)')
+    if 'href="S1-SOS-Web.dc.html"' not in h or "'S2-SOS-Mobile.dc.html'" not in h: prob.append('o relatório precisa do SOS no topo (S1 no computador, S2 no celular)')
+    if '\r' in h: prob.append('o relatório tem CRLF (os LF são os das páginas fora das telas)')
+    return prob
+
+
+# ——— o fechamento da fase: o registro das telas novas, a varredura de todas as telas com o replay livre, o SVG, os timers, a faixa e as listas de pendência ———
+TELAS_NOVAS_FASE4 = ('A4-Sensores-Web', 'A5-Sensores-Mobile', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'F6-FAQ-Equipamentos-Web', 'F6-FAQ-Equipamentos')
+MODULOS_NOVOS_FASE4 = ('capitao-replay.js', 'capitao-alertas.js', 'capitao-grafico.js', 'capitao-sensores.js', 'capitao-faq.js', 'faq-equipamentos.json', 'assets/sensores-perfil.svg', 'assets/sensores-planta.svg')
+# setInterval por arquivo ao fim da Fase 4: a espera do cérebro (e a do módulo do FAQ no hub F1, limitada a 6 s e limpa ao desmontar) que cada tela já tinha ou ganhou; o E2 tem a segunda, da base; nenhum arquivo novo tem timer de leitura
+SETINTERVAL_FASE4 = {'A1-Ponte-Web.dc.html': 1, 'A2-Ponte-Mobile.dc.html': 1, 'B1-Carta-Web.dc.html': 1, 'B2-Carta-Mobile.dc.html': 1, 'B3-Carta-Resposta.dc.html': 1, 'C1-Leme-Web.dc.html': 1, 'C2-Leme-Mobile.dc.html': 1, 'C3-Leme-Alerta.dc.html': 1,
+                     'C4-Checklist-Mobile.dc.html': 1, 'C4-Checklist-Web.dc.html': 1, 'E1-Navegando-Gatilhos.dc.html': 1, 'E2-Navegando-Sintoma.dc.html': 2, 'F1-FAQ-Hub-Web.dc.html': 1, 'F1-FAQ-Hub.dc.html': 1, 'F6-FAQ-Equipamentos-Web.dc.html': 1,
+                     'F6-FAQ-Equipamentos.dc.html': 1, 'G1-Documentos-Mobile.dc.html': 1, 'G1-Documentos-Web.dc.html': 1, 'G2-Abastecimento-Mobile.dc.html': 1, 'G2-Abastecimento-Web.dc.html': 1, 'G3-Diario-Mobile.dc.html': 1, 'G3-Diario-Web.dc.html': 1,
+                     'G4-Equipe-Mobile.dc.html': 1, 'G4-Equipe-Web.dc.html': 1, 'H2-Home-Mobile.dc.html': 1, 'H3-Atalhos-Editar-Web.dc.html': 1, 'H3-Atalhos-Editar.dc.html': 1, 'Main.dc.html': 1, 'S1-SOS-Web.dc.html': 2, 'S2-SOS-Mobile.dc.html': 2,
+                     'capitao-auth.js': 1, 'capitao-brain.js': 1, 'capitao-voz.js': 1, 'login.html': 1}
+SVGTAGS_P4K = r'(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g|text|tspan|use|defs|linearGradient|radialGradient|stop|clipPath|mask|pattern|marker|symbol|filter)'
+RX_SVG_P4K = re.compile(r'<' + SVGTAGS_P4K + r'\b(?:"[^"]*"|\'[^\']*\'|[^>"\'])*>', re.S)
+
+
+def arquivos_fase4():
+    return sorted(a for a in os.listdir(RAIZ) if a.endswith('.html') or (a.endswith('.js') and a not in ('support.js', 'deck-stage.js')))
+
+
+def teste_fase4_registro():
+    """O registro final: toda tela de TELAS existe, é única e tem a linha na lista do index.html; as 6 telas novas (A4, A5, C4 web e app, F6 web e app) estão em TELAS e no mapa APP do capitao-app.js (toda web com o par do app, e o par
+    existe); o relatório e os Dados do aparelho estão no CORE e na lista, o relatório com o arquivo; cada arquivo do CORE existe; os módulos novos da fase estão no CORE; todo script local usado pelas telas e pelas páginas está no CORE
+    (senão abre sem rede e quebra); cada atalho do manifest leva a uma tela de TELAS."""
+    prob = []
+    sw, app, idx = le_arq('sw.js'), le_arq('capitao-app.js'), le_arq('index.html')
+    telas_sw = re.findall(r"'([^']+)'", re.search(r'const TELAS = \[(.*?)\];', sw, re.S).group(1))
+    m = re.search(r'const CORE = \[(.*?)\]\.concat', sw, re.S)
+    core = re.findall(r"'\./([^']*)'", m.group(1)) if m else []
+    if len(set(telas_sw)) != len(telas_sw): prob.append('TELAS do sw.js com tela repetida: %s' % sorted({t for t in telas_sw if telas_sw.count(t) > 1}))
+    for t in telas_sw:
+        if not os.path.exists(os.path.join(RAIZ, t + '.dc.html')): prob.append('%s está em TELAS e o arquivo não existe' % t)
+        if 'href="%s.dc.html"' % t not in idx: prob.append('%s está em TELAS e sem linha na lista do index.html' % t)
+    for t in TELAS_NOVAS_FASE4:
+        if t not in telas_sw: prob.append('a tela nova %s não está em TELAS do sw.js' % t)
+    pares = re.search(r'var APP = \{(.*?)\};', app, re.S)
+    mapa = dict(re.findall(r"'([^']+)':\s*'([^']+)'", pares.group(1))) if pares else {}
+    web = [t for t in telas_sw if t == 'Main' or t.endswith('-Web')]
+    for t in web:
+        if t not in mapa: prob.append('a tela web %s não tem par no mapa APP do capitao-app.js' % t)
+    for k, v in mapa.items():
+        if k not in telas_sw or v not in telas_sw: prob.append('o mapa APP leva %s a %s e uma das duas não está em TELAS' % (k, v))
+        if not (k == 'Main' or k.endswith('-Web')): prob.append('o mapa APP tem a chave %s, que não é tela web' % k)
+    for web_, app_ in (('A4-Sensores-Web', 'A5-Sensores-Mobile'), ('C4-Checklist-Web', 'C4-Checklist-Mobile'), ('F6-FAQ-Equipamentos-Web', 'F6-FAQ-Equipamentos')):
+        if mapa.get(web_) != app_: prob.append('o mapa APP devia levar %s a %s e leva a %s' % (web_, app_, mapa.get(web_)))
+    for pag in ('relatorio.html', 'dados.html', 'login.html'):
+        if pag not in core: prob.append('%s não está no CORE do sw.js (não abre sem rede)' % pag)
+    for pag in ('relatorio.html', 'dados.html'):
+        if 'href="%s"' % pag not in idx: prob.append('%s sem linha na lista do index.html' % pag)
+    for a in core:
+        if a and not os.path.exists(os.path.join(RAIZ, a)): prob.append('o CORE do sw.js lista %s e o arquivo não existe' % a)
+    for a in MODULOS_NOVOS_FASE4:
+        if a not in core: prob.append('%s (da Fase 4) não está no CORE do sw.js' % a)
+    paginas = [t + '.dc.html' for t in telas_sw] + ['relatorio.html', 'dados.html', 'index.html', 'login.html']
+    for a in paginas:
+        if not os.path.exists(os.path.join(RAIZ, a)): continue
+        for s in re.findall(r'<script[^>]*\bsrc="\./([^"?#]+)', le_arq(a)):
+            if s not in core: prob.append('%s usa o script %s, que não está no CORE do sw.js' % (a, s))
+    try:
+        mf = json.loads(le_arq('manifest.webmanifest'))
+        for s in mf.get('shortcuts', []):
+            u = s['url'].replace('./', '').split('#')[0].split('?')[0]
+            if u.replace('.dc.html', '') not in telas_sw: prob.append('o atalho %r do manifest leva a %s, que não está em TELAS' % (s.get('name'), u))
+    except Exception as e:
+        prob.append('manifest.webmanifest: %s' % e)
+    return prob
+
+
+def teste_fase4_pendentes(rotulo=None, muda=None):
+    """A Fase 4 fecha com as duas listas de pendência vazias: nenhuma tela com rótulo do §3 (PENDENTES_ROTULO) nem com leitura que só anda com o replay congelado (PENDENTES_MUDA)."""
+    rotulo = PENDENTES_ROTULO if rotulo is None else rotulo
+    muda = PENDENTES_MUDA if muda is None else muda
+    prob = []
+    if tuple(rotulo): prob.append('PENDENTES_ROTULO não está vazia: %s' % (tuple(rotulo),))
+    if tuple(muda): prob.append('PENDENTES_MUDA não está vazia: %s' % (tuple(muda),))
+    return prob
+
+
+def teste_fase4_svg():
+    """Nenhum {{…}} em atributo de elemento SVG em nenhuma tela nem página (o navegador lê o modelo cru antes do runtime e loga erro): o ícone, o mostrador e o gráfico dinâmicos são elementos React."""
+    prob = []
+    for a in arquivos_fase4():
+        h = le_arq(a)
+        ruins = [x.group(0)[:100].replace('\n', ' ') for x in RX_SVG_P4K.finditer(h) if '{{' in x.group(0)]
+        if ruins: prob.append('%s: {{…}} em atributo de SVG (%d): %s' % (a, len(ruins), ruins[0]))
+    return prob
+
+
+def teste_fase4_intervalos():
+    """Nenhum setInterval novo: cada tela e módulo tem, no máximo, os de SETINTERVAL_FASE4 (a espera limitada do cérebro, limpa ao desmontar) e todo arquivo fora da tabela (o relatório, os Dados, o index, os módulos) tem zero."""
+    prob = []
+    for a in arquivos_fase4():
+        n = le_arq(a).count('setInterval')
+        if n > SETINTERVAL_FASE4.get(a, 0): prob.append('%s: %d setInterval (no máximo %d na Fase 4: a espera do cérebro)' % (a, n, SETINTERVAL_FASE4.get(a, 0)))
+    return prob
+
+
+LIVRE_ALVOS = (10, 108, 124, 148)   # segundos da volta: marcha lenta, o AVISO do arrefecimento (99 a 116), logo depois dele (NORMALIZADO) e o fim da volta, que cruza a virada para 0
+
+
+def teste_varredura_livre(b, tela):
+    """A tela com o replay SOLTO (sem capitao.replay.fixo) em 4 pontos da volta de 150 s, indo até lá pelo relógio: nenhum termo do §3 no texto, no title, no aria-label, no placeholder nem no alt (o Manual só na Fase 8), a
+    faixa de alerta nunca no SOS, no Manual nem na C3, e a tela chega ao segundo pedido. A C3 abre no alarme do arrefecimento para mostrar o NORMALIZADO depois dele."""
+    prob = []
+    movel = eh_app(tela)
+    w, h = (390, 844) if movel else (1440, 900)
+    ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
+    ctx.add_init_script("window.__off = 0; (() => { const n = Date.now.bind(Date); Date.now = () => n() + window.__off; })();" + SESSAO + ";localStorage.setItem('capitao.tema.v1', 'escuro');localStorage.setItem('capitao.plataforma.v1', '%s');" % ('app' if movel else 'web'))
+    ctx.add_init_script(ESPIA_FALA)
+    aplica_mut(ctx)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.on('console', lambda m: erros.append('console: ' + m.text[:300]) if m.type == 'error' and 'Failed to load resource' not in m.text else None)
+    pg.goto(BASE + tela + '.dc.html' + ('#alarme=arref_be' if tela == 'C3-Leme-Alerta' else ''), wait_until='load')
+    try: pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    except Exception: erros.append('prancheta não desenhou em 15 s')
+    pg.wait_for_timeout(900)
+    sos = tela in TELAS_SOS
+    for alvo in (None,) + LIVRE_ALVOS:
+        if alvo is not None:
+            pg.evaluate("""(alvo) => { const R = window.CapitaoReplay; if (!R || typeof R.t !== 'function') return; const t = R.t(Date.now()); window.__off += (((alvo - t) % 150) + 150) % 150 * 1000; }""", alvo)
+            pg.wait_for_timeout(3300 if alvo == 148 else 1500)
+        st = pg.evaluate("""() => ({ t: window.CapitaoReplay && window.CapitaoReplay.fixo && window.CapitaoReplay.fixo() === null ? window.CapitaoReplay.t(Date.now()) : null, fixo: window.CapitaoReplay && window.CapitaoReplay.fixo ? window.CapitaoReplay.fixo() : undefined,
+          faixa: !!document.getElementById('capitao-faixa-alertas') })""")
+        rot = '%s livre · volta %s s' % (tela, '%.0f' % st['t'] if st['t'] is not None else 'antes de pedir')
+        if not sos and alvo is not None and st['t'] is not None:
+            d = abs(st['t'] - alvo) % 150
+            if min(d, 150 - d) > 4: prob.append('%s: o teste pediu o segundo %d e a tela está em %.0f (o relógio não chegou lá)' % (tela, alvo, st['t']))
+        if st['fixo'] is not None: prob.append('%s: o replay está fixado (%s) no teste do replay livre' % (tela, st['fixo']))
+        if tela in SEM_FAIXA and st['faixa']: prob.append('%s (%s): tem a faixa de alerta (nunca no SOS, no Manual nem na C3)' % (tela, rot))
+        if not tela.startswith('Manual-'):
+            ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+            if ach: prob.append('%s: termo do §3 no texto (%s): %s' % (rot, ' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:240]))
+    prob += ['%s livre: %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def p4k_conferencias(b, lista, paginas, completo):
+    """[(nome, problemas)] das conferências da P4K: o relatório (quando é da rodada), o fechamento da fase (só na rodada completa) e a varredura com o replay livre de cada tela da rodada."""
+    out = []
+    if 'relatorio' in paginas:
+        out.append(('relatório · o conteúdo: capa, cartões, agenda, histórico, documentos, abastecimentos e peças, nenhum termo do §3, R$, coordenada nem telefone, sem leitura ao vivo', teste_rel_conteudo(b)))
+        out.append(('relatório · os prazos de hoje (relógio 40 dias adiante) refeitos pelo CapitaoAgora', teste_rel_dias(b)))
+        out.append(('relatório · privacidade: telefone, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora', teste_rel_privacidade(b)))
+        out.append(('relatório · o diário vigente (anulada, corrigida, ação, pendência) e o selo apresentação só com simulacao false', teste_rel_vigente(b)))
+        out.append(('relatório · o ramo simulacao false (SEM DADOS só ali) e as seções vazias', teste_rel_real(b)))
+        out.append(('relatório · se refaz ao voltar à aba, com o registro de outra aba e antes de imprimir, sem timer', teste_rel_atualiza(b)))
+        out.append(('relatório · impressão: mídia de papel, A4, mais de uma folha e o PDF sem dado proibido', teste_rel_impressao(b)))
+        out.append(('relatório · layout: texto comprido, 6 tamanhos, 2 temas, o SOS à vista e a tabela em blocos no celular', teste_rel_layout(b)))
+        out.append(('relatório · o código: fontes, nenhum motor de leitura, nenhum timer, o §3 pela fonte única, @media print e @page A4', teste_rel_codigo()))
+    if completo:
+        out.append(('fechamento da Fase 4 · o registro das telas novas e do relatório (TELAS, CORE, lista, mapa APP, manifest)', teste_fase4_registro()))
+        out.append(('fechamento da Fase 4 · PENDENTES_ROTULO e PENDENTES_MUDA vazias', teste_fase4_pendentes()))
+        out.append(('fechamento da Fase 4 · nenhum {{…}} em atributo de SVG', teste_fase4_svg()))
+        out.append(('fechamento da Fase 4 · nenhum setInterval novo', teste_fase4_intervalos()))
+    for tela in lista:
+        out.append((tela + ' · o texto com o replay livre em 4 pontos da volta (sem termo do §3; a faixa de alerta nunca no SOS, no Manual nem na C3)', teste_varredura_livre(b, tela)))
+    return out
+
+
+MUTANTES_P4K = [
+    # —— o relatório: o conteúdo, a capa e os cartões ——
+    ('o prazo da agenda sai 5 dias errado (não é o de hoje)', REL, [("vence: t.vence || '', dn: num(t.dn) ? t.dn : null,", "vence: t.vence || '', dn: num(t.dn) ? t.dn + 5 : null,")], 'conteudo'),
+    ('o prazo do documento perde o sinal (vencido vira a vencer)', REL, [("d = dn != null ? A.docDe(dn) : null;", "d = dn != null ? A.docDe(Math.abs(dn)) : null;")], 'dias'),
+    ('o cartão de atrasadas mostra as de 30 dias', REL, [("cartao('atrasadas', 'TAREFAS ATRASADAS', c.atrasadas || 0,", "cartao('atrasadas', 'TAREFAS ATRASADAS', c.d30 || 0,")], 'conteudo'),
+    ('a capa mostra o MMSI de cadastro (lugar que a trava não permite)', REL, [("['Base', E.base]].filter", "['Base', E.base], ['MMSI', E.mmsi]].filter")], 'conteudo'),
+    ('a hora de «Gerado em» sai em UTC (não a do barco)', REL, [("(F.hora ? F.hora(agora, false) : ''),", "(new Date(agora).toISOString().slice(11, 16)),")], 'conteudo'),
+    ('o consumo de referência perde a casa decimal da marcha lenta', REL, [("nb(c.lph, c.lph < 10 ? 1 : 0)", "nb(c.lph, 0)")], 'conteudo'),
+    ('o relatório carrega o motor da reprodução (lê a leitura ao vivo)', REL, [('<script src="./capitao-brain.js"></script>', '<script src="./capitao-brain.js"></script>\n<script src="./capitao-replay.js"></script>')], 'conteudo'),
+    ('o aviso do relatório escreve R$', REL, [("sem valores em dinheiro e sem a posição do barco. No celular:", "sem R$ 5,99 o litro e sem a posição do barco. No celular:")], 'conteudo'),
+    ('o relatório não tem o SOS no topo', REL, [('<a class="sos" id="sos" href="S1-SOS-Web.dc.html" aria-label="SOS — emergência">SOS</a>', '')], 'layout'),
+    # —— a agenda, o histórico vigente e o selo ——
+    ('a tarefa executada vem antes das abertas', REL, [("return (a.feita - b.feita) || ((a.dn", "return ((a.dn")], 'vigente'),
+    ('a tarefa executada não vira FEITA', REL, [("if (t.feita) return { st: 'FEITA', tom: 'ok', det: '' };", "if (false) return { st: 'FEITA', tom: 'ok', det: '' };")], 'vigente'),
+    ('a peça ligada a uma tarefa feita ainda mostra o prazo', REL, [("if (ex[id]) return e(t.t) + ' (executada)';", "")], 'vigente'),
+    ('o histórico deixa a linha anulada', REL, [("if (x.acao || anul[x.iso] ||", "if (x.acao ||")], 'vigente'),
+    ('o histórico mostra o texto antigo da linha corrigida', REL, [("t: corr[x.iso] ? corr[x.iso].t : x.t,", "t: x.t,")], 'vigente'),
+    ('o histórico traz as linhas de ação (resolve, corrige, anula)', REL, [("if (x.acao || anul[x.iso] ||", "if (anul[x.iso] ||")], 'vigente'),
+    ('o histórico traz a linha do SOS', REL, [(" || /^(?:web|app) · SOS/.test(String(x.src || ''))", "")], 'priv'),
+    ('o histórico traz as linhas que não são de manutenção', REL, [(" || !SYS_MANUT[x.sys]) return;", ") return;")], 'priv'),
+    ('o selo apresentação aparece também na simulação (linha do diário)', REL, [("apres: x.sim === true && !sim() });", "apres: x.sim === true });")], 'vigente'),
+    ('o selo apresentação aparece na tarefa sem sim', REL, [("apres: !!apar[t.id] && !sim() });", "apres: !sim() });")], 'vigente'),
+    # —— a privacidade ——
+    ('o texto livre não passa pelo PESSOAIS do §3', REL, [("    if (RX_PESSOAL) s = s.replace(RX_PESSOAL, '[contato omitido]');\n", "")], 'priv'),
+    ('o telefone com rótulo («tel 3333-4444») não sai', REL, [("    s = s.replace(RX_FONE, '$1 [contato omitido]');\n", "")], 'priv'),
+    ('o texto livre não passa pelo DINHEIRO do §3', REL, [("    if (RX_DINHEIRO) s = s.replace(RX_DINHEIRO, '[valor omitido]');\n", "")], 'priv'),
+    ('o valor sai pela metade (sobram os dígitos depois do R$)', REL, [("RX_DINHEIRO = rx('DINHEIRO', '[\\\\d.,]*')", "RX_DINHEIRO = rx('DINHEIRO')")], 'priv'),
+    ('a coordenada do texto livre não passa pelo semCoord', REL, [("return B.semCoord ? B.semCoord(s) : s;", "return s;")], 'priv'),
+    ('o documento enviado diz CONFERIDO (o app não leu o arquivo)', REL, [("st: 'A CONFERIR', tom: 'aviso', apres:", "st: 'CONFERIDO', tom: 'ok', apres:")], 'priv'),
+    # —— o rótulo, o ramo real e a atualização ——
+    ('o documento sem prazo diz SEM DADOS também na simulação', REL, [("function falta(txtSim) { return sim() ? txtSim : SD; }", "function falta(txtSim) { return SD; }")], 'real'),
+    ('a seção vazia da simulação escreve SEM DADOS', REL, [("return sim() ? m : SD + ': ' + m.charAt(0)", "return SD + ': ' + m.charAt(0)")], 'real'),
+    ('o relatório não se refaz antes de imprimir', REL, [("  window.addEventListener('beforeprint', function () { desenha(true); });\n", "")], 'atualiza'),
+    ('o relatório não se refaz ao voltar para a aba', REL, [("  document.addEventListener('visibilitychange', function () { if (!document.hidden) desenha(); });\n", "")], 'atualiza'),
+    ('o relatório não ouve os documentos de outra aba', REL, [("(diario|executado|docs|abast|pecas|tarefas|tickets)", "(diario|executado|abast|pecas|tarefas|tickets)")], 'atualiza'),
+    ('o relatório se redesenha por um timer de 1 s', REL, [("  desenha(true);\n  // Sem timer", "  desenha(true); setInterval(function () { desenha(true); }, 1000);\n  // Sem timer")], 'atualiza'),
+    # —— a impressão e o layout ——
+    ('a impressão não esconde o topo e o aviso', REL, [(".sem-print, capitao-rodape { display: none !important; }", "capitao-rodape { display: none !important; }")], 'impressao'),
+    ('a página sai A5', REL, [("@page { size: A4;", "@page { size: A5;")], 'impressao'),
+    ('o papel imprime com o fundo escuro do tema', REL, [("html, body { background: #fff !important; min-height: 0; display: block; }", "html, body { min-height: 0; display: block; }")], 'impressao'),
+    ('o cabeçalho da tabela não se repete em cada folha', REL, [("thead { display: table-header-group; }", "thead { display: block; }")], 'impressao'),
+    ('a tabela do celular não vira blocos', REL, [("table, tbody, tr, td { display: block; width: auto !important; } thead { display: none; }", "thead { display: none; }")], 'layout'),
+    ('o texto comprido sem espaço passa da célula', REL, [("td { vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--linha); overflow-wrap: anywhere; }", "td { vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--linha); }"),
+                                                       ("font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }", "font-size: 12.5px; line-height: 1.45; }")], 'layout'),
+    # —— o fechamento: o registro, as listas, o SVG, os timers e o replay livre ——
+    ('o relatório sai do CORE do sw.js (não abre sem rede)', 'sw.js', [("'./relatorio.html', ", "")], 'registro'),
+    ('o módulo do FAQ sai do CORE do sw.js', 'sw.js', [("'./capitao-faq.js', ", "")], 'registro'),
+    ('a A5 sai de TELAS do sw.js', 'sw.js', [("'A5-Sensores-Mobile', ", "")], 'registro'),
+    ('a F6 web perde o par no mapa APP', 'capitao-app.js', [(" 'F6-FAQ-Equipamentos-Web': 'F6-FAQ-Equipamentos',", "")], 'registro'),
+    ('o relatório perde a linha na lista do index.html', 'index.html', [('      <a class="row" href="relatorio.html">Relatório do barco · agenda, documentos, abastecimentos e peças<span>imprimir · PDF A4</span></a>\n', '')], 'registro'),
+    ('PENDENTES_ROTULO volta com uma tela', None, [], 'pendentes'),
+    ('um {{…}} num atributo de SVG do relatório', REL, [('<style>', '<svg viewBox="0 0 {{n}} 10"></svg><style>')], 'svg'),
+    ('a G1 web ganha um segundo setInterval', 'G1-Documentos-Web.dc.html', [("clearTimeout(this._n); clearTimeout(this._r); clearInterval(this._b);", "clearTimeout(this._n); clearTimeout(this._r); clearInterval(this._b); setInterval(() => {}, 1000);")], 'intervalos'),
+    ('o relatório ganha um setInterval', REL, [("  desenha(true);\n  // Sem timer", "  desenha(true); setInterval(function () { desenha(true); }, 1000);\n  // Sem timer")], 'intervalos'),
+    ('o texto do NORMALIZADO da C3 ganha o rótulo DEMO (só aparece depois do alarme)', 'C3-Leme-Alerta.dc.html', [("selo = 'NORMALIZADO às ' + hora(j.ate, false).slice(0, 5);", "selo = 'NORMALIZADO · DEMO ' + hora(j.ate, false).slice(0, 5);")], 'livre:C3-Leme-Alerta'),
+    ('a faixa de alerta aparece na C3', 'capitao-app.js', [("!/^(Manual-|C3-|S[12]-SOS-)/.test(ARQ)", "!/^(Manual-|S[12]-SOS-)/.test(ARQ)")], 'livre:C3-Leme-Alerta'),
+]
+QUAL_P4K = {'conteudo': lambda b, a: teste_rel_conteudo(b), 'dias': lambda b, a: teste_rel_dias(b), 'priv': lambda b, a: teste_rel_privacidade(b), 'vigente': lambda b, a: teste_rel_vigente(b), 'real': lambda b, a: teste_rel_real(b),
+            'atualiza': lambda b, a: teste_rel_atualiza(b) + teste_rel_codigo(), 'impressao': lambda b, a: teste_rel_impressao(b) + teste_rel_codigo(), 'layout': lambda b, a: teste_rel_layout(b),
+            'registro': lambda b, a: teste_fase4_registro(), 'pendentes': lambda b, a: teste_fase4_pendentes(('Main',), ()), 'svg': lambda b, a: teste_fase4_svg(), 'intervalos': lambda b, a: teste_fase4_intervalos()}
+
+
+def mutantes_p4k(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (ou um de a|b), para refazer um
+    for nome, arq, trocas, qual in MUTANTES_P4K:
+        if filtro and not any(f in nome for f in filtro.split('|')): continue
+        if arq:
+            src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
+            faltam = [x for x, _ in trocas if src.count(x) != 1]
+            if faltam:
+                print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+            MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            if qual.startswith('livre:'): prob = teste_varredura_livre(b, qual.split(':', 1)[1])
+            else: prob = QUAL_P4K[qual](b, arq)
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4K), len(vivos)))
+    return vivos
+
+
+
 def teste_offline(b, lista, paginas=()):
     """1ª visita com internet (SW instala), confere no cache da instalação cada tela e página da rodada, depois abre cada tela sem
     rede. unpkg.com fora do ar o tempo todo: nenhum pedido a ele. Com "dados" na lista: a página dos Dados do aparelho também abre
@@ -7668,6 +8469,21 @@ def teste_offline(b, lista, paginas=()):
         if erros5:
             prob.append('dados.html offline com erro: ' + erros5[0])
         pg5.close()
+    # P4K: o relatório sem rede, depois dos Dados: monta as 6 seções com a agenda, os documentos e as peças da cópia guardada (CORE do sw.js), sem leitura ao vivo
+    if 'relatorio' in paginas:
+        pg7 = ctx.new_page()
+        erros7 = []
+        pg7.on('pageerror', lambda e: erros7.append(str(e)[:200]))
+        try:
+            pg7.goto(BASE + REL, wait_until='load', timeout=20000)
+            pg7.wait_for_selector('[data-rel=secao][data-secao=pecas]', state='attached', timeout=15000)
+            r = pg7.evaluate(LE_REL)
+            if r['titulo'] != REL_TITULO or r['sec'] != REL_SECOES: prob.append('relatorio.html offline: %r · seções %s' % (r['titulo'], r['sec']))
+            if not (r['agenda'] and r['documentos'] and r['pecas'] and r['historico'] and r['abastecimentos']): prob.append('relatorio.html offline com seção sem linha: agenda %d, histórico %d, documentos %d, abastecimentos %d, peças %d' % (len(r['agenda']), len(r['historico']), len(r['documentos']), len(r['abastecimentos']), len(r['pecas'])))
+        except Exception as e:
+            prob.append('relatorio.html offline: ' + str(e)[:120])
+        if erros7: prob.append('relatorio.html offline com erro: ' + erros7[0])
+        pg7.close()
     # P4B: o SOS do login abre sem rede e sem login: o login guardado (CORE) tem o botão e ele leva à tela de emergência do computador (S1), com o roteiro do canal 16
     pg6 = ctx.new_page()
     erros6 = []

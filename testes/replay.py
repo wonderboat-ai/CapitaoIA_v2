@@ -1148,8 +1148,8 @@ def codigo():
             erradas.append(t)
     ok('as %d telas fora do SOS têm o <script src="./capitao-replay.js"> uma vez, logo depois do capitao-dados.js e antes do support.js' % (len(telas) - 2), erradas == [], erradas)
     ok('S1 e S2 não carregam o capitao-replay.js nem o capitao-telemetria.js', sem_sos == [], sem_sos)
-    fora = [a for a in ('index.html', 'login.html', 'dados.html') if 'capitao-replay' in le(a)]
-    ok('index.html, login.html e dados.html (fora das TELAS: não leem o quadro) não carregam o motor', fora == [], fora)
+    fora = [a for a in ('index.html', 'login.html', 'dados.html', 'relatorio.html') if 'capitao-replay' in le(a)]
+    ok('index.html, login.html, dados.html e relatorio.html (fora das TELAS: não leem o quadro; o relatório é um documento do registro, P4K) não carregam o motor', fora == [], fora)
 
 
 # ——— 11b. a moldura em nós Text e o setState só ao mudar (P2B; PROMPT Fase 2 «Desempenho», CONTRATO §6.6) ———
@@ -2222,8 +2222,8 @@ def codigo_alertas():
             erradas.append(t)
     ok('as %d telas fora do SOS têm o <script src="./capitao-alertas.js"> uma vez, na linha seguinte ao capitao-replay.js (depois do capitao-dados.js e antes do support.js)' % (len(telas_) - 2), erradas == [], erradas)
     ok('S1 e S2 não carregam o capitao-alertas.js', sem_sos == [], sem_sos)
-    fora = [a for a in ('index.html', 'login.html', 'dados.html') if 'capitao-alertas' in le(a)]
-    ok('index.html, login.html e dados.html (fora das TELAS: não leem alerta) não carregam a API', fora == [], fora)
+    fora = [a for a in ('index.html', 'login.html', 'dados.html', 'relatorio.html') if 'capitao-alertas' in le(a)]
+    ok('index.html, login.html, dados.html e relatorio.html (fora das TELAS: não leem alerta; sem faixa de alerta) não carregam a API', fora == [], fora)
 
 
 # P2C: defeitos plantados no capitao-alertas.js; cada um tem de ser acusado pelo teste que cuida dele.
