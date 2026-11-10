@@ -122,6 +122,15 @@ Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva 
 A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
 leitura de 26/09 ao lado do «AO VIVO»).
 
+Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 27 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
+Documentos com a validade de cada documento = hoje + o prazo relativo (venceEm), conferida contra o relógio da própria página e refeita com o dia virado (fixar 60@1152, sem recarregar), a situação do CapitaoAgora (VENCIDO, VENCE EM n D,
+EM DIA; a nota fiscal, CONFERIDA, sem prazo), os cartões iguais a contagens(), nenhuma linha com A CONFERIR, MANUAL NO DRIVE nem SEM DADOS e a pergunta de cada linha no docsvenc sem IA; o envio de documento (anexo: continua A CONFERIR, carimbo sim: true só
+com a simulação, selo «apresentação» só com simulacao false); a aba Peças com as 12 peças do D.pecas (quantidade, mínimo, ZERADA / ABAIXO DO MÍNIMO / NO MÍNIMO / OK, tarefas ligadas com o prazo de hoje), o aviso das zeradas e no mínimo, o −1 USADA com
+Desfazer (movimento novo, o −1 fica; recusado se outra aba mexeu), o ✎ e o + PEÇA só com inteiro puro de 0 a 999, a quantidade e o mínimo entregues ao cérebro como TEXTO e o erro EXPLÍCITO quando o cérebro devolve null; G2 aba Nível com o diesel, o último
+abastecimento, o consumido desde ele e a autonomia do instante (não a leitura de 26/09), o histórico do D.abastecimentos, a regra de bordo sem rótulo e os gráficos do capitao-grafico.js (diesel válido, água doce e servidas, baterias com 3 séries, estação
+meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
+(SEM DADOS só ali); os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -132,6 +141,7 @@ Navegador: Edge instalado (channel="msedge").
 """
 import datetime
 import json
+import math
 import os
 import re
 import struct
@@ -191,13 +201,13 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; o P4K a deixa só com o que a Fase 8 reescreve). O Manual é a apresentação,
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = (
-    'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (6 telas em 10/11/2026, depois da P4H: F1 a F5 (web e app) saíram; 16 telas depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+    'G4-Equipe-Web', 'G4-Equipe-Mobile',
+)   # (2 telas em 10/11/2026, depois da P4I: G1 e G2 (web e app) saíram; só a G4 ainda tem rótulo. 6 telas em 10/11/2026, depois da P4H: F1 a F5 (web e app) saíram; 16 telas depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
 PENDENTES_MUDA = ()   # (a C3 saiu na P4E: virou alerta vivo)
-MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile', 'C3-Leme-Alerta', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos')
+MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile', 'C3-Leme-Alerta', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile')
 # Sem faixa global de alerta: o SOS (nunca muda de lugar), o Manual (apresentação) e a C3 (a própria tela do alerta)
 SEM_FAIXA = ('S1-SOS-Web', 'S2-SOS-Mobile', 'Manual-Capitao-IA', 'C3-Leme-Alerta')
 MUT_ARQ = {}   # {arquivo: [(trecho, no lugar)]}: serve o arquivo do site com o defeito plantado (as mutações dos testes da P4B; nunca no uso normal)
@@ -768,6 +778,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4i' in sys.argv or '--mutantes-p4i' in sys.argv:   # só as conferências da P4I (e, com --mutantes-p4i, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4i' in sys.argv:
+                falhas = mutantes_p4i(b)
+            else:
+                for nome, prob in p4i_conferencias(b, [a for a in sys.argv[1:] if a in TELAS_P4I] or list(TELAS_P4I)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4h' in sys.argv or '--mutantes-p4h' in sys.argv:   # só as conferências da P4H (e, com --mutantes-p4h, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -982,6 +1005,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4H', 'prob': prob[:8]})
                     print('FALHA P4H ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4i_conferencias(b, lista):   # P4I: Documentos com peças (G1) e Abastecimento com consumo (G2): validade pelo CapitaoAgora, estoque, −1 USADA, consumo por faixa, gráficos, ramo simulacao:false e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4I', 'prob': prob[:8]})
+                    print('FALHA P4I ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -5699,6 +5727,798 @@ def mutantes_p4h(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4H), len(vivos)))
+    return vivos
+
+
+# ═══ Fase 4, P4I: Documentos com peças (G1) e Abastecimento com consumo (G2), web e app ═══
+# `--so-p4i [Tela…]` roda só as conferências dela; `--mutantes-p4i` planta os defeitos (todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto).
+# As expectativas saem do D e do instante da própria página (CapitaoAgora, CapitaoReplay, D.pecas, D.agenda) e de contas feitas aqui em Python (a data de hoje + venceEm, o estado da peça, o TWA), nunca do
+# texto que a tela escreve. Sem Worker (a IA nem entra), sem valor em dinheiro.
+TELAS_G1 = ('G1-Documentos-Web', 'G1-Documentos-Mobile')
+TELAS_G2 = ('G2-Abastecimento-Web', 'G2-Abastecimento-Mobile')
+TELAS_P4I = TELAS_G1 + TELAS_G2
+LE_G1 = """() => { const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), q = (s) => document.querySelector(s), qa = (s) => [...document.querySelectorAll(s)];
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }, at = (e, s, a) => { const x = e.querySelector(s); return x ? x.getAttribute(a) : null; };
+  return {
+    abas: qa('[data-g1=aba]').map((e) => [e.getAttribute('data-aba'), e.getAttribute('aria-selected')]), hash: location.hash,
+    resumo: lin((q('[data-g1=resumo]') || {}).innerText), nota: lin((q('[data-g1=nota]') || {}).innerText), perguntar: q('[data-g1=perguntar]') ? q('[data-g1=perguntar]').getAttribute('href') : null,
+    tiles: qa('[data-g1=tile]').map((e) => [e.getAttribute('data-k'), lin(e.innerText), e.getAttribute('aria-pressed')]),
+    ptiles: qa('[data-g1=ptile]').map((e) => [e.getAttribute('data-k'), lin(e.innerText), e.getAttribute('aria-pressed')]),
+    docs: qa('[data-g1=doc]').map((e) => ({ id: e.getAttribute('data-id'), nome: lin((e.querySelector('[data-g1=doc-nome]') || {}).innerText), validade: lin((e.querySelector('[data-g1=validade]') || {}).innerText),
+      st: lin((e.querySelector('[data-g1=st]') || {}).innerText), selo: !!e.querySelector('[data-g1=selo]'), ask: at(e, '[data-g1=ask]', 'href'), texto: lin(e.innerText) })),
+    proximos: qa('[data-g1=proximo]').map((e) => lin(e.innerText)),
+    pecas: qa('[data-g1=peca]').map((e) => ({ id: e.getAttribute('data-id'), nivel: e.getAttribute('data-nivel'), nome: lin((e.querySelector('[data-g1=nome]') || {}).innerText), qtd: lin((e.querySelector('[data-g1=qtd]') || {}).innerText),
+      st: lin((e.querySelector('[data-g1=st]') || {}).innerText), selo: !!e.querySelector('[data-g1=selo]'), tarefas: lin((e.querySelector('[data-g1=tarefas]') || {}).innerText), ask: at(e, '[data-g1=ask]', 'href'),
+      usaOff: at(e, '[data-g1=usa]', 'aria-disabled'), editor: !!e.querySelector('[data-g1=editor]') })),
+    aviso: lin((q('[data-g1=aviso]') || {}).innerText), avisoLinhas: ((q('[data-g1=aviso]') || { innerText: '' }).innerText || '').split('\\n').map(lin).filter(Boolean), uso: lin((q('[data-g1=uso-texto]') || {}).innerText),
+    erros: qa('[data-g1=erro]').map((e) => lin(e.innerText)).filter(Boolean), form: !!q('[data-g1=form]'), nova: q('[data-g1=nova]') ? q('[data-g1=nova]').getAttribute('aria-expanded') : null,
+    falta: /FALTA REGISTRAR/.test(document.body.innerText), texto: document.body.innerText,
+    pecasLs: ls('capitao.pecas.v1'), docsLs: ls('capitao.docs.v1'), diarioLs: ls('capitao.diario.v1') }; }"""
+ESP_G1 = """() => { const D = window.CapitaoDados, A = window.CapitaoAgora;
+  return { hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso, sim: D.simulacao === true,
+    docs: D.documentos.map((x) => ({ id: x.id, n: x.n, venceEm: typeof x.venceEm === 'number' ? x.venceEm : null, cat: x.cat })),
+    pecas: D.pecas.map((p) => ({ id: p.id, n: p.n, qtd: p.qtd, min: p.min, tarefas: p.tarefas || [] })),
+    agenda: D.agenda.map((t) => ({ id: t.id, t: t.t, venceEm: t.venceEm })), cont: A.contagens() }; }"""
+G1_PERGUNTA = """(qs) => { const B = window.CapitaoBrain; return qs.map((q) => { const a = B.answer(q, { platform: 'web', commit: false }); return { q: q, key: a.key, ia: B.pedeIA(a, q) }; }); }"""
+
+
+def nbp(x, c=1, mil=False):
+    """O número como o CapitaoAgora.fmt.nb escreve: floor(x·10^c + 0,5) / 10^c, vírgula decimal, ponto de milhar opcional, sem -0."""
+    p = 10 ** c
+    v = math.floor(x * p + 0.5) / p
+    if v == 0: v = 0.0
+    inteiro, _, frac = ('%.*f' % (c, abs(v))).partition('.')
+    if mil: inteiro = re.sub(r'(\d)(?=(\d{3})+$)', r'\1.', inteiro)
+    return ('-' if v < 0 else '') + inteiro + (',' + frac if c else '')
+
+
+def data_de(hoje_iso, dias): return (datetime.date.fromisoformat(hoje_iso) + datetime.timedelta(days=dias)).strftime('%d/%m/%Y')
+def st_doc(dn): return 'VENCIDO' if dn < 0 else 'VENCE EM %d D' % dn if dn <= 90 else 'EM DIA'
+def st_peca(q, mn): return 'ZERADA' if q <= 0 else 'ABAIXO DO MÍNIMO' if mn > 0 and q < mn else 'NO MÍNIMO' if mn > 0 and q == mn else 'OK'
+def nivel_peca(q, mn): return 'zero' if q <= 0 else 'baixa' if mn > 0 and q <= mn else 'ok'
+def rot_prazo(n): return 'ATRASADA · %d D' % -n if n < 0 else 'D-%d' % n
+
+
+def abre_g1(b, tela, aba='docs', fixo='60', depois='', ls=None):
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, hash_='#aba=pecas' if aba == 'pecas' else '', depois=depois, ls=ls)
+    try: pg.wait_for_function("() => document.querySelector('[data-g1=doc],[data-g1=peca]')", timeout=10000)
+    except Exception: pass
+    pg.wait_for_timeout(250)
+    return ctx, pg, erros
+
+
+def g1_docs_confere(r, E, rot, app):
+    """O que a aba Documentos tem de mostrar com o relógio `E` (hoje, venceEm de cada documento): a ordem, a validade (hoje + venceEm), a situação, os 3 cartões e a pergunta de cada linha."""
+    prob = []
+    docs = sorted(E['docs'], key=lambda x: x['venceEm'] if x['venceEm'] is not None else 2e6)
+    if [d['id'] for d in r['docs']] != [d['id'] for d in docs]: return ['%s: os documentos da lista são %s (esperado %s, por vence primeiro)' % (rot, [d['id'] for d in r['docs']], [d['id'] for d in docs])]
+    chat = CHAT_DE['app' if app else 'web']
+    for d, x in zip(docs, r['docs']):
+        ev = data_de(E['hojeIso'], d['venceEm']) if d['venceEm'] is not None else 'sem prazo'
+        es = st_doc(d['venceEm']) if d['venceEm'] is not None else 'CONFERIDA'
+        if x['nome'] != d['n'] or x['validade'] != ev or x['st'] != es: prob.append('%s: %s mostra %r / %r / %r (esperado %r / %r / %r)' % (rot, d['id'], x['nome'], x['validade'], x['st'], d['n'], ev, es))
+        if x['ask'] != chat + '#q=' + enc('Situação e vencimento do documento: ' + d['n']): prob.append('%s: o «Perguntar sobre» de %s é %r' % (rot, d['id'], x['ask']))
+        if re.search(r'A CONFERIR|A CONFIRMAR|MANUAL NO DRIVE|SEM DADOS|\bDEMO\b', x['texto']): prob.append('%s: a linha de %s tem rótulo: %r' % (rot, d['id'], x['texto'][:120]))
+    com = [d for d in docs if d['venceEm'] is not None]
+    n90 = sum(1 for d in com if d['venceEm'] <= 90)
+    nem = len(docs) - n90
+    t = {k: (txt, pr) for k, txt, pr in r['tiles']}
+    if [k for k, _, _ in r['tiles']] != ['emdia', 'venc90', 'enviado']: prob.append('%s: os cartões são %s (esperado em dia, vencem em 90 dias e enviados; SEM DADOS só no ramo simulacao false)' % (rot, [k for k, _, _ in r['tiles']]))
+    elif not (t['emdia'][0].lower().startswith('%d em dia' % nem) and t['venc90'][0].lower().startswith('%d %s' % (n90, '≤ 90 dias' if app else 'vencem em 90 dias')) and t['enviado'][0].lower().startswith('0 enviados')):
+        prob.append('%s: os cartões dizem %s (esperado %d em dia, %d vencem em 90 dias, 0 enviados)' % (rot, [x[1][:40] for x in r['tiles']], nem, n90))
+    cont = E['cont']
+    if cont['docsVencem90'] + cont['docsVencidos'] != n90: prob.append('%s: o CapitaoAgora.contagens() conta %d documentos até 90 dias e a conta daqui, %d' % (rot, cont['docsVencem90'] + cont['docsVencidos'], n90))
+    esp_res = ('%d documentos · %d em dia · %d vencem em 90 dias · prazos contados a partir de %s' % (len(docs), nem, n90, E['hoje'])) if not app else ('%d documentos · toque para filtrar · prazos a partir de %s' % (len(docs), E['hoje']))
+    if esp_res not in r['resumo']: prob.append('%s: o resumo diz %r (esperado %r)' % (rot, r['resumo'], esp_res))
+    if r['falta']: prob.append('%s: o bloco FALTA REGISTRAR na simulação (todo documento tem prazo ou conferência)' % rot)
+    if r['perguntar'] and r['perguntar'] != chat + '#q=' + enc('Quais documentos e licenças vencem primeiro?'): prob.append('%s: o «Perguntar» do alto é %r' % (rot, r['perguntar']))
+    if not app:
+        esp = [d for d in com][:2]
+        if len(r['proximos']) != 2 or not all(d['n'] in p and 'D-%d' % d['venceEm'] in p and 'vence ' + data_de(E['hojeIso'], d['venceEm']) in p for d, p in zip(esp, r['proximos'])):
+            prob.append('%s: «Vence primeiro» diz %s (esperado %s)' % (rot, r['proximos'], [(d['n'], d['venceEm']) for d in esp]))
+    return prob
+
+
+def teste_g1_documentos(b, tela):
+    """G1, aba Documentos: a validade de cada documento é hoje + o prazo relativo (venceEm), a situação vem do CapitaoAgora (VENCIDO, VENCE EM n D, EM DIA; a nota fiscal, CONFERIDA, sem prazo), os cartões batem com
+    contagens(), nenhuma linha traz A CONFERIR, MANUAL NO DRIVE nem SEM DADOS, a pergunta de cada linha vai ao docsvenc sem IA; e com o dia virado (fixar 2 dias adiante) as datas se refazem sem recarregar."""
+    prob = []
+    app = eh_app(tela)
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_g1(b, tela, fixo=fixo)
+        r, E = pg.evaluate(LE_G1), pg.evaluate(ESP_G1)
+        rot = '%s a %s s' % (tela, fixo)
+        prob += g1_docs_confere(r, E, rot, app)
+        if r['abas'] != [['docs', 'true'], ['pecas', 'false']]: prob.append('%s: as abas são %s (esperado Documentos marcada e Peças)' % (rot, r['abas']))
+        qs = ['Quais documentos e licenças vencem primeiro?'] + ['Situação e vencimento do documento: ' + d['n'] for d in E['docs']]
+        for x in pg.evaluate(G1_PERGUNTA, qs):
+            if x['key'] != 'docsvenc' or x['ia']: prob.append('%s: «%s» dá %s (IA %s), esperado docsvenc sem IA' % (rot, x['q'][:60], x['key'], x['ia']))
+        ach = achados_termos(tela, r['texto'])
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if TERMOS['DINHEIRO'].search(r['texto']) or 'R$' in r['texto']: prob.append('%s: valor em dinheiro na tela' % rot)
+        if fixo == '60':   # o dia vira: o CapitaoAgora refaz as datas (hoje + venceEm) e a tela, que ouve 'capitao-rebase', as redesenha sem recarregar
+            pg.evaluate("() => { window.__marca = 'viva'; window.CapitaoReplay.fixar('60@1152'); }"); pg.wait_for_timeout(700)
+            r2, E2 = pg.evaluate(LE_G1), pg.evaluate(ESP_G1)
+            if E2['hoje'] == E['hoje']: prob.append('%s: o teste não vale: fixar 60@1152 não mudou o dia (%s)' % (rot, E2['hoje']))
+            prob += g1_docs_confere(r2, E2, rot + ' com o dia virado', app)
+            if pg.evaluate("() => window.__marca") != 'viva': prob.append('%s: a virada do dia recarregou a tela' % rot)
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_g1_envio(b, tela):
+    """G1, o envio de documento (anexo do aparelho: continua A CONFERIR): sem categoria avisa e não grava; com ela, 1 linha nova com o nome, o tamanho e a categoria, A CONFERIR e carimbada sim: true com a simulação
+    (sem o carimbo e sem o selo «apresentação» com simulacao false), 1 linha no diário que diz «linha criada como A CONFERIR», o cartão «enviados» em 1; e o selo «apresentação» só na linha gravada com a simulação e vista com simulacao false."""
+    prob = []
+    sel = 'select[aria-label^="Categoria"]'
+    for modo, depois in (('simulação', ''), ('simulacao false', 'window.CapitaoDados.simulacao = false;')):
+        ctx, pg, erros = abre_g1(b, tela, depois=depois)
+        pg.click('[data-g1=foto]'); pg.wait_for_timeout(250)
+        r = pg.evaluate(LE_G1)
+        if 'Escolha a categoria' not in r['nota'] or r['docsLs']: prob.append('%s (%s): sem categoria devia avisar e não gravar: %r %r' % (tela, modo, r['nota'], r['docsLs']))
+        pg.select_option(sel, 'Seguro')
+        pg.set_input_files('[data-g1=arq-foto]', {'name': 'apolice-teste.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8' + b'0' * 3000}); pg.wait_for_timeout(450)
+        r = pg.evaluate(LE_G1)
+        ls_, dia = r['docsLs'] or [], r['diarioLs'] or []
+        if len(ls_) != 1: prob.append('%s (%s): o envio devia gravar 1 linha em capitao.docs.v1: %s' % (tela, modo, ls_)); ctx.close(); continue
+        l = ls_[0]
+        if (l.get('n'), l.get('st'), l.get('cat'), l.get('s')) != ('apolice-teste.jpg', 'A CONFERIR', 'Seguro', '3 KB'): prob.append('%s (%s): a linha gravada é %s' % (tela, modo, l))
+        if (l.get('sim') is True) != (modo == 'simulação') or ('sim' in l and modo != 'simulação'): prob.append('%s (%s): a linha %s o carimbo sim: true (esperado só com a simulação)' % (tela, modo, 'tem' if 'sim' in l else 'não tem'))
+        d = [x for x in dia if 'apolice-teste.jpg' in (x.get('t') or '')]
+        if len(d) != 1 or 'linha criada como A CONFERIR' not in d[0]['t'] or not str(d[0].get('src', '')).endswith('· documento') or (d[0].get('sim') is True) != (modo == 'simulação'): prob.append('%s (%s): o diário devia ganhar 1 linha «linha criada como A CONFERIR» do documento (sim só na simulação): %s' % (tela, modo, d))
+        x = [y for y in r['docs'] if y['nome'] == 'apolice-teste.jpg']
+        if len(x) != 1 or x[0]['st'] != 'A CONFERIR' or x[0]['validade'] != 'a conferir' or x[0]['selo']: prob.append('%s (%s): a linha enviada na tela é %s (esperado A CONFERIR, a conferir, sem selo: ela foi gravada agora)' % (tela, modo, x))
+        t = {k: txt for k, txt, _ in r['tiles']}
+        if not t.get('enviado', '').lower().startswith('1 enviados'): prob.append('%s (%s): o cartão dos enviados diz %r' % (tela, modo, t.get('enviado')))
+        if 'Contratos, notas fiscais, título de propriedade e dados pessoais não ficam neste site' not in r['texto']: prob.append('%s (%s): sumiu o aviso de privacidade' % (tela, modo))
+        prob += ['%s (%s): %s' % (tela, modo, e) for e in erros[:2]]
+        ctx.close()
+    ls = {'capitao.docs.v1': json.dumps([{'n': 'com-selo.jpg', 's': '1 KB', 'dd': '01/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos', 'fonte': 'enviado no app por Lucas', 'sim': True},
+                                         {'n': 'sem-selo.jpg', 's': '1 KB', 'dd': '01/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos', 'fonte': 'enviado no app por Lucas'}])}
+    for modo, depois, esp in (('simulação', '', {'com-selo.jpg': False, 'sem-selo.jpg': False}), ('simulacao false', 'window.CapitaoDados.simulacao = false;', {'com-selo.jpg': True, 'sem-selo.jpg': False})):
+        ctx, pg, erros = abre_g1(b, tela, depois=depois, ls=ls)
+        r = pg.evaluate(LE_G1)
+        got = {x['nome']: x['selo'] for x in r['docs'] if x['nome'] in esp}
+        if got != esp: prob.append('%s (%s): o selo «apresentação» das linhas enviadas é %s (esperado %s)' % (tela, modo, got, esp))
+        ctx.close()
+    return prob
+
+
+def g1_peca_esperada(E, estado=None):
+    """As peças que a tela tem de mostrar: do D.pecas (+ `estado` = {id: quantidade a bordo} das que o teste mexeu), com o estado e as tarefas ligadas (nome, D-n ou ATRASADA, dd/mm) feitos aqui."""
+    ag = {t['id']: t for t in E['agenda']}
+    out = []
+    for p in E['pecas']:
+        q = (estado or {}).get(p['id'], p['qtd'])
+        tf = ['%s — %s · %s' % (ag[i]['t'], rot_prazo(ag[i]['venceEm']), data_de(E['hojeIso'], ag[i]['venceEm'])[:5]) for i in p['tarefas'] if i in ag]
+        out.append({'id': p['id'], 'n': p['n'], 'qtd': '%d / %d' % (q, p['min']), 'q': q, 'min': p['min'], 'st': st_peca(q, p['min']), 'nivel': nivel_peca(q, p['min']), 'tarefas': ' '.join(tf) if tf else 'nenhuma tarefa da agenda'})
+    return out
+
+
+def g1_pecas_confere(r, E, rot, app, estado=None, extra=()):
+    prob = []
+    esp = g1_peca_esperada(E, estado) + list(extra)
+    if [p['id'] for p in r['pecas']] != [p['id'] for p in esp]: return ['%s: as peças da lista são %s (esperado %s)' % (rot, [p['id'] for p in r['pecas']], [p['id'] for p in esp])]
+    chat = CHAT_DE['app' if app else 'web']
+    for e, x in zip(esp, r['pecas']):
+        if (x['nome'], x['qtd'], x['st'], x['nivel']) != (e['n'], e['qtd'], e['st'], e['nivel']): prob.append('%s: %s mostra %r %r %r %r (esperado %r %r %r %r)' % (rot, e['id'], x['nome'], x['qtd'], x['st'], x['nivel'], e['n'], e['qtd'], e['st'], e['nivel']))
+        if x['tarefas'] != e['tarefas']: prob.append('%s: as tarefas ligadas de %s são %r (esperado %r)' % (rot, e['id'], x['tarefas'], e['tarefas']))
+        if x['ask'] != chat + '#q=' + enc('Estoque de peças: ' + e['n']): prob.append('%s: o «Perguntar sobre» de %s é %r' % (rot, e['id'], x['ask']))
+        if (x['usaOff'] == 'true') != (e['q'] <= 0): prob.append('%s: o −1 USADA de %s está aria-disabled=%r com %d a bordo' % (rot, e['id'], x['usaOff'], e['q']))
+    z = [p for p in esp if p['nivel'] == 'zero']; bx = [p for p in esp if p['nivel'] == 'baixa']; ok = [p for p in esp if p['nivel'] == 'ok']
+    t = {k: txt for k, txt, _ in r['ptiles']}
+    if [k for k, _, _ in r['ptiles']] != ['todas', 'zero', 'baixa', 'ok'] or not (t['todas'].lower().startswith('%d peças' % len(esp)) and t['zero'].lower().startswith('%d zeradas' % len(z)) and t['baixa'].lower().startswith('%d no mínimo' % len(bx)) and t['ok'].lower().startswith('%d acima' % len(ok))):
+        prob.append('%s: os cartões das peças dizem %s (esperado %d peças, %d zeradas, %d no mínimo, %d acima)' % (rot, [x[1][:30] for x in r['ptiles']], len(esp), len(z), len(bx), len(ok)))
+    av = z + bx
+    esp_av = ['%d %s' % (len(av), 'peça zerada ou no mínimo' if len(av) == 1 else 'peças zeradas ou no mínimo')] + [x for p in av for x in (p['n'], '%d / %d' % (p['q'], p['min']))] if av else ['Estoque acima do mínimo']
+    got = [l for l in r['avisoLinhas'] if not l.startswith('Fonte:')]
+    if got != esp_av: prob.append('%s: o aviso de estoque diz %s (esperado %s)' % (rot, got, esp_av))
+    return prob
+
+
+def teste_g1_pecas_lista(b, tela):
+    """G1, aba Peças: as peças do D.pecas com a quantidade, o mínimo, a situação (ZERADA, ABAIXO DO MÍNIMO, NO MÍNIMO, OK), o local, as tarefas ligadas (nome e o prazo de hoje do CapitaoAgora, ATRASADA ou D-n, com o dia),
+    o aviso das zeradas e no mínimo, os 4 cartões (e o filtro), a pergunta de cada peça no cérebro (pecas, sem IA), a aba pelo #aba= e por toque, sem valor em dinheiro nem rótulo; a 60 s e a 105 s."""
+    prob = []
+    app = eh_app(tela)
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_g1(b, tela, aba='pecas', fixo=fixo)
+        r, E = pg.evaluate(LE_G1), pg.evaluate(ESP_G1)
+        rot = '%s a %s s' % (tela, fixo)
+        prob += g1_pecas_confere(r, E, rot, app)
+        if r['abas'] != [['docs', 'false'], ['pecas', 'true']]: prob.append('%s: com #aba=pecas as abas são %s' % (rot, r['abas']))
+        esp = g1_peca_esperada(E)
+        z = sum(1 for p in esp if p['nivel'] == 'zero'); bx = sum(1 for p in esp if p['nivel'] == 'baixa')
+        if ('%d peças' % len(esp)) not in r['resumo'] or ('%d zerada' % z) not in r['resumo'] or ('%d no mínimo ou abaixo' % bx) not in r['resumo']: prob.append('%s: o resumo das peças diz %r' % (rot, r['resumo']))
+        qs = ['Quais peças estão zeradas ou no mínimo?'] + ['Estoque de peças: ' + p['n'] for p in E['pecas']]
+        for x in pg.evaluate(G1_PERGUNTA, qs):
+            if x['key'] != 'pecas' or x['ia']: prob.append('%s: «%s» dá %s (IA %s), esperado pecas sem IA' % (rot, x['q'][:60], x['key'], x['ia']))
+        chat = CHAT_DE['app' if app else 'web']
+        if r['perguntar'] and r['perguntar'] != chat + '#q=' + enc('Quais peças estão zeradas ou no mínimo?'): prob.append('%s: o «Perguntar» do alto das peças é %r' % (rot, r['perguntar']))
+        ach = achados_termos(tela, r['texto'])
+        if ach: prob.append('%s: termo do §3 na aba Peças: %s' % (rot, ach))
+        if TERMOS['DINHEIRO'].search(r['texto']) or 'R$' in r['texto'] or re.search(r'\bpn\b|código do fabricante:', r['texto']): prob.append('%s: valor em dinheiro ou código de fabricante na aba Peças' % rot)
+        if fixo == '60':
+            # o filtro dos cartões: só as zeradas; de novo, volta a todas
+            pg.click('[data-g1=ptile][data-k=zero]'); pg.wait_for_timeout(200)
+            f = pg.evaluate(LE_G1)
+            if [p['id'] for p in f['pecas']] != [p['id'] for p in esp if p['nivel'] == 'zero']: prob.append('%s: o cartão das zeradas filtra %s' % (rot, [p['id'] for p in f['pecas']]))
+            pg.click('[data-g1=ptile][data-k=zero]'); pg.wait_for_timeout(200)
+            if len(pg.evaluate(LE_G1)['pecas']) != len(esp): prob.append('%s: o 2º toque no cartão das zeradas devia soltar o filtro' % rot)
+            # a aba por toque: troca o endereço, fecha o que estava aberto e volta; o #aba= com a tela aberta também troca
+            pg.click('[data-g1=aba][data-aba=docs]'); pg.wait_for_timeout(250)
+            f = pg.evaluate(LE_G1)
+            if f['abas'] != [['docs', 'true'], ['pecas', 'false']] or f['hash'] != '#aba=docs' or not f['docs'] or f['pecas']: prob.append('%s: o toque em DOCUMENTOS devia abrir os documentos e pôr #aba=docs: %s %s' % (rot, f['abas'], f['hash']))
+            pg.evaluate("() => { window.__marca = 'viva'; location.hash = '#aba=pecas'; }"); pg.wait_for_timeout(300)
+            f = pg.evaluate(LE_G1)
+            if f['abas'] != [['docs', 'false'], ['pecas', 'true']] or not f['pecas'] or pg.evaluate("() => window.__marca") != 'viva': prob.append('%s: trocar o endereço para #aba=pecas devia abrir as peças sem recarregar: %s' % (rot, f['abas']))
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def g1_clica(pg, sel):
+    pg.click(sel); pg.wait_for_timeout(320)
+    return pg.evaluate(LE_G1)
+
+
+def g1_movs(r):
+    return ((r['pecasLs'] or {}).get('movs') or [])
+
+
+def teste_g1_uso(b, tela):
+    """G1, −1 USADA e Desfazer: o toque tira 1 da quantidade (e só do que há), grava UM movimento dq −1 carimbado sim: true, a peça entra no aviso ao chegar no mínimo; o Desfazer devolve a unidade com um movimento NOVO
+    (o registro só cresce: o −1 continua lá) e some com o botão; a peça zerada não perde unidade nem grava; o Desfazer depois que outra aba mexeu na quantidade é RECUSADO com a mensagem, sem gravar; e o cérebro que
+    devolve null no −1 vira mensagem, nunca silêncio."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g1(b, tela, aba='pecas')
+    E = pg.evaluate(ESP_G1)
+    rot = tela
+    r = g1_clica(pg, '[data-g1=peca][data-id=p01] [data-g1=usa]')
+    m = g1_movs(r)
+    if len(m) != 1 or m[0].get('id') != 'p01' or m[0].get('dq') != -1 or m[0].get('sim') is not True or not m[0].get('iso'): prob.append('%s: o −1 USADA devia gravar 1 movimento {id p01, dq −1, sim true}: %s' % (rot, m))
+    prob += g1_pecas_confere(r, E, rot + ' depois do −1', app, {'p01': 3})
+    if r['uso'] != '−1 USADA: Filtro de óleo do motor — 4 → 3 a bordo.': prob.append('%s: o aviso do −1 diz %r' % (rot, r['uso']))
+    iso0 = m[0]['iso'] if m else None
+    r = g1_clica(pg, '[data-g1=desfazer]')
+    m = g1_movs(r)
+    if len(m) != 2 or m[0].get('iso') != iso0 or m[0].get('dq') != -1 or m[1].get('dq') != 1 or m[1].get('iso') == iso0: prob.append('%s: o Desfazer devia ACRESCENTAR um movimento dq +1 e manter o −1 (o registro só cresce): %s' % (rot, m))
+    prob += g1_pecas_confere(r, E, rot + ' depois do Desfazer', app)
+    if r['uso'] or 'Desfeito' not in r['nota']: prob.append('%s: depois do Desfazer a barra devia sumir e a nota dizer «Desfeito»: %r %r' % (rot, r['uso'], r['nota']))
+    # p02 (4, mínimo 2): dois toques levam ao mínimo e a peça entra no aviso; um terceiro, abaixo dele
+    g1_clica(pg, '[data-g1=peca][data-id=p02] [data-g1=usa]'); r = g1_clica(pg, '[data-g1=peca][data-id=p02] [data-g1=usa]')
+    prob += g1_pecas_confere(r, E, rot + ' com a p02 no mínimo', app, {'p02': 2})
+    if [p['st'] for p in r['pecas'] if p['id'] == 'p02'] != ['NO MÍNIMO']: prob.append('%s: a p02 com 2/2 devia dizer NO MÍNIMO (e subir o aviso para 7 peças): %s' % (rot, [p['st'] for p in r['pecas'] if p['id'] == 'p02']))
+    # a peça zerada: nada a tirar, nada grava
+    n0 = len(g1_movs(r))
+    pg.evaluate("() => document.querySelector('[data-g1=peca][data-id=p05] [data-g1=usa]').click()"); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G1)
+    if len(g1_movs(r)) != n0 or 'já está zerada' not in r['nota']: prob.append('%s: o −1 na peça zerada devia avisar e não gravar: %r (movimentos %d → %d)' % (rot, r['nota'], n0, len(g1_movs(r))))
+    # o Desfazer depois que outra aba mexeu na quantidade: recusado, com a mensagem
+    g1_clica(pg, '[data-g1=peca][data-id=p04] [data-g1=usa]')
+    pg.evaluate("() => window.CapitaoBrain.ajustaPeca('p04', '9')")
+    n1 = len(g1_movs(pg.evaluate(LE_G1)))
+    r = g1_clica(pg, '[data-g1=desfazer]')
+    q4 = [p['qtd'] for p in r['pecas'] if p['id'] == 'p04']
+    if 'Não deu para desfazer' not in r['nota'] or len(g1_movs(r)) != n1 or q4 != ['9 / 1']: prob.append('%s: o Desfazer depois de a quantidade mudar devia ser recusado com a mensagem e sem gravar: %r, movimentos %d → %d, p04 %s' % (rot, r['nota'], n1, len(g1_movs(r)), q4))
+    # o cérebro que devolve null no −1: mensagem explícita
+    pg.evaluate("() => { window.CapitaoBrain.usaPeca = () => null; }")
+    n2 = len(g1_movs(pg.evaluate(LE_G1)))
+    r = g1_clica(pg, '[data-g1=peca][data-id=p06] [data-g1=usa]')
+    if 'Não deu para tirar uma unidade' not in r['nota'] or len(g1_movs(r)) != n2: prob.append('%s: o cérebro recusou o −1 e a tela não disse (nota %r)' % (rot, r['nota']))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    # com simulacao false, nada é carimbado
+    ctx, pg, erros = abre_g1(b, tela, aba='pecas', depois='window.CapitaoDados.simulacao = false;')
+    r = g1_clica(pg, '[data-g1=peca][data-id=p01] [data-g1=usa]')
+    m = g1_movs(r)
+    if len(m) != 1 or 'sim' in m[0]: prob.append('%s (simulacao false): o movimento não leva sim: %s' % (rot, m))
+    ctx.close()
+    return prob
+
+
+def teste_g1_edita(b, tela):
+    """G1, ✎ e + PEÇA: só o inteiro puro de 0 a 999 (1e2, 12abc, 3,5, −1, 1000, 0x10 e o vazio dão «Quantidade inválida», sem gravar); o mesmo número avisa «nada mudou»; o valor bom (com espaços) grava UM movimento
+    com a diferença; o + PEÇA pede o nome, recusa quantidade e mínimo inválidos, entrega ao cérebro a quantidade e o mínimo como TEXTO, grava a peça (com a tarefa ligada, o carimbo sim e sem código de fabricante) e a lista a
+    mostra; e o cérebro que devolve null no ✎ ou no + PEÇA vira mensagem EXPLÍCITA (o formulário não se apaga)."""
+    prob = []
+    app = eh_app(tela)
+    ctx, pg, erros = abre_g1(b, tela, aba='pecas')
+    E = pg.evaluate(ESP_G1)
+    rot = tela
+    r = g1_clica(pg, '[data-g1=peca][data-id=p03] [data-g1=editar]')
+    if not [p for p in r['pecas'] if p['id'] == 'p03' and p['editor']]: prob.append('%s: o ✎ devia abrir o editor da p03' % rot)
+    for v in ('', '1e2', '12abc', '3,5', '-1', '1000', '0x10'):
+        pg.fill('[data-g1=editar-campo]', v); r = g1_clica(pg, '[data-g1=editar-ok]')
+        if not r['erros'] or not r['erros'][0].startswith('Quantidade inválida') or g1_movs(r) or [p['qtd'] for p in r['pecas'] if p['id'] == 'p03'] != ['1 / 2']: prob.append('%s: ✎ com %r devia dar «Quantidade inválida» sem gravar: %s %s' % (rot, v, r['erros'], g1_movs(r)))
+    pg.fill('[data-g1=editar-campo]', '1'); r = g1_clica(pg, '[data-g1=editar-ok]')
+    if not r['erros'] or 'nada mudou' not in r['erros'][0] or g1_movs(r): prob.append('%s: ✎ com o mesmo número devia dizer que nada mudou: %s' % (rot, r['erros']))
+    # o cérebro que devolve null: mensagem, não silêncio
+    pg.evaluate("() => { window.__ajusta = window.CapitaoBrain.ajustaPeca; window.CapitaoBrain.ajustaPeca = () => null; }")
+    pg.fill('[data-g1=editar-campo]', '4'); r = g1_clica(pg, '[data-g1=editar-ok]')
+    if not r['erros'] or 'Não deu para ajustar' not in r['erros'][0] or g1_movs(r): prob.append('%s: o cérebro recusou o ✎ e a tela não disse: %s' % (rot, r['erros']))
+    pg.evaluate("() => { window.CapitaoBrain.ajustaPeca = window.__ajusta; }")
+    pg.fill('[data-g1=editar-campo]', ' 5 '); r = g1_clica(pg, '[data-g1=editar-ok]')
+    m = g1_movs(r)
+    if len(m) != 1 or (m[0].get('id'), m[0].get('dq'), m[0].get('sim')) != ('p03', 4, True) or r['erros'] or [p['editor'] for p in r['pecas'] if p['id'] == 'p03'] != [False]: prob.append('%s: ✎ com « 5 » devia gravar 1 movimento p03 +4 e fechar o editor: %s' % (rot, m))
+    prob += g1_pecas_confere(r, E, rot + ' depois do ✎', app, {'p03': 5})
+    r = g1_clica(pg, '[data-g1=peca][data-id=p03] [data-g1=editar]'); r = g1_clica(pg, '[data-g1=peca][data-id=p03] [data-g1=editar-cancela]')
+    if len(g1_movs(r)) != 1 or [p['editor'] for p in r['pecas'] if p['id'] == 'p03'] != [False]: prob.append('%s: Cancelar devia fechar o editor sem gravar' % rot)
+    # + PEÇA
+    r = g1_clica(pg, '[data-g1=nova]')
+    if not r['form'] or r['nova'] != 'true': prob.append('%s: o + PEÇA devia abrir o formulário (aria-expanded true)' % rot)
+    def nova(nome, qtd, mn, local='', tarefa=''):
+        pg.fill('[data-g1=f-nome]', nome); pg.fill('[data-g1=f-qtd]', qtd); pg.fill('[data-g1=f-min]', mn); pg.fill('[data-g1=f-local]', local)
+        pg.select_option('[data-g1=f-tarefa]', tarefa)
+        return g1_clica(pg, '[data-g1=f-salvar]')
+    casos = [(('', '3', '1'), 'Dê um nome'), (('Peça x', '1e2', '1'), 'Quantidade inválida'), (('Peça x', '3', '12abc'), 'Mínimo inválido'), (('Peça x', '1000', '1'), 'Quantidade inválida'), (('Peça x', '3,5', '1'), 'Quantidade inválida')]
+    for args, esperado in casos:
+        r = nova(*args)
+        if not r['erros'] or not r['erros'][0].startswith(esperado) or len(r['pecas']) != 12 or (r['pecasLs'] or {}).get('novas'): prob.append('%s: + PEÇA com %s devia dar «%s» sem cadastrar: %s, %d peças' % (rot, args, esperado, r['erros'], len(r['pecas'])))
+    pg.evaluate("() => { window.__args = []; window.__add = window.CapitaoBrain.addPeca; window.CapitaoBrain.addPeca = () => null; }")
+    r = nova('Filtro de ar do gerador', '3', '1', 'estante técnica 2', 'gerador-revisao')
+    if not r['erros'] or 'Não deu para cadastrar' not in r['erros'][0] or len(r['pecas']) != 12 or not r['form']: prob.append('%s: o cérebro recusou o + PEÇA e a tela não disse (ou apagou o formulário): %s' % (rot, r['erros']))
+    pg.evaluate("() => { window.CapitaoBrain.addPeca = function (c) { window.__args.push(JSON.parse(JSON.stringify(c))); return window.__add.call(window.CapitaoBrain, c); }; }")
+    r = pg.evaluate(LE_G1)
+    pg.click('[data-g1=f-salvar]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G1)
+    args = pg.evaluate("() => window.__args")
+    if len(args) != 1 or not (isinstance(args[0].get('qtd'), str) and isinstance(args[0].get('min'), str)) or args[0].get('qtd') != '3' or args[0].get('min') != '1': prob.append('%s: a quantidade e o mínimo vão ao cérebro como TEXTO ("3" e "1"): %s' % (rot, args))
+    novas = (r['pecasLs'] or {}).get('novas') or []
+    if len(novas) != 1 or (novas[0].get('n'), novas[0].get('qtd'), novas[0].get('min'), novas[0].get('local'), novas[0].get('tarefas'), novas[0].get('sim')) != ('Filtro de ar do gerador', 3, 1, 'estante técnica 2', ['gerador-revisao'], True) or 'pn' in novas[0] or re.search(r'pre[cç]o|valor|r\$', json.dumps(novas[0]), re.I):
+        prob.append('%s: a peça cadastrada devia ser %s: %s' % (rot, 'Filtro de ar do gerador 3/1 estante técnica 2 com a tarefa gerador-revisao e sim true', novas))
+    nid = novas[0]['id'] if novas else 'x'
+    ag = {t['id']: t for t in E['agenda']}['gerador-revisao']
+    extra = [{'id': nid, 'n': 'Filtro de ar do gerador', 'qtd': '3 / 1', 'q': 3, 'min': 1, 'st': 'OK', 'nivel': 'ok', 'tarefas': '%s — %s · %s' % (ag['t'], rot_prazo(ag['venceEm']), data_de(E['hojeIso'], ag['venceEm'])[:5])}]
+    prob += g1_pecas_confere(r, E, rot + ' com a peça cadastrada', app, {'p03': 5}, extra)
+    if r['form'] or r['erros'] or 'Peça cadastrada' not in r['nota']: prob.append('%s: depois de cadastrar o formulário devia fechar e a nota dizer «Peça cadastrada»: %r %r' % (rot, r['nota'], r['form']))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g1_real(b, tela):
+    """G1, o caminho `null` → SEM DADOS é do ramo simulacao false: um documento sem prazo e sem conferência diz SEM DADOS (cartão, linha, FALTA REGISTRAR); na simulação o mesmo documento diz «sem prazo», sem rótulo; e as peças cadastradas
+    com a simulação ligada ganham o selo «apresentação» só com simulacao false (as de antes, não)."""
+    prob = []
+    doc = "window.CapitaoDados.documentos.push({ id: 'sem-prazo-teste', n: 'Documento sem prazo do teste', cat: 'Registro', nota: 'teste', fonte: 'Controle de documentos' });"
+    ctx, pg, erros = abre_g1(b, tela, depois=doc)
+    r = pg.evaluate(LE_G1)
+    x = [d for d in r['docs'] if d['id'] == 'sem-prazo-teste']
+    if len(x) != 1 or x[0]['st'] != 'sem prazo' or x[0]['validade'] != 'sem prazo' or r['falta'] or ach_g1(tela, r): prob.append('%s (simulação): o documento sem prazo devia dizer «sem prazo» sem rótulo nem FALTA REGISTRAR: %s %s' % (tela, x, ach_g1(tela, r)))
+    ctx.close()
+    ctx, pg, erros = abre_g1(b, tela, depois=doc + ' window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(LE_G1)
+    x = [d for d in r['docs'] if d['id'] == 'sem-prazo-teste']
+    t = {k: txt for k, txt, _ in r['tiles']}
+    if len(x) != 1 or x[0]['st'] != 'SEM DADOS' or x[0]['validade'] != 'SEM DADOS' or not r['falta'] or not t.get('semdados', '').startswith('1 SEM DADOS'): prob.append('%s (simulacao false): o documento sem prazo devia dizer SEM DADOS na linha, no cartão e no FALTA REGISTRAR: %s %s' % (tela, x, t.get('semdados')))
+    prob += ['%s (simulacao false): %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    ls = {'capitao.pecas.v1': json.dumps({'novas': [{'id': 'u1', 'n': 'Peça com selo do teste', 'qtd': 2, 'min': 1, 'sim': True}, {'id': 'u2', 'n': 'Peça sem selo do teste', 'qtd': 2, 'min': 1}], 'movs': []})}
+    for modo, depois, esp in (('simulação', '', {'u1': False, 'u2': False}), ('simulacao false', 'window.CapitaoDados.simulacao = false;', {'u1': True, 'u2': False})):
+        ctx, pg, erros = abre_g1(b, tela, aba='pecas', depois=depois, ls=ls)
+        r = pg.evaluate(LE_G1)
+        got = {p['id']: p['selo'] for p in r['pecas'] if p['id'] in esp}
+        if got != esp: prob.append('%s (%s): o selo «apresentação» das peças cadastradas é %s (esperado %s)' % (tela, modo, got, esp))
+        ctx.close()
+    return prob
+
+
+def ach_g1(tela, r): return achados_termos(tela, r['texto'])
+
+
+LE_G2 = """() => { const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), q = (s) => document.querySelector(s), qa = (s) => [...document.querySelectorAll(s)];
+  const ls = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+  const g = q('[data-capitao-grafico]');
+  return {
+    abas: qa('[data-g2=aba]').map((e) => [e.getAttribute('data-aba'), e.getAttribute('aria-selected')]), hash: location.hash,
+    resumo: lin((q('[data-g2=resumo]') || {}).innerText), nota: lin((q('[data-g2=nota]') || {}).innerText), perguntar: q('[data-g2=perguntar]') ? q('[data-g2=perguntar]').getAttribute('href') : null,
+    kpis: Object.fromEntries(qa('[data-g2=kpi]').map((e) => [e.getAttribute('data-k'), lin(e.innerText)])), hrefs: Object.fromEntries(qa('[data-g2=kpi]').map((e) => [e.getAttribute('data-k'), e.getAttribute('href')])), litros: lin((q('[data-g2=litros]') || {}).innerText),
+    serieTitulo: lin((q('[data-g2=serie-titulo]') || {}).innerText), series: qa('[data-g2=serie]').map((e) => [e.getAttribute('data-s'), lin(e.innerText), e.getAttribute('aria-pressed')]),
+    janelas: qa('[data-g2=janela]').map((e) => [e.getAttribute('data-j'), e.getAttribute('aria-pressed')]),
+    graf: g ? { met: g.getAttribute('data-capitao-grafico'), jan: g.getAttribute('data-janela'), vazio: (g.querySelector('[data-vazio]') || g).getAttribute('data-vazio'), linhas: g.querySelectorAll('svg path[fill=none][stroke-width="2"]').length,
+      agora: [...g.querySelectorAll('circle[data-agora]')].map((c) => [c.getAttribute('data-campo'), c.getAttribute('data-agora')]), texto: lin(g.innerText) } : null,
+    nota2: lin((q('[data-g2=grafico-nota]') || {}).innerText), estacao: Object.fromEntries(qa('[data-g2=estacao-item]').map((e) => [e.getAttribute('data-e'), lin(e.innerText)])),
+    histSub: lin((q('[data-g2=hist-sub]') || {}).innerText), hist: qa('[data-g2=hist-linha]').map((e) => ({ texto: lin(e.innerText), st: lin((e.querySelector('[data-g2=st]') || {}).innerText), selo: !!e.querySelector('[data-g2=selo]') })),
+    regra: lin((q('[data-g2=regra]') || {}).innerText), regraAgora: lin((q('[data-g2=regra-agora]') || {}).innerText),
+    faixas: qa('[data-g2=faixa]').map((e) => ({ nome: e.getAttribute('data-nome'), nomeTxt: lin((e.querySelector('[data-g2=faixa-nome]') || {}).innerText), lph: lin((e.querySelector('[data-g2=faixa-lph]') || {}).innerText), horas: lin((e.querySelector('[data-g2=faixa-horas]') || {}).innerText), litros: lin((e.querySelector('[data-g2=faixa-litros]') || {}).innerText), texto: lin(e.innerText) })),
+    totais: Object.fromEntries(qa('[data-g2=total]').map((e) => [e.getAttribute('data-t'), lin(e.innerText)])), coerencia: lin((q('[data-g2=coerencia]') || {}).innerText), faixasSub: lin((q('[data-g2=faixas-sub]') || {}).innerText),
+    agora: qa('[data-g2=agora-valor]').map((e) => lin(e.innerText)), texto: document.body.innerText,
+    abastLs: ls('capitao.abast.v1'), diarioLs: ls('capitao.diario.v1') }; }"""
+ESP_G2 = """() => { const D = window.CapitaoDados, A = window.CapitaoAgora, R = window.CapitaoReplay, F = A.fmt, I = A.instante(), q = I.q, T = {};
+  ['diesel_litros', 'diesel_bb_pct', 'diesel_be_pct', 'bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v', 'tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct', 'vento_verdadeiro_nos', 'pressao_barometrica_hpa',
+   'temp_ar_externo_c', 'temp_agua_c', 'consumo_lph', 'sog_nos', 'motor_bb_rpm', 'motor_be_rpm', 'gerador_kw'].forEach((c) => { T[c] = F.campo(q, c); });
+  let c0 = null, c1 = null; try { c0 = R.contadoresEm(A.ancora(I.ms)); c1 = R.contadores(); } catch (e) {}
+  return { hora: I.hora, fonteTxt: I.fonteTxt, ms: I.ms, anc: A.ancora(I.ms), calc: I.calc, T: T, twd: q.vento_verdadeiro_angulo, proa: q.proa_graus, lph: q.consumo_lph, sog: q.sog_nos, gerador: q.gerador_ativo === true,
+    hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso, regra: D.regraAbast, cons: { cruzeiro: D.consumo.cruzeiro, lenta: D.consumo.lenta, gerador_lph: D.consumo.gerador_lph, faixas: D.consumo.faixas }, cap: D.embarcacao.tanques.diesel_l,
+    ab: D.abastecimentos.map((a) => ({ id: a.id, d: a.d, h: a.h, litros: a.litros, local: a.local, st: a.st, nivelDepois: a.nivelDepois })), faixas: R.porFaixa(), c0: c0 && c0.diesel_litros, c1: c1 && c1.diesel_litros }; }"""
+G2_SERIES = [('diesel', 'Diesel válido', 'diesel', ['diesel_litros']), ('agua', 'Água doce', 'agua', ['tanque_agua_pct']), ('servidas', 'Servidas', 'servidas', ['tanque_cinzas_pct', 'tanque_negras_pct']),
+             ('baterias', 'Baterias', 'baterias', ['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v']), ('estacao', 'Estação meteorológica', 'vento', ['vento_verdadeiro_nos'])]
+
+
+def abre_g2(b, tela, aba='nivel', fixo='60', depois='', ls=None):
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, hash_='#aba=consumo' if aba == 'consumo' else '', depois=depois, ls=ls)
+    try: pg.wait_for_function("() => document.querySelector('[data-g2=kpi]') && document.querySelector('[data-capitao-grafico],[data-g2=faixa]')", timeout=10000)
+    except Exception: pass
+    pg.wait_for_timeout(350)
+    return ctx, pg, erros
+
+
+def g2_twa(twd, proa):
+    t = (twd - proa + 540) % 360 - 180
+    if t == -180: t = 180
+    return '%d° %s' % (abs(math.floor(t + 0.5)), 'BE' if t >= 0 else 'BB')
+
+
+def teste_g2_nivel(b, tela):
+    """G2, aba Nível, a 60 s e a 105 s: o diesel, o último abastecimento, o consumido desde ele e a autonomia vêm do instante (quadro e `calc` do CapitaoAgora), nunca do D.snapshot de 26/09 (848 L, 11,2 h) nem da
+    D.autonomia; o histórico é o D.abastecimentos (data, 1.086 L, local, CONFERIDO, 97,5 % depois); a regra de bordo sem rótulo e o nível de agora contra ela; os gráficos do capitao-grafico.js: diesel válido, água doce e
+    servidas (os tanques em 2 abas), baterias (3 séries) e a estação meteorológica (o vento, com o TWA, o barômetro e o ar), cada um com o ponto «agora» igual ao quadro e as 5 janelas; e, sem congelar, a leitura anda."""
+    prob = []
+    app = eh_app(tela)
+    chat = CHAT_DE['app' if app else 'web']
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_g2(b, tela, fixo=fixo)
+        r, E = pg.evaluate(LE_G2), pg.evaluate(ESP_G2)
+        rot = '%s a %s s' % (tela, fixo)
+        T, calc = E['T'], E['calc']
+        cap = nbp(E['cap'], 0, True)
+        if r['abas'] != [['nivel', 'true'], ['consumo', 'false']]: prob.append('%s: as abas são %s' % (rot, r['abas']))
+        fonte = E['fonteTxt'][:1].upper() + E['fonteTxt'][1:]
+        res = r['resumo']
+        if fonte not in res or E['hora'] not in res or (not app and (('≈ %s' % T['diesel_litros']) not in res or ('(%s %%)' % nbp(calc['diesel_pct'])) not in res or 'regra: abastecer antes de 25 %' not in res)): prob.append('%s: o resumo diz %r (esperado %r, %s e, na web, o diesel %s L e a regra de 25 %%)' % (rot, res, fonte, E['hora'], T['diesel_litros']))
+        k = r['kpis']
+        if app:
+            if ('≈ %s' % T['diesel_litros']) not in r['litros'] or 'L de ' + cap not in r['texto']: prob.append('%s: o diesel do app é %r (esperado ≈ %s L de %s)' % (rot, r['litros'], T['diesel_litros'], cap))
+            if sorted(k) != ['autonomia', 'desde', 'regra', 'ultimo']: prob.append('%s: os cartões do app são %s' % (rot, sorted(k)))
+        else:
+            d = k.get('diesel', '')
+            if ('≈ %s' % T['diesel_litros']) not in d or 'L de ' + cap not in d or ('BB %s %%' % T['diesel_bb_pct']) not in d or ('BE %s %%' % T['diesel_be_pct']) not in d or E['hora'] not in d: prob.append('%s: o cartão do diesel diz %r (esperado ≈ %s L de %s, BB %s %%, BE %s %%, %s)' % (rot, d, T['diesel_litros'], cap, T['diesel_bb_pct'], T['diesel_be_pct'], E['hora']))
+        a0 = E['ab'][0] if E['ab'] else {}
+        u = k.get('ultimo', '')
+        if not E['ab'] or nbp(a0['litros'], 0, True) not in u or a0['d'] not in u or a0['h'] not in u or a0['local'] not in u or a0['st'] not in u or ('tanques ≈ %s %% depois' % nbp(a0['nivelDepois'])) not in u: prob.append('%s: o último abastecimento diz %r (esperado %s)' % (rot, u, a0))
+        ds = k.get('desde', ''); dd = calc.get('desdeAbast') or {}
+        if ('≈ %s' % nbp(dd.get('litros', 0), 0, True)) not in ds or dd.get('desde', '?')[:5] not in ds: prob.append('%s: o consumido desde o abastecimento diz %r (esperado ≈ %s L desde %s)' % (rot, ds, dd.get('litros'), dd.get('desde')))
+        au = k.get('autonomia', ''); aa = calc['autonomia']
+        if ('≈ %s h' % nbp(aa['horas'])) not in au or ('≈ %s mn' % nbp(aa['mn'], 0, True)) not in au or ('marcha lenta ≈ %s h' % nbp(aa['lenta'], 0, True)) not in au or '11,2' in au: prob.append('%s: a autonomia diz %r (esperado ≈ %s h, ≈ %s mn, lenta ≈ %s h: a do instante, não a de 26/09)' % (rot, au, aa['horas'], aa['mn'], aa['lenta']))
+        if not app:   # as perguntas dos cartões e do «Perguntar» vão ao cérebro (autonomia, consumo), sem IA; o cartão do diesel leva à Ponte
+            esp_k = {'ultimo': 'consumo', 'desde': 'consumo', 'autonomia': 'autonomia'}
+            qs = [(k_, urllib.parse.unquote(h.split('#q=', 1)[1])) for k_, h in r['hrefs'].items() if k_ in esp_k and '#q=' in (h or '')] + [('perguntar', urllib.parse.unquote(r['perguntar'].split('#q=', 1)[1]))]
+            if len(qs) != 4 or r['hrefs'].get('diesel') != 'A1-Ponte-Web.dc.html' or not r['perguntar'].startswith(chat + '#q='): prob.append('%s: os links dos cartões são %s e o «Perguntar» %r' % (rot, r['hrefs'], r['perguntar']))
+            for (k_, _), x in zip(qs, pg.evaluate(G1_PERGUNTA, [q_ for _, q_ in qs])):
+                if x['key'] != esp_k.get(k_, 'autonomia') or x['ia']: prob.append('%s: a pergunta do cartão %r dá %s (IA %s), esperado %s sem IA' % (rot, k_, x['key'], x['ia'], esp_k.get(k_, 'autonomia')))
+        for ruim in ('26/09', '848', 'snapshot', 'telemetria ao vivo desligada'):
+            if ruim in r['texto']: prob.append('%s: a tela ainda mostra %r (a leitura de 26/09)' % (rot, ruim))
+        # o histórico: o registro (D.abastecimentos) com as datas de hoje
+        if len(r['hist']) != len(E['ab']): prob.append('%s: o histórico tem %d linhas (esperado as %d do D.abastecimentos)' % (rot, len(r['hist']), len(E['ab'])))
+        for x, a in zip(r['hist'], E['ab']):
+            if a['d'] not in x['texto'] or a['h'] not in x['texto'] or nbp(a['litros'], 0, True) + ' L' not in x['texto'] or a['local'] not in x['texto'] or x['st'] != a['st'] or ('tanques ≈ %s %% depois' % nbp(a['nivelDepois'])) not in x['texto'] or x['selo']: prob.append('%s: a linha do histórico de %s diz %r' % (rot, a['d'], x['texto'][:140]))
+        if not app and ('%d registros' % len(E['ab'])) not in r['histSub']: prob.append('%s: o histórico diz %r' % (rot, r['histSub']))
+        # a regra de bordo
+        if not r['regra'].startswith('REGRA DE BORDO ' + E['regra'][:1].upper() + E['regra'][1:40]) or re.search(r'DEMO|demonstra', r['regra']): prob.append('%s: a regra de bordo diz %r' % (rot, r['regra'][:120]))
+        esp_ra = 'Agora %s %% do total · ≈ %s L — acima da regra (%s)' % (nbp(calc['diesel_pct']), T['diesel_litros'], E['hora'])
+        if r['regraAgora'] != esp_ra: prob.append('%s: o nível contra a regra diz %r (esperado %r)' % (rot, r['regraAgora'], esp_ra))
+        # os gráficos
+        g = r['graf']
+        if not g or g['met'] != 'diesel' or g['jan'] != '7D' or g['vazio'] or not g['agora'] or g['agora'][0][1] != T['diesel_litros']: prob.append('%s: o gráfico de abertura devia ser o diesel válido em 7 D com o ponto «agora» em %s L: %s' % (rot, T['diesel_litros'], g))
+        if r['serieTitulo'].split(' · ')[0] != 'Diesel válido' and 'Diesel válido' not in r['serieTitulo']: prob.append('%s: o título do gráfico diz %r' % (rot, r['serieTitulo']))
+        if [s[0] for s in r['series']] != [s[0] for s in G2_SERIES] or [s[1] for s in r['series']] != [s[1] for s in G2_SERIES]: prob.append('%s: os gráficos escolhíveis são %s (esperado diesel válido, água doce, servidas, baterias e estação meteorológica)' % (rot, [s[1] for s in r['series']]))
+        if fixo == '60':
+            for chave, rotulo, met, campos in G2_SERIES:
+                pg.click('[data-g2=serie][data-s=%s]' % chave); pg.wait_for_timeout(400)
+                x = pg.evaluate(LE_G2)
+                g = x['graf']
+                if not g or g['met'] != met or g['vazio'] or [a[0] for a in g['agora']] != campos or [a[1] for a in g['agora']] != [E['T'][c] for c in campos]:
+                    prob.append('%s: o gráfico «%s» devia ser a métrica %s com o ponto «agora» do quadro %s: %s' % (rot, rotulo, met, [E['T'][c] for c in campos], g and (g['met'], g['vazio'], g['agora'])))
+                if chave == 'baterias' and g and g['linhas'] < 3: prob.append('%s: as baterias têm de ter 3 séries no gráfico (linhas: %s)' % (rot, g['linhas']))
+                if [s[2] for s in x['series'] if s[0] == chave] != ['true']: prob.append('%s: o chip «%s» devia ficar marcado' % (rot, rotulo))
+                if chave == 'estacao':
+                    est = x['estacao']
+                    esp = {'vento': '%s nós' % E['T']['vento_verdadeiro_nos'], 'twa': g2_twa(E['twd'], E['proa']), 'pressao': '%s hPa' % E['T']['pressao_barometrica_hpa'], 'ar': '%s °C' % E['T']['temp_ar_externo_c']}
+                    if sorted(est) != sorted(esp) or any(v not in est[k_] for k_, v in esp.items()): prob.append('%s: a estação meteorológica diz %s (esperado %s, com o TWA = vento verdadeiro − proa, + a boreste)' % (rot, est, esp))
+                    if 'TWA' not in est.get('twa', '') or 'proa' not in est.get('twa', ''): prob.append('%s: o TWA diz %r (esperado o ângulo em relação à proa)' % (rot, est.get('twa')))
+                elif x['estacao']: prob.append('%s: o gráfico «%s» não é a estação e mostra a faixa de meteorologia' % (rot, rotulo))
+                if not x['nota2']: prob.append('%s: o gráfico «%s» sem a nota do que ele mostra' % (rot, rotulo))
+            # as 5 janelas, no diesel e nas baterias: o gráfico muda de janela e o «agora» continua sendo o quadro
+            for chave, campos in (('diesel', ['diesel_litros']), ('baterias', ['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v'])):
+                pg.click('[data-g2=serie][data-s=%s]' % chave); pg.wait_for_timeout(300)
+                for j in ('150S', '1D', '7D', '30D', '1A'):
+                    pg.click('[data-g2=janela][data-j="%s"]' % j); pg.wait_for_timeout(350)
+                    x = pg.evaluate(LE_G2); g = x['graf']
+                    if not g or g['jan'] != j or g['vazio'] or [a[1] for a in g['agora']] != [E['T'][c] for c in campos] or [w[1] for w in x['janelas'] if w[0] == j] != ['true']:
+                        prob.append('%s: %s na janela %s devia desenhar com o «agora» do quadro %s: %s' % (rot, chave, j, [E['T'][c] for c in campos], g and (g['jan'], g['vazio'], g['agora'])))
+        ach = achados_termos(tela, r['texto'])
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if TERMOS['DINHEIRO'].search(r['texto']) or 'R$' in r['texto']: prob.append('%s: valor em dinheiro na tela' % rot)
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # sem congelar o replay, a leitura de agora anda (o tique de 1 s redesenha o texto; o gráfico ouve o tique sozinho)
+    ctx, pg, erros = abre_g2(b, tela, fixo=None)
+    a = pg.evaluate(LE_G2)
+    pg.wait_for_timeout(2300)
+    c = pg.evaluate(LE_G2)
+    if a['resumo'] == c['resumo'] and a['kpis'] == c['kpis'] and (a['litros'] == c['litros']): prob.append('%s: sem congelar, o resumo e a leitura não mudaram em 2,3 s: %r' % (tela, a['resumo']))
+    ctx.close()
+    return prob
+
+
+def teste_g2_consumo(b, tela):
+    """G2, aba Consumo (F23), a 60 s, a 105 s e a 60 s da volta 300 (19:31, outro ponto do dia de bordo): as 5 faixas do D.consumo.faixas com o L/h, as horas e os litros do CapitaoReplay.porFaixa(); o total desde as 07:00 é
+    a soma dos motores e do gerador e BATE com o contador de diesel (c(07:00) − c(agora), diferença só de arredondamento) e a frase da coerência cita os dois contadores; as horas das faixas somam o tempo desde as 07:00; o consumo
+    de agora (L/h, L/mn, gerador) é o do quadro; nenhum R$; e o #aba=consumo é a aba."""
+    prob = []
+    app = eh_app(tela)
+    for fixo in ('60', '105', '60@300'):
+        ctx, pg, erros = abre_g2(b, tela, aba='consumo', fixo=fixo)
+        r, E = pg.evaluate(LE_G2), pg.evaluate(ESP_G2)
+        rot = '%s a %s s' % (tela, fixo)
+        if r['abas'] != [['nivel', 'false'], ['consumo', 'true']]: prob.append('%s: com #aba=consumo as abas são %s' % (rot, r['abas']))
+        fx, nomes = E['faixas'], [f['nome'] for f in E['cons']['faixas']]
+        if [f['nome'] for f in r['faixas']] != nomes or [f['nome'] for f in fx] != nomes: prob.append('%s: as faixas da tela são %s (esperado %s, as do D.consumo.faixas)' % (rot, [f['nome'] for f in r['faixas']], nomes)); ctx.close(); continue
+        for f, x in zip(fx, r['faixas']):
+            esp = (f['nome'][:1].upper() + f['nome'][1:], nbp(f['lph']) + ' L/h' if f['seg'] else '—', nbp(f['horas']) + ' h', nbp(f['litros']) + ' L')
+            if (x['nomeTxt'], x['lph'], x['horas'], x['litros']) != esp: prob.append('%s: a faixa %s mostra %s (esperado %s, do CapitaoReplay.porFaixa())' % (rot, f['nome'], (x['nomeTxt'], x['lph'], x['horas'], x['litros']), esp))
+            if ('rpm %s a %s' % (nbp(f['rpm_de'], 0, True), nbp(f['rpm_ate'], 0, True))) not in x['texto']: prob.append('%s: a faixa %s sem a rotação %d a %d: %r' % (rot, f['nome'], f['rpm_de'], f['rpm_ate'], x['texto'][:80]))
+        sm = sum(f['litros'] for f in fx); sg = sum(f['gerador_litros'] for f in fx); sh = sum(f['horas'] for f in fx)
+        tot = r['totais']
+        if tot != {'motores': nbp(sm) + ' L', 'gerador': nbp(sg) + ' L', 'total': nbp(sm + sg) + ' L'}: prob.append('%s: os totais dizem %s (esperado motores %s L, gerador %s L, total %s L)' % (rot, tot, nbp(sm), nbp(sg), nbp(sm + sg)))
+        dif = (E['c0'] - E['c1']) if E['c0'] is not None and E['c1'] is not None else None
+        if dif is None or abs((sm + sg) - dif) > 1.0: prob.append('%s: a soma das faixas e do gerador (%.1f L) não bate com o contador de diesel (%s − %s = %s L)' % (rot, sm + sg, E['c0'], E['c1'], dif))
+        elif not all(nbp(v, 0, True) in r['coerencia'] for v in (E['c0'], E['c1'], dif)) or '07:00' not in r['coerencia']: prob.append('%s: a coerência diz %r (esperado os contadores %s → %s = %s L desde as 07:00)' % (rot, r['coerencia'], E['c0'], E['c1'], dif))
+        ms_desde = (E['ms'] - E['anc']) / 3.6e6
+        if abs(sh - ms_desde) > 0.06: prob.append('%s: as horas das faixas somam %.2f h e desde as 07:00 passaram %.2f h' % (rot, sh, ms_desde))
+        if 'Desde as 07:00' not in r['faixasSub'] and not app: prob.append('%s: o subtítulo não diz «Desde as 07:00»: %r' % (rot, r['faixasSub']))
+        T = E['T']
+        esp_ag = ['%s L/h' % T['consumo_lph'], '%s L/mn' % nbp(E['lph'] / E['sog']) if E['sog'] >= 1 else '—', '%s L/h' % nbp(E['cons']['gerador_lph']) if E['gerador'] else '0,0 L/h']
+        if r['agora'] != esp_ag: prob.append('%s: o consumo de agora diz %s (esperado %s, do quadro e do D.consumo)' % (rot, r['agora'], esp_ag))
+        ach = achados_termos(tela, r['texto'])
+        if ach: prob.append('%s: termo do §3 na aba Consumo: %s' % (rot, ach))
+        if TERMOS['DINHEIRO'].search(r['texto']) or 'R$' in r['texto']: prob.append('%s: valor em dinheiro na aba Consumo' % rot)
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # a aba por toque
+    ctx, pg, erros = abre_g2(b, tela)
+    pg.click('[data-g2=aba][data-aba=consumo]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G2)
+    if r['abas'] != [['nivel', 'false'], ['consumo', 'true']] or r['hash'] != '#aba=consumo' or len(r['faixas']) != 5 or r['graf']: prob.append('%s: o toque em CONSUMO devia abrir a aba e pôr #aba=consumo: %s %s' % (tela, r['abas'], r['hash']))
+    pg.evaluate("() => { window.__marca = 'viva'; location.hash = '#aba=nivel'; }"); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G2)
+    if r['abas'] != [['nivel', 'true'], ['consumo', 'false']] or not r['graf'] or pg.evaluate("() => window.__marca") != 'viva': prob.append('%s: trocar o endereço para #aba=nivel devia voltar ao nível sem recarregar: %s' % (tela, r['abas']))
+    ctx.close()
+    return prob
+
+
+def teste_g2_nf(b, tela):
+    """G2, a foto da NF (anexo: continua A CONFIRMAR, o app não lê o arquivo): 1 linha nova no histórico e no capitao.abast.v1 com o nome, a data de hoje e o carimbo sim: true na simulação (sem carimbo com simulacao false: a
+    regra do carimbo, CONTRATO §1.25), 1 linha no diário «linha criada como A CONFIRMAR» (sim só na simulação); e o selo «apresentação» só na linha gravada com a simulação e vista com simulacao false."""
+    prob = []
+    for modo, depois in (('simulação', ''), ('simulacao false', 'window.CapitaoDados.simulacao = false;')):
+        ctx, pg, erros = abre_g2(b, tela, depois=depois)
+        n0 = len(pg.evaluate(LE_G2)['hist'])
+        pg.set_input_files('[data-g2=arq-nf]', {'name': 'nf-diesel-teste.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8' + b'0' * 2000}); pg.wait_for_timeout(450)
+        r = pg.evaluate(LE_G2)
+        ls_, dia = r['abastLs'] or [], r['diarioLs'] or []
+        hoje = datetime.date.today().strftime('%d/%m/%Y')
+        if len(ls_) != 1: prob.append('%s (%s): a foto devia gravar 1 linha em capitao.abast.v1: %s' % (tela, modo, ls_)); ctx.close(); continue
+        l = ls_[0]
+        if (l.get('n'), l.get('st')) != ('nf-diesel-teste.jpg', 'A CONFIRMAR') or l.get('d') != hoje: prob.append('%s (%s): a linha gravada é %s (esperado a foto, A CONFIRMAR, de %s)' % (tela, modo, l, hoje))
+        if (l.get('sim') is True) != (modo == 'simulação') or ('sim' in l and modo != 'simulação'): prob.append('%s (%s): a linha %s o carimbo sim: true (esperado só com a simulação)' % (tela, modo, 'tem' if 'sim' in l else 'não tem'))
+        d = [x for x in dia if 'nf-diesel-teste.jpg' in (x.get('t') or '')]
+        if len(d) != 1 or 'linha criada como A CONFIRMAR' not in d[0]['t'] or not str(d[0].get('src', '')).endswith('· abastecimento') or (d[0].get('sim') is True) != (modo == 'simulação'): prob.append('%s (%s): o diário devia ganhar 1 linha «linha criada como A CONFIRMAR» do abastecimento (sim só na simulação): %s' % (tela, modo, d))
+        x = [h for h in r['hist'] if 'nf-diesel-teste.jpg' in h['texto']]
+        if len(r['hist']) != n0 + 1 or len(x) != 1 or x[0]['st'] != 'A CONFIRMAR' or x[0]['selo']: prob.append('%s (%s): o histórico devia ganhar 1 linha A CONFIRMAR da foto, sem selo: %d → %d linhas, %s' % (tela, modo, n0, len(r['hist']), x))
+        if not eh_app(tela) and '1 A CONFIRMAR' not in r['histSub']: prob.append('%s (%s): o resumo do histórico diz %r' % (tela, modo, r['histSub']))
+        prob += ['%s (%s): %s' % (tela, modo, e) for e in erros[:2]]
+        ctx.close()
+    ls = {'capitao.abast.v1': json.dumps([{'n': 'com-selo.jpg', 'd': '01/11/2026', 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no app por Lucas', 'sim': True}, {'n': 'sem-selo.jpg', 'd': '02/11/2026', 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no app por Lucas'}])}
+    for modo, depois, esp in (('simulação', '', {'com-selo.jpg': False, 'sem-selo.jpg': False}), ('simulacao false', 'window.CapitaoDados.simulacao = false;', {'com-selo.jpg': True, 'sem-selo.jpg': False})):
+        ctx, pg, erros = abre_g2(b, tela, depois=depois, ls=ls)
+        r = pg.evaluate(LE_G2)
+        got = {n: any(n in h['texto'] and h['selo'] for h in r['hist']) for n in esp}
+        if got != esp: prob.append('%s (%s): o selo «apresentação» das fotos é %s (esperado %s)' % (tela, modo, got, esp))
+        ctx.close()
+    return prob
+
+
+def teste_g2_real(b, tela):
+    """G2, o caminho `null` → SEM DADOS / SEM LEITURA é do ramo simulacao false: o diesel é a última leitura salva (a de 26/09, dita com o dia e a hora), o último abastecimento e o consumido desde ele dizem SEM DADOS (o registro
+    está vazio), o gráfico diz SEM DADOS com a leitura de agora, a aba Consumo diz SEM DADOS; nada de erro de script. Na simulação, nenhuma dessas frases."""
+    prob = []
+    for aba in ('nivel', 'consumo'):
+        ctx, pg, erros = abre_g2(b, tela, aba=aba, depois='window.CapitaoDados.simulacao = false;')
+        r = pg.evaluate(LE_G2)
+        S = pg.evaluate("() => { const s = window.CapitaoDados.snapshot; return { quando: s.quando, hora: s.hora, litros: s.quadro.diesel_litros }; }")
+        rot = '%s (simulacao false, %s)' % (tela, aba)
+        ultima = 'Última leitura · ' + S['quando'][:5] + ' ' + S['hora'][:5]
+        if ultima not in r['texto']: prob.append('%s: devia dizer a última leitura salva «%s»: %r' % (rot, ultima, r['resumo'] or r['texto'][:200]))
+        if 'telemetria ao vivo' in r['texto'].lower() and aba == 'nivel': prob.append('%s: diz «telemetria ao vivo» sem o replay' % rot)
+        if aba == 'nivel':
+            if ('≈ %s' % nbp(S['litros'], 0, True)) not in (r['litros'] + r['kpis'].get('diesel', '')) : prob.append('%s: o diesel devia ser o da última leitura salva (%s L)' % (rot, S['litros']))
+            if 'SEM DADOS' not in r['kpis'].get('ultimo', r['texto']) or 'SEM DADOS' not in r['kpis'].get('desde', ''): prob.append('%s: o último abastecimento e o consumido desde ele devem dizer SEM DADOS (registro vazio): %s' % (rot, {k: v[:50] for k, v in r['kpis'].items()}))
+            if not r['graf'] or r['graf']['vazio'] is None or 'SEM DADOS' not in r['graf']['texto']: prob.append('%s: o gráfico sem série devia dizer SEM DADOS: %s' % (rot, r['graf']))
+        else:
+            if r['faixas'] or 'SEM DADOS' not in (r['coerencia'] + r['faixasSub']): prob.append('%s: sem o replay a aba Consumo devia dizer SEM DADOS e não listar faixas: %d faixas, %r' % (rot, len(r['faixas']), r['coerencia']))
+        prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    ctx, pg, erros = abre_g2(b, tela)
+    r = pg.evaluate(LE_G2)
+    if 'SEM DADOS' in r['texto'] or 'Última leitura' in r['texto']: prob.append('%s (simulação): a tela devia estar sem SEM DADOS nem «Última leitura»' % tela)
+    ctx.close()
+    # a simulação sem nenhuma linha de abastecimento (o dia de bordo sem a linha): a tela diz «nenhum registro» e traço, nunca SEM DADOS
+    ctx, pg, erros = abre_g2(b, tela, depois='window.CapitaoDados.replay.diaDeBordo.abastecimento = null;')
+    r = pg.evaluate(LE_G2)
+    if r['hist'] or 'SEM DADOS' in r['texto'] or 'SEM LEITURA' in r['texto'] or 'nenhum registro' not in r['kpis'].get('ultimo', '') or achados_termos(tela, r['texto']): prob.append('%s (simulação sem linha de abastecimento): devia dizer «nenhum registro», sem SEM DADOS nem linha no histórico: %s %s' % (tela, r['kpis'].get('ultimo'), achados_termos(tela, r['texto'])))
+    prob += ['%s (simulação sem linha de abastecimento): %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_p4i_codigo():
+    """O código das 4 telas: G1 ouve a virada do dia ('capitao-rebase') e o 'storage' e tira os dois ao desmontar, só dá setState se o texto mudou e nunca com a aba escondida na virada; G2 ouve também o tique da telemetria e tira os
+    três; nenhum timer novo (só o da espera do cérebro); G2 carrega o capitao-grafico.js no <head> e usa o gráfico, o porFaixa() e os contadores; nada lê o D.snapshot nem escreve DEMO, R$ ou {{…}} em atributo geométrico de SVG; o app guarda os
+    CRLF do arquivo e a web, os LF; a G1 chama as 4 funções de peça do cérebro e passa a quantidade e o mínimo do + PEÇA como o texto digitado."""
+    prob = []
+    for tela in TELAS_P4I:
+        arq = tela + '.dc.html'
+        h = le_arq(arq)
+        t = h.replace('\r\n', '\n')
+        g1 = tela.startswith('G1')
+        for ev in (('capitao-rebase',) if g1 else ('capitao-telemetria', 'capitao-rebase')):
+            if t.count("addEventListener('%s'" % ev) != 1 or t.count("removeEventListener('%s'" % ev) != 1: prob.append('%s: devia ouvir e tirar o ouvinte de %r uma vez' % (arq, ev))
+        if t.count("addEventListener('storage'") != 1 or t.count("removeEventListener('storage'") != 1: prob.append('%s: o ouvinte do storage (registro em outra aba)' % arq)
+        if "if (!document.hidden)" not in t: prob.append('%s: a virada do dia/o tique sem a guarda de document.hidden' % arq)
+        if 'if (k === this._k) return;' not in t or t.count('setInterval') != 1 or t.count('setTimeout') < 1: prob.append('%s: só dá setState quando o texto muda (k === this._k) e o único setInterval é a espera do cérebro' % arq)
+        cod = re.sub(r'//[^\n]*', '', t.split('<script type="text/x-dc"')[1])
+        if re.search(r'D\.demo|\.demo\b|D\.aviso|D\.snapshot', cod): prob.append('%s: lê D.demo, D.aviso ou o D.snapshot (a leitura de 26/09)' % arq)
+        if re.search(r'DEMO|R\$|demonstra|fict[ií]ci', t): prob.append('%s: DEMO, R$, demonstração ou fictício no código da tela' % arq)
+        if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (arq, MARCAS_FIXAS.search(cod).group(0)))
+        for l in cod.split('\n'):   # SEM DADOS / SEM LEITURA só no ramo simulacao false (falta(), sim ? ou !sim) e na constante SD
+            if re.search(r'SEM (?:DADOS|LEITURA)', l) and not re.search(r"falta\(|sim \?|!sim|SD = 'SEM DADOS'", l): prob.append('%s: rótulo fora do ramo simulacao false: %s' % (arq, l.strip()[:100]))
+        if GEOM_SVG.search(t): prob.append('%s: {{…}} em atributo geométrico de SVG' % arq)
+        if arq.endswith('Mobile.dc.html'):
+            if h.count('\r\n') != h.count('\n') or h.count('\n') < 100: prob.append('%s: o arquivo do app perdeu as quebras CRLF' % arq)
+        elif '\r' in h: prob.append('%s: o arquivo da web ganhou CR' % arq)
+        if g1:
+            for f in ('B.usaPeca(', 'B.desfazUsoPeca(', 'B.ajustaPeca(', 'B.addPeca(', 'B.pecas()', 'B.loadPecas'):
+                if f not in t: prob.append('%s: sem a chamada %s do cérebro' % (arq, f))
+            if "B.addPeca({ n: s.fNome, qtd: s.fQtd, min: s.fMin," not in t: prob.append('%s: o + PEÇA devia passar a quantidade e o mínimo como o texto digitado (s.fQtd, s.fMin)' % arq)
+            if 'capitao-grafico' in t: prob.append('%s: carrega o gráfico sem usar' % arq)
+        else:
+            head = t.split('</head>')[0]
+            if '<script src="./capitao-grafico.js"></script>' not in head or head.index('capitao-grafico.js') < head.index('capitao-replay.js'): prob.append('%s: o capitao-grafico.js devia estar no <head>, depois do replay' % arq)
+            for f in ('G.elemento(', 'R.porFaixa(', 'R.contadoresEm(', 'R.contadores(', 'A.instante('):
+                if f not in t: prob.append('%s: sem %s' % (arq, f))
+    return prob
+
+
+LE_LAYOUT_P4I = r"""() => { const out = [], de = document.documentElement, lin = (x) => (x || '').replace(/\s+/g, ' ').trim();
+  const lateral = Math.max(de.scrollWidth, document.body ? document.body.scrollWidth : 0) - de.clientWidth;
+  for (const e of document.getElementById('dc-root').querySelectorAll('*')) {
+    if (e.closest('capitao-faixa,capitao-cabecalho,capitao-topo-app,capitao-trilho,capitao-sos-web,capitao-sos-app,capitao-barra-chat,svg,[data-capitao-grafico]')) continue;
+    const cs = getComputedStyle(e);
+    if (!(e.clientWidth > 0) || !(e.scrollWidth > e.clientWidth + 1) || /(auto|scroll)/.test(cs.overflowX)) continue;
+    const txt = lin(e.innerText); if (!txt) continue;
+    if (!(cs.textOverflow === 'ellipsis' && lin(e.getAttribute('title')) === txt)) out.push(e.tagName.toLowerCase() + ' cortado (' + e.scrollWidth + ' px de conteúdo em ' + e.clientWidth + ')' + (cs.textOverflow === 'ellipsis' ? ' com reticências e sem a dica do texto inteiro' : '') + ': «' + txt.slice(0, 60) + '»');
+  }
+  return { lateral: lateral, cortes: out }; }"""
+
+
+def teste_p4i_layout(b, tela):
+    """Os estados de dentro das 4 telas, que a matriz (só a tela de abertura) não vê: G1 nas peças, com o formulário do + PEÇA aberto e com o erro do ✎; G2 com a estação meteorológica e na aba Consumo. Em 3 tamanhos e 2 temas: nenhuma rolagem
+    lateral, nenhum texto cortado em silêncio (reticências só com a dica do texto inteiro)."""
+    prob = []
+    app = eh_app(tela)
+    g1 = tela.startswith('G1')
+    for w, h, tema in ([(360, 640, 'escuro'), (844, 390, 'escuro'), (390, 844, 'claro')] if app else [(1024, 768, 'escuro'), (1440, 900, 'escuro'), (1280, 720, 'claro')]):
+        ctx, pg, erros = abre_tela(b, tela, w=w, h=h, tema=tema)
+        pg.wait_for_timeout(300)
+        def olha(estado):
+            r = pg.evaluate(LE_LAYOUT_P4I)
+            if r['lateral'] > 1: prob.append('%s %dx%d %s · %s: rola para o lado (%d px)' % (tela, w, h, tema, estado, r['lateral']))
+            prob.extend('%s %dx%d %s · %s: %s' % (tela, w, h, tema, estado, x) for x in r['cortes'][:3])
+        olha('abertura')
+        if g1:
+            pg.click('[data-g1=aba][data-aba=pecas]'); pg.wait_for_timeout(300); olha('peças')
+            pg.click('[data-g1=nova]'); pg.wait_for_timeout(250); olha('+ PEÇA aberto')
+            pg.click('[data-g1=peca][data-id=p03] [data-g1=editar]'); pg.wait_for_timeout(250)
+            pg.fill('[data-g1=editar-campo]', '1e2'); pg.click('[data-g1=editar-ok]'); pg.wait_for_timeout(250); olha('✎ com o erro')
+        else:
+            pg.click('[data-g2=serie][data-s=estacao]'); pg.wait_for_timeout(450); olha('estação meteorológica')
+            pg.click('[data-g2=aba][data-aba=consumo]'); pg.wait_for_timeout(350); olha('consumo')
+        prob += ['%s %dx%d: %s' % (tela, w, h, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def p4i_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4I para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_P4I): out.append(('código das telas G1 e G2 (ouvintes, timers, DEMO, SVG, CRLF, o cérebro)', teste_p4i_codigo()))
+    for tela in [t for t in TELAS_P4I if t in lista]:
+        out.append((tela + ' · os estados de dentro (peças, formulário, erro do ✎, estação, consumo): sem rolagem lateral nem texto cortado em silêncio, em 3 tamanhos e 2 temas', teste_p4i_layout(b, tela)))
+    for tela in [t for t in TELAS_G1 if t in lista]:
+        out.append((tela + ' · os documentos: validade (hoje + prazo), situação do CapitaoAgora, cartões, a virada do dia e as perguntas ao docsvenc', teste_g1_documentos(b, tela)))
+        out.append((tela + ' · o envio do documento (A CONFERIR, carimbo sim, selo apresentação)', teste_g1_envio(b, tela)))
+        out.append((tela + ' · as peças: lista, aviso no mínimo, tarefas ligadas, cartões, filtro e abas', teste_g1_pecas_lista(b, tela)))
+        out.append((tela + ' · −1 USADA e Desfazer', teste_g1_uso(b, tela)))
+        out.append((tela + ' · ✎ e + PEÇA (inteiro puro, texto ao cérebro, erro explícito)', teste_g1_edita(b, tela)))
+        out.append((tela + ' · o ramo simulacao false (SEM DADOS) e o selo das peças', teste_g1_real(b, tela)))
+    for tela in [t for t in TELAS_G2 if t in lista]:
+        out.append((tela + ' · o nível: diesel, último abastecimento, consumido, autonomia, histórico, regra e os gráficos', teste_g2_nivel(b, tela)))
+        out.append((tela + ' · o consumo por faixa de rpm e a soma com os contadores', teste_g2_consumo(b, tela)))
+        out.append((tela + ' · a foto da NF (A CONFIRMAR, carimbo sim, selo apresentação)', teste_g2_nf(b, tela)))
+        out.append((tela + ' · o ramo simulacao false (SEM DADOS e a última leitura)', teste_g2_real(b, tela)))
+    return out
+
+
+MUTANTES_P4I = [
+    # —— G1: os documentos ——
+    ('a G1 web sem ouvir a virada do dia (as datas ficam as de antes)', 'G1-Documentos-Web.dc.html', [("window.addEventListener('capitao-rebase', this._onRebase);", "")], 'docs'),
+    ('o cartão «vencem em 90 dias» da G1 web conta só até 60', 'G1-Documentos-Web.dc.html', [("x.dn <= 90 ? 'venc90'", "x.dn <= 60 ? 'venc90'")], 'docs'),
+    ('a situação de todo documento da G1 web fixa em EM DIA', 'G1-Documentos-Web.dc.html', [("x.st = dd ? dd.st :", "x.st = dd ? 'EM DIA' :")], 'docs'),
+    ('a G1 do app abre o chat da web na pergunta de cada documento', 'G1-Documentos-Mobile.dc.html', [("'H2-Home-Mobile.dc.html#q=' + encodeURIComponent('Situação e vencimento do documento: ' + x.n)", "'Main.dc.html#q=' + encodeURIComponent('Situação e vencimento do documento: ' + x.n)")], 'docs'),
+    ('a G1 web sem o selo «apresentação» nas linhas enviadas', 'G1-Documentos-Web.dc.html', [("selo: x.sim === true && !sim", "selo: false")], 'envio'),
+    ('a G1 do app mostra o selo «apresentação» também com a simulação', 'G1-Documentos-Mobile.dc.html', [("selo: x.sim === true && !sim", "selo: x.sim === true")], 'envio'),
+    # —— G1: as peças ——
+    ('o aviso da G1 web só lista as zeradas (as no mínimo somem)', 'G1-Documentos-Web.dc.html', [("pz.concat(pb)", "pz")], 'pecas'),
+    ('a tarefa ligada da G1 do app sem o prazo (só o dia)', 'G1-Documentos-Mobile.dc.html', [("prazo: (p.rot || '')", "prazo: ('')")], 'pecas'),
+    ('o −1 USADA da G1 web não chama o cérebro (a quantidade só muda na tela)', 'G1-Documentos-Web.dc.html', [("const u = B.usaPeca(p.id);", "const u = { id: p.id, ant: p.qtd, novo: p.qtd - 1, iso: 'x' };")], 'uso'),
+    ('o Desfazer da G1 do app diz que desfez mesmo com a recusa do cérebro', 'G1-Documentos-Mobile.dc.html', [("const r = B.desfazUsoPeca({ id: u.id, ant: u.ant, novo: u.novo, iso: u.iso });", "const r = B.desfazUsoPeca({ id: u.id, ant: u.ant, novo: u.novo, iso: u.iso }) || { qtd: u.ant };")], 'uso'),
+    ('o + PEÇA da G1 web passa a quantidade e o mínimo como número (1e2 vira 100)', 'G1-Documentos-Web.dc.html', [("B.addPeca({ n: s.fNome, qtd: s.fQtd, min: s.fMin,", "B.addPeca({ n: s.fNome, qtd: Number(s.fQtd), min: Number(s.fMin),")], 'edita'),
+    ('o + PEÇA recusado pelo cérebro fica sem mensagem na G1 do app', 'G1-Documentos-Mobile.dc.html', [("if (!it) return this.setState({ formErro:", "if (!it) return; this.setState({ formErro:")], 'edita'),
+    ('o ✎ da G1 web não confere o inteiro (1e2 chega ao cérebro)', 'G1-Documentos-Web.dc.html', [("if (!this.inteiro(v)) return this.setState", "if (false) return this.setState")], 'edita'),
+    # —— G1: o ramo simulacao false ——
+    ('a G1 web diz SEM DADOS também na simulação (documento sem prazo)', 'G1-Documentos-Web.dc.html', [("const falta = (rot) => (sim ? 'sem prazo' : rot);", "const falta = (rot) => rot;")], 'real_g1'),
+    # —— G2: o nível ——
+    ('a G2 web mostra o diesel da última leitura de 26/09 (848 L)', 'G2-Abastecimento-Web.dc.html', [("const litros = q && num(q.diesel_litros)", "const litros = '848'; const _x = q && num(q.diesel_litros)")], 'nivel'),
+    ('a G2 do app usa a autonomia do D (11,2 h) e não a do instante', 'G2-Abastecimento-Mobile.dc.html', [("const aut = calc.autonomia", "const aut = D.autonomia")], 'nivel'),
+    ('a G2 web não assina o tique da telemetria (a leitura para)', 'G2-Abastecimento-Web.dc.html', [("window.addEventListener('capitao-telemetria', this._onTele);", "")], 'nivel'),
+    ('o gráfico «Diesel válido» da G2 web desenha a água', 'G2-Abastecimento-Web.dc.html', [("['diesel', 'Diesel válido', 'diesel']", "['diesel', 'Diesel válido', 'agua']")], 'nivel'),
+    ('o TWA da G2 do app troca BE por BB', 'G2-Abastecimento-Mobile.dc.html', [("twa >= 0 ? 'BE' : 'BB'", "twa >= 0 ? 'BB' : 'BE'")], 'nivel'),
+    ('as janelas do gráfico da G2 do app não fazem nada', 'G2-Abastecimento-Mobile.dc.html', [("onClick: () => { if (!off) this.setState({ janela: k }); }", "onClick: () => {}")], 'nivel'),
+    # —— G2: o consumo ——
+    ('o total do consumo da G2 web esquece o gerador', 'G2-Abastecimento-Web.dc.html', [("const total = sL !== null ? sL + sG : null;", "const total = sL !== null ? sL : null;")], 'consumo'),
+    ('o L/h da faixa da G2 do app é o de cruzeiro da base', 'G2-Abastecimento-Mobile.dc.html', [("lph: f.seg ? nb(f.lph)", "lph: f.seg ? nb(cz.lph)")], 'consumo'),
+    # —— G2: a foto da NF ——
+    ('a foto da NF da G2 web não vai ao diário', 'G2-Abastecimento-Web.dc.html', [("B.addDiario({ sys: 'Combustível'", "(() => {})({ sys: 'Combustível'")], 'nf'),
+    ('a foto da NF da G2 do app entra como CONFERIDO', 'G2-Abastecimento-Mobile.dc.html', [("st: 'A CONFIRMAR'", "st: 'CONFERIDO'")], 'nf'),
+    ('a G2 web diz SEM DADOS também na simulação', 'G2-Abastecimento-Web.dc.html', [("falta = (rot) => (sim ? '—' : rot)", "falta = (rot) => rot")], 'real_g2'),
+    # —— o código ——
+    ('a G1 web não tira o ouvinte da virada do dia ao desmontar', 'G1-Documentos-Web.dc.html', [("window.removeEventListener('capitao-rebase', this._onRebase);", "")], 'codigo'),
+    ('a G2 do app não tira o ouvinte da telemetria ao desmontar', 'G2-Abastecimento-Mobile.dc.html', [("window.removeEventListener('capitao-telemetria', this._onTele);", "")], 'codigo'),
+]
+QUAL_P4I = {'docs': teste_g1_documentos, 'envio': teste_g1_envio, 'pecas': teste_g1_pecas_lista, 'uso': teste_g1_uso, 'edita': teste_g1_edita, 'real_g1': teste_g1_real,
+            'nivel': teste_g2_nivel, 'consumo': teste_g2_consumo, 'nf': teste_g2_nf, 'real_g2': teste_g2_real, 'codigo': lambda b, t: teste_p4i_codigo()}
+
+
+def mutantes_p4i(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
+    for nome, arq, trocas, qual in MUTANTES_P4I:
+        if filtro and filtro not in nome: continue
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = QUAL_P4I[qual](b, arq.replace('.dc.html', ''))
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4I), len(vivos)))
     return vivos
 
 

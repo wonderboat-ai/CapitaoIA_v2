@@ -1628,11 +1628,12 @@ GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegand
                 ('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('A4-Sensores-Web', 1440, 900), ('A5-Sensores-Mobile', 390, 844),   # (P4C: a Ponte e o mapa de sensores)
                 ('B1-Carta-Web', 1440, 900), ('B2-Carta-Mobile', 390, 844),   # (P4D: a Gestão e os Sistemas)
                 ('E2-Navegando-Sintoma', 390, 844, '#sis=motores'),   # (P4F: a triagem, com o sistema dos motores aberto: a leitura de agora é o texto que anda; o 4º item é o endereço)
-                ('F2-FAQ-Estabilizador-Web', 1440, 900), ('F3-FAQ-Eletronicos', 390, 844), ('F4-FAQ-Gerador-Web', 1440, 900), ('F5-FAQ-Climatizacao', 390, 844))   # (P4H: o estado a bordo dos FAQs; uma por número, web ou app)
+                ('F2-FAQ-Estabilizador-Web', 1440, 900), ('F3-FAQ-Eletronicos', 390, 844), ('F4-FAQ-Gerador-Web', 1440, 900), ('F5-FAQ-Climatizacao', 390, 844),   # (P4H: o estado a bordo dos FAQs; uma por número, web ou app)
+                ('G2-Abastecimento-Web', 1440, 900), ('G2-Abastecimento-Mobile', 390, 844))   # (P4I: o abastecimento, com o diesel e a hora do instante)
 
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
-    print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2 e F2 a F5: setState só quando o texto exibido muda')
+    print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2, F2 a F5 e G2: setState só quando o texto exibido muda')
     pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
            for t in telas]
     pgs[0][1].wait_for_timeout(3500)
@@ -1654,12 +1655,14 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
-        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2', 'F')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores; os FAQs, a hora do instante)
+        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2', 'F', 'G2')):   # (a G2 mostra o diesel e a hora do instante, não o SOG; a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores; os FAQs, a hora do instante)
             ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
         if nome.startswith(('B1', 'B2', 'E2')):   # (P4D: a Gestão e os Sistemas mostram a rotação dos motores, não o SOG; P4F: a triagem, com os motores abertos, também)
             ok('%s: a tela mostra a rotação do BB do instante fixado (%s rpm): não deixou de se atualizar' % (nome, f['rpm']), f['temRpm'], f)
         if nome[0] == 'F' and nome[1] in '2345':   # (P4H: o estado a bordo dos FAQs mostra a hora do instante fixado)
             ok('%s: a tela mostra a hora do instante fixado (12:01:00): não deixou de se atualizar' % nome, pg.evaluate("() => document.body.innerText.indexOf('Telemetria ao vivo · 12:01:00') >= 0"), f)
+        if nome.startswith('G2'):   # (P4I: o abastecimento mostra a hora do instante fixado e o diesel dele)
+            ok('%s: a tela mostra a hora do instante fixado (12:01:00) e o diesel do quadro: não deixou de se atualizar' % nome, pg.evaluate("() => { const t = document.body.innerText, d = window.CapitaoAgora.fmt.campo(window.CapitaoTelemetria.atual(), 'diesel_litros'); return t.indexOf('Telemetria ao vivo · 12:01:00') >= 0 && t.indexOf(d) >= 0; }"), f)
         ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
     for nome, pg in pgs:
         fecha(pg)
@@ -1700,6 +1703,35 @@ def home_rebase(b, telas=HOME_REBASE):
         fecha(pg)
 
 
+# P4I: a virada do dia de bordo (o evento 'capitao-rebase' do motor) nos Documentos. As datas de validade e os prazos das tarefas ligadas às peças só se refazem quando o dia vira; a G1 só dá setState se o texto
+# que exibe mudou. Com o instante fixado e o prazo igual, 5 viradas não redesenham nada; com a aba escondida, nem com o prazo mudado; com a tarefa do rotor executada (Executado), 1 redesenho e a peça diz «executada».
+G1_REBASE = (('G1-Documentos-Web', 1440, 900), ('G1-Documentos-Mobile', 390, 844))
+LE_G1R = """() => ({ sets: window.__sets, tar: [...document.querySelectorAll('[data-g1=peca][data-id=p05] [data-g1=tarefas]')].map((e) => e.innerText.replace(/\\s+/g, ' ').trim()), docs: document.querySelectorAll('[data-g1=doc]').length })"""
+
+
+def g1_rebase(b, telas=G1_REBASE):
+    print('G1 (web e app): a virada do dia de bordo (capitao-rebase) só redesenha quando o prazo exibido muda')
+    for nome, w, h in telas:
+        pg = abre(b, caminho='/%s.dc.html#aba=pecas' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1")
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(2500)
+        pg.evaluate("() => { window.__sets = 0; for (let i = 0; i < 5; i++) window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }")
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(LE_G1R)
+        ok('%s: 5 viradas do dia com o prazo igual não redesenham nada (%d setState)' % (nome, r['sets']), r['sets'] == 0, r)
+        ok('%s: o rotor do gerador aparece com o atraso antes do Executado (o teste vale)' % nome, any('ATRASADA' in t for t in r['tar']), r['tar'])
+        sets_escondida = pg.evaluate("""(ex) => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+          try { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); return window.__sets; }
+          finally { localStorage.removeItem('capitao.executado.v1'); delete document.hidden; } }""", EXEC_ROTOR)
+        ok('%s: com a aba escondida a virada do dia não dá setState (%d), mesmo com o prazo mudado' % (nome, sets_escondida), sets_escondida == 0, sets_escondida)
+        pg.evaluate("(ex) => { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }", EXEC_ROTOR)
+        pg.wait_for_timeout(200)
+        r = pg.evaluate(LE_G1R)
+        ok('%s: com o rotor executado a virada do dia redesenha uma vez (%d setState) e a peça diz «executada»' % (nome, r['sets']), r['sets'] == 1 and any('executada' in t for t in r['tar']) and not any('ATRASADA' in t for t in r['tar']), r)
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
 # ——— 12. as telas de verdade ———
 def telas(b):
     print('Telas de verdade (com sessão): o motor carrega, anda e não dá erro de script')
@@ -1707,7 +1739,8 @@ def telas(b):
                      ('H2-Home-Mobile', {'width': 390, 'height': 844}), ('C3-Leme-Alerta', {'width': 390, 'height': 844}), ('Manual-Capitao-IA', {'width': 1440, 'height': 900}),
                      ('A2-Ponte-Mobile', {'width': 390, 'height': 844}), ('A4-Sensores-Web', {'width': 1440, 'height': 900}), ('A5-Sensores-Mobile', {'width': 390, 'height': 844}),
                      ('B1-Carta-Web', {'width': 1440, 'height': 900}), ('B2-Carta-Mobile', {'width': 390, 'height': 844}), ('B3-Carta-Resposta', {'width': 390, 'height': 844}),   # (P4D: a Carta)
-                     ('E2-Navegando-Sintoma', {'width': 390, 'height': 844})):   # (P4F: a triagem)
+                     ('E2-Navegando-Sintoma', {'width': 390, 'height': 844}),   # (P4F: a triagem)
+                     ('G1-Documentos-Web', {'width': 1440, 'height': 900}), ('G1-Documentos-Mobile', {'width': 390, 'height': 844}), ('G2-Abastecimento-Web', {'width': 1440, 'height': 900}), ('G2-Abastecimento-Mobile', {'width': 390, 'height': 844})):   # (P4I: os Documentos e o Abastecimento)
         pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, viewport=vp, espera='() => window.CapitaoReplay')
         pg.wait_for_timeout(1500)
         r = pg.evaluate("() => ({ obj: typeof window.CapitaoReplay, ativo: window.CapitaoReplay.ativo(), inst: window.CapitaoAgora.instante().fonte, n: window.__conta('capitao-telemetria'), t: window.CapitaoTelemetria ? window.CapitaoTelemetria.fonte() : 'sem' })")
@@ -2324,6 +2357,18 @@ MUTANTES_ARQ = [
      [("this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.leitura());", "this._onTele = () => { const k = JSON.stringify(this.leitura());")], 'home_rebase'),
     ('a H2 redesenhando a virada do dia com a aba escondida (sem o document.hidden)', 'H2-Home-Mobile.dc.html',
      [("this._onReb = () => { if (document.hidden) return; const k = this.chaveCartoes();", "this._onReb = () => { const k = this.chaveCartoes();")], 'home_rebase'),
+    # P4I: os Documentos só dão setState na virada do dia quando o texto exibido muda; o Abastecimento, a cada tique
+    ('a G1 web dando setState a cada virada do dia, sem comparar o texto', 'G1-Documentos-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'g1_rebase'),
+    ('a G1 web redesenhando a virada do dia com a aba escondida (sem o document.hidden)', 'G1-Documentos-Web.dc.html',
+     [("this._onRebase = () => { if (!document.hidden) this.atualiza(); };", "this._onRebase = () => { this.atualiza(); };")], 'g1_rebase'),
+    ('a G1 web sem ouvir a virada do dia (a tarefa executada não atualiza a peça)', 'G1-Documentos-Web.dc.html',
+     [("    window.addEventListener('capitao-rebase', this._onRebase);\n", "")], 'g1_rebase'),
+    ('a G2 web dando setState a cada tique, sem comparar o texto', 'G2-Abastecimento-Web.dc.html',
+     [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    # (os arquivos do app são CRLF: o trecho é de uma linha só, que o corpo servido casa)
+    ('a G2 do app dando setState a cada tique, sem comparar o texto', 'G2-Abastecimento-Mobile.dc.html',
+     [("if (k === this._k) return;", "")], 'gating'),
 ]
 
 
@@ -2352,6 +2397,8 @@ def mutantes_arq(b):
                     faixa_emergencia(b)
                 elif qual == 'home_rebase':
                     home_rebase(b, telas=[t_ for t_ in HOME_REBASE if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]])
+                elif qual == 'g1_rebase':
+                    g1_rebase(b, telas=[t_ for t_ in G1_REBASE if t_[0] == arq.replace('.dc.html', '')])
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
@@ -2421,6 +2468,7 @@ def main():
         faixa_emergencia(browser)
         gating(browser)
         home_rebase(browser)
+        g1_rebase(browser)
         codigo()
         codigo_faixa()
         telas(browser)
