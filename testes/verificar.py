@@ -109,6 +109,19 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 45 defeitos, todos acusados;
+`MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
+cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
+a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
+«PRONTO», «5 FAQ») iguais às contagens do CapitaoAgora e ao Executado, nenhuma caixa de selo violeta e a varredura do §3; o ramo sem fabricante (a simulação deixa o cartão sem a palavra, simulacao false diz «SEM DADOS»); a Home
+que anda sozinha; simulacao false com a última leitura salva (LED âmbar parado, «ÚLTIMA LEITURA · 26/09 10:12»); os 5 ouvintes (telemetria, virada do dia, botão de resposta, hash, ENCERRAR) tirados pelo componentWillUnmount e
+religados sem vazar em 3 voltas; a IA (o 3º argumento é B.resumoAgora, o histórico é B.historicoIA — sem coordenadas e sem a emergência —, o ditado vai corrigido e a resposta da IA é contada ao cérebro com B.conversa: «o
+gerador» depois de «Qual equipamento você quer ligar?» continua o «como ligar?»); a janela de conversa em emergência (o SOS a marca, dentro dela a posição é «LEIA NO PLOTTER» e nada vai à IA, o NOVA e o ENCERRAR zeram a marca e
+chamam B.limpaConversa); os botões das propostas (#capitao-relato-… e #capitao-prop-…: o toque vira a pergunta digitada, não navega, Registrar = 1 linha, Não registrar e Recusar = 0, Confirmar grava a regra ou a tarefa e o
+Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva o anexo nem apaga o rascunho); e a H3 sem rótulo (nem com D.demo ligado) com os atalhos para o mapa de sensores e os checklists da plataforma da tela.
+A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
+leitura de 26/09 ao lado do «AO VIVO»).
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -178,11 +191,10 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # Telas que ainda têm rótulo do §3 no texto (cada item da Fase 4 retira as suas daqui; o P4K a deixa só com o que a Fase 8 reescreve). O Manual é a apresentação,
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = (
-    'Main', 'H2-Home-Mobile',
     'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
     'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
     'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (18 telas em 10/11/2026, depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+)   # (16 telas em 10/11/2026, depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
@@ -547,13 +559,13 @@ SELO_RE = re.compile(r'DEMO|FICT[IÍ]CI|DEMONSTRA', re.I)
 
 
 def problemas_selo(tela, r):
-    """Selo que sobrou na tela (r = CHECA). Main e H2: a caixa do cabeçalho é a ÚLTIMA LEITURA, nunca vazia nem SNAPSHOT; SOS sem caixa."""
+    """Selo que sobrou na tela (r = CHECA). Main e H2: nenhuma caixa de selo no cabeçalho (a origem é o selo ao vivo e o LED); SOS sem caixa."""
     prob = []
     if SELO_RE.search(r['rodapeTxt']): prob.append('selo no rodapé: %r' % r['rodapeTxt'][:120])
     ruins = [t for t in r['selos'] if SELO_RE.search(t) or 'SNAPSHOT' in t.upper()]
     if ruins: prob.append('caixa de selo: %s' % ruins[:3])
-    if tela in ('Main', 'H2-Home-Mobile') and (r['selos'] != [r['ultima']] or not r['ultima']):
-        prob.append('caixa do cabeçalho %s (esperado só %r)' % (r['selos'][:3], r['ultima']))
+    if tela in ('Main', 'H2-Home-Mobile') and r['selos']:   # (P4G: a caixa «ÚLTIMA LEITURA» do cabeçalho saiu; a origem é o selo «AO VIVO · hh:mm:ss» e o LED, conferidos em teste_home_leitura)
+        prob.append('caixa de selo no cabeçalho da Home %s (esperado nenhuma)' % r['selos'][:3])
     if tela in ('S1-SOS-Web', 'S2-SOS-Mobile') and r['selos']: prob.append('caixa de selo no SOS: %s' % r['selos'][:3])
     if r['seloTexto']: prob.append('selo no texto da tela (fora do capitao-dados.js): %s' % r['seloTexto'][:3])
     if r['afirma']: prob.append('a tela afirma que o dado é real (fora do capitao-dados.js): %s' % r['afirma'][:3])
@@ -753,6 +765,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4g' in sys.argv or '--mutantes-p4g' in sys.argv:   # só as conferências da P4G (e, com --mutantes-p4g, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4g' in sys.argv:
+                falhas = mutantes_p4g(b)
+            else:
+                for nome, prob in p4g_conferencias(b, [a for a in sys.argv[1:] if a in TELAS_P4G] or list(TELAS_P4G)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4f' in sys.argv or '--mutantes-p4f' in sys.argv:   # só as conferências da P4F (e, com --mutantes-p4f, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -931,6 +956,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4F', 'prob': prob[:8]})
                     print('FALHA P4F ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4g_conferencias(b, lista):   # P4G: a Home (Main e H2) e os atalhos (H3): leitura de agora, cartões, ouvintes, a IA, a janela de emergência, os botões das propostas e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4G', 'prob': prob[:8]})
+                    print('FALHA P4G ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -4270,6 +4300,616 @@ def mutantes_p4f(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4F), len(vivos)))
+    return vivos
+
+
+# ═══ Fase 4, P4G: a Home (Main e H2) e os atalhos (H3 web e app) ═══
+# `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela; `--mutantes-p4g` planta os defeitos (MUTANTES_P4G), cada um servido no lugar do arquivo (MUT_ARQ) e acusado pela
+# conferência que cuida dele (`MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto). O Worker da IA é de mentira (ctx.route): não gasta cota; cada corpo que o app manda fica em estado['pedidos'].
+TELAS_P4G = ('Main', 'H2-Home-Mobile', 'H3-Atalhos-Editar-Web', 'H3-Atalhos-Editar')
+TELAS_HOME = ('Main', 'H2-Home-Mobile')
+TELAS_H3 = ('H3-Atalhos-Editar-Web', 'H3-Atalhos-Editar')
+CAMPO_HOME = {'Main': '#pergunta', 'H2-Home-Mobile': '#pergunta-m'}
+URL_IA = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capitao-ia.js'), encoding='utf-8').read()).group(1)
+TEXTO_IA_HOME = 'Resposta da IA: confira o painel do gerador.'
+PEDIDO_IA = 'como se faz um nó lais de guia?'   # sem resposta pronta: cai em fallback e vai à IA
+RELATO_DEFEITO = 'O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado'   # vira proposta de relato com «O que verificar?»
+ORACULO_HOME = {   # CONTRATO §1.22 (as horas, o SOG e o diesel dos dois instantes); o resto sai do D.campos (T)
+    '60': {'hora': '12:01:00', 'sog': '18,1 NÓS', 'diesel': '1.333 L (83,3 %)', 'ger': '1.241,4 h', 'estado': 'NAVEGANDO · AO LARGO DA ILHA DAS CABRAS, A CAMINHO DA BARRA SUL'},
+    '105': {'hora': '12:01:45', 'sog': '18,0 NÓS', 'diesel': '1.332 L (83,3 %)', 'ger': '1.241,4 h', 'estado': 'NAVEGANDO · NA SAÍDA DA BARRA SUL, CHEGANDO'}}
+NOMES_MAIN = ['1 · CONSOLE', '2 · GERADOR', '3 · CLIMATIZAÇÃO', '4 · ESTABILIZADOR', '5 · ELETRÔNICOS']
+NOMES_H2 = ['2 · GERADOR', '3 · CLIMATIZAÇÃO', '4 · ESTABILIZADOR', '5 · ELETRÔNICOS']
+FABRICANTES_FALSOS = ("(() => { const E = window.CapitaoDados.equipamentos, z = { gerador: 'Zyxgerador', climatizacao: 'Zyxclima', estabilizador: 'Zyxestab', eletronicos: 'Zyxeletro', audio: 'Zyxaudio', vhf: 'Zyxvhf' }; "
+                      "E.forEach((e) => { if (z[e.id]) { e.fabricante = z[e.id]; e.modelo = z[e.id] + ' Mod9'; } }); })();")
+SEM_FABRICANTE = "(() => { window.CapitaoDados.equipamentos.forEach((e) => { if (['gerador', 'climatizacao', 'estabilizador', 'eletronicos', 'audio', 'vhf'].indexOf(e.id) >= 0) { e.fabricante = ''; e.modelo = ''; } }); })();"
+OUVINTES_JS = """(() => { const add = window.addEventListener, rem = window.removeEventListener, c = {};
+  window.__ev = (t) => (c[t] || new Set()).size;
+  window.addEventListener = function (t, f, o) { (c[t] = c[t] || new Set()).add(f); return add.call(this, t, f, o); };
+  window.removeEventListener = function (t, f, o) { if (c[t]) c[t].delete(f); return rem.call(this, t, f, o); }; })()"""
+EVENTOS_HOME = ['capitao-telemetria', 'capitao-rebase', 'capitao-chat-pergunta', 'hashchange', 'capitao-voz-encerrar']
+PNG_1X1 = bytes.fromhex('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6360000002000001e221bc330000000049454e44ae426082')
+
+LE_HOME = """() => { """ + JS_BASE + """
+  const el = (s) => document.querySelector('[data-home=' + s + ']'), g = (s) => { const e = el(s); return e ? lin(e.innerText) : null; };
+  const led = el('led') || el('selo'), bola = led ? led.querySelector('span') : null, cs = bola ? getComputedStyle(bola) : null;
+  const E = D.embarcacao || {}, eq = (D.equipamentos || []).map((e) => ({ id: e.id, f: e.fabricante, m: e.modelo })), ag = D.agenda || [];
+  const cartoes = [...document.querySelectorAll('[data-home=cartao]')].map((e) => ({ href: e.getAttribute('href'), title: e.title, aria: e.getAttribute('aria-label'), txt: lin(e.innerText),
+    nome: lin((e.querySelector('[data-home=nome]') || {}).innerText), eq: lin((e.querySelector('[data-home=eq]') || {}).innerText), chip: lin((e.querySelector('[data-home=chip]') || {}).innerText),
+    ponto: (() => { const d = e.querySelector('span[style*="border-radius: 50%"]'); return d ? getComputedStyle(d).backgroundColor : null; })() }));
+  const est = el('estado'), hora = el('hora'), rod = document.querySelector('footer'), sel = el('selo') || el('led');
+  const feitas = (() => { try { return JSON.parse(localStorage.getItem('capitao.executado.v1') || '{}'); } catch (e) { return {}; } })();
+  return { hora: I.hora, hhmm: I.hhmm, fonte: I.fonte, T, q: { estado: q.estado, local: q.local }, selo: g('selo'), seloTitle: sel ? sel.title : null, ledAria: el('led') ? el('led').getAttribute('aria-label') : null,
+    ledCor: cs ? cs.backgroundColor : null, ledAnim: cs ? cs.animationName : null, reg: g('reg'), registro: E.registro, faixa: [...document.querySelectorAll('[data-home=faixa]')].map((e) => lin(e.innerText)),
+    estado: est ? lin(est.innerText) : null, estadoTitle: est ? est.title : null, horaTxt: hora ? lin(hora.innerText) : null, corteHora: hora ? hora.scrollWidth - hora.clientWidth : null,
+    rodLateral: rod ? rod.scrollWidth - rod.clientWidth : null, cartoes, eq, ag: ag.filter((t) => t.id === 'gerador-rotor' || t.id === 'clima-filtro').map((t) => ({ id: t.id, dn: t.dn })), faq: Object.keys(D.faq).map((k) => ({ k, st: D.faq[k].status, n: (D.faq[k].perguntas || []).length })),
+    atrasadas: A.contagens().atrasadas, consoleChip: g('console-chip'), feitas, texto: lin(document.body.innerText), lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }"""
+
+
+def fab_mod(f, m):
+    f, m = f or '', m or ''
+    return m if f and m and m.lower().startswith(f.lower()) else ' '.join(x for x in (f, m) if x)
+
+
+def fabs_eletronicos(eq):
+    d = {e['id']: e for e in eq}
+    fabs = []
+    for i in ('eletronicos', 'audio', 'vhf'):
+        f = (d.get(i) or {}).get('f')
+        if f and f not in fabs: fabs.append(f)
+    return fabs
+
+
+def atrasada(r, tarefa):
+    dn = [t['dn'] for t in r['ag'] if t['id'] == tarefa]
+    return dn[0] if dn and isinstance(dn[0], int) and dn[0] < 0 and not r['feitas'].get(tarefa) else None
+
+
+def chip_equip(r, k, tarefa):
+    """O chip do cartão: «ROTOR · 2 D» / «FILTRO · 16 D» enquanto a tarefa está atrasada e não foi executada; senão o status do FAQ («PRONTO») ou a contagem do eletrônicos."""
+    dn = atrasada(r, tarefa) if tarefa else None
+    if dn is not None: return ('ROTOR' if tarefa == 'gerador-rotor' else 'FILTRO') + ' · %d D' % -dn
+    f = [x for x in r['faq'] if x['k'] == k][0]
+    return 'PRONTO' if f['st'] == 'PRONTO' and k != 'eletronicos' else '%d FAQ' % f['n']
+
+
+def problemas_home_leitura(r, fixo, tela):
+    """O que a Home mostra do instante fixado: a origem («AO VIVO · hh:mm:ss» na Main; o LED e a dica na H2), o LED verde que pulsa, o registro do cadastro, a faixa de baixo (só da Main) igual ao D.campos,
+    o estado e o local do quadro, a hora que não é cortada e os cartões com o fabricante, o modelo, as horas do gerador e os prazos."""
+    p, o, rot = [], ORACULO_HOME[fixo], '%s a %s s' % (tela, fixo)
+    main = tela == 'Main'
+    if r['hora'] != o['hora']: p.append('%s: o instante é %s (esperado %s): o teste não vale' % (rot, r['hora'], o['hora']))
+    if cor_do_selo(r['ledCor']) != 'verde' or 'capVivo' not in (r['ledAnim'] or ''): p.append('%s: o LED é %s (%s) e a animação %r: esperado verde que pulsa (selo do coletor, F06)' % (rot, cor_do_selo(r['ledCor']), r['ledCor'], r['ledAnim']))
+    if main:
+        if r['selo'] != 'AO VIVO · ' + o['hora']: p.append('%s: o selo diz %r (esperado «AO VIVO · %s»)' % (rot, r['selo'], o['hora']))
+        if r['seloTitle'] != 'Telemetria ao vivo — atualiza a cada segundo': p.append('%s: a dica do selo diz %r' % (rot, r['seloTitle']))
+        if r['reg'] != 'REG. ' + str(r['registro']) or not r['registro']: p.append('%s: o registro diz %r (esperado o do cadastro %r)' % (rot, r['reg'], r['registro']))
+        T = r['T']
+        esperado = [('SOG', T['sog_nos'] + ' NÓS'), ('PROA', T['proa_graus'] + '°'), ('VENTO', T['vento_verdadeiro_nos'] + ' NÓS'), ('24 V', T['bateria_0_tensao_v'] + ' V'), ('ÁGUA DOCE', T['tanque_agua_pct'] + ' %'),
+                    ('DIESEL', T['diesel_litros'] + ' L (' + o['diesel'].split('(')[1])]
+        if len(r['faixa']) != 6: p.append('%s: a faixa de baixo tem %d valores (esperado 6): %s' % (rot, len(r['faixa']), r['faixa']))
+        for (k, v), txt in zip(esperado, r['faixa']):
+            if txt != k + ' ' + v: p.append('%s: a faixa diz %r (esperado %r)' % (rot, txt, k + ' ' + v))
+        if r['faixa'][:1] != ['SOG ' + o['sog']] or (len(r['faixa']) == 6 and r['faixa'][5] != 'DIESEL ' + o['diesel']): p.append('%s: SOG ou diesel fora do CONTRATO §1.22 (%s · %s): %s' % (rot, o['sog'], o['diesel'], r['faixa']))
+        est = ('%s · %s' % (r['q']['estado'], r['q']['local'])).upper()
+        if r['estadoTitle'] != est or r['estado'] != o['estado'] or est != o['estado']: p.append('%s: o estado diz %r (dica %r), esperado o do quadro %r' % (rot, r['estado'], r['estadoTitle'], est))
+        if r['horaTxt'] != o['hora'] + ' · AO VIVO' or (r['corteHora'] or 0) > 1: p.append('%s: a hora do rodapé diz %r (cortada em %s px)' % (rot, r['horaTxt'], r['corteHora']))
+        if (r['rodLateral'] or 0) > 1: p.append('%s: o rodapé rola para o lado (%s px)' % (rot, r['rodLateral']))
+        if re.search(r'54/52|\b848\b|26/09|SOG 0,1', r['texto']): p.append('%s: sobrou leitura do snapshot de 26/09 na tela: %s' % (rot, re.search(r'54/52|\b848\b|26/09|SOG 0,1', r['texto']).group(0)))
+    else:
+        if r['ledAria'] != 'Telemetria ao vivo — atualiza a cada segundo': p.append('%s: a dica do LED diz %r' % (rot, r['ledAria']))
+    eqd = {e['id']: e for e in r['eq']}
+    fe = fabs_eletronicos(r['eq'])
+    ger = fab_mod(eqd['gerador']['f'], eqd['gerador']['m']); cli = fab_mod(eqd['climatizacao']['f'], eqd['climatizacao']['m']); est_ = fab_mod(eqd['estabilizador']['f'], eqd['estabilizador']['m'])
+    if main:
+        eqs = [None, '%s · %s h' % (ger, r['T']['gerador_horimetro_h']), cli, est_, ' · '.join(fe)]
+        chips = ['%d ATRASADAS' % r['atrasadas'] if r['atrasadas'] else 'EM DIA', chip_equip(r, 'gerador', 'gerador-rotor'), chip_equip(r, 'climatizacao', 'clima-filtro'), chip_equip(r, 'estabilizador', None), chip_equip(r, 'eletronicos', None)]
+        if r['T']['gerador_horimetro_h'] + ' h' != o['ger']: p.append('%s: as horas do gerador do quadro são %s (CONTRATO §1.22: %s)' % (rot, r['T']['gerador_horimetro_h'], o['ger']))
+        if [c['nome'] for c in r['cartoes']] != NOMES_MAIN: p.append('%s: os cartões são %s' % (rot, [c['nome'] for c in r['cartoes']]))
+        for c, e, ch in zip(r['cartoes'], eqs, chips):
+            if e is not None and c['eq'] != e: p.append('%s: o cartão %s diz %r (esperado %r)' % (rot, c['nome'], c['eq'], e))
+            if c['chip'] != ch: p.append('%s: o chip de %s diz %r (esperado %r)' % (rot, c['nome'], c['chip'], ch))
+    else:
+        titulos = ['Gerador %s — ligar · desligar · alarmes%s' % (ger, ' · rotor em atraso' if atrasada(r, 'gerador-rotor') is not None else ''),
+                   'Climatização %s — ligar · alarme de fluxo · filtros%s' % (cli, ' · filtro em atraso' if atrasada(r, 'clima-filtro') is not None else ''),
+                   'Estabilizador %s — ligar antes de sair · desligar ao atracar' % est_, '%s — plotter · piloto · rádio · áudio' % ' · '.join(fe)]
+        if [c['aria'] for c in r['cartoes']] != NOMES_H2: p.append('%s: os cartões são %s' % (rot, [c['aria'] for c in r['cartoes']]))
+        for c, t in zip(r['cartoes'], titulos):
+            if c['title'] != t: p.append('%s: a dica de %s diz %r (esperado %r)' % (rot, c['aria'], c['title'], t))
+        esp = '%d ATRASADAS' % r['atrasadas'] if r['atrasadas'] else 'EM DIA'
+        if r['consoleChip'] != esp: p.append('%s: o chip do CONSOLE diz %r (esperado %r)' % (rot, r['consoleChip'], esp))
+    if re.search(r'NaN|undefined|\[object|Infinity', r['texto']): p.append('%s: NaN, undefined ou [object na tela' % rot)
+    if r['lateral'] > 1: p.append('%s: rola para o lado (%d px)' % (rot, r['lateral']))
+    return p
+
+
+def teste_home_leitura(b, tela):
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, tela, fixo=fixo)
+        prob += problemas_home_leitura(pg.evaluate(LE_HOME), fixo, tela)
+        prob += ['%s a %s s: %s' % (tela, fixo, x) for x in problemas_selo(tela, pg.evaluate(CHECA))]   # nenhuma caixa de selo violeta, nada de «DEMO» nem de «é real» fora do capitao-dados.js
+        ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))   # a varredura do §3 (texto, title, aria-label, placeholder e alt)
+        if ach: prob.append('%s a %s s: termo do §3 na tela: %s' % (tela, fixo, {k: v[:2] for k, v in ach.items()}))
+        if erros: prob += ['%s a %s s: %s' % (tela, fixo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_home_dados(b, tela):
+    """O fabricante e o modelo vêm de D.equipamentos (planta outros nomes: aparecem); a tarefa executada tira o chip de atraso e a contagem do CONSOLE; sem o fabricante, a simulação deixa o cartão sem a palavra
+    (nunca «SEM DADOS») e o ramo simulacao false diz «SEM DADOS»."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, tela, fixo='60', depois=FABRICANTES_FALSOS)
+    r = pg.evaluate(LE_HOME)
+    prob += ['%s com fabricantes plantados: %s' % (tela, x) for x in problemas_home_leitura(r, '60', tela)]
+    txt = r['texto'] + ' ' + ' '.join(c['title'] for c in r['cartoes'])
+    for z in ('Zyxgerador Mod9', 'Zyxclima Mod9', 'Zyxestab Mod9'):
+        if z not in txt: prob.append('%s: o fabricante e o modelo plantados (%s) não aparecem' % (tela, z))
+    if 'Zyxeletro · Zyxaudio · Zyxvhf' not in txt: prob.append('%s: os fabricantes dos eletrônicos plantados não aparecem (esperado «Zyxeletro · Zyxaudio · Zyxvhf»)' % tela)
+    if re.search(r'Onan|Webasto|Seakeeper|Garmin|Icom|Fusion', txt): prob.append('%s: sobrou fabricante fixo: %s' % (tela, re.search(r'Onan|Webasto|Seakeeper|Garmin|Icom|Fusion', txt).group(0)))
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, tela, fixo='60')   # a tarefa do rotor e a do filtro executadas (Executado): saem do atraso
+    r0 = pg.evaluate(LE_HOME)
+    ctx.close()
+    ex = json.dumps({'gerador-rotor': {'iso': '2026-11-10T09:00:00-03:00', 't': '09:00', 'sim': True}})
+    ctx, pg, erros = abre_tela(b, tela, fixo='60', ls={'capitao.executado.v1': ex})
+    r1 = pg.evaluate(LE_HOME)
+    prob += ['%s com o rotor executado: %s' % (tela, x) for x in problemas_home_leitura(r1, '60', tela)]
+    if r0['atrasadas'] != r1['atrasadas'] + 1: prob.append('%s: executar o rotor devia tirar 1 das atrasadas (%d → %d)' % (tela, r0['atrasadas'], r1['atrasadas']))
+    if any('ROTOR' in c['chip'] or 'rotor em atraso' in c['title'] for c in r1['cartoes']): prob.append('%s: o cartão do gerador ainda mostra o rotor em atraso depois do Executado' % tela)
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, tela, fixo='60', depois=SEM_FABRICANTE)
+    r = pg.evaluate(LE_HOME)
+    if re.search(r'SEM DADOS|SEM LEITURA', r['texto'] + ' '.join(c['title'] for c in r['cartoes'])): prob.append('%s (simulação, sem fabricante): rótulo SEM DADOS na tela' % tela)
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, tela, fixo=None, depois=SEM_FABRICANTE + 'window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(LE_HOME)
+    if 'SEM DADOS' not in r['texto'] + ' '.join(c['title'] for c in r['cartoes']): prob.append('%s (simulacao false, sem fabricante): devia dizer SEM DADOS (a regra do modo real)' % tela)
+    ctx.close()
+    return prob
+
+
+def teste_home_vivo(b, tela):
+    """Sem congelar o replay a Home anda sozinha: a hora do selo (Main) e a da faixa mudam em 1,5 s; a H2 não tem texto que ande e não se redesenha à toa."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, tela, fixo=None)
+    if tela == 'Main':
+        mudou = False
+        for _ in range(3):
+            a = pg.evaluate(LE_HOME); pg.wait_for_timeout(1500); c = pg.evaluate(LE_HOME)
+            if not re.fullmatch(r'AO VIVO · \d\d:\d\d:\d\d', c['selo'] or ''): prob.append('Main livre: o selo diz %r (esperado «AO VIVO · hh:mm:ss»)' % c['selo']); break
+            if a['selo'] != c['selo'] and c['selo'] == 'AO VIVO · ' + c['hora'] and c['horaTxt'] == c['hora'] + ' · AO VIVO' and a['faixa'][0] is not None: mudou = True; break
+        if not mudou: prob.append('Main livre: a hora do selo não mudou em 1,5 s (3 tentativas): a tela não assina o capitao-telemetria')
+    else:
+        r = pg.evaluate(LE_HOME)
+        if cor_do_selo(r['ledCor']) != 'verde': prob.append('H2 livre: o LED não é verde (%s)' % r['ledCor'])
+    if erros: prob += ['%s livre: %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_home_real(b, tela):
+    """Com simulacao false: o replay não anda, a leitura vem da última leitura salva (26/09 10:12) com «ÚLTIMA LEITURA», o LED é âmbar e parado, sem NaN, undefined nem AO VIVO."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, tela, fixo=None, depois='window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(LE_HOME)
+    rot = '%s com simulacao false' % tela
+    if r['fonte'] != 'snapshot': prob.append('%s: a fonte do instante é %s (esperado a última leitura salva)' % (rot, r['fonte']))
+    if cor_do_selo(r['ledCor']) != 'amarelo' or 'capVivo' in (r['ledAnim'] or ''): prob.append('%s: o LED é %s e a animação %r: esperado âmbar e parado' % (rot, cor_do_selo(r['ledCor']), r['ledAnim']))
+    if re.search(r'NaN|undefined|\[object|Infinity|AO VIVO', r['texto']): prob.append('%s: NaN, undefined, [object ou AO VIVO na tela: %s' % (rot, re.search(r'NaN|undefined|\[object|Infinity|AO VIVO', r['texto']).group(0)))
+    if tela == 'Main':
+        if r['selo'] != 'ÚLTIMA LEITURA · 26/09 10:12' or r['seloTitle'] != 'Sem leitura ao vivo agora — mostrando a última leitura salva': prob.append('%s: o selo diz %r (dica %r)' % (rot, r['selo'], r['seloTitle']))
+        if r['horaTxt'] != r['horaTxt'].split(' · ')[0] + ' · ÚLTIMA LEITURA' or not (r['estado'] or '').startswith('FUNDEADO'): prob.append('%s: o rodapé diz %r · %r (esperado a hora com «· ÚLTIMA LEITURA» e o estado Fundeado)' % (rot, r['horaTxt'], r['estado']))
+        if len(r['faixa']) != 6 or any(re.search(r'—$', f) for f in r['faixa']): prob.append('%s: a faixa de baixo ficou incompleta: %s' % (rot, r['faixa']))
+        if r['faixa'][:1] != ['SOG 0,1 NÓS']: prob.append('%s: o SOG da última leitura é %s (esperado 0,1 nó)' % (rot, r['faixa'][:1]))
+    else:
+        if r['ledAria'] != 'Sem leitura ao vivo agora — mostrando a última leitura salva': prob.append('%s: a dica do LED diz %r' % (rot, r['ledAria']))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_home_ouvintes(b, tela):
+    """Sem vazamento de listener: a tela liga 5 ouvintes (telemetria, virada do dia, botão de resposta, hash e ENCERRAR) e o componentWillUnmount tira os 5; religar volta aos mesmos números, em 3 voltas."""
+    prob = []
+    ctx = b.new_context(viewport={'width': 1440, 'height': 900}, service_workers='block')
+    ctx.add_init_script(SESSAO + ";localStorage.setItem('capitao.replay.fixo', '60');")
+    ctx.add_init_script(OUVINTES_JS)
+    aplica_mut(ctx)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append('pageerror: ' + str(e)[:300]))
+    pg.goto(BASE + tela + '.dc.html', wait_until='load')
+    pg.wait_for_function("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0", timeout=15000)
+    pg.wait_for_timeout(1300)
+    r = pg.evaluate("""(ev) => { const hosts = [...document.querySelectorAll('.sc-host')], n = () => ev.map((e) => window.__ev(e));
+      let L = null; for (const hs of hosts) { const k = Object.keys(hs).find((x) => x.startsWith('__reactFiber')); let f = hs[k]; while (f && !(f.stateNode && f.stateNode.logic && f.stateNode.logic.ask)) f = f.return; if (f) { L = f.stateNode.logic; break; } }
+      if (!L) return { achou: false };
+      const n0 = n(), voltas = []; for (let i = 0; i < 3; i++) { L.componentWillUnmount(); const fora = n(); L.componentDidMount(); voltas.push({ fora, dentro: n() }); }
+      return { achou: true, n0, voltas }; }""", EVENTOS_HOME)
+    if not r['achou']: prob.append('%s: não achei a lógica da tela para desmontar' % tela)
+    else:
+        for i, v in enumerate(r['voltas']):
+            queda = [a - c for a, c in zip(r['n0'], v['fora'])]
+            if queda != [1, 1, 1, 1, 1]: prob.append('%s volta %d: o componentWillUnmount tira %s ouvintes de %s (esperado 1 de cada)' % (tela, i + 1, queda, EVENTOS_HOME))
+            if v['dentro'] != r['n0']: prob.append('%s volta %d: religar deixa %s ouvintes (esperado %s: vazou ou duplicou)' % (tela, i + 1, v['dentro'], r['n0']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+# ——— o chat completo ———
+def liga_ia(ctx, estado):
+    """O Worker da IA de mentira: guarda cada corpo em estado['pedidos'] e responde estado['texto'] (422 sem ficha, trecho nem leitura, como o de verdade)."""
+    def rota(route):
+        req = route.request
+        cab = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
+        if req.method == 'OPTIONS': return route.fulfill(status=204, headers=cab)
+        corpo = json.loads(req.post_data or '{}')
+        estado['pedidos'].append(corpo)
+        if not (corpo.get('ficha') or corpo.get('trechos') or corpo.get('contexto')): return route.fulfill(status=422, content_type='application/json', headers=cab, body='{"erro":"sem fontes","motivo":"sem_fontes"}')
+        return route.fulfill(status=200, content_type='application/json', headers=cab, body=json.dumps({'texto': estado['texto'] + '\nFonte: ficha de bordo', 'provedor': 'Workers AI', 'modelo': 'teste', 'parou': 'fim'}))
+    ctx.route(URL_IA.rstrip('/') + '**', rota)
+
+
+def abre_home(b, tela, fixo='60', ia=True, ls=None, depois='', texto=None):
+    est = {'pedidos': [], 'texto': texto or TEXTO_IA_HOME}
+    ls = dict(ls or {})
+    if ia: ls['capitao.ia.chave.v1'] = 'chave-de-teste'
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, ls=ls, depois=depois)
+    if ia: liga_ia(ctx, est)
+    return ctx, pg, erros, est
+
+
+LE_MSGS = """() => [...document.querySelectorAll('[data-home=msg]')].map((m) => ({ papel: m.dataset.papel, txt: m.innerText.replace(/\\s+/g, ' ').trim(), acoes: [...m.querySelectorAll('[data-home=acao]')].map((a) => ({ l: a.innerText.replace(/[›\\s]+$/, '').trim(), href: a.getAttribute('href') })) }))"""
+LE_ESTADO_HOME = """() => ({ emerg: window.CapitaoEmergencia.valendo(), ate: sessionStorage.getItem('capitao.emergenciaAte'), url: location.href, diario: JSON.parse(localStorage.getItem('capitao.diario.v1') || '[]'),
+  alarmes: JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]'), tarefas: JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]'), anexo: !!document.querySelector('button[aria-label="Remover anexo"]'), digitado: (document.querySelector('#pergunta, #pergunta-m') || {}).value,
+  limpou: window.__limpou || 0, resumo: window.CapitaoBrain.resumoAgora() }) """
+
+
+def pergunta_home(pg, tela, q, espera=True):
+    """Digita no campo e envia (Enter); espera a resposta e devolve as mensagens (papel, texto, ações)."""
+    campo = CAMPO_HOME[tela]
+    n0 = pg.evaluate("() => document.querySelectorAll('[data-home=msg][data-papel=bot]').length")
+    pg.fill(campo, q); pg.press(campo, 'Enter')
+    if espera:
+        try: pg.wait_for_function("(n) => document.querySelectorAll('[data-home=msg][data-papel=bot]').length > n && !document.querySelector('[data-capitao-pensando]')", arg=n0, timeout=20000)
+        except Exception: pass   # (a tela com defeito pode não responder: quem chama acusa pelo conteúdo, não por um erro do teste)
+        pg.wait_for_timeout(250)
+    return pg.evaluate(LE_MSGS)
+
+
+def clica_acao(pg, texto, esperar=True):
+    """Toca no botão de uma resposta (o link #capitao-prop-… ou #capitao-relato-…); o link não navega e vira a pergunta digitada."""
+    n0 = pg.evaluate("() => document.querySelectorAll('[data-home=msg]').length")
+    pg.locator('[data-home=acao]:has-text("%s")' % texto).last.click()
+    if esperar:
+        try: pg.wait_for_function("(n) => document.querySelectorAll('[data-home=msg]').length >= n + 2 && !document.querySelector('[data-capitao-pensando]')", arg=n0, timeout=6000)
+        except Exception: pass
+    pg.wait_for_timeout(300)
+    return pg.evaluate(LE_MSGS)
+
+
+def teste_home_ia(b, tela):
+    """A IA a partir da Home: o 3º argumento é a leitura de agora (B.resumoAgora, o instante da resposta, sem coordenadas), o histórico vem de B.historicoIA (sem coordenadas e sem a emergência), o texto que vai
+    é o ditado corrigido (B.corrigeVoz) e a resposta da IA é contada ao cérebro (B.conversa): «o gerador» depois de «Qual equipamento você quer ligar?» continua o «como ligar?»."""
+    prob = []
+    rot = tela
+    COORD = "Estamos em 26°59,58'S 048°36,84'W, perto da Ilha das Cabras."
+    ctx, pg, erros, est = abre_home(b, tela, texto=COORD)
+    m = pergunta_home(pg, tela, PEDIDO_IA)
+    if len(est['pedidos']) != 1: prob.append('%s: a pergunta sem resposta pronta devia fazer 1 pedido à IA (fez %d)' % (rot, len(est['pedidos'])))
+    else:
+        ped, esperado = est['pedidos'][0], pg.evaluate('() => window.CapitaoBrain.resumoAgora()')
+        ctxt = ped.get('contexto') or ''
+        if not ctxt or ctxt != esperado: prob.append('%s: o 3º argumento (contexto) é %r, esperado a leitura de agora do cérebro %r' % (rot, ctxt[:80], esperado[:80]))
+        if len(ctxt) > 300 or confere.R_COORD.search(ctxt) or not re.search(r'SOG \d+,\d nós', ctxt) or '12:01:00' not in ctxt: prob.append('%s: o contexto não é o resumo do instante (≤ 300 letras, sem coordenada, com SOG e a hora 12:01:00): %r' % (rot, ctxt[:200]))
+        if ped.get('historico') != []: prob.append('%s: o histórico da 1ª pergunta devia ser vazio: %r' % (rot, ped.get('historico')))
+    m = pergunta_home(pg, tela, 'qual é a diferença entre barlavento e sotavento?')
+    if len(est['pedidos']) != 2: prob.append('%s: a 2ª pergunta de náutica geral devia fazer o 2º pedido (fez %d)' % (rot, len(est['pedidos'])))
+    else:
+        h = est['pedidos'][1].get('historico') or []
+        if [x.get('papel') for x in h] != ['usuario', 'capitao'] or h[0].get('texto') != PEDIDO_IA: prob.append('%s: o histórico do 2º pedido devia ser a pergunta e a resposta de antes: %r' % (rot, h))
+        if h and (confere.R_COORD.search(h[-1].get('texto', '')) or '26°' in h[-1].get('texto', '')): prob.append('%s: coordenada no histórico que vai à IA (o cérebro a corta, B.historicoIA): %r' % (rot, h[-1].get('texto')))
+    ctx.close()
+    # a emergência nunca vai à IA, nem depois da janela: o histórico do pedido não leva o SOS nem a resposta dele
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'mayday, homem ao mar')
+    pg.evaluate("() => window.CapitaoEmergencia.marca(Date.now() - 1000)")   # a janela venceu (a marca guarda também em memória: só o marca() com um fim no passado a encerra)
+    if pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o teste não vale (a janela não venceu)' % rot)
+    pergunta_home(pg, tela, PEDIDO_IA)
+    if len(est['pedidos']) != 1: prob.append('%s: depois da janela a pergunta devia ir à IA (pedidos %d)' % (rot, len(est['pedidos'])))
+    else:
+        txt = json.dumps(est['pedidos'][0].get('historico'), ensure_ascii=False)
+        if re.search(r'mayday|Emergência|homem ao mar|canal 16', txt, re.I): prob.append('%s: o histórico que vai à IA leva a emergência: %s' % (rot, txt[:200]))
+    ctx.close()
+    # o ditado corrigido vai à IA
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'como ligar o siker?')
+    if len(est['pedidos']) != 1 or est['pedidos'][0].get('pergunta') != 'como ligar o Seakeeper?': prob.append('%s: o texto que vai à IA devia ser o corrigido «como ligar o Seakeeper?»: %r' % (rot, [x.get('pergunta') for x in est['pedidos']]))
+    ctx.close()
+    # a IA pergunta, a pessoa responde só o equipamento: o cérebro precisa saber que a IA perguntou
+    ctx, pg, erros, est = abre_home(b, tela, texto='Qual equipamento você quer ligar?')
+    pergunta_home(pg, tela, 'como ligar?')
+    pg.evaluate("() => localStorage.removeItem('capitao.ia.chave.v1')")
+    m = pergunta_home(pg, tela, 'o gerador')
+    t = m[-1]['txt']
+    if 'PARTIDA até o motor pegar' not in t: prob.append('%s: «o gerador» depois da pergunta da IA devia continuar o «como ligar?» (os passos de partida): %r' % (rot, t[:200]))
+    ctx.close()
+    ctx, pg, erros, est = abre_home(b, tela, texto='Qual equipamento você quer ligar?')
+    pergunta_home(pg, tela, 'como ligar?')
+    pg.click('[aria-label="Nova conversa"]'); pg.wait_for_timeout(300)
+    pg.evaluate("() => localStorage.removeItem('capitao.ia.chave.v1')")
+    m = pergunta_home(pg, tela, 'o gerador')
+    if 'PARTIDA até o motor pegar' in m[-1]['txt']: prob.append('%s: depois do NOVA o «o gerador» não devia continuar a pergunta de antes' % rot)
+    ctx.close()
+    return prob
+
+
+def teste_home_janela(b, tela):
+    """A janela de conversa em emergência: o SOS a marca (CapitaoEmergencia); dentro dela a posição vira «LEIA NO PLOTTER» e nada vai à IA; o NOVA e o ENCERRAR zeram a marca e o contexto do cérebro (limpaConversa)."""
+    prob = []
+    rot = tela
+    SPY = "window.__limpou = 0; (() => { const B = window.CapitaoBrain; const f = B.limpaConversa; B.limpaConversa = function () { window.__limpou++; return f.apply(this, arguments); }; })()"
+    ctx, pg, erros, est = abre_home(b, tela)
+    pg.evaluate(SPY)
+    s0 = pg.evaluate(LE_ESTADO_HOME)
+    pergunta_home(pg, tela, 'qual a nossa posição?')
+    if 'LEIA NO PLOTTER' in pg.evaluate(LE_MSGS)[-1]['txt'] or s0['emerg']: prob.append('%s: fora da janela a posição devia vir do quadro' % rot)
+    m = pergunta_home(pg, tela, 'mayday, homem ao mar')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if not s['emerg'] or not s['ate']: prob.append('%s: a resposta do SOS não marcou a janela (valendo %r, sessionStorage %r)' % (rot, s['emerg'], s['ate']))
+    if s['diario']: prob.append('%s: a pergunta de emergência gravou no diário: %s' % (rot, s['diario']))
+    antes = len(est['pedidos'])
+    m = pergunta_home(pg, tela, 'qual a nossa posição?')
+    t = m[-1]['txt']
+    if 'LEIA NO PLOTTER' not in t or 'Barra Sul' in t or confere.R_COORD.search(t): prob.append('%s: dentro da janela a posição devia vir como «LEIA NO PLOTTER», sem o ponto da rota: %r' % (rot, t[:200]))
+    m = pergunta_home(pg, tela, PEDIDO_IA)
+    if len(est['pedidos']) != antes: prob.append('%s: dentro da janela a pergunta foi à IA (%d pedidos)' % (rot, len(est['pedidos']) - antes))
+    if 'LEIA NO PLOTTER' not in m[-1]['txt']: prob.append('%s: dentro da janela o fallback devia trazer «LEIA NO PLOTTER»: %r' % (rot, m[-1]['txt'][:200]))
+    pg.click('[aria-label="Nova conversa"]'); pg.wait_for_timeout(300)
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if s['emerg'] or s['ate'] or s['limpou'] != 1: prob.append('%s: o NOVA devia zerar a marca (valendo %r, sessionStorage %r) e chamar B.limpaConversa 1 vez (chamou %d)' % (rot, s['emerg'], s['ate'], s['limpou']))
+    m = pergunta_home(pg, tela, 'qual a nossa posição?')
+    if 'LEIA NO PLOTTER' in m[-1]['txt']: prob.append('%s: depois do NOVA a posição devia voltar do quadro' % rot)
+    pergunta_home(pg, tela, 'mayday, homem ao mar')
+    if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o 2º SOS não marcou a janela' % rot)
+    pg.evaluate("() => window.dispatchEvent(new CustomEvent('capitao-voz-encerrar'))"); pg.wait_for_timeout(300)
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if s['emerg'] or s['ate'] or s['limpou'] != 2: prob.append('%s: o ENCERRAR devia zerar a marca (valendo %r, sessionStorage %r) e chamar B.limpaConversa (chamadas %d, esperado 2)' % (rot, s['emerg'], s['ate'], s['limpou']))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    # com a janela já marcada ao abrir (outra tela de conversa a marcou), a pergunta de rotina também não vai à IA
+    ctx, pg, erros, est = abre_home(b, tela, depois=JANELA_VALE)
+    if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o teste não vale (a janela não estava marcada)' % rot)
+    m = pergunta_home(pg, tela, 'qual a nossa posição?')
+    if 'LEIA NO PLOTTER' not in m[-1]['txt'] or 'Barra Sul' in m[-1]['txt']: prob.append('%s: com a janela marcada por outra tela a posição devia vir como «LEIA NO PLOTTER»: %r' % (rot, m[-1]['txt'][:160]))
+    pergunta_home(pg, tela, PEDIDO_IA)
+    if est['pedidos']: prob.append('%s: com a janela marcada por outra tela a pergunta foi à IA' % rot)
+    ctx.close()
+    return prob
+
+
+def teste_home_botoes(b, tela):
+    """Os botões das propostas (os links #capitao-relato-… e #capitao-prop-…): o toque vira a pergunta digitada (a bolha do usuário aparece), o link não navega, o cérebro grava só o que o botão pede (Registrar = 1 linha;
+    Não registrar = 0; Confirmar o alarme = 1 regra; Desfazer a apaga; Recusar não grava), «O que verificar?» vai à IA com o relato, e o toque não leva o anexo nem apaga o que está sendo digitado."""
+    prob = []
+    rot = tela
+    ctx, pg, erros, est = abre_home(b, tela)
+    m = pergunta_home(pg, tela, RELATO_DEFEITO)
+    ls = [a['l'] for a in m[-1]['acoes']]
+    for t in ('Registrar no diário', 'Não registrar', 'O que verificar?'):
+        if t not in ls: prob.append('%s: a proposta do relato devia ter o botão «%s» (tem %s)' % (rot, t, ls))
+    url0 = pg.evaluate("() => location.href")
+    m = clica_acao(pg, 'Não registrar')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if m[-2]['papel'] != 'user' or 'não registrar o relato' not in m[-2]['txt'].lower(): prob.append('%s: o toque em «Não registrar» devia aparecer como a pergunta do usuário: %r' % (rot, m[-2]['txt'][:80]))
+    if s['diario'] or s['url'] != url0: prob.append('%s: «Não registrar» gravou no diário ou navegou (%s · %s)' % (rot, s['diario'], s['url']))
+    m = pergunta_home(pg, tela, RELATO_DEFEITO)
+    m = clica_acao(pg, 'Registrar no diário')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if len(s['diario']) != 1 or s['diario'][0].get('sim') is not True or 'desligou sozinho' not in s['diario'][0].get('t', ''): prob.append('%s: «Registrar no diário» devia gravar 1 linha com o relato e sim: true: %s' % (rot, s['diario']))
+    if s['url'] != url0: prob.append('%s: o botão navegou (%s)' % (rot, s['url']))
+    antes = len(est['pedidos'])
+    m = pergunta_home(pg, tela, RELATO_DEFEITO)
+    m = clica_acao(pg, 'O que verificar?')
+    ult = est['pedidos'][-1] if est['pedidos'] else {}
+    if len(est['pedidos']) != antes + 1 or not (ult.get('pergunta') or '').startswith('O que verificar'): prob.append('%s: «O que verificar?» devia mandar a pergunta pronta do relato à IA (pedidos %d → %d): %r' % (rot, antes, len(est['pedidos']), (ult.get('pergunta') or '')[:60]))
+    elif not ult.get('contexto') or confere.R_COORD.search(ult['pergunta']): prob.append('%s: o pedido do «O que verificar?» sem a leitura de agora ou com coordenada' % rot)
+    if len(pg.evaluate(LE_ESTADO_HOME)['diario']) != 1: prob.append('%s: «O que verificar?» gravou no diário' % rot)
+    ctx.close()
+    # a proposta do alarme: Confirmar grava a regra, Recusar não grava; a da agenda: Confirmar grava a tarefa e o Desfazer a tira
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'me avise se a pressão do óleo do BB cair abaixo de 2 bar')
+    m = clica_acao(pg, 'Confirmar')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if [a.get('id') for a in s['alarmes'] if not a.get('acao')] != ['usr_1']: prob.append('%s: «Confirmar» devia gravar a regra usr_1: %s' % (rot, s['alarmes']))
+    ctx.close()
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'me avise se a pressão do óleo do BB cair abaixo de 2 bar')
+    clica_acao(pg, 'Recusar')
+    if pg.evaluate(LE_ESTADO_HOME)['alarmes']: prob.append('%s: «Recusar» gravou o alarme' % rot)
+    ctx.close()
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, 'agendar revisão do gerador para 15/11')
+    if pg.evaluate(LE_ESTADO_HOME)['tarefas']: prob.append('%s: a proposta da tarefa gravou antes do Confirmar' % rot)
+    m = clica_acao(pg, 'Confirmar')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if len(s['tarefas']) != 1 or not s['tarefas'][0]['vence'].endswith('-11-15'): prob.append('%s: «Confirmar» devia gravar a tarefa (vence 15/11): %s' % (rot, s['tarefas']))
+    if 'Desfazer' not in [a['l'] for a in m[-1]['acoes']]: prob.append('%s: depois do Confirmar devia haver o botão «Desfazer» (tem %s)' % (rot, [a['l'] for a in m[-1]['acoes']]))
+    else:
+        clica_acao(pg, 'Desfazer')
+        if pg.evaluate(LE_ESTADO_HOME)['tarefas']: prob.append('%s: o «Desfazer» devia tirar a tarefa da agenda da equipe' % rot)
+    ctx.close()
+    # o botão não leva o anexo nem apaga o que está sendo digitado
+    ctx, pg, erros, est = abre_home(b, tela)
+    pergunta_home(pg, tela, RELATO_DEFEITO)
+    pg.set_input_files('input[type=file][accept="image/*"]', {'name': 'etiqueta.png', 'mimeType': 'image/png', 'buffer': PNG_1X1})
+    pg.wait_for_timeout(300)
+    pg.fill(CAMPO_HOME[tela], 'rascunho da próxima pergunta')
+    if not pg.evaluate(LE_ESTADO_HOME)['anexo']: prob.append('%s: o teste não vale (o anexo não ficou pendente)' % rot)
+    clica_acao(pg, 'Não registrar')
+    s = pg.evaluate(LE_ESTADO_HOME)
+    if not s['anexo']: prob.append('%s: o toque no botão da resposta levou o anexo pendente' % rot)
+    if s['digitado'] != 'rascunho da próxima pergunta': prob.append('%s: o toque no botão da resposta apagou o que estava sendo digitado (%r)' % (rot, s['digitado']))
+    if s['diario']: prob.append('%s: o anexo ou o botão gravou no diário: %s' % (rot, s['diario']))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_home_codigo():
+    prob = []
+    def le_(a):
+        t = open(os.path.join(RAIZ, a), encoding='utf-8', newline='').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    for a in ('Main.dc.html', 'H2-Home-Mobile.dc.html'):
+        h = le_(a)
+        n = a.split('.')[0]
+        cod = re.sub(r'//[^\n]*', '', h)
+        mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+        for ev in ('capitao-telemetria', 'capitao-rebase', 'capitao-chat-pergunta'):
+            if "'%s'" % ev not in h[mont:desm] or "'%s'" % ev not in h[desm:desm + 700]: prob.append('%s: não assina o %s no componentDidMount e remove no componentWillUnmount' % (n, ev))
+        if h.count('setInterval') != 1: prob.append('%s: setInterval a mais (%d; só o do whenBrain)' % (n, h.count('setInterval')))
+        if re.search(r'D\.demo|\.demo\b|DEMO|D\.aviso|D\.snapshot|\.snapshot\b|demoTip', cod): prob.append('%s: lê D.demo, D.aviso ou D.snapshot (ou escreve DEMO) no código' % n)
+        if MARCAS_FIXAS.search(cod): prob.append('%s: fabricante fixo no código: %s' % (n, MARCAS_FIXAS.search(cod).group(0)))
+        for l in cod.split('\n'):   # SEM DADOS / SEM LEITURA só no ramo simulacao:false (falta() ou sim ?)
+            if re.search(r'SEM (?:DADOS|LEITURA)', l) and not re.search(r'falta\(|sim \?', l): prob.append('%s: rótulo fora do ramo simulacao false: %s' % (n, l.strip()[:100]))
+        if re.search(r'Não consegui responder agora|Fonte: nenhuma', cod): prob.append('%s: o texto de erro ao montar a resposta ainda leva o rótulo' % n)
+        if 'B.resumoAgora(a, { emergencia: emg })' not in h or re.search(r"B\.buscaBase\(qc, 3\), ''", h): prob.append('%s: o 3º argumento da IA não é B.resumoAgora(a)' % n)
+        if 'B.historicoIA(' not in h or re.search(r'slice\(-6\)', cod): prob.append('%s: o histórico não vem só de B.historicoIA (ou a tela corta as 6 últimas)' % n)
+        if 'B.corrigeVoz(q)' not in h or 'B.conversa(qc, r.text)' not in h: prob.append('%s: falta o B.corrigeVoz no texto da IA ou o B.conversa depois da resposta dela' % n)
+        if h.count('limpaContexto()') < 3 or 'B.limpaConversa()' not in h or 'E.zera()' not in h: prob.append('%s: o NOVA e o ENCERRAR não zeram o contexto e a marca da janela (limpaContexto)' % n)
+        if 'emergencia: emg' not in h or 'B.pedeIA(a, qc, { emergencia: emg })' not in h or "EM.marca()" not in h or 'a.abreJanela === true' not in h: prob.append('%s: a janela de conversa em emergência não é passada ao cérebro ou não é marcada' % n)
+        if "this.ask(d.q, null, 'botao')" not in h: prob.append('%s: o botão de uma resposta não vira a pergunta (capitao-chat-pergunta → ask)' % n)
+        if re.search(r'location\s*\.\s*(href|assign|replace|reload)|window\s*\.\s*open|history\s*\.\s*(push|replace)State', cod): prob.append('%s: troca de tela ou abre janela sozinha' % n)
+        if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % n)
+    return prob
+
+
+def teste_h3(b, tela):
+    """H3: nenhum rótulo (nem com D.demo ligado: o « · DEMO» do resumo só valia com a flag), o atalho para o mapa de sensores e os checklists guiados com os destinos da plataforma da tela (web ou app) que existem."""
+    prob = []
+    web = tela.endswith('-Web')
+    ctx, pg, erros = abre_tela(b, tela, fixo='60', depois='window.CapitaoDados.demo = true;')
+    r = pg.evaluate("""() => ({ texto: document.body.innerText, a: [...document.querySelectorAll('[data-h3^=tela-]')].map((e) => ({ id: e.dataset.h3, href: e.getAttribute('href'), txt: e.innerText.replace(/\\s+/g, ' ').trim(), h: e.offsetHeight })),
+      lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth })""")
+    if re.search(r'\bDEMO\b|SEM DADOS|SEM LEITURA|snapshot|fict[ií]ci', r['texto'], re.I): prob.append('%s: rótulo na tela: %s' % (tela, re.search(r'\bDEMO\b|SEM DADOS|SEM LEITURA|snapshot|fict[ií]ci', r['texto'], re.I).group(0)))
+    esperado = {'tela-sensores': 'A4-Sensores-Web.dc.html' if web else 'A5-Sensores-Mobile.dc.html', 'tela-checklist': 'C4-Checklist-Web.dc.html' if web else 'C4-Checklist-Mobile.dc.html'}
+    if {x['id']: x['href'] for x in r['a']} != esperado: prob.append('%s: os atalhos das telas novas são %s (esperado %s)' % (tela, {x['id']: x['href'] for x in r['a']}, esperado))
+    sw = open(os.path.join(RAIZ, 'sw.js'), encoding='utf-8').read()
+    for x in r['a']:
+        if not os.path.exists(os.path.join(RAIZ, x['href'])) or ("'%s'" % x['href'].replace('.dc.html', '')) not in sw: prob.append('%s: o destino %s não existe ou não está no TELAS do sw.js' % (tela, x['href']))
+        if x['h'] < 43.5: prob.append('%s: o atalho %s tem %.0f px de altura (< 44)' % (tela, x['id'], x['h']))
+    if r['lateral'] > 1: prob.append('%s: rola para o lado (%d px)' % (tela, r['lateral']))
+    if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def p4g_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4G para as telas da rodada."""
+    out = []
+    if any(t in lista for t in TELAS_HOME): out.append(('código da Main e da H2', teste_home_codigo()))
+    for tela in [t for t in TELAS_HOME if t in lista]:
+        out.append((tela + ' · a leitura de agora a 60 e 105 s: selo, faixa, estado, cartões e prazos', teste_home_leitura(b, tela)))
+        out.append((tela + ' · fabricante e modelo de D.equipamentos, Executado e o ramo sem fabricante', teste_home_dados(b, tela)))
+        out.append((tela + ' · anda sozinha sem congelar o replay', teste_home_vivo(b, tela)))
+        out.append((tela + ' · simulacao false: a última leitura salva', teste_home_real(b, tela)))
+        out.append((tela + ' · os ouvintes: nenhum vazamento em 3 voltas de desmontar e montar', teste_home_ouvintes(b, tela)))
+        out.append((tela + ' · a IA: leitura de agora, histórico do cérebro, ditado corrigido e a conversa', teste_home_ia(b, tela)))
+        out.append((tela + ' · a janela de conversa em emergência, o NOVA e o ENCERRAR', teste_home_janela(b, tela)))
+        out.append((tela + ' · os botões das propostas e do «O que verificar?»', teste_home_botoes(b, tela)))
+    for tela in [t for t in TELAS_H3 if t in lista]:
+        out.append((tela + ' · sem rótulo e com o atalho das telas novas', teste_h3(b, tela)))
+    return out
+
+
+MUTANTES_P4G = [
+    # —— Main ——
+    ('o diesel da faixa da Main de volta no snapshot (54/52)', 'Main.dc.html', [("litros === null || litros === undefined ? falta('SEM LEITURA') : litros + ' L' + (pct ? ' (' + pct + ' %)' : '') }] };", "'54/52' }] };")], 'leitura'),
+    ('a Main sem a hora do quadro no selo (SNAPSHOT fixo)', 'Main.dc.html', [("liveLabel: L.selo,", "liveLabel: 'SNAPSHOT · 26/09 10:12',")], 'leitura'),
+    ('o estado da faixa da Main fixo no snapshot', 'Main.dc.html', [("faixaEstado: (L.estado + (L.local ? ' · ' + L.local.replace(/^enseada de /i, '') : '')).toUpperCase(),", "faixaEstado: 'FUNDEADO · ENSEADA DE BALNEÁRIO CAMBORIÚ',")], 'leitura'),
+    ('a hora do rodapé da Main sem o «· AO VIVO»', 'Main.dc.html', [("faixaHora: L.hora + (L.vivo ? ' · AO VIVO' : ' · ÚLTIMA LEITURA'),", "faixaHora: L.hora,")], 'leitura'),
+    ('o LED da Main de volta no ciano que não diz a origem (sem verde)', 'Main.dc.html', [("background: 'var(--cap-ok, #34c77a)', animation: 'capVivo 2s ease-in-out infinite', display: 'inline-block' } }),", "background: 'var(--cap-tele, #00f4fd)', animation: 'capVivo 2s ease-in-out infinite', display: 'inline-block' } }),")], 'leitura'),
+    ('o LED da Main em última leitura sem o âmbar', 'Main.dc.html', [("background: 'var(--cap-warn, #f0a63a)', boxShadow: '0 0 0 3px rgba(var(--cap-warn-rgb, 240,166,58), 0.22)', display: 'inline-block' } }),", "border: '1.5px solid var(--cap-ink3, #97a3c0)', boxSizing: 'border-box', display: 'inline-block' } }),")], 'real'),
+    ('o gerador da Main com «Onan» fixo no código', 'Main.dc.html', [("Object.assign({ n: '2 · GERADOR', eq: [nome('gerador'), horas].filter(Boolean).join(' · '),", "Object.assign({ n: '2 · GERADOR', eq: ['Onan QD 9', horas].filter(Boolean).join(' · '),")], 'dados'),
+    ('as horas do gerador da Main sem o quadro (só o fabricante)', 'Main.dc.html', [("hg = I && I.q && f && !(I.fonte === 'replay' && !sim) ? f(I.q, 'gerador_horimetro_h') : null;", "hg = null;")], 'leitura'),
+    ('o chip da Main de volta com «PRONTO · DEMO»', 'Main.dc.html', [("Object.assign({ chip: 'PRONTO' }, chip('ok'))", "Object.assign({ chip: 'PRONTO · DEMO' }, chip('ok'))")], 'leitura'),
+    ('o chip dos eletrônicos da Main de volta com «FAQ · DEMO»', 'Main.dc.html', [("Object.assign({ chip: faq.eletronicos.perguntas.length + ' FAQ' }, chip('ok'))", "Object.assign({ chip: faq.eletronicos.perguntas.length + ' FAQ · DEMO' }, chip('ok'))")], 'leitura'),
+    ('o atraso do rotor na Main ignora o Executado', 'Main.dc.html', [("return t && !feitas[t.id] && typeof t.dn === 'number' && t.dn < 0 ? t : null; };", "return t && typeof t.dn === 'number' && t.dn < 0 ? t : null; };")], 'dados'),
+    ('as atrasadas da Main contadas na agenda crua (sem o CapitaoAgora)', 'Main.dc.html', [("atr = A.contagens ? A.contagens().atrasadas : ag.filter((t) => !feitas[t.id] && t.dn < 0).length;", "atr = ag.filter((t) => t.dn < 0).length;")], 'dados'),
+    ('a Main com «SEM DADOS» sem o ramo simulacao false (falta() sempre rotula)', 'Main.dc.html', [("falta = (r) => (sim ? '' : r), ag = D.agenda || [], EQ", "falta = (r) => r, ag = D.agenda || [], EQ")], 'dados'),
+    ('a Main sem assinar o capitao-telemetria', 'Main.dc.html', [("['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'vivo'),
+    ('a Main não remove o ouvinte da telemetria ao desmontar', 'Main.dc.html', [("['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));", "['capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));")], 'ouvintes'),
+    ('a Main não remove o ouvinte do botão de uma resposta', 'Main.dc.html', [("    window.removeEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'ouvintes'),
+    # —— H2 ——
+    ('o selo violeta da H2 de volta (DEMO · DADOS FICTÍCIOS)', 'H2-Home-Mobile.dc.html', [("<svg width=\"11\" height=\"11\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" style=\"flex-shrink: 0;\"><path d=\"M12 2l10 10-10 10L2 12z", "<span style=\"border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); font-size: 9px; padding: 3px 7px;\">DEMO · DADOS FICTÍCIOS</span><svg width=\"11\" height=\"11\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\" style=\"flex-shrink: 0;\"><path d=\"M12 2l10 10-10 10L2 12z")], 'leitura'),
+    ('a dica do LED da H2 de volta com «snapshot»', 'H2-Home-Mobile.dc.html', [("liveTip: vivo ? 'Telemetria ao vivo — atualiza a cada segundo' : 'Sem leitura ao vivo agora — mostrando a última leitura salva',", "liveTip: vivo ? 'Telemetria ao vivo — atualiza a cada segundo' : 'Telemetria ao vivo desligada — snapshot de 26/09',")], 'real'),
+    ('o gerador da H2 com «Onan» fixo no código', 'H2-Home-Mobile.dc.html', [("s: rot('gerador', 'Gerador') + ' — ligar · desligar · alarmes'", "s: 'Gerador Onan (modelo SEM DADOS) — ligar · desligar · alarmes'")], 'dados'),
+    ('os eletrônicos da H2 com a lista fixa «Garmin · Fusion · Icom»', 'H2-Home-Mobile.dc.html', [("s: (fabs.join(' · ') || falta('Fabricantes SEM DADOS')) + ' — plotter", "s: 'Garmin · Fusion · Icom — plotter")], 'dados'),
+    ('o atraso do filtro na H2 ignora o Executado', 'H2-Home-Mobile.dc.html', [("const atr = (t) => !!(t && !feitas[t.id] && typeof t.dn === 'number' && t.dn < 0);", "const atr = (t) => !!(t && typeof t.dn === 'number' && t.dn < 0);")], 'dados'),
+    ('o LED da H2 sem o selo do coletor (sempre verde)', 'H2-Home-Mobile.dc.html', [("return !!(I && I.q && !(I.fonte === 'replay' && D.simulacao !== true) && (!I.selo || I.selo.tom === 'ok'));", "return true;")], 'real'),
+    ('a H2 não remove o ouvinte da virada do dia', 'H2-Home-Mobile.dc.html', [("    window.removeEventListener('capitao-rebase', this._onReb);\n", "")], 'ouvintes'),
+    # —— o chat (Main e H2) ——
+    ('a Main manda a IA o 3º argumento vazio (sem a leitura de agora)', 'Main.dc.html', [("B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', {", "'', {")], 'ia'),
+    ('a H2 manda a IA o 3º argumento vazio (sem a leitura de agora)', 'H2-Home-Mobile.dc.html', [("B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', {", "'', {")], 'ia'),
+    ('a Main monta o histórico por conta própria (as 6 últimas, sem filtro)', 'Main.dc.html', [("return B && B.historicoIA ? B.historicoIA(i < 0 ? th : th.slice(0, i), { emergencia: !!emg }) : [];", "return (i < 0 ? th : th.slice(0, i)).slice(-6).map((m) => ({ papel: m.role === 'user' ? 'usuario' : 'capitao', texto: String(m.text || '').slice(0, 600) }));")], 'ia'),
+    ('a H2 monta o histórico por conta própria (as 6 últimas, sem filtro)', 'H2-Home-Mobile.dc.html', [("return B && B.historicoIA ? B.historicoIA(i < 0 ? th : th.slice(0, i), { emergencia: !!emg }) : [];", "return (i < 0 ? th : th.slice(0, i)).slice(-6).map((m) => ({ papel: m.role === 'user' ? 'usuario' : 'capitao', texto: String(m.text || '').slice(0, 600) }));")], 'ia'),
+    ('a Main não conta a resposta da IA ao cérebro (sem B.conversa)', 'Main.dc.html', [("try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} ", "")], 'ia'),
+    ('a H2 não conta a resposta da IA ao cérebro (sem B.conversa)', 'H2-Home-Mobile.dc.html', [("try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} ", "")], 'ia'),
+    ('a Main manda o ditado sem corrigir à IA', 'Main.dc.html', [("const qc = B.corrigeVoz ? B.corrigeVoz(q) : q;", "const qc = q;")], 'ia'),
+    ('a H2 manda o ditado sem corrigir à IA', 'H2-Home-Mobile.dc.html', [("const qc = B.corrigeVoz ? B.corrigeVoz(q) : q;", "const qc = q;")], 'ia'),
+    ('a Main não passa a janela de emergência ao cérebro (answer)', 'Main.dc.html', [("} else a = B.answer(q, link ? { platform: 'web', id: id, commit: false, emergencia: emg } : { platform: 'web', id: id, emergencia: emg });", "} else a = B.answer(q, link ? { platform: 'web', id: id, commit: false } : { platform: 'web', id: id });")], 'janela'),
+    ('a H2 não passa a janela de emergência ao cérebro (answer)', 'H2-Home-Mobile.dc.html', [("} else a = B.answer(q, link ? { platform: 'app', id: id, commit: false, emergencia: emg } : { platform: 'app', id: id, emergencia: emg });", "} else a = B.answer(q, link ? { platform: 'app', id: id, commit: false } : { platform: 'app', id: id });")], 'janela'),
+    ('a Main não marca a janela quando a resposta a abre', 'Main.dc.html', [("if (a && a.abreJanela === true) { try { if (EM) EM.marca(); } catch (e) {} }", "")], 'janela'),
+    ('a H2 não marca a janela quando a resposta a abre', 'H2-Home-Mobile.dc.html', [("if (a && a.abreJanela === true) { try { if (EM) EM.marca(); } catch (e) {} }", "")], 'janela'),
+    ('o NOVA da Main não zera o contexto nem a janela', 'Main.dc.html', [("  clearThread() {\n    this.limpaContexto();\n", "  clearThread() {\n")], 'janela'),
+    ('o NOVA da H2 não zera o contexto nem a janela', 'H2-Home-Mobile.dc.html', [("  clearThread() {\n    this.limpaContexto();\n", "  clearThread() {\n")], 'janela'),
+    ('o ENCERRAR da Main não zera o contexto nem a janela', 'Main.dc.html', [("this._onEncerra = () => { this.limpaContexto(); if", "this._onEncerra = () => { if")], 'janela'),
+    ('o ENCERRAR da H2 não zera o contexto nem a janela', 'H2-Home-Mobile.dc.html', [("this._onEncerra = () => { this.limpaContexto(); if", "this._onEncerra = () => { if")], 'janela'),
+    ('o botão de uma resposta na Main leva o anexo e apaga o que se digita (modo de pergunta digitada)', 'Main.dc.html', [("this.ask(d.q, null, 'botao')", "this.ask(d.q)")], 'botoes'),
+    ('o botão de uma resposta na H2 leva o anexo e apaga o que se digita (modo de pergunta digitada)', 'H2-Home-Mobile.dc.html', [("this.ask(d.q, null, 'botao')", "this.ask(d.q)")], 'botoes'),
+    ('a Main não escuta o botão de uma resposta (sem capitao-chat-pergunta)', 'Main.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'botoes'),
+    ('a H2 não escuta o botão de uma resposta (sem capitao-chat-pergunta)', 'H2-Home-Mobile.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'botoes'),
+    # —— H3 ——
+    ('o resumo da H3 web de volta com « · DEMO»', 'H3-Atalhos-Editar-Web.dc.html', [("iguais no console e no app',", "iguais no console e no app' + (window.CapitaoDados.demo ? ' · DEMO' : ''),")], 'h3'),
+    ('o atalho do checklist da H3 app leva à C4 web', 'H3-Atalhos-Editar.dc.html', [('<a href="C4-Checklist-Mobile.dc.html" data-h3="tela-checklist"', '<a href="C4-Checklist-Web.dc.html" data-h3="tela-checklist"')], 'h3'),
+]
+# cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
+QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
+            'vivo': lambda b, t: teste_home_vivo(b, t) + teste_home_codigo(), 'ouvintes': lambda b, t: teste_home_ouvintes(b, t) + teste_home_codigo(), 'ia': lambda b, t: teste_home_ia(b, t),
+            'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t)}
+
+
+def mutantes_p4g(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
+    for nome, arq, trocas, qual in MUTANTES_P4G:
+        if filtro and filtro not in nome: continue
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = QUAL_P4G[qual](b, arq.replace('.dc.html', ''))
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4G), len(vivos)))
     return vivos
 
 

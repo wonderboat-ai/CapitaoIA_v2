@@ -1662,6 +1662,36 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         fecha(pg)
 
 
+# P4G: a virada do dia de bordo (o evento 'capitao-rebase' do motor) na Home. Os prazos dos cartões (a tarefa do rotor atrasada, o chip do CONSOLE) só se refazem quando o dia vira; a Main e a H2 só dão setState
+# se o texto que exibem a partir deles mudou. Com o instante fixado e o prazo igual, 5 viradas não redesenham nada; com a tarefa executada (Executado), 1 redesenho e o cartão sem o atraso.
+HOME_REBASE = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844))
+EXEC_ROTOR = '{"gerador-rotor": {"iso": "2026-11-10T09:00:00-03:00", "t": "09:00", "sim": true}}'
+LE_ROTOR = """() => ({ sets: window.__sets, txt: document.body.innerText, titulos: [...document.querySelectorAll('[data-home=cartao]')].map((e) => e.title), chips: [...document.querySelectorAll('[data-home=chip]')].map((e) => e.innerText.trim()) })"""
+
+
+def home_rebase(b, telas=HOME_REBASE):
+    print('Main e H2: a virada do dia de bordo (capitao-rebase) só redesenha quando o prazo exibido muda')
+    for nome, w, h in telas:
+        pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1")
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(2500)
+        pg.evaluate("() => { window.__sets = 0; for (let i = 0; i < 5; i++) window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }")
+        pg.wait_for_timeout(600)
+        r = pg.evaluate(LE_ROTOR)
+        ok('%s: 5 viradas do dia com o prazo igual não redesenham nada (%d setState)' % (nome, r['sets']), r['sets'] == 0, r)
+        antes_rotor = ('ROTOR · 2 D' in r['txt']) if nome == 'Main' else any('rotor em atraso' in t for t in r['titulos'])
+        ok('%s: o rotor aparece em atraso antes do Executado (o teste vale)' % nome, antes_rotor, r['chips'] if nome == 'Main' else r['titulos'])
+        # logo depois de um tique (o próximo vem só 1 s depois: nenhum tique redesenha dentro da janela de 150 ms, então quem atualiza o cartão é a virada do dia)
+        pg.evaluate("() => new Promise((res) => { const f = () => { window.removeEventListener('capitao-telemetria', f); res(true); }; window.addEventListener('capitao-telemetria', f); })")
+        pg.evaluate("(ex) => { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }", EXEC_ROTOR)
+        pg.wait_for_timeout(150)
+        r = pg.evaluate(LE_ROTOR)
+        depois_rotor = ('ROTOR' in r['txt']) if nome == 'Main' else any('rotor em atraso' in t for t in r['titulos'])
+        ok('%s: com o rotor executado a virada do dia redesenha uma vez (%d setState) em até 150 ms e o cartão sai do atraso' % (nome, r['sets']), r['sets'] == 1 and not depois_rotor, r)
+        ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+
+
 # ——— 12. as telas de verdade ———
 def telas(b):
     print('Telas de verdade (com sessão): o motor carrega, anda e não dá erro de script')
@@ -2264,6 +2294,15 @@ MUTANTES_ARQ = [
      [("if (!forca && k === this._k) return;", "")], 'gating'),
     ('a E2 dando setState a cada tique, sem comparar a leitura de agora', 'E2-Navegando-Sintoma.dc.html',
      [("if (k === this._refK) return;", "")], 'gating'),
+    # P4G: a Home só dá setState na virada do dia quando o prazo exibido muda (Main e H2 são LF)
+    ('a Main dando setState a cada virada do dia, sem comparar o texto exibido', 'Main.dc.html',
+     [("if (k !== this._leitK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'home_rebase'),
+    ('a Main sem ouvir a virada do dia (só a telemetria)', 'Main.dc.html',
+     [("['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-telemetria'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'home_rebase'),
+    ('a H2 dando setState a cada virada do dia, sem comparar os cartões', 'H2-Home-Mobile.dc.html',
+     [("if (k !== this._cartK) this.setState({ cart: k });", "this.setState({ cart: k });")], 'home_rebase'),
+    ('a H2 sem ouvir a virada do dia', 'H2-Home-Mobile.dc.html',
+     [("    window.addEventListener('capitao-rebase', this._onReb);\n", "")], 'home_rebase'),
 ]
 
 
@@ -2290,6 +2329,8 @@ def mutantes_arq(b):
                     faixa_global(b)
                 elif qual == 'emerg':
                     faixa_emergencia(b)
+                elif qual == 'home_rebase':
+                    home_rebase(b, telas=[t_ for t_ in HOME_REBASE if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]])
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova
@@ -2358,6 +2399,7 @@ def main():
         faixa_global(browser)
         faixa_emergencia(browser)
         gating(browser)
+        home_rebase(browser)
         codigo()
         codigo_faixa()
         telas(browser)

@@ -121,6 +121,13 @@ input::placeholder, textarea::placeholder { color: var(--cap-ph, #4a5578); }
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
       <span style="font-size: 12px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);"><b style="color: var(--cap-ink, #eaf1ff);">Fixos e não removíveis:</b> o SOS, os 5 botões da tela inicial (Console, Gerador, Climatização, Estabilizador, Eletrônicos) e a barra do assistente.</span>
     </div>
+    <div data-h3="telas" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); flex-shrink: 0;">
+      <span style="font-size: 12px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);"><b style="color: var(--cap-ink, #eaf1ff);">Abrem direto, sem passar pelo chat:</b> o mapa dos sensores do barco e os checklists guiados.</span>
+      <span style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <a href="A5-Sensores-Mobile.dc.html" data-h3="tela-sensores" style="min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.12em; font-weight: 700; display: flex; align-items: center; text-decoration: none; white-space: nowrap;">MAPA DE SENSORES ›</a>
+        <a href="C4-Checklist-Mobile.dc.html" data-h3="tela-checklist" style="min-height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.12em; font-weight: 700; display: flex; align-items: center; text-decoration: none; white-space: nowrap;">CHECKLISTS ›</a>
+      </span>
+    </div>
   </div>
 
   <x-import component-from-global-scope="capitao-sos-app" from="./capitao-moldura.js" hint-size="390px,68px"></x-import>

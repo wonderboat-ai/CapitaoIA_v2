@@ -20,7 +20,7 @@ body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial
 a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
 a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
 button { font: inherit; }
-@keyframes capVivo { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(var(--cap-tele-rgb, 0,244,253), 0.22), 0 0 10px rgba(var(--cap-tele-rgb, 0,244,253), 0.7); } 50% { opacity: 0.18; box-shadow: 0 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0), 0 0 0 rgba(var(--cap-tele-rgb, 0,244,253), 0); } }
+@keyframes capVivo { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(var(--cap-ok-rgb, 52,199,122), 0.22), 0 0 10px rgba(var(--cap-ok-rgb, 52,199,122), 0.7); } 50% { opacity: 0.18; box-shadow: 0 0 0 0 rgba(var(--cap-ok-rgb, 52,199,122), 0), 0 0 0 rgba(var(--cap-ok-rgb, 52,199,122), 0); } }
 input::placeholder { color: var(--cap-ph, #4a5578); }
 @keyframes capSweep { 0% { transform: translateX(-160%) skewX(-16deg); } 42% { transform: translateX(700%) skewX(-16deg); } 100% { transform: translateX(700%) skewX(-16deg); } }
 @keyframes capPulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(var(--cap-accent-rgb, 0,161,254), 0.22); } 50% { box-shadow: 0 0 0 6px rgba(var(--cap-accent-rgb, 0,161,254), 0.06); } }
@@ -40,7 +40,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
   <header style="position: relative; flex-shrink: 0; box-sizing: border-box; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: rgba(var(--cap-bar-rgb, 10,15,34), 0.82); border-bottom: 1px solid rgba(var(--cap-plat-rgb, 211,220,239), 0.12); font-size: 10.5px; letter-spacing: 0.14em; white-space: nowrap;">
     <img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height: 24px; width: 56px; object-fit: contain; flex-shrink: 0;">
     <span style="flex-grow: 1;"></span>
-    <span role="img" aria-label="{{liveTip}}" title="{{liveTip}}" style="display: flex; align-items: center; padding: 0 3px;">{{led}}</span>
+    <span data-home="led" role="img" aria-label="{{liveTip}}" title="{{liveTip}}" style="display: flex; align-items: center; padding: 0 3px;">{{led}}</span>
     <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="12" hint-size="150px,24px"></x-import>
     <x-import component-from-global-scope="capitao-theme-toggle" from="./capitao-theme.js" size="30" hint-size="30px,30px"></x-import>
     <a href="G4-Equipe-Mobile.dc.html" aria-label="Equipe e acessos" style="width: 30px; height: 30px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--cap-accent, #00a1fe); color: var(--cap-accent, #00a1fe); font-size: 9.5px; font-weight: 800; letter-spacing: 0; display: flex; align-items: center; justify-content: center; text-decoration: none;"><x-import component-from-global-scope="capitao-usuario" campo="ini"></x-import></a>
@@ -57,7 +57,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="width: 70px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 100%);"></span>
-          <span title="{{demoTip}}" style="font-size: 9px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-violeta, #b45cff); border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); border-radius: 5px; padding: 3px 7px; white-space: nowrap;">{{demo}}</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 2l10 10-10 10L2 12z M2 12h20 M12 2v20" stroke-width="1.6" stroke-linejoin="round" style="stroke: var(--cap-plat, #d3dcef);"></path></svg>
           <span style="width: 70px; height: 1px; background: linear-gradient(90deg, rgba(var(--cap-plat-rgb, 211,220,239), 0.6) 0%, rgba(var(--cap-plat-rgb, 211,220,239), 0) 100%);"></span>
         </div>
         <div style="font-style: italic; font-size: 15px; line-height: 1.35; color: var(--cap-greet, #8d98b8); margin: 2px 0 8px; text-align: center; padding: 0 8px;"><x-import component-from-global-scope="capitao-saudacao"></x-import></div>
@@ -73,7 +73,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
       </div>
       <div ref="{{threadRef}}" aria-live="polite" style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 2px 0;">
         <sc-for list="{{thread}}" as="m" hint-placeholder-count="0">
-          <div style="display: flex; justify-content: {{m.justify}};">
+          <div data-home="msg" data-papel="{{m.papel}}" style="display: flex; justify-content: {{m.justify}};">
             <div style="max-width: 320px; box-sizing: border-box; padding: 10px 12px; border-radius: 14px; background: {{m.bg}}; border: 1px solid {{m.line}}; display: flex; flex-direction: column; gap: 6px;">
               <span style="font-size: 9px; letter-spacing: 0.14em; font-weight: 700; color: {{m.ktone}};">{{m.k}}</span>
               <span style="font-size: 12.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--cap-ink, #eaf1ff);">{{m.text}}</span>
@@ -81,7 +81,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
               <sc-if value="{{m.hasActions}}" hint-placeholder-val="{{false}}">
                 <span style="display: flex; gap: 6px; flex-wrap: wrap;">
                   <sc-for list="{{m.actions}}" as="x" hint-placeholder-count="1">
-                    <a href="{{x.href}}" target="{{x.target}}" rel="{{x.rel}}" style="height: 34px; padding: 0 11px; border-radius: 9px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 9.5px; letter-spacing: 0.10em; font-weight: 700; display: flex; align-items: center; text-decoration: none;">{{x.l}} ›</a>
+                    <a data-home="acao" href="{{x.href}}" target="{{x.target}}" rel="{{x.rel}}" style="height: 34px; padding: 0 11px; border-radius: 9px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 9.5px; letter-spacing: 0.10em; font-weight: 700; display: flex; align-items: center; text-decoration: none;">{{x.l}} ›</a>
                   </sc-for>
                 </span>
               </sc-if>
@@ -139,12 +139,12 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
         <a href="A2-Ponte-Mobile.dc.html" title="Console completo — telemetria, manutenção, documentos, abastecimento e diário" style="box-sizing: border-box; display: flex; align-items: center; gap: 11px; height: 64px; padding: 0 12px 0 8px; background: linear-gradient(180deg, rgba(var(--cap-accent-rgb, 0,161,254), 0.14) 0%, rgba(var(--cap-accent-rgb, 0,161,254), 0.05) 100%); border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); border-radius: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff); box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); transition: transform .3s, border-color .3s;" style-active="transform: scale(0.98); border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55);">
           <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: linear-gradient(160deg, rgba(var(--cap-hl-rgb, 255,255,255), 0.12) 0%, rgba(var(--cap-hl-rgb, 255,255,255), 0.02) 100%); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); box-shadow: inset 0 1px 0 rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
           <span style="flex-grow: 1; font-size: 11.5px; letter-spacing: 0.16em; font-weight: 700; color: var(--cap-accent, #00a1fe);">CONSOLE</span>
-          <span style="display: flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: 0.12em; font-weight: 700; color: {{painel.ctone}}; border: 1px solid {{painel.cline}}; background: {{painel.cwash}}; border-radius: 5px; padding: 3px 7px; white-space: nowrap;"><span style="width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: {{painel.ctone}};"></span>{{painel.chip}}</span>
+          <span data-home="console-chip" style="display: flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: 0.12em; font-weight: 700; color: {{painel.ctone}}; border: 1px solid {{painel.cline}}; background: {{painel.cwash}}; border-radius: 5px; padding: 3px 7px; white-space: nowrap;"><span style="width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: {{painel.ctone}};"></span>{{painel.chip}}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink4, #7985a6);"></path></svg>
         </a>
         <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
           <sc-for list="{{faq}}" as="b" hint-placeholder-count="4">
-            <a href="{{b.href}}" title="{{b.s}}" aria-label="{{b.n}}" style="box-sizing: border-box; height: 92px; padding: 12px 2px 10px; background: linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.09); border-radius: 14px; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); transition: transform .3s, border-color .3s;" style-active="transform: scale(0.96); border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55);">
+            <a data-home="cartao" href="{{b.href}}" title="{{b.s}}" aria-label="{{b.n}}" style="box-sizing: border-box; height: 92px; padding: 12px 2px 10px; background: linear-gradient(180deg, rgba(var(--cap-card3-rgb, 20,28,54), 0.92) 0%, rgba(var(--cap-card2-rgb, 10,15,32), 0.94) 100%); border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.09); border-radius: 14px; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: space-between; position: relative; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); transition: transform .3s, border-color .3s;" style-active="transform: scale(0.96); border-color: rgba(var(--cap-plat-rgb, 211,220,239), 0.55);">
               <span style="position: absolute; top: 7px; right: 7px; width: 6px; height: 6px; border-radius: 50%; background: {{b.ctone}};"></span>
               <span style="margin-top: 4px; display: flex;">{{b.ico}}</span>
               <span style="font-size: 9.5px; letter-spacing: 0.08em; font-weight: 700; color: {{b.tone}}; white-space: nowrap;">{{b.short}}</span>
@@ -178,12 +178,18 @@ class Component extends DCLogic {
     this._onHash = () => this.handleHash();
     window.addEventListener('hashchange', this._onHash);
     // ENCERRAR no overlay de voz (capitao-voz.js): desliga a conversa ou o voz→texto em andamento.
-    this._onEncerra = () => { if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
+    this._onEncerra = () => { this.limpaContexto(); if (this.state.conversa) this.toggleConversa(); else if (this.rec) { this.stopRec(); this.setState({ listening: false }); } };
     window.addEventListener('capitao-voz-encerrar', this._onEncerra);
-    // A cada tique da telemetria (replay ou coletor): redesenha só se o que a tela exibe a partir dela mudou. Aqui é só o LED e a dica (vivo ou não): o setState
-    // refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa.
+    // A cada tique da telemetria (replay ou coletor) e na virada do dia de bordo (os prazos dos cartões): redesenha só se o que a tela exibe a partir deles mudou. Da telemetria é só o LED e a dica (vivo ou não);
+    // dos prazos, o resumo dos cartões: o setState refaz a tela inteira (o __setLogicState do support.js troca o __v sem comparar nada), então comparar antes evita um redesenho por segundo à toa.
     this._onTele = () => { const k = this.vivoTele(); if (k !== this._vivoK) this.setState({ vivo: k }); };
     window.addEventListener('capitao-telemetria', this._onTele);
+    this._onReb = () => { const k = this.chaveCartoes(); if (k !== this._cartK) this.setState({ cart: k }); };
+    window.addEventListener('capitao-rebase', this._onReb);
+    // O botão de uma resposta (os links #capitao-prop-… e #capitao-relato-…): o cérebro (document, click) o transforma na pergunta e avisa com este evento; o link não navega. Aqui o toque vale: a pergunta sai como se
+    // tivesse sido digitada (Confirmar, Recusar, Desfazer, Registrar, Não registrar, O que verificar?) e o cérebro grava só o que o botão pede; ela não leva o anexo nem apaga o que está sendo digitado.
+    this._chat = (e) => { const d = (e && e.detail) || {}; if (d.q && String(d.q).trim()) this.ask(d.q, null, 'botao'); };
+    window.addEventListener('capitao-chat-pergunta', this._chat);
     this.whenBrain(() => { this.setState({ atalhos: window.CapitaoBrain.loadShortcuts() }); this.handleHash(); });
   }
   handleHash() {
@@ -206,6 +212,8 @@ class Component extends DCLogic {
     window.removeEventListener('hashchange', this._onHash);
     window.removeEventListener('capitao-voz-encerrar', this._onEncerra);
     window.removeEventListener('capitao-telemetria', this._onTele);
+    window.removeEventListener('capitao-rebase', this._onReb);
+    window.removeEventListener('capitao-chat-pergunta', this._chat);
     this.stopRec();
     (this._pend || []).forEach(clearTimeout); clearTimeout(this._fl);
     this._fala = null; if (window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
@@ -225,33 +233,40 @@ class Component extends DCLogic {
     const h = React.createElement;
     this._fx = {
       sweep: h('div', { key: 'sweep', 'aria-hidden': 'true', style: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '16%', background: 'linear-gradient(90deg, rgba(var(--cap-hl-rgb, 255,255,255), 0) 0%, rgba(var(--cap-hl-rgb, 255,255,255), 0.5) 50%, rgba(var(--cap-hl-rgb, 255,255,255), 0) 100%)', mixBlendMode: 'overlay', animation: 'capSweep 6.5s cubic-bezier(.3,.1,.2,1) infinite', pointerEvents: 'none' } }),
-      ledVivo: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 7, height: 7, flexShrink: 0, borderRadius: '50%', background: 'var(--cap-tele, #00f4fd)', animation: 'capVivo 2s ease-in-out infinite', display: 'inline-block' } }),
-      ledSnap: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 7, height: 7, flexShrink: 0, borderRadius: '50%', border: '1.5px solid var(--cap-ink3, #97a3c0)', boxSizing: 'border-box', display: 'inline-block' } })
+      ledVivo: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 7, height: 7, flexShrink: 0, borderRadius: '50%', background: 'var(--cap-ok, #34c77a)', animation: 'capVivo 2s ease-in-out infinite', display: 'inline-block' } }),
+      ledSnap: h('span', { key: 'led', 'aria-hidden': 'true', style: { width: 7, height: 7, flexShrink: 0, borderRadius: '50%', background: 'var(--cap-warn, #f0a63a)', boxShadow: '0 0 0 3px rgba(var(--cap-warn-rgb, 240,166,58), 0.22)', display: 'inline-block' } })
     };
     return this._fx;
   }
   flash(msg, ms, realce) { this.setState({ note: msg, realce: realce || '' }); clearTimeout(this._fl); this._fl = setTimeout(() => this.setState({ note: '', realce: '' }), ms || 4000); }
   scrollThread() { const el = this.threadRef.current; if (el) el.scrollTop = el.scrollHeight; }
-  // link = pergunta vinda do endereço (#q=): só leitura — não grava no diário, não leva o anexo nem apaga o que foi digitado.
-  ask(q, id, link) {
+  // modo true = pergunta vinda do endereço (#q=): só leitura — não grava no diário, não leva o anexo nem apaga o que foi digitado; 'botao' = o botão de uma resposta (a proposta do diário, do alarme, da agenda): sai como
+  // digitada e o cérebro grava só o que o botão pede, sem levar o anexo nem apagar o que está sendo digitado.
+  ask(q, id, modo) {
     const B = window.CapitaoBrain; if (!B) return;
+    const link = modo === true, botao = modo === 'botao';
     q = String(q || '').trim().slice(0, 500);
-    const att = link ? null : this.state.attachment;
+    const att = link || botao ? null : this.state.attachment;
     if (!q && !att) { this.flash('Digite ou fale a pergunta — ou toque em um atalho.'); return; }
-    if (!link && this.inputRef.current) this.inputRef.current.value = '';
+    if (!link && !botao && this.inputRef.current) this.inputRef.current.value = '';
     const um = { role: 'user', text: (att ? '[' + (att.kind === 'video' ? 'vídeo' : 'foto') + ' · ' + att.name + '] ' : '') + q };
-    this.setState((s) => ({ thread: s.thread.concat([um]), pending: (s.pending || 0) + 1, thinking: true, attachment: link ? s.attachment : null, note: '' }), () => this.scrollThread());
+    this.setState((s) => ({ thread: s.thread.concat([um]), pending: (s.pending || 0) + 1, thinking: true, attachment: link || botao ? s.attachment : null, note: '' }), () => this.scrollThread());
     const ger = this._ger || 0;
     const t = setTimeout(() => {
       this._pend = (this._pend || []).filter((x) => x !== t);
       if (this._dead) return;
+      // A conversa em emergência (CLAUDE.md 10): depois de uma resposta que ABRE a janela (a.abreJanela: SOS, óleo, canal 16, EPIRB, Seafire, diário com alerta) a marca vale 15 min, nesta e nas outras telas de conversa
+      // (CapitaoEmergencia, capitao-app.js). Enquanto vale, o cérebro troca posição, rumo, SOG, ETA e pessoas por «LEIA NO PLOTTER» e nada vai à IA (answer, pedeIA, ficha, resumoAgora, historicoIA).
+      const EM = window.CapitaoEmergencia;
+      let emg = false; try { emg = !!(EM && EM.valendo()); } catch (e) { emg = false; }
       let a;
       try {
         if (att) {
-          a = B.answerAttachment(att.kind, att.file, { platform: 'app' });
-          if (q) { const b = B.answer(q, { platform: 'app' }); if (b.key !== 'fallback' && b.key !== 'saudacao') a = { key: b.key, text: a.text + '\n\n' + b.text, src: b.src, actions: b.actions }; }
-        } else a = B.answer(q, link ? { platform: 'app', id: id, commit: false } : { platform: 'app', id: id });
-      } catch (e) { a = { text: 'Não consegui responder agora — SEM DADOS. Tente de novo.', src: 'Fonte: nenhuma — erro ao montar a resposta', actions: [] }; }
+          a = B.answerAttachment(att.kind, att.file, { platform: 'app', emergencia: emg });
+          if (q) { const b = B.answer(q, { platform: 'app', emergencia: emg }); if (b.key !== 'fallback' && b.key !== 'saudacao') { a = { key: b.key, text: a.text + '\n\n' + b.text, src: b.src, actions: b.actions }; if (b.abreJanela === true) a.abreJanela = true; } }
+        } else a = B.answer(q, link ? { platform: 'app', id: id, commit: false, emergencia: emg } : { platform: 'app', id: id, emergencia: emg });
+      } catch (e) { a = { key: 'erro', text: 'Não consegui montar a resposta agora. Tente de novo.', src: 'Fonte: este aparelho — erro ao montar a resposta', actions: [] }; }
+      if (a && a.abreJanela === true) { try { if (EM) EM.marca(); } catch (e) {} }
       // A resposta entra logo depois da pergunta dela (a ordem fica certa mesmo se a IA terminar depois de outra pergunta).
       // Na conversa por voz, fala a resposta final — a da IA ou, se ela não entrar, a local.
       const entrega = (fin, ia) => {
@@ -263,14 +278,15 @@ class Component extends DCLogic {
           return { thread: thread, pending: n, iaN: iaN, thinking: n > 0 };
         }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume((B.falaCurta ? B.falaCurta(fin) : fin.text) + (fin.extraFala ? ' ' + fin.extraFala : '')); });
       };
-      // IA na nuvem (Workers AI) quando a resposta local não basta (B.pedeIA): SEM DADOS, trecho do guia ou pergunta sobre o app.
-      // Leva a ficha de bordo (o que o app sabe, com as fontes) e as últimas mensagens; a resposta local espera a IA e fica
-      // se ela não entrar (desligada, sem internet, erro, demora), com o motivo na linha da fonte.
+      // IA na nuvem (Workers AI) quando a resposta local não basta (B.pedeIA): pergunta sem resposta pronta, trecho do guia ou pergunta sobre o app.
+      // Leva a ficha de bordo (o que o app sabe, com as fontes), a leitura de agora (B.resumoAgora(a): o instante da resposta, sem posição na emergência) e o histórico do cérebro (B.historicoIA: o ponto único,
+      // sem coordenadas, sem emergência); a resposta local espera a IA e fica se ela não entrar (desligada, sem internet, erro, demora), com o motivo na linha da fonte.
       // Pergunta por link (#q=) só usa a IA se o link veio de dentro do app (FAQ, sistemas…): link de fora não gasta a cota.
       const IA = window.CapitaoIA;
       let interno = !link;
       if (link) { try { interno = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) { interno = false; } }
-      const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, q);
+      const qc = B.corrigeVoz ? B.corrigeVoz(q) : q;   // o que vai à IA: o ditado já corrigido (o answer() e a conversa também corrigem)
+      const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });
       // "diagnóstico": o texto local diz versões, internet e estado da IA; o teste da chave no servidor (sem gastar a cota)
       // vem junto, na mesma mensagem.
       if (a.key === 'diagnostico' && IA && IA.testar) {
@@ -295,9 +311,10 @@ class Component extends DCLogic {
       }
       if (this.state.conversa && B.vozPensando) B.vozPensando(q);
       this.setState((s) => ({ iaN: (s.iaN || 0) + 1 }));
-      IA.perguntar(q, B.buscaBase(q, 3), '', { ficha: B.ficha ? B.ficha('app', q, a) : '', historico: this.historico(um) }).then((r) => {
-        // SEM DADOS da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca o SEM DADOS genérico.
-        if (r && !(r.semDados && a.key === 'base')) entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' ? a.actions : [] }, true);
+      IA.perguntar(qc, B.buscaBase(qc, 3), B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', { ficha: B.ficha ? B.ficha('app', qc, a, { emergencia: emg }) : '', historico: this.historico(um, emg) }).then((r) => {
+        // Resposta sem dado da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca a resposta genérica.
+        // O cérebro não vê a resposta da IA: a tela a conta (B.conversa), para «o gerador» continuar uma pergunta que a IA fez.
+        if (r && !(r.semDados && a.key === 'base')) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' ? a.actions : [] }, true); }
         else {
           const nota = r ? '' : IA.falha ? IA.falha() : '', fin = local(nota);
           if (nota && this.state.conversa) fin.extraFala = nota.replace(/ — /g, ', ') + '.'; // na voz, o motivo também é falado
@@ -307,12 +324,20 @@ class Component extends DCLogic {
     }, this.state.conversa ? 0 : 650); // na CONVERSA por voz, sem a pausa visual de 0,65 s: a pergunta ouvida sai na hora (a resposta é a mesma); texto, VOZ→TEXTO e atalhos mantêm a pausa
     this._pend = (this._pend || []).concat([t]);
   }
-  // Últimas mensagens antes da pergunta (até 6), para a IA entender continuações: "e o gerador?", "e amanhã?".
-  historico(ate) {
-    const th = this.state.thread, i = th.indexOf(ate);
-    return (i < 0 ? th : th.slice(0, i)).slice(-6).map((m) => ({ papel: m.role === 'user' ? 'usuario' : 'capitao', texto: String(m.text || '').slice(0, 600) }));
+  // O histórico que vai à IA, para ela entender continuações («e o gerador?», «e amanhã?»): o cérebro monta (B.historicoIA: as últimas 6 mensagens antes da pergunta, sem coordenadas e sem a emergência; vazio dentro
+  // da janela de emergência). A tela não corta nem filtra por conta própria.
+  historico(ate, emg) {
+    const B = window.CapitaoBrain, th = this.state.thread, i = th.indexOf(ate);
+    return B && B.historicoIA ? B.historicoIA(i < 0 ? th : th.slice(0, i), { emergencia: !!emg }) : [];
+  }
+  // NOVA e ENCERRAR: zeram o contexto da conversa no cérebro (a pergunta e a resposta de antes, a proposta que espera) e a marca da janela de conversa em emergência.
+  limpaContexto() {
+    const B = window.CapitaoBrain, E = window.CapitaoEmergencia;
+    try { if (B && B.limpaConversa) B.limpaConversa(); } catch (e) {}
+    try { if (E) E.zera(); } catch (e) {}
   }
   clearThread() {
+    this.limpaContexto();
     this.stopRec(); this._fala = null; if (window.CapitaoBrain) window.CapitaoBrain.stopSpeaking();
     (this._pend || []).forEach(clearTimeout); this._pend = [];
     this._ger = (this._ger || 0) + 1; // resposta da IA de antes do NOVA é descartada
@@ -366,24 +391,43 @@ class Component extends DCLogic {
     if (!B || !(window.SpeechRecognition || window.webkitSpeechRecognition)) { this.flash('Microfone indisponível neste navegador — digite a pergunta.'); return; }
     this.setState({ conversa: true }, () => this.speakAndResume(B.abertura ? B.abertura() : 'Capitão IA online. Que precisa?'));
   }
+  agora() { try { const A = window.CapitaoAgora; return A && typeof A.instante === 'function' ? A.instante() : null; } catch (e) { return null; } }
+  // Os 4 cartões do app. O equipamento, o fabricante e o modelo vêm de D.equipamentos (nunca fixos aqui); o prazo da agenda já foi refeito pelo CapitaoAgora e a tarefa executada não conta como atrasada.
   equipamentos() {
-    const D = window.CapitaoDados || {}, ag = D.agenda || [], faq = D.faq || {};
+    const D = window.CapitaoDados || {}, sim = D.simulacao === true, falta = (r) => (sim ? '' : r), ag = D.agenda || [], EQ = D.equipamentos || [], faq = D.faq || {}, B = window.CapitaoBrain;
+    let feitas = {}; try { feitas = B && B.loadExec ? B.loadExec() : {}; } catch (e) { feitas = {}; }
     const tarefa = (id) => ag.filter((t) => t.id === id)[0];
-    const atr = (t) => !!(t && t.dn < 0);
+    const atr = (t) => !!(t && !feitas[t.id] && typeof t.dn === 'number' && t.dn < 0);
     const ok = 'var(--cap-ok, #34c77a)', crit = 'var(--cap-crit, #ff3b30)', warn = 'var(--cap-warn, #f0a63a)';
     const st = (k) => (faq[k] && faq[k].status === 'PRONTO' ? ok : warn);
+    const eq = (id) => EQ.filter((e) => e.id === id)[0] || null;
+    // fabricante + modelo; o fabricante não se repete quando o modelo já começa por ele («Seakeeper 3»)
+    const fabMod = (e) => { const fb = (e && e.fabricante) || '', m = (e && e.modelo) || ''; return fb && m && m.toLowerCase().indexOf(fb.toLowerCase()) === 0 ? m : [fb, m].filter(Boolean).join(' '); };
+    // «Gerador Onan QD 9»: o nome curto do cartão e o fabricante e o modelo do cadastro (com a simulação nunca falta; o ramo simulacao:false diz o que falta)
+    const rot = (id, curto) => curto + (fabMod(eq(id)) ? ' ' + fabMod(eq(id)) : falta(' (fabricante e modelo SEM DADOS)'));
+    const fabs = ['eletronicos', 'audio', 'vhf'].map((id) => (eq(id) && eq(id).fabricante) || '').filter((x, i, l) => x && l.indexOf(x) === i);
     return [
-      { short: 'GERADOR', n: '2 · GERADOR', s: 'Gerador Onan (modelo SEM DADOS) — ligar · desligar · alarmes' + (atr(tarefa('gerador-rotor')) ? ' · rotor em atraso' : ''), href: 'F4-FAQ-Gerador.dc.html', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tone: 'var(--cap-warn, #f0a63a)', ctone: atr(tarefa('gerador-rotor')) ? crit : st('gerador') },
-      { short: 'CLIMA', n: '3 · CLIMATIZAÇÃO', s: 'Climatização (fabricante SEM DADOS) — ligar · alarme de fluxo · filtros' + (atr(tarefa('clima-filtro')) ? ' · filtro em atraso' : ''), href: 'F5-FAQ-Climatizacao.dc.html', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tone: 'var(--cap-tele, #00f4fd)', ctone: atr(tarefa('clima-filtro')) ? crit : st('climatizacao') },
-      { short: 'SEAKEEPER', n: '4 · ESTABILIZADOR', s: 'Seakeeper (modelo SEM DADOS) — ligar antes de sair · desligar ao atracar', href: 'F2-FAQ-Estabilizador.dc.html', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tone: 'var(--cap-ok, #34c77a)', ctone: st('estabilizador') },
-      { short: 'ELETRÔN.', n: '5 · ELETRÔNICOS', s: 'Garmin · Fusion · Icom — plotter · piloto · rádio · áudio', href: 'F3-FAQ-Eletronicos.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)', ctone: st('eletronicos') }
+      { short: 'GERADOR', n: '2 · GERADOR', s: rot('gerador', 'Gerador') + ' — ligar · desligar · alarmes' + (atr(tarefa('gerador-rotor')) ? ' · rotor em atraso' : ''), href: 'F4-FAQ-Gerador.dc.html', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tone: 'var(--cap-warn, #f0a63a)', ctone: atr(tarefa('gerador-rotor')) ? crit : st('gerador') },
+      { short: 'CLIMA', n: '3 · CLIMATIZAÇÃO', s: rot('climatizacao', 'Climatização') + ' — ligar · alarme de fluxo · filtros' + (atr(tarefa('clima-filtro')) ? ' · filtro em atraso' : ''), href: 'F5-FAQ-Climatizacao.dc.html', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', tone: 'var(--cap-tele, #00f4fd)', ctone: atr(tarefa('clima-filtro')) ? crit : st('climatizacao') },
+      { short: 'SEAKEEPER', n: '4 · ESTABILIZADOR', s: rot('estabilizador', 'Estabilizador') + ' — ligar antes de sair · desligar ao atracar', href: 'F2-FAQ-Estabilizador.dc.html', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', tone: 'var(--cap-ok, #34c77a)', ctone: st('estabilizador') },
+      { short: 'ELETRÔN.', n: '5 · ELETRÔNICOS', s: (fabs.join(' · ') || falta('Fabricantes SEM DADOS')) + ' — plotter · piloto · rádio · áudio', href: 'F3-FAQ-Eletronicos.dc.html', d: 'M4 5h16v11H4z M9 20h6 M12 16v4 M7 9l3 3-3 3 M12 15h3', tone: 'var(--cap-violeta, #b45cff)', ctone: st('eletronicos') }
     ].map((b) => Object.assign(b, { ico: this.ico(b.d, 26, 1.7, b.tone) }));
   }
-  // Há quadro de telemetria agora (replay ou coletor recente)? É a única coisa que a H2 exibe a partir dela (LED e dica).
-  vivoTele() { const T = window.CapitaoTelemetria; return !!(T && T.atual && T.atual()); }
+  // O que o app exibe vindo de prazo: o resumo dos cartões e a contagem do CONSOLE (a chave do «só redesenha quando muda» na virada do dia de bordo).
+  chaveCartoes() { return JSON.stringify([this.equipamentos().map((b) => b.s + '|' + b.ctone), this.atrasadas()]); }
+  atrasadas() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, B = window.CapitaoBrain;
+    let feitas = {}; try { feitas = B && B.loadExec ? B.loadExec() : {}; } catch (e) { feitas = {}; }
+    try { return A.contagens ? A.contagens().atrasadas : (D.agenda || []).filter((t) => !feitas[t.id] && t.dn < 0).length; } catch (e) { return 0; }
+  }
+  // Há leitura ao vivo agora (o selo do coletor, F06: verde com o replay ou o coletor; âmbar só com a última leitura salva)? É a única coisa que a H2 exibe do instante (LED e dica).
+  vivoTele() {
+    const D = window.CapitaoDados || {}, I = this.agora();
+    return !!(I && I.q && !(I.fonte === 'replay' && D.simulacao !== true) && (!I.selo || I.selo.tom === 'ok'));
+  }
   renderVals() {
     const s = this.state;
-    const D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const D = window.CapitaoDados || {};
     const vivo = this.vivoTele();
     this._vivoK = vivo; // o que o LED exibe agora: o ouvinte da telemetria só chama setState se mudar
     const atalhos = (s.atalhos || this.FALLBACK).slice(0, 8);
@@ -405,11 +449,11 @@ class Component extends DCLogic {
     // cantos de baixo arredondados e divisória só entre os pares
     const linha = '1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.07)';
     const dock = (m, lado) => Object.assign({}, m, { ico: this.ico(m.d, 21, 1.8), rad: lado === 0 ? '0 0 0 19px' : lado === 2 ? '0 0 19px 0' : '0', br: lado === 0 || m === modes[0] ? linha : 'none' });
-    const atr = (D.agenda || []).filter((t) => t.dn < 0).length;
+    const atr = this.atrasadas();
+    this._cartK = this.chaveCartoes();   // o que os cartões exibem agora: a virada do dia de bordo só chama setState se mudar
     return {
       sweep: fx.sweep, led: vivo ? fx.ledVivo : fx.ledSnap,
-      liveTip: vivo ? 'Telemetria ao vivo' : 'Telemetria ao vivo desligada — snapshot' + (D.demo ? ' de demonstração' : '') + ' de ' + (S.quando || 'SEM DADOS'),
-      demo: D.demo ? 'DEMO · DADOS FICTÍCIOS' : 'ÚLTIMA LEITURA · ' + (S.quando ? (S.quando.slice(0, 5) + ' ' + (S.hora || '')).trim() : 'SEM DADOS'), demoTip: D.aviso || '',
+      liveTip: vivo ? 'Telemetria ao vivo — atualiza a cada segundo' : 'Sem leitura ao vivo agora — mostrando a última leitura salva',
       idle: !chatting, chatting: chatting, thinking: s.thinking,
       pensandoTxt: s.iaN > 0 ? 'CONSULTANDO A IA DE BORDO…' : 'CONSULTANDO TELEMETRIA · AGENDA · DOCUMENTOS…',
       attachment: !!att,
@@ -423,7 +467,7 @@ class Component extends DCLogic {
       status: s.conversa ? 'CONVERSA ATIVA · OUVINDO · TOQUE EM CONVERSA PARA ENCERRAR' : s.listening ? 'OUVINDO… TOQUE DE NOVO PARA ENVIAR' : s.note ? s.note.toUpperCase() : att ? 'ANEXO PRONTO · DESCREVA E ENVIE' : 'ATALHOS · UM TOQUE ENVIA',
       statusTone: s.conversa || s.listening ? 'var(--cap-accent, #00a1fe)' : s.note ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink4, #7985a6)',
       showStatus: !!(s.conversa || s.listening || s.note || att),
-      thread: s.thread.map((m) => ({ text: m.text, src: m.src || '', actions: (m.actions || []).map((x) => ({ l: x.l, href: x.href, target: x.ext ? '_blank' : '_self', rel: x.ext ? 'noopener' : '' })), hasActions: !!(m.actions && m.actions.length), justify: m.role === 'user' ? 'flex-end' : 'flex-start', bg: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.10)' : 'rgba(var(--cap-card-rgb, 13,19,41), 0.9)', line: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.09)', k: m.role === 'user' ? (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas').toUpperCase() : 'CAPITÃO IA', ktone: m.role === 'user' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)' })),
+      thread: s.thread.map((m) => ({ papel: m.role, text: m.text, src: m.src || '', actions: (m.actions || []).map((x) => ({ l: x.l, href: x.href, target: x.ext ? '_blank' : '_self', rel: x.ext ? 'noopener' : '' })), hasActions: !!(m.actions && m.actions.length), justify: m.role === 'user' ? 'flex-end' : 'flex-start', bg: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.10)' : 'rgba(var(--cap-card-rgb, 13,19,41), 0.9)', line: m.role === 'user' ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.09)', k: m.role === 'user' ? (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas').toUpperCase() : 'CAPITÃO IA', ktone: m.role === 'user' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)' })),
       chips: atalhos.map((a) => ({ l: a.l, q: a.q, onClick: () => this.ask(a.q, a.id) })),
       painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-crit, #ff3b30)', cline: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', cwash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)' } : { chip: 'EM DIA', ctone: 'var(--cap-ok, #34c77a)', cline: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)' },
       faq: this.equipamentos(),

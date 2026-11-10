@@ -246,6 +246,18 @@ def main():
                 t, n, _ = digita('como se faz um nó lais de guia?')
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
                 ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and not confere.R_COORD.search(fc), 'pedidos=%d ficha=%d' % (n, len(fc)))
+                # Fase 4 (P4G): o 3º argumento do IA.perguntar é a leitura de agora (B.resumoAgora, o instante da resposta; antes era '': o pedido só levava a ficha): com o replay fixado em 60 s é o resumo de 12:01:00,
+                # sem coordenada, e o botão «O que verificar?» do relato manda a pergunta pronta à IA com ele (a tela escuta o link #capitao-relato-…, o cérebro o transforma na pergunta)
+                resumo = pg.evaluate('() => window.CapitaoBrain.resumoAgora()')
+                cx = estado['pedidos'][-1].get('contexto', '') if estado['pedidos'] else ''
+                ok(tela + ': o pedido à IA leva a leitura de agora (3º argumento = B.resumoAgora: SOG e hora 12:01:00, sem coordenadas, ≤ 300 letras)', cx == resumo and re.search(r'SOG \d+,\d nós', cx) and '12:01:00' in cx and not confere.R_COORD.search(cx) and len(cx) <= 300, cx[:120])
+                t, n, _ = digita('O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
+                antes = len(estado['pedidos'])
+                pg.locator('a:has-text("O que verificar?")').last.click()
+                espera_resposta()
+                ped = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
+                ok(tela + ': o botão «O que verificar?» do relato vai à IA (1 pedido, a pergunta pronta com o relato, a leitura de agora) sem navegar nem gravar no diário', len(estado['pedidos']) == antes + 1 and ped.get('pergunta', '').startswith('O que verificar') and 'desligou sozinho' in ped.get('pergunta', '') and bool(ped.get('contexto'))
+                   and tela in pg.url and pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") is None, ped.get('pergunta', '')[:80])
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
                 # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
                 t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
