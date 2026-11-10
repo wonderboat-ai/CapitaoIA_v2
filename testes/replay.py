@@ -55,7 +55,7 @@ Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 
 - o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
 - a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
 - o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
-- a faixa de alerta, a lista da Ponte, a C3 viva, a E1 NAVEGANDO × FUNDEADO e as rotas de alarmes do cérebro (Fases 3 e 4; a API que elas vão ler, o capitao-alertas.js, é da P2C e está coberta acima);
+- a faixa de alerta, a lista da Ponte, a C3 viva, a E1 NAVEGANDO × FUNDEADO (P4F: verificar.py --so-p4f; aqui, o setState só quando o texto muda) e as rotas de alarmes do cérebro (Fases 3 e 4; a API que elas vão ler, o capitao-alertas.js, é da P2C e está coberta acima);
 - o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
   CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() — e a Fase 4: a P2B só trocou a mecânica da moldura, os textos e rótulos ficam para elas): lá entra a conferência de que nenhum texto diz «coletor NMEA»
   quando `CapitaoTelemetria.fonte()` é 'replay'.
@@ -1626,13 +1626,14 @@ def codigo_faixa():
 # Main, H2 e E1 se redesenham a cada setState (o __setLogicState do support.js sempre troca o __v): só dão setState quando o texto exibido muda.
 GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegando-Gatilhos', 360, 640),
                 ('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('A4-Sensores-Web', 1440, 900), ('A5-Sensores-Mobile', 390, 844),   # (P4C: a Ponte e o mapa de sensores)
-                ('B1-Carta-Web', 1440, 900), ('B2-Carta-Mobile', 390, 844))   # (P4D: a Gestão e os Sistemas)
+                ('B1-Carta-Web', 1440, 900), ('B2-Carta-Mobile', 390, 844),   # (P4D: a Gestão e os Sistemas)
+                ('E2-Navegando-Sintoma', 390, 844, '#sis=motores'))   # (P4F: a triagem, com o sistema dos motores aberto: a leitura de agora é o texto que anda; o 4º item é o endereço)
 
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
-    print('Main, H2, E1, A1, A2, A4, A5, B1 e B2: setState só quando o texto exibido muda')
-    pgs = [(nome, abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
-           for nome, w, h in telas]
+    print('Main, H2, E1, E2, A1, A2, A4, A5, B1 e B2: setState só quando o texto exibido muda')
+    pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
+           for t in telas]
     pgs[0][1].wait_for_timeout(3500)
     for nome, pg in pgs:
         pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
@@ -1652,9 +1653,9 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
-        if not nome.startswith(('H2', 'A5', 'B1', 'B2')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores)
+        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2')):   # (a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores)
             ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
-        if nome.startswith(('B1', 'B2')):   # (P4D: a Gestão e os Sistemas mostram a rotação dos motores, não o SOG)
+        if nome.startswith(('B1', 'B2', 'E2')):   # (P4D: a Gestão e os Sistemas mostram a rotação dos motores, não o SOG; P4F: a triagem, com os motores abertos, também)
             ok('%s: a tela mostra a rotação do BB do instante fixado (%s rpm): não deixou de se atualizar' % (nome, f['rpm']), f['temRpm'], f)
         ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
     for nome, pg in pgs:
@@ -1667,7 +1668,8 @@ def telas(b):
     for nome, vp in (('Main', {'width': 1440, 'height': 900}), ('A1-Ponte-Web', {'width': 1440, 'height': 900}), ('E1-Navegando-Gatilhos', {'width': 1440, 'height': 900}),
                      ('H2-Home-Mobile', {'width': 390, 'height': 844}), ('C3-Leme-Alerta', {'width': 390, 'height': 844}), ('Manual-Capitao-IA', {'width': 1440, 'height': 900}),
                      ('A2-Ponte-Mobile', {'width': 390, 'height': 844}), ('A4-Sensores-Web', {'width': 1440, 'height': 900}), ('A5-Sensores-Mobile', {'width': 390, 'height': 844}),
-                     ('B1-Carta-Web', {'width': 1440, 'height': 900}), ('B2-Carta-Mobile', {'width': 390, 'height': 844}), ('B3-Carta-Resposta', {'width': 390, 'height': 844})):   # (P4D: a Carta)
+                     ('B1-Carta-Web', {'width': 1440, 'height': 900}), ('B2-Carta-Mobile', {'width': 390, 'height': 844}), ('B3-Carta-Resposta', {'width': 390, 'height': 844}),   # (P4D: a Carta)
+                     ('E2-Navegando-Sintoma', {'width': 390, 'height': 844})):   # (P4F: a triagem)
         pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, viewport=vp, espera='() => window.CapitaoReplay')
         pg.wait_for_timeout(1500)
         r = pg.evaluate("() => ({ obj: typeof window.CapitaoReplay, ativo: window.CapitaoReplay.ativo(), inst: window.CapitaoAgora.instante().fonte, n: window.__conta('capitao-telemetria'), t: window.CapitaoTelemetria ? window.CapitaoTelemetria.fonte() : 'sem' })")

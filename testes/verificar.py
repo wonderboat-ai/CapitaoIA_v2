@@ -97,6 +97,18 @@ D.equipamentos, o pisca; o NORMALIZADO às 11:59 a 60 s (o fim da volta anterior
 sim; dois toques seguidos não duplicam; nem ao abrir nem a cada mudança de estado), sempre escura (tema claro) e leve (sem tema, sem cérebro até o toque); C4 nos 4 tipos a 60 e a 105 s: itens, fonte, verificação do
 quadro (s02: ✓ a 60 s, ✗ a 105 s), marcas, desmarca do ✓ do quadro, Recomeçar sem diário, CONCLUIR = 1 linha nova (dois toques seguidos não duplicam), links do FAQ e do app; simulacao false nas 5 telas.
 
+Fase 4, P4F (o Modo navegação: E1 Gatilhos e E2 Sintoma; `--so-p4f [E1-Navegando-Gatilhos|E2-Navegando-Sintoma]` roda só as conferências dela e `--mutantes-p4f` planta 31 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto): E1 NAVEGANDO a 60 e 105 s em 3 tamanhos e 2 temas (os 6 gatilhos na ordem do CSS, os links, a pergunta de cada gatilho ao chat e a chave que o cérebro responde: o relato no porão
+é SOS e nunca traz o nível; o vigia com o chip «AO VIVO hh:mm:ss», o estado, as 5 leituras do quadro e o diesel do quadro e não o de 26/09, a posição e a fonte, sem corte; a nota da troca sem «ainda não está ativa»); o alarme
+(o 1º cartão no DOM e no CSS leva à C3-Leme-Alerta.dc.html#alarme=<id>, amarelo no AVISO, vermelho no crítico plantado, também com o barco parado; o toque abre a C3; nunca abre o SOS, fala ou grava); a troca automática com
+a tela aberta (SOG 0: aos 3 s ainda NAVEGANDO, aos 7 s FUNDEADO com ÂNCORA/GARRA, CHECKLIST DE SAÍDA, ABASTECER e DIÁRIO e sem o REGISTRAR; SOG 1,5: só aos 7 s volta), a histerese (0,8 nó nunca troca; 0,3 nó com o quadro
+Atracado vira ATRACADO; um SOG 0 de 3 s não pisca), a aba escondida que zera a contagem, o REGISTRAR POSIÇÃO só com o toque (1 linha com sim: true, sem duplicar em 2,5 s, com a janela de emergência a linha leva «LEIA NO
+PLOTTER»), a E1 que anda sem congelar e o ramo simulacao false (a última leitura salva como reserva). E2: a leitura de agora de cada um dos 5 sistemas (motores, gerador kW, Seakeeper rpm e %, climatização, GPS com
+satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (nunca «modelo SEM DADOS»), a introdução sem «(guias DEMO)», cada sistema × sintoma sem termo do §3, a resposta com o segundo do quadro
+(«Calculado às 12:01:00 pelo Capitão IA»; a de emergência sem hora e sem leitura; o relato de óleo baixo sem o óleo do quadro), a janela de conversa em emergência (marca, vale no cérebro, o botão de uma resposta), a
+resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
+muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
+
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
     python testes/verificar.py Main S2-SOS-Mobile  só essas telas (login, index e dados: as páginas fora das TELAS)
@@ -168,9 +180,9 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 PENDENTES_ROTULO = (
     'Main', 'H2-Home-Mobile',
     'F1-FAQ-Hub-Web', 'F1-FAQ-Hub', 'F2-FAQ-Estabilizador-Web', 'F2-FAQ-Estabilizador', 'F3-FAQ-Eletronicos-Web', 'F3-FAQ-Eletronicos',
-    'E2-Navegando-Sintoma', 'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
+    'F4-FAQ-Gerador-Web', 'F4-FAQ-Gerador', 'F5-FAQ-Climatizacao-Web', 'F5-FAQ-Climatizacao',
     'G1-Documentos-Web', 'G1-Documentos-Mobile', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile', 'G4-Equipe-Web', 'G4-Equipe-Mobile',
-)   # (19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
+)   # (18 telas em 10/11/2026, depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
 FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
@@ -741,6 +753,19 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-p4f' in sys.argv or '--mutantes-p4f' in sys.argv:   # só as conferências da P4F (e, com --mutantes-p4f, os defeitos plantados delas)
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-p4f' in sys.argv:
+                falhas = mutantes_p4f(b)
+            else:
+                for nome, prob in p4f_conferencias(b, [a for a in sys.argv[1:] if a in TELAS_P4F] or list(TELAS_P4F)):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4e' in sys.argv or '--mutantes-p4e' in sys.argv:   # só as conferências da P4E (e, com --mutantes-p4e, os defeitos plantados delas)
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -901,6 +926,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4E', 'prob': prob[:8]})
                     print('FALHA P4E ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in p4f_conferencias(b, lista):   # P4F: o Modo navegação (E1 e E2): troca NAVEGANDO × FUNDEADO, alarme → C3, vigia ao vivo, triagem com o segundo do quadro, ramo simulacao:false e o código
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'P4F', 'prob': prob[:8]})
+                    print('FALHA P4F ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -3607,6 +3637,639 @@ def mutantes_p4e(b):
         print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
         if not prob: vivos.append(nome)
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4E), len(vivos)))
+    return vivos
+
+
+# ═══ Fase 4, P4F: o Modo navegação (E1 Gatilhos e E2 Sintoma) ═══
+# `--so-p4f` roda só as conferências dela; `--mutantes-p4f` planta os defeitos (MUTANTES_P4F), cada um servido no lugar do arquivo (MUT_ARQ) e acusado pela conferência que cuida dele.
+# O gancho da troca: o `capitao.replay.sobre` planta o SOG no quadro do instante fixado, mas o instante guarda 1 s (a chave inclui o `capitao.clima.v1`): para o valor novo entrar com a tela aberta, o teste muda também
+# o clima (uma leitura de OUTRO dia, que não trava nada) — só assim o quadro de 60 s passa a valer outro SOG sem recarregar.
+TELAS_P4F = ('E1-Navegando-Gatilhos', 'E2-Navegando-Sintoma')
+IDS_NAV = ['mob', 'porao', 'pane', 'alarme', 'registrar', 'canal16']   # na ordem do CSS (order 1 a 6)
+IDS_PARADO = ['ancora', 'checklist', 'abastecer', 'diario']
+HREF_NAV = {'mob': 'S2-SOS-Mobile.dc.html', 'pane': 'E2-Navegando-Sintoma.dc.html#sis=motores', 'alarme': 'E2-Navegando-Sintoma.dc.html'}
+HREF_PARADO = {'checklist': 'C4-Checklist-Mobile.dc.html#tipo=saida', 'abastecer': 'G2-Abastecimento-Mobile.dc.html', 'diario': 'G3-Diario-Mobile.dc.html'}
+PERGUNTA_E1 = {'porao': 'Tem água no porão', 'canal16': 'Canal 16', 'ancora': 'A âncora está garrando?'}   # os que abrem o chat do app (#q=)
+CHAVE_E1 = {'porao': 'sos', 'canal16': 'canal16', 'ancora': 'ancora'}   # o relato no porão é SOS (CLAUDE.md 10): nunca a leitura do porão; o canal 16 abre a janela; a âncora é a resposta pronta dela
+ORACULO_E1 = {'60': {'hora': '12:01:00', 'sog': '18,1', 'litros': '1.333', 'porao': 'BB 1,1 · BE 0,9 cm'}, '105': {'hora': '12:01:45', 'sog': '18,0', 'litros': '1.332', 'porao': 'BB 1,2 · BE 0,9 cm'}}   # CONTRATO §1.22
+SOBRE_JS = "([v, n]) => { if (v === null) localStorage.removeItem('capitao.replay.sobre'); else localStorage.setItem('capitao.replay.sobre', JSON.stringify(v)); localStorage.setItem('capitao.clima.v1', JSON.stringify({ dia: '2000-01-01', n: n })); }"
+JANELA_VALE = "try { sessionStorage.setItem('capitao.emergenciaAte', String(Date.now() + 600000)); } catch (e) {}"   # a janela de conversa em emergência já marcada (10 min) quando a tela abre
+
+LE_E1 = """() => { """ + JS_BASE + """
+  const AL = window.CapitaoAlertas, B = window.CapitaoBrain, g = (s) => { const e = document.querySelector('[data-e1=' + s + ']'); return e ? lin(e.innerText) : null; };
+  const gat = [...document.querySelectorAll('[data-e1=gatilho]')].map((e) => { const cs = getComputedStyle(e); return { id: e.dataset.id, tag: e.tagName, href: e.getAttribute('href'), txt: lin(e.innerText), aria: e.getAttribute('aria-label'),
+    ordem: parseInt(cs.order, 10), col: cs.gridColumnStart + '/' + cs.gridColumnEnd, bg: cs.backgroundColor, h: e.getBoundingClientRect().height }; });
+  const vg = document.querySelector('[data-e1=vigia]'), ch = document.querySelector('[data-e1=chip]'), es = document.querySelector('[data-e1=estado]');
+  const leit = [...document.querySelectorAll('[data-e1=leitura]')].map((e) => ({ txt: lin(e.innerText), title: e.title, corte: [...e.querySelectorAll('span')].filter((s) => s.scrollWidth - s.clientWidth > 1).map((s) => lin(s.innerText)) }));
+  const al = AL ? AL.ativos().map((a) => ({ id: a.id, nivel: a.nivel, texto: a.texto, hora: a.hora, detalhe: a.detalhe, lado: a.lado, sistema: a.sistema })) : [];
+  const pergunta = {}; gat.forEach((x) => { const m = /#q=(.*)$/.exec(x.href || ''); if (m) { let q2 = m[1]; try { q2 = decodeURIComponent(q2); } catch (e) {} pergunta[x.id] = q2; } });
+  const resp = {}; if (B) Object.keys(pergunta).forEach((k) => { const a = B.answer(pergunta[k], { platform: 'app', commit: false }); resp[k] = { key: a.key, texto: a.text }; });
+  return { hora: I.hora, hhmm: I.hhmm, fonte: I.fonte, fonteTxt: I.fonteTxt, T, local: q.local, estado: q.estado, coord: F.coord(q.lat, q.lon), pctTxt: I.calc && typeof I.calc.diesel_pct === 'number' ? F.nb(I.calc.diesel_pct, 1) + ' %' : null,
+    dBB: Math.round(q.diesel_bb_pct), dBE: Math.round(q.diesel_be_pct), gat, modo: vg ? vg.dataset.modo : null, vigia: g('vigia'), chip: ch ? lin(ch.innerText) : null, estadoV: es ? lin(es.innerText) : null, estadoCor: es ? getComputedStyle(es).color : null,
+    sub: g('sub'), subTitle: (document.querySelector('[data-e1=sub]') || {}).title, leit, titulo: g('gatilhos-titulo'), troca: g('troca'), texto: lin(document.body.innerText), al, pergunta, resp,
+    url: location.href, falas: window.__falas || 0, diario: localStorage.getItem('capitao.diario.v1'), lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }"""
+LE_E1_MIN = """() => { const g = (s) => { const e = document.querySelector('[data-e1=' + s + ']'); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : null; };
+  return { modo: document.querySelector('[data-e1=vigia]').dataset.modo, ids: [...document.querySelectorAll('[data-e1=gatilho]')].map((e) => e.dataset.id).join(','), titulo: g('gatilhos-titulo'), sub: g('sub') }; }"""
+
+
+def ids_e1(r):
+    return [x['id'] for x in sorted(r['gat'], key=lambda x: x['ordem'])]
+
+
+def problemas_e1_conjunto(r, conj, rot, titulo='GATILHOS · NAVEGANDO'):
+    """O conjunto de gatilhos (ids na ordem do CSS, links, perguntas ao chat e a chave que o cérebro responde a cada uma) e o título."""
+    prob = []
+    por = {x['id']: x for x in r['gat']}
+    esp = (['alerta'] if r['al'] else []) + (IDS_PARADO if conj == 'parado' else IDS_NAV)
+    if ids_e1(r) != esp: prob.append('%s: os gatilhos são %s (esperado %s)' % (rot, ids_e1(r), esp))
+    if r['titulo'] != titulo: prob.append('%s: o título dos gatilhos diz %r (esperado %r)' % (rot, r['titulo'], titulo))
+    if r['modo'] != conj: prob.append('%s: o vigia diz modo %r (esperado %r)' % (rot, r['modo'], conj))
+    for i, h in (HREF_PARADO if conj == 'parado' else HREF_NAV).items():
+        if i in por and por[i]['href'] != h: prob.append('%s: o gatilho %s leva a %r (esperado %r)' % (rot, i, por[i]['href'], h))
+    for i in (['ancora'] if conj == 'parado' else ['porao', 'canal16']):
+        p = r['pergunta'].get(i)
+        if i in por and (p != PERGUNTA_E1[i] or not (por[i]['href'] or '').startswith('H2-Home-Mobile.dc.html#q=')): prob.append('%s: o gatilho %s pergunta %r a %r (esperado %r no chat do app)' % (rot, i, p, por[i]['href'], PERGUNTA_E1[i]))
+        k = (r['resp'].get(i) or {}).get('key')
+        if i in por and k != CHAVE_E1[i]: prob.append('%s: a pergunta do gatilho %s cai na chave %s do cérebro (esperado %s)' % (rot, i, k, CHAVE_E1[i]))
+    if conj == 'nav':
+        reg = por.get('registrar')
+        if not reg or reg['tag'] != 'BUTTON': prob.append('%s: o REGISTRAR POSIÇÃO não é um botão' % rot)
+        for i, tg in (('mob', 'A'), ('porao', 'A'), ('pane', 'A'), ('alarme', 'A'), ('canal16', 'A')):
+            if i in por and por[i]['tag'] != tg: prob.append('%s: %s não é um link' % (rot, i))
+        if 'porao' in por and 'nível' in (r['resp'].get('porao') or {}).get('texto', ''): prob.append('%s: a resposta ao relato no porão traz o nível do porão (relato de falha sem leitura)' % rot)
+    elif 'registrar' in por: prob.append('%s: o REGISTRAR POSIÇÃO continua com o barco parado' % rot)
+    return prob
+
+
+def problemas_e1_leituras(r, fixo, rot):
+    """O vigia ao vivo: o chip «AO VIVO hh:mm:ss», o estado, as 5 leituras do quadro (nada do snapshot de 26/09), a posição e a fonte, sem corte."""
+    prob = []
+    o = ORACULO_E1[fixo]
+    if r['hora'] != o['hora'] or r['T']['sog_nos'] != o['sog'] or r['T']['diesel_litros'] != o['litros']: prob.append('%s: o oráculo não vale (instante %s, SOG %s, diesel %s)' % (rot, r['hora'], r['T']['sog_nos'], r['T']['diesel_litros']))
+    if r['chip'] != 'AO VIVO ' + r['hora']: prob.append('%s: o chip diz %r (esperado «AO VIVO %s»)' % (rot, r['chip'], r['hora']))
+    esp = 'Vigia ligada · ' + ('nenhum alarme ativo' if fixo == '60' else 'AVISO ativo')
+    if r['estadoV'] != esp: prob.append('%s: o estado do vigia diz %r (esperado %r)' % (rot, r['estadoV'], esp))
+    if r['fonte'] != 'replay': prob.append('%s: a fonte do instante é %s' % (rot, r['fonte']))
+    T = r['T']
+    esp = ['SOG %s nós' % T['sog_nos'], 'PROA %s° %s' % (T['proa_graus'], r['hhmm']), 'VENTO %s nós · %s°' % (T['vento_verdadeiro_nos'], T['vento_verdadeiro_angulo']), 'PROF. %s m' % T['profundidade_m'],
+           'DIESEL %d/%d %% %s L' % (r['dBB'], r['dBE'], T['diesel_litros'])]
+    if [x['txt'] for x in r['leit']] != esp: prob.append('%s: as leituras do vigia dizem %s (esperado %s)' % (rot, [x['txt'] for x in r['leit']], esp))
+    if any(x['corte'] for x in r['leit']): prob.append('%s: leitura cortada no cartão: %s' % (rot, [x['corte'] for x in r['leit'] if x['corte']]))
+    if 'Vento verdadeiro a bordo agora' not in r['leit'][2]['title']: prob.append('%s: o vento do vigia sem «a bordo agora» no title (trava 12): %r' % (rot, r['leit'][2]['title']))
+    if 'BB %s %% · BE %s %%' % (T['diesel_bb_pct'], T['diesel_be_pct']) not in r['leit'][4]['title']: prob.append('%s: o title do diesel não traz os dois lados do quadro: %r' % (rot, r['leit'][4]['title']))
+    if r['coord'] not in r['vigia'] or ('Fonte: ' + r['fonteTxt']) not in r['vigia']: prob.append('%s: o vigia sem a posição do quadro (%s) ou sem «Fonte: %s»' % (rot, r['coord'], r['fonteTxt']))
+    if r['fonteTxt'] != 'telemetria ao vivo · ' + r['hora']: prob.append('%s: a fonte do quadro diz %r' % (rot, r['fonteTxt']))
+    if not r['sub'].startswith('NAVEGANDO · ' + r['local']): prob.append('%s: a linha do vigia diz %r (esperado «NAVEGANDO · %s»)' % (rot, r['sub'], r['local']))
+    if o['porao'] not in (next((x for x in r['gat'] if x['id'] == 'porao'), {}).get('txt') or ''): prob.append('%s: o gatilho do porão sem a leitura %r: %r' % (rot, o['porao'], next((x['txt'] for x in r['gat'] if x['id'] == 'porao'), None)))
+    esp = 'Agora: NAVEGANDO · SOG %s nós.' % T['sog_nos']
+    if not (r['troca'] or '').startswith('o conjunto de botões muda sozinho com o SOG: NAVEGANDO com 1 nó ou mais por 5 s, FUNDEADO ou ATRACADO com menos de 0,5 nó por 5 s.') or esp not in r['troca']: prob.append('%s: a nota da troca automática diz %r' % (rot, r['troca']))
+    if re.search(r'ESPECIFICADO|não está ativa|ainda não|demonstra|snapshot|SEM LEITURA|SEM DADOS|coletor NMEA|DEMO\b|26/09|09:31|54/52', r['texto']): prob.append('%s: rótulo ou leitura do snapshot na tela: %s' % (rot, re.search(r'ESPECIFICADO|não está ativa|ainda não|demonstra|snapshot|SEM LEITURA|SEM DADOS|coletor NMEA|DEMO\b|26/09|09:31|54/52', r['texto']).group(0)))
+    if r['lateral'] > 1: prob.append('%s: rolagem lateral de %d px' % (rot, r['lateral']))
+    return prob
+
+
+def teste_e1_nav(b):
+    """E1 NAVEGANDO a 60 s e a 105 s, em 3 tamanhos e 2 temas: o conjunto, os links, o vigia ao vivo (chip, estado, leituras, posição, fonte), a nota da troca e nenhum rótulo nem dado do snapshot."""
+    prob = []
+    for fixo in ('60', '105'):
+        for tema, w, h in (('escuro', 390, 844), ('claro', 360, 640), ('escuro', 844, 390)):
+            ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', w, h, fixo=fixo, tema=tema)
+            r = pg.evaluate(LE_E1)
+            rot = 'E1 a %s s (%s, %d×%d)' % (fixo, tema, w, h)
+            prob += problemas_e1_conjunto(r, 'nav', rot)
+            prob += problemas_e1_leituras(r, fixo, rot)
+            ach = achados_termos('E1-Navegando-Gatilhos', pg.evaluate(LE_TEXTOS))
+            if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    # os destinos existem (os arquivos que os links abrem)
+    for arq in sorted(set(list(HREF_NAV.values()) + list(HREF_PARADO.values()) + ['H2-Home-Mobile.dc.html', 'C3-Leme-Alerta.dc.html'])):
+        try:
+            if urllib.request.urlopen(BASE + arq.split('#')[0], timeout=10).status != 200: prob.append('E1: o destino %s não responde 200' % arq)
+        except Exception as e:
+            prob.append('E1: o destino %s não abre: %s' % (arq, str(e)[:80]))
+    return prob
+
+
+def teste_e1_alerta(b):
+    """Com alarme, o 1º cartão leva ao detalhe (C3-Leme-Alerta.dc.html#alarme=<id>): primeiro no DOM e no CSS, 2 colunas, amarelo no AVISO e vermelho no crítico (o cenário alarme-critico, desligado, plantado); sem alarme, nenhum;
+    o conjunto parado leva o mesmo cartão; o toque abre a C3. Nunca abre o SOS, fala ou grava sozinho."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
+    r = pg.evaluate(LE_E1)
+    if any(x['id'] == 'alerta' for x in r['gat']) or r['al']: prob.append('E1 a 60 s: tem o cartão de alerta sem alarme (%s)' % [x['id'] for x in r['gat']])
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='105')
+    r = pg.evaluate(LE_E1)
+    a = r['al'][0] if r['al'] else None
+    primeiro = r['gat'][0] if r['gat'] else {}
+    if not a or a['id'] != 'arref_be': prob.append('E1 a 105 s: o alarme do instante não é o arref_be (%r): o teste não vale' % a)
+    else:
+        esp_h = 'C3-Leme-Alerta.dc.html#alarme=arref_be'
+        if primeiro.get('id') != 'alerta' or primeiro.get('href') != esp_h or a['detalhe'] != esp_h: prob.append('E1 a 105 s: o 1º cartão é %r e leva a %r (esperado «alerta» → %s)' % (primeiro.get('id'), primeiro.get('href'), esp_h))
+        if ids_e1(r)[0] != 'alerta' or primeiro.get('ordem') != 0 or primeiro.get('col') != '1/-1': prob.append('E1 a 105 s: o cartão de alerta não é o 1º no CSS (order %r) nem ocupa as 2 colunas (%r)' % (primeiro.get('ordem'), primeiro.get('col')))
+        if not primeiro.get('txt', '').startswith('AVISO · MOTORES BE Temperatura do motor BE: 89,6 °C (acima de 88 °C) · desde 12:01:39'): prob.append('E1 a 105 s: o texto do cartão de alerta diz %r' % primeiro.get('txt'))
+        if primeiro.get('bg') != 'rgba(240, 166, 58, 0.12)': prob.append('E1 a 105 s: o cartão do AVISO tem fundo %r (esperado o amarelo do AVISO)' % primeiro.get('bg'))
+        if r['estadoCor'] != 'rgb(240, 166, 58)': prob.append('E1 a 105 s: o estado do vigia não é amarelo com o AVISO (%r)' % r['estadoCor'])
+        try:
+            pg.click('[data-e1=gatilho][data-id=alerta]', timeout=5000)
+            pg.wait_for_url('**/C3-Leme-Alerta.dc.html#alarme=arref_be', timeout=8000)
+        except Exception as e:
+            prob.append('E1: o toque no cartão de alerta não abriu a C3 do alarme (%s): %s' % (pg.url, str(e).splitlines()[0][:100]))
+    if r['url'].split('#')[0].endswith('SOS-Mobile.dc.html') or r['falas'] or r['diario']: prob.append('E1 a 105 s: abriu o SOS, falou ou gravou sozinha (%s, %d falas, diário %r)' % (r['url'], r['falas'], r['diario']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o crítico plantado: vermelho e brilho; o estado do vigia diz ALERTA CRÍTICO
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='105', depois=CRITICO_PLANTADO)
+    r = pg.evaluate(LE_E1)
+    primeiro = r['gat'][0] if r['gat'] else {}
+    if primeiro.get('id') != 'alerta' or primeiro.get('bg') != 'rgb(211, 47, 39)' or not primeiro.get('txt', '').startswith('ALERTA CRÍTICO · MOTORES BE'): prob.append('E1 crítico: o 1º cartão é %r (fundo %r, texto %r): esperado o vermelho de ALERTA CRÍTICO · MOTORES BE' % (primeiro.get('id'), primeiro.get('bg'), primeiro.get('txt')))
+    if r['estadoV'] != 'Vigia ligada · ALERTA CRÍTICO ativo' or r['estadoCor'] != 'rgb(255, 59, 48)': prob.append('E1 crítico: o estado do vigia diz %r em %r' % (r['estadoV'], r['estadoCor']))
+    if not r['al'] or r['al'][0]['nivel'] != 'critico': prob.append('E1 crítico: o plantio não valeu (a API de alertas diz %r)' % r['al'])
+    if r['url'].split('#')[0].endswith('SOS-Mobile.dc.html') or r['falas'] or r['diario']: prob.append('E1 crítico: abriu o SOS, falou ou gravou sozinha')
+    ctx.close()
+    # o barco parado com alarme: o cartão de alerta vem antes dos 4 gatilhos do conjunto parado
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='105', ls={'capitao.replay.sobre': json.dumps({'sog_nos': 0, 'estado': 'Fundeado'})})
+    r = pg.evaluate(LE_E1)
+    prob += problemas_e1_conjunto(r, 'parado', 'E1 parado com alarme', 'GATILHOS · FUNDEADO')
+    if ids_e1(r)[:1] != ['alerta'] or not r['al']: prob.append('E1 parado a 105 s: o cartão de alerta não é o 1º (%s; alarmes %s)' % (ids_e1(r), r['al']))
+    ctx.close()
+    return prob
+
+
+def teste_e1_troca(b):
+    """A troca automática com a tela aberta: SOG 0 → no 3º segundo ainda NAVEGANDO (nada de piscar) e no 7º FUNDEADO (ÂNCORA/GARRA, CHECKLIST DE SAÍDA, ABASTECER, DIÁRIO, sem o REGISTRAR); SOG 1,5 → só no 7º volta a
+    NAVEGANDO. Os links vêm do estado: âncora ao chat, checklist de saída na C4, abastecer na G2, diário na G3."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
+    r0 = pg.evaluate(LE_E1)
+    prob += problemas_e1_conjunto(r0, 'nav', 'E1 ao abrir')
+    pg.evaluate(SOBRE_JS, [{'sog_nos': 0, 'estado': 'Fundeado', 'ancora_estado': 'lançada'}, 1])
+    pg.wait_for_timeout(3000)
+    m = pg.evaluate(LE_E1_MIN)
+    if m['modo'] != 'nav' or m['ids'] != ','.join(x for x in ['mob', 'porao', 'pane', 'alarme', 'canal16', 'registrar']): prob.append('E1: o conjunto trocou 3 s depois de o SOG cair a 0 (a troca é com 5 s seguidos): %s' % m)
+    pg.wait_for_timeout(4500)
+    r = pg.evaluate(LE_E1)
+    prob += problemas_e1_conjunto(r, 'parado', 'E1 7 s depois do SOG 0', 'GATILHOS · FUNDEADO')
+    por = {x['id']: x for x in r['gat']}
+    if por.get('ancora') and 'Âncora lançada · alarme de âncora e corrente' not in por['ancora']['txt']: prob.append('E1 parado: o gatilho da âncora diz %r (o quadro diz lançada)' % por['ancora']['txt'])
+    esp = 'Diesel ≈ %s L · %s' % (r['T']['diesel_litros'], r['pctTxt'])
+    if por.get('abastecer') and esp not in por['abastecer']['txt']: prob.append('E1 parado: o gatilho ABASTECER diz %r (esperado «%s», o diesel do quadro)' % (por['abastecer']['txt'], esp))
+    if not r['sub'].startswith('FUNDEADO · '): prob.append('E1 parado: a linha do vigia diz %r (esperado «FUNDEADO · …»)' % r['sub'])
+    if not (r['troca'] or '').endswith('Agora: FUNDEADO · SOG 0,0 nós.'): prob.append('E1 parado: a nota da troca diz %r' % r['troca'])
+    pg.evaluate(SOBRE_JS, [{'sog_nos': 1.5, 'estado': 'Navegando'}, 2])
+    pg.wait_for_timeout(3000)
+    m = pg.evaluate(LE_E1_MIN)
+    if m['modo'] != 'parado': prob.append('E1: o conjunto voltou a NAVEGANDO 3 s depois de o SOG subir a 1,5 (a troca é com 5 s seguidos): %s' % m)
+    pg.wait_for_timeout(4500)
+    r = pg.evaluate(LE_E1)
+    prob += problemas_e1_conjunto(r, 'nav', 'E1 7 s depois do SOG 1,5')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e1_histerese(b):
+    """A histerese (entra com 1 nó ou mais, sai com menos de 0,5 nó): SOG 0,8 não troca nunca, nem navegando nem parado; um SOG 0 de 3 s (menos que os 5 s) não pisca o conjunto; e FUNDEADO × ATRACADO vem do estado do quadro."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
+    def modo(): return pg.evaluate(LE_E1_MIN)
+    n = [0]
+    def muda(v):
+        n[0] += 1; pg.evaluate(SOBRE_JS, [v, n[0]])
+    muda({'sog_nos': 0.8, 'estado': 'Navegando'}); pg.wait_for_timeout(7500)
+    if modo()['modo'] != 'nav': prob.append('E1: navegando, o SOG de 0,8 nó trocou o conjunto (histerese: só sai abaixo de 0,5 nó)')
+    muda({'sog_nos': 0.3, 'estado': 'Atracado'}); pg.wait_for_timeout(7500)
+    m = modo()
+    if m['modo'] != 'parado' or m['titulo'] != 'GATILHOS · ATRACADO': prob.append('E1: com o SOG em 0,3 nó por 7 s e o quadro Atracado: %s (esperado parado · ATRACADO)' % m)
+    muda({'sog_nos': 0.8, 'estado': 'Atracado'}); pg.wait_for_timeout(7500)
+    if modo()['modo'] != 'parado': prob.append('E1: parado, o SOG de 0,8 nó trocou o conjunto (histerese: só entra com 1 nó ou mais)')
+    muda({'sog_nos': 1.2, 'estado': 'Navegando'}); pg.wait_for_timeout(7500)
+    if modo()['modo'] != 'nav': prob.append('E1: o SOG de 1,2 nó por 7 s não voltou a NAVEGANDO')
+    muda({'sog_nos': 0, 'estado': 'Fundeado'}); pg.wait_for_timeout(3000)
+    muda(None); pg.wait_for_timeout(7000)   # um SOG 0 de 3 s e o quadro normal de volta: nenhuma troca
+    m = modo()
+    if m['modo'] != 'nav' or 'registrar' not in m['ids']: prob.append('E1: um SOG 0 de 3 s (menos de 5 s) trocou o conjunto: %s' % m)
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e1_aba_escondida(b):
+    """A contagem dos 5 s zera num intervalo sem tique (aba escondida): o SOG 0 visto 2 s antes de a aba esconder por 4 s não vale como 5 s seguidos."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
+    pg.evaluate(SOBRE_JS, [{'sog_nos': 0, 'estado': 'Fundeado'}, 1])
+    pg.wait_for_timeout(2500)
+    pg.evaluate("() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); }")
+    pg.wait_for_timeout(4000)
+    pg.evaluate("() => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')); }")
+    pg.wait_for_timeout(1800)
+    m = pg.evaluate(LE_E1_MIN)
+    if m['modo'] != 'nav': prob.append('E1: voltando de 4 s escondida, o SOG 0 visto antes dela trocou o conjunto na hora (a contagem devia zerar): %s' % m)
+    pg.wait_for_timeout(5500)
+    m = pg.evaluate(LE_E1_MIN)
+    if m['modo'] != 'parado': prob.append('E1: depois de 5 s à vista com o SOG 0 o conjunto não trocou: %s' % m)
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e1_registrar(b):
+    """REGISTRAR POSIÇÃO só com o toque: abrir não grava; 1 toque = 1 linha nova (sim: true, src de atalho), o toque duplo em 2,5 s não duplica, o seguinte é linha nova; com a janela de conversa em emergência valendo a linha
+    leva «LEIA NO PLOTTER» no lugar da posição, do SOG e da proa."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
+    ls = lambda: json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))
+    if ls(): prob.append('E1: gravou no diário só de abrir: %s' % ls())
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(300)
+    l = ls()
+    if len(l) != 1 or l[0].get('sim') is not True or not re.search(r'atalho|telemetria', l[0].get('src', '')) or 'SOG 18,1 nós' not in l[0].get('t', ''): prob.append('E1: 1 toque devia gravar 1 linha de atalho com sim: true e o SOG do quadro: %s' % l)
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(300)
+    if len(ls()) != 1: prob.append('E1: o toque duplo em 2,5 s gravou outra linha (%d linhas)' % len(ls()))
+    pg.wait_for_timeout(2400)
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(300)
+    if len(ls()) != 2: prob.append('E1: o toque depois dos 2,5 s devia ser linha nova (%d linhas)' % len(ls()))
+    if erros: prob += erros[:2]
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60', depois=JANELA_VALE)
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(300)
+    l = json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))
+    t = l[0].get('t', '') if l else ''
+    if len(l) != 1 or 'LEIA NO PLOTTER' not in t or re.search(r'SOG|proa|nós|\d+°', t): prob.append('E1 com a janela de emergência: a linha do registro devia trocar a posição por «LEIA NO PLOTTER» (sem SOG nem proa): %r' % t)
+    ctx.close()
+    return prob
+
+
+def teste_e1_vivo(b):
+    """Sem congelar o replay a E1 anda sozinha: o chip «AO VIVO hh:mm:ss» muda em 1,5 s e a hora dele é a do instante (assina o capitao-telemetria)."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo=None)
+    mudou = False
+    for _ in range(3):
+        a = pg.evaluate(LE_E1)
+        pg.wait_for_timeout(1500)
+        c = pg.evaluate(LE_E1)
+        if not re.fullmatch(r'AO VIVO \d\d:\d\d:\d\d', c['chip'] or ''): prob.append('E1 livre: o chip diz %r (esperado «AO VIVO hh:mm:ss»)' % c['chip']); break
+        if a['chip'] != c['chip'] and c['chip'] == 'AO VIVO ' + c['hora']: mudou = True; break
+    if not mudou: prob.append('E1 livre: o chip não mudou em 1,5 s (3 tentativas): a tela não assina o capitao-telemetria')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e1_real(b):
+    """E1 com simulacao false: sem replay, a última leitura salva (26/09 10:12) como reserva, com SEM LEITURA no que falta e o conjunto do barco parado do quadro; sem NaN, undefined nem AO VIVO."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo=None, depois='window.CapitaoDados.simulacao = false;')
+    r = pg.evaluate(LE_E1)
+    rot = 'E1 com simulacao false'
+    if r['fonte'] != 'snapshot' or not pg.evaluate("() => !window.CapitaoReplay.ativo()"): prob.append('%s: o replay ainda anda (%s)' % (rot, r['fonte']))
+    if re.search(r'NaN|undefined|\[object|Infinity|AO VIVO', r['texto']): prob.append('%s: NaN, undefined, [object ou AO VIVO na tela: %s' % (rot, re.search(r'NaN|undefined|\[object|Infinity|AO VIVO', r['texto']).group(0)))
+    for t in ('ÚLTIMA LEITURA', 'Vigia automática inativa · SEM LEITURA ao vivo', 'Última leitura salva · coletor NMEA · leitura de 26/09 10:12'):
+        if t not in r['texto']: prob.append('%s: a tela devia dizer %r' % (rot, t))
+    if ids_e1(r) != IDS_PARADO or r['titulo'] != 'GATILHOS · FUNDEADO': prob.append('%s: o conjunto é %s (%s): esperado o do barco fundeado da última leitura' % (rot, ids_e1(r), r['titulo']))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_e1_codigo():
+    prob = []
+    def le_(a):
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    h = le_('E1-Navegando-Gatilhos.dc.html')
+    cod = re.sub(r'//[^\n]*', '', h)
+    mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+    for ev in ('capitao-telemetria', 'capitao-alerta', 'capitao-rebase'):
+        if "'%s'" % ev not in h[mont:desm] or "'%s'" % ev not in h[desm:desm + 400]: prob.append('E1: não assina o %s no componentDidMount e remove no componentWillUnmount' % ev)
+    if "forEach((ev) => window.addEventListener(ev, this._onTele))" not in h[mont:desm] or "forEach((ev) => window.removeEventListener(ev, this._onTele))" not in h[desm:desm + 400]: prob.append('E1: addEventListener/removeEventListener fora do par do componentDidMount/componentWillUnmount')
+    if 'document.hidden' not in h: prob.append('E1: não pausa com document.hidden')
+    if 'if (!forca && k === this._k) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('E1: não compara o texto antes do setState')
+    if h.count('setInterval') != 1: prob.append('E1: setInterval a mais (%d; só o do whenBrain)' % h.count('setInterval'))
+    if re.search(r'D\.demo|\.demo\b|DEMO|D\.snapshot|\.snapshot\b', cod): prob.append('E1: lê D.demo ou D.snapshot (ou escreve DEMO) no código')
+    if MARCAS_FIXAS.search(cod): prob.append('E1: fabricante fixo no código: %s' % MARCAS_FIXAS.search(cod).group(0))
+    if re.search(r'location\s*\.\s*(href|assign|replace|reload)|window\s*\.\s*open|speechSynthesis|history\s*\.\s*(push|replace)State', cod): prob.append('E1: troca de tela, abre janela ou fala sozinha')
+    if 'ENTRA = 1, SAI = 0.5, ESPERA = 5000' not in h: prob.append('E1: os limiares da troca não são 1 nó, 0,5 nó e 5 s')
+    if h.count('B.answer(') != 1 or h.find('B.answer(') < h.find('  registrar() {') or 'onClick="{{registrar}}"' not in h or h.count('this.registrar()') != 1: prob.append('E1: o cérebro responde fora do registrar() ou o registro não é só pelo toque')
+    if 'emergencia: emergencia' not in h: prob.append('E1: o registrar() não passa a janela de emergência ao cérebro')
+    if re.search(r'addDiario|localStorage\s*\.\s*setItem', cod): prob.append('E1: grava direto (o cérebro grava)')
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    if GEOM.search(h): prob.append('E1: {{…}} em atributo geométrico de SVG')
+    return prob
+
+
+# E2: o que a tela mostra da leitura de agora e da resposta
+LE_E2 = """() => { """ + JS_BASE + """
+  const g = (s) => { const e = document.querySelector('[data-e2=' + s + ']'); return e ? lin(e.innerText) : null; }, sec = document.querySelector('[data-e2=resposta]');
+  return { hora: I.hora, hhmm: I.hhmm, fonteTxt: I.fonteTxt, T, intro: g('intro'), ref: g('ref'), refTexto: g('ref-texto'), refFonte: g('ref-fonte'), pergunta: g('pergunta'), fonte: g('fonte'), chave: sec ? sec.dataset.chave : null,
+    resp: sec ? lin(sec.innerText) : null, texto: lin(document.body.innerText), emerg: window.CapitaoEmergencia ? window.CapitaoEmergencia.valendo() : null, ate: sessionStorage.getItem('capitao.emergenciaAte'),
+    diario: localStorage.getItem('capitao.diario.v1'), sistemas: [...document.querySelectorAll('button[aria-label^="Sistema:"]')].map((e) => ({ txt: lin(e.innerText), aria: e.getAttribute('aria-label') })),
+    sintomas: [...document.querySelectorAll('button[aria-pressed]:not([aria-label])')].map((e) => lin(e.innerText)), eq: D.equipamentos.map((e) => ({ id: e.id, f: e.fabricante, m: e.modelo, n: e.nome })),
+    regBt: !!document.querySelector('button[aria-label^="Registrar no diário"]'), url: location.href }; }"""
+SIS_E2 = [('motores', 'MOTORES'), ('gerador', 'GERADOR'), ('climatizacao', 'CLIMA'), ('estabilizador', 'ESTABILIZADOR'), ('eletronicos', 'ELETRÔNICOS')]
+SINTOMAS_E2 = {'motores': ['Temperatura alta', 'Pressão de óleo baixa', 'Sem água no escapamento', 'Não liga', 'Fumaça / cheiro de queimado', 'Entrada de água']}
+ORACULO_E2 = {'60': 'Motores ligados · BB 2.049 · BE 2.038 rpm · óleo BB 3,9 · BE 3,8 bar · arrefecimento BB 82,0 · BE 82,1 °C.',
+              '105': 'Motores ligados · BB 2.049 · BE 2.036 rpm · óleo BB 3,9 · BE 3,8 bar · arrefecimento BB 81,9 · BE 89,6 °C.'}   # CONTRATO §1.22
+
+
+def clica_e2(pg, tipo, i):
+    pg.click('button[aria-pressed][aria-label^="Sistema:"] >> nth=%d' % i if tipo == 'sis' else 'button[aria-pressed]:not([aria-label]) >> nth=%d' % i)
+    pg.wait_for_timeout(250)
+
+
+def esperado_ref_e2(sid, T, fab):
+    par = lambda a, b, suf: 'BB %s · BE %s%s' % (T[a], T[b], suf)
+    if sid == 'motores': return 'Motores ligados · %s · óleo %s · arrefecimento %s.' % (par('motor_bb_rpm', 'motor_be_rpm', ' rpm'), par('motor_bb_oleo_bar', 'motor_be_oleo_bar', ' bar'), par('motor_bb_arref_c', 'motor_be_arref_c', ' °C'))
+    if sid == 'gerador': return 'Gerador ligado · %s kW · horímetro %s h.' % (T['gerador_kw'], T['gerador_horimetro_h'])
+    if sid == 'estabilizador': return '%s ligado · volante %s rpm (%s %%).' % (fab, T['seakeeper_volante_rpm'], T['seakeeper_volante_pct'])
+    if sid == 'climatizacao': return 'Climatização ligada.'
+    return 'GPS com %s satélites · radar ligado · AIS com %s alvos.' % (T['gps_satelites'], T['ais_alvos'])
+
+
+def teste_e2_ref(b):
+    """E2: a leitura de agora de cada um dos 5 sistemas vem do quadro do instante (60 s e 105 s: motores, gerador kW, Seakeeper rpm e %, climatização, GPS com satélites), com a fonte «telemetria ao vivo · hh:mm:ss»;
+    o fabricante e o modelo de cada sistema são os de D.equipamentos (nunca «modelo SEM DADOS»); a introdução sem «(guias DEMO)»; nada do snapshot de 26/09."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo=fixo)
+        r = pg.evaluate(LE_E2)
+        if r['intro'] != 'Triagem: escolha o sistema e o sintoma. O Capitão IA responde na hora com o trecho do guia de bordo e a fonte.': prob.append('E2 a %s s: a introdução diz %r' % (fixo, r['intro']))
+        eq = {e['id']: e for e in r['eq']}
+        for i, (sid, rot) in enumerate(SIS_E2):
+            e = eq[sid]
+            esp_aria = 'Sistema: ' + e['n'] + ('' if e['m'].lower().startswith(e['f'].lower()) else ' ' + e['f']) + ' ' + e['m']
+            if r['sistemas'][i]['aria'] != esp_aria or r['sistemas'][i]['txt'] != '%s %s' % (rot, e['f']): prob.append('E2 a %s s: o botão do sistema %s diz %r / %r (esperado %r e «%s %s»)' % (fixo, sid, r['sistemas'][i]['aria'], r['sistemas'][i]['txt'], esp_aria, rot, e['f']))
+            clica_e2(pg, 'sis', i)
+            r = pg.evaluate(LE_E2)
+            esp = esperado_ref_e2(sid, r['T'], e['f'])
+            if sid == 'motores' and esp != ORACULO_E2[fixo]: prob.append('E2 a %s s: o oráculo dos motores não vale (%r)' % (fixo, esp))
+            if r['refTexto'] != esp: prob.append('E2 a %s s · %s: a leitura de agora diz %r (esperado %r)' % (fixo, sid, r['refTexto'], esp))
+            if not (r['ref'] or '').startswith('LEITURA AGORA · ' + rot) or r['refFonte'] != 'Fonte: telemetria ao vivo · ' + r['hora']: prob.append('E2 a %s s · %s: o título ou a fonte da leitura dizem %r / %r' % (fixo, sid, (r['ref'] or '')[:40], r['refFonte']))
+            if re.search(r'snapshot|SEM LEITURA|SEM DADOS|26/09|desligada|última leitura com motores|DEMO\b', r['texto']): prob.append('E2 a %s s · %s: rótulo ou dado do snapshot na tela: %s' % (fixo, sid, re.search(r'snapshot|SEM LEITURA|SEM DADOS|26/09|desligada|última leitura com motores|DEMO\b', r['texto']).group(0)))
+            if r['chave'] is not None: prob.append('E2 a %s s · %s: mostra resposta antes de escolher o sintoma' % (fixo, sid))
+        if erros: prob += ['E2 a %s s: %s' % (fixo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_e2_varre(b):
+    """Cada sistema × cada sintoma a 60 s e a 105 s: nenhum termo do §3 no texto, no title, no aria-label, no placeholder nem no alt (nem «SEM DADOS» do fabricante, «modelo SEM DADOS» ou «(guias DEMO)»),
+    nem NaN, undefined ou [object."""
+    prob = []
+    for fixo in ('60', '105'):
+        ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo=fixo)
+        for i in range(len(SIS_E2)):
+            clica_e2(pg, 'sis', i)
+            n = pg.evaluate("() => document.querySelectorAll('button[aria-pressed]:not([aria-label])').length")
+            for j in list(range(n)):
+                clica_e2(pg, 'sin', j)
+                t = pg.evaluate(LE_TEXTOS)
+                ach = achados_termos('E2-Navegando-Sintoma', t)
+                if ach: prob.append('E2 a %s s · %s/%d: termo do §3: %s' % (fixo, SIS_E2[i][0], j, ach))
+                if re.search(r'NaN|undefined|\[object|Infinity|modelo SEM|fabricante SEM|guias DEMO', t): prob.append('E2 a %s s · %s/%d: NaN, undefined ou rótulo: %s' % (fixo, SIS_E2[i][0], j, re.search(r'NaN|undefined|\[object|Infinity|modelo SEM|fabricante SEM|guias DEMO', t).group(0)))
+        if erros: prob += ['E2 a %s s: %s' % (fixo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_e2_resposta(b):
+    """A resposta leva o segundo do quadro (a.hora: «Calculado às 12:01:00 pelo Capitão IA» a 60 s e «12:01:45» a 105 s), a de emergência não (sos, fumaça e água): a leitura de agora some dela, e o relato de pressão de óleo
+    baixa troca a leitura por «confira o manômetro agora» (sem o óleo do quadro); a resposta que abre a janela (sos, óleo) a marca em 15 min, a de rotina não."""
+    prob = []
+    for fixo, hora in (('60', '12:01:00'), ('105', '12:01:45')):
+        ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo=fixo)
+        clica_e2(pg, 'sis', 0)
+        clica_e2(pg, 'sin', 2)   # sem água no escapamento (a resposta pronta dos motores, com a leitura do quadro)
+        r = pg.evaluate(LE_E2)
+        if not (r['pergunta'] or '').startswith('Calculado às %s pelo Capitão IA · pergunta: “sem água no escapamento motores' % hora): prob.append('E2 a %s s: a resposta não leva o segundo do quadro: %r' % (fixo, r['pergunta']))
+        if r['chave'] == 'motores' and ('Motores ligados às %s' % hora) not in r['resp']: prob.append('E2 a %s s: a resposta dos motores não traz as %s do quadro: %r' % (fixo, hora, (r['resp'] or '')[:200]))
+        if r['emerg']: prob.append('E2 a %s s: a janela de emergência abriu com uma resposta de rotina' % fixo)
+        clica_e2(pg, 'sin', 0)   # temperatura alta (trecho do guia)
+        r = pg.evaluate(LE_E2)
+        if not (r['pergunta'] or '').startswith('Calculado às %s pelo Capitão IA' % hora): prob.append('E2 a %s s: o trecho do guia não leva o segundo do quadro: %r' % (fixo, r['pergunta']))
+        for j, nome, chave in ((4, 'fumaça', 'sos'), (5, 'água', 'sos')):
+            ctx2, pg2, erros2 = abre_tela(b, 'E2-Navegando-Sintoma', fixo=fixo)
+            clica_e2(pg2, 'sis', 0); clica_e2(pg2, 'sin', j)
+            r = pg2.evaluate(LE_E2)
+            rot = 'E2 a %s s · %s' % (fixo, nome)
+            if r['chave'] != chave: prob.append('%s: a resposta é %s (esperado %s)' % (rot, r['chave'], chave))
+            if not (r['pergunta'] or '').startswith('Calculado agora pelo Capitão IA') or hora in (r['pergunta'] or ''): prob.append('%s: a resposta de emergência leva a hora do quadro: %r' % (rot, r['pergunta']))
+            if r['refTexto'] != 'Em emergência não há leitura de referência: confira os instrumentos e o plotter agora. POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER · PESSOAS: CONTE AGORA' or not (r['ref'] or '').startswith('INSTRUMENTOS · MOTORES'): prob.append('%s: no lugar da leitura, a tela diz %r' % (rot, r['ref']))
+            if re.search(r'rpm|\d,\d bar|BB \d|SOG|proa', r['texto']): prob.append('%s: leitura do quadro na tela da emergência: %s' % (rot, re.search(r'rpm|\d,\d bar|BB \d|SOG|proa', r['texto']).group(0)))
+            if not r['emerg'] or not r['ate']: prob.append('%s: a resposta que abre a janela não a marcou (valendo %r, sessionStorage %r)' % (rot, r['emerg'], r['ate']))
+            if erros2: prob += ['%s: %s' % (rot, e) for e in erros2[:2]]
+            ctx2.close()
+        ctx2, pg2, erros2 = abre_tela(b, 'E2-Navegando-Sintoma', fixo=fixo)
+        clica_e2(pg2, 'sis', 0); clica_e2(pg2, 'sin', 1)
+        r = pg2.evaluate(LE_E2)
+        rot = 'E2 a %s s · pressão de óleo baixa' % fixo
+        if r['chave'] != 'oleo' or r['refTexto'] != 'Pressão de óleo baixa: confira o manômetro de cada motor agora, no painel.': prob.append('%s: a resposta é %s e a leitura diz %r' % (rot, r['chave'], r['refTexto']))
+        if re.search(r'óleo BB|\d,\d bar|rpm|BB \d', r['texto']): prob.append('%s: o óleo ou a rotação do quadro na tela do relato (relato de falha sem leitura): %s' % (rot, re.search(r'óleo BB|\d,\d bar|rpm|BB \d', r['texto']).group(0)))
+        if not r['emerg']: prob.append('%s: a resposta do óleo não marcou a janela' % rot)
+        ctx2.close()
+        if erros: prob += ['E2 a %s s: %s' % (fixo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_e2_janela(b):
+    """A janela de conversa em emergência vale na E2 (a marca é a mesma das telas de conversa): marcada, a pergunta que chega pelo botão de uma resposta (capitao-chat-pergunta) responde com a posição trocada por
+    «LEIA NO PLOTTER» (sem o ponto da rota); sem a marca, responde com a situação de bordo. A pergunta de emergência que chega pelo botão abre a janela e não mostra leitura nem botão de registro."""
+    prob = []
+    Q = "(q) => window.dispatchEvent(new CustomEvent('capitao-chat-pergunta', { detail: { q: q } }))"
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo='60', depois=JANELA_VALE)
+    if not pg.evaluate(LE_E2)['emerg']: prob.append('E2: o teste não vale (a janela não estava marcada)')
+    pg.evaluate(Q, 'Âncora'); pg.wait_for_timeout(500)
+    r = pg.evaluate(LE_E2)
+    if r['chave'] != 'ancora' or 'leia no plotter' not in (r['resp'] or '').lower() or 'Barra Sul' in (r['resp'] or ''): prob.append('E2 com a janela marcada: a pergunta do botão (Âncora) devia vir com «leia no plotter» e sem o ponto da rota: %r' % (r['resp'] or '')[:260])
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo='60')
+    pg.evaluate(Q, 'Âncora'); pg.wait_for_timeout(500)
+    r = pg.evaluate(LE_E2)
+    if r['chave'] != 'ancora' or 'Barra Sul' not in (r['resp'] or '') or r['emerg']: prob.append('E2 sem a janela: a pergunta do botão (Âncora) devia vir com a situação de bordo (e não abrir a janela): %r' % (r['resp'] or '')[:200])
+    if r['regBt'] or r['diario']: prob.append('E2: a resposta de um botão tem o botão de registro ou gravou no diário (%r)' % r['diario'])
+    pg.evaluate(Q, 'Tem água no porão'); pg.wait_for_timeout(500)
+    r = pg.evaluate(LE_E2)
+    if r['chave'] != 'sos' or not r['emerg'] or not r['ate']: prob.append('E2: a pergunta de emergência do botão (porão) devia abrir a janela (resposta %s, valendo %r)' % (r['chave'], r['emerg']))
+    if re.search(r'nível|BB \d|cm\b', r['resp'] or '') or r['diario']: prob.append('E2: a resposta ao relato no porão traz o nível do porão ou gravou: %r' % (r['resp'] or '')[:200])
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e2_cache(b):
+    """Sem congelar o replay: a leitura de agora anda (muda em 2,2 s) e a resposta NÃO (calculada uma vez por escolha, com a hora dela); tocar de novo no mesmo sintoma recalcula agora (hora nova); a tela só redesenha quando o texto muda."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo=None)
+    clica_e2(pg, 'sis', 0); clica_e2(pg, 'sin', 2)
+    a = pg.evaluate(LE_E2)
+    pg.wait_for_timeout(2200)
+    c = pg.evaluate(LE_E2)
+    if a['refTexto'] == c['refTexto'] and a['refFonte'] == c['refFonte']: prob.append('E2 livre: a leitura de agora não mudou em 2,2 s: a tela não assina o capitao-telemetria')
+    if a['pergunta'] != c['pergunta'] or a['resp'] != c['resp']: prob.append('E2 livre: a resposta se refez sozinha em 2,2 s (devia ser calculada uma vez por escolha): %r → %r' % (a['pergunta'][:60], c['pergunta'][:60]))
+    clica_e2(pg, 'sin', 2)
+    d = pg.evaluate(LE_E2)
+    if d['pergunta'] == c['pergunta']: prob.append('E2 livre: o toque de novo no sintoma não recalculou a resposta (a hora ficou %r)' % c['pergunta'][:40])
+    if not re.match(r'Calculado às \d\d:\d\d:\d\d pelo Capitão IA', d['pergunta'] or ''): prob.append('E2 livre: a resposta sem a hora do quadro: %r' % d['pergunta'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e2_registrar(b):
+    """Registrar no diário só com o toque: escolher o sintoma não grava; 1 toque = 1 linha de «app · sintoma» (sim: true, sem posição nem leitura), o 2º toque no mesmo sintoma não duplica."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo='60')
+    ls = lambda: json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))
+    clica_e2(pg, 'sis', 0); clica_e2(pg, 'sin', 0)
+    if ls():   # (a tela que grava sozinha também troca o botão: sem o botão o toque abaixo daria erro e esconderia esta acusação)
+        linhas = ls()
+        ctx.close()
+        return ['E2: gravou no diário só de escolher o sintoma: %s' % linhas]
+    pg.click('button[aria-label^="Registrar no diário"]'); pg.wait_for_timeout(400)
+    l = ls()
+    t = l[0].get('t', '') if l else ''
+    if len(l) != 1 or l[0].get('src') != 'app · sintoma' or l[0].get('sim') is not True or not t.startswith('Sintoma relatado: temperatura alta — Motores Cummins QSB6.7 305. Anomalia A CONFIRMAR · triagem no app') or re.search(r'SEM DADOS|rpm|SOG|proa|\d,\d bar', t): prob.append('E2: 1 toque devia gravar 1 linha de app · sintoma, com sim: true, sem leitura: %s' % l)
+    if pg.query_selector('button[aria-label^="Registrar no diário"]'): prob.append('E2: o botão de registro continua depois de registrar')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_e2_real(b):
+    """E2 com simulacao false: a leitura vem da última leitura salva (26/09 10:12) com «ÚLTIMA LEITURA», sem NaN nem undefined, e a resposta continua do cérebro (sem a hora do quadro)."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo=None, depois='window.CapitaoDados.simulacao = false;')
+    clica_e2(pg, 'sis', 0); clica_e2(pg, 'sin', 2)
+    r = pg.evaluate(LE_E2)
+    rot = 'E2 com simulacao false'
+    if not (r['ref'] or '').startswith('ÚLTIMA LEITURA · MOTORES') or r['refFonte'] != 'Fonte: coletor NMEA · leitura de 26/09 10:12': prob.append('%s: a leitura diz %r / %r (esperado a última leitura salva)' % (rot, (r['ref'] or '')[:40], r['refFonte']))
+    if re.search(r'NaN|undefined|\[object|Infinity', r['texto']): prob.append('%s: NaN, undefined ou [object na tela' % rot)
+    if not (r['pergunta'] or '').startswith('Calculado agora pelo Capitão IA'): prob.append('%s: a resposta diz %r (sem o quadro, sem a hora)' % (rot, r['pergunta']))
+    if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_e2_codigo():
+    prob = []
+    def le_(a):
+        t = open(os.path.join(RAIZ, a), encoding='utf-8').read()
+        for velho, novo in MUT_ARQ.get(a, []): t = t.replace(velho, novo, 1)
+        return t
+    h = le_('E2-Navegando-Sintoma.dc.html')
+    cod = re.sub(r'//[^\n]*', '', h)
+    mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
+    for ev in ('capitao-telemetria', 'capitao-rebase'):
+        if "'%s'" % ev not in h[mont:desm] or "'%s'" % ev not in h[desm:desm + 500]: prob.append('E2: não assina o %s no componentDidMount e remove no componentWillUnmount' % ev)
+    if "addEventListener('capitao-chat-pergunta'" not in h[mont:desm] or "removeEventListener('capitao-chat-pergunta'" not in h[desm:desm + 500]: prob.append('E2: não escuta o capitao-chat-pergunta (o botão de uma resposta)')
+    if 'document.hidden' not in h: prob.append('E2: não pausa com document.hidden')
+    if 'if (k === this._refK) return;' not in h or 'this.setState({ vivo: k })' not in h: prob.append('E2: não compara o texto antes do setState')
+    if h.count('setInterval') != 2: prob.append('E2: setInterval a mais ou a menos (%d; o do whenBrain e o da base)' % h.count('setInterval'))
+    if re.search(r'D\.demo|\.demo\b|DEMO|D\.snapshot|\.snapshot\b|\bS\.\w+', cod): prob.append('E2: lê D.demo ou D.snapshot (ou escreve DEMO) no código')
+    if MARCAS_FIXAS.search(cod): prob.append('E2: fabricante fixo no código: %s' % MARCAS_FIXAS.search(cod).group(0))
+    if "commit: false" not in h or 'emergencia: emergencia' not in h or 'a.abreJanela === true' not in h or 'E.marca()' not in h: prob.append('E2: a resposta não passa commit:false e a janela de emergência ao cérebro, ou não marca a janela')
+    if h.count('addDiario') != 1 or h.find('addDiario') < h.find('  registrar(s, x, a) {') or 'onClick="{{registrar}}"' not in h: prob.append('E2: grava no diário fora do registrar() ou sem ser pelo toque')
+    if re.search(r'location\s*\.\s*(href|assign|replace|reload)|window\s*\.\s*open|speechSynthesis', cod): prob.append('E2: troca de tela, abre janela ou fala sozinha')
+    GEOM = re.compile(r'<(?:svg|path|circle|line|rect|ellipse|polyline|polygon|g)\b[^>]*\b(?:d|x|y|x1|x2|y1|y2|cx|cy|r|rx|ry|width|height|viewBox|points|transform)="[^"]*\{\{')
+    if GEOM.search(h): prob.append('E2: {{…}} em atributo geométrico de SVG')
+    return prob
+
+
+def p4f_conferencias(b, lista):
+    """[(nome, problemas)] das conferências da P4F para as telas da rodada."""
+    out = []
+    if 'E1-Navegando-Gatilhos' in lista:
+        out.append(('código da E1', teste_e1_codigo()))
+        out.append(('E1 · NAVEGANDO a 60 e 105 s: conjunto, links, vigia ao vivo, sem rótulo', teste_e1_nav(b)))
+        out.append(('E1 · o alarme: o 1º cartão leva à C3 (aviso, crítico plantado, barco parado)', teste_e1_alerta(b)))
+        out.append(('E1 · a troca automática com 5 s seguidos (NAVEGANDO × FUNDEADO)', teste_e1_troca(b)))
+        out.append(('E1 · a histerese e o ATRACADO', teste_e1_histerese(b)))
+        out.append(('E1 · a aba escondida zera a contagem', teste_e1_aba_escondida(b)))
+        out.append(('E1 · REGISTRAR POSIÇÃO só com o toque (e com a janela de emergência)', teste_e1_registrar(b)))
+        out.append(('E1 · anda sozinha sem congelar o replay', teste_e1_vivo(b)))
+        out.append(('E1 · simulacao false', teste_e1_real(b)))
+    if 'E2-Navegando-Sintoma' in lista:
+        out.append(('código da E2', teste_e2_codigo()))
+        out.append(('E2 · a leitura de agora de cada sistema, o fabricante e a introdução', teste_e2_ref(b)))
+        out.append(('E2 · cada sistema × sintoma sem rótulo', teste_e2_varre(b)))
+        out.append(('E2 · a resposta leva o segundo do quadro; a emergência e o óleo sem leitura', teste_e2_resposta(b)))
+        out.append(('E2 · a janela de conversa em emergência e o botão de uma resposta', teste_e2_janela(b)))
+        out.append(('E2 · a resposta é calculada uma vez por escolha; a leitura anda', teste_e2_cache(b)))
+        out.append(('E2 · registrar só com o toque', teste_e2_registrar(b)))
+        out.append(('E2 · simulacao false', teste_e2_real(b)))
+    return out
+
+
+MUTANTES_P4F = [
+    # —— E1 ——
+    ('a troca da E1 sem espera (ESPERA = 0: pisca com qualquer leitura)', 'E1-Navegando-Gatilhos.dc.html', [("ENTRA = 1, SAI = 0.5, ESPERA = 5000", "ENTRA = 1, SAI = 0.5, ESPERA = 0")], 'troca'),
+    ('a troca da E1 com 20 s de espera (nunca troca na hora)', 'E1-Navegando-Gatilhos.dc.html', [("ENTRA = 1, SAI = 0.5, ESPERA = 5000", "ENTRA = 1, SAI = 0.5, ESPERA = 20000")], 'troca'),
+    ('a E1 sem histerese (sai com menos de 1 nó)', 'E1-Navegando-Gatilhos.dc.html', [("ENTRA = 1, SAI = 0.5, ESPERA = 5000", "ENTRA = 1, SAI = 1, ESPERA = 5000")], 'histerese'),
+    ('a E1 entra em NAVEGANDO com 0,5 nó (ENTRA = 0,5)', 'E1-Navegando-Gatilhos.dc.html', [("ENTRA = 1, SAI = 0.5, ESPERA = 5000", "ENTRA = 0.5, SAI = 0.5, ESPERA = 5000")], 'histerese'),
+    ('a E1 não zera a contagem depois de um intervalo sem tique', 'E1-Navegando-Gatilhos.dc.html', [("if (this._ult1 && agora - this._ult1 > 2500) this._cand = null;", "")], 'aba'),
+    ('a E1 sem o FUNDEADO × ATRACADO do quadro (sempre FUNDEADO)', 'E1-Navegando-Gatilhos.dc.html', [("(/atrac/i.test(est) ? 'ATRACADO' : /fundead/i.test(est) ? 'FUNDEADO' : 'FUNDEADO / ATRACADO')", "'FUNDEADO'")], 'histerese'),
+    ('o 1º cartão de alerta da E1 sem o id do alarme (C3 sem #alarme=)', 'E1-Navegando-Gatilhos.dc.html', [("typeof al.detalhe === 'string' && al.detalhe ? al.detalhe : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,", "'C3-Leme-Alerta.dc.html',")], 'alerta'),
+    ('o cartão de alerta da E1 depois dos gatilhos (order 9)', 'E1-Navegando-Gatilhos.dc.html', [("'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 0,", "'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 9,")], 'alerta'),
+    ('o alerta crítico da E1 sem o fundo vermelho', 'E1-Navegando-Gatilhos.dc.html', [("critico: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'var(--cap-crit-fill, #d32f27)',", "critico: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)',")], 'alerta'),
+    ('a E1 sem assinar o capitao-telemetria', 'E1-Navegando-Gatilhos.dc.html', [("['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'vivo'),
+    ('o diesel da E1 de volta no snapshot (54/52)', 'E1-Navegando-Gatilhos.dc.html', [("dieselOk ? Math.round(q.diesel_bb_pct) + '/' + Math.round(q.diesel_be_pct) : null", "dieselOk ? '54/52' : null")], 'nav'),
+    ('o chip da E1 sem os segundos (AO VIVO hh:mm)', 'E1-Navegando-Gatilhos.dc.html', [("chip = 'AO VIVO ' + I.hora;", "chip = 'AO VIVO ' + I.hhmm;")], 'nav'),
+    ('o gatilho do porão da E1 sem a leitura (SEM LEITURA fixo)', 'E1-Navegando-Gatilhos.dc.html', [("'Passo a passo do Capitão IA · sensor ' + porao,", "'Passo a passo do Capitão IA · sensor SEM LEITURA',")], 'nav'),
+    ('o gatilho do porão da E1 pergunta só «Porão» (a leitura, não o relato)', 'E1-Navegando-Gatilhos.dc.html', [("ask('Tem água no porão')", "ask('Porão')")], 'nav'),
+    ('a nota da troca da E1 de volta com «ainda não está ativa»', 'E1-Navegando-Gatilhos.dc.html', [("especificado: 'o conjunto de botões muda sozinho com o SOG:", "especificado: 'a troca automática ainda não está ativa nesta demonstração. O conjunto de botões muda sozinho com o SOG:")], 'nav'),
+    ('o REGISTRAR POSIÇÃO continua com o barco parado', 'E1-Navegando-Gatilhos.dc.html', [("reg: { on: tele.conj === 'nav',", "reg: { on: true,")], 'troca'),
+    ('a E1 registra sozinha ao abrir (sem o toque)', 'E1-Navegando-Gatilhos.dc.html', [("this.whenBrain(() => this.atualiza(true));", "this.whenBrain(() => { this.atualiza(true); this.registrar(); });")], 'registrar'),   # (uma linha só: o arquivo é CRLF e o trecho com \\n não casaria com o corpo servido)
+    ('o registrar da E1 sem a janela de emergência', 'E1-Navegando-Gatilhos.dc.html', [("{ platform: 'app', emergencia: emergencia }", "{ platform: 'app' }")], 'registrar'),
+    ('o link do CHECKLIST DE SAÍDA da E1 na web', 'E1-Navegando-Gatilhos.dc.html', [("'C4-Checklist-Mobile.dc.html#tipo=saida'", "'C4-Checklist-Web.dc.html#tipo=saida'")], 'troca'),
+    # —— E2 ——
+    ('a leitura dos motores da E2 fixa no snapshot (700/690 rpm)', 'E2-Navegando-Sintoma.dc.html', [("t = p.length ? 'Motores ' + (gira ? 'ligados' : 'desligados') + ' · ' + p.join(' · ') + '.' : null;", "t = 'Motores desligados · BB 700 · BE 690 rpm.';")], 'ref'),
+    ('a E2 sem assinar o capitao-telemetria', 'E2-Navegando-Sintoma.dc.html', [("['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'cache'),
+    ('a resposta da E2 se refaz a cada segundo (o segundo na chave)', 'E2-Navegando-Sintoma.dc.html', [("return this.pergunta(s, x) + '|' + this.state.baseOk + '|' + this.state.seq; }", "return this.pergunta(s, x) + '|' + this.state.baseOk + '|' + this.state.seq + '|' + Math.floor(Date.now() / 1000); }")], 'cache'),
+    ('o toque de novo no sintoma da E2 não recalcula', 'E2-Navegando-Sintoma.dc.html', [("onClick: () => this.setState({ sin: y.id, seq: this.state.seq + 1, livre: null,", "onClick: () => this.setState({ sin: y.id, seq: this.state.seq, livre: null,")], 'cache'),
+    ('a resposta da E2 sem a hora do quadro', 'E2-Navegando-Sintoma.dc.html', [("(hora ? 'Calculado às ' + hora + ' pelo Capitão IA' : 'Calculado agora pelo Capitão IA')", "'Calculado agora pelo Capitão IA'")], 'resposta'),
+    ('a E2 sem a janela de emergência no cérebro', 'E2-Navegando-Sintoma.dc.html', [("{ platform: 'app', commit: false, emergencia: emergencia }", "{ platform: 'app', commit: false }")], 'janela'),
+    ('a E2 não marca a janela quando a resposta a abre', 'E2-Navegando-Sintoma.dc.html', [("if (a && a.abreJanela === true) { try { if (E) E.marca(); } catch (e) {} }", "")], 'resposta'),
+    ('a E2 mostra a leitura do quadro na emergência e no relato do óleo', 'E2-Navegando-Sintoma.dc.html', [("if (oleo || emerg) {", "if (false) {")], 'resposta'),
+    ('o fabricante da E2 de volta com «modelo SEM DADOS»', 'E2-Navegando-Sintoma.dc.html', [("(m ? ' ' + m : sim ? '' : ' · modelo SEM DADOS');", "(m ? ' ' + m + ' · modelo SEM DADOS' : '');")], 'varre'),
+    ('a introdução da E2 de volta com «(guias DEMO)»', 'E2-Navegando-Sintoma.dc.html', [("com o trecho do guia de bordo e a fonte.',", "com o trecho do guia de bordo e a fonte (guias DEMO).',")], 'ref'),
+    ('a fonte da leitura da E2 de volta com «telemetria ao vivo desligada»', 'E2-Navegando-Sintoma.dc.html', [("fonte: 'Fonte: ' + fonte };", "fonte: 'Fonte: ' + fonte + ' — telemetria ao vivo desligada' };")], 'ref'),
+    ('a E2 registra sozinha ao escolher o sintoma', 'E2-Navegando-Sintoma.dc.html', [("onClick: () => this.setState({ sin: y.id, seq: this.state.seq + 1, livre: null, reg: null, nota: '' }, () => this.mostra())", "onClick: () => this.setState({ sin: y.id, seq: this.state.seq + 1, livre: null, reg: null, nota: '' }, () => { this.mostra(); this.registrar(s, y, null); })")], 'registrar'),
+]
+QUAL_P4F = {'troca': lambda b: teste_e1_troca(b), 'histerese': lambda b: teste_e1_histerese(b), 'aba': lambda b: teste_e1_aba_escondida(b), 'alerta': lambda b: teste_e1_alerta(b), 'vivo': lambda b: teste_e1_vivo(b) + teste_e1_codigo(),
+            'nav': lambda b: teste_e1_nav(b), 'registrar': lambda b: teste_e1_registrar(b) + teste_e2_registrar(b), 'ref': lambda b: teste_e2_ref(b), 'cache': lambda b: teste_e2_cache(b) + teste_e2_codigo(),
+            'resposta': lambda b: teste_e2_resposta(b), 'janela': lambda b: teste_e2_janela(b), 'varre': lambda b: teste_e2_varre(b)}
+
+
+def mutantes_p4f(b):
+    global MUT_ARQ
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
+    for nome, arq, trocas, qual in MUTANTES_P4F:
+        if filtro and filtro not in nome: continue
+        src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq, faltam)); vivos.append(nome); continue
+        MUT_ARQ = {arq: trocas}
+        sai = sys.stdout
+        prob = []
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            prob = QUAL_P4F[qual](b)
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            sys.stdout = sai
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            sys.stdout = sai
+            MUT_ARQ = {}
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:150] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_P4F), len(vivos)))
     return vivos
 
 
