@@ -3464,9 +3464,12 @@ LE_C3 = """() => { """ + JS_BASE + """
   const AL = window.CapitaoAlertas, R = window.CapitaoReplay, g = (s) => { const e = document.querySelector('[data-c3=' + s + ']'); return e ? lin(e.innerText) : null; };
   const c = document.querySelector('[data-c3=cartao]'), lt = document.querySelector('[data-c3=leitura]'), pa = document.querySelector('[data-c3=passos]'), sp = document.querySelector('[data-c3=spark]');
   const kids = pa ? [...pa.children] : [], porId = (id) => AL.porId(id), a = AL.ativos()[0] || null;
+  const ou = document.querySelector('[data-c3=outro]'), ouR = document.querySelector('[data-c3=outro-rotulo]');
   const cat = D.replay.alertas.arref_be, lim = D.replay.limites;
   return { hora: I.hora, ms: I.ms, fonteTxt: I.fonteTxt, selo: g('selo'), kicker: g('kicker'), titulo: g('titulo'), situacao: g('situacao'), equip: g('equip'), leitura: g('leitura'), leituraSub: g('leitura-sub'), faixa: g('faixa'), faixaSub: g('faixa-sub'),
     tendencia: g('tendencia'), tend30: g('tendencia30'), fonte: g('fonte'), info: g('info'), nota: g('nota'), registrado: g('registrado'), temRegistrar: !!document.querySelector('[data-c3=registrar]'),
+    outro: g('outro'), outroRotulo: g('outro-rotulo'), outroTexto: g('outro-texto'), outroHref: ou ? ou.getAttribute('href') : null, outroNivel: ou ? ou.getAttribute('data-nivel') : null, outroCor: ouR ? getComputedStyle(ouR).color : null,
+    ativos: AL.ativos().map((x) => x.id + ':' + x.nivel), hash: location.hash,
     estado: c ? c.getAttribute('data-estado') : null, nivel: c ? c.getAttribute('data-nivel') : null, brilho: c ? c.getAttribute('data-brilho') : null, bg: c ? getComputedStyle(c).backgroundColor : null,
     pisca: lt ? lt.getAttribute('data-pisca') : null, anim: lt ? getComputedStyle(lt).animationName : null, cor: lt ? getComputedStyle(lt).color : null, corpo: getComputedStyle(document.body).backgroundColor,
     passos: pa ? { titulo: lin(kids[0].innerText), passos: kids.slice(1, -1).map((k) => lin(k.innerText)), fonte: lin(kids[kids.length - 1].innerText) } : null,
@@ -3555,11 +3558,20 @@ def teste_c3_estados(b):
     r = pg.evaluate(LE_C3)
     prob += problemas_c3_aviso(r, 'C3 a 105 s sem #alarme (o que estiver tocando)')
     ctx.close()
-    # id que não existe (nem 'constructor', nem '__proto__'): neutro, sem erro
-    for h in ('#alarme=zzz', '#alarme=constructor', '#alarme=__proto__', '#alarme=%E0%A4%A'):
+    # id que o catálogo não tem (link velho ou digitado errado: 'zzz', 'constructor', '__proto__', o id com outra caixa, o endereço malformado): a 60 s ninguém toca e o estado é o neutro, sem erro;
+    # a 105 s o AVISO está aberto e a tela o mostra, como sem #alarme: um id inválido nunca esconde um alarme aberto atrás de «Nenhum alarme ativo» e «Tudo dentro da faixa»
+    for h in ('#alarme=zzz', '#alarme=__proto__'):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_=h)
+        r = pg.evaluate(LE_C3)
+        if r['estado'] != 'nenhum' or r['titulo'] != 'Nenhum alarme ativo agora' or r['ativos'] or re.search(r'NaN|undefined|\[object', r['texto']): prob.append('C3 a 60 s com %s: estado %r, título %r, ativos %r (esperado o neutro, sem NaN, com nenhum alarme aberto)' % (h, r['estado'], r['titulo'], r['ativos']))
+        if erros: prob += ['C3 com %s: %s' % (h, e) for e in erros[:2]]
+        ctx.close()
+    for h in ('#alarme=zzz', '#alarme=constructor', '#alarme=__proto__', '#alarme=ARREF_BE', '#alarme=%E0%A4%A'):
         ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_=h)
         r = pg.evaluate(LE_C3)
-        if r['estado'] not in ('nenhum', 'ativo') or (h != '#alarme=%E0%A4%A' and r['estado'] != 'nenhum') or re.search(r'NaN|undefined|\[object', r['texto']): prob.append('C3 com %s: estado %r (esperado neutro, sem NaN)' % (h, r['estado']))
+        prob += problemas_c3_aviso(r, 'C3 a 105 s com %s (id fora do catálogo, alarme aberto)' % h)
+        if r['ativos'] != ['arref_be:aviso'] or 'Nenhum alarme ativo' in r['texto'] or 'Tudo dentro da faixa' in r['texto'] or re.search(r'NaN|undefined|\[object', r['texto']):
+            prob.append('C3 com %s a 105 s: o alarme %r está aberto e a tela diz «Nenhum alarme ativo» ou «Tudo dentro da faixa» (ou traz NaN): %r' % (h, r['ativos'], r['texto'][:140]))
         if erros: prob += ['C3 com %s: %s' % (h, e) for e in erros[:2]]
         ctx.close()
     # alerta do catálogo sem janela no cenário aviso (o banco de 12 V): dentro da faixa, com a faixa do guia
@@ -3573,6 +3585,92 @@ def teste_c3_estados(b):
     r = pg.evaluate(LE_C3)
     if r['faixa'] != 'de 2,4 a 6,0 bar (a partir de 1.000 rpm)' or r['faixaSub'] != 'aviso abaixo de 2,4 bar ou acima de 6,0 bar · crítico abaixo de 1,4 bar': prob.append('C3#alarme=oleo_bb: a faixa diz %r / %r (esperado a do regime de 1.000 rpm ou mais)' % (r['faixa'], r['faixaSub']))
     ctx.close()
+    return prob
+
+
+def alarmes_c3_plantados(b):
+    """O alarme real de 105 s (o AVISO do arrefecimento do BE, com o `desde` do quadro) e dois alarmes de óleo plantados com a mesma forma, para a lista literal do gancho `capitao.replay.sobre`."""
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105')
+    a = pg.evaluate("() => window.CapitaoReplay.alarmes()[0]")
+    ctx.close()
+    return a, dict(a, id='oleo_bb', campo='motor_bb_oleo_bar', lado='bb', sistema='motores', valor=0.9, limite=2.4), dict(a, id='oleo_be', campo='motor_be_oleo_bar', lado='be', sistema='motores', valor=0.8, limite=2.4)
+
+
+def sobre_alarmes(*lista):
+    return {'capitao.replay.sobre': json.dumps({'alarmes': list(lista)})}
+
+
+def teste_c3_outros(b):
+    """C3 e os alarmes abertos que não são o da tela (a C3 não tem faixa global): (1) sem #alarme a tela segue o que toca — depois de normalizar, um alarme novo entra no lugar do NORMALIZADO, e com um crítico
+    e um aviso abertos vai para o crítico (o mais grave); (2) com #alarme=<id> do catálogo ela fica no alarme escolhido e uma linha «OUTRO ALARME ABERTO» (ou «N OUTROS…») leva ao detalhe do outro, na cor do
+    nível dele, em qualquer estado (DENTRO DA FAIXA, NORMALIZADO, AVISO); (3) o toque no ABRIR troca o alarme da tela (hashchange); (4) sem outro alarme aberto a linha não existe; (5) sem termo do §3."""
+    prob = []
+    a0, bb, be = alarmes_c3_plantados(b)
+    if not a0 or a0.get('id') != 'arref_be': return ['C3: o alarme real de 105 s não veio do replay (%r)' % (a0,)]
+    R_BB, R_BE, R_ARREF = 'Pressão de óleo do motor BB · 0,9 bar · AVISO desde 12:01:39', 'Pressão de óleo do motor BE · 0,8 bar · AVISO desde 12:01:39', 'Temperatura do motor BE · 89,6 °C · AVISO desde 12:01:39'
+    def confere(rot, r, **esp):
+        for k, v in esp.items():
+            if r[k] != v: prob.append('%s: %s diz %r (esperado %r)' % (rot, k, r[k], v))
+    # (1) sem #alarme: o NORMALIZADO dá lugar ao alarme novo (a tela não fica presa no primeiro)
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105')
+    pg.evaluate("() => window.CapitaoReplay.fixar('135')"); pg.wait_for_timeout(900)
+    r = pg.evaluate(LE_C3)
+    confere('C3 sem #alarme a 135 s', r, selo='NORMALIZADO às 12:01', estado='normalizado', outro=None, ativos=[])
+    pg.evaluate(SOBRE_JS, [{'alarmes': [bb]}, 1]); pg.evaluate("() => window.CapitaoReplay.fixar('136')"); pg.wait_for_timeout(1200)
+    r = pg.evaluate(LE_C3)
+    confere('C3 sem #alarme a 136 s, com o óleo do BB aberto depois do NORMALIZADO', r, selo='AVISO', estado='ativo', nivel='aviso', titulo='Pressão de óleo do motor BB', ativos=['oleo_bb:aviso'], outro=None)
+    if not (r['leitura'] or '').startswith('BB 0,9 bar · '): prob.append('C3 sem #alarme a 136 s: a leitura diz %r (esperado «BB 0,9 bar · hora»)' % r['leitura'])
+    pg.evaluate(SOBRE_JS, [{'alarmes': [bb, be]}, 2]); pg.evaluate("() => window.CapitaoReplay.fixar('137')"); pg.wait_for_timeout(1200)
+    r = pg.evaluate(LE_C3)
+    confere('C3 sem #alarme a 137 s, com dois alarmes abertos', r, titulo='Pressão de óleo do motor BB', outroRotulo='OUTRO ALARME ABERTO', outroTexto=R_BE, outroHref='C3-Leme-Alerta.dc.html#alarme=oleo_be')
+    if erros: prob += erros[:2]
+    ctx.close()
+    # (1b) o mais grave: um crítico e um aviso abertos, sem #alarme → o crítico na tela e o aviso na linha do outro
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', depois="window.CapitaoDados.replay.cenario = 'alarme-critico';", ls=sobre_alarmes(a0, dict(bb, nivel='critico')))
+    r = pg.evaluate(LE_C3)
+    confere('C3 sem #alarme com um crítico e um aviso abertos', r, selo='ALERTA CRÍTICO', estado='ativo', nivel='critico', titulo='Pressão de óleo do motor BB', ativos=['oleo_bb:critico', 'arref_be:aviso'], outroRotulo='OUTRO ALARME ABERTO', outroTexto=R_ARREF, outroNivel='aviso')
+    ctx.close()
+    # (2) #alarme=<id do catálogo>: fica nele, e o outro alarme aberto aparece numa linha com o ABRIR, em qualquer estado
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=b12')
+    r = pg.evaluate(LE_C3)
+    confere('C3#alarme=b12 a 105 s (o banco de 12 V, sem alarme, com o do arrefecimento aberto)', r, selo='DENTRO DA FAIXA', estado='normal', outroRotulo='OUTRO ALARME ABERTO', outroTexto=R_ARREF, outroHref='C3-Leme-Alerta.dc.html#alarme=arref_be', outroNivel='aviso', outroCor='rgb(240, 166, 58)')
+    if 'Nenhum alarme ativo' in r['texto'] or 'Tudo dentro da faixa' in r['texto']: prob.append('C3#alarme=b12 a 105 s: diz «Nenhum alarme ativo» ou «Tudo dentro da faixa» com o do arrefecimento aberto: %r' % r['texto'][:140])
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=arref_be', ls=sobre_alarmes(bb))
+    r = pg.evaluate(LE_C3)
+    confere('C3#alarme=arref_be a 60 s (NORMALIZADO) com o óleo do BB aberto', r, selo='NORMALIZADO às 11:59', estado='normalizado', outroRotulo='OUTRO ALARME ABERTO', outroTexto=R_BB, outroHref='C3-Leme-Alerta.dc.html#alarme=oleo_bb', ativos=['oleo_bb:aviso'])
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', ls=sobre_alarmes(a0, bb, be))
+    r = pg.evaluate(LE_C3)
+    confere('C3#alarme=arref_be a 105 s com mais dois alarmes abertos', r, selo='AVISO', estado='ativo', titulo='Temperatura do motor BE', outroRotulo='2 OUTROS ALARMES ABERTOS', outroTexto=R_BB + ' · e mais 1', outroHref='C3-Leme-Alerta.dc.html#alarme=oleo_bb', ativos=['arref_be:aviso', 'oleo_bb:aviso', 'oleo_be:aviso'])
+    ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+    if ach: prob.append('C3 com a linha do outro alarme: termo do §3 na tela: %s' % ach)
+    # (3) o ABRIR troca o alarme da tela (hashchange), sem recarregar, e a linha passa a apontar para o que ficou de fora
+    if not pg.evaluate("() => { window.__marca = 'viva'; const o = document.querySelector('[data-c3=outro]'); if (o) o.click(); return !!o; }"): prob.append('C3: sem a linha do outro alarme para tocar no ABRIR')
+    pg.wait_for_timeout(1500)
+    r = pg.evaluate(LE_C3)
+    confere('C3 depois do ABRIR', r, hash='#alarme=oleo_bb', titulo='Pressão de óleo do motor BB', selo='AVISO', outroRotulo='2 OUTROS ALARMES ABERTOS', outroTexto=R_ARREF + ' · e mais 1', outroHref='C3-Leme-Alerta.dc.html#alarme=arref_be')
+    if pg.evaluate("() => window.__marca") != 'viva': prob.append('C3: o ABRIR recarregou a tela (devia só trocar o alarme)')
+    if erros: prob += erros[:2]
+    ctx.close()
+    # um alarme aberto cujo id o catálogo não tem (o id é o do campo, como o replay o devolve): o endereço dele vale, a tela fica nele e o arref_be aparece na linha do outro
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=zz_planta', ls=sobre_alarmes(a0, dict(bb, id='zz_planta')))
+    r = pg.evaluate(LE_C3)
+    confere('C3#alarme=zz_planta (alarme aberto sem id no catálogo) a 105 s', r, selo='AVISO', estado='ativo', outroRotulo='OUTRO ALARME ABERTO', outroTexto=R_ARREF, outroHref='C3-Leme-Alerta.dc.html#alarme=arref_be', ativos=['arref_be:aviso', 'zz_planta:aviso'])
+    if r['titulo'] == 'Temperatura do motor BE': prob.append('C3#alarme=zz_planta: a tela devia ficar no alarme do endereço e não no primeiro da lista (título %r)' % r['titulo'])
+    if erros: prob += erros[:2]
+    ctx.close()
+    # a cor da linha é a do nível do outro alarme (crítico vermelho), e ela mostra o outro mesmo quando o da tela está aberto
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', depois="window.CapitaoDados.replay.cenario = 'alarme-critico';", ls=sobre_alarmes(a0, dict(bb, nivel='critico')))
+    r = pg.evaluate(LE_C3)
+    confere('C3#alarme=arref_be com o óleo do BB em CRÍTICO', r, selo='AVISO', outroNivel='critico', outroCor='rgb(255, 106, 96)', outroTexto='Pressão de óleo do motor BB · 0,9 bar · CRÍTICO desde 12:01:39', outroRotulo='OUTRO ALARME ABERTO')
+    ctx.close()
+    # (4) só o alarme da tela aberto, ou nenhum: a linha não existe (a própria tela nunca aparece como «outro»)
+    for fixo, h, esp in (('105', '#alarme=arref_be', 'AVISO'), ('105', '', 'AVISO'), ('60', '#alarme=arref_be', 'NORMALIZADO às 11:59'), ('60', '#alarme=b12', 'DENTRO DA FAIXA'), ('60', '', 'SEM ALARME ATIVO')):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo=fixo, hash_=h)
+        r = pg.evaluate(LE_C3)
+        if r['selo'] != esp or r['outro'] is not None or r['outroHref'] is not None: prob.append('C3%s a %s s: selo %r e linha do outro alarme %r (esperado %r e nenhuma linha: só o alarme da tela está aberto)' % (h, fixo, r['selo'], r['outro'], esp))
+        ctx.close()
     return prob
 
 
@@ -3865,6 +3963,7 @@ def p4e_conferencias(b, lista):
     if 'C2-Leme-Mobile' in lista: out.append(('C2 · atrasadas, horímetros de agora e horas que faltam', teste_leme_c2(b)))
     if 'C3-Leme-Alerta' in lista:
         out.append(('C3 · o alerta vivo: AVISO, NORMALIZADO, sem alarme e a faixa do óleo', teste_c3_estados(b)))
+        out.append(('C3 · o alarme da tela segue o que toca e os outros alarmes abertos têm a linha com o ABRIR', teste_c3_outros(b)))
         out.append(('C3 · o alarme crítico plantado (o cenário desligado)', teste_c3_critico(b)))
         out.append(('C3 · normaliza com a tela aberta, sem sair dela', teste_c3_transicao(b)))
         out.append(('C3 · registrar só com o toque, com o valor, o lado e a hora do quadro', teste_c3_registrar(b)))
@@ -3907,6 +4006,13 @@ MUTANTES_P4E = [
     ('a C3 de volta com o texto fixo «MODELO DE ALERTA»', 'C3-Leme-Alerta.dc.html', [('<span data-c3="selo" style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em; color: {{cartaoAcc}};">{{selo}}</span>', '<span data-c3="selo" style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.10em; color: {{cartaoAcc}};">MODELO DE ALERTA · {{selo}}</span>')], 'c3'),
     ('a C3 carrega o cérebro na abertura (deixa de ser leve)', 'C3-Leme-Alerta.dc.html', [('<script src="./capitao-telemetria.js"></script>\n<style>', '<script src="./capitao-telemetria.js"></script>\n<script src="./capitao-brain.js"></script>\n<style>')], 'c3_leve'),
     ('o alerta crítico da C3 sem o fundo vermelho', 'C3-Leme-Alerta.dc.html', [("d.nivel === 'critico' ? { bg: '#d32f27',", "d.nivel === 'critico' ? { bg: 'rgba(240,166,58,0.13)',")], 'c3_critico'),
+    ('a C3 fica presa no primeiro alarme (não segue o que toca)', 'C3-Leme-Alerta.dc.html', [("    else if (ativos[0]) this._id = ativos[0].id;", "    else if (!this._id && ativos[0]) this._id = ativos[0].id;")], 'c3_outros'),
+    ('a C3 com id fora do catálogo no endereço fica em «Nenhum alarme ativo» com um alarme aberto', 'C3-Leme-Alerta.dc.html', [("    if (h && (dono(cat, h) || ativos.some((x) => x.id === h))) this._id = h;", "    if (h) this._id = h;")], 'c3'),
+    ('a C3 ignora o endereço de um alarme aberto que o catálogo não tem (vai para o primeiro da lista)', 'C3-Leme-Alerta.dc.html', [("    if (h && (dono(cat, h) || ativos.some((x) => x.id === h))) this._id = h;", "    if (h && dono(cat, h)) this._id = h;")], 'c3_outros'),
+    ('a C3 sem a linha do outro alarme aberto', 'C3-Leme-Alerta.dc.html', [("temOutro: d.outroN > 0,", "temOutro: false,")], 'c3_outros'),
+    ('o ABRIR da C3 leva ao próprio alarme da tela (e não ao outro)', 'C3-Leme-Alerta.dc.html', [("outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(o1.id) }", "outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(id) }")], 'c3_outros'),
+    ('a linha do outro alarme da C3 conta também o alarme da própria tela', 'C3-Leme-Alerta.dc.html', [("const outros = ativos.filter((x) => x.id !== id), o1", "const outros = ativos.slice(), o1")], 'c3_outros'),
+    ('a linha do outro alarme da C3 sempre na cor do aviso', 'C3-Leme-Alerta.dc.html', [("outroLinha: d.outroNivel === 'critico' ? '#ff6a60' : '#f0a63a'", "outroLinha: '#f0a63a'")], 'c3_outros'),
     ('a C3 sem assinar o capitao-alerta', 'C3-Leme-Alerta.dc.html', [("    window.addEventListener('capitao-alerta', this._onTele);\n", "")], 'c3_codigo'),
     # —— C4 ——
     ('a C4 sem o ✓ do quadro (os itens sem a verificação)', 'C4-Checklist-Web.dc.html', [("aEstado: i.auto ? i.auto.estado : '', aValor: i.auto ? String(i.auto.valor) : '',", "aEstado: '', aValor: '',")], 'c4_web'),
@@ -3919,7 +4025,7 @@ MUTANTES_P4E = [
     ('o Recomeçar da C4 grava no diário', 'C4-Checklist-Mobile.dc.html', [("zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistZera(this._tipo);", "zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistConcluir(this._tipo); B.checklistZera(this._tipo);")], 'c4_app'),
 ]
 QUAL_P4E = {'c1': lambda b: teste_leme_c1(b), 'c1_vivo': lambda b: teste_leme_vivo(b), 'c2': lambda b: teste_leme_c2(b), 'c2_codigo': lambda b: teste_c4_codigo(),
-            'c3': lambda b: teste_c3_estados(b) + teste_c3_codigo(), 'c3_critico': lambda b: teste_c3_critico(b), 'c3_transicao': lambda b: teste_c3_transicao(b), 'c3_registrar': lambda b: teste_c3_registrar(b),
+            'c3': lambda b: teste_c3_estados(b) + teste_c3_codigo(), 'c3_outros': lambda b: teste_c3_outros(b), 'c3_critico': lambda b: teste_c3_critico(b), 'c3_transicao': lambda b: teste_c3_transicao(b), 'c3_registrar': lambda b: teste_c3_registrar(b),
             'c3_leve': lambda b: teste_c3_leve(b) + teste_c3_codigo(), 'c3_codigo': lambda b: teste_c3_codigo(),
             'c4_web': lambda b: teste_c4(b, 'C4-Checklist-Web'), 'c4_app': lambda b: teste_c4(b, 'C4-Checklist-Mobile'), 'c4_vivo': lambda b: teste_c4_vivo(b) + teste_c4_codigo()}
 

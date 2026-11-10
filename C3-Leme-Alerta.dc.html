@@ -53,6 +53,18 @@ button { font: inherit; }
       </sc-if>
     </div>
 
+    <!-- Alarme aberto que não é o desta tela (a C3 não tem faixa global): sempre visível, com o toque que abre o detalhe dele -->
+    <sc-if value="{{temOutro}}" hint-placeholder-val="{{false}}">
+      <a href="{{outroHref}}" data-c3="outro" data-nivel="{{outroNivel}}" aria-label="{{outroAria}}" style="flex-shrink: 0; box-sizing: border-box; min-height: 56px; padding: 10px 14px; border-radius: 16px; border: 1.5px solid {{outroLinha}}; background: {{outroBg}}; color: #eaf1ff; text-decoration: none; display: flex; align-items: center; gap: 12px;">
+        <span data-pisca="1" style="width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: {{outroLinha}};"></span>
+        <span style="min-width: 0; flex-grow: 1; display: flex; flex-direction: column; gap: 2px;">
+          <span data-c3="outro-rotulo" style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; color: {{outroLinha}};">{{outroRotulo}}</span>
+          <span data-c3="outro-texto" style="font-size: 13px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;">{{outroTexto}}</span>
+        </span>
+        <span style="flex-shrink: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; color: {{outroLinha}};">ABRIR ›</span>
+      </a>
+    </sc-if>
+
     <sc-if value="{{temPassos}}" hint-placeholder-val="{{true}}">
       <div data-c3="passos" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: #eaf1ff; border-radius: 20px; color: #050816; display: flex; flex-direction: column; gap: 9px;">
         <span style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800; color: {{passosCor}};">{{passosTitulo}}</span><span style="font-size: 11.5px; font-weight: 600; color: #3b4766;">{{passosSub}}</span></span>
@@ -124,7 +136,8 @@ button { font: inherit; }
 class Component extends DCLogic {
   state = { reg: null, gravando: false, nota: '', notaTone: '#97a3c0', vivo: '' };
   componentDidMount() {
-    // #alarme=<id> escolhe o alerta; sem ele, o que estiver tocando (o mais grave). Assina o tique da telemetria (a leitura anda) e o 'capitao-alerta' (início, mudança de nível e fim); só chama setState
+    // #alarme=<id> (um id do catálogo ou de um alarme aberto) escolhe o alerta; sem ele, ou com um id que não é de nenhum dos dois, o que estiver tocando (o mais grave) — e a tela segue o que toca: se aparece outro, ela vai para ele.
+    // Qualquer alarme aberto que não seja o da tela aparece numa linha com o ABRIR (a C3 não tem faixa global). Assina o tique da telemetria (a leitura anda) e o 'capitao-alerta' (início, mudança de nível e fim); só chama setState
     // quando o texto exibido muda, não gira timer nenhum e pausa com a aba oculta. A tela nunca se fecha sozinha: quando o alarme acaba, o selo vira NORMALIZADO e a tela fica.
     this._onTele = () => { if (!document.hidden) this.atualiza(); };
     this._onHash = () => this.atualiza();
@@ -178,12 +191,19 @@ class Component extends DCLogic {
     const hora = (t, seg) => { try { return F.hora ? F.hora(t, !!seg) : ''; } catch (e) { return ''; } };
     const dur = (t) => (t < 60 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60 ? (t % 60) + ' s' : '').trim()).trim();
     let ativos = []; try { ativos = AL && typeof AL.ativos === 'function' ? AL.ativos(ms) : []; } catch (e) { ativos = []; }
-    // qual alerta: o do endereço; sem ele, o primeiro que tocar (e fica nele, mesmo depois de normalizado)
+    // qual alerta: o do endereço, quando é um id do catálogo ou de um alarme aberto agora (a pessoa escolheu: fica nele, aberto ou não). Sem endereço, ou com um id que o catálogo não tem (link velho, id digitado errado), vale o que estiver tocando
+    // (ativos()[0], o mais grave); a tela acompanha o que toca e só fica no último (NORMALIZADO, sem sair da tela) quando nenhum alarme está aberto. Nunca diz «nenhum alarme» com um aberto.
     const m = /alarme=([^&]*)/.exec(location.hash || '');
     let h = ''; try { h = m ? decodeURIComponent(m[1]) : ''; } catch (e) { h = m ? m[1] : ''; }
-    if (h !== this._hash) { this._hash = h; this._id = h || null; }
-    if (!this._id && ativos[0]) this._id = ativos[0].id;
+    if (h !== this._hash) { this._hash = h; this._id = null; }
+    if (h && (dono(cat, h) || ativos.some((x) => x.id === h))) this._id = h;
+    else if (ativos[0]) this._id = ativos[0].id;
     const id = this._id, e1 = id && dono(cat, id) ? cat[id] : null;
+    // os outros alarmes abertos (o da tela fica de fora): a linha «OUTRO ALARME ABERTO» leva ao detalhe do primeiro
+    const outros = ativos.filter((x) => x.id !== id), o1 = outros[0] || null, nivelRot = (n) => (n === 'critico' ? 'CRÍTICO' : 'AVISO');
+    const outro = o1 ? { outroN: outros.length, outroId: o1.id, outroNivel: o1.nivel, outroRotulo: outros.length > 1 ? outros.length + ' OUTROS ALARMES ABERTOS' : 'OUTRO ALARME ABERTO',
+      outroTexto: [o1.titulo, o1.valorTxt, nivelRot(o1.nivel) + (o1.hora ? ' desde ' + o1.hora : '')].filter(Boolean).join(' · ') + (outros.length > 1 ? ' · e mais ' + (outros.length - 1) : ''),
+      outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(o1.id) } : { outroN: 0, outroId: '', outroNivel: '', outroRotulo: '', outroTexto: '', outroHref: '' };
     let a = null; try { a = id && AL && typeof AL.porId === 'function' ? AL.porId(id, ms) : null; } catch (e) { a = null; }
     let j = null; if (!a && e1) { try { j = R && typeof R.janela === 'function' ? R.janela(id, ms) : null; } catch (e) { j = null; } }
     // sem a reprodução (simulacao false) ninguém avalia os limites: o alerta só existe com a API de alertas andando; sem ela a tela diz que não há alarme, nunca «dentro da faixa»
@@ -194,10 +214,10 @@ class Component extends DCLogic {
     const eq = (D.equipamentos || []).filter((x) => x.id === sistema)[0] || null;
     const nivel = a ? a.nivel : '';
     const horaI = I ? I.hora : '';
-    const base = { estado: estado, nivel: nivel, id: id || '', horaI: horaI, ms: ms === undefined ? null : ms };
+    const base = Object.assign({ estado: estado, nivel: nivel, id: id || '', horaI: horaI, ms: ms === undefined ? null : ms }, outro);
 
     if (estado === 'nenhum') {
-      return Object.assign(base, { selo: 'SEM ALARME ATIVO', kicker: 'Alertas', titulo: 'Nenhum alarme ativo agora', situacao: anda && I ? 'Tudo dentro da faixa às ' + I.hora + ' · ' + cap1(I.fonteTxt) : 'Alarmes ' + falta(SL) + (I ? ' · ' + cap1(I.fonteTxt) : ''),
+      return Object.assign(base, { selo: 'SEM ALARME ATIVO', kicker: 'Alertas', titulo: 'Nenhum alarme ativo agora', situacao: anda && I && !ativos.length ? 'Tudo dentro da faixa às ' + I.hora + ' · ' + cap1(I.fonteTxt) : 'Alarmes ' + falta(SL) + (I ? ' · ' + cap1(I.fonteTxt) : ''),
         infoTitulo: 'Quando um alarme abrir', infoTexto: 'Esta tela mostra a leitura agora, a faixa normal, a tendência dos últimos 10 s e o que fazer, e avisa quando a leitura normaliza. Ela nunca se fecha sozinha.' });
     }
     // a leitura agora: «BB 1,6 bar · 14:05:31» (o lado, o valor do alarme e a hora do quadro)
@@ -308,6 +328,8 @@ class Component extends DCLogic {
       temLeitura: d.estado !== 'nenhum', leitura: d.leitura, leituraSub: d.leituraSub, leituraCor: leituraCor, faixa: d.faixa, faixaSub: d.faixaSub,
       temTendencia: !!d.tendencia, tendencia: d.tendencia, temTend30: !!d.tendencia30, tendencia30: d.tendencia30, spark: d.serie && d.serie.length ? this.spark(d.serie, aviso || d.nivel === 'critico' ? d.limite : null, leituraCor) : null, fonte: d.fonte,
       temInfo: d.estado === 'nenhum', infoTitulo: d.infoTitulo || '', infoTexto: d.infoTexto || '',
+      temOutro: d.outroN > 0, outroHref: d.outroHref, outroNivel: d.outroNivel, outroRotulo: d.outroRotulo, outroTexto: d.outroTexto, outroAria: 'Abrir o outro alarme aberto: ' + d.outroTexto,
+      outroLinha: d.outroNivel === 'critico' ? '#ff6a60' : '#f0a63a', outroBg: d.outroNivel === 'critico' ? 'rgba(255,59,48,0.14)' : 'rgba(240,166,58,0.13)',
       podeRegistrar: !!d.registravel, naoRegistrado: !reg, registrado: !!reg,
       registrar: () => this.registrar(), registrarLabel: s.gravando ? 'Gravando…' : 'Registrar no diário',
       registradoLabel: reg ? 'REGISTRADO ' + reg.d + ' ' + reg.t + ' · ABRIR DIÁRIO ›' : '',
