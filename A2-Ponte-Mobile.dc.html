@@ -44,7 +44,7 @@ button { font: inherit; }
           <span style="flex-shrink: 0; width: 52px; box-sizing: border-box; margin-top: 1px; padding: 3px 0; border-radius: 999px; background: {{a.cor}}; color: var(--cap-bg, #050816); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-align: center;">{{a.rotulo}}</span>
           <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
             <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">{{a.sistema}}</span>
-            <span style="font-size: 13.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;">{{a.texto}}</span>
+            <span style="font-size: 13.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;">{{a.txt}}</span>
             <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); font-variant-numeric: tabular-nums;">{{a.quando}}</span>
           </span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; align-self: center;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
@@ -90,20 +90,18 @@ button { font: inherit; }
     </div>
 
     <section aria-label="Histórico" style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; display: flex; flex-direction: column; gap: 9px; min-width: 0;">
-      <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
-          <span style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Histórico · {{serieRot}}</span>
-          <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
-        </span>
-        <span role="group" aria-label="Período" style="display: flex; flex-shrink: 0; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 10px;">
-          <sc-for list="{{janelas}}" as="w" hint-placeholder-count="5">
-            <button type="button" onClick="{{w.onClick}}" aria-pressed="{{w.on}}" aria-disabled="{{w.off}}" title="{{w.tip}}" style="height: 32px; min-width: 34px; padding: 0 6px; border-radius: 8px; border: none; background: {{w.bg}}; color: {{w.tom}}; font-size: 11px; letter-spacing: 0.04em; font-weight: 800; cursor: {{w.cursor}}; opacity: {{w.opac}}; white-space: nowrap;">{{w.l}}</button>
-          </sc-for>
-        </span>
-      </div>
+      <span style="display: flex; flex-direction: column; min-width: 0;">
+        <span data-hist="titulo" style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Histórico · {{serieRot}}</span>
+        <span data-hist="sub" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
+      </span>
+      <span role="group" aria-label="Período" style="display: flex; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px;">
+        <sc-for list="{{janelas}}" as="w" hint-placeholder-count="5">
+          <button type="button" onClick="{{w.onClick}}" aria-pressed="{{w.on}}" aria-disabled="{{w.off}}" title="{{w.tip}}" style="flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 4px; border-radius: 9px; border: none; background: {{w.bg}}; color: {{w.tom}}; font-size: 11.5px; letter-spacing: 0.04em; font-weight: 800; cursor: {{w.cursor}}; opacity: {{w.opac}}; white-space: nowrap;">{{w.l}}</button>
+        </sc-for>
+      </span>
       <div role="group" aria-label="Série" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
         <sc-for list="{{series}}" as="m" hint-placeholder-count="10">
-          <button type="button" onClick="{{m.onClick}}" aria-pressed="{{m.on}}" style="flex-shrink: 0; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tom}}; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{m.l}}</button>
+          <button type="button" onClick="{{m.onClick}}" aria-pressed="{{m.on}}" style="flex-shrink: 0; min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tom}}; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{m.l}}</button>
         </sc-for>
       </div>
       <div style="min-width: 0;">{{grafico}}</div>
@@ -216,6 +214,8 @@ class Component extends DCLogic {
     { id: 'anomalias', label: 'Anomalias', icon: 'alerta', q: 'Anomalias abertas' }
   ];
   PADRAO = ['motores', 'manutencao', 'telemetria', 'documentos', 'equipamentos', 'navegacao', 'abastecer', 'diario'];
+  // número e unidade na mesma linha: um espaço sem quebra entre o número e a unidade (a unidade nunca cai sozinha na linha de baixo); só no que a tela desenha, nunca no title nem no aria-label
+  un(s) { return String(s === null || s === undefined ? '' : s).replace(/(\d) (°C|°|%|rpm|bar|hPa|nós?|kW|V|Ah|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])/g, '$1\u00a0$2'); }
   porId(id) { return this.CATALOGO.filter((b) => b.id === id)[0] || null; }
   hrefDe(b) { return b.q ? 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(b.q) : b.href; }
   padrao() { return this.PADRAO.map((id) => { const b = this.porId(id); return { id: b.id, label: b.label, icon: b.icon }; }); }
@@ -348,7 +348,7 @@ class Component extends DCLogic {
     const hh = I ? (reserva ? String(I.fonteTxt || '').replace(/^.*leitura de /, '') : I.hhmm) : '—';
     const alertas = { n: itens.length, crit: nCrit, titulo: itens.length ? itens.length + (itens.length === 1 ? ' alerta ativo' : ' alertas ativos') : 'Nenhum alerta ativo',
       status: itens.length ? (nCrit ? nCrit + ' crítico' + (nCrit > 1 ? 's' : '') : '') + (nCrit && nAv ? ' · ' : '') + (nAv ? nAv + (nAv === 1 ? ' aviso' : ' avisos') : '') : (I ? (reserva ? 'Última leitura salva · ' + hh : 'Faixas do guia de bordo · ' + hh) : falta(SL)),
-      itens: itens.map((a) => ({ id: a.id, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, texto: a.texto, quando: a.quando, href: a.href, aria: a.rotulo + ' — ' + a.texto + ' · ' + a.quando })) };
+      itens: itens.map((a) => ({ id: a.id, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, texto: a.texto, txt: this.un(a.texto), quando: a.quando, href: a.href, aria: a.rotulo + ' — ' + a.texto + ' · ' + a.quando })) };
     // tendências (F11): do cérebro, a cada 5 s do instante
     let tend = this._pred || [];
     const slot = I ? Math.floor(I.ms / 5000) : -1;
@@ -375,7 +375,7 @@ class Component extends DCLogic {
     const blocos = lista.map((b) => {
       const c = this.porId(b.id), ic = this.ICONES[b.icon] || this.ICONES[c.icon], k = cor(ic.tom), e = est[b.id] || { sub: '—' };
       const badge = e.badge ? String(e.badge) : '';
-      return { href: this.hrefDe(c), label: b.label, sub: e.sub, subTom: e.tom || 'var(--cap-ink3, #97a3c0)', badge: badge, ico: this.ico(ic.d, 20, 1.7, k[0]), wash: k[1],
+      return { href: this.hrefDe(c), label: b.label, sub: this.un(e.sub), subTom: e.tom || 'var(--cap-ink3, #97a3c0)', badge: badge, ico: this.ico(ic.d, 20, 1.7, k[0]), wash: k[1],
         aria: b.label + ' — ' + e.sub + (badge ? ' · ' + badge + (badge === '1' ? ' tarefa atrasada' : ' tarefas atrasadas') : '') + (c.q ? ' · pergunta pronta' : '') };
     });
     const salvo = !!s.blocos;

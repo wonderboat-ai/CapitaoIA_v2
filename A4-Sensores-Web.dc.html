@@ -97,13 +97,15 @@ class Component extends DCLogic {
     this._k = k; this._din = d; this._fresco = true;
     this.setState({ vivo: k });
   }
+  // número e unidade na mesma linha: um espaço sem quebra entre o número e a unidade (a unidade nunca cai sozinha na linha de baixo); só no que a tela desenha, nunca no title nem no aria-label
+  un(s) { return String(s === null || s === undefined ? '' : s).replace(/(\d) (°C|°|%|rpm|bar|hPa|nós?|kW|V|Ah|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])/g, '$1\u00a0$2'); }
   dinamico() {
     const S = window.CapitaoSensores, D = window.CapitaoDados || {}, sim = D.simulacao === true, falta = (r) => (sim ? '—' : r);
     const v = S ? S.vistas('web') : { perfil: null, planta: null, hora: '—', fonte: falta('SEM DADOS'), reserva: false }, c = S ? S.contagem() : { total: 0, comValor: 0 };
     const todos = [].concat(v.perfil ? v.perfil.pontos : [], v.planta ? v.planta.pontos : []).sort((a, b) => a.n - b.n);
     const cr = (p) => (p.nivel === 'normal' ? 'var(--cap-ok, #34c77a)' : p.nivel === 'aviso' ? 'var(--cap-warn, #f0a63a)' : p.nivel === 'critico' ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ink3, #97a3c0)');
     return { v: v, c: c, hora: v.hora, fonte: v.fonte, reserva: v.reserva,
-      lista: todos.map((p) => ({ id: p.id, rotulo: p.rotulo, onde: p.onde, vista: p.vista, cor: cr(p), titulo: p.titulo, valores: p.itens.map((it) => it.k + ' ' + it.v).join(' · ') })) };
+      lista: todos.map((p) => ({ id: p.id, rotulo: p.rotulo, onde: p.onde, vista: p.vista, cor: cr(p), titulo: p.titulo, valores: this.un(p.itens.map((it) => it.k + ' ' + it.v).join(' · ')) })) };
   }
   renderVals() {
     const S = window.CapitaoSensores;

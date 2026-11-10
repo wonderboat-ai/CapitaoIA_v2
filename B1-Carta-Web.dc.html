@@ -92,7 +92,7 @@ button { font: inherit; }
             <sc-for list="{{motores}}" as="m" hint-placeholder-count="2">
               <div data-motor="{{m.id}}" title="{{m.title}}" style="min-width: 0; padding: 8px 12px; background: var(--cap-row, #10162e); border-radius: 12px; display: flex; flex-direction: column; gap: 1px;">
                 <span style="font-size: 12px; font-weight: 600; color: var(--cap-ink2, #b1bdd6);">{{m.l}}</span>
-                <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">{{m.h}} <span style="font-size: 13px; font-weight: 600; color: var(--cap-ink3, #97a3c0); letter-spacing: 0;">h</span></span>
+                <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.15;">{{m.h}}&nbsp;<span style="font-size: 13px; font-weight: 600; color: var(--cap-ink3, #97a3c0); letter-spacing: 0;">h</span></span>
                 <span data-b1="motor-leitura" style="font-size: 11px; line-height: 1.3; color: {{m.tone}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">{{m.s}}</span>
               </div>
             </sc-for>
@@ -315,9 +315,10 @@ class Component extends DCLogic {
     // ——— Propulsão: o instante (motores ligados ou desligados; o horímetro e as horas até a troca andam com eles) ———
     const eM = equip('motores'), ligados = q && num(q.motor_bb_rpm) && num(q.motor_be_rpm) ? (q.motor_bb_rpm > 0 || q.motor_be_rpm > 0) : null, fase = I && I.fase && I.fase.nome ? I.fase.nome : '';
     const lado = (id, nome, rpm, oleo, arr, hor) => {
-      const s = ligados === null ? falta(SL) : ligados ? c(rpm) + ' rpm · óleo ' + c(oleo) + ' bar · ' + c(arr) + ' °C' : 'desligado · arrefecimento ' + c(arr) + ' °C';
+      // (o número e a unidade ficam juntos, com espaço sem quebra: a unidade nunca cai sozinha na 2ª linha da caixa; o title leva o mesmo texto com o espaço comum)
+      const NB = '\u00a0', s = ligados === null ? falta(SL) : ligados ? c(rpm) + NB + 'rpm · óleo ' + c(oleo) + NB + 'bar · ' + c(arr) + NB + '°C' : 'desligado · arrefecimento ' + c(arr) + NB + '°C';
       const pior = [lv(oleo), lv(arr)].indexOf('crit') >= 0 ? 'crit' : [lv(oleo), lv(arr)].indexOf('warn') >= 0 ? 'warn' : '';
-      return { id: id, l: nome, h: c(hor), s: s, tomK: ligados ? pior : '', title: nome + ' — ' + s + ' · ' + agoraTxt + ' · arrefecimento ' + c(arr) + ' °C' };
+      return { id: id, l: nome, h: c(hor), s: s, tomK: ligados ? pior : '', title: (nome + ' — ' + s + ' · ' + agoraTxt + ' · arrefecimento ' + c(arr) + ' °C').split(NB).join(' ') };
     };
     const tOleo = AG.filter((t) => t.id === 'motores-oleo')[0], tRev = AG.filter((t) => t.id === 'motores-revisao')[0];
     const eO = tOleo && ex[tOleo.id], eR = tRev && ex[tRev.id];

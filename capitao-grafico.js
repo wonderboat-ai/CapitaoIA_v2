@@ -18,7 +18,7 @@
   var COR = ['var(--cap-accent, #00a1fe)', 'var(--cap-tele, #00f4fd)', 'var(--cap-violeta, #b45cff)'];
   var COR_NOME = ['azul', 'ciano', 'violeta'];
   var JANELAS = {
-    '150S': { rot: '150 s', nome: 'últimos 150 s', media: 'um ponto por segundo' },
+    '150S': { rot: '150 s', nome: 'últimos 150 s', media: 'um ponto/s' },
     '1D': { rot: '1 D', nome: 'últimas 24 h', media: 'média a cada 15 min' },
     '7D': { rot: '7 D', nome: 'últimos 7 dias', media: 'média por hora' },
     '30D': { rot: '30 D', nome: 'últimos 30 dias', media: 'média a cada 6 h' },
@@ -217,10 +217,14 @@
         var el = svgRef.current; if (!el) return;
         var r = el.getBoundingClientRect(); if (!r.width) return;
         var x = (e.clientX - r.left) * W / r.width, p0 = d.paineis[0].series[0].pts, t = d.t0 + (x - X0) / (X1 - X0) * (d.t1 - d.t0), best = 0, bd = Infinity, q;
+        clearTimeout(fim.current);   // um toque novo vale: o prazo do toque anterior não pode apagar o cursor dele
         if (x < X0 - 6 || x > X1 + 6) { setCur(null); return; }
         for (q = 0; q < p0.length; q++) { var dist = Math.abs(p0[q].ms - t); if (dist < bd) { bd = dist; best = q; } }
         setCur(best);
       };
+      // o dedo: ao soltar (pointerup), ou quando o sistema toma o gesto (pointercancel: a rolagem vertical), o cursor fica 2,5 s para dar tempo de ler a hora e os valores; o pointerleave
+      // que o navegador dispara junto com o pointerup NÃO o apaga (só o do mouse apaga: o mouse que sai do gráfico some na hora)
+      var soltou = function (e) { if (e && e.pointerType && e.pointerType !== 'mouse') { clearTimeout(fim.current); fim.current = setTimeout(function () { setCur(null); }, 2500); } };
       var caixa = null;
       if (sel !== null) {
         var linhas = [h('b', { key: 'h' }, horaDe(d.paineis[0].series[0].pts[sel].ms, jan))], px = xdoT(d.paineis[0].series[0].pts[sel].ms) / W * 100;
@@ -235,8 +239,8 @@
       var minmax = 'mín ' + valTxt(s0.campo, mn, false) + ' · máx ' + valTxt(s0.campo, mxv) + (todas.length > 1 ? ' (' + s0.n + ')' : '');
       var titulo = textoAria + ' · ' + minmax + ' · ' + JANELAS[jan].media + ' · ' + todas.map(function (ss) { return ss.corNome + ' = ' + ss.n; }).join('; ');
       return h('div', raiz,
-        h('svg', { ref: svgRef, viewBox: '0 0 ' + W + ' ' + H, width: '100%', role: 'img', 'aria-label': textoAria, onPointerMove: aoPonteiro, onPointerDown: aoPonteiro, onPointerLeave: function () { setCur(null); },
-          onPointerUp: function (e) { if (e.pointerType && e.pointerType !== 'mouse') { clearTimeout(fim.current); fim.current = setTimeout(function () { setCur(null); }, 2500); } },
+        h('svg', { ref: svgRef, viewBox: '0 0 ' + W + ' ' + H, width: '100%', role: 'img', 'aria-label': textoAria, onPointerMove: aoPonteiro, onPointerDown: aoPonteiro, onPointerLeave: function (e) { if (!e || !e.pointerType || e.pointerType === 'mouse') setCur(null); },
+          onPointerUp: soltou, onPointerCancel: soltou,
           style: { display: 'block', touchAction: 'pan-y', maxWidth: '100%', height: 'auto', overflow: 'visible' } }, kids),
         caixa,
         h('span', { title: titulo, 'data-legenda': 'curta', style: { display: 'flex', flexWrap: 'wrap', columnGap: 12, rowGap: 1, fontSize: 11, lineHeight: 1.4, color: 'var(--cap-ink3, #97a3c0)' } }, leg, h('span', { key: 'mm', style: { whiteSpace: 'nowrap' } }, minmax)));

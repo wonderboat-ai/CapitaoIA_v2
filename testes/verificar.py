@@ -2362,6 +2362,7 @@ def teste_ponte_web(b):
         if not r['nota'] or r['nota']['tom'] != 'ok' or not re.fullmatch(r'Ao vivo · \d\d:\d\d', r['nota']['texto']): prob.append('%s: o selo da página devia ser verde «Ao vivo · HH:MM»: %s' % (rot, r['nota']))
         ach = sem_rotulo(r['texto'])
         if ach: prob.append('%s: termo do §3 no texto: %s' % (rot, ach))
+        prob += problemas_orfaos(pg, rot)
         if fixo == '60':
             if r['alertasTitulo'] != 'Nenhum alerta ativo' or r['itens']: prob.append('A1 a 60 s: devia ter «Nenhum alerta ativo», e tem %r %s' % (r['alertasTitulo'], r['itens']))
         else:
@@ -2449,6 +2450,7 @@ def teste_ponte_app(b):
         if 'Estabilizador' in r['blocos'] and (T['seakeeper_volante_pct'] + ' %') not in r['blocos']['Estabilizador']: prob.append('%s: o bloco Estabilizador diz %r' % (rot, r['blocos']['Estabilizador']))
         ach = achados_termos('A2-Ponte-Mobile', r['texto'] + ' ' + ' '.join(r['blocos'].values()))
         if ach: prob.append('%s: termo do §3: %s' % (rot, ach))
+        prob += problemas_orfaos(pg, rot)
         if fixo == '60' and (r['alertasTitulo'] != 'Nenhum alerta ativo' or r['itens']): prob.append('A2 a 60 s: devia ter «Nenhum alerta ativo»: %r %s' % (r['alertasTitulo'], r['itens']))
         if fixo == '105':
             if r['alertasTitulo'] != '1 alerta ativo' or [i['id'] for i in r['itens']] != ['arref_be'] or r['itens'][0]['href'] != 'C3-Leme-Alerta.dc.html#alarme=arref_be': prob.append('A2 a 105 s: a lista de alertas %r %s (esperado o arref_be com o link da C3)' % (r['alertasTitulo'], r['itens']))
@@ -2544,6 +2546,8 @@ def teste_sensores(b, tela):
         ctx, pg, erros = abre_tela(b, tela, w, h, fixo=fixo, tema=tema)
         r = pg.evaluate(LE_SENS)
         prob += problemas_sensores(r, tela, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
+        prob += problemas_orfaos(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
+        if movel and (w, h) == (390, 844): prob += problemas_alvos(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
         if erros: prob += erros[:2]
         ctx.close()
     return prob
@@ -2608,6 +2612,168 @@ def teste_ponte_real(b, lista=TELAS_P4C):
     return prob
 
 
+# ——— revisão final do grupo ponte-carta (P4C e P4D): o que a matriz e as conferências acima não pegavam ———
+# (1) as Tendências acompanham o instante na MESMA sessão (a conta se refaz a cada 5 s do instante, não só na carga); (2) o cursor do gráfico no TOQUE (o pointerleave que acompanha o pointerup não o apaga);
+# (3) a lista de alertas da A1 com muitos alertas (o bloco tem teto e rola: as abas e «O que vence» continuam à mão); (4) nenhum texto passa da borda do cartão, nos 4 tamanhos da web;
+# (5) alvos de toque de 44 px no app; (6) o título e o subtítulo do histórico inteiros; (7) a unidade nunca sozinha na linha de baixo (número e unidade ficam juntos).
+# Cada uma tem o defeito plantado que a faz falhar em MUTANTES_P4C / MUTANTES_P4D (--mutantes-p4c, --mutantes-p4d).
+EXCLUI_MOLDURA = "capitao-topo-app, capitao-barra-chat, capitao-rodape, #capitao-faixa-alertas"
+# a unidade que cai sozinha no começo da linha de baixo (o número ficou no fim da de cima): o texto é percorrido letra a letra e agrupado por linha desenhada; a moldura (a faixa global de alerta) é de outro item
+LE_ORFAOS = """() => { const out = [], UN = /^(°C|°|%|rpm|bar|hPa|nós?|kW|V|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])/, w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (w.nextNode()) { const n = w.currentNode, t = n.nodeValue; if (!t || !/\\S/.test(t)) continue; const par = n.parentElement; if (!par || par.closest('script, style, template, @MOLDURA@')) continue;
+    const r = document.createRange(), linhas = []; let linha = [], topo = null;
+    for (let i = 0; i < t.length; i++) { r.setStart(n, i); r.setEnd(n, i + 1); const rc = r.getClientRects()[0]; if (!rc || !rc.width) continue;
+      if (topo === null || Math.abs(rc.top - topo) > rc.height * 0.6) { if (linha.length) linhas.push(linha.join('')); linha = []; topo = rc.top; } linha.push(t[i]); }
+    if (linha.length) linhas.push(linha.join(''));
+    for (let k = 1; k < linhas.length; k++) { const ant = linhas[k - 1].trim(), cur = linhas[k].trim(); if (UN.test(cur) && /\\d$/.test(ant)) out.push([ant.slice(-26), cur.slice(0, 22)]); } }
+  return out; }""".replace('@MOLDURA@', EXCLUI_MOLDURA)
+# texto que passa da borda direita do cartão (a caixa de conteúdo, descontados o padding e a borda; a prancheta é escalada, então a medida segue a escala)
+LE_FORA_DO_CARTAO = """() => { const out = []; document.querySelectorAll('main article').forEach((a) => { const ar = a.getBoundingClientRect(), cs = getComputedStyle(a), k = ar.width / a.offsetWidth, dir = ar.right - k * (parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth));
+    a.querySelectorAll('*').forEach((e) => { if (e.children.length || !(e.innerText || '').trim()) return; const r = e.getBoundingClientRect(); if (r.width && r.right > dir + 1) out.push([(e.innerText || '').trim().slice(0, 30), Math.round((r.right - dir) * 10) / 10]); }); });
+  return out; }"""
+# alvo de toque do app: nada com menos de 44 px na tela (fora a moldura, a barra do assistente e o rodapé, que são de outro item)
+LE_ALVOS = """() => { const out = []; document.querySelectorAll('a[href], button, [role=button], [role=tab], input, select, textarea').forEach((e) => { if (e.closest('@MOLDURA@')) return;
+    const r = e.getBoundingClientRect(), cs = getComputedStyle(e); if (!r.width || !r.height || cs.visibility === 'hidden') return;
+    if (r.height < 43.5 || r.width < 43.5) out.push([(e.innerText || e.getAttribute('aria-label') || e.tagName).trim().replace(/\\s+/g, ' ').slice(0, 28), Math.round(r.width), Math.round(r.height)]); }); return out; }""".replace('@MOLDURA@', EXCLUI_MOLDURA)
+
+
+def problemas_orfaos(pg, rot):
+    return ['%s: a unidade «%s» caiu sozinha na linha de baixo de «…%s» (número e unidade ficam juntos, com espaço sem quebra)' % (rot, u, ant) for ant, u in pg.evaluate(LE_ORFAOS)[:4]]
+
+
+def problemas_alvos(pg, rot):
+    return ['%s: o alvo de toque «%s» tem %d × %d px (o app pede 44 px)' % (rot, n, w, h) for n, w, h in pg.evaluate(LE_ALVOS)[:6]]
+
+
+# a lista de alertas da A1 com 4 e com 6 alertas ao mesmo tempo (o aviso do BE a 105 s e 3 ou 5 alarmes pedidos no chat)
+PED_MUITOS = [dict(PED_FOGO[0], id='usr_%d' % i, campo=c, limite=l, iso='2026-11-09T10:0%d:00-03:00' % i) for i, (c, l) in enumerate([('motor_bb_arref_c', 60), ('sog_nos', 0.5), ('motor_bb_rpm', 500), ('vento_verdadeiro_nos', 1), ('bateria_0_tensao_v', 10)])]
+LE_PAINEL_ALERTAS = """() => { const sec = document.querySelector('section[aria-label="Alertas, o que vence e tendências"]'), sr = sec.getBoundingClientRect(), tabs = document.querySelector('[role=tablist]').getBoundingClientRect(), v = document.getElementById('vence'),
+    lista = document.querySelector('[data-alertas=lista]'), itens = lista ? [...lista.querySelectorAll('[data-alerta]')] : [];
+  if (!lista || !itens.length || !v) return { semLista: !lista, n: itens.length };
+  const alt = lista.scrollHeight, vis = lista.clientHeight; lista.scrollTop = 0; const p1 = itens[0].getBoundingClientRect(), l0 = lista.getBoundingClientRect(); const primeiroInteiro = p1.top >= l0.top - 1 && p1.bottom <= l0.bottom + 1;
+  lista.scrollTop = lista.scrollHeight; const ult = itens[itens.length - 1].getBoundingClientRect(), l1 = lista.getBoundingClientRect();
+  return { n: itens.length, secB: sr.bottom, tabsB: tabs.bottom, venceH: v.getBoundingClientRect().height, rola: alt > vis + 1, ov: getComputedStyle(lista).overflowY, primeiroInteiro: primeiroInteiro, ultimoAlcanca: ult.bottom <= l1.bottom + 1 && ult.top >= l1.top - 1 }; }"""
+
+
+def teste_a1_alertas_muitos(b):
+    prob = []
+    for n_ped, esp in ((3, 4), (5, 6)):
+        ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', fixo='105', ls={'capitao.alarmes.v1': json.dumps(PED_MUITOS[:n_ped])})
+        r = pg.evaluate(LE_PAINEL_ALERTAS)
+        rot = 'A1 a 105 s com %d alertas' % esp
+        if r.get('semLista') or r['n'] != esp: prob.append('%s: a lista tem %s alertas (esperado %d, o do BE e %d pedidos no chat): %s' % (rot, r.get('n'), esp, n_ped, r))
+        else:
+            if r['tabsB'] > r['secB'] + 0.5: prob.append('%s: as abas «O que vence» e «Tendências» saem do painel (o fim das abas em %.0f e o fim do painel em %.0f)' % (rot, r['tabsB'], r['secB']))
+            if r['venceH'] < 60: prob.append('%s: «O que vence» ficou com %.0f px (esperado ao menos 60: os alertas têm teto e a lista rola)' % (rot, r['venceH']))
+            if r['ov'] not in ('auto', 'scroll'): prob.append('%s: a lista de alertas não rola (overflow-y %s)' % (rot, r['ov']))
+            if not r['rola']: prob.append('%s: com %d alertas a lista devia passar da altura que tem e rolar' % (rot, esp))
+            if not r['primeiroInteiro']: prob.append('%s: o 1º alerta não aparece inteiro no alto da lista' % rot)
+            if not r['ultimoAlcanca']: prob.append('%s: o último alerta não se alcança rolando a lista' % rot)
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_a1_cartoes(b):
+    """A1 nos 4 tamanhos da web, a 60 s e a 105 s: nenhum texto passa da borda do cartão (a posição, que é a linha mais longa) e nenhuma unidade cai sozinha na linha de baixo."""
+    prob = []
+    for (w, h) in WEB:
+        for fixo in ('60', '105'):
+            ctx, pg, erros = abre_tela(b, 'A1-Ponte-Web', w=w, h=h, fixo=fixo)
+            rot = 'A1 %dx%d a %s s' % (w, h, fixo)
+            fora = pg.evaluate(LE_FORA_DO_CARTAO)
+            if fora: prob.append('%s: texto além da borda do cartão: %s' % (rot, fora[:3]))
+            prob += problemas_orfaos(pg, rot)
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    return prob
+
+
+# o título e o subtítulo do histórico, em cada série × janela, sem a reticência (o texto inteiro cabe) e com a dica completa
+LE_TITULOS = """async () => { const out = [], g = (n) => document.querySelector('[data-hist=' + n + ']'), cl = (grupo, t) => { const bt = [...document.querySelectorAll('[role=group][aria-label=' + grupo + '] button')].find((x) => x.innerText.trim() === t); if (bt) bt.click(); };
+  const series = [...document.querySelectorAll('[role=group][aria-label="Série"] button')].map((x) => x.innerText.trim()); let n = 0;
+  for (const s of series) { cl('Série', s); for (const j of ['150 s', '1 D', '7 D', '30 D', '1 A']) { cl('Período', j); await new Promise((r) => setTimeout(r, 30)); n++;
+    const a = g('titulo'), b = g('sub'); if (!a || !b) { out.push(['sem título', s, j]); continue; } const cort = (e) => e.scrollWidth > e.clientWidth + 1;
+    if (cort(a) || cort(b)) out.push([s, j, a.innerText, cort(a), b.innerText, cort(b)]); } }
+  return { n: n, cortados: out }; }"""
+
+
+def teste_historico_cabecalho(b):
+    """O título («série · janela», e na A2 com «Histórico ·») e o subtítulo do histórico cabem inteiros em cada série × janela; na A2 os botões das janelas e das séries têm 44 px de alvo."""
+    prob = []
+    for tela, w, h in (('A1-Ponte-Web', 1440, 900), ('A2-Ponte-Mobile', 390, 844), ('A2-Ponte-Mobile', 360, 640)):
+        ctx, pg, erros = abre_tela(b, tela, w=w, h=h)
+        rot = '%s %dx%d' % (tela, w, h)
+        r = pg.evaluate(LE_TITULOS)
+        if r['n'] != 50: prob.append('%s: %d combinações série × janela conferidas (esperado 50)' % (rot, r['n']))
+        if r['cortados']: prob.append('%s: título ou subtítulo do histórico cortado com reticência: %s' % (rot, r['cortados'][:3]))
+        if tela.startswith('A2'):
+            if w == 390: prob += problemas_alvos(pg, rot)   # (a 360 × 640 a prancheta do app é escalada para caber: os 44 px só valem na escala 1)
+            tip = pg.evaluate("() => document.querySelector('[data-hist=titulo]').innerText")
+            if not tip.startswith('Histórico · '): prob.append('%s: o título do histórico diz %r (esperado «Histórico · série · janela»)' % (rot, tip))
+        else:
+            dica = pg.evaluate("() => { const e = document.querySelector('[data-hist=titulo]').parentElement; return e.getAttribute('title'); }")
+            if not dica or not dica.startswith('Histórico · ') or ' · ' not in dica[12:]: prob.append('%s: a dica do título do histórico diz %r (esperado «Histórico · série · período · média»)' % (rot, dica))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_grafico_toque(b):
+    """O cursor do gráfico no toque (A2, 390×844, toque de verdade pelo CDP): com o dedo na tela a caixa tem a hora e os valores; ao soltar ela FICA ~2,5 s (o pointerleave que o navegador manda com o pointerup
+    não a apaga) e some depois; o gesto tomado pelo sistema (pointercancel) faz o mesmo; um toque novo não é apagado pelo prazo do anterior."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'A2-Ponte-Mobile')
+    pg.evaluate("() => document.querySelector('[data-capitao-grafico] svg').scrollIntoView({ block: 'center' })")
+    pg.wait_for_timeout(400)
+    box = pg.evaluate("() => { const r = document.querySelector('[data-capitao-grafico] svg').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }")
+    cdp = ctx.new_cdp_session(pg)
+    caixa = lambda: pg.evaluate("() => { const c = document.querySelector('[data-cursor=caixa]'); return c ? c.innerText.replace(/\\s+/g, ' ').trim() : null; }")
+    toca = lambda fx: cdp.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': box['x'] + box['w'] * fx, 'y': box['y'] + box['h'] * 0.4}]})
+    solta = lambda: cdp.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+    cancela = lambda: cdp.send('Input.dispatchTouchEvent', {'type': 'touchCancel', 'touchPoints': []})
+    toca(0.6); pg.wait_for_timeout(300)
+    c = caixa()
+    if not c or not re.search(r'\d\d/\d\d \d\d:\d\d', c) or 'serviço 24 V' not in c: prob.append('toque: com o dedo na tela a caixa do cursor diz %r (esperado a hora e os valores das 3 baterias)' % c)
+    solta(); pg.wait_for_timeout(80)
+    if caixa() is None: prob.append('toque: o cursor sumiu no instante em que o dedo saiu (devia ficar ~2,5 s para dar tempo de ler)')
+    pg.wait_for_timeout(1000)
+    if caixa() is None: prob.append('toque: 1 s depois de soltar o cursor já sumiu (devia ficar ~2,5 s)')
+    pg.wait_for_timeout(2000)
+    if caixa() is not None: prob.append('toque: 3 s depois de soltar o cursor ainda está na tela (devia sumir em ~2,5 s)')
+    # o sistema toma o gesto (rolagem vertical): pointercancel
+    toca(0.3); pg.wait_for_timeout(250); cancela(); pg.wait_for_timeout(1000)
+    if caixa() is None: prob.append('toque cancelado: o cursor sumiu antes de 1 s (devia ficar ~2,5 s)')
+    pg.wait_for_timeout(2300)
+    if caixa() is not None: prob.append('toque cancelado: 3,5 s depois o cursor ainda está na tela (o pointercancel devia apagá-lo em ~2,5 s)')
+    # o prazo do 1º toque não apaga o cursor do 2º (o dedo segue na tela)
+    toca(0.5); pg.wait_for_timeout(100); solta(); pg.wait_for_timeout(2000); toca(0.7); pg.wait_for_timeout(1000)
+    if caixa() is None: prob.append('toque novo: o prazo do toque anterior apagou o cursor com o dedo na tela')
+    solta()
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_tendencias_sessao(b, lista=TELAS_PONTE):
+    """As Tendências mudam quando o instante muda, na MESMA sessão (A1 com a aba aberta e A2): a 60 s «dentro da faixa normal», depois de fixar a reprodução em 105 s «AVISO desde …», e de volta a 60 s
+    «dentro da faixa normal» (a conta do cérebro se refaz a cada 5 s do instante; o cache eterno deixava o texto velho)."""
+    prob = []
+    for tela in [t for t in TELAS_PONTE if t in lista]:
+        ctx, pg, erros = abre_tela(b, tela, fixo='60')
+        if tela.startswith('A1'): pg.evaluate("() => [...document.querySelectorAll('[role=tab]')].find((x) => /^Tendências/.test(x.innerText.trim())).click()")
+        pg.wait_for_selector('[data-tendencia=arref_agora]', timeout=4000)
+        le = lambda: pg.evaluate("() => { const e = document.querySelector('[data-tendencia=arref_agora]'); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : ''; }")
+        if 'dentro da faixa normal' not in le(): prob.append('%s a 60 s: o arrefecimento agora diz %r (esperado «dentro da faixa normal»)' % (tela, le()))
+        for s, quer, nome in ((105, 'AVISO desde', 'a 105 s'), (60, 'dentro da faixa normal', 'de volta a 60 s')):
+            pg.evaluate("(s) => window.CapitaoReplay.fixar(s)", s)
+            try: pg.wait_for_function("(q) => { const e = document.querySelector('[data-tendencia=arref_agora]'); return !!e && e.innerText.indexOf(q) >= 0; }", arg=quer, timeout=5000)
+            except Exception: prob.append('%s %s, na mesma sessão: o arrefecimento agora ficou %r (esperado «%s»: as Tendências não acompanham o instante)' % (tela, nome, le(), quer))
+        if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
 # ——— o código das telas e dos dois arquivos novos ———
 def teste_codigo_ponte():
     prob = []
@@ -2655,6 +2821,11 @@ def p4c_conferencias(b, lista):
     for tela in [t for t in TELAS_SENSORES if t in lista]: out.append(('sensores em ' + tela, teste_sensores(b, tela)))
     if 'A4-Sensores-Web' in lista: out.append(('desenho dos sensores × referência', teste_sensores_desenho(b)))
     if any(t in lista for t in TELAS_P4C): out.append(('simulacao false na Ponte e nos sensores', teste_ponte_real(b, lista)))
+    if 'A1-Ponte-Web' in lista: out.append(('A1 · 4 e 6 alertas ao mesmo tempo (a lista tem teto e rola)', teste_a1_alertas_muitos(b)))
+    if 'A1-Ponte-Web' in lista: out.append(('A1 · texto dentro do cartão e unidade junto do número, nos 4 tamanhos', teste_a1_cartoes(b)))
+    if any(t in lista for t in TELAS_PONTE): out.append(('histórico · título inteiro e alvos de 44 px no app', teste_historico_cabecalho(b)))
+    if 'A2-Ponte-Mobile' in lista: out.append(('gráfico · o cursor no toque', teste_grafico_toque(b)))
+    if any(t in lista for t in TELAS_PONTE): out.append(('Tendências · acompanham o instante na mesma sessão', teste_tendencias_sessao(b, lista)))
     return out
 
 
@@ -2673,6 +2844,22 @@ MUTANTES_P4C = [
     ('o inclinômetro sem o yaw (só roll e pitch)', 'capitao-sensores.js', [("linha2 = j !== null && c !== null && y !== null ? 'R ' + j + ' P ' + c + ' Y ' + y : falta(SL);", "linha2 = j !== null && c !== null ? 'R ' + j + ' P ' + c : falta(SL);")], 'sensores_web'),
     ('blocos largos demais (se sobrepõem e cortam o texto)', 'capitao-sensores.js', [("bw = Math.floor(0.1 * W) - 4;", "bw = Math.floor(0.16 * W) - 4;")], 'sensores_app'),
     ('capitao-grafico.js fora do CORE do sw.js', 'sw.js', [("'./capitao-grafico.js', ", "")], 'codigo'),
+    # revisão final do grupo ponte-carta
+    ('as Tendências da A1 com cache eterno (a conta não se refaz quando o instante muda)', 'A1-Ponte-Web.dc.html', [("if (slot !== this._predSlot || !this._pred) {", "if (!this._pred) {")], 'tendencias'),
+    ('as Tendências da A2 com cache eterno (a conta não se refaz quando o instante muda)', 'A2-Ponte-Mobile.dc.html', [("(slot !== this._predSlot || !this._pred)", "(!this._pred)")], 'tendencias'),
+    ('o pointerleave do toque apaga o cursor do gráfico na hora (o dedo que sai some com a caixa)', 'capitao-grafico.js', [("onPointerLeave: function (e) { if (!e || !e.pointerType || e.pointerType === 'mouse') setCur(null); },", "onPointerLeave: function () { setCur(null); },")], 'toque'),
+    ('o gráfico sem o pointercancel (o gesto tomado pelo sistema deixa o cursor para sempre)', 'capitao-grafico.js', [("onPointerUp: soltou, onPointerCancel: soltou,", "onPointerUp: soltou,")], 'toque'),
+    ('o prazo do toque anterior apaga o cursor do toque novo', 'capitao-grafico.js', [("        clearTimeout(fim.current);   // um toque novo vale: o prazo do toque anterior não pode apagar o cursor dele\n", "")], 'toque'),
+    ('a lista de alertas da A1 sem teto de altura (as abas saem do painel)', 'A1-Ponte-Web.dc.html', [('style="flex-shrink: 0; min-height: 0; max-height: 56%; display: flex; flex-direction: column; gap: 7px;">', 'style="flex-shrink: 0; display: flex; flex-direction: column; gap: 7px;">')], 'alertas'),
+    ('a lista de alertas da A1 que não rola', 'A1-Ponte-Web.dc.html', [('<div data-alertas="lista" style="flex-shrink: 1; min-height: 0; overflow-y: auto;', '<div data-alertas="lista" style="flex-shrink: 1; min-height: 0; overflow-y: visible;')], 'alertas'),
+    ('a posição da A1 sem poder encolher nem quebrar (vaza pela borda do cartão)', 'A1-Ponte-Web.dc.html', [("{ ff: MONO, fs: '11.5px', ws: 'normal', shr: '1' }", "{ ff: MONO }")], 'cartoes'),
+    ('o título do histórico da A1 de volta com «Histórico ·» (cortado com reticência)', 'A1-Ponte-Web.dc.html', [("serieRot: nomeSerie(st.serie) + ' · ' + (JR[jan] ? JR[jan].rot : jan),", "serieRot: 'Histórico · ' + nomeSerie(st.serie) + ' · ' + (JR[jan] ? JR[jan].rot : jan),")], 'cabecalho'),
+    ('o subtítulo da janela de 150 s de volta com «um ponto por segundo» (cortado na A1)', 'capitao-grafico.js', [("media: 'um ponto/s'", "media: 'um ponto por segundo'")], 'cabecalho'),
+    ('os botões das janelas do histórico da A2 com 32 px de alvo', 'A2-Ponte-Mobile.dc.html', [("flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 4px;", "flex: 1 1 0; min-width: 0; height: 32px; padding: 0 4px;")], 'cabecalho'),
+    ('os chips de série do histórico da A2 com 34 px de alvo', 'A2-Ponte-Mobile.dc.html', [("flex-shrink: 0; min-height: 44px; padding: 0 12px;", "flex-shrink: 0; min-height: 34px; padding: 0 12px;")], 'cabecalho'),
+    ('o texto do alerta da A2 sem a unidade colada ao número («°C» sozinho na linha de baixo)', 'A2-Ponte-Mobile.dc.html', [("txt: this.un(a.texto),", "txt: a.texto,")], 'ponte_app'),
+    ('os valores dos sensores da A4 sem a unidade colada ao número', 'A4-Sensores-Web.dc.html', [("valores: this.un(p.itens.map((it) => it.k + ' ' + it.v).join(' · ')) })) };", "valores: p.itens.map((it) => it.k + ' ' + it.v).join(' · ') })) };")], 'sensores_web'),
+    ('os valores dos sensores da A5 sem a unidade colada ao número', 'A5-Sensores-Mobile.dc.html', [("valores: this.un(p.itens.map((it) => it.k + ' ' + it.v).join(' · ')) })) };", "valores: p.itens.map((it) => it.k + ' ' + it.v).join(' · ') })) };")], 'sensores_app'),
 ]
 
 
@@ -2690,7 +2877,9 @@ def mutantes_p4c(b):
         try:
             sys.stdout = open(os.devnull, 'w')
             prob = {'grafico': lambda: teste_grafico(b, 'A1-Ponte-Web'), 'ponte_web': lambda: teste_ponte_web(b), 'ponte_app': lambda: teste_ponte_app(b),
-                    'sensores_web': lambda: teste_sensores(b, 'A4-Sensores-Web'), 'sensores_app': lambda: teste_sensores(b, 'A5-Sensores-Mobile'), 'codigo': lambda: teste_codigo_ponte()}[qual]()
+                    'sensores_web': lambda: teste_sensores(b, 'A4-Sensores-Web'), 'sensores_app': lambda: teste_sensores(b, 'A5-Sensores-Mobile'), 'codigo': lambda: teste_codigo_ponte(),
+                    'tendencias': lambda: teste_tendencias_sessao(b), 'toque': lambda: teste_grafico_toque(b), 'alertas': lambda: teste_a1_alertas_muitos(b), 'cartoes': lambda: teste_a1_cartoes(b),
+                    'cabecalho': lambda: teste_historico_cabecalho(b)}[qual]()
         except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um defeito do teste): o mutante fica vivo
             sys.stdout = sai
             print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
@@ -2833,6 +3022,7 @@ def teste_carta_app(b):
         if fixo == '60' and warn_motores: prob.append('%s: o estado dos motores está em AVISO a 60 s' % rot)
         ach = achados_termos('B2-Carta-Mobile', pg.evaluate(LE_TEXTOS))
         if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        prob += problemas_orfaos(pg, rot) + problemas_alvos(pg, rot)
         if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
     # Executado tira a tarefa dos atrasados (e da etiqueta do porão); a lista segue o CapitaoAgora
@@ -2973,6 +3163,7 @@ def teste_carta_corte(b):
             if not r['diesel'] or r['diesel']['w']: prob.append('%s: a linha do diesel está cortada: %r' % (rot, r['diesel']))
             ruins = [x for x in r['folga'] if x['folga'] < 1]
             if ruins: prob.append('%s: o texto passa da borda de baixo do cartão: %s' % (rot, ruins))
+            prob += problemas_orfaos(pg, rot)   # (a unidade «°C» não cai sozinha na 2ª linha da leitura de cada motor)
             if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
             ctx.close()
     return prob
@@ -3089,6 +3280,9 @@ MUTANTES_P4D = [
     ('a B3 sem escutar os botões das respostas (capitao-chat-pergunta)', 'B3-Carta-Resposta.dc.html', [("    window.addEventListener('capitao-chat-pergunta', this._chat);\n", "")], 'resposta'),
     ('a B3 com link vazio na ação sem destino', 'B3-Carta-Resposta.dc.html', [(".filter((x) => x && x.l && x.href)", "")], 'resposta'),
     ('a B3 sem dizer a hora da resposta', 'B3-Carta-Resposta.dc.html', [("temHora: !!hora,", "temHora: false,")], 'resposta'),
+    # revisão final do grupo ponte-carta
+    ('a leitura do motor da B1 com o espaço comum antes da unidade («°C» sozinho na 2ª linha)', 'B1-Carta-Web.dc.html', [("const NB = '\\u00a0', s =", "const NB = ' ', s =")], 'corte'),
+    ('o estado dos sistemas da B2 sem a unidade colada ao número («ciclos/h» sozinho na linha de baixo)', 'B2-Carta-Mobile.dc.html', [("estado: this.un(r.estado), estTone", "estado: r.estado, estTone")], 'app'),
 ]
 
 

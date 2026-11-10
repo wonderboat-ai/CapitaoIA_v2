@@ -63,7 +63,7 @@ button { font: inherit; }
                   <div style="display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 20px;">
                     <span style="flex-shrink: 0; font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">{{l.k}}</span>
                     <span aria-hidden="true" style="flex-grow: 1; min-width: 6px; height: 0; border-bottom: 1px dotted var(--cap-line2, #27315a);"></span>
-                    <span style="flex-shrink: 0; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; color: {{l.tom}}; font-family: {{l.ff}};">{{l.v}}</span>
+                    <span style="flex-shrink: {{l.shr}}; min-width: 0; text-align: right; font-size: {{l.fs}}; font-weight: 700; font-variant-numeric: tabular-nums; white-space: {{l.ws}}; color: {{l.tom}}; font-family: {{l.ff}};">{{l.v}}</span>
                   </div>
                 </sc-if>
               </sc-for>
@@ -101,9 +101,9 @@ button { font: inherit; }
         <section aria-label="Histórico" style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
           <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
             <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.14); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 19h16 M4 5v14 M8 15l4-5 3 3 5-6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
-            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
-              <span style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Histórico · {{serieRot}}</span>
-              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
+            <span title="{{histTip}}" style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+              <span data-hist="titulo" style="font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{serieRot}}</span>
+              <span data-hist="sub" style="font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
             </span>
             <span role="group" aria-label="Período" style="display: flex; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; flex-shrink: 0;">
               <sc-for list="{{janelas}}" as="w" hint-placeholder-count="5">
@@ -121,14 +121,15 @@ button { font: inherit; }
         </section>
 
         <section aria-label="Alertas, o que vence e tendências" style="width: 400px; flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid {{al.borda}}; border-radius: 18px; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
-          <div id="alertas" aria-label="Alertas" style="flex-shrink: 0; display: flex; flex-direction: column; gap: 7px;">
-            <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <div id="alertas" aria-label="Alertas" style="flex-shrink: 0; min-height: 0; max-height: 56%; display: flex; flex-direction: column; gap: 7px;">
+            <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px; min-width: 0;">
               <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; background: {{al.wash}}; display: flex; align-items: center; justify-content: center;">{{al.ico}}</span>
               <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
                 <span data-alertas="titulo" style="font-size: 14.5px; font-weight: 700;">{{al.titulo}}</span>
                 <span style="font-size: 11.5px; font-weight: 600; line-height: 1.35; color: {{al.cor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{al.status}}</span>
               </span>
             </div>
+            <div data-alertas="lista" style="flex-shrink: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 7px; padding: 3px; margin: -3px;">
             <sc-for list="{{al.itens}}" as="a" hint-placeholder-count="1">
               <a href="{{a.href}}" aria-label="{{a.aria}}" data-alerta="{{a.id}}" style="flex-shrink: 0; display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; background: {{a.fundo}}; border: 1px solid {{a.borda}}; border-radius: 12px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
                 <span style="flex-shrink: 0; width: 50px; box-sizing: border-box; margin-top: 1px; padding: 3px 0; border-radius: 999px; background: {{a.cor}}; color: var(--cap-bg, #050816); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-align: center;">{{a.rotulo}}</span>
@@ -140,6 +141,7 @@ button { font: inherit; }
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; align-self: center;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
               </a>
             </sc-for>
+            </div>
           </div>
 
           <div role="tablist" aria-label="O que vence e tendências" style="flex-shrink: 0; display: flex; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px;">
@@ -288,7 +290,8 @@ class Component extends DCLogic {
     const fabMod = (e) => { const f = e.fabricante || '', m = e.modelo || ''; if (!f && !m) return falta('(fabricante e modelo ' + SD + ')'); return m && f && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? m : [f || falta('(fabricante ' + SD + ')'), m].filter(Boolean).join(' '); };
     const regra = /(\d+)\s*%/.exec(D.regraAbast || ''), minDiesel = regra ? +regra[1] : null;
     const pctTom = (x, base) => (num(x) && minDiesel != null && base === 'diesel' && x < minDiesel ? WARN : base === 'diesel' ? OK : base === 'agua' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)');
-    const txt = (k, v, extra) => Object.assign({ k: k, v: v, texto: true, barra: false, tom: v === SL || v === SD ? WARN : INK, ff: 'inherit' }, extra || {});
+    // (a linha de texto não passa da borda do cartão: o valor que não cabe na linha encolhe e quebra no espaço — a posição, que é a mais longa — em vez de vazar pela borda)
+    const txt = (k, v, extra) => Object.assign({ k: k, v: v, texto: true, barra: false, tom: v === SL || v === SD ? WARN : INK, ff: 'inherit', fs: '13px', ws: 'nowrap', shr: '0' }, extra || {});
     const val = (nome) => (tem(nome) ? F.campo(q, nome) : null);
     const bar = (k, nome, base) => { const v = q && num(q[nome]) ? q[nome] : null; return { k: k, v: v === null ? falta(SL) : c(nome, ' %'), w: v === null ? '0%' : Math.max(0, Math.min(100, v)) + '%', barra: true, texto: false, tom: v === null ? WARN : pctTom(v, base) }; };
     const sog = q && num(q.sog_nos) ? c('sog_nos', q.sog_nos < 2 ? ' nó' : ' nós') : falta(SL);
@@ -299,7 +302,7 @@ class Component extends DCLogic {
     // ——— Telemetria agora ———
     const blocos = [
       { t: 'Navegação', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', tom: 'tele', hora: hora, horaTip: 'Leitura de ' + (I ? I.hora : '—'),
-        linhas: [txt('Posição', q && num(q.lat) && num(q.lon) && F.coord ? F.coord(q.lat, q.lon) : falta(SL), { ff: MONO }), txt('Satélites GPS', c('gps_satelites')), txt('SOG', sog), txt('Proa', c('proa_graus', '°')), txt('Profundidade', c('profundidade_m', ' m'), { tom: lv('profundidade_m') || INK })],
+        linhas: [txt('Posição', q && num(q.lat) && num(q.lon) && F.coord ? F.coord(q.lat, q.lon) : falta(SL), { ff: MONO, fs: '11.5px', ws: 'normal', shr: '1' }), txt('Satélites GPS', c('gps_satelites')), txt('SOG', sog), txt('Proa', c('proa_graus', '°')), txt('Profundidade', c('profundidade_m', ' m'), { tom: lv('profundidade_m') || INK })],
         obs: [q && q.estado ? String(q.estado).charAt(0).toUpperCase() + String(q.estado).slice(1) : falta(SD), q && q.local ? q.local : ''].filter(Boolean).join(' · ') },
       { t: 'Ambiente', d: 'M3 8h11a3 3 0 1 0-3-3 M3 12h15a3 3 0 1 1-3 3 M3 16h8a2 2 0 1 1-2 2', tom: 'tele', hora: hora, horaTip: 'Leitura de ' + (I ? I.hora : '—'),
         linhas: [txt('Vento', c('vento_verdadeiro_nos', ' nós')), txt('Direção', tem('vento_verdadeiro_angulo') ? 'de ' + c('vento_verdadeiro_angulo', '°') : falta(SL)), txt('Barômetro', c('pressao_barometrica_hpa', ' hPa')), txt('Ar', c('temp_ar_externo_c', ' °C')), txt('Água do mar', c('temp_agua_c', ' °C'))],
@@ -457,8 +460,9 @@ class Component extends DCLogic {
     return {
       resumo: d.resumo, nota: d.nota, notaTom: d.notaTom, notaCor: d.notaTom === 'ok' ? TOM.ok[0] : TOM.warn[0],
       blocos: blocos, motor: motor,
+      // o título cabe na linha ao lado das janelas: «{série} · {janela}» (a palavra «Histórico» é o rótulo da seção) e a dica diz tudo
       serieRot: nomeSerie(st.serie) + ' · ' + (JR[jan] ? JR[jan].rot : jan),
-      janelaTxt: JR[jan] ? JR[jan].nome + ' · ' + JR[jan].media : '',
+      janelaTxt: JR[jan] ? JR[jan].nome + ' · ' + JR[jan].media : '', histTip: 'Histórico · ' + nomeSerie(st.serie) + ' · ' + (JR[jan] ? JR[jan].nome + ' · ' + JR[jan].media : jan),
       janelas: JAN.map((k) => { const off = so150 && k !== '150S', on = onJan(k); return { l: JR[k].rot, tip: off ? nomeSerie(st.serie) + ' só tem a janela de 150 s' : JR[k].nome, on: on, off: off, cursor: off ? 'not-allowed' : 'pointer', opac: off ? '0.4' : '1',
         onClick: () => { if (!off) this.setState({ janela: k }); }, bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tom: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; }),
       series: ORDEM.map((k) => ({ l: nomeSerie(k), on: onSel(k), onClick: () => this.setState({ serie: k }), bg: onSel(k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', line: onSel(k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', tom: onSel(k) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),

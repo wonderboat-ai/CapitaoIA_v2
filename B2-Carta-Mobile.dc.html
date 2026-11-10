@@ -116,6 +116,8 @@ class Component extends DCLogic {
     this._k = k; this._din = d; this._fresco = true;
     this.setState({ vivo: k });
   }
+  // número e unidade na mesma linha: um espaço sem quebra entre o número e a unidade (a unidade nunca cai sozinha na linha de baixo); só no que a tela desenha, nunca no title nem no aria-label
+  un(s) { return String(s === null || s === undefined ? '' : s).replace(/(\d) (°C|°|%|rpm|bar|hPa|nós?|kW|V|Ah|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])/g, '$1\u00a0$2'); }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
   // O estado de cada sistema vem do instante do CapitaoAgora (replay, coletor ou a última leitura salva: o mesmo texto da moldura e do cérebro, CapitaoAgora.fmt.campo, as casas do D.campos) e de
   // D.equipamentos (fabricante, modelo, quantidade, nota da etiqueta); o prazo, da agenda e dos documentos já refeitos pelo CapitaoAgora. Com a simulação o dado sempre existe; o caminho `null` →
@@ -219,7 +221,7 @@ class Component extends DCLogic {
     const cor = (k) => TOM[k] || TOM.accent;
     const rows = d.rows.map((r) => {
       const c = cor(r.tomK);
-      return { id: r.id, n: r.n, fab: r.fab, estado: r.estado, estTone: r.est === 'crit' ? TOM.crit[0] : r.est === 'warn' ? TOM.warn[0] : 'var(--cap-ink2, #b1bdd6)', href: r.href, acao: r.acao,
+      return { id: r.id, n: r.n, fab: r.fab, estado: this.un(r.estado), estTone: r.est === 'crit' ? TOM.crit[0] : r.est === 'warn' ? TOM.warn[0] : 'var(--cap-ink2, #b1bdd6)', href: r.href, acao: r.acao,
         tag: r.tag, tagTitle: r.tagTitle, tagTone: c[0], tagWash: c[1],
         ico: this.ico(r.d, 20, 1.7, c[0]), wash: c[1], line: r.tomK === 'crit' && r.tag ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.40)' : 'var(--cap-line, #1a2240)',
         ouvir: r.ouvir, ouvirAria: 'Ouvir a resposta por voz: ' + r.n, ouvirIco: this.ico('M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', 18, 1.8, 'var(--cap-tele, #00f4fd)') };
