@@ -180,7 +180,7 @@ class Component extends DCLogic {
     const est = q && typeof q.estado === 'string' ? q.estado : '', local = q && typeof q.local === 'string' ? q.local : '';
     const rot = nav === true ? 'NAVEGANDO' : nav === false ? (/atrac/i.test(est) ? 'ATRACADO' : /fundead/i.test(est) ? 'FUNDEADO' : 'FUNDEADO / ATRACADO') : falta('SEM LEITURA DO SOG');
     const fonte = I ? String(I.fonteTxt || '') : falta(SD);
-    // alertas abertos (a lista única do capitao-alertas.js, a mesma da faixa do topo, da Ponte e da C3): crítico antes de aviso, o mais antigo primeiro
+    // alertas abertos (a lista única do CapitaoAlertas, a mesma da faixa do topo, da Ponte e da C3): crítico antes de aviso, o mais antigo primeiro
     let lista = []; try { lista = AL && typeof AL.ativos === 'function' ? AL.ativos() : []; } catch (e) { lista = []; }
     lista = (Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string' && a.id && (a.nivel === 'aviso' || a.nivel === 'critico'));
     const al = lista[0] || null, mais = Math.max(0, lista.length - 1), crit = !!al && al.nivel === 'critico';
