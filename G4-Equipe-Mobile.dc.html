@@ -361,9 +361,12 @@ class Component extends DCLogic {
     if (!n) return this.setState({ tarErro: 'Digite o nome da tarefa.' });
     if (!/^\d{4}-\d\d-\d\d$/.test(v) || isNaN(Date.parse(v + 'T00:00:00Z'))) return this.setState({ tarErro: 'Escolha o dia em que a tarefa vence.' });
     if (hoje && v < hoje) return this.setState({ tarErro: 'Esse dia já passou: escolha hoje ou um dia à frente.' });
+    const antes = B.loadTarefas().map((x) => x.id);
     const t = B.addTarefa({ n: n, vence: v, quem: s.tQuem || '', origem: 'tela' });
     if (!t) return this.setState({ tarErro: 'Não consegui agendar: confira o nome e o dia.' });
     this.setState({ tarAberto: false, tarErro: '', tN: '', tVence: '' }); this.refresh();
+    // o cérebro não duplica a mesma tarefa (nome e dia) ainda aberta e devolve a que já está: nada novo foi agendado, então nenhuma linha nova no diário (o registro só cresce, a linha repetida não sai)
+    if (antes.indexOf(t.id) >= 0) return this.toast('Essa tarefa já está agendada para ' + v.split('-').reverse().join('/') + ' — nada foi gravado de novo', 'var(--cap-warn, #f0a63a)');
     this.toast('Tarefa agendada na equipe · vence ' + v.split('-').reverse().join('/'));
     this.diario('Tarefa da equipe: ' + t.n + ' — vence ' + v.split('-').reverse().join('/') + (t.quem ? ' · responsável: ' + t.quem : '') + '. Agendada em Equipe — linha nova, nada se apaga.', 'Manutenção');
   }

@@ -133,7 +133,7 @@ abastecimento, o consumido desde ele e a autonomia do instante (não a leitura d
 meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
 (SEM DADOS só ali); os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
 
-Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 49 defeitos, todos acusados; `MUT_FILTRO=texto`
+Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 61 defeitos (49 da P4J e 12 da revisão final), todos acusados; `MUT_FILTRO=texto`
 refaz só os mutantes cujo nome tem o texto; sem Worker): G3 com o diário gerado na ordem do tempo e as 3 pendências do CapitaoAgora (nada gravado só por abrir; o alarme de 105 s nunca vira proposta sozinho), as propostas
 A CONFIRMAR (relato, agendamento e alarme: CONFIRMAR grava UMA linha com o texto do cérebro, DESFAZER de 10 s é uma linha nova de anulação e o confirmado fica guardado, RECUSAR não grava, ✎ ajusta o texto ou a tarefa, o dia e o
 responsável com o dia que existe, o agendamento confirmado cria a tarefa e a conta de contagens() sobe, o toque duplo grava uma só e o aviso some em 10 s), as pendências como linhas novas (RESOLVER, REABRIR, DESFAZER dentro da
@@ -143,10 +143,13 @@ execução com sim só com simulacao false); G4 com os 6 contatos de apoio, o es
 os prestadores (+ PRESTADOR, ✎, OCULTAR e RESTAURAR sem apagar nada; o telefone só em capitao.equipe.v1; a linha do diário e a ficha da IA sem nome nem número; o que o app não entende no armazenamento fica como estava), + TAREFA da equipe
 (o nome, o dia que existe e não passou, o responsável; UMA tarefa em capitao.tarefas.v1 e UMA linha; contagens() sobe; os prazos se refazem com o dia virado sem recarregar; o Executado vira FEITA) e o selo; a Main e a H2 com o selo
 «n A CONFIRMAR» (conta só as abertas, leva ao #confirmar do Diário, some quando a última é decidida em outra aba); os estados de dentro em 3 tamanhos e 2 temas; e o código. PENDENTES_ROTULO fica vazia.
-Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 48 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
+Revisão final da P4J: o DESFAZER libera o gesto (CONFIRMAR → DESFAZER → CONFIRMAR e RESOLVER → DESFAZER → RESOLVER em menos de 1,5 s gravam de novo), a linha corrigida duas vezes mostra a correção mais nova, o telefone de 7 e de 16
+dígitos é recusado, a + TAREFA aceita hoje (D-0) e, repetida (mesmo nome e dia), não duplica nem grava uma 2ª linha no diário (a tela avisa que já estava agendada).
+Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 54 defeitos (48 da P4K e 6 da revisão final), todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
 nome tem o texto; sem Worker): o relatorio.html é uma PÁGINA (PAGINAS: a matriz o abre em 8 tamanhos e 2 temas, com o SOS do topo à vista, as 6 seções e, com --offline, sem rede) e tem as suas conferências: o conteúdo contra o cadastro
 (capa, cartões = contagens(), agenda, histórico, documentos, abastecimentos, peças; nenhum termo do §3, R$, coordenada, telefone nem MMSI; nunca o replay, a telemetria nem a faixa de alerta), os prazos de hoje (relógio 40 dias adiante),
-a privacidade (telefone, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora), o diário vigente e o selo apresentação, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
+a privacidade (telefone — inclusive o +55 e o número de 10 a 11 dígitos seguidos —, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora), as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31),
+o diário vigente (com duas correções da mesma linha, a mais nova) e o selo apresentação, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
 O fechamento (rodada completa): o registro das telas novas e do relatório (TELAS, CORE, lista, mapa APP, manifest), PENDENTES_ROTULO e PENDENTES_MUDA vazias, nenhum {{…}} em atributo de SVG, nenhum setInterval novo e a varredura do §3 em
 TODAS as telas com o replay SOLTO em 4 pontos da volta de 150 s (a faixa de alerta nunca no SOS, no Manual nem na C3).
 
@@ -7459,8 +7462,8 @@ def teste_g3_propostas(b, tela):
 
 
 def teste_g3_ancora_e_janela(b, tela):
-    """G3, o #confirmar do selo da tela inicial leva ao bloco e o realça por 4 s (sem a âncora, nenhum realce); o aviso do DESFAZER some sozinho em 10 s (a janela do cérebro); e a mesma proposta confirmada duas vezes seguidas
-    num toque duplo grava UMA linha só."""
+    """G3, o #confirmar do selo da tela inicial leva ao bloco e o realça por 4 s (sem a âncora, nenhum realce); o aviso do DESFAZER some sozinho em 10 s (a janela do cérebro); a mesma proposta confirmada duas vezes seguidas
+    num toque duplo grava UMA linha só; e o DESFAZER libera o gesto (CONFIRMAR → DESFAZER → CONFIRMAR e RESOLVER → DESFAZER → RESOLVER em menos de 1,5 s gravam de novo)."""
     prob = []
     tk = [{'id': 'tg3rel9', 'k': 'diario', 'origem': 'relato', 'texto': 'Cheiro de diesel na casa de máquinas depois da saída', 'prop': {'sys': 'Equipamentos'}, 'estado': 'aberto', 'iso': '2026-11-10T08:00:00.000Z', 'who': 'Lucas'}]
     ctx, pg, erros = abre_g3(b, tela, hash_='#confirmar', ls={'capitao.tickets.v1': json.dumps(tk)})
@@ -7480,6 +7483,29 @@ def teste_g3_ancora_e_janela(b, tela):
     pg.wait_for_timeout(10300)
     r = pg.evaluate(LE_G3)
     if r['desfaz'] or r['aviso']: prob.append('%s: o aviso com o DESFAZER devia sumir depois dos 10 s (a janela do cérebro): %r' % (tela, r['aviso'][:50]))
+    # o DESFAZER libera o gesto: só o MESMO toque repetido é o toque duplo; CONFIRMAR → DESFAZER → CONFIRMAR e RESOLVER → DESFAZER → RESOLVER dentro de 1,5 s gravam de novo (cada um com as 3 linhas)
+    pg.evaluate("() => window.CapitaoBrain.addTicket({ id: 'tg3rel8', k: 'diario', origem: 'relato', texto: 'Folga no prensa-gaxetas do eixo de bombordo na saída da baía', prop: { sys: 'Equipamentos' } })")
+    pg.evaluate("() => window.dispatchEvent(new StorageEvent('storage', { key: 'capitao.tickets.v1' }))"); pg.wait_for_timeout(350)
+    n0 = len(pg.evaluate(LE_G3)['diarioLs'] or [])
+    ciclo = """async (sel) => { const w = (ms) => new Promise((ok) => setTimeout(ok, ms)), q = (s) => document.querySelector(s), t0 = Date.now();
+      const a = q(sel); if (!a) return { ok: false, passo: 1 }; a.click(); await w(300);
+      const d = q('[data-g3=desfaz]'); if (!d) return { ok: false, passo: 2 }; d.click(); await w(300);
+      const c = q(sel); if (!c) return { ok: false, passo: 3 }; c.click(); await w(250); return { ok: true, ms: Date.now() - t0 }; }"""
+    g = pg.evaluate(ciclo, '[data-g3=ticket][data-id=tg3rel8] [data-g3=t-confirma]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G3)
+    if not g['ok'] or g['ms'] >= 1400: prob.append('%s: o ciclo CONFIRMAR → DESFAZER → CONFIRMAR não coube nos 1,5 s do toque duplo (%s): o teste não vale' % (tela, g))
+    else:
+        ln = r['diarioLs'] or []
+        tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+        if len(ln) != n0 + 3 or len(g3_acoes(r)) != 1 or tl.get('tg3rel8', {}).get('estado') != 'aceito' or not r['desfaz']:
+            prob.append('%s: CONFIRMAR → DESFAZER → CONFIRMAR em %d ms devia gravar a linha, a anulação e a linha de novo (o DESFAZER libera o gesto): linhas %d → %d, proposta %s' % (tela, g['ms'], n0, len(ln), tl.get('tg3rel8', {}).get('estado')))
+    g = pg.evaluate(ciclo, '[data-g3=pend][data-alvo=d03] [data-g3=p-troca]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G3)
+    if not g['ok'] or g['ms'] >= 1400: prob.append('%s: o ciclo RESOLVER → DESFAZER → RESOLVER não coube nos 1,5 s do toque duplo (%s): o teste não vale' % (tela, g))
+    else:
+        ac = [a.get('acao') for a in g3_acoes(r) if a.get('alvo') == 'd03']
+        p = [x for x in r['pend'] if x['alvo'] == 'd03'][0]
+        if ac != ['resolve', 'reabre', 'resolve'] or p['aberta'] != 'nao': prob.append('%s: RESOLVER → DESFAZER → RESOLVER em %d ms devia gravar resolve, reabre e resolve (o DESFAZER libera o gesto) e deixar a d03 resolvida: %s %s' % (tela, g['ms'], ac, p['aberta']))
     prob += ['%s: %s' % (tela, e) for e in erros[:2]]
     ctx.close()
     return prob
@@ -7550,7 +7576,8 @@ def teste_g3_pendencias(b, tela):
 
 
 def teste_g3_linhas(b, tela):
-    """G3, corrigir e anular uma linha do aparelho (PARIDADE §6.2): ✎ grava uma linha NOVA (acao corrige, alvo = o iso) e a lista mostra o texto novo com CORRIGIDO, a correção como linha à parte e o original guardado; 🗑 pede a confirmação e
+    """G3, corrigir e anular uma linha do aparelho (PARIDADE §6.2): ✎ grava uma linha NOVA (acao corrige, alvo = o iso) e a lista mostra o texto novo com CORRIGIDO, a correção como linha à parte e o original guardado; corrigir de novo
+    mostra a correção mais nova (as duas ficam guardadas); 🗑 pede a confirmação e
     grava uma linha de anulação (a lista risca a linha e diz ANULADO, o total desce, o texto continua guardado); Cancelar não grava; a linha do diário gerado, a linha de ação e a linha do SOS não têm ✎ nem 🗑."""
     prob = []
     app = eh_app(tela)
@@ -7581,16 +7608,27 @@ def teste_g3_linhas(b, tela):
     cr = [l for l in r['linhas'] if l['acao'] == 'corrige']
     if len(cr) != 1 or 'CORREÇÃO' not in cr[0]['tags'] or cr[0]['edita'] or cr[0]['anula']: prob.append('%s: a correção devia ser uma linha à parte, sem ✎ nem 🗑: %s' % (rot, cr))
     if g3_nums(r['resumo']) != n0: prob.append('%s: corrigir não muda o total (%s → %s)' % (rot, n0, g3_nums(r['resumo'])))
+    # corrigir DE NOVO a mesma linha: o ✎ abre com o texto vigente e a lista mostra a correção MAIS NOVA (as duas ficam guardadas, a vigente é a mais nova)
+    pg.click('[data-g3=linha][data-iso="%s"] [data-g3=l-edita]' % iso); pg.wait_for_timeout(250)
+    if pg.input_value('[data-g3=l-campo]') != 'Troquei a lâmpada de navegação de bombordo': prob.append('%s: o 2º ✎ devia abrir com o texto vigente (a correção mais nova): %r' % (rot, pg.input_value('[data-g3=l-campo]')))
+    pg.fill('[data-g3=l-campo]', 'Troquei as lâmpadas de navegação de bombordo e de popa'); pg.click('[data-g3=l-salva]'); pg.wait_for_timeout(350)
+    r = pg.evaluate(LE_G3)
+    ac = g3_acoes(r)
+    if [a.get('acao') for a in ac] != ['corrige', 'corrige'] or ac[0].get('t') != 'Troquei as lâmpadas de navegação de bombordo e de popa' or ac[1].get('t') != 'Troquei a lâmpada de navegação de bombordo':
+        prob.append('%s: a 2ª correção devia ACRESCENTAR uma linha corrige (a 1ª continua): %s' % (rot, [(a.get('acao'), a.get('t', '')[:30]) for a in ac]))
+    v = [l for l in r['linhas'] if l['iso'] == iso]
+    if not v or v[0]['texto'] != 'Troquei as lâmpadas de navegação de bombordo e de popa' or 'CORRIGIDO' not in v[0]['tags']: prob.append('%s: com duas correções a linha devia mostrar a MAIS NOVA com CORRIGIDO: %s' % (rot, v))
+    if len([l for l in r['linhas'] if l['acao'] == 'corrige']) != 2 or g3_nums(r['resumo']) != n0: prob.append('%s: as duas correções ficam na lista como linhas à parte e o total não muda (%s → %s)' % (rot, n0, g3_nums(r['resumo'])))
     # 🗑: confirmação, depois a linha de anulação
     pg.click('[data-g3=linha][data-iso="%s"] [data-g3=l-anula]' % iso); pg.wait_for_timeout(250)
     r = pg.evaluate(LE_G3)
-    if len(g3_acoes(r)) != 1: prob.append('%s: o 🗑 só pede a confirmação, não grava' % rot)
+    if len(g3_acoes(r)) != 2: prob.append('%s: o 🗑 só pede a confirmação, não grava' % rot)
     if not pg.query_selector('[data-g3=l-anula-ok]'): return prob
     pg.click('[data-g3=l-anula-ok]'); pg.wait_for_timeout(350)
     r = pg.evaluate(LE_G3)
     ac = g3_acoes(r)
     orig = [l for l in (r['diarioLs'] or []) if l.get('iso') == iso]
-    if len(ac) != 2 or ac[0].get('acao') != 'anula' or ac[0].get('alvo') != iso or not orig or orig[0].get('t') != 'Troquei a lâmpada de navegação de boreste': prob.append('%s: ANULAR devia gravar UMA linha anula e manter o texto guardado: %s' % (rot, [(a.get('acao')) for a in ac]))
+    if len(ac) != 3 or ac[0].get('acao') != 'anula' or ac[0].get('alvo') != iso or not orig or orig[0].get('t') != 'Troquei a lâmpada de navegação de boreste': prob.append('%s: ANULAR devia gravar UMA linha anula e manter o texto guardado: %s' % (rot, [(a.get('acao')) for a in ac]))
     v = [l for l in r['linhas'] if l['iso'] == iso]
     if not v or v[0]['estado'] != 'anulado' or 'ANULADO' not in v[0]['tags'] or v[0]['edita'] or v[0]['anula']: prob.append('%s: a linha anulada devia dizer ANULADO e perder o ✎ e o 🗑: %s' % (rot, v))
     n1 = g3_nums(r['resumo'])
@@ -7851,6 +7889,10 @@ def teste_g4_prestadores(b, tela):
     r = pg.evaluate(LE_G4)
     if 'Telefone inválido' not in r['erro'] or r['prestLs'] or r['equipeLs']: prob.append('%s: telefone de 3 dígitos devia dar «Telefone inválido» e não gravar: %r' % (rot, r['erro']))
     if not r['form']: return prob
+    pg.fill('[data-g4=f-fone]', '1234567'); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(250)
+    r = pg.evaluate(LE_G4)
+    if 'Telefone inválido' not in r['erro'] or r['prestLs'] or r['equipeLs']: prob.append('%s: telefone de 7 dígitos devia dar «Telefone inválido» e não gravar: %r' % (rot, r['erro']))
+    if not r['form']: return prob
     pg.fill('[data-g4=f-fone]', FONE); pg.click('[data-g4=f-salva]'); pg.wait_for_timeout(400)
     r = pg.evaluate(LE_G4)
     novos = (r['prestLs'] or {}).get('novos') or []
@@ -7924,7 +7966,7 @@ def teste_g4_prestadores(b, tela):
 
 
 def teste_g4_telefones(b, tela):
-    """G4, o telefone de cada contato de apoio (já existia): cadastrar valida os 8 a 15 dígitos, grava só em capitao.equipe.v1, mostra LIGAR (tel:), a linha do diário não leva o número, corrigir e remover funcionam; sem «A CADASTRAR»."""
+    """G4, o telefone de cada contato de apoio (já existia): cadastrar valida os 8 a 15 dígitos (7 e 16 recusados), grava só em capitao.equipe.v1, mostra LIGAR (tel:), a linha do diário não leva o número, corrigir e remover funcionam; sem «A CADASTRAR»."""
     prob = []
     ctx, pg, erros = abre_g4(b, tela)
     rot = tela
@@ -7933,6 +7975,11 @@ def teste_g4_telefones(b, tela):
     r = pg.evaluate(LE_G4)
     if r['equipeLs'] or 'Telefone inválido' not in r['nota']: prob.append('%s: telefone inválido devia avisar e não gravar: %r %s' % (rot, r['nota'], r['equipeLs']))
     if not pg.query_selector('[data-g4=fone-campo]'): return prob
+    for ruim, qual in (('1234567', '7 dígitos'), ('1234567890123456', '16 dígitos')):   # as fronteiras: 8 a 15 dígitos
+        pg.fill('[data-g4=fone-campo]', ruim); pg.click('[data-g4=fone-salva]'); pg.wait_for_timeout(250)
+        r = pg.evaluate(LE_G4)
+        if r['equipeLs'] or 'Telefone inválido' not in r['nota']: prob.append('%s: o telefone de %s devia avisar e não gravar: %r %s' % (rot, qual, r['nota'], r['equipeLs']))
+        if not pg.query_selector('[data-g4=fone-campo]'): return prob
     pg.fill('[data-g4=fone-campo]', '(47) 3333-4444'); pg.click('[data-g4=fone-salva]'); pg.wait_for_timeout(350)
     r = pg.evaluate(LE_G4)
     mar = [a for a in r['apoio'] if a['id'] == 'marina'][0]
@@ -8013,6 +8060,43 @@ def teste_g4_tarefas(b, tela):
     r = pg.evaluate(LE_G4)
     feita = [t for t in r['tarefas'] if t['id'] == gid]
     if not feita or feita[0]['feita'] != 'sim' or feita[0]['prazo'] != 'FEITA' or r['tarefas'][-1]['id'] != gid: prob.append('%s: a tarefa executada devia ir para o fim e dizer FEITA: %s' % (rot, feita))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_g4_tarefa_repetida(b, tela):
+    """G4, + TAREFA: o dia de HOJE é aceito (D-0: o formulário só recusa o que já passou); agendar de novo a mesma tarefa (nome e dia) NÃO duplica: o cérebro devolve a que já está, a tela diz que já estava agendada e não grava uma 2ª
+    linha no diário (o registro só cresce: a linha repetida não sairia, só com ANULAR); o mesmo nome em outro dia é outra tarefa (UMA linha para cada)."""
+    prob = []
+    ctx, pg, erros = abre_g4(b, tela)
+    rot = tela
+    E0 = pg.evaluate(ESP_G4)
+    g4_aba(pg, tela, 'tarefas')
+    def agenda(nome, dia):
+        if not pg.query_selector('[data-g4=t-n]'): pg.click('[data-g4=nova-tarefa]'); pg.wait_for_timeout(250)   # (o formulário que ficou aberto com o erro não se fecha de novo)
+        pg.fill('[data-g4=t-n]', nome); pg.fill('[data-g4=t-vence]', dia); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(450)
+        return pg.evaluate(LE_G4)
+    hoje = E0['hojeIso']
+    amanha = (datetime.date.fromisoformat(hoje) + datetime.timedelta(days=1)).isoformat()
+    nome = 'Conferir o extintor do convés'
+    r = agenda(nome, hoje)
+    tar = r['tarefasLs'] or []
+    if len(tar) != 1 or tar[0].get('vence') != hoje or r['tErro'] or r['formTar']: prob.append('%s: o dia de hoje devia ser aceito (UMA tarefa, sem erro, formulário fechado): %s %r' % (rot, tar, r['tErro']))
+    nova = [t for t in r['tarefas'] if t['nome'] == nome]
+    if len(nova) != 1 or nova[0]['prazo'] != rot_dn(0): prob.append('%s: a tarefa de hoje devia aparecer com %s: %s' % (rot, rot_dn(0), nova))
+    if len(r['diarioLs'] or []) != 1 or 'agendada na equipe' not in r['nota']: prob.append('%s: a tarefa nova devia gravar UMA linha e avisar «Tarefa agendada na equipe»: %d linhas, %r' % (rot, len(r['diarioLs'] or []), r['nota']))
+    if not tar:
+        ctx.close()
+        return prob   # (o resto depende da tarefa de hoje)
+    # a mesma tarefa de novo: nada novo
+    r = agenda(nome, hoje)
+    if len(r['tarefasLs'] or []) != 1 or len(r['diarioLs'] or []) != 1 or r['formTar']: prob.append('%s: a mesma tarefa agendada de novo não devia duplicar nem gravar outra linha no diário: %d tarefa(s), %d linha(s)' % (rot, len(r['tarefasLs'] or []), len(r['diarioLs'] or [])))
+    if 'já está agendada' not in r['nota'] or 'Tarefa agendada na equipe' in r['nota']: prob.append('%s: a repetida devia avisar que a tarefa já estava agendada (e não que agendou): %r' % (rot, r['nota']))
+    if len([t for t in r['tarefas'] if t['nome'] == nome]) != 1: prob.append('%s: a lista devia ter a tarefa uma vez só' % rot)
+    # o mesmo nome em outro dia é outra tarefa
+    r = agenda(nome, amanha)
+    if len(r['tarefasLs'] or []) != 2 or len(r['diarioLs'] or []) != 2 or 'agendada na equipe' not in r['nota']: prob.append('%s: o mesmo nome em outro dia é outra tarefa (2 tarefas e 2 linhas): %d e %d, %r' % (rot, len(r['tarefasLs'] or []), len(r['diarioLs'] or []), r['nota']))
     prob += ['%s: %s' % (rot, e) for e in erros[:2]]
     ctx.close()
     return prob
@@ -8171,6 +8255,7 @@ def p4j_conferencias(b, lista):
         out.append((tela + ' · os prestadores: + PRESTADOR, ✎, OCULTAR e RESTAURAR, o telefone só no aparelho', teste_g4_prestadores(b, tela)))
         out.append((tela + ' · o telefone de cada contato de apoio', teste_g4_telefones(b, tela)))
         out.append((tela + ' · + TAREFA da equipe: o prazo do CapitaoAgora, contagens(), a virada do dia e o Executado', teste_g4_tarefas(b, tela)))
+        out.append((tela + ' · + TAREFA para hoje (D-0) e a tarefa repetida (não duplica nem grava outra linha)', teste_g4_tarefa_repetida(b, tela)))
         out.append((tela + ' · o selo apresentação (simulacao false)', teste_g4_real(b, tela)))
     for tela in [t for t in TELAS_INICIO if t in lista]:
         out.append((tela + ' · o selo A CONFIRMAR do início', teste_selo_inicio(b, tela)))
@@ -8206,6 +8291,11 @@ MUTANTES_P4J = [
     ('a G3 do app limpa a barra mesmo quando o texto não entrou na linha', 'G3-Diario-Mobile.dc.html', [("if (r.nota) this.limpaBarra();   // o texto entrou na mesma linha", "this.limpaBarra();   // o texto entrou na mesma linha")], 'foto'),
     ('a foto da G3 web grava duas linhas', 'G3-Diario-Web.dc.html', [("let r = null; try { r = B.answerAttachment(kind, f, { platform: 'web', texto: texto }); }", "let r = null; try { B.answerAttachment(kind, f, { platform: 'web' }); r = B.answerAttachment(kind, f, { platform: 'web', texto: texto }); }")], 'foto'),
     # —— G3: o selo e o código ——
+    ('a G3 web mostra a correção MAIS VELHA da linha corrigida duas vezes', 'G3-Diario-Web.dc.html', [(" && !corr[x.alvo]) corr[x.alvo] = x; });", ") corr[x.alvo] = x; });")], 'linhas'),
+    ('a G3 do app mostra a correção MAIS VELHA da linha corrigida duas vezes', 'G3-Diario-Mobile.dc.html', [(" && !corr[x.alvo]) corr[x.alvo] = x; });", ") corr[x.alvo] = x; });")], 'linhas'),
+    ('o DESFAZER da G3 web não libera o CONFIRMAR (o toque duplo segue valendo)', 'G3-Diario-Web.dc.html', [("this._tk = null; this._tq = null;   // o toque duplo só vale", "this._tq = null;   // o toque duplo só vale")], 'ancora'),
+    ('o DESFAZER da G3 do app não libera o RESOLVER (o toque duplo segue valendo)', 'G3-Diario-Mobile.dc.html', [("this._tk = null; this._tq = null;   // o toque duplo só vale", "this._tk = null;   // o toque duplo só vale")], 'ancora'),
+    ('o DESFAZER da G3 web não limpa nenhum dos dois toques', 'G3-Diario-Web.dc.html', [("this._tk = null; this._tq = null;   // o toque duplo só vale", "   // o toque duplo só vale")], 'ancora'),
     ('a G3 web mostra o selo da linha também com a simulação', 'G3-Diario-Web.dc.html', [("if (e.sim === true && real) tags.push(tag('APRESENTAÇÃO', 'ink'));", "if (e.sim === true) tags.push(tag('APRESENTAÇÃO', 'ink'));")], 'real_g3'),
     ('a G3 do app põe o selo em toda linha do aparelho com simulacao false', 'G3-Diario-Mobile.dc.html', [("if (e.sim === true && real) tags.push(tag('APRESENTAÇÃO', 'ink'));", "if (real) tags.push(tag('APRESENTAÇÃO', 'ink'));")], 'real_g3'),
     ('a G3 web não tira o ouvinte da virada do dia ao desmontar', 'G3-Diario-Web.dc.html', [("window.removeEventListener('capitao-rebase', this._onRebase);", "")], 'codigo'),
@@ -8229,6 +8319,13 @@ MUTANTES_P4J = [
     ('a G4 web põe as tarefas feitas antes das abertas', 'G4-Equipe-Web.dc.html', [("d.tarefas.filter((t) => !t.feita).concat(d.tarefas.filter((t) => t.feita))", "d.tarefas.filter((t) => t.feita).concat(d.tarefas.filter((t) => !t.feita))")], 'g4_tar'),
     ('a G4 do app nunca mostra a tarefa como FEITA', 'G4-Equipe-Mobile.dc.html', [("feita: !!ex[t.id] });", "feita: false });")], 'g4_tar'),
     ('a G4 web não ouve a virada do dia (os prazos ficam os de antes)', 'G4-Equipe-Web.dc.html', [("window.addEventListener('capitao-rebase', this._onRebase);", "")], 'g4_tar'),
+    ('a + TAREFA da G4 web recusa o dia de hoje', 'G4-Equipe-Web.dc.html', [("if (hoje && v < hoje) return this.setState", "if (hoje && v <= hoje) return this.setState")], 'g4_rep'),
+    ('a + TAREFA da G4 web grava outra linha e diz agendada quando a tarefa já existia', 'G4-Equipe-Web.dc.html', [("    if (antes.indexOf(t.id) >= 0) return this.toast(", "    if (false) return this.toast(")], 'g4_rep'),
+    ('a + TAREFA da G4 do app grava outra linha e diz agendada quando a tarefa já existia', 'G4-Equipe-Mobile.dc.html', [("    if (antes.indexOf(t.id) >= 0) return this.toast(", "    if (false) return this.toast(")], 'g4_rep'),
+    ('a + TAREFA da G4 do app trata o mesmo nome em outro dia como repetida', 'G4-Equipe-Mobile.dc.html', [("    if (antes.indexOf(t.id) >= 0) return this.toast(", "    if (antes.indexOf(t.id) >= 0 || B.loadTarefas().filter((x) => x.n === t.n).length > 1) return this.toast(")], 'g4_rep'),
+    ('o telefone da G4 web aceita 7 dígitos', 'G4-Equipe-Web.dc.html', [("dg.length >= 8 &&", "dg.length >= 6 &&")], 'g4_fone'),
+    ('o telefone da G4 do app aceita 16 dígitos', 'G4-Equipe-Mobile.dc.html', [("dg.length <= 15); }", "dg.length <= 17); }")], 'g4_fone'),
+    ('o + PRESTADOR da G4 do app aceita 7 dígitos', 'G4-Equipe-Mobile.dc.html', [("dg.length >= 8 &&", "dg.length >= 6 &&")], 'g4_prest'),
     ('a G4 web mostra o selo do prestador também com a simulação', 'G4-Equipe-Web.dc.html', [("temSelo: c.sim === true && real,", "temSelo: c.sim === true,")], 'g4_real'),
     ('a G4 do app não mostra o selo da execução gravada com sim', 'G4-Equipe-Mobile.dc.html', [("temSelo: real && (tarSimMap[t.id] === true || exSim) };", "temSelo: real && tarSimMap[t.id] === true };")], 'g4_real'),
     # —— o selo A CONFIRMAR do início ——
@@ -8237,7 +8334,7 @@ MUTANTES_P4J = [
     ('a Main não ouve o storage (o selo só muda ao recarregar)', 'Main.dc.html', [("    window.addEventListener('storage', this._onSt);\n", "")], 'inicio'),
 ]
 QUAL_P4J = {'abertura': teste_g3_abertura, 'propostas': teste_g3_propostas, 'ancora': teste_g3_ancora_e_janela, 'pend': teste_g3_pendencias, 'linhas': teste_g3_linhas, 'foto': teste_g3_foto, 'real_g3': teste_g3_real,
-            'g4_abertura': teste_g4_abertura, 'g4_prest': teste_g4_prestadores, 'g4_fone': teste_g4_telefones, 'g4_tar': teste_g4_tarefas, 'g4_real': teste_g4_real, 'inicio': teste_selo_inicio,
+            'g4_abertura': teste_g4_abertura, 'g4_prest': teste_g4_prestadores, 'g4_fone': teste_g4_telefones, 'g4_tar': teste_g4_tarefas, 'g4_rep': teste_g4_tarefa_repetida, 'g4_real': teste_g4_real, 'inicio': teste_selo_inicio,
             'codigo': lambda b, t: teste_g3_codigo() + teste_g4_codigo()}
 
 
@@ -8279,7 +8376,7 @@ REL_TITULO = 'Relatório do barco · Capitão IA'
 REL_SECOES = ['resumo', 'agenda', 'historico', 'documentos', 'abastecimentos', 'pecas']
 SYS_MANUT_REL = ('Manutenção', 'Motores', 'Equipamentos', 'Eletrônicos')
 COORD_REL = re.compile(r"\d{1,3}\s*[°º]\s*\d|-?\d{1,3}[.,]\d{4,}(?!\d)")
-FONE_REL = re.compile(r"\b\d{4,5}[-\s]\d{4}\b|\(\d{2}\)\s?\d|\+55")
+FONE_REL = re.compile(r"\b\d{4,5}[-\s]\d{4}\b|\(\d{2}\)\s?\d|\+55|\b\d{10,13}\b")   # (o 10 a 13 dígitos seguidos: o número sem separador, com ou sem o 55)
 LE_REL = r"""() => {
   const T = (e) => ((e && e.innerText) || '').replace(/\s+/g, ' ').trim(), q = (s, r) => (r || document).querySelector(s);
   const rows = (s) => [...document.querySelectorAll('tr[data-rel=linha][data-sec="' + s + '"]')].map((tr) => ({ id: tr.getAttribute('data-id'), c: [...tr.children].map(T), chips: [...tr.querySelectorAll('.st')].map(T), html: tr.innerHTML }));
@@ -8505,6 +8602,37 @@ def teste_rel_conteudo(b):
     return prob
 
 
+def teste_rel_tarefas_aparelho(b):
+    """As tarefas agendadas neste aparelho (capitao.tarefas.v1, F15) entram na agenda impressa com o prazo de HOJE, contado aqui no calendário do barco: ontem (ATRASADA há 1 dia), hoje (D-0), a daqui a 30 dias (ainda D-30) e a de 31
+    (EM DIA, D-31: a fronteira dos 30 dias); a lista é a do cérebro (as 2 geradas e as do aparelho, as abertas por prazo) e os cartões acompanham as contagens()."""
+    prob = []
+    hoje = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=3)).date()
+    ks = [('gdm1', -1), ('gd0', 0), ('gd30', 30), ('gd31', 31)]
+    tar = [{'id': i, 'n': 'Tarefa do aparelho ' + i, 'vence': (hoje + datetime.timedelta(days=k)).isoformat(), 'quem': 'Lucas', 'origem': 'tela', 'iso': '2026-11-10T09:00:00.000Z', 'who': 'Lucas'} for i, k in ks]
+    ctx, pg, erros = abre_rel(b, ls={'capitao.tarefas.v1': json.dumps(tar)})
+    r = pg.evaluate(LE_REL)
+    dd = r['dd']
+    if dd['hojeIso'] != hoje.isoformat():
+        ctx.close()
+        return ['tarefas do aparelho: hoje no CapitaoAgora é %s e no relógio do barco %s (o teste não vale)' % (dd['hojeIso'], hoje.isoformat())]
+    for i, k in ks:
+        lin = [x for x in r['agenda'] if x['id'] == i]
+        if len(lin) != 1:
+            prob.append('a tarefa %s (daqui a %d dias), agendada neste aparelho, sumiu da agenda do relatório (a lista é a do cérebro: as geradas e as do aparelho)' % (i, k)); continue
+        st, dt = rel_situacao({'feita': False, 'dn': k})
+        c = lin[0]['c']
+        if not c[0].startswith('Tarefa do aparelho ' + i) or 'tarefa da equipe' not in c[0]: prob.append('%s: o nome ou o detalhe «tarefa da equipe» está errado: %r' % (i, c[0][:90]))
+        if c[2] != rel_br((hoje + datetime.timedelta(days=k)).isoformat()): prob.append('%s: vence %r (esperado %s)' % (i, c[2], rel_br((hoje + datetime.timedelta(days=k)).isoformat())))
+        if lin[0]['chips'][:1] != [st] or c[3] != st + (' ' + dt if dt else ''): prob.append('%s (hoje %+d dias): a situação devia ser %s %s e é %r' % (i, k, st, dt, c[3]))
+    prob += rel_confere_agenda(r, dd, 'tarefas do aparelho')
+    c = dd['cont']
+    n_atr = sum(1 for x in r['agenda'] if x['chips'][:1] == ['ATRASADA'])
+    if n_atr != c['atrasadas'] or r['cartoes']['atrasadas'] != [str(c['atrasadas']), 'vencem em 30 dias: %d' % c['d30']]: prob.append('tarefas do aparelho: %d linhas ATRASADA, cartão %s e contagens() %s' % (n_atr, r['cartoes']['atrasadas'], (c['atrasadas'], c['d30'])))
+    prob += ['tarefas do aparelho: %s' % e for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
 def teste_rel_dias(b):
     """Os prazos são os de HOJE: o cadastro guarda o prazo relativo (venceEm) e o CapitaoAgora refaz a DATA de vencimento a cada dia; com o relógio 40 dias adiante, a data de cada tarefa e de cada documento anda os mesmos 40 dias, o prazo
     (há 25 dias, D-17) fica, a situação bate com o calendário (a data menos o dia de hoje, calculada aqui sem o dn do cadastro) e as contagens e os cartões acompanham; um documento vencido há 10 dias e uma tarefa atrasada há 1 dia
@@ -8553,7 +8681,7 @@ def teste_rel_dias(b):
 
 def rel_semente(sim=True):
     """O registro deste aparelho com tudo o que o relatório não pode mostrar (telefone, e-mail, CPF, valor, coordenada, a linha do SOS, o que não é manutenção) e o que ele tem de mostrar."""
-    S = "Troca do filtro concluída; custou R$ 1.250,00 e o técnico (47) 99999-1234 confirmou. Posição 26°59,56'S 048°38,07'W e -26.99261, -48.63456; email tecnico@exemplo.com; CPF 123.456.789-09; tel 3333-4444; cel: 47 98888-7777; preço 99,90 o litro."
+    S = "Troca do filtro concluída; custou R$ 1.250,00 e o técnico (47) 99999-1234 confirmou. Posição 26°59,56'S 048°38,07'W e -26.99261, -48.63456; email tecnico@exemplo.com; CPF 123.456.789-09; tel 3333-4444; cel: 47 98888-7777; preço 99,90 o litro. Ligar +55 47 94444-3333 ou +5547993332222; whatsapp do mecânico 47992221111; fixo 4733330000."
     dia = [
         {'d': '10/11', 'iso': '2026-11-10T12:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': S},
         {'d': '10/11', 'iso': '2026-11-10T11:00:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'LINHA_DIARIO_GERAL passeio de domingo'},
@@ -8570,13 +8698,13 @@ def rel_semente(sim=True):
     }
 
 
-REL_SEGREDOS = ['99999-1234', '98888-7777', '97777-6666', '96666-5555', '95555-4444', '3333-4444', 'tecnico@exemplo', 'joao@exemplo', '123.456.789', 'R$', '1.250', '250,00', '99,90', '9,90', "26°59", '26.99261', '48.63456', 'SOSMARCA',
+REL_SEGREDOS = ['99999-1234', '98888-7777', '97777-6666', '96666-5555', '95555-4444', '3333-4444', '94444-3333', '993332222', '47992221111', '4733330000', '+55', 'tecnico@exemplo', 'joao@exemplo', '123.456.789', 'R$', '1.250', '250,00', '99,90', '9,90', "26°59", '26.99261', '48.63456', 'SOSMARCA',
                 'LINHA_DIARIO_GERAL', 'Fulano', 'Prestador Teste Alfa', '710123456']
 
 
 def teste_rel_privacidade(b):
     """Sem telefone, e-mail, CPF, valor em dinheiro nem coordenada: o texto livre do aparelho (diário, nome de arquivo, local e observação de peça, responsável da tarefa) passa pelo PESSOAIS e pelo DINHEIRO do §3 e pelo semCoord do
-    cérebro; o valor sai inteiro (não sobra «250» do «R$ 1.250,00»); a linha do SOS e a que não é manutenção não entram; a Equipe (telefones, convites, prestadores) nunca aparece; o resto da frase fica."""
+    cérebro (o telefone com +55, com ou sem separador, e o número de 10 a 11 dígitos seguidos saem INTEIROS: o PESSOAIS do §3 só reconhece o começo deles); o valor sai inteiro (não sobra «250» do «R$ 1.250,00»); a linha do SOS e a que não é manutenção não entram; a Equipe (telefones, convites, prestadores) nunca aparece; o resto da frase fica."""
     prob = []
     ctx, pg, erros = abre_rel(b, ls=rel_semente())
     r = pg.evaluate(LE_REL)
@@ -8606,6 +8734,7 @@ def rel_semente_vigente():
          dict(base, iso='2026-11-10T12:30:00.000Z', t='Registro L3 com pendência', pend=True),
          dict(base, iso='2026-11-10T12:20:00.000Z', t='Pendência resolvida: Registro L3 (linha de ação)', acao='resolve', alvo='2026-11-10T12:30:00.000Z'),
          dict(base, iso='2026-11-10T12:00:00.000Z', t='Texto original L2 corrigido'),
+         dict(base, iso='2026-11-10T11:45:00.000Z', t='Segunda correção vigente L2', acao='corrige', alvo='2026-11-10T12:00:00.000Z'),
          dict(base, iso='2026-11-10T11:30:00.000Z', t='Texto novo da correção L2', acao='corrige', alvo='2026-11-10T12:00:00.000Z'),
          dict(base, iso='2026-11-10T11:00:00.000Z', t='Registro L1 que foi anulado'),
          dict(base, iso='2026-11-10T10:30:00.000Z', t='Registro anulado: L1', acao='anula', alvo='2026-11-10T11:00:00.000Z')]
@@ -8614,7 +8743,7 @@ def rel_semente_vigente():
 
 
 def teste_rel_vigente(b):
-    """A versão vigente do diário: a linha anulada sai, a corrigida mostra o texto novo (CORRIGIDO), as linhas de ação não são registros, a pendência aberta é PENDENTE e a resolvida, RESOLVIDA; o selo «apresentação» (linha, tarefa,
+    """A versão vigente do diário: a linha anulada sai, a corrigida mostra o texto novo (CORRIGIDO; com duas correções, a mais nova), as linhas de ação não são registros, a pendência aberta é PENDENTE e a resolvida, RESOLVIDA; o selo «apresentação» (linha, tarefa,
     peça, documento, abastecimento e execução com sim) só com simulacao false, nunca na linha sem sim."""
     prob = []
     for sim, depois in ((True, ''), (False, 'window.CapitaoDados.simulacao = false;')):
@@ -8632,8 +8761,9 @@ def teste_rel_vigente(b):
         por = lambda sec, frag: [x for x in r[sec] if frag in x['c'][0]]
         textos = ' | '.join(x['c'][1] for x in r['historico'])
         if 'Registro L1 que foi anulado' in textos or 'Texto original L2' in textos or 'Registro anulado: L1' in textos or 'linha de ação' in textos: prob.append('%s: a linha anulada, a original corrigida ou uma linha de ação entrou no histórico: %s' % (modo, textos[:200]))
-        l2 = [x for x in r['historico'] if 'Texto novo da correção L2' in x['c'][1]]
-        if len(l2) != 1 or 'CORRIGIDO' not in l2[0]['chips']: prob.append('%s: a linha corrigida devia mostrar o texto novo com o chip CORRIGIDO: %s' % (modo, [x['c'][1][:60] for x in r['historico']]))
+        l2 = [x for x in r['historico'] if 'Segunda correção vigente L2' in x['c'][1]]
+        if len(l2) != 1 or 'CORRIGIDO' not in l2[0]['chips']: prob.append('%s: a linha corrigida duas vezes devia mostrar a correção MAIS NOVA com o chip CORRIGIDO: %s' % (modo, [x['c'][1][:60] for x in r['historico']]))
+        if 'Texto novo da correção L2' in textos: prob.append('%s: a correção mais velha da mesma linha apareceu no histórico: %s' % (modo, textos[:200]))
         l3 = [x for x in r['historico'] if x['c'][1].startswith('Registro L3 com pendência')]
         l4 = [x for x in r['historico'] if x['c'][1].startswith('Registro L4 pendente')]
         if len(l3) != 1 or l3[0]['chips'] != ['RESOLVIDA'] or len(l4) != 1 or l4[0]['chips'] != ['PENDENTE']: prob.append('%s: pendência resolvida %s / aberta %s (esperado RESOLVIDA / PENDENTE)' % (modo, l3 and l3[0]['chips'], l4 and l4[0]['chips']))
@@ -8932,6 +9062,7 @@ def p4k_conferencias(b, lista, paginas, completo):
     if 'relatorio' in paginas:
         out.append(('relatório · o conteúdo: capa, cartões, agenda, histórico, documentos, abastecimentos e peças, nenhum termo do §3, R$, coordenada nem telefone, sem leitura ao vivo', teste_rel_conteudo(b)))
         out.append(('relatório · os prazos de hoje (relógio 40 dias adiante) refeitos pelo CapitaoAgora', teste_rel_dias(b)))
+        out.append(('relatório · as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31)', teste_rel_tarefas_aparelho(b)))
         out.append(('relatório · privacidade: telefone, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora', teste_rel_privacidade(b)))
         out.append(('relatório · o diário vigente (anulada, corrigida, ação, pendência) e o selo apresentação só com simulacao false', teste_rel_vigente(b)))
         out.append(('relatório · o ramo simulacao false (SEM DADOS só ali) e as seções vazias', teste_rel_real(b)))
@@ -8961,6 +9092,9 @@ MUTANTES_P4K = [
     ('o aviso do relatório escreve R$', REL, [("sem valores em dinheiro e sem a posição do barco. No celular:", "sem R$ 5,99 o litro e sem a posição do barco. No celular:")], 'conteudo'),
     ('o relatório não tem o SOS no topo', REL, [('<a class="sos" id="sos" href="S1-SOS-Web.dc.html" aria-label="SOS — emergência">SOS</a>', '')], 'layout'),
     # —— a agenda, o histórico vigente e o selo ——
+    ('a agenda do relatório perde as tarefas agendadas neste aparelho (lê só o cadastro)', REL, [("try { eq = B.tarefasEquipe(); }", "try { eq = D.tarefasEquipe; }")], 'tarefas'),
+    ('o relatório põe EM DIA a tarefa que vence em 30 dias', REL, [("if (t.dn <= 30) return { st: 'D-' + t.dn", "if (t.dn <= 29) return { st: 'D-' + t.dn")], 'tarefas'),
+    ('o relatório põe como atrasada a tarefa que vence hoje', REL, [("if (t.dn < 0) return { st: 'ATRASADA'", "if (t.dn <= 0) return { st: 'ATRASADA'")], 'tarefas'),
     ('a tarefa executada vem antes das abertas', REL, [("return (a.feita - b.feita) || ((a.dn", "return ((a.dn")], 'vigente'),
     ('a tarefa executada não vira FEITA', REL, [("if (t.feita) return { st: 'FEITA', tom: 'ok', det: '' };", "if (false) return { st: 'FEITA', tom: 'ok', det: '' };")], 'vigente'),
     ('a peça ligada a uma tarefa feita ainda mostra o prazo', REL, [("if (ex[id]) return e(t.t) + ' (executada)';", "")], 'vigente'),
@@ -8969,10 +9103,13 @@ MUTANTES_P4K = [
     ('o histórico traz as linhas de ação (resolve, corrige, anula)', REL, [("if (x.acao || anul[x.iso] ||", "if (anul[x.iso] ||")], 'vigente'),
     ('o histórico traz a linha do SOS', REL, [(" || /^(?:web|app) · SOS/.test(String(x.src || ''))", "")], 'priv'),
     ('o histórico traz as linhas que não são de manutenção', REL, [(" || !SYS_MANUT[x.sys]) return;", ") return;")], 'priv'),
+    ('o histórico mostra a correção MAIS VELHA de uma linha corrigida duas vezes', REL, [(" && !corr[x.alvo]) corr[x.alvo] = x; });", ") corr[x.alvo] = x; });")], 'vigente'),
     ('o selo apresentação aparece também na simulação (linha do diário)', REL, [("apres: x.sim === true && !sim() });", "apres: x.sim === true });")], 'vigente'),
     ('o selo apresentação aparece na tarefa sem sim', REL, [("apres: !!apar[t.id] && !sim() });", "apres: !sim() });")], 'vigente'),
     # —— a privacidade ——
     ('o texto livre não passa pelo PESSOAIS do §3', REL, [("    if (RX_PESSOAL) s = s.replace(RX_PESSOAL, '[contato omitido]');\n", "")], 'priv'),
+    ('o telefone com +55 não sai inteiro (sem o padrão do código do país)', REL, [("    s = s.replace(RX_FONE_PAIS, '[contato omitido]');\n", "")], 'priv'),
+    ('o número de 10 a 11 dígitos sem separador não sai', REL, [("    s = s.replace(RX_FONE_SOLTO, '$1[contato omitido]');\n", "")], 'priv'),
     ('o telefone com rótulo («tel 3333-4444») não sai', REL, [("    s = s.replace(RX_FONE, '$1 [contato omitido]');\n", "")], 'priv'),
     ('o texto livre não passa pelo DINHEIRO do §3', REL, [("    if (RX_DINHEIRO) s = s.replace(RX_DINHEIRO, '[valor omitido]');\n", "")], 'priv'),
     ('o valor sai pela metade (sobram os dígitos depois do R$)', REL, [("RX_DINHEIRO = rx('DINHEIRO', '[\\\\d.,]*')", "RX_DINHEIRO = rx('DINHEIRO')")], 'priv'),
@@ -9006,7 +9143,7 @@ MUTANTES_P4K = [
     ('o texto do NORMALIZADO da C3 ganha o rótulo DEMO (só aparece depois do alarme)', 'C3-Leme-Alerta.dc.html', [("selo = 'NORMALIZADO às ' + hora(j.ate, false).slice(0, 5);", "selo = 'NORMALIZADO · DEMO ' + hora(j.ate, false).slice(0, 5);")], 'livre:C3-Leme-Alerta'),
     ('a faixa de alerta aparece na C3', 'capitao-app.js', [("!/^(Manual-|C3-|S[12]-SOS-)/.test(ARQ)", "!/^(Manual-|S[12]-SOS-)/.test(ARQ)")], 'livre:C3-Leme-Alerta'),
 ]
-QUAL_P4K = {'conteudo': lambda b, a: teste_rel_conteudo(b), 'dias': lambda b, a: teste_rel_dias(b), 'priv': lambda b, a: teste_rel_privacidade(b), 'vigente': lambda b, a: teste_rel_vigente(b), 'real': lambda b, a: teste_rel_real(b),
+QUAL_P4K = {'conteudo': lambda b, a: teste_rel_conteudo(b), 'dias': lambda b, a: teste_rel_dias(b), 'tarefas': lambda b, a: teste_rel_tarefas_aparelho(b), 'priv': lambda b, a: teste_rel_privacidade(b), 'vigente': lambda b, a: teste_rel_vigente(b), 'real': lambda b, a: teste_rel_real(b),
             'atualiza': lambda b, a: teste_rel_atualiza(b) + teste_rel_codigo(), 'impressao': lambda b, a: teste_rel_impressao(b) + teste_rel_codigo(), 'layout': lambda b, a: teste_rel_layout(b),
             'registro': lambda b, a: teste_fase4_registro(), 'pendentes': lambda b, a: teste_fase4_pendentes(('Main',), ()), 'svg': lambda b, a: teste_fase4_svg(), 'intervalos': lambda b, a: teste_fase4_intervalos()}
 
