@@ -2259,6 +2259,11 @@ MUTANTES_ARQ = [
      [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
     ('a B2 dando setState a cada tique, sem comparar o texto', 'B2-Carta-Mobile.dc.html',
      [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    # P4F: o Modo navegação só dá setState quando o texto exibido muda (E1 e E2 são CRLF: o trecho é de uma linha só, que o corpo servido casa)
+    ('a E1 dando setState a cada tique, sem comparar o texto', 'E1-Navegando-Gatilhos.dc.html',
+     [("if (!forca && k === this._k) return;", "")], 'gating'),
+    ('a E2 dando setState a cada tique, sem comparar a leitura de agora', 'E2-Navegando-Sintoma.dc.html',
+     [("if (k === this._refK) return;", "")], 'gating'),
 ]
 
 
