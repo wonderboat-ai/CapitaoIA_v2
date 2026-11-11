@@ -1881,7 +1881,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -4236,7 +4236,9 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3B_REV
 MUTANTES_3B_REV2 = [
     ('o dia do prazo é o dia UTC (sem o fuso do barco)', r"return Math.floor((ms + o * 60000) / 86400000); }", r"return Math.floor(ms / 86400000); }", ('prazos',)),
     ('o dn tem um dia a mais', r"var n = x ? diaData(x.vence) - diaDe(msAgora()) : NaN; return isNaN(n)", r"var n = x ? diaData(x.vence) - diaDe(msAgora()) + 1 : NaN; return isNaN(n)", ('prazos',)),
-    ('o prazo lê o Date.now() e não o instante do cérebro', r"function msAgora() { var i = CONG.inst; return i && typeof i.ms === 'number' ? i.ms : Date.now(); }", r"function msAgora() { return Date.now(); }", ('prazos',)),
+    ('o prazo lê o Date.now() e não o instante do cérebro', r"function msAgora() { var i = CONG.inst, R = window.CapitaoReplay, x = null; if (i && typeof i.ms === 'number') return i.ms; try { x = R && typeof R.agora === 'function' ? R.agora() : null; } catch (e) { x = null; } return typeof x === 'number' && isFinite(x) ? x : Date.now(); }", r"function msAgora() { return Date.now(); }", ('prazos',)),
+    ('o prazo fora de uma pergunta lê o Date.now() e não o instante do replay (a tela com o replay fixado em outro dia fica 1 dia fora do resto)', r"function msAgora() { var i = CONG.inst, R = window.CapitaoReplay, x = null; if (i && typeof i.ms === 'number') return i.ms; try { x = R && typeof R.agora === 'function' ? R.agora() : null; } catch (e) { x = null; } return typeof x === 'number' && isFinite(x) ? x : Date.now(); }", r"function msAgora() { var i = CONG.inst; return i && typeof i.ms === 'number' ? i.ms : Date.now(); }", ('p3g_prazo',)),
+
     ('os horímetros ignoram a troca de óleo executada', r"(oEx ? 'Troca de óleo dos motores: ' + oEx + '.' : 'Próxima troca de óleo dos motores: '", r"(false ? 'Troca de óleo dos motores: ' + oEx + '.' : 'Próxima troca de óleo dos motores: '", ('prazos',)),
     ('os horímetros ignoram a revisão do gerador executada', r"(rvEx ? rvEx + '.' : rv.vence", r"(false ? rvEx + '.' : rv.vence", ('prazos',)),
     ('os motores ignoram a troca de óleo executada', r"' · troca de óleo ' + (execTxt(o) || prazoTxt(o) + (o.horas ? ' ou '", r"' · troca de óleo ' + (prazoTxt(o) + (o.horas ? ' ou '", ('prazos',)),
@@ -5445,6 +5447,16 @@ JS_CK_ESCRITA = """() => { const B = window.CapitaoBrain, R = window.CapitaoRepl
   return o; }"""
 
 
+# CONCLUIR com o diário que não grava (cota cheia, janela privada): o addDiario devolve a entrada mesmo assim; sem a linha no diário o CONCLUIR devolve entrada null e as marcações FICAM
+JS_CK_FALHA = """() => { const B = window.CapitaoBrain, o = {}; localStorage.clear(); B.checklistMarca('saida', 's03', true); B.checklistMarca('chegada', 'c01', true);
+  o.antes = localStorage.getItem('capitao.checklist.v1');
+  const set = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (k === 'capitao.diario.v1') throw new Error('QuotaExceededError'); return set.apply(this, arguments); };
+  try { const r = B.checklistConcluir('saida'); o.r = r && [r.entrada, r.t, r.tipo]; } finally { Storage.prototype.setItem = set; }
+  o.diario = B.loadDiario().length; o.marcas = localStorage.getItem('capitao.checklist.v1');
+  const ok = B.checklistConcluir('saida'); o.ok = ok && [!!ok.entrada, B.loadDiario().length, JSON.parse(localStorage.getItem('capitao.checklist.v1'))];
+  return o; }"""
+
+
 def primeira_linha_ck(nome, hora, itens):
     f = sum(1 for i in itens if i['feito'])
     nao = [i['c'] for i in itens if not i['feito'] and i['auto'] and i['auto']['estado'] == 'falta']
@@ -5544,6 +5556,10 @@ def grupo_checklist(b, muta, ped):
             and w['c']['entrada'] == w['entrada'] and w['c']['t'] == quer and 'saida' not in w['depois'] and w['depois']['chegada']['m'] == {'c01': 1}, (w['n0'], w['n2'], w['n3'], w['entrada']))
         ped('checklist (marcas): false volta ao automático (apaga a marca); sem marca nenhuma o tipo continua no registro do aparelho vazio', w['volta'] == {} and w['vazio'].get('chegada', {}).get('m') == {}, (w['volta'], w['vazio']))
         ped('checklist: tipo que não existe — marca e CONCLUIR devolvem null e não gravam', w['ruim'] is None and w['semTipo'] is None, (w['ruim'], w['semTipo']))
+        f = pg.evaluate(JS_CK_FALHA)
+        ped('checklist (CONCLUIR sem gravar): com o diário que não grava a linha, o CONCLUIR devolve entrada null (a tela diz «Não gravado»), o diário fica vazio e as marcações FICAM; no toque seguinte, com a gravação de volta, grava 1 linha e só então apaga as marcas de saída',
+            f['r'] and f['r'][0] is None and f['r'][2] == 'saida' and f['r'][1].startswith('Checklist de saída concluído') and f['diario'] == 0 and f['marcas'] == f['antes'] and json.loads(f['antes'])['saida']['m'] == {'s03': 1}
+            and f['ok'] and f['ok'][0] is True and f['ok'][1] == 1 and 'saida' not in f['ok'][2] and f['ok'][2]['chegada']['m'] == {'c01': 1}, f)
         ped('checklist: JSON ruim no aparelho (lista, texto, marca que não é mapa, tipo que não é objeto) vale como sem marcas e os 14 itens seguem; nunca lança', w['lixo1'] == [14, {}] and w['lixo2'] == [14, '{}'] and w['lixo3'] == [14, '{}', '{}'], (w['lixo1'], w['lixo2'], w['lixo3']))
         ped('checklist (CONCLUIR): a linha gravada (e a pior, com todos os rótulos pendentes) de cada tipo não casa a lista SOS, não é o relato de óleo e não vira diário com alerta', all(r == [False, r_[1], False] and r_[1] not in ('sos', 'oleo') for t in TIPOS_CK for r_ in [w['emerg'][t][0], w['emerg'][t][1]] for r in [r_]), w['emerg'])
     finally:
@@ -5608,6 +5624,9 @@ MUTANTES_3E_F09 = [
     ('p3e checklist: o item parcial vira ✓', "if (it.parcial && a && a.estado === 'ok') a = R_('ler', a.valor + ' — o resto do item: confira');", "", ('checklist',)),
     ('p3e checklist: a maré dá ✓ sozinha (o s01 da previsão é parcial e ficaria «ler» de qualquer jeito)', "return R_('ler', [pv ? 'previsão de hoje: '", "return R_('ok', [pv ? 'previsão de hoje: '", ('checklist',)),
     ('p3e checklist: o CONCLUIR grava duas linhas', "    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", "    addDiario({ sys: ln.sys, t: ln.t, who: quem(), src: 'x' });\n    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", ('checklist',)),
+    ('p3e checklist: o CONCLUIR apaga as marcas e diz que gravou com o diário que não gravou (sem conferir a linha)', "    if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) return Object.assign({ entrada: null }, ln);\n", "", ('checklist',)),
+    ('p3e checklist: o CONCLUIR só confere se o addDiario devolveu a entrada (que ele devolve mesmo sem gravar)', "if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) return Object.assign({ entrada: null }, ln);", "if (!e) return Object.assign({ entrada: null }, ln);", ('checklist',)),
+    ('p3e checklist: o CONCLUIR sem a linha apaga as marcas mesmo assim (devolve entrada null depois de zerar)', "if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) return Object.assign({ entrada: null }, ln);", "if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) { checklistZera(ln.tipo); return Object.assign({ entrada: null }, ln); }", ('checklist',)),
     ('p3e checklist: o CONCLUIR não apaga as marcas do tipo', "    checklistZera(ln.tipo);\n    return Object.assign({ entrada: e }, ln);", "    return Object.assign({ entrada: e }, ln);", ('checklist',)),
     ('p3e checklist: a linha do CONCLUIR sem o carimbo sim (o addDiario não carimba)', "    if (sim() && !linhaDoSOS(entry) && entry.sim == null) entry.sim = true;", "", ('checklist',)),   # (P3F: o carimbo passou a ser do addDiario; antes o CONCLUIR passava selaSim() à mão)
     ('p3e checklist: a marca da pessoa não conta', "feito: (ok && !anulado) || manual });", "feito: (ok && !anulado) });", ('checklist',)),
@@ -8226,7 +8245,37 @@ def grupo_p3g_agenda(b, muta, ped):
         pg.ctx.close()
 
 
+# —— o prazo da tarefa da equipe FORA de uma pergunta (as telas leem tarefasEquipe()): o dia é o do instante do replay (o mesmo da agenda e de contagens()), nunca o do Date.now() —— #
+# O replay fixado 2 dias depois do relógio (s = 172.860 s: 07:00 + 5 h + 2 dias + 60 s) põe o instante num dia que o relógio ainda não tem; entre 00:00 e 07:00 até o `fixo` de 60 s cai no dia de ontem.
+JS_P3G_PRAZO_INSTANTE = """() => { const B = window.CapitaoBrain, C = window.CapitaoAgora, D = window.CapitaoDados, o = {}; localStorage.clear();
+  const dia = (iso) => Math.floor(Date.parse(iso.slice(0, 10) + 'T00:00:00Z') / 86400000), iso = (n) => new Date(n * 86400000).toISOString().slice(0, 10), hoje = dia(C.relogio.hojeIso);
+  o.hoje = C.relogio.hojeIso; o.relogio = iso(Math.floor((Date.now() - 3 * 3600000) / 86400000)); o.fixo = window.CapitaoReplay.fixo();
+  [['Atrasada de ontem', -1], ['Vence hoje', 0], ['Vence em cinco dias', 5], ['Vence em 40 dias', 40]].forEach((x) => B.addTarefa({ n: x[0], vence: iso(hoje + x[1]), origem: 'tela' }));
+  o.eq = B.tarefasEquipe().map((t) => [t.id, t.n, t.vence, t.dn, t.st]);
+  o.dados = D.tarefasEquipe.map((t) => [t.id, t.dn, t.st]);
+  const c = C.contagens(); o.cont = [c.atrasadas, c.d30, c.d60, c.d90, c.emDia, c.tarefasEquipe];
+  const conta = { atrasadas: 0, d30: 0, d60: 0, d90: 0, emDia: 0 }; D.agenda.concat(B.tarefasEquipe()).forEach((t) => { const n = t.dn; conta[n < 0 ? 'atrasadas' : n <= 30 ? 'd30' : n <= 60 ? 'd60' : n <= 90 ? 'd90' : 'emDia']++; });
+  o.conta = [conta.atrasadas, conta.d30, conta.d60, conta.d90, conta.emDia];
+  return o; }"""
+
+
+def grupo_p3g_prazo_instante(b, muta, ped):
+    pg = pagina(b, muta=muta, relogio_ms=1793653799900, fixo='172860')
+    try:
+        o = pg.evaluate(JS_P3G_PRAZO_INSTANTE)
+        por_nome = {e[1]: e for e in o['eq']}
+        quer = {'Atrasada de ontem': -1, 'Vence hoje': 0, 'Vence em cinco dias': 5, 'Vence em 40 dias': 40}
+        ped('p3g prazo: com o replay fixado 2 dias depois do relógio, o dia do instante (%s) não é o do Date.now() (%s)' % (o['hoje'], o['relogio']), o['hoje'] != o['relogio'] and o['fixo'], (o['hoje'], o['relogio'], o['fixo']))
+        ped('p3g prazo: tarefasEquipe() fora de uma pergunta conta o dn do dia do INSTANTE — ontem -1, hoje 0, +5, +40, e as 2 geradas com o mesmo dn do rodapé (rebase), com o st do prazoDe',
+            all(por_nome[n][3] == d for n, d in quer.items()) and por_nome['Atrasada de ontem'][4] == 'ATRASADA' and por_nome['Vence hoje'][4] == 'D-30' and por_nome['Vence em 40 dias'][4] == 'D-60'
+            and sorted([e[0], e[3], e[4]] for e in o['eq'] if e[0] in ('g01', 'g02')) == sorted(o['dados']), (o['eq'], o['dados']))
+        ped('p3g prazo: as faixas de tarefasEquipe() e da agenda somam o mesmo que CapitaoAgora.contagens() (atrasadas, D-30, D-60, D-90, em dia)', o['cont'][:5] == o['conta'] and o['cont'][5] == 6, (o['cont'], o['conta']))
+    finally:
+        pg.ctx.close()
+
+
 GRUPOS_3A['p3g_agenda'] = grupo_p3g_agenda
+GRUPOS_3A['p3g_prazo'] = grupo_p3g_prazo_instante
 
 
 # —— F20: pendências. O estado vem das linhas de ação (resolve/reabre + alvo): resolver, reabrir e desfazer são linhas NOVAS; o registro que cita a pendência e CONCLUI o serviço a fecha (com Desfazer) ——

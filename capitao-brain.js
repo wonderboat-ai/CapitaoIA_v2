@@ -1292,7 +1292,9 @@
   // rebase do rodapé o refaz ao carregar e na virada do dia, e uma tela aberta desde ontem sem o replay ficaria um dia atrás. A classificação é a do
   // CapitaoAgora.prazoDe; a tarefa executada (capitao.executado.v1) sai da agenda, como na contagem das telas; a tarefa de um equipamento de segurança (EPIRB,
   // Seafire) vai sem a data e sem o D-n: a nota da etiqueta (CONTRATO §1.4, §6.6 «Revisão do C7»).
-  function msAgora() { var i = CONG.inst; return i && typeof i.ms === 'number' ? i.ms : Date.now(); }
+  // Dentro de uma pergunta, o instante congelado dela. Fora (uma tela lendo tarefasEquipe()): o instante do replay, o mesmo que o rodapé usa para refazer a agenda e as contagens (R.agora(): o fixado ou o relógio); com o
+  // replay fixado em outro dia, ou entre 00:00 e 07:00 com o instante fixado no dia de bordo de ontem, o Date.now() daria 1 dia de diferença do resto da tela.
+  function msAgora() { var i = CONG.inst, R = window.CapitaoReplay, x = null; if (i && typeof i.ms === 'number') return i.ms; try { x = R && typeof R.agora === 'function' ? R.agora() : null; } catch (e) { x = null; } return typeof x === 'number' && isFinite(x) ? x : Date.now(); }
   function diaDe(ms) { var A = window.CapitaoAgora, o = -180; try { if (A && typeof A.off === 'function') o = A.off(ms); } catch (e) {} return Math.floor((ms + o * 60000) / 86400000); }
   function diaData(s) {   // 'dd/mm/aaaa' ou 'aaaa-mm-dd' → dia desde 1970; NaN se não for data
     var m = /^(\d\d)\/(\d\d)\/(\d{4})$/.exec(s || ''), n = null;
@@ -2655,11 +2657,13 @@
     return { tipo: tp.id, sys: tp.sys, feitos: l.length - pend.length, total: l.length, porQuadro: pq, pend: pend,
       t: tp.nome + ' concluído · ' + (l.length - pend.length) + '/' + l.length + (pq ? ' (' + pq + ' pela telemetria)' : '') + (pend.length ? ' · pendentes: ' + pend.join(', ') : ' · tudo conferido') };
   }
-  // CONCLUIR: UMA linha nova no diário (a conveniência das marcas some); `ctx.commit === false` (pedido vindo de link) não grava. Devolve { …linha, entrada } ou null.
+  // CONCLUIR: UMA linha nova no diário (a conveniência das marcas some); `ctx.commit === false` (pedido vindo de link) não grava. Devolve { …linha, entrada } (`entrada: null` se o diário não gravou: as marcações ficam) ou null.
   function checklistConcluir(tipo, ctx) {
     var ln = checklistLinha(tipo), e;
     if (!ln || (ctx && ctx.commit === false)) return null;
     e = addDiario({ sys: ln.sys, t: ln.t, who: quem(), src: 'checklist de bordo' + (ln.porQuadro ? ' · telemetria' : '') });   // (o carimbo sim é do addDiario, P3F)
+    // a linha só vale se está no diário: o addDiario devolve a entrada mesmo quando a gravação falha (cota cheia, janela privada). Sem a linha, as marcações ficam (nada se perde) e a tela diz «Não gravado»
+    if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) return Object.assign({ entrada: null }, ln);
     checklistZera(ln.tipo);
     return Object.assign({ entrada: e }, ln);
   }

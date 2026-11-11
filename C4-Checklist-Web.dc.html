@@ -81,7 +81,7 @@ button { font: inherit; }
           </div>
         </section>
 
-        <aside style="width: 360px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-bottom: 92px; box-sizing: border-box;">
+        <aside style="width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; padding-bottom: 92px; box-sizing: border-box;">
           <section aria-label="Concluir" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 9px;">
             <span style="display: flex; align-items: baseline; gap: 8px;">
               <span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">ANDAMENTO</span>
@@ -103,7 +103,7 @@ button { font: inherit; }
             </sc-if>
             <span style="font-size: 11px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">{{nota}}</span>
           </section>
-          <section aria-label="Agora a bordo" style="flex-shrink: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px;">
+          <section aria-label="Agora a bordo" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 6px;">
             <span style="display: flex; align-items: center; gap: 8px;"><span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">AGORA A BORDO</span><a href="A1-Ponte-Web.dc.html" style="display: flex; align-items: center; min-height: 32px; font-size: 12px; font-weight: 700; text-decoration: none;">Telemetria ›</a></span>
             <sc-for list="{{agora}}" as="g" hint-placeholder-count="5">
               <span data-c4="agora" style="display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; line-height: 1.35;"><span style="width: 78px; flex-shrink: 0; color: var(--cap-ink3, #97a3c0);">{{g.k}}</span><span style="min-width: 0; font-weight: 500; color: {{g.tone}}; overflow-wrap: anywhere;">{{g.v}}</span></span>
@@ -202,7 +202,8 @@ class Component extends DCLogic {
     });
     const pend = lista.filter((i) => !i.feito).map((i) => i.c);
     const aB = I && I.txt ? I.txt : {};
-    const agora = [['Diesel', aB.dieselLados && aB.diesel ? aB.dieselLados + ' — ' + aB.diesel : ''], ['Tanques', aB.tanques || ''], ['Baterias', aB.b24 && aB.b12 ? aB.b24 + ' · 12 V ' + aB.b12 : ''], ['Porão', aB.porao || ''], ['Gerador', aB.gerador || ''], ['Alarmes', aB.alarmes ? aB.alarmes : (I && I.q && Array.isArray(I.q.alarmes) ? 'nenhum alarme ativo' : '')]]
+    // os alarmes primeiro: é a linha que muda e a que a pessoa precisa ver antes de largar (o painel nunca corta: se a altura não bastar, a coluna rola e os alarmes continuam no alto)
+    const agora = [['Alarmes', aB.alarmes ? aB.alarmes : (I && I.q && Array.isArray(I.q.alarmes) ? 'nenhum alarme ativo' : '')], ['Diesel', aB.dieselLados && aB.diesel ? aB.dieselLados + ' — ' + aB.diesel : ''], ['Tanques', aB.tanques || ''], ['Baterias', aB.b24 && aB.b12 ? aB.b24 + ' · 12 V ' + aB.b12 : ''], ['Porão', aB.porao || ''], ['Gerador', aB.gerador || '']]
       .filter((x) => x[1]).map((x) => ({ k: x[0], v: x[1], tomK: x[0] === 'Alarmes' ? (/^(AVISO|CRÍTICO)/.test(x[1]) ? 'warn' : 'ok') : '' }));
     return {
       pronto: true, tipo: tipo.id, nome: tipo.nome, sys: tipo.sys,

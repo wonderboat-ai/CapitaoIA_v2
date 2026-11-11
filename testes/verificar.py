@@ -98,8 +98,8 @@ do MESMO tique com o replay livre, na entrada e na saída da janela do alarme (s
 D.historico.janelas, as horas do eixo e do cursor no relógio do barco (Intl); a lista de valores dos sensores sem «ligado desligado» nem rótulo repetido e a linha do bloco na cor do ponto (e, no replay.py, nenhuma
 releitura de série do gráfico nem das tendências com o instante fixado).
 
-Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 58 defeitos, todos acusados; `MUT_FILTRO=texto`
-refaz só os mutantes cujo nome tem o texto; os 5 `setState a cada tique` só caem na contagem real do setState, `teste_leme_setstate`, e a C3 conta também os alarmes pedidos no chat, o cérebro que chega depois do toque em Registrar e o alarme sem começo conhecido): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
+Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 73 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto; os 5 `setState a cada tique` só caem na contagem real do setState, `teste_leme_setstate`, e a C3 conta também os alarmes pedidos no chat, o cérebro que chega depois do toque em Registrar e o alarme sem começo conhecido; a C1 e a C2 contam as tarefas da equipe no dia do INSTANTE com o replay fixado 2 dias adiante do relógio, `FIXO_OUTRO_DIA`; a C3, a C4 web e app, a E1 e a E2 com o diário que não grava dizem «Não gravado» e a C4 mantém as marcações, `BLOQUEIA_DIARIO`; a C4 conclui os 4 tipos e prova o 2º toque que desmarca; o painel «Agora a bordo» da C4 web não corta em silêncio nos 4 tamanhos): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
 da agenda gerada), os 3 cartões iguais às contagens do CapitaoAgora (a agenda e as tarefas da equipe, as do aparelho também; Executado acompanha e o Executado da tarefa do aparelho grava 1 linha nova com sim);
 C2 com as atrasadas, o horímetro de agora (BB, BE e gerador) e as mesmas horas até a troca; C3 como alerta vivo: o AVISO a 105 s com a leitura «BE 89,6 °C · 12:01:45» (o lado, o valor do alarme e a hora do
 quadro), a faixa normal do guia (a do regime do giro, no óleo), a tendência dos 10 s (o quadro do segundo 95 da volta) e dos 30 s (+7,5 °C, a do cérebro), os passos e a fonte do catálogo, o equipamento de
@@ -108,8 +108,8 @@ D.equipamentos, o pisca; o NORMALIZADO às 11:59 a 60 s (o fim da volta anterior
 sim; dois toques seguidos não duplicam; nem ao abrir nem a cada mudança de estado), sempre escura (tema claro) e leve (sem tema, sem cérebro até o toque); C4 nos 4 tipos a 60 e a 105 s: itens, fonte, verificação do
 quadro (s02: ✓ a 60 s, ✗ a 105 s), marcas, desmarca do ✓ do quadro, Recomeçar sem diário, CONCLUIR = 1 linha nova (dois toques seguidos não duplicam), links do FAQ e do app; simulacao false nas 5 telas.
 
-Fase 4, P4F (o Modo navegação: E1 Gatilhos e E2 Sintoma; `--so-p4f [E1-Navegando-Gatilhos|E2-Navegando-Sintoma]` roda só as conferências dela e `--mutantes-p4f` planta 36 defeitos, todos acusados; `MUT_FILTRO=texto`
-refaz só os mutantes cujo nome tem o texto; a E1 junta os alarmes pedidos no chat à lista da faixa do topo): E1 NAVEGANDO a 60 e 105 s em 3 tamanhos e 2 temas (os 6 gatilhos na ordem do CSS, os links, a pergunta de cada gatilho ao chat e a chave que o cérebro responde: o relato no porão
+Fase 4, P4F (o Modo navegação: E1 Gatilhos e E2 Sintoma; `--so-p4f [E1-Navegando-Gatilhos|E2-Navegando-Sintoma]` roda só as conferências dela e `--mutantes-p4f` planta 39 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto; a E1 junta os alarmes pedidos no chat à lista da faixa do topo; o botão de uma resposta da E2 nunca grava, `commit: false`): E1 NAVEGANDO a 60 e 105 s em 3 tamanhos e 2 temas (os 6 gatilhos na ordem do CSS, os links, a pergunta de cada gatilho ao chat e a chave que o cérebro responde: o relato no porão
 é SOS e nunca traz o nível; o vigia com o chip «AO VIVO hh:mm:ss», o estado, as 5 leituras do quadro e o diesel do quadro e não o de 26/09, a posição e a fonte, sem corte; a nota da troca sem «ainda não está ativa»); o alarme
 (o 1º cartão no DOM e no CSS leva à C3-Leme-Alerta.dc.html#alarme=<id>, amarelo no AVISO, vermelho no crítico plantado, também com o barco parado; o toque abre a C3; nunca abre o SOS, fala ou grava); a troca automática com
 a tela aberta (SOG 0: aos 3 s ainda NAVEGANDO, aos 7 s FUNDEADO com ÂNCORA/GARRA, CHECKLIST DE SAÍDA, ABASTECER e DIÁRIO e sem o REGISTRAR; SOG 1,5: só aos 7 s volta), a histerese (0,8 nó nunca troca; 0,3 nó com o quadro
@@ -3875,6 +3875,7 @@ LE_LEME = """() => { """ + JS_BASE + """
   const fm = {}; D.agenda.filter((t) => t.horas).forEach((t) => { fm[t.id] = { faltam: F.nb(I.calc.faltam[t.id], 1, false), limite: F.nb(t.horas.limite, 0, true), agenda: F.nb(t.horas.faltam, 1, false) }; });
   const atr = D.agenda.filter((t) => t.dn < 0).map((t) => t.equip.split(' (')[0] + ' · ' + (-t.dn) + ' d');
   return { T, hora: I.hora, fase: I.fase && I.fase.nome, C, live, linhas, ids, idsEsp: D.agenda.map((t) => t.id).concat(eq.map((t) => t.id)), cartoes, eq, fm, atr, versao: D.versao, nAg: D.agenda.length, nEq: D.tarefasEquipe.length,
+    agDn: D.agenda.map((t) => t.dn), eqD: D.tarefasEquipe.map((t) => ({ id: t.id, dn: t.dn })), hojeIso: A.relogio.hojeIso,
     resumo: un('[data-c1=resumo]'), leituraSub: un('[data-c1=leitura-sub]'), atrSub: un('[data-c2=atr-sub]'), hor: un('[data-c2=horimetros-txt]'), horSub: un('[data-c2=horimetros-sub]'),
     texto: lin(document.body.innerText), executado: localStorage.getItem('capitao.executado.v1'), diario: localStorage.getItem('capitao.diario.v1') }; }"""
 ORACULO_FALTAM = {'motores-oleo': '32,4', 'gerador-revisao': '58,6'}   # CONTRATO §1.23: as horas que faltam às 12:01:00 e 12:01:45 (a agenda gerada diz 37,4 e 63,6)
@@ -3894,6 +3895,44 @@ def problemas_faltam(r, rot, prob):
         esp = 'ou %s h (faltam %s h)' % (f['limite'], f['faltam'])
         if f['faltam'] != ORACULO_FALTAM.get(id_, f['faltam']): prob.append('%s: calc.faltam de %s é %s (o contrato diz %s)' % (rot, id_, f['faltam'], ORACULO_FALTAM[id_]))
         if esp not in r['linhas'].get(id_, ''): prob.append('%s: a linha de %s devia ter «%s» (as horas do horímetro de agora, não as %s da agenda gerada): %r' % (rot, id_, esp, f['agenda'], r['linhas'].get(id_)))
+
+
+FIXO_OUTRO_DIA = '172860'   # o replay fixado 2 dias depois do relógio (07:00 + 5 h + 2 dias + 60 s): o dia do INSTANTE nunca é o do Date.now() (entre 00:00 e 07:00 até o fixo de 60 s já cai no dia de bordo de ontem)
+DIAS_EQUIPE = ((-1, 'Atrasada de ontem do instante'), (0, 'Vence no dia do instante'), (5, 'Vence em cinco dias do instante'))
+
+
+def dia_do_instante(b):
+    """O dia do instante fixado em FIXO_OUTRO_DIA (CapitaoAgora.relogio.hojeIso) e o dia do relógio do aparelho no fuso do barco (UTC−3)."""
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', fixo=FIXO_OUTRO_DIA)
+    d = pg.evaluate("() => ({ hoje: window.CapitaoAgora.relogio.hojeIso, relogio: new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10) })")
+    ctx.close()
+    return d
+
+
+def tarefas_do_instante(hoje):
+    """Três tarefas do aparelho que vencem ontem, hoje e daqui a 5 dias contados do dia do INSTANTE (nunca do relógio)."""
+    base = datetime.date.fromisoformat(hoje)
+    return [{'id': 'gfr%d' % i, 'n': n, 'vence': (base + datetime.timedelta(days=d)).isoformat(), 'quem': 'Lucas', 'sistema': 'Casco', 'origem': 'tela', 'iso': '2026-11-09T10:00:%02d-03:00' % i, 'who': 'Lucas', 'sim': True} for i, (d, n) in enumerate(DIAS_EQUIPE)]
+
+
+def problemas_equipe_instante(r, dia, rot, app):
+    """As tarefas da equipe no dia do instante: as 3 do aparelho com o prazo certo na linha (1 dia atrás, D-0, D-5), os grupos iguais aos de CapitaoAgora.contagens() e ao que se conta da agenda e das geradas."""
+    prob = []
+    esp_dn = {'gfr0': -1, 'gfr1': 0, 'gfr2': 5}
+    eq = {t['id']: t['dn'] for t in r['eq']}
+    if r['hojeIso'] != dia['hoje'] or dia['hoje'] == dia['relogio']: prob.append('%s: o teste não vale (o instante está em %s, o relógio em %s)' % (rot, r['hojeIso'], dia['relogio']))
+    for id_, dn in esp_dn.items():
+        if eq.get(id_) != dn: prob.append('%s: o cérebro conta %s dias para %s (esperado %d, o prazo do dia do instante %s)' % (rot, eq.get(id_), id_, dn, r['hojeIso']))
+        esp = '1 dia atrás' if dn == -1 else 'D-%d' % dn
+        if esp not in (r['linhas'].get(id_) or ''): prob.append('%s: a linha de %s devia dizer «%s» (o prazo do dia do instante): %r' % (rot, id_, esp, r['linhas'].get(id_)))
+    dns = r['agDn'] + [t['dn'] for t in r['eqD']] + list(esp_dn.values())
+    quer = [sum(1 for n in dns if n < 0), sum(1 for n in dns if 0 <= n <= 30), sum(1 for n in dns if n > 30)]
+    C = r['C']
+    if [C['atrasadas'], C['d30'], C['d60'] + C['d90'] + C['emDia']] != quer: prob.append('%s: CapitaoAgora.contagens() diz %s (esperado %s: a agenda, as geradas e as 3 do aparelho no dia do instante)' % (rot, [C['atrasadas'], C['d30'], C['d60'] + C['d90'] + C['emDia']], quer))
+    if not app:
+        n = [int(re.match(r'\d+', c).group(0)) for c in r['cartoes']]
+        if n != quer: prob.append('%s: os cartões mostram %s (esperado %s: os grupos do dia do instante, como o CapitaoAgora)' % (rot, n, quer))
+    return prob, quer
 
 
 def teste_leme_c1(b):
@@ -3944,6 +3983,14 @@ def teste_leme_c1(b):
         if r2['C']['tarefasEquipe'] != 2: prob.append('C1: a tarefa executada ainda conta nas da equipe (%s)' % r2['C']['tarefasEquipe'])
     if erros: prob += erros[:2]
     ctx.close()
+    # as tarefas da equipe no dia do INSTANTE (o replay fixado em outro dia que o relógio): ontem, hoje e +5 batem com o CapitaoAgora (o cérebro conta do instante, não do Date.now())
+    dia = dia_do_instante(b)
+    ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', fixo=FIXO_OUTRO_DIA, ls={'capitao.tarefas.v1': json.dumps(tarefas_do_instante(dia['hoje']))})
+    r = pg.evaluate(LE_LEME)
+    p_, quer = problemas_equipe_instante(r, dia, 'C1 no dia do instante (%s, o relógio em %s)' % (dia['hoje'], dia['relogio']), False)
+    prob += p_
+    if erros: prob += erros[:2]
+    ctx.close()
     # o filtro do endereço (#f=atrasadas)
     ctx, pg, erros = abre_tela(b, 'C1-Leme-Web', hash_='#f=atrasadas')
     r = pg.evaluate(LE_LEME)
@@ -3972,6 +4019,19 @@ def teste_leme_c2(b):
         if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
         if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
+    # as tarefas da equipe no dia do INSTANTE (o replay fixado em outro dia que o relógio): ontem, hoje e +5 batem com o CapitaoAgora
+    dia = dia_do_instante(b)
+    ctx, pg, erros = abre_tela(b, 'C2-Leme-Mobile', fixo=FIXO_OUTRO_DIA, ls={'capitao.tarefas.v1': json.dumps(tarefas_do_instante(dia['hoje']))})
+    r = pg.evaluate(LE_LEME)
+    rot = 'C2 no dia do instante (%s, o relógio em %s)' % (dia['hoje'], dia['relogio'])
+    n_atr = sum(1 for n in r['agDn'] + [t['dn'] for t in r['eqD']] + [-1] if n < 0)   # a agenda, as geradas e a do aparelho que venceu ontem do instante
+    if len(r['ids']) != n_atr or r['C']['atrasadas'] != n_atr or 'Casco · 1 d' not in (r['atrSub'] or ''): prob.append('%s: a lista das atrasadas tem %d linhas e o CapitaoAgora conta %d (esperado %d); as atrasadas dizem %r (esperado «Casco · 1 d», a tarefa que venceu ontem do instante)' % (rot, len(r['ids']), r['C']['atrasadas'], n_atr, r['atrSub']))
+    pg.evaluate("() => [...document.querySelectorAll('button')].find((x) => x.innerText.trim() === 'Todas').click()"); pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_LEME)
+    p_, quer = problemas_equipe_instante(r, dia, rot, True)
+    prob += p_
+    if erros: prob += erros[:2]
+    ctx.close()
     ctx, pg, erros = abre_tela(b, 'C2-Leme-Mobile', ls={'capitao.executado.v1': json.dumps({'porao-teste': {'d': '09/11', 't': '12:00'}})})
     r = pg.evaluate(LE_LEME)
     if r['C']['atrasadas'] != 2 or 'Bombas de porão' in r['atrSub'] or 'EXECUTADO 09/11' not in r['linhas'].get('porao-teste', '') or not r['atrSub'].startswith('Climatização'):
@@ -4578,6 +4638,13 @@ def teste_c4(b, tela):
     m = json.loads(r['marcas'] or '{}')
     if m.get('saida', {}).get('m') != {'s03': 1} or r['itens']['s03']['feito'] != 'pessoa' or r['conta'] != '%d/14' % (f0 + 1): prob.append('%s: marcar o s03 devia gravar {s03: 1}, deixar o item «pessoa» e o andamento %d/14: %r %r %r' % (tela, f0 + 1, m, r['itens']['s03']['feito'], r['conta']))
     if r['diario']: prob.append('%s: marcar um item gravou no diário' % tela)
+    pg.evaluate(clica, 's03'); pg.wait_for_timeout(300)   # o 2º toque no item marcado pela pessoa desmarca: volta para «aberto», sai das marcas do aparelho e do andamento
+    r = pg.evaluate(LE_C4)
+    m = json.loads(r['marcas'] or '{}')
+    if 's03' in m.get('saida', {}).get('m', {}) or r['itens']['s03']['feito'] != 'aberto' or r['conta'] != '%d/14' % f0: prob.append('%s: o 2º toque no s03 devia desmarcar (item «aberto», fora das marcas, andamento %d/14): %r %r %r' % (tela, f0, r['itens']['s03']['feito'], m, r['conta']))
+    pg.evaluate(clica, 's03'); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_C4)
+    if r['itens']['s03']['feito'] != 'pessoa' or r['conta'] != '%d/14' % (f0 + 1): prob.append('%s: o 3º toque no s03 devia marcar de novo (item «pessoa», andamento %d/14): %r %r' % (tela, f0 + 1, r['itens']['s03']['feito'], r['conta']))
     pg.evaluate(clica, 's05'); pg.wait_for_timeout(300)
     r = pg.evaluate(LE_C4)
     m = json.loads(r['marcas'] or '{}')
@@ -4601,6 +4668,68 @@ def teste_c4(b, tela):
         if not re.fullmatch(r'Checklist de saída concluído · %d/14 \(%d pela telemetria\) · pendentes: .+' % (f0 + 1, f0), e['t']): prob.append('%s: o formato da linha do CONCLUIR: %r (esperado %d/14, %d pela telemetria)' % (tela, e['t'], f0 + 1, f0))
     if 'saida' in json.loads(r['marcas'] or '{}'): prob.append('%s: o CONCLUIR devia apagar as marcas do tipo: %r' % (tela, r['marcas']))
     if 'No diário: Checklist de saída concluído' not in (r['aviso'] or '') or 'VER NO DIÁRIO' not in (r['aviso'] or ''): prob.append('%s: depois do CONCLUIR a tela devia avisar e levar ao diário: %r' % (tela, r['aviso']))
+    if erros: prob += erros[:2]
+    ctx.close()
+    # o CONCLUIR de cada um dos outros tipos: a linha é a do tipo da ABA aberta (nunca a da saída), com o placar e a categoria dele, sim: true; só as marcas desse tipo somem
+    for tipo in ('chegada', 'abastecimento', 'fundeio'):
+        ctx, pg, erros = abre_tela(b, tela, hash_='#tipo=' + tipo)
+        r = pg.evaluate(LE_C4)
+        rot = '%s %s' % (tela.split('-')[0], tipo)
+        alvo = next((i['id'] for i in r['api'][tipo] if not i['feito']), None)
+        if not alvo:
+            prob.append('%s: o teste não vale (nenhum item aberto para marcar)' % rot); ctx.close(); continue
+        pg.evaluate(clica, alvo); pg.wait_for_timeout(300)
+        r = pg.evaluate(LE_C4)
+        linha, conta, nome = r['linha'], r['conta'], next(t['nome'] for t in r['tipos'] if t['id'] == tipo)
+        if r['itens'][alvo]['feito'] != 'pessoa' or tipo not in json.loads(r['marcas'] or '{}'): prob.append('%s: marcar %s devia deixar o item «pessoa» e gravar as marcas do tipo: %r %r' % (rot, alvo, r['itens'][alvo]['feito'], r['marcas']))
+        pg.evaluate("() => document.querySelector('[data-c4=concluir]').click()"); pg.wait_for_timeout(700)
+        r = pg.evaluate(LE_C4)
+        d = json.loads(r['diario'] or '[]')
+        if len(d) != 1: prob.append('%s: o CONCLUIR gravou %d linhas no diário (esperado 1)' % (rot, len(d)))
+        else:
+            e = d[0]
+            if e['t'] != linha['t'] or e['sys'] != linha['sys'] or e.get('sim') is not True or not e['src'].startswith('checklist de bordo') or e['who'] != 'Lucas': prob.append('%s: a linha do CONCLUIR devia ser %r (sys %s, sim: true): %r' % (rot, linha['t'], linha['sys'], {k: e.get(k) for k in ('t', 'sys', 'sim', 'src', 'who')}))
+            if not e['t'].startswith('%s concluído · %s' % (nome, conta)): prob.append('%s: a linha devia começar por «%s concluído · %s» (o tipo da aba e o placar): %r' % (rot, nome, conta, e['t']))
+        if tipo in json.loads(r['marcas'] or '{}'): prob.append('%s: o CONCLUIR devia apagar as marcas do tipo: %r' % (rot, r['marcas']))
+        if ('No diário: ' + nome) not in (r['aviso'] or '') or 'VER NO DIÁRIO' not in (r['aviso'] or ''): prob.append('%s: depois do CONCLUIR a tela devia avisar o tipo e levar ao diário: %r' % (rot, r['aviso']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+# C4 web, o painel «Agora a bordo»: o retângulo da section, o da coluna (o <aside>, que rola) e o de cada linha (a prancheta de 1440×900 é escalada, os retângulos andam juntos)
+LE_C4_PAINEL = """() => { const sec = document.querySelector('section[aria-label="Agora a bordo"]'), asd = sec.parentElement, rs = sec.getBoundingClientRect(), ra = asd.getBoundingClientRect();
+  const lin = [...sec.querySelectorAll('[data-c4=agora], [data-c4=agora-hora]')].map((e) => { const r = e.getBoundingClientRect(); return { t: e.innerText.replace(/\\s+/g, ' ').trim(), topo: r.top, base: r.bottom, vis: getComputedStyle(e).visibility !== 'hidden' && r.height > 0 }; });
+  return { rs: [rs.top, rs.bottom], ra: [ra.top, ra.bottom], secOv: getComputedStyle(sec).overflowY, asdOv: getComputedStyle(asd).overflowY, secRolagem: sec.scrollHeight - sec.clientHeight, asdRolagem: asd.scrollHeight - asd.clientHeight,
+    linhas: lin.filter((x) => !/^(Telemetria|Última|Coletor)/.test(x.t)), fonte: lin[lin.length - 1], n: lin.length - 1 }; }"""
+
+
+def teste_c4_painel(b):
+    """C4 web, «Agora a bordo»: nunca corta em silêncio. Nos 4 tamanhos web, a 60 s e a 105 s (o AVISO é o texto mais longo), as 6 linhas e a fonte ficam dentro do retângulo do painel e da coluna sem rolar, o painel não rola
+    por dentro (overflow visível), os alarmes são a 1ª linha; e com o aviso do CONCLUIR aberto (a coluna cresce) é a COLUNA que rola e a última linha fica alcançável."""
+    prob = []
+    for w, h in ((1440, 900), (1280, 720), (1920, 1080), (1024, 768)):
+        for fixo in ('60', '105'):
+            ctx, pg, erros = abre_tela(b, 'C4-Checklist-Web', w=w, h=h, fixo=fixo, hash_='#tipo=saida')
+            r = pg.evaluate(LE_C4_PAINEL)
+            rot = 'C4 web %dx%d a %s s' % (w, h, fixo)
+            ls = r['linhas']
+            if len(ls) != 6 or not ls[0]['t'].startswith('Alarmes '): prob.append('%s: o painel devia ter 6 linhas com os alarmes no alto: %s' % (rot, [x['t'][:24] for x in ls]))
+            fora = [x['t'][:24] for x in ls + [r['fonte']] if x['topo'] < r['rs'][0] - 1 or x['base'] > r['rs'][1] + 1 or not x['vis']]
+            if fora or r['secOv'] != 'visible' or r['secRolagem'] > 1: prob.append('%s: o painel corta em silêncio (linhas fora dele: %s; overflow %s; rolagem interna %d px)' % (rot, fora, r['secOv'], r['secRolagem']))
+            fora = [x['t'][:24] for x in ls + [r['fonte']] if x['topo'] < r['ra'][0] - 1 or x['base'] > r['ra'][1] + 1]
+            if fora or r['asdRolagem'] > 1: prob.append('%s: linhas fora da coluna sem rolar (%s; a coluna rolaria %d px só para o espaço do SOS)' % (rot, fora, r['asdRolagem']))
+            if r['asdOv'] != 'auto': prob.append('%s: a coluna da direita devia ser a que rola (overflow-y %s)' % (rot, r['asdOv']))
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    # o aviso do CONCLUIR faz a coluna crescer: quem rola é a coluna, e a última linha fica ao alcance
+    ctx, pg, erros = abre_tela(b, 'C4-Checklist-Web', fixo='105', hash_='#tipo=saida')
+    pg.evaluate("() => document.querySelector('[data-c4=concluir]').click()"); pg.wait_for_timeout(700)
+    pg.evaluate("() => { const a = document.querySelector('section[aria-label=\"Agora a bordo\"]').parentElement; a.scrollTop = a.scrollHeight; }"); pg.wait_for_timeout(200)
+    r = pg.evaluate(LE_C4_PAINEL)
+    ls = r['linhas'] + [r['fonte']]
+    fora = [x['t'][:24] for x in ls if x['topo'] < r['ra'][0] - 1 or x['base'] > r['ra'][1] + 1]
+    if r['asdRolagem'] <= 1 or fora: prob.append('C4 web com o aviso do CONCLUIR aberto: a coluna devia rolar (%d px) e, rolada até o fim, mostrar o painel inteiro (fora: %s)' % (r['asdRolagem'], fora))
     if erros: prob += erros[:2]
     ctx.close()
     return prob
@@ -4669,6 +4798,8 @@ def p4e_conferencias(b, lista):
         out.append(('C3 · sempre escura e leve', teste_c3_leve(b)))
     for tela in ('C4-Checklist-Web', 'C4-Checklist-Mobile'):
         if tela in lista: out.append(('%s · itens, ✓ do quadro, marcas, CONCLUIR e links' % tela, teste_c4(b, tela)))
+    if 'C4-Checklist-Web' in lista: out.append(('C4 web · o painel «Agora a bordo» não corta em silêncio nos 4 tamanhos', teste_c4_painel(b)))
+    if any(t.startswith('C4') for t in lista) or 'C3-Leme-Alerta' in lista: out.append(('C3 e C4 · com o diário que não grava a tela diz «Não gravado» e as marcações ficam', teste_gravacao_falha_leme(b)))
     if any(t.startswith('C4') for t in lista): out.append(('C4 · anda sem congelar o replay', teste_c4_vivo(b)))
     if any(t in lista for t in TELAS_P4E): out.append(('C1 a C4 · só dão setState quando o texto exibido muda (o setState contado)', teste_leme_setstate(b, [t for t in lista if t in TELAS_P4E])))
     if any(t in lista for t in TELAS_P4E): out.append(('simulacao false no Leme e nos checklists', teste_leme_real(b)))
@@ -4687,10 +4818,14 @@ MUTANTES_P4E = [
     ('a fonte da leitura da C1 de volta com «telemetria ao vivo desligada»', 'C1-Leme-Web.dc.html', [("resumo: resumo, leituraSub: fonteTxt,", "resumo: resumo, leituraSub: 'Coletor NMEA · snapshot · telemetria ao vivo desligada',")], 'c1'),
     ('a C1 dando setState a cada tique (o texto da chave ganha o relógio)', 'C1-Leme-Web.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C1 sem assinar o capitao-telemetria', 'C1-Leme-Web.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'c1_vivo'),
+    ('a C1 conta as tarefas da equipe com um dia a mais (o dia do relógio, não o do instante)', 'C1-Leme-Web.dc.html', [("dn: t.dn, horas: null, tom: t.tom, feita: !!t.feita })))", "dn: t.dn + 1, horas: null, tom: t.tom, feita: !!t.feita })))")], 'c1'),
+    ('o cérebro conta o prazo da tarefa da equipe do Date.now() fora de uma pergunta (a C1 com o replay fixado em outro dia fica 1 dia fora do resto)', 'capitao-brain.js', [("return typeof x === 'number' && isFinite(x) ? x : Date.now(); }", "return Date.now(); }")], 'c1'),
     # —— C2 ——
     ('a C2 dando setState a cada tique (o texto da chave ganha o relógio)', 'C2-Leme-Mobile.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('os horímetros da C2 fixos no snapshot (BB 412,6 h)', 'C2-Leme-Mobile.dc.html', [("horimetros: 'BB ' + c('motor_bb_horimetro_h')", "horimetros: 'BB 412,6'")], 'c2'),
     ('as horas que faltam da C2 só da agenda gerada', 'C2-Leme-Mobile.dc.html', [("const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null;", "return num(h.faltam) ? h.faltam : null;")], 'c2'),
+    ('a C2 conta as tarefas da equipe com um dia a mais (o dia do relógio, não o do instante)', 'C2-Leme-Mobile.dc.html', [("dn: t.dn, horas: null, tom: t.tom, feita: !!t.feita })))", "dn: t.dn + 1, horas: null, tom: t.tom, feita: !!t.feita })))")], 'c2'),
+    ('o cérebro conta o prazo da tarefa da equipe do Date.now() fora de uma pergunta (a C2 com o replay fixado em outro dia fica 1 dia fora do resto)', 'capitao-brain.js', [("return typeof x === 'number' && isFinite(x) ? x : Date.now(); }", "return Date.now(); }")], 'c2'),
     ('a C2 conta a tarefa executada como atrasada', 'C2-Leme-Mobile.dc.html', [("t.dn < 0 && !ex[t.id] && !t.feita)", "t.dn < 0 && !t.feita)")], 'c2'),
     ('a C2 sem assinar o capitao-telemetria', 'C2-Leme-Mobile.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'c2_codigo'),
     # —— C3 ——
@@ -4728,6 +4863,7 @@ MUTANTES_P4E = [
     ('o diário da C3 grava «AVISO desde » vazio com o alarme sem começo conhecido', 'C3-Leme-Alerta.dc.html', [("(conhece ? ' desde ' + a.hora : ' aberto agora');", "(' desde ' + a.hora);")], 'c3_inicio'),
     ('a C3 dando setState a cada tique (o texto da chave ganha o relógio)', 'C3-Leme-Alerta.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C3 sem assinar o capitao-alerta', 'C3-Leme-Alerta.dc.html', [("    window.addEventListener('capitao-alerta', this._onTele);\n", "")], 'c3_codigo'),
+    ('a C3 registra sem conferir a linha no diário (diz «registrado» com o diário que não gravou)', 'C3-Leme-Alerta.dc.html', [("const ok = !!e && B.loadDiario().some((l) => l.iso === e.iso && l.src === 'app · alerta');", "const ok = !!e;")], 'gravacao'),
     # —— C4 ——
     ('a C4 web dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Web.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C4 do app dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Mobile.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
@@ -4738,13 +4874,77 @@ MUTANTES_P4E = [
     ('o toque no ✓ do quadro da C4 não desmarca (marca como conferido)', 'C4-Checklist-Web.dc.html', [("B.checklistMarca(tipo, i.id, 'n'); this.atualiza(); return", "B.checklistMarca(tipo, i.id, 1); this.atualiza(); return")], 'c4_web'),
     ('a C4 do app com o link do diário da web', 'C4-Checklist-Mobile.dc.html', [("'G3-Diario': ['G3-Diario-Mobile.dc.html',", "'G3-Diario': ['G3-Diario-Web.dc.html',")], 'c4_app'),
     ('a C4 do app sem assinar o capitao-telemetria', 'C4-Checklist-Mobile.dc.html', [("['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'c4_vivo'),
+    ('o CONCLUIR do cérebro apaga as marcas e diz «No diário» com o diário que não gravou (sem conferir a linha)', 'capitao-brain.js', [("    if (!e || !loadDiario().some(function (l) { return l.iso === e.iso && l.src === e.src; })) return Object.assign({ entrada: null }, ln);\n", "")], 'gravacao'),
+    ('a C4 web diz «No diário» sem conferir o que o CONCLUIR devolveu', 'C4-Checklist-Web.dc.html', [("if (!r || !r.entrada) return this.aviso('Não gravado", "if (!r) return this.aviso('Não gravado")], 'gravacao'),
+    ('a C4 do app diz «No diário» sem conferir o que o CONCLUIR devolveu', 'C4-Checklist-Mobile.dc.html', [("if (!r || !r.entrada) return this.aviso('Não gravado", "if (!r) return this.aviso('Não gravado")], 'gravacao'),
+    ('o painel «Agora a bordo» da C4 web de volta com overflow e encolhendo (corta as linhas de baixo em silêncio)', 'C4-Checklist-Web.dc.html', [('<section aria-label="Agora a bordo" style="flex-shrink: 0; box-sizing: border-box;', '<section aria-label="Agora a bordo" style="flex-shrink: 1; min-height: 0; overflow-y: auto; box-sizing: border-box;')], 'c4_painel'),
+    ('a coluna da direita da C4 web sem rolagem (a coluna cresce e corta)', 'C4-Checklist-Web.dc.html', [('min-height: 0; overflow-y: auto; padding-bottom: 92px;', 'min-height: 0; padding-bottom: 92px;')], 'c4_painel'),
+    ('o painel «Agora a bordo» da C4 web com os alarmes por último', 'C4-Checklist-Web.dc.html', [(".filter((x) => x[1]).map((x) => ({ k: x[0], v: x[1], tomK:", ".filter((x) => x[1]).reverse().map((x) => ({ k: x[0], v: x[1], tomK:")], 'c4_painel'),
+    ('o CONCLUIR da C4 web conclui sempre o checklist de saída (a aba aberta é outra)', 'C4-Checklist-Web.dc.html', [("try { r = B.checklistConcluir(this._tipo); } catch (e) { r = null; }", "try { r = B.checklistConcluir('saida'); } catch (e) { r = null; }")], 'c4_web'),
+    ('o CONCLUIR da C4 do app conclui sempre o checklist de saída (a aba aberta é outra)', 'C4-Checklist-Mobile.dc.html', [("try { r = B.checklistConcluir(this._tipo); } catch (e) { r = null; }", "try { r = B.checklistConcluir('saida'); } catch (e) { r = null; }")], 'c4_app'),
+    ('o 2º toque no item marcado pela pessoa da C4 web não desmarca (marca de novo)', 'C4-Checklist-Web.dc.html', [("B.checklistMarca(tipo, i.id, !i.manual)", "B.checklistMarca(tipo, i.id, true)")], 'c4_web'),
+    ('o 2º toque no item marcado pela pessoa da C4 do app não desmarca (marca de novo)', 'C4-Checklist-Mobile.dc.html', [("B.checklistMarca(tipo, i.id, !i.manual)", "B.checklistMarca(tipo, i.id, true)")], 'c4_app'),
     ('o Recomeçar da C4 grava no diário', 'C4-Checklist-Mobile.dc.html', [("zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistZera(this._tipo);", "zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistConcluir(this._tipo); B.checklistZera(this._tipo);")], 'c4_app'),
 ]
 QUAL_P4E = {'c1': lambda b: teste_leme_c1(b), 'c1_vivo': lambda b: teste_leme_vivo(b), 'c2': lambda b: teste_leme_c2(b), 'c2_codigo': lambda b: teste_c4_codigo(),
             'c3': lambda b: teste_c3_estados(b) + teste_c3_codigo(), 'c3_outros': lambda b: teste_c3_outros(b), 'c3_critico': lambda b: teste_c3_critico(b), 'c3_transicao': lambda b: teste_c3_transicao(b), 'c3_registrar': lambda b: teste_c3_registrar(b),
             'c3_leve': lambda b: teste_c3_leve(b) + teste_c3_codigo(), 'c3_codigo': lambda b: teste_c3_codigo(),
             'c3_pedidos': lambda b: teste_c3_pedidos(b), 'c3_inicio': lambda b: teste_c3_inicio(b), 'setstate': lambda b: teste_leme_setstate(b, [a.replace('.dc.html', '') for a in MUT_ARQ]),
+            'gravacao': lambda b: teste_gravacao_falha_leme(b), 'c4_painel': lambda b: teste_c4_painel(b),
             'c4_web': lambda b: teste_c4(b, 'C4-Checklist-Web'), 'c4_app': lambda b: teste_c4(b, 'C4-Checklist-Mobile'), 'c4_vivo': lambda b: teste_c4_vivo(b) + teste_c4_codigo()}
+
+
+# O diário que não grava (cota cheia, janela privada): o Storage.prototype.setItem lança erro para a chave do diário quando window.__bloqueia vale true. O addDiario do cérebro devolve a entrada mesmo assim
+# (o write engole o erro): a tela só pode dizer «gravado» se a linha está no diário (a conferência que cada tela faz depois do addDiario).
+BLOQUEIA_DIARIO = """(function () { var set = Storage.prototype.setItem; window.__bloqueia = false;
+  Storage.prototype.setItem = function (k, v) { if (window.__bloqueia && k === 'capitao.diario.v1') throw new DOMException('cheio', 'QuotaExceededError'); return set.apply(this, arguments); }; })();"""
+
+
+def teste_gravacao_falha_leme(b):
+    """C3 e C4 (web e app) com o diário que não grava: C3 diz «Não gravado» (sem o REGISTRADO e com o botão), a C4 diz «Não gravado» (sem «No diário»), o diário fica vazio e as marcações FICAM; com a gravação de volta o
+    toque seguinte grava 1 linha."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', extra=BLOQUEIA_DIARIO)
+    pg.evaluate("() => { window.__bloqueia = true; }")
+    pg.evaluate("() => document.querySelector('[data-c3=registrar]').click()")
+    try:
+        pg.wait_for_function("() => /Não gravado/.test((document.querySelector('[data-c3=nota]') || {}).innerText || '')", timeout=8000)
+    except Exception:
+        pass
+    r = pg.evaluate(LE_C3)
+    if 'Não gravado' not in (r['nota'] or '') or r['registrado'] or not r['temRegistrar'] or r['diario'] not in (None, '[]'): prob.append('C3 com o diário que não grava: a tela devia dizer «Não gravado» e manter o botão (nota %r, registrado %r, botão %s, diário %r)' % (r['nota'], r['registrado'], r['temRegistrar'], r['diario']))
+    if r['temRegistrar']:   # (a tela que já disse «registrado» trocou o botão: a acusação acima basta)
+        pg.evaluate("() => { window.__bloqueia = false; }"); pg.wait_for_timeout(300)
+        pg.evaluate("() => document.querySelector('[data-c3=registrar]').click()")
+        try:
+            pg.wait_for_function("() => !!document.querySelector('[data-c3=registrado]')", timeout=8000)
+        except Exception:
+            prob.append('C3: com a gravação de volta o toque seguinte não registrou')
+        if len(json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))) != 1: prob.append('C3: com a gravação de volta devia entrar 1 linha no diário')
+    if erros: prob += erros[:2]
+    ctx.close()
+    for tela in ('C4-Checklist-Web', 'C4-Checklist-Mobile'):
+        ctx, pg, erros = abre_tela(b, tela, hash_='#tipo=saida', extra=BLOQUEIA_DIARIO)
+        clica = "(id) => document.querySelector('[data-item=' + id + '] [data-c4=marca]').click()"
+        r = pg.evaluate(LE_C4)
+        abertos = [i['id'] for i in r['api']['saida'] if not i['feito']][:2]
+        for id_ in abertos: pg.evaluate(clica, id_); pg.wait_for_timeout(250)
+        r = pg.evaluate(LE_C4)
+        antes = r['marcas']
+        pg.evaluate("() => { window.__bloqueia = true; }")
+        pg.evaluate("() => document.querySelector('[data-c4=concluir]').click()"); pg.wait_for_timeout(700)
+        r = pg.evaluate(LE_C4)
+        if not (r['aviso'] or '').startswith('Não gravado') or 'No diário' in (r['aviso'] or '') or 'VER NO DIÁRIO' in (r['aviso'] or ''): prob.append('%s com o diário que não grava: o CONCLUIR devia dizer «Não gravado» (sem «No diário» nem o link): %r' % (tela, r['aviso']))
+        if r['diario'] not in (None, '[]'): prob.append('%s: o diário devia ficar vazio: %r' % (tela, r['diario']))
+        if r['marcas'] != antes or [r['itens'][i]['feito'] for i in abertos] != ['pessoa'] * len(abertos): prob.append('%s: sem a linha no diário as marcações devem FICAR (marcas %r → %r, itens %s)' % (tela, antes, r['marcas'], [r['itens'][i]['feito'] for i in abertos]))
+        pg.evaluate("() => { window.__bloqueia = false; }"); pg.wait_for_timeout(1700)   # (o intervalo de 1,5 s entre dois CONCLUIR)
+        pg.evaluate("() => document.querySelector('[data-c4=concluir]').click()"); pg.wait_for_timeout(700)
+        r = pg.evaluate(LE_C4)
+        d = json.loads(r['diario'] or '[]')
+        if len(d) != 1 or 'saida' in json.loads(r['marcas'] or '{}') or 'No diário: Checklist de saída concluído' not in (r['aviso'] or ''): prob.append('%s: com a gravação de volta o CONCLUIR devia gravar 1 linha, apagar as marcas e avisar (linhas %d, marcas %r, aviso %r)' % (tela, len(d), r['marcas'], r['aviso']))
+        if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
 
 
 def teste_leme_vivo(b):
@@ -5303,6 +5503,11 @@ def teste_e2_janela(b):
     r = pg.evaluate(LE_E2)
     if r['chave'] != 'ancora' or 'Barra Sul' not in (r['resp'] or '') or r['emerg']: prob.append('E2 sem a janela: a pergunta do botão (Âncora) devia vir com a situação de bordo (e não abrir a janela): %r' % (r['resp'] or '')[:200])
     if r['regBt'] or r['diario']: prob.append('E2: a resposta de um botão tem o botão de registro ou gravou no diário (%r)' % r['diario'])
+    # o pedido que chega pelo botão de uma resposta NUNCA grava (commit: false): um pedido de registro volta como «não registrado — pedido vindo de link não grava» e o diário fica como está
+    for q in ('Registre posição e hora no diário', 'registre no diário: saída com 4 pessoas'):
+        pg.evaluate(Q, q); pg.wait_for_timeout(500)
+        r = pg.evaluate(LE_E2)
+        if r['diario'] not in (None, '[]') or 'Não registrado — pedido vindo de link não grava no diário' not in (r['resp'] or ''): prob.append('E2: o pedido de registro vindo do botão (%r) devia voltar «Não registrado — pedido vindo de link não grava no diário» e não gravar (diário %r): %r' % (q, r['diario'], (r['resp'] or '')[:220]))
     pg.evaluate(Q, 'Tem água no porão'); pg.wait_for_timeout(500)
     r = pg.evaluate(LE_E2)
     if r['chave'] != 'sos' or not r['emerg'] or not r['ate']: prob.append('E2: a pergunta de emergência do botão (porão) devia abrir a janela (resposta %s, valendo %r)' % (r['chave'], r['emerg']))
@@ -5346,6 +5551,38 @@ def teste_e2_registrar(b):
     t = l[0].get('t', '') if l else ''
     if len(l) != 1 or l[0].get('src') != 'app · sintoma' or l[0].get('sim') is not True or not t.startswith('Sintoma relatado: temperatura alta — Motores Cummins QSB6.7 305. Anomalia A CONFIRMAR · triagem no app') or re.search(r'SEM DADOS|rpm|SOG|proa|\d,\d bar', t): prob.append('E2: 1 toque devia gravar 1 linha de app · sintoma, com sim: true, sem leitura: %s' % l)
     if pg.query_selector('button[aria-label^="Registrar no diário"]'): prob.append('E2: o botão de registro continua depois de registrar')
+    if erros: prob += erros[:2]
+    ctx.close()
+    return prob
+
+
+def teste_gravacao_falha_nav(b):
+    """E1 (REGISTRAR POSIÇÃO) e E2 (Registrar no diário) com o diário que não grava: a tela diz «NÃO REGISTRADO» / «Não gravado» (nunca «REGISTRADO NO DIÁRIO» nem «Sintoma registrado»), o diário fica vazio e o botão fica;
+    com a gravação de volta o toque seguinte grava 1 linha."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60', extra=BLOQUEIA_DIARIO)
+    ls = lambda: json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))
+    pg.evaluate("() => { window.__bloqueia = true; }")
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(500)
+    t = pg.evaluate("() => document.body.innerText")
+    if 'NÃO REGISTRADO' not in t or 'REGISTRADO NO DIÁRIO' in t or ls(): prob.append('E1 com o diário que não grava: devia dizer «NÃO REGISTRADO» (sem «REGISTRADO NO DIÁRIO») e não gravar (linhas %d)' % len(ls()))
+    pg.evaluate("() => { window.__bloqueia = false; }"); pg.wait_for_timeout(2600)   # (o toque duplo em 2,5 s não vale)
+    pg.click('[data-e1=gatilho][data-id=registrar]'); pg.wait_for_timeout(500)
+    t = pg.evaluate("() => document.body.innerText")
+    if len(ls()) != 1 or 'REGISTRADO NO DIÁRIO' not in t: prob.append('E1: com a gravação de volta o toque seguinte devia gravar 1 linha e dizer «REGISTRADO NO DIÁRIO» (linhas %d)' % len(ls()))
+    if erros: prob += erros[:2]
+    ctx.close()
+    ctx, pg, erros = abre_tela(b, 'E2-Navegando-Sintoma', fixo='60', extra=BLOQUEIA_DIARIO)
+    ls = lambda: json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1') || '[]'"))
+    clica_e2(pg, 'sis', 0); clica_e2(pg, 'sin', 0)
+    pg.evaluate("() => { window.__bloqueia = true; }")
+    pg.click('button[aria-label^="Registrar no diário"]'); pg.wait_for_timeout(500)
+    t, r = pg.evaluate("() => document.body.innerText"), pg.evaluate(LE_E2)
+    if 'Não gravado' not in t or 'Sintoma registrado no diário' in t or ls() or not r['regBt']: prob.append('E2 com o diário que não grava: devia dizer «Não gravado» (sem «Sintoma registrado»), manter o botão e não gravar (linhas %d, botão %s)' % (len(ls()), r['regBt']))
+    if r['regBt']:   # (a tela que já disse «registrado» tirou o botão: a acusação acima basta)
+        pg.evaluate("() => { window.__bloqueia = false; }")
+        pg.click('button[aria-label^="Registrar no diário"]'); pg.wait_for_timeout(500)
+        if len(ls()) != 1 or pg.query_selector('button[aria-label^="Registrar no diário"]'): prob.append('E2: com a gravação de volta o toque seguinte devia gravar 1 linha e tirar o botão (linhas %d)' % len(ls()))
     if erros: prob += erros[:2]
     ctx.close()
     return prob
@@ -5403,6 +5640,8 @@ def p4f_conferencias(b, lista):
         out.append(('E1 · a aba escondida zera a contagem', teste_e1_aba_escondida(b)))
         out.append(('E1 · REGISTRAR POSIÇÃO só com o toque (e com a janela de emergência)', teste_e1_registrar(b)))
         out.append(('E1 · anda sozinha sem congelar o replay', teste_e1_vivo(b)))
+    if 'E1-Navegando-Gatilhos' in lista or 'E2-Navegando-Sintoma' in lista: out.append(('E1 e E2 · com o diário que não grava a tela diz «NÃO REGISTRADO» / «Não gravado»', teste_gravacao_falha_nav(b)))
+    if 'E1-Navegando-Gatilhos' in lista:
         out.append(('E1 · simulacao false', teste_e1_real(b)))
     if 'E2-Navegando-Sintoma' in lista:
         out.append(('código da E2', teste_e2_codigo()))
@@ -5454,11 +5693,14 @@ MUTANTES_P4F = [
     ('o fabricante da E2 de volta com «modelo SEM DADOS»', 'E2-Navegando-Sintoma.dc.html', [("(m ? ' ' + m : sim ? '' : ' · modelo SEM DADOS');", "(m ? ' ' + m + ' · modelo SEM DADOS' : '');")], 'varre'),
     ('a introdução da E2 de volta com «(guias DEMO)»', 'E2-Navegando-Sintoma.dc.html', [("com o trecho do guia de bordo e a fonte.',", "com o trecho do guia de bordo e a fonte (guias DEMO).',")], 'ref'),
     ('a fonte da leitura da E2 de volta com «telemetria ao vivo desligada»', 'E2-Navegando-Sintoma.dc.html', [("fonte: 'Fonte: ' + fonte };", "fonte: 'Fonte: ' + fonte + ' — telemetria ao vivo desligada' };")], 'ref'),
+    ('a E2 grava no diário o pedido que vem do botão de uma resposta (commit: true)', 'E2-Navegando-Sintoma.dc.html', [("{ platform: 'app', commit: false, emergencia: emergencia }", "{ platform: 'app', commit: true, emergencia: emergencia }")], 'janela'),
+    ('a E2 diz «registrado» sem conferir a linha no diário', 'E2-Navegando-Sintoma.dc.html', [("const ok = !!(e && B.loadDiario().some((y) => y.iso === e.iso && y.src === 'app · sintoma'));", "const ok = !!e;")], 'gravacao'),
+    ('a E1 diz «REGISTRADO NO DIÁRIO» sem conferir a linha no diário', 'E1-Navegando-Gatilhos.dc.html', [("const ok = !!(a && depois.length > antes && linha && /atalho|telemetria/.test(String(linha.src || '')));", "const ok = !!a;")], 'gravacao'),
     ('a E2 registra sozinha ao escolher o sintoma', 'E2-Navegando-Sintoma.dc.html', [("onClick: () => this.setState({ sin: y.id, seq: this.state.seq + 1, livre: null, reg: null, nota: '' }, () => this.mostra())", "onClick: () => this.setState({ sin: y.id, seq: this.state.seq + 1, livre: null, reg: null, nota: '' }, () => { this.mostra(); this.registrar(s, y, null); })")], 'registrar'),
 ]
 QUAL_P4F = {'troca': lambda b: teste_e1_troca(b), 'histerese': lambda b: teste_e1_histerese(b), 'aba': lambda b: teste_e1_aba_escondida(b), 'alerta': lambda b: teste_e1_alerta(b), 'vivo': lambda b: teste_e1_vivo(b) + teste_e1_codigo(),
             'nav': lambda b: teste_e1_nav(b), 'registrar': lambda b: teste_e1_registrar(b) + teste_e2_registrar(b), 'ref': lambda b: teste_e2_ref(b), 'cache': lambda b: teste_e2_cache(b) + teste_e2_codigo(),
-            'resposta': lambda b: teste_e2_resposta(b), 'janela': lambda b: teste_e2_janela(b), 'varre': lambda b: teste_e2_varre(b)}
+            'resposta': lambda b: teste_e2_resposta(b), 'janela': lambda b: teste_e2_janela(b), 'varre': lambda b: teste_e2_varre(b), 'gravacao': lambda b: teste_gravacao_falha_nav(b)}
 
 
 def mutantes_p4f(b):
