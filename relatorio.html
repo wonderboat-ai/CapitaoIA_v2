@@ -132,8 +132,8 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   var RX_PESSOAL = rx('PESSOAIS'), RX_DINHEIRO = rx('DINHEIRO', '[\\d.,]*'), RX_FONE = /\b(tel|telefone|fone|cel|celular|whatsapp|whats|zap)\b\.?\s*:?\s*\+?[\d()\s.-]{8,}/gi;
   // O PESSOAIS do §3 é um DETECTOR: de «+55 47 98888-7777» ele reconhece só o começo («+55 4»); trocar só esse pedaço deixaria o resto do número no papel. Por isso o número com o código do país sai inteiro antes dele, e depois dele
   // sai o telefone de qualquer agrupamento: a sequência de 10 ou mais dígitos com, no máximo, dois separadores simples entre eles (espaço, ponto, hífen, parêntese: «47 9 9999 1234», «47-3333-4444», «4799991234»; o DDD, o 9 e os 8
-  // dígitos, em qualquer forma) e o número sem DDD de 4 ou 5 + 4 dígitos com hífen ou ponto («99999-1234», «3333-4444»). Número de peça de 8 dígitos seguidos, hora e data com barra não são telefone e ficam.
-  var RX_FONE_PAIS = /\+\d{1,3}(?:[\s().-]*\d){8,}/g, RX_FONE_LONGO = /(^|\D)\d(?:[ ().-]{0,2}\d){9,}(?!\d)/g, RX_FONE_CURTO = /(^|\D)\d{4,5}[-.]\d{4}(?!\d)/g;
+  // dígitos, em qualquer forma) e o número sem DDD de 4 ou 5 + 4 dígitos com hífen ou ponto («99999-1234», «3333-4444»), menos o intervalo de dois anos («garantia 2025-2027», «temporada 2026-2027»: é a vigência da garantia, não um telefone). Número de peça de 8 dígitos seguidos, hora e data com barra não são telefone e ficam.
+  var RX_FONE_PAIS = /\+\d{1,3}(?:[\s().-]*\d){8,}/g, RX_FONE_LONGO = /(^|\D)\d(?:[ ().-]{0,2}\d){9,}(?!\d)/g, RX_FONE_CURTO = /(^|\D)(?!(?:19|20)\d\d-(?:19|20)\d\d(?!\d))\d{4,5}[-.]\d{4}(?!\d)/g;
   function limpa(s) {
     s = String(s == null ? '' : s);
     s = s.replace(RX_FONE, '$1 [contato omitido]');

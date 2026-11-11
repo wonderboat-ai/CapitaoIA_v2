@@ -331,6 +331,7 @@ class Component extends DCLogic {
     return [{ k: 'texto', l: 'TEXTO DO REGISTRO', val: t.texto, area: true }];
   }
   abreForm(t) { const v = {}; this.camposDe(t).forEach((c) => { v[c.k] = c.val; }); this.setState({ form: { id: t.id }, fv: v, ferro: '' }); }
+  dadoPessoal(t) { const T = (window.CapitaoBrain || {}).TERMOS || {}; return !!((T.PESSOAIS && T.PESSOAIS.test(t)) || (T.DINHEIRO && T.DINHEIRO.test(t))); }
   salvaForm() {
     const B = window.CapitaoBrain, f = this.state.form, fv = this.state.fv || {};
     const t = f && B ? B.ticketsAbertos().filter((x) => x.id === f.id)[0] : null;
@@ -339,7 +340,10 @@ class Component extends DCLogic {
     if (t.k === 'tarefa') {
       const n = String(fv.n || '').replace(/\s+/g, ' ').trim(), vence = this.dataIso(fv.vence);
       if (!n) return this.setState({ ferro: 'Digite o nome da tarefa.' });
+      if (this.dadoPessoal(n)) return this.setState({ ferro: 'Tire telefone, e-mail, CPF/CNPJ ou valor do nome da tarefa: esses dados não entram na agenda.' });   // o nome vai à agenda e à ficha da IA: sem telefone, e-mail, CPF/CNPJ nem valor (as regex do §3)
       if (!vence) return this.setState({ ferro: 'Data inválida: use DD/MM/AAAA, um dia que existe.' });
+      const hoje = window.CapitaoAgora && CapitaoAgora.relogio ? CapitaoAgora.relogio.hojeIso : '';   // o dia do instante (o mesmo da + TAREFA da Equipe): tarefa no passado nasceria atrasada e a conta de todas as telas subiria
+      if (hoje && vence < hoje) return this.setState({ ferro: 'Esse dia já passou: escolha hoje ou um dia à frente.' });
       const prop = Object.assign({}, t.prop || {}, { n: n, vence: vence, quem: String(fv.quem || '').replace(/\s+/g, ' ').trim() });
       r = B.editaTicket(t.id, { texto: B.textoTicket('tarefa', prop), prop: prop });
     } else {

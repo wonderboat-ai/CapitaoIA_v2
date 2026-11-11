@@ -144,7 +144,7 @@ abastecimento, o consumido desde ele e a autonomia do instante (não a leitura d
 meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
 (SEM DADOS só ali); o consumo a preencher (D.consumo nulo, sem o cruzeiro ou sem a rotação ou a velocidade) sem «null», «undefined» nem «NaN» na G2, nas duas abas e nos dois ramos, e com SEM DADOS no lugar da velocidade e da rotação de cruzeiro (cartão Autonomia e «Consumo de referência») com simulacao false; os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
 
-Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 66 defeitos (49 da P4J e 17 da revisão final), todos acusados; `MUT_FILTRO=texto`
+Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 76 defeitos (49 da P4J, 17 da revisão final e 10 da 3ª rodada: o dia passado e o dado pessoal no nome da tarefa), todos acusados; `MUT_FILTRO=texto`
 refaz só os mutantes cujo nome tem o texto; sem Worker): G3 com o diário gerado na ordem do tempo e as 3 pendências do CapitaoAgora (nada gravado só por abrir; o alarme de 105 s nunca vira proposta sozinho), as propostas
 A CONFIRMAR (relato, agendamento e alarme: CONFIRMAR grava UMA linha com o texto do cérebro, DESFAZER de 10 s é uma linha nova de anulação e o confirmado fica guardado, RECUSAR não grava, ✎ ajusta o texto ou a tarefa, o dia e o
 responsável com o dia que existe, o agendamento confirmado cria a tarefa e a conta de contagens() sobe, o toque duplo grava uma só e o aviso some em 10 s), as pendências como linhas novas (RESOLVER, REABRIR, DESFAZER dentro da
@@ -158,7 +158,7 @@ Revisão final da P4J: o DESFAZER libera o gesto (CONFIRMAR → DESFAZER → CON
 dígitos é recusado, a + TAREFA aceita hoje (D-0) e, repetida (mesmo nome e dia), não duplica nem grava uma 2ª linha no diário (a tela avisa que já estava agendada).
 Revisão final da P4J (2ª rodada): sem equipe nem perfis (D.equipe nulo, e no ramo simulacao false também sem tarefas) o + TAREFA abre e agenda sem erro de script; o convite de acesso grava no diário (e na ficha da IA) só o tipo de acesso, o canal e uma
 referência curta, nunca o nome, a função nem o contato; o dados.html reconhece o convite cancelado depois por essa referência (e o do 1.0.9, sem referência, pelas linhas antigas).
-Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 58 defeitos (48 da P4K e 10 da revisão final), todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
+Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 60 defeitos (48 da P4K, 10 da revisão final e 2 da 3ª rodada: o intervalo de anos não é telefone), todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
 nome tem o texto; sem Worker): o relatorio.html é uma PÁGINA (PAGINAS: a matriz o abre em 8 tamanhos e 2 temas, com o SOS do topo à vista, as 6 seções e, com --offline, sem rede) e tem as suas conferências: o conteúdo contra o cadastro
 (capa, cartões = contagens(), agenda, histórico, documentos, abastecimentos, peças; nenhum termo do §3, R$, coordenada, telefone nem MMSI; nunca o replay, a telemetria nem a faixa de alerta), os prazos de hoje (relógio 40 dias adiante),
 a privacidade (telefone — inclusive o +55, o número de 10 ou mais dígitos com espaços, ponto, hífen ou sem separador e o sem DDD com hífen ou ponto —, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora; o número de peça de 8 dígitos fica), as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31),
@@ -8617,7 +8617,7 @@ def teste_g3_abertura(b, tela):
 def teste_g3_propostas(b, tela):
     """G3, as propostas A CONFIRMAR (F14): o relato, o agendamento (regra) e o alarme de 105 s só viram propostas com um gesto e ficam na lista, a mais nova primeiro, com a origem e o texto do cérebro. CONFIRMAR grava UMA linha
     nova com esse texto (o aviso tem o DESFAZER); DESFAZER escreve uma linha de anulação (o confirmado continua guardado) e a proposta volta; fora dos 10 s o DESFAZER é recusado e não grava; RECUSAR grava nada; ✎ muda o texto
-    (no agendamento, a tarefa, o dia e o responsável, com o dia que existe) e o CONFIRMAR grava o ajustado; confirmar o agendamento cria a tarefa da equipe (capitao.tarefas.v1) e a conta do CapitaoAgora sobe."""
+    (no agendamento, a tarefa, o dia e o responsável: o dia tem de existir e não ter passado, e o nome não leva telefone, e-mail, CPF nem valor) e o CONFIRMAR grava o ajustado; confirmar o agendamento cria a tarefa da equipe (capitao.tarefas.v1) e a conta do CapitaoAgora sobe."""
     prob = []
     app = eh_app(tela)
     ctx, pg, erros = abre_g3(b, tela, fixo='105')
@@ -8707,6 +8707,32 @@ def teste_g3_propostas(b, tela):
     tl = {t['id']: t for t in (r['ticketsLs'] or [])}
     if 'Data inválida' not in t3['erro'] or tl['tg3tar1']['prop']['n'] != 'Revisar a vedação do alçapão da praça de máquinas' or not t3['editando']: prob.append('%s: o dia 31/02 devia dar «Data inválida», manter o ✎ aberto e não mudar a proposta: %r %s' % (rot, t3['erro'], tl['tg3tar1']['prop']))
     if not t3['editando']: return prob
+    # o dia que já passou (ontem e um ano qualquer, 01/01/1999) é recusado como o da + TAREFA da Equipe (a tarefa nasceria atrasada e a conta de todas as telas subiria); o de hoje é aceito; e o nome com telefone, e-mail, CPF ou valor
+    # (o §3: a tarefa vai à agenda e à ficha da IA) também, com a proposta como estava e o ✎ aberto
+    salva = '[data-g3=ticket][data-id=tg3tar1] [data-g3=t-salva]'
+    orig = dict(tl['tg3tar1']['prop'])
+    br = lambda iso: '/'.join(reversed(iso.split('-')))
+    ontem = (datetime.date.fromisoformat(E['hojeIso']) - datetime.timedelta(days=1)).isoformat()
+    for ruim in (br(ontem), '01/01/1999'):
+        pg.fill(sel % 'vence', ruim); pg.click(salva); pg.wait_for_timeout(300)
+        r = pg.evaluate(LE_G3)
+        t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
+        tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+        if 'já passou' not in t3['erro'] or tl['tg3tar1']['prop'] != orig or not t3['editando']: prob.append('%s: o dia %s (já passou) devia dar «já passou», manter o ✎ aberto e não mudar a proposta: %r %s' % (rot, ruim, t3['erro'], tl['tg3tar1']['prop']))
+        if not t3['editando']: return prob
+    for ruim in ('Ligar 47 99999-1234 sobre a vedação', 'Falar com joao@oficina.com da vedação', 'Vedação do alçapão CPF 123.456.789-09', 'Revisar a vedação por R$ 3.500,00'):
+        pg.fill(sel % 'n', ruim); pg.fill(sel % 'vence', '25/12/2026'); pg.click(salva); pg.wait_for_timeout(300)
+        r = pg.evaluate(LE_G3)
+        t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
+        tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+        if 'Tire telefone, e-mail, CPF/CNPJ ou valor' not in t3['erro'] or tl['tg3tar1']['prop'] != orig or not t3['editando']: prob.append('%s: o nome %r devia dar o erro de dado pessoal, manter o ✎ aberto e não mudar a proposta: %r %s' % (rot, ruim, t3['erro'], tl['tg3tar1']['prop']))
+        if not t3['editando']: return prob
+    pg.fill(sel % 'n', 'Revisar a vedação do alçapão (ajustada)'); pg.fill(sel % 'vence', br(E['hojeIso'])); pg.click(salva); pg.wait_for_timeout(300)
+    r = pg.evaluate(LE_G3)
+    tl = {t['id']: t for t in (r['ticketsLs'] or [])}
+    if tl['tg3tar1']['prop'].get('vence') != E['hojeIso'] or [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]['editando']: return prob + ['%s: o dia de HOJE (%s) devia ser aceito no ✎ (D-0): %s' % (rot, E['hojeIso'], tl['tg3tar1']['prop'])]
+    r = g3_clica(pg, '[data-g3=ticket][data-id=tg3tar1] [data-g3=t-edita]')
+    if not [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]['editando']: return prob + ['%s: o ✎ não reabriu depois de salvar o dia de hoje' % rot]
     pg.fill(sel % 'vence', '25/12/2026'); pg.fill(sel % 'quem', 'marina'); pg.click('[data-g3=ticket][data-id=tg3tar1] [data-g3=t-salva]'); pg.wait_for_timeout(300)
     r = pg.evaluate(LE_G3)
     t3 = [t for t in r['tickets'] if t['id'] == 'tg3tar1'][0]
@@ -9261,7 +9287,7 @@ def teste_g4_telefones(b, tela):
 
 
 def teste_g4_tarefas(b, tela):
-    """G4, + TAREFA da equipe (F15): pede o nome, o dia que existe e que não passou, o responsável (os papéis do arquivo e o primeiro nome dos perfis, como a agenda os escreve); grava UMA tarefa em capitao.tarefas.v1 (id g…,
+    """G4, + TAREFA da equipe (F15): pede o nome (sem telefone, e-mail, CPF nem valor), o dia que existe e que não passou, o responsável (os papéis do arquivo e o primeiro nome dos perfis, como a agenda os escreve); grava UMA tarefa em capitao.tarefas.v1 (id g…,
     nome, dia AAAA-MM-DD, responsável, origem tela, sim) e UMA linha no diário; o prazo vem do CapitaoAgora no dia do instante (D-n) e a conta de contagens() sobe; a tarefa entra no estado do contato de apoio dela e no perfil do
     responsável; com o dia virado (fixar 60@1152) os prazos de todas se refazem sem recarregar; o Executado de uma tarefa do aparelho aparece FEITA."""
     prob = []
@@ -9288,6 +9314,17 @@ def teste_g4_tarefas(b, tela):
     if 'já passou' not in r['tErro'] or r['tarefasLs']: prob.append('%s: o dia de ontem devia dar «já passou» e não gravar: %r %s' % (rot, r['tErro'], r['tarefasLs']))
     if not pg.query_selector('[data-g4=t-vence]'): return prob
     vence = (datetime.date.fromisoformat(E0['hojeIso']) + datetime.timedelta(days=12)).isoformat()
+    # o nome com telefone, e-mail, CPF ou valor (o §3) é recusado: o nome vai à agenda (Manutenção) e ao diário, e os dois entram na ficha da IA; nada é gravado e a ficha não leva nada disso
+    for ruim in ('Ligar para 47 99999-1234 sobre o extintor', 'Falar com joao@oficina.com do extintor', 'Revisar o extintor CPF 123.456.789-09', 'Revisar o extintor por R$ 3.500,00'):
+        pg.fill('[data-g4=t-n]', ruim); pg.fill('[data-g4=t-vence]', vence); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(250)
+        r = pg.evaluate(LE_G4)
+        if 'Tire telefone, e-mail, CPF/CNPJ ou valor' not in r['tErro'] or r['tarefasLs'] or r['diarioLs']: prob.append('%s: o nome %r devia dar o erro de dado pessoal e não gravar tarefa nem linha: %r %s %s' % (rot, ruim, r['tErro'], r['tarefasLs'], r['diarioLs']))
+        if not r['formTar']: return prob   # (o formulário fechou: a tarefa foi agendada, e o resto do teste não vale)
+    ficha = pg.evaluate("() => window.CapitaoBrain.ficha('web', 'o que tem para fazer', null)")
+    for seg in ('99999-1234', 'joao@oficina', '3.500,00', '123.456.789'):
+        if seg in ficha: prob.append('%s: a ficha da IA leva %r do nome de uma tarefa recusada' % (rot, seg))
+    if not pg.query_selector('[data-g4=t-vence]'): return prob
+    pg.fill('[data-g4=t-n]', 'Revisar o extintor da cabine')
     pg.fill('[data-g4=t-vence]', vence); pg.select_option('[data-g4=t-quem]', 'marina')
     c0 = E0['cont']
     pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(400)
@@ -9675,6 +9712,16 @@ MUTANTES_P4J = [
     ('a linha do diário do convite da G4 web leva o nome e a função de quem foi convidado', 'G4-Equipe-Web.dc.html', [("aberto no ' + lk.canal + ' (convite ' + ref + ') — PENDENTE", "aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' (convite ' + ref + ') — PENDENTE")], 'g4_conv'),
     ('a linha do diário do cancelamento do convite na G4 do app leva o nome', 'G4-Equipe-Mobile.dc.html', [("this.diario('Convite de acesso (' + c.acesso + ') cancelado em Equipe'", "this.diario('Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe'")], 'g4_conv'),
     ('o convite novo da G4 web não guarda a referência (o dados.html não o reconhece depois)', 'G4-Equipe-Web.dc.html', [("canal: lk.canal, ref: ref });", "canal: lk.canal });")], 'g4_conv'),
+    ('o ✎ da proposta de tarefa na G3 web aceita um dia que já passou (01/01/1999)', 'G3-Diario-Web.dc.html', [('if (hoje && vence < hoje) return this.setState({ ferro:', 'if (false) return this.setState({ ferro:')], 'propostas'),
+    ('o ✎ da proposta de tarefa na G3 do app aceita um dia que já passou (01/01/1999)', 'G3-Diario-Mobile.dc.html', [('if (hoje && vence < hoje) return this.setState({ ferro:', 'if (false) return this.setState({ ferro:')], 'propostas'),
+    ('o ✎ da proposta de tarefa na G3 web recusa o dia de hoje', 'G3-Diario-Web.dc.html', [('if (hoje && vence < hoje) return this.setState({ ferro:', 'if (hoje && vence <= hoje) return this.setState({ ferro:')], 'propostas'),
+    ('o ✎ da proposta de tarefa na G3 do app só recusa o ano que passou (ontem vale)', 'G3-Diario-Mobile.dc.html', [('if (hoje && vence < hoje) return this.setState({ ferro:', "if (hoje && vence < hoje.slice(0, 4) + '-01-01') return this.setState({ ferro:")], 'propostas'),
+    ('o ✎ da proposta de tarefa na G3 web aceita o nome com telefone, e-mail, CPF ou valor', 'G3-Diario-Web.dc.html', [('      if (this.dadoPessoal(n)) return this.setState({ ferro:', '      if (false) return this.setState({ ferro:')], 'propostas'),
+    ('o ✎ da proposta de tarefa na G3 do app só confere o telefone e o e-mail do nome (aceita o valor em dinheiro)', 'G3-Diario-Mobile.dc.html', [('|| (T.DINHEIRO && T.DINHEIRO.test(t)));', '|| false);')], 'propostas'),
+    ('a + TAREFA da G4 web aceita o nome com telefone, e-mail, CPF ou valor', 'G4-Equipe-Web.dc.html', [('    if (this.dadoPessoal(n)) return this.setState({ tarErro:', '    if (false) return this.setState({ tarErro:')], 'g4_tar'),
+    ('a + TAREFA da G4 do app aceita o nome com telefone, e-mail, CPF ou valor', 'G4-Equipe-Mobile.dc.html', [('    if (this.dadoPessoal(n)) return this.setState({ tarErro:', '    if (false) return this.setState({ tarErro:')], 'g4_tar'),
+    ('a + TAREFA da G4 web só confere o valor em dinheiro do nome (aceita telefone, e-mail e CPF)', 'G4-Equipe-Web.dc.html', [('return !!((T.PESSOAIS && T.PESSOAIS.test(t)) || (T.DINHEIRO', 'return !!((false) || (T.DINHEIRO')], 'g4_tar'),
+    ('a + TAREFA da G4 do app só confere o telefone, o e-mail e o CPF do nome (aceita o valor em dinheiro)', 'G4-Equipe-Mobile.dc.html', [('|| (T.DINHEIRO && T.DINHEIRO.test(t)));', '|| false);')], 'g4_tar'),
     # —— o selo A CONFIRMAR do início ——
     ('o selo da Main conta também as propostas decididas', 'Main.dc.html', [("return B && typeof B.ticketsAbertos === 'function' ? B.ticketsAbertos().length : 0;", "return B && typeof B.loadTickets === 'function' ? B.loadTickets().length : 0;")], 'inicio'),
     ('o selo da H2 leva ao Diário da web', 'H2-Home-Mobile.dc.html', [('href="G3-Diario-Mobile.dc.html#confirmar"', 'href="G3-Diario-Web.dc.html#confirmar"')], 'inicio'),
@@ -9723,7 +9770,7 @@ REL_TITULO = 'Relatório do barco · Capitão IA'
 REL_SECOES = ['resumo', 'agenda', 'historico', 'documentos', 'abastecimentos', 'pecas']
 SYS_MANUT_REL = ('Manutenção', 'Motores', 'Equipamentos', 'Eletrônicos')
 COORD_REL = re.compile(r"\d{1,3}\s*[°º]\s*\d|-?\d{1,3}[.,]\d{4,}(?!\d)")
-FONE_REL = re.compile(r"\b\d{4,5}[-.\s]\d{4}\b|\(\d{2}\)\s?\d|\+55|\b\d{10,13}\b|\d(?:[ ().-]{0,2}\d){9,}")   # (o 10 a 13 dígitos seguidos: o número sem separador, com ou sem o 55; e a sequência de 10 ou mais dígitos com separadores simples: o DDD e o 9 separados)
+FONE_REL = re.compile(r"\b(?!(?:19|20)\d\d-(?:19|20)\d\d\b)\d{4,5}[-.\s]\d{4}\b|\(\d{2}\)\s?\d|\+55|\b\d{10,13}\b|\d(?:[ ().-]{0,2}\d){9,}")   # (o 10 a 13 dígitos seguidos: o número sem separador, com ou sem o 55; e a sequência de 10 ou mais dígitos com separadores simples: o DDD e o 9 separados)
 LE_REL = r"""() => {
   const T = (e) => ((e && e.innerText) || '').replace(/\s+/g, ' ').trim(), q = (s, r) => (r || document).querySelector(s);
   const rows = (s) => [...document.querySelectorAll('tr[data-rel=linha][data-sec="' + s + '"]')].map((tr) => ({ id: tr.getAttribute('data-id'), c: [...tr.children].map(T), chips: [...tr.querySelectorAll('.st')].map(T), html: tr.innerHTML }));
@@ -10027,7 +10074,7 @@ def teste_rel_dias(b):
 
 
 # O telefone em todos os agrupamentos que o PESSOAIS do §3 não reconhece (sem DDD, com hífen ou ponto, o DDD separado por hífen, o 9 solto, 10 dígitos com o 8 começando em 9 e o número sem separador); o número de peça de 8 dígitos e o lote ficam.
-TELEFONES_SOLTOS = 'Contatos soltos: ligar pro 98123-4567, depois 3222-1100, ou 47-3555-6677; também 47 9 8111 2233 e 4798123456 e 47.98765.4321; com rótulo, fone 3999 8877; peça 87654321 e lote 20261110 ficam; fim dos contatos.'
+TELEFONES_SOLTOS = 'Contatos soltos: ligar pro 98123-4567, depois 3222-1100, ou 47-3555-6677; também 47 9 8111 2233 e 4798123456 e 47.98765.4321; com rótulo, fone 3999 8877; peça 87654321 e lote 20261110 ficam; garantia 2025-2027 e temporada 2026-2027 ficam; fim dos contatos.'
 
 
 def rel_semente(sim=True):
@@ -10079,7 +10126,7 @@ def teste_rel_privacidade(b):
     if len(solto) != 1: prob.append('a linha dos contatos soltos devia aparecer uma vez, apareceu %d' % len(solto))
     else:
         c = solto[0]['c'][1]
-        esp = 'Contatos soltos: ligar pro [contato omitido], depois [contato omitido], ou [contato omitido]; também [contato omitido] e [contato omitido] e [contato omitido]; com rótulo, fone [contato omitido]; peça 87654321 e lote 20261110 ficam; fim dos contatos.'
+        esp = 'Contatos soltos: ligar pro [contato omitido], depois [contato omitido], ou [contato omitido]; também [contato omitido] e [contato omitido] e [contato omitido]; com rótulo, fone [contato omitido]; peça 87654321 e lote 20261110 ficam; garantia 2025-2027 e temporada 2026-2027 ficam; fim dos contatos.'
         if c != esp: prob.append('cada telefone devia sair inteiro (sem DDD, com hífen ou ponto, com o DDD separado, com espaços, sem separador) e o número de peça e o lote ficar: %r (esperado %r)' % (c, esp))
     for sec, chave in (('documentos', 'laudo'), ('abastecimentos', 'posto.jpg'), ('pecas', 'Peça do teste de privacidade'), ('agenda', 'Tarefa do teste')):
         if not any(chave in x['c'][0] + ' ' + x['c'][1] for x in r[sec]): prob.append('%s: a linha do aparelho (%s) sumiu em vez de perder só o contato' % (sec, chave))
@@ -10554,7 +10601,9 @@ MUTANTES_P4K = [
     ('o telefone com +55 não sai inteiro (sem o padrão do código do país)', REL, [("    s = s.replace(RX_FONE_PAIS, '[contato omitido]');\n", "")], 'priv'),
     ('o telefone de 10 dígitos ou mais com espaços, ponto, hífen ou sem separador não sai', REL, [("    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]').replace(RX_FONE_CURTO, '$1[contato omitido]');\n", "    s = s.replace(RX_FONE_CURTO, '$1[contato omitido]');\n")], 'priv'),
     ('o telefone sem DDD (99999-1234, 3333-4444) não sai', REL, [("    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]').replace(RX_FONE_CURTO, '$1[contato omitido]');\n", "    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]');\n")], 'priv'),
-    ('o número de peça de 8 dígitos seguidos é tratado como telefone', REL, [("RX_FONE_CURTO = /(^|\\D)\\d{4,5}[-.]\\d{4}(?!\\d)/g;", "RX_FONE_CURTO = /(^|\\D)\\d{4,5}[-.]?\\d{4}(?!\\d)/g;")], 'priv'),
+    ('o número de peça de 8 dígitos seguidos é tratado como telefone', REL, [("RX_FONE_CURTO = /(^|\\D)(?!(?:19|20)\\d\\d-(?:19|20)\\d\\d(?!\\d))\\d{4,5}[-.]\\d{4}(?!\\d)/g;", "RX_FONE_CURTO = /(^|\\D)(?!(?:19|20)\\d\\d-(?:19|20)\\d\\d(?!\\d))\\d{4,5}[-.]?\\d{4}(?!\\d)/g;")], 'priv'),
+    ('qualquer número de 4 + 4 dígitos com hífen vira «intervalo de anos» no relatório (o telefone sem DDD 3222-1100 fica)', REL, [("RX_FONE_CURTO = /(^|\\D)(?!(?:19|20)\\d\\d-(?:19|20)\\d\\d(?!\\d))\\d{4,5}[-.]\\d{4}(?!\\d)/g;", "RX_FONE_CURTO = /(^|\\D)(?!\\d{4}-\\d{4}(?!\\d))\\d{4,5}[-.]\\d{4}(?!\\d)/g;")], 'priv'),
+    ('o intervalo de anos («garantia 2025-2027») sai do relatório como se fosse telefone', REL, [("RX_FONE_CURTO = /(^|\\D)(?!(?:19|20)\\d\\d-(?:19|20)\\d\\d(?!\\d))\\d{4,5}[-.]\\d{4}(?!\\d)/g;", "RX_FONE_CURTO = /(^|\\D)\\d{4,5}[-.]\\d{4}(?!\\d)/g;")], 'priv'),
     ('o relatório troca de dia com a âncora das 07:00 (antes das 07:00 diz o dia de ontem, ao contrário das telas com o replay livre)', REL, [("A.rebase(Date.now()); } catch (x) {}", "A.rebase(A.ancora(Date.now()), true); } catch (x) {}")], 'dia_bordo'),
     ('o telefone com rótulo («tel 3333-4444») não sai', REL, [("    s = s.replace(RX_FONE, '$1 [contato omitido]');\n", "")], 'priv'),
     ('o texto livre não passa pelo DINHEIRO do §3', REL, [("    if (RX_DINHEIRO) s = s.replace(RX_DINHEIRO, '[valor omitido]');\n", "")], 'priv'),

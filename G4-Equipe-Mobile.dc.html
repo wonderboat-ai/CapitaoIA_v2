@@ -355,10 +355,13 @@ class Component extends DCLogic {
   QUEM() { return { marina: 'marina', oficina: 'oficina de motores', tecnico: 'técnico', eletronica: 'técnico de eletrônicos', refrigeracao: 'técnico de refrigeração', posto: 'posto de combustível' }; }
   quemDe(a) { return this.QUEM()[a.id] || String(a.papel || a.id).toLowerCase(); }
   opcoesQuem() { const D = window.CapitaoDados || {}, EQ = D.equipe || {}; return (EQ.perfis || []).map((p) => ({ v: String(p.nome || '').split(' ')[0], l: String(p.nome || '').split(' ')[0] + ' · ' + (p.papel || 'perfil') })).concat((EQ.apoio || []).map((a) => ({ v: this.quemDe(a), l: a.papel }))); }
+  dadoPessoal(t) { const T = (window.CapitaoBrain || {}).TERMOS || {}; return !!((T.PESSOAIS && T.PESSOAIS.test(t)) || (T.DINHEIRO && T.DINHEIRO.test(t))); }
   salvaTarefa() {
     const B = window.CapitaoBrain, s = this.state, A = window.CapitaoAgora; if (!B) return;
     const n = String(s.tN || '').replace(/\s+/g, ' ').trim(), v = String(s.tVence || '').trim(), hoje = A && A.relogio ? A.relogio.hojeIso : '';
     if (!n) return this.setState({ tarErro: 'Digite o nome da tarefa.' });
+    // o nome vai à agenda (Manutenção) e ao diário, e os dois entram na ficha da IA: telefone, e-mail, CPF/CNPJ e valor (as regex do §3, a fonte única) ficam de fora; o telefone de um contato tem o lugar dele na aba Apoio
+    if (this.dadoPessoal(n)) return this.setState({ tarErro: 'Tire telefone, e-mail, CPF/CNPJ ou valor do nome da tarefa: esses dados não entram na agenda (o telefone de um contato vai na aba Apoio).' });
     if (!/^\d{4}-\d\d-\d\d$/.test(v) || isNaN(Date.parse(v + 'T00:00:00Z'))) return this.setState({ tarErro: 'Escolha o dia em que a tarefa vence.' });
     if (hoje && v < hoje) return this.setState({ tarErro: 'Esse dia já passou: escolha hoje ou um dia à frente.' });
     const antes = B.loadTarefas().map((x) => x.id);
