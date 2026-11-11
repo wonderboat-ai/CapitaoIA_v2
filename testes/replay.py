@@ -1687,7 +1687,10 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
 # se o texto que exibem a partir deles mudou. Com o instante fixado e o prazo igual, 5 viradas não redesenham nada; com a tarefa executada (Executado), 1 redesenho e o cartão sem o atraso.
 HOME_REBASE = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844))
 EXEC_ROTOR = '{"gerador-rotor": {"iso": "2026-11-10T09:00:00-03:00", "t": "09:00", "sim": true}}'
-LE_ROTOR = """() => ({ sets: window.__sets, txt: document.body.innerText, titulos: [...document.querySelectorAll('[data-home=cartao]')].map((e) => e.title), chips: [...document.querySelectorAll('[data-home=chip]')].map((e) => e.innerText.trim()) })"""
+LE_ROTOR = """() => ({ sets: window.__sets, txt: document.body.innerText, titulos: [...document.querySelectorAll('[data-home=cartao]')].map((e) => e.title), chips: [...document.querySelectorAll('[data-home=chip]')].map((e) => e.innerText.trim()),
+  console: ((document.querySelector('[data-home=console-chip]') || {}).innerText || '').trim() })"""
+# a tarefa das bombas de porão (a 3ª atrasada: não é o rotor nem o filtro, que mudam também o texto de um cartão): executada, só a contagem do chip do CONSOLE muda
+EXEC_PORAO = '{"porao-teste": {"iso": "2026-11-10T09:00:00-03:00", "t": "09:00", "sim": true}}'
 
 
 def home_rebase(b, telas=HOME_REBASE):
@@ -1715,6 +1718,22 @@ def home_rebase(b, telas=HOME_REBASE):
         depois_rotor = ('ROTOR' in r['txt']) if nome == 'Main' else any('rotor em atraso' in t for t in r['titulos'])
         ok('%s: com o rotor executado a virada do dia redesenha uma vez (%d setState) em até 150 ms e o cartão sai do atraso' % (nome, r['sets']), r['sets'] == 1 and not depois_rotor, r)
         ok('%s: sem erro de script' % nome, not pg.erros, pg.erros)
+        fecha(pg)
+        # a tarefa que NÃO é o rotor nem o filtro (as bombas de porão): executada, o texto dos cartões fica igual e só o chip do CONSOLE muda («3 ATRASADAS» → «2 ATRASADAS»); a virada do dia tem de redesenhar uma vez
+        # (a chave dos cartões da H2 leva a contagem das atrasadas: sem ela o chip do CONSOLE só mudaria no tique seguinte, que não vem com o instante fixado)
+        pg = abre(b, caminho='/%s.dc.html' % nome, sessao=True, init=MOLDURA_JS, viewport={'width': w, 'height': h}, espera="() => window.CapitaoReplay && window.__ticks >= 1")
+        pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
+        pg.wait_for_timeout(2500)
+        r0 = pg.evaluate(LE_ROTOR)
+        c0 = r0['chips'][0] if nome == 'Main' else r0['console']
+        pg.evaluate("() => new Promise((res) => { const f = () => { window.removeEventListener('capitao-telemetria', f); res(true); }; window.addEventListener('capitao-telemetria', f); })")
+        pg.evaluate("(ex) => { localStorage.setItem('capitao.executado.v1', ex); window.__sets = 0; window.dispatchEvent(new CustomEvent('capitao-rebase', { detail: { ms: Date.now() } })); }", EXEC_PORAO)
+        pg.wait_for_timeout(150)
+        r = pg.evaluate(LE_ROTOR)
+        c1 = r['chips'][0] if nome == 'Main' else r['console']
+        ok('%s: com a tarefa das bombas de porão executada (não é o rotor nem o filtro) a virada do dia redesenha uma vez (%d setState) e o chip do CONSOLE cai de %r para %r' % (nome, r['sets'], c0, c1),
+           c0 == '3 ATRASADAS' and c1 == '2 ATRASADAS' and r['sets'] == 1 and r['titulos'] == r0['titulos'], {'antes': c0, 'depois': c1, 'sets': r['sets']})
+        ok('%s: sem erro de script (bombas de porão)' % nome, not pg.erros, pg.erros)
         fecha(pg)
 
 
@@ -2435,6 +2454,8 @@ MUTANTES_ARQ = [
      [("['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-telemetria'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'home_rebase'),
     ('a H2 dando setState a cada virada do dia, sem comparar os cartões', 'H2-Home-Mobile.dc.html',
      [("if (k !== this._cartK) this.setState({ cart: k });", "this.setState({ cart: k });")], 'home_rebase'),
+    ('a chave dos cartões da H2 sem a contagem das atrasadas (o chip do CONSOLE não muda com a tarefa que não é rotor nem filtro)', 'H2-Home-Mobile.dc.html',
+     [("chaveCartoes() { return JSON.stringify([this.equipamentos().map((b) => b.s + '|' + b.ctone), this.atrasadas()]); }", "chaveCartoes() { return JSON.stringify([this.equipamentos().map((b) => b.s + '|' + b.ctone)]); }")], 'home_rebase'),
     ('a H2 sem ouvir a virada do dia', 'H2-Home-Mobile.dc.html',
      [("    window.addEventListener('capitao-rebase', this._onReb);\n", "")], 'home_rebase'),
     ('a Main redesenhando com a aba escondida (sem o document.hidden)', 'Main.dc.html',

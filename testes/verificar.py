@@ -120,7 +120,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 80 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada e 10 da 3ª: a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la), todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 90 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada, 10 da 3ª — a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la — e 10 da 4ª: os trechos e a ficha do ditado corrigido, a cor do chip e do ponto dos cartões e o microfone da CONVERSA depois do MAYDAY), todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -5764,14 +5764,15 @@ LE_HOME = """() => { """ + JS_BASE + """
   const E = D.embarcacao || {}, eq = (D.equipamentos || []).map((e) => ({ id: e.id, f: e.fabricante, m: e.modelo })), ag = D.agenda || [];
   const cartoes = [...document.querySelectorAll('[data-home=cartao]')].map((e) => ({ href: e.getAttribute('href'), title: e.title, aria: e.getAttribute('aria-label'), txt: lin(e.innerText),
     nome: lin((e.querySelector('[data-home=nome]') || {}).innerText), eq: lin((e.querySelector('[data-home=eq]') || {}).innerText), chip: lin((e.querySelector('[data-home=chip]') || {}).innerText),
-    ponto: (() => { const d = e.querySelector('span[style*="border-radius: 50%"]'); return d ? getComputedStyle(d).backgroundColor : null; })() }));
+    ponto: (() => { const d = e.querySelector('span[style*="border-radius: 50%"]'); return d ? getComputedStyle(d).backgroundColor : null; })(),
+    chipCor: (() => { const d = e.querySelector('[data-home=chip]'); return d ? getComputedStyle(d).color : null; })() }));
   const est = el('estado'), hora = el('hora'), rod = document.querySelector('footer'), sel = el('selo') || el('led');
   const feitas = (() => { try { return JSON.parse(localStorage.getItem('capitao.executado.v1') || '{}'); } catch (e) { return {}; } })();
   return { hora: I.hora, hhmm: I.hhmm, fonte: I.fonte, T, q: { estado: q.estado, local: q.local }, selo: g('selo'), seloTitle: sel ? sel.title : null, ledAria: el('led') ? el('led').getAttribute('aria-label') : null,
     ledCor: cs ? cs.backgroundColor : null, ledAnim: cs ? cs.animationName : null, reg: g('reg'), registro: E.registro, faixa: [...document.querySelectorAll('[data-home=faixa]')].map((e) => lin(e.innerText)),
     estado: est ? lin(est.innerText) : null, estadoTitle: est ? est.title : null, horaTxt: hora ? lin(hora.innerText) : null, corteHora: hora ? hora.scrollWidth - hora.clientWidth : null,
     rodLateral: rod ? rod.scrollWidth - rod.clientWidth : null, cartoes, eq, ag: ag.filter((t) => t.id === 'gerador-rotor' || t.id === 'clima-filtro').map((t) => ({ id: t.id, dn: t.dn })), faq: Object.keys(D.faq).map((k) => ({ k, st: D.faq[k].status, n: (D.faq[k].perguntas || []).length })),
-    atrasadas: A.contagens().atrasadas, consoleChip: g('console-chip'), feitas, texto: lin(document.body.innerText), lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }"""
+    atrasadas: A.contagens().atrasadas, consoleChip: g('console-chip'), consoleCor: el('console-chip') ? getComputedStyle(el('console-chip')).color : null, feitas, texto: lin(document.body.innerText), lateral: document.documentElement.scrollWidth - document.documentElement.clientWidth }; }"""
 
 
 def fab_mod(f, m):
@@ -5786,6 +5787,21 @@ def fabs_eletronicos(eq):
         f = (d.get(i) or {}).get('f')
         if f and f not in fabs: fabs.append(f)
     return fabs
+
+
+def cor_tom(rgb):
+    """A cor do ponto e do chip dos cartões da Home: «vermelho» (o crítico: tarefa atrasada), «amarelo» (o âmbar: o FAQ ainda não pronto) ou «verde» (o ok); '?' se não for nenhuma (a de fora do tema)."""
+    c = [int(x) for x in re.findall(r'\d+', rgb or '')[:3]]
+    if len(c) != 3: return '?'
+    if c[0] > c[1] + 80 and c[0] > c[2] + 80 and c[1] < 110: return 'vermelho'
+    return cor_do_selo(rgb)
+
+
+def cor_esperada(r, k, tarefa):
+    """A cor que o cartão do equipamento `k` tem de ter: vermelho enquanto a tarefa dele está atrasada e não executada; senão verde com o FAQ PRONTO (ou, nos eletrônicos, com as perguntas do FAQ) e âmbar sem."""
+    if tarefa and atrasada(r, tarefa) is not None: return 'vermelho'
+    f = [x for x in r['faq'] if x['k'] == k][0]
+    return 'verde' if f['st'] == 'PRONTO' or (k == 'eletronicos' and f['n'] > 0) else 'amarelo'
 
 
 def atrasada(r, tarefa):
@@ -5837,6 +5853,10 @@ def problemas_home_leitura(r, fixo, tela):
         for c, e, ch in zip(r['cartoes'], eqs, chips):
             if e is not None and c['eq'] != e: p.append('%s: o cartão %s diz %r (esperado %r)' % (rot, c['nome'], c['eq'], e))
             if c['chip'] != ch: p.append('%s: o chip de %s diz %r (esperado %r)' % (rot, c['nome'], c['chip'], ch))
+        # a COR do chip e do ponto dele (o texto sozinho não a vigia): o CONSOLE é vermelho com tarefa atrasada e verde em dia; o gerador e a climatização, vermelhos com o rotor e o filtro atrasados
+        cores = ['vermelho' if r['atrasadas'] else 'verde', cor_esperada(r, 'gerador', 'gerador-rotor'), cor_esperada(r, 'climatizacao', 'clima-filtro'), cor_esperada(r, 'estabilizador', None), cor_esperada(r, 'eletronicos', None)]
+        for c, cor in zip(r['cartoes'], cores):
+            if cor_tom(c['chipCor']) != cor or cor_tom(c['ponto']) != cor: p.append('%s: a cor do chip de %s é %s e a do ponto %s (esperado %s; chip %s, ponto %s)' % (rot, c['nome'], cor_tom(c['chipCor']), cor_tom(c['ponto']), cor, c['chipCor'], c['ponto']))
     else:
         titulos = ['Gerador %s — ligar · desligar · alarmes%s' % (ger, ' · rotor em atraso' if atrasada(r, 'gerador-rotor') is not None else ''),
                    'Climatização %s — ligar · alarme de fluxo · filtros%s' % (cli, ' · filtro em atraso' if atrasada(r, 'clima-filtro') is not None else ''),
@@ -5846,6 +5866,12 @@ def problemas_home_leitura(r, fixo, tela):
             if c['title'] != t: p.append('%s: a dica de %s diz %r (esperado %r)' % (rot, c['aria'], c['title'], t))
         esp = '%d ATRASADAS' % r['atrasadas'] if r['atrasadas'] else 'EM DIA'
         if r['consoleChip'] != esp: p.append('%s: o chip do CONSOLE diz %r (esperado %r)' % (rot, r['consoleChip'], esp))
+        # a COR: o ponto de cada cartão (vermelho com o rotor ou o filtro atrasados, senão verde com o FAQ pronto e âmbar sem) e o chip do CONSOLE (vermelho com tarefa atrasada, verde em dia)
+        cores = [cor_esperada(r, 'gerador', 'gerador-rotor'), cor_esperada(r, 'climatizacao', 'clima-filtro'), cor_esperada(r, 'estabilizador', None), cor_esperada(r, 'eletronicos', None)]
+        for c, cor in zip(r['cartoes'], cores):
+            if cor_tom(c['ponto']) != cor: p.append('%s: a cor do ponto do cartão %s é %s (esperado %s; %s)' % (rot, c['aria'], cor_tom(c['ponto']), cor, c['ponto']))
+        cc = 'vermelho' if r['atrasadas'] else 'verde'
+        if cor_tom(r['consoleCor']) != cc: p.append('%s: a cor do chip do CONSOLE é %s (esperado %s com %d atrasadas; %s)' % (rot, cor_tom(r['consoleCor']), cc, r['atrasadas'], r['consoleCor']))
     if re.search(r'NaN|undefined|\[object|Infinity', r['texto']): p.append('%s: NaN, undefined ou [object na tela' % rot)
     if r['lateral'] > 1: p.append('%s: rola para o lado (%d px)' % (rot, r['lateral']))
     return p
@@ -5982,11 +6008,11 @@ def liga_ia(ctx, estado):
     ctx.route(URL_IA.rstrip('/') + '**', rota)
 
 
-def abre_home(b, tela, fixo='60', ia=True, ls=None, depois='', texto=None, hash_=''):
+def abre_home(b, tela, fixo='60', ia=True, ls=None, depois='', texto=None, hash_='', extra=''):
     est = {'pedidos': [], 'texto': texto or TEXTO_IA_HOME}
     ls = dict(ls or {})
     if ia: ls['capitao.ia.chave.v1'] = 'chave-de-teste'
-    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, ls=ls, depois=depois, hash_=hash_)
+    ctx, pg, erros = abre_tela(b, tela, fixo=fixo, ls=ls, depois=depois, hash_=hash_, extra=extra)
     if ia: liga_ia(ctx, est)
     return ctx, pg, erros, est
 
@@ -6018,6 +6044,12 @@ def clica_acao(pg, texto, esperar=True):
         except Exception: pass
     pg.wait_for_timeout(300)
     return pg.evaluate(LE_MSGS)
+
+
+# as perguntas que a tela passa ao B.ficha (2º argumento) e ao B.buscaBase (1º) quando pede a IA: window.__qIA (o <head> roda o cérebro duas vezes: o espião embrulha a cópia que estiver valendo, uma vez em cada)
+ESPIA_PERGUNTA_IA = r"""(() => { window.__qIA = { ficha: [], busca: [] };
+  setInterval(() => { const B = window.CapitaoBrain; if (B && B.ficha && B.buscaBase && !B.__espiaIA) { B.__espiaIA = true; const f = B.ficha, g = B.buscaBase;
+    B.ficha = function (p, q) { window.__qIA.ficha.push(String(q)); return f.apply(this, arguments); }; B.buscaBase = function (q) { window.__qIA.busca.push(String(q)); return g.apply(this, arguments); }; } }, 5); })()"""
 
 
 def teste_home_ia(b, tela):
@@ -6054,9 +6086,22 @@ def teste_home_ia(b, tela):
         if re.search(r'mayday|Emergência|homem ao mar|canal 16', txt, re.I): prob.append('%s: o histórico que vai à IA leva a emergência: %s' % (rot, txt[:200]))
     ctx.close()
     # o ditado corrigido vai à IA
-    ctx, pg, erros, est = abre_home(b, tela)
+    ctx, pg, erros, est = abre_home(b, tela, extra=ESPIA_PERGUNTA_IA)
     pergunta_home(pg, tela, 'como ligar o siker?')
+    qs = pg.evaluate('() => JSON.parse(JSON.stringify(window.__qIA))')   # (antes de a conferência abaixo chamar o B.ficha e o B.buscaBase por conta própria)
     if len(est['pedidos']) != 1 or est['pedidos'][0].get('pergunta') != 'como ligar o Seakeeper?': prob.append('%s: o texto que vai à IA devia ser o corrigido «como ligar o Seakeeper?»: %r' % (rot, [x.get('pergunta') for x in est['pedidos']]))
+    else:
+        # os TRECHOS e a FICHA que vão com a pergunta saem do ditado corrigido também (não só o campo `pergunta`): o que o cérebro entrega para «como ligar o Seakeeper?» (e não para o «siker» cru) é o que o pedido leva
+        ped = est['pedidos'][0]
+        esp = pg.evaluate("""(p) => { const B = window.CapitaoBrain, qc = 'como ligar o Seakeeper?', cru = 'como ligar o siker?', hits = (q) => B.buscaBase(q, 3).slice(0, 3).map((h) => { const d = h && h.d ? h.d : h; return { fonte: d.fonte, pag: d.pag, secao: d.secao, texto: d.texto }; });
+          const fi = (q) => B.ficha(p, q, B.answer(q, { platform: p, commit: false }), { emergencia: false }).slice(0, 12000);
+          return JSON.parse(JSON.stringify({ trechos: hits(qc), ficha: fi(qc), cruTrechos: hits(cru), cruFicha: fi(cru) })); }""", 'web' if tela == 'Main' else 'app')
+        if not esp['trechos'] or not esp['ficha'] or (esp['trechos'] == esp['cruTrechos'] and esp['ficha'] == esp['cruFicha']): prob.append('%s: o teste não vale (o ditado cru e o corrigido dão o mesmo trecho e a mesma ficha)' % rot)
+        if ped.get('trechos') != esp['trechos']: prob.append('%s: os trechos que vão à IA não são os do ditado corrigido «como ligar o Seakeeper?» (levou %s, esperado %s)' % (rot, [t.get('secao') for t in ped.get('trechos') or []], [t.get('secao') for t in esp['trechos']]))
+        if ped.get('ficha') != esp['ficha']: prob.append('%s: a ficha que vai à IA não é a do ditado corrigido (%d letras, esperado %d; a do ditado cru tem %d)' % (rot, len(ped.get('ficha') or ''), len(esp['ficha']), len(esp['cruFicha'])))
+        # (a ficha de hoje não muda com a pergunta crua — a resposta já foi montada com o ditado corrigido —, então o que a tela passa ao B.ficha e ao B.buscaBase é conferido na chamada: a pergunta corrigida, nunca a crua)
+        if qs['ficha'] != ['como ligar o Seakeeper?']: prob.append('%s: a tela chamou o B.ficha com %s (esperado só o ditado corrigido «como ligar o Seakeeper?»)' % (rot, qs['ficha']))
+        if qs['busca'] != ['como ligar o Seakeeper?']: prob.append('%s: a tela chamou o B.buscaBase com %s (esperado só o ditado corrigido «como ligar o Seakeeper?»)' % (rot, qs['busca']))
     ctx.close()
     # a IA pergunta, a pessoa responde só o equipamento: o cérebro precisa saber que a IA perguntou
     ctx, pg, erros, est = abre_home(b, tela, texto='Qual equipamento você quer ligar?')
@@ -6260,6 +6305,11 @@ ABRE_CONVERSA = """() => { for (const hs of document.querySelectorAll('.sc-host'
   if (f) { f.stateNode.logic.setState({ conversa: true }); return true; } } return false; }"""
 
 
+# a conversa por voz com o reconhecedor que CONTA os inícios (window.__recStarts) e a fala que termina sozinha (80 ms): o microfone que reabre depois de uma resposta muda aparece como um início a mais
+ESPIA_MIC = r"""(() => { class R { start() { window.__recStarts = (window.__recStarts || 0) + 1; } stop() {} abort() {} } window.SpeechRecognition = R; window.webkitSpeechRecognition = R; window.__faladas = []; window.__recStarts = 0;
+  const t = setInterval(() => { const B = window.CapitaoBrain; if (B && B.speak && !B.__espiado) { B.__espiado = true; B.speak = function (txt, fim) { window.__faladas.push(String(txt)); setTimeout(() => { if (fim) fim(); }, 80); return true; }; } }, 10); })()"""
+
+
 def libera(seg, cab, texto='Qual equipamento você quer ligar?'):
     for rt in seg:
         rt.fulfill(status=200, content_type='application/json', headers=cab, body=json.dumps({'texto': texto + '\nFonte: ficha de bordo', 'provedor': 'Workers AI', 'modelo': 'teste', 'parou': 'fim'}))
@@ -6332,6 +6382,21 @@ def teste_home_tardio(b, tela):
             if 'PARTIDA até o motor pegar' in m[-1]['txt']: prob.append('%s: depois do %s «o gerador» continuou o «como ligar?» da resposta tardia (devia ser a resposta pronta do gerador)' % (rot, cenario))
         if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
+    # o microfone da CONVERSA com um MAYDAY no meio: a pergunta de rotina segue na IA, o MAYDAY responde local (a instrução é falada, a fala acaba e o microfone espera a resposta que falta); a resposta que chega MUDA
+    # (a janela vale agora) não fala nada e, sem outra resposta a caminho nem fala em curso, REABRE o microfone: o reconhecimento tem de estar ativo de novo (um início a mais), senão a conversa fica surda
+    ctx, pg, erros, seg, cab = abre_home_retida(b, tela, extra=ESPIA_MIC)
+    if not pg.evaluate(ABRE_CONVERSA): prob.append('%s: o teste não vale (a conversa por voz não abriu)' % rot)
+    elif not pergunta_a_caminho(pg, tela, seg, TARDIA_ROTINA): prob.append('%s: o pedido não chegou ao Worker (o teste não vale)' % rot)
+    else:
+        pergunta_home(pg, tela, 'mayday, homem ao mar', espera=False); pg.wait_for_timeout(1500)
+        if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o teste não vale (o SOS não marcou a janela)' % rot)
+        i0, falas0 = pg.evaluate('() => window.__recStarts'), pg.evaluate('() => window.__faladas.length')
+        libera(seg, cab, texto=TARDIA_MARCA + ' Estamos a 18 nós.'); pg.wait_for_timeout(900)
+        i1, falas = pg.evaluate('() => window.__recStarts'), pg.evaluate('() => window.__faladas')
+        if i1 <= i0: prob.append('%s: depois da resposta que chegou muda (MAYDAY no meio) o microfone da CONVERSA não reabriu (inícios do reconhecimento: %d antes, %d depois): a conversa fica surda' % (rot, i0, i1))
+        if len(falas) != falas0: prob.append('%s: a resposta que chegou muda foi falada (%s)' % (rot, [f[:50] for f in falas[falas0:]]))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
     return prob
 
 
@@ -6543,6 +6608,17 @@ MUTANTES_P4G = [
     ('o atalho do checklist da H3 app leva à C4 web', 'H3-Atalhos-Editar.dc.html', [('<a href="C4-Checklist-Mobile.dc.html" data-h3="tela-checklist"', '<a href="C4-Checklist-Web.dc.html" data-h3="tela-checklist"')], 'h3'),
     ('o quadro «Abrem direto» da H3 web fora da área visível (empurrado para baixo do cartão)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="margin-top: 700px; display: flex;')], 'h3'),
     ('o quadro «Abrem direto» da H3 web cortado pelo próprio quadro (altura de 40 px com o excesso escondido)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="max-height: 40px; overflow: hidden; display: flex;')], 'h3'),
+    # —— revisão final, 4ª rodada: o que o pedido à IA leva do ditado corrigido, a COR dos cartões e o microfone da CONVERSA depois do MAYDAY ——
+    ('os trechos do guia que vão à IA saem do ditado cru (Main: B.buscaBase(q, 3), não o corrigido)', 'Main.dc.html', [("IA.perguntar(qc, B.buscaBase(qc, 3),", "IA.perguntar(qc, B.buscaBase(q, 3),")], 'ia'),
+    ('os trechos do guia que vão à IA saem do ditado cru (H2: B.buscaBase(q, 3), não o corrigido)', 'H2-Home-Mobile.dc.html', [("IA.perguntar(qc, B.buscaBase(qc, 3),", "IA.perguntar(qc, B.buscaBase(q, 3),")], 'ia'),
+    ('a ficha que vai à IA sai do ditado cru (Main: B.ficha(\'web\', q, …), não o corrigido)', 'Main.dc.html', [("B.ficha('web', qc, a, { emergencia: emg })", "B.ficha('web', q, a, { emergencia: emg })")], 'ia'),
+    ('a ficha que vai à IA sai do ditado cru (H2: B.ficha(\'app\', q, …), não o corrigido)', 'H2-Home-Mobile.dc.html', [("B.ficha('app', qc, a, { emergencia: emg })", "B.ficha('app', q, a, { emergencia: emg })")], 'ia'),
+    ('o chip «N ATRASADAS» do CONSOLE da Main verde com tarefa atrasada (sempre ok)', 'Main.dc.html', [("}, chip(atr ? 'crit' : 'ok')),", "}, chip('ok')),")], 'leitura'),
+    ('o ponto do cartão do gerador da H2 sem ficar vermelho com o rotor atrasado', 'H2-Home-Mobile.dc.html', [("ctone: atr(tarefa('gerador-rotor')) ? crit : st('gerador') }", "ctone: st('gerador') }")], 'leitura'),
+    ('o ponto do cartão da climatização da H2 sem ficar vermelho com o filtro atrasado', 'H2-Home-Mobile.dc.html', [("ctone: atr(tarefa('clima-filtro')) ? crit : st('climatizacao') }", "ctone: st('climatizacao') }")], 'leitura'),
+    ('o chip do CONSOLE da H2 verde com tarefa atrasada (sempre «EM DIA» na cor)', 'H2-Home-Mobile.dc.html', [("painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-crit, #ff3b30)', cline: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', cwash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)' }", "painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-ok, #34c77a)', cline: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)' }")], 'leitura'),
+    ('o microfone da CONVERSA da Main nunca reabre depois da resposta da IA que chega muda (MAYDAY no meio)', 'Main.dc.html', [("if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }", "if (mudo) { return; }")], 'tardio'),
+    ('o microfone da CONVERSA da H2 nunca reabre depois da resposta da IA que chega muda (MAYDAY no meio)', 'H2-Home-Mobile.dc.html', [("if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }", "if (mudo) { return; }")], 'tardio'),
 ]
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
