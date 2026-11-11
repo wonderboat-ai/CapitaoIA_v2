@@ -16,6 +16,9 @@
                           uma palavra só, que o cérebro não busca, casa o começo de uma palavra do título, da pergunta, das variantes ou do equipamento; «sos», «socorro», «mayday», «emergência», «ajuda» e «perigo»,
                           sozinhas, abrem os cartões de emergência (os achados primeiro). EMERGÊNCIA ACIMA DE TUDO: a pergunta que o cérebro roteia para o SOS («fogo no motor», «água entrando no motor», «alguém caiu»,
                           «barco afundando») traz na frente os cartões de emergência (EM-xx) de maior cobertura — nunca filtrados nem enterrados pelo equipamento que a frase nomeia — e, se nenhum casou, os 9 cartões.
+                          AS PALAVRAS DE CONVERSA («gostaria de saber sobre», «onde fica», «estou precisando») não zeram a busca: só contam as do ASSUNTO do arquivo (as dos títulos e dos equipamentos; ver noAssunto); «salva-vidas» é enchimento.
+                          A salvatagem e o Seafire (que o cérebro roteia para o equipamento, e os cartões dizem de outro jeito: «colete salva-vidas», «bote salva-vidas», «foguete de sinalização», «Seafire») trazem a FAMÍLIA no lugar
+                          de «nada encontrado» (ver familia).
                           `sec`: número da seção, lista de números ou 0 (todas)
      estadoInicial()      { q, sec, sel } do endereço: #id=EM-01 · #s=6 ou #s=6,7 (várias seções) · #busca=texto · #glossario
      chatHref(it, plat)   o link que abre o chat com a pergunta do item e o código (#q=…&faq=…)
@@ -27,7 +30,8 @@
 
   var GRUPOS = { '6,7': 'Eletrônicos' };   // o cartão «Eletrônicos» do hub abre as seções 6 e 7 juntas (#s=6,7)
   var COD = /^([A-Z]{2})-(\d{1,2})$/;
-  var PARADAS = ' a o as os um uma de da do das dos em no na nos nas por para pra com sem se que qual quais quando como onde quanto eu me meu minha tem ter faco fazer faz pode posso nao ' ;
+  // (as de conversa que também estão num título do arquivo: «funciona» é de «Como funcionam as bombas de porão»; as outras («gostaria», «saber», «onde fica») o ASSUNTO já tira)
+  var PARADAS = ' a o as os um uma de da do das dos em no na nos nas por para pra com sem se que qual quais quando como onde quanto eu me meu minha tem ter faco fazer faz pode posso nao funciona gostaria queria quero saber sobre estou estamos precisando fica ficam ' ;
   var EMERGENCIA = ' sos socorro mayday emergencia ajuda perigo ';   // a busca só dessas palavras abre os cartões de emergência (EM-xx), os achados primeiro
 
   var CACHE = null;   // o arquivo já lido: o <head> da tela pode rodar o capitao-brain.js duas vezes e a 2ª cópia assume o window.CapitaoBrain sem o FAQ (a tela não volta a «Carregando…»)
@@ -70,7 +74,24 @@
   }
 
   function naSecao(it, sec) { return !sec || (Array.isArray(sec) ? sec.indexOf(it.secao) !== -1 : it.secao === sec); }
-  function palavras(q) { return norm(q).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && PARADAS.indexOf(' ' + w + ' ') === -1 && (w.length > 1 || /\d/.test(w)); }); }
+  // («salva-vidas» é enchimento: «colete salva-vidas» é o colete; «salva» e «vidas» não estão em nenhum cartão, e «vidas» casaria o «vida» do PAN-PAN)
+  function palavras(q) { return norm(q).replace(/salva[\s-]*vidas?/g, ' ').replace(/[^a-z0-9]+/g, ' ').split(' ').filter(function (w) { return w && PARADAS.indexOf(' ' + w + ' ') === -1 && (w.length > 1 || /\d/.test(w)); }); }
+  // O ASSUNTO do arquivo: as palavras dos títulos e dos equipamentos dos itens («gerador», «estabilizador», «EPIRB», «porão»). A frase que a pessoa digita tem palavras de conversa («gostaria de saber sobre», «onde fica»,
+  // «estou precisando») que não estão no título de nenhum item, e a busca de TODAS as palavras no item as trataria como se faltassem. Uma palavra é do assunto se for igual a uma palavra de título ou de equipamento ou,
+  // com 5 letras ou mais, o começo de uma delas (a palavra ainda sendo digitada: «estabil»); «esta» (de «está») não é o começo de «estabilizador». (É o mesmo começo de palavra do porTexto: o que é do assunto está num item.)
+  var ASSUNTO = null, ASSUNTO_DE = null;
+  function noAssunto(w, d) {
+    if (ASSUNTO_DE !== d) {
+      var s = {};
+      d.itens.forEach(function (it) { norm((it.titulo || '') + ' ' + (it.equip || '')).replace(/[^a-z0-9]+/g, ' ').split(' ').forEach(function (x) { if (x) s[x] = 1; }); });
+      ASSUNTO = Object.keys(s); ASSUNTO_DE = d;
+    }
+    return ASSUNTO.some(function (x) { return x === w || (w.length >= 5 && x.indexOf(w) === 0); });
+  }
+  // as palavras que dizem do que a pergunta trata: as do assunto do arquivo; se nenhuma é, a pergunta fica como está («xyzzy» não vira outra coisa, uma palavra ainda sendo digitada segue pelo começo de palavra)
+  function doAssunto(ws, d) { var f = ws.filter(function (w) { return noAssunto(w, d); }); return f.length ? f : ws; }
+  // o mesmo, com as palavras de socorro: «estou precisando de ajuda» é a palavra de socorro «ajuda»
+  function essenciais(ws, d) { var f = ws.filter(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1 || noAssunto(w, d); }); return f.length ? f : ws; }
   // a palavra do texto começa pela palavra buscada (não é um pedaço no meio: «sos» não está em «pa-SSOS»)
   function temPalavra(texto, w) { return (' ' + texto.replace(/[^a-z0-9]+/g, ' ') + ' ').indexOf(' ' + w) !== -1; }
   // o mesmo radical: «liga» e «ligar», «gerador» e «geradores», «ligado» e «ligar» (4 letras de começo e, no máximo, 1 letra a mais na menor); palavra curta, só igual
@@ -81,9 +102,10 @@
     while (k < n && a.charAt(k) === b.charAt(k)) k++;
     return k >= 4 && k >= n - 1;
   }
-  // uma palavra só (o cérebro não busca): todas as palavras no texto do item; o título pesa mais
+  // uma palavra só (o cérebro não busca) ou a frase que o cérebro não pontuou: todas as palavras DO ASSUNTO no texto do item (as de conversa não contam: «gostaria de saber sobre o estabilizador» é o estabilizador);
+  // o título pesa mais
   function porTexto(q, d) {
-    var ws = palavras(q);
+    var ws = doAssunto(palavras(q), d);
     if (!ws.length) return [];
     return d.itens.map(function (it, k) {
       var t = norm(it.titulo + ' ' + it.pergunta), r = norm((it.variantes || []).join(' ') + ' ' + (it.equip || '')), nota = 0, todos = true;
@@ -121,10 +143,26 @@
   }
   // A pergunta de emergência: a que o cérebro roteia para o SOS (a mesma decisão do chat: «fogo no motor», «água entrando no motor», «alguém caiu», «barco afundando», «fumaça no motor»…). Só o cérebro decide;
   // sem ele (cópia antiga) a tela não adivinha: as palavras de socorro sozinhas seguem valendo (EMERGENCIA).
-  function deEmergencia(t) {
+  function rotaDe(t) {
     var b = B(), r = '';
     try { r = b && typeof b.route === 'function' ? b.route(t) : ''; } catch (e) { r = ''; }
-    return r === 'sos';
+    return typeof r === 'string' ? r : '';
+  }
+  function deEmergencia(rota) { return rota === 'sos'; }
+  // Os assuntos de segurança que o cérebro roteia para um equipamento e não para o SOS e que o arquivo diz com outras palavras: a salvatagem («colete salva-vidas», «bote salva-vidas», «boia», «foguete de sinalização»)
+  // e o Seafire (o nome do produto não está nos cartões, que dizem «sistema fixo de supressão de incêndio»). Quando a busca não acha nenhum item, os itens da FAMÍLIA vêm no lugar: os de maior cobertura das palavras
+  // abaixo (no título, na pergunta, nas variantes e no equipamento), na ordem do arquivo (os cartões de emergência o abrem; até 5). O que a busca acha, a família não toca. (O EPIRB, o canal 16 e o MMSI não entram:
+  // as palavras deles — «epirb», «radiobaliza», «canal», «vhf», «rádio», «dsc», «pan-pan», «mmsi» — estão nos itens e a busca os acha, nunca uma lista vazia.)
+  var FAMILIAS = { salvatagem: 'salvatagem colete balsa', seafire: 'sistema fixo incendio' };
+  function familia(rota, ws, d, sec) {
+    var sem = FAMILIAS[rota], dize, l, top = 0;
+    if (!sem) return [];
+    dize = palavras(sem);
+    // a pergunta tem de ser só desse assunto: a palavra do assunto do arquivo que a família não diz («dessalinizador radar balsa») é de outro equipamento, e a lista fica vazia
+    if (ws.some(function (w) { return noAssunto(w, d) && !dize.some(function (x) { return mesmoRadical(w, x); }); })) return [];
+    l = d.itens.map(function (it, i) { return { it: it, c: naSecao(it, sec) ? cobreTitulo(it, dize) : 0, i: i }; }).filter(function (x) { return x.c > 0; });
+    l.forEach(function (x) { top = Math.max(top, x.c); });
+    return l.filter(function (x) { return x.c >= top; }).sort(function (x, y) { return x.i - y.i; }).slice(0, 5).map(function (x) { return { it: x.it, nota: 0, cobre: 1 }; });
   }
   // Os cartões de emergência (EM-xx) de uma pergunta de emergência: os de MAIOR cobertura das palavras da pergunta (até 3). A cobertura é a maior entre a da busca do cérebro (que acha o sinônimo, «alagamento»,
   // mesmo com 1 palavra de 3: «incêndio na praça de máquinas» → EM-05) e a do título, da pergunta, das variantes e do equipamento do cartão (com «afundando» = «alagamento»); «barco», «bordo» e «lancha» não
@@ -143,29 +181,42 @@
     return cand.filter(function (x) { return x.c >= top; }).sort(function (x, y) { return x.k - y.k; }).slice(0, 3).map(function (x) { return x.r; });
   }
   function busca(q, n, sec) {
-    var d = dados(), t = String(q || '').trim(), m, x, todos = [], achados = [], b = B(), ws, ems, puras, emer, frente = [];
+    var d = dados(), t = String(q || '').trim(), m, x, todos = [], achados = [], b = B(), ws, ems, puras, emer, frente = [], rota, ess, soSocorro, usaNota;
     if (!d || !t) return [];
     m = COD.exec(t.toUpperCase());
     if (m) { x = item(m[1] + '-' + (m[2].length < 2 ? '0' : '') + m[2]); return x && naSecao(x, sec) ? [{ it: x, nota: 99, cobre: 1 }] : []; }
     sincroniza();
     ws = palavras(t);
-    puras = ws.length > 0 && ws.every(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1; });
-    try { todos = b && typeof b.faqBusca === 'function' ? b.faqBusca(t, 100) : []; } catch (e) { todos = []; }
+    rota = rotaDe(t);
+    // as palavras de socorro, sozinhas, ou com palavras de conversa que o cérebro NÃO toma por emergência («estou precisando de ajuda», «preciso de ajuda»: a rota dele é a saudação): só a palavra de socorro conta.
+    // Se o cérebro diz que é emergência («socorro, estou afundando», «preciso de ajuda urgente»), o caminho é o da emergência (os cartões da frase na frente), e as palavras que o arquivo não tem («afundando») contam.
+    soSocorro = ws.length > 0 && ws.every(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1; });
+    ess = ws.length && !soSocorro && !deEmergencia(rota) ? essenciais(ws, d) : ws;
+    puras = ess.length > 0 && ess.every(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1; });
+    // a nota do cérebro diz qual cartão a palavra de socorro abre («socorro» → o MAYDAY e o DSC) só quando a pergunta é ela e mais nada: com outra palavra junto («preciso de ajuda»), a nota é da outra palavra
+    usaNota = soSocorro && ws.length === norm(t).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean).length;
+    // só enchimento («salva-vidas», «onde fica»): o que o cérebro pontuou não é resultado
+    if (ws.length) { try { todos = b && typeof b.faqBusca === 'function' ? b.faqBusca(t, 100) : []; } catch (e) { todos = []; } }
     todos = (todos || []).filter(function (r) { return r && r.it; });
-    emer = !puras && ws.length > 0 && deEmergencia(t);
+    emer = !puras && ws.length > 0 && deEmergencia(rota);
     if (emer) frente = frenteEmergencia(todos, ws, d, sec);
     achados = todos.filter(function (r) { return r.cobre >= 0.5 && frente.indexOf(r) === -1 && naSecao(r.it, sec); });
     if (achados.length) achados = reordena(achados, ws, emer);
     else if (!todos.some(function (r) { return r.cobre >= 0.5; })) achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec) && frente.every(function (f) { return f.it !== r.it; }); });
-    // «sos», «socorro», «mayday», «emergência», «ajuda» e «perigo», sozinhas: os cartões de emergência, os que a busca achou primeiro (o procedimento padrão abre local, nunca vai à IA)
+    // «sos», «socorro», «mayday», «emergência», «ajuda» e «perigo», sozinhas: os cartões de emergência, os que a busca achou primeiro (o procedimento padrão abre local, nunca vai à IA). Com palavras de conversa
+    // junto («preciso de ajuda»: «preciso» é de um cartão do abandono), o que a busca achou é das palavras de conversa: os 9 cartões na ordem do arquivo (o MAYDAY primeiro) e nada mais
     if (puras) {
       ems = d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it) {
-        var a = achados.filter(function (r) { return r.it === it; })[0];
+        var a = usaNota ? achados.filter(function (r) { return r.it === it; })[0] : null;
         return a || { it: it, nota: 0, cobre: 1 };
       });
-      ems.sort(function (p, q2) { return q2.nota - p.nota; });
-      achados = ems.concat(achados.filter(function (r) { return !r.it.emerg; }));
-    } else achados = frente.concat(achados);
+      ems.sort(function (p, q2) { return q2.nota - p.nota; });   // (sem a nota, todos com 0 e a ordem do arquivo)
+      achados = ems.concat(usaNota ? achados.filter(function (r) { return !r.it.emerg; }) : []);
+    } else {
+      // a família de segurança no lugar de «nada encontrado»: «colete salva-vidas», «Seafire», «foguete de sinalização»
+      if (!achados.length && !frente.length) achados = familia(rota, ws, d, sec);
+      achados = frente.concat(achados);
+    }
     return achados.slice(0, n || 40);
   }
 

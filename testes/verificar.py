@@ -133,16 +133,16 @@ Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva 
 A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
 leitura de 26/09 ao lado do «AO VIVO»).
 
-Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 83 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência, a frase de emergência com equipamento nomeado («fogo no motor», «água entrando no motor», «barco afundando», FRASES_EMERGENCIA) trazendo o cartão EM-xx entre os 3 primeiros na F6 e no hub, e o corte de cobertura —; os itens de emergência e de segurança do catálogo achados pelo título, pela pergunta e pelas variantes; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
+Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 101 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência, a frase de emergência com equipamento nomeado («fogo no motor», «água entrando no motor», «barco afundando», FRASES_EMERGENCIA) trazendo o cartão EM-xx entre os 3 primeiros na F6 e no hub, a frase de segurança com palavra que o arquivo não tem («colete salva-vidas», «bote salva-vidas», «foguete de sinalização», «Seafire», «onde fica o epirb», FRASES_SEGURANCA) trazendo o cartão da salvatagem, do Seafire ou do EPIRB entre os 3 primeiros na F6 e no hub (e a seção filtrando-o), a frase de conversa («gostaria de saber sobre o estabilizador», «onde fica o radar», «onde está o plotter», FRASES_CONVERSA) abrindo com os itens do equipamento que ela nomeia, e o corte de cobertura —; os itens de emergência e de segurança do catálogo achados pelo título, pela pergunta e pelas variantes; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
 
-Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 45 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
+Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 48 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
 Documentos com a validade de cada documento = hoje + o prazo relativo (venceEm), conferida contra o relógio da própria página e refeita com o dia virado (fixar 60@1152, sem recarregar), a situação do CapitaoAgora (VENCIDO, VENCE EM n D,
 EM DIA; a nota fiscal, CONFERIDA, sem prazo), os cartões iguais a contagens(), nenhuma linha com A CONFERIR, MANUAL NO DRIVE nem SEM DADOS e a pergunta de cada linha no docsvenc sem IA; o envio de documento (anexo: continua A CONFERIR, carimbo sim: true só
 com a simulação, selo «apresentação» só com simulacao false); a aba Peças com as 12 peças do D.pecas (quantidade, mínimo, ZERADA / ABAIXO DO MÍNIMO / NO MÍNIMO / OK, tarefas ligadas com o prazo de hoje), o aviso das zeradas e no mínimo, o −1 USADA com
 Desfazer (movimento novo, o −1 fica; recusado se outra aba mexeu), o ✎ e o + PEÇA só com inteiro puro de 0 a 999, a quantidade e o mínimo entregues ao cérebro como TEXTO e o erro EXPLÍCITO quando o cérebro devolve null; G2 aba Nível com o diesel, o último
 abastecimento, o consumido desde ele e a autonomia do instante (não a leitura de 26/09), o histórico do D.abastecimentos, a regra de bordo sem rótulo e os gráficos do capitao-grafico.js (diesel válido, água doce e servidas, baterias com 3 séries, estação
 meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
-(SEM DADOS só ali); os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
+(SEM DADOS só ali); o consumo a preencher (D.consumo nulo, sem o cruzeiro ou sem a rotação ou a velocidade) sem «null», «undefined» nem «NaN» na G2, nas duas abas e nos dois ramos, e com SEM DADOS no lugar da velocidade e da rotação de cruzeiro (cartão Autonomia e «Consumo de referência») com simulacao false; os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
 
 Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 66 defeitos (49 da P4J e 17 da revisão final), todos acusados; `MUT_FILTRO=texto`
 refaz só os mutantes cujo nome tem o texto; sem Worker): G3 com o diário gerado na ordem do tempo e as 3 pendências do CapitaoAgora (nada gravado só por abrir; o alarme de 105 s nunca vira proposta sozinho), as propostas
@@ -6724,8 +6724,19 @@ EXEMPLOS_FAQ = {'gerador não liga': (['GE-02'], 'Gerador'), 'o gerador não lig
 # que a frase nomeia («fogo no MOTOR») nunca esconde nem enterra o cartão: antes, «fogo no motor» abria 10 itens dos motores com o EM-05 em 12º, «água entrando no motor» perdia o EM-06 e «barco afundando» não achava nada.
 FRASES_EMERGENCIA = {'fogo no motor': ['EM-05', 'SF-01'], 'tem fogo no motor': ['EM-05', 'SF-01'], 'fogo no gerador': ['EM-05', 'SF-01'], 'fogo no estabilizador': ['EM-05'], 'fogo no plotter': ['EM-05'], 'fogo no porão': ['EM-05'],
                      'incêndio na praça de máquinas': ['EM-05'], 'incêndio na cozinha': ['EM-05'], 'fumaça no motor': ['EM-05'], 'fogo no barco': ['EM-05'], 'água entrando no motor': ['EM-06'], 'alguem caiu': ['EM-04'],
-                     'barco afundando': ['EM-06'], 'estou afundando': ['EM-06'], 'ajuda': ['EM-01']}
+                     'barco afundando': ['EM-06'], 'estou afundando': ['EM-06'], 'ajuda': ['EM-01'], 'socorro estou afundando': ['EM-06'], 'socorro alguém caiu': ['EM-04']}
 FRASES_EMERGENCIA_HUB = ('fogo no motor', 'tem fogo no motor', 'fogo no gerador', 'água entrando no motor', 'barco afundando', 'alguem caiu')
+# SEGURANÇA ACIMA DE TUDO (a salvatagem, o EPIRB e o Seafire o cérebro roteia para o equipamento, não para o SOS): a frase com palavras que o arquivo não tem («salva-vidas», «foguete», «fica», «estou precisando») ou o nome do
+# produto («Seafire») traz o cartão da família entre os 3 primeiros, nunca «nada encontrado». Antes: «colete salva-vidas», «bote salva-vidas», «foguete de sinalização» e «Seafire» não achavam nada, e «onde fica o epirb» também não
+# (a busca exigia TODAS as palavras num item: uma palavra só de conversa zerava a lista).
+FRASES_SEGURANCA = {'colete salva-vidas': ['EM-09'], 'coletes salva-vidas': ['EM-09'], 'balsa salva-vidas': ['EM-09'], 'bote salva-vidas': ['EM-09'], 'bóia salva-vidas': ['EM-09'], 'boia': ['EM-09'], 'salva-vidas': ['EM-09'],
+                    'foguete de sinalização': ['EM-09'], 'onde ficam os coletes': ['EM-09'], 'Seafire': ['SF-01'], 'onde fica o epirb': ['EM-08'], 'onde está o epirb': ['EM-08', 'EP-01'], 'estou precisando de ajuda': ['EM-01']}
+FRASES_SEGURANCA_HUB = ('colete salva-vidas', 'boia', 'foguete de sinalização', 'Seafire', 'onde fica o epirb', 'estou precisando de ajuda')
+# a frase de conversa («gostaria de saber sobre…», «preciso saber…», «onde fica…»): as palavras que não são do assunto não zeram a lista, e os 3 primeiros são do equipamento que a frase nomeia
+FRASES_CONVERSA = {'gostaria de saber sobre o estabilizador': 'Estabilizador', 'preciso saber sobre o gerador': 'Gerador', 'queria saber do dessalinizador': 'Dessalinizador', 'onde fica o radar': 'Radar',
+                   'onde está o plotter': 'Plotters', 'me fala sobre o piloto automático': 'Piloto', 'quero saber como funciona o dessalinizador': 'Dessalinizador', 'onde fica o ais': 'AIS', 'queria saber do vhf': 'Rádios VHF',
+                   'gostaria de saber sobre o estabil': 'Estabilizador'}
+FRASES_CONVERSA_HUB = ('gostaria de saber sobre o estabilizador', 'preciso saber sobre o gerador')
 # a pergunta de emergência sem nada que case com um cartão («isso não é um teste», um dos pedidos de socorro implícitos do cérebro): os 9 cartões, na ordem do arquivo (o MAYDAY primeiro)
 FRASE_EMERGENCIA_SEM_CARTAO = 'isso não é um teste'
 # os itens de emergência e de segurança do catálogo (os 9 cartões EM-xx e os de segurança: sistema fixo de incêndio, EPIRB, porão, MOB…): cada um é achado entre os 3 primeiros pelo título, pela pergunta e por cada
@@ -6733,13 +6744,23 @@ FRASE_EMERGENCIA_SEM_CARTAO = 'isso não é um teste'
 VARRE_FAQ = """() => { const F = window.CapitaoFAQ, d = F.dados(), out = []; d.itens.filter((it) => it.emerg || it.seguranca).forEach((it) => [it.titulo, it.pergunta].concat(it.variantes || []).forEach((q) => { out.push([it.id, q, F.busca(q, 40, 0).map((r) => r.it.id).indexOf(it.id)]); })); return out; }"""
 
 
-def problemas_emergencia(rot, achados, n=3, frases=None):
-    """`achados`: {frase: [códigos na ordem da busca]}. O cartão (e o SF-01, no fogo) tem de estar entre os `n` primeiros."""
+def problemas_emergencia(rot, achados, n=3, frases=None, esperado=None):
+    """`achados`: {frase: [códigos na ordem da busca]}. O cartão (e o SF-01, no fogo) tem de estar entre os `n` primeiros. `esperado`: {frase: [códigos]} (as frases de emergência, ou as de segurança)."""
     prob = []
-    for fr in (frases or FRASES_EMERGENCIA):
+    esperado = esperado or FRASES_EMERGENCIA
+    for fr in (frases or esperado):
         ids = achados.get(fr) or []
-        falta = [c for c in FRASES_EMERGENCIA[fr] if c not in ids[:n]]
-        if falta: prob.append('%s: «%s» (emergência) devia trazer %s entre os %d primeiros — o equipamento que a frase nomeia não enterra o cartão: %s' % (rot, fr, falta, n, ids[:6]))
+        falta = [c for c in esperado[fr] if c not in ids[:n]]
+        if falta: prob.append('%s: «%s» (%s) devia trazer %s entre os %d primeiros — o equipamento que a frase nomeia, uma palavra fora do arquivo ou o nome do produto não enterra nem some com o cartão: %s' % (rot, fr, 'segurança' if esperado is FRASES_SEGURANCA else 'emergência', falta, n, ids[:6]))
+    return prob
+
+
+def problemas_conversa(rot, achados, frases=None):
+    """`achados`: {frase: [códigos na ordem da busca]}. Os 3 primeiros são do equipamento que a frase de conversa nomeia (as palavras que não são do assunto não zeram a busca)."""
+    prob = []
+    for fr in (frases or FRASES_CONVERSA):
+        ids = achados.get(fr) or []
+        if len(ids) < 3 or not all(FAQ_ITENS[i]['equip'].startswith(FRASES_CONVERSA[fr]) for i in ids[:3]): prob.append('%s: a frase de conversa «%s» devia abrir com 3 itens de «%s»: %s' % (rot, fr, FRASES_CONVERSA[fr], [(i, FAQ_ITENS[i]['equip'][:14]) for i in ids[:4]]))
     return prob
 
 
@@ -6832,13 +6853,28 @@ def teste_f6_busca(b, tela):
     if x[:1] != ['EM-05'] or {'EM-06', 'EM-07'} & set(x[:3]): prob.append('%s: «fogo no barco» devia abrir só com o cartão do fogo (EM-05), sem os cartões que só têm «barco»: %s' % (tela, x[:5]))
     x = digita('ajuda')['itens']
     if x[:len(ems_ordem)] != ems_ordem: prob.append('%s: «ajuda» sozinha devia abrir os %d cartões de emergência na ordem do arquivo: %s' % (tela, len(ems_ordem), x[:10]))
+    for fr in ('preciso de ajuda', 'estou precisando de ajuda', 'me dá uma ajuda'):   # a palavra de socorro entre palavras de conversa («preciso» é do cartão do abandono): os 9 cartões na ordem do arquivo, o MAYDAY primeiro
+        x = digita(fr)['itens']
+        if x != ems_ordem: prob.append('%s: «%s» devia abrir só os %d cartões de emergência, na ordem do arquivo (as palavras de conversa não tiram o MAYDAY do primeiro lugar): %s' % (tela, fr, len(ems_ordem), x[:10]))
     x = digita(FRASE_EMERGENCIA_SEM_CARTAO)['itens']
     if x[:len(ems_ordem)] != ems_ordem: prob.append('%s: «%s» (emergência sem cartão que case) devia abrir os %d cartões de emergência na ordem do arquivo: %s' % (tela, FRASE_EMERGENCIA_SEM_CARTAO, len(ems_ordem), x[:10]))
     # a seção filtra também o cartão de emergência (EM-xx é da seção 1): «fogo no motor» na seção dos motores só traz itens dos motores
     pg.evaluate(CLICA_FILTRO, 2); pg.wait_for_timeout(250)
     x = digita('fogo no motor')['itens']
     if not x or any(FAQ_ITENS[i]['secao'] != 2 for i in x): prob.append('%s: «fogo no motor» na seção dos motores devia trazer só itens dela (o cartão EM-05 é da seção 1): %s' % (tela, [(i, FAQ_ITENS[i]['secao']) for i in x[:6]]))
+    r = digita('colete salva-vidas')   # o cartão da salvatagem (seção 1) não passa pelo filtro da seção dos motores
+    if r['itens'] or not r['vazio']: prob.append('%s: «colete salva-vidas» na seção dos motores devia dizer que nada foi achado (o EM-09 é da seção 1): %s' % (tela, r['itens'][:6]))
     pg.evaluate(CLICA_FILTRO, 0); pg.wait_for_timeout(200)
+    # SEGURANÇA ACIMA DE TUDO e as frases de conversa, digitadas no campo: a palavra que o arquivo não tem não zera a lista, e a família da salvatagem, do EPIRB e do Seafire aparece no lugar de «nada encontrado»
+    ach_seg, ach_conv = {}, {}
+    for fr in FRASES_SEGURANCA: ach_seg[fr] = digita(fr)['itens']
+    for fr in FRASES_CONVERSA: ach_conv[fr] = digita(fr)['itens']
+    prob += problemas_emergencia(tela, ach_seg, esperado=FRASES_SEGURANCA)
+    prob += problemas_conversa(tela, ach_conv)
+    sf = ach_seg['Seafire']
+    if sf[:1] != ['EM-05'] or not {'SF-01', 'SF-02', 'SF-03', 'SF-04'} <= set(sf[:5]): prob.append('%s: «Seafire» (o nome do produto, que os itens não trazem) devia abrir os itens do sistema fixo de incêndio (EM-05 e SF-01 a SF-04): %s' % (tela, sf[:6]))
+    r = digita('colete salva-vidas do porão')   # outro assunto junto («porão»): a família não toma o lugar
+    if r['itens'] or not r['vazio']: prob.append('%s: «colete salva-vidas do porão» (dois assuntos) devia dizer que nada foi achado: %s' % (tela, r['itens'][:6]))
     # os itens de emergência e de segurança do catálogo: cada um pelo título, pela pergunta e por cada variante dele, entre os 3 primeiros
     var = pg.evaluate(VARRE_FAQ)
     fora = [(i, q, k) for i, q, k in var if not 0 <= k < 3]
@@ -7123,6 +7159,13 @@ def teste_f1(b, tela):
             r = pg.evaluate(LE_F1)
             ach_em[fr] = [re.search(r'#id=([A-Z]{2}-\d\d)$', x['href']).group(1) for x in r['resultados'] if re.search(r'#id=([A-Z]{2}-\d\d)$', x['href'])]
         prob += problemas_emergencia(tela, ach_em, frases=FRASES_EMERGENCIA_HUB)
+        ach_seg, ach_conv = {}, {}
+        for fr in FRASES_SEGURANCA_HUB + FRASES_CONVERSA_HUB:
+            pg.fill(campo, fr); pg.wait_for_timeout(350)
+            r = pg.evaluate(LE_F1)
+            (ach_seg if fr in FRASES_SEGURANCA else ach_conv)[fr] = [re.search(r'#id=([A-Z]{2}-\d\d)$', x['href']).group(1) for x in r['resultados'] if re.search(r'#id=([A-Z]{2}-\d\d)$', x['href'])]
+        prob += problemas_emergencia(tela, ach_seg, frases=FRASES_SEGURANCA_HUB, esperado=FRASES_SEGURANCA)
+        prob += problemas_conversa(tela, ach_conv, frases=FRASES_CONVERSA_HUB)
         pg.fill(campo, 'xyzzy'); pg.wait_for_timeout(350)
         r = pg.evaluate(LE_F1)
         if r['resultados'] or r['verTodos'] or ('Nenhum item do FAQ com “xyzzy”' not in r['texto'] and 'NENHUM ITEM NO FAQ' not in r['texto']): prob.append('%s: o que não existe devia dizer «Nenhum item do FAQ» e não oferecer o «Ver todos»: %s' % (tela, r['resultados'][:2]))
@@ -7492,13 +7535,13 @@ MUTANTES_P4H = [
     ('a pergunta de emergência não traz os cartões na frente («fogo no motor» abre os itens dos motores, o EM-05 em 12º)', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'busca'),
     ('a pergunta de emergência do hub não traz os cartões na frente (o dropdown mostra só os itens do motor)', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'f1_web'),
     ('a pergunta de emergência do hub do app não traz os cartões na frente', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'f1_app'),
-    ('o cérebro não diz que a pergunta é de emergência (a rota sos não vale)', 'capitao-faq.js', [("return r === 'sos';", "return false;")], 'busca'),
+    ('o cérebro não diz que a pergunta é de emergência (a rota sos não vale)', 'capitao-faq.js', [("return rota === 'sos';", "return false;")], 'busca'),
     ('na emergência, quem cobre todas as palavras não vem na frente do equipamento nomeado (o SF-01 de «fogo no motor» depois dos itens do motor)', 'capitao-faq.js', [("return emer ? (b.x.c >= 1) - (a.x.c >= 1) || a.i - b.i : a.i - b.i; })", "return a.i - b.i; })")], 'busca'),
     ('a pergunta de emergência sem cartão que case não abre os cartões («estamos em risco» fica vazia)', 'capitao-faq.js', [("if (!cand.length) return d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it) { return { it: it, nota: 0, cobre: 1 }; });", "if (!cand.length) return [];")], 'busca'),
     ('«barco», «bordo» e «lancha» contam na cobertura do cartão («fogo no barco» abre também a água e o abandono)', 'capitao-faq.js', [("var GENERICAS = ' barco bordo embarcacao lancha ';", "var GENERICAS = ' ';")], 'busca'),
     ('o cartão de emergência não respeita a seção filtrada («fogo no motor» na seção dos motores traz o EM-05)', 'capitao-faq.js', [("cand = d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it, i) {", "cand = d.itens.filter(function (it) { return it.emerg; }).map(function (it, i) {")], 'busca'),
     ('«afundando» não é «alagamento» («barco afundando» abre o MAYDAY, o EM-06 em 6º)', 'capitao-faq.js', [("var SIN_EMERG = { afund: ['alagamento'], naufrag: ['alagamento'], alag: ['alagamento'], fumac: ['fogo', 'incendio'] };", "var SIN_EMERG = {};")], 'busca'),
-    ('o cartão que cobre 1 palavra de 3 não entra («incêndio na praça de máquinas» sem o EM-05)', 'capitao-faq.js', [("}).filter(function (x) { return x.c > 0; });", "}).filter(function (x) { return x.c >= 0.5; });")], 'busca'),
+    ('o cartão que cobre 1 palavra de 3 não entra («incêndio na praça de máquinas» sem o EM-05)', 'capitao-faq.js', [("k: a ? a.k : 1e4 + i };\n    }).filter(function (x) { return x.c > 0; });", "k: a ? a.k : 1e4 + i };\n    }).filter(function (x) { return x.c >= 0.5; });")], 'busca'),
     ('o campo de busca da F6 recebe o texto aparado (o espaço digitado some)', 'capitao-faq.js', [("q: String(st.q || ''), temQ: !!q,", "q: q, temQ: !!q,")], 'busca'),
     ('a F6 web sugere um exemplo sem conferência', 'F6-FAQ-Equipamentos-Web.dc.html', [("“gerador não liga”, “alarme de óleo”, “EM-06”", "“gerador não parte”, “alarme de óleo”, “EM-06”")], 'busca'),
     ('o campo do hub sugere um exemplo sem conferência', 'F1-FAQ-Hub-Web.dc.html', [("“ligar gerador”, “alarme”, “canal 16”", "“ligar gerador”, “alarme”, “bomba quebrada”")], 'f1_web'),
@@ -7507,6 +7550,25 @@ MUTANTES_P4H = [
     ('a F6 do app fecha o item e a lista volta ao topo (perde o lugar)', 'F6-FAQ-Equipamentos.dc.html', [("if (e) e.scrollTop = !this.state.sel && antes ? (this._listaTop || 0) : 0;", "if (e) e.scrollTop = 0;")], 'rolagem_app'),
     ('a F4 do app com o fabricante do gerador fixo no prefixo da barra', 'F4-FAQ-Gerador.dc.html', [('prefixo="{{prefixoBarra}}"', 'prefixo="Gerador Onan: "')], 'f2f5:F4-FAQ-Gerador'),
     ('a F2 do app com o fabricante do estabilizador fixo no prefixo da barra', 'F2-FAQ-Estabilizador.dc.html', [('prefixo="{{prefixoBarra}}"', 'prefixo="Estabilizador Seakeeper: "')], 'f2f5:F2-FAQ-Estabilizador'),
+    # —— a revisão final (rodada 4): as palavras de conversa, a salvatagem, o EPIRB e o Seafire ——
+    ('a frase de conversa zera a lista («gostaria de saber sobre o estabilizador», «onde fica o epirb»: a busca exige todas as palavras, as de conversa também)', 'capitao-faq.js', [("var ws = doAssunto(palavras(q), d);", "var ws = palavras(q);")], 'busca'),
+    ('«esta» (de «está») é o começo de «estabilizador» («onde está o epirb» e «onde está o plotter» não acham nada)', 'capitao-faq.js', [("return x === w || (w.length >= 5 && x.indexOf(w) === 0);", "return x === w || x.indexOf(w) === 0;")], 'busca'),
+    ('a palavra curta do assunto («ais», «vhf») só vale com 5 letras («onde fica o ais» não acha nada)', 'capitao-faq.js', [("return x === w || (w.length >= 5 && x.indexOf(w) === 0);", "return w.length >= 5 && x.indexOf(w) === 0;")], 'busca'),
+    ('o começo da palavra ainda digitada não é do assunto («gostaria de saber sobre o estabil» não acha nada)', 'capitao-faq.js', [("return x === w || (w.length >= 5 && x.indexOf(w) === 0);", "return x === w;")], 'busca'),
+    ('«funciona» (de «Como funcionam as bombas de porão») não é palavra de conversa («quero saber como funciona o dessalinizador» não acha nada)', 'capitao-faq.js', [(" nao funciona gostaria queria", " nao gostaria queria")], 'busca'),
+    ('«ajuda» entre palavras de conversa não abre os cartões («preciso de ajuda», «estou precisando de ajuda»: o «preciso» é do cartão do abandono)', 'capitao-faq.js', [("ess = ws.length && !soSocorro && !deEmergencia(rota) ? essenciais(ws, d) : ws;", "ess = ws;")], 'busca'),
+    ('o pedido de socorro que o cérebro toma por emergência perde o cartão da frase («socorro, estou afundando» abre o MAYDAY e o EM-06 só em 6º)', 'capitao-faq.js', [("ess = ws.length && !soSocorro && !deEmergencia(rota) ? essenciais(ws, d) : ws;", "ess = ws.length && !soSocorro ? essenciais(ws, d) : ws;")], 'busca'),
+    ('«preciso de ajuda» traz atrás dos cartões o item que a palavra de conversa achou (o MO-03)', 'capitao-faq.js', [("achados = ems.concat(usaNota ? achados.filter(function (r) { return !r.it.emerg; }) : []);", "achados = ems.concat(achados.filter(function (r) { return !r.it.emerg; }));")], 'busca'),
+    ('«salva-vidas» não é enchimento («salva-vidas» sozinha acha o PAN-PAN: «vidas» é o «vida» dele)', 'capitao-faq.js', [(r".replace(/salva[\s-]*vidas?/g, ' ')", "")], 'busca'),
+    ('o que o cérebro pontua para só enchimento vale («salva-vidas» sozinha acha o PAN-PAN em vez da salvatagem)', 'capitao-faq.js', [("if (ws.length) { try { todos", "{ try { todos")], 'busca'),
+    ('a família de segurança não vem no lugar de «nada encontrado» («Seafire», «bote salva-vidas», «foguete de sinalização»)', 'capitao-faq.js', [("if (!achados.length && !frente.length) achados = familia(rota, ws, d, sec);", "if (false) achados = familia(rota, ws, d, sec);")], 'busca'),
+    ('a família ignora a rota do cérebro (o cérebro não diz que «Seafire» é do sistema fixo)', 'capitao-faq.js', [("rota = rotaDe(t);", "rota = '';")], 'busca'),
+    ('a família toma o lugar de pergunta de outro equipamento («dessalinizador radar balsa» e «colete salva-vidas do porão» abrem a salvatagem)', 'capitao-faq.js', [("if (ws.some(function (w) { return noAssunto(w, d) && !dize.some(function (x) { return mesmoRadical(w, x); }); })) return [];", "")], 'busca'),
+    ('a família não respeita a seção filtrada («colete salva-vidas» na seção dos motores traz o EM-09)', 'capitao-faq.js', [("c: naSecao(it, sec) ? cobreTitulo(it, dize) : 0, i: i }", "c: cobreTitulo(it, dize), i: i }")], 'busca'),
+    ('a família do Seafire traz só 1 item (os SF-01 a SF-04 do sistema fixo ficam de fora)', 'capitao-faq.js', [(".slice(0, 5).map(function (x) { return { it: x.it, nota: 0, cobre: 1 }; });", ".slice(0, 1).map(function (x) { return { it: x.it, nota: 0, cobre: 1 }; });")], 'busca'),
+    ('a família ignora a rota do cérebro no hub («colete salva-vidas» e «Seafire» dão «nenhum item do FAQ»)', 'capitao-faq.js', [("rota = rotaDe(t);", "rota = '';")], 'f1_web'),
+    ('o hub do app não traz o cartão da salvatagem e do Seafire no lugar de «nenhum item»', 'capitao-faq.js', [("if (!achados.length && !frente.length) achados = familia(rota, ws, d, sec);", "if (false) achados = familia(rota, ws, d, sec);")], 'f1_app'),
+    ('a frase de conversa do hub zera a lista («gostaria de saber sobre o estabilizador» nenhum item)', 'capitao-faq.js', [("var ws = doAssunto(palavras(q), d);", "var ws = palavras(q);")], 'f1_web'),
 ]
 F6W, F6A = 'F6-FAQ-Equipamentos-Web', 'F6-FAQ-Equipamentos'
 QUAL_P4H = {
@@ -7525,7 +7587,7 @@ def mutantes_p4h(b):
     vivos = []
     filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
     for nome, arq, trocas, qual in MUTANTES_P4H:
-        if filtro and filtro not in nome: continue
+        if filtro and not any(f in nome for f in filtro.split('|')): continue
         src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
         faltam = [x for x, _ in trocas if src.count(x) != 1]
         if faltam:
@@ -8238,6 +8300,25 @@ def teste_g2_real(b, tela):
             if r['faixas'] or 'SEM DADOS' not in (r['coerencia'] + r['faixasSub']): prob.append('%s: sem o replay a aba Consumo devia dizer SEM DADOS e não listar faixas: %d faixas, %r' % (rot, len(r['faixas']), r['coerencia']))
         prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
+    # o consumo a preencher na próxima embarcação (D.consumo nulo, sem o cruzeiro ou o cruzeiro sem a rotação): nunca «null», «undefined» ou «NaN» na tela, nas duas abas — o cartão Autonomia e a linha Cruzeiro da aba
+    # Consumo dizem SEM DADOS no ramo simulacao false (a velocidade e a rotação de cruzeiro vêm juntas: «a SEM DADOS nós · null rpm» já foi para a tela)
+    CONSUMOS = (('consumo nulo', 'window.CapitaoDados.consumo = null;'), ('consumo sem o cruzeiro', 'window.CapitaoDados.consumo = { lenta: {} };'), ('cruzeiro sem a rotação', 'window.CapitaoDados.consumo.cruzeiro.rpm = null;'),
+                ('cruzeiro sem a velocidade', 'window.CapitaoDados.consumo.cruzeiro.nos = null;'))
+    for nome_c, js_c in CONSUMOS:
+        for aba in ('nivel', 'consumo'):
+            for sim_c in (False, True):
+                ctx, pg, erros = abre_g2(b, tela, aba=aba, depois=('window.CapitaoDados.simulacao = false;' if not sim_c else '') + js_c)
+                r = pg.evaluate(LE_G2)
+                rot = '%s (%s, %s, %s)' % (tela, nome_c, 'simulação' if sim_c else 'simulacao false', aba)
+                vaza = re.findall(r'\bnull\b|undefined|NaN', r['texto'])
+                if vaza: prob.append('%s: o texto da tela traz %s (valor nulo concatenado)' % (rot, sorted(set(vaza))))
+                if not sim_c:
+                    aut = r['kpis'].get('autonomia', '') if aba == 'nivel' else ''
+                    cruz = ([x['s'] for x in r['taxas'] if x['nome'] == 'Cruzeiro'] or [''])[0] if aba == 'consumo' else ''
+                    if aba == 'nivel' and (not re.search(r'SEM DADOS · ', aut.split('reserva de')[0]) or re.search(r'\bnós\b|\brpm\b', aut)): prob.append('%s: o cartão Autonomia devia dizer SEM DADOS no lugar da velocidade e da rotação de cruzeiro (sem «nós» nem «rpm»): %r' % (rot, aut))
+                    if aba == 'consumo' and (not cruz.startswith('SEM DADOS') or re.search(r'\bnós\b|\brpm\b', cruz)): prob.append('%s: a linha Cruzeiro devia dizer SEM DADOS no lugar da velocidade e da rotação de cruzeiro (sem «nós» nem «rpm»): %r' % (rot, cruz))
+                prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+                ctx.close()
     ctx, pg, erros = abre_g2(b, tela)
     r = pg.evaluate(LE_G2)
     if 'SEM DADOS' in r['texto'] or 'Última leitura' in r['texto']: prob.append('%s (simulação): a tela devia estar sem SEM DADOS nem «Última leitura»' % tela)
@@ -8394,12 +8475,16 @@ MUTANTES_P4I = [
     ('a reserva do cartão Autonomia da G2 do app ×10 («reserva de 1 %»)', 'G2-Abastecimento-Mobile.dc.html', [("Math.round(D.reserva * 100)", "Math.round(D.reserva * 10)")], 'nivel'),
     ('a «Marcha lenta» do consumo de referência da G2 web com o L/h do cruzeiro (68 no lugar de 6,2)', 'G2-Abastecimento-Web.dc.html', [("v: num(lz.lph) ? nb(lz.lph) + ' L/h' : falta(SD) }", "v: num(cz.lph) ? nb(cz.lph) + ' L/h' : falta(SD) }")], 'nivel'),
     ('a «Marcha lenta» do consumo de referência da G2 do app com o L/h do cruzeiro', 'G2-Abastecimento-Mobile.dc.html', [("v: num(lz.lph) ? nb(lz.lph) + ' L/h' : falta(SD) }", "v: num(cz.lph) ? nb(cz.lph) + ' L/h' : falta(SD) }")], 'consumo'),
-    ('a rotação do cruzeiro do consumo de referência da G2 web +100 rpm', 'G2-Abastecimento-Web.dc.html', [("' nós · ' + mil(cz.rpm) + ' rpm · dois motores'", "' nós · ' + mil(cz.rpm + 100) + ' rpm · dois motores'")], 'nivel'),
-    ('a rotação do cruzeiro do consumo de referência da G2 do app +100 rpm', 'G2-Abastecimento-Mobile.dc.html', [("' nós · ' + mil(cz.rpm) + ' rpm · dois motores'", "' nós · ' + mil(cz.rpm + 100) + ' rpm · dois motores'")], 'consumo'),
+    ('a rotação do cruzeiro do consumo de referência da G2 web +100 rpm', 'G2-Abastecimento-Web.dc.html', [("cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm' : falta(SD);", "cz.nos + ' nós · ' + mil(cz.rpm + 100) + ' rpm' : falta(SD);")], 'nivel'),
+    ('a rotação do cruzeiro do consumo de referência da G2 do app +100 rpm', 'G2-Abastecimento-Mobile.dc.html', [("cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm' : falta(SD);", "cz.nos + ' nós · ' + mil(cz.rpm + 100) + ' rpm' : falta(SD);")], 'consumo'),
     ('a linha da foto da NF da G2 web volta ao travessão de dado vazio nos litros', 'G2-Abastecimento-Web.dc.html', [("litros: 'na NF'", "litros: '—'")], 'nf'),
     ('a linha da foto da NF da G2 do app volta ao travessão de dado vazio nos litros', 'G2-Abastecimento-Mobile.dc.html', [("litros: 'na NF'", "litros: '—'")], 'nf'),
     ('o histórico da G2 web escreve «0 A CONFIRMAR» sem foto nenhuma', 'G2-Abastecimento-Web.dc.html', [("(d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho)' : '')", "' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho)'")], 'nf'),
     ('o título do histórico da G2 do app escreve «0 A CONFIRMAR» sem foto nenhuma', 'G2-Abastecimento-Mobile.dc.html', [("(d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR' : '')", "' · ' + d.nEnv + ' A CONFIRMAR'")], 'nf'),
+    # —— a revisão final (rodada 4): o consumo a preencher (D.consumo nulo) nunca escreve «null rpm» ——
+    ('a G2 web escreve «undefined nós · null rpm» com o consumo a preencher (sem o rótulo SEM DADOS)', 'G2-Abastecimento-Web.dc.html', [("czVel = czOk ? cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm' : falta(SD);", "czVel = cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm';")], 'real_g2'),
+    ('a G2 do app escreve «undefined nós · null rpm» com o consumo a preencher (sem o rótulo SEM DADOS)', 'G2-Abastecimento-Mobile.dc.html', [("czVel = czOk ? cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm' : falta(SD);", "czVel = cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm';")], 'real_g2'),
+    ('a G2 web com a velocidade de cruzeiro e sem a rotação escreve «18 nós · null rpm»', 'G2-Abastecimento-Web.dc.html', [("const czOk = !!cz.nos && mil(cz.rpm) !== null,", "const czOk = !!cz.nos,")], 'real_g2'),
     # —— o código ——
     ('a G1 web não tira o ouvinte da virada do dia ao desmontar', 'G1-Documentos-Web.dc.html', [("window.removeEventListener('capitao-rebase', this._onRebase);", "")], 'codigo'),
     ('a G2 do app não tira o ouvinte da telemetria ao desmontar', 'G2-Abastecimento-Mobile.dc.html', [("window.removeEventListener('capitao-telemetria', this._onTele);", "")], 'codigo'),
@@ -8413,7 +8498,7 @@ def mutantes_p4i(b):
     vivos = []
     filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
     for nome, arq, trocas, qual in MUTANTES_P4I:
-        if filtro and filtro not in nome: continue
+        if filtro and not any(f in nome for f in filtro.split('|')): continue
         src = open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
         faltam = [x for x, _ in trocas if src.count(x) != 1]
         if faltam:

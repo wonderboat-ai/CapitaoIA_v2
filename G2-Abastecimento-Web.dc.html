@@ -311,6 +311,8 @@ class Component extends DCLogic {
     const fonteTxt = I ? (reserva ? 'Última leitura · ' + String(I.fonteTxt || '').replace(/^.*leitura de /, '') : cap1(I.fonteTxt)) : falta('Leitura ' + SL);
     const hora = I ? I.hora : '';
     const C0 = D.consumo || {}, cz = C0.cruzeiro || {}, lz = C0.lenta || {}, cap = D.embarcacao && D.embarcacao.tanques && D.embarcacao.tanques.diesel_l;
+    // a velocidade e a rotação de cruzeiro: as duas ou, sem uma delas (consumo a preencher: o ramo simulacao false), o rótulo — nunca «null rpm»
+    const czOk = !!cz.nos && mil(cz.rpm) !== null, czVel = czOk ? cz.nos + ' nós · ' + mil(cz.rpm) + ' rpm' : falta(SD);
     const fAbast = D.abastFonte || falta(SD), fAbastC = String(fAbast).split(' · ')[0];
     const dt = (t) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(t || ''); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : null; };
     const hm = (t) => { const m = /^(\d{2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : 0; };
@@ -333,7 +335,7 @@ class Component extends DCLogic {
       { id: 'diesel', l: 'DIESEL A BORDO', v: litros ? '≈ ' + litros : falta(SD), u: diesel.cap ? 'L de ' + diesel.cap : '', s: litros ? 'BB ' + (bb !== null ? nb(bb) : falta(SL)) + ' % · BE ' + (be !== null ? nb(be) : falta(SL)) + ' % · ' + (pct !== null ? nb(pct) + ' % do total' : falta(SL)) : falta(SL), f: 'Fonte: ' + fonteTxt.toLowerCase(), tone: 'ink', t: 'tele', d: 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4', href: 'A1-Ponte-Web.dc.html' },
       { id: 'ultimo', l: 'ÚLTIMO ABASTECIMENTO', v: ult && num(ult.litros) ? mil(ult.litros) : falta(SD), u: ult ? 'L · ' + ult.d + (ult.h ? ' ' + ult.h : '') : '', s: ult ? (ult.local || falta('local ' + SD)) + ' · ' + (ult.st || '') + (num(ult.nivelDepois) ? ' · tanques ≈ ' + nb(ult.nivelDepois) + ' % depois' : '') : 'nenhum registro', f: 'Fonte: ' + fAbastC, tone: 'ok', t: 'ok', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', href: 'Main.dc.html#q=' + encodeURIComponent('Consumo de diesel observado por regime e desde o último abastecimento.') },
       { id: 'desde', l: 'CONSUMIDO DESDE ' + (desde && desde.desde ? desde.desde.slice(0, 5) + (desde.h ? ' ' + desde.h : '') : falta('—')), v: desde && num(desde.litros) ? '≈ ' + mil(desde.litros) : falta(SD), u: 'L', s: desde ? 'desde o abastecimento · estimativa pela telemetria' : falta(SD), f: 'Fonte: ' + (C0.fonte || falta(SD)), tone: 'ink', t: 'warn', d: 'M3 12h4l2-6 3 12 2.5-8 1.5 4h5', href: 'Main.dc.html#q=' + encodeURIComponent('Consumo de diesel observado por regime e desde o último abastecimento.') },
-      { id: 'autonomia', l: 'AUTONOMIA', v: aut && num(aut.horas) ? '≈ ' + nb(aut.horas) + ' h' : falta(SD), u: aut && num(aut.mn) ? '≈ ' + mil(aut.mn) + ' mn' : '', s: 'a ' + (cz.nos || falta('—')) + ' nós · ' + mil(cz.rpm) + ' rpm · ' + (num(cz.lph) ? nb(cz.lph, 0) + ' L/h' : falta('L/h ' + SD)) + ' · reserva de ' + reservaTxt + ' · marcha lenta ≈ ' + (aut && num(aut.lenta) ? mil(aut.lenta) + ' h' : falta(SD)), f: 'Fonte: ' + (C0.fonte || falta(SD)), tone: 'ok', t: 'accent', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', href: 'Main.dc.html#q=' + encodeURIComponent('Autonomia com reserva de 10% pelo diesel a bordo.') }
+      { id: 'autonomia', l: 'AUTONOMIA', v: aut && num(aut.horas) ? '≈ ' + nb(aut.horas) + ' h' : falta(SD), u: aut && num(aut.mn) ? '≈ ' + mil(aut.mn) + ' mn' : '', s: (czOk ? 'a ' : '') + czVel + ' · ' + (num(cz.lph) ? nb(cz.lph, 0) + ' L/h' : falta('L/h ' + SD)) + ' · reserva de ' + reservaTxt + ' · marcha lenta ≈ ' + (aut && num(aut.lenta) ? mil(aut.lenta) + ' h' : falta(SD)), f: 'Fonte: ' + (C0.fonte || falta(SD)), tone: 'ok', t: 'accent', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', href: 'Main.dc.html#q=' + encodeURIComponent('Autonomia com reserva de 10% pelo diesel a bordo.') }
     ];
 
     // ——— histórico: as linhas do registro (D.abastecimentos, com as datas de hoje) e as fotos de NF deste aparelho (A CONFIRMAR: o app não lê o arquivo) ———
@@ -380,7 +382,7 @@ class Component extends DCLogic {
       histFonte: 'Fonte: ' + fAbast + ' · fotos de NF: só neste aparelho · sem valores no app',
       estacao: estacao, twa: twa === null ? null : Math.round(twa * 10) / 10,
       taxas: [
-        { n: 'Cruzeiro', s: (cz.nos || falta('—')) + ' nós · ' + mil(cz.rpm) + ' rpm · dois motores', v: num(cz.lph) ? nb(cz.lph, 0) + ' L/h' : falta(SD) },
+        { n: 'Cruzeiro', s: czVel + ' · dois motores', v: num(cz.lph) ? nb(cz.lph, 0) + ' L/h' : falta(SD) },
         { n: 'Marcha lenta', s: 'autonomia em lenta ≈ ' + (aut && num(aut.lenta) ? mil(aut.lenta) + ' h' : falta(SD)), v: num(lz.lph) ? nb(lz.lph) + ' L/h' : falta(SD) }
       ],
       taxaFonte: 'Fonte: ' + (C0.fonte || falta(SD)) + ' · a NF é a fonte oficial',
