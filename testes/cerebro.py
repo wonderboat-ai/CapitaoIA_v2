@@ -748,11 +748,28 @@ SOCORRO_PESSOA_P4G = [
     'o Garmin sumiu da tela e a Ana desapareceu', 'o Garmin sumiu e o João desapareceu', 'o Garmin travou. A Ana desapareceu', 'a Ana desapareceu e o Garmin sumiu da tela', 'o Spotify sumiu do celular e o Pedro desapareceu',
     'perdi um passageiro, a lista de saída tinha 6', 'o passageiro sumiu no mar', 'sumiu um tripulante da lancha', 'o Pedro pulou pela borda',
     # a frase longa (8 palavras ou mais, sem pergunta) continua socorro: o relato, que a route() consulta ANTES do socorro, não a toma como «proposta de registro»
-    'o Pedro sumiu faz dez minutos e estamos procurando por todo o barco', 'a Ana desapareceu faz uns vinte minutos e ninguém viu para onde ela foi', 'perdemos um passageiro faz dez minutos e ninguém viu onde ele caiu']
+    'o Pedro sumiu faz dez minutos e estamos procurando por todo o barco', 'a Ana desapareceu faz uns vinte minutos e ninguém viu para onde ela foi', 'perdemos um passageiro faz dez minutos e ninguém viu onde ele caiu',
+    # 3ª rodada. O grupo, a rede, o turno, o plantão, a escala, a equipe e a tripulação são lugar de GENTE: só o dado tira o socorro (o grupo e a rede digitais, a conta de pessoal com «falta»). «Perdemos um tripulante na equipe de manutenção»
+    # (que a lista SOS do gerador já pegava) e «o passageiro sumiu da equipe» voltam a ser socorro: na dúvida, a janela de 15 min custa menos que uma pessoa a bordo ignorada
+    'uma pessoa sumiu do grupo de mergulho', 'um passageiro sumiu do grupo', 'o menino sumiu do grupo na praia', 'a Ana desapareceu do grupo de mergulho', 'perdemos uma pessoa do grupo', 'uma criança sumiu da rede', 'um tripulante desapareceu do turno da noite',
+    'uma pessoa sumiu da escala de pesca', 'sumiu um passageiro no turno da noite', 'desapareceu um tripulante no meu turno', 'uma criança desapareceu do grupo', 'o passageiro sumiu da rede de proteção', 'o passageiro sumiu da equipe',
+    'o passageiro sumiu da tripulação', 'o passageiro sumiu do plantão', 'perdemos um tripulante na equipe de manutenção', 'faltam duas pessoas no grupo', 'sumiu um passageiro da rede do catamarã',
+    # o adjetivo (antes ou depois do nome, com ou sem artigo), quem sai e some, o nome fora da lista dos prenomes (a maiúscula é o que o reconhece: Wendell, Genivaldo, Cleuza) e o de 2 letras (Bi, Ti)
+    'Pedro está desaparecido', 'Ana está desaparecida', 'Pedro tá sumido', 'Está desaparecida a Ana', 'Pedro foi embora e sumiu', 'o Pedro está desaparecido', 'Genivaldo está desaparecido', 'Cleuza tá sumida', 'Wendell foi embora e sumiu',
+    'Wendell desapareceu', 'o Wendell desapareceu do barco', 'a Cleuza sumiu', 'perdemos o Genivaldo no mar', 'perdi o Zeferino de vista', 'cadê o Zeferino? sumiu', 'Cadê Wendell? Não está a bordo', 'não vejo o Genivaldo em lugar nenhum', 'o Wendell pulou pela borda',
+    'o Genivaldo foi levado pela correnteza', 'o Bi desapareceu', 'perdemos o Ti no mar', 'ninguém viu o Bi',
+    # o nome de 2 letras da lista, o prenome em minúscula e em CAIXA ALTA (o texto de celular e o ditado)
+    'o Zé desapareceu do barco', 'Zé desapareceu', 'perdemos o Zé no mar', 'perdi o Zé', 'ninguém viu o Zé', 'não vejo o Zé em lugar nenhum', 'cadê o Zé? não está a bordo', 'a Lu desapareceu', 'perdemos a Lu', 'o Ed sumiu',
+    'o pedro desapareceu', 'o pedro sumiu do barco', 'o PEDRO SUMIU', 'o ze sumiu', 'a lu desapareceu', 'a ana desapareceu', 'perdemos o lucas no mar', 'o pedro não aparece, será que caiu', 'pedro está desaparecido', 'PERDI O JOAO DE VISTA',
+    # a função de bordo e o parentesco que a lista do gerador não tem
+    'o mestre sumiu', 'o cozinheiro desapareceu', 'o turista sumiu', 'o senhor desapareceu', 'a velhinha sumiu', 'o marinheiro desapareceu', 'o comandante desapareceu', 'o convidado sumiu', 'o Léo sumiu', 'o garoto sumiu', 'a garota desapareceu',
+    'a senhora desapareceu', 'o senhor sumiu', 'o mestre desapareceu', 'o cozinheiro sumiu', 'o pescador sumiu', 'o jovem desapareceu', 'o visitante sumiu',
+    # quem faz uma atividade na água e não volta (sem «na água»), quem cai do reboque, o pronome com o lugar, a cláusula
+    'o mergulhador não voltou', 'o mergulhador não subiu', 'nadador não voltou', 'o esquiador caiu', 'ele sumiu do barco', 'ela desapareceu da lancha', 'o rapaz que estava no jet ski sumiu', 'a garota que foi nadar sumiu']
 NAO_SOCORRO_PESSOA_P4G = [
     # o sumiço de dados: a pessoa na lista, no cadastro, na equipe, no app (a lista SOS do gerador pegava vários)
     'o passageiro sumiu da lista', 'o tripulante desapareceu do cadastro da equipe', 'o nome do tripulante sumiu da Equipe', 'a Maria sumiu da lista de equipe', 'o Lucas sumiu da lista', 'o Carlos sumiu do app',
-    'perdi um passageiro na lista de saída', 'perdemos um tripulante na equipe de manutenção', 'falta gente na equipe', 'falta uma pessoa na escala', 'o contato da Maria sumiu', 'a foto do João desapareceu do app', 'o nome do tripulante sumiu',
+    'perdi um passageiro na lista de saída', 'falta gente na equipe', 'falta uma pessoa na escala', 'o contato da Maria sumiu', 'a foto do João desapareceu do app', 'o nome do tripulante sumiu',
     'o passageiro desapareceu do cadastro', 'a pessoa responsável sumiu do cadastro', 'o Lucas sumiu do WhatsApp', 'Perdi o Lucas no WhatsApp', 'o Pedro desapareceu do Instagram', 'Falta o Lucas assinar o diário',
     'Falta gente para a revisão', 'falta uma pessoa para completar a tripulação', 'Falta gente a bordo para o passeio de sábado',
     # aplicativo, serviço, marca e palavra de bordo com maiúscula
@@ -767,7 +784,17 @@ NAO_SOCORRO_PESSOA_P4G = [
     'a tripulação não está a bordo', 'o mecânico não está a bordo, qual o telefone?', 'ele não está a bordo hoje, quem assume?',
     # o objeto, a pergunta e o resto
     'não encontro o manual, acho que caiu atrás do armário, qual a posição?', 'não achamos o filtro, acho que caiu atrás da bancada', 'não acho o extintor', 'perdi minha chave', 'perdi um filtro', 'perdemos o sinal do GPS', 'cadê o Pedro?',
-    'onde está o Lucas?', 'quem está a bordo?', 'quantas pessoas a bordo', 'o Lucas está a bordo?']
+    'onde está o Lucas?', 'quem está a bordo?', 'quantas pessoas a bordo', 'o Lucas está a bordo?',
+    # 3ª rodada. O grupo e a rede DIGITAIS (WhatsApp, Telegram, rede social) e a conta de pessoal com «falta» são rotina; o que é do passageiro (o colete, o documento, a mochila, o remédio da criança) não é «a pessoa que não está a bordo»;
+    # o embarque («falta um passageiro embarcar»), o evento («tem gente faltando na reunião de amanhã») e o passageiro que foi para outra marina; as palavras que abrem a frase e o 2 letras («Já», «Só», «Não»); o prenome em minúscula com dado
+    'o Lucas sumiu do grupo do WhatsApp', 'o passageiro sumiu do grupo do WhatsApp', 'o Pedro desapareceu do grupo do Telegram', 'perdi o Lucas na rede social', 'sumiu o passageiro do grupo do WhatsApp', 'perdi o Lucas no grupo do WhatsApp',
+    'falta alguém no turno da noite', 'faltam duas pessoas no turno da noite', 'faltou gente na escala de sábado', 'falta um tripulante no plantão',
+    'o colete da criança não está a bordo', 'o colete do bebê não está a bordo', 'o colete salva-vidas da criança não está a bordo', 'o documento do passageiro não está a bordo', 'a mochila do passageiro não está a bordo',
+    'a bagagem do tripulante não está a bordo', 'a cadeira do bebê não está a bordo', 'o remédio do meu filho não está a bordo', 'o chinelo da menina não está a bordo', 'o celular do passageiro não está a bordo', 'cadê o colete da criança? não está a bordo',
+    'falta um passageiro embarcar', 'faltam duas pessoas chegar para sairmos', 'tem gente faltando na reunião de amanhã', 'perdi um passageiro para outra marina', 'falta uma pessoa assinar', 'falta um passageiro chegar',
+    'Não sumiu o alarme', 'Já sumiu o sinal', 'Só desapareceu o ícone', 'Aí sumiu a luz', 'Se sumiu o sinal avise', 'Um sumiu da tela', 'Nem sumiu o alarme', 'Capitão, o alarme sumiu', 'Capitão, o plotter sumiu', 'o waypoint sumiu', 'o gráfico desapareceu',
+    'o efeito imediato desapareceu', 'o cliente sumiu', 'o lucas sumiu da lista', 'perdi o lucas no whatsapp', 'o carlos sumiu do app', 'o pedro desapareceu do instagram', 'falta o lucas assinar o diário', 'cadê o pedro?', 'o lucas está a bordo?',
+    'sumiu um passageiro da lista', 'falta gente no cadastro', 'perdemos um tripulante na lista de manutenção', 'tem gente faltando na escala', 'tem alguém faltando no turno da noite', 'faltam duas pessoas na reunião de amanhã', 'Muito sumiu de repente', 'Quase sumiu o sinal', 'Sempre sumiu o sinal', 'o Tv sumiu', 'o Pc desapareceu', 'o Ar desapareceu', 'a Tv desapareceu do salão', 'o Ip sumiu']
 
 # O relato com número ou estado NÃO é a pergunta da leitura: nenhuma destas perguntas pode voltar «dentro da faixa normal», «Profundidade de 10,8 m», «Ondas de 0,8 m» nem a água do mar a 20 °C
 # (trava 10: relato de falha sem leitura calma). Vão ao guia, ao fallback, à IA ou à rota do assunto (não importa qual; importa que não seja a leitura).
@@ -6866,7 +6893,7 @@ JS_P3F_FOTO = """() => { const B = window.CapitaoBrain, o = {}; localStorage.cle
   o.agua = foto('foto', 'a água do mar está entrando pelo casco da popa devagar agora'); o.aguaNivel = foto('foto', 'o nível de água na sala de máquinas subiu bastante nos últimos minutos desde que saímos'); o.ticketsAgua = B.loadTickets().length;
   o.perguntaMarca = foto('foto', 'esta etiqueta está legível?'); o.pedidoApp = foto('foto', 'confira a etiqueta desta foto do gerador'); o.pedidoResumoMais = foto('foto', 'registre no diário posição e hora, saída com 4 pessoas');
   o.semCat = foto('foto', 'vista bonita do pier ao entardecer'); o.longaLegenda = foto('foto', 'legenda '.repeat(90));
-  o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB'); o.sumiu = foto('foto', 'a Ana desapareceu'); o.sumida = foto('foto', 'perdi um passageiro');
+  o.pergunta = foto('foto', 'o que é isso?'); o.perguntaSem = foto('foto', 'qual o modelo desta etiqueta'); o.ack = foto('foto', 'obrigado'); o.emerg = foto('foto', 'mayday, homem ao mar'); o.oleo = foto('foto', 'pressão de óleo baixa no motor BB'); o.sumiu = foto('foto', 'a Ana desapareceu'); o.sumida = foto('foto', 'perdi um passageiro'); o.sumiuNome = foto('foto', 'o Wendell desapareceu'); o.sumiuMinuscula = foto('foto', 'o pedro desapareceu');
   B.answer('registrar no diário que', op); o.link = foto('foto', 'filtro sujo', { commit: false }); o.depoisDoLink = foto('foto', 'o gerador foi ligado às sete');   // o pedido de link não consome a espera
   B.answer('registrar no diário que', op); const real = Date.now; Date.now = () => real() + 121000; o.esperaVelha = foto('foto', 'o gerador foi ligado às sete'); Date.now = real;   // a espera vale 2 min
   // a espera do «o que devo registrar?»: a legenda é o registro (uma vez só)
@@ -6902,8 +6929,8 @@ def grupo_p3f_foto(b, muta, ped):
             and o['relato']['linhas'] == 1 and o['relato']['linha']['t'].startswith('Trocamos o filtro de ar do gerador hoje de manhã na marina · foto anexada') and o['relato']['pedido'] is True and o['tickets0'] == 0, (o['pedidoReg'], o['pedidoResumo'], o['relato']['linha']))
         ped('p3f F36 (revisão): o texto de perigo com água (a água do mar entrando, o nível de água subindo) dito com a foto NÃO é relato tratado: o pedido é falso (a tela responde ao texto, que pode ser socorro) e nenhuma proposta nasce',
             o['agua']['pedido'] is False and o['aguaNivel']['pedido'] is False and o['agua']['linhas'] == 1 and o['aguaNivel']['linhas'] == 1 and o['ticketsAgua'] == 0, (o['agua']['pedido'], o['aguaNivel']['pedido'], o['ticketsAgua']))
-        sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo', 'sumiu', 'sumida')
-        ped('p3f F36: a pergunta, o reconhecimento, a emergência, a pessoa desaparecida («a Ana desapareceu», «perdi um passageiro») e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
+        sem_texto = ('pergunta', 'perguntaSem', 'perguntaMarca', 'pedidoApp', 'pedidoResumoMais', 'ack', 'emerg', 'oleo', 'sumiu', 'sumida', 'sumiuNome', 'sumiuMinuscula')
+        ped('p3f F36: a pergunta, o reconhecimento, a emergência, a pessoa desaparecida («a Ana desapareceu», «perdi um passageiro», «o Wendell desapareceu», «o pedro desapareceu») e a pressão de óleo ditos com a foto NÃO entram na linha (a foto vai sozinha, 1 linha) e ficam para a conversa responder (pedido falso)',
             all(o[k]['linhas'] == 1 and o[k]['linha']['t'] == 'Foto anexada pelo chat: a.jpg (2 KB) — identificação A CONFIRMAR.' and not o[k]['nota'] and not o[k]['pedido'] for k in sem_texto), {k: o[k]['linha']['t'] for k in sem_texto})
         ped('p3f F36: o pedido de link (commit false) não grava nada, diz que não anexou e não consome a espera do «o que devo registrar?» (a foto seguinte ainda é o registro); a espera vencida (121 s) não vira registro', o['link']['linhas'] == 0 and 'pedido vindo de link' in o['link']['text'] and o['depoisDoLink']['pedido'] is True and o['depoisDoLink']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada') and o['esperaVelha']['pedido'] is False and o['esperaVelha']['linha']['t'].startswith('O gerador foi ligado às sete · foto anexada'), (o['link']['linhas'], o['link']['text'][:160], o['depoisDoLink']['pedido'], o['esperaVelha']['pedido']))
         ped('p3f F36: a legenda sem categoria fica em Equipamentos; a legenda enorme (700 letras) entra com no máximo 600', o['semCat']['linha']['sys'] == 'Equipamentos' and o['semCat']['linha']['t'].startswith('Vista bonita do pier ao entardecer · foto anexada') and 0 < len(o['longaLegenda']['linha']['t'].split(' · foto anexada')[0]) <= 600, (o['semCat']['linha']['sys'], len(o['longaLegenda']['linha']['t'])))
@@ -7120,9 +7147,9 @@ GRUPOS_3A['p3f_foto'] = grupo_p3f_foto
 # Revisão final da P4G, 2ª rodada: o TEXTO que se manda registrar («registre no diário: o João sumiu»), a foto com o texto de pessoa que some e a marca que só o D.equipamentos conhece. O diário usa o MESMO predicado da rota
 # (emergenciaTexto: a lista SOS, o pedido de socorro implícito e a pessoa que some, com ou sem nome): a resposta abre com a instrução de segurança e liga a janela, como «registre no diário: homem ao mar».
 DIARIO_PESSOA_EMERG = ['registre no diário: homem ao mar', 'registre no diário: o João sumiu', 'registre no diário: perdemos um passageiro', 'anote no diário: a Ana desapareceu', 'registre no diário: estamos em risco',
-                       'registre no diário: perdemos o Pedro no mar', 'registre no diário: sumiram duas pessoas', 'registre no diário: não achamos a Maria, acho que caiu', 'registre a posição e a hora, o João sumiu']
+                       'registre no diário: perdemos o Pedro no mar', 'registre no diário: sumiram duas pessoas', 'registre no diário: não achamos a Maria, acho que caiu', 'registre a posição e a hora, o João sumiu', 'registre no diário: o Wendell sumiu', 'registre no diário: o pedro sumiu']
 DIARIO_PESSOA_ROTINA = ['registre no diário: o passageiro sumiu da lista', 'registre no diário: o Spotify sumiu', 'registre no diário: troquei o filtro do gerador', 'registre no diário: o nome do tripulante sumiu da Equipe']
-FOTO_PESSOA_EMERG = ['perdemos o Pedro no mar', 'o Pedro sumiu', 'não encontramos o João, acho que caiu, qual a posição?', 'sumiram duas pessoas', 'a Ana desapareceu', 'registre no diário: o Pedro sumiu']
+FOTO_PESSOA_EMERG = ['perdemos o Pedro no mar', 'o Pedro sumiu', 'não encontramos o João, acho que caiu, qual a posição?', 'sumiram duas pessoas', 'a Ana desapareceu', 'registre no diário: o Pedro sumiu', 'o Wendell sumiu', 'o pedro desapareceu']
 FOTO_PESSOA_ROTINA = ['o Spotify sumiu', 'o passageiro sumiu da lista', 'o Garmin sumiu da tela']
 JS_P4G_PESSOA = r"""(args) => { const B = window.CapitaoBrain, D = window.CapitaoDados, op = { platform: 'app' }, o = { dia: [], diaNao: [], foto: [], fotoNao: [] };
   const reg = (q) => { localStorage.clear(); const a = B.answer(q, op); return { q: q, key: a.key, sos: /Se a emergência é agora/.test(a.text), jan: a.abreJanela === true, emerg: a.emerg === true, linhas: B.loadDiario().map((x) => x.t) }; };
@@ -7133,6 +7160,10 @@ JS_P4G_PESSOA = r"""(args) => { const B = window.CapitaoBrain, D = window.Capita
   const sem = B.answer('o Zeppelin sumiu', { platform: 'app', commit: false }).key;
   D.equipamentos.push({ id: 'zz', nome: 'Ponte', fabricante: 'Zeppelin', modelo: 'Z1', qtd: 1, lados: false, guia: null, palavras: [], nominal: false, fonte: 'teste' });
   o.marca = { sem: sem, com: B.answer('o Zeppelin sumiu', { platform: 'app', commit: false }).key };
+  // o prenome em minúscula («o beto sumiu») é pessoa, MENOS quando a palavra é fabricante, equipamento ou modelo do cadastro (D.equipamentos): a marca nunca é nome
+  const semB = B.answer('o beto sumiu', { platform: 'app', commit: false }).key;
+  D.equipamentos.push({ id: 'zy', nome: 'Ponte', fabricante: 'Beto', modelo: 'B1', qtd: 1, lados: false, guia: null, palavras: [], nominal: false, fonte: 'teste' });
+  o.prenome = { sem: semB, com: B.answer('o beto sumiu', { platform: 'app', commit: false }).key };
   return o; }"""
 
 
@@ -7149,6 +7180,7 @@ def grupo_p4g_pessoa(b, muta, ped):
         ruins = [(x['txt'], x['jan'], x['situ'], x['linhas']) for x in o['fotoNao'] if x['jan'] or not x['situ'] or len(x['linhas']) != 1 or ('foto anexada' not in x['linhas'][0])]
         ped('p4g pessoa: a foto com a legenda de rotina («o Spotify sumiu», «o passageiro sumiu da lista») não liga a janela, leva a situação de bordo e a legenda entra na linha da foto', not ruins, ruins[:5])
         ped('p4g pessoa: a marca que só o cadastro (D.equipamentos) conhece não é nome («o Zeppelin sumiu» é rotina com o fabricante no cadastro e socorro sem ele)', o['marca']['sem'] == 'sos' and o['marca']['com'] != 'sos', o['marca'])
+        ped('p4g pessoa: o prenome em minúscula é nome («o beto sumiu» é socorro) e a marca do cadastro nunca é nome (com um fabricante «Beto» no D.equipamentos, é rotina)', o['prenome']['sem'] == 'sos' and o['prenome']['com'] != 'sos', o['prenome'])
     finally:
         pg.ctx.close()
 
@@ -9183,7 +9215,7 @@ JS_JAN_API = """() => { const B = window.CapitaoBrain, R = window.CapitaoReplay,
   // o TEXTO que vai com a foto (revisão final da P4G): a pergunta de emergência (SOS, óleo, salvatagem, MMSI, pessoa desaparecida) liga a janela na resposta da foto — a janela só abre DEPOIS, na resposta da pergunta, e a foto vinha
   // com o SOG e a proa do quadro antes da instrução de segurança; a pergunta de rotina e a legenda não ligam. (commit false: nenhuma linha vai ao diário.)
   const tx = (texto) => { const r = B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: texto }), v = B.answerAttachment('video', file, { platform: 'app', commit: false, texto: texto }); return { texto, foto: r.text, fotoJanela: r.janela === true, fotoInst: r._inst !== undefined, video: v.text, videoJanela: v.janela === true }; };
-  out.anexoTexto = { emerg: ['tem fogo no motor', 'pressão de óleo baixa no motor BB', 'onde estão os coletes?', 'qual o MMSI do rádio?', 'pessoa desaparecida a bordo', 'a Ana desapareceu', 'perdemos o Pedro no mar', 'o Pedro sumiu', 'não encontramos o João, acho que caiu, qual a posição?', 'sumiram duas pessoas', 'estamos em risco'].map(tx), rotina: ['qual o rumo agora?', 'filtro de água salgada sujo e com limo', 'o que é isso?', 'o Spotify sumiu', 'o passageiro sumiu da lista', 'o Garmin sumiu da tela'].map(tx),
+  out.anexoTexto = { emerg: ['tem fogo no motor', 'pressão de óleo baixa no motor BB', 'onde estão os coletes?', 'qual o MMSI do rádio?', 'pessoa desaparecida a bordo', 'a Ana desapareceu', 'perdemos o Pedro no mar', 'o Pedro sumiu', 'não encontramos o João, acho que caiu, qual a posição?', 'sumiram duas pessoas', 'estamos em risco', 'o Wendell desapareceu', 'o pedro desapareceu'].map(tx), rotina: ['qual o rumo agora?', 'filtro de água salgada sujo e com limo', 'o que é isso?', 'o Spotify sumiu', 'o passageiro sumiu da lista', 'o Garmin sumiu da tela'].map(tx),
     ja: (() => { const r = B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: 'qual o rumo agora?', emergencia: true }); return { foto: r.text, janela: r.janela === true }; })(), semTexto: B.answerAttachment('foto', file, { platform: 'app', commit: false, texto: '   ' }).text };
   // a janela não vaza e só liga com `true`
   const depois = B.answer('posição agora', op), txt = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 'true' }), um = B.answer('posição agora', { platform: 'app', commit: false, emergencia: 1 }), falso = B.answer('posição agora', { platform: 'app', commit: false, emergencia: false });
@@ -9770,14 +9802,14 @@ MUTANTES_P4G_REV = [
     # —— as formas de pessoa (cada uma é acusada por uma pergunta que só ela pega) ——
     ('p4g pessoa: sem o adjetivo («pessoa desaparecida a bordo», «tripulante desaparecido», «passageiro sumido»)', r"var ADJ_SUMIDO = '(?:desaparecid[oa]s?|sumid[oa]s?|perdid[oa]s?|extraviad[oa]s?)';", r"var ADJ_SUMIDO = '(?:xdesaparecid[oa]s?|xsumid[oa]s?|xperdid[oa]s?|xextraviad[oa]s?)';", ('p3c',)),
     ('p4g pessoa: sem «desaparecimento de passageiro»', r"' desaparecimento d[eao]s? '", r"' xdesaparecimento d[eao]s? '", ('p3c',)),
-    ('p4g pessoa: sem «perdi um passageiro» (a lista SOS só tem tripulante, criança, filho e menino)', r"' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + ' ',", r"' (?:xperdi|xperdemos|xperdeu|xperderam) ' + DETN + PES_ELE + ' ',", ('p3c',)),
+    ('p4g pessoa: sem «perdi um passageiro» (a lista SOS só tem tripulante, criança, filho e menino)', r"' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + ' (?!' + ROT_PERDI + ')',", r"' (?:xperdi|xperdemos|xperdeu|xperderam) ' + DETN + PES_ELE + ' (?!' + ROT_PERDI + ')',", ('p3c',)),
     ('p4g pessoa: sem «sumiram duas pessoas» (o verbo ANTES da pessoa, com número)', r"' ' + V_SUMIU + ' ' + DETN + PES_ELE + ' ',", r"' x' + V_SUMIU + ' ' + DETN + PES_ELE + ' ',", ('p3c',)),
     ('p4g pessoa: sem «Pedro desapareceu» e «meu amigo desapareceu» (o verbo DEPOIS da pessoa, nome inclusive)', r"' ' + PES_ELE + '(?: [a-z0-9]+){0,2} ' + V_SUMIU + ' ',", r"' ' + PES_ELE + '(?: [a-z0-9]+){0,2} x' + V_SUMIU + ' ',", ('p3c',)),
     ('p4g pessoa: sem «faltam duas pessoas» e «falta uma pessoa a bordo»', r"' (?:falta|faltam|faltou|faltaram|faltando|esta faltando|estao faltando) ' + DETN + PES_FALTA", r"' (?:xfalta|xfaltam|xfaltou|xfaltaram|xfaltando|xesta faltando|xestao faltando) ' + DETN + PES_FALTA", ('p3c',)),
     ('p4g pessoa: «falta gente para a revisão» é socorro (a palavra «gente» na pessoa que falta)', r"var PES_FALTA = '(?:alguem|pessoas?|", r"var PES_FALTA = '(?:gente|alguem|pessoas?|", ('p3c',)),
-    ('p4g pessoa: «falta o Lucas assinar o diário» é socorro (o nome na pessoa que falta)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?= )',", r"DETN + PES_ELE + ' ',", ('p3c',)),
-    ('p4g pessoa: «falta uma pessoa para completar a tripulação» é socorro (sem o «para» de quem completa a equipe)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?= )',", r"DETN + PES_FALTA + '(?= )',", ('p3c',)),
-    ('p4g pessoa: sem «tem gente faltando»', r"' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?faltando ',", r"' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?xfaltando ',", ('p3c',)),
+    ('p4g pessoa: «falta o Lucas assinar o diário» é socorro (o nome na pessoa que falta)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',", r"DETN + PES_ELE + ' ',", ('p3c',)),
+    ('p4g pessoa: «falta uma pessoa para completar a tripulação» é socorro (sem o «para» de quem completa a equipe)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',", r"DETN + PES_FALTA + '(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',", ('p3c',)),
+    ('p4g pessoa: sem «tem gente faltando»', r"' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?faltando (?!' + ROT_EVENTO + ')',", r"' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?xfaltando (?!' + ROT_EVENTO + ')',", ('p3c',)),
     ('p4g pessoa: sem «contei as pessoas e falta uma»', r"' (?:cont|confer|cham|recens)[a-z]* (?:", r"' (?:xcont|xconfer|xcham|xrecens)[a-z]* (?:", ('p3c',)),
     ('p4g pessoa: sem «não encontramos o João, acho que caiu» (o «não se acha» e o palpite da queda: o NAO_VE)', r"var NAO_VE = 'nao (?:(?:estou|estamos) (?:vendo|achando|encontrando)|(?:vejo|vemos|vi|vimos|acho|achamos|encontro|encontramos|enxergo|enxergamos))';", r"var NAO_VE = 'nao (?:(?:estou|estamos) (?:xvendo|xachando|xencontrando)|(?:xvejo|xvemos|xvi|xvimos|xacho|xachamos|xencontro|xencontramos|xenxergo|xenxergamos))';", ('p3c',)),
     ('p4g pessoa: o palpite da queda só vale no fim da frase («…, acho que caiu, qual a posição?» fica sem socorro)', r"' ' + NAO_VE + ' ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,3} ' + PALPITE + ' ',", r"' ' + NAO_VE + ' ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,3} ' + PALPITE + ' $',", ('p3c',)),
@@ -9789,7 +9821,7 @@ MUTANTES_P4G_REV = [
     ('p4g pessoa: sem «meu filho não está em lugar nenhum»', r"' ' + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:esta|estao|ta|tao|aparece|apareceu) ' + EM_NENHUM + ' ',", r"' ' + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:esta|estao|ta|tao|aparece|apareceu) x' + EM_NENHUM + ' ',", ('p3c',)),
     ('p4g pessoa: sem «ninguém viu o Pedro»', r"' ninguem (?:viu|ve|esta vendo|achou|encontrou|sabe onde (?:esta|ta|foi|anda)) '", r"' ninguem (?:xviu|xve|xesta vendo|xachou|xencontrou|xsabe onde (?:esta|ta|foi|anda)) '", ('p3c',)),
     ('p4g pessoa: sem «cadê a menina? não está a bordo»', r"' (?:cade|onde esta|onde estao) ' + DETN + PES_ELE", r"' (?:xcade|xonde esta|xonde estao) ' + DETN + PES_ELE", ('p3c',)),
-    ('p4g pessoa: sem «o passageiro não está a bordo» e «ela não está a bordo»', r"ESCALA + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", r"ESCALA + ' ' + PES_PRES + 'x nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", ('p3c',)),
+    ('p4g pessoa: sem «o passageiro não está a bordo» e «ela não está a bordo»', r"ESCALA.slice(1) + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", r"ESCALA.slice(1) + ' ' + PES_PRES + 'x nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", ('p3c',)),
     ('p4g pessoa: sem «o menino foi para a água e não voltou»', r"(?:agua|mar)(?: e)? nao (?:voltou|volta|voltaram|aparece|apareceu|aparecem|sai|saiu|saem|respondeu|responde) '", r"(?:agua|mar)(?: e)? xnao (?:voltou|volta|voltaram|aparece|apareceu|aparecem|sai|saiu|saem|respondeu|responde) '", ('p3c',)),
     ('p4g pessoa: sem «o Pedro foi levado pela correnteza»', r"(?:foi|foram) (?:levad|arrastad|carregad|puxad)[oa]s? (?:pel[ao]s?|por) ", r"(?:foi|foram) (?:xlevad|xarrastad|xcarregad|xpuxad)[oa]s? (?:pel[ao]s?|por) ", ('p3c',)),
     ('p4g pessoa: sem «o Pedro pulou pela borda» (o nome que cai na água)', r"' fulano (?:caiu|cairam|pulou|pularam) ' + NA_AGUA + ' ',", r"' fulano (?:xcaiu|xcairam|xpulou|xpularam) ' + NA_AGUA + ' ',", ('p3c',)),
@@ -9797,22 +9829,21 @@ MUTANTES_P4G_REV = [
     ('p4g pessoa: a pessoa que some fora do socorro implícito (o cabeça de emergência não a conhece)', r"|| SOCORRO_AJUDA.test(q) || pessoaSumida(q); }", r"|| SOCORRO_AJUDA.test(q); }", ('p3c',)),
     ('p4g nome: o nome com inicial maiúscula fora da route() («a Ana desapareceu»)', r"if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", r"if (socorroImplicito(q)) return 'sos';", ('p3c',)),
     ('p4g nome: nenhum nome é nome (o comNomes nunca troca)', r"    if (!cortes.length) return null;", r"    return null;", ('p3c',)),
-    ('p4g nome: o nome que abre a frase («Pedro desapareceu») só vale com o verbo logo depois — sem o verbo, nenhum vale', r"var VERBO_NOME = /^\s+(?:sumiu|sumiram|desapareceu|desapareceram|caiu|cairam|pulou|pularam)(?![A-Za-zÀ-ÿ])/i;", r"var VERBO_NOME = /^\s+(?:xsumiu|xsumiram|xdesapareceu|xdesapareceram|xcaiu|xcairam|xpulou|xpularam)(?![A-Za-zÀ-ÿ])/i;", ('p3c',)),
+    ('p4g nome: o nome que abre a frase («Pedro desapareceu») só vale com o verbo logo depois — sem o verbo, nenhum vale', r"var VERBO_NOME = /^\s+(?:(?:sumiu|sumiram|desapareceu|desapareceram|caiu|cairam|pulou|pularam)|", r"var VERBO_NOME = /^\s+(?:(?:xsumiu|xsumiram|xdesapareceu|xdesapareceram|xcaiu|xcairam|xpulou|xpularam)|", ('p3c',)),
     ('p4g nome: a maiúscula que abre a frase é sempre nome («Nosso sinal sumiu», «Perdemos o sinal»)', "        else if (g.length > 1) ini = g[1].i;\n        else return;\n", "        else if (g.length > 1) ini = g[1].i;\n", ('p3c',)),
     ('p4g nome: «Cadê Pedro? Não está a bordo» (o grupo de 2 na abertura da frase) fica sem nome', "        else if (g.length > 1) ini = g[1].i;\n", "        else if (g.length > 1) return;\n", ('p3c',)),
     # —— as guardas do que é rotina (cada uma é acusada por uma pergunta que só ela segura) ——
     ('p4g guarda: a lista SOS lê «o passageiro sumiu da lista» sem tirar o sumiço de dados (a emergencia sem a guarda)', r"q = semSumicoDeDados(q.split(' a gente ').join(' nos '));", r"q = q.split(' a gente ').join(' nos ');", ('p3c',)),
-    ('p4g guarda: a pessoaSumida sem tirar o sumiço de dados («perdi um passageiro na lista de saída»)', r"function pessoaSumida(q) { q = semSumicoDeDados(q); return", r"function pessoaSumida(q) { return", ('p3c',)),
+    ('p4g guarda: a pessoaSumida sem tirar o sumiço de dados («perdi um passageiro na lista de saída»)', r"function pessoaSumida(q) { q = semSumicoDeDados(comPrenomes(q)); return", r"function pessoaSumida(q) { q = comPrenomes(q); return", ('p3c',)),
     ('p4g guarda: sem o verbo + lugar de dado («o passageiro sumiu da lista»)', r"new RegExp(' ' + V_ANY + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
-    ('p4g guarda: sem o verbo + pessoa + lugar de dado («falta gente na equipe»)', r"new RegExp(' ' + V_ANY + ' ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
-    ('p4g guarda: sem o perdi + pessoa + lugar de dado («perdemos um tripulante na equipe de manutenção»)', r"new RegExp(' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g guarda: sem o verbo + pessoa + lugar de dado («sumiu um passageiro da lista», «falta gente no cadastro»)', r"new RegExp(' ' + V_ANY + ' ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g guarda: sem o perdi + pessoa + lugar de dado («perdi um passageiro na lista de saída»)', r"new RegExp(' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
     ('p4g guarda: sem o dado de quem some («o nome do tripulante sumiu», «o contato da Maria sumiu»)', r"new RegExp(' ' + HEAD_DADO + ' d[aeo]s? ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,1} ' + V_ANY + '(?= )', 'g')", r"new RegExp('(?!)', 'g')", ('p3c',)),
     ('p4g guarda: «lista» fora dos lugares de dado («o Lucas sumiu da lista»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|", r"var CONT_ADMIN = '(?:xlista|xlistas|cadastro|", ('p3c',)),
     ('p4g guarda: «app» fora dos lugares de dado («o Carlos sumiu do app»)', r"|planilhas|app|aplicativo|aplicativos|", r"|planilhas|xapp|xaplicativo|xaplicativos|", ('p3c',)),
     ('p4g guarda: «whatsapp» fora dos lugares de dado («o Lucas sumiu do WhatsApp», «Perdi o Lucas no WhatsApp»)', r"|diario|whatsapp|telegram|", r"|diario|xwhatsapp|xtelegram|", ('p3c',)),
-    ('p4g guarda: «instagram» fora dos lugares de dado («o Pedro desapareceu do Instagram»)', r"|telegram|instagram|facebook|", r"|telegram|xinstagram|xfacebook|", ('p3c',)),
-    ('p4g guarda: «equipe» fora dos lugares de dado («perdemos um tripulante na equipe de manutenção»)', r"|equipe|equipes|escala|", r"|xequipe|xequipes|escala|", ('p3c',)),
-    ('p4g guarda: a escala de pessoal vira socorro («meu filho não está a bordo ainda», «o João não está a bordo hoje»)', r"ESCALA + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", r"'' + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", ('p3c',)),
+    ('p4g guarda: «instagram» fora dos lugares de dado («o Pedro desapareceu do Instagram»)', r"|diario|whatsapp|telegram|instagram|facebook|zap|", r"|diario|whatsapp|telegram|xinstagram|xfacebook|zap|", ('p3c',)),
+    ('p4g guarda: a escala de pessoal vira socorro («meu filho não está a bordo ainda», «o João não está a bordo hoje»)', r"'^' + SEM_POSSE + ESCALA.slice(1) + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", r"'^' + SEM_POSSE + '.*' + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',", ('p3c',)),
     ('p4g guarda: o marinheiro, o convidado e o comandante entram na escala de pessoal («o convidado não está a bordo»)', r"var PES_PRES = '(?:alguem|gente|", r"var PES_PRES = '(?:marinheiros?|convidad[oa]s?|comandante|alguem|gente|", ('p3c',)),
     # —— o que não é nome: palavra de bordo, aplicativo, marca, substantivo comum, advérbio e pronome que abrem a frase, a marca do cadastro ——
     ('p4g nome: a marca do cadastro (D.equipamentos) é pessoa («o Zeppelin sumiu»)', r"|| (marcas !== null && marcas.indexOf(' ' + tk.w + ' ') !== -1)", r"", ('p4g_pessoa',)),
@@ -9830,6 +9861,63 @@ MUTANTES_P4G_REV = [
     ('p4g nome: o nome dito com a foto vira legenda (o texto de emergência entra na linha)', r"socorroImplicito(n) || nomeSumiu(raw) || cabecaEmerg(n) || /\?/.test(raw)", r"socorroImplicito(n) || cabecaEmerg(n) || /\?/.test(raw)", ('p3f_foto',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV
+
+
+# Mutantes da revisão final da P4G, 3ª rodada (o grupo, a rede, o turno, a escala, a equipe e a tripulação são lugar de GENTE; o prenome em minúscula e o nome de 2 letras; o adjetivo, «foi embora e sumiu», a cláusula e o
+# mergulhador que não volta; o que é do passageiro, o embarque e o evento não são a pessoa que falta): cada um tem de ser acusado pelo grupo `p3c` (as rotas) ou `p4g_pessoa` (a marca do cadastro)
+MUTANTES_P4G_REV3 = [
+    # —— o lugar de gente não tira o socorro (cada palavra, em separado) ——
+    ('p4g3 guarda: «grupo» volta aos lugares de dado («uma pessoa sumiu do grupo de mergulho»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:grupo|grupos|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: «rede» volta aos lugares de dado («uma criança sumiu da rede», «da rede de proteção»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:rede|redes|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: «turno» e «plantão» voltam aos lugares de dado («um tripulante desapareceu do turno da noite»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:turno|turnos|plantao|plantoes|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: «escala» volta aos lugares de dado («uma pessoa sumiu da escala de pesca»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:escala|escalas|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: «equipe» volta aos lugares de dado («o passageiro sumiu da equipe», «perdemos um tripulante na equipe de manutenção»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:equipe|equipes|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: «tripulação» volta aos lugares de dado («o passageiro sumiu da tripulação»)', r"var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|agenda|", r"var CONT_ADMIN = '(?:tripulacao|lista|listas|cadastro|cadastros|agenda|", ('p3c',)),
+    ('p4g3 guarda: sem o grupo e a rede DIGITAIS («o Lucas sumiu do grupo do WhatsApp»)', r"new RegExp(' ' + V_ANY + LOC_DIGITAL, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g3 guarda: sem o verbo + pessoa + grupo digital («sumiu o passageiro do grupo do WhatsApp»)', r"new RegExp(' ' + V_ANY + ' ' + DETN + PES_ELE + LOC_DIGITAL, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g3 guarda: sem o perdi + pessoa + grupo digital («perdi o Lucas no grupo do WhatsApp»)', r"new RegExp(' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + LOC_DIGITAL, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g3 guarda: sem a conta de pessoal com «falta» + pessoa («faltam duas pessoas no turno da noite», «falta gente na equipe»)', r"new RegExp(' ' + V_FALTA + ' ' + DETN + PES_ELE + LOC_PESSOAL, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    ('p4g3 guarda: sem a conta de pessoal com «faltando» (a pessoa antes: «tem gente faltando na escala»)', r"new RegExp(' ' + V_FALTA + LOC_PESSOAL, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
+    # —— quem mais pode sumir a bordo ——
+    ('p4g3 pessoa: sem «garoto» e «garota»', r"var PES_MAIS = '(?:garot[oa]s?|", r"var PES_MAIS = '(?:xgarot[oa]s?|", ('p3c',)),
+    ('p4g3 pessoa: sem «senhor» e «senhora»', r"|senhor|senhora|senhores|senhoras|", r"|xsenhor|xsenhora|xsenhores|xsenhoras|", ('p3c',)),
+    ('p4g3 pessoa: sem «turista», «visitante», «pescador», «cozinheiro» e «mestre»', r"|turistas?|visitantes?|pescador(?:es)?|cozinheir[oa]s?|mestres?|", r"|xturistas?|xvisitantes?|xpescador(?:es)?|xcozinheir[oa]s?|xmestres?|", ('p3c',)),
+    ('p4g3 pessoa: sem «jovem» e «adolescente»', r"|jove(?:m|ns)|adolescentes?|", r"|xjove(?:m|ns)|xadolescentes?|", ('p3c',)),
+    ('p4g3 pessoa: sem a velhinha', r"|esquiador(?:es)?|surfistas?|velhinh[oa]s?|morador(?:es)?|rapazes)';", r"|esquiador(?:es)?|surfistas?|xvelhinh[oa]s?|morador(?:es)?|rapazes)';", ('p3c',)),
+    # —— o que é rotina de embarque, de evento, de objeto e de concorrência ——
+    ('p4g3 rotina: «falta um passageiro embarcar» é socorro (sem «embarcar» entre os verbos de embarque)', r"var ROT_INF = '(?:embarcar|chegar|", r"var ROT_INF = '(?:xembarcar|chegar|", ('p3c',)),
+    ('p4g3 rotina: «falta um passageiro chegar» é socorro (sem «chegar»)', r"var ROT_INF = '(?:embarcar|chegar|", r"var ROT_INF = '(?:embarcar|xchegar|", ('p3c',)),
+    ('p4g3 rotina: «falta uma pessoa assinar» é socorro (sem «assinar»)', r"|vir|sair|assinar|pagar|", r"|vir|sair|xassinar|pagar|", ('p3c',)),
+    ('p4g3 rotina: a falta de pessoa sem a guarda do embarque (nenhum infinitivo)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',", r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_EVENTO + ')(?= )',", ('p3c',)),
+    ('p4g3 rotina: a falta de pessoa sem a guarda do evento («faltam duas pessoas na reunião de amanhã»)', r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',", r"DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?= )',", ('p3c',)),
+    ('p4g3 rotina: «tem gente faltando na reunião de amanhã» é socorro (a «faltando» sem a guarda do evento)', r"(?:esta |estao )?faltando (?!' + ROT_EVENTO + ')',", r"(?:esta |estao )?faltando ',", ('p3c',)),
+    ('p4g3 rotina: a reunião deixa de ser evento', r"(?:reuniao|jantar|festa|aula|treino|", r"(?:xreuniao|jantar|festa|aula|treino|", ('p3c',)),
+    ('p4g3 rotina: «perdi um passageiro para outra marina» é socorro (sem a guarda da concorrência)', r"DETN + PES_ELE + ' (?!' + ROT_PERDI + ')',", r"DETN + PES_ELE + ' ',", ('p3c',)),
+    ('p4g3 rotina: «para outra marina» deixa de ser concorrência', r"var ROT_PERDI = 'para (?:outr[oa]s?|", r"var ROT_PERDI = 'para (?:xoutr[oa]s?|", ('p3c',)),
+    ('p4g3 rotina: o colete da criança é a pessoa que não está a bordo (sem a guarda do possuidor)', r"'^' + SEM_POSSE + ESCALA.slice(1)", r"'^' + ESCALA.slice(1)", ('p3c',)),
+    ('p4g3 rotina: a guarda do possuidor não olha «de», «do», «da»', r"var SEM_POSSE = '(?!.* d[eao]s? '", r"var SEM_POSSE = '(?!.* xd[eao]s? '", ('p3c',)),
+    # —— as formas novas ——
+    ('p4g3 pessoa: sem o adjetivo antes da pessoa («está desaparecida a Ana»)', r"' (?:esta|estao|ta|tao|ficou|ficaram|foi dado como|foram dados como) ' + ADJ_SUMIDO", r"' x(?:esta|estao|ta|tao|ficou|ficaram|foi dado como|foram dados como) ' + ADJ_SUMIDO", ('p3c',)),
+    ('p4g3 pessoa: sem «o Pedro foi embora e sumiu»', r"(?:foi|foram|saiu|sairam|se afastou|nadou|mergulhou|pulou)(?: [a-z0-9]+){0,3} e (?:sumiu|sumiram|desapareceu|desapareceram) '", r"(?:xfoi|xforam|xsaiu|xsairam|xse afastou|xnadou|xmergulhou|xpulou)(?: [a-z0-9]+){0,3} e (?:sumiu|sumiram|desapareceu|desapareceram) '", ('p3c',)),
+    ('p4g3 pessoa: sem a cláusula («o rapaz que estava no jet ski sumiu»)', r"' ' + PES_ELE + ' (?:que|q) (?:estava|estavam|", r"' ' + PES_ELE + ' x(?:que|q) (?:estava|estavam|", ('p3c',)),
+    ('p4g3 pessoa: o mergulhador que não volta ou não sobe é socorro só com «na água» (sem a atividade)', r"' ' + NA_AGUA_ATIV + '(?: [a-z0-9]+){0,2} nao (?:voltou|", r"' ' + NA_AGUA_ATIV + 'x(?: [a-z0-9]+){0,2} nao (?:voltou|", ('p3c',)),
+    ('p4g3 pessoa: sem «o esquiador caiu»', r"' esquiador(?:es)? (?:caiu|cairam) ',", r"' xesquiador(?:es)? (?:caiu|cairam) ',", ('p3c',)),
+    ('p4g3 pessoa: sem «ele sumiu do barco» (o pronome com o lugar)', r"' (?:ele|ela|eles|elas) ' + V_SUMIU + ' (?:d[oa] (?:barco|", r"' x(?:ele|ela|eles|elas) ' + V_SUMIU + ' (?:d[oa] (?:barco|", ('p3c',)),
+    # —— o nome ——
+    ('p4g3 nome: o nome que abre a frase sem o adjetivo («Genivaldo está desaparecido»)', r"|(?:est[aáã]o?|t[aáã]o?|ficou|ficaram|continua|segue)\s+(?:desaparecid|sumid|perdid|extraviad)[oa]s?|", r"|(?:xest[aáã]o?|xt[aáã]o?|xficou|xficaram|xcontinua|xsegue)\s+(?:desaparecid|sumid|perdid|extraviad)[oa]s?|", ('p3c',)),
+    ('p4g3 nome: o nome que abre a frase sem «foi embora e sumiu» («Wendell foi embora e sumiu»)', r"|(?:foi|saiu|nadou|pulou|mergulhou)(?:\s+\S+){0,2}\s+e\s+(?:sumiu|desapareceu))", r"|(?:xfoi|xsaiu|xnadou|xpulou|xmergulhou)(?:\s+\S+){0,2}\s+e\s+(?:sumiu|desapareceu))", ('p3c',)),
+    ('p4g3 nome: o nome de 2 letras («o Bi desapareceu») não é nome', r"([A-ZÀ-Ý][a-zà-ÿ]{1,})(?![A-Za-zÀ-ÿ0-9])/g;", r"([A-ZÀ-Ý][a-zà-ÿ]{2,})(?![A-Za-zÀ-ÿ0-9])/g;", ('p3c',)),
+    ('p4g3 nome: o prenome em minúscula não é nome («o pedro desapareceu», «PERDI O JOAO DE VISTA»)', r"    return mudou ? out : q;", r"    return q;", ('p3c',)),
+    ('p4g3 nome: o prenome de 2 letras em minúscula («o ze sumiu», «a lu desapareceu») fora da lista', r"'gui', 'leo', 'ze', 'ed', 'rui',", r"'gui', 'leo', 'xze', 'xed', 'rui',", ('p3c',)),
+    ('p4g3 nome: a lista dos prenomes sem «joao» e «jose»', r"var PRENOMES = ' ' + ['joao', 'jose',", r"var PRENOMES = ' ' + ['xjoao', 'xjose',", ('p3c',)),
+    ('p4g3 nome: a marca do cadastro é prenome («o beto» com o fabricante Beto no D.equipamentos)', r"if (w === '' || PRENOMES.indexOf(' ' + w + ' ') === -1 || (marcas !== null && marcas.indexOf(' ' + w + ' ') !== -1)) return w;", r"if (w === '' || PRENOMES.indexOf(' ' + w + ' ') === -1) return w;", ('p4g_pessoa',)),
+    ('p4g3 nome: o prenome troca só depois da guarda do sumiço de dados («perdi o lucas no whatsapp»)', r"function pessoaSumida(q) { q = semSumicoDeDados(comPrenomes(q)); return", r"function pessoaSumida(q) { q = comPrenomes(semSumicoDeDados(q)); return", ('p3c',)),
+    ('p4g3 nome: «Não sumiu o alarme» é pessoa (sem «não» entre as palavras que abrem a frase)', r"'tem', 'nao', 'nem', 'nunca',", r"'tem', 'xnao', 'xnem', 'nunca',", ('p3c',)),
+    ('p4g3 nome: «Já sumiu o sinal» é pessoa (sem as palavras de 2 letras)', r"'ja', 'so', 'ai', 'la', 'se', 'um', 'uma',", r"'xja', 'xso', 'xai', 'xla', 'xse', 'xum', 'xuma',", ('p3c',)),
+    ('p4g3 nome: a sigla de 2 letras com a 2ª minúscula é nome («o Tv sumiu», «o Pc desapareceu»)', r"'tv', 'pc', 'hd', 'ar', 'ac', 'ip', 'id',", r"'xtv', 'xpc', 'xhd', 'xar', 'xac', 'xip', 'xid',", ('p3c',)),
+    ('p4g3 nome: sem as funcionais «mais», «menos», «muito», «pouco»... («Muito sumiu»)', r"'sempre', 'sim', 'talvez', 'sera', 'quase', 'mais', 'menos', 'muito', 'pouco',", r"'xsempre', 'xsim', 'xtalvez', 'xsera', 'xquase', 'xmais', 'xmenos', 'xmuito', 'xpouco',", ('p3c',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV3
 
 
 

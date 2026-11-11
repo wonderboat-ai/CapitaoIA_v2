@@ -298,6 +298,12 @@ class Component extends DCLogic {
         if (this._dead || ger !== (this._ger || 0)) return; // NOVA apagou a conversa: descarta sem mexer nos contadores novos
         // `mudo`: a resposta que chega da IA com uma emergência aberta no meio (a janela vale agora e não valia quando a pergunta saiu) entra na tela sem falar — a fala nova cancelaria a instrução de segurança que está sendo dita
         let mudo = false; if (ia && !emg) { try { mudo = !!(EM && EM.valendo()); } catch (e) { mudo = false; } }
+        // A resposta local calculada ANTES da janela (a pergunta de rotina que foi à IA: fallback, trecho do guia) traz «Situação de bordo agora: … SOG … proa …». Se a janela abriu no meio, entra a resposta REFEITA em modo emergência
+        // (o cérebro troca a situação pela instrução do plotter; commit false: nada é gravado de novo), nunca a de antes — nem a da IA, nem a local por falha ou erro (CLAUDE.md 10: sem posição, rumo nem SOG).
+        if (mudo) {
+          let ref = null; try { ref = B.answer(q, { platform: 'app', id: id, commit: false, emergencia: true }); } catch (e) { ref = null; }
+          fin = ref && ref.text ? { key: ref.key, text: ref.text, src: ref.src, actions: ref.actions } : { key: fin.key, text: String(fin.text || '').split('\n').filter((l) => !/^Situação de bordo agora/.test(l)).join('\n'), src: fin.src, actions: fin.actions };
+        }
         const msg = { role: 'bot', text: fin.text, src: fin.src, actions: fin.actions };
         this.setState((s) => {
           const n = Math.max(0, (s.pending || 1) - 1), iaN = Math.max(0, (s.iaN || 0) - (ia ? 1 : 0)), i = s.thread.indexOf(um);
@@ -350,7 +356,7 @@ class Component extends DCLogic {
         // O cérebro não vê a resposta da IA: a tela a conta (B.conversa), para «o gerador» continuar uma pergunta que a IA fez.
         // A resposta tardia não recoloca o que o NOVA ou o ENCERRAR zeraram (ctxN) nem o que a emergência que abriu no meio encerrou (a janela vale agora).
         // E a janela que ABRIU depois de a pergunta sair (uma emergência no meio) fecha a porta da IA: o texto dela, que pode trazer posição, rumo e SOG, não entra na conversa nem é falado (CLAUDE.md 10) —
-        // fica a resposta local da pergunta de rotina, que nunca leva posição. A fala da instrução de segurança segue inteira (B.speak cancela a anterior: nenhuma fala nova a corta).
+        // entra a resposta local da pergunta REFEITA em modo emergência (no `entrega`: a de antes da janela leva «Situação de bordo agora: … SOG … proa …»). A fala da instrução de segurança segue inteira (B.speak cancela a anterior: nenhuma fala nova a corta).
         let emAgora = false; try { emAgora = !!(EM && EM.valendo()); } catch (e) { emAgora = false; }
         if (r && emAgora) { entrega(local(''), true); return; }
         if (r && !(r.semDados && (a.key === 'base' || a.key === 'faqEquip'))) {
