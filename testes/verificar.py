@@ -139,7 +139,7 @@ abastecimento, o consumido desde ele e a autonomia do instante (não a leitura d
 meteorológica com o TWA, 5 janelas); aba Consumo com o L/h, as horas e os litros de cada faixa do CapitaoReplay.porFaixa() e a soma (motores + gerador) batendo com o contador de diesel; a foto da NF (A CONFIRMAR, carimbo sim); o ramo simulacao false
 (SEM DADOS só ali); os estados de dentro das 4 telas em 3 tamanhos e 2 temas (sem rolagem lateral nem texto cortado em silêncio); e o código (ouvintes, timers, DEMO, SVG, CRLF). PENDENTES_ROTULO fica só com a G4; a G2 entra em MUDA_SEM_FIXO (a leitura anda).
 
-Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 61 defeitos (49 da P4J e 12 da revisão final), todos acusados; `MUT_FILTRO=texto`
+Fase 4, P4J (o Diário G3 e a Equipe G4, web e app, e o selo «n A CONFIRMAR» da tela inicial; `--so-p4j [Tela…]` roda só as conferências dela e `--mutantes-p4j` planta 66 defeitos (49 da P4J e 17 da revisão final), todos acusados; `MUT_FILTRO=texto`
 refaz só os mutantes cujo nome tem o texto; sem Worker): G3 com o diário gerado na ordem do tempo e as 3 pendências do CapitaoAgora (nada gravado só por abrir; o alarme de 105 s nunca vira proposta sozinho), as propostas
 A CONFIRMAR (relato, agendamento e alarme: CONFIRMAR grava UMA linha com o texto do cérebro, DESFAZER de 10 s é uma linha nova de anulação e o confirmado fica guardado, RECUSAR não grava, ✎ ajusta o texto ou a tarefa, o dia e o
 responsável com o dia que existe, o agendamento confirmado cria a tarefa e a conta de contagens() sobe, o toque duplo grava uma só e o aviso some em 10 s), as pendências como linhas novas (RESOLVER, REABRIR, DESFAZER dentro da
@@ -151,11 +151,13 @@ os prestadores (+ PRESTADOR, ✎, OCULTAR e RESTAURAR sem apagar nada; o telefon
 «n A CONFIRMAR» (conta só as abertas, leva ao #confirmar do Diário, some quando a última é decidida em outra aba); os estados de dentro em 3 tamanhos e 2 temas; e o código. PENDENTES_ROTULO fica vazia.
 Revisão final da P4J: o DESFAZER libera o gesto (CONFIRMAR → DESFAZER → CONFIRMAR e RESOLVER → DESFAZER → RESOLVER em menos de 1,5 s gravam de novo), a linha corrigida duas vezes mostra a correção mais nova, o telefone de 7 e de 16
 dígitos é recusado, a + TAREFA aceita hoje (D-0) e, repetida (mesmo nome e dia), não duplica nem grava uma 2ª linha no diário (a tela avisa que já estava agendada).
-Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 54 defeitos (48 da P4K e 6 da revisão final), todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
+Revisão final da P4J (2ª rodada): sem equipe nem perfis (D.equipe nulo, e no ramo simulacao false também sem tarefas) o + TAREFA abre e agenda sem erro de script; o convite de acesso grava no diário (e na ficha da IA) só o tipo de acesso, o canal e uma
+referência curta, nunca o nome, a função nem o contato; o dados.html reconhece o convite cancelado depois por essa referência (e o do 1.0.9, sem referência, pelas linhas antigas).
+Fase 4, P4K (o relatório para imprimir e o fechamento da fase; `--so-p4k [Tela|relatorio…]` roda só as conferências dela e `--mutantes-p4k` planta 58 defeitos (48 da P4K e 10 da revisão final), todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo
 nome tem o texto; sem Worker): o relatorio.html é uma PÁGINA (PAGINAS: a matriz o abre em 8 tamanhos e 2 temas, com o SOS do topo à vista, as 6 seções e, com --offline, sem rede) e tem as suas conferências: o conteúdo contra o cadastro
 (capa, cartões = contagens(), agenda, histórico, documentos, abastecimentos, peças; nenhum termo do §3, R$, coordenada, telefone nem MMSI; nunca o replay, a telemetria nem a faixa de alerta), os prazos de hoje (relógio 40 dias adiante),
-a privacidade (telefone — inclusive o +55 e o número de 10 a 11 dígitos seguidos —, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora), as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31),
-o diário vigente (com duas correções da mesma linha, a mais nova) e o selo apresentação, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
+a privacidade (telefone — inclusive o +55, o número de 10 ou mais dígitos com espaços, ponto, hífen ou sem separador e o sem DDD com hífen ou ponto —, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora; o número de peça de 8 dígitos fica), as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31),
+o diário vigente (com duas correções da mesma linha, a mais nova; a manutenção que a G3 e o chat gravam com sys «Diário» entra no histórico) e o selo apresentação, o dia de hoje igual ao das telas com o replay livre às 03:00 de Brasília, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
 O fechamento (rodada completa): o registro das telas novas e do relatório (TELAS, CORE, lista, mapa APP, manifest), PENDENTES_ROTULO e PENDENTES_MUDA vazias, nenhum {{…}} em atributo de SVG, nenhum setInterval novo e a varredura do §3 em
 TODAS as telas com o replay SOLTO em 4 pontos da volta de 150 s (a faixa de alerta nunca no SOS, no Manual nem na C3).
 
@@ -1694,10 +1696,10 @@ N_A, N_B, N_C = abast_teste('A', 20), abast_teste('B', 21), abast_teste('C', 22)
 TEXTOS_DESFEITO = {
     'C1-Leme-Web': ["t: 'Executado: ' + t.t + ' (' + t.equip + ').", "t: 'Desfeito: ' + t.t + ' volta para a agenda"],
     'C2-Leme-Mobile': ["t: 'Executado: ' + t.t + ' (' + t.equip + ').", "t: 'Desfeito: ' + t.t + ' volta para a agenda"],
-    'G4-Equipe-Web': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe",
-                      "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — "],
-    'G4-Equipe-Mobile': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe",
-                         "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — "],
+    'G4-Equipe-Web': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de acesso (' + c.acesso + ') cancelado em Equipe' + (/^[0-9a-z]{4,16}$/.test(String(c.ref || '')) ? ' (convite ' + c.ref + ')' : '')",
+                      "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' (convite ' + ref + ') — "],
+    'G4-Equipe-Mobile': ["'Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe", "'Convite de acesso (' + c.acesso + ') cancelado em Equipe' + (/^[0-9a-z]{4,16}$/.test(String(c.ref || '')) ? ' (convite ' + c.ref + ')' : '')",
+                         "'Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' (convite ' + ref + ') — "],
 }
 
 
@@ -1956,6 +1958,38 @@ def teste_dados(b):
         eq = json.loads(tudo.get('capitao.equipe.v1') or '{}')
         if t['id'] not in json.loads(tudo.get('capitao.executado.v1') or '{}') or not eq.get('fones') or [c.get('nome') for c in eq.get('convites', [])] != [nome]:
             p.append('aparelho sem o diário: a cópia não devolveu os três: %r' % {k: tudo.get(k) for k in ('capitao.executado.v1', 'capitao.equipe.v1')})
+
+        # 7b) O convite cancelado depois não volta, com ou sem referência: o convite novo se identifica no diário pela referência (sem o nome, que não vai ao diário nem à ficha da IA) e o do 1.0.9, que não tem
+        # referência, pelas linhas antigas, que levam o nome; o convite que não foi cancelado volta (e só ele), e cancelar um convite não prende o outro do mesmo acesso e do mesmo canal.
+        p = res['convite cancelado não volta (com e sem referência)'] = []
+        T = lambda h, m: '2026-11-10T%02d:%02d:00.000Z' % (h, m)
+        cv = lambda nome, acesso, ref=None: dict({'nome': nome, 'func': 'função do teste', 'acesso': acesso, 'd': '10/11', 'contato': 'x@exemplo.com', 'canal': 'e-mail'}, **({'ref': ref} if ref else {}))
+        ln = lambda t, h, m: {'d': '10/11', 'iso': T(h, m), 'sys': 'Equipe', 'who': 'Lucas', 'src': 'console · equipe', 't': t}
+        arq7b = {'capitao.equipe.v1': json.dumps({'fones': {}, 'convites': [cv('Convite Com Ref', 'total', 'k3j2l1a9xyz'), cv('Convite Sem Ref', 'convidado'), cv('Convite Ainda Aberto', 'total', 'zz11yy22xx')]}),
+                 'capitao.diario.v1': json.dumps([
+                     ln('Convite de acesso (total) cancelado em Equipe (convite k3j2l1a9xyz) — nunca virou acesso.', 11, 0),
+                     ln('Convite de Convite Sem Ref (convidado) cancelado em Equipe — nunca virou acesso.', 11, 5),
+                     ln('Convite de acesso (total) aberto no e-mail (convite zz11yy22xx) — PENDENTE até o cadastro do acesso (nome, função e contato ficam só neste aparelho).', 10, 10),
+                     ln('Convite de acesso (convidado) aberto no e-mail para Convite Sem Ref · função do teste — PENDENTE até o cadastro do acesso.', 10, 5),
+                     ln('Convite de acesso (total) aberto no e-mail (convite k3j2l1a9xyz) — PENDENTE até o cadastro do acesso (nome, função e contato ficam só neste aparelho).', 10, 0)])}
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': '[]', 'capitao.equipe.v1': json.dumps({'fones': {}, 'convites': []})})
+        pg.reload(wait_until='load')
+        r = escolhe(arquivo(arq7b))
+        for esp in ('falta aqui 1 item: convite de Convite Ainda Aberto', 'fica de fora o que o diário diz que foi desfeito depois: convite de Convite Com Ref, convite de Convite Sem Ref'):
+            if esp not in r['resumo']: p.append('a prévia devia dizer «%s»: %r' % (esp, r['resumo'][:300]))
+        restaura()
+        nomes = [c.get('nome') for c in (json.loads(ls().get('capitao.equipe.v1') or '{}').get('convites') or [])]
+        if nomes != ['Convite Ainda Aberto']: p.append('só o convite que não foi cancelado devia voltar: %s' % nomes)
+        # sem as linhas de cancelar (aparelho com o diário só até a abertura), os três voltam
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': '[]', 'capitao.equipe.v1': json.dumps({'fones': {}, 'convites': []})})
+        pg.reload(wait_until='load')
+        sem = json.loads(arq7b['capitao.diario.v1'])[2:]
+        r = escolhe(arquivo(dict(arq7b, **{'capitao.diario.v1': json.dumps(sem)})))
+        restaura()
+        nomes = sorted(c.get('nome') for c in (json.loads(ls().get('capitao.equipe.v1') or '{}').get('convites') or []))
+        if nomes != ['Convite Ainda Aberto', 'Convite Com Ref', 'Convite Sem Ref']: p.append('sem a linha de cancelar os três convites deviam voltar: %s' % nomes)
+        # o diário que as telas gravaram no passo anterior nunca levou o nome do convidado
+        pg.evaluate(GRAVA_LS, {'capitao.diario.v1': '[]', 'capitao.equipe.v1': json.dumps({'fones': {}, 'convites': []})})
 
         # 8) A cópia leva a posição gravada no diário (a linha do SOS: o registro fica intacto) e a página avisa.
         p = res['posição no arquivo e aviso'] = []
@@ -8733,6 +8767,80 @@ def teste_g4_tarefa_repetida(b, tela):
     return prob
 
 
+def teste_g4_sem_equipe(b, tela):
+    """G4, o cadastro sem equipe: com D.equipe nulo (nenhum perfil nem contato de apoio) e, no ramo simulacao false, também sem tarefas da equipe (o caminho null), as telas abrem, o + TAREFA abre o formulário sem erro de script (o
+    responsável fica vazio, a lista só tem a opção em branco) e agenda uma tarefa sem responsável: UMA em capitao.tarefas.v1, UMA linha no diário."""
+    prob = []
+    rot = tela
+    for modo, depois in (('equipe nula', 'window.CapitaoDados.equipe = null;'),
+                         ('simulacao false, equipe e tarefas nulas', 'window.CapitaoDados.simulacao = false; window.CapitaoDados.equipe = null; window.CapitaoDados.tarefasEquipe = null;')):
+        ctx, pg, erros = abre_g4(b, tela, depois=depois)
+        g4_aba(pg, tela, 'tarefas')
+        try: pg.wait_for_selector('[data-g4=nova-tarefa]', timeout=5000)
+        except Exception: prob.append('%s (%s): a tela não mostrou o + TAREFA' % (rot, modo)); ctx.close(); continue
+        pg.click('[data-g4=nova-tarefa]'); pg.wait_for_timeout(350)
+        r = pg.evaluate(LE_G4)
+        if not r['formTar']: prob.append('%s (%s): o + TAREFA devia abrir o formulário (erro de script: %s)' % (rot, modo, erros[:1]))
+        elif r['quem'] and [o[0] for o in r['quem']] != ['']: prob.append('%s (%s): sem perfis nem contatos o responsável devia ficar vazio: %s' % (rot, modo, r['quem']))
+        if r['formTar']:
+            hoje = pg.evaluate("() => window.CapitaoAgora.relogio.hojeIso")
+            vence = (datetime.date.fromisoformat(hoje) + datetime.timedelta(days=3)).isoformat()
+            pg.fill('[data-g4=t-n]', 'Tarefa sem equipe do teste'); pg.fill('[data-g4=t-vence]', vence); pg.click('[data-g4=t-salva]'); pg.wait_for_timeout(400)
+            r = pg.evaluate(LE_G4)
+            tar = r['tarefasLs'] or []
+            if len(tar) != 1 or (tar[0].get('n'), tar[0].get('vence'), tar[0].get('quem')) != ('Tarefa sem equipe do teste', vence, ''): prob.append('%s (%s): devia gravar UMA tarefa sem responsável: %s' % (rot, modo, tar))
+            if len(r['diarioLs'] or []) != 1: prob.append('%s (%s): devia gravar UMA linha no diário: %s' % (rot, modo, [l.get('t') for l in (r['diarioLs'] or [])]))
+        prob += ['%s (%s): %s' % (rot, modo, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_g4_convite(b, tela):
+    """G4, o convite de acesso e o diário que entra na ficha da IA: ENVIAR CONVITE grava o convite em capitao.equipe.v1 (nome, função, contato e uma referência curta) e UMA linha no diário que NÃO leva o nome, a função nem o contato
+    (só o tipo de acesso, o canal e a referência: o diário vai na ficha enviada à IA na nuvem); cancelar grava outra linha igual de limpa, no topo (o diário guarda a mais nova primeiro, com a mesma referência) e tira o convite; o convite do 1.0.9, que não tem referência, cancela com a
+    linha sem nome e sem referência; a ficha (B.ficha) nunca traz o nome, a função nem o contato, nem depois de convidar nem depois de cancelar."""
+    prob = []
+    rot = tela
+    NOME, FUNC, CONT = 'Marinalva Quintanilha Teste', 'cozinheira do teste de convite', '(47) 99123-4567'
+    VELHO = 'Velho Convidado Teste'
+    ctx, pg, erros = abre_g4(b, tela, ls={'capitao.equipe.v1': json.dumps({'fones': {}, 'convites': [{'nome': VELHO, 'func': 'imediato do teste', 'acesso': 'total', 'd': '09/11', 'contato': '(47) 98877-1234', 'canal': 'WhatsApp'}]})})
+    ctx.route('https://wa.me/**', lambda rt: rt.abort())
+    vaza = lambda t: [x for x in (NOME, 'Marinalva', 'Quintanilha', FUNC, 'cozinheira', CONT, '99123', VELHO, 'Velho Convidado', 'imediato', '98877') if x in t]
+    ficha = lambda: pg.evaluate("() => window.CapitaoBrain.ficha('web', 'Quem foi convidado para a equipe?', null)")
+    if eh_app(tela): pg.click('button:has-text("Convidar para a equipe")'); pg.wait_for_timeout(250)   # (no app o formulário abre num botão)
+    pg.fill('[aria-label="Nome de quem vai receber o convite"]', NOME); pg.fill('[aria-label="Função a bordo"]', FUNC); pg.fill('[aria-label="Celular com DDD ou e-mail"]', CONT)
+    with ctx.expect_page() as aba:
+        pg.click('button:has-text("ENVIAR CONVITE")')
+    aba.value.close()
+    pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_G4)
+    conv = [c for c in ((r['equipeLs'] or {}).get('convites') or []) if c.get('nome') == NOME]
+    li = [l.get('t', '') for l in (r['diarioLs'] or [])]
+    ref = conv[0].get('ref', '') if conv else ''
+    if len(conv) != 1 or not re.fullmatch(r'[0-9a-z]{4,16}', ref) or conv[0].get('func') != FUNC or '99123' not in str(conv[0].get('contato', '')): prob.append('%s: o convite devia ficar em capitao.equipe.v1 com nome, função, contato e uma referência curta: %s' % (rot, conv))
+    if len(li) != 1 or not li[0].startswith('Convite de acesso (') or 'PENDENTE' not in li[0] or '(convite %s)' % ref not in li[0]: prob.append('%s: ENVIAR CONVITE devia gravar UMA linha «Convite de acesso (…) aberto no … (convite <referência>) — PENDENTE…»: %s' % (rot, li))
+    if vaza(' | '.join(li)): prob.append('%s: a linha do diário do convite leva %s (o diário entra na ficha da IA: nada de nome, função nem contato)' % (rot, vaza(' | '.join(li))))
+    f1 = ficha()
+    if vaza(f1): prob.append('%s: a ficha da IA traz %s depois de convidar' % (rot, vaza(f1)))
+    if 'Convite de acesso' not in f1: prob.append('%s: o teste não vale: a linha do convite não entrou na ficha da IA' % rot)
+    pg.click('[aria-label="Cancelar convite de %s"]' % NOME); pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_G4)
+    if [c for c in ((r['equipeLs'] or {}).get('convites') or []) if c.get('nome') == NOME]: prob.append('%s: cancelar devia tirar o convite de capitao.equipe.v1' % rot)
+    li = [l.get('t', '') for l in (r['diarioLs'] or [])]
+    if len(li) != 2 or not li[0].startswith('Convite de acesso (') or 'cancelado em Equipe (convite %s)' % ref not in li[0] or 'nunca virou acesso' not in li[0]: prob.append('%s: cancelar devia gravar UMA linha nova «Convite de acesso (…) cancelado em Equipe (convite <a mesma referência>) — nunca virou acesso.»: %s' % (rot, li))
+    # o convite do 1.0.9: sem referência
+    pg.click('[aria-label="Cancelar convite de %s"]' % VELHO); pg.wait_for_timeout(400)
+    r = pg.evaluate(LE_G4)
+    li = [l.get('t', '') for l in (r['diarioLs'] or [])]
+    if len(li) != 3 or not li[0].startswith('Convite de acesso (total) cancelado em Equipe') or '(convite' in li[0] or 'nunca virou acesso' not in li[0]: prob.append('%s: o convite sem referência (do 1.0.9) devia cancelar com a linha «Convite de acesso (total) cancelado em Equipe — nunca virou acesso.»: %s' % (rot, li))
+    if vaza(' | '.join(li)): prob.append('%s: o diário leva %s depois de cancelar' % (rot, vaza(' | '.join(li))))
+    f2 = ficha()
+    if vaza(f2): prob.append('%s: a ficha da IA traz %s depois de cancelar' % (rot, vaza(f2)))
+    prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
 def teste_g4_real(b, tela):
     """G4, o selo «apresentação»: o prestador, a tarefa e o Executado gravados com sim: true ganham o selo só com simulacao false (nunca com a simulação), os gravados sem sim nunca; e o resto do ramo (os contatos e o convidado) segue sem rótulo."""
     prob = []
@@ -8887,6 +8995,8 @@ def p4j_conferencias(b, lista):
         out.append((tela + ' · o telefone de cada contato de apoio', teste_g4_telefones(b, tela)))
         out.append((tela + ' · + TAREFA da equipe: o prazo do CapitaoAgora, contagens(), a virada do dia e o Executado', teste_g4_tarefas(b, tela)))
         out.append((tela + ' · + TAREFA para hoje (D-0) e a tarefa repetida (não duplica nem grava outra linha)', teste_g4_tarefa_repetida(b, tela)))
+        out.append((tela + ' · sem equipe nem perfis (D.equipe nulo): o + TAREFA abre e agenda sem erro de script', teste_g4_sem_equipe(b, tela)))
+        out.append((tela + ' · o convite de acesso: o diário (e a ficha da IA) sem nome, função nem contato', teste_g4_convite(b, tela)))
         out.append((tela + ' · o selo apresentação (simulacao false)', teste_g4_real(b, tela)))
     for tela in [t for t in TELAS_INICIO if t in lista]:
         out.append((tela + ' · o selo A CONFIRMAR do início', teste_selo_inicio(b, tela)))
@@ -8959,13 +9069,19 @@ MUTANTES_P4J = [
     ('o + PRESTADOR da G4 do app aceita 7 dígitos', 'G4-Equipe-Mobile.dc.html', [("dg.length >= 8 &&", "dg.length >= 6 &&")], 'g4_prest'),
     ('a G4 web mostra o selo do prestador também com a simulação', 'G4-Equipe-Web.dc.html', [("temSelo: c.sim === true && real,", "temSelo: c.sim === true,")], 'g4_real'),
     ('a G4 do app não mostra o selo da execução gravada com sim', 'G4-Equipe-Mobile.dc.html', [("temSelo: real && (tarSimMap[t.id] === true || exSim) };", "temSelo: real && tarSimMap[t.id] === true };")], 'g4_real'),
+    # —— G4: sem equipe e o convite no diário (revisão final) ——
+    ('o + TAREFA da G4 web lê o 1º responsável sem conferir que existe', 'G4-Equipe-Web.dc.html', [("tQuem: (this.opcoesQuem()[0] || { v: '' }).v,", "tQuem: this.opcoesQuem()[0].v,")], 'g4_vazio'),
+    ('o + TAREFA da G4 do app lê o 1º responsável sem conferir que existe', 'G4-Equipe-Mobile.dc.html', [("tQuem: (this.opcoesQuem()[0] || { v: '' }).v,", "tQuem: this.opcoesQuem()[0].v,")], 'g4_vazio'),
+    ('a linha do diário do convite da G4 web leva o nome e a função de quem foi convidado', 'G4-Equipe-Web.dc.html', [("aberto no ' + lk.canal + ' (convite ' + ref + ') — PENDENTE", "aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' (convite ' + ref + ') — PENDENTE")], 'g4_conv'),
+    ('a linha do diário do cancelamento do convite na G4 do app leva o nome', 'G4-Equipe-Mobile.dc.html', [("this.diario('Convite de acesso (' + c.acesso + ') cancelado em Equipe'", "this.diario('Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe'")], 'g4_conv'),
+    ('o convite novo da G4 web não guarda a referência (o dados.html não o reconhece depois)', 'G4-Equipe-Web.dc.html', [("canal: lk.canal, ref: ref });", "canal: lk.canal });")], 'g4_conv'),
     # —— o selo A CONFIRMAR do início ——
     ('o selo da Main conta também as propostas decididas', 'Main.dc.html', [("return B && typeof B.ticketsAbertos === 'function' ? B.ticketsAbertos().length : 0;", "return B && typeof B.loadTickets === 'function' ? B.loadTickets().length : 0;")], 'inicio'),
     ('o selo da H2 leva ao Diário da web', 'H2-Home-Mobile.dc.html', [('href="G3-Diario-Mobile.dc.html#confirmar"', 'href="G3-Diario-Web.dc.html#confirmar"')], 'inicio'),
     ('a Main não ouve o storage (o selo só muda ao recarregar)', 'Main.dc.html', [("    window.addEventListener('storage', this._onSt);\n", "")], 'inicio'),
 ]
 QUAL_P4J = {'abertura': teste_g3_abertura, 'propostas': teste_g3_propostas, 'ancora': teste_g3_ancora_e_janela, 'pend': teste_g3_pendencias, 'linhas': teste_g3_linhas, 'foto': teste_g3_foto, 'real_g3': teste_g3_real,
-            'g4_abertura': teste_g4_abertura, 'g4_prest': teste_g4_prestadores, 'g4_fone': teste_g4_telefones, 'g4_tar': teste_g4_tarefas, 'g4_rep': teste_g4_tarefa_repetida, 'g4_real': teste_g4_real, 'inicio': teste_selo_inicio,
+            'g4_abertura': teste_g4_abertura, 'g4_prest': teste_g4_prestadores, 'g4_fone': teste_g4_telefones, 'g4_tar': teste_g4_tarefas, 'g4_rep': teste_g4_tarefa_repetida, 'g4_real': teste_g4_real, 'g4_vazio': teste_g4_sem_equipe, 'g4_conv': teste_g4_convite, 'inicio': teste_selo_inicio,
             'codigo': lambda b, t: teste_g3_codigo() + teste_g4_codigo()}
 
 
@@ -9007,7 +9123,7 @@ REL_TITULO = 'Relatório do barco · Capitão IA'
 REL_SECOES = ['resumo', 'agenda', 'historico', 'documentos', 'abastecimentos', 'pecas']
 SYS_MANUT_REL = ('Manutenção', 'Motores', 'Equipamentos', 'Eletrônicos')
 COORD_REL = re.compile(r"\d{1,3}\s*[°º]\s*\d|-?\d{1,3}[.,]\d{4,}(?!\d)")
-FONE_REL = re.compile(r"\b\d{4,5}[-\s]\d{4}\b|\(\d{2}\)\s?\d|\+55|\b\d{10,13}\b")   # (o 10 a 13 dígitos seguidos: o número sem separador, com ou sem o 55)
+FONE_REL = re.compile(r"\b\d{4,5}[-.\s]\d{4}\b|\(\d{2}\)\s?\d|\+55|\b\d{10,13}\b|\d(?:[ ().-]{0,2}\d){9,}")   # (o 10 a 13 dígitos seguidos: o número sem separador, com ou sem o 55; e a sequência de 10 ou mais dígitos com separadores simples: o DDD e o 9 separados)
 LE_REL = r"""() => {
   const T = (e) => ((e && e.innerText) || '').replace(/\s+/g, ' ').trim(), q = (s, r) => (r || document).querySelector(s);
   const rows = (s) => [...document.querySelectorAll('tr[data-rel=linha][data-sec="' + s + '"]')].map((tr) => ({ id: tr.getAttribute('data-id'), c: [...tr.children].map(T), chips: [...tr.querySelectorAll('.st')].map(T), html: tr.innerHTML }));
@@ -9310,12 +9426,18 @@ def teste_rel_dias(b):
     return prob
 
 
+# O telefone em todos os agrupamentos que o PESSOAIS do §3 não reconhece (sem DDD, com hífen ou ponto, o DDD separado por hífen, o 9 solto, 10 dígitos com o 8 começando em 9 e o número sem separador); o número de peça de 8 dígitos e o lote ficam.
+TELEFONES_SOLTOS = 'Contatos soltos: ligar pro 98123-4567, depois 3222-1100, ou 47-3555-6677; também 47 9 8111 2233 e 4798123456 e 47.98765.4321; com rótulo, fone 3999 8877; peça 87654321 e lote 20261110 ficam; fim dos contatos.'
+
+
 def rel_semente(sim=True):
     """O registro deste aparelho com tudo o que o relatório não pode mostrar (telefone, e-mail, CPF, valor, coordenada, a linha do SOS, o que não é manutenção) e o que ele tem de mostrar."""
     S = "Troca do filtro concluída; custou R$ 1.250,00 e o técnico (47) 99999-1234 confirmou. Posição 26°59,56'S 048°38,07'W e -26.99261, -48.63456; email tecnico@exemplo.com; CPF 123.456.789-09; tel 3333-4444; cel: 47 98888-7777; preço 99,90 o litro. Ligar +55 47 94444-3333 ou +5547993332222; whatsapp do mecânico 47992221111; fixo 4733330000."
     dia = [
         {'d': '10/11', 'iso': '2026-11-10T12:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': S},
-        {'d': '10/11', 'iso': '2026-11-10T11:00:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'LINHA_DIARIO_GERAL passeio de domingo'},
+        {'d': '10/11', 'iso': '2026-11-10T11:00:00.000Z', 'sys': 'Diário', 'who': 'Lucas', 'src': 'console · texto', 't': 'LINHA_DIARIO_LIVRE troquei o filtro de óleo do motor BB hoje'},
+        {'d': '10/11', 'iso': '2026-11-10T11:30:00.000Z', 'sys': 'Navegação', 'who': 'Lucas', 'src': 'console · navegação', 't': 'LINHA_NAO_MANUT saímos da marina e fundeamos na enseada'},
+        {'d': '10/11', 'iso': '2026-11-10T11:45:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': TELEFONES_SOLTOS},
         {'d': '10/11', 'iso': '2026-11-10T10:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'web · SOS', 't': 'SOSMARCA posição 26°59,56\'S 048°38,07\'W'},
     ]
     return {
@@ -9329,8 +9451,8 @@ def rel_semente(sim=True):
     }
 
 
-REL_SEGREDOS = ['99999-1234', '98888-7777', '97777-6666', '96666-5555', '95555-4444', '3333-4444', '94444-3333', '993332222', '47992221111', '4733330000', '+55', 'tecnico@exemplo', 'joao@exemplo', '123.456.789', 'R$', '1.250', '250,00', '99,90', '9,90', "26°59", '26.99261', '48.63456', 'SOSMARCA',
-                'LINHA_DIARIO_GERAL', 'Fulano', 'Prestador Teste Alfa', '710123456']
+REL_SEGREDOS = ['3999 8877', '98123-4567', '3222-1100', '3555-6677', '8111 2233', '4798123456', '98765.4321', '98765', '.4321', '99999-1234', '98888-7777', '97777-6666', '96666-5555', '95555-4444', '3333-4444', '94444-3333', '993332222', '47992221111', '4733330000', '+55', 'tecnico@exemplo', 'joao@exemplo', '123.456.789', 'R$', '1.250', '250,00', '99,90', '9,90', "26°59", '26.99261', '48.63456', 'SOSMARCA',
+                'LINHA_NAO_MANUT', 'Fulano', 'Prestador Teste Alfa', '710123456']
 
 
 def teste_rel_privacidade(b):
@@ -9348,13 +9470,100 @@ def teste_rel_privacidade(b):
     if len(linha) != 1: prob.append('a linha de manutenção do aparelho devia aparecer uma vez, apareceu %d' % len(linha))
     else:
         c = linha[0]['c'][1]
+        if 'Ligar [contato omitido] ou [contato omitido];' not in c: prob.append('cada telefone com +55 devia sair numa marca só (o padrão do código do país vem antes do PESSOAIS, que só reconhece o começo): %r' % c[:300])
         if 'confirmou' not in c or '[valor omitido]' not in c or c.count('[contato omitido]') < 4 or '(coordenadas só na tela do app)' not in c: prob.append('a linha de manutenção devia manter o texto e marcar o que saiu (valor, contatos, coordenada): %r' % c[:260])
-    if len([x for x in r['historico'] if 'SOSMARCA' in x['c'][1]]) or len([x for x in r['historico'] if 'LINHA_DIARIO_GERAL' in x['c'][1]]): prob.append('entrou no histórico a linha do SOS ou a que não é de manutenção')
+    if len([x for x in r['historico'] if 'SOSMARCA' in x['c'][1]]) or len([x for x in r['historico'] if 'LINHA_NAO_MANUT' in x['c'][1]]): prob.append('entrou no histórico a linha do SOS ou a de outra categoria (navegação)')
+    livre = [x for x in r['historico'] if 'LINHA_DIARIO_LIVRE' in x['c'][1]]
+    if len(livre) != 1: prob.append('a anotação livre do Diário (sys «Diário»: a manutenção que a pessoa escreve na G3 ou no chat) devia aparecer no histórico uma vez, apareceu %d' % len(livre))
+    solto = [x for x in r['historico'] if 'Contatos soltos' in x['c'][1]]
+    if len(solto) != 1: prob.append('a linha dos contatos soltos devia aparecer uma vez, apareceu %d' % len(solto))
+    else:
+        c = solto[0]['c'][1]
+        esp = 'Contatos soltos: ligar pro [contato omitido], depois [contato omitido], ou [contato omitido]; também [contato omitido] e [contato omitido] e [contato omitido]; com rótulo, fone [contato omitido]; peça 87654321 e lote 20261110 ficam; fim dos contatos.'
+        if c != esp: prob.append('cada telefone devia sair inteiro (sem DDD, com hífen ou ponto, com o DDD separado, com espaços, sem separador) e o número de peça e o lote ficar: %r (esperado %r)' % (c, esp))
     for sec, chave in (('documentos', 'laudo'), ('abastecimentos', 'posto.jpg'), ('pecas', 'Peça do teste de privacidade'), ('agenda', 'Tarefa do teste')):
         if not any(chave in x['c'][0] + ' ' + x['c'][1] for x in r[sec]): prob.append('%s: a linha do aparelho (%s) sumiu em vez de perder só o contato' % (sec, chave))
     if 'A CONFERIR' not in ' '.join(x['c'][3] for x in r['documentos']): prob.append('o documento enviado devia ficar A CONFERIR')
     prob += ['privacidade: %s' % e for e in erros[:2]]
     ctx.close()
+    return prob
+
+
+def teste_rel_diario_g3(b):
+    """O histórico de manutenção traz a manutenção que a pessoa anota no Diário: o que a G3 (web e app) e o chat («registre no diário: …») gravam tem sys «Diário» (sem categoria) e, mesmo assim, entra no relatório com o texto, o dia e a
+    hora do barco, ao lado das linhas geradas; a linha de outra categoria do aparelho (navegação) e a do SOS seguem de fora."""
+    prob = []
+    for tela in TELAS_G3:
+        app = eh_app(tela)
+        ctx, pg, erros = abre_g3(b, tela)
+        sufixo = 'app' if app else 'web'
+        nela = 'Troquei o filtro de óleo do motor BB (teste %s)' % sufixo
+        g3_envia(pg, app, nela)
+        pelo_chat = 'limpei o filtro de água salgada da climatização (teste %s)' % sufixo
+        pg.evaluate("(q) => window.CapitaoBrain.answer(q, { platform: 'web', commit: true })", 'registre no diário: ' + pelo_chat)
+        pg.wait_for_timeout(300)
+        lin = pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.diario.v1') || '[]').filter((x) => !x.acao).map((x) => [x.sys, x.t])")
+        if len(lin) != 2 or any(x[0] != 'Diário' for x in lin): prob.append('%s: o teste não vale: a tela e o chat deviam gravar duas linhas sys «Diário»: %s' % (tela, lin))
+        rp = ctx.new_page()
+        rp.goto(BASE + REL, wait_until='load')
+        try: rp.wait_for_selector('[data-rel=secao][data-secao=pecas]', state='attached', timeout=15000)
+        except Exception: prob.append('%s: o relatório não montou' % tela)
+        rp.wait_for_timeout(250)
+        r = rp.evaluate(LE_REL)
+        textos = [x['c'][1] for x in r['historico']]
+        for t in (nela, pelo_chat):
+            achou = [x for x in r['historico'] if t.lower() in x['c'][1].lower()]
+            if len(achou) != 1: prob.append('%s: a manutenção anotada no Diário («%s») devia estar no histórico do relatório uma vez, está %d vez(es): %s' % (tela, t[:50], len(achou), [x[:40] for x in textos[:4]]))
+            elif not re.match(r'\d\d/\d\d/\d{4}', achou[0]['c'][0]) or not re.search(r'\d\d:\d\d', achou[0]['c'][0]): prob.append('%s: a linha do Diário no relatório devia ter o dia e a hora do barco: %r' % (tela, achou[0]['c'][0]))
+        gerad = [x['id'] for x in r['historico'] if x['id'] in {y['id'] for y in r['dd']['diario']}]
+        if len(gerad) != len(rel_historico_ids(r['dd'])): prob.append('%s: as linhas geradas do histórico mudaram (%d, esperado %d)' % (tela, len(gerad), len(rel_historico_ids(r['dd']))))
+        prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+def teste_rel_dia_bordo(b):
+    """O dia de hoje do relatório é o mesmo das telas com o replay livre, também entre 00:00 e 07:00 de Brasília (com o relógio às 03:00, quando o dia de bordo, que começa às 07:00, ainda é o de ontem): o «hoje», os prazos e
+    a data de vencimento de cada tarefa da equipe do relatório batem com os da G4 e com o hoje da C1; o dia de bordo não é o hoje (o relatório não troca de dia com a âncora das 07:00; o replay fixado é outra coisa: ele congela a tela
+    inteira num instante da volta e o relatório, que é um documento do registro, não lê o replay)."""
+    prob = []
+    agora = datetime.datetime.now(datetime.timezone.utc)
+    alvo = (agora - datetime.timedelta(hours=3)).replace(hour=3, minute=0, second=0, microsecond=0) + datetime.timedelta(hours=3)   # 03:00 de Brasília de hoje
+    delta = int((alvo - agora).total_seconds() * 1000)
+    esperado = (alvo - datetime.timedelta(hours=3)).strftime('%d/%m/%Y')
+    shift = "(() => { const n = Date.now.bind(Date); Date.now = () => n() + %d; })();" % delta
+    sessao = {'capitao.sessao.v1': json.dumps({'u': 'lucas', 'em': int(alvo.timestamp() * 1000), 'exp': int(alvo.timestamp() * 1000) + 86400000})}   # (a sessão do relógio deslocado)
+    LE = "() => { const A = window.CapitaoAgora; return { hoje: A.relogio.hoje, bordo: A.relogio.diaBordo, ms: A.relogio.ms }; }"
+    ctx, pg, erros = abre_rel(b, dias=delta / 86400000.0)
+    r = pg.evaluate(LE_REL)
+    rel = pg.evaluate(LE)
+    dd = r['dd']
+    if rel['hoje'] != esperado: prob.append('o relatório às 03:00 de Brasília diz hoje %s (esperado %s, o dia do calendário do barco)' % (rel['hoje'], esperado))
+    if dict(r['dl']).get('Prazos') != 'contados a partir de %s (hoje)' % rel['hoje']: prob.append('a capa devia dizer «contados a partir de %s (hoje)»: %r' % (rel['hoje'], dict(r['dl']).get('Prazos')))
+    ctx.close()
+    ctx, pg, erros_g = abre_tela(b, 'G4-Equipe-Web', fixo=None, ls=sessao, extra=shift)
+    try: pg.wait_for_function("() => document.querySelector('[data-g4=apoio]')", timeout=10000)
+    except Exception: pass
+    g4 = pg.evaluate(LE)
+    if g4['bordo'] == g4['hoje']: prob.append('o teste não vale: às 03:00 o dia de bordo (%s) devia ser o de ontem e não o de hoje (%s)' % (g4['bordo'], g4['hoje']))
+    if g4['hoje'] != rel['hoje']: prob.append('a G4 (replay livre) diz hoje %s e o relatório %s: tudo lê o mesmo dia' % (g4['hoje'], rel['hoje']))
+    g4_aba(pg, 'G4-Equipe-Web', 'tarefas')
+    tg = {t['id']: t for t in pg.evaluate(LE_G4)['tarefas']}
+    n_eq = 0
+    for lin in r['agenda']:
+        if 'tarefa da equipe' not in lin['c'][0] or lin['id'] not in tg: continue
+        n_eq += 1
+        if lin['c'][2] not in tg[lin['id']]['meta'] and lin['c'][2] not in tg[lin['id']]['prazo']: prob.append('a tarefa %s vence %s no relatório e a G4 diz %r' % (lin['id'], lin['c'][2], tg[lin['id']]['meta']))
+        if lin['c'][3].split(' ')[0].replace('-', '‑') not in tg[lin['id']]['prazo'].replace('-', '‑') and lin['c'][3].split(' ')[0] not in tg[lin['id']]['prazo']: prob.append('a tarefa %s está %r no relatório e a G4 diz %r' % (lin['id'], lin['c'][3], tg[lin['id']]['prazo']))
+    if n_eq < 2: prob.append('o teste não vale: eram esperadas as 2 tarefas da equipe geradas na agenda do relatório e na G4, achou %d' % n_eq)
+    prob += ['G4: %s' % e for e in erros_g[:2]]
+    ctx.close()
+    ctx, pg, erros_c = abre_tela(b, 'C1-Leme-Web', fixo=None, ls=sessao, extra=shift)
+    c1 = pg.evaluate(LE)
+    if c1['hoje'] != rel['hoje']: prob.append('a C1 (replay livre) diz hoje %s e o relatório %s' % (c1['hoje'], rel['hoje']))
+    prob += ['C1: %s' % e for e in erros_c[:2]]
+    ctx.close()
+    prob += ['relatório: %s' % e for e in erros[:2]]
     return prob
 
 
@@ -9696,6 +9905,8 @@ def p4k_conferencias(b, lista, paginas, completo):
         out.append(('relatório · as tarefas agendadas neste aparelho na agenda (ontem, hoje, D-30 e D-31)', teste_rel_tarefas_aparelho(b)))
         out.append(('relatório · privacidade: telefone, e-mail, CPF, valor, coordenada, a linha do SOS e a Equipe fora', teste_rel_privacidade(b)))
         out.append(('relatório · o diário vigente (anulada, corrigida, ação, pendência) e o selo apresentação só com simulacao false', teste_rel_vigente(b)))
+        out.append(('relatório · a manutenção anotada no Diário (sys Diário) pela G3 e pelo chat entra no histórico', teste_rel_diario_g3(b)))
+        out.append(('relatório · o dia de hoje é o das telas com o replay livre, também às 03:00 de Brasília (antes da âncora das 07:00)', teste_rel_dia_bordo(b)))
         out.append(('relatório · o ramo simulacao false (SEM DADOS só ali) e as seções vazias', teste_rel_real(b)))
         out.append(('relatório · se refaz ao voltar à aba, com o registro de outra aba e antes de imprimir, sem timer', teste_rel_atualiza(b)))
         out.append(('relatório · impressão: mídia de papel, A4, mais de uma folha e o PDF sem dado proibido', teste_rel_impressao(b)))
@@ -9733,14 +9944,18 @@ MUTANTES_P4K = [
     ('o histórico mostra o texto antigo da linha corrigida', REL, [("t: corr[x.iso] ? corr[x.iso].t : x.t,", "t: x.t,")], 'vigente'),
     ('o histórico traz as linhas de ação (resolve, corrige, anula)', REL, [("if (x.acao || anul[x.iso] ||", "if (anul[x.iso] ||")], 'vigente'),
     ('o histórico traz a linha do SOS', REL, [(" || /^(?:web|app) · SOS/.test(String(x.src || ''))", "")], 'priv'),
-    ('o histórico traz as linhas que não são de manutenção', REL, [(" || !SYS_MANUT[x.sys]) return;", ") return;")], 'priv'),
+    ('o histórico traz as linhas que não são de manutenção', REL, [(" || !SYS_APARELHO[x.sys]) return;", ") return;")], 'priv'),
+    ('o histórico deixa de fora a manutenção que a pessoa anota no Diário (sys Diário)', REL, [("'Eletrônicos': 1, 'Diário': 1 };", "'Eletrônicos': 1 };")], 'diario_g3'),
     ('o histórico mostra a correção MAIS VELHA de uma linha corrigida duas vezes', REL, [(" && !corr[x.alvo]) corr[x.alvo] = x; });", ") corr[x.alvo] = x; });")], 'vigente'),
     ('o selo apresentação aparece também na simulação (linha do diário)', REL, [("apres: x.sim === true && !sim() });", "apres: x.sim === true });")], 'vigente'),
     ('o selo apresentação aparece na tarefa sem sim', REL, [("apres: !!apar[t.id] && !sim() });", "apres: !sim() });")], 'vigente'),
     # —— a privacidade ——
     ('o texto livre não passa pelo PESSOAIS do §3', REL, [("    if (RX_PESSOAL) s = s.replace(RX_PESSOAL, '[contato omitido]');\n", "")], 'priv'),
     ('o telefone com +55 não sai inteiro (sem o padrão do código do país)', REL, [("    s = s.replace(RX_FONE_PAIS, '[contato omitido]');\n", "")], 'priv'),
-    ('o número de 10 a 11 dígitos sem separador não sai', REL, [("    s = s.replace(RX_FONE_SOLTO, '$1[contato omitido]');\n", "")], 'priv'),
+    ('o telefone de 10 dígitos ou mais com espaços, ponto, hífen ou sem separador não sai', REL, [("    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]').replace(RX_FONE_CURTO, '$1[contato omitido]');\n", "    s = s.replace(RX_FONE_CURTO, '$1[contato omitido]');\n")], 'priv'),
+    ('o telefone sem DDD (99999-1234, 3333-4444) não sai', REL, [("    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]').replace(RX_FONE_CURTO, '$1[contato omitido]');\n", "    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]');\n")], 'priv'),
+    ('o número de peça de 8 dígitos seguidos é tratado como telefone', REL, [("RX_FONE_CURTO = /(^|\\D)\\d{4,5}[-.]\\d{4}(?!\\d)/g;", "RX_FONE_CURTO = /(^|\\D)\\d{4,5}[-.]?\\d{4}(?!\\d)/g;")], 'priv'),
+    ('o relatório troca de dia com a âncora das 07:00 (antes das 07:00 diz o dia de ontem, ao contrário das telas com o replay livre)', REL, [("A.rebase(Date.now()); } catch (x) {}", "A.rebase(A.ancora(Date.now()), true); } catch (x) {}")], 'dia_bordo'),
     ('o telefone com rótulo («tel 3333-4444») não sai', REL, [("    s = s.replace(RX_FONE, '$1 [contato omitido]');\n", "")], 'priv'),
     ('o texto livre não passa pelo DINHEIRO do §3', REL, [("    if (RX_DINHEIRO) s = s.replace(RX_DINHEIRO, '[valor omitido]');\n", "")], 'priv'),
     ('o valor sai pela metade (sobram os dígitos depois do R$)', REL, [("RX_DINHEIRO = rx('DINHEIRO', '[\\\\d.,]*')", "RX_DINHEIRO = rx('DINHEIRO')")], 'priv'),
@@ -9774,7 +9989,7 @@ MUTANTES_P4K = [
     ('o texto do NORMALIZADO da C3 ganha o rótulo DEMO (só aparece depois do alarme)', 'C3-Leme-Alerta.dc.html', [("selo = 'NORMALIZADO às ' + hora(j.ate, false).slice(0, 5);", "selo = 'NORMALIZADO · DEMO ' + hora(j.ate, false).slice(0, 5);")], 'livre:C3-Leme-Alerta'),
     ('a faixa de alerta aparece na C3', 'capitao-app.js', [("!/^(Manual-|C3-|S[12]-SOS-)/.test(ARQ)", "!/^(Manual-|S[12]-SOS-)/.test(ARQ)")], 'livre:C3-Leme-Alerta'),
 ]
-QUAL_P4K = {'conteudo': lambda b, a: teste_rel_conteudo(b), 'dias': lambda b, a: teste_rel_dias(b), 'tarefas': lambda b, a: teste_rel_tarefas_aparelho(b), 'priv': lambda b, a: teste_rel_privacidade(b), 'vigente': lambda b, a: teste_rel_vigente(b), 'real': lambda b, a: teste_rel_real(b),
+QUAL_P4K = {'diario_g3': lambda b, a: teste_rel_diario_g3(b), 'dia_bordo': lambda b, a: teste_rel_dia_bordo(b), 'conteudo': lambda b, a: teste_rel_conteudo(b), 'dias': lambda b, a: teste_rel_dias(b), 'tarefas': lambda b, a: teste_rel_tarefas_aparelho(b), 'priv': lambda b, a: teste_rel_privacidade(b), 'vigente': lambda b, a: teste_rel_vigente(b), 'real': lambda b, a: teste_rel_real(b),
             'atualiza': lambda b, a: teste_rel_atualiza(b) + teste_rel_codigo(), 'impressao': lambda b, a: teste_rel_impressao(b) + teste_rel_codigo(), 'layout': lambda b, a: teste_rel_layout(b),
             'registro': lambda b, a: teste_fase4_registro(), 'pendentes': lambda b, a: teste_fase4_pendentes(('Main',), ()), 'svg': lambda b, a: teste_fase4_svg(), 'intervalos': lambda b, a: teste_fase4_intervalos()}
 

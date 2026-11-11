@@ -350,7 +350,7 @@ class Component extends DCLogic {
     if (n) this.diario((n === 1 ? 'Prestador restaurado' : 'Prestadores restaurados') + ' em Equipe: ' + n + '.');
   }
   // ——— tarefas da equipe (F15) ———
-  novaTarefa() { if (this.state.tarAberto) return this.setState({ tarAberto: false, tarErro: '' }); this.setState({ tarAberto: true, tN: '', tVence: '', tQuem: this.opcoesQuem()[0].v, tarErro: '' }, () => { const el = document.querySelector('[data-g4=t-n]'); if (el) el.focus(); }); }
+  novaTarefa() { if (this.state.tarAberto) return this.setState({ tarAberto: false, tarErro: '' }); this.setState({ tarAberto: true, tN: '', tVence: '', tQuem: (this.opcoesQuem()[0] || { v: '' }).v, tarErro: '' }, () => { const el = document.querySelector('[data-g4=t-n]'); if (el) el.focus(); }); }
   // o responsável: o papel de cada contato de apoio (como a agenda o escreve) e o primeiro nome de cada perfil
   QUEM() { return { marina: 'marina', oficina: 'oficina de motores', tecnico: 'técnico', eletronica: 'técnico de eletrônicos', refrigeracao: 'técnico de refrigeração', posto: 'posto de combustível' }; }
   quemDe(a) { return this.QUEM()[a.id] || String(a.papel || a.id).toLowerCase(); }
@@ -389,12 +389,14 @@ class Component extends DCLogic {
     const ja = eq.convites.filter((c) => c.nome === nome && c.contato === lk.contato && c.acesso === acesso)[0];
     this.abrir(lk);
     if (ja) return this.toast('Convite de ' + nome + ' já estava PENDENTE — reaberto no ' + lk.canal, 'var(--cap-warn, #f0a63a)');
-    eq.convites.push({ nome: nome, func: func || 'função a confirmar', acesso: acesso, d: B.now().d, contato: lk.contato, canal: lk.canal });
+    // a referência identifica o convite no diário SEM o nome, a função nem o contato (o diário entra na ficha da IA); o dados.html a lê para não devolver um convite cancelado depois
+    const ref = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    eq.convites.push({ nome: nome, func: func || 'função a confirmar', acesso: acesso, d: B.now().d, contato: lk.contato, canal: lk.canal, ref: ref });
     this.save(eq);
     [this.nomeRef, this.funcRef, this.contatoRef].forEach((r) => { if (r.current) r.current.value = ''; });
     this.setState({ conviteAberto: false });
     this.toast('Convite aberto no ' + lk.canal + ' · ' + nome + ' fica PENDENTE');
-    this.diario('Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — PENDENTE até o cadastro do acesso.');
+    this.diario('Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' (convite ' + ref + ') — PENDENTE até o cadastro do acesso (nome, função e contato ficam só neste aparelho).');
   }
   cancelarConvite(c) {
     const eq = this.fresh();
@@ -402,7 +404,7 @@ class Component extends DCLogic {
     if (k < 0) return this.refresh();
     eq.convites.splice(k, 1); this.save(eq);
     this.toast('Convite de ' + c.nome + ' cancelado — nunca virou acesso', 'var(--cap-warn, #f0a63a)');
-    this.diario('Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe — nunca virou acesso.');
+    this.diario('Convite de acesso (' + c.acesso + ') cancelado em Equipe' + (/^[0-9a-z]{4,16}$/.test(String(c.ref || '')) ? ' (convite ' + c.ref + ')' : '') + ' — nunca virou acesso.');
   }
   renderVals() {
     const s = this.state, d = this.dinamico(), B = window.CapitaoBrain;
