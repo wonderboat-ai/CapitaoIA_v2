@@ -2274,9 +2274,10 @@ LE_GRAFICO = """() => { """ + JS_BASE + """
   const yTxt = [...svg.querySelectorAll('text[text-anchor="end"]')].filter((t) => +t.getAttribute('x') < 40).map((t) => t.textContent), xTxt = [...svg.querySelectorAll('text[text-anchor="middle"]')].map((t) => t.textContent);
   // as horas do eixo e a do cursor pelo relógio do barco (Intl, o fuso do CapitaoAgora; nada da conta de fuso do gráfico): o texto de cada marca é o horário de parede do ponto do eixo onde ela está
   // (x → instante pela linha: o 1º ponto e o último), e o do cursor no último ponto é o do instante de agora
-  const PRT = (ms) => Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: A.fuso, hourCycle: 'h23', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms)).map((p) => [p.type, p.value]));
+  const PRT = (ms) => { try { return Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: A.fuso, hourCycle: 'h23', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms)).map((p) => [p.type, p.value])); }
+    catch (e) { return { year: 'NaN', month: '1', day: 'NaN', hour: 'NaN', minute: 'NaN', second: 'NaN' }; } };   // (uma marca fora do tempo, NaN, é acusação: «NaN:NaN», não erro do teste)
   const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'], FM = { '150S': (p) => p.hour + ':' + p.minute + ':' + p.second, '1D': (p) => p.hour + ':' + p.minute, '7D': (p) => p.day + '/' + p.month, '30D': (p) => p.day + '/' + p.month, '1A': (p) => MESES[+p.month - 1] + '/' + p.year };
-  const TOL = { '150S': 500, '1D': 30000, '7D': 1800000, '30D': 1800000, '1A': 1800000 }, l0 = linhas[0], xi = l0 ? l0.pts[0][0] : 0, xf = l0 ? l0.pts[l0.pts.length - 1][0] : 1;
+  const TOL = { '150S': 500, '1D': 30000, '7D': 1800000, '30D': 1800000, '1A': 1800000 }, l0 = linhas[0], ok0 = !!(l0 && l0.pts.length), xi = ok0 ? l0.pts[0][0] : 0, xf = ok0 ? l0.pts[l0.pts.length - 1][0] : 1;
   const marcasX = [...svg.querySelectorAll('text[text-anchor="middle"]')].map((t) => +t.getAttribute('x')), pI = PRT(I.ms);
   const marcasEsp = dd.ok ? marcasX.map((x) => FM[jan](PRT(dd.t0 + (x - xi) / (xf - xi) * (dd.t1 - dd.t0) + TOL[jan]))) : [];
   const horaEsp = { '150S': FM['150S'](pI), '1D': pI.day + '/' + pI.month + ' ' + pI.hour + ':' + pI.minute, '7D': pI.day + '/' + pI.month + ' ' + pI.hour + ':' + pI.minute, '30D': pI.day + '/' + pI.month + ' ' + pI.hour + ':' + pI.minute, '1A': pI.day + '/' + pI.month };
@@ -2781,7 +2782,7 @@ LE_SENS = """() => { """ + JS_BASE + """
     return { id: e.getAttribute('data-ponto'), nivel: e.getAttribute('data-nivel'), cor: getComputedStyle(e).backgroundColor, visivel: topo === e || e.contains(topo), esq: parseFloat(e.style.left) + parseFloat(e.style.width) / 2, topo: parseFloat(e.style.top) + parseFloat(e.style.height) / 2 }; });
   const linhas = [...document.querySelectorAll('[data-linha]')].map((e) => ({ id: e.getAttribute('data-linha'), esq: parseFloat(e.style.left), topo: parseFloat(e.style.top) + 0.5, cor: getComputedStyle(e).backgroundColor }));
   // a lista «todos os sensores»: o texto de valores de cada um (a última linha do cartão), os campos do D.sensores com o rótulo e o valor de cada um, e os itens que a API dá à tela
-  const valores = Object.fromEntries([...document.querySelectorAll('[data-sensor]')].map((e) => [e.getAttribute('data-sensor'), nome(e.lastElementChild.innerText)]));
+  const valores = Object.fromEntries([...document.querySelectorAll('[data-sensor]')].map((e) => [e.getAttribute('data-sensor'), nome(e.lastElementChild.innerText)])), valoresCru = Object.fromEntries([...document.querySelectorAll('[data-sensor]')].map((e) => [e.getAttribute('data-sensor'), e.lastElementChild.innerText]));
   const campos = Object.fromEntries(D.sensores.pontos.map((p) => [p.id, p.campos.map((c) => ({ c: c, rot: D.campos[c].rotulo, v: T[c], bool: typeof q[c] === 'boolean' ? q[c] : null }))]));
   const vs = window.CapitaoSensores.vistas(/Mobile/.test(location.pathname) ? 'app' : 'web'), itens = Object.fromEntries([].concat(vs.perfil.pontos, vs.planta.pontos).map((p) => [p.id, p.itens.map((i) => [i.k, i.v])]));
   window.scrollTo(0, 0);
@@ -2791,7 +2792,7 @@ LE_SENS = """() => { """ + JS_BASE + """
       bl.forEach((q) => { if (x > q.l - m && x < q.r + m && y > q.t - m && y < q.b + m) colide.push(d.getAttribute('data-ponto') + ' dentro do bloco ' + q.id); }); }); });
   const cor = (v) => { const e = document.createElement('i'); e.style.color = v; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; };
   return { T, colide, cores: { normal: cor('var(--cap-ok, #34c77a)'), aviso: cor('var(--cap-warn, #f0a63a)'), critico: cor('var(--cap-crit, #ff3b30)') }, ativos: window.CapitaoAlertas.ativos().map((a) => ({ id: a.id, sistema: a.sistema, lado: a.lado })),
-    q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }, blocos, pontos, linhas, valores, campos, itens, lista: [...document.querySelectorAll('[data-sensor]')].map((e) => nome(e.innerText)), desenhos: [...document.querySelectorAll('[data-desenho]')].map((e) => e.getAttribute('data-desenho')),
+    q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }, blocos, pontos, linhas, valores, valoresCru, campos, itens, lista: [...document.querySelectorAll('[data-sensor]')].map((e) => nome(e.innerText)), desenhos: [...document.querySelectorAll('[data-desenho]')].map((e) => e.getAttribute('data-desenho')),
     texto: nome(document.body.innerText), D: { sens: D.sensores.pontos.map((p) => [p.id, p.vista]), mapa: [D.sensores.perfil, D.sensores.planta] },
     selo: (() => { const n = document.querySelector('[data-selo]'); return n ? [n.getAttribute('data-selo'), nome(n.innerText)] : null; })() }; }"""
 LIVRE_DE_SALVATAGEM = re.compile(r'colete|balsa|boia|extintor|sinalizador|epirb|radiobaliza|seafire|supress|incêndio|incendio|salva-?vidas', re.I)
@@ -2822,6 +2823,9 @@ def problemas_sensores_texto(r, rot):
     prob = []
     for pid, cs in r['campos'].items():
         txt, itens = r['valores'].get(pid, ''), r['itens'].get(pid, [])
+        # número e unidade juntos por um espaço sem quebra (a unidade nunca cai sozinha na linha de baixo): o texto cru não tem número, espaço comum e unidade
+        solto = re.search(r'\d (?:°C|°|%|rpm|bar|hPa|nós?|kW|V|Ah|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])', r['valoresCru'].get(pid, ''))
+        if solto: prob.append('%s: o sensor %s tem «%s» com espaço comum entre o número e a unidade (devia ser espaço sem quebra: a unidade pode cair sozinha na linha de baixo)' % (rot, pid, solto.group(0)))
         if re.search(r'\b(ligad[oa]s?|transmitindo)\s+(ligad|deslig|transmit)', txt, re.I): prob.append('%s: o sensor %s diz %r (o rótulo já traz o estado: «ligado desligado»)' % (rot, pid, txt))
         rotulos = [i[0] for i in itens]
         if len(set(rotulos)) != len(rotulos): prob.append('%s: o sensor %s repete o rótulo na lista de valores: %s' % (rot, pid, rotulos))
