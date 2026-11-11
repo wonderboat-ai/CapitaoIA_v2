@@ -279,7 +279,7 @@ def main():
                    and tela in pg.url and pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") is None, ped.get('pergunta', '')[:80])
                 # Fase 4 (P4G, revisão final 4ª rodada, trava 10): a pessoa que some, não volta ou não se acha é emergência LOCAL: com a chave ligada e o replay fixado em 60 s, a pergunta (a que foi nadar, a que sai de caiaque, a que
                 # «não está aqui, estava na popa») não faz pedido nenhum ao Worker, abre com a instrução de segurança e não traz a situação de bordo (SOG, proa) que o fallback levava à IA
-                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco'):
+                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'quem foi de caiaque não volta', 'um de nós sumiu', 'cadê o Pedro? ninguém vê'):   # (os 3 últimos: 5ª rodada, achado 7)
                     t, n, _ = digita(q)
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     ok(tela + ': a pessoa perdida «%s» é emergência local: nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
