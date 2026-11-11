@@ -303,12 +303,20 @@ class Component extends DCLogic {
       // Na conversa por voz, fala a resposta final — a da IA ou, se ela não entrar, a local.
       const entrega = (fin, ia) => {
         if (this._dead || ger !== (this._ger || 0)) return; // NOVA apagou a conversa: descarta sem mexer nos contadores novos
+        // `mudo`: a resposta que chega da IA com uma emergência aberta no meio (a janela vale agora e não valia quando a pergunta saiu) entra na tela sem falar — a fala nova cancelaria a instrução de segurança que está sendo dita
+        let mudo = false; if (ia && !emg) { try { mudo = !!(EM && EM.valendo()); } catch (e) { mudo = false; } }
         const msg = { role: 'bot', text: fin.text, src: fin.src, actions: fin.actions };
         this.setState((s) => {
           const n = Math.max(0, (s.pending || 1) - 1), iaN = Math.max(0, (s.iaN || 0) - (ia ? 1 : 0)), i = s.thread.indexOf(um);
           const thread = i < 0 ? s.thread.concat([msg]) : s.thread.slice(0, i + 1).concat([msg], s.thread.slice(i + 1));
           return { thread: thread, pending: n, iaN: iaN, thinking: n > 0 };
-        }, () => { this.scrollThread(); if (this.state.conversa) this.speakAndResume((B.falaCurta ? B.falaCurta(fin) : fin.text) + (fin.extraFala ? ' ' + fin.extraFala : '')); });
+        }, () => {
+          this.scrollThread();
+          if (!this.state.conversa) return;
+          // sem fala, o microfone só reabre se nenhuma fala segue em curso (a que segue o reabre no fim) e sem outra resposta a caminho
+          if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }
+          this.speakAndResume((B.falaCurta ? B.falaCurta(fin) : fin.text) + (fin.extraFala ? ' ' + fin.extraFala : ''));
+        });
       };
       // IA na nuvem (Workers AI) quando a resposta local não basta (B.pedeIA): pergunta sem resposta pronta, trecho do guia ou pergunta sobre o app.
       // Leva a ficha de bordo (o que o app sabe, com as fontes), a leitura de agora (B.resumoAgora(a): o instante da resposta, sem posição na emergência) e o histórico do cérebro (B.historicoIA: o ponto único,
@@ -348,9 +356,12 @@ class Component extends DCLogic {
         // Resposta sem dado da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca a resposta genérica.
         // O cérebro não vê a resposta da IA: a tela a conta (B.conversa), para «o gerador» continuar uma pergunta que a IA fez.
         // A resposta tardia não recoloca o que o NOVA ou o ENCERRAR zeraram (ctxN) nem o que a emergência que abriu no meio encerrou (a janela vale agora).
+        // E a janela que ABRIU depois de a pergunta sair (uma emergência no meio) fecha a porta da IA: o texto dela, que pode trazer posição, rumo e SOG, não entra na conversa nem é falado (CLAUDE.md 10) —
+        // fica a resposta local da pergunta de rotina, que nunca leva posição. A fala da instrução de segurança segue inteira (B.speak cancela a anterior: nenhuma fala nova a corta).
+        let emAgora = false; try { emAgora = !!(EM && EM.valendo()); } catch (e) { emAgora = false; }
+        if (r && emAgora) { entrega(local(''), true); return; }
         if (r && !(r.semDados && (a.key === 'base' || a.key === 'faqEquip'))) {
-          let emAgora = false; try { emAgora = !!(EM && EM.valendo()); } catch (e) { emAgora = false; }
-          if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} }
+          if (!this._dead && ctxN === (this._ctxN || 0)) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} }
           entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' || a.key === 'faqEquip' ? a.actions : [] }, true);
         } else {
           const nota = r ? '' : IA.falha ? IA.falha() : '', fin = local(nota);

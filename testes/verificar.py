@@ -115,7 +115,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 66 defeitos (47 da P4G e 19 da revisão final), todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 70 defeitos (47 da P4G, 19 da revisão final e 4 da 2ª rodada: a resposta da IA que chega depois de um MAYDAY), todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -123,7 +123,7 @@ a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as hora
 que anda sozinha; simulacao false com a última leitura salva (LED âmbar parado, «ÚLTIMA LEITURA · 26/09 10:12»); os 5 ouvintes (telemetria, virada do dia, botão de resposta, hash, ENCERRAR) tirados pelo componentWillUnmount e
 religados sem vazar em 3 voltas; a IA (o 3º argumento é B.resumoAgora, o histórico é B.historicoIA — sem coordenadas e sem a emergência —, o ditado vai corrigido e a resposta da IA é contada ao cérebro com B.conversa: «o
 gerador» depois de «Qual equipamento você quer ligar?» continua o «como ligar?»); a janela de conversa em emergência (o SOS a marca, dentro dela a posição é «LEIA NO PLOTTER» e nada vai à IA, o NOVA e o ENCERRAR zeram a marca e
-chamam B.limpaConversa); os botões das propostas (#capitao-relato-… e #capitao-prop-…: o toque vira a pergunta digitada, não navega, Registrar = 1 linha, Não registrar e Recusar = 0, Confirmar grava a regra ou a tarefa e o
+chamam B.limpaConversa; a resposta da IA que chega DEPOIS de um MAYDAY, com a janela já valendo, não vira balão, não é falada e não corta a instrução do SOS: fica a resposta local); os botões das propostas (#capitao-relato-… e #capitao-prop-…: o toque vira a pergunta digitada, não navega, Registrar = 1 linha, Não registrar e Recusar = 0, Confirmar grava a regra ou a tarefa e o
 Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva o anexo nem apaga o rascunho); e a H3 sem rótulo (nem com D.demo ligado) com os atalhos para o mapa de sensores e os checklists da plataforma da tela.
 A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
 leitura de 26/09 ao lado do «AO VIVO»).
@@ -5716,10 +5716,10 @@ def teste_home_anexo(b, tela):
     return prob
 
 
-def abre_home_retida(b, tela):
-    """A Home com o Worker da IA de mentira que SEGURA a resposta: cada pedido fica em `seg` até o teste liberá-lo (libera(seg, texto)); espia o B.conversa em window.__conv."""
+def abre_home_retida(b, tela, extra=''):
+    """A Home com o Worker da IA de mentira que SEGURA a resposta: cada pedido fica em `seg` até o teste liberá-lo (libera(seg, texto)); espia o B.conversa em window.__conv. `extra`: um script a mais antes dos da página."""
     seg = []
-    ctx, pg, erros = abre_tela(b, tela, ls={'capitao.ia.chave.v1': 'chave-de-teste'})
+    ctx, pg, erros = abre_tela(b, tela, ls={'capitao.ia.chave.v1': 'chave-de-teste'}, extra=extra)
     cab = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
     def rota(route):
         if route.request.method == 'OPTIONS': return route.fulfill(status=204, headers=cab)
@@ -5727,6 +5727,13 @@ def abre_home_retida(b, tela):
     ctx.route(URL_IA.rstrip('/') + '**', rota)
     pg.evaluate("() => { window.__conv = []; const B = window.CapitaoBrain, f = B.conversa; B.conversa = function () { window.__conv.push([].slice.call(arguments)); return f.apply(this, arguments); }; }")
     return ctx, pg, erros, seg, cab
+
+
+# a fala de mentira da conversa por voz: o reconhecedor não ouve nada e o B.speak (o ponto único da fala do app) guarda cada texto em window.__faladas (sem trocar o comportamento dele)
+ESPIA_BSPEAK = r"""(() => { class R { start() {} stop() {} abort() {} } window.SpeechRecognition = R; window.webkitSpeechRecognition = R; window.__faladas = [];
+  const t = setInterval(() => { const B = window.CapitaoBrain; if (B && B.speak && !B.__espiado) { B.__espiado = true; const o = B.speak; B.speak = function (txt) { window.__faladas.push(String(txt)); return o.apply(this, arguments); }; } }, 10); })()"""
+ABRE_CONVERSA = """() => { for (const hs of document.querySelectorAll('.sc-host')) { const k = Object.keys(hs).find((x) => x.startsWith('__reactFiber')); let f = hs[k]; while (f && !(f.stateNode && f.stateNode.logic && f.stateNode.logic.ask)) f = f.return;
+  if (f) { f.stateNode.logic.setState({ conversa: true }); return true; } } return false; }"""
 
 
 def libera(seg, cab, texto='Qual equipamento você quer ligar?'):
@@ -5744,6 +5751,9 @@ def pergunta_a_caminho(pg, tela, seg, q):
     return False
 
 
+TARDIA_MARCA = 'MARCA-TARDIA-DA-IA'
+
+
 def teste_home_tardio(b, tela):
     """A resposta da IA que chega DEPOIS do NOVA, do ENCERRAR ou de uma emergência não recoloca no cérebro o contexto que eles zeraram (B.conversa só conta a conversa que continua): o controle conta a resposta (1 chamada) e,
     depois do NOVA, «o gerador» volta a ser a resposta pronta do gerador, não a continuação do «como ligar?»."""
@@ -5755,7 +5765,8 @@ def teste_home_tardio(b, tela):
     if len(pg.evaluate('() => window.__conv')) != 1: prob.append('%s: o controle (sem NOVA nem ENCERRAR) devia contar a resposta da IA ao cérebro 1 vez: %s' % (rot, pg.evaluate('() => window.__conv')))
     ctx.close()
     for cenario in ('NOVA', 'ENCERRAR', 'emergência'):
-        ctx, pg, erros, seg, cab = abre_home_retida(b, tela)
+        ctx, pg, erros, seg, cab = abre_home_retida(b, tela, extra=ESPIA_BSPEAK if cenario == 'emergência' else '')
+        if cenario == 'emergência' and not pg.evaluate(ABRE_CONVERSA): prob.append('%s: o teste não vale (a conversa por voz não abriu)' % rot)
         if not pergunta_a_caminho(pg, tela, seg, 'como ligar?'): prob.append('%s: o pedido não chegou ao Worker (o teste não vale)' % rot); ctx.close(); continue
         if cenario == 'NOVA': pg.click('[aria-label="Nova conversa"]')
         elif cenario == 'ENCERRAR': pg.evaluate("() => window.dispatchEvent(new CustomEvent('capitao-voz-encerrar'))")
@@ -5763,9 +5774,19 @@ def teste_home_tardio(b, tela):
             pergunta_home(pg, tela, 'mayday, homem ao mar', espera=False); pg.wait_for_timeout(1500)
             if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: o teste não vale (o SOS não marcou a janela)' % rot)
         pg.wait_for_timeout(300)
-        libera(seg, cab); pg.wait_for_timeout(700)
+        falas0 = pg.evaluate('() => (window.__faladas || []).length')
+        libera(seg, cab, **({'texto': TARDIA_MARCA + ' Estamos a 18 nós, rumo 207, perto da Ilha das Cabras.'} if cenario == 'emergência' else {})); pg.wait_for_timeout(700)
         n = pg.evaluate('() => window.__conv')
         if n: prob.append('%s: a resposta da IA que chegou depois do %s foi contada ao cérebro (B.conversa %s): ela recoloca o contexto que foi zerado' % (rot, cenario, n))
+        if cenario == 'emergência':
+            # a janela que abriu DEPOIS da pergunta fecha a porta da IA (CLAUDE.md 10): o texto da IA (aqui com «18 nós, rumo 207») não vira balão, não é falado, e nenhuma fala nova cancela a instrução do SOS
+            msgs = pg.evaluate(LE_MSGS)
+            if any(TARDIA_MARCA in m['txt'] for m in msgs): prob.append('%s: a resposta da IA que chegou depois do MAYDAY (com a janela valendo) entrou na conversa: %s' % (rot, [m['txt'][:90] for m in msgs if TARDIA_MARCA in m['txt']]))
+            if TARDIA_MARCA in pg.evaluate("() => document.body.innerText"): prob.append('%s: o texto da IA que chegou depois do MAYDAY está na tela' % rot)
+            falas = pg.evaluate('() => window.__faladas')
+            if falas0 < 1 or not any(re.search(r'mayday|sos|emerg', f, re.I) for f in falas[:falas0]): prob.append('%s: o teste não vale (a instrução do SOS não foi falada na conversa antes da resposta tardia: %s)' % (rot, [f[:50] for f in falas]))
+            if any(TARDIA_MARCA in f for f in falas): prob.append('%s: o texto da IA que chegou depois do MAYDAY foi falado na conversa: %s' % (rot, [f[:60] for f in falas]))
+            if len(falas) > falas0: prob.append('%s: uma fala nova (%s) veio depois da instrução do SOS e a cortaria (B.speak cancela a anterior)' % (rot, [f[:60] for f in falas[falas0:]]))
         if cenario != 'emergência':
             pg.evaluate("() => localStorage.removeItem('capitao.ia.chave.v1')")
             m = pergunta_home(pg, tela, 'o gerador')
@@ -5955,10 +5976,14 @@ MUTANTES_P4G = [
     ('a H2 põe a nota da foto (com a situação de bordo) antes da resposta de emergência', 'H2-Home-Mobile.dc.html', [("const seg = a.janela === true || b.emerg === true || b.abreJanela === true;", "const seg = false;")], 'anexo'),
     ('a Main perde o abreJanela da resposta composta (foto + texto de emergência não marca a janela)', 'Main.dc.html', [("              if (b.abreJanela === true) a.abreJanela = true;\n", "")], 'anexo'),
     ('a H2 perde o abreJanela da resposta composta (foto + texto de emergência não marca a janela)', 'H2-Home-Mobile.dc.html', [("              if (b.abreJanela === true) a.abreJanela = true;\n", "")], 'anexo'),
-    ('a Main conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'Main.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && !emAgora) {")], 'tardio'),
-    ('a H2 conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'H2-Home-Mobile.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && !emAgora) {")], 'tardio'),
-    ('a Main conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'Main.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && ctxN === (this._ctxN || 0)) {")], 'tardio'),
-    ('a H2 conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'H2-Home-Mobile.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0) && !emAgora) {", "if (!this._dead && ctxN === (this._ctxN || 0)) {")], 'tardio'),
+    ('a Main conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'Main.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0)) {", "if (!this._dead) {")], 'tardio'),
+    ('a H2 conta a resposta tardia da IA depois do NOVA e do ENCERRAR (sem o contador do contexto)', 'H2-Home-Mobile.dc.html', [("if (!this._dead && ctxN === (this._ctxN || 0)) {", "if (!this._dead) {")], 'tardio'),
+    ('a Main conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'Main.dc.html', [("        if (r && emAgora) { entrega(local(''), true); return; }\n", "")], 'tardio'),
+    ('a Main mostra o texto da IA que chegou depois de uma emergência (a guarda entrega o texto da IA em vez da resposta local)', 'Main.dc.html', [("if (r && emAgora) { entrega(local(''), true); return; }", "if (r && emAgora) { entrega({ key: 'ia', text: r.text, src: r.src, actions: [] }, true); return; }")], 'tardio'),
+    ('a Main fala a resposta que chegou depois de uma emergência (sem o mudo: a fala nova cancela a instrução do SOS)', 'Main.dc.html', [("let mudo = false; if (ia && !emg) { try { mudo = !!(EM && EM.valendo()); } catch (e) { mudo = false; } }", "let mudo = false;")], 'tardio'),
+    ('a H2 conta a resposta tardia da IA depois de uma emergência (sem a guarda da janela)', 'H2-Home-Mobile.dc.html', [("        if (r && emAgora) { entrega(local(''), true); return; }\n", "")], 'tardio'),
+    ('a H2 mostra o texto da IA que chegou depois de uma emergência (a guarda entrega o texto da IA em vez da resposta local)', 'H2-Home-Mobile.dc.html', [("if (r && emAgora) { entrega(local(''), true); return; }", "if (r && emAgora) { entrega({ key: 'ia', text: r.text, src: r.src, actions: [] }, true); return; }")], 'tardio'),
+    ('a H2 fala a resposta que chegou depois de uma emergência (sem o mudo: a fala nova cancela a instrução do SOS)', 'H2-Home-Mobile.dc.html', [("let mudo = false; if (ia && !emg) { try { mudo = !!(EM && EM.valendo()); } catch (e) { mudo = false; } }", "let mudo = false;")], 'tardio'),
     ('o ENCERRAR e o NOVA da Main não contam o zerar do contexto (o contador não anda)', 'Main.dc.html', [("    this._ctxN = (this._ctxN || 0) + 1;   // a resposta da IA que ainda está a caminho não recoloca no cérebro o contexto que acabou de ser zerado (ask: ctxN)\n", "")], 'tardio'),
     ('o ENCERRAR e o NOVA da H2 não contam o zerar do contexto (o contador não anda)', 'H2-Home-Mobile.dc.html', [("    this._ctxN = (this._ctxN || 0) + 1;   // a resposta da IA que ainda está a caminho não recoloca no cérebro o contexto que acabou de ser zerado (ask: ctxN)\n", "")], 'tardio'),
     ('o ouvinte de clique do cérebro usa o perguntaDoBotao da 1ª cópia (o botão de uma proposta antiga age na nova) — na Main', 'capitao-brain.js@Main', [("q = a ? pdb(a.getAttribute('href')) : '';", "q = a ? perguntaDoBotao(a.getAttribute('href')) : '';")], 'antiga'),
