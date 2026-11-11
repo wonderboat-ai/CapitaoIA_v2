@@ -120,7 +120,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 90 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada, 10 da 3ª — a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la — e 10 da 4ª: os trechos e a ficha do ditado corrigido, a cor do chip e do ponto dos cartões e o microfone da CONVERSA depois do MAYDAY), todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 94 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada, 10 da 3ª — a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la — e 14 da 4ª: os trechos e a ficha do ditado corrigido, a cor do chip e do ponto dos cartões, o microfone da CONVERSA depois do MAYDAY e a pessoa perdida que não vai à IA), todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -6400,6 +6400,27 @@ def teste_home_tardio(b, tela):
     return prob
 
 
+# a pessoa perdida que a 4ª rodada achou indo à IA com SOG e proa (o replay fixado em 60 s): a que foi nadar, a que sai de caiaque, a que não está aqui (a popa), a que «estava na proa» (a palavra de dado na frase)
+PERDIDA_PAGINA = ['o Pedro saiu de caiaque e não voltou', 'ela foi nadar e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'não estou vendo o Pedro, ele estava na proa', 'tem uma pessoa a menos no barco']
+
+
+def teste_home_perdida(b, tela):
+    """A pessoa que some, não volta ou não se acha, DITA na Home (trava 10, 4ª rodada): nenhum pedido chega ao Worker da IA, a resposta é a instrução de segurança local, a janela de 15 min fica marcada e nenhuma mensagem da
+    conversa leva SOG, proa, rpm, a situação de bordo nem coordenada (antes, a pergunta ia ao fallback e à IA com «SOG 18,1 nós · proa 207°», ou à rota da posição por causa da palavra «proa»)."""
+    prob = []
+    for q in PERDIDA_PAGINA:
+        ctx, pg, erros, est = abre_home(b, tela)
+        m = pergunta_home(pg, tela, q)
+        txt = ' | '.join(x['txt'] for x in m)
+        if est['pedidos']: prob.append('%s: «%s» foi à IA (%d pedido(s)): a pessoa perdida é emergência local, nunca da IA' % (tela, q, len(est['pedidos'])))
+        if not m or 'Emergência' not in m[-1]['txt']: prob.append('%s: «%s» devia abrir a resposta com a instrução de segurança («Emergência — …»): %r' % (tela, q, (m[-1]['txt'] if m else '')[:140]))
+        if SITUACAO_DE_BORDO.search(txt) or confere.R_COORD.search(txt): prob.append('%s: «%s»: a conversa leva SOG, proa, a situação de bordo ou coordenada: %s' % (tela, q, (SITUACAO_DE_BORDO.search(txt) or confere.R_COORD.search(txt)).group(0)))
+        if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: «%s» não marcou a janela de 15 min' % (tela, q))
+        if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
 def teste_home_proposta_antiga(b, tela):
     """O botão de uma proposta ANTIGA não age na nova (CONTRATO F12 e F15): com duas propostas de alarme esperando, o «Confirmar» da primeira diz que ela é antiga e não grava nada (o da última grava o alarme que ele mostra);
     com o relato descartado e outro relato proposto, o «Registrar no diário» do descartado diz que já foi descartado e não grava o novo. O <head> roda o capitao-brain.js duas vezes e o ouvinte de clique é o da 1ª cópia: o alvo do botão
@@ -6517,6 +6538,7 @@ def p4g_conferencias(b, lista):
         out.append((tela + ' · o botão de uma proposta antiga não age na nova (alarme e relato)', teste_home_proposta_antiga(b, tela)))
         out.append((tela + ' · a foto com o texto: F36 e a instrução de segurança antes da situação de bordo', teste_home_anexo(b, tela)))
         out.append((tela + ' · a resposta tardia da IA não recoloca o contexto zerado (NOVA, ENCERRAR, emergência)', teste_home_tardio(b, tela)))
+        out.append((tela + ' · a pessoa perdida (foi nadar, não está aqui, «proa» na frase) é emergência local: nada vai à IA e a resposta não leva SOG nem proa', teste_home_perdida(b, tela)))
     for tela in [t for t in TELAS_H3 if t in lista]:
         out.append((tela + ' · sem rótulo e com o atalho das telas novas', teste_h3(b, tela)))
     return out
@@ -6619,12 +6641,16 @@ MUTANTES_P4G = [
     ('o chip do CONSOLE da H2 verde com tarefa atrasada (sempre «EM DIA» na cor)', 'H2-Home-Mobile.dc.html', [("painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-crit, #ff3b30)', cline: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)', cwash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.10)' }", "painel: atr ? { chip: atr + ' ATRASADAS', ctone: 'var(--cap-ok, #34c77a)', cline: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', cwash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)' }")], 'leitura'),
     ('o microfone da CONVERSA da Main nunca reabre depois da resposta da IA que chega muda (MAYDAY no meio)', 'Main.dc.html', [("if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }", "if (mudo) { return; }")], 'tardio'),
     ('o microfone da CONVERSA da H2 nunca reabre depois da resposta da IA que chega muda (MAYDAY no meio)', 'H2-Home-Mobile.dc.html', [("if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }", "if (mudo) { return; }")], 'tardio'),
+    ('a pessoa perdida fora do predicado do cérebro (só as formas fixas): «ela foi nadar e não voltou» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("return PESSOA_SUMIDA.some(function (r) { return r.test(q); }) || pessoaPerdida(q);", "return PESSOA_SUMIDA.some(function (r) { return r.test(q); });")], 'perdida'),
+    ('a pessoa perdida fora do predicado do cérebro (só as formas fixas): «ela foi nadar e não voltou» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("return PESSOA_SUMIDA.some(function (r) { return r.test(q); }) || pessoaPerdida(q);", "return PESSOA_SUMIDA.some(function (r) { return r.test(q); });")], 'perdida'),
+    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (Main)', 'capitao-brain.js@Main', [("    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", "    if ((socorroImplicito(q) || nomeSumiu(qRaw)) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
+    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", "    if ((socorroImplicito(q) || nomeSumiu(qRaw)) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
 ]
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
             'vivo': lambda b, t: teste_home_vivo(b, t) + teste_home_codigo(), 'ouvintes': lambda b, t: teste_home_ouvintes(b, t) + teste_home_codigo(), 'ia': lambda b, t: teste_home_ia(b, t),
             'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t), 'codigo': lambda b, t: teste_home_codigo(),
-            'anexo': lambda b, t: teste_home_anexo(b, t), 'tardio': lambda b, t: teste_home_tardio(b, t), 'antiga': lambda b, t: teste_home_proposta_antiga(b, t)}
+            'anexo': lambda b, t: teste_home_anexo(b, t), 'tardio': lambda b, t: teste_home_tardio(b, t), 'antiga': lambda b, t: teste_home_proposta_antiga(b, t), 'perdida': lambda b, t: teste_home_perdida(b, t)}
 
 
 def mutantes_p4g(b):

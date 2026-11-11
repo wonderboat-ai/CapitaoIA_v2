@@ -277,6 +277,13 @@ def main():
                 ped = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
                 ok(tela + ': o botão «O que verificar?» do relato vai à IA (1 pedido, a pergunta pronta com o relato, a leitura de agora) sem navegar nem gravar no diário', len(estado['pedidos']) == antes + 1 and ped.get('pergunta', '').startswith('O que verificar') and 'desligou sozinho' in ped.get('pergunta', '') and bool(ped.get('contexto'))
                    and tela in pg.url and pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") is None, ped.get('pergunta', '')[:80])
+                # Fase 4 (P4G, revisão final 4ª rodada, trava 10): a pessoa que some, não volta ou não se acha é emergência LOCAL: com a chave ligada e o replay fixado em 60 s, a pergunta (a que foi nadar, a que sai de caiaque, a que
+                # «não está aqui, estava na popa») não faz pedido nenhum ao Worker, abre com a instrução de segurança e não traz a situação de bordo (SOG, proa) que o fallback levava à IA
+                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco'):
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    ok(tela + ': a pessoa perdida «%s» é emergência local: nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
+                    pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")   # (a janela vale por aba: as conferências de baixo partem sem ela)
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
                 # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
                 t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
