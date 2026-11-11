@@ -13,8 +13,10 @@
      item(id)             o item pelo código ('EM-01', 'MO-02'…) ou null
      busca(q, n, sec)     [{ it, nota, cobre }] — o código (EM-06) acha o item; senão a busca do cérebro (BM25 com sinônimos), REORDENADA aqui: primeiro o equipamento que a pergunta nomeia, depois quem tem
                           mais das palavras no título, na pergunta, nas variantes ou no equipamento (com o mesmo radical: «liga» e «ligar»), por último a nota; havendo item com todas as palavras, só esses;
-                          uma palavra só, que o cérebro não busca, casa o começo de uma palavra do título, da pergunta, das variantes ou do equipamento; «sos», «socorro», «mayday» e «emergência»,
-                          sozinhas, abrem os cartões de emergência (os achados primeiro). `sec`: número da seção, lista de números ou 0 (todas)
+                          uma palavra só, que o cérebro não busca, casa o começo de uma palavra do título, da pergunta, das variantes ou do equipamento; «sos», «socorro», «mayday», «emergência», «ajuda» e «perigo»,
+                          sozinhas, abrem os cartões de emergência (os achados primeiro). EMERGÊNCIA ACIMA DE TUDO: a pergunta que o cérebro roteia para o SOS («fogo no motor», «água entrando no motor», «alguém caiu»,
+                          «barco afundando») traz na frente os cartões de emergência (EM-xx) de maior cobertura — nunca filtrados nem enterrados pelo equipamento que a frase nomeia — e, se nenhum casou, os 9 cartões.
+                          `sec`: número da seção, lista de números ou 0 (todas)
      estadoInicial()      { q, sec, sel } do endereço: #id=EM-01 · #s=6 ou #s=6,7 (várias seções) · #busca=texto · #glossario
      chatHref(it, plat)   o link que abre o chat com a pergunta do item e o código (#q=…&faq=…)
      tela(st, plat, set)  o modelo das telas: filtros, lista, detalhe e glossário (`plat`: 'web' | 'app'; `set(parcial)` troca o estado e redesenha) */
@@ -26,7 +28,7 @@
   var GRUPOS = { '6,7': 'Eletrônicos' };   // o cartão «Eletrônicos» do hub abre as seções 6 e 7 juntas (#s=6,7)
   var COD = /^([A-Z]{2})-(\d{1,2})$/;
   var PARADAS = ' a o as os um uma de da do das dos em no na nos nas por para pra com sem se que qual quais quando como onde quanto eu me meu minha tem ter faco fazer faz pode posso nao ' ;
-  var EMERGENCIA = ' sos socorro mayday emergencia ';   // a busca só dessas palavras abre os cartões de emergência (EM-xx), os achados primeiro
+  var EMERGENCIA = ' sos socorro mayday emergencia ajuda perigo ';   // a busca só dessas palavras abre os cartões de emergência (EM-xx), os achados primeiro
 
   var CACHE = null;   // o arquivo já lido: o <head> da tela pode rodar o capitao-brain.js duas vezes e a 2ª cópia assume o window.CapitaoBrain sem o FAQ (a tela não volta a «Carregando…»)
   function B() { return window.CapitaoBrain || null; }
@@ -90,14 +92,19 @@
     }).filter(Boolean).sort(function (x, y) { return y.nota - x.nota; });
   }
   // a fração das palavras da pergunta que estão no título, na pergunta, nas variantes ou no equipamento do item (com o mesmo radical)
-  function cobreTitulo(it, ws) {
+  function cobreTitulo(it, ws, sin) {
     var tx = norm(it.titulo + ' ' + it.pergunta + ' ' + (it.variantes || []).join(' ') + ' ' + (it.equip || '')).replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
-    return ws.filter(function (w) { return tx.some(function (x) { return mesmoRadical(w, x); }); }).length / ws.length;
+    function tem(w) { return tx.some(function (x) { return mesmoRadical(w, x); }); }
+    return ws.filter(function (w) { return tem(w) || (sin && sinonimos(w).some(tem)); }).length / ws.length;
   }
+  // o vocabulário de emergência que os cartões dizem de outro jeito («afundando» é «alagamento», «fumaça» é «fogo»): só para achar o cartão de uma pergunta de emergência (frenteEmergencia)
+  var SIN_EMERG = { afund: ['alagamento'], naufrag: ['alagamento'], alag: ['alagamento'], fumac: ['fogo', 'incendio'] };
+  function sinonimos(w) { var k; for (k in SIN_EMERG) if (w.indexOf(k) === 0) return SIN_EMERG[k]; return []; }
   // A nota do cérebro (BM25) pesa a palavra rara, e «liga» (que o índice não liga a «ligar») subia o item de OUTRO equipamento («gerador não liga» abria o estabilizador): na tela mandam, nesta ordem, o equipamento
   // que a pergunta nomeia («gerador», «plotter»: o item é dele), as palavras da pergunta que estão no título, na pergunta, nas variantes ou no equipamento do item, e só por último a nota. Havendo item com todas
-  // as palavras, só esses ficam; havendo item do equipamento nomeado, os dos outros equipamentos só entram se cobrirem todas as palavras.
-  function reordena(achados, ws) {
+  // as palavras, só esses ficam; havendo item do equipamento nomeado, os dos outros equipamentos só entram se cobrirem todas as palavras. O cartão de emergência NÃO passa por esse funil (ver frenteEmergencia):
+  // o equipamento nomeado («fogo no MOTOR») nunca o esconde.
+  function reordena(achados, ws, emer) {
     if (!ws.length) return achados;
     var m = achados.map(function (r, k) {
       var tc = cobreTitulo(r.it, ws), eqp = norm(r.it.equip || '').replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
@@ -106,28 +113,59 @@
     function funil(l) { l.sort(function (x, y) { return y.c - x.c || y.tc - x.tc || x.k - y.k; }); return l.length && l[0].c >= 1 ? l.filter(function (x) { return x.c >= 1; }) : l; }
     var com = funil(m.filter(function (x) { return x.eq; })), sem = funil(m.filter(function (x) { return !x.eq; }));
     if (com.length) sem = sem.filter(function (x) { return x.c >= 1; });
-    return com.concat(sem).map(function (x) { return x.r; });
+    // (na pergunta de emergência, quem tem TODAS as palavras vai na frente de quem só nomeia o equipamento: «fogo no motor» abre com o item do sistema fixo de incêndio, não com os 10 itens dos motores; fora da
+    // emergência o equipamento nomeado manda — «o plotter não liga» abre com os plotters)
+    return com.concat(sem).map(function (x, i) { return { x: x, i: i }; })
+      .sort(function (a, b) { return emer ? (b.x.c >= 1) - (a.x.c >= 1) || a.i - b.i : a.i - b.i; })
+      .map(function (o) { return o.x.r; });
+  }
+  // A pergunta de emergência: a que o cérebro roteia para o SOS (a mesma decisão do chat: «fogo no motor», «água entrando no motor», «alguém caiu», «barco afundando», «fumaça no motor»…). Só o cérebro decide;
+  // sem ele (cópia antiga) a tela não adivinha: as palavras de socorro sozinhas seguem valendo (EMERGENCIA).
+  function deEmergencia(t) {
+    var b = B(), r = '';
+    try { r = b && typeof b.route === 'function' ? b.route(t) : ''; } catch (e) { r = ''; }
+    return r === 'sos';
+  }
+  // Os cartões de emergência (EM-xx) de uma pergunta de emergência: os de MAIOR cobertura das palavras da pergunta (até 3). A cobertura é a maior entre a da busca do cérebro (que acha o sinônimo, «alagamento»,
+  // mesmo com 1 palavra de 3: «incêndio na praça de máquinas» → EM-05) e a do título, da pergunta, das variantes e do equipamento do cartão (com «afundando» = «alagamento»); «barco», «bordo» e «lancha» não
+  // dizem de que emergência é a pergunta. Empatados, na ordem da busca e depois na do arquivo. Se nenhum casou («barco afundando» sem o cartão, «ajuda»), os cartões da seção, na ordem do arquivo. O botão SOS
+  // continua à vista; a lista nunca deixa o socorro de fora.
+  var GENERICAS = ' barco bordo embarcacao lancha ';
+  function frenteEmergencia(todos, ws, d, sec) {
+    var wsE = ws.filter(function (w) { return GENERICAS.indexOf(' ' + w + ' ') === -1; }), achou = {}, cand, top = 0;
+    todos.forEach(function (r, k) { if (r.it.emerg && r.cobre > 0 && !achou[r.it.id]) achou[r.it.id] = { r: r, k: k }; });
+    cand = d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it, i) {
+      var a = achou[it.id], c = Math.max(a ? a.r.cobre : 0, wsE.length ? cobreTitulo(it, wsE, true) : 0);
+      return { r: a ? a.r : { it: it, nota: 0, cobre: c }, c: c, k: a ? a.k : 1e4 + i };
+    }).filter(function (x) { return x.c > 0; });
+    if (!cand.length) return d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it) { return { it: it, nota: 0, cobre: 1 }; });
+    cand.forEach(function (x) { top = Math.max(top, x.c); });
+    return cand.filter(function (x) { return x.c >= top; }).sort(function (x, y) { return x.k - y.k; }).slice(0, 3).map(function (x) { return x.r; });
   }
   function busca(q, n, sec) {
-    var d = dados(), t = String(q || '').trim(), m, x, achados = [], b = B(), ws, ems;
+    var d = dados(), t = String(q || '').trim(), m, x, todos = [], achados = [], b = B(), ws, ems, puras, emer, frente = [];
     if (!d || !t) return [];
     m = COD.exec(t.toUpperCase());
     if (m) { x = item(m[1] + '-' + (m[2].length < 2 ? '0' : '') + m[2]); return x && naSecao(x, sec) ? [{ it: x, nota: 99, cobre: 1 }] : []; }
     sincroniza();
     ws = palavras(t);
-    try { achados = b && typeof b.faqBusca === 'function' ? b.faqBusca(t, 100) : []; } catch (e) { achados = []; }
-    achados = (achados || []).filter(function (r) { return r && r.it && r.cobre >= 0.5; });
-    if (achados.length) achados = reordena(achados.filter(function (r) { return naSecao(r.it, sec); }), ws);
-    else achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec); });
-    // «sos», «socorro», «mayday» e «emergência», sozinhas: os cartões de emergência, os que a busca achou primeiro (o procedimento padrão abre local, nunca vai à IA)
-    if (ws.length && ws.every(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1; })) {
+    puras = ws.length > 0 && ws.every(function (w) { return EMERGENCIA.indexOf(' ' + w + ' ') !== -1; });
+    try { todos = b && typeof b.faqBusca === 'function' ? b.faqBusca(t, 100) : []; } catch (e) { todos = []; }
+    todos = (todos || []).filter(function (r) { return r && r.it; });
+    emer = !puras && ws.length > 0 && deEmergencia(t);
+    if (emer) frente = frenteEmergencia(todos, ws, d, sec);
+    achados = todos.filter(function (r) { return r.cobre >= 0.5 && frente.indexOf(r) === -1 && naSecao(r.it, sec); });
+    if (achados.length) achados = reordena(achados, ws, emer);
+    else if (!todos.some(function (r) { return r.cobre >= 0.5; })) achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec) && frente.every(function (f) { return f.it !== r.it; }); });
+    // «sos», «socorro», «mayday», «emergência», «ajuda» e «perigo», sozinhas: os cartões de emergência, os que a busca achou primeiro (o procedimento padrão abre local, nunca vai à IA)
+    if (puras) {
       ems = d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it) {
         var a = achados.filter(function (r) { return r.it === it; })[0];
         return a || { it: it, nota: 0, cobre: 1 };
       });
       ems.sort(function (p, q2) { return q2.nota - p.nota; });
       achados = ems.concat(achados.filter(function (r) { return !r.it.emerg; }));
-    }
+    } else achados = frente.concat(achados);
     return achados.slice(0, n || 40);
   }
 

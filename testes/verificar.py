@@ -128,9 +128,9 @@ Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva 
 A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
 leitura de 26/09 ao lado do «AO VIVO»).
 
-Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 73 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência e o corte de cobertura —; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
+Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 84 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência, a frase de emergência com equipamento nomeado («fogo no motor», «água entrando no motor», «barco afundando», FRASES_EMERGENCIA) trazendo o cartão EM-xx entre os 3 primeiros na F6 e no hub, e o corte de cobertura —; os itens de emergência e de segurança do catálogo achados pelo título, pela pergunta e pelas variantes; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
 
-Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 33 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
+Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 45 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
 Documentos com a validade de cada documento = hoje + o prazo relativo (venceEm), conferida contra o relógio da própria página e refeita com o dia virado (fixar 60@1152, sem recarregar), a situação do CapitaoAgora (VENCIDO, VENCE EM n D,
 EM DIA; a nota fiscal, CONFERIDA, sem prazo), os cartões iguais a contagens(), nenhuma linha com A CONFERIR, MANUAL NO DRIVE nem SEM DADOS e a pergunta de cada linha no docsvenc sem IA; o envio de documento (anexo: continua A CONFERIR, carimbo sim: true só
 com a simulação, selo «apresentação» só com simulacao false); a aba Peças com as 12 peças do D.pecas (quantidade, mínimo, ZERADA / ABAIXO DO MÍNIMO / NO MÍNIMO / OK, tarefas ligadas com o prazo de hoje), o aviso das zeradas e no mínimo, o −1 USADA com
@@ -6171,6 +6171,29 @@ EXEMPLOS_FAQ = {'gerador não liga': (['GE-02'], 'Gerador'), 'o gerador não lig
                 'ligar gerador': (['GE-02'], 'Gerador'), 'alarme': ([], ''), 'canal 16': (['EL-04'], 'Rádios VHF')}
 
 
+# EMERGÊNCIA ACIMA DE TUDO: a pergunta de emergência (a que o cérebro roteia para o SOS), com ou sem equipamento nomeado, traz o cartão certo (EM-xx) — e, no fogo, o item do sistema fixo (SF-01) — entre os 3 primeiros. O equipamento
+# que a frase nomeia («fogo no MOTOR») nunca esconde nem enterra o cartão: antes, «fogo no motor» abria 10 itens dos motores com o EM-05 em 12º, «água entrando no motor» perdia o EM-06 e «barco afundando» não achava nada.
+FRASES_EMERGENCIA = {'fogo no motor': ['EM-05', 'SF-01'], 'tem fogo no motor': ['EM-05', 'SF-01'], 'fogo no gerador': ['EM-05', 'SF-01'], 'fogo no estabilizador': ['EM-05'], 'fogo no plotter': ['EM-05'], 'fogo no porão': ['EM-05'],
+                     'incêndio na praça de máquinas': ['EM-05'], 'incêndio na cozinha': ['EM-05'], 'fumaça no motor': ['EM-05'], 'fogo no barco': ['EM-05'], 'água entrando no motor': ['EM-06'], 'alguem caiu': ['EM-04'],
+                     'barco afundando': ['EM-06'], 'estou afundando': ['EM-06'], 'ajuda': ['EM-01']}
+FRASES_EMERGENCIA_HUB = ('fogo no motor', 'tem fogo no motor', 'fogo no gerador', 'água entrando no motor', 'barco afundando', 'alguem caiu')
+# a pergunta de emergência sem nada que case com um cartão («isso não é um teste», um dos pedidos de socorro implícitos do cérebro): os 9 cartões, na ordem do arquivo (o MAYDAY primeiro)
+FRASE_EMERGENCIA_SEM_CARTAO = 'isso não é um teste'
+# os itens de emergência e de segurança do catálogo (os 9 cartões EM-xx e os de segurança: sistema fixo de incêndio, EPIRB, porão, MOB…): cada um é achado entre os 3 primeiros pelo título, pela pergunta e por cada
+# variante dele (~130 consultas); a busca por equipamento nomeado e o funil de cobertura nunca podem enterrá-los
+VARRE_FAQ = """() => { const F = window.CapitaoFAQ, d = F.dados(), out = []; d.itens.filter((it) => it.emerg || it.seguranca).forEach((it) => [it.titulo, it.pergunta].concat(it.variantes || []).forEach((q) => { out.push([it.id, q, F.busca(q, 40, 0).map((r) => r.it.id).indexOf(it.id)]); })); return out; }"""
+
+
+def problemas_emergencia(rot, achados, n=3, frases=None):
+    """`achados`: {frase: [códigos na ordem da busca]}. O cartão (e o SF-01, no fogo) tem de estar entre os `n` primeiros."""
+    prob = []
+    for fr in (frases or FRASES_EMERGENCIA):
+        ids = achados.get(fr) or []
+        falta = [c for c in FRASES_EMERGENCIA[fr] if c not in ids[:n]]
+        if falta: prob.append('%s: «%s» (emergência) devia trazer %s entre os %d primeiros — o equipamento que a frase nomeia não enterra o cartão: %s' % (rot, fr, falta, n, ids[:6]))
+    return prob
+
+
 def frases_de_exemplo(*textos): return [x for t in textos for x in re.findall(r'“([^”]+)”', t or '')]
 
 
@@ -6250,6 +6273,27 @@ def teste_f6_busca(b, tela):
     if x['busca'] != 'alarme de óleo' or set(x['itens'][:2]) != {'GE-06', 'MO-04'} or x['hash'] != '#busca=alarme%20de%20%C3%B3leo': prob.append('%s: «alarme de óleo» digitado devia ficar no campo e achar o GE-06 e o MO-04 (endereço #busca=alarme%%20de%%20%%C3%%B3leo): %r %s %r' % (tela, x['busca'], x['itens'][:4], x['hash']))
     x = teclas('alarme ')
     if x['busca'] != 'alarme ' or x['hash'] != '#busca=alarme' or not x['itens']: prob.append('%s: o espaço no fim do que se digita (alarme␣) devia ficar no campo, sem ir ao endereço: %r %r %d itens' % (tela, x['busca'], x['hash'], len(x['itens'])))
+    # EMERGÊNCIA ACIMA DE TUDO: a frase de emergência com o equipamento nomeado (ou sem nenhum) traz o cartão EM-xx (e o SF-01 no fogo) entre os 3 primeiros, digitada no campo
+    ach_em = {}
+    for fr in FRASES_EMERGENCIA:
+        ach_em[fr] = digita(fr)['itens']
+    prob += problemas_emergencia(tela, ach_em)
+    ems_ordem = [it['id'] for it in FAQ_JSON['itens'] if it.get('emerg')]
+    x = digita('fogo no barco')['itens']   # «barco» não diz de que emergência é a pergunta: só o cartão do fogo vai à frente (não o da água nem o do abandono)
+    if x[:1] != ['EM-05'] or {'EM-06', 'EM-07'} & set(x[:3]): prob.append('%s: «fogo no barco» devia abrir só com o cartão do fogo (EM-05), sem os cartões que só têm «barco»: %s' % (tela, x[:5]))
+    x = digita('ajuda')['itens']
+    if x[:len(ems_ordem)] != ems_ordem: prob.append('%s: «ajuda» sozinha devia abrir os %d cartões de emergência na ordem do arquivo: %s' % (tela, len(ems_ordem), x[:10]))
+    x = digita(FRASE_EMERGENCIA_SEM_CARTAO)['itens']
+    if x[:len(ems_ordem)] != ems_ordem: prob.append('%s: «%s» (emergência sem cartão que case) devia abrir os %d cartões de emergência na ordem do arquivo: %s' % (tela, FRASE_EMERGENCIA_SEM_CARTAO, len(ems_ordem), x[:10]))
+    # a seção filtra também o cartão de emergência (EM-xx é da seção 1): «fogo no motor» na seção dos motores só traz itens dos motores
+    pg.evaluate(CLICA_FILTRO, 2); pg.wait_for_timeout(250)
+    x = digita('fogo no motor')['itens']
+    if not x or any(FAQ_ITENS[i]['secao'] != 2 for i in x): prob.append('%s: «fogo no motor» na seção dos motores devia trazer só itens dela (o cartão EM-05 é da seção 1): %s' % (tela, [(i, FAQ_ITENS[i]['secao']) for i in x[:6]]))
+    pg.evaluate(CLICA_FILTRO, 0); pg.wait_for_timeout(200)
+    # os itens de emergência e de segurança do catálogo: cada um pelo título, pela pergunta e por cada variante dele, entre os 3 primeiros
+    var = pg.evaluate(VARRE_FAQ)
+    fora = [(i, q, k) for i, q, k in var if not 0 <= k < 3]
+    if len(var) < 100 or fora: prob.append('%s: %d de %d consultas (título, pergunta e variantes de cada item de emergência e de segurança) não acham o item entre os 3 primeiros, ex. %s' % (tela, len(fora), len(var), fora[:4]))
     digita('baliza')
     pg.click('[data-f6=limpa]'); pg.wait_for_timeout(250)
     r = pg.evaluate(LE_F6)
@@ -6523,6 +6567,13 @@ def teste_f1(b, tela):
         pg.fill(campo, 'MAYDAY'); pg.wait_for_timeout(350)
         r = pg.evaluate(LE_F1)
         if not r['resultados'] or 'EM-01' not in r['resultados'][0]['href'] or 'EMERGÊNCIA' not in r['resultados'][0]['txt'] and p == 'web': prob.append('%s: a busca «MAYDAY» devia achar o cartão EM-01 primeiro (com a etiqueta EMERGÊNCIA na web): %s' % (tela, r['resultados'][:2]))
+        # EMERGÊNCIA ACIMA DE TUDO: no hub o dropdown mostra só 8 (web) ou 6 (app) itens; a frase de emergência com o equipamento nomeado traz o cartão entre os 3 primeiros
+        ach_em = {}
+        for fr in FRASES_EMERGENCIA_HUB:
+            pg.fill(campo, fr); pg.wait_for_timeout(350)
+            r = pg.evaluate(LE_F1)
+            ach_em[fr] = [re.search(r'#id=([A-Z]{2}-\d\d)$', x['href']).group(1) for x in r['resultados'] if re.search(r'#id=([A-Z]{2}-\d\d)$', x['href'])]
+        prob += problemas_emergencia(tela, ach_em, frases=FRASES_EMERGENCIA_HUB)
         pg.fill(campo, 'xyzzy'); pg.wait_for_timeout(350)
         r = pg.evaluate(LE_F1)
         if r['resultados'] or r['verTodos'] or ('Nenhum item do FAQ com “xyzzy”' not in r['texto'] and 'NENHUM ITEM NO FAQ' not in r['texto']): prob.append('%s: o que não existe devia dizer «Nenhum item do FAQ» e não oferecer o «Ver todos»: %s' % (tela, r['resultados'][:2]))
@@ -6818,9 +6869,9 @@ def p4h_conferencias(b, lista):
 MUTANTES_P4H = [
     # —— capitao-faq.js (o modelo da F6 e o que o hub usa) ——
     ('o código (EM-06) não acha o item', 'capitao-faq.js', [("m = COD.exec(t.toUpperCase());", "m = null;")], 'busca'),
-    ('a palavra solta (baliza) não acha nada (sem o texto no título)', 'capitao-faq.js', [("else achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec); });", "else achados = [];")], 'busca'),
-    ('a seção não filtra a busca de uma palavra só', 'capitao-faq.js', [("else achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec); });", "else achados = porTexto(t, d);")], 'busca'),
-    ('a seção não filtra a busca de várias palavras', 'capitao-faq.js', [("if (achados.length) achados = reordena(achados.filter(function (r) { return naSecao(r.it, sec); }), ws);", "if (achados.length) achados = reordena(achados, ws);")], 'busca'),
+    ('a palavra solta (baliza) não acha nada (sem o texto no título)', 'capitao-faq.js', [("achados = porTexto(t, d).filter(function (r) { return naSecao(r.it, sec) && frente.every(function (f) { return f.it !== r.it; }); });", "achados = [];")], 'busca'),
+    ('a seção não filtra a busca de uma palavra só', 'capitao-faq.js', [("return naSecao(r.it, sec) && frente.every(function (f) { return f.it !== r.it; }); });", "return frente.every(function (f) { return f.it !== r.it; }); });")], 'busca'),
+    ('a seção não filtra a busca de várias palavras', 'capitao-faq.js', [("frente.indexOf(r) === -1 && naSecao(r.it, sec); });", "frente.indexOf(r) === -1; });")], 'busca'),
     ('o link do chat sem o código do item (#faq=)', 'capitao-faq.js', [("+ '&faq=' + encodeURIComponent(it.id)", "+ ''")], 'itens'),
     ('o link do chat com o título no lugar da pergunta', 'capitao-faq.js', [("encodeURIComponent(it.pergunta || it.titulo || '')", "encodeURIComponent(it.titulo || '')")], 'itens'),
     ('o grupo «Eletrônicos» (#s=6,7) sem nome', 'capitao-faq.js', [("var GRUPOS = { '6,7': 'Eletrônicos' };", "var GRUPOS = {};")], 'enderecos'),
@@ -6883,12 +6934,22 @@ MUTANTES_P4H = [
     ('o selo EMERGÊNCIA some das linhas da lista da F6', 'capitao-faq.js', [("sub: it.acao || it.resposta, equip: it.equip, emerg: !!it.emerg,", "sub: it.acao || it.resposta, equip: it.equip, emerg: false,")], 'lista'),
     ('o selo SEGURANÇA some das linhas da lista da F6', 'capitao-faq.js', [("emerg: !!it.emerg, seg: !!it.seguranca && !it.emerg, abre:", "emerg: !!it.emerg, seg: false, abre:")], 'lista'),
     ('a prévia de cada linha da lista da F6 some', 'capitao-faq.js', [("sub: it.acao || it.resposta,", "sub: '',")], 'lista'),
-    ('a busca sem o corte de cobertura (cobre ≥ 0,5): o item de 1 palavra em 3 é resultado', 'capitao-faq.js', [("return r && r.it && r.cobre >= 0.5;", "return r && r.it;")], 'busca'),
-    ('a busca só pela nota do cérebro, sem reordenar («gerador não liga» abre o estabilizador)', 'capitao-faq.js', [("if (achados.length) achados = reordena(achados.filter(function (r) { return naSecao(r.it, sec); }), ws);", "if (achados.length) achados = achados.filter(function (r) { return naSecao(r.it, sec); });")], 'busca'),
+    ('a busca sem o corte de cobertura (cobre ≥ 0,5): o item de 1 palavra em 3 é resultado', 'capitao-faq.js', [("return r.cobre >= 0.5 && frente.indexOf(r) === -1 && naSecao(r.it, sec); });", "return frente.indexOf(r) === -1 && naSecao(r.it, sec); });")], 'busca'),
+    ('a busca só pela nota do cérebro, sem reordenar («gerador não liga» abre o estabilizador)', 'capitao-faq.js', [("if (achados.length) achados = reordena(achados, ws, emer);", "if (achados.length) achados = achados;")], 'busca'),
     ('«liga» e «ligar» não são o mesmo radical', 'capitao-faq.js', [("return k >= 4 && k >= n - 1;", "return false;")], 'busca'),
-    ('o equipamento que a pergunta nomeia não vem na frente', 'capitao-faq.js', [("return com.concat(sem).map(function (x) { return x.r; });", "return sem.concat(com).map(function (x) { return x.r; });")], 'busca'),
+    ('o equipamento que a pergunta nomeia não vem na frente', 'capitao-faq.js', [("return com.concat(sem).map(function (x, i) { return { x: x, i: i }; })", "return sem.concat(com).map(function (x, i) { return { x: x, i: i }; })")], 'busca'),
     ('«sos» casa o pedaço de «passos» (a palavra solta sem o começo de palavra)', 'capitao-faq.js', [("return (' ' + texto.replace(/[^a-z0-9]+/g, ' ') + ' ').indexOf(' ' + w) !== -1;", "return texto.indexOf(w) !== -1;")], 'busca'),
-    ('«sos», «socorro» e «mayday» não abrem os cartões de emergência', 'capitao-faq.js', [("var EMERGENCIA = ' sos socorro mayday emergencia ';", "var EMERGENCIA = ' ';")], 'busca'),
+    ('«sos», «socorro» e «mayday» não abrem os cartões de emergência', 'capitao-faq.js', [("var EMERGENCIA = ' sos socorro mayday emergencia ajuda perigo ';", "var EMERGENCIA = ' ';")], 'busca'),
+    ('a pergunta de emergência não traz os cartões na frente («fogo no motor» abre os itens dos motores, o EM-05 em 12º)', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'busca'),
+    ('a pergunta de emergência do hub não traz os cartões na frente (o dropdown mostra só os itens do motor)', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'f1_web'),
+    ('a pergunta de emergência do hub do app não traz os cartões na frente', 'capitao-faq.js', [("if (emer) frente = frenteEmergencia(todos, ws, d, sec);", "if (false) frente = frenteEmergencia(todos, ws, d, sec);")], 'f1_app'),
+    ('o cérebro não diz que a pergunta é de emergência (a rota sos não vale)', 'capitao-faq.js', [("return r === 'sos';", "return false;")], 'busca'),
+    ('na emergência, quem cobre todas as palavras não vem na frente do equipamento nomeado (o SF-01 de «fogo no motor» depois dos itens do motor)', 'capitao-faq.js', [("return emer ? (b.x.c >= 1) - (a.x.c >= 1) || a.i - b.i : a.i - b.i; })", "return a.i - b.i; })")], 'busca'),
+    ('a pergunta de emergência sem cartão que case não abre os cartões («estamos em risco» fica vazia)', 'capitao-faq.js', [("if (!cand.length) return d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it) { return { it: it, nota: 0, cobre: 1 }; });", "if (!cand.length) return [];")], 'busca'),
+    ('«barco», «bordo» e «lancha» contam na cobertura do cartão («fogo no barco» abre também a água e o abandono)', 'capitao-faq.js', [("var GENERICAS = ' barco bordo embarcacao lancha ';", "var GENERICAS = ' ';")], 'busca'),
+    ('o cartão de emergência não respeita a seção filtrada («fogo no motor» na seção dos motores traz o EM-05)', 'capitao-faq.js', [("cand = d.itens.filter(function (it) { return it.emerg && naSecao(it, sec); }).map(function (it, i) {", "cand = d.itens.filter(function (it) { return it.emerg; }).map(function (it, i) {")], 'busca'),
+    ('«afundando» não é «alagamento» («barco afundando» abre o MAYDAY, o EM-06 em 6º)', 'capitao-faq.js', [("var SIN_EMERG = { afund: ['alagamento'], naufrag: ['alagamento'], alag: ['alagamento'], fumac: ['fogo', 'incendio'] };", "var SIN_EMERG = {};")], 'busca'),
+    ('o cartão que cobre 1 palavra de 3 não entra («incêndio na praça de máquinas» sem o EM-05)', 'capitao-faq.js', [("}).filter(function (x) { return x.c > 0; });", "}).filter(function (x) { return x.c >= 0.5; });")], 'busca'),
     ('o campo de busca da F6 recebe o texto aparado (o espaço digitado some)', 'capitao-faq.js', [("q: String(st.q || ''), temQ: !!q,", "q: q, temQ: !!q,")], 'busca'),
     ('a F6 web sugere um exemplo sem conferência', 'F6-FAQ-Equipamentos-Web.dc.html', [("“gerador não liga”, “alarme de óleo”, “EM-06”", "“gerador não parte”, “alarme de óleo”, “EM-06”")], 'busca'),
     ('o campo do hub sugere um exemplo sem conferência', 'F1-FAQ-Hub-Web.dc.html', [("“ligar gerador”, “alarme”, “canal 16”", "“ligar gerador”, “alarme”, “bomba quebrada”")], 'f1_web'),
@@ -7012,6 +7073,11 @@ def g1_docs_confere(r, E, rot, app):
         if x['nome'] != d['n'] or x['validade'] != ev or x['st'] != es: prob.append('%s: %s mostra %r / %r / %r (esperado %r / %r / %r)' % (rot, d['id'], x['nome'], x['validade'], x['st'], d['n'], ev, es))
         if x['ask'] != chat + '#q=' + enc('Situação e vencimento do documento: ' + d['n']): prob.append('%s: o «Perguntar sobre» de %s é %r' % (rot, d['id'], x['ask']))
         if re.search(r'A CONFERIR|A CONFIRMAR|MANUAL NO DRIVE|SEM DADOS|\bDEMO\b', x['texto']): prob.append('%s: a linha de %s tem rótulo: %r' % (rot, d['id'], x['texto'][:120]))
+        # o prazo de cada linha, escrito pelo venceEm de agora: «D-65» (web e app) ou «vencido há 12 d»; o documento sem prazo (a nota fiscal, CONFERIDA) não tem nenhum dos dois
+        dn = d['venceEm']
+        esp_dn = None if dn is None else ('vencido há %d d' % -dn if dn < 0 else 'D-%d' % dn)
+        tem_dn = re.findall(r'(?<![\w+-])D-\d+(?!\d)|vencido há \d+ d', x['texto'])
+        if tem_dn != ([esp_dn] if esp_dn else []): prob.append('%s: a linha de %s diz o prazo %s (esperado %s, do venceEm %s): %r' % (rot, d['id'], tem_dn, [esp_dn] if esp_dn else [], dn, x['texto'][:140]))
     com = [d for d in docs if d['venceEm'] is not None]
     n90 = sum(1 for d in com if d['venceEm'] <= 90)
     nem = len(docs) - n90
@@ -7360,6 +7426,7 @@ LE_G2 = """() => { const lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), q 
       agora: [...g.querySelectorAll('circle[data-agora]')].map((c) => [c.getAttribute('data-campo'), c.getAttribute('data-agora')]), texto: lin(g.innerText) } : null,
     nota2: lin((q('[data-g2=grafico-nota]') || {}).innerText), estacao: Object.fromEntries(qa('[data-g2=estacao-item]').map((e) => [e.getAttribute('data-e'), lin(e.innerText)])),
     histSub: lin((q('[data-g2=hist-sub]') || {}).innerText), hist: qa('[data-g2=hist-linha]').map((e) => ({ texto: lin(e.innerText), st: lin((e.querySelector('[data-g2=st]') || {}).innerText), selo: !!e.querySelector('[data-g2=selo]') })),
+    taxas: qa('[data-g2=taxa]').map((e) => ({ nome: e.getAttribute('data-nome'), n: lin((e.querySelector('[data-g2=taxa-n]') || {}).innerText), s: lin((e.querySelector('[data-g2=taxa-s]') || {}).innerText), v: lin((e.querySelector('[data-g2=taxa-v]') || {}).innerText) })),
     regra: lin((q('[data-g2=regra]') || {}).innerText), regraAgora: lin((q('[data-g2=regra-agora]') || {}).innerText),
     faixas: qa('[data-g2=faixa]').map((e) => ({ nome: e.getAttribute('data-nome'), nomeTxt: lin((e.querySelector('[data-g2=faixa-nome]') || {}).innerText), lph: lin((e.querySelector('[data-g2=faixa-lph]') || {}).innerText), horas: lin((e.querySelector('[data-g2=faixa-horas]') || {}).innerText), litros: lin((e.querySelector('[data-g2=faixa-litros]') || {}).innerText), parte: lin((e.querySelector('[data-g2=faixa-parte]') || {}).innerText), barra: ((e.querySelector('[data-g2=faixa-barra]') || { style: {} }).style.width || ''), texto: lin(e.innerText) })),
     totais: Object.fromEntries(qa('[data-g2=total]').map((e) => [e.getAttribute('data-t'), lin(e.innerText)])), coerencia: lin((q('[data-g2=coerencia]') || {}).innerText), faixasSub: lin((q('[data-g2=faixas-sub]') || {}).innerText),
@@ -7370,7 +7437,7 @@ ESP_G2 = """() => { const D = window.CapitaoDados, A = window.CapitaoAgora, R = 
    'temp_ar_externo_c', 'temp_agua_c', 'consumo_lph', 'sog_nos', 'motor_bb_rpm', 'motor_be_rpm', 'gerador_kw'].forEach((c) => { T[c] = F.campo(q, c); });
   let c0 = null, c1 = null; try { c0 = R.contadoresEm(A.ancora(I.ms)); c1 = R.contadores(); } catch (e) {}
   return { hora: I.hora, fonteTxt: I.fonteTxt, ms: I.ms, anc: A.ancora(I.ms), calc: I.calc, T: T, twd: q.vento_verdadeiro_angulo, proa: q.proa_graus, lph: q.consumo_lph, sog: q.sog_nos, gerador: q.gerador_ativo === true,
-    hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso, regra: D.regraAbast, cons: { cruzeiro: D.consumo.cruzeiro, lenta: D.consumo.lenta, gerador_lph: D.consumo.gerador_lph, faixas: D.consumo.faixas }, cap: D.embarcacao.tanques.diesel_l,
+    hoje: A.relogio.hoje, hojeIso: A.relogio.hojeIso, regra: D.regraAbast, reserva: D.reserva, cons: { cruzeiro: D.consumo.cruzeiro, lenta: D.consumo.lenta, gerador_lph: D.consumo.gerador_lph, faixas: D.consumo.faixas }, cap: D.embarcacao.tanques.diesel_l,
     ab: D.abastecimentos.map((a) => ({ id: a.id, d: a.d, h: a.h, litros: a.litros, local: a.local, st: a.st, nivelDepois: a.nivelDepois })), faixas: R.porFaixa(), c0: c0 && c0.diesel_litros, c1: c1 && c1.diesel_litros }; }"""
 G2_SERIES = [('diesel', 'Diesel válido', 'diesel', ['diesel_litros']), ('agua', 'Água doce', 'agua', ['tanque_agua_pct']), ('servidas', 'Servidas', 'servidas', ['tanque_cinzas_pct', 'tanque_negras_pct']),
              ('baterias', 'Baterias', 'baterias', ['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v']), ('estacao', 'Estação meteorológica', 'vento', ['vento_verdadeiro_nos'])]
@@ -7388,6 +7455,20 @@ def g2_twa(twd, proa):
     t = (twd - proa + 540) % 360 - 180
     if t == -180: t = 180
     return '%d° %s' % (abs(math.floor(t + 0.5)), 'BE' if t >= 0 else 'BB')
+
+
+def g2_taxas_esperadas(E):
+    """O bloco «Consumo de referência»: Cruzeiro (os nós, a rotação e o L/h de D.consumo.cruzeiro) e Marcha lenta (o L/h de D.consumo.lenta e a autonomia em lenta do instante): {nome: (subtítulo, valor)}."""
+    cz, lz, aa = E['cons']['cruzeiro'], E['cons']['lenta'], E['calc']['autonomia']
+    return {'Cruzeiro': ('%s nós · %s rpm · dois motores' % (cz['nos'], nbp(cz['rpm'], 0, True)), '%s L/h' % nbp(cz['lph'], 0)),
+            'Marcha lenta': ('autonomia em lenta ≈ %s h' % nbp(aa['lenta'], 0, True), '%s L/h' % nbp(lz['lph']))}
+
+
+def g2_taxas_confere(r, E, rot):
+    esp = g2_taxas_esperadas(E)
+    got = {t['n']: (t['s'], t['v']) for t in r['taxas']}
+    if [t['n'] for t in r['taxas']] != list(esp) or got != esp: return ['%s: o «Consumo de referência» diz %s (esperado %s, do D.consumo: cruzeiro %s e lenta %s)' % (rot, [(t['n'], t['s'], t['v']) for t in r['taxas']], list(esp.items()), E['cons']['cruzeiro'], E['cons']['lenta'])]
+    return []
 
 
 def teste_g2_nivel(b, tela):
@@ -7421,6 +7502,11 @@ def teste_g2_nivel(b, tela):
         if ('≈ %s' % nbp(dd.get('litros', 0), 0, True)) not in ds or dd.get('desde', '?')[:5] not in ds: prob.append('%s: o consumido desde o abastecimento diz %r (esperado ≈ %s L desde %s)' % (rot, ds, dd.get('litros'), dd.get('desde')))
         au = k.get('autonomia', ''); aa = calc['autonomia']
         if ('≈ %s h' % nbp(aa['horas'])) not in au or ('≈ %s mn' % nbp(aa['mn'], 0, True)) not in au or ('marcha lenta ≈ %s h' % nbp(aa['lenta'], 0, True)) not in au or '11,2' in au: prob.append('%s: a autonomia diz %r (esperado ≈ %s h, ≈ %s mn, lenta ≈ %s h: a do instante, não a de 26/09)' % (rot, au, aa['horas'], aa['mn'], aa['lenta']))
+        # o subtítulo inteiro do cartão: os nós, a rotação e o L/h do cruzeiro (D.consumo), a reserva de D.reserva e a autonomia em lenta
+        cz_ = E['cons']['cruzeiro']
+        esp_au = 'a %s nós · %s rpm · %s L/h · reserva de %d %% · marcha lenta ≈ %s h' % (cz_['nos'], nbp(cz_['rpm'], 0, True), nbp(cz_['lph'], 0), math.floor(E['reserva'] * 100 + 0.5), nbp(aa['lenta'], 0, True))
+        if esp_au not in au: prob.append('%s: o subtítulo da autonomia diz %r (esperado %r: cruzeiro e reserva do D, lenta do instante)' % (rot, au, esp_au))
+        if not app: prob += g2_taxas_confere(r, E, rot)
         if not app:   # as perguntas dos cartões e do «Perguntar» vão ao cérebro (autonomia, consumo), sem IA; o cartão do diesel leva à Ponte
             esp_k = {'ultimo': 'consumo', 'desde': 'consumo', 'autonomia': 'autonomia'}
             qs = [(k_, urllib.parse.unquote(h.split('#q=', 1)[1])) for k_, h in r['hrefs'].items() if k_ in esp_k and '#q=' in (h or '')] + [('perguntar', urllib.parse.unquote(r['perguntar'].split('#q=', 1)[1]))]
@@ -7520,6 +7606,7 @@ def teste_g2_consumo(b, tela):
         ms_desde = (E['ms'] - E['anc']) / 3.6e6
         if abs(sh - ms_desde) > 0.06: prob.append('%s: as horas das faixas somam %.2f h e desde as 07:00 passaram %.2f h' % (rot, sh, ms_desde))
         if 'Desde as 07:00' not in r['faixasSub'] and not app: prob.append('%s: o subtítulo não diz «Desde as 07:00»: %r' % (rot, r['faixasSub']))
+        prob += g2_taxas_confere(r, E, rot)
         T = E['T']
         esp_ag = ['%s L/h' % T['consumo_lph'], '%s L/mn' % nbp(E['lph'] / E['sog']) if E['sog'] >= 1 else '—', '%s L/h' % nbp(E['cons']['gerador_lph']) if E['gerador'] else '0,0 L/h']
         if r['agora'] != esp_ag: prob.append('%s: o consumo de agora diz %s (esperado %s, do quadro e do D.consumo)' % (rot, r['agora'], esp_ag))
@@ -7546,7 +7633,10 @@ def teste_g2_nf(b, tela):
     prob = []
     for modo, depois in (('simulação', ''), ('simulacao false', 'window.CapitaoDados.simulacao = false;')):
         ctx, pg, erros = abre_g2(b, tela, depois=depois)
-        n0 = len(pg.evaluate(LE_G2)['hist'])
+        r0 = pg.evaluate(LE_G2)
+        n0 = len(r0['hist'])
+        # sem foto nenhuma, nem o resumo do histórico nem o título (no app) escrevem o rótulo com contagem zero («0 A CONFIRMAR»): o rótulo só aparece com a foto
+        if re.search(r'\d+ A CONFIRMAR', r0['texto']): prob.append('%s (%s): sem foto de NF o histórico escreve %r (o rótulo A CONFIRMAR só vale para a foto enviada)' % (tela, modo, re.findall(r'.{0,25}\d+ A CONFIRMAR.{0,20}', r0['texto'])[:2]))
         pg.set_input_files('[data-g2=arq-nf]', {'name': 'nf-diesel-teste.jpg', 'mimeType': 'image/jpeg', 'buffer': b'\xff\xd8' + b'0' * 2000}); pg.wait_for_timeout(450)
         r = pg.evaluate(LE_G2)
         ls_, dia = r['abastLs'] or [], r['diarioLs'] or []
@@ -7560,6 +7650,13 @@ def teste_g2_nf(b, tela):
         x = [h for h in r['hist'] if 'nf-diesel-teste.jpg' in h['texto']]
         if len(r['hist']) != n0 + 1 or len(x) != 1 or x[0]['st'] != 'A CONFIRMAR' or x[0]['selo']: prob.append('%s (%s): o histórico devia ganhar 1 linha A CONFIRMAR da foto, sem selo: %d → %d linhas, %s' % (tela, modo, n0, len(r['hist']), x))
         if not eh_app(tela) and '1 A CONFIRMAR' not in r['histSub']: prob.append('%s (%s): o resumo do histórico diz %r' % (tela, modo, r['histSub']))
+        if eh_app(tela) and 'HISTÓRICO · %d REGISTROS · 1 A CONFIRMAR' % len(pg.evaluate(ESP_G2)['ab']) not in r['texto']: prob.append('%s (%s): o título do histórico do app devia dizer «· 1 A CONFIRMAR» com a foto' % (tela, modo))
+        # a linha da foto não traz travessão de dado vazio («10/11/2026 · —»: a regex VAZIOS do §3) nem outro termo da varredura; o rótulo A CONFIRMAR é o do anexo (exceção da decisão (g))
+        if x:
+            ach = achados_termos(tela, x[0]['texto'])
+            if ach or '—' in x[0]['texto']: prob.append('%s (%s): a linha da foto da NF tem dado vazio (travessão) ou termo do §3: %r %s' % (tela, modo, x[0]['texto'][:120], ach))
+        ach = achados_termos(tela, r['texto'])
+        if ach and modo == 'simulação': prob.append('%s (%s): termo do §3 na tela depois da foto: %s' % (tela, modo, ach))
         prob += ['%s (%s): %s' % (tela, modo, e) for e in erros[:2]]
         ctx.close()
     ls = {'capitao.abast.v1': json.dumps([{'n': 'com-selo.jpg', 'd': '01/11/2026', 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no app por Lucas', 'sim': True}, {'n': 'sem-selo.jpg', 'd': '02/11/2026', 'st': 'A CONFIRMAR', 'fonte': 'foto enviada no app por Lucas'}])}
@@ -7741,6 +7838,19 @@ MUTANTES_P4I = [
     ('a faixa da G2 web sem a «% da volta»', 'G2-Abastecimento-Web.dc.html', [("pct: nb(f.pct, 0) + ' % da volta',", "pct: '',")], 'consumo'),
     ('a nota do diesel da G2 web volta a prometer um abastecimento conferido por salto', 'G2-Abastecimento-Web.dc.html', [("o salto das 07:00 é o abastecimento do dia. A linha tracejada", "o salto de cada abastecimento conferido na lista (07:00). A linha tracejada")], 'nivel'),
     ('a barra do Desfazer da G1 do app deixa de grudar no alto (sai da tela com a lista rolada)', 'G1-Documentos-Mobile.dc.html', [("position: sticky; top: 0; z-index: 5; flex-shrink: 0; box-sizing: border-box; display: flex;", "flex-shrink: 0; box-sizing: border-box; display: flex;")], 'uso'),
+    # —— a revisão final (rodada 3): valores visíveis que as conferências não pegavam ——
+    ('o prazo de cada documento da G1 web escrito «D+65» no lugar de «D-65»', 'G1-Documentos-Web.dc.html', [("x.dd = x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D-' + x.dn) : '';", "x.dd = x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D+' + x.dn) : '';")], 'docs'),
+    ('o prazo de cada documento da G1 do app escrito «D+65» no lugar de «D-65»', 'G1-Documentos-Mobile.dc.html', [("'· vencido há ' + (-x.dn) + ' d' : '· D-' + x.dn) : ''", "'· vencido há ' + (-x.dn) + ' d' : '· D+' + x.dn) : ''")], 'docs'),
+    ('a reserva do cartão Autonomia da G2 web ×10 («reserva de 1 %»)', 'G2-Abastecimento-Web.dc.html', [("Math.round(D.reserva * 100)", "Math.round(D.reserva * 10)")], 'nivel'),
+    ('a reserva do cartão Autonomia da G2 do app ×10 («reserva de 1 %»)', 'G2-Abastecimento-Mobile.dc.html', [("Math.round(D.reserva * 100)", "Math.round(D.reserva * 10)")], 'nivel'),
+    ('a «Marcha lenta» do consumo de referência da G2 web com o L/h do cruzeiro (68 no lugar de 6,2)', 'G2-Abastecimento-Web.dc.html', [("v: num(lz.lph) ? nb(lz.lph) + ' L/h' : falta(SD) }", "v: num(cz.lph) ? nb(cz.lph) + ' L/h' : falta(SD) }")], 'nivel'),
+    ('a «Marcha lenta» do consumo de referência da G2 do app com o L/h do cruzeiro', 'G2-Abastecimento-Mobile.dc.html', [("v: num(lz.lph) ? nb(lz.lph) + ' L/h' : falta(SD) }", "v: num(cz.lph) ? nb(cz.lph) + ' L/h' : falta(SD) }")], 'consumo'),
+    ('a rotação do cruzeiro do consumo de referência da G2 web +100 rpm', 'G2-Abastecimento-Web.dc.html', [("' nós · ' + mil(cz.rpm) + ' rpm · dois motores'", "' nós · ' + mil(cz.rpm + 100) + ' rpm · dois motores'")], 'nivel'),
+    ('a rotação do cruzeiro do consumo de referência da G2 do app +100 rpm', 'G2-Abastecimento-Mobile.dc.html', [("' nós · ' + mil(cz.rpm) + ' rpm · dois motores'", "' nós · ' + mil(cz.rpm + 100) + ' rpm · dois motores'")], 'consumo'),
+    ('a linha da foto da NF da G2 web volta ao travessão de dado vazio nos litros', 'G2-Abastecimento-Web.dc.html', [("litros: 'na NF'", "litros: '—'")], 'nf'),
+    ('a linha da foto da NF da G2 do app volta ao travessão de dado vazio nos litros', 'G2-Abastecimento-Mobile.dc.html', [("litros: 'na NF'", "litros: '—'")], 'nf'),
+    ('o histórico da G2 web escreve «0 A CONFIRMAR» sem foto nenhuma', 'G2-Abastecimento-Web.dc.html', [("(d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho)' : '')", "' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho)'")], 'nf'),
+    ('o título do histórico da G2 do app escreve «0 A CONFIRMAR» sem foto nenhuma', 'G2-Abastecimento-Mobile.dc.html', [("(d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR' : '')", "' · ' + d.nEnv + ' A CONFIRMAR'")], 'nf'),
     # —— o código ——
     ('a G1 web não tira o ouvinte da virada do dia ao desmontar', 'G1-Documentos-Web.dc.html', [("window.removeEventListener('capitao-rebase', this._onRebase);", "")], 'codigo'),
     ('a G2 do app não tira o ouvinte da telemetria ao desmontar', 'G2-Abastecimento-Mobile.dc.html', [("window.removeEventListener('capitao-telemetria', this._onTele);", "")], 'codigo'),

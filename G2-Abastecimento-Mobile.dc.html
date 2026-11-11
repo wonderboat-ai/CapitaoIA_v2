@@ -161,9 +161,9 @@ button { font: inherit; }
     <div style="box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
       <span style="font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">CONSUMO DE REFERÊNCIA · ESTIMATIVA</span>
       <sc-for list="{{taxas}}" as="t" hint-placeholder-count="2">
-        <span style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--cap-row, #10162e); border-radius: 10px; min-width: 0;">
-          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="font-size: 12.5px; font-weight: 700;">{{t.n}}</span><span style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.3;">{{t.s}}</span></span>
-          <span style="flex-shrink: 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;">{{t.v}}</span>
+        <span data-g2="taxa" data-nome="{{t.n}}" style="display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--cap-row, #10162e); border-radius: 10px; min-width: 0;">
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span data-g2="taxa-n" style="font-size: 12.5px; font-weight: 700;">{{t.n}}</span><span data-g2="taxa-s" style="font-size: 10.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.3;">{{t.s}}</span></span>
+          <span data-g2="taxa-v" style="flex-shrink: 0; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums;">{{t.v}}</span>
         </span>
       </sc-for>
     </div>
@@ -286,7 +286,7 @@ class Component extends DCLogic {
     ];
 
     // ——— histórico: as linhas do registro (D.abastecimentos, com as datas de hoje) e as fotos de NF deste aparelho (A CONFIRMAR: o app não lê o arquivo) ———
-    const env = (envios0 || s.envios || []).map((x) => ({ d: x.d || 'sem data', h: '', t: dt(x.d) || 0, litros: '—', lTone: 'ink3', local: 'a confirmar na NF', localTone: 'ink3', st: x.st || 'A CONFIRMAR', tom: 'violeta', temSelo: x.sim === true && !sim, obs: 'Foto da NF: ' + x.n + ' · ficou no aparelho · o app não lê valores', fonte: 'Fonte: ' + (x.fonte || 'foto enviada no app'), chave: x.n + '|' + x.d }));
+    const env = (envios0 || s.envios || []).map((x) => ({ d: x.d || 'sem data', h: '', t: dt(x.d) || 0, litros: 'na NF', lTone: 'ink3', local: 'a confirmar na NF', localTone: 'ink3', st: x.st || 'A CONFIRMAR', tom: 'violeta', temSelo: x.sim === true && !sim, obs: 'Foto da NF: ' + x.n + ' · ficou no aparelho · o app não lê valores', fonte: 'Fonte: ' + (x.fonte || 'foto enviada no app'), chave: x.n + '|' + x.d }));
     const reg = AB.map((a) => ({ d: a.d, h: a.h || '', t: dt(a.d) || 0, litros: num(a.litros) ? mil(a.litros) + ' L' : falta(SD), lTone: 'ink', local: (a.local || falta(SD)) + (a.combustivel ? ' · ' + a.combustivel : ''), localTone: 'ink', st: a.st || falta(SD), tom: a.st === 'CONFERIDO' ? 'ok' : 'neutro', temSelo: false, obs: (a.nota || '—') + (num(a.nivelDepois) ? ' · tanques ≈ ' + nb(a.nivelDepois) + ' % depois' : ' · nível depois ' + falta(SD)), fonte: 'Fonte: ' + fAbast, chave: '' }));
     const hist = env.concat(reg).map((r, i) => Object.assign(r, { i: i })).sort((a, b) => b.t - a.t || a.i - b.i);
 
@@ -378,7 +378,7 @@ class Component extends DCLogic {
       janelas: JAN.map((k) => { const on = jan === k, off = !!(G && G.so150(metrica) && k !== '150S'); return { k: k, l: JR[k] ? JR[k].rot : k, tip: JR[k] ? JR[k].nome : k, on: on, onClick: () => { if (!off) this.setState({ janela: k }); }, bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tom: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; }),
       series: SERIES.map((m) => { const on = serie === m[0]; return { k: m[0], l: m[1], on: on, onClick: () => this.setState({ serie: m[0] }), bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', tom: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; }),
       grafico: grafico, graficoNota: NOTAS[serie], temEstacao: serie === 'estacao', estacao: d.estacao,
-      histSub: d.nReg + (d.nReg === 1 ? ' registro' : ' registros') + ' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho) · mais recente primeiro', histTitle: 'HISTÓRICO · ' + d.nReg + (d.nReg === 1 ? ' REGISTRO' : ' REGISTROS') + ' · ' + d.nEnv + ' A CONFIRMAR',
+      histSub: d.nReg + (d.nReg === 1 ? ' registro' : ' registros') + (d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR (foto de NF deste aparelho)' : '') + ' · mais recente primeiro', histTitle: 'HISTÓRICO · ' + d.nReg + (d.nReg === 1 ? ' REGISTRO' : ' REGISTROS') + (d.nEnv > 0 ? ' · ' + d.nEnv + ' A CONFIRMAR' : ''),
       hist: hist, histVazio: hist.length === 0, histVazioTxt: 'Nenhum abastecimento registrado.', histFonte: d.histFonte,
       pickNf: () => this.nfRef.current && this.nfRef.current.click(), nfRef: this.nfRef, onNf: (e) => this.onNf(e),
       nfFonte: 'Fonte: fotos deste aparelho (' + d.nEnv + ') · nada vai ao servidor',
