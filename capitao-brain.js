@@ -1541,9 +1541,31 @@
     ' urgente(?: [a-z]+){0,2} (?:ajuda|socorro|auxilio|resgate) '
   ];
   var SOS_REGEX = SOS_REGEX_FONTES.map(function (f) { return new RegExp(f); });
+  // ——— Pessoa que some, falta ou se perde a bordo: as constantes e a GUARDA do que é rotina (revisão final da P4G, 2 rodadas) ———
+  // Quem some na LISTA, no CADASTRO, na EQUIPE, no APP, na TELA… não é pessoa no mar: «o passageiro sumiu da lista», «o nome do tripulante sumiu da Equipe», «perdemos um tripulante na equipe de manutenção», «o Carlos sumiu do app».
+  // A lista SOS do gerador (que não muda aqui) pegava «passageiro sumiu» e «perdemos tripulante» mesmo assim; a guarda tira a FRASE do sumiço de dados (o verbo e o lugar de dado que vem logo depois, ou o dado — nome, contato,
+  // foto, cadastro — de quem some) ANTES de a lista e de as formas de pessoa desaparecida olharem o texto, e só ela: «o Garmin sumiu da tela e a Ana desapareceu» continua socorro pela 2ª metade.
+  var DETN = '(?:(?:um|uma|uns|umas|dois|duas|tres|quatro|cinco|seis|varios|varias|alguns|algumas|o|a|os|as|meu|minha|meus|minhas|nosso|nossa|nossos|nossas|esse|essa|esses|essas|mais de [a-z]+) )*';
+  var PES_ELE = '(?:' + PESSOA + '|' + PARENTE + '|fulano)';   // («fulano» é o lugar do nome próprio dito com inicial maiúscula: ver comNomes)
+  var V_SUMIU = '(?:sumiu|sumiram|desapareceu|desapareceram)';
+  var V_ANY = '(?:sumiu|sumiram|desapareceu|desapareceram|sumid[oa]s?|desaparecid[oa]s?|perdid[oa]s?|extraviad[oa]s?|falta|faltam|faltou|faltaram|faltando)';
+  var CONT_ADMIN = '(?:lista|listas|cadastro|cadastros|equipe|equipes|escala|agenda|planilha|planilhas|app|aplicativo|aplicativos|sistema|sistemas|tela|telas|celular|celulares|telefone|painel|rede|redes|mapa|carta|menu|pagina|site|chat|grupo|grupos|registro|registros|conversa|contato|contatos|computador|notebook|tablet|folha|relatorio|plantao|turno|tripulacao|seguro|apolice|diario|whatsapp|telegram|instagram|facebook|zap|email|e-mail|gmail|google|nuvem|internet|wifi|wi-fi|bluetooth|servidor|ficha|documento|documentos)';
+  var LOC_ADMIN = ' (?:d[aeo]s?|n[aeo]s?|em|pel[ao]s?) (?:(?:o|a|os|as|meu|minha|nosso|nossa|seu|sua|esse|essa|este|esta|um|uma|novo|nova) )*(?:[a-z0-9-]+ )?' + CONT_ADMIN + '(?= )';
+  var HEAD_DADO = '(?:nome|nomes|contato|contatos|foto|fotos|cadastro|perfil|dados|ficha|registro|telefone|numero|horario|escala|presenca|assinatura|documento|documentos|habilitacao|carteira|email|e-mail|senha|login|conta|mensagem|mensagens|conversa|ligacao|chamada)';
+  var SUMICO_DADOS = [
+    new RegExp(' ' + V_ANY + LOC_ADMIN, 'g'),   // «sumiu da lista», «desapareceu do cadastro da equipe»
+    new RegExp(' ' + V_ANY + ' ' + DETN + PES_ELE + LOC_ADMIN, 'g'),   // «falta gente na equipe», «sumiu um passageiro da lista»
+    new RegExp(' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + LOC_ADMIN, 'g'),   // «perdi um passageiro na lista de saída», «perdemos um tripulante na equipe de manutenção»
+    new RegExp(' ' + HEAD_DADO + ' d[aeo]s? ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,1} ' + V_ANY + '(?= )', 'g')   // «o nome do tripulante sumiu», «a foto da Maria desapareceu»
+  ];
+  function semSumicoDeDados(q) {
+    if (!/sum[iu]|desapare|perd|extravi|falt/.test(q)) return q;
+    SUMICO_DADOS.forEach(function (r) { q = q.replace(r, ' '); });
+    return q;
+  }
   // "a gente" é "nós", não a pessoa de "gente na água"/"gente cai": troca por "nos" antes de conferir
   function emergencia(q) {
-    q = q.split(' a gente ').join(' nos ');
+    q = semSumicoDeDados(q.split(' a gente ').join(' nos '));
     return has(q, SOS) || SOS_REGEX.some(function (r) { return r.test(q); }) || (has(q, ['fumaca']) && !has(q, ['escap'])); // fumaça no escapamento é do motor, não SOS
   }
   // Rota salvatagem (PROMPT §2.3): ' boia ' só sem as palavras de boia de sinalização (amarra, poita, canal, baliza, cardinal, luz) nem de boia de
@@ -2678,14 +2700,14 @@
       var como = 'Para registrar, diga ou digite aqui “registre no diário…” seguido do texto';
       var junto = resumoMais(nota); // nota que pede posição/hora: resumo + nota numa linha só
       if (nota && !junto) {
-        var alerta = emergencia(pad(nota)), pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência / pressão de óleo: grava a nota e traz os passos
+        var alerta = emergenciaTexto(nota), pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência (inclui a pessoa que some, falta ou se perde, com ou sem nome) / pressão de óleo: grava a nota e traz os passos
         // F20/F15: o registro que conclui um serviço fecha a pendência que cita (com Desfazer) e propõe o Executado ou a tarefa; o texto de emergência, de pressão de óleo ou de cabeça de segurança (EPIRB, Seafire, rádio…) não mexe na agenda pelo chat
         reg = grava ? addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' }, alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }) : null;
         ef = efeitosNoChat(reg);
         return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
           fala: falaRegistro(grava, alerta, pressao) + ef.fala }, alerta || pressao);
       }
-      var al = junto && emergencia(pad(nota)), pr = junto && oleo(pad(nota)) === 1;
+      var al = junto && emergenciaTexto(nota), pr = junto && oleo(pad(nota)) === 1;
       var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
       var acoes = (al ? [['Abrir SOS', 'sos']] : []).concat(pr ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]);
       if (al || pr) {
@@ -3516,42 +3538,97 @@
   var SOCORRO_AJUDA = /\bajudem\b|\balguem (?:me |nos )?(?:ajuda|ajude)(?: por favor| aqui| agora)? $|\bpelo amor de deus\b.*\b(?:ajuda|ajudem|ajude|socorro)\b/;
   // o pedido de ajuda junto de um dado que o MAYDAY pede (posição, rumo, ETA, pessoas a bordo) também é socorro: a posição é a do plotter, nunca a do quadro
   var DADOS_MAYDAY = ['posicao', 'onde estamos', 'onde estou', 'coordenada', 'latitude', 'longitude', ' rumo ', ' eta ', 'chegada', 'pessoas a bordo', 'quantas pessoas', 'quantos a bordo', 'quantos tripulantes', 'quantos passageiros'];
-  // Pessoa desaparecida ou perdida a bordo (revisão final da P4G). A lista SOS (a do gerador, que não muda aqui) só pega «sumiu/desapareceu» logo antes ou depois de uma palavra de pessoa, e «perdi» com tripulante, criança, filho
-  // ou menino; «pessoa desaparecida a bordo», «perdi um passageiro», «não encontramos o João, acho que caiu» e «cadê a Maria? não está a bordo» caíam no fallback e iam à IA com o SOG e a proa do quadro. Toda forma abaixo é socorro
-  // (rota sos, local, janela de 15 min), como «sumiu um tripulante». O texto aqui é o normalizado (sem acento, minúsculo): o nome próprio dito com inicial maiúscula («a Ana desapareceu») só aparece no texto original
-  // e é o nomeSumiu, mais abaixo. A pergunta sem pessoa («o ícone sumiu», «o waypoint sumiu», «cadê o extintor? não está a bordo») e a de rotina («perdi o manual») não entram.
-  var PES_ELE = '(?:' + PESSOA + '|' + PARENTE + ')';
+  // Pessoa desaparecida ou perdida a bordo (revisão final da P4G, 2 rodadas). A lista SOS (a do gerador, que não muda aqui) só pega «sumiu/desapareceu» colado a uma palavra de pessoa e «perdi» com tripulante, criança, filho ou
+  // menino. Toda forma de pessoa que SOME, FALTA ou se PERDE a bordo é socorro (rota sos, local, janela de 15 min), POR REGRA e não por frase: quem some (sumiu, desapareceu, sumido, perdi, perdemos), quem falta (faltam duas
+  // pessoas, tem gente faltando, contei e falta uma), quem não se acha (não acho meu filho, não vejo o Pedro em lugar nenhum, «não encontramos o João, acho que caiu» com QUALQUER cauda depois — «…, qual a posição?» — ) e quem foi
+  // para a água e não voltou. O texto aqui é o normalizado (sem acento, minúsculo); o nome próprio dito com inicial maiúscula («a Ana desapareceu», «perdemos o Pedro no mar») só existe no texto original: o `comNomes` o troca por
+  // «fulano» e as MESMAS formas valem para ele. O que é rotina fica de fora por duas guardas: o sumiço na lista, no cadastro, na equipe, no app (`semSumicoDeDados`, acima, também dentro da `emergencia`) e o que não é pessoa (palavra
+  // de bordo, aplicativo, marca: NAO_NOME e os fabricantes de D.equipamentos). A escala de pessoal («o marinheiro não está a bordo hoje», «o convidado não está a bordo») e o objeto («acho que caiu atrás do armário») não são socorro.
+  var PES_PRES = '(?:alguem|gente|pessoas?|criancas?|filh[oa]s?|menin[oa]s?|bebe|passageir[oa]s?|tripulantes?|ele|ela|eles|elas)';   // quem se diz «não está a bordo» sem mais nada (marinheiro, convidado, comandante, o João: escala de pessoal)
+  var PES_FALTA = '(?:alguem|pessoas?|criancas?|passageir[oa]s?|tripulantes?|filh[oa]s?|menin[oa]s?)';   // quem FALTA («faltam duas pessoas»): sem «gente», sem papel de escala (marinheiro, comandante), sem nome («falta o Lucas assinar»)
+  var PES_PARENTE = '(?:criancas?|filh[oa]s?|menin[oa]s?|bebe|maes?|pai|marido|esposa|esposo|namorad[oa]s?|irma[o]?|irmaos|netos?|netas?|sobrinh[oa]s?|idos[oa]s?)';
+  var ADJ_SUMIDO = '(?:desaparecid[oa]s?|sumid[oa]s?|perdid[oa]s?|extraviad[oa]s?)';
+  var NAO_VE = 'nao (?:(?:estou|estamos) (?:vendo|achando|encontrando)|(?:vejo|vemos|vi|vimos|acho|achamos|encontro|encontramos|enxergo|enxergamos))';
+  var A_BORDO = '(?:a bordo|abordo|no barco|na lancha|na embarcacao)';
+  var EM_NENHUM = '(?:em lugar nenhum|em lugar algum|em nenhum lugar|em parte nenhuma|em canto nenhum)';
+  var NA_AGUA = '(?:na agua|no mar|ao mar|do barco|da lancha|da embarcacao|pela borda|pro mar|para o mar|pra agua|para fora)';
+  var PALPITE = '(?:(?:acho|acha|achamos|parece|imagino|sera|talvez|deve|pode)(?: ter)?(?: que)? (?:ele |ela )?(?:caiu|cairam|pulou|pularam|se jogou|se afogou))';   // o palpite da queda: «acho que caiu», «será que caiu», «parece que caiu»
+  var ESCALA = '^(?!.* (?:hoje|ainda|amanha|ontem|segunda|terca|quarta|quinta|sexta|sabado|domingo|escala|lista|equipe|cadastro|folga|ferias|turno|plantao|saida|viagem|passeio|semana|proxim[oa]|vem|vai|chega|chegou|veio) ).*';
   var PESSOA_SUMIDA = [
-    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} (?:desaparecid[oa]s?|sumid[oa]s?|perdid[oa]s?|extraviad[oa]s?) ',   // «pessoa desaparecida a bordo», «tripulante sumido», «passageiro perdido»
-    ' desaparecimento d[eao]s? ' + DET + PES_ELE + ' ',   // «desaparecimento de passageiro»
-    ' (?:perdi|perdemos|perdeu|perderam) ' + DET + PES_ELE + ' ',   // «perdi um passageiro», «perdemos o meu amigo» (a lista SOS só tem tripulante, criança, filho e menino)
-    // «não encontramos o João, acho que caiu»: quem não se acha e o palpite da queda, que fecha a frase ou diz a água («acho que caiu atrás do armário» é um objeto)
-    ' nao (?:encontr[a-z]*|ach[a-z]*|vej[a-z]*|vemos|vi|vimos|acho) ' + DET + '[a-z]+(?: [a-z0-9]+){0,3} (?:acho|acha|achamos|parece|talvez|deve|pode)(?: ter)?(?: que)?(?: ele| ela)? (?:ca[a-z]+|pul[a-z]+)(?: (?:ao|no|na|pro|pra|para o|pela|do|da) (?:mar|agua|borda|barco|lancha|embarcacao))? $',
-    ' (?:cade|onde esta) ' + DET + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:esta|estao|ta|tao) (?:a bordo|abordo|no barco|na lancha|na embarcacao) ',   // «cadê a menina? não está a bordo»
-    ' (?:' + PES_ELE + '|ele|ela|eles|elas) nao (?:esta|estao|ta|tao) (?:a bordo|abordo|no barco|na lancha|na embarcacao) '   // «o passageiro não está a bordo», «ela não está a bordo»
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} ' + ADJ_SUMIDO + ' ',   // «pessoa desaparecida a bordo», «tripulante sumido», «passageiro perdido»
+    ' desaparecimento d[eao]s? ' + DETN + PES_ELE + ' ',   // «desaparecimento de passageiro»
+    ' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + ' ',   // «perdi um passageiro», «perdemos o meu amigo», «perdemos o Pedro no mar» (a lista SOS só tem tripulante, criança, filho e menino)
+    ' ' + V_SUMIU + ' ' + DETN + PES_ELE + ' ',   // «sumiram duas pessoas», «desapareceu o passageiro»
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} ' + V_SUMIU + ' ',   // «meu amigo desapareceu», «Pedro desapareceu», «o menino do camarote 3 sumiu»
+    ' (?:falta|faltam|faltou|faltaram|faltando|esta faltando|estao faltando) ' + DETN + PES_FALTA + '(?! (?:para|pra) )(?= )',   // «falta uma pessoa a bordo», «faltam duas pessoas», «está faltando alguém» (não «falta gente para a revisão», «falta o Lucas assinar»)
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?faltando ',   // «tem gente faltando», «um passageiro faltando»
+    ' (?:cont|confer|cham|recens)[a-z]* (?:(?:as|os|a|o) )?(?:pessoas|gente|tripulantes|passageiros|tripulacao|criancas|todos)(?: [a-z0-9]+){0,4} (?:falta|faltam|faltou|faltando|sobrou|nao bate) ',   // «contei as pessoas e falta uma»
+    // quem não se acha e o palpite da queda («não encontramos o João, acho que caiu»; sem âncora no fim: «…, qual a posição?» é socorro também; «não encontro o manual, acho que caiu atrás do armário» não tem pessoa)
+    ' ' + NAO_VE + ' ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,3} ' + PALPITE + ' ',
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:aparece|apareceu|aparecem|responde|respondeu|volta|voltou|voltaram|esta|estao|ta|tao)(?: [a-z0-9]+){0,3} ' + PALPITE + ' ',   // «o Pedro não aparece, será que caiu?»
+    ' ' + NAO_VE + ' ' + DETN + PES_PARENTE + ' ',   // «não acho meu filho», «não estamos achando uma criança»
+    ' ' + NAO_VE + ' ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,2} ' + EM_NENHUM + ' ',   // «não vejo o Pedro em lugar nenhum»
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,2} nao (?:esta|estao|ta|tao|aparece|apareceu) ' + EM_NENHUM + ' ',   // «meu filho não está em lugar nenhum»
+    ' ninguem (?:viu|ve|esta vendo|achou|encontrou|sabe onde (?:esta|ta|foi|anda)) ' + DETN + PES_ELE + ' ',   // «ninguém viu o Pedro», «ninguém sabe onde está a menina»
+    ' (?:cade|onde esta|onde estao) ' + DETN + PES_ELE + '(?: [a-z0-9]+){0,2} (?:nao (?:esta|estao|ta|tao) (?:' + A_BORDO + '|' + EM_NENHUM + ')|nao aparece|sumiu|sumiram|desapareceu|desapareceram) ',   // «cadê a menina? não está a bordo» (só «cadê o Pedro?» é pergunta de paradeiro)
+    ESCALA + ' ' + PES_PRES + ' nao (?:esta|estao|ta|tao) ' + A_BORDO + '(?= )',   // «o passageiro não está a bordo», «ela não está a bordo» (sem hoje, ainda, escala, lista…: aí é escala de pessoal)
+    // quem foi para a água e não voltou, foi levado pela correnteza, caiu na água (o nome próprio com «fulano»: a lista SOS só tem palavra de pessoa)
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao |ta |tao |foi |foram |ficou |ficaram )?(?:para|pra|pro|na|no|ao|a) (?:a |o )?(?:agua|mar)(?: e)? nao (?:voltou|volta|voltaram|aparece|apareceu|aparecem|sai|saiu|saem|respondeu|responde) ',
+    ' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:foi|foram) (?:levad|arrastad|carregad|puxad)[oa]s? (?:pel[ao]s?|por) (?:correnteza|corrente|onda|ondas|mare|vento|mar|agua) ',
+    ' fulano (?:caiu|cairam|pulou|pularam) ' + NA_AGUA + ' ',
+    ' fulano (?:esta|estao|ta|tao|foi|foram|ficou|ficaram) (?:no mar|na agua|ao mar|pro mar|para o mar|pra agua) '
   ].map(function (s) { return new RegExp(s); });
-  function pessoaSumida(q) { return PESSOA_SUMIDA.some(function (r) { return r.test(q); }); }
-  // O nome próprio com inicial maiúscula («a Ana desapareceu», «o João sumiu», «cadê a Maria? não está a bordo»): só no texto original (a maiúscula some na normalização) e só com o artigo na frente. A marca de um equipamento
-  // («o Garmin sumiu da tela») e as palavras de bordo escritas com inicial maiúscula («o Plotter sumiu») não são pessoa. O que fica de fora (nome sem artigo, tudo em minúsculas) segue as outras formas.
-  var NOME_CAP = '[A-ZÀ-Ý][a-zà-ÿ]{2,}';
-  var NOME_INI = '(?:^|[\\s,;:.!?(])';
-  var NOME_FIM = '(?![A-Za-zÀ-ÿ])';
-  var NOME_SUMIU = [
-    new RegExp(NOME_INI + '[AaOo]s?\\s+(' + NOME_CAP + '(?:\\s+' + NOME_CAP + ')?)\\s+(?:desapareceu|sumiu|desapareceram|sumiram)' + NOME_FIM),
-    new RegExp(NOME_INI + '(?:[Cc]ad[êé]|[Oo]nde est[áa])\\s+(?:[AaOo]s?\\s+)?(' + NOME_CAP + ')[?,.!\\s]{1,3}(?:(?:ele|ela)\\s+)?[Nn][ãa]o est[áa]o? (?:a bordo|abordo|no barco|na lancha|na embarca[çc][ãa]o)' + NOME_FIM)
-  ];
-  var NAO_NOME = ' plotter radar radio gps ais vhf dsc app aplicativo alarme sinal icone painel tela mapa carta mensagem sistema sensor motor motores gerador seakeeper internet wifi luz leme barco lancha porao bomba filtro oleo piloto sonda display menu botao alerta aviso grafico extintor ';
-  function nomeSumiu(raw) {
-    var s = String(raw == null ? '' : raw).slice(0, 600), marcas = null;
-    return NOME_SUMIU.some(function (r) {
-      var m = r.exec(s), nome;
-      if (!m) return false;
-      nome = norm(m[1]).trim();
-      if (NAO_NOME.indexOf(' ' + nome + ' ') !== -1) return false;
-      if (!marcas) marcas = (D.equipamentos || []).map(function (e) { return norm(e.fabricante || '').trim(); }).filter(Boolean);
-      return !nome.split(' ').some(function (w) { return marcas.some(function (f) { return f === w || f.split(' ').indexOf(w) !== -1; }); });
+  function pessoaSumida(q) { q = semSumicoDeDados(q); return PESSOA_SUMIDA.some(function (r) { return r.test(q); }); }
+  // O nome próprio com inicial maiúscula («a Ana desapareceu», «perdemos o Pedro no mar», «Pedro desapareceu»): só existe no texto original (a maiúscula some na normalização). O `comNomes` troca cada nome por «fulano» e devolve o texto
+  // normalizado (ou null, sem nome nenhum): as formas de PESSOA_SUMIDA valem para ele sem nenhuma regra à parte. Não é nome: a palavra de bordo, o aplicativo, o serviço e a marca com maiúscula («o Plotter sumiu», «o Spotify sumiu»,
+  // «o Bluetooth sumiu», «o Garmin sumiu»: NAO_NOME e os fabricantes e equipamentos de D.equipamentos), a palavra com cara de substantivo comum («Cartão», «Manutenção») e a maiúscula que só abre a frase («Cadê», «Perdemos», «Não»):
+  // o 1º nome de uma frase só vale quando o verbo de sumiço vem logo depois («Pedro desapareceu»). O que sobra de dúvida (um aplicativo que a lista não conhece) vira socorro: a janela de 15 min custa menos que uma pessoa a bordo ignorada.
+  var NAO_NOME = ' ' + ['plotter', 'radar', 'sonar', 'radio', 'gps', 'ais', 'vhf', 'dsc', 'epirb', 'antena', 'baliza', 'bateria', 'baterias', 'carta', 'mapa', 'leme', 'barco', 'lancha', 'porao', 'bomba', 'filtro', 'oleo', 'piloto', 'sonda',
+    'display', 'botao', 'extintor', 'helice', 'eixo', 'casco', 'ancora', 'guincho', 'gerador', 'motor', 'motores', 'seakeeper', 'estabilizador', 'dessalinizador', 'climatizacao', 'transponder', 'bussola', 'sirene', 'alarme', 'alerta',
+    'aviso', 'luz', 'lampada', 'farol', 'fusivel', 'disjuntor', 'chave', 'cabo', 'defensa', 'boia', 'colete', 'balsa', 'tender', 'capitao', 'tanque', 'painel', 'tela', 'sensor', 'sinal', 'icone', 'mensagem', 'sistema', 'grafico',
+    'cartao', 'manual', 'menu', 'pagina', 'conta', 'senha', 'login', 'arquivo', 'pasta', 'foto', 'video', 'musica', 'canal', 'rede', 'dados', 'internet', 'wifi', 'conexao', 'notificacao', 'link', 'site', 'aplicativo', 'app',
+    'bluetooth', 'android', 'ios', 'iphone', 'ipad', 'windows', 'macos', 'linux', 'chrome', 'safari', 'edge', 'firefox', 'google', 'maps', 'map', 'gmail', 'drive', 'youtube', 'whatsapp', 'telegram', 'instagram', 'facebook',
+    'twitter', 'tiktok', 'netflix', 'spotify', 'alexa', 'siri', 'waze', 'uber', 'zoom', 'skype', 'outlook', 'excel', 'dropbox', 'icloud', 'starlink', 'openai', 'chatgpt', 'copilot', 'navionics', 'windy', 'windguru', 'marinetraffic',
+    'pix', 'garmin', 'raymarine', 'simrad', 'furuno', 'lowrance', 'volvo', 'yanmar', 'cummins', 'caterpillar', 'mercury', 'yamaha', 'honda', 'suzuki', 'onan', 'kohler', 'fusion', 'icom', 'lewmar', 'maxwell', 'victron',
+    'mastervolt', 'webasto', 'dometic', 'vetus', 'racor', 'parker', 'rule', 'schenker', 'jabsco', 'raritan', 'quick', 'seafire', 'ocean', 'signal', 'emtrak',
+    // a palavra que abre a frase com maiúscula e vem antes do verbo («Ontem desapareceu o sinal», «Isso sumiu da tela», «Também sumiu o ícone»): advérbio, pronome, dia da semana
+    'ontem', 'hoje', 'agora', 'depois', 'tambem', 'entao', 'logo', 'aqui', 'ainda', 'quando', 'algo', 'tudo', 'nada', 'isso', 'aquilo', 'mas', 'porque', 'como', 'onde', 'quem', 'ele', 'ela', 'eles', 'elas', 'voce', 'voces', 'todos', 'todas',
+    'amanha', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo',
+    // mais marcas e aparelhos de bordo, operadoras, serviços e o que há no barco e em casa (a lista nunca é completa: o nome com maiúscula que ela não conhece segue como pessoa — a janela de 15 min custa menos que uma pessoa ignorada)
+    'navico', 'evinrude', 'johnson', 'mercruiser', 'axiom', 'striker', 'vesper', 'whale', 'lofrans', 'muir', 'sleipner', 'humphree', 'besenzoni', 'isotherm', 'engel', 'eberspacher', 'espar', 'kenyon', 'magma', 'groco', 'perko',
+    'hella', 'lalizas', 'mustang', 'hammar', 'plastimo', 'mcmurdo', 'kannad', 'jotron', 'uniden', 'sailor', 'cobham', 'iridium', 'inmarsat', 'globalstar', 'vivo', 'claro', 'samsung', 'motorola', 'xiaomi', 'apple', 'huawei', 'lenovo',
+    'dell', 'acer', 'asus', 'logitech', 'jbl', 'bose', 'sony', 'philips', 'panasonic', 'toshiba', 'intelbras', 'ifood', 'amazon', 'shopee', 'booking', 'airbnb', 'teams', 'slack', 'notion', 'canva', 'figma', 'trello', 'discord', 'twitch',
+    'kindle', 'cortana', 'usb', 'hdmi', 'porta', 'janela', 'escotilha', 'cabine', 'camarote', 'cozinha', 'conves', 'mastro', 'ponte', 'proa', 'popa', 'bordo', 'corda', 'vela', 'bimini', 'toldo', 'cadeira', 'mesa', 'sofa', 'banco',
+    'geladeira', 'freezer', 'fogao', 'microondas', 'televisao', 'som', 'caixa', 'fone', 'controle', 'remoto', 'mouse', 'teclado', 'carregador', 'tomada', 'extensao', 'lanterna', 'telefone', 'celular', 'tablet', 'notebook',
+    'computador', 'impressora', 'camera', 'drone', 'relogio', 'carteira', 'documento', 'passaporte', 'chaves'].join(' ') + ' ';
+  var NOME_PAL = /(^|[^A-Za-zÀ-ÿ0-9'’-])([A-ZÀ-Ý][a-zà-ÿ]{2,})(?![A-Za-zÀ-ÿ0-9])/g;
+  var VERBO_NOME = /^\s+(?:sumiu|sumiram|desapareceu|desapareceram|caiu|cairam|pulou|pularam)(?![A-Za-zÀ-ÿ])/i;
+  var SUBST_COMUM = /(?:cao|sao|dade|mento|agem|ismo|ncia)$/;   // «Cartão», «Manutenção», «Sistema»…: substantivo comum com maiúscula, não nome («São Paulo» também)
+  function comNomes(raw) {
+    var s = String(raw == null ? '' : raw).slice(0, 600), re = new RegExp(NOME_PAL.source, 'g'), m, toks = [], grupos = [], marcas = null, cortes = [], out = '', pos = 0;
+    while ((m = re.exec(s))) toks.push({ i: m.index + m[1].length, f: m.index + m[0].length, w: norm(m[2]) });
+    if (!toks.length) return null;
+    toks.forEach(function (tk) { var g = grupos[grupos.length - 1]; if (g && /^\s+$/.test(s.slice(g[g.length - 1].f, tk.i))) g.push(tk); else grupos.push([tk]); });
+    (D.equipamentos || []).forEach(function (e) { marcas = (marcas || ' ') + norm([e.fabricante, e.nome, e.modelo].join(' ')).replace(/[^a-z0-9]+/g, ' ') + ' '; });
+    function naoENome(tk) { return NAO_NOME.indexOf(' ' + tk.w + ' ') !== -1 || (marcas !== null && marcas.indexOf(' ' + tk.w + ' ') !== -1) || SUBST_COMUM.test(tk.w); }
+    grupos.forEach(function (g) {
+      var ini = g[0].i, fim = g[g.length - 1].f, antes = s.slice(0, ini).replace(/[\s"'«“‘(\[—–-]+$/, '');
+      if (g.some(naoENome)) return;
+      if (antes === '' || /[.!?…:;\n]$/.test(antes)) {   // abre a frase: a maiúscula é de qualquer palavra; nome só com o verbo de sumiço logo depois, ou (grupo de 2 ou mais) o que vem depois da 1ª palavra
+        if (VERBO_NOME.test(s.slice(fim, fim + 30))) { /* o grupo inteiro é o nome («Maria Clara desapareceu») */ }
+        else if (g.length > 1) ini = g[1].i;
+        else return;
+      }
+      cortes.push([ini, fim]);
     });
+    if (!cortes.length) return null;
+    cortes.forEach(function (c) { out += s.slice(pos, c[0]) + ' fulano '; pos = c[1]; });
+    return pad(out + s.slice(pos));
   }
+  function nomeSumiu(raw) { var q = comNomes(raw); return q !== null && pessoaSumida(q); }
+  // O predicado único do TEXTO que se manda registrar (o diário, a foto com o pedido de registro): a lista SOS, o pedido de socorro implícito («estamos em risco», «isso não é um teste») e a pessoa que some, falta ou se perde,
+  // com ou sem nome próprio (o texto original). «registre no diário: homem ao mar» e «registre no diário: o João sumiu» abrem a resposta com a instrução de segurança e ligam a janela de 15 min do mesmo jeito.
+  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || nomeSumiu(raw); }
   function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q) || pessoaSumida(q); }
   // O equipamento de segurança na pergunta (EPIRB, Seafire, canal 16, PAN-PAN, DSC): a pergunta mista («acionar o EPIRB, quantas pessoas a bordo?», «pan-pan, qual o ETA?») é do equipamento, com o procedimento e
   // a janela de emergência da chave dele; as rotas de dados da navegação e do cadastro (que levam ETA, pessoas, profundidade, alarmes…) não a tomam.
@@ -4546,7 +4623,7 @@
       if (r === 'nao') return { nota: '', pedido: true, descarta: rp.id };
       if (t && (r === 'sim' || (sb && !sb.duvida))) return { nota: comExtra(t.texto, sb), pedido: true, doRelato: rp.id };
     }
-    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
+    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergenciaTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
     if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || nomeSumiu(raw) || cabecaEmerg(n) || /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;
     if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }
     if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };
