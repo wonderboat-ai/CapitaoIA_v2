@@ -80,7 +80,7 @@ button { font: inherit; }
           </span>
           <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
             <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{b.label}}</span>
-            <span style="font-size: 11.5px; line-height: 1.3; color: {{b.subTom}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">{{b.sub}}</span>
+            <span style="font-size: 11.5px; line-height: 1.3; color: {{b.subTom}}; overflow-wrap: anywhere;">{{b.sub}}</span>
           </span>
         </a>
       </sc-for>
@@ -321,7 +321,14 @@ class Component extends DCLogic {
     e.posicao = { sub: q && num(q.lat) && num(q.lon) && F.coord ? F.coord(q.lat, q.lon) : 'posição ' + falta(SL) };
     e.checklist = { sub: (D.guias && D.guias.checklist) || falta(SD) };
     e.consumo = { sub: CON.cruzeiro ? F.nb ? F.nb(CON.cruzeiro.lph, 0) + ' L/h a ' + CON.cruzeiro.nos + ' nós' + (CON.lenta ? ' · lenta ' + F.nb(CON.lenta.lph, 1) + ' L/h' : '') : '' : 'consumo ' + falta(SD) };
-    let pend = 0; try { pend = A.contagens ? A.contagens().pendencias : (D.diario || []).filter((x) => x.pend).length; } catch (x) { pend = 0; }
+    // pendências abertas: as do cérebro (as geradas e as do aparelho, menos as resolvidas por linha nova) e as anotações do app (anomalia, A CONFIRMAR/A CONFERIR de foto e vídeo): a mesma conta da B1 e
+    // do chat em «Anomalias abertas» (o CapitaoAgora.contagens() só vê as pendências do diário gerado e as do aparelho com `pend`: ficava abaixo)
+    let pend = 0;
+    try {
+      const Br = window.CapitaoBrain, pl = Br && typeof Br.pendenciasLista === 'function' ? Br.pendenciasLista().filter((p) => p.aberta) : null;
+      if (pl) { const noApp = {}; pl.forEach((p) => { if (p.origem === 'aparelho') noApp[p.iso] = 1; }); pend = pl.length + (diarioLocal || []).filter((x) => !x.acao && /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(String(x.t || '')) && !noApp[x.iso]).length; }
+      else pend = A.contagens ? A.contagens().pendencias : (D.diario || []).filter((x) => x.pend).length;
+    } catch (x) { pend = 0; }
     e.anomalias = { sub: pend + (pend === 1 ? ' pendência aberta' : ' pendências abertas') + ' no diário' };
     return { e: e, nAtr: nAtr, atr: atrasadas().map((t) => ({ n: t.equip.split(' (')[0], dn: t.dn })) };
   }

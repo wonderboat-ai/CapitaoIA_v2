@@ -79,13 +79,19 @@ Fase 4 retira as suas; uma tela da lista que já está limpa reprova, para a lis
 ainda não tornou viva, está em PENDENTES_MUDA). Selo do coletor pela cor (F06): verde com o replay ao vivo, amarelo com a última leitura (replay desligado ou que falhou ao carregar).
 Offline: capitao-replay.js responde 200 e CapitaoReplay.quadro() não é nulo em cada tela (o SOS só confere o arquivo). Login com o botão de SOS (S2 no celular, S1 no computador).
 
-Fase 4, P4D (a Carta: B1 Gestão, B2 Sistemas, B3 Resposta por voz; `--so-p4d` roda só as conferências dela e `--mutantes-p4d` planta 26 defeitos, todos acusados): B1 com a propulsão, o diesel,
+Fase 4, P4D (a Carta: B1 Gestão, B2 Sistemas, B3 Resposta por voz; `--so-p4d` roda só as conferências dela e `--mutantes-p4d` planta 32 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto): B1 com a propulsão, o diesel,
 o consumo, a autonomia e as horas até a troca do óleo do quadro (nada do snapshot de 26/09), o dia do instante, os 4 cartões iguais às contagens do CapitaoAgora e do cérebro (Executado e pendência
 resolvida por linha nova acompanham); B2 com o estado de cada um dos 11 sistemas do quadro e de D.equipamentos (áudio e VHF), EPIRB e Seafire só com o procedimento padrão e a nota da etiqueta, o
 fabricante e o modelo de D.equipamentos em toda linha (as bombas e as baterias também); B3 com a hora da resposta (calculada uma vez por pergunta; nunca na emergência), a marca da janela de
 conversa em emergência (CapitaoEmergencia: abre com sos, óleo, canal 16, EPIRB e Seafire, não com salvatagem nem MMSI; dentro dela posição, SOG, chegada e pessoas viram «LEIA NO PLOTTER»), o
 botão de uma resposta (#capitao-prop-… e #capitao-relato-…) que vira a pergunta sem gravar, e nenhum link vazio. Sem congelar o replay, a propulsão da B1 e da B2 muda em 1,5 s; com simulacao false
 as duas leem a última leitura salva (D.snapshot).
+
+Fase 4, P4C (a Ponte: A1 a A5, o gráfico e o mapa de sensores; `--so-p4c` roda só as conferências dela e `--mutantes-p4c` planta 47 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem
+o texto): na 2ª rodada da revisão final do grupo, os 25 blocos do console da A2 (e não só os 8 padrão) com o texto do quadro e o selo das atrasadas, as pendências abertas iguais na A2, na B1 e no chat (uma
+anomalia registrada pelo chat entra nas três), nenhum texto da Ponte e da Carta cortado com reticência (o que não cabe quebra), nenhum fabricante fixo no código das telas e dos dois arquivos novos (nem no que a
+A1 desenha com os fabricantes trocados), o desenho do gráfico além da linha (referência do guia, faixa mín/máx, escala do diesel de 0 à capacidade, marcas do eixo do tempo, mín e máx da legenda), o nível e a cor
+de cada ponto do mapa de sensores (aviso do motor BE a 105 s), os selos das abas da A1, a fonte do histórico por janela, a «reserva N %» da autonomia da B1 e a etiqueta «LICENÇA · D-n» do VHF na B2.
 
 Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 42 defeitos, todos acusados; `MUT_FILTRO=texto`
 refaz só os mutantes cujo nome tem o texto): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
@@ -2216,8 +2222,19 @@ LE_GRAFICO = """() => { """ + JS_BASE + """
   const linhas = [...svg.querySelectorAll('path[d]')].filter((p) => p.getAttribute('fill') === 'none' && p.getAttribute('stroke-width') === '2').map((p) => ({ d: p.getAttribute('d'), n: (p.getAttribute('d').match(/M/g) || []).length, pts: pts(p.getAttribute('d')) }));
   const dots = [...svg.querySelectorAll('circle[data-agora]')].map((c) => ({ campo: c.getAttribute('data-campo'), v: c.getAttribute('data-agora'), esperado: T[c.getAttribute('data-campo')], cx: +c.getAttribute('cx'), cy: +c.getAttribute('cy') }));
   const leg = raiz.querySelector('[data-legenda]'), vb = svg.getAttribute('viewBox').split(' ').map(Number);
-  return { met: raiz.getAttribute('data-capitao-grafico'), jan: raiz.getAttribute('data-janela'), ruim: /NaN|undefined|Infinity|null/.test(html), linhas, dots, nTexto: svg.querySelectorAll('text').length, vb,
-    legenda: leg ? lin(leg.innerText) : '', titulo: leg ? leg.getAttribute('title') : '', aria: svg.getAttribute('aria-label') }; }"""
+  // o que o desenho tem além da linha: a referência (tracejada, com o texto no tom de aviso), a faixa mín/máx do balde (caminho fechado), os números do eixo vertical e as marcas do eixo do tempo; e o que a
+  // legenda e a faixa devem dizer, refeitos de CapitaoGrafico.dados (o mesmo que o gráfico desenha) e do texto de cada campo (CapitaoAgora.fmt)
+  const met = raiz.getAttribute('data-capitao-grafico'), jan = raiz.getAttribute('data-janela'), dd = window.CapitaoGrafico.dados(met, jan, undefined, vb[3]), lim = (D.replay && D.replay.limites) || {};
+  const s0 = dd.ok ? dd.paineis[0].series[0] : null, c0 = s0 ? D.campos[s0.campo] : null, cap = D.embarcacao.tanques.diesel_l;
+  const nbv = (v, un) => F.nb(v, (c0 && c0.casas) || 0, !!(c0 && c0.mil)) + (un && c0 && c0.un ? ' ' + c0.un : '');
+  const nSeries = dd.ok ? dd.paineis.reduce((n, p) => n + p.series.length, 0) : 0;
+  const minmax = s0 ? 'mín ' + nbv(Math.min(...s0.pts.map((e) => e.min))) + ' · máx ' + nbv(Math.max(...s0.pts.map((e) => e.max)), true) + (nSeries > 1 ? ' (' + s0.n + ')' : '') : null;
+  const refs = svg.querySelectorAll('line[stroke-dasharray]').length, refTxt = [...svg.querySelectorAll('text')].filter((t) => /cap-warn/.test(t.getAttribute('style') || '')).map((t) => t.textContent);
+  const faixas = svg.querySelectorAll('path[d$="Z"]').length, faixasEsp = dd.ok ? dd.paineis.filter((p) => jan !== '150S' && p.series[0].pts.some((e) => e.max - e.min > (p.hi - p.lo) * 0.004)).length : 0;
+  const yTxt = [...svg.querySelectorAll('text[text-anchor="end"]')].filter((t) => +t.getAttribute('x') < 40).map((t) => t.textContent), xTxt = [...svg.querySelectorAll('text[text-anchor="middle"]')].map((t) => t.textContent);
+  return { met, jan, ruim: /NaN|undefined|Infinity|null/.test(html), linhas, dots, nTexto: svg.querySelectorAll('text').length, vb,
+    legenda: leg ? lin(leg.innerText) : '', titulo: leg ? leg.getAttribute('title') : '', aria: svg.getAttribute('aria-label'),
+    minmax, refs, refTxt, faixas, faixasEsp, yTxt, xTxt, limDiesel: lim.diesel_litros && lim.diesel_litros.normal ? lim.diesel_litros.normal.de : null, limArref: lim.motor_bb_arref_c && lim.motor_bb_arref_c.normal ? lim.motor_bb_arref_c.normal.ate : null, cap, capTxt: F.nb(cap, 0, true) }; }"""
 JAN_ID = {'150 s': '150S', '1 D': '1D', '7 D': '7D', '30 D': '30D', '1 A': '1A'}
 SO150 = ('Rotação', 'Óleo', 'Arrefecimento')
 CURSOR_JS = """async (x) => { const svg = document.querySelector('[data-capitao-grafico] svg'), r = svg.getBoundingClientRect(), n0 = svg.querySelectorAll('line').length;
@@ -2230,6 +2247,30 @@ CONTRASTE_JS = """() => { const raiz = document.querySelector('[data-capitao-gra
   const rgb = (s) => (s.match(/[\\d.]+/g) || []).slice(0, 3).map(Number), lum = (c) => { const f = c.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; };
   const cr = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }, bg = rgb(getComputedStyle(card).backgroundColor);
   return { bg, txt: Math.min(...[...svg.querySelectorAll('text')].map((t) => cr(rgb(getComputedStyle(t).fill), bg))), linha: Math.min(...[...svg.querySelectorAll('path[stroke-width="2"]')].map((p) => cr(rgb(getComputedStyle(p).stroke), bg))), tema: document.documentElement.getAttribute('data-capitao-tema') }; }"""
+
+
+FORMATO_MARCA = {'150S': r'\d\d:\d\d:\d\d', '1D': r'\d\d:\d\d', '7D': r'\d\d/\d\d', '30D': r'\d\d/\d\d', '1A': r'[a-zç]{3}/\d\d'}
+
+
+def problemas_grafico_desenho(r, rot):
+    """O que o desenho tem além da linha e do ponto «agora»: a linha de referência do guia (a reserva do diesel e o aviso do arrefecimento, tracejada e com o texto), a faixa mín/máx do balde nas janelas
+    longas, a escala fixa (diesel de 0 à capacidade dos tanques; água e servidas de 0 a 100), as marcas do eixo do tempo no formato da janela, e a legenda com o mín e o máx certos (da série, não trocados)."""
+    prob = []
+    esp_ref = {'diesel': 'reserva %s L' % ('%g' % r['limDiesel']).replace('.', ',') if r['limDiesel'] is not None else None,
+               'arref': 'aviso acima de %s °C' % ('%g' % r['limArref']).replace('.', ',') if r['limArref'] is not None else None}.get(r['met'])
+    if r['met'] in ('diesel', 'arref') and not esp_ref: prob.append('%s: sem o limite do guia em D.replay.limites (a referência não tem de onde sair)' % rot)
+    if esp_ref and (r['refs'] != 1 or r['refTxt'] != [esp_ref]): prob.append('%s: a linha de referência devia ser 1 tracejada com o texto «%s» (tem %d, texto %s)' % (rot, esp_ref, r['refs'], r['refTxt']))
+    if not esp_ref and (r['refs'] or r['refTxt']): prob.append('%s: linha de referência onde o guia não tem faixa (%d, %s)' % (rot, r['refs'], r['refTxt']))
+    if r['faixas'] != r['faixasEsp']: prob.append('%s: %d faixa(s) mín/máx do balde (esperado %d: janelas longas com o balde mais largo que 0,4 %% da escala)' % (rot, r['faixas'], r['faixasEsp']))
+    if r['jan'] != '150S' and r['met'] == 'baterias' and not r['faixasEsp']: prob.append('%s: controle: a janela longa devia ter faixa mín/máx e o dado não a pede' % rot)
+    nums = [float(x.replace('.', '').replace(',', '.')) for x in r['yTxt'] if re.fullmatch(r'[\d.,]+', x)]
+    if r['met'] == 'diesel' and (not nums or min(nums) != 0 or max(nums) != r['cap'] or '0' not in r['yTxt'] or r['capTxt'] not in r['yTxt']):
+        prob.append('%s: a escala do diesel devia ir de 0 a %s (a capacidade dos tanques) e o eixo mostra %s' % (rot, r['capTxt'], r['yTxt']))
+    if r['met'] in ('agua', 'servidas') and (not nums or min(nums) != 0 or max(nums) != 100): prob.append('%s: a escala devia ir de 0 a 100 %% e o eixo mostra %s' % (rot, r['yTxt']))
+    if len(r['xTxt']) < 2 or not all(re.fullmatch(FORMATO_MARCA[r['jan']], x) for x in r['xTxt']): prob.append('%s: as marcas do eixo do tempo %s (esperado ao menos 2, no formato %s)' % (rot, r['xTxt'], FORMATO_MARCA[r['jan']]))
+    if not r['minmax'] or not r['legenda'].endswith(r['minmax']): prob.append('%s: a legenda devia terminar com «%s» e diz %r' % (rot, r['minmax'], r['legenda'][-60:]))
+    if r['minmax'] and r['minmax'] not in (r['titulo'] or ''): prob.append('%s: a dica da legenda não leva «%s»: %r' % (rot, r['minmax'], r['titulo']))
+    return prob
 
 
 def teste_grafico(b, tela):
@@ -2267,6 +2308,7 @@ def teste_grafico(b, tela):
             if r['nTexto'] < 4: prob.append('%s: só %d rótulos de eixo' % (rot, r['nTexto']))
             if len(r['legenda']) < 8 or not re.search(r'\d', r['legenda']): prob.append('%s: legenda vazia ou sem número: %r' % (rot, r['legenda']))
             if not r['aria'] or 'NaN' in r['aria']: prob.append('%s: aria-label do gráfico: %r' % (rot, r['aria']))
+            prob += problemas_grafico_desenho(r, rot)
         if nome in SO150:   # as métricas do laço só têm a janela de 150 s: os outros botões ficam desativados
             off = pg.evaluate("() => [...document.querySelectorAll('[role=group][aria-label=\"Período\"] button')].map((x) => [x.innerText.trim(), x.getAttribute('aria-disabled')])")
             if [x[0] for x in off if x[1] == 'true'] != ['1 D', '7 D', '30 D', '1 A']: prob.append('%s: botões desativados %s (esperado 1 D, 7 D, 30 D e 1 A)' % (nome, off))
@@ -2316,7 +2358,7 @@ LE_A1 = """() => { """ + JS_BASE + """
   const fx = document.getElementById('capitao-faixa-alertas'), nota = document.querySelector('[data-selo]'), tab = (n) => [...document.querySelectorAll('[role=tab]')].find((b) => lin(b.innerText).indexOf(n) === 0);
   const cel = (txt) => [...document.querySelectorAll('article[aria-label="Motores"] span')].find((e) => e.children.length === 0 && lin(e.innerText) === txt);
   const probe = document.createElement('span'); probe.style.color = 'var(--cap-warn, #f0a63a)'; document.body.appendChild(probe); const warn = getComputedStyle(probe).color; probe.remove();
-  return { T, fase: I.fase ? I.fase.nome : '', coord: F.coord(q.lat, q.lon), q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos, marcha: q.marcha, estado: q.estado, local: q.local }, nav: t('Navegação'), amb: t('Ambiente'), ene: t('Energia'), tan: t('Tanques'), mot: t('Motores'), chips,
+  return { T, C: A.contagens(), fase: I.fase ? I.fase.nome : '', coord: F.coord(q.lat, q.lon), q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos, marcha: q.marcha, estado: q.estado, local: q.local }, nav: t('Navegação'), amb: t('Ambiente'), ene: t('Energia'), tan: t('Tanques'), mot: t('Motores'), chips,
     mapa: mapa ? { href: mapa.getAttribute('href'), texto: lin(mapa.innerText) } : null, alertasTitulo: tit ? lin(tit.innerText) : null, itens, faixa: fx && !fx.hidden ? lin(fx.innerText) : '',
     nota: nota ? { tom: nota.getAttribute('data-selo'), texto: lin(nota.innerText) } : null, abas: [...document.querySelectorAll('[role=tab]')].map((x) => [lin(x.innerText), x.getAttribute('aria-selected')]),
     corArref: (() => { const c = cel(T.motor_be_arref_c); return c ? getComputedStyle(c).color : null; })(), warn, texto: lin(document.body.innerText),
@@ -2324,6 +2366,23 @@ LE_A1 = """() => { """ + JS_BASE + """
 LE_TENDENCIAS = """() => { const B = window.CapitaoBrain, lin = (s) => (s || '').replace(/\\s+/g, ' ').trim(), el = [...document.querySelectorAll('[data-tendencia]')];
   const lk = [...document.querySelectorAll('[role=tabpanel] a')].find((a) => /Ver tendências/.test(a.innerText));
   return { itens: el.map((e) => ({ id: e.getAttribute('data-tendencia'), texto: lin(e.innerText), fonte: e.getAttribute('title') })), api: B.preditiva().map((x) => ({ id: x.id, nivel: x.nivel, texto: x.texto, titulo: x.titulo })), href: lk ? lk.getAttribute('href') : null }; }"""
+
+
+# a fonte embaixo do histórico (a 1ª série é Baterias × 7 D; Rotação só tem a janela de 150 s): a do histórico gravado nas janelas longas e a do instante na de 150 s
+LE_FONTE_HIST = "() => { const e = document.querySelector('section[aria-label=\"Histórico\"] > span:last-child'); return e ? e.innerText.replace(/\\s+/g, ' ').trim() : null; }"
+LE_FONTES = "() => ({ hist: window.CapitaoDados.historico.fonte, agora: window.CapitaoAgora.instante().fonteTxt.replace(/(\\d\\d:\\d\\d):\\d\\d/, '$1') })"
+
+
+def problemas_fonte_hist(pg, rot):
+    """A fonte do histórico muda com a janela: Baterias × 7 D leva a do histórico (D.historico.fonte); Rotação × 150 s, a do instante (o laço do replay, sem a do histórico gravado)."""
+    prob = []
+    pg.evaluate(CLICA_GRUPO, ['Série', 'Baterias']); pg.evaluate(CLICA_GRUPO, ['Período', '7 D']); pg.wait_for_timeout(250)
+    fh, f7 = pg.evaluate(LE_FONTES), pg.evaluate(LE_FONTE_HIST)
+    pg.evaluate(CLICA_GRUPO, ['Série', 'Rotação']); pg.wait_for_timeout(250)
+    f150 = pg.evaluate(LE_FONTE_HIST)
+    if not f7 or fh['hist'] not in f7: prob.append('%s: a fonte do histórico de 7 D devia levar %r e diz %r' % (rot, fh['hist'], f7))
+    if not f150 or not f150.startswith('Fonte: ' + fh['agora']) or fh['hist'] in f150: prob.append('%s: a fonte da janela de 150 s devia ser a do instante (%r), sem a do histórico gravado, e diz %r' % (rot, fh['agora'], f150))
+    return prob
 
 
 def sem_rotulo(txt):
@@ -2385,6 +2444,13 @@ def teste_ponte_web(b):
         if [i['id'] for i in td['itens']] != [x['id'] for x in td['api']] or len(td['itens']) != 5: prob.append('%s: as tendências da tela %s não são as 5 do cérebro %s' % (rot, [i['id'] for i in td['itens']], [x['id'] for x in td['api']]))
         if not td['href'] or not td['href'].startswith('Main.dc.html#q='): prob.append('%s: o link «Ver tendências ›» leva a %r' % (rot, td['href']))
         if any(not i['fonte'] for i in td['itens']): prob.append('%s: tendência sem a fonte no title' % rot)
+        # o selo de cada aba: as atrasadas do CapitaoAgora em «O que vence» e quantas tendências pedem atenção em «Tendências» (nada com zero)
+        fora = len([x for x in td['api'] if x['nivel'] != 'ok'])
+        abas = pg.evaluate("() => [...document.querySelectorAll('[role=tab]')].map((x) => x.innerText.replace(/\\s+/g, ' ').trim())")
+        esp_abas = ['O que vence %d' % r['C']['atrasadas'] if r['C']['atrasadas'] else 'O que vence', 'Tendências %d' % fora if fora else 'Tendências']
+        if abas != esp_abas: prob.append('%s: as abas dizem %s (esperado %s: o selo conta as atrasadas e as tendências que pedem atenção)' % (rot, abas, esp_abas))
+        if fixo == '105' and not fora: prob.append('controle: a 105 s o arrefecimento sai da faixa e ao menos uma tendência devia pedir atenção')
+        prob += problemas_fonte_hist(pg, rot)
         guarda[fixo] = {i['id']: i['texto'] for i in td['itens']}
         ach = sem_rotulo(pg.evaluate("() => document.body.innerText"))
         if ach: prob.append('%s: termo do §3 na aba Tendências: %s' % (rot, ach))
@@ -2414,6 +2480,9 @@ def teste_ponte_web(b):
     r = pg.evaluate(LE_A1)
     if not r['mot'].startswith('Motores Zyxmotor') or 'modelo Zyxmotor Mod9' not in r['mot']: prob.append('fabricante e modelo dos motores trocados no D.equipamentos e a A1 não os mostra (título e modelo): %r' % r['mot'][:120])
     if 'Zyxgerador Mod9' not in r['ene'] or 'Zyxestab Mod9' not in r['ene']: prob.append('fabricante do gerador e do estabilizador trocados no D.equipamentos e a A1 não os mostra: %r' % r['ene'][-90:])
+    # com os três fabricantes trocados, o bloco Energia e o mapa de sensores (texto e dica) não podem ter nenhuma marca do inventário de verdade: o rótulo da linha do estabilizador era «Seakeeper» fixo
+    marca = MARCAS_FIXAS.search(r['ene'] + ' ' + ' '.join(c['texto'] + ' ' + c['titulo'] for c in r['chips']) + ' ' + r['mot'])
+    if marca: prob.append('com os fabricantes trocados no D.equipamentos a A1 ainda diz «%s» no bloco Energia, nos motores ou no mapa de sensores (fabricante fixo na tela)' % marca.group(0))
     if erros: prob += erros[:2]
     ctx.close()
     # o hash #alertas (o ABRIR › da faixa para os alarmes pedidos) abre a página sem erro
@@ -2455,7 +2524,7 @@ def teste_ponte_app(b):
         if 'Estabilizador' in r['blocos'] and (T['seakeeper_volante_pct'] + ' %') not in r['blocos']['Estabilizador']: prob.append('%s: o bloco Estabilizador diz %r' % (rot, r['blocos']['Estabilizador']))
         ach = achados_termos('A2-Ponte-Mobile', r['texto'] + ' ' + ' '.join(r['blocos'].values()))
         if ach: prob.append('%s: termo do §3: %s' % (rot, ach))
-        prob += problemas_orfaos(pg, rot)
+        prob += problemas_orfaos(pg, rot) + problemas_reticencia(pg, rot) + problemas_fonte_hist(pg, rot)
         if fixo == '60' and (r['alertasTitulo'] != 'Nenhum alerta ativo' or r['itens']): prob.append('A2 a 60 s: devia ter «Nenhum alerta ativo»: %r %s' % (r['alertasTitulo'], r['itens']))
         if fixo == '105':
             if r['alertasTitulo'] != '1 alerta ativo' or [i['id'] for i in r['itens']] != ['arref_be'] or r['itens'][0]['href'] != 'C3-Leme-Alerta.dc.html#alarme=arref_be': prob.append('A2 a 105 s: a lista de alertas %r %s (esperado o arref_be com o link da C3)' % (r['alertasTitulo'], r['itens']))
@@ -2472,6 +2541,118 @@ def teste_ponte_app(b):
     return prob
 
 
+# ——— A2: os 25 blocos do console (a matriz só mostra os 8 padrão): cada um com o texto do quadro e o selo das tarefas atrasadas ———
+# O aria-label de cada bloco leva o texto cheio («Rótulo — texto · N tarefas atrasadas · pergunta pronta»); o selo vermelho é o N. Os 25 ids saem do CATALOGO da própria tela, em lotes de até 8 (o MAX
+# do console), a 60 s e a 105 s. O que cada bloco diz é refeito aqui do quadro (o texto de cada campo do CapitaoAgora.fmt.campo), de D e do cérebro, sem repetir a conta da tela.
+def catalogo_a2():
+    src = open(os.path.join(RAIZ, 'A2-Ponte-Mobile.dc.html'), encoding='utf-8').read()
+    return re.findall(r"\{ id: '(\w+)', label: '([^']+)', icon: '\w+', (href|q): ", src)
+
+
+LE_A2_BLOCOS = """() => { """ + JS_BASE + """
+  const B = window.CapitaoBrain, nb = F.nb, eq = (id) => D.equipamentos.find((e) => e.id === id) || {}, CON = D.consumo || {}, EQ = D.equipe || {};
+  const todas = D.agenda.map((t) => ({ id: t.id, dn: t.dn, feita: false })).concat(B.tarefasEquipe().map((t) => ({ id: t.id, dn: t.dn, feita: !!t.feita })));
+  const atr = (ids) => todas.filter((t) => (!ids || ids.indexOf(t.id) >= 0) && typeof t.dn === 'number' && t.dn < 0 && !t.feita).length;
+  const tarefa = (id) => D.agenda.find((t) => t.id === id) || null, rot = (n) => A.prazoDe(n).rot;
+  const fab = (e) => { const f = e.fabricante || '', m = e.modelo || ''; return m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? m : f + ' ' + m; };
+  const d0 = D.documentos.filter((d) => typeof d.dn === 'number' && d.dn >= 0).sort((a, b) => a.dn - b.dn)[0];
+  const pt = tarefa('porao-teste'), fc = tarefa('clima-filtro'), ciclos = q.bomba_porao_ciclos, nAtr = atr(null), c = I.calc, ger = q.gerador_ativo;
+  const guias = Object.keys(D.faq).filter((k) => D.faq[k] && D.faq[k].status === 'PRONTO').length;
+  const m = /Pendências abertas \\((\\d+)\\)/.exec(B.answer('Anomalias abertas', { platform: 'app', commit: false }).text), pend = m ? +m[1] : null;
+  const esp = {
+    motores: 'BB ' + T.motor_bb_horimetro_h + ' h · BE ' + T.motor_be_horimetro_h + ' h',
+    manutencao: (nAtr ? nAtr + (nAtr === 1 ? ' atrasada' : ' atrasadas') : 'nada atrasado') + ' · ' + todas.length + ' tarefas',
+    telemetria: 'ao vivo ' + I.hhmm,
+    documentos: d0.n.split(' ')[0].toLowerCase() + ' vence em ' + d0.dn + ' d',
+    equipamentos: guias + ' guias de bordo',
+    navegacao: q.estado.toLowerCase() + ' · ' + T.sog_nos + (q.sog_nos < 2 ? ' nó' : ' nós') + ' · ' + T.proa_graus + '°',
+    abastecer: '≈ ' + T.diesel_litros + ' L · ' + Math.round(c.diesel_pct) + ' %',
+    diario: 'último ' + D.diario[0].d + ' ' + D.diario[0].h,
+    gerador: eq('gerador').fabricante + (ger ? ' · ' + T.gerador_kw + ' kW' : ' · desligado') + ' · ' + T.gerador_horimetro_h + ' h',
+    climatizacao: fc && fc.dn < 0 ? 'filtro ' + rot(fc.dn) : 'guia de bordo',
+    estabilizador: fab(eq('estabilizador')) + ' · ' + (q.seakeeper_ativo ? 'ligado · ' + T.seakeeper_volante_pct + ' %' : 'desligado'),
+    eletronicos: D.faq.eletronicos.equip.replace(/^Eletrônicos\\s+/, ''),
+    equipe: EQ.perfis.length + (EQ.perfis.length === 1 ? ' perfil' : ' perfis') + ' · ' + EQ.apoio.length + ' de apoio',
+    sistemas: D.equipamentos.length + ' equipamentos com fabricante e modelo',
+    mare: 'ref. ' + D.posicaoRef.nome,
+    clima: 'a bordo ' + T.vento_verdadeiro_nos + ' nós · ' + T.pressao_barometrica_hpa + ' hPa',
+    autonomia: '≈ ' + nb(c.autonomia.horas, 1) + ' h · ≈ ' + nb(c.autonomia.mn, 0, true) + ' mn',
+    tanques: 'água ' + T.tanque_agua_pct + ' % · negras ' + T.tanque_negras_pct + ' %',
+    porao: 'BB ' + T.porao_bb_nivel + ' · BE ' + T.porao_be_nivel + ' cm · bomba ' + ciclos + (ciclos === 1 ? ' ciclo' : ' ciclos') + '/h' + (pt && pt.dn < 0 ? ' · teste ' + rot(pt.dn) : ''),
+    canal16: 'canal ' + D.protocolos.canal16.canal + ' · ' + D.protocolos.canal16.mhz + ' MHz',
+    horimetros: 'BB ' + T.motor_bb_horimetro_h + ' · BE ' + T.motor_be_horimetro_h + ' · ger. ' + T.gerador_horimetro_h,
+    posicao: F.coord(q.lat, q.lon),
+    checklist: D.guias.checklist,
+    consumo: nb(CON.cruzeiro.lph, 0) + ' L/h a ' + CON.cruzeiro.nos + ' nós · lenta ' + nb(CON.lenta.lph, 1) + ' L/h',
+    anomalias: pend + (pend === 1 ? ' pendência aberta' : ' pendências abertas') + ' no diário' };
+  const selo = { motores: atr(['motores-oleo', 'motores-revisao']), manutencao: nAtr, gerador: atr(['gerador-rotor', 'gerador-revisao']), climatizacao: atr(['clima-filtro', 'clima-revisao']), estabilizador: atr(['seakeeper-anodo']),
+    eletronicos: atr(['garmin-cartas']), porao: atr(['porao-teste']) };
+  const lidos = {}; [...document.querySelectorAll('a[aria-label]')].forEach((a) => { const mm = /^([^—]+) — (.*)$/.exec(a.getAttribute('aria-label')), s = a.querySelector(':scope > span:first-child > span[aria-hidden]');
+    if (mm) lidos[mm[1].trim()] = { aria: a.getAttribute('aria-label'), resto: mm[2], selo: s ? lin(s.innerText) : '' }; });
+  return { esp, selo, lidos, texto: lin(document.body.innerText), pend, nBlocos: document.querySelectorAll('div[style*="grid-template-columns"] > a[aria-label]').length }; }"""
+
+
+def teste_a2_blocos(b):
+    """Os 25 blocos do console, a 60 s e a 105 s: o texto de cada um é o do quadro (e de D, e do cérebro), o selo vermelho conta as tarefas atrasadas dele, sem termo do §3, sem corte com
+    reticência e com a unidade junto do número."""
+    prob = []
+    cat = catalogo_a2()
+    if len(cat) != 25: return ['o CATALOGO do console tem %d blocos (esperado 25: 8 padrão e 17 no banco)' % len(cat)]
+    rotulo = {i: (l, t) for i, l, t in cat}
+    ids = [i for i, _, _ in cat]
+    lotes = [ids[k:k + 8] for k in range(0, len(ids), 8)]
+    vistos = set()
+    for fixo in ('60', '105'):
+        for lote in lotes:
+            ctx, pg, erros = abre_tela(b, 'A2-Ponte-Mobile', fixo=fixo, ls={'capitao.blocos.v1': json.dumps([{'id': i, 'label': i, 'icon': 'motor'} for i in lote])})
+            r = pg.evaluate(LE_A2_BLOCOS)
+            rot = 'A2 a %s s, blocos %s…%s' % (fixo, lote[0], lote[-1])
+            if r['nBlocos'] != len(lote): prob.append('%s: %d blocos na tela (esperado %d)' % (rot, r['nBlocos'], len(lote)))
+            for i in lote:
+                rot_i, tipo = rotulo[i]
+                lido = r['lidos'].get(rot_i)
+                if not lido: prob.append('%s: sem o bloco «%s»' % (rot, rot_i)); continue
+                vistos.add(i)
+                n = r['selo'].get(i, 0)
+                esp = r['esp'][i] + (' · %d %s' % (n, 'tarefa atrasada' if n == 1 else 'tarefas atrasadas') if n else '') + (' · pergunta pronta' if tipo == 'q' else '')
+                if lido['resto'] != esp: prob.append('%s: o bloco «%s» diz %r (esperado %r, do quadro)' % (rot, rot_i, lido['resto'], esp))
+                if lido['selo'] != (str(n) if n else ''): prob.append('%s: o selo de tarefas atrasadas do bloco «%s» diz %r (esperado %r)' % (rot, rot_i, lido['selo'], str(n) if n else ''))
+            if re.search(r'NaN|undefined|\[object|Infinity', r['texto'] + ' '.join(x['aria'] for x in r['lidos'].values())): prob.append('%s: NaN, undefined ou [object na tela' % rot)
+            ach = achados_termos('A2-Ponte-Mobile', r['texto'] + ' ' + ' '.join(x['aria'] for x in r['lidos'].values()))
+            if ach: prob.append('%s: termo do §3 no texto: %s' % (rot, ach))
+            prob += problemas_orfaos(pg, rot) + problemas_reticencia(pg, rot)
+            if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+            ctx.close()
+    if len(vistos) != 25: prob.append('só %d dos 25 blocos foram conferidos' % len(vistos))
+    return prob
+
+
+# ——— as pendências abertas: o bloco «Anomalias» da A2, o cartão da B1 e a resposta «Anomalias abertas» do chat são a mesma conta ———
+def teste_anomalias_tres_telas(b):
+    """Uma anomalia (ou uma pendência) registrada pelo cérebro com o comando do chat entra na conta das três: A2 = B1 = chat (a A2 usava o CapitaoAgora.contagens(), que só vê as pendências do diário gerado)."""
+    prob = []
+    ctx, pg, erros = abre_tela(b, 'B1-Carta-Web')
+    base = pg.evaluate("() => { const m = /Pendências abertas \\((\\d+)\\)/.exec(window.CapitaoBrain.answer('Anomalias abertas', { platform: 'web', commit: false }).text); return m ? +m[1] : null; }")
+    diarios = []
+    for q in ('registre no diário: anomalia no leme, ruído ao virar', 'anota no diário: pendência — conferir a cinta do gerador'):
+        res = pg.evaluate("(q) => { const a = window.CapitaoBrain.answer(q, { platform: 'web', commit: true }); return [a.key, a.text.slice(0, 60)]; }", q)
+        if res[0] != 'diario': prob.append('controle: «%s» devia registrar no diário e deu %s' % (q, res))
+        diarios.append(pg.evaluate("() => localStorage.getItem('capitao.diario.v1')"))
+    ctx.close()
+    for rot, ls, esp in (('sem registro novo', {}, base), ('com a anomalia registrada', {'capitao.diario.v1': diarios[0]}, base + 1), ('com a anomalia e a pendência registradas', {'capitao.diario.v1': diarios[1]}, base + 2)):
+        ctx, pg, erros = abre_tela(b, 'B1-Carta-Web', ls=ls)
+        rb = pg.evaluate(LE_B1)
+        ctx.close()
+        ctx, pg, erros = abre_tela(b, 'A2-Ponte-Mobile', ls=dict(ls, **{'capitao.blocos.v1': json.dumps([{'id': 'anomalias', 'label': 'Anomalias', 'icon': 'alerta'}])}))
+        ra = pg.evaluate(LE_A2_BLOCOS)
+        ctx.close()
+        a2 = ra['lidos'].get('Anomalias', {}).get('resto', '')
+        m = re.match(r'(\d+) pendências? abertas? no diário', a2)
+        n_a2, n_b1, n_chat = (int(m.group(1)) if m else None), rb['kpi'].get('pendencias', {}).get('v'), rb['anom']
+        if esp is not None and (n_a2 != esp or n_b1 != str(esp) or n_chat != esp): prob.append('%s: a A2 conta %s, a B1 conta %s e o chat conta %s (esperado %s nos três)' % (rot, n_a2, n_b1, n_chat, esp))
+    return prob
+
+
 # ——— A4 e A5: o mapa de sensores ———
 LE_SENS = """() => { """ + JS_BASE + """
   const re = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; }, nome = (s) => (s || '').replace(/\\s+/g, ' ').trim();
@@ -2479,14 +2660,16 @@ LE_SENS = """() => { """ + JS_BASE + """
   const blocos = [...document.querySelectorAll('[data-bloco]')].map((e) => { const l1 = e.querySelector('[data-l1]'), l2 = e.querySelector('[data-l2]'); return Object.assign({ id: e.getAttribute('data-bloco'), l1: nome(l1.innerText), l2: nome(l2.innerText), c1: l1.scrollWidth <= l1.clientWidth + 1, c2: l2.scrollWidth <= l2.clientWidth + 1, titulo: e.getAttribute('title'),
     cartao: sec(e).getAttribute('aria-label'), dentro: (() => { const r = re(e), s = re(regiao(e)), rolavel = !!e.closest('[role=region]'); return (rolavel || (r.l >= s.l - 0.5 && r.r <= s.r + 0.5)) && r.t >= s.t - 0.5 && r.b <= s.b + 0.5; })() }, re(e)); });
   const pontos = [...document.querySelectorAll('[data-ponto]')].map((e) => { e.scrollIntoView({ block: 'center', inline: 'center' }); const r = e.getBoundingClientRect(), cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2, topo = document.elementFromPoint(cx, cy);
-    return { id: e.getAttribute('data-ponto'), nivel: e.getAttribute('data-nivel'), visivel: topo === e || e.contains(topo), esq: parseFloat(e.style.left) + parseFloat(e.style.width) / 2, topo: parseFloat(e.style.top) + parseFloat(e.style.height) / 2 }; });
+    return { id: e.getAttribute('data-ponto'), nivel: e.getAttribute('data-nivel'), cor: getComputedStyle(e).backgroundColor, visivel: topo === e || e.contains(topo), esq: parseFloat(e.style.left) + parseFloat(e.style.width) / 2, topo: parseFloat(e.style.top) + parseFloat(e.style.height) / 2 }; });
   const linhas = [...document.querySelectorAll('[data-linha]')].map((e) => ({ id: e.getAttribute('data-linha'), esq: parseFloat(e.style.left), topo: parseFloat(e.style.top) + 0.5 }));
   window.scrollTo(0, 0);
   const num = (e, k) => parseFloat(e.style[k]), colide = [];
   document.querySelectorAll('[data-desenho]').forEach((cx) => { const bl = [...cx.querySelectorAll(':scope > [data-bloco]')].map((e) => ({ id: e.getAttribute('data-bloco'), l: num(e, 'left'), t: num(e, 'top'), r: num(e, 'left') + num(e, 'width'), b: num(e, 'top') + num(e, 'height') }));
     cx.querySelectorAll(':scope > [data-ponto]').forEach((d) => { const x = num(d, 'left') + num(d, 'width') / 2, y = num(d, 'top') + num(d, 'height') / 2, m = num(d, 'width') / 2 + 1;
       bl.forEach((q) => { if (x > q.l - m && x < q.r + m && y > q.t - m && y < q.b + m) colide.push(d.getAttribute('data-ponto') + ' dentro do bloco ' + q.id); }); }); });
-  return { T, colide, q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }, blocos, pontos, linhas, lista: [...document.querySelectorAll('[data-sensor]')].map((e) => nome(e.innerText)), desenhos: [...document.querySelectorAll('[data-desenho]')].map((e) => e.getAttribute('data-desenho')),
+  const cor = (v) => { const e = document.createElement('i'); e.style.color = v; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; };
+  return { T, colide, cores: { normal: cor('var(--cap-ok, #34c77a)'), aviso: cor('var(--cap-warn, #f0a63a)'), critico: cor('var(--cap-crit, #ff3b30)') }, ativos: window.CapitaoAlertas.ativos().map((a) => ({ id: a.id, sistema: a.sistema, lado: a.lado })),
+    q: { ancora: q.ancora_estado, ciclos: q.bomba_porao_ciclos }, blocos, pontos, linhas, lista: [...document.querySelectorAll('[data-sensor]')].map((e) => nome(e.innerText)), desenhos: [...document.querySelectorAll('[data-desenho]')].map((e) => e.getAttribute('data-desenho')),
     texto: nome(document.body.innerText), D: { sens: D.sensores.pontos.map((p) => [p.id, p.vista]), mapa: [D.sensores.perfil, D.sensores.planta] },
     selo: (() => { const n = document.querySelector('[data-selo]'); return n ? [n.getAttribute('data-selo'), nome(n.innerText)] : null; })() }; }"""
 LIVRE_DE_SALVATAGEM = re.compile(r'colete|balsa|boia|extintor|sinalizador|epirb|radiobaliza|seafire|supress|incêndio|incendio|salva-?vidas', re.I)
@@ -2530,9 +2713,15 @@ def problemas_sensores(r, tela, rot):
         if not (b_['c1'] and b_['c2']): prob.append('%s: o texto do bloco %s está cortado (%r / %r)' % (rot, b_['id'], b_['l1'], b_['l2']))
         if not b_['dentro']: prob.append('%s: o bloco %s sai do cartão (cortado pela borda)' % (rot, b_['id']))
     if r['colide']: prob.append('%s: ponto dentro de um bloco (o texto do bloco ficaria sob o ponto): %s' % (rot, r['colide'][:4]))
+    avisos = {'motor_' + a['lado'] for a in r['ativos'] if a['sistema'] == 'motores' and a['lado']}
+    if ('t=105' in rot) != bool(avisos): prob.append('%s: controle: o alerta do motor BE existe só a 105 s (alertas: %s)' % (rot, r['ativos']))
     for p in r['pontos']:
         if not p['visivel']: prob.append('%s: o ponto %s está coberto por outro elemento' % (rot, p['id']))
         if p['nivel'] not in ('normal', 'aviso', 'critico'): prob.append('%s: o ponto %s sem nível (%r)' % (rot, p['id'], p['nivel']))
+        # o nível e a cor do ponto são os da faixa do guia: a 60 s (cruzeiro) todos normais; a 105 s o arrefecimento do BE sai da faixa e só o motor BE vira aviso (âmbar), os outros seguem normais (verdes)
+        esp = 'aviso' if p['id'] in avisos else 'normal'
+        if p['nivel'] != esp: prob.append('%s: o ponto %s está em %r (esperado %r: as faixas do guia, a lista de alertas diz %s)' % (rot, p['id'], p['nivel'], esp, r['ativos']))
+        elif p['cor'] != r['cores'][esp]: prob.append('%s: o ponto %s está na cor %s (esperado a de %s: %s)' % (rot, p['id'], p['cor'], esp, r['cores'][esp]))
     pontos = {p['id']: p for p in r['pontos']}
     for ln in r['linhas']:
         p = pontos.get(ln['id'])
@@ -2551,7 +2740,7 @@ def teste_sensores(b, tela):
         ctx, pg, erros = abre_tela(b, tela, w, h, fixo=fixo, tema=tema)
         r = pg.evaluate(LE_SENS)
         prob += problemas_sensores(r, tela, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
-        prob += problemas_orfaos(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
+        prob += problemas_orfaos(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo)) + problemas_reticencia(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
         if movel and (w, h) == (390, 844): prob += problemas_alvos(pg, '%s %s %dx%d t=%s' % (tela, tema, w, h, fixo))
         if erros: prob += erros[:2]
         ctx.close()
@@ -2650,6 +2839,18 @@ def problemas_alvos(pg, rot):
     return ['%s: o alvo de toque «%s» tem %d × %d px (o app pede 44 px)' % (rot, n, w, h) for n, w, h in pg.evaluate(LE_ALVOS)[:6]]
 
 
+# texto cortado com reticência (text-overflow: ellipsis) ou pelo teto de linhas (line-clamp): o diesel do chip dos tanques e o prazo em horas da agenda («ou 450 h») saíam cortados na A1, e o title nem sempre
+# leva o valor. Nas telas da Ponte e da Carta (menos o painel-resumo da B1, que lista tudo com o title completo) o que não cabe quebra em outra linha. A moldura (a faixa de leitura do rodapé) é de outro item.
+LE_RETICENCIA = """() => { const out = []; document.querySelectorAll('body *').forEach((e) => { if (e.closest('capitao-topo-app, capitao-barra-chat, capitao-rodape, capitao-faixa, #capitao-faixa-alertas, script, style')) return;
+  const cs = getComputedStyle(e); if (cs.textOverflow !== 'ellipsis' && cs.webkitLineClamp === 'none') return; if (!(e.innerText || '').trim()) return;
+  const largura = cs.textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth + 1, linhas = cs.webkitLineClamp !== 'none' && e.scrollHeight > e.clientHeight + 1;
+  if (largura || linhas) out.push([e.innerText.trim().replace(/\\s+/g, ' ').slice(0, 60), largura ? 'largura' : 'linhas']); }); return out; }"""
+
+
+def problemas_reticencia(pg, rot):
+    return ['%s: texto cortado com reticência (o que não cabe quebra em outra linha): «%s»' % (rot, t) for t, _ in pg.evaluate(LE_RETICENCIA)[:4]]
+
+
 # a lista de alertas da A1 com 4 e com 6 alertas ao mesmo tempo (o aviso do BE a 105 s e 3 ou 5 alarmes pedidos no chat)
 PED_MUITOS = [dict(PED_FOGO[0], id='usr_%d' % i, campo=c, limite=l, iso='2026-11-09T10:0%d:00-03:00' % i) for i, (c, l) in enumerate([('motor_bb_arref_c', 60), ('sog_nos', 0.5), ('motor_bb_rpm', 500), ('vento_verdadeiro_nos', 1), ('bateria_0_tensao_v', 10)])]
 LE_PAINEL_ALERTAS = """() => { const sec = document.querySelector('section[aria-label="Alertas, o que vence e tendências"]'), sr = sec.getBoundingClientRect(), tabs = document.querySelector('[role=tablist]').getBoundingClientRect(), v = document.getElementById('vence'),
@@ -2680,7 +2881,8 @@ def teste_a1_alertas_muitos(b):
 
 
 def teste_a1_cartoes(b):
-    """A1 nos 4 tamanhos da web, a 60 s e a 105 s: nenhum texto passa da borda do cartão (a posição, que é a linha mais longa) e nenhuma unidade cai sozinha na linha de baixo."""
+    """A1 nos 4 tamanhos da web, a 60 s e a 105 s: nenhum texto passa da borda do cartão (a posição, que é a linha mais longa), nenhuma unidade cai sozinha na linha de baixo e nenhum texto é cortado com
+    reticência (o diesel do chip dos tanques e o prazo em horas do «O que vence» quebram em outra linha)."""
     prob = []
     for (w, h) in WEB:
         for fixo in ('60', '105'):
@@ -2688,7 +2890,7 @@ def teste_a1_cartoes(b):
             rot = 'A1 %dx%d a %s s' % (w, h, fixo)
             fora = pg.evaluate(LE_FORA_DO_CARTAO)
             if fora: prob.append('%s: texto além da borda do cartão: %s' % (rot, fora[:3]))
-            prob += problemas_orfaos(pg, rot)
+            prob += problemas_orfaos(pg, rot) + problemas_reticencia(pg, rot)
             if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
             ctx.close()
     return prob
@@ -2780,6 +2982,13 @@ def teste_tendencias_sessao(b, lista=TELAS_PONTE):
 
 
 # ——— o código das telas e dos dois arquivos novos ———
+def sem_comentarios(src):
+    """O código sem comentário (/* */, <!-- --> e // fora de endereço): o que se escreve numa tela e fica no que ela desenha."""
+    src = re.sub(r'(?s)/\*.*?\*/', '', src)
+    src = re.sub(r'(?s)<!--.*?-->', '', src)
+    return re.sub(r'(?<!:)//[^\n]*', '', src)
+
+
 def teste_codigo_ponte():
     prob = []
     def le_(a):   # o arquivo do disco, com o defeito plantado (MUT_ARQ) se houver
@@ -2790,6 +2999,8 @@ def teste_codigo_ponte():
     for t in TELAS_P4C:
         h = le_(t + '.dc.html')
         if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % t)
+        marca = MARCAS_FIXAS.search(sem_comentarios(h))   # (o fabricante vem de D.equipamentos: o rótulo da linha do estabilizador era «Seakeeper» fixo na A1)
+        if marca: prob.append('%s: fabricante fixo no código: %s' % (t, marca.group(0)))
         if t in ('A3-Ponte-Editar',): continue
         mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
         if "addEventListener('capitao-telemetria'" not in h[mont:desm] or "removeEventListener('capitao-telemetria'" not in h[desm:]: prob.append('%s: não assina o capitao-telemetria no componentDidMount e remove no componentWillUnmount' % t)
@@ -2800,6 +3011,8 @@ def teste_codigo_ponte():
     for arq in ('capitao-grafico.js', 'capitao-sensores.js'):
         src = le_(arq)
         sem_com = re.sub(r'(?s)/\*.*?\*/', '', src)
+        marca = MARCAS_FIXAS.search(sem_comentarios(src))
+        if marca: prob.append('%s: fabricante fixo no código: %s' % (arq, marca.group(0)))
         if '(?<' in src or '\\w' in src: prob.append('%s: lookbehind ou \\w' % arq)
         if 'setInterval' in sem_com: prob.append('%s: setInterval' % arq)
         if re.search(r'localStorage|sessionStorage|indexedDB|speechSynthesis|location\s*(\.\s*(href|assign|replace|reload)|=)|window\s*\.\s*open', sem_com): prob.append('%s: escreve no aparelho, fala ou troca de tela' % arq)
@@ -2823,6 +3036,8 @@ def p4c_conferencias(b, lista):
     for tela in [t for t in TELAS_PONTE if t in lista]: out.append(('gráfico em ' + tela, teste_grafico(b, tela)))
     if 'A1-Ponte-Web' in lista: out.append(('A1 · blocos, alertas, tendências e mapa', teste_ponte_web(b)))
     if 'A2-Ponte-Mobile' in lista: out.append(('A2 · estados, alertas, tendências e mapa', teste_ponte_app(b)))
+    if 'A2-Ponte-Mobile' in lista: out.append(('A2 · os 25 blocos do console, com o quadro e o selo das atrasadas', teste_a2_blocos(b)))
+    if 'A2-Ponte-Mobile' in lista: out.append(('Anomalias · A2 = B1 = chat (a anomalia registrada pelo chat entra nas três)', teste_anomalias_tres_telas(b)))
     for tela in [t for t in TELAS_SENSORES if t in lista]: out.append(('sensores em ' + tela, teste_sensores(b, tela)))
     if 'A4-Sensores-Web' in lista: out.append(('desenho dos sensores × referência', teste_sensores_desenho(b)))
     if any(t in lista for t in TELAS_P4C): out.append(('simulacao false na Ponte e nos sensores', teste_ponte_real(b, lista)))
@@ -2865,13 +3080,35 @@ MUTANTES_P4C = [
     ('o texto do alerta da A2 sem a unidade colada ao número («°C» sozinho na linha de baixo)', 'A2-Ponte-Mobile.dc.html', [("txt: this.un(a.texto),", "txt: a.texto,")], 'ponte_app'),
     ('os valores dos sensores da A4 sem a unidade colada ao número', 'A4-Sensores-Web.dc.html', [("valores: this.un(p.itens.map((it) => it.k + ' ' + it.v).join(' · ')) })) };", "valores: p.itens.map((it) => it.k + ' ' + it.v).join(' · ') })) };")], 'sensores_web'),
     ('os valores dos sensores da A5 sem a unidade colada ao número', 'A5-Sensores-Mobile.dc.html', [("valores: this.un(p.itens.map((it) => it.k + ' ' + it.v).join(' · ')) })) };", "valores: p.itens.map((it) => it.k + ' ' + it.v).join(' · ') })) };")], 'sensores_app'),
+    # revisão final 2 do grupo ponte-carta
+    ('o rótulo da linha do estabilizador da A1 de volta com o fabricante fixo («Seakeeper»)', 'A1-Ponte-Web.dc.html', [("txt('Estabilizador', q && typeof q.seakeeper_ativo", "txt('Seakeeper', q && typeof q.seakeeper_ativo")], 'ponte_web'),
+    ('o chip do estabilizador do mapa de sensores da A1 de volta com o fabricante fixo', 'A1-Ponte-Web.dc.html', [("{ n: 'Estabilizador', v: q && typeof q.seakeeper_ativo", "{ n: 'Seakeeper', v: q && typeof q.seakeeper_ativo")], 'codigo'),
+    ('a meta do «O que vence» da A1 de volta cortada com reticência (o «ou 450 h» some)', 'A1-Ponte-Web.dc.html', [('line-height: 1.3; color: var(--cap-ink3, #97a3c0); overflow-wrap: anywhere;">{{v.meta}}</span>', 'color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.meta}}</span>')], 'cartoes'),
+    ('o valor do chip do mapa de sensores da A1 de volta cortado com reticência (o diesel dos tanques some)', 'A1-Ponte-Web.dc.html', [('letter-spacing: {{s.esp}}; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;">{{s.v}}</span>', 'letter-spacing: {{s.esp}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">{{s.v}}</span>')], 'cartoes'),
+    ('o estado de cada bloco da A2 de volta com o teto de 2 linhas (o «teste ATRASADA · 25 D» do porão sai cortado)', 'A2-Ponte-Mobile.dc.html', [('line-height: 1.3; color: {{b.subTom}}; overflow-wrap: anywhere;">{{b.sub}}</span>', 'line-height: 1.3; color: {{b.subTom}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">{{b.sub}}</span>')], 'blocos_app'),
+    ('o bloco «Tanques» da A2 lendo as águas cinzas no lugar das negras', 'A2-Ponte-Mobile.dc.html', [("' · negras ' + c('tanque_negras_pct', ' %')", "' · negras ' + c('tanque_cinzas_pct', ' %')")], 'blocos_app'),
+    ('o bloco «Horímetros» da A2 com o horímetro do motor no lugar do gerador', 'A2-Ponte-Mobile.dc.html', [("' · ger. ' + c('gerador_horimetro_h')", "' · ger. ' + c('motor_bb_horimetro_h')")], 'blocos_app'),
+    ('a A2 sem o selo de tarefas atrasadas nos blocos', 'A2-Ponte-Mobile.dc.html', [("const badge = e.badge ? String(e.badge) : '';", "const badge = '';")], 'blocos_app'),
+    ('o bloco «Anomalias» da A2 sem as anotações do app (a anomalia registrada pelo chat não entra na conta)', 'A2-Ponte-Mobile.dc.html', [("pend = pl.length + (diarioLocal || []).filter(", "pend = pl.length + 0 * (diarioLocal || []).filter(")], 'anomalias'),
+    ('o ponto do motor BE do mapa de sensores sem o aviso (o pior nível ignora o aviso)', 'capitao-sensores.js', [("if (r && r.nivel === 'aviso') out = 'aviso';", "")], 'sensores_web'),
+    ('o gráfico sem a linha de referência do guia (a reserva do diesel e o aviso do arrefecimento)', 'capitao-grafico.js', [("if (pn.ref && pn.ref.v >= pn.lo && pn.ref.v <= pn.hi) {", "if (false && pn.ref) {")], 'grafico'),
+    ('o gráfico sem a faixa mín/máx do balde', 'capitao-grafico.js', [("if (jan !== '150S' && serie0.pts.some(", "if (false && serie0.pts.some(")], 'grafico'),
+    ('o diesel com a escala automática (não vai de 0 à capacidade dos tanques)', 'capitao-grafico.js', [("fx = num(cap) && cap > 0 ? [0, cap] : null; }", "fx = null; }")], 'grafico'),
+    ('o eixo do tempo do gráfico sem as marcas', 'capitao-grafico.js', [("for (i = 0; i < mk.length; i++) {\n        var mx = xdoT(mk[i].ms);", "for (i = 0; i < 0; i++) {\n        var mx = xdoT(mk[i].ms);")], 'grafico'),
+    ('a legenda do gráfico com o mínimo e o máximo trocados', 'capitao-grafico.js', [("var minmax = 'mín ' + valTxt(s0.campo, mn, false) + ' · máx ' + valTxt(s0.campo, mxv)", "var minmax = 'mín ' + valTxt(s0.campo, mxv, false) + ' · máx ' + valTxt(s0.campo, mn)")], 'grafico'),
+    ('a aba Tendências da A1 sem o selo de quantas pedem atenção', 'A1-Ponte-Web.dc.html', [("n: aba === 'tend' && d.foraEst ? String(d.foraEst) : '', ", "n: '', ")], 'ponte_web'),
+    ('a aba «O que vence» da A1 sem o selo das atrasadas', 'A1-Ponte-Web.dc.html', [("n: d.nAtr ? String(d.nAtr) : '', ", "n: '', ")], 'ponte_web'),
+    ('a fonte da janela de 150 s da A1 é a do histórico gravado', 'A1-Ponte-Web.dc.html', [("histFonte: jan === '150S' ? 'Fonte: ' + d.fonteAgora.replace(/^Fonte: /, '') : d.histFonte,", "histFonte: d.histFonte,")], 'ponte_web'),
+    ('a fonte da janela de 150 s da A2 é a do histórico gravado', 'A2-Ponte-Mobile.dc.html', [("histFonte: 'Fonte: ' + (jan === '150S' ? d.fonteAgora.replace(/^Fonte: /, '') : d.histRef),", "histFonte: 'Fonte: ' + d.histRef,")], 'ponte_app'),
 ]
 
 
 def mutantes_p4c(b):
     global MUT_ARQ
     vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
     for nome, arq, trocas, qual in MUTANTES_P4C:
+        if filtro and filtro not in nome: continue
         src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
         faltam = [x for x, _ in trocas if src.count(x) != 1]
         if faltam:
@@ -2884,7 +3121,7 @@ def mutantes_p4c(b):
             prob = {'grafico': lambda: teste_grafico(b, 'A1-Ponte-Web'), 'ponte_web': lambda: teste_ponte_web(b), 'ponte_app': lambda: teste_ponte_app(b),
                     'sensores_web': lambda: teste_sensores(b, 'A4-Sensores-Web'), 'sensores_app': lambda: teste_sensores(b, 'A5-Sensores-Mobile'), 'codigo': lambda: teste_codigo_ponte(),
                     'tendencias': lambda: teste_tendencias_sessao(b), 'toque': lambda: teste_grafico_toque(b), 'alertas': lambda: teste_a1_alertas_muitos(b), 'cartoes': lambda: teste_a1_cartoes(b),
-                    'cabecalho': lambda: teste_historico_cabecalho(b)}[qual]()
+                    'cabecalho': lambda: teste_historico_cabecalho(b), 'blocos_app': lambda: teste_a2_blocos(b), 'anomalias': lambda: teste_anomalias_tres_telas(b)}[qual]()
         except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um defeito do teste): o mutante fica vivo
             sys.stdout = sai
             print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
@@ -2915,7 +3152,7 @@ LE_B1 = """() => { """ + JS_BASE + """
   const warn = (() => { const e = document.createElement('i'); e.style.color = 'var(--cap-warn, #f0a63a)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; })();
   const tOleo = D.agenda.find((t) => t.id === 'motores-oleo'), hMax = (campos) => Math.max(...campos.map((c) => q[c]));
   const manut = [...document.querySelectorAll('a[href*="C1-Leme-Web.dc.html#f="]')].filter((a) => !a.hasAttribute('data-kpi') && a.querySelector('b')).map((a) => lin(a.innerText));
-  return { T, I: { hora: I.hora, hhmm: I.hhmm, fase: I.fase && I.fase.nome }, marcha: q.marcha, mot, kpi, C, anom: m ? +m[1] : null, warn, texto: lin(document.body.innerText),
+  return { T, I: { hora: I.hora, hhmm: I.hhmm, fase: I.fase && I.fase.nome }, marcha: q.marcha, mot, kpi, C, anom: m ? +m[1] : null, warn, reserva: D.reserva, texto: lin(document.body.innerText),
     resumo: un('[data-b1=resumo]'), propSub: un('[data-b1=prop-sub]'), estado: un('[data-b1=prop-estado]'), diesel: un('[data-b1=diesel]'), dieselHora: un('[data-b1=diesel-hora]'), consumo: un('[data-b1=consumo]'),
     autonomia: un('[data-b1=autonomia]'), oleo: un('[data-b1=oleo-s]'), manut, versao: D.versao,
     esp: { dia: dia.charAt(0).toUpperCase() + dia.slice(1) + ', ' + ddmm, aut: calc.autonomia ? '≈ ' + nb(calc.autonomia.horas, 1) + ' h · ≈ ' + nb(calc.autonomia.mn, 0, true) + ' mn' : null,
@@ -2942,6 +3179,7 @@ def teste_carta_web(b):
         if not (r['dieselHora'] or '').startswith('Ao vivo · ' + r['I']['hora']): prob.append('%s: a hora do diesel diz %r (esperado «Ao vivo · %s»)' % (rot, r['dieselHora'], r['I']['hora']))
         if ('agora ' + T['consumo_lph'] + ' L/h') not in (r['consumo'] or '') or r['esp']['desde'] not in (r['consumo'] or ''): prob.append('%s: o consumo %r não tem «agora %s L/h» nem «%s»' % (rot, r['consumo'], T['consumo_lph'], r['esp']['desde']))
         if r['esp']['aut'] not in (r['autonomia'] or ''): prob.append('%s: a autonomia diz %r (esperado %r, do instante)' % (rot, r['autonomia'], r['esp']['aut']))
+        if not (r['autonomia'] or '').endswith(' · reserva %d %%' % round(r['reserva'] * 100)): prob.append('%s: a autonomia devia terminar com «reserva %d %%» (a reserva de D.reserva) e diz %r' % (rot, round(r['reserva'] * 100), r['autonomia']))
         if ('Horímetro %s h · faltam %s h' % (r['esp']['oleoHoras'], r['esp']['oleoFaltam'])) not in (r['oleo'] or ''): prob.append('%s: a troca de óleo diz %r (esperado «Horímetro %s h · faltam %s h», do horímetro de agora)' % (rot, r['oleo'], r['esp']['oleoHoras'], r['esp']['oleoFaltam']))
         if r['esp']['dia'] not in (r['resumo'] or '') or ('Telemetria ao vivo · ' + r['I']['hhmm']) not in (r['resumo'] or '') or ('prazos contados a partir de ' + r['versao']) not in (r['resumo'] or ''):
             prob.append('%s: o resumo %r devia ter «%s», «Telemetria ao vivo · %s» e «prazos contados a partir de %s»' % (rot, r['resumo'], r['esp']['dia'], r['I']['hhmm'], r['versao']))
@@ -3011,6 +3249,7 @@ def teste_carta_app(b):
         if not R['climatizacao']['estado'].startswith('Ligada' if r['q']['clima'] else 'Desligada') or 'diário' not in R['climatizacao']['estado']: prob.append('%s: o estado da climatização diz %r (esperado o do quadro, com a linha do diário)' % (rot, R['climatizacao']['estado']))
         if '%s zonas de áudio · %s' % (r['D']['zonas'], r['D']['guia']) != R['audio']['estado']: prob.append('%s: o áudio diz %r (esperado as zonas e o guia do D.equipamentos)' % (rot, R['audio']['estado']))
         L = r['D']['licenca']
+        if ('LICENÇA · D-%d' % L['dn']) not in R['vhf']['texto']: prob.append('%s: a linha do VHF não leva a etiqueta «LICENÇA · D-%d» (o prazo da licença de estação): %r' % (rot, L['dn'], R['vhf']['texto']))
         if not R['vhf']['estado'].startswith('Canal %s · %s MHz' % (r['D']['canal']['canal'], r['D']['canal']['mhz'])) or ('licença de estação vence %s (D-%d)' % (L['vence'], L['dn'])) not in R['vhf']['estado']: prob.append('%s: o VHF diz %r (esperado o canal 16 e a licença de estação)' % (rot, R['vhf']['estado']))
         for k in ('epirb', 'seafire'):   # decisão 17: só o procedimento padrão e a nota da etiqueta; fabricante e modelo ficam na linha de cima (Equipamentos)
             if R[k]['estado'] != '%s · %s' % (PADRAO_SEG, NOTA_ETIQUETA): prob.append('%s: o estado de %s diz %r (esperado só «%s · %s»)' % (rot, k, R[k]['estado'], PADRAO_SEG, NOTA_ETIQUETA))
@@ -3020,6 +3259,10 @@ def teste_carta_app(b):
             nome = m_ if m_.lower().startswith(f.lower()) else f + ' ' + m_   # o fabricante não se repete quando o modelo já começa por ele («Seakeeper 3»)
             if nome not in R[k]['fab']: prob.append('%s: a linha de %s não tem %r (fabricante e modelo do D.equipamentos): %r' % (rot, k, nome, R[k]['fab']))
             if qtd > 1 and ('%d unidades' % qtd) not in R[k]['fab']: prob.append('%s: a linha de %s não diz %d unidades: %r' % (rot, k, qtd, R[k]['fab']))
+        # a pergunta que o cartão de áudio leva à B3 não traz o fabricante fixo (vem de D.equipamentos) e o cérebro a responde com o guia de áudio
+        hrefs_audio = [h for h in R['audio']['hrefs'] if h and 'B3-Carta-Resposta' in h]
+        if not hrefs_audio or MARCAS_FIXAS.search(urllib.parse.unquote(hrefs_audio[0])): prob.append('%s: o cartão de áudio pergunta %s (o fabricante não é fixo na tela)' % (rot, hrefs_audio))
+        elif pg.evaluate("(q) => window.CapitaoBrain.answer(q, { platform: 'app', commit: false }).key", urllib.parse.unquote(hrefs_audio[0].split('#q=')[1])) != 'audio': prob.append('%s: a pergunta do cartão de áudio (%s) não cai na resposta de áudio do cérebro' % (rot, hrefs_audio[0]))
         if r['agora'] != 'ao vivo · ' + r['I']['hora']: prob.append('%s: o rótulo da hora diz %r (esperado «ao vivo · %s»)' % (rot, r['agora'], r['I']['hora']))
         if r['atr'] is None or not re.search(r'3 manutenções atrasadas', r['atr']) or r['C']['atrasadas'] != 3: prob.append('%s: a faixa de atrasadas diz %r e o CapitaoAgora conta %s (esperado 3)' % (rot, r['atr'], r['C']['atrasadas']))
         warn_motores = R['motores']['cor'] == r['warn']
@@ -3027,7 +3270,7 @@ def teste_carta_app(b):
         if fixo == '60' and warn_motores: prob.append('%s: o estado dos motores está em AVISO a 60 s' % rot)
         ach = achados_termos('B2-Carta-Mobile', pg.evaluate(LE_TEXTOS))
         if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
-        prob += problemas_orfaos(pg, rot) + problemas_alvos(pg, rot)
+        prob += problemas_orfaos(pg, rot) + problemas_alvos(pg, rot) + problemas_reticencia(pg, rot)
         if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
     # Executado tira a tarefa dos atrasados (e da etiqueta do porão); a lista segue o CapitaoAgora
@@ -3226,6 +3469,8 @@ def teste_carta_codigo():
         if GEOM.search(h): prob.append('%s: {{…}} em atributo geométrico de SVG' % t)
         if re.search(r'D\.demo|\.demo\b|DEMO', h): prob.append('%s: lê D.demo ou escreve DEMO no código' % t)
         if re.search(r'D\.snapshot|\.snapshot\b', h): prob.append('%s: lê o D.snapshot (o dado vem do instante)' % t)
+        marca = MARCAS_FIXAS.search(sem_comentarios(h))   # (a pergunta do cartão de áudio da B2 era «Áudio Fusion» fixa: o fabricante vem de D.equipamentos)
+        if marca: prob.append('%s: fabricante fixo no código: %s' % (t, marca.group(0)))
         mont, desm = h.find('componentDidMount'), h.find('componentWillUnmount')
         if t != 'B3-Carta-Resposta':
             for ev in ('capitao-telemetria', 'capitao-rebase'):
@@ -3288,13 +3533,20 @@ MUTANTES_P4D = [
     # revisão final do grupo ponte-carta
     ('a leitura do motor da B1 com o espaço comum antes da unidade («°C» sozinho na 2ª linha)', 'B1-Carta-Web.dc.html', [("const NB = '\\u00a0', s =", "const NB = ' ', s =")], 'corte'),
     ('o estado dos sistemas da B2 sem a unidade colada ao número («ciclos/h» sozinho na linha de baixo)', 'B2-Carta-Mobile.dc.html', [("estado: this.un(r.estado), estTone", "estado: r.estado, estTone")], 'app'),
+    # revisão final 2 do grupo ponte-carta
+    ('a autonomia da B1 sem a «reserva N %» de D.reserva', 'B1-Carta-Web.dc.html', [(" + ' · reserva ' + reservaTxt,", " + '',")], 'web'),
+    ('a linha do VHF da B2 sem a etiqueta «LICENÇA · D-n»', 'B2-Carta-Mobile.dc.html', [("{ tag: 'LICENÇA · D-' + licenca.dn,", "{ tag: '',")], 'app'),
+    ('a pergunta do cartão de áudio da B2 de volta com o fabricante fixo («Áudio Fusion»)', 'B2-Carta-Mobile.dc.html', [("q: 'Áudio', d:", "q: 'Áudio Fusion', d:")], 'app'),
+    ('a pergunta do cartão de áudio da B2 de volta com o fabricante fixo, no código da tela', 'B2-Carta-Mobile.dc.html', [("q: 'Áudio', d:", "q: 'Áudio Fusion', d:")], 'codigo'),
 ]
 
 
 def mutantes_p4d(b):
     global MUT_ARQ
     vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (para refazer um)
     for nome, arq, trocas, qual in MUTANTES_P4D:
+        if filtro and filtro not in nome: continue
         src = open(os.path.join(RAIZ, arq), encoding='utf-8').read()
         faltam = [x for x, _ in trocas if src.count(x) != 1]
         if faltam:

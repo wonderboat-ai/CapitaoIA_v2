@@ -135,7 +135,7 @@ class Component extends DCLogic {
     const reserva = !!(I && I.fonte === 'snapshot');
     const lei = I ? String(I.fonteTxt || '').replace(/^.*leitura de /, '') : '';   // 'dd/mm hh:mm' da última leitura salva (ramo simulacao:false)
     const eq = (id) => EQ.filter((e) => e.id === id)[0] || null;
-    // fabricante e modelo sem repetir o fabricante quando o modelo já começa por ele («Seakeeper 3»); quantidade e lados só com mais de um
+    // fabricante e modelo sem repetir o fabricante quando o modelo já começa por ele; quantidade e lados só com mais de um
     const fabMod = (e) => { const f = e.fabricante || '', m = e.modelo || ''; return m && f && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? m : [f || falta('fabricante ' + SD), m || falta('modelo ' + SD)].join(' '); };
     const fab = (e, rot) => (e ? (rot ? rot + ' · ' : '') + fabMod(e) + (e.qtd > 1 ? ' · ' + e.qtd + ' unidades' + (e.lados ? ' (' + e.lados + ')' : '') : '') : falta((rot || 'equipamento') + ' · fabricante e modelo ' + SD));
     const tarefa = (id) => AG.filter((t) => t.id === id)[0] || null;
@@ -180,7 +180,7 @@ class Component extends DCLogic {
         estado: (q && typeof q.climatizacao_ativa === 'boolean' ? (q.climatizacao_ativa ? 'Ligada' : 'Desligada') : falta(SL)) + (clima ? ' · diário ' + clima.d + ': ' + primeira(clima.t) + (pendente(clima) ? ' (pendente)' : '') : ''), est: '', p: prazo(['clima-filtro', 'clima-revisao']) }, faq('F5-FAQ-Climatizacao.dc.html', 'climatizacao')),
       Object.assign({ id: 'eletronicos', n: 'Eletrônicos de navegação', q: 'Eletrônicos', d: 'M4 5h16v11H4z M9 20h6 M12 16v4', fab: fab(eq('eletronicos')),
         estado: 'GPS: ' + c('gps_satelites') + ' satélites · AIS ' + c('ais_alvos') + (q && q.ais_alvos === 1 ? ' alvo' : ' alvos') + ' · radar ' + (q && typeof q.radar_ativo === 'boolean' ? (q.radar_ativo ? 'ligado' : 'desligado') : falta(SL)) + (cartas ? ' · ' + primeira(cartas.t).toLowerCase() + ' (diário ' + cartas.d + ')' : ''), est: '', p: prazo(['garmin-cartas']) }, faq('F3-FAQ-Eletronicos.dc.html', 'eletronicos')),
-      Object.assign({ id: 'audio', n: 'Áudio', q: 'Áudio Fusion', d: 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', fab: fab(eA),
+      Object.assign({ id: 'audio', n: 'Áudio', q: 'Áudio', d: 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 0 1 0 6 M18.5 6.5a8 8 0 0 1 0 11', fab: fab(eA),
         estado: (zonas ? zonas + ' zonas de áudio · ' : '') + ((D.guias && D.guias.g_eletronicos) || falta(SD)), est: '', p: null }, faq('F3-FAQ-Eletronicos.dc.html', 'eletronicos')),
       Object.assign({ id: 'vhf', n: 'Rádios VHF', q: 'Rádio VHF', d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', fab: fab(eq('vhf')),
         estado: (P.canal16 ? 'Canal ' + P.canal16.canal + ' · ' + P.canal16.mhz + ' MHz' : falta('canal 16 ' + SD)) + (licenca ? ' · licença de estação ' + (licenca.vence ? 'vence ' + licenca.vence + ' (D-' + licenca.dn + ')' : falta(SD)) + ' · ' + (licenca.fonte || '') : ''), est: '',

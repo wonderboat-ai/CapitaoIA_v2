@@ -685,7 +685,7 @@ def telas(b):
                              ('G4-Equipe-Web', False, None)):
         pg = abre(b, local, caminho='/%s.dc.html' % tela, sessao=True, tela='app' if app else None)
         pg.wait_for_timeout(1800)
-        txt = pg.evaluate("() => document.body.innerText")
+        txt = pg.evaluate("() => document.body.innerText.replace(/\\u00a0/g, ' ')")
         ok('%s: sem erro de script' % tela, not pg.erros, pg.erros)
         if desde:
             ok('%s: "%s"' % (tela, desde), desde in txt, [l for l in txt.split('\n') if 'a partir de' in l][:2])
@@ -702,7 +702,7 @@ def telas(b):
         if tela == 'A1-Ponte-Web':
             # revisão do C7: o "O que vence" lista a agenda inteira e escrevia "vence 09/11" (autoteste do EPIRB, +13) e "vence 16/03" (inspeção do
             # sistema fixo, +140) na linha e na dica; a data deles só em Equipamentos, Leme e Documentos (§1.4); o chip D-n e a nota da etiqueta ficam
-            todo = pg.evaluate("() => [document.body.innerText].concat([...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title'))).join('\\n')")
+            todo = pg.evaluate("() => [document.body.innerText].concat([...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title'))).join('\\n').replace(/\\u00a0/g, ' ')")
             ok('A1-Ponte-Web: o autoteste do EPIRB e a inspeção do sistema fixo sem a data (linha e dica), com o D-13 e o D-140',
                not any(x in todo for x in ('09/11', '16/03')) and 'EPIRB' in txt and 'D-13' in txt and 'D-140' in txt, [l for l in todo.split('\n') if 'EPIRB' in l or 'supress' in l][:4])
             ok('A1-Ponte-Web: a dica das duas linhas leva a nota da etiqueta', todo.count('modelo, validade e acionamento: veja a etiqueta do equipamento') == 2,
@@ -734,7 +734,8 @@ def telas(b):
 # âncora ({estado, cabo_m}); a B2 escrevia 'porão: ' + S.porao e as duas F3 String(S.ancora) ([object Object] na tela). As três guardas de 1 linha
 # (B2:158, F3-Web:222, F3:216) entraram sem teste: tirá-las não acusava nada (53 verificações do verificar.py, 0 falhas). Aqui cada leitor abre com o
 # dado gerado de verdade e o texto da tela e os `title` não têm [object Object]; o valor certo aparece (o objeto virou texto, não sumiu).
-TITULOS = "() => document.body.innerText + '\\n' + [...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join('\\n')"
+# (o espaço sem quebra entre o número e a unidade — B1, B2, A1, A2, A4, A5 — vira espaço comum aqui: o NBSP é só de quebra de linha; as asserções são sobre o conteúdo)
+TITULOS = "() => (document.body.innerText + '\\n' + [...document.querySelectorAll('[title]')].map((e) => e.getAttribute('title')).join('\\n')).replace(/\\u00a0/g, ' ')"
 SNAPSHOT_TELAS = (   # (tela, app, o que a tela tem de mostrar[, o que não pode aparecer em texto nem em title])
     ('B2-Carta-Mobile', True, ('porão: BB 1,2 cm · BE 0,9 cm',)),
     ('F3-FAQ-Eletronicos', True, ('Posição do ferro (âncora)', 'LANÇADA · 30 m')),

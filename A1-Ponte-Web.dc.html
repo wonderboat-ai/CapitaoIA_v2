@@ -168,7 +168,7 @@ button { font: inherit; }
                     <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
                       <span style="font-size: 12.5px; font-weight: 700; line-height: 1.3;">{{v.t}}</span>
                       <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                        <span style="flex-grow: 1; min-width: 0; font-size: 11px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.meta}}</span>
+                        <span style="flex-grow: 1; min-width: 0; font-size: 11px; line-height: 1.3; color: var(--cap-ink3, #97a3c0); overflow-wrap: anywhere;">{{v.meta}}</span>
                         <span style="flex-shrink: 0; padding: 3px 9px; border-radius: 999px; background: {{v.wash}}; color: {{v.tom}}; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; white-space: nowrap;">{{v.dd}}</span>
                       </span>
                     </span>
@@ -213,7 +213,7 @@ button { font: inherit; }
             <sc-for list="{{sensores}}" as="s" hint-placeholder-count="12">
               <div title="{{s.tip}}" style="box-sizing: border-box; padding: 4px 9px; border-radius: 10px; background: {{s.bg}}; border: 1px {{s.borda}} {{s.line}}; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
                 <span style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; background: {{s.dot}}; border: 1.5px solid {{s.dotLine}};"></span><span style="font-size: 11.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{s.n}}</span></span>
-                <span style="font-size: 10.5px; line-height: 1.25; font-weight: {{s.peso}}; color: {{s.tom}}; letter-spacing: {{s.esp}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">{{s.v}}</span>
+                <span style="font-size: 10.5px; line-height: 1.25; font-weight: {{s.peso}}; color: {{s.tom}}; letter-spacing: {{s.esp}}; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;">{{s.v}}</span>
               </div>
             </sc-for>
           </div>
@@ -286,7 +286,7 @@ class Component extends DCLogic {
     const hora = I ? I.hhmm : '—';   // (a hora dos chips: HH:MM do instante; na última leitura salva, a hora dela)
     const fonteCurta = I ? String(I.fonteTxt || '').replace(/(\d\d:\d\d):\d\d/, '$1') : 'Fonte: ' + falta(SD);
     const equip = (id) => (D.equipamentos || []).filter((e) => e.id === id)[0] || {};
-    // fabricante e modelo sem repetir o fabricante quando o modelo já começa por ele («Seakeeper 3»); o que faltar fica marcado só no ramo simulacao:false
+    // fabricante e modelo sem repetir o fabricante quando o modelo já começa por ele; o que faltar fica marcado só no ramo simulacao:false
     const fabMod = (e) => { const f = e.fabricante || '', m = e.modelo || ''; if (!f && !m) return falta('(fabricante e modelo ' + SD + ')'); return m && f && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? m : [f || falta('(fabricante ' + SD + ')'), m].filter(Boolean).join(' '); };
     const regra = /(\d+)\s*%/.exec(D.regraAbast || ''), minDiesel = regra ? +regra[1] : null;
     const pctTom = (x, base) => (num(x) && minDiesel != null && base === 'diesel' && x < minDiesel ? WARN : base === 'diesel' ? OK : base === 'agua' ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)');
@@ -307,10 +307,10 @@ class Component extends DCLogic {
       { t: 'Ambiente', d: 'M3 8h11a3 3 0 1 0-3-3 M3 12h15a3 3 0 1 1-3 3 M3 16h8a2 2 0 1 1-2 2', tom: 'tele', hora: hora, horaTip: 'Leitura de ' + (I ? I.hora : '—'),
         linhas: [txt('Vento', c('vento_verdadeiro_nos', ' nós')), txt('Direção', tem('vento_verdadeiro_angulo') ? 'de ' + c('vento_verdadeiro_angulo', '°') : falta(SL)), txt('Barômetro', c('pressao_barometrica_hpa', ' hPa')), txt('Ar', c('temp_ar_externo_c', ' °C')), txt('Água do mar', c('temp_agua_c', ' °C'))],
         obs: 'A bordo agora' + (tem('ondas_m') ? ' · ondas ' + c('ondas_m', ' m') : '') },
-      { t: 'Energia', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tom: 'ok', hora: hora, horaTip: 'Baterias, gerador e Seakeeper · leitura de ' + (I ? I.hora : '—'),
+      { t: 'Energia', d: 'M13 3L5 14h6l-1 7 8-11h-6z', tom: 'ok', hora: hora, horaTip: 'Baterias, gerador e estabilizador · leitura de ' + (I ? I.hora : '—'),
         linhas: [txt('Banco 24 V', c('bateria_0_tensao_v', ' V'), { tom: lv('bateria_0_tensao_v') || INK }), txt('Banco 12 V', c('bateria_2_tensao_v', ' V'), { tom: lv('bateria_2_tensao_v') || INK }),
           txt('Gerador', q && typeof q.gerador_ativo === 'boolean' ? ligado(q.gerador_ativo) + (q.gerador_ativo && tem('gerador_kw') ? ' · ' + c('gerador_kw', ' kW') : '') : falta(SL)), txt('Horas gerador', c('gerador_horimetro_h', ' h')),
-          txt('Seakeeper', q && typeof q.seakeeper_ativo === 'boolean' ? ligado(q.seakeeper_ativo) + (q.seakeeper_ativo && tem('seakeeper_volante_pct') ? ' · ' + c('seakeeper_volante_pct', ' %') : '') : falta(SL))],
+          txt('Estabilizador', q && typeof q.seakeeper_ativo === 'boolean' ? ligado(q.seakeeper_ativo) + (q.seakeeper_ativo && tem('seakeeper_volante_pct') ? ' · ' + c('seakeeper_volante_pct', ' %') : '') : falta(SL))],
         obs: 'Gerador ' + fabMod(equip('gerador')) + ' · estabilizador ' + fabMod(equip('estabilizador')) },
       { t: 'Tanques', d: 'M5 6h14v12H5z M5 13h14', tom: 'accent', hora: hora, horaTip: 'Água, cinzas, negras e diesel · leitura de ' + (I ? I.hora : '—'),
         linhas: [bar('Água doce', 'tanque_agua_pct', 'agua'), bar('Cinzas', 'tanque_cinzas_pct', 'servida'), bar('Negras', 'tanque_negras_pct', 'servida'), bar('Diesel BB', 'diesel_bb_pct', 'diesel'), bar('Diesel BE', 'diesel_be_pct', 'diesel')],
@@ -341,13 +341,13 @@ class Component extends DCLogic {
       { n: 'Baterias', v: dsc('bateria_0_tensao_v') ? dsc('bateria_0_tensao_v') + ' V · ' + (dsc('bateria_2_tensao_v') || '—') + ' V' : null },
       { n: 'Motores', v: dsc('motor_bb_rpm') ? dsc('motor_bb_rpm') + ' · ' + (dsc('motor_be_rpm') || '—') + ' rpm' : null },
       { n: 'Gerador', v: q && typeof q.gerador_ativo === 'boolean' ? ligado(q.gerador_ativo) + (q.gerador_ativo && dsc('gerador_kw') ? ' · ' + dsc('gerador_kw') + ' kW' : '') : null },
-      { n: 'Seakeeper', v: q && typeof q.seakeeper_ativo === 'boolean' ? ligado(q.seakeeper_ativo) + (q.seakeeper_ativo && dsc('seakeeper_volante_pct') ? ' · ' + dsc('seakeeper_volante_pct') + ' %' : '') : null },
+      { n: 'Estabilizador', v: q && typeof q.seakeeper_ativo === 'boolean' ? ligado(q.seakeeper_ativo) + (q.seakeeper_ativo && dsc('seakeeper_volante_pct') ? ' · ' + dsc('seakeeper_volante_pct') + ' %' : '') : null },
       // porão e âncora: o quadro traz o nível de cada lado e o estado do ferro (o nível e o estado são o valor; o cabo lançado só vem da última leitura salva)
       { n: 'Porão', v: dsc('porao_bb_nivel') && dsc('porao_be_nivel') ? 'BB ' + dsc('porao_bb_nivel') + ' · BE ' + dsc('porao_be_nivel') + ' cm' : null },
       { n: 'Âncora', v: ancora }
     ].map((s) => {
       const ok = s.v != null;
-      return Object.assign(s, { v: ok ? s.v : falta(SL), tip: ok ? s.n + ' na rede · ' + fonteCurta.replace(/^Fonte: /, '') : s.n + ': ' + falta(SL),
+      return Object.assign(s, { v: ok ? s.v.replace(/(\d) (%|V|nós|hPa|°C|cm|rpm|kW|h|L|m)(?![A-Za-zÀ-ÿ])/g, '$1\u00a0$2').replace(/([A-Za-zÀ-ÿ]) (\d)/g, '$1\u00a0$2') : falta(SL), tip: ok ? s.n + ' na rede · ' + s.v + ' · ' + fonteCurta.replace(/^Fonte: /, '') : s.n + ': ' + falta(SL),
         bg: ok ? 'var(--cap-elev, #131a33)' : 'transparent', borda: ok ? 'solid' : 'dashed', line: ok ? 'var(--cap-elev, #131a33)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.55)',
         dot: ok ? OK : 'transparent', dotLine: ok ? OK : WARN, tom: ok ? 'var(--cap-ink3, #97a3c0)' : WARN, peso: ok ? '500' : '800', esp: ok ? '0' : '0.08em' });
     });
@@ -402,7 +402,7 @@ class Component extends DCLogic {
       const p = prazo(t.dn), tomK = t.dn < 0 ? 'crit' : p.tom, eqS = (D.equipamentos || []).filter((e) => e.id === t.sistema && e.seguranca)[0], nota = eqS && eqS.nota;
       const etq = t.equip ? t.equip.split(' (')[0] : '';
       return { t: t.t, tip: [t.t, t.equip, t.quem, t.intervalo, nota || (t.vence ? 'vence ' + t.vence : '')].filter(Boolean).join(' · '),
-        meta: etq + (nota || !t.vence ? '' : (t.dn < 0 ? ' · venceu ' : ' · vence ') + t.vence.slice(0, 5)) + (t.horas ? ' ou ' + (F.nb ? F.nb(t.horas.limite, 0, true) : t.horas.limite) + ' h' : ''),
+        meta: etq + (nota || !t.vence ? '' : (t.dn < 0 ? ' · venceu\u00a0' : ' · vence\u00a0') + t.vence.slice(0, 5)) + (t.horas ? ' ou ' + (F.nb ? F.nb(t.horas.limite, 0, true) : t.horas.limite) + '\u00a0h' : ''),
         dd: p.rot || (t.dn < 0 ? 'ATRASADA · ' + (-t.dn) + ' D' : 'D-' + t.dn), tomK: tomK, d: icoDe(t.equip), href: 'C1-Leme-Web.dc.html#f=' + grupo(t.dn) };
     });
     const P = D.drive || {};
