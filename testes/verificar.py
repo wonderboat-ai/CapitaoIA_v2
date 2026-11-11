@@ -93,8 +93,8 @@ anomalia registrada pelo chat entra nas três), nenhum texto da Ponte e da Carta
 A1 desenha com os fabricantes trocados), o desenho do gráfico além da linha (referência do guia, faixa mín/máx, escala do diesel de 0 à capacidade, marcas do eixo do tempo, mín e máx da legenda), o nível e a cor
 de cada ponto do mapa de sensores (aviso do motor BE a 105 s), os selos das abas da A1, a fonte do histórico por janela, a «reserva N %» da autonomia da B1 e a etiqueta «LICENÇA · D-n» do VHF na B2.
 
-Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 42 defeitos, todos acusados; `MUT_FILTRO=texto`
-refaz só os mutantes cujo nome tem o texto): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
+Fase 4, P4E (o Leme: C1 Manutenção, C2, C3 alerta vivo, e os checklists C4 web e app; `--so-p4e` roda só as conferências dela e `--mutantes-p4e` planta 58 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto; os 5 `setState a cada tique` só caem na contagem real do setState, `teste_leme_setstate`, e a C3 conta também os alarmes pedidos no chat, o cérebro que chega depois do toque em Registrar e o alarme sem começo conhecido): C1 com as 6 leituras de agora do quadro (o vento «a bordo agora»), a fonte e o resumo sem rótulo, as horas até a troca do horímetro de agora (32,4 h e 58,6 h, e não as
 da agenda gerada), os 3 cartões iguais às contagens do CapitaoAgora (a agenda e as tarefas da equipe, as do aparelho também; Executado acompanha e o Executado da tarefa do aparelho grava 1 linha nova com sim);
 C2 com as atrasadas, o horímetro de agora (BB, BE e gerador) e as mesmas horas até a troca; C3 como alerta vivo: o AVISO a 105 s com a leitura «BE 89,6 °C · 12:01:45» (o lado, o valor do alarme e a hora do
 quadro), a faixa normal do guia (a do regime do giro, no óleo), a tendência dos 10 s (o quadro do segundo 95 da volta) e dos 30 s (+7,5 °C, a do cérebro), os passos e a fonte do catálogo, o equipamento de
@@ -103,8 +103,8 @@ D.equipamentos, o pisca; o NORMALIZADO às 11:59 a 60 s (o fim da volta anterior
 sim; dois toques seguidos não duplicam; nem ao abrir nem a cada mudança de estado), sempre escura (tema claro) e leve (sem tema, sem cérebro até o toque); C4 nos 4 tipos a 60 e a 105 s: itens, fonte, verificação do
 quadro (s02: ✓ a 60 s, ✗ a 105 s), marcas, desmarca do ✓ do quadro, Recomeçar sem diário, CONCLUIR = 1 linha nova (dois toques seguidos não duplicam), links do FAQ e do app; simulacao false nas 5 telas.
 
-Fase 4, P4F (o Modo navegação: E1 Gatilhos e E2 Sintoma; `--so-p4f [E1-Navegando-Gatilhos|E2-Navegando-Sintoma]` roda só as conferências dela e `--mutantes-p4f` planta 31 defeitos, todos acusados; `MUT_FILTRO=texto`
-refaz só os mutantes cujo nome tem o texto): E1 NAVEGANDO a 60 e 105 s em 3 tamanhos e 2 temas (os 6 gatilhos na ordem do CSS, os links, a pergunta de cada gatilho ao chat e a chave que o cérebro responde: o relato no porão
+Fase 4, P4F (o Modo navegação: E1 Gatilhos e E2 Sintoma; `--so-p4f [E1-Navegando-Gatilhos|E2-Navegando-Sintoma]` roda só as conferências dela e `--mutantes-p4f` planta 36 defeitos, todos acusados; `MUT_FILTRO=texto`
+refaz só os mutantes cujo nome tem o texto; a E1 junta os alarmes pedidos no chat à lista da faixa do topo): E1 NAVEGANDO a 60 e 105 s em 3 tamanhos e 2 temas (os 6 gatilhos na ordem do CSS, os links, a pergunta de cada gatilho ao chat e a chave que o cérebro responde: o relato no porão
 é SOS e nunca traz o nível; o vigia com o chip «AO VIVO hh:mm:ss», o estado, as 5 leituras do quadro e o diesel do quadro e não o de 26/09, a posição e a fonte, sem corte; a nota da troca sem «ainda não está ativa»); o alarme
 (o 1º cartão no DOM e no CSS leva à C3-Leme-Alerta.dc.html#alarme=<id>, amarelo no AVISO, vermelho no crítico plantado, também com o barco parado; o toque abre a C3; nunca abre o SOS, fala ou grava); a troca automática com
 a tela aberta (SOG 0: aos 3 s ainda NAVEGANDO, aos 7 s FUNDEADO com ÂNCORA/GARRA, CHECKLIST DE SAÍDA, ABASTECER e DIÁRIO e sem o REGISTRAR; SOG 1,5: só aos 7 s volta), a histerese (0,8 nó nunca troca; 0,3 nó com o quadro
@@ -2179,8 +2179,8 @@ TELAS_SENSORES = ('A4-Sensores-Web', 'A5-Sensores-Mobile')
 TELAS_P4C = TELAS_PONTE + ('A3-Ponte-Editar',) + TELAS_SENSORES
 
 
-def abre_tela(b, tela, w=None, h=None, fixo='60', tema='escuro', depois='', hash_='', ls=None):
-    """A tela com sessão, o replay congelado em `fixo` s (None = livre), o tema, `depois` somado ao fim do capitao-dados.js (a flag, o inventário…) e localStorage `ls` posto antes da carga."""
+def abre_tela(b, tela, w=None, h=None, fixo='60', tema='escuro', depois='', hash_='', ls=None, extra=''):
+    """A tela com sessão, o replay congelado em `fixo` s (None = livre), o tema, `depois` somado ao fim do capitao-dados.js (a flag, o inventário…), localStorage `ls` posto antes da carga e `extra`, um script a mais antes de qualquer script da página."""
     movel = eh_app(tela)
     if w is None: w, h = (390, 844) if movel else (1440, 900)
     ctx = b.new_context(viewport={'width': w, 'height': h}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
@@ -2189,6 +2189,7 @@ def abre_tela(b, tela, w=None, h=None, fixo='60', tema='escuro', depois='', hash
     for k, v in (ls or {}).items(): init += "localStorage.setItem(%s, %s);" % (json.dumps(k), json.dumps(v))
     ctx.add_init_script(init)
     ctx.add_init_script(ESPIA_FALA)
+    if extra: ctx.add_init_script(extra)
     aplica_mut(ctx)
     if depois:
         def injeta(route):
@@ -3837,6 +3838,15 @@ def teste_c3_estados(b):
     if r['selo'] != 'DENTRO DA FAIXA' or r['estado'] != 'normal' or r['faixa'] != 'de 12,2 a 14,7 V' or not r['leitura'].endswith(' V · 12:01:00') or r['passos'] is not None:
         prob.append('C3#alarme=b12 a 60 s: selo %r, faixa %r, leitura %r, passos %r (esperado DENTRO DA FAIXA, «de 12,2 a 14,7 V» e sem passos)' % (r['selo'], r['faixa'], r['leitura'], r['passos']))
     ctx.close()
+    # DENTRO DA FAIXA (nenhum alarme aberto para o item, nem o NORMALIZADO de antes): nunca o botão «Registrar no diário» nem o «REGISTRADO …» — não houve ocorrência, e a linha gravada seria de um alerta que não existiu
+    # (só o AVISO e o NORMALIZADO se registram)
+    for fixo, h in (('60', '#alarme=b12'), ('105', '#alarme=b12'), ('105', '#alarme=arref_bb'), ('60', '#alarme=oleo_bb')):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo=fixo, hash_=h)
+        r = pg.evaluate(LE_C3)
+        if r['estado'] != 'normal' or r['selo'] != 'DENTRO DA FAIXA': prob.append('C3%s a %s s: estado %r, selo %r (esperado «normal» e DENTRO DA FAIXA: o teste não vale)' % (h, fixo, r['estado'], r['selo']))
+        elif r['temRegistrar'] or r['registrado'] is not None or r['diario'] is not None: prob.append('C3%s a %s s: DENTRO DA FAIXA com o botão de registrar (%s), o link REGISTRADO (%r) ou o diário gravado (%r)' % (h, fixo, r['temRegistrar'], r['registrado'], r['diario']))
+        if erros: prob += ['C3%s a %s s: %s' % (h, fixo, e) for e in erros[:2]]
+        ctx.close()
     # a faixa do óleo é a do regime do giro (a partir de 1.000 rpm: 2,4 a 6,0 bar), com o aviso e o crítico do regime
     ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_='#alarme=oleo_bb')
     r = pg.evaluate(LE_C3)
@@ -3927,6 +3937,154 @@ def teste_c3_outros(b):
         ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo=fixo, hash_=h)
         r = pg.evaluate(LE_C3)
         if r['selo'] != esp or r['outro'] is not None or r['outroHref'] is not None: prob.append('C3%s a %s s: selo %r e linha do outro alarme %r (esperado %r e nenhuma linha: só o alarme da tela está aberto)' % (h, fixo, r['selo'], r['outro'], esp))
+        ctx.close()
+    return prob
+
+
+LE_PED = "() => window.CapitaoBrain ? window.CapitaoBrain.alarmesPedidosAtivos().map((a) => ({ id: a.id, texto: a.texto, desdeTxt: a.desdeTxt, desdeMs: a.desdeMs })) : null"
+BLOQUEIA_CEREBRO = "(function () { var ap = Node.prototype.appendChild; Node.prototype.appendChild = function (n) { if (n && n.tagName === 'SCRIPT' && /capitao-brain/.test(n.src || '')) return n; return ap.call(this, n); }; })();"   # o cérebro que a tela injeta nunca chega
+ATRASA_CEREBRO = "(function () { var ap = Node.prototype.appendChild; Node.prototype.appendChild = function (n) { if (n && n.tagName === 'SCRIPT' && /capitao-brain/.test(n.src || '') && !n.__real) { var t = this, ph = document.createElement('script'); ph.type = 'text/plain'; ph.setAttribute('src', n.getAttribute('src')); ap.call(this, ph); var r = document.createElement('script'); r.src = n.src; r.__real = 1; setTimeout(function () { ap.call(t, r); }, 2000); return n; } return ap.call(this, n); }; })();"   # o cérebro que a tela injeta chega 2 s depois (um marcador no lugar dele, para a tela não injetá-lo duas vezes)
+
+
+def espera_cerebro(pg, prob, rot, ms=1300):
+    """Espera o cérebro entrar na tela (a C3 o carrega sozinha com alarme pedido guardado); se não entrar em 8 s a falha é da tela: vira problema (um erro do teste não acusaria o defeito)."""
+    try:
+        pg.wait_for_function("() => !!window.CapitaoBrain", timeout=8000)
+    except Exception:
+        prob.append('%s: o cérebro não entrou em 8 s (a tela devia carregá-lo sozinha para avaliar o alarme pedido)' % rot)
+        return False
+    pg.wait_for_timeout(ms)
+    return True
+
+
+def texto_outro_pedido(p):
+    """O que a linha «OUTRO ALARME ABERTO» da C3 diz do alarme pedido: o texto do cérebro e o AVISO com o começo («desde hh:mm:ss», ou «há mais de …» / «agora» quando ele não é conhecido)."""
+    return p['texto'] + ' · AVISO' + (' ' if p['desdeTxt'].startswith('desde ') else ' · ') + p['desdeTxt']
+
+
+def teste_c3_pedidos(b):
+    """C3 e os alarmes pedidos no chat (F12): a lista de alarmes abertos é a da faixa do topo (a C3 não a tem). Com um alarme pedido aberto a tela nunca diz «Nenhum alarme ativo» nem «Tudo dentro da faixa»: sem alarme do painel
+    ela diz «Nenhum alarme do painel aberto agora» e a linha «OUTRO ALARME ABERTO» traz o pedido, com o ABRIR para a lista de alertas da Ponte (o alarme pedido não tem tela de detalhe); com um alarme do painel aberto o pedido é a linha
+    do outro (também com o começo desconhecido, no fim, e com a janela de emergência: a velocidade sem limite nem leitura); o cérebro só entra quando há alarme pedido guardado; enquanto lê, e se não conseguir ler, a tela não afirma nada."""
+    prob = []
+    ls_ped = lambda p: {'capitao.alarmes.v1': json.dumps(p)}
+    PED_SOG2 = [dict(PED_FOGO[0], campo='sog_nos', limite=2)]   # a SOG acima de 2 nós vale há mais de 160 s: sem começo conhecido (desdeMs null)
+    def confere(rot, r, **esp):
+        for k, v in esp.items():
+            if r[k] != v: prob.append('%s: %s diz %r (esperado %r)' % (rot, k, r[k], v))
+    # (1) sem alarme do painel (60 s) e com o arrefecimento do BB pedido acima de 80 °C (aberto): nada de «Nenhum alarme ativo»; o pedido na linha do outro
+    for h in ('', '#alarme=b12'):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', hash_=h, ls=ls_ped(PED_FOGO))
+        rot = 'C3%s a 60 s com o alarme pedido aberto' % h
+        if not espera_cerebro(pg, prob, rot): ctx.close(); continue
+        r = pg.evaluate(LE_C3); ped = pg.evaluate(LE_PED)
+        if not ped or len(ped) != 1: prob.append('%s: o cérebro não tem o alarme pedido aberto (%r): o teste não vale' % (rot, ped)); ctx.close(); continue
+        if h:
+            confere(rot, r, selo='DENTRO DA FAIXA', estado='normal', temRegistrar=False)
+        else:
+            confere(rot, r, selo='SEM ALARME DO PAINEL', estado='nenhum', titulo='Nenhum alarme do painel aberto agora', leitura=None, temRegistrar=False)
+            if not (r['situacao'] or '').startswith('Há 1 alarme pedido no chat aberto (abaixo)'): prob.append('%s: a situação diz %r (esperado «Há 1 alarme pedido no chat aberto (abaixo) · fonte»)' % (rot, r['situacao']))
+        confere(rot, r, outroRotulo='OUTRO ALARME ABERTO', outroTexto=texto_outro_pedido(ped[0]), outroHref='A2-Ponte-Mobile.dc.html#alertas', outroNivel='aviso', outroCor='rgb(240, 166, 58)')
+        if 'Nenhum alarme ativo' in r['texto'] or 'Tudo dentro da faixa' in r['texto']: prob.append('%s: diz «Nenhum alarme ativo» ou «Tudo dentro da faixa» com o alarme pedido aberto: %r' % (rot, r['texto'][:160]))
+        if r['cerebro'] != 'object': prob.append('%s: o cérebro não entrou sozinho para avaliar o alarme pedido (%s)' % (rot, r['cerebro']))
+        if r['diario'] is not None or r['falas']: prob.append('%s: gravou no diário ou falou sozinha' % rot)
+        ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 na tela: %s' % (rot, ach))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # (2) o alarme do painel aberto (105 s) e o pedido na linha do outro, com o começo conhecido (o pedido começou antes do aviso) e desconhecido (a SOG acima de 2 nós: «há mais de …», no fim)
+    for rot, ped_ls in (('com o começo conhecido', PED_FOGO), ('sem começo conhecido', PED_SOG2)):
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', ls=ls_ped(ped_ls))
+        rot = 'C3#alarme=arref_be a 105 s com o alarme pedido %s' % rot
+        if not espera_cerebro(pg, prob, rot): ctx.close(); continue
+        r = pg.evaluate(LE_C3); ped = pg.evaluate(LE_PED)
+        if not ped or len(ped) != 1: prob.append('%s: o cérebro não tem o alarme pedido aberto (%r): o teste não vale' % (rot, ped)); ctx.close(); continue
+        confere(rot, r, selo='AVISO', estado='ativo', titulo='Temperatura do motor BE', outroRotulo='OUTRO ALARME ABERTO', outroTexto=texto_outro_pedido(ped[0]), outroHref='A2-Ponte-Mobile.dc.html#alertas')
+        if rot.endswith('sem começo conhecido') and (ped[0]['desdeMs'] is not None or not ped[0]['desdeTxt'].startswith('há mais de')): prob.append('%s: o plantio não valeu (o cérebro diz %r)' % (rot, ped[0]))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # (2b) com o alarme do painel e o pedido abertos, o do painel que não é o da tela e o pedido ficam na linha na ordem da faixa (o mais antigo primeiro): «2 OUTROS ALARMES ABERTOS»
+    a0, bb, be = alarmes_c3_plantados(b)
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=oleo_be', ls=dict(sobre_alarmes(a0, be), **ls_ped(PED_FOGO)))
+    if not espera_cerebro(pg, prob, 'C3 com o arref_be e o alarme pedido'): ctx.close(); return prob
+    r = pg.evaluate(LE_C3); ped = pg.evaluate(LE_PED)
+    if ped and len(ped) == 1:
+        confere('C3#alarme=oleo_be com o arref_be e o alarme pedido abertos', r, titulo='Pressão de óleo do motor BE', outroRotulo='2 OUTROS ALARMES ABERTOS', outroTexto=texto_outro_pedido(ped[0]) + ' · e mais 1', outroHref='A2-Ponte-Mobile.dc.html#alertas')
+    else: prob.append('C3 com o arref_be e o alarme pedido: o cérebro não tem o alarme pedido aberto (%r)' % (ped,))
+    ctx.close()
+    # (3) a janela de conversa em emergência: o alarme pedido de velocidade sai sem limite nem leitura (CLAUDE.md 10)
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', ls=ls_ped([dict(PED_FOGO[0], campo='sog_nos', limite=10)]), depois=JANELA_VALE)
+    if not espera_cerebro(pg, prob, 'C3 na janela de emergência'): ctx.close(); return prob
+    r = pg.evaluate(LE_C3)
+    if 'velocidade, com limite e leitura no plotter' not in (r['outroTexto'] or '') or re.search(r'1[08],\d|10,0', r['outroTexto'] or '') or re.search(r'\bnós\b', r['outroTexto'] or ''):
+        prob.append('C3 na janela de emergência: a linha do alarme pedido de velocidade diz %r (esperado sem limite nem leitura: «velocidade, com limite e leitura no plotter»)' % r['outroTexto'])
+    ctx.close()
+    # (4) o cérebro entra só com alarme pedido guardado: sem nenhum, a tela segue leve (sem cérebro, sem linha, sem «conferindo»)
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60')
+    pg.wait_for_timeout(1500)
+    r = pg.evaluate(LE_C3)
+    if r['cerebro'] != 'undefined' or r['selo'] != 'SEM ALARME ATIVO' or r['outro'] is not None: prob.append('C3 sem alarme pedido guardado: cérebro %s, selo %r, linha %r (esperado leve: sem cérebro, SEM ALARME ATIVO e nenhuma linha)' % (r['cerebro'], r['selo'], r['outro']))
+    ctx.close()
+    # (5) o cérebro que não chega: enquanto lê, «Conferindo os alarmes pedidos»; passados os ~6 s da espera, «Não consegui conferir» — nunca «Nenhum alarme ativo» nem «Tudo dentro da faixa»
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='60', ls=ls_ped(PED_FOGO), extra=BLOQUEIA_CEREBRO)
+    r = pg.evaluate(LE_C3)
+    confere('C3 com o cérebro ainda não carregado', r, selo='CONFERINDO', titulo='Conferindo os alarmes pedidos', outro=None)
+    if 'Nenhum alarme ativo' in r['texto'] or 'Tudo dentro da faixa' in r['texto']: prob.append('C3 lendo os alarmes pedidos: diz «Nenhum alarme ativo» ou «Tudo dentro da faixa»: %r' % r['texto'][:160])
+    ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+    if ach: prob.append('C3 lendo os alarmes pedidos: termo do §3 na tela: %s' % ach)
+    try:
+        pg.wait_for_function("() => document.body.innerText.indexOf('Não consegui conferir') >= 0", timeout=12000)
+        r = pg.evaluate(LE_C3)
+        confere('C3 com o cérebro que não chegou', r, selo='SEM ALARME DO PAINEL', titulo='Nenhum alarme do painel aberto agora')
+        if 'Nenhum alarme ativo' in r['texto'] or 'Tudo dentro da faixa' in r['texto'] or not (r['situacao'] or '').startswith('Não consegui conferir os alarmes pedidos no chat agora'): prob.append('C3 sem conseguir ler os alarmes pedidos: a situação diz %r (esperado «Não consegui conferir os alarmes pedidos no chat agora»)' % r['situacao'])
+    except Exception:
+        prob.append('C3 com o cérebro que não chegou: em 12 s a tela não passou de «Conferindo» para «Não consegui conferir» (%r)' % pg.evaluate("() => document.body.innerText.slice(0, 160)"))
+    ach = achados_termos('C3-Leme-Alerta', pg.evaluate(LE_TEXTOS))
+    if ach: prob.append('C3 sem conseguir ler os alarmes pedidos: termo do §3 na tela: %s' % ach)
+    ctx.close()
+    # (6) o toque em «Registrar no diário» com o cérebro ainda chegando (2 s) e um alarme pedido que aparece nesse meio tempo (guardado depois da abertura, como o de outra aba): a espera do cérebro para os alarmes pedidos não derruba a do
+    # toque — a linha entra no diário (uma só), o «REGISTRADO …» aparece e a tela passa a mostrar o alarme pedido
+    ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', extra=ATRASA_CEREBRO)
+    pg.wait_for_timeout(500)
+    if pg.evaluate("() => !!window.CapitaoBrain"): prob.append('C3 com o cérebro atrasado: ele já estava na tela antes do toque (o teste não vale)')
+    try:
+        pg.click('[data-c3=registrar]', timeout=5000)
+        pg.evaluate("(v) => localStorage.setItem('capitao.alarmes.v1', v)", json.dumps(PED_FOGO))
+        pg.wait_for_function("() => !!document.querySelector('[data-c3=registrado]')", timeout=9000)
+        linhas = json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") or '[]')
+        if len(linhas) != 1 or linhas[0].get('src') != 'app · alerta': prob.append('C3 com o cérebro atrasado: o toque em Registrar gravou %d linha(s) (esperado 1, «app · alerta»)' % len(linhas))
+        pg.wait_for_function("() => document.body.innerText.indexOf('OUTRO ALARME ABERTO') >= 0 || !!document.querySelector('[data-c3=outro]')", timeout=5000)
+    except Exception as e:
+        prob.append('C3 com o cérebro atrasado e um alarme pedido guardado depois do toque: o Registrar não terminou (%s)' % str(e).splitlines()[0][:120])
+    if erros: prob += ['C3 com o cérebro atrasado: %s' % e for e in erros[:2]]
+    ctx.close()
+    return prob
+
+
+def teste_c3_inicio(b):
+    """C3 com o alarme aberto sem começo conhecido (o coletor às vezes entrega o alarme sem `desde`, ou com um `desde` que não é data: desdeMs null, hora vazia): a situação diz «aberto agora» — nada de «desde » vazio nem
+    «há 0 s» — e a linha do diário também («AVISO aberto agora», sem hora inventada); com o começo conhecido segue como antes."""
+    prob = []
+    a0, bb, be = alarmes_c3_plantados(b)
+    for rot, desde in (('sem o campo desde', None), ('com desde que não é data', 'x'), ('com desde vazio', '')):
+        a = dict(a0)
+        if desde is None: a.pop('desde', None)
+        else: a['desde'] = desde
+        ctx, pg, erros = abre_tela(b, 'C3-Leme-Alerta', fixo='105', hash_='#alarme=arref_be', ls=sobre_alarmes(a))
+        r = pg.evaluate(LE_C3)
+        rot = 'C3 a 105 s com o alarme %s' % rot
+        if r['estado'] != 'ativo' or not r['ativo'] or r['ativo']['hora'] != '': prob.append('%s: o plantio não valeu (estado %r, alarme %r)' % (rot, r['estado'], r['ativo']))
+        if r['situacao'] != '89,6 °C · acima de 88 °C · aberto agora' or re.search(r'desde|há \d', r['situacao'] or ''): prob.append('%s: a situação diz %r (esperado «89,6 °C · acima de 88 °C · aberto agora», sem «desde» nem «há N s»)' % (rot, r['situacao']))
+        if r['selo'] != 'AVISO' or r['leitura'] != 'BE 89,6 °C · 12:01:45': prob.append('%s: selo %r e leitura %r (esperado AVISO e «BE 89,6 °C · 12:01:45»)' % (rot, r['selo'], r['leitura']))
+        try:
+            pg.click('[data-c3=registrar]', timeout=5000)
+            pg.wait_for_function("() => !!document.querySelector('[data-c3=registrado]')", timeout=8000)
+            linhas = json.loads(pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") or '[]')
+            if len(linhas) != 1 or not re.fullmatch(r'Alerta registrado no app às \d\d:\d\d por Lucas — Temperatura do motor BE \(lado BE\): 89,6 °C \(acima de 88 °C\), AVISO aberto agora · leitura às 12:01:45 \(telemetria ao vivo\)\. Passos: Guia de bordo — Motores Cummins §5 · Temperatura alta\. Linha nova, nada se apaga\.', linhas[0]['t']):
+                prob.append('%s: a linha gravada diz %r (esperado «…AVISO aberto agora · leitura às 12:01:45…», sem «desde» nem espaço duplo)' % (rot, [x['t'] for x in linhas]))
+        except Exception as e:
+            prob.append('%s: não registrou (%s)' % (rot, str(e).splitlines()[0][:100]))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
         ctx.close()
     return prob
 
@@ -4221,6 +4379,8 @@ def p4e_conferencias(b, lista):
     if 'C3-Leme-Alerta' in lista:
         out.append(('C3 · o alerta vivo: AVISO, NORMALIZADO, sem alarme e a faixa do óleo', teste_c3_estados(b)))
         out.append(('C3 · o alarme da tela segue o que toca e os outros alarmes abertos têm a linha com o ABRIR', teste_c3_outros(b)))
+        out.append(('C3 · os alarmes pedidos no chat também contam: nunca «Nenhum alarme ativo» com um aberto', teste_c3_pedidos(b)))
+        out.append(('C3 · o alarme sem começo conhecido: «aberto agora», sem «desde» vazio', teste_c3_inicio(b)))
         out.append(('C3 · o alarme crítico plantado (o cenário desligado)', teste_c3_critico(b)))
         out.append(('C3 · normaliza com a tela aberta, sem sair dela', teste_c3_transicao(b)))
         out.append(('C3 · registrar só com o toque, com o valor, o lado e a hora do quadro', teste_c3_registrar(b)))
@@ -4228,6 +4388,7 @@ def p4e_conferencias(b, lista):
     for tela in ('C4-Checklist-Web', 'C4-Checklist-Mobile'):
         if tela in lista: out.append(('%s · itens, ✓ do quadro, marcas, CONCLUIR e links' % tela, teste_c4(b, tela)))
     if any(t.startswith('C4') for t in lista): out.append(('C4 · anda sem congelar o replay', teste_c4_vivo(b)))
+    if any(t in lista for t in TELAS_P4E): out.append(('C1 a C4 · só dão setState quando o texto exibido muda (o setState contado)', teste_leme_setstate(b, [t for t in lista if t in TELAS_P4E])))
     if any(t in lista for t in TELAS_P4E): out.append(('simulacao false no Leme e nos checklists', teste_leme_real(b)))
     return out
 
@@ -4242,8 +4403,10 @@ MUTANTES_P4E = [
     ('a C1 sem as tarefas da equipe do aparelho', 'C1-Leme-Web.dc.html', [(".concat(equipe.map((t) => ({ id: t.id, t: t.n,", ".concat([].map((t) => ({ id: t.id, t: t.n,")], 'c1'),
     ('o resumo da C1 de volta com «snapshot DEMO»', 'C1-Leme-Web.dc.html', [("const resumo = fonteTxt + ' · '", "const resumo = 'snapshot DEMO · ' + fonteTxt + ' · '")], 'c1'),
     ('a fonte da leitura da C1 de volta com «telemetria ao vivo desligada»', 'C1-Leme-Web.dc.html', [("resumo: resumo, leituraSub: fonteTxt,", "resumo: resumo, leituraSub: 'Coletor NMEA · snapshot · telemetria ao vivo desligada',")], 'c1'),
+    ('a C1 dando setState a cada tique (o texto da chave ganha o relógio)', 'C1-Leme-Web.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C1 sem assinar o capitao-telemetria', 'C1-Leme-Web.dc.html', [("    window.addEventListener('capitao-telemetria', this._onTele);\n", "")], 'c1_vivo'),
     # —— C2 ——
+    ('a C2 dando setState a cada tique (o texto da chave ganha o relógio)', 'C2-Leme-Mobile.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('os horímetros da C2 fixos no snapshot (BB 412,6 h)', 'C2-Leme-Mobile.dc.html', [("horimetros: 'BB ' + c('motor_bb_horimetro_h')", "horimetros: 'BB 412,6'")], 'c2'),
     ('as horas que faltam da C2 só da agenda gerada', 'C2-Leme-Mobile.dc.html', [("const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null;", "return num(h.faltam) ? h.faltam : null;")], 'c2'),
     ('a C2 conta a tarefa executada como atrasada', 'C2-Leme-Mobile.dc.html', [("t.dn < 0 && !ex[t.id] && !t.feita)", "t.dn < 0 && !t.feita)")], 'c2'),
@@ -4267,11 +4430,25 @@ MUTANTES_P4E = [
     ('a C3 com id fora do catálogo no endereço fica em «Nenhum alarme ativo» com um alarme aberto', 'C3-Leme-Alerta.dc.html', [("    if (h && (dono(cat, h) || ativos.some((x) => x.id === h))) this._id = h;", "    if (h) this._id = h;")], 'c3'),
     ('a C3 ignora o endereço de um alarme aberto que o catálogo não tem (vai para o primeiro da lista)', 'C3-Leme-Alerta.dc.html', [("    if (h && (dono(cat, h) || ativos.some((x) => x.id === h))) this._id = h;", "    if (h && dono(cat, h)) this._id = h;")], 'c3_outros'),
     ('a C3 sem a linha do outro alarme aberto', 'C3-Leme-Alerta.dc.html', [("temOutro: d.outroN > 0,", "temOutro: false,")], 'c3_outros'),
-    ('o ABRIR da C3 leva ao próprio alarme da tela (e não ao outro)', 'C3-Leme-Alerta.dc.html', [("outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(o1.id) }", "outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(id) }")], 'c3_outros'),
-    ('a linha do outro alarme da C3 conta também o alarme da própria tela', 'C3-Leme-Alerta.dc.html', [("const outros = ativos.filter((x) => x.id !== id), o1", "const outros = ativos.slice(), o1")], 'c3_outros'),
+    ('o ABRIR da C3 leva ao próprio alarme da tela (e não ao outro)', 'C3-Leme-Alerta.dc.html', [("href: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(x.id) }))", "href: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(id) }))")], 'c3_outros'),
+    ('a linha do outro alarme da C3 conta também o alarme da própria tela', 'C3-Leme-Alerta.dc.html', [("const outros = ativos.filter((x) => x.id !== id).map(", "const outros = ativos.map(")], 'c3_outros'),
     ('a linha do outro alarme da C3 sempre na cor do aviso', 'C3-Leme-Alerta.dc.html', [("outroLinha: d.outroNivel === 'critico' ? '#ff6a60' : '#f0a63a'", "outroLinha: '#f0a63a'")], 'c3_outros'),
+    ('o botão de registrar da C3 também DENTRO DA FAIXA (sem alarme aberto para o item)', 'C3-Leme-Alerta.dc.html', [("registravel: estado === 'ativo' || estado === 'normalizado',", "registravel: estado !== 'nenhum',")], 'c3'),
+    ('a C3 sem a linha dos alarmes pedidos no chat (só os do painel)', 'C3-Leme-Alerta.dc.html', [(".concat(pedidos.map((x) => ({ id: x.id, nivel: 'aviso',", ".concat([].map((x) => ({ id: x.id, nivel: 'aviso',")], 'c3_pedidos'),
+    ('a C3 diz «Tudo dentro da faixa» com um alarme pedido aberto', 'C3-Leme-Alerta.dc.html', [("if (pedidos.length) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL',", "if (false) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL',")], 'c3_pedidos'),
+    ('a C3 não carrega o cérebro com alarme pedido guardado (fica «conferindo»)', 'C3-Leme-Alerta.dc.html', [("else { conferindo = true; this.carregaPedidos(); }", "else { conferindo = true; }")], 'c3_pedidos'),
+    ('a C3 diz «Tudo dentro da faixa» enquanto lê os alarmes pedidos', 'C3-Leme-Alerta.dc.html', [("if (conferindo) return Object.assign(base, { selo: 'CONFERINDO',", "if (false) return Object.assign(base, { selo: 'CONFERINDO',")], 'c3_pedidos'),
+    ('a C3 diz «Tudo dentro da faixa» sem conseguir ler os alarmes pedidos', 'C3-Leme-Alerta.dc.html', [("if (semConferir) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL',", "if (false) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL',")], 'c3_pedidos'),
+    ('o ABRIR do alarme pedido da C3 leva à C3 de um id que ela não tem', 'C3-Leme-Alerta.dc.html', [("href: 'A2-Ponte-Mobile.dc.html#alertas' })))", "href: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(x.id) })))")], 'c3_pedidos'),
+    ('a espera do cérebro para os alarmes pedidos da C3 derruba a do toque em Registrar (o mesmo temporizador)', 'C3-Leme-Alerta.dc.html', [("const sl = slot || '_b';", "const sl = '_b';")], 'c3_pedidos'),
+    ('a C3 sem a janela de emergência no alarme pedido (a velocidade sai com limite e leitura)', 'C3-Leme-Alerta.dc.html', [("Bc.alarmesPedidosAtivos(undefined, { emergencia: emerg })", "Bc.alarmesPedidosAtivos()")], 'c3_pedidos'),
+    ('a C3 diz «desde » vazio e «há 0 s» com o alarme sem começo conhecido', 'C3-Leme-Alerta.dc.html', [("(conhece ? ' · desde ' + a.hora + ' · há ' + dur(a.seg) : ' · aberto agora');", "(' · desde ' + a.hora + ' · há ' + dur(a.seg));")], 'c3_inicio'),
+    ('o diário da C3 grava «AVISO desde » vazio com o alarme sem começo conhecido', 'C3-Leme-Alerta.dc.html', [("(conhece ? ' desde ' + a.hora : ' aberto agora');", "(' desde ' + a.hora);")], 'c3_inicio'),
+    ('a C3 dando setState a cada tique (o texto da chave ganha o relógio)', 'C3-Leme-Alerta.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C3 sem assinar o capitao-alerta', 'C3-Leme-Alerta.dc.html', [("    window.addEventListener('capitao-alerta', this._onTele);\n", "")], 'c3_codigo'),
     # —— C4 ——
+    ('a C4 web dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Web.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
+    ('a C4 do app dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Mobile.dc.html', [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'setstate'),
     ('a C4 sem o ✓ do quadro (os itens sem a verificação)', 'C4-Checklist-Web.dc.html', [("aEstado: i.auto ? i.auto.estado : '', aValor: i.auto ? String(i.auto.valor) : '',", "aEstado: '', aValor: '',")], 'c4_web'),
     ('o CONCLUIR da C4 grava duas linhas', 'C4-Checklist-Web.dc.html', [("try { r = B.checklistConcluir(this._tipo); } catch (e) { r = null; }", "try { r = B.checklistConcluir(this._tipo); B.checklistConcluir(this._tipo); } catch (e) { r = null; }")], 'c4_web'),
     ('a C4 sem o intervalo entre dois CONCLUIR', 'C4-Checklist-Web.dc.html', [("Date.now() - (this._tq || 0) < 1500", "false")], 'c4_web'),
@@ -4284,6 +4461,7 @@ MUTANTES_P4E = [
 QUAL_P4E = {'c1': lambda b: teste_leme_c1(b), 'c1_vivo': lambda b: teste_leme_vivo(b), 'c2': lambda b: teste_leme_c2(b), 'c2_codigo': lambda b: teste_c4_codigo(),
             'c3': lambda b: teste_c3_estados(b) + teste_c3_codigo(), 'c3_outros': lambda b: teste_c3_outros(b), 'c3_critico': lambda b: teste_c3_critico(b), 'c3_transicao': lambda b: teste_c3_transicao(b), 'c3_registrar': lambda b: teste_c3_registrar(b),
             'c3_leve': lambda b: teste_c3_leve(b) + teste_c3_codigo(), 'c3_codigo': lambda b: teste_c3_codigo(),
+            'c3_pedidos': lambda b: teste_c3_pedidos(b), 'c3_inicio': lambda b: teste_c3_inicio(b), 'setstate': lambda b: teste_leme_setstate(b, [a.replace('.dc.html', '') for a in MUT_ARQ]),
             'c4_web': lambda b: teste_c4(b, 'C4-Checklist-Web'), 'c4_app': lambda b: teste_c4(b, 'C4-Checklist-Mobile'), 'c4_vivo': lambda b: teste_c4_vivo(b) + teste_c4_codigo()}
 
 
@@ -4300,6 +4478,36 @@ def teste_leme_vivo(b):
     if erros: prob += erros[:2]
     ctx.close()
     return prob + teste_c4_codigo()
+
+
+# O setState do React contado de verdade (o React.Component.prototype.setState, que o __setLogicState do support.js chama a cada setState de uma tela; o window.React é um acessor que troca o método no 1º get com o Component
+# pronto — o mesmo contador do replay.py › gating): o «só chama setState quando o texto mudou» de C1 a C4 não se prova lendo o código (um `k = JSON.stringify(d) + Date.now()` passa na leitura) mas contando o que a tela faz.
+CONTA_SETSTATE = """(function () {
+  window.__sets = 0; window.__ticks = 0;
+  window.addEventListener('capitao-telemetria', function () { window.__ticks++; });
+  var R, pronto = false;
+  function troca() { if (pronto || !R || !R.Component) return; pronto = true; var P = R.Component.prototype, o = P.setState; P.setState = function () { window.__sets++; return o.apply(this, arguments); }; }
+  Object.defineProperty(window, 'React', { configurable: true, get: function () { troca(); return R; }, set: function (v) { R = v; } });
+})();"""
+TELAS_SETSTATE = (('C1-Leme-Web', ''), ('C2-Leme-Mobile', ''), ('C3-Leme-Alerta', '#alarme=arref_be'), ('C4-Checklist-Web', ''), ('C4-Checklist-Mobile', ''))
+
+
+def teste_leme_setstate(b, telas=None):
+    """C1, C2, C3 e C4 (web e app) só dão setState quando o texto exibido muda: com o instante fixado (60 s), 3 tiques da telemetria ou mais e nenhum setState (o texto não mudou: nenhum redesenho); o livre, nunca mais que
+    um por tique, está no replay.py › gating."""
+    prob = []
+    for tela, hash_ in TELAS_SETSTATE:
+        if telas is not None and tela not in telas: continue
+        ctx, pg, erros = abre_tela(b, tela, fixo='60', hash_=hash_, extra=CONTA_SETSTATE)
+        pg.wait_for_timeout(1800)   # (o cérebro e o FAQ da C4 chegam depois da abertura: o que redesenha ao carregar não conta)
+        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
+        pg.wait_for_timeout(3600)
+        r = pg.evaluate("() => ({ sets: window.__sets, ticks: window.__ticks })")
+        if r['ticks'] < 3: prob.append('%s: só %d tiques em 3,6 s com o instante fixado (o teste não vale: a tela não ouve o capitao-telemetria ou o motor parou)' % (tela, r['ticks']))
+        if r['sets']: prob.append('%s: %d setState em %d tiques com o instante fixado (o texto exibido não mudou: nenhum redesenho)' % (tela, r['sets'], r['ticks']))
+        if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
 
 
 def mutantes_p4e(b):
@@ -4442,9 +4650,12 @@ def teste_e1_nav(b):
     return prob
 
 
+LE_FAIXA_PED = "() => { const f = document.getElementById('capitao-faixa-alertas'); return f && !f.hidden ? { txt: f.innerText.replace(/\\s+/g, ' ').trim(), mais: ((f.querySelector('.cpf-mais') || {}).innerText || '').trim() } : null; }"   # a faixa global do topo (capitao-app.js)
+
+
 def teste_e1_alerta(b):
     """Com alarme, o 1º cartão leva ao detalhe (C3-Leme-Alerta.dc.html#alarme=<id>): primeiro no DOM e no CSS, 2 colunas, amarelo no AVISO e vermelho no crítico (o cenário alarme-critico, desligado, plantado); sem alarme, nenhum;
-    o conjunto parado leva o mesmo cartão; o toque abre a C3. Nunca abre o SOS, fala ou grava sozinho."""
+    o conjunto parado leva o mesmo cartão; o toque abre a C3; os alarmes pedidos no chat entram na mesma lista da faixa do topo (vigia, «+N» e 1º cartão concordam). Nunca abre o SOS, fala ou grava sozinho."""
     prob = []
     ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60')
     r = pg.evaluate(LE_E1)
@@ -4478,6 +4689,34 @@ def teste_e1_alerta(b):
     if r['estadoV'] != 'Vigia ligada · ALERTA CRÍTICO ativo' or r['estadoCor'] != 'rgb(255, 59, 48)': prob.append('E1 crítico: o estado do vigia diz %r em %r' % (r['estadoV'], r['estadoCor']))
     if not r['al'] or r['al'][0]['nivel'] != 'critico': prob.append('E1 crítico: o plantio não valeu (a API de alertas diz %r)' % r['al'])
     if r['url'].split('#')[0].endswith('SOS-Mobile.dc.html') or r['falas'] or r['diario']: prob.append('E1 crítico: abriu o SOS, falou ou gravou sozinha')
+    ctx.close()
+    # com um alarme pedido no chat (F12; PED_FOGO: o arrefecimento do BB acima de 80 °C) a lista é a da faixa do topo e da Ponte: o estado do vigia, a contagem «+N» e o 1º cartão concordam com a faixa. O alarme pedido não tem tela
+    # de detalhe: o cartão dele leva à lista de alertas da Ponte; com o pedido sem começo conhecido (a SOG acima de 2 nós vale há mais de 160 s) ele vai para o fim da lista, atrás do alarme do painel
+    PED_SOG2 = [dict(PED_FOGO[0], campo='sog_nos', limite=2)]
+    for fixo, ped_ls, rot, primeiro_pedido, n_mais in (('60', PED_FOGO, 'a 60 s', True, 0), ('105', PED_FOGO, 'a 105 s (o aviso do painel também aberto, o pedido começou antes)', True, 1), ('105', PED_SOG2, 'a 105 s com o pedido sem começo conhecido', False, 1)):
+        ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo=fixo, ls={'capitao.alarmes.v1': json.dumps(ped_ls)})
+        rot = 'E1 %s com o alarme pedido aberto' % rot
+        if not espera_cerebro(pg, prob, rot, 1500): ctx.close(); continue
+        r = pg.evaluate(LE_E1); ped = pg.evaluate(LE_PED); fx = pg.evaluate(LE_FAIXA_PED)
+        if not ped or len(ped) != 1 or not fx: prob.append('%s: o cérebro (%r) ou a faixa (%r) não têm o alarme pedido aberto: o teste não vale' % (rot, ped, fx)); ctx.close(); continue
+        mais = ' · +%d' % n_mais if n_mais else ''
+        if r['estadoV'] != 'Vigia ligada · AVISO ativo' + mais or r['estadoCor'] != 'rgb(240, 166, 58)': prob.append('%s: o vigia diz %r em %r (esperado «Vigia ligada · AVISO ativo%s» em amarelo, como a faixa do topo)' % (rot, r['estadoV'], r['estadoCor'], mais))
+        if fx['mais'] != ('+%d' % n_mais if n_mais else ''): prob.append('%s: a faixa do topo diz %r de «mais» e o vigia %r (a contagem é a mesma lista)' % (rot, fx['mais'], mais))
+        primeiro = r['gat'][0] if r['gat'] else {}
+        if primeiro.get('id') != 'alerta' or primeiro.get('ordem') != 0 or primeiro.get('col') != '1/-1': prob.append('%s: o 1º gatilho é %r (order %r, colunas %r): esperado o cartão de alerta em 2 colunas' % (rot, primeiro.get('id'), primeiro.get('ordem'), primeiro.get('col')))
+        if primeiro_pedido:
+            esp = 'AVISO · MOTORES BB %s · %s%s' % (ped[0]['texto'], ped[0]['desdeTxt'], ' · +%d alerta' % n_mais if n_mais else '')
+            if primeiro.get('txt') != esp or primeiro.get('href') != 'A2-Ponte-Mobile.dc.html#alertas' or ped[0]['texto'] not in fx['txt']: prob.append('%s: o 1º cartão diz %r e leva a %r (esperado %r → A2-Ponte-Mobile.dc.html#alertas, o mesmo alarme da faixa %r)' % (rot, primeiro.get('txt'), primeiro.get('href'), esp, fx['txt']))
+        else:
+            if primeiro.get('href') != 'C3-Leme-Alerta.dc.html#alarme=arref_be' or 'Temperatura do motor BE' not in primeiro.get('txt', '') or 'Temperatura do motor BE' not in fx['txt']: prob.append('%s: o 1º cartão diz %r e leva a %r (esperado o aviso do painel → C3, o mesmo da faixa %r)' % (rot, primeiro.get('txt'), primeiro.get('href'), fx['txt']))
+        if erros: prob += ['%s: %s' % (rot, e) for e in erros[:2]]
+        ctx.close()
+    # na janela de conversa em emergência o alarme pedido de velocidade sai sem limite nem leitura (CLAUDE.md 10), também no cartão da E1
+    ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='60', ls={'capitao.alarmes.v1': json.dumps([dict(PED_FOGO[0], campo='sog_nos', limite=10)])}, depois=JANELA_VALE)
+    if not espera_cerebro(pg, prob, 'E1 na janela de emergência', 1500): ctx.close(); return prob
+    r = pg.evaluate(LE_E1)
+    primeiro = r['gat'][0] if r['gat'] else {}
+    if primeiro.get('id') != 'alerta' or 'velocidade, com limite e leitura no plotter' not in primeiro.get('txt', '') or re.search(r'1[08],\d|\bnós\b', primeiro.get('txt', '')): prob.append('E1 na janela de emergência: o cartão do alarme pedido de velocidade diz %r (esperado sem limite nem leitura)' % primeiro.get('txt'))
     ctx.close()
     # o barco parado com alarme: o cartão de alerta vem antes dos 4 gatilhos do conjunto parado
     ctx, pg, erros = abre_tela(b, 'E1-Navegando-Gatilhos', fixo='105', ls={'capitao.replay.sobre': json.dumps({'sog_nos': 0, 'estado': 'Fundeado'})})
@@ -4903,7 +5142,12 @@ MUTANTES_P4F = [
     ('a E1 entra em NAVEGANDO com 0,5 nó (ENTRA = 0,5)', 'E1-Navegando-Gatilhos.dc.html', [("ENTRA = 1, SAI = 0.5, ESPERA = 5000", "ENTRA = 0.5, SAI = 0.5, ESPERA = 5000")], 'histerese'),
     ('a E1 não zera a contagem depois de um intervalo sem tique', 'E1-Navegando-Gatilhos.dc.html', [("if (this._ult1 && agora - this._ult1 > 2500) this._cand = null;", "")], 'aba'),
     ('a E1 sem o FUNDEADO × ATRACADO do quadro (sempre FUNDEADO)', 'E1-Navegando-Gatilhos.dc.html', [("(/atrac/i.test(est) ? 'ATRACADO' : /fundead/i.test(est) ? 'FUNDEADO' : 'FUNDEADO / ATRACADO')", "'FUNDEADO'")], 'histerese'),
-    ('o 1º cartão de alerta da E1 sem o id do alarme (C3 sem #alarme=)', 'E1-Navegando-Gatilhos.dc.html', [("typeof al.detalhe === 'string' && al.detalhe ? al.detalhe : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,", "'C3-Leme-Alerta.dc.html',")], 'alerta'),
+    ('o 1º cartão de alerta da E1 sem o id do alarme (C3 sem #alarme=)', 'E1-Navegando-Gatilhos.dc.html', [("al.detalhe ? al.detalhe : al.pedido ? 'A2-Ponte-Mobile.dc.html#alertas' : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,", "'C3-Leme-Alerta.dc.html',")], 'alerta'),
+    ('a E1 sem os alarmes pedidos no chat (o vigia diz «nenhum alarme ativo» com a faixa do topo aberta)', 'E1-Navegando-Gatilhos.dc.html', [("lista.push({ id: a.id, nivel: 'aviso', texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, quando: String(a.desdeTxt || ''), detalhe: '', sistema: a.sistema, lado: a.lado, pedido: true });", "void 0;")], 'alerta'),
+    ('o cartão do alarme pedido da E1 leva à C3 de um id que ela não tem', 'E1-Navegando-Gatilhos.dc.html', [("al.detalhe ? al.detalhe : al.pedido ? 'A2-Ponte-Mobile.dc.html#alertas' : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,", "al.detalhe ? al.detalhe : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,")], 'alerta'),
+    ('a lista da E1 sem a ordem da faixa (o pedido que começou antes não vem primeiro)', 'E1-Navegando-Gatilhos.dc.html', [("lista.sort((x, y) => (peso(y.nivel) - peso(x.nivel)) || (inf(x.desdeMs) < inf(y.desdeMs) ? -1 : inf(x.desdeMs) > inf(y.desdeMs) ? 1 : 0) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));", "void 0;")], 'alerta'),
+    ('o alarme pedido da E1 sem o começo (agora no lugar de «desde hh:mm:ss»)', 'E1-Navegando-Gatilhos.dc.html', [("quando: String(a.desdeTxt || ''),", "quando: 'agora',")], 'alerta'),
+    ('a E1 sem a janela de emergência no alarme pedido (a velocidade sai com limite e leitura)', 'E1-Navegando-Gatilhos.dc.html', [("B.alarmesPedidosAtivos(undefined, { emergencia: emerg })", "B.alarmesPedidosAtivos()")], 'alerta'),
     ('o cartão de alerta da E1 depois dos gatilhos (order 9)', 'E1-Navegando-Gatilhos.dc.html', [("'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 0,", "'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 9,")], 'alerta'),
     ('o alerta crítico da E1 sem o fundo vermelho', 'E1-Navegando-Gatilhos.dc.html', [("critico: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'var(--cap-crit-fill, #d32f27)',", "critico: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)',")], 'alerta'),
     ('a E1 sem assinar o capitao-telemetria', 'E1-Navegando-Gatilhos.dc.html', [("['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));", "['capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));")], 'vivo'),

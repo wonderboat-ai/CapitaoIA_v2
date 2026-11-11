@@ -180,12 +180,19 @@ class Component extends DCLogic {
     const est = q && typeof q.estado === 'string' ? q.estado : '', local = q && typeof q.local === 'string' ? q.local : '';
     const rot = nav === true ? 'NAVEGANDO' : nav === false ? (/atrac/i.test(est) ? 'ATRACADO' : /fundead/i.test(est) ? 'FUNDEADO' : 'FUNDEADO / ATRACADO') : falta('SEM LEITURA DO SOG');
     const fonte = I ? String(I.fonteTxt || '') : falta(SD);
-    // alertas abertos (a lista única do CapitaoAlertas, a mesma da faixa do topo, da Ponte e da C3): crítico antes de aviso, o mais antigo primeiro
+    // alertas abertos, a mesma lista da faixa do topo e da Ponte: os do CapitaoAlertas e os alarmes pedidos no chat (F12, B.alarmesPedidosAtivos: só se houver algum guardado, a conta varre até 160 s por regra), crítico
+    // antes de aviso, o mais antigo primeiro (o que não tem começo conhecido, desdeMs null, vai para o fim) e por fim o id. O alarme pedido é sempre AVISO e não tem tela de detalhe: o cartão dele leva à lista de alertas da Ponte.
     let lista = []; try { lista = AL && typeof AL.ativos === 'function' ? AL.ativos() : []; } catch (e) { lista = []; }
-    lista = (Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string' && a.id && (a.nivel === 'aviso' || a.nivel === 'critico'));
+    lista = (Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string' && a.id && (a.nivel === 'aviso' || a.nivel === 'critico'))
+      .map((a) => ({ id: a.id, nivel: a.nivel, texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, quando: num(a.desdeMs) && a.hora ? 'desde ' + a.hora : 'agora', detalhe: typeof a.detalhe === 'string' ? a.detalhe : '', sistema: a.sistema, lado: a.lado, pedido: false }));
+    let emerg = false; try { emerg = !!(window.CapitaoEmergencia && window.CapitaoEmergencia.valendo()); } catch (e) { emerg = false; }   // na janela de conversa em emergência a velocidade do alarme pedido sai sem limite nem leitura (CLAUDE.md 10)
+    let pedidos = []; try { if (B && typeof B.alarmesPedidosAtivos === 'function') { let tem = ''; try { tem = localStorage.getItem('capitao.alarmes.v1') || ''; } catch (e) {} if (tem.length >= 3) { const l = B.alarmesPedidosAtivos(undefined, { emergencia: emerg }); pedidos = Array.isArray(l) ? l : []; } } } catch (e) { pedidos = []; }
+    pedidos.forEach((a) => { if (a && typeof a.id === 'string' && a.id && a.nivel === 'aviso') lista.push({ id: a.id, nivel: 'aviso', texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, quando: String(a.desdeTxt || ''), detalhe: '', sistema: a.sistema, lado: a.lado, pedido: true }); });
+    const peso = (n) => (n === 'critico' ? 2 : 1), inf = (x) => (x === null ? Infinity : x);
+    lista.sort((x, y) => (peso(y.nivel) - peso(x.nivel)) || (inf(x.desdeMs) < inf(y.desdeMs) ? -1 : inf(x.desdeMs) > inf(y.desdeMs) ? 1 : 0) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
     const al = lista[0] || null, mais = Math.max(0, lista.length - 1), crit = !!al && al.nivel === 'critico';
     const SISTEMA = { motores: 'Motores', eletrico: 'Elétrico', porao: 'Porão', eletronicos: 'Eletrônicos', tanques: 'Tanques', gerador: 'Gerador', estabilizador: 'Estabilizador' };
-    const alTxt = al ? al.texto + (typeof al.desdeMs === 'number' && al.hora ? ' · desde ' + al.hora : ' · agora') + (mais ? ' · +' + mais + (mais === 1 ? ' alerta' : ' alertas') : '') : '';
+    const alTxt = al ? al.texto + ' · ' + (al.quando || 'agora') + (mais ? ' · +' + mais + (mais === 1 ? ' alerta' : ' alertas') : '') : '';
     // o conjunto: com alarme, o 1º cartão leva ao detalhe do alarme (C3-Leme-Alerta.dc.html#alarme=<id>); os links vêm do estado
     const ask = (p) => (B && B.askHref ? B.askHref('app', p) : 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(p));
     const C16 = (D.protocolos && D.protocolos.canal16) || {};
@@ -194,9 +201,9 @@ class Component extends DCLogic {
     const T = (id, l, sub, href, d, tom, ordem, aria) => ({ id: id, l: l, sub: sub, href: href, d: d, tom: tom, ordem: ordem, aria: aria || l + ' — ' + sub });
     const tiles = [];
     if (al) {
-      const sist = (SISTEMA[al.sistema] || cap(al.sistema)) + (al.lado ? ' ' + String(al.lado).toUpperCase() : '');
-      tiles.push(T('alerta', (crit ? 'ALERTA CRÍTICO' : 'AVISO') + ' · ' + sist.toUpperCase(), alTxt, typeof al.detalhe === 'string' && al.detalhe ? al.detalhe : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,
-        'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 0, (crit ? 'Alerta crítico' : 'Aviso') + ': ' + al.texto + ' — abrir o detalhe do alarme'));
+      const sist = (SISTEMA[al.sistema] || cap(al.sistema) || 'Alarme pedido') + (al.lado ? ' ' + String(al.lado).toUpperCase() : '');
+      tiles.push(T('alerta', (crit ? 'ALERTA CRÍTICO' : 'AVISO') + ' · ' + sist.toUpperCase(), alTxt, al.detalhe ? al.detalhe : al.pedido ? 'A2-Ponte-Mobile.dc.html#alertas' : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,
+        'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 0, (crit ? 'Alerta crítico' : 'Aviso') + ': ' + al.texto + (al.pedido ? ' — abrir a lista de alertas' : ' — abrir o detalhe do alarme')));
       tiles[0].col = '1 / -1';
     }
     if (nav === false) {

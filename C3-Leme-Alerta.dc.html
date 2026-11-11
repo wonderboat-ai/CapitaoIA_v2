@@ -150,17 +150,25 @@ class Component extends DCLogic {
   componentWillUnmount() {
     window.removeEventListener('capitao-telemetria', this._onTele); window.removeEventListener('capitao-alerta', this._onTele); window.removeEventListener('capitao-rebase', this._onTele);
     window.removeEventListener('hashchange', this._onHash);
-    this._dead = true; clearInterval(this._b);
+    this._dead = true; clearInterval(this._b); clearInterval(this._bp);
   }
-  // Tela leve e sempre escura: o cérebro só entra se a pessoa tocar em "Registrar no diário".
-  whenBrain(cb, fail) {
+  // Tela leve e sempre escura: o cérebro só entra se a pessoa tocar em "Registrar no diário" ou se houver alarme pedido no chat guardado neste aparelho (carregaPedidos). Cada espera tem o seu temporizador (`slot`): a que
+  // carrega o cérebro para os alarmes pedidos nunca derruba a do toque em Registrar, nem o contrário.
+  whenBrain(cb, fail, slot) {
     if (window.CapitaoBrain) return cb(window.CapitaoBrain);
     let n = 0;
-    clearInterval(this._b);
-    this._b = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(window.CapitaoBrain); else fail(); return; }
+    const sl = slot || '_b';
+    clearInterval(this[sl]);
+    this[sl] = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this[sl]); if (window.CapitaoBrain) cb(window.CapitaoBrain); else fail(); return; }
       if (n === 1 && !document.querySelector('script[src*="capitao-brain.js"]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
+  }
+  // Os alarmes pedidos no chat (F12) são avaliados pelo cérebro: com algum guardado neste aparelho ele entra sozinho, só para isso (sem nenhum a tela segue leve, sem o cérebro); falhou, a tela diz que não conseguiu conferir.
+  carregaPedidos() {
+    if (this._ped || window.CapitaoBrain) return;
+    this._ped = true;
+    this.whenBrain(() => { if (!this._dead) this.atualiza(); }, () => { this._pedFalha = true; if (!this._dead) this.atualiza(); }, '_bp');
   }
   atualiza() {
     const d = this.dinamico(), k = JSON.stringify(d);
@@ -191,6 +199,16 @@ class Component extends DCLogic {
     const hora = (t, seg) => { try { return F.hora ? F.hora(t, !!seg) : ''; } catch (e) { return ''; } };
     const dur = (t) => (t < 60 ? t + ' s' : Math.floor(t / 60) + ' min ' + (t % 60 ? (t % 60) + ' s' : '').trim()).trim();
     let ativos = []; try { ativos = AL && typeof AL.ativos === 'function' ? AL.ativos(ms) : []; } catch (e) { ativos = []; }
+    // alarmes pedidos no chat (F12): só se houver algum guardado (a conta varre até 160 s por regra) e com o cérebro na tela; são sempre AVISO, nunca o alarme da tela (não têm detalhe: o ABRIR leva à lista de alertas da Ponte)
+    let temPed = false; try { temPed = (localStorage.getItem('capitao.alarmes.v1') || '').length >= 3; } catch (e) { temPed = false; }
+    const Bc = window.CapitaoBrain; let pedidos = [], conferindo = false, semConferir = false;
+    if (temPed) {
+      if (Bc && typeof Bc.alarmesPedidosAtivos === 'function') {
+        let emerg = false; try { emerg = !!(window.CapitaoEmergencia && window.CapitaoEmergencia.valendo()); } catch (e) { emerg = false; }   // na janela de conversa em emergência a velocidade sai sem limite nem leitura (CLAUDE.md 10)
+        try { const l = Bc.alarmesPedidosAtivos(undefined, { emergencia: emerg }); pedidos = (Array.isArray(l) ? l : []).filter((x) => x && typeof x.id === 'string' && x.id && x.nivel === 'aviso'); } catch (e) { semConferir = true; }
+      } else if (this._pedFalha) semConferir = true;
+      else { conferindo = true; this.carregaPedidos(); }
+    }
     // qual alerta: o do endereço, quando é um id do catálogo ou de um alarme aberto agora (a pessoa escolheu: fica nele, aberto ou não). Sem endereço, ou com um id que o catálogo não tem (link velho, id digitado errado), vale o que estiver tocando
     // (ativos()[0], o mais grave); a tela acompanha o que toca e só fica no último (NORMALIZADO, sem sair da tela) quando nenhum alarme está aberto. Nunca diz «nenhum alarme» com um aberto.
     const m = /alarme=([^&]*)/.exec(location.hash || '');
@@ -200,10 +218,14 @@ class Component extends DCLogic {
     else if (ativos[0]) this._id = ativos[0].id;
     const id = this._id, e1 = id && dono(cat, id) ? cat[id] : null;
     // os outros alarmes abertos (o da tela fica de fora): a linha «OUTRO ALARME ABERTO» leva ao detalhe do primeiro
-    const outros = ativos.filter((x) => x.id !== id), o1 = outros[0] || null, nivelRot = (n) => (n === 'critico' ? 'CRÍTICO' : 'AVISO');
+    // (a ordem é a da faixa do topo: crítico antes de aviso, o mais antigo primeiro, o que não tem começo conhecido — desdeMs null — no fim, por fim o id)
+    const nivelRot = (n) => (n === 'critico' ? 'CRÍTICO' : 'AVISO'), peso = (n) => (n === 'critico' ? 2 : 1), inf = (x) => (num(x) ? x : Infinity);
+    const outros = ativos.filter((x) => x.id !== id).map((x) => ({ id: x.id, nivel: x.nivel, desdeMs: x.desdeMs, texto: [x.titulo, x.valorTxt, nivelRot(x.nivel) + (x.hora ? ' desde ' + x.hora : '')].filter(Boolean).join(' · '), href: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(x.id) }))
+      .concat(pedidos.map((x) => ({ id: x.id, nivel: 'aviso', desdeMs: x.desdeMs, texto: [x.texto, 'AVISO' + (x.desdeTxt ? (/^desde /.test(x.desdeTxt) ? ' ' : ' · ') + x.desdeTxt : '')].filter(Boolean).join(' · '), href: 'A2-Ponte-Mobile.dc.html#alertas' })))
+      .sort((x, y) => (peso(y.nivel) - peso(x.nivel)) || (inf(x.desdeMs) < inf(y.desdeMs) ? -1 : inf(x.desdeMs) > inf(y.desdeMs) ? 1 : 0) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+    const o1 = outros[0] || null;
     const outro = o1 ? { outroN: outros.length, outroId: o1.id, outroNivel: o1.nivel, outroRotulo: outros.length > 1 ? outros.length + ' OUTROS ALARMES ABERTOS' : 'OUTRO ALARME ABERTO',
-      outroTexto: [o1.titulo, o1.valorTxt, nivelRot(o1.nivel) + (o1.hora ? ' desde ' + o1.hora : '')].filter(Boolean).join(' · ') + (outros.length > 1 ? ' · e mais ' + (outros.length - 1) : ''),
-      outroHref: 'C3-Leme-Alerta.dc.html#alarme=' + encodeURIComponent(o1.id) } : { outroN: 0, outroId: '', outroNivel: '', outroRotulo: '', outroTexto: '', outroHref: '' };
+      outroTexto: o1.texto + (outros.length > 1 ? ' · e mais ' + (outros.length - 1) : ''), outroHref: o1.href } : { outroN: 0, outroId: '', outroNivel: '', outroRotulo: '', outroTexto: '', outroHref: '' };
     let a = null; try { a = id && AL && typeof AL.porId === 'function' ? AL.porId(id, ms) : null; } catch (e) { a = null; }
     let j = null; if (!a && e1) { try { j = R && typeof R.janela === 'function' ? R.janela(id, ms) : null; } catch (e) { j = null; } }
     // sem a reprodução (simulacao false) ninguém avalia os limites: o alerta só existe com a API de alertas andando; sem ela a tela diz que não há alarme, nunca «dentro da faixa»
@@ -217,8 +239,12 @@ class Component extends DCLogic {
     const base = Object.assign({ estado: estado, nivel: nivel, id: id || '', horaI: horaI, ms: ms === undefined ? null : ms }, outro);
 
     if (estado === 'nenhum') {
-      return Object.assign(base, { selo: 'SEM ALARME ATIVO', kicker: 'Alertas', titulo: 'Nenhum alarme ativo agora', situacao: anda && I && !ativos.length ? 'Tudo dentro da faixa às ' + I.hora + ' · ' + cap1(I.fonteTxt) : 'Alarmes ' + falta(SL) + (I ? ' · ' + cap1(I.fonteTxt) : ''),
-        infoTitulo: 'Quando um alarme abrir', infoTexto: 'Esta tela mostra a leitura agora, a faixa normal, a tendência dos últimos 10 s e o que fazer, e avisa quando a leitura normaliza. Ela nunca se fecha sozinha.' });
+      // «Nenhum alarme ativo» e «Tudo dentro da faixa» só valem sem alarme nenhum aberto, nem os do painel nem os pedidos no chat (os pedidos abertos aparecem na linha abaixo, com o ABRIR); lendo os pedidos ou sem conseguir lê-los a tela não afirma nada
+      const fonteC = I ? ' · ' + cap1(I.fonteTxt) : '', info = { infoTitulo: 'Quando um alarme abrir', infoTexto: 'Esta tela mostra a leitura agora, a faixa normal, a tendência dos últimos 10 s e o que fazer, e avisa quando a leitura normaliza. Ela nunca se fecha sozinha.' };
+      if (conferindo) return Object.assign(base, { selo: 'CONFERINDO', kicker: 'Alertas', titulo: 'Conferindo os alarmes pedidos', situacao: 'Lendo os alarmes pedidos no chat' + fonteC }, info);
+      if (semConferir) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL', kicker: 'Alertas', titulo: 'Nenhum alarme do painel aberto agora', situacao: 'Não consegui conferir os alarmes pedidos no chat agora' + fonteC }, info);
+      if (pedidos.length) return Object.assign(base, { selo: 'SEM ALARME DO PAINEL', kicker: 'Alertas', titulo: 'Nenhum alarme do painel aberto agora', situacao: (pedidos.length === 1 ? 'Há 1 alarme pedido no chat aberto (abaixo)' : 'Há ' + pedidos.length + ' alarmes pedidos no chat abertos (abaixo)') + fonteC }, info);
+      return Object.assign(base, { selo: 'SEM ALARME ATIVO', kicker: 'Alertas', titulo: 'Nenhum alarme ativo agora', situacao: anda && I && !ativos.length ? 'Tudo dentro da faixa às ' + I.hora + fonteC : 'Alarmes ' + falta(SL) + fonteC }, info);
     }
     // a leitura agora: «BB 1,6 bar · 14:05:31» (o lado, o valor do alarme e a hora do quadro)
     const valor = a && a.valorTxt ? a.valorTxt : q && F.campo && F.campo(q, campo) !== null && F.campo(q, campo) !== undefined ? F.campo(q, campo) + (un ? ' ' + un : '') : falta(SL);
@@ -263,8 +289,10 @@ class Component extends DCLogic {
     let selo, situacao, regTxt = '', passosTitulo = '', passosSub = '';
     if (estado === 'ativo') {
       selo = a.nivel === 'critico' ? 'ALERTA CRÍTICO' : 'AVISO';
-      situacao = (a.valorTxt || '') + (a.limiteTxt ? ' · ' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt : '') + ' · desde ' + a.hora + ' · há ' + dur(a.seg);
-      regTxt = (a.valorTxt || '') + (a.limiteTxt ? ' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt + ')' : '') + ', ' + (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + ' desde ' + a.hora;
+      // o começo do alarme pode ser desconhecido (desdeMs null, hora vazia, como o coletor às vezes entrega): sem «desde» nem «há N s»; o diário diz «aberto agora» em vez de uma hora que ninguém sabe
+      const conhece = num(a.desdeMs) && !!a.hora;
+      situacao = (a.valorTxt || '') + (a.limiteTxt ? ' · ' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt : '') + (conhece ? ' · desde ' + a.hora + ' · há ' + dur(a.seg) : ' · aberto agora');
+      regTxt = (a.valorTxt || '') + (a.limiteTxt ? ' (' + (a.valor > a.limite ? 'acima' : 'abaixo') + ' de ' + a.limiteTxt + ')' : '') + ', ' + (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO') + (conhece ? ' desde ' + a.hora : ' aberto agora');
       passosTitulo = 'Faça agora'; passosSub = 'enquanto o alarme durar';
     } else if (estado === 'normalizado') {
       selo = 'NORMALIZADO às ' + hora(j.ate, false).slice(0, 5);

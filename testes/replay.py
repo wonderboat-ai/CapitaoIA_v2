@@ -1629,11 +1629,12 @@ GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegand
                 ('B1-Carta-Web', 1440, 900), ('B2-Carta-Mobile', 390, 844),   # (P4D: a Gestão e os Sistemas)
                 ('E2-Navegando-Sintoma', 390, 844, '#sis=motores'),   # (P4F: a triagem, com o sistema dos motores aberto: a leitura de agora é o texto que anda; o 4º item é o endereço)
                 ('F2-FAQ-Estabilizador-Web', 1440, 900), ('F3-FAQ-Eletronicos', 390, 844), ('F4-FAQ-Gerador-Web', 1440, 900), ('F5-FAQ-Climatizacao', 390, 844),   # (P4H: o estado a bordo dos FAQs; uma por número, web ou app)
-                ('G2-Abastecimento-Web', 1440, 900), ('G2-Abastecimento-Mobile', 390, 844))   # (P4I: o abastecimento, com o diesel e a hora do instante)
+                ('G2-Abastecimento-Web', 1440, 900), ('G2-Abastecimento-Mobile', 390, 844),   # (P4I: o abastecimento, com o diesel e a hora do instante)
+                ('C1-Leme-Web', 1440, 900), ('C2-Leme-Mobile', 390, 844), ('C3-Leme-Alerta', 390, 844, '#alarme=arref_be'), ('C4-Checklist-Web', 1440, 900), ('C4-Checklist-Mobile', 390, 844))   # (P4E: o Leme e os checklists; a C3 no alarme do arrefecimento do BE)
 
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
-    print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2, F2 a F5 e G2: setState só quando o texto exibido muda')
+    print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2, C1 a C4, F2 a F5 e G2: setState só quando o texto exibido muda')
     pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
            for t in telas]
     pgs[0][1].wait_for_timeout(3500)
@@ -1655,12 +1656,14 @@ def gating(b, telas=GATING_TELAS, livre_ms=8000):
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
-        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'E2', 'F', 'G2')):   # (a G2 mostra o diesel e a hora do instante, não o SOG; a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores; os FAQs, a hora do instante)
+        if not nome.startswith(('H2', 'A5', 'B1', 'B2', 'C2', 'C3', 'C4', 'E2', 'F', 'G2')):   # (a G2 mostra o diesel e a hora do instante, não o SOG; a H2 e a A5 não mostram o SOG: a A5 mostra os valores dos sensores, conferidos no verificar.py › teste_sensores; a E2 mostra a rotação dos motores; os FAQs, a hora do instante; a C2, a C3 e a C4, a hora do instante)
             ok('%s: a tela mostra o SOG do instante fixado (%s nós): não deixou de se atualizar' % (nome, f['sog']), f['temSog'], f)
         if nome.startswith(('B1', 'B2', 'E2')):   # (P4D: a Gestão e os Sistemas mostram a rotação dos motores, não o SOG; P4F: a triagem, com os motores abertos, também)
             ok('%s: a tela mostra a rotação do BB do instante fixado (%s rpm): não deixou de se atualizar' % (nome, f['rpm']), f['temRpm'], f)
         if nome[0] == 'F' and nome[1] in '2345':   # (P4H: o estado a bordo dos FAQs mostra a hora do instante fixado)
             ok('%s: a tela mostra a hora do instante fixado (12:01:00): não deixou de se atualizar' % nome, pg.evaluate("() => document.body.innerText.indexOf('Telemetria ao vivo · 12:01:00') >= 0"), f)
+        if nome.startswith(('C2', 'C3', 'C4')):   # (P4E: o horímetro de agora da C2, a leitura «· 12:01:00» da C3 e a fonte da C4 mostram a hora do instante fixado)
+            ok('%s: a tela mostra a hora do instante fixado (12:01:00): não deixou de se atualizar' % nome, pg.evaluate("() => document.body.innerText.indexOf('12:01:00') >= 0"), f)
         if nome.startswith('G2'):   # (P4I: o abastecimento mostra a hora do instante fixado e o diesel dele)
             ok('%s: a tela mostra a hora do instante fixado (12:01:00) e o diesel do quadro: não deixou de se atualizar' % nome, pg.evaluate("() => { const t = document.body.innerText, d = window.CapitaoAgora.fmt.campo(window.CapitaoTelemetria.atual(), 'diesel_litros'); return t.indexOf('Telemetria ao vivo · 12:01:00') >= 0 && t.indexOf(d) >= 0; }"), f)
         ok('%s: sem erro de script' % nome, not pgs[[n for n, _ in pgs].index(nome)][1].erros, pgs[[n for n, _ in pgs].index(nome)][1].erros)
@@ -2384,6 +2387,17 @@ MUTANTES_ARQ = [
      [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
     ('a B2 dando setState a cada tique, sem comparar o texto', 'B2-Carta-Mobile.dc.html',
      [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
+    # P4E: o Leme e os checklists só dão setState quando o texto exibido muda (a chave ganha o relógio: a linha `if (k === this._k) return;` continua no código e só a contagem do setState acusa)
+    ('a C1 dando setState a cada tique (o texto da chave ganha o relógio)', 'C1-Leme-Web.dc.html',
+     [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'gating'),
+    ('a C2 dando setState a cada tique (o texto da chave ganha o relógio)', 'C2-Leme-Mobile.dc.html',
+     [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'gating'),
+    ('a C3 dando setState a cada tique (o texto da chave ganha o relógio)', 'C3-Leme-Alerta.dc.html',
+     [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'gating'),
+    ('a C4 web dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Web.dc.html',
+     [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'gating'),
+    ('a C4 do app dando setState a cada tique (o texto da chave ganha o relógio)', 'C4-Checklist-Mobile.dc.html',
+     [("const d = this.dinamico(), k = JSON.stringify(d);", "const d = this.dinamico(), k = JSON.stringify(d) + Date.now();")], 'gating'),
     # P4F: o Modo navegação só dá setState quando o texto exibido muda (E1 e E2 são CRLF: o trecho é de uma linha só, que o corpo servido casa)
     ('a E1 dando setState a cada tique, sem comparar o texto', 'E1-Navegando-Gatilhos.dc.html',
      [("if (!forca && k === this._k) return;", "")], 'gating'),
