@@ -19,6 +19,7 @@ import os
 import re
 import sys
 import threading
+import time
 import urllib.parse
 
 from playwright.sync_api import sync_playwright
@@ -47,6 +48,10 @@ VOZ = '[aria-label="Falar — a pergunta é transcrita e respondida em texto e v
 # Microfone e voz de mentira para a CONVERSA: o reconhecedor "ouve" as frases de window.__falas (uma por vez) e a fala só
 # registra o texto em window.__faladas. Os eventos do núcleo de voz ficam em window.__voz.
 VOZ_FALSA = r"""(() => {
+  // o <head> das telas roda o capitao-brain.js DUAS vezes e a 2ª cópia assume o window.CapitaoBrain: com a máquina carregada ela chega depois de a tela estar pronta (~200 ms) e leva embora a fala de mentira
+  // posta na 1ª. O abre() espera as duas (window.__cerebros >= 2) antes de qualquer conferência mexer no B.speak.
+  let B_; window.__cerebros = 0;
+  Object.defineProperty(window, 'CapitaoBrain', { configurable: true, get() { return B_; }, set(v) { B_ = v; window.__cerebros++; } });
   window.__falas = []; window.__faladas = []; window.__voz = [];
   window.addEventListener('capitao-voz', (e) => window.__voz.push(e.detail));
   class SR {
@@ -177,6 +182,13 @@ def main():
                         pass
                     pg.wait_for_timeout(600)
 
+                def espera_pedido(antes, prazo=8.0):
+                    # espera o PEDIDO chegar ao Worker simulado (não o relógio): a tela adia a pergunta em ~650 ms (setTimeout do ask) e o «Fonte:» da proposta do relato já está na tela, então
+                    # espera_resposta() sozinho sairia antes do pedido (corrida: reprovava ~50% das vezes). Sem pedido no prazo, segue (a conferência que vem depois acusa).
+                    t0 = time.time()
+                    while len(estado['pedidos']) <= antes and time.time() - t0 < prazo:
+                        pg.wait_for_timeout(50)
+
                 def prepara(chave):
                     pg.goto(base + 'README.md')
                     pg.evaluate("(c) => { if (c) localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); else localStorage.removeItem('capitao.ia.chave.v1'); }", chave)
@@ -187,6 +199,10 @@ def main():
                     pg.goto(base + tela + '.dc.html')
                     pg.wait_for_function(PRONTA, timeout=20000)
                     pg.wait_for_selector(campo, timeout=15000)
+                    try:
+                        pg.wait_for_function('() => window.__cerebros >= 2', timeout=8000)   # as duas cópias do cérebro (ver o VOZ_FALSA)
+                    except Exception:
+                        pass
 
                 def envia(q):
                     antes = len(estado['pedidos'])
@@ -256,6 +272,7 @@ def main():
                 t, n, _ = digita('O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
                 antes = len(estado['pedidos'])
                 pg.locator('a:has-text("O que verificar?")').last.click()
+                espera_pedido(antes)
                 espera_resposta()
                 ped = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
                 ok(tela + ': o botão «O que verificar?» do relato vai à IA (1 pedido, a pergunta pronta com o relato, a leitura de agora) sem navegar nem gravar no diário', len(estado['pedidos']) == antes + 1 and ped.get('pergunta', '').startswith('O que verificar') and 'desligou sozinho' in ped.get('pergunta', '') and bool(ped.get('contexto'))
