@@ -333,7 +333,7 @@ class Component extends DCLogic {
     return { e: e, nAtr: nAtr, atr: atrasadas().map((t) => ({ n: t.equip.split(' (')[0], dn: t.dn })) };
   }
   // Tudo o que a tela exibe e vem do instante, em texto puro (dados, sem elemento React): é a chave do «só redesenha quando o texto exibido muda». As tendências custam ~5 ms:
-  // a conta se refaz a cada 5 s do instante (ou na hora, se ainda não há nenhuma), não a cada tique de 1 s.
+  // a conta se refaz quando o instante muda (a cada tique do replay livre; com o instante fixado não se refaz) e nunca fica atrás do alerta e dos blocos da mesma tela.
   dinamico() {
     const st = this.state, D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, B = window.CapitaoBrain, ex = st.exec || {};
     let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
@@ -356,9 +356,9 @@ class Component extends DCLogic {
     const alertas = { n: itens.length, crit: nCrit, titulo: itens.length ? itens.length + (itens.length === 1 ? ' alerta ativo' : ' alertas ativos') : 'Nenhum alerta ativo',
       status: itens.length ? (nCrit ? nCrit + ' crítico' + (nCrit > 1 ? 's' : '') : '') + (nCrit && nAv ? ' · ' : '') + (nAv ? nAv + (nAv === 1 ? ' aviso' : ' avisos') : '') : (I ? (reserva ? 'Última leitura salva · ' + hh : 'Faixas do guia de bordo · ' + hh) : falta(SL)),
       itens: itens.map((a) => ({ id: a.id, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, texto: a.texto, txt: this.un(a.texto), quando: a.quando, href: a.href, aria: a.rotulo + ' — ' + a.texto + ' · ' + a.quando })) };
-    // tendências (F11): do cérebro, a cada 5 s do instante
+    // tendências (F11): do cérebro, refeitas quando o instante (ou o Executado) muda — a cada tique do replay livre, para o texto nunca ficar atrás do alerta e dos blocos da mesma tela; com o instante fixado, a conta anterior vale
     let tend = this._pred || [];
-    const slot = I ? Math.floor(I.ms / 5000) : -1;
+    const slot = (I ? I.ms : -1) + '|' + JSON.stringify(ex);
     if (B && typeof B.preditiva === 'function' && (slot !== this._predSlot || !this._pred)) { try { tend = this._pred = B.preditiva().map((x) => ({ id: x.id, nivel: x.nivel, rotulo: x.rotulo, titulo: x.titulo, texto: x.texto, fonte: x.fonte })); this._predSlot = slot; } catch (e) { tend = []; } }
     const foraEst = tend.filter((x) => x.nivel !== 'ok').length;
     const cs = window.CapitaoSensores ? window.CapitaoSensores.contagem() : { total: 0, comValor: 0 };

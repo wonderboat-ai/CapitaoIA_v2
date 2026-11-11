@@ -377,10 +377,11 @@ class Component extends DCLogic {
       itens: itens.map((a) => ({ id: a.id, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, texto: a.texto, quando: a.quando, href: a.href, aria: a.rotulo + ' — ' + a.texto + ' · ' + a.quando })) };
 
     // ——— Tendências (F11): só com a aba aberta; sem o cérebro, sem bloco ———
-    // (cerca de 5 ms por chamada: a conta se refaz a cada 5 s do instante, ou na hora se ainda não há nenhuma, e não a cada tique de 1 s)
+    // (cerca de 5 ms por chamada: a conta se refaz quando o instante muda — a cada tique do replay livre, para o texto nunca ficar atrás do alerta e dos motores da mesma tela — e quando o Executado muda;
+    // com o instante fixado ou a mesma leitura, o texto da conta anterior vale e o JSON do dinamico() não muda: nenhum redesenho)
     let tend = [];
     if (st.aba === 'tend' && B && typeof B.preditiva === 'function') {
-      const slot = I ? Math.floor(I.ms / 5000) : -1;
+      const slot = (I ? I.ms : -1) + '|' + JSON.stringify(ex);
       if (slot !== this._predSlot || !this._pred) { try { this._pred = B.preditiva().map((x) => ({ id: x.id, nivel: x.nivel, rotulo: x.rotulo, titulo: x.titulo, texto: x.texto, fonte: x.fonte })); this._predSlot = slot; } catch (e) { this._pred = []; } }
       tend = this._pred;
     }

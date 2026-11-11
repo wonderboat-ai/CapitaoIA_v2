@@ -47,12 +47,24 @@
   var COR = { normal: ['var(--cap-ok, #34c77a)', 'var(--cap-ok-rgb, 52,199,122)'], aviso: ['var(--cap-warn, #f0a63a)', 'var(--cap-warn-rgb, 240,166,58)'], critico: ['var(--cap-crit, #ff3b30)', 'var(--cap-crit-rgb, 255,59,48)'],
     sem: ['var(--cap-ink3, #97a3c0)', 'var(--cap-ink3-rgb, 151,163,192)'] };
 
+  // os itens da lista de valores e da dica (rótulo e valor de cada campo): nos liga/desliga o rótulo do campo já carrega o estado («Radar transmitindo», «Dessalinizador ligado»), então fica só o nome e o
+  // valor (ligado/desligado) diz o resto, sem «ligado desligado»; dois campos do mesmo equipamento com o mesmo rótulo («Volante do estabilizador» em rpm e em %) viram um item só, com os dois valores
+  function itensTexto(itens) {
+    var out = [], i, it, k, j, achou;
+    for (i = 0; i < itens.length; i++) {
+      it = itens[i]; k = it.b ? it.k.replace(/\s+(ligad[oa]s?|transmitindo)$/i, '') : it.k; achou = null;
+      for (j = 0; j < out.length; j++) if (out[j].k === k) achou = out[j];
+      if (achou) achou.v += ' · ' + it.v; else out.push({ k: k, v: it.v });
+    }
+    return out;
+  }
+
   function ponto(p, q, modo) {
-    var itens = [], tem = false, i, v, linha2, inc = p.id === 'inclinometro', nv;
+    var itens = [], tem = false, i, v, linha2, inc = p.id === 'inclinometro', nv, txt;
     for (i = 0; i < (p.campos || []).length; i++) {
       v = valorCampo(q, p.campos[i]);
       if (v !== null) tem = true;
-      itens.push({ k: rotuloCampo(p.campos[i]), v: v === null ? falta(SL) : v, c: p.campos[i], cru: v });
+      itens.push({ k: rotuloCampo(p.campos[i]), v: v === null ? falta(SL) : v, c: p.campos[i], cru: v, b: !!q && typeof q[p.campos[i]] === 'boolean' });
     }
     if (inc) {   // roll, pitch e yaw (F08): jogo, caimento e proa, cada um como a tela mostra
       var j = valorCampo(q, 'jogo_graus'), c = valorCampo(q, 'caimento_graus'), y = valorCampo(q, 'proa_graus');
@@ -63,8 +75,9 @@
       linha2 = vals.length ? (modo === 'app' ? vals.slice(0, 1) : vals.slice(0, 2)).join(' · ') : falta(SL);
     }
     nv = tem ? pior(q, p.campos || []) : 'sem';
-    return { n: p.n, id: p.id, rotulo: p.rotulo, curto: CURTO[p.id] || p.rotulo, onde: p.onde, vista: p.vista, x: p.x, y: p.y, campos: p.campos || [], itens: itens.map(function (it) { return { k: it.k, v: it.v }; }),
-      linha1: CURTO[p.id] || p.rotulo, linha2: linha2, titulo: p.rotulo + ' · ' + p.onde + ': ' + itens.map(function (it) { return it.k + ' ' + it.v; }).join(' · '),
+    txt = itensTexto(itens);
+    return { n: p.n, id: p.id, rotulo: p.rotulo, curto: CURTO[p.id] || p.rotulo, onde: p.onde, vista: p.vista, x: p.x, y: p.y, campos: p.campos || [], itens: txt,
+      linha1: CURTO[p.id] || p.rotulo, linha2: linha2, titulo: p.rotulo + ' · ' + p.onde + ': ' + txt.map(function (it) { return it.k + ' ' + it.v; }).join(' · '),
       cor: COR[nv][0], rgb: COR[nv][1], tem: tem, nivel: nv, bloco: (p.bloco && (p.bloco[modo] || p.bloco.web)) || null };
   }
   function vistas(modo) {

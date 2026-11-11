@@ -1173,6 +1173,13 @@ MOLDURA_JS = """(function () {
   function troca() { if (pronto || !R || !R.Component) return; pronto = true; var P = R.Component.prototype, o = P.setState; P.setState = function () { window.__sets++; return o.apply(this, arguments); }; }
   Object.defineProperty(window, 'React', { configurable: true, get: function () { troca(); return R; }, set: function (v) { R = v; } });
 })();"""
+# conta as chamadas de CapitaoReplay.serie (o gráfico e as tendências leem as séries por ela): o setState de classe não pega o gráfico (um componente de função com useState), mas cada releitura dele passa por aqui
+CONTA_SERIE_JS = """(function () {
+  var RP; window.__series = 0;
+  Object.defineProperty(window, 'CapitaoReplay', { configurable: true, get: function () { return RP; }, set: function (v) {
+    if (v && typeof v.serie === 'function') { var o = v.serie; v = Object.assign({}, v, { serie: function () { window.__series++; return o.apply(this, arguments); } }); }
+    RP = v; } });
+})();"""
 ESPERA_MOLDURA = "() => document.querySelector('capitao-theme-toggle button') && window.CapitaoReplay"
 MOLDURA_SEL = 'capitao-cabecalho,capitao-faixa,capitao-topo-app'
 # começa a medir: guarda os nós, põe o foco no botão do tema e liga o observador de mutações
@@ -1635,24 +1642,29 @@ GATING_TELAS = (('Main', 1440, 900), ('H2-Home-Mobile', 390, 844), ('E1-Navegand
 
 def gating(b, telas=GATING_TELAS, livre_ms=8000):
     print('Main, H2, E1, E2, A1, A2, A4, A5, B1, B2, C1 a C4, F2 a F5 e G2: setState só quando o texto exibido muda')
-    pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
+    pgs = [(t[0], abre(b, caminho='/%s.dc.html%s' % (t[0], t[3] if len(t) > 3 else ''), sessao=True, init=MOLDURA_JS + CONTA_SERIE_JS, viewport={'width': t[1], 'height': t[2]}, espera="() => window.CapitaoReplay && window.__ticks >= 1"))
            for t in telas]
     pgs[0][1].wait_for_timeout(3500)
     for nome, pg in pgs:
-        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
+        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; window.__series = 0; }")
     pgs[0][1].wait_for_timeout(livre_ms)
-    livre = {nome: pg.evaluate("() => ({ sets: window.__sets, ticks: window.__ticks })") for nome, pg in pgs}
+    livre = {nome: pg.evaluate("() => ({ sets: window.__sets, ticks: window.__ticks, series: window.__series })") for nome, pg in pgs}
     for nome, pg in pgs:
         pg.evaluate("() => { window.CapitaoReplay.fixar(60); }")
     pgs[0][1].wait_for_timeout(1800)
     for nome, pg in pgs:
-        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; }")
+        pg.evaluate("() => { window.__sets = 0; window.__ticks = 0; window.__series = 0; }")
     pgs[0][1].wait_for_timeout(3300)
     for nome, pg in pgs:
         f = pg.evaluate("""() => { const v = window.CapitaoTelemetria.atual(), nb = (x) => x.toFixed(1).replace('.', ','), t = document.body.innerText, rpm = window.CapitaoAgora.fmt.campo(v, 'motor_bb_rpm');
-          return { sets: window.__sets, ticks: window.__ticks, sog: nb(v.sog_nos), temSog: t.indexOf(nb(v.sog_nos)) >= 0, rpm: rpm, temRpm: t.indexOf(rpm) >= 0 }; }""")
+          return { sets: window.__sets, ticks: window.__ticks, series: window.__series, sog: nb(v.sog_nos), temSog: t.indexOf(nb(v.sog_nos)) >= 0, rpm: rpm, temRpm: t.indexOf(rpm) >= 0 }; }""")
         l = livre[nome]
         ok('%s: livre, %d setState em %d tiques (nunca mais que um por tique)' % (nome, l['sets'], l['ticks']), l['ticks'] >= livre_ms // 1000 - 2 and l['sets'] <= l['ticks'], l)
+        # P4C (revisão final): o gráfico é um componente de função (useState), que o setState de classe acima não vê; cada releitura dele passa por CapitaoReplay.serie. Livre, a série anda e é lida
+        # (controle: o contador funciona); com o instante fixado, nenhuma leitura de série em 3 s ou mais de tiques (nem do gráfico, nem das tendências): nada recalcula quando nada mudou
+        if nome.startswith(('A1', 'A2', 'G2')):
+            ok('%s: livre, o gráfico lê a série (%d leituras em %d tiques): o contador funciona' % (nome, l['series'], l['ticks']), l['series'] > 0, l)
+            ok('%s: com o instante fixado, %d tiques e nenhuma leitura de série (%d): o gráfico e as tendências não recalculam o que não mudou' % (nome, f['ticks'], f['series']), f['ticks'] >= 3 and f['series'] == 0, f)
         if nome.startswith('H2'):
             ok('%s: livre, nenhum setState (o único texto vindo do motor é o LED, que não muda)' % nome, l['sets'] == 0, l)
         ok('%s: com o instante fixado, %d tiques e nenhum setState (o texto exibido não mudou)' % (nome, f['ticks']), f['ticks'] >= 3 and f['sets'] == 0, f)
@@ -2374,6 +2386,10 @@ MUTANTES_ARQ = [
     ('a H2 dando setState a cada tique, sem comparar o LED', 'H2-Home-Mobile.dc.html',
      [("if (k !== this._vivoK) this.setState({ vivo: k });", "this.setState({ vivo: k });")], 'gating'),
     # P4C: a Ponte e o mapa de sensores só dão setState quando o texto exibido muda
+    ('o gráfico refeito a cada tique mesmo com o instante fixado (setTique incondicional)', 'capitao-grafico.js',
+     [("if (k !== '' && k === vez.current) return; vez.current = k; setTique(", "vez.current = k; setTique(")], 'gating_grafico'),
+    ('as Tendências da A2 refeitas a cada tique com o instante fixado (o slot não compara nada)', 'A2-Ponte-Mobile.dc.html',
+     [("const slot = (I ? I.ms : -1) + '|' + JSON.stringify(ex);", "const slot = Math.random();")], 'gating'),
     ('a A1 dando setState a cada tique, sem comparar o texto', 'A1-Ponte-Web.dc.html',
      [("    if (k === this._k) return;\n    this._k = k; this._din = d; this._fresco = true;", "    this._k = k; this._din = d; this._fresco = true;")], 'gating'),
     ('a A2 dando setState a cada tique, sem comparar o texto', 'A2-Ponte-Mobile.dc.html',
@@ -2482,6 +2498,8 @@ def mutantes_arq(b):
                     g4_rebase(b, telas=[t_ for t_ in G4_REBASE if t_[0] == arq.replace('.dc.html', '')])
                 elif qual == 'g3_rebase':
                     g3_rebase(b, telas=[t_ for t_ in G3_REBASE if t_[0] == arq.replace('.dc.html', '')])
+                elif qual == 'gating_grafico':   # (o arquivo do gráfico serve a Ponte e o Abastecimento: a Ponte basta para acusar)
+                    gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0] in ('A1-Ponte-Web', 'A2-Ponte-Mobile')], livre_ms=4000)
                 else:
                     gating(b, telas=[t_ for t_ in GATING_TELAS if t_[0].split('-')[0] == arq.split('-')[0].split('.')[0]], livre_ms=4000)
             except Exception as e:   # aqui um erro do próprio teste NÃO conta como acusação (esconderia um erro de código do teste): reprova

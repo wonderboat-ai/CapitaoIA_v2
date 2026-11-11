@@ -9,7 +9,7 @@
    marcado e legendado), linha contínua, sem NaN. As métricas do laço (rotação, óleo, arrefecimento) só têm a janela de 150 s: nas longas a volta se repete e a linha sairia reta.
    Cursor (mouse, dedo ou teclado de ponteiro): linha no instante, pontos nas séries e uma caixa com a hora e os valores. Claro e escuro pelas variáveis --cap-*.
    Sem o replay (modo real: simulacao false, ou sem tabela) a série não existe: o gráfico diz SEM DADOS e a leitura de agora, e nada é desenhado (o caminho `null` não se apaga).
-   Nenhum timer: o gráfico ouve o 'capitao-telemetria' (1 s, parado com a página oculta). Nunca lança erro. No SOS o arquivo nem se define (o SOS não lê a reprodução). */
+   Nenhum timer: o gráfico ouve o 'capitao-telemetria' (1 s, parado com a página oculta) e só se refaz quando o instante muda (fixado, não recalcula nada). Nunca lança erro. No SOS o arquivo nem se define (o SOS não lê a reprodução). */
 (function () {
   var EM_SOS = false;
   try { EM_SOS = /SOS-/.test(location.pathname); } catch (e) {}
@@ -145,9 +145,12 @@
       var a = React.useState(null), cur = a[0], setCur = a[1];
       var b = React.useState(0), tique = b[0], setTique = b[1];
       var c = React.useState(num(props.largura) ? props.largura : 480), larg = c[0], setLarg = c[1];
-      var ref = React.useRef(null), svgRef = React.useRef(null), fim = React.useRef(0);
+      var ref = React.useRef(null), svgRef = React.useRef(null), fim = React.useRef(0), vez = React.useRef(null);
       React.useEffect(function () {
-        var on = function () { if (!document.hidden) setTique(function (t) { return t + 1; }); };
+        // só refaz o desenho quando o instante muda (o segundo do replay, a leitura do coletor): com o instante fixado o gráfico não recalcula as séries a cada tique, como as telas (nenhum setState sem texto novo)
+        var chave = function () { var a = A(), i = null; try { i = a && typeof a.instante === 'function' ? a.instante() : null; } catch (e) { i = null; } return i ? i.ms + '|' + i.fonte : ''; };
+        var on = function () { var k; if (document.hidden) return; k = chave(); if (k !== '' && k === vez.current) return; vez.current = k; setTique(function (t) { return t + 1; }); };
+        vez.current = chave();
         window.addEventListener('capitao-telemetria', on);
         return function () { window.removeEventListener('capitao-telemetria', on); clearTimeout(fim.current); };
       }, []);
