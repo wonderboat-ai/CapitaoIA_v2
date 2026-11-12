@@ -17,9 +17,7 @@ bordo	marinheirinho	m	s
 bordo	timoneiro-reserva	m	s
 bordo	aprendiz	m	s
 bordo	subcomandante	m	s
-bordo	co-piloto	m	s
 bordo	comissário	m	s
-bordo	rádio-operador	m	s
 terra	despachante	m	s
 bordo	praticante	m	s
 terra	mestre-de-obras	m	s

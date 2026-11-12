@@ -128,3 +128,63 @@ a menina não alcança a escada	2	ctl
 o menino não alcança a escada	2	ctl
 o jet ski está sozinho e não vejo o piloto	2	ctl
 não estamos achando ele, será que caiu?	2	ctl
+# —— 2ª rodada de correção do fechamento: os literais que a revisão achou fora da estrutura (o partitivo, o sem substantivo, o nome sem artigo, a composta, as 2 letras, a pessoa que também é coisa, a queda sem destino, o que a onda faz, a contração) e os controles da rotina ——
+os nossos sumiram	2	1
+dois sumiram	2	1
+faltam dois	2	1
+sumiram todos	2	1
+sumiu todo mundo	2	1
+o que foi nadar não voltou	2	8
+o de azul sumiu	2	1
+um dos meus trabalhadores não voltou	1	1
+Genivaldo se perdeu	2	1
+Tuca está boiando	2	4
+Tuca foi levado pela correnteza	2	8
+o DJ sumiu	2	7
+o dj desapareceu	2	7
+o cliente sumiu	1	7
+os clientes sumiram	1	7
+o cliente não volta do mergulho	2	7
+o fiscal está boiando	2	7
+minha vó sumiu	2	7
+meu vô sumiu	2	7
+a vó desapareceu	2	7
+o ex-marido sumiu	2	7
+a ex-namorada sumiu	2	7
+o guarda-vidas desapareceu	2	7
+um fã sumiu	2	1
+nossa delegação desapareceu	2	1
+o dono caiu	2	8
+caiu o técnico	2	8
+o dono caiu, onde estamos?	2	8
+o técnico escorregou e caiu	2	8
+o grumete caiu	2	8
+não sei onde o arrais está, será que caiu	2	8
+o catraieiro foi levado pela correnteza	2	8
+a onda levou o Pedro	2	8
+o Pedro foi engolido por uma onda	2	8
+vi o Pedro cair no mar	2	8
+o Pedro nadou no mar e não veio de volta	2	8
+jogamos a boia para o Pedro mas não alcança	2	8
+chamei o Pedro três vezes e nada	1	2
+a lancha do Pedro está aqui e ele não	1	2
+quem viu o Pedro por último?	1	2
+não temos notícia desse gordinho	1	2
+não temos notícia dele	1	2
+o Pedro sumiiu	2	1
+sumiu-se o armador	2	1
+o armador evaporou	2	1
+o Fábio foi à farmácia e não voltou	0	ctl
+o Pedro não retornou minha ligação	0	ctl
+o Pedro não apareceu na reunião	0	ctl
+o compressor sumiu	0	ctl
+o horímetro sumiu	0	ctl
+o ar-condicionado não volta a funcionar	0	ctl
+onde está o próximo ponto da rota?	0	ctl
+estamos sem o mecânico hoje	0	ctl
+quem está sem colete?	0	ctl
+o curso de mergulho não aparece na agenda	0	ctl
+o euro caiu?	0	ctl
+o vento caiu	0	ctl
+o contador sumiu	0	ctl
+o guia de bordo sumiu	0	ctl

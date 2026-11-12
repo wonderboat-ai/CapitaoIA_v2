@@ -1914,7 +1914,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -7668,10 +7668,10 @@ def es_pagina_antiga(b, src):
     return pg
 
 
-def es_vocab_livre(corpo):
-    """As palavras do vocabulário reservado que o texto do cérebro tem (palavra inteira, sem acento): tem de ser nenhuma — a pessoa é a estrutura, não uma lista."""
-    t = sem_acento_es(corpo.lower())
-    return [w for w in ES_VOCAB if re.search(r'(?<![a-z0-9])' + re.escape(sem_acento_es(w.lower())) + r'(?![a-z0-9])', t)]
+def es_vocab_livre(corpo, vocab=None):
+    """As palavras do vocabulário reservado que o CÓDIGO do cérebro tem (os comentários não contam; palavra inteira, sem acento): tem de ser nenhuma — a pessoa é a estrutura, não uma lista."""
+    t = sem_acento_es(re.sub(r'(?<=\s)//[^\n]*', '', corpo).lower())
+    return [w for w in (ES_VOCAB if vocab is None else vocab) if re.search(r'(?<![a-z0-9])' + re.escape(sem_acento_es(w.lower())) + r'(?![a-z0-9])', t)]
 
 
 def grupo_p4g_estrutura(b, muta, ped):
@@ -7736,6 +7736,208 @@ def grupo_p4g_estrutura(b, muta, ped):
 
 
 GRUPOS_3A['p4g_estrutura'] = grupo_p4g_estrutura
+
+
+# ═══ Fechamento do grupo home (P4G), 2ª RODADA DE CORREÇÃO: a ESTRUTURA do SUJEITO ═══
+# A 1ª rodada fechou o portão por estrutura para «o + substantivo aberto». A revisão achou o resto do sujeito que a estrutura ainda não via: o partitivo («um dos meus X», «um de vocês», «dois deles»), o numeral e o quantificador
+# SEM substantivo («dois sumiram», «sumiram todos», «sumiu todo mundo»), a relativa («o que foi nadar não voltou»), a anáfora («o de azul sumiu»), o possessivo sem cabeça («os nossos sumiram»), o nome SEM artigo fora de PRENOMES
+# («Tuca está boiando», o apelido em minúscula do ditado), a palavra composta («ex-marido») e a de 2 letras («a vó», «o DJ»), o coletivo em -ção, a pessoa que também é coisa («o fiscal», «o cliente»), o erro de digitação do verbo,
+# a contração com demonstrativo («notícia desse X») e os quadros que nenhuma lista cobria («a onda levou X», «vi X cair no mar», «jogamos a boia para X»). Este grupo GERA em vez de listar: o vocabulário 2 (escrito do zero, em
+# testes/dados/pessoa-vocab2.txt) × os quadros antigos e novos, a matriz do sujeito sem substantivo, os apelidos, o erro de digitação, a pessoa que também é coisa — e confere a rotina (pessoa-rotina2.txt) contra a mesma rede.
+ES2_VOCAB = [tuple(l.split('\t')) for l in le_dados('pessoa-vocab2.txt')]   # (categoria, forma, gênero, número)
+ES2_ROTINA = le_dados('pessoa-rotina2.txt')
+ES2_DET = {('m', 's'): ['o', 'meu', 'um', 'esse', 'aquele', 'nosso'], ('f', 's'): ['a', 'minha', 'uma', 'essa', 'aquela', 'nossa'],
+           ('m', 'p'): ['os', 'meus', 'uns', 'esses', 'aqueles', 'nossos'], ('f', 'p'): ['as', 'minhas', 'umas', 'essas', 'aquelas', 'nossas']}
+ES2_CONTR = {'o': 'do', 'a': 'da', 'os': 'dos', 'as': 'das', 'meu': 'do meu', 'minha': 'da minha', 'meus': 'dos meus', 'minhas': 'das minhas', 'nosso': 'do nosso', 'nossa': 'da nossa', 'nossos': 'dos nossos', 'nossas': 'das nossas',
+             'um': 'de um', 'uma': 'de uma', 'uns': 'de uns', 'umas': 'de umas', 'esse': 'desse', 'essa': 'dessa', 'esses': 'desses', 'essas': 'dessas', 'aquele': 'daquele', 'aquela': 'daquela', 'aqueles': 'daqueles', 'aquelas': 'daquelas'}
+# os quadros que a 1ª rodada não tinha: a queda sem destino, o que a onda faz, o que se viu, o que se atirou, a contração com demonstrativo (`{DEM}`)
+ES2_NOVOS = [
+    ('s3', '{S} caiu', 'sos'), ('s3', 'caiu {S}', 'sos'), ('s3', '{S} foi levado pela correnteza', 'sos'), ('s9', '{S} está se debatendo', 'sos'),
+    ('n1', 'a onda levou {S}', 'sos'), ('n1', '{S} foi engolido por uma onda', 'sos'), ('n1', 'puxaram {S} pra baixo', 'sos'),
+    ('n2', 'chamei {S} três vezes e nada', 'seguro'), ('n2', 'a lancha {DE} está aqui e ele não', 'seguro'), ('n2', 'quem viu {S} por último?', 'seguro'),
+    ('n3', 'vi {S} cair no mar', 'sos'), ('n3', '{S} nadou no mar e não veio de volta', 'sos'), ('n3', 'jogamos a boia para {S} mas não alcança', 'sos'),
+    ('n4', 'não temos notícia {DEM}', 'seguro'), ('n4', 'procuramos o barco todo e nada {DEM}', 'seguro'), ('n4', 'estamos sem notícias {DEM}', 'seguro')]
+
+
+def es2_sint(h, g, n, i):
+    """O sintagma da palavra do vocabulário 2: o artigo, o possessivo, o indefinido, o demonstrativo (em rodízio), o partitivo («um dos meus X», no plural) e a palavra SEM artigo (o ditado)."""
+    if n == 'p' and i % 5 == 0: return ('um dos meus ' if g == 'm' else 'uma das minhas ') + h
+    if i % 11 == 3 and len(h) >= 4: return h   # (a palavra SOLTA só de 4 letras ou mais: a de 2 letras vem sempre com o artigo)
+    d = ES2_DET[(g, n)]
+    return d[i % len(d)] + ' ' + h
+
+
+def es2_de(s):
+    """«o dono» → «do dono», «um dos meus X» → «de um dos meus X», «X» (sem artigo) → «de X»."""
+    p = s.split(' ', 1)
+    if len(p) == 2 and p[0] in ES2_CONTR and not (p[0] in ('um', 'uma') and p[1].startswith(('dos ', 'das '))): return ES2_CONTR[p[0]] + ' ' + p[1]
+    return 'de ' + s
+
+
+def es2_matriz(passo=3):
+    """[(frase, família, esperado, palavra)]: cada palavra do vocabulário 2 com cada quadro (os 47 de antes e os novos), pura e, a cada `passo`, com vocativo, cauda de dado e caixa trocados."""
+    out, i = [], 0
+    for cat, h, g, n in ES2_VOCAB:
+        dem = ('desses ' if g == 'm' else 'dessas ') + h if n == 'p' else ('desse ' if g == 'm' else 'dessa ') + h
+        for fam, modelo, esp in ES_QUADROS + ES2_NOVOS:
+            i += 1
+            s = es2_sint(h, g, n, i)
+            t = modelo.replace('{S}', s).replace('{DE}', es2_de(s)).replace('{DEM}', dem)
+            if ' ' not in s and fam in ('s1', 's2') and esp == 'sos': esp = 'seguro'   # (a palavra SOLTA, sem artigo, é o candidato duvidoso: o sumiço dela é a ESPERA; a água (queda, boiando) é o socorro)
+            out.append((t, fam, esp, h))
+            if i % passo == 0:
+                v = ES_VOCATIVOS[(i // 3) % len(ES_VOCATIVOS)] + t + ES_CAUDAS[i % len(ES_CAUDAS)]
+                caixa = PERD_CAIXAS[i % 4]
+                out.append((perd_caixa(v, caixa) if caixa != 'orig' else v, fam + '+', esp, h))
+    return out
+
+
+# o sujeito SEM substantivo: o quantificador, o numeral, o partitivo, a relativa, a anáfora, o genérico × os quadros (o singular e o plural do verbo vêm no (singular, plural) de cada quadro)
+ES2_SEM = {
+    'quantificador': [('todos', 1), ('todas', 1), ('todo mundo', 0), ('geral', 0), ('o resto', 0), ('os outros', 1), ('as outras', 1), ('quase todos', 1), ('a maioria', 0), ('vários', 1), ('alguns', 1), ('algumas', 1), ('metade da turma', 0), ('muita gente', 0), ('a turma toda', 0), ('o pessoal todo', 0)],
+    'numeral': [('dois', 1), ('três', 1), ('quatro', 1), ('cinco', 1), ('duas', 1), ('os dois', 1), ('os três', 1), ('as duas', 1), ('uns três', 1), ('os cinco', 1)],
+    'partitivo': [('um dos meus', 0), ('um dos nossos', 0), ('uma das nossas', 0), ('um deles', 0), ('uma delas', 0), ('um de vocês', 0), ('dois deles', 1), ('dois dos nossos', 1), ('uma das moças', 0), ('um dos caras', 0), ('uma das faxineiras', 0), ('um dos jogadores', 0)],
+    'relativo': [('o que foi nadar', 0), ('o que mergulhou', 0), ('a que estava na proa', 0), ('quem foi nadar', 0), ('quem estava no caiaque', 0), ('o que estava de azul', 0), ('os que foram de caiaque', 1), ('as que foram nadar', 1), ('os que ficaram na praia', 1)],
+    'anafora': [('o último', 0), ('a última', 0), ('o mais velho', 0), ('o mais novo', 0), ('o do meio', 0), ('o de azul', 0), ('a de vermelho', 0), ('o outro', 0), ('o da camisa azul', 0), ('o careca', 0), ('a loira', 0), ('o gordinho', 0)],
+    'generico': [('alguém', 0), ('um cara', 0), ('uma moça', 0), ('um senhor', 0), ('um rapaz', 0), ('uma pessoa', 0), ('duas pessoas', 1)]}
+ES2_SEM_QUADROS = [
+    ('{S} {sumiu}', 'seguro'), ('{sumiu} {S}', 'seguro'), ('{S} {desapareceu}', 'seguro'), ('{desapareceu} {S}', 'seguro'), ('{falta} {S}', 'seguro'), ('{S} {esta} faltando', 'seguro'), ('cadê {S}?', 'seguro'),
+    ('{S} não {voltou}', 'seguro'), ('não vejo {S}', 'seguro'), ('perdemos {S}', 'seguro'), ('ninguém viu {S}', 'seguro'), ('{S} não {esta} a bordo', 'seguro'),
+    ('{S} {sumiu} no mar', 'sos'), ('{S} {caiu} no mar', 'sos'), ('{caiu} {S} na água', 'sos'), ('{S} {foi} nadar e não {voltou}', 'sos'), ('{S} {esta} boiando', 'sos'), ('{S} {ficou} pra trás no mar', 'sos'),
+    ('{S} {mergulhou} e não {subiu}', 'sos'), ('deixamos {S} para trás', 'sos')]
+ES2_VERBOS = {'sumiu': ('sumiu', 'sumiram'), 'desapareceu': ('desapareceu', 'desapareceram'), 'falta': ('falta', 'faltam'), 'esta': ('está', 'estão'), 'voltou': ('voltou', 'voltaram'), 'caiu': ('caiu', 'caíram'),
+              'foi': ('foi', 'foram'), 'ficou': ('ficou', 'ficaram'), 'mergulhou': ('mergulhou', 'mergulharam'), 'subiu': ('subiu', 'subiram')}
+
+
+def es2_sem():
+    """[(frase, grupo, esperado)] do sujeito sem substantivo (a decoração: pura, com vocativo e cauda de dado, em rodízio)."""
+    out, i = [], 0
+    for g, lista in ES2_SEM.items():
+        for sj, pl in lista:
+            for modelo, esp in ES2_SEM_QUADROS:
+                if sj.startswith('quem ') and modelo.startswith(('{falta}', 'cadê', 'não vejo', 'perdemos', 'ninguém', 'deixamos')): continue
+                i += 1
+                t = modelo.replace('{S}', sj)
+                for k, (a, b) in ES2_VERBOS.items(): t = t.replace('{' + k + '}', b if pl else a)
+                if i % 3 == 0: t = ES_VOCATIVOS[(i // 3) % len(ES_VOCATIVOS)] + t + ES_CAUDAS[i % len(ES_CAUDAS)]
+                out.append((t, g, esp))
+    return out
+
+
+# o nome SEM artigo que nenhuma lista tem (o apelido): no começo da frase, no meio, em minúscula (o ditado), em CAIXA ALTA e com o artigo
+ES2_APELIDOS = ['Tuca', 'Dedé', 'Pitica', 'Babau', 'Zezinho', 'Nandinha', 'Betão', 'Lalá', 'Tonhão', 'Cacá', 'Xuxa', 'Genivaldo', 'Ozires', 'Valdomiro', 'Zuleica', 'Nenê', 'Quim', 'Tião', 'Pepê', 'Mazinho', 'Dinha', 'Fifi', 'Binho', 'Gigi',
+                'Tatá', 'Lelê', 'Quinha', 'Beba', 'Toninho', 'Zito', 'Mimi', 'Roni', 'Edinho', 'Dorinha', 'Cleo', 'Duca', 'Kiko', 'Lica', 'Maninho', 'Nilo', 'Pituca', 'Quitéria', 'Rubinho', 'Salete', 'Teca', 'Wanderley', 'Zenaide', 'Ivonete', 'Jacó', 'Marquinhos']
+ES2_NOME_QUADROS = [('{N} sumiu', 'seguro'), ('{N} está boiando', 'sos'), ('{N} se perdeu', 'seguro'), ('{N} foi levado pela correnteza', 'sos'), ('{N} caiu no mar', 'sos'), ('{N} foi nadar e não voltou', 'sos'), ('{N} ficou pra trás no mar', 'sos'),
+                    ('{N} está faltando', 'seguro'), ('{N} não responde mais', 'seguro'), ('não achei {N}', 'seguro'), ('perdi {N} de vista', 'seguro'), ('ninguém viu {N}', 'seguro'), ('{N} se jogou da lancha na água', 'sos'), ('jogamos a boia para {N} mas não alcança', 'sos'),
+                    ('{N} caiu', 'sos'), ('{N} mergulhou no mar e não subiu', 'sos')]
+ES2_TIPOS = [('sumiu', ['sumiiu', 'summiu', 'sumu', 'sumui', 'sumiou', 'somiu', 'sumio']), ('desapareceu', ['desapareceeu', 'desaparceu', 'dsapareceu', 'desaparecue', 'desaparecru', 'desaparesceu', 'dizaparesceu', 'desapaeeceu']),
+             ('sumiram', ['sumirum', 'summiram', 'sumiran'])]   # o erro de digitação (letra dobrada, comida, trocada, o/u, de ouvido) nos verbos do sumiço
+
+
+def es2_pessoas_aberto():
+    return ['o armador', 'a faxineira', 'o porteiro', 'meu cabeleireiro', 'a gringa', 'o tiozinho', 'o Pedro', 'meu filho', 'a criança']
+
+
+def es2_nomes(corpo):
+    """Os apelidos que NÃO estão em PRENOMES (o teste confere: o nome do apelido não é lista, é estrutura)."""
+    m = re.search(r"var PRENOMES = ' ' \+ \[(.*?)\]\.join", corpo, re.S)
+    lista = set(re.findall(r"'([a-z]+)'", m.group(1))) if m else set()
+    return [n for n in ES2_APELIDOS if sem_acento_es(n.lower()) not in lista]
+
+
+ES2_NET = ['tuca ontem sumiu', 'zeca aqui desapareceu', 'lalá boiando', 'dedé está meio sumido', 'tião já desapareceu faz tempo', 'juca ainda está sumido', 'nené desapareceu de repente', 'cacá sumiu daqui']
+ES2_COLETIVOS = ['delegação', 'comissão', 'congregação', 'multidão', 'população', 'seleção', 'criatura', 'autoridade']   # (o -ção de pessoa e de coletivo: a lista de exceção do ABSTRATO_NP)
+ES2_PERTO = ['não achie o armador', 'faltta o armador aqui', 'flata o catraieiro aqui', 'perddemos nosso proeiro', 'perdmos esse barqueiro', 'pedremos o armador', 'não ahcei nosso armador', 'não acchei o dentista']   # (a letra dobrada, as duas trocadas, uma comida: a substituição e a letra a mais ficam de fora de propósito)
+JS_ES2_SEM = r"""(casos) => { const B = window.CapitaoBrain; return casos.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { q: q, n: B.risco(q).n, key: a.key }; }); }"""
+
+
+def grupo_p4g_estrutura2(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        # (1) a MATRIZ do vocabulário 2 (papéis, profissões, parentesco com e sem hífen, gírias, coletivos, plurais, 2 letras) × os quadros antigos e novos
+        mx = es2_matriz()
+        res = pg.evaluate(JS_REDE, [q for q, _, _, _ in mx])
+        ruins = [x for (q, fam, esp, p), r in zip(mx, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: a MATRIZ (%d frases: as %d palavras do vocabulário 2 — papel, profissão, parentesco com e sem hífen, gíria, coletivo, plural, 2 letras — × os %d quadros: o partitivo «um dos meus X», o sem artigo, a contração com demonstrativo, o que a onda faz, '
+            'a pessoa vista caindo, a boia atirada, a notícia, o chamado sem resposta — × pura e com vocativo/cauda de dado/caixa) é a rota sos com a janela (o sinal forte, a água) ou a sos/fallback seguro (a ausência): nunca a IA, nunca rota de dado, sem posição, rumo, SOG, ETA nem pessoas'
+            % (len(mx), len(ES2_VOCAB), len(ES_QUADROS) + len(ES2_NOVOS)), not ruins and len(ES2_VOCAB) >= 150, (len(ruins), ruins[:5]))
+        sos = [q for (q, fam, esp, p) in mx if esp == 'sos' and not fam.endswith('+')][::9]
+        jr = pg.evaluate(JS_ES_JANELA, sos)
+        pl = jr['plotter']
+        ruins = [(o['q'], o['key'], p['p'], p['l1'][:60]) for o in jr['out'] for p in o['pos'] if not (o['abre'] and p['l1'] == pl and p['jan'] and not p['ia'] and not PERD_VEDADO.search(p['txt']) and not confere.R_COORD.search(p['txt']))]
+        ped('p4g estrutura2: depois da frase de água do vocabulário 2 (%d frases do quadro \'sos\'), a janela abre e a pergunta de posição, rumo, ETA, pessoas e velocidade é a instrução do plotter' % len(sos), not ruins, (len(ruins), ruins[:4]))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p4g_estrutura2'] = grupo_p4g_estrutura2
+
+
+def grupo_p4g_sujeito(b, muta, ped):
+    corpo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'capitao-brain.js'), encoding='utf-8').read()
+    if muta and corpo.count(muta[0]) == 1: corpo = corpo.replace(muta[0], muta[1])
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        # (2) o sujeito SEM substantivo
+        sm = es2_sem()
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in sm])
+        ruins = [x for (q, g, esp), r in zip(sm, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: o SUJEITO SEM SUBSTANTIVO (%d frases: o quantificador, o numeral, o partitivo, a relativa, a anáfora, o genérico × os %d quadros de sumiço, falta, não voltou, notícia, queda, boiando, na água) é a rota sos com a janela ou o fallback seguro: nunca a IA, nem dado'
+            % (len(sm), len(ES2_SEM_QUADROS)), not ruins, (len(ruins), ruins[:5]))
+        # (3) o nome sem artigo fora de PRENOMES (o apelido), em 5 formas
+        nomes = es2_nomes(corpo)
+        nm = []
+        for k, nome in enumerate(nomes):
+            for j, (modelo, esp) in enumerate(ES2_NOME_QUADROS):
+                forma = (k + j) % 5
+                n = [nome, nome.lower(), nome.upper(), 'o ' + nome, nome][forma]
+                t = modelo.replace('{N}', n)
+                if forma == 4: t = 'capitão, ' + t + ', qual a posição?'
+                nm.append((t, 'nome', esp))
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in nm])
+        ruins = [x for (q, g, esp), r in zip(nm, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: o NOME SEM ARTIGO que nenhuma lista tem (%d apelidos fora de PRENOMES × %d quadros, no começo da frase, em minúscula, em CAIXA ALTA, com artigo e no meio, com a cauda de dado) é a rota sos com a janela ou o fallback seguro: nunca a IA, nem dado'
+            % (len(nomes), len(ES2_NOME_QUADROS)), not ruins and len(nomes) >= 45, (len(ruins), ruins[:5]))
+        # (4) o erro de digitação nos verbos do sumiço (o conjunto fechado: letra dobrada, comida, trocada, o/u, de ouvido), com a pessoa aberta e a conhecida
+        tp = [(n + ' ' + errado, 'tipo', 'seguro') for certo, erros in ES2_TIPOS for errado in erros for n in es2_pessoas_aberto()]
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in tp])
+        ruins = [x for (q, g, esp), r in zip(tp, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: o ERRO DE DIGITAÇÃO nos verbos do sumiço (%d frases: %d formas erradas de sumiu, sumiram e desapareceu × a pessoa aberta e a conhecida) é a rota sos ou o fallback seguro: nunca a IA' % (len(tp), sum(len(e) for _, e in ES2_TIPOS)), not ruins, (len(ruins), ruins[:5]))
+        # (5) a pessoa que também é coisa: o fiscal, o cliente, o resto (ESPERA sempre; socorro com a água) e o contador, o modelo, o cabo (coisa; pessoa só com a água, a queda ou o apuro)
+        am = [(f % a, 'amb', esp) for a in ('o fiscal', 'um cliente', 'o resto do pessoal', 'meu fiscal') for f, esp in (('%s sumiu', 'seguro'), ('perdi %s', 'seguro'), ('não vejo %s', 'seguro'), ('%s está boiando', 'sos'), ('perdemos %s no mar', 'sos'), ('%s não volta do mergulho', 'sos'), ('%s caiu no mar', 'sos'), ('deixamos %s na praia', 'sos'))]
+        am += [(f % a, 'amb2', 'sos') for a in ('o contador', 'a modelo', 'o cabo', 'um modelo') for f in ('perdemos %s no mar', '%s não volta do mergulho', '%s está boiando', '%s caiu da proa', '%s caiu no mar')]
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in am])
+        ruins = [x for (q, g, esp), r in zip(am, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: a pessoa que também é COISA (o fiscal, o cliente, o resto: a ESPERA e o socorro com a água; o contador, o modelo, o cabo: socorro com a água, a queda ou o apuro — «o contador não volta do mergulho», «perdemos o cabo no mar») não vai à IA nem ao dado', not ruins, (len(ruins), ruins[:5]))
+        # (4b) a rede POR SINAL (o sujeito que a estrutura não reconhece: a palavra solta com um advérbio no meio), o -ção de pessoa e de coletivo, a contração com demonstrativo, o erro de digitação junto da pessoa
+        extra = [(q, 'net', 'seguro') for q in ES2_NET] + [(f % c, 'coletivo', esp) for c in ES2_COLETIVOS for f, esp in (('%s sumiu', 'seguro'), ('a %s está desaparecida', 'seguro'), ('a %s caiu no mar', 'sos'), ('perdemos a %s no mar', 'sos'))]
+        extra += [('não temos notícia %s %s' % (d, h), 'dem', 'seguro') for d in ('desse', 'daquele', 'dum') for h in ('gordinho', 'barqueiro', 'sócio', 'jogador')]
+        extra += [(q, 'perto', 'seguro') for q in ES2_PERTO]
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in extra])
+        ruins = [x for (q, g, esp), r in zip(extra, res) for x in [es_ruim(r, esp)] if x]
+        ped('p4g estrutura2: a REDE POR SINAL (a palavra solta com um advérbio no meio: «tuca ontem sumiu»), o -ção de pessoa e de coletivo («a delegação desapareceu», «a multidão caiu no mar»), a contração com demonstrativo («notícia desse gordinho», «dum sócio») e o erro de digitação junto da pessoa («não achie o armador», «faltta o proeiro», «perddemos o grumete») são a rota sos ou o fallback seguro: nunca a IA, nem dado', not ruins, (len(ruins), ruins[:5]))
+        sc = pg.evaluate(JS_ES2_SEM, ['o contador sumiu', 'o modelo sumiu', 'o cabo sumiu', 'o contador de horas sumiu', 'o guia de bordo sumiu', 'o piloto automático sumiu', 'o Capitão IA caiu'])
+        ped('p4g estrutura2: a coisa que também é pessoa, SEM a água, é coisa («o contador sumiu», «o cabo sumiu», «o contador de horas», «o guia de bordo», «o piloto automático», «o Capitão IA caiu»: nível 0)', all(x['n'] == 0 for x in sc), [(x['q'], x['n']) for x in sc if x['n'] != 0])
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p4g_sujeito'] = grupo_p4g_sujeito
+
+
+def grupo_p4g_rotina2(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        # (6) a rotina (pessoa-rotina2.txt: a escala, a lista, a mensagem, a ligação, a reunião, o convite, a ida a terra, o equipamento e o item do app que «some», «não responde», «não volta a funcionar», o próximo/seguinte/atual…) NÃO é socorro nem fallback seguro
+        res = pg.evaluate(JS_REDE, ES2_ROTINA)
+        ruins = [(q, r['key'], r['jan'], 'pessoa' if r['pessoa'] else '') for q, r in zip(ES2_ROTINA, res) if r['key'] == 'sos' or r['pessoa'] or r['jan']]
+        ped('p4g estrutura2: as %d perguntas de ROTINA (a ligação e a mensagem sem resposta, a reunião, o convite, a ida à farmácia/ao mercado e o «saiu para almoçar», o equipamento e o item do app que some ou não volta a funcionar, o «próximo» e o «seguinte», a escala de hoje, «sem colete» na checagem, '
+            '«alguém viu o Pedro na marina», o curso de mergulho na agenda) NÃO são socorro nem o fallback seguro' % len(ES2_ROTINA), not ruins and len(ES2_ROTINA) >= 150, (len(ruins), ruins[:8]))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p4g_rotina2'] = grupo_p4g_rotina2
 
 
 
@@ -10666,6 +10868,38 @@ MUTANTES_P4G_REV7 = [
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV7
 
+
+
+# ——— 2ª rodada de correção do fechamento da Home: os mutantes cujo trecho a reescrita do sintagma (fulaniza, partitivo, ehCabeca, a rede por sinal, preparaPessoa) moveu: a MESMA intenção, o trecho novo ———
+MUT_REESCRITOS = {
+    'p4g guarda: a pessoaSumida sem tirar o sumiço de dados («perdi um passageiro na lista de saída»)': ("pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q))))))))).replace(QUEDA_FIGURADA, ' ')", "pronPessoa(semPossuidor(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q)))))))).replace(QUEDA_FIGURADA, ' ')", ('p3c',)),
+    'p4g3 nome: o prenome troca só depois da guarda do sumiço de dados («perdi o lucas no whatsapp»)': ("pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q))))))))).replace(QUEDA_FIGURADA, ' ')", "pronPessoa(semPossuidor(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(semSumicoDeDados(aGente(grafia(q)))))))).replace(QUEDA_FIGURADA, ' ')", ('p3c',)),
+    'p4g5 vocabulário: sem o «um de nós» e o «um dos nossos»': ("/^(?:nos|voces|vcs|eles|elas|nossos|nossas)$/.test(t[k] || '')", "/^(?:xnos)$/.test(t[k] || '')", ('p4g_perdida',)),
+    'p4g6 rede: o nome desconhecido que abre a frase sem o `largo` («Zacarias não volta do mergulho»)': (' || (largo === true && (VERBO_NOME_REDE.test(s.slice(fim, fim + 30)) || (g.length === 1 && !VERBO_NP.test(g[0].w) && VERBO_NOME_AMPLO.test(s.slice(fim, fim + 30)))))) {', ') {', ('p4g_rede', 'p4g_rede_matriz')),
+    'p4g6 rede: o «falta» de «quanto falta para a Barra Sul?» vira pessoa que falta (o FALTA_PESSOA sem a guarda do «para»)': ("var FALTA_PESSOA = '(?:(?:falta|faltam|faltou|faltaram)(?! (?:para|pra|", "var FALTA_PESSOA = '(?:(?:falta|faltam|faltou|faltaram)(?! (?:xpara|xpra|", ('p4g_rede',)),
+    'p4g6 sos: o partitivo plural fora de PES_MAIS («dois dos nossos não voltaram»)': ('if (QUANT_NU.test(w) && livre && (r = partitivo(t, i, ant))) {', 'if (false && QUANT_NU.test(w) && livre && (r = partitivo(t, i, ant))) {', ('p4g_rede', 'p4g_rede_matriz')),
+    'p4g estrutura M8: a fulaniza é a identidade (nenhum substantivo de pessoa fora da lista é pessoa)': ("  function fulaniza(q) {\n    var t = q.split(' '), out = [], i = 0, ch = false, w, ant, r, cls, livre, fim;", "  function fulaniza(q) { return q;\n    var t = q.split(' '), out = [], i = 0, ch = false, w, ant, r, cls, livre, fim;", ('p4g_estrutura', 'p3c')),
+    'p4g estrutura M1: o sujeito aberto depois do sumiço («sumiu o dono») não é mais fulano': ("    if (SUMICO_V.test(ant) || QUEDA_V.test(ant) || /^(?:desaparecimento|sumico)$/.test(ant)) return 'fulano';\n", '', ('p4g_estrutura',)),
+    'p4g estrutura: o sujeito aberto antes do sumiço («o dono sumiu», «a babá se perdeu») não é mais fulano': ("      if (SUMICO_V.test(w) || (w === 'se' && /^perd/.test(t[k + 1] || '')) || (k < fim + 2 && QUEDA_V.test(w))) return 'fulano';\n", '', ('p4g_estrutura',)),
+    'p4g estrutura: o sujeito aberto da queda com lugar («a babá caiu da proa») não é mais fulano': ("    if (QUEDA_LUGAR_RE.test(ad) || LEVADO_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", "    if (false) return 'fulano';", ('p4g_estrutura',)),
+    'p4g estrutura M3: a lista das coisas é vazia (o plotter, o Spotify, a pressão, o sinal viram pessoa)': ("    [FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, NAO_NOME, GAP_OBJ, CONT_ADMIN, CONT_DIGITAL, HEAD_DADO, BARCOS, PARTES, DURO_MAR, COISAS_APP, FORA_BARCO.join(' ')].forEach(add);", '', ('p4g_estrutura',)),
+    'p4g estrutura: o piloto, o capitão, o imediato e o guia sem o complemento de coisa são o DUVIDOSO (a ESPERA), não pessoa aberta (o socorro de «o piloto sumiu»)': ("      if (AMBIGUAS_DE.indexOf(' ' + cb + ' ') !== -1) return ", '      if (false) return ', ('p4g_estrutura',)),
+    'p4g estrutura: o «piloto automático» e o «guia de bordo» são pessoa duvidosa': ("return /^(?:automatico|automatica|de|do|da|dos|das|rapido|rapida|ia)$/.test(t[j + 1] || '') ? { coisa: true } : { tok: 'pessoax', fim: j + 1 };", "return { tok: 'pessoax', fim: j + 1 };", ('p4g_estrutura',)),
+    'p4g estrutura: o abstrato por morfologia («a calibração», «a pressão») é pessoa': (' && !VERBO_NP.test(w) && !ABSTRATO_NP.test(ultimaParte(w));', ' && !VERBO_NP.test(w);', ('p4g_estrutura',)),
+    'p4g estrutura: o verbo é cabeça de sintagma («voltou a ligar»: o infinitivo vira fulano e o retorno de rotina escapa)': ("MOD_NP.indexOf(' ' + w + ' ') === -1 && !VERBO_NP.test(w) &&", "MOD_NP.indexOf(' ' + w + ' ') === -1 &&", ('p4g_estrutura',)),
+    'p4g estrutura M11: a preposição não bloqueia o sintagma («o sinal sumiu para o dono»)': ("      if (DET_NP.indexOf(' ' + w + ' ') !== -1 && w !== '' && livre) {", "      if (DET_NP.indexOf(' ' + w + ' ') !== -1 && w !== '') {", ('p4g_estrutura',)),
+    'p4g estrutura: a palavra solta antes do «sumiu» (o ditado sem artigo) não é candidata': ('      if ((/^[a-z]{3,}$/.test(w) || /^[a-z]{2,}(?:-[a-z]+)+$/.test(w)) && !(w.length >= 4', '      if (false && !(w.length >= 4', ('p4g_sujeito',)),
+    'p4g estrutura: o «os dois» (a anáfora) é pessoa certa, não a duvidosa': ("return { tok: MOD_ANAFORA.indexOf(' ' + ult + ' ') !== -1 && /^(?:o|a|os|as)$/.test(det) && nm === 1 ? 'pessoax' : 'fulano', fim: j,", "return { tok: 'fulano', fim: j,", ('p4g_estrutura',)),
+    'p4g estrutura M2: o retorno de rotina («não voltou a ligar/responder») é sinal': ("    new RegExp(' (?:nao|ainda nao|nunca mais|ja nao) ' + V_RETORNO + ' (?:a|de) (?:(?:me|nos|lhe|lhes|te) )?' + ROT_RETORNO_INF + '(?= )', 'g'),   // «não voltou a ligar», «não voltou a me ligar», «não voltou a responder»\n    new RegExp(' (?:nao|ainda nao|nunca mais|ja nao) (?:volta|voltou|voltam|voltaram) a (?!(?:nadar|mergulhar|subir|respirar|boiar|aparecer|emergir|reaparecer|se)(?= ))[a-z]{3,}(?:ar|er|ir|or)(?= )', 'g'),   // «o ar-condicionado não volta a funcionar», «a bomba não voltou a ligar»: o infinitivo comum, não o da água\n", '', ('p4g_estrutura', 'p4g_rotina2')),
+    'p4g estrutura M-C2: a escala, a lista, o WhatsApp, a mensagem, o e-mail, o telefone na frase NÃO tiram a ausência da rede (pendente 6)': ("adm = ADM_RE.test(pad(raw).replace(/ contatos? com /g, ' ')) || FALTA_HOJE.test(pad(raw));", 'adm = false;', ('p4g_estrutura', 'p4g_perdida')),
+    'p4g estrutura: «caiu na gargalhada» é queda': (".replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", ".replace(QUEDA_MOVEL, ' '); }", ('p3c', 'p4g_perdida')),
+    'p4g estrutura: «o garoto caiu da cama» (a queda de casa) é queda': (".replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", ".replace(QUEDA_FIGURADA, ' '); }", ('p4g_estrutura',)),
+    'p4g estrutura: «deixamos X para trás / esquecemos X na praia» não é sinal': ("    DEIXOU + ' ' + DETN + PES_ELX + '(?: [a-z0-9]+){0,4} (?:para tras|pra tras|na praia|na ilha|na agua|no mar|la fora)|' +", "    '(?!)|' +", ('p4g_estrutura',)),
+    'p4g estrutura: a água com a ausência («X não volta do mergulho») é a ESPERA, não o socorro': ('    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q)) ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q)) ? 0 : 1;', ('p4g_estrutura',)),
+    'p4g estrutura: o palpite da queda («será que caiu?») com a ausência é a ESPERA': ('    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q)) ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q)) ? 0 : (agua ? 2 : 1);', ('p4g_estrutura',)),
+    'p4g estrutura: a grafia do ditado («sumio», «sumiru») não vale': ('  function grafia(q) {\n    var i, t, ch;', '  function grafia(q) { return q;\n    var i, t, ch;', ('p4g_estrutura',)),
+}
+MUTANTES_3A = [(n,) + MUT_REESCRITOS[n] if n in MUT_REESCRITOS else (n, t, tr, g) for n, t, tr, g in MUTANTES_3A]
 
 
 def instante_3a(b):
