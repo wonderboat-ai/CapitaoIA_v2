@@ -6410,9 +6410,11 @@ PERDIDA_PAGINA = ['o Pedro saiu de caiaque e não voltou', 'ela foi nadar e não
                   'ninguém viu mais meu filho', 'faltam dois dos nossos',
                   # fechamento do grupo home (P4G, 2ª instância; pendentes 1 e 7): a pessoa de um substantivo que nenhuma lista conhece, a grafia do ditado e a pessoa que boia (a ESTRUTURA do cérebro, não a lista)
                   'o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram',
+                  # 2ª rodada de correção do fechamento: o sujeito sem substantivo, a cabeça de 2 letras, o nome sem artigo, a queda sem destino, o que a onda faz
+                  'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro',
                   'Zacarias não volta do mergulho']   # (o mergulho é a água: socorro com a janela — saiu da REDE_PAGINA, que é a ESPERA)
 # as que também conferem a janela: depois da água, «qual a posição?» é a instrução do plotter (pendente 8)
-PERDIDA_JANELA = ['o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'meu filho ficou pra trás no mar']
+PERDIDA_JANELA = ['o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'meu filho ficou pra trás no mar', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro']
 
 
 def teste_home_perdida(b, tela):
@@ -6441,7 +6443,9 @@ REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o imediat
                # 6ª rodada: o que a rota sos não toma (o pronome, o nome com a escala, «proa» na frase, a contagem que não bate, o nome que abre a frase, a pessoa na água sem apuro)
                'ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o menino está nadando', 'o Pedro não está vindo',
                # 6ª rodada, 3ª passada: a embarcação pequena que volta sem a pessoa, o contato perdido, o pulo, a correnteza
-               'o tender voltou vazio', 'perdi o contato com a Ana', 'vi alguém pular do barco', 'meu filho está na correnteza']
+               'o tender voltou vazio', 'perdi o contato com a Ana', 'vi alguém pular do barco', 'meu filho está na correnteza',
+               # 2ª rodada de correção do fechamento: a pessoa que também é item de dado (a ESPERA) e a ausência em forma nova
+               'o cliente sumiu', 'o fiscal sumiu', 'chamei o Pedro três vezes e nada', 'a lancha do Pedro está aqui e ele não', 'quem viu o Pedro por último?', 'não temos notícia dele']
 REDE_SEGURANCA = 'Se há pessoa no mar ou sumida: abra o SOS e siga o procedimento padrão — confirmar com o protocolo de bordo.'
 
 
