@@ -279,11 +279,20 @@ def main():
                    and tela in pg.url and pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") is None, ped.get('pergunta', '')[:80])
                 # Fase 4 (P4G, revisão final 4ª rodada, trava 10): a pessoa que some, não volta ou não se acha é emergência LOCAL: com a chave ligada e o replay fixado em 60 s, a pergunta (a que foi nadar, a que sai de caiaque, a que
                 # «não está aqui, estava na popa») não faz pedido nenhum ao Worker, abre com a instrução de segurança e não traz a situação de bordo (SOG, proa) que o fallback levava à IA
-                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'quem foi de caiaque não volta', 'um de nós sumiu', 'cadê o Pedro? ninguém vê'):   # (os 3 últimos: 5ª rodada, achado 7)
+                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'quem foi de caiaque não volta', 'um de nós sumiu', 'cadê o Pedro? ninguém vê',
+              'o menino está nadando longe demais', 'meu filho está longe do barco', 'a Letícia ficou para trás na água', 'meu filho estava na popa e agora não está'):   # (os 3 da 5ª rodada, achado 7; os 4 últimos: 6ª rodada, achados 1 e 7)
                     t, n, _ = digita(q)
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     ok(tela + ': a pessoa perdida «%s» é emergência local: nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
                     pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")   # (a janela vale por aba: as conferências de baixo partem sem ela)
+                # 6ª rodada: a REDE de pessoa — o que a rota sos não toma (o pronome, o nome com a escala, «na proa: falta o marinheiro», a contagem que não bate) nunca vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS na 1ª linha,
+                # sem a situação de bordo, sem a janela)
+                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete'):
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    # (a resposta é a ÚLTIMA mensagem do Capitão: a Main mostra a leitura de bordo — SOG, proa — no cabeçalho, fora da conversa)
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': a pessoa da rede «%s» não vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS, sem a situação de bordo nem coordenada, sem a janela)' % q, n == 0 and 'Se há pessoa no mar ou sumida' in u and TEXTO_IA not in t and 'Situação de bordo' not in u and not re.search(r'\bSOG\b|\d+,\d+ nós|\bproa \d', u) and not jan, 'pedidos=%d · janela=%s · %s' % (n, jan, u[-200:]))
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
                 # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
                 t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')

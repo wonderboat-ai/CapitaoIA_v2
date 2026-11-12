@@ -120,7 +120,7 @@ satélites) do quadro a 60 e 105 s, o fabricante e o modelo de D.equipamentos (n
 resposta calculada uma vez por escolha enquanto a leitura anda, o registrar só com o toque e o ramo simulacao false. O instante guarda 1 s: o gancho `capitao.replay.sobre` só entra com a tela aberta se o teste
 muda também o `capitao.clima.v1` (uma leitura de OUTRO dia, que não trava nada).
 
-Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 98 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada, 10 da 3ª — a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la — e 14 da 4ª: os trechos e a ficha do ditado corrigido, a cor do chip e do ponto dos cartões, o microfone da CONVERSA depois do MAYDAY e a pessoa perdida que não vai à IA — e 4 da 5ª: a distância entre a pessoa e o verbo e a rede larga do pedeIA), todos acusados;
+Fase 4, P4G (a Home: Main e H2, e os atalhos H3 web e app; `--so-p4g [Main|H2-Home-Mobile|H3-Atalhos-Editar-Web|H3-Atalhos-Editar]` roda só as conferências dela e `--mutantes-p4g` planta 108 defeitos (47 da P4G, 19 da revisão final, 4 da 2ª rodada, 10 da 3ª — a resposta da IA que chega depois de um MAYDAY entra REFEITA em modo emergência, sem SOG nem proa, também quando o cérebro falha ao refazê-la — e 14 da 4ª: os trechos e a ficha do ditado corrigido, a cor do chip e do ponto dos cartões, o microfone da CONVERSA depois do MAYDAY e a pessoa perdida que não vai à IA — e 4 da 5ª: a distância entre a pessoa e o verbo e a rede larga do pedeIA — e 10 da 6ª: a rede de pessoa antes das rotas de assunto, o fallback seguro restaurado no fim, a pessoa na água em apuros, a embarcação pequena que volta vazia e o contato perdido), todos acusados;
 `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; o Worker da IA é de mentira, sem cota): a leitura de agora a 60 e 105 s (a Main: o selo «AO VIVO · hh:mm:ss», o LED verde que pulsa, o registro do
 cadastro, a faixa de baixo SOG/PROA/VENTO/24 V/ÁGUA DOCE/DIESEL igual ao D.campos e ao CONTRATO §1.22, o diesel do quadro e não o 54/52 de 26/09, o estado e o local do quadro com a dica inteira e a hora que não é cortada;
 a H2: o LED e a dica), os 5 e os 4 cartões com o fabricante, o modelo e as horas do gerador do quadro e do D.equipamentos (planta outros fabricantes: aparecem; nenhum fixo no código), os chips («3 ATRASADAS», «ROTOR · 2 D»,
@@ -6404,7 +6404,10 @@ def teste_home_tardio(b, tela):
 PERDIDA_PAGINA = ['o Pedro saiu de caiaque e não voltou', 'ela foi nadar e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'não estou vendo o Pedro, ele estava na proa', 'tem uma pessoa a menos no barco',
                   # 5ª rodada: a mesma emergência em formas vizinhas (a distância até o verbo, a queda da proa, o bebê, o «quem», o «um de nós», o paradeiro perguntado, o «a gente», o possuidor)
                   'o menino estava brincando e sumiu', 'o Pedro caiu da proa', 'o bebê sumiu', 'quem foi de caiaque não volta', 'um de nós sumiu', 'cadê o Pedro? ninguém vê', 'alguém viu meu filho?', 'meu filho estava com a gente e sumiu',
-                  'o filho do Pedro está desaparecido', 'o Pedro foi nadar e não está aparecendo']
+                  'o filho do Pedro está desaparecido', 'o Pedro foi nadar e não está aparecendo',
+                  # 6ª rodada: o «estava na popa e agora não está» sem «mais», a pessoa na água em apuros sem verbo de sumiço (longe demais, longe do barco, ficou para trás), o que demora a subir, o bote com a pessoa, «gente a menos», «ninguém viu mais»
+                  'meu filho estava na popa e agora não está', 'o menino está nadando longe demais', 'meu filho está longe do barco', 'a Letícia ficou para trás na água', 'o mergulhador demorou a subir', 'o bote com meus filhos virou', 'tem gente a menos',
+                  'ninguém viu mais meu filho', 'faltam dois dos nossos']
 
 
 def teste_home_perdida(b, tela):
@@ -6425,7 +6428,12 @@ def teste_home_perdida(b, tela):
 
 
 # a REDE larga do pedeIA (5ª rodada): a pessoa com o sinal de sumiço ou de ausência que a escala, o «hoje» ou o «ainda» tiram da rota sos NÃO é emergência, mas também nunca vai à IA com o SOG e a proa do quadro: é respondida no aparelho
-REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o marinheiro não voltou da folga', 'a Ana não está a bordo ainda']
+REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o marinheiro não voltou da folga', 'a Ana não está a bordo ainda',
+               # 6ª rodada: o que a rota sos não toma (o pronome, o nome com a escala, «proa» na frase, a contagem que não bate, o nome que abre a frase, a pessoa na água sem apuro)
+               'ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'Zacarias não volta do mergulho', 'o menino está nadando', 'o Pedro não está vindo',
+               # 6ª rodada, 3ª passada: a embarcação pequena que volta sem a pessoa, o contato perdido, o pulo, a correnteza
+               'o tender voltou vazio', 'perdi o contato com a Ana', 'vi alguém pular do barco', 'meu filho está na correnteza']
+REDE_SEGURANCA = 'Se há pessoa no mar ou sumida: abra o SOS e siga o procedimento padrão — confirmar com o protocolo de bordo.'
 
 
 def teste_home_rede(b, tela):
@@ -6437,6 +6445,8 @@ def teste_home_rede(b, tela):
         m = pergunta_home(pg, tela, q)
         if est['pedidos']: prob.append('%s: «%s» foi à IA (%d pedido(s)): a pessoa ausente nunca vai à IA com o SOG e a proa do quadro (a rede larga do pedeIA)' % (tela, q, len(est['pedidos'])))
         if not m: prob.append('%s: «%s» não teve resposta local' % (tela, q))
+        elif not re.sub(r'^\s*CAPITÃO IA\s*', '', m[-1]['txt']).startswith(REDE_SEGURANCA) or SITUACAO_DE_BORDO.search(' | '.join(x['txt'] for x in m)) or confere.R_COORD.search(' | '.join(x['txt'] for x in m)):
+            prob.append('%s: «%s» devia abrir a resposta com a instrução do SOS (o fallback seguro) e não levar a situação de bordo (SOG, proa) nem coordenada: %r' % (tela, q, m[-1]['txt'][:160]))
         if pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: «%s» não é emergência e não devia marcar a janela de 15 min' % (tela, q))
         if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
         ctx.close()
@@ -6672,6 +6682,16 @@ MUTANTES_P4G = [
     ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("|| nomeSumiu(String(q || '')) || pessoaRede(String(q || ''))) return false;", "|| nomeSumiu(String(q || ''))) return false;")], 'rede'),
     ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|| nomeSumiu(String(q || '')) || pessoaRede(String(q || ''))) return false;", "|| nomeSumiu(String(q || ''))) return false;")], 'rede'),
     ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", "    if ((socorroImplicito(q) || nomeSumiu(qRaw)) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
+    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (pessoaRede(qRaw)) return 'fallback';", "")], 'rede'),
+    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (pessoaRede(qRaw)) return 'fallback';", "")], 'rede'),
+    ('o fallback seguro da pessoa não é restaurado: «ele sumiu» recebe o fallback com a situação de bordo (SOG e proa) (Main)', 'capitao-brain.js@Main', [("    if (segura !== null) { a = segura; key = 'fallback'; }", "")], 'rede'),
+    ('o fallback seguro da pessoa não é restaurado: «ele sumiu» recebe o fallback com a situação de bordo (SOG e proa) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (segura !== null) { a = segura; key = 'fallback'; }", "")], 'rede'),
+    ('a pessoa na água em apuros fora do predicado (a rota sos sem o PERIGO_S): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (Main)', 'capitao-brain.js@Main', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", "")], 'perdida'),
+    ('a pessoa na água em apuros fora do predicado (a rota sos sem o PERIGO_S): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", "")], 'perdida'),
+    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (CRAFT_VAZIO.test(q)) return true;\n", "")], 'rede'),
+    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (CRAFT_VAZIO.test(q)) return true;\n", "")], 'rede'),
+    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (Main)', 'capitao-brain.js@Main', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|sem contato com|", "|")], 'rede'),
+    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|sem contato com|", "|")], 'rede'),
 ]
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
