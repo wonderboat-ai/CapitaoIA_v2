@@ -1553,7 +1553,7 @@
   // sumiu») e sem «cliente» (o cliente que «sumiu» é o que parou de responder)
   // (5ª rodada da P4G: o vocabulário que a lista do gerador não tem — o bebê, o neném, o garotinho, o moleque, o guri, o caçula, avô e avó, tio e tia, primo, genro, nora, cunhado, sogro, noivo, enteado, padrasto, o casal, o pessoal, a galera, a turma —,
   // o «um de nós / um dos nossos» e o «todo mundo». O «pequeno» e a «pia» (a pia da cozinha) só valem fora do que eles costumam ser: «o pequeno vazamento», «a pia do banheiro»)
-  var PES_MAIS = '(?:garot[oa]s?|garotinh[oa]s?|bebes?|nenem|nenens|nenes?|moleques?|molecas?|guri(?:s|a|as)?|pia(?! d[ao]s? (?:cozinha|banheiro|cabine|galley|lavabo|copa))|cacula|avos?|avozinh[oa]s?|vov[oa]s?|vovozinh[oa]s?|tios?|tias?|prim[oa]s?|genros?|noras?|cunhad[oa]s?|sogr[oa]s?|noiv[oa]s?|entead[oa]s?|padrastos?|madrastas?|padrinhos?|madrinhas?|afilhad[oa]s?|pais|casal|casais|pessoal|galera|turma|instrutor(?:es|a|as)?|alun[oa]s?|remador(?:es|a|as)?|velejador(?:es|a|as)?|banhistas?|canoistas?|mergulhadoras?|nadadoras?|mecanic[oa]s?|eletricistas?|todo mundo|familias?|familiares|parentes|(?:grupo|pessoal) todo|(?:turma|familia|galera) toda|grupo de (?:mergulho|snorkel|caiaque|stand up|nado|passeio)|(?:um|uma) (?:de nos|dos nossos|das nossas|da gente)|pequen[oa]s?(?! (?:vazamento|ruido|barulho|problema|defeito|falha|ajuste|reparo|erro|detalhe|alarme|aviso|desvio|vibracao|trepidacao|tremor|odor|cheiro|fumaca|som|estalo|trinca|rachadura|furo|corte|arranhao|amassado|motor|barco|bote|tender|filtro|bomba|display|tela|botao|led|luz|lampada|vento|mar|onda|ondas|marola|chuva|chuvisco|atraso|desconto|ajuda|teste|lote|trecho|dano))|senhor|senhora|senhores|senhoras|jove(?:m|ns)|adolescentes?|turistas?|visitantes?|pescador(?:es)?|cozinheir[oa]s?|mestres?|esquiador(?:es)?|surfistas?|velhinh[oa]s?|morador(?:es)?|rapazes)';
+  var PES_MAIS = '(?:garot[oa]s?|garotinh[oa]s?|bebes?|nenem|nenens|nenes?|moleques?|molecas?|guri(?:s|a|as)?|pia(?! d[ao]s? (?:cozinha|banheiro|cabine|galley|lavabo|copa))|cacula|avos?|avozinh[oa]s?|vov[oa]s?|vovozinh[oa]s?|tios?|tias?|prim[oa]s?|genros?|noras?|cunhad[oa]s?|sogr[oa]s?|noiv[oa]s?|entead[oa]s?|padrastos?|madrastas?|padrinhos?|madrinhas?|afilhad[oa]s?|pais|casal|casais|pessoal|galera|turma|instrutor(?:es|a|as)?|alun[oa]s?|remador(?:es|a|as)?|velejador(?:es|a|as)?|banhistas?|canoistas?|mergulhadoras?|nadadoras?|mecanic[oa]s?|eletricistas?|todo mundo|familias?|familiares|parentes|(?:grupo|pessoal) todo|(?:turma|familia|galera) toda|grupo de (?:mergulho|snorkel|caiaque|stand up|nado|passeio)|(?:um|uma|dois|duas|tres|quatro|cinco|seis|alguns|algumas|varios|varias) (?:de nos|dos nossos|das nossas|da gente)|pequen[oa]s?(?! (?:vazamento|ruido|barulho|problema|defeito|falha|ajuste|reparo|erro|detalhe|alarme|aviso|desvio|vibracao|trepidacao|tremor|odor|cheiro|fumaca|som|estalo|trinca|rachadura|furo|corte|arranhao|amassado|motor|barco|bote|tender|filtro|bomba|display|tela|botao|led|luz|lampada|vento|mar|onda|ondas|marola|chuva|chuvisco|atraso|desconto|ajuda|teste|lote|trecho|dano))|senhor|senhora|senhores|senhoras|jove(?:m|ns)|adolescentes?|turistas?|visitantes?|pescador(?:es)?|cozinheir[oa]s?|mestres?|esquiador(?:es)?|surfistas?|velhinh[oa]s?|morador(?:es)?|rapazes)';
   var PES_ELE = '(?:' + PESSOA + '|' + PARENTE + '|' + PES_MAIS + '|fulano|pronpes)';   // («fulano» é o lugar do nome próprio: ver comNomes e PRENOMES)
   var V_SUMIU = '(?:sumiu|sumiram|sumia|sumiam|sumindo|sumir|some|somem|desapareceu|desapareceram|desaparecia|desapareciam|desaparecendo|desaparecer|desaparece|desaparecem)';   // (em todos os tempos: «some», «sumia», «está sumindo»)
   var V_ANY = '(?:' + V_SUMIU + '|sumid[oa]s?|desaparecid[oa]s?|perdid[oa]s?|extraviad[oa]s?|falta|faltam|faltou|faltaram|faltando)';
@@ -1796,7 +1796,7 @@
     if (!raw || querRegistrar(raw, n)) return null;
     if (CANCELA_REG.test(n) || metaRegistro(n)) return 'relatoCancela';
     if (/\?\s*$/.test(raw) || PERGUNTA.test(n) || ACK.test(n)) return null;
-    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n)) return null;
+    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || cabecaEmerg(n) || pessoaRede(raw)) return null;
     if (NAO_ESPERA[route(raw)] === 1) return null;
     if (textoDeRegistro(raw, n)) return 'diario';
     // A promessa da pergunta («a próxima frase é gravada») nunca fica no silêncio (revisão 3 da P3F): a fala que não é nota, nem pedido ao app, nem pergunta, e que a rota nenhuma responde (cairia no «Isso não está nas
@@ -1845,7 +1845,7 @@
     q = q || pad(raw);
     if (q.trim().split(/\s+/).length < 8) return false;
     if (RELATO_PEDIDO.test(q) || RELATO_NAO.test(q) || RELATO_FIM.test(q) || RELATO_PERIGO.test(q) || RELATO_PESSOA.test(q) || RELATO_TEMPO.test(q) || (RELATO_AGORA.test(q) && RELATO_DEFEITO.test(q))) return false;
-    if (emergencia(q) || oleo(q) === 1 || socorroImplicito(q) || cabecaEmerg(q) || SOBRE.test(q) || querRegistrar(raw, q) || foraBarcoPergunta(q) || TERMOS.DINHEIRO.test(raw)) return false;   // (dinheiro e o que é de fora do barco não viram proposta de registro)
+    if (emergencia(q) || oleo(q) === 1 || socorroImplicito(q) || cabecaEmerg(q) || pessoaRede(raw) || SOBRE.test(q) || querRegistrar(raw, q) || foraBarcoPergunta(q) || TERMOS.DINHEIRO.test(raw)) return false;   // (dinheiro e o que é de fora do barco não viram proposta de registro)
     // verbo de fato fora de oração com «que» («consumo das saídas que fizemos em setembro», «anotações que o Lucas fez»: pedido de dado, não relato)
     return RELATO_FATO.test(q.replace(/ (?:que|quem)(?: [a-z]+){1,3}(?= )/g, ' '));
   }
@@ -3408,6 +3408,14 @@
       return r;
     };
   })();
+  // O fallback SEGURO da pessoa (P4G, 6ª rodada): a pessoa sumida, ausente ou na água que a REDE reconhece e que nenhuma rota tomou. A 1ª linha (a falada) é a instrução do SOS; sem a situação de bordo (SOG, proa), sem o trecho do guia, sem o item do FAQ,
+  // sem a hora do instante na fonte, sem a janela de 15 min (a escala e o palpite não custam 15 min de emergência). Dentro da janela, a instrução do plotter abre a resposta, como a de todo fallback.
+  var PESSOA_SEGURANCA = 'Se há pessoa no mar ou sumida: abra o SOS e siga o procedimento padrão — confirmar com o protocolo de bordo.';
+  function fallbackPessoa(p) {
+    var r = { text: PESSOA_SEGURANCA + '\nIsso não está nas fontes de bordo que o app consulta. Posso registrar como pendência no diário.', src: FT.proto, actions: act(p, [['Abrir SOS', 'sos'], ['Registrar pendência', 'diario']]), pessoa: true };
+    if (janela()) r.text = EM_PERIGO + '\n' + r.text;
+    return r;
+  }
   // (P4A) o fallback dentro da janela de emergência abre com a instrução de segurança (a 1ª linha é a falada): a pergunta solta («e agora?») não recebe o «isso não está nas fontes»
   (function () {
     var fallback0 = ANSWERS.fallback;
@@ -3571,9 +3579,9 @@
   // de bordo, aplicativo, marca: NAO_NOME e os fabricantes de D.equipamentos). A escala de pessoal («o marinheiro não está a bordo hoje», «o convidado não está a bordo») e o objeto («acho que caiu atrás do armário») não são socorro.
   var PES_FAM = '(?:bebes?|nenem|nenens|nenes?|garot[oa]s?|garotinh[oa]s?|moleques?|molecas?|guri(?:s|a|as)?|cacula|avos?|vov[oa]s?|tios?|tias?|prim[oa]s?|genros?|noras?|cunhad[oa]s?|sogr[oa]s?|noiv[oa]s?|entead[oa]s?|pais|pai|maes?|marido|esposa|esposo|netos?|netas?|sobrinh[oa]s?|irma[o]?|irmaos|namorad[oa]s?)';   // (a família e as crianças que a lista do gerador não tem: o que se diz «não está aqui», «falta», «procurando»)
   var PES_PRES = '(?:alguem|gente|pessoas?|criancas?|filh[oa]s?|menin[oa]s?|bebe|passageir[oa]s?|tripulantes?|ele|ela|eles|elas|pronpes|' + PES_FAM + ')';   // quem se diz «não está a bordo» sem mais nada (marinheiro, convidado, comandante, o João: escala de pessoal)
-  var PES_FALTA = '(?:alguem|pessoas?|criancas?|passageir[oa]s?|tripulantes?|filh[oa]s?|menin[oa]s?|mulher(?:es)?|homens?|amig[oa]s?|jove(?:m|ns)|rapaz(?:es)?|moc[oa]s?|turistas?|hospedes?|convidad[oa]s?|cara|colegas?|vizinh[oa]s?|senhor(?:a|es|as)?|adolescentes?|velhinh[oa]s?|visitantes?|' + PES_FAM + ')';   // quem FALTA («faltam duas pessoas»): sem «gente», sem papel de escala (marinheiro, comandante), sem nome («falta o Lucas assinar»)
+  var PES_FALTA = '(?:alguem|pessoas?|criancas?|passageir[oa]s?|tripulantes?|filh[oa]s?|menin[oa]s?|mulher(?:es)?|homens?|amig[oa]s?|jove(?:m|ns)|rapaz(?:es)?|moc[oa]s?|turistas?|hospedes?|convidad[oa]s?|cara|colegas?|vizinh[oa]s?|senhor(?:a|es|as)?|adolescentes?|velhinh[oa]s?|mergulhador(?:es)?|nadador(?:es)?|(?:um|uma|dois|duas|tres|quatro|cinco|seis|alguns|algumas|varios|varias) (?:de nos|dos nossos|das nossas)|visitantes?|' + PES_FAM + ')';   // quem FALTA («faltam duas pessoas»): sem «gente», sem papel de escala (marinheiro, comandante), sem nome («falta o Lucas assinar»)
   var PES_PARENTE = '(?:criancas?|filh[oa]s?|menin[oa]s?|bebe|idos[oa]s?|' + PES_FAM + ')';
-  var NAO_VE = 'nao (?:(?:estou|estamos|esta|estao) (?:vendo|achando|encontrando|localizando)|(?:consigo|conseguimos|consegue|conseguem|estou conseguindo|estamos conseguindo|esta conseguindo|estao conseguindo)(?: mais)? (?:ver|achar|encontrar|localizar|enxergar)(?:-l?[oa]s?)?|(?:vejo|vemos|ve|veem|vi|vimos|viu|acho|acha|achamos|acham|achei|achou|encontro|encontra|encontramos|encontram|encontrei|encontrou|enxergo|enxergamos|localizo|localizamos|localizei|avisto|avistamos|avistei|avistou|avistaram))(?: mais)?';   // (todos os tempos: «não acho», «não achei», «não vi mais», «não estou vendo»)
+  var NAO_VE = 'nao (?:(?:estou|estamos|esta|estao|to|tou|tamos|ta|tao) (?:vendo|achando|encontrando|localizando)|(?:consigo|conseguimos|consegue|conseguem|estou conseguindo|estamos conseguindo|esta conseguindo|estao conseguindo)(?: mais)? (?:ver|achar|encontrar|localizar|enxergar)(?:-l?[oa]s?)?|(?:vejo|vemos|ve|veem|vi|vimos|viu|acho|acha|achamos|acham|achei|achou|encontro|encontra|encontramos|encontram|encontrei|encontrou|enxergo|enxergamos|localizo|localizamos|localizei|avisto|avistamos|avistei|avistou|avistaram))(?: mais)?';   // (todos os tempos: «não acho», «não achei», «não vi mais», «não estou vendo»)
   var EM_NENHUM = '(?:em lugar nenhum|em lugar algum|em nenhum lugar|em parte nenhuma|em canto nenhum)';
   var NA_AGUA = '(?:na agua|no mar|ao mar|do barco|da lancha|da embarcacao|pela borda|pro mar|para o mar|pra agua|para fora)';
   var PALPITE = '(?:(?:acho|acha|achamos|parece|imagino|sera|talvez|deve|pode)(?: ter)?(?: que)? (?:ele |ela )?(?:caiu|cairam|pulou|pularam|se jogou|se afogou))';   // o palpite da queda: «acho que caiu», «será que caiu», «parece que caiu»
@@ -3585,6 +3593,8 @@
   // o mergulhador, o nadador, o esquiador que não volta, não sobe, não sai (sem «na água»: a atividade já é a água)
   var NA_AGUA_ATIV = '(?:mergulhador(?:es)?|nadador(?:es)?|esquiador(?:es)?|surfistas?|snorkel(?:ista)?s?)';
   var PESSOA_SUMIDA = [
+    ' ninguem (?:viu|ve|vendo|achou|acha|encontrou|encontra|localizou|localiza) mais ' + DETN + PES_ELE + ' ',   // «ninguém viu mais meu filho», «ninguém vê mais a criança» (6ª rodada: o «mais» depois do verbo)
+    ' ninguem (?:mais )?sabe (?:(?:d[eao]s? |do paradeiro d[eao]s? |nada d[eao]s? |noticias d[eao]s? )' + DETN + PES_ELE + '|zz) ',   // «ninguém sabe do Pedro», «ninguém sabe do paradeiro do menino» (o possuidor de «sabe do Pedro» já virou «zz»)
     ' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + ' (?!' + ROT_PERDI + ')',   // «perdi um passageiro», «perdemos o meu amigo», «perdemos o Pedro no mar» (a lista SOS só tem tripulante, criança, filho e menino)
     ' (?:falta|faltam|faltou|faltaram|faltando|esta faltando|estao faltando) ' + DETN + PES_FALTA + '(?! (?:para|pra) )(?! ' + ROT_INF + ' )(?! ' + ROT_EVENTO + ')(?= )',   // «falta uma pessoa a bordo», «faltam duas pessoas», «está faltando alguém» (não «falta gente para a revisão», «falta o Lucas assinar»)
     ' ' + PES_ELE + '(?: [a-z0-9]+){0,1} (?:esta |estao )?faltando (?!' + ROT_EVENTO + ')',   // «tem gente faltando», «um passageiro faltando» (não «tem gente faltando na reunião de amanhã»)
@@ -3618,9 +3628,9 @@
   var PES_RE = new RegExp(' ' + PES_ELE + ' ');
   var PES_AGUA_RE = new RegExp(' (?:' + PES_ELE + '|quem) ');   // («quem foi de caiaque não volta»: o «quem» só vale com a atividade na água)
   var ATIV_AGUA = '(?:nadar|nadou|nadando|nadaram|nadava|nadavam|mergulhar|mergulhou|mergulhando|mergulharam|mergulho|caiaques?|kayak|stand up|paddle|jet ?ski|moto aquatica|banana boat|snorkel[a-z]*|esquiar|esquiou|esquiando|wakeboard|surfar|surfou|surfando|bodyboard|apneia|pular|pulou|pularam|pulando|se jogou|se jogaram|(?:de|no|do|com) (?:tender|bote|dinghy)|banho de mar)';
-  var LUGAR_AGUA = '(?:na agua|no mar|ao mar|pela borda|pra agua|pro mar|para o mar|para a agua|fora d agua|nas ondas|longe do barco|longe da lancha|longe da embarcacao)';
+  var LUGAR_AGUA = '(?:na agua|no mar|ao mar|pela borda|pra agua|pro mar|para o mar|para a agua|fora d.?agua|debaixo d.?agua|embaixo d.?agua|dentro d.?agua|sob a agua|abaixo d.?agua|nas ondas|longe do barco|longe da lancha|longe da embarcacao)';
   var AGUA_RE = new RegExp(' (?:' + ATIV_AGUA + '|' + LUGAR_AGUA + ') ');
-  var V_RETORNO = '(?:volta|voltou|voltam|voltaram|sobe|subiu|sobem|subiram|sai|saiu|saem|sairam|emerge|emergiu|reaparece|reapareceu|retorna|retornou)';
+  var V_RETORNO = '(?:volta|voltou|voltam|voltaram|sobe|subiu|sobem|subiram|sai|saiu|saem|sairam|emerge|emergiu|emergem|emergiram|reaparece|reapareceu|reaparecem|reapareceram|retorna|retornou|retornam|retornaram)';
   var V_RESPOSTA = '(?:aparece|apareceu|aparecem|apareceram|responde|respondeu|respondem|responderam|atende|atendeu|reage|reagiu|se mexe|da sinal|deu sinal)';
   var SEM_NOTICIA = 'sem (?:retorno|resposta|dar sinal|dar noticias?|noticias?)';
   var NEG_PROG = '(?:esta|estao|ta|tao|estava|estavam) (?:aparecendo|respondendo|atendendo|reagindo|voltando|subindo|saindo|emergindo|reaparecendo|retornando|se mexendo|dando (?:sinal|resposta|noticias?))';   // «não está aparecendo», «não está respondendo»
@@ -3640,7 +3650,7 @@
   var DESDE = / desde (?:hoje|ontem|cedo|agora|de manha|da manha|de madrugada|da madrugada|da noite|ha [a-z0-9]+)(?= )/g;   // («desde hoje cedo» é uma duração, não a escala de hoje)
   var SUMI_ANY = new RegExp(' ' + SUMI + ' ');
   var NEG_ANY = new RegExp(' (?:' + NAO_VE + '|' + NEG_X + '|' + SEM_NOTICIA + '|' + NINGUEM_V + ') ');
-  var PERDIDA_PRE = / (?:sum|some|desapar|perd|extrav|falt|nao |sem |menos|cont|confer|cham|recens|ninguem|cade|onde|ca[ei]|despenc|tomb|escorreg|jog|atir|parar|arremess|vi[ru]|ve |veem|procur|busc|atras|salt|pul|todo mundo|ped|grit|boi|flut|longe|deriva|emborc|capot|afund|par[ao]u|pararam|deix[ao]u|deixaram|nunca|prec|ajud|temos que|tenho que|vamos)/;   // (a saída rápida: a pergunta comum não tem nenhuma destas palavras)
+  var PERDIDA_PRE = / (?:sum|some|desapar|perd|extrav|falt|nao |sem |menos|cont|confer|cham|recens|ninguem|cade|onde|ca[ei]|despenc|tomb|escorreg|jog|atir|parar|arremess|vi[ru]|ve |veem|procur|busc|atras|salt|pul|todo mundo|ped|grit|boi|flut|longe|deriva|emborc|capot|afund|par[ao]u|pararam|deix[ao]u|deixaram|nunca|prec|ajud|temos que|tenho que|vamos|lanc|puxad|arrast|levad|empurr|demor|retorn|debat|afog|engol|respir|afast|tras |vindo|ja nao|agora|somos|eramos|fomos|saimos|embarc|tinha|nad|merg|caiaq|stand|mar |agua|bote|tender)/;   // (a saída rápida: a pergunta comum não tem nenhuma destas palavras; 6ª rodada: lançado, puxado, demorou, retornam, se debatendo, afogando, engoliu água, ficou para trás, a contagem)
   // a palavra que, no meio da distância, mostra que o verbo é de OUTRO sujeito: uma coisa de bordo ou de dado, ou uma fala
   var GAP_OBJ = 'plotter|radar|sonar|radio|gps|ais|vhf|dsc|epirb|antena|baliza|bateria|baterias|carta|mapa|leme|porao|bomba|filtro|oleo|piloto|sonda|display|botao|extintor|helice|eixo|casco|guincho|gerador|motor|motores|seakeeper|estabilizador|dessalinizador|climatizacao|transponder|bussola|sirene|alarme|alerta|aviso|luz|lampada|farol|fusivel|disjuntor|chave|chaves|tanque|painel|tela|sensor|sinal|icone|mensagem|mensagens|sistema|grafico|cartao|manual|menu|pagina|conta|senha|login|arquivo|pasta|foto|video|musica|canal|rede|dados|internet|wifi|conexao|notificacao|link|site|aplicativo|app|bluetooth|celular|telefone|tablet|notebook|computador|camera|drone|relogio|carteira|documento|passaporte|waypoint|rota|garmin|raymarine|simrad|furuno|lowrance|volvo|yanmar|cummins|onan|kohler|icom|whatsapp|telegram|instagram|facebook|spotify|ferramenta|ferramentas|peca|pecas|rotor|impulsor';
   var GAP_BARRA = '(?:que|q|disse|disseram|falou|falaram|avisou|avisaram|informou|perguntou|pediu|mandou|diz|dizem|fala|falam|avisa|pergunta|quer|queria|' + GAP_OBJ + ')';
@@ -3651,6 +3661,7 @@
   var Q_VERBO = '(?:caiu|cairam|despencou|despencaram|tombou|tombaram|escorregou|escorregaram|foi parar|foram parar|se jogou|se jogaram|se atirou|se atiraram|foi arremessad[oa]|foram arremessad[oa]s|foi jogad[oa]|foram jogad[oa]s|foi lancad[oa]|foram lancad[oa]s)';
   var Q_LUGAR = '(?:na agua|no mar|ao mar|pro mar|para o mar|pra agua|para a agua|pela borda|d[ao] (?:barco|lancha|embarcacao|proa|popa|flybridge|fly|conves|deck|escada|prancha|plataforma|passarela|lateral|mastro|tender|bote|jet ?ski|caiaque|stand up|balsa|cais|pier|trapiche|marina)|n[ao] (?:proa|popa|flybridge|conves|deck|escada|prancha|plataforma|passarela|lateral))';
   var P_QUEDA = reg([
+    ' ' + PES_ELE + gap(4) + ' (?:foi|foram|esta sendo|estao sendo|estava sendo) (?:lancad|jogad|arremessad|puxad|arrastad|empurrad)[oa]s?' + gap(3) + ' (?:ao mar|pro mar|para o mar|na agua|para a agua|pra agua|para fora|pela borda|pela corda|do barco|da lancha|da embarcacao|do tender|do bote) ',   // «o menino foi lançado ao mar», «o Carlos foi puxado pela corda para fora do barco» (6ª rodada)
     ' ' + PES_ELE + gap(4) + ' ' + Q_VERBO + gap(3) + ' ' + Q_LUGAR + ' ',   // «o menino foi parar na água», «o Pedro caiu da proa», «o menino escorregou e caiu da proa»
     ' ' + Q_VERBO + gap(2) + ' ' + Q_LUGAR + gap(2) + ' ' + DETN + PES_ELE + ' ',   // «caiu no mar o meu filho»
     ' ' + PES_ELE + gap(3) + ' (?:pulou|pularam|saltou|saltaram) d[oa] (?:flybridge|fly|proa|popa|conves|deck|mastro|escada|passarela) '   // «a Ana pulou do flybridge»
@@ -3658,8 +3669,10 @@
   // quem se perde, o palpite de quem falta, quem estava aqui agora, quem ninguém vê e quem se procura pelo barco todo: socorro sem guarda além do sumiço de dados
   var CADE = '(?:cade|onde esta|onde foi|onde estao|onde foram|onde anda|onde andam)';
   // o que estava aqui agora há pouco e já não está: vale até para o nome e o papel («o Pedro estava na proa e agora não está mais»)
-  var RECENTE = / (?:estava|estavam|tava|tavam|ficou|ficaram|vi|vimos|viu) (?:[a-z0-9]+ ){0,5}(?:agora|ha pouco|agora mesmo|ainda ha pouco|ha instantes|ha segundos|ha minutos|agorinha) | agora nao esta mais /;
-  var P_RECENTE = reg([' ' + PES_ELE + gap(8) + ' nao ' + NEG_AQUI + ' ', ' ' + PES_ELE + gap(8) + ' nao (?:esta|estao|ta|tao) mais(?: (?:aqui|ali|la|a bordo|abordo|no barco|na lancha|na embarcacao))* $']);
+  var RECENTE = / (?:estava|estavam|tava|tavam|ficou|ficaram|vi|vimos|viu) (?:[a-z0-9]+ ){0,5}(?:agora|ha pouco|agora mesmo|ainda ha pouco|ha instantes|ha segundos|ha minutos|agorinha) | agora nao esta mais | (?:estava|estavam|tava|tavam) (?:(?:na|no|em|a) )?(?:proa|popa|conves|deck|flybridge|fly|cabine|camarote|cozinha|aqui|ali|la|bordo|lancha|barco) /;   // (6ª rodada: «estava na proa e não está mais»)
+  // «não está» no FIM da frase (ou antes da cauda de uma pergunta de dado): «meu filho estava na popa e agora não está», «agora não está, qual o rumo?». A ausência de quem estava aqui: o «mais» e o lugar são opcionais
+  var NAO_ESTA_FIM = 'nao (?:esta|estao|ta|tao)(?: mais)?(?: (?:aqui|ali|la|a bordo|abordo|no barco|na lancha|na embarcacao|(?:no|na|nos|nas|em) [a-z0-9]+))*(?= (?:agora|qual|onde|cade|quant[a-z]*|como|e|ele|ela|pronpes|alguem|ninguem|ha|faz|me|nos|eu|vi|vejo|achei|acho|nao|so|preciso|socorro|ajuda|procur[a-z]*|olh[a-z]*|ve|veja) | $)';
+  var P_RECENTE = reg([' ' + PES_ELE + gap(8) + ' nao ' + NEG_AQUI + ' ', ' ' + PES_ELE + gap(8) + ' nao (?:esta|estao|ta|tao) mais(?: (?:aqui|ali|la|a bordo|abordo|no barco|na lancha|na embarcacao))* $', ' ' + PES_ELE + gap(8) + ' ' + NAO_ESTA_FIM]);
   var Q_RE = new RegExp(' ' + Q_VERBO + ' ');
   var P_FORTE = reg([
     ' (?:falta|faltam|faltou|faltando|esta faltando|estao faltando) ' + DETN + PES_ELE + gap(3) + ' ' + PALPITE + ' ',   // «está faltando o Pedro, será que caiu?»
@@ -3677,7 +3690,7 @@
   ]);
   // a embarcação pequena que vira: a pessoa está na água. O caiaque, a canoa, a prancha e o jet ski levam a pessoa na água por si; o bote e o tender («o bote virou» é a relato de falha do barco, local por outro caminho) só com a pessoa na frase
   var P_VIROU = reg([' (?:caiaques?|jet ?skis?|canoas?|pranchas?|stand up) (?:virou|emborcou|afundou|capotou|viraram|emborcaram|afundaram) ']);
-  var P_VIROU_PES = reg([' (?:botes?|tenders?|botinhos?|dinghy) (?:virou|emborcou|afundou|capotou|viraram|emborcaram|afundaram) ']);
+  var P_VIROU_PES = reg([' (?:botes?|tenders?|botinhos?|dinghy)(?: [a-z0-9]+){0,4} (?:virou|emborcou|afundou|capotou|viraram|emborcaram|afundaram) ']);   // («o bote com meus filhos virou»: a pessoa entre o bote e o verbo, 6ª rodada)
   // o sumiço (some, desaparece, se perdeu, está sumido), em qualquer tempo e distância: sem a palavra de dado na frase
   var P_SUMICO = reg([
     ' ' + PES_ELE + gap(8) + ' ' + SUMI + ' ',   // «o menino estava brincando e sumiu», «meu filho ficou brincando na popa e desapareceu», «o Pedro estava na proa e sumiu»
@@ -3688,6 +3701,7 @@
   ]);
   // quem não volta, não sobe, não sai, sem retorno: socorro; só a palavra de dado ou de pessoal na frase o tira («o Pedro não voltou na escala» é dado) e a de agenda («o marinheiro não voltou da folga»)
   var P_GUARDADA = reg([
+    ' ' + PES_ELE + gap(8) + ' demor[a-z]*(?: [a-z0-9]+){0,3} (?:subir|voltar|emergir|retornar|reaparecer|aparecer) ',   // «o mergulhador demorou a subir», «o Pedro está demorando muito para voltar do mergulho» (6ª rodada)
     ' ' + PES_ELE + gap(8) + ' (?:nao|nunca mais) ' + V_RETORNO + ' ',   // «o Pedro foi nadar e não voltou», «o Pedro foi ao banheiro e não voltou», «meu filho nunca mais voltou»
     ' ' + PES_ELE + gap(4) + ' (?:que|q)' + gap(9) + ' (?:nao|nunca mais) ' + V_RETORNO + ' ',   // «tem gente que não voltou», «o rapaz que foi nadar não voltou»
     ' ' + PES_ELE + '(?: (?:que|q))?' + gap(5) + ' ' + SEM_NOTICIA + ' ',   // «mergulhador sem retorno», «o Pedro foi mergulhar e estamos sem notícias dele»
@@ -3696,6 +3710,7 @@
   ]);
   // a ausência pura (não aparece, não responde, não está respondendo, não está aqui, a menos, falta o nome): também é a rotina da escala, então só vale sem a palavra de dado e sem a de escala
   var P_PRESENCA = reg([
+    ' gente(?: [a-z0-9]+){0,2} a menos ',   // «tem gente a menos», «tem gente a menos no barco» (a «gente» não é a pessoa que FALTA em «falta gente para a revisão», mas é a que fica a menos)
     ' ' + PES_ELE + gap(8) + ' (?:nao ' + NEG_AUSENTE + '|' + NEG_PARAR + '|nunca mais ' + V_RESPOSTA + ') ',   // «o menino não aparece», «o Pedro não responde», «o Pedro não está respondendo», «o Pedro parou de responder», «não a vejo mais»
     ' ' + PES_ELE + gap(4) + ' (?:que|q)' + gap(9) + ' (?:nao ' + NEG_AUSENTE + '|' + NEG_PARAR + ') ',   // «o rapaz que estava na proa não responde»
     ' ' + NAO_VE + ' ' + DETN + PES_ELE + ' ',   // «não vimos mais a Maria», «não achamos a Maria», «não avistei o Pedro» (parente e criança: a forma de PESSOA_SUMIDA, sem a escala)
@@ -3708,6 +3723,7 @@
   var P_PRESENCA_PRES = reg([
     ' ' + PES_PRES + gap(8) + ' nao (?:esta|estao|ta|tao) (?:mais(?: (?:aqui|ali|la|a bordo|abordo|no barco|na lancha|na embarcacao))*(?= (?:agora|qual|onde|cade|quant[a-z]*|como|e|ele|ela|pronpes|alguem|ninguem|ha|faz) | $)|aqui|ali|la|na proa|na popa|no conves|no deck|na cabine)(?= )',   // «meu filho não está aqui, estava na popa agora há pouco», «a criança estava na proa e agora não está mais»,
     ' ' + PES_PRES + gap(8) + ' nao ' + NEG_AQUI + ' ',   // «o marido não está aqui», «a bebê não está mais a bordo»
+    ' ' + PES_PRES + gap(8) + ' (?:agora|ja) ' + NAO_ESTA_FIM,   // «meu filho estava aqui e agora não está», «a criança estava na popa e já não está, qual o rumo?» (6ª rodada: com ou sem «mais», com cauda)
   ]);
   // a quantidade que falta a bordo, sem a palavra de pessoa («um a menos no barco», «falta gente no barco»): só vale a bordo
   var P_QUANT = reg([
@@ -3723,12 +3739,17 @@
   // O possuidor vira UMA palavra («zz»): a distância entre «o filho» e «está desaparecido» não cresce.
   var POSSUIDOR = new RegExp(' ((?:[a-z0-9]+ )?)(?:do|da|dos|das) ((?:(?:o|a|os|as|meu|minha|meus|minhas|nosso|nossa|esse|essa|um|uma) )*)' + PES_ELE + '(?= )', 'g');
   var PARTITIVO = new RegExp(' ' + QUANT_PARTE + ' $');
-  function semPossuidor(q) { return q.replace(POSSUIDOR, function (m, prev) { return PARTITIVO.test(' ' + prev) || /^(?:desaparecimento|sumico|perda|falta|ausencia|noticias?|sinal|resposta|retorno|rastro|paradeiro|pista|vestigio) $/.test(prev) ? m : ' ' + prev + 'zz'; }); }
+  function semPossuidor(q) { return q.replace(POSSUIDOR, function (m, prev) { return PARTITIVO.test(' ' + prev) || /^(?:desaparecimento|sumico|perda|falta|ausencia|noticias?|sinal|resposta|retorno|rastro|paradeiro|pista|vestigio|nada|perna|pernas|braco|bracos|mao|maos|pe|pes|cabeca|corpo|cabelo|pescoco|cintura|tornozelo|dedo|dedos) $/.test(prev) ? m : ' ' + prev + 'zz'; }); }
   // ele/ela/eles/elas é pessoa quando a frase já tem a pessoa ou a água («ele pulou no mar e não voltou», «o menino sumiu, ele estava na proa»); sozinho é qualquer coisa («ele sumiu» do plotter)
   function pronPessoa(q) {
     if (!/ (?:ele|ela|eles|elas) /.test(q) || !(PES_RE.test(q) || AGUA_RE.test(q))) return q;
     return q.replace(/ (?:ele|ela|eles|elas)(?= )/g, ' pronpes');
   }
+  // A pessoa NA ÁGUA em apuros, sem verbo de sumiço (6ª rodada): se debatendo, parou de nadar, não consegue subir nem voltar para o barco, não alcança, ficou para trás, longe demais, demorou, engoliu água, não respira,
+  // gritando, pedindo ajuda, sem colete, à deriva, se afastando. É socorro com a pessoa e a água na frase (P_SUBIR: o «não consegue subir no barco» já diz que está na água). Em qualquer distância, tempo e ordem.
+  var PERIGO_S = new RegExp(' (?:parou de (?:nadar|boiar|se mexer|respirar|remar)|(?:esta |estao |ta |tao |estava |estavam )?se (?:debat[a-z]*|afog[a-z]*)|debat[a-z]*|afog[a-z]*|engol[a-z]*(?: [a-z]+)? agua|nao (?:respira|respirou|esta respirando|consegue(?: mais)?|conseguem|consigo|conseguiu|alcanca|alcancam|alcancou|vem|vai|volta)|sem respirar|gritand[a-z]*|gritou|gritaram|pedindo (?:ajuda|socorro)|pede (?:ajuda|socorro)|sem (?:colete|boia)|(?:ficou|ficaram|ficando|esta ficando|estao ficando) para tras|longe demais|muito longe|bem longe|longe d[oa] (?:barco|lancha|embarcacao)|se afast[a-z]*|afastou|afastando|a deriva|derivando|demor[a-z]*) ');
+  var P_SUBIR = reg([' ' + PES_ELE + gap(6) + ' nao (?:consegue|conseguem|consigo|conseguiu|conseguem mais|consegue mais|alcanca|alcancam|alcancou)(?: [a-z0-9]+){0,2} (?:subir|voltar|alcancar|chegar|sair|nadar|se segurar|ficar a tona|boiar|respirar)(?: [a-z0-9]+){0,3} (?:no|ao|para o|pro|pra|na|ate o|ate a|a|para a|em) (?:barco|lancha|embarcacao|escada|plataforma|prancha|bordo|borda|tender|bote|boia|superficie|margem) ',   // «o menino não consegue subir no barco», «não consegue voltar para o barco»
+    ' ' + PES_ELE + gap(6) + ' nao (?:alcanca|alcancam|alcancou|alcanca mais) (?:a |o |as |os )?(?:escada|barco|borda|plataforma|prancha|boia|lancha|corda|cabo) ']);   // «o menino não alcança a escada»
   function pessoaPerdida(q) {
     var s = q, pes, pesA, sd;
     if (!PERDIDA_PRE.test(q)) return false;
@@ -3737,6 +3758,8 @@
     if (P_VIROU.some(function (r) { return r.test(s); })) return true;   // o caiaque, o bote, o tender que virou
     if (pes && (P_QUEDA.some(function (r) { return r.test(s); }) || P_VIROU_PES.some(function (r) { return r.test(s); }))) return true;   // a queda (da proa, na água, do barco) e o bote que vira com a pessoa
     if (pesA && AGUA_RE.test(s) && (SUMI_ANY.test(s) || NEG_ANY.test(s))) return true;   // a atividade na água + o sumiço, em qualquer ordem e distância
+    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;   // a atividade na água + o apuro (se debatendo, parou de nadar, ficou para trás, longe demais, demorou), sem verbo de sumiço
+    if (pes && P_SUBIR.some(function (r) { return r.test(s); })) return true;   // «o menino não consegue subir no barco»
     if (pes && P_FORTE.some(function (r) { return r.test(s); })) return true;
     if (pes && RECENTE.test(s) && P_RECENTE.some(function (r) { return r.test(s); })) return true;   // estava aqui agora há pouco e já não está
     if (pesA && P_SUMICO.some(function (r) { return r.test(s); })) return true;   // o sumiço da pessoa vale com a palavra de dado na frase («o menino sumiu, estou olhando o radar»): só o sumiço DE DADOS (semSumicoDeDados) o tira
@@ -3749,7 +3772,10 @@
   }
   // a REDE larga do pedeIA: a pessoa e qualquer sinal de sumiço, ausência, perda ou queda na MESMA pergunta, sem a guarda de dado nem a de escala. Só desliga a IA (o falso positivo custa só a resposta local; o falso negativo manda SOG
   // e proa à IA): nenhuma rota, nenhuma palavra a mais («proa», «ontem») a contorna.
-  var REDE_SINAL = new RegExp(' (?:' + V_SUMIU + '|sumid[oa]s?|desaparecid[oa]s?|extraviad[oa]s?|perdid[oa]s?|perdi|perdemos|perdeu|perderam|se perd[a-z]+|' + NAO_VE + '|' + NEG_X + '|' + SEM_NOTICIA + '|falta|faltam|faltou|faltaram|faltando|' + NINGUEM_V + '|' + Q_VERBO + '|' + CADE + ') ');
+  var NUM = '(?:[0-9]+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|quatorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte)';
+  // «falta» como sinal de PESSOA que falta: não o «quanto falta para a Barra Sul?», «faltam 5 minutos», «falta pouco», «faltam duas milhas»
+  var FALTA_PESSOA = '(?:falta|faltam|faltou|faltaram|faltando)(?! (?:para|pra|ate|pouco|muito|quanto|tempo|de |[0-9]+ )| ' + NUM + ' (?:milhas?|mn|minutos?|horas?|km|metros?|dias?|nos|litros?|semanas?|meses|segundos?))';
+  var REDE_SINAL = new RegExp(' (?:' + V_SUMIU + '|sumid[oa]s?|desaparecid[oa]s?|extraviad[oa]s?|perdid[oa]s?|(?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + '|se perd[a-z]+|' + NAO_VE + '|' + NEG_X + '|' + SEM_NOTICIA + '|' + FALTA_PESSOA + '|' + NINGUEM_V + '|' + Q_VERBO + '|' + CADE + '|nada d[eoa]s? ' + DETN + PES_ELE + '|perd(?:i|emos|eu|eram) (?:o )?contato com|sem contato com|(?:ninguem|nenhum de nos)(?: [a-z0-9]+){0,3} (?:viu|ve|vendo|achou|acha|encontrou|encontra|localizou|localiza|sabe)) ');   // («procuramos o barco todo e nada do Carlos»: a busca que não achou a pessoa)
   // (o `a gente` é «nós»: só o sujeito, nunca depois de preposição — «meu filho estava com a gente e sumiu»; o `comPrenomes` e o `semSumicoDeDados` entram nesta ordem: o prenome vira «fulano» e só depois a guarda tira o sumiço de dados, que também vale para ele: «o pedro sumiu da lista»)
   function aGente(q) { return q.replace(/ (com|para|pra|por|sem|de|em|ate|entre|contra|sobre|sob) a gente /g, ' $1 a_gente_obj ').split(' a gente ').join(' nos ').split(' a_gente_obj ').join(' a gente '); }
   function preparaPessoa(q) { return pronPessoa(semPossuidor(semSumicoDeDados(comPrenomes(aGente(q))))); }
@@ -3757,7 +3783,50 @@
     q = preparaPessoa(q);
     return PESSOA_SUMIDA.some(function (r) { return r.test(q); }) || pessoaPerdida(q);
   }
-  function pessoaRede(raw) { var c = comNomes(raw), q = preparaPessoa(c !== null ? c : pad(raw)); return PES_AGUA_RE.test(q) && REDE_SINAL.test(q); }
+  // ——— A REDE DE PESSOA (6ª rodada) ———
+  // O que a rota sos reconhece é preciso e local (a janela de 15 min); a REDE é larga e NUNCA vai à IA: a pessoa (um prenome, «o menino», «meu filho», «um dos nossos», «gente», «quem»; ele/ela só com o sumiço forte, a água ou a
+  // pessoa na frase) junto de QUALQUER sinal de sumiço, ausência, perda, queda, apuro na água ou contagem que não bate («não está» no fim, «demorou a subir», «se debatendo», «não alcança», «ficou para trás», «longe do barco», «a
+  // menos», «somos oito mas só contei sete») — e a pessoa na água sem sinal nenhum, a não ser a pergunta de consulta («quer aprender a nadar», «vai de caiaque amanhã», «qual a idade ideal»). Quando a rede casa e a rota sos não, a
+  // route() devolve o fallback SEGURO (`ANSWERS.fallback` com `a.pessoa`: sem a situação de bordo, com a instrução do SOS, sem a janela), nunca uma rota de dado; o `pedeIA` é false por qualquer rota. O falso positivo custa só a resposta local.
+  var CONTA_ELA = '(?:somos|eramos|fomos|saimos|embarcamos|partimos)(?: [a-z0-9]+){0,2} ' + NUM + '|(?:tinha|tinham|eram|temos|tem|ha|havia|haviam|sao|estamos em|ficamos em) ' + NUM + ' (?:pessoas|passageiros|tripulantes|criancas|gente)';
+  var CONTA_N = new RegExp(' (?:' + CONTA_ELA + ')(?: [a-z0-9]+){0,5} (?:mas|e agora|agora|so|apenas|porem|so que|ate agora) (?:[a-z0-9]+ ){0,4}' + NUM + ' ');   // «somos oito mas só contei sete», «éramos cinco e agora são quatro», «tinha seis pessoas e agora só tem cinco»
+  var CONTA_N3 = new RegExp(' (?:somos|estamos em|ficamos em|eramos|tinhamos|temos) ' + NUM + ' (?:[a-z0-9]+ ){0,6}(?:mas|e|porem|so) (?:[a-z0-9]+ ){0,5}' + NUM + ' (?:[a-z0-9]+ ){0,2}(?:a bordo|abordo|no barco|na lancha|na embarcacao) ');   // «estamos em sete e agora só temos seis a bordo»
+  var CONTA_N4 = new RegExp(' conte[a-z]*(?: [a-z0-9]+){0,4} (?:sao|eram|deu|deram|tem|ha) ' + NUM + '(?: [a-z0-9]+){0,3} (?:antes|mas|porem|e) (?:[a-z0-9]+ ){0,3}(?:eram|eramos|tinha|tinham|devia ser|deveria ser|deviam ser) ' + NUM + ' ');   // «contei de novo e são 6, antes eram 7» (o objeto contado — CONTA_OBJETO — não é)
+  var CONTA_N2 = new RegExp(' (?:conte[a-z]* ' + NUM + ' (?:[a-z0-9]+ ){0,3}(?:mas|e|porem) (?:eram|eramos|somos|tinha|tinham|deviam ser|deveriam ser) ' + NUM + '|(?:eram|eramos|somos|tinha|tinham) ' + NUM + ' (?:[a-z0-9]+ ){0,3}(?:mas|e|porem) (?:so|apenas|agora) (?:vejo|vi|contei|conto|contamos|vemos|tem|ha|temos) (?:[a-z0-9]+ ){0,2}' + NUM + '|faltou (?:um|uma|dois|duas) na (?:contagem|chamada|conferencia)) ');   // «contei 5 e eram 6», «eram 6 e só vejo 5», «faltou um na contagem» (o objeto contado — filtro, colete, peça — não é: CONTA_OBJETO)
+  var PRON_FORTE = new RegExp(' (?:(?:ele|ela|eles|elas)' + gap(6) + ' (?:sumiu|sumiram|desapareceu|desapareceram|caiu|cairam|se perdeu|se perderam|nao (?:volta|voltou|voltam|voltaram|sobe|subiu|sobem|subiram|retorna|retornou|retornam|retornaram|saiu|sai|saem))|(?:ele|ela|eles|elas)' + gap(3) + ' (?:foi|foram) (?:arrastad|levad|puxad|lancad|jogad|empurrad|arremessad)[oa]s?' + gap(3) + ' (?:ao mar|pro mar|para o mar|pela correnteza|pela corrente|pela onda|pela mare|pela borda|para fora|da lancha|do barco|na agua)|(?:ele|ela|eles|elas)' + gap(6) + ' (?:esta|estao|ta|tao|ficou|ficaram)(?: [a-z]+){0,1} (?:la longe|muito longe|bem longe|longe demais|la atras|para tras)|(?:falta|faltam|faltou) (?:ele|ela|eles|elas)|nao (?:acho|achei|achamos|vejo|vi|vimos|encontro|encontrei|encontramos|localizo|localizei|avisto|avistei) (?:mais )?(?:ele|ela|eles|elas)|(?:nao|ninguem) (?:sei|sabemos|sabe|sabem|faco ideia|fazemos ideia|temos ideia|tenho ideia) (?:de )?onde (?:(?:esta|ta|estao|foi|foram|anda|andam) )?(?:ele|ela|eles|elas)|(?:cade|onde (?:esta|foi|estao|foram|anda|andam)) (?:ele|ela|eles|elas)) ');   // ele/ela/eles/elas sozinhos com o sumiço FORTE (o «responde» e o «aparece» são do aparelho)
+  var CRAFT = '(?:caiaques?|canoas?|tenders?|botes?|botinhos?|dinghy|jet ?skis?|pranchas?|stand up|barquinho)';
+  var CRAFT_VAZIO = new RegExp(' ' + CRAFT + '(?: [a-z0-9]+){0,5} (?:vazi[oa]s?|sozinh[oa]s?|virad[oa]s?|a deriva|derivando|sem (?:ninguem|' + DETN + PES_ELE + ')) ');   // «o tender voltou vazio», «o caiaque voltou sem ninguém», «encontrei o caiaque boiando sem ninguém», «o tender voltou sem o Pedro»: quem estava nele não está
+  var PERIGO_ANY = new RegExp(' (?:parou de (?:nadar|boiar|se mexer|respirar|remar)|se (?:debat[a-z]*|afog[a-z]*)|debat[a-z]*|afog[a-z]*|engol[a-z]*(?: [a-z]+)? agua|nao (?:respira|respirou|esta respirando)|sem respirar|pedindo (?:ajuda|socorro)|pede (?:ajuda|socorro)|sem (?:colete|boia)|nao (?:consegue|conseguem|consigo|conseguiu|alcanca|alcancam|alcancou)(?: [a-z0-9]+){0,2} (?:subir|voltar|alcancar|chegar|sair|nadar|se segurar|boiar|respirar|ficar a tona)|(?:ficou|ficaram|ficando|esta ficando|estao ficando) para tras|nao (?:esta vindo|vem de volta|vem para o barco|vem pro barco|vem pra ca)|demor[a-z]*(?: [a-z0-9]+){0,3} (?:subir|voltar|emergir|retornar|reaparecer|aparecer|na agua|no mar|do mergulho|do mar|da agua)|a menos|gritand[a-z]*|gritou|gritaram|puxad[oa]s? (?:pel[ao]s?|por) (?:ancora|corda|cabo|corrente|helice|onda|ondas|correnteza)|(?:corda|cabo|linha|rede|ancora|corrente) (?:enroscou|enrolou|prendeu|agarrou)|(?:debaixo|embaixo|sob) d[oe] (?:barco|casco|lancha|embarcacao|tender|bote)|tentando (?:voltar|subir|chegar|alcancar|nadar)(?: [a-z0-9]+){0,3} (?:barco|lancha|embarcacao|escada|bordo|margem|praia|costa)|(?:preso|presa|presos|presas|enroscad[oa]s?|agarrad[oa]s?) (?:n[ao]s?|embaixo|debaixo|sob)(?: [a-z]+){0,2} (?:corda|cabo|ancora|helice|leme|rede|linha|pedras?|barco|casco|fundo)|sem ar|sem oxigenio|sozinh[oa](?: [a-z]+){0,2} (?:longe|na prancha|na agua|no mar|no caiaque|no bote)|(?:devia|deveria|deviam|deveriam) ter (?:voltado|subido|chegado|retornado|saido|emergido)|(?:saiu|sairam|sai) d[eo] (?:meu |nosso )?(?:campo de visao|vista|alcance)|perd(?:i|emos|eu|eram) de vista|sem (?:ver|achar|encontrar|localizar|avistar)|' + NAO_ESTA_FIM + ') ');   // o apuro com a pessoa, sem a água na frase («o menino engoliu água e não respira», «o Pedro não está vindo», «tem gente a menos»)
+  var PERIGO_AGUA = new RegExp(' (?:gritand[a-z]*|gritou|gritaram|cansad[oa]s?|exaust[oa]s?|desacordad[oa]s?|inconsciente|boiando|flutuando|puxad[oa]s?|arrastad[oa]s?|levad[oa]s?|empurrad[oa]s?|longe demais|muito longe|bem longe|longe d[oa] (?:barco|lancha|embarcacao)|se afast[a-z]*|afastou|afastando|a deriva|derivando|demor[a-z]*) ');   // o que só é apuro com a pessoa NA água
+  var PERIGO_SEMPES = / (?:gritand[a-z]*|pedindo (?:ajuda|socorro)|se debat[a-z]*|se afog[a-z]*|afogand[a-z]*|afogad[oa]s?|nao respira[a-z]*) /;   // «estão gritando na água» (a pessoa é oculta: o plural sem sujeito)
+  var CALMA_LEAD = /^ (?:como|qual|quais|quanto|quanta|quantos|quantas|quando|que horas|onde posso|posso|podemos|pode|podem|devo|devemos|e seguro|e permitido|da pra|da para|tem como|vale a pena|existe|ha ) /;   // (só vale no começo da FRASE em que a água está: «qual a posição? a criança está na correnteza» — o «qual» é da outra frase —, ver consultaNaAgua)
+  var CALMA_PAL = / (?:quer|querem|queria|queremos|vai|vao|vamos|pretend[a-z]*|gostaria|aprender|aprende|ensinar|ensino|ensinou|amanha|semana|fim de semana|idade|ideal|seguro|permitid[oa]s?|recomend[a-z]*|cuidados?|dicas?|pode|podem|posso|podemos|devo|devemos|pesc[a-z]*|passeio|passeando|curtindo|brincando|brinca|brincam|tomando banho|se divertindo|aproveitando|relaxando|descansando|medo|gosta|gosto|adora|prefere|aprendeu|aula|curso|chega|chegam|chegara|chegarao|marcad[oa]s?|agendad[oa]s?|combinad[oa]s?|horario) /;   // a pergunta de consulta (intenção, futuro, conselho) com a pessoa na água e sem apuro: continua indo à IA
+  var CALMA_PEDE = /^ (?:posso|podemos|pode|podem|devo|devemos|e seguro|e permitido|da pra|da para|vale a pena|tem como) /;
+  // A pessoa NA água (nadar, mergulhar, no mar, na água; o caiaque, o tender e a prancha só valem com um sinal) sem sinal nenhum, que não é consulta («o menino está nadando»), também é rede: a IA e a rota de assunto (que lê o quadro: «o menino está
+  // nadando, qual a posição?») não a tomam. A consulta («quer aprender a nadar», «vai de caiaque amanhã», «como ensinar») e a atividade tranquila («brincando», «pescando», «passeando») seguem como sempre.
+  var AGUA_B = new RegExp(' (?:nadar|nadou|nadando|nadaram|nadava|nadavam|mergulhar|mergulhou|mergulhando|mergulharam|mergulho|snorkel[a-z]*|apneia|banho de mar|pular|pulou|pularam|pulando|se jogou|se jogaram|se jogando|saltou|saltaram|correntezas?|ressaca|' + LUGAR_AGUA + ') ');
+  function pessoaRede(raw) {
+    var c = comNomes(raw, true), q = preparaPessoa(c !== null ? c : pad(raw)), agua = AGUA_RE.test(q);
+    if (CONTA_N.test(q) || CONTA_N3.test(q) || ((CONTA_N2.test(q) || CONTA_N4.test(q)) && !CONTA_OBJETO.test(q))) return true;
+    if (CRAFT_VAZIO.test(q)) return true;
+    if (!PES_AGUA_RE.test(q)) return PRON_FORTE.test(q) || (agua && PERIGO_SEMPES.test(q));
+    if (REDE_SINAL.test(q) || PERIGO_ANY.test(q)) return true;
+    if (agua && PERIGO_AGUA.test(q)) return true;
+    return AGUA_B.test(q) && !consultaNaAgua(raw);
+  }
+  // A consulta é a FRASE em que a pessoa está na água (nadar, mergulhar, no mar…), não a pergunta inteira: «qual a posição? a criança está na correnteza» e «como está o mar? meu filho está na água» têm a consulta numa frase e a água em outra,
+  // e a água, sem consulta, é a rede. A cada frase (pontuação) com a água: a consulta («como ensinar meu filho a nadar?», «meu filho quer aprender a nadar, qual a idade ideal?») ou nenhuma.
+  function consultaNaAgua(raw) {
+    var frases = String(raw == null ? '' : raw).split(/[?!.;:\n]+|,/), achou = false, pede = false, i, c;
+    for (i = 0; i < frases.length; i++) if (CALMA_PEDE.test(pad(frases[i]))) pede = true;   // («a ressaca está forte, posso levar meu filho?»: a permissão, em qualquer frase, é a consulta; o «qual» e o «como» de dado não)
+    for (i = 0; i < frases.length; i++) {
+      c = pad(frases[i]);
+      if (!AGUA_B.test(c)) continue;
+      achou = true;
+      if (!(pede || CALMA_LEAD.test(c) || CALMA_PAL.test(c))) return false;
+    }
+    return achou;
+  }
   // O nome próprio com inicial maiúscula («a Ana desapareceu», «perdemos o Pedro no mar», «Pedro desapareceu»): só existe no texto original (a maiúscula some na normalização). O `comNomes` troca cada nome por «fulano» e devolve o texto
   // normalizado (ou null, sem nome nenhum): as formas de PESSOA_SUMIDA valem para ele sem nenhuma regra à parte. Não é nome: a palavra de bordo, o aplicativo, o serviço e a marca com maiúscula («o Plotter sumiu», «o Spotify sumiu»,
   // «o Bluetooth sumiu», «o Garmin sumiu»: NAO_NOME e os fabricantes e equipamentos de D.equipamentos), a palavra com cara de substantivo comum («Cartão», «Manutenção») e a maiúscula que só abre a frase («Cadê», «Perdemos», «Não»):
@@ -3792,6 +3861,11 @@
   function marcasBordo() {
     var m = null;
     (D.equipamentos || []).forEach(function (e) { m = (m || ' ') + norm([e.fabricante, e.nome, e.modelo].join(' ')).replace(/[^a-z0-9]+/g, ' ') + ' '; });
+    // os lugares do plano de navegação, os destinos e a posição de referência também não são nome de pessoa («quanto falta para o Estaleirinho?», «onde está a Ilha das Cabras?», «não encontro a Barra Sul»)
+    if (!EM_SOS) try {   // (a página do SOS não lê D.rota: lá nenhuma resposta é de dado)
+      var lugares = [D.rota && D.rota.base && D.rota.base.nome, D.posicaoRef && D.posicaoRef.nome].concat(((D.rota && D.rota.pontos) || []).map(function (x) { return x && x.nome; }), (D.destinos || []).map(function (x) { return x && x.nome; })).filter(Boolean);
+      if (lugares.length) m = (m || ' ') + norm(lugares.join(' ')).replace(/[^a-z0-9]+/g, ' ') + ' ';
+    } catch (e) {}
     return m;
   }
   // O nome próprio dito em minúscula («o pedro sumiu», «O PEDRO SUMIU», «a lu desapareceu», o ditado e o texto de celular): na normalização a maiúscula some, então o que reconhece o nome é a LISTA dos prenomes mais comuns (só os que não
@@ -3815,7 +3889,9 @@
     }).join(' ');
     return mudou ? out : q;
   }
-  function comNomes(raw) {
+  // `largo` (só a REDE do pedeIA, 6ª rodada): o nome que ABRE a frase também vale com a ausência logo depois («Zacarias não volta do mergulho», «Zacarias demorou a subir»), que o `VERBO_NOME` estreito da rota sos não aceita
+  var VERBO_NOME_REDE = /^\s+(?:n[aã]o|nunca|ainda\s+n[aã]o|j[aá]\s+n[aã]o|demor(?:ou|ando|a)|ficou\s+para\s+tr[aá]s|parou\s+de|(?:foi|saiu|nadou|pulou|mergulhou|entrou)(?:\s+\S+){0,3}\s+e\s+(?:n[aã]o|sumiu|desapareceu)|est[aá]\s+(?:demorando|longe|na\s+[aá]gua|no\s+mar|nadando|mergulhando|se\s+debatendo|afogando))(?![A-Za-zÀ-ÿ])/i;
+  function comNomes(raw, largo) {
     var s = String(raw == null ? '' : raw).slice(0, 600), re = new RegExp(NOME_PAL.source, 'g'), m, toks = [], grupos = [], marcas = null, cortes = [], out = '', pos = 0;
     while ((m = re.exec(s))) toks.push({ i: m.index + m[1].length, f: m.index + m[0].length, w: norm(m[2]) });
     if (!toks.length) return null;
@@ -3826,7 +3902,7 @@
       var ini = g[0].i, fim = g[g.length - 1].f, antes = s.slice(0, ini).replace(/[\s"'«“‘(\[—–-]+$/, '');
       if (g.some(naoENome)) return;
       if (antes === '' || /[.!?…:;\n]$/.test(antes)) {   // abre a frase: a maiúscula é de qualquer palavra; nome só com o verbo de sumiço logo depois, ou (grupo de 2 ou mais) o que vem depois da 1ª palavra
-        if (VERBO_NOME.test(s.slice(fim, fim + 30))) { /* o grupo inteiro é o nome («Maria Clara desapareceu») */ }
+        if (VERBO_NOME.test(s.slice(fim, fim + 30)) || (largo === true && VERBO_NOME_REDE.test(s.slice(fim, fim + 30)))) { /* o grupo inteiro é o nome («Maria Clara desapareceu») */ }
         else if (g.length > 1) ini = g[1].i;
         else return;
       }
@@ -4060,6 +4136,10 @@
     // F16: o botão «O que verificar?» do relato: a busca no FAQ e nos guias pelo texto do relato (e a IA, se a tela a chamar), antes das rotas por palavra (depois da emergência e da cabeça de segurança)
     if (relatoVerificaPergunta(q)) return 'relatoVerifica';
     if (ol) return 'oleoLeitura';   // a leitura calma da pressão de óleo (o relato, ol === 1, já saiu lá em cima): depois da cabeça de equipamento de segurança, que ela não toma («onde fica o EPIRB, qual a pressão do óleo?»)
+    // A REDE de pessoa (P4G, 6ª rodada): a pessoa sumida, ausente, na água em apuros que a rota sos acima não tomou (a escala, o palpite, a forma que ninguém previu) nunca cai numa rota de assunto — nenhuma delas é segura para ela: a posição,
+    // o rumo, o ETA, as pessoas a bordo, a telemetria, o fora do barco e os contatos levam a situação de bordo ou a hora do quadro; «proa», «popa», «onde» e «agora» não a desviam —: é o fallback SEGURO (a instrução do SOS, sem a
+    // situação de bordo, sem a janela), local; o pedeIA também é false para ela. Os falsos positivos custam só a resposta do outro assunto (a rede é larga, mas não toma «quanto falta para a Barra Sul?», «perdeu o voo» nem o lugar da rota).
+    if (pessoaRede(qRaw)) return 'fallback';
     // F12/F15 (depois da cabeça de emergência: a pergunta de segurança nunca é delas): o pedido de alarme (incompleto também), o «apagar alarme #n», os alarmes pedidos e o «agendar … para dd/mm»
     if (almPedido(q)) return 'alarmePedido';
     if (almApagaN(qRaw) >= 0) return 'alarmeApaga';
@@ -4490,6 +4570,7 @@
     if (!ANSWERS[key]) key = 'fallback';
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
+    var segura = key === 'fallback' && pessoaRede(String(q || '')) ? fallbackPessoa(p) : null;   // (P4G, 6ª rodada: a pessoa que nenhuma rota tomou recebe o fallback SEGURO, pronto antes de o guia, o FAQ e a hora mexerem na resposta)
     // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && a.janela !== true && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
@@ -4504,6 +4585,7 @@
     // P3E (revisão 5): a cabeça de emergência que ficou no fallback (o guia não carregou: o trecho de segurança do botão DISTRESS ou da baliza do EPIRB não veio, ou a cauda não o deixou subir) é a instrução de
     // segurança da família dela, local, e NUNCA o fallback, que leva a situação de bordo (SOG, proa, motores, a hora do quadro: trava 10). A baliza do EPIRB dá a resposta do EPIRB; o botão DISTRESS, a do canal 16.
     if (key === 'fallback' && cabecaEmerg(pad(q))) { var fam = cabecaSemRota(pad(q)); key = fam === 'baliza' ? 'epirb' : fam ? 'canal16' : 'sos'; try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'sos'; a = ANSWERS.sos(p, ctx, ''); } }
+    if (segura !== null) { a = segura; key = 'fallback'; }   // (o trecho do guia, o item do FAQ e a hora do instante nunca tomam o lugar da instrução)
     a.key = key;
     return a;
   }
@@ -4530,7 +4612,7 @@
   }
   // A pergunta de emergência (SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio): ela e a resposta dela nunca entram no contexto, e ENCERRAM o que havia (a fala «o gerador» depois de
   // «mayday» é a resposta pronta do gerador, nunca a continuação da pergunta de antes da emergência).
-  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || nomeSumiu(q) || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
+  function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || nomeSumiu(q) || pessoaRede(q) || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
   function conversa(q, texto) {
     if (EM_SOS || !String(q || '').trim()) return;
     if (perguntaEmerg(q)) { limpaConversa(); return; }
