@@ -1,0 +1,691 @@
+# Perguntas NATURAIS de bordo (equipe, escala, contatos, peças, marina, apps, equipamentos, pessoas em tarefas): o cérebro de hoje responde IGUAL ao de f3b121c (a chave, a IA, o fallback seguro, a janela) — a estrutura da pessoa em risco não mexe na rotina. Fonte: as perguntas dos grupos de teste das fases 3 e 4.
+quando foi a última troca do filtro de óleo?
+como troco o filtro de óleo do motor?
+qual o filtro do gerador?
+o filtro de combustível está sujo
+quantos filtros de óleo eu tenho de reserva
+tem rotor sobrando?
+preciso trocar o rotor da bomba de água salgada
+o rotor do gerador quebrou
+o rotor do gerador acabou
+acabou o óleo do gerador
+acabou o diesel
+falta diesel para chegar?
+falta muito para chegar?
+quanto falta para a troca de óleo?
+o que falta fazer na manutenção?
+o que falta comprar?
+preciso comprar anodo
+onde fica o anodo do estabilizador
+quanto custa um filtro de óleo
+quem vende filtro de óleo
+tem correia sobressalente?
+tem fusível sobressalente?
+estoque de fusíveis
+qual o estoque de peças?
+lista de peças sobressalentes
+peças que vencem
+peças para a revisão dos 450 horas
+o que preciso para a troca de óleo dos motores?
+quais peças uso na troca de óleo?
+tendência de queda do dólar
+como está a tendência do mercado
+vai chover amanhã? tendência do tempo
+tendência da pressão barométrica
+a pressão do óleo está caindo?
+a temperatura do motor está subindo
+o BE está esquentando mais que o BB?
+por que o motor BE esquenta mais?
+a bateria está descarregando
+a bateria está perdendo carga rápido
+quanto tempo dura a bateria
+qual a saída do inversor?
+a saída de ar da climatização está fraca
+saída de água do escapamento do gerador
+como foi a saída de ontem?
+quando é a próxima saída?
+resumo da última saída
+hora de saída
+horário de saída
+checklist
+check-list de saída
+checklist de partida
+lista de verificação antes de sair
+estamos prontos para sair?
+posso sair agora?
+tudo pronto para largar?
+o que devo conferir antes de largar?
+antes de largar o que faço?
+antes de sair confira o porão
+fundeio
+como fundear
+como fundeio com 10 metros?
+qual a profundidade para fundear?
+checklist da âncora
+checklist do motor
+checklist do gerador
+checklist de segurança
+checklist de colete
+checklist do EPIRB
+chegada
+horário de chegada
+o que fazer na chegada
+abastecimento
+quando foi o último abastecimento?
+como abastecer?
+procedimento de abastecimento
+regra do diesel
+nível de diesel
+como ligo o rádio?
+como ligo o piloto automático?
+o piloto está desligando
+como programar o AIS?
+o plotter travou
+como silenciar o alarme?
+alarme de baixa pressão do óleo
+alarme do porão
+alarme de profundidade
+a sonda não lê
+sonda sem leitura
+luz do óleo acesa
+quais são os próximos vencimentos?
+quanto tempo falta pro seguro vencer?
+o seguro vence quando?
+quem chamar para consertar o gerador?
+telefone da oficina
+horas do motor
+horas do gerador
+quantas horas faltam para a revisão?
+revisão do gerador
+próxima revisão do motor
+qual o consumo?
+quanto consome por hora?
+qual a autonomia?
+que dia é hoje?
+quem sou eu?
+bom dia
+obrigado
+teste
+Como faço um pedido de socorro (MAYDAY) pelo rádio?
+chamada de socorro no canal 16
+o que falar no MAYDAY
+como chamar socorro no VHF
+MAYDAY: pedido de socorro pelo rádio
+Quando uso o PAN-PAN em vez do MAYDAY?
+diferença entre PAN-PAN e MAYDAY
+pane sem governo: que chamada faço
+chamada de urgência no canal 16
+PAN-PAN: urgência sem perigo imediato de vida
+Como mando o alerta DSC de socorro pelo rádio?
+botão DISTRESS do rádio VHF
+identificação do rádio no alerta de socorro
+depois do botão DISTRESS, o que faço
+Alerta DSC de socorro pelo rádio
+O que faço quando alguém cai na água?
+pessoa caiu do barco
+homem ao mar: primeiros passos
+como recuperar quem caiu
+Homem ao mar (MOB)
+O que faço se houver fogo a bordo?
+fogo no motor
+alarme do sistema fixo de incêndio
+como usar o extintor portátil no fogo
+Incêndio a bordo
+O que faço se estiver entrando água?
+alagamento no porão
+a bomba de porão não dá conta
+nível do porão subindo
+Água entrando no barco
+Quando e como abandono o barco?
+preciso abandonar o barco
+ordem de abandono
+o que levar para a balsa
+Abandono do barco
+Quando e como aciono o EPIRB?
+como disparar a radiobaliza
+acionar a baliza de emergência
+EPIRB em perigo grave
+EPIRB (radiobaliza): acionar
+Onde estão os coletes, a balsa e os extintores?
+equipamentos de salvatagem do barco
+quantos coletes preciso levar
+onde ficam os sinalizadores
+Salvatagem: coletes, balsa e extintores
+O que olho nos motores antes da partida?
+verificação antes da partida do motor
+motor frio: o que olhar primeiro
+checar o motor antes de ligar
+Antes de dar a partida nos motores
+Como ligo os motores?
+dar partida no motor
+partida dos dois motores pelo painel
+ligar o motor de bombordo e o de boreste
+Dar a partida nos motores
+Preciso aquecer o motor antes de acelerar?
+motor frio: posso acelerar
+tempo de aquecimento do motor
+marcha lenta antes de acelerar
+Aquecer os motores
+O que faço se a pressão de óleo cair?
+alarme de pressão de óleo no motor
+manômetro de óleo baixo
+motor sem pressão de óleo
+Pressão de óleo baixa no motor
+O motor esquentou demais, o que faço?
+alarme de temperatura do motor
+arrefecimento do motor subindo
+motor superaquecendo
+Temperatura alta no motor
+Quanto tempo deixo o motor em marcha lenta antes de desligar?
+esfriar o motor antes de parar
+posso desligar o motor logo ao chegar
+marcha lenta antes de desligar
+Desligar os motores depois de navegar
+Quando é a próxima troca de óleo e do rotor dos motores?
+troca de óleo e filtros do motor
+prazo de troca do rotor da bomba de água salgada
+revisão anual dos motores
+Manutenção dos motores na agenda
+Onde vejo as horas de uso dos motores?
+horímetro dos motores de BB e BE
+quantas horas têm os motores
+horas de motor na telemetria
+Horímetros dos motores
+Quais são os valores normais de rotação, óleo e temperatura dos motores?
+faixa normal do motor
+limites de pressão de óleo e arrefecimento
+rotação de cruzeiro dos motores
+Faixas de operação dos motores
+Quanto os motores gastam de diesel por hora?
+consumo em marcha lenta e em cruzeiro
+litros por hora dos dois motores
+gasto de combustível na rotação máxima
+Consumo de diesel dos motores
+O que olho no gerador antes de ligar?
+verificação do gerador antes da partida
+gerador parado: o que checar
+óleo e filtro de água salgada do gerador
+Antes de ligar o gerador
+Como ligo o gerador?
+dar partida no gerador
+passar as cargas para o gerador
+ligar a climatização depois do gerador
+Ligar o gerador
+Como sei se o gerador está refrigerando?
+gerador sem água no escapamento
+saída de água do gerador
+falta de refrigeração do gerador
+Água no escapamento do gerador
+Como desligo o gerador?
+parar o gerador
+retirar a carga e esfriar o gerador
+fechar a válvula de fundo do gerador
+Desligar o gerador
+O gerador deu alarme de temperatura alta, o que faço?
+gerador esquentando
+alarme de temperatura no gerador
+gerador superaquecido
+Alarme de alta temperatura do gerador
+O gerador deu alarme de pressão de óleo, o que faço?
+gerador sem pressão de óleo
+alarme de óleo no gerador
+nível de óleo do gerador
+Alarme de baixa pressão de óleo do gerador
+Quando é a próxima troca de óleo e a inspeção do rotor do gerador?
+troca de óleo e filtros do gerador
+inspeção do rotor (impeller)
+revisão do gerador na agenda
+Manutenção do gerador na agenda
+Onde vejo as horas de uso do gerador?
+quantas horas tem o gerador
+horímetro do gerador na telemetria
+Horímetro do gerador
+Quanta carga o gerador aguenta?
+potência nominal do gerador
+carga normal com a climatização ligada
+carga acima do normal no gerador
+Potência e carga do gerador
+Quantas baterias tem o barco e como estão ligadas?
+bancos de 24 V e 12 V
+banco de partida dos motores
+carregador de bordo
+Bancos de baterias
+Qual a tensão normal dos bancos de baterias?
+tensão baixa nas baterias
+faixa do banco de 12 V
+banco de serviço de 24 V
+Faixas de tensão das baterias
+Quando verifico as baterias?
+conferir as tensões antes de sair
+bornes das baterias
+verificação dos bancos a cada 6 meses
+Verificação das baterias
+De onde o estabilizador tira energia?
+alimentação do Seakeeper
+banco de 12 V do estabilizador
+volante que não acelera
+Energia do estabilizador
+Como ligo o estabilizador antes de sair?
+ligar o Seakeeper
+esperar o estabilizador ficar pronto
+rotação do volante no display
+Ligar o estabilizador antes de sair
+Posso desligar o efeito do estabilizador sem parar o volante?
+botão de estabilização
+estabilizador na manobra de marina
+desligar só a estabilização
+Ligar e desligar a estabilização
+Como desligo o estabilizador ao chegar?
+parar o Seakeeper
+volante ainda girando depois de desligar
+quando desligo o banco de 12 V
+Desligar o estabilizador ao atracar
+Posso mexer no estabilizador com o volante girando?
+manutenção do estabilizador
+abrir tampas do Seakeeper
+conferir que o volante parou
+Segurança com o volante do estabilizador
+O estabilizador mostrou uma mensagem de alarme, o que faço?
+mensagem no display do Seakeeper
+estabilizador com temperatura alta
+tensão baixa no estabilizador
+Alarmes e mensagens do estabilizador
+Quando faço a manutenção do estabilizador?
+anodo do trocador de calor
+revisão anual do Seakeeper
+troca do anodo do estabilizador
+Manutenção do estabilizador na agenda
+A partir de que rotação o estabilizador estabiliza?
+rotação do volante do Seakeeper
+volante abaixo do normal
+quando o estabilizador começa a funcionar
+Faixa do volante do estabilizador
+Como ligo o ar-condicionado?
+ligar a climatização
+ligar o ar da cabine
+bomba de água salgada da climatização
+Ligar a climatização
+Como escolho frio, calor ou ventilação?
+ajustar a temperatura da cabine
+unidades de 16.000 e 12.000 BTU/h
+ligar uma unidade de cada vez
+Modos e temperatura da climatização
+A climatização deu alarme de fluxo ou de alta pressão, o que faço?
+alarme de água salgada na climatização
+ar-condicionado desligou por alarme
+filtro de água salgada sujo
+Alarme de fluxo da climatização
+O ar da cabine está fraco, o que faço?
+fluxo de ar fraco
+limpar o filtro de ar da cabine
+unidade da cabine com pouco ar
+Pouco ar saindo na cabine
+Como desligo a climatização?
+desligar o ar-condicionado
+desligar a bomba de água salgada da climatização
+fechar a válvula de fundo ao deixar o barco
+Desligar a climatização
+Quando limpo o filtro de água salgada da climatização?
+limpeza mensal do filtro
+revisão anual da climatização
+filtro de água salgada do ar-condicionado
+Manutenção da climatização na agenda
+Como ligo o dessalinizador?
+fazer água doce a bordo
+dessalinizador: válvula de fundo e pré-filtro
+ligar o dessalinizador pelo painel
+Ligar o dessalinizador
+Quanta água o dessalinizador faz por hora?
+produção nominal em litros por hora
+salinidade da água produzida
+água dos primeiros minutos
+Produção do dessalinizador
+Como desligo o dessalinizador?
+lavagem com água doce no fim do ciclo
+desligar o dessalinizador pelo painel
+dessalinizador com o barco parado
+Desligar e lavar o dessalinizador
+Quando troco os pré-filtros do dessalinizador?
+pré-filtros do dessalinizador
+conservação da membrana
+dessalinizador parado por muito tempo
+Manutenção do dessalinizador
+As bombas de porão ligam sozinhas?
+sensor de nível do porão
+ciclos das bombas de porão
+bombas automáticas de BB e BE
+Como funcionam as bombas de porão
+Qual o nível normal do porão?
+nível do poço das bombas
+alarme de nível do porão
+porão acima do normal
+Nível normal do porão
+Como testo as bombas de porão?
+acionar a bomba de porão no manual
+teste mensal do porão
+alarme do painel do porão
+Teste mensal das bombas de porão
+Entrou água no barco, o que faço?
+água subindo no porão
+bomba de porão sem dar conta
+Água entrando: bombas de porão
+Como marco um homem ao mar no plotter?
+função MOB do plotter
+alguém caiu na água: o que faço no plotter
+rumo de volta para quem caiu
+Marcar homem ao mar no plotter
+Quando deixo o piloto automático em espera?
+piloto em standby
+engatar o piloto automático
+piloto ao manobrar na marina
+Piloto automático: espera e engate
+Como ativo o alarme de âncora?
+raio do alarme de âncora
+ativar o alarme ao fundear
+contador de corrente e alarme de âncora
+Alarme de âncora no plotter
+Qual canal fica em escuta no rádio VHF?
+escuta permanente do canal 16
+dupla escuta do VHF
+rádio portátil carregado
+Rádio VHF: escuta do canal 16
+Para que serve o botão DISTRESS do rádio?
+alerta DSC do rádio VHF
+Rádio VHF: botão DISTRESS (DSC)
+Como pareio o celular no som do barco?
+Bluetooth do Fusion
+conectar o celular ao áudio
+volume por zona do áudio
+Áudio Fusion: parear o celular
+Com que frequência atualizo as cartas e o software dos plotters?
+atualização anual dos plotters
+software do radar e do áudio
+cartas náuticas do plotter
+Atualização de cartas e software
+Qual a profundidade mínima para navegar?
+alarme de profundidade da sonda
+água rasa: o que faço
+sonda mostrando pouca profundidade
+Profundidade mínima na sonda
+Como lanço a âncora?
+fundear com o guincho
+quanto de corrente lançar
+dar ré até a âncora unhar
+Lançar a âncora
+Como sei quantos metros de corrente lancei?
+marca do contador de corrente
+metros de corrente no controle do guincho
+contador do guincho antes do alarme de âncora
+Contador de corrente
+Como recolho a âncora?
+içar a âncora
+travar a corrente
+desligar o guincho no disjuntor
+Recolher a âncora e travar a corrente
+Que cuidado o guincho precisa depois do uso?
+lavar o guincho com água doce
+corrente e destorcedor
+conferência anual do guincho
+Manutenção do guincho
+Como engato o piloto automático?
+ligar o piloto Raymarine
+piloto no posto de comando
+engatar com o rumo conferido no plotter
+Engatar o piloto automático
+Quando deixo o piloto em espera?
+piloto na marina
+piloto em situação de risco
+Piloto em espera ao manobrar
+Como assumo o leme com o piloto ligado?
+sair do piloto automático
+governar pelo timão
+direção hidráulica do piloto
+Assumir o leme no timão
+O piloto deu alarme de desvio de rumo, o que faço?
+desvio de rumo do piloto
+alarme da direção hidráulica
+piloto alarmando
+Alarmes do piloto automático
+Como ligo o radar?
+transmitir com o radar
+ligar o radar pelo plotter
+radar em espera na marina
+Ligar o radar e transmitir
+Como defino a zona de guarda do radar?
+alerta de alvo no radar
+zona de guarda em volta do barco
+radar avisando alvo próximo
+Zona de guarda do radar
+Como uso o radar na neblina?
+radar à noite
+conferir alvos com o AIS
+reduzir a velocidade na neblina
+Radar com neblina ou à noite
+Posso chegar perto do radar transmitindo?
+domo do radar ligado
+abrir o domo do radar
+cuidados com o radar transmitindo
+Segurança com o domo do radar
+Como vejo os outros barcos pelo AIS?
+alvos do AIS
+distância de passagem prevista
+nome, rumo e velocidade dos alvos
+Alvos do AIS no plotter
+Que identificação o AIS transmite?
+MMSI do AIS
+transponder classe B
+identificação do barco no AIS
+Identificação do AIS
+O que faz o modo silencioso do AIS?
+transponder só recebendo
+AIS sem transmitir a posição
+voltar a transmitir o AIS
+AIS em modo silencioso
+O que faço em caso de fogo no motor?
+quando usar o extintor portátil
+Fogo a bordo: sistema fixo de incêndio
+Como uso o disparo manual do sistema fixo?
+sistema fixo não disparou sozinho
+acionar o disparo manual de incêndio
+disparo manual com o motor desligado
+Disparo manual do sistema fixo
+O sistema fixo disparou, o que faço depois?
+sistema fixo descarregou
+quando abrir o acesso ao motor depois do disparo
+recarga do sistema fixo
+Depois do disparo do sistema fixo
+Quando inspeciono o sistema fixo de incêndio?
+inspeção do sistema e da carga
+revisão anual do sistema fixo
+técnico de bordo e o sistema fixo
+Inspeção anual do sistema fixo
+Como aciono o EPIRB?
+disparar a radiobaliza
+EPIRB: antena para cima e céu aberto
+levar o EPIRB para a balsa
+Acionar o EPIRB
+Como testo o EPIRB?
+autoteste da radiobaliza
+o teste do EPIRB envia alerta
+bateria e disparador hidrostático
+Teste da baliza (EPIRB)
+Disparei o EPIRB sem querer, o que faço?
+baliza disparou por engano
+desligar o EPIRB disparado
+avisar no canal 16 depois do disparo
+EPIRB disparado por engano
+Onde vejo a validade do EPIRB?
+validade da bateria da radiobaliza
+disparador hidrostático
+certificado do EPIRB
+Validade do EPIRB
+O que confiro antes de sair: gerador, estabilizador e climatização?
+checklist de saída, itens 1 a 3
+água no escapamento do gerador na saída
+filtro de água salgada antes de ligar a climatização
+Checklist de saída: gerador, estabilizador e climatização
+O que confiro antes de sair: eletrônicos, porão e diesel?
+checklist de saída, itens 4 a 6
+plotter, piloto e VHF antes de sair
+bombas de porão e diesel antes de largar
+Checklist de saída: eletrônicos, porão e diesel
+O que confiro antes de largar: coletes, balsa e previsão do dia?
+coletes, balsa e extintores antes de sair
+previsão do dia antes de largar
+boletim da Marinha antes de sair
+Checklist de saída: coletes, previsão e salvatagem
+O que faço ao chegar na marina?
+fechar a saída no diário
+desligar estabilizador, gerador e climatização ao atracar
+checklist ao atracar
+Checklist de chegada
+Quando devo abastecer e o que registro?
+reserva técnica de diesel
+abastecer antes de 25 %
+Checklist de abastecimento
+Quando completo a água e esvazio as servidas?
+água doce abaixo do aviso
+tanques de águas cinzas e negras
+servidas acima do aviso
+Checklist de tanques
+O que confiro ao fundear?
+checklist ao fundear
+alarme de âncora e diário no fundeio
+fundo de areia ou lama
+Checklist de fundeio
+checklist de saída
+checklist de chegada
+checklist de abastecimento
+checklist de fundeio
+pronto para sair?
+checklist do rádio VHF
+tendências
+quais as tendências?
+tendência do óleo
+as baterias estão perdendo capacidade?
+tendência do arrefecimento
+que peça acabou?
+o que está acabando?
+o que está faltando a bordo?
+tem anodo?
+quantos filtros de óleo temos?
+tem peça de reposição do guincho Lewmar?
+tem peça sobressalente fictício?
+peças para a troca de óleo dos motores
+peças do gerador
+peças do rádio VHF
+quais peças estão no mínimo?
+tem rotor no estoque
+onde fica a correia do alternador?
+quanto custa o rotor do gerador?
+estoque
+estoque de água
+estoque de gelo
+tem peça sobressalente para o motor?
+qual a validade das peças?
+peças vencidas
+peças com validade
+oi
+é seguro sair hoje?
+para onde vamos hoje?
+próximas manutenções
+autonomia
+maré agora
+clima e vento
+roteiro do canal 16
+consumo de diesel
+nível dos tanques
+quem chamar da equipe?
+pendências abertas
+bombas de porão
+posição agora
+documentos vencendo
+horímetros
+motores volvo penta
+estabilizador Seakeeper
+climatização
+plotter garmin
+dessalinizador
+bateria 24 v
+âncora garrando?
+guias de bordo
+diário de bordo
+Telemetria agora
+qual a pressão do óleo?
+qual o calado do barco?
+qual o preço do dólar?
+diagnóstico
+áudio fusion
+motores
+quem está na escala hoje?
+o Pedro está de folga amanhã?
+o João assume o turno da noite?
+o marinheiro chega às 8h?
+qual o telefone do mecânico?
+o técnico da Cummins vem hoje?
+liguei para o dono e ele não atendeu
+o dono da marina não respondeu o e-mail
+o técnico vai trocar o rotor do gerador
+o mecânico não veio ainda
+o estaleiro não entregou a peça
+o joystick não responde
+o tacômetro não funciona
+o macaco hidráulico sumiu
+a escada de popa caiu
+a bomba de água salgada parou
+o capitão do porto liberou a saída?
+o piloto automático desligou
+o piloto desligou sozinho
+o imediato assinou o diário?
+o cliente pediu a nota fiscal
+a babá não respondeu a mensagem
+o dono não aprovou o orçamento
+o mestre da marina não voltou do almoço
+o eletricista não terminou o serviço
+o painel do dono não liga
+meu filho quer saber o consumo
+minha esposa perguntou a previsão do tempo
+a criança está dormindo na cabine
+o menino está no flybridge
+o Pedro está na proa
+o garoto caiu da cama e riu
+o Pedro está pescando
+os caras do estaleiro chegaram
+todo mundo já embarcou?
+todos assinaram o termo?
+o pessoal da marina falou que o óleo acabou
+quem faltou na vistoria?
+o fiscal não apareceu na vistoria
+o convidado não chegou ainda
+o hóspede perdeu o voo
+a Maria perdeu o celular
+o cooler caiu no chão
+o tendal caiu
+o sinal do GPS caiu
+a conexão com o Starlink caiu
+a temperatura do motor caiu
+o diesel acabou
+o gelo derreteu
+o técnico disse que o filtro está sujo
+o mecânico falou que a bomba precisa trocar
+o dono pediu o relatório
+o proprietário quer ver o diário
+o comandante assinou
+perdi o manual
+perdi o remo
+não encontro o filtro de óleo
+não acho a chave do porão
+cadê o extintor?
+cadê o manual do gerador?
+ninguém viu o controle remoto
+falta óleo no motor BB
+faltam duas peças no estoque
+falta uma assinatura no documento
+o óleo do motor sumiu do visor
+o sinal do rádio sumiu
+o barulho do motor desapareceu
+o cheiro de diesel sumiu
+a luz do painel sumiu
+o ícone do plotter sumiu da tela
+a foto do barco sumiu do app
+o nome do Pedro sumiu da lista

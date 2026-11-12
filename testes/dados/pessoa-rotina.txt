@@ -1,0 +1,373 @@
+# Perguntas de ROTINA com pessoa (escala, lista, mensagem, contato, peça, ida à marina, app, equipamento): nenhuma pode ser socorro nem o fallback seguro (pendentes 5 e 6 do fechamento do grupo home)
+o Pedro não voltou a ligar
+a Maria não voltou a ligar
+o dono não voltou a ligar
+o técnico não voltou a ligar
+a babá não voltou a ligar
+o fotógrafo não voltou a ligar
+meu filho não voltou a ligar
+a cozinheira não voltou a ligar
+o Pedro não voltou a responder
+a Maria não voltou a responder
+o dono não voltou a responder
+o técnico não voltou a responder
+a babá não voltou a responder
+o fotógrafo não voltou a responder
+meu filho não voltou a responder
+a cozinheira não voltou a responder
+o Pedro não retorna as ligações
+a Maria não retorna as ligações
+o dono não retorna as ligações
+o técnico não retorna as ligações
+a babá não retorna as ligações
+o fotógrafo não retorna as ligações
+meu filho não retorna as ligações
+a cozinheira não retorna as ligações
+o Pedro não voltou com a peça
+a Maria não voltou com a peça
+o dono não voltou com a peça
+o técnico não voltou com a peça
+a babá não voltou com a peça
+o fotógrafo não voltou com a peça
+meu filho não voltou com a peça
+a cozinheira não voltou com a peça
+o Pedro não voltou da marina
+a Maria não voltou da marina
+o dono não voltou da marina
+o técnico não voltou da marina
+a babá não voltou da marina
+o fotógrafo não voltou da marina
+meu filho não voltou da marina
+a cozinheira não voltou da marina
+o Pedro não voltou do almoço
+a Maria não voltou do almoço
+o dono não voltou do almoço
+o técnico não voltou do almoço
+a babá não voltou do almoço
+o fotógrafo não voltou do almoço
+meu filho não voltou do almoço
+a cozinheira não voltou do almoço
+o Pedro não voltou do mercado
+a Maria não voltou do mercado
+o dono não voltou do mercado
+o técnico não voltou do mercado
+a babá não voltou do mercado
+o fotógrafo não voltou do mercado
+meu filho não voltou do mercado
+a cozinheira não voltou do mercado
+o Pedro não aparece na escala
+a Maria não aparece na escala
+o dono não aparece na escala
+o técnico não aparece na escala
+a babá não aparece na escala
+o fotógrafo não aparece na escala
+meu filho não aparece na escala
+a cozinheira não aparece na escala
+o Pedro não aparece na escala de hoje
+a Maria não aparece na escala de hoje
+o dono não aparece na escala de hoje
+o técnico não aparece na escala de hoje
+a babá não aparece na escala de hoje
+o fotógrafo não aparece na escala de hoje
+meu filho não aparece na escala de hoje
+a cozinheira não aparece na escala de hoje
+o Pedro não aparece na lista
+a Maria não aparece na lista
+o dono não aparece na lista
+o técnico não aparece na lista
+a babá não aparece na lista
+o fotógrafo não aparece na lista
+meu filho não aparece na lista
+a cozinheira não aparece na lista
+o Pedro não respondeu a mensagem
+a Maria não respondeu a mensagem
+o dono não respondeu a mensagem
+o técnico não respondeu a mensagem
+a babá não respondeu a mensagem
+o fotógrafo não respondeu a mensagem
+meu filho não respondeu a mensagem
+a cozinheira não respondeu a mensagem
+o Pedro não respondeu o e-mail
+a Maria não respondeu o e-mail
+o dono não respondeu o e-mail
+o técnico não respondeu o e-mail
+a babá não respondeu o e-mail
+o fotógrafo não respondeu o e-mail
+meu filho não respondeu o e-mail
+a cozinheira não respondeu o e-mail
+o Pedro não respondeu o WhatsApp
+a Maria não respondeu o WhatsApp
+o dono não respondeu o WhatsApp
+o técnico não respondeu o WhatsApp
+a babá não respondeu o WhatsApp
+o fotógrafo não respondeu o WhatsApp
+meu filho não respondeu o WhatsApp
+a cozinheira não respondeu o WhatsApp
+o Pedro não está no grupo
+a Maria não está no grupo
+o dono não está no grupo
+o técnico não está no grupo
+a babá não está no grupo
+o fotógrafo não está no grupo
+meu filho não está no grupo
+a cozinheira não está no grupo
+o Pedro faltou ontem
+a Maria faltou ontem
+o dono faltou ontem
+o técnico faltou ontem
+a babá faltou ontem
+o fotógrafo faltou ontem
+meu filho faltou ontem
+a cozinheira faltou ontem
+o Pedro não atende o telefone
+a Maria não atende o telefone
+o dono não atende o telefone
+o técnico não atende o telefone
+a babá não atende o telefone
+o fotógrafo não atende o telefone
+meu filho não atende o telefone
+a cozinheira não atende o telefone
+o Pedro não veio trabalhar hoje
+a Maria não veio trabalhar hoje
+o dono não veio trabalhar hoje
+o técnico não veio trabalhar hoje
+a babá não veio trabalhar hoje
+o fotógrafo não veio trabalhar hoje
+meu filho não veio trabalhar hoje
+a cozinheira não veio trabalhar hoje
+o Pedro está de folga amanhã
+a Maria está de folga amanhã
+o dono está de folga amanhã
+o técnico está de folga amanhã
+a babá está de folga amanhã
+o fotógrafo está de folga amanhã
+meu filho está de folga amanhã
+a cozinheira está de folga amanhã
+o Pedro não assinou o diário
+a Maria não assinou o diário
+o dono não assinou o diário
+o técnico não assinou o diário
+a babá não assinou o diário
+o fotógrafo não assinou o diário
+meu filho não assinou o diário
+a cozinheira não assinou o diário
+o Pedro não está na lista de saída
+a Maria não está na lista de saída
+o dono não está na lista de saída
+o técnico não está na lista de saída
+a babá não está na lista de saída
+o fotógrafo não está na lista de saída
+meu filho não está na lista de saída
+a cozinheira não está na lista de saída
+o Pedro não aparece no cadastro
+a Maria não aparece no cadastro
+o dono não aparece no cadastro
+o técnico não aparece no cadastro
+a babá não aparece no cadastro
+o fotógrafo não aparece no cadastro
+meu filho não aparece no cadastro
+a cozinheira não aparece no cadastro
+o Pedro sumiu da lista de contatos
+a Maria sumiu da lista de contatos
+o dono sumiu da lista de contatos
+o técnico sumiu da lista de contatos
+a babá sumiu da lista de contatos
+o fotógrafo sumiu da lista de contatos
+meu filho sumiu da lista de contatos
+a cozinheira sumiu da lista de contatos
+o Pedro não está na equipe
+a Maria não está na equipe
+o dono não está na equipe
+o técnico não está na equipe
+a babá não está na equipe
+o fotógrafo não está na equipe
+meu filho não está na equipe
+a cozinheira não está na equipe
+o Pedro ainda não chegou na marina
+a Maria ainda não chegou na marina
+o dono ainda não chegou na marina
+o técnico ainda não chegou na marina
+a babá ainda não chegou na marina
+o fotógrafo ainda não chegou na marina
+meu filho ainda não chegou na marina
+a cozinheira ainda não chegou na marina
+o Pedro não confirmou a viagem de sábado
+a Maria não confirmou a viagem de sábado
+o dono não confirmou a viagem de sábado
+o técnico não confirmou a viagem de sábado
+a babá não confirmou a viagem de sábado
+o fotógrafo não confirmou a viagem de sábado
+meu filho não confirmou a viagem de sábado
+a cozinheira não confirmou a viagem de sábado
+o Pedro não mandou a nota fiscal
+a Maria não mandou a nota fiscal
+o dono não mandou a nota fiscal
+o técnico não mandou a nota fiscal
+a babá não mandou a nota fiscal
+o fotógrafo não mandou a nota fiscal
+meu filho não mandou a nota fiscal
+a cozinheira não mandou a nota fiscal
+o Pedro não deu retorno sobre o orçamento
+a Maria não deu retorno sobre o orçamento
+o dono não deu retorno sobre o orçamento
+o técnico não deu retorno sobre o orçamento
+a babá não deu retorno sobre o orçamento
+o fotógrafo não deu retorno sobre o orçamento
+meu filho não deu retorno sobre o orçamento
+a cozinheira não deu retorno sobre o orçamento
+o Pedro não voltou da oficina
+a Maria não voltou da oficina
+o dono não voltou da oficina
+o técnico não voltou da oficina
+a babá não voltou da oficina
+o fotógrafo não voltou da oficina
+meu filho não voltou da oficina
+a cozinheira não voltou da oficina
+o Pedro não voltou da reunião
+a Maria não voltou da reunião
+o dono não voltou da reunião
+o técnico não voltou da reunião
+a babá não voltou da reunião
+o fotógrafo não voltou da reunião
+meu filho não voltou da reunião
+a cozinheira não voltou da reunião
+o Pedro não atendeu a ligação da marina
+a Maria não atendeu a ligação da marina
+o dono não atendeu a ligação da marina
+o técnico não atendeu a ligação da marina
+a babá não atendeu a ligação da marina
+o fotógrafo não atendeu a ligação da marina
+meu filho não atendeu a ligação da marina
+a cozinheira não atendeu a ligação da marina
+o Pedro está sem sinal de celular
+a Maria está sem sinal de celular
+o dono está sem sinal de celular
+o técnico está sem sinal de celular
+a babá está sem sinal de celular
+o fotógrafo está sem sinal de celular
+meu filho está sem sinal de celular
+a cozinheira está sem sinal de celular
+o Pedro faltou na revisão
+a Maria faltou na revisão
+o dono faltou na revisão
+o técnico faltou na revisão
+a babá faltou na revisão
+o fotógrafo faltou na revisão
+meu filho faltou na revisão
+a cozinheira faltou na revisão
+o Pedro não compareceu à vistoria
+a Maria não compareceu à vistoria
+o dono não compareceu à vistoria
+o técnico não compareceu à vistoria
+a babá não compareceu à vistoria
+o fotógrafo não compareceu à vistoria
+meu filho não compareceu à vistoria
+a cozinheira não compareceu à vistoria
+o Pedro não entregou o relatório
+a Maria não entregou o relatório
+o dono não entregou o relatório
+o técnico não entregou o relatório
+a babá não entregou o relatório
+o fotógrafo não entregou o relatório
+meu filho não entregou o relatório
+a cozinheira não entregou o relatório
+o Pedro não pagou a taxa
+a Maria não pagou a taxa
+o dono não pagou a taxa
+o técnico não pagou a taxa
+a babá não pagou a taxa
+o fotógrafo não pagou a taxa
+meu filho não pagou a taxa
+a cozinheira não pagou a taxa
+o Pedro saiu cedo e não volta hoje
+a Maria saiu cedo e não volta hoje
+o dono saiu cedo e não volta hoje
+o técnico saiu cedo e não volta hoje
+a babá saiu cedo e não volta hoje
+o fotógrafo saiu cedo e não volta hoje
+meu filho saiu cedo e não volta hoje
+a cozinheira saiu cedo e não volta hoje
+o Pedro não vem no próximo passeio
+a Maria não vem no próximo passeio
+o dono não vem no próximo passeio
+o técnico não vem no próximo passeio
+a babá não vem no próximo passeio
+o fotógrafo não vem no próximo passeio
+meu filho não vem no próximo passeio
+a cozinheira não vem no próximo passeio
+o Pedro não está disponível no WhatsApp
+a Maria não está disponível no WhatsApp
+o dono não está disponível no WhatsApp
+o técnico não está disponível no WhatsApp
+a babá não está disponível no WhatsApp
+o fotógrafo não está disponível no WhatsApp
+meu filho não está disponível no WhatsApp
+a cozinheira não está disponível no WhatsApp
+o Pedro desapareceu do grupo do WhatsApp
+a Maria desapareceu do grupo do WhatsApp
+o dono desapareceu do grupo do WhatsApp
+o técnico desapareceu do grupo do WhatsApp
+a babá desapareceu do grupo do WhatsApp
+o fotógrafo desapareceu do grupo do WhatsApp
+meu filho desapareceu do grupo do WhatsApp
+a cozinheira desapareceu do grupo do WhatsApp
+o Pedro não apareceu na planilha
+a Maria não apareceu na planilha
+o dono não apareceu na planilha
+o técnico não apareceu na planilha
+a babá não apareceu na planilha
+o fotógrafo não apareceu na planilha
+meu filho não apareceu na planilha
+a cozinheira não apareceu na planilha
+qual o telefone do Pedro?
+qual o telefone da Maria?
+qual o telefone do dono?
+qual o telefone do técnico?
+qual o telefone da babá?
+qual o telefone do fotógrafo?
+qual o telefone de meu filho?
+qual o telefone da cozinheira?
+quem é o Pedro na equipe?
+quem é a Maria na equipe?
+quem é o dono na equipe?
+quem é o técnico na equipe?
+quem é a babá na equipe?
+quem é o fotógrafo na equipe?
+quem é meu filho na equipe?
+quem é a cozinheira na equipe?
+o Pedro está escalado para sábado?
+a Maria está escalado para sábado?
+o dono está escalado para sábado?
+o técnico está escalado para sábado?
+a babá está escalado para sábado?
+o fotógrafo está escalado para sábado?
+meu filho está escalado para sábado?
+a cozinheira está escalado para sábado?
+lista de tarefas do Pedro
+lista de tarefas da Maria
+lista de tarefas do dono
+lista de tarefas do técnico
+lista de tarefas da babá
+lista de tarefas do fotógrafo
+lista de tarefas de meu filho
+lista de tarefas da cozinheira
+o Pedro fez a manutenção do gerador?
+a Maria fez a manutenção do gerador?
+o dono fez a manutenção do gerador?
+o técnico fez a manutenção do gerador?
+a babá fez a manutenção do gerador?
+o fotógrafo fez a manutenção do gerador?
+meu filho fez a manutenção do gerador?
+a cozinheira fez a manutenção do gerador?
+a Ana voltou do mergulho
+o menino voltou do mar
+o Pedro saiu do mar e foi almoçar
+o dono disse que o barco está pronto
+o técnico chegou
+o técnico está a caminho
+o dono chegou hoje
+o Pedro foi ao mercado e já volta
+a Maria voltou da marina
+Falta gente a bordo para o passeio de sábado
+o Pedro não está vindo para o jantar
+o Pedro não vem para a reunião
