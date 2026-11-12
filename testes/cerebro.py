@@ -7634,7 +7634,7 @@ JS_ES_JANELA = r"""(casos) => { const B = window.CapitaoBrain, D = window.Capita
   return { plotter: D.protocolos.plotter, out: casos.map((q) => { B.limpaConversa(); const a = B.answer(q, op); const pos = ['qual a posição?', 'qual o rumo?', 'quanto falta para chegar?', 'quantas pessoas a bordo?', 'qual a velocidade?'].map((p) => { const r = B.answer(p, opj);
       return { p: p, l1: String(r.text || '').split('\n')[0], jan: r.janela === true, ia: B.pedeIA(r, p, { emergencia: true }), txt: String(r.text || '') + '\n' + String(r.src || '') + '\n' + String(B.falaCurta(r) || '') }; });
     return { q: q, key: a.key, abre: a.abreJanela === true, pos: pos }; }) }; }"""
-JS_ES_DIARIO = r"""(qs) => { const B = window.CapitaoBrain; return qs.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { q: q, key: a.key, abre: a.abreJanela === true, emerg: a.emerg === true, soSOS: /abra o SOS/.test(String(a.text || '')) }; }); }"""
+JS_ES_DIARIO = r"""(qs) => { const B = window.CapitaoBrain; return qs.map((q) => { const a = B.answer(q, { platform: 'app', commit: false }); return { q: q, key: a.key, abre: a.abreJanela === true, emerg: a.emerg === true, soSOS: /abra o SOS/.test(String(a.text || '')), plot: /ler no plotter/.test(String(a.text || '')), coord: /[0-9]+[°º] ?[0-9]|[0-9]+ ?(?:nós|kt)/i.test(String(a.text || '')) }; }); }"""
 
 
 # a lista das COISAS vem do cadastro: toda palavra do equipamento, do documento, da tarefa da agenda, da peça, do ponto da rota e do destino (e as palavras que o cadastro dá a cada equipamento) é coisa — «o T sumiu», «a T desapareceu», «perdi o T»,
@@ -7672,6 +7672,9 @@ def es_vocab_livre(corpo, vocab=None):
     """As palavras do vocabulário reservado que o CÓDIGO do cérebro tem (os comentários não contam; palavra inteira, sem acento): tem de ser nenhuma — a pessoa é a estrutura, não uma lista."""
     t = sem_acento_es(re.sub(r'(?<=\s)//[^\n]*', '', corpo).lower())
     return [w for w in (ES_VOCAB if vocab is None else vocab) if re.search(r'(?<![a-z0-9])' + re.escape(sem_acento_es(w.lower())) + r'(?![a-z0-9])', t)]
+
+
+JS_ES_FOTO = r"""(qs) => qs.map((txt) => { const B = window.CapitaoBrain; localStorage.clear(); const a = B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app', texto: txt }); return { txt: txt, pedido: a.pedido === true, linhas: B.loadDiario().map((x) => x.t) }; })"""
 
 
 def grupo_p4g_estrutura(b, muta, ped):
@@ -7713,9 +7716,8 @@ def grupo_p4g_estrutura(b, muta, ped):
         cd = pg.evaluate(JS_ES_COISAS)
         ped('p4g estrutura: toda palavra do cadastro do barco (equipamento, marca, modelo, documento, tarefa, peça, ponto da rota, destino: %d palavras, %d frases) é COISA: nenhuma é pessoa em risco' % (cd['tokens'], cd['n']), not cd['ruins'] and cd['tokens'] > 100, (cd['tokens'], cd['ruins'][:6]))
         antigo = es_cerebro_antigo()
-        if antigo is None:
-            print('p4g estrutura: (o cérebro-oráculo %s não está no git deste clone: o diferencial da rotina foi pulado)' % ES_ORACULO)
-        else:
+        ped('p4g estrutura: o cérebro-oráculo %s está no git deste clone (sem ele o diferencial da rotina não roda — num clone raso, `git fetch --unshallow`: a falta do oráculo é FALHA, não aviso)' % ES_ORACULO, antigo is not None)
+        if antigo is not None:
             pg.evaluate("() => new Promise((r) => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
             pa = es_pagina_antiga(b, antigo)
             try:
@@ -7728,9 +7730,14 @@ def grupo_p4g_estrutura(b, muta, ped):
             ped('p4g estrutura: as %d perguntas NATURAIS de bordo (equipe, escala, contatos, peças, marina, apps, equipamentos, pessoas em tarefas) têm a MESMA rota, a mesma decisão de IA, o mesmo fallback seguro e a mesma janela que no cérebro de antes das rodadas (%s): a estrutura não mexe na rotina' % (nat, ES_ORACULO), not ruins, (len(ruins), ruins[:5]))
             ruins = [(q, esp, y[1:]) for (q, esp), y, x in zip(ES_MUDA, novo[nat:], velho[nat:]) if not ((esp == 'sos' and y[1] == 'sos' and y[4]) or (esp == 'seguro' and y[1] == 'fallback' and y[3] and not y[4])) or x[1:] == y[1:]]
             ped('p4g estrutura: a rotina que MUDA de propósito (%s) é, de fato, o socorro ou o fallback seguro da estrutura e difere do cérebro de antes' % ', '.join(q for q, _ in ES_MUDA), not ruins, ruins[:4])
-        d = pg.evaluate(JS_ES_DIARIO, ['registre no diário: o dono sumiu', 'registre no diário: o técnico caiu na água', 'registre no diário: o Pedro não aparece na escala', 'registre no diário: o motor está bem'])
-        ped('p4g estrutura: «registre no diário: o dono sumiu» leva a instrução do SOS e abre a janela (o texto de pessoa aberta), e a nota de rotina não',
-            d[0]['abre'] and d[0]['soSOS'] and d[1]['abre'] and d[1]['soSOS'] and not d[2]['abre'] and not d[2]['soSOS'] and not d[3]['abre'], d)
+        d = pg.evaluate(JS_ES_DIARIO, ['registre no diário: o dono sumiu', 'registre no diário: o técnico caiu na água', 'registre no diário: o Pedro não aparece na escala', 'registre no diário: o motor está bem', 'registre no diário: o imediato não aparece',
+                                       'registre no diário: o tender voltou vazio', 'registre posição e hora, o imediato não aparece', 'registre posição e hora, o dono sumiu'])
+        ped('p4g estrutura: «registre no diário: o dono sumiu» leva a instrução do SOS e abre a janela (o texto de pessoa aberta); o duvidoso («o imediato não aparece», «o tender voltou vazio») leva a instrução do SOS SEM a janela (a ESPERA), também com o pedido de posição e hora (sem coordenada: «posição: ler no plotter»); a nota de rotina não leva nada',
+            d[0]['abre'] and d[0]['soSOS'] and d[1]['abre'] and d[1]['soSOS'] and not d[2]['abre'] and not d[2]['soSOS'] and not d[3]['abre'] and not d[4]['abre'] and d[4]['soSOS'] and not d[5]['abre'] and d[5]['soSOS']
+            and not d[6]['abre'] and not d[6]['emerg'] and d[6]['soSOS'] and d[6]['plot'] and not d[6]['coord'] and d[7]['abre'] and d[7]['soSOS'] and d[7]['plot'] and not d[7]['coord'], d)
+        f = pg.evaluate(JS_ES_FOTO, ['registre no diário: o imediato não aparece', 'registre no diário: o tender voltou vazio', 'registre no diário: o dono sumiu', 'registre no diário: troquei o filtro do gerador'])
+        ped('p4g estrutura: a foto com «registre no diário: <o duvidoso ou a pessoa aberta>» NÃO grava a legenda na linha da foto (a tela responde ao texto: a instrução de segurança, `pedido` falso); a legenda de rotina entra na linha',
+            all(not x['pedido'] and len(x['linhas']) == 1 and x['txt'].split(': ', 1)[1].lower() not in x['linhas'][0].lower() for x in f[:3]) and f[3]['pedido'] and len(f[3]['linhas']) == 1 and 'troquei o filtro' in f[3]['linhas'][0].lower(), f)
     finally:
         pg.ctx.close()
 
@@ -8016,7 +8023,7 @@ MUTANTES_P3F_F17 = [
     ('p3f F17: o cancelar vira o texto do registro', r"    if (CANCELA_REG.test(n) || metaRegistro(n)) return 'relatoCancela';", r"    if (metaRegistro(n)) return 'relatoCancela';", ('p3f_f17',)),
     ('p3f F17: o NOVA não zera a espera', r"n: (CONV.n || 0) + 1, reg: false }; ESPERA_REG = null; REL = null; PEND_CHAT", r"n: (CONV.n || 0) + 1, reg: false }; REL = null; PEND_CHAT", ('p3f_f17',)),
     ('p3f F17: a fala do registro volta à 1ª linha com a data', r"    return 'Registrado no diário de bordo.' + (alerta", r"    return 'Registrado no diário de bordo · ' + now().d + ' ' + now().t + (alerta", ('p3f_f17',)),
-    ('p3f F17: a fala do registro de emergência não manda abrir o SOS', r"(alerta ? ' Se a emergência é agora, abra o SOS.' : '')", r"''", ('p3f_f17',)),
+    ('p3f F17: a fala do registro de emergência não manda abrir o SOS', r"(alerta ? ' Se a emergência é agora, abra o SOS.' : espera ? ' Se há pessoa no mar ou sumida, abra o SOS.' : '')", r"''", ('p3f_f17',)),
     ('p3f F17: a fala do registro de óleo não traz a instrução', r"(pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '')", r"''", ('p3f_f17',)),
     ('p3f F17: o pedido de link fala que gravou', r"    if (!grava) return 'Pedido vindo de link não grava no diário.';", r"", ('p3f_f17',)),
 ]
@@ -8095,8 +8102,8 @@ MUTANTES_P3F_F36 = [
     ('p3f F36: a emergência dita com a foto entra na linha', '    if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || risco(raw).n >= 1 || cabecaEmerg(n) || /\\?/.test(raw)', '    if (/\\?/.test(raw)', ('p3f_foto',)),
     ('p3f F36: a legenda comum é tratada como pedido (a tela não responde)', r"    return { nota: notaRelato(raw), pedido: false };   // a legenda", r"    return { nota: notaRelato(raw), pedido: true };   // a legenda", ('p3f_foto',)),
     ('p3f F36: o relato dito com a foto não é tratado (pedido falso)', r"    if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };", r"", ('p3f_foto',)),
-    ('p3f F36: o pedido de registro dito com a foto não é tratado', r"    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergenciaTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"", ('p3f_foto',)),
-    ('p3f F36: «posição e hora» dito com a foto entra na linha', r"return nota && !resumoMais(nota) && !emergenciaTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"return nota ? { nota: nota, pedido: true } : null; }", ('p3f_foto',)),
+    ('p3f F36: o pedido de registro dito com a foto não é tratado', r"    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !instrucaoTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"", ('p3f_foto',)),
+    ('p3f F36: «posição e hora» dito com a foto entra na linha', r"return nota && !resumoMais(nota) && !instrucaoTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }", r"return nota ? { nota: nota, pedido: true } : null; }", ('p3f_foto',)),
     ('p3f F36: a legenda depois do «o que devo registrar?» não é o registro', r"    if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }", r"", ('p3f_foto',)),
     ('p3f F36: a espera do registro não é consumida pela foto', r"{ ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }", r"{ return { nota: notaRelato(raw), pedido: true }; }", ('p3f_foto',)),
     ('p3f F36: a espera do registro vale depois dos 2 minutos', r"    if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) {", r"    if (ESPERA_REG) {", ('p3f_foto',)),
@@ -9321,7 +9328,7 @@ MUTANTES_P3G = [
     if (opts.pendencia) {""", r"    if (opts.pendencia) {", ('p3g_agenda', 'p3g_pendencias')),
     ('p3g exec: a linha do SOS propõe e fecha', r"    if (EM_SOS || !entry || entry.acao || linhaDoSOS(entry) || typeof entry.t !== 'string') return null;", r"    if (EM_SOS || !entry || entry.acao || typeof entry.t !== 'string') return null;", ('p3g_agenda', 'p3g_pendencias')),
     ('p3g exec: o registro da linha de ação propõe', r"    if (EM_SOS || !entry || entry.acao || linhaDoSOS(entry) ||", r"    if (EM_SOS || !entry || linhaDoSOS(entry) ||", ('p3g_agenda',)),
-    ('p3g exec: o chat propõe a agenda para a nota com cabeça de segurança (EPIRB)', r"alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }", r"alerta || pressao ? undefined : { pendencia: true, agenda: true, chat: true }", ('p3g_agenda',)),
+    ('p3g exec: o chat propõe a agenda para a nota com cabeça de segurança (EPIRB)', r"alerta || espera || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }", r"alerta || espera || pressao ? undefined : { pendencia: true, agenda: true, chat: true }", ('p3g_agenda',)),
     ('p3g exec: a confirmação que abre outras propostas as perde (a decisão parte da lista de antes)', r"    cru = ticketsCru(); t = achaTicket(cru, id) || t;   // (a confirmação pode ter aberto", r"    /* cru = ticketsCru(); t = achaTicket(cru, id) || t; */   // (a confirmação pode ter aberto", ('p3g_pendencias',)),
     ('p3g exec: o desfazer perde a recusa das propostas que o registro abriu', r"""    cru = ticketsCru(); t = achaTicket(cru, id) || t;
     t.estado = 'aberto'; delete t.dec; delete t.res;""", r"    t.estado = 'aberto'; delete t.dec; delete t.res;", ('p3g_pendencias',)),
@@ -10594,10 +10601,10 @@ MUTANTES_P4G_REV = [
     ('p4g nome: o advérbio que abre a frase é pessoa («Ontem desapareceu o sinal do AIS», «Hoje sumiu o alarme»)', r"'ontem', 'hoje', 'agora', 'depois', 'tambem', 'entao',", r"'xontem', 'xhoje', 'xagora', 'xdepois', 'xtambem', 'xentao',", ('p3c',)),
     ('p4g nome: o pronome que abre a frase é pessoa («Isso sumiu de repente»)', r"'logo', 'aqui', 'ainda', 'quando', 'algo', 'tudo', 'nada', 'isso', 'aquilo',", r"'logo', 'aqui', 'ainda', 'quando', 'algo', 'xtudo', 'xnada', 'xisso', 'xaquilo',", ('p3c',)),
     # —— o registro no diário e a foto com o texto ——
-    ('p4g diário: «registre no diário: o João sumiu» sem a instrução de segurança (o diário só conhece a lista SOS)', r"var alerta = emergenciaTexto(nota), pressao", r"var alerta = emergencia(pad(nota)), pressao", ('p4g_pessoa',)),
-    ('p4g diário: «registre a posição e a hora, o João sumiu» sem a instrução de segurança (o ramo do resumo)', r"var al = junto && emergenciaTexto(nota), pr", r"var al = junto && emergencia(pad(nota)), pr", ('p4g_pessoa',)),
-    ('p4g diário: o texto de rotina vira alerta (o predicado único sem a guarda do sumiço de dados)', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 1; }', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 1 || /sumiu|desapareceu/.test(n); }', ('p4g_pessoa',)),
-    ('p4g diário: o pedido de registro com a foto grava a pessoa que some como legenda de rotina', r"!resumoMais(nota) && !emergenciaTexto(nota) && oleo(pad(nota)) !== 1", r"!resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1", ('p4g_pessoa',)),
+    ('p4g diário: «registre no diário: o João sumiu» sem a instrução de segurança (o diário só conhece a lista SOS)', r"var alerta = emergenciaTexto(nota), espera", r"var alerta = emergencia(pad(nota)), espera", ('p4g_pessoa',)),
+    ('p4g diário: «registre a posição e a hora, o João sumiu» sem a instrução de segurança (o ramo do resumo)', r"var al = junto && emergenciaTexto(nota), es", r"var al = junto && emergencia(pad(nota)), es", ('p4g_pessoa',)),
+    ('p4g diário: o texto de rotina vira alerta (o predicado único sem a guarda do sumiço de dados)', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || /sumiu|desapareceu/.test(n); }', ('p4g_pessoa',)),
+    ('p4g diário: o pedido de registro com a foto grava a pessoa que some como legenda de rotina', r"!resumoMais(nota) && !instrucaoTexto(nota) && oleo(pad(nota)) !== 1", r"!resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1", ('p4g_pessoa',)),
     ('p4g nome: o nome dito com a foto vira legenda (o texto de emergência entra na linha)', 'socorroImplicito(n) || risco(raw).n >= 1 || cabecaEmerg(n) || /\\?/.test(raw)', 'socorroImplicito(n) || cabecaEmerg(n) || /\\?/.test(raw)', ('p3f_foto', 'p4g_pessoa')),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV
@@ -10862,7 +10869,7 @@ MUTANTES_P4G_REV7 = [
     ('p4g estrutura: o palpite da queda («será que caiu?») com a ausência é a ESPERA', "    if (fraco) return adm && !agua ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);", "    if (fraco) return adm && !agua ? 0 : (agua ? 2 : 1);", E7),
     ('p4g estrutura: a ausência de pessoa de terra com a água («a pessoa do stand up paddle») nunca é a água', "    agua = AGUA_RE.test(sa) || PESSOA_NA_AGUA.test(sa);", "    agua = AGUA_RE.test(sa);", E7),
     # —— o ponto de entrada único ——
-    ('p4g estrutura M10: o diário não leva a pessoa aberta («registre no diário: o dono sumiu»)', "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 1; }", "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n); }", E7 + ('p4g_pessoa',)),
+    ('p4g estrutura M10: o diário não leva a pessoa aberta («registre no diário: o dono sumiu»)', "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }", "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n); }", E7 + ('p4g_pessoa',)),
     ('p4g estrutura: a memória das últimas perguntas devolve a resposta de OUTRA pergunta', "if (RISCO_MEM[i].k === raw && RISCO_MEM[i].s === sig) return RISCO_MEM[i].v;", "if (RISCO_MEM[i].s === sig) return RISCO_MEM[i].v;", E7),
     ('p4g estrutura: a grafia do ditado («sumio», «sumiru») não vale', "  function grafia(q) { var i;", "  function grafia(q) { return q; var i;", E7),
 ]
@@ -10900,6 +10907,54 @@ MUT_REESCRITOS = {
     'p4g estrutura: a grafia do ditado («sumio», «sumiru») não vale': ('  function grafia(q) {\n    var i, t, ch;', '  function grafia(q) { return q;\n    var i, t, ch;', ('p4g_estrutura',)),
 }
 MUTANTES_3A = [(n,) + MUT_REESCRITOS[n] if n in MUT_REESCRITOS else (n, t, tr, g) for n, t, tr, g in MUTANTES_3A]
+
+
+# ——— 2ª rodada de correção do fechamento da Home: os mutantes da estrutura do sujeito (partitivo, sem substantivo, relativa, anáfora, o nome sem artigo, a rede por sinal, a composta, as 2 letras, a digitação) e da rotina (a ligação, a ida a terra, o equipamento, a escala) ———
+MUTANTES_P4G_R2 = [
+    ('p4g R2 partitivo: o «um dos meus X» (artigo depois do «dos») não é sujeito', "    if (DET_NP.indexOf(' ' + (t[k] || '#') + ' ') !== -1) {\n      r = nucleoNP(t, k + 1, t[k]);", '    if (false) {\n      r = nucleoNP(t, k + 1, t[k]);', ('p4g_sujeito', 'p4g_estrutura2')),
+    ('p4g R2 partitivo: o «um deles», «dois deles» (a pessoa sem antecedente) não é sujeito', "    if (/^(?:deles|delas)$/.test(p || '')) return { tok: 'pessoax', fim: i + 2 };", '', ('p4g_sujeito',)),
+    ('p4g R2 numeral: o numeral sem substantivo antes do verbo («dois sumiram») não é sujeito', "(verboAdiante(t, i + 1) && t.slice(i + 2, i + 8).indexOf('menos') === -1) ||", 'false ||', ('p4g_sujeito',)),
+    ('p4g R2 numeral: o numeral sem substantivo depois do verbo («faltam dois», «sumiram todos») não é sujeito', "(VSUJ.test(ant) && (!t[i + 1] || LOC_FIM.indexOf(' ' + t[i + 1] + ' ') !== -1) && !t.slice(Math.max(0, i - 6), i).some(coisaObjeto))", 'false', ('p4g_sujeito',)),
+    ('p4g R2 numeral: o numeral como objeto («perdemos dois», «cadê todos?») não é pessoa', 'if (OBJ_V.test(ant) && !/^[0-9]+$/.test(w) &&', 'if (false && !/^[0-9]+$/.test(w) &&', ('p4g_sujeito',)),
+    ('p4g R2 relativa: «o que foi nadar não voltou» não tem sujeito', "if (t[i + 1] === 'que' && relativa(t, i)) {", 'if (false && relativa(t, i)) {', ('p4g_sujeito',)),
+    ('p4g R2 anáfora: «o de azul sumiu», «o do meio» não tem sujeito', "if (/^(?:de|do|da|dos|das)$/.test(t[i + 1] || '') && (r = anafora(t, i, ant))) {", 'if (false && (r = anafora(t, i, ant))) {', ('p4g_sujeito',)),
+    ('p4g R2 possessivo sem cabeça: «os nossos sumiram» não tem sujeito', "if (POSSESSIVO.test(t[i + 1] || '') && verboAdiante(t, i + 2)) {", 'if (false && verboAdiante(t, i + 2)) {', ('p4g_estrutura',)),
+    ('p4g R2 nome: o nome sem artigo que abre a frase com qualquer verbo («Tuca está boiando», «Genivaldo se perdeu») não é nome', '(g.length === 1 && !VERBO_NP.test(g[0].w) && VERBO_NOME_AMPLO.test(s.slice(fim, fim + 30)))', 'false', ('p4g_sujeito', 'p4g_estrutura')),
+    ('p4g R2 rede por sinal: o sumiço sem coisa ao lado e sem sujeito reconhecido («tuca ontem sumiu») não é a ESPERA', '    if (v.n < 2) v.n = Math.max(v.n, riscoNet(raw));', '', ('p4g_sujeito',)),
+    ('p4g R2 ambígua: «o fiscal», «o cliente», «o resto» (a pessoa que também é item de dado) não é a ESPERA', "      if (AMBIGUAS_PES.indexOf(' ' + cb + ' ') !== -1) return { tok: 'pessoax', fim: j + 1 };", "      if (false) return { tok: 'pessoax', fim: j + 1 };", ('p4g_sujeito',)),
+    ('p4g R2 ambígua: «o contador não volta do mergulho» (a coisa que também é pessoa, com a água) é coisa', "return FULA_AGUA && !/^(?:de|do|da|dos|das)$/.test(t[j + 1] || '') ? { tok: 'fulano', fim: j + 1, aberta: true } : { coisa: true };", 'return { coisa: true };', ('p4g_sujeito',)),
+    ('p4g R2 2 letras: «a vó», «o DJ», «o fã» (a cabeça de 2 letras depois do artigo) não é candidata', '    if (w.length < 3 && !(depoisDeDet && /^[a-z]{2}$/.test(w))) return false;', '    if (w.length < 3) return false;', ('p4g_estrutura2', 'p4g_estrutura')),
+    ('p4g R2 composta: «ex-marido», «sub-oficial», «guarda-vidas» (a palavra com hífen) não é candidata', '    if (!w || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(w) || /^[0-9]+$/.test(w)) return false;', '    if (!w || !/^[a-z0-9]+$/.test(w) || /^[0-9]+$/.test(w)) return false;', ('p4g_estrutura2', 'p4g_estrutura')),
+    ('p4g R2 coletivo: «a delegação», «a multidão», «a criatura» (o -ção de pessoa) é abstrato', '  var ABSTRATO_NP = /^(?!(?:tripulacao|delegacao|comissao|congregacao|multidao|populacao|selecao|criatura|autoridade|assistencia|presidencia|gerencia|direcao|comunidade|irmandade|fraternidade|figura)s?$)', '  var ABSTRATO_NP = /^(?!tripulacao$)', ('p4g_sujeito',)),
+    ('p4g R2 crase: «foi à farmácia e não voltou» (o «a» depois do verbo de movimento é artigo)', "        if (w === 'a' && MOV_RE.test(ant)) { out.push(w); i++; continue; }", '', ('p4g_rotina2',)),
+    ('p4g R2 infinitivo: «não volta a funcionar» (o «a» + infinitivo é artigo)', "        if (w === 'a' && /^(?:volta|voltou|voltam|voltaram|comecou|comecaram|continua|continuou|continuam|passou|passaram|tornou|tornaram|pos|ajudou|aprendeu|conseguiu|tentou)$/.test(ant) && t[i + 1] && /(?:ar|ir|er)$/.test(t[i + 1])) { out.push(w); i++; continue; }", '', ('p4g_rotina2',)),
+    ('p4g R2 demonstrativo: «notícia desse X», «nada daquele X» (a contração) não tem a pessoa', "      if (DEM_CONTR[w] && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", "      if (false && DEM_CONTR[w] && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", ('p4g_sujeito', 'p4g_estrutura')),
+    ('p4g R2 pronome oblíquo: «não temos notícia dele», «nada dele» não tem a pessoa', "      if (/^(?:dele|dela|deles|delas)$/.test(w) && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", "      if (false && /^(?:dele|dela|deles|delas)$/.test(w) && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", ('p4g_estrutura',)),
+    ('p4g R2 digitação: o verbo do sumiço com erro («sumiiu», «desaparceu») não vale', '  function consertaVerbo(w) {\n    var c, k;', '  function consertaVerbo(w) { return w;\n    var c, k;', ('p4g_sujeito', 'p4g_estrutura2')),
+    ('p4g R2 digitação junto da pessoa: «não achie o armador», «faltta o armador» não vale', "  function consertaPerto(q) {\n    var t = q.split(' '), ch = false, k, m, w, c, perto, j, alvo;", "  function consertaPerto(q) { return q;\n    var t = q.split(' '), ch = false, k, m, w, c, perto, j, alvo;", ('p4g_sujeito',)),
+    ('p4g R2 agente natural: «a onda levou o Pedro», «vi o Pedro cair no mar», «jogamos a boia para o Pedro» não são apuro', "perd(?:i|emos|eu|eram) de vista|' + AGENTE_PES + ') ');", "perd(?:i|emos|eu|eram) de vista) ');", ('p4g_estrutura',)),
+    ('p4g R2 levado: «o catraieiro foi levado pela correnteza» (o substantivo aberto) não é sinal', "    if (QUEDA_LUGAR_RE.test(ad) || LEVADO_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", "    if (QUEDA_LUGAR_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", ('p4g_estrutura',)),
+    ('p4g R2 queda sem destino: «o grumete caiu», «o dono caiu» (o substantivo aberto) não é a pessoa', "(k < fim + 2 && QUEDA_V.test(w))) return 'fulano';", "false) return 'fulano';", ('p4g_estrutura',)),
+    ('p4g R2 rotina: a ausência de ligação, mensagem, reunião de uma pessoa NOMEADA volta a ser socorro («o Pedro não retornou minha ligação»)', '  var ADM_ROT = / (?:reuniao|reunioes|revisao|revisoes|vistoria|orcamento|fatura|faturas|nota|notas|curso|aula|aulas|treino|treinos|folga|ferias|recado|recados|ligacao|ligacoes|chamadas?|expediente|trabalho|servico|entrega|encomenda|peca|pecas|material|convite|convites|escritorio|viagem|licenca|voo|hotel|treinamento|aviso|avisos|confirmar|escalar|assinar|cracha|vaga|vagas|mensagens?|mensagem|whatsapp|zap|emails?|e-mail|telefone|celular|online|offline) /;', '  var ADM_ROT = /(?!)/;', ('p4g_rotina2',)),
+    ('p4g R2 rotina: «sem colete» é apuro sem a água («quem está sem colete?»)', '    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));', '    perigo = PERIGO_ANY.test(q) || / sem (?:colete|boia) /.test(q) || (agua && PERIGO_AGUA.test(q));', ('p4g_rotina2', 'p4g_estrutura')),
+    ('p4g R2 rotina: «alguém viu o Pedro na marina / hoje» é socorro', "'(?!(?: [a-z0-9]+){0,2} (?:n[ao]|em) (?:' + LUGAR_TERRA + ')(?= )| (?:hoje|ontem|de manha|de tarde|de noite)(?= )) ',", "' ',", ('p4g_rotina2',)),
+    ('p4g R2 rotina: a escala («estamos sem o mecânico hoje», «quem faltou hoje?») é ausência', ' || FALTA_HOJE.test(pad(raw));', ';', ('p4g_rotina2',)),
+    ('p4g R2 rotina: o curso de mergulho na agenda é a atividade na água com a ausência', '(ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q))', 'false', ('p4g_rotina2',)),
+    ('p4g R2 rotina: «foi comprar gelo e não voltou», «saiu para almoçar» (a ida por um propósito de terra) é sinal', "q = q.replace(IDA_TERRA, ' ').replace(IDA_INF, function", "q = q.replace(IDA_TERRA, ' ').replace(/(?!)/, function", ('p4g_rotina2',)),
+    ('p4g R2 rotina: «o rapaz do ar-condicionado», «o técnico do gerador» (o profissional do equipamento) é a pessoa que some', "(?:' + LUGAR_TERRA + '|' + GAP_OBJ + ')(?= )', 'g');", "(?:' + LUGAR_TERRA + ')(?= )', 'g');", ('p4g_rotina2',)),
+    ('p4g R2 rotina: as palavras das telas do app e o dinheiro (horímetro, checklist, widget, euro, dólar) são coisa', "BARCOS, PARTES, DURO_MAR, COISAS_APP, FORA_BARCO.join(' ')].forEach(add);", 'BARCOS, PARTES, DURO_MAR].forEach(add);', ('p4g_rotina2',)),
+    ('p4g R2 rotina: o «próximo», o «seguinte», o «atual» (o modificador nominal) é cabeça de sintagma', " proximo proxima proximos proximas seguinte seguintes atual atuais principal principais maior maiores menor menores melhor melhores pior piores terceiro terceira antigo antiga antigos antigas anterior anteriores posterior posteriores certo certa inteiro inteira proprio propria demais ';", " ';", ('p4g_rotina2',)),
+    ('p4g R2 ditado: «sumiu armador» (a palavra solta depois do verbo do sumiço) não é a pessoa', '        if ((SUMICO_V.test(ant) || QUEDA_V.test(ant)) && fim) {', '        if (false) {', ('p4g_estrutura2',)),
+    ('p4g R2 ditado: a pontuação escrita por extenso («ponto de interrogação») atrapalha o «não está» do fim da frase', "    if (/ (?:ponto de (?:interrogacao|exclamacao)|ponto final|virgula)(?= )/.test(q)) q = q.replace(/ (?:ponto de (?:interrogacao|exclamacao)|ponto final|virgula)(?= )/g, ' ');", '', ('p4g_sujeito', 'p4g_estrutura')),
+    ('p4g R2 interjeição: «meu deus! perdemos ele» (a interjeição) vira o sujeito', "    if (INTERJEICAO.test(q)) q = q.replace(INTERJEICAO, ' ');", '', ('p4g_estrutura',)),
+    ('p4g R2 diário: o duvidoso («o imediato não aparece») no diário não leva a instrução do SOS', "espera = !alerta && risco(nota).n === 1, pressao", "espera = false, pressao", ('p4g_estrutura',)),
+    ('p4g R2 diário: o duvidoso no diário abre a janela de 15 min (a ESPERA não custa a janela)', "fala: falaRegistro(grava, alerta, pressao, espera) + ef.fala }, alerta || pressao);", "fala: falaRegistro(grava, alerta, pressao, espera) + ef.fala }, alerta || espera || pressao);", ('p4g_estrutura',)),
+    ('p4g R2 diário: o duvidoso com «posição e hora» não leva a instrução do SOS (o ramo do resumo)', "es = junto && !al && risco(nota).n === 1, pr", "es = false, pr", ('p4g_estrutura',)),
+    ('p4g R2 diário: o duvidoso com «posição e hora» abre a janela', "fala: falaRegistro(grava, al, pr, es) }, al || pr);", "fala: falaRegistro(grava, al, pr, es) }, true);", ('p4g_estrutura',)),
+    ('p4g R2 diário: a legenda de foto com o duvidoso entra na linha de rotina (a instrução só para a ESPERA)', "function instrucaoTexto(raw) { return emergenciaTexto(raw) || risco(raw).n >= 1; }", "function instrucaoTexto(raw) { return emergenciaTexto(raw); }", ('p4g_estrutura',)),
+    ('p4g R2 sem substantivo: «quase todos» (o quantificador com «quase») não é sujeito', "    if (/ quase (?:todos|todas|todo mundo)/.test(q)) q = q.replace(/ quase (todos|todas|todo mundo)/g, ' $1');", '', ('p4g_sujeito',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_R2
 
 
 def instante_3a(b):

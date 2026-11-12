@@ -188,3 +188,19 @@ o euro caiu?	0	ctl
 o vento caiu	0	ctl
 o contador sumiu	0	ctl
 o guia de bordo sumiu	0	ctl
+o tender voltou vazio	1	5
+vi alguém pular do barco	1	ctl
+vi o Pedro pular do barco	1	ctl
+vi alguém cair no mar	2	ctl
+não sei onde está marujo, será que caiu?	2	ctl
+não sei onde está padeiro, será que caiu?	2	ctl
+Genivaldo se perdeu	2	ctl
+estamos sem notícias desse hóspede	2	ctl
+procuramos o barco todo e nada desse colega	1	ctl
+o catraieiro está sendo levado pela correnteza	2	ctl
+o grumete está sendo arrastado pela onda	2	ctl
+meu deus! perdemos ele	1	ctl
+meu deus! ele sumiu	1	ctl
+sumiu armador ponto final	2	ctl
+caiu tonhão ponto de exclamação	2	ctl
+sumiu armador vírgula qual o rumo	2	ctl
