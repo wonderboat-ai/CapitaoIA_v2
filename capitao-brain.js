@@ -1809,9 +1809,9 @@
   }
   // as rotas de ação e de emergência: a fala que cai nelas, depois do «o que devo registrar?», segue a rota (não vira o texto do registro)
   // a confirmação falada do registro (F17): «Registrado no diário de bordo.» e, se a nota é de emergência ou de pressão de óleo, a instrução de segurança (a fala não leva só a primeira linha)
-  function falaRegistro(grava, alerta, pressao) {
+  function falaRegistro(grava, alerta, pressao, espera) {
     if (!grava) return 'Pedido vindo de link não grava no diário.';
-    return 'Registrado no diário de bordo.' + (alerta ? ' Se a emergência é agora, abra o SOS.' : '') + (pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '');
+    return 'Registrado no diário de bordo.' + (alerta ? ' Se a emergência é agora, abra o SOS.' : espera ? ' Se há pessoa no mar ou sumida, abra o SOS.' : '') + (pressao ? ' Se a pressão de óleo está baixa agora, ' + min1((P.oleo && P.oleo[0]) || 'reduza para marcha lenta') + ' e siga os passos na tela.' : '');
   }
   // ——— O relato no chat vira PROPOSTA de registro (F16; Avanti 1.17.2) ———
   // A frase que CONTA um fato do barco — afirmação com verbo de fato (passado, «está …ndo», «não liga», «será necessário»), com 8 palavras ou mais, sem «?», sem palavra de pergunta nem pedido ao app, e sem
@@ -2728,21 +2728,21 @@
       var como = 'Para registrar, diga ou digite aqui “registre no diário…” seguido do texto';
       var junto = resumoMais(nota); // nota que pede posição/hora: resumo + nota numa linha só
       if (nota && !junto) {
-        var alerta = emergenciaTexto(nota), pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência (inclui a pessoa que some, falta ou se perde, com ou sem nome) / pressão de óleo: grava a nota e traz os passos
+        var alerta = emergenciaTexto(nota), espera = !alerta && risco(nota).n === 1, pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência (inclui a pessoa que some, falta ou se perde, com ou sem nome) / pressão de óleo: grava a nota e traz os passos
         // F20/F15: o registro que conclui um serviço fecha a pendência que cita (com Desfazer) e propõe o Executado ou a tarefa; o texto de emergência, de pressão de óleo ou de cabeça de segurança (EPIRB, Seafire, rádio…) não mexe na agenda pelo chat
-        reg = grava ? addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' }, alerta || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }) : null;
+        reg = grava ? addDiario({ sys: 'Diário', t: nota, who: quem(), src: 'chat · voz/texto' }, alerta || espera || pressao || cabecaEmerg(pad(nota)) ? undefined : { pendencia: true, agenda: true, chat: true }) : null;
         ef = efeitosNoChat(reg);
-        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
-          fala: falaRegistro(grava, alerta, pressao) + ef.fala }, alerta || pressao);
+        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\n' + como + '.') + (ef.linhas.length ? '\n' + ef.linhas.join('\n') : '') + (alerta ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : espera ? '\n' + PESSOA_SEGURANCA : '') + (pressao ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : ''), src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pressao ? ' · ' + guia('g_motores') + ' §4' : ''), actions: ef.botoes.concat(act(p, (alerta || espera ? [['Abrir SOS', 'sos']] : []).concat(pressao ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]))),
+          fala: falaRegistro(grava, alerta, pressao, espera) + ef.fala }, alerta || pressao);
       }
-      var al = junto && emergenciaTexto(nota), pr = junto && oleo(pad(nota)) === 1;
-      var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
-      var acoes = (al ? [['Abrir SOS', 'sos']] : []).concat(pr ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]);
-      if (al || pr) {
+      var al = junto && emergenciaTexto(nota), es = junto && !al && risco(nota).n === 1, pr = junto && oleo(pad(nota)) === 1;
+      var passos = (al ? '\nSe a emergência é agora: abra o SOS. ' + SOS_PASSOS : es ? '\n' + PESSOA_SEGURANCA : '') + (pr ? '\nSe a pressão de óleo está baixa agora, verifique nesta ordem:\n' + OLEO_PASSOS : '');
+      var acoes = (al || es ? [['Abrir SOS', 'sos']] : []).concat(pr ? [['Contatos', 'equipe']] : [], [['Abrir diário', 'diario']]);
+      if (al || es || pr) {
         // «registre posição e hora, tem fogo no motor» (PROMPT §2.2, diário com alerta): a linha e a resposta NÃO usam o resumoAgora() (nada de coordenada, SOG, proa nem
         // leitura do quadro): a hora da linha, «posição: ler no plotter» no lugar da posição pedida, e os passos
         if (grava) addDiario({ sys: 'Diário', t: nota + ' · posição: ler no plotter', who: quem(), src: 'chat · voz/texto' });
-        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr) }, true);
+        return emergDiario({ text: (grava ? 'Registrado no diário de bordo · ' + n.d + ' ' + n.t + ' · ' + quem() + '\n“' + nota + '”\nPosição: ler no plotter.\nLinha nova — nada se apaga.' : 'Não registrado — pedido vindo de link não grava no diário:\n“' + nota + '”\nPosição: ler no plotter.\n' + como + '.') + passos, src: 'Fonte: anotação de ' + quem() + ' · diário de bordo do app' + (pr ? ' · ' + guia('g_motores') + ' §4' : ''), actions: act(p, acoes), fala: falaRegistro(grava, al, pr, es) }, al || pr);
       }
       var t = resumoAgora();
       if (grava) addDiario({ sys: 'Navegação', tone: 'var(--cap-tele, #00f4fd)', t: (junto ? nota + ' · resumo: ' : 'Resumo registrado pelo atalho: ') + t, who: quem(), src: junto ? 'chat · voz/texto · telemetria' + demo() : 'atalho · telemetria' + demo() });
@@ -4272,12 +4272,24 @@
   function coisaReal(w) { return ehCoisa(w) && FUNC_NP.indexOf(' ' + w + ' ') === -1 && !VSINAL.test(w) && !VERBO_NP.test(w); }   // (a lista das coisas tem também as palavras funcionais de NAO_NOME: «não», «foi», «se» não são coisa)
   // «o que foi nadar não voltou», «os que ficaram na praia desapareceram»: o «o que» é o sujeito quando um 2º verbo de sinal vem depois do verbo da relativa e nenhuma coisa de bordo entra no meio («o que sumiu?» é a pergunta, não a pessoa)
   var OBJ_V = /^(?:perdemos|perdi|perdeu|perderam|vejo|vemos|vi|vimos|viu|viram|ve|vendo|achei|achamos|acho|acha|achou|achando|encontro|encontra|encontrou|encontramos|encontrei|encontrando|procuro|procura|procuramos|procurando|procurou|buscando|busca|deixamos|deixei|esquecemos|esqueci|cade|falta|faltam|faltou|faltaram|faltando|avistei|avistamos|enxergo|localizo|localiza|localizou|menos|chamamos|chamei|chamou|chamaram|gritamos|gritei|gritou|gritaram|ligamos|liguei|buzinamos|buzinei)$/;   // (o verbo que tem a pessoa por OBJETO: «perdemos dois», «não vejo todos», «cadê o que foi nadar?», «falta o do meio»)
+  var LUGAR_REL = /^(?:mar|agua|praia|ilha|proa|popa|conves|barco|lancha|bordo|lado|fundo|costa|margem|enseada|baia|cais|pier|trapiche|deck|fly|flybridge|cabine|camarote|caiaque|caiaques|bote|tender|prancha|jet|ski|stand|up|paddle|moto|canoa)$/;   // (o lugar e a embarcação não tornam a frase «de coisa»: o que o sujeito faz ali é de pessoa)
+  // «falta fluxo no filtro», «faltando vazão no radiador»: a palavra solta depois do «falta» é a FALTA DE COISA quando o lugar que segue é uma coisa de bordo (equipamento, dado): «no filtro», «na bomba». A cauda de dado
+  // («falta arrais, qual o rumo?») e a outra oração param a busca: a pessoa que falta fica a ESPERA
+  function coisaAdiante(t, a) {
+    var k, f = false;
+    for (k = a; k < t.length && k <= a + 6; k++) {
+      if (t[k] === '' || /^(?:qual|quais|quanto|quanta|quantos|quantas|onde|como|e|mas|porque|que|se|pois)$/.test(t[k])) return false;
+      if (/^(?:no|na|nos|nas|em|de|do|da|dos|das|pelo|pela)$/.test(t[k])) { f = true; continue; }
+      if (f && coisaReal(t[k]) && !LUGAR_REL.test(t[k])) return true;
+    }
+    return false;
+  }
   function relativa(t, i) {
     var k, a = t[i + 2];
     if (!a || !(VSINAL.test(a) || VERBO_NP.test(a)) || /^(?:esta|estao|ta|tao|e|sao|ha|tem)$/.test(a)) return false;   // («o que está faltando a bordo?» é a pergunta, não a pessoa)
     if (OBJ_V.test(t[i - 1] || '') || /^(?:nao|nunca|ja|ainda)$/.test(t[i - 1] || '') && OBJ_V.test(t[i - 2] || '')) return true;   // «falta o que foi nadar», «cadê o que mergulhou?», «não vejo o que subiu»
     for (k = i + 3; k < t.length && k <= i + 8; k++) {
-      if (GAP_OBJ_RE.test(t[k]) || (coisaReal(t[k]) && !/^(?:mar|agua|praia|ilha|proa|popa|conves|barco|lancha|bordo|lado|fundo|costa|margem|enseada|baia|cais|pier|trapiche|deck|fly|flybridge|cabine|camarote|caiaque|caiaques|bote|tender|prancha|jet|ski|stand|up|paddle|moto|canoa)$/.test(t[k]))) return false;
+      if (GAP_OBJ_RE.test(t[k]) || (coisaReal(t[k]) && !LUGAR_REL.test(t[k]))) return false;
       if (/^(?:sumiu|sumiram|desapareceu|desapareceram|caiu|cairam|boiando|flutuando|faltou|faltaram|faltando|falta|faltam)$/.test(t[k]) || (/^nao$/.test(t[k]) && /^(?:esta|estao)$/.test(t[k + 1] || '') && /^(?:a|aqui|ali|la|no)$/.test(t[k + 2] || '')) || (/^(?:ficou|ficaram)$/.test(t[k]) && /^(?:pra|para)$/.test(t[k + 1] || '') && t[k + 2] === 'tras') || (/^(?:nao|nunca|ainda|ja)$/.test(t[k]) && VSINAL.test(t[k + 1] || '') && !/^(?:esta|estao|ta|tao|foi|foram)$/.test(t[k + 1]))) return true;
     }
     return false;
@@ -4336,12 +4348,12 @@
       // o nome chamado duas vezes («Armador! Armador! não responde»): a pessoa que se chama, a palavra solta repetida que nenhuma lista conhece
       if (w === t[i + 1] && ehCabeca(w) && !NUCLEO_RE.test(w) && !ehCoisa(w) && livre) { out.push('fulano'); ch = true; i += 2; continue; }
       // a palavra SOLTA que nenhuma lista conhece e que vem sem artigo (o ditado em minúscula, a caixa alta, o apelido, o nome de outra língua): o sujeito de um verbo de sinal («tuca não responde», «xuxa ficou na ilha», «tonhão caiu»), o objeto de «perdi»,
-      // «não vejo», «achei», «cadê», «deixamos», «ninguém viu», o que a onda leva («a correnteza está arrastando nandinha»): candidato DUVIDOSO (a ESPERA e, com a água, o socorro); a queda sozinha é a pessoa (n = 2)
+      // «não vejo», «achei», «cadê», «deixamos», «ninguém viu» (o «falta <palavra solta> no <coisa de bordo>» NÃO: é a falta de coisa, «falta fluxo no filtro»), o que a onda leva («a correnteza está arrastando nandinha»): candidato DUVIDOSO (a ESPERA e, com a água, o socorro); a queda sozinha é a pessoa (n = 2)
       if ((/^[a-z]{3,}$/.test(w) || /^[a-z]{2,}(?:-[a-z]+)+$/.test(w)) && !(w.length >= 4 && /(?:ou|eu|iu|ei)$/.test(w)) && !(w.length >= 5 && /(?:mos|am|em|ar|ir)$/.test(w)) && !(/^falt/.test(ant) && INF_ER.test(w)) && !(w.length >= 6 && /(?:amos|emos|imos|iam|ava|avam|aram|eram|iram)$/.test(w)) && ehCabeca(w) && !NUCLEO_RE.test(w) && !ehCoisa(w) && !BARE_NAO.test(w) && SLOT_NOTICIA.indexOf(' ' + w + ' ') === -1 && (FULA_AGUA || AMBIGUAS_AGUA.indexOf(' ' + w + ' ') === -1) && livre && DET_NP.indexOf(' ' + ant + ' ') === -1 && !/^(?:nao|nunca|ja|ainda|nem|mais|se|me|te|lhe|nos)$/.test(ant) && !(coisaReal(ant) && !coisaFraca(ant))) {   // (depois do «não», do «se» e do «me» é o verbo, não o nome)
         fim = !t[i + 1] || t[i + 1] === '' || LOC_FIM_OBJ.indexOf(' ' + t[i + 1] + ' ') !== -1;   // (a frase acaba, ou segue com o lugar, a preposição, a cauda de dado)
         if (QUEDA_V.test(t[i + 1] || '') && !/^(?:o|a)$/.test(t[i - 1] || '')) { out.push('fulano'); ch = true; i++; continue; }   // («tonhão caiu»)
         if ((SUMICO_V.test(ant) || QUEDA_V.test(ant)) && fim) { out.push('fulano'); ch = true; i++; continue; }   // («sumiu armador», «caiu tonhão»)
-        if (SUMICO_FORTE.indexOf(' ' + t[i + 1] + ' ') !== -1 || verboAdiante(t, i + 1) || (PREP_NP.indexOf(' ' + ant + ' ') !== -1 && livre && fim) || OBJ_V.test(ant) || (/^(?:esta|estao|ta|tao|foi|foram|anda|andam)$/.test(ant) && /^(?:nao|onde|ninguem)$/.test(out[out.length - 2] || '')) || (/^(?:puxou|puxaram|puxando|derrubaram|derrubou)$/.test(ant) && /^(?:pra|para)$/.test(t[i + 1] || '') && /^(?:baixo|fundo|dentro)$/.test(t[i + 2] || '')) || (AGENTE_V.test(ant) && (AGENTE_NP.test(out[out.length - 2] || '') || AGENTE_NP.test(out[out.length - 3] || '')))) { out.push('pessoax'); ch = true; i++; continue; }
+        if (SUMICO_FORTE.indexOf(' ' + t[i + 1] + ' ') !== -1 || verboAdiante(t, i + 1) || (PREP_NP.indexOf(' ' + ant + ' ') !== -1 && livre && fim) || (OBJ_V.test(ant) && !(/^falt/.test(ant) && coisaAdiante(t, i + 1))) || (/^(?:esta|estao|ta|tao|foi|foram|anda|andam)$/.test(ant) && /^(?:nao|onde|ninguem)$/.test(out[out.length - 2] || '')) || (/^(?:puxou|puxaram|puxando|derrubaram|derrubou)$/.test(ant) && /^(?:pra|para)$/.test(t[i + 1] || '') && /^(?:baixo|fundo|dentro)$/.test(t[i + 2] || '')) || (AGENTE_V.test(ant) && (AGENTE_NP.test(out[out.length - 2] || '') || AGENTE_NP.test(out[out.length - 3] || '')))) { out.push('pessoax'); ch = true; i++; continue; }
       }
       out.push(w); i++;
     }
@@ -4374,7 +4386,9 @@
   }
   // O predicado único do TEXTO que se manda registrar (o diário, a foto com o pedido de registro): a lista SOS, o pedido de socorro implícito («estamos em risco», «isso não é um teste») e a pessoa que some, falta ou se perde,
   // com ou sem nome próprio (o texto original). «registre no diário: homem ao mar» e «registre no diário: o João sumiu» abrem a resposta com a instrução de segurança e ligam a janela de 15 min do mesmo jeito.
-  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 1; }
+  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }
+  // (o texto que merece a instrução de segurança, com ou sem janela: a ESPERA, n=1, leva a instrução e a linha sem a janela de 15 min — a escala e o palpite não custam 15 min de emergência)
+  function instrucaoTexto(raw) { return emergenciaTexto(raw) || risco(raw).n >= 1; }
   function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q) || pessoaSumidaG(q); }
   function pessoaSumidaG(q) { return pessoaSumida(q) && !((ADM_ROT.test(q) || ADM_ADMIN.test(q)) && riscoRede(q) === 0); }   // (a pessoa que some, com a guarda da rotina: a ausência de ligação, mensagem, reunião que a rede também não vê como sinal)
   // O equipamento de segurança na pergunta (EPIRB, Seafire, canal 16, PAN-PAN, DSC): a pergunta mista («acionar o EPIRB, quantas pessoas a bordo?», «pan-pan, qual o ETA?») é do equipamento, com o procedimento e
@@ -5376,7 +5390,7 @@
       if (r === 'nao') return { nota: '', pedido: true, descarta: rp.id };
       if (t && (r === 'sim' || (sb && !sb.duvida))) return { nota: comExtra(t.texto, sb), pedido: true, doRelato: rp.id };
     }
-    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !emergenciaTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
+    if (querRegistrar(raw, n)) { nota = notaDoUsuario(raw); return nota && !resumoMais(nota) && !instrucaoTexto(nota) && oleo(pad(nota)) !== 1 ? { nota: nota, pedido: true } : null; }
     if (emergencia(n) || oleo(n) === 1 || socorroImplicito(n) || risco(raw).n >= 1 || cabecaEmerg(n) || /\?/.test(raw) || RELATO_PEDIDO.test(n) || RELATO_NAO.test(n) || ACK.test(n) || CANCELA_REG.test(n) || SOBRE.test(n)) return null;
     if (ESPERA_REG && Date.now() - ESPERA_REG.t <= ESPERA_VALE) { ESPERA_REG = null; return { nota: notaRelato(raw), pedido: true }; }
     if (relatoDiario(raw, n)) return { nota: notaRelato(raw), pedido: true };
