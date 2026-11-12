@@ -6407,7 +6407,12 @@ PERDIDA_PAGINA = ['o Pedro saiu de caiaque e não voltou', 'ela foi nadar e não
                   'o filho do Pedro está desaparecido', 'o Pedro foi nadar e não está aparecendo',
                   # 6ª rodada: o «estava na popa e agora não está» sem «mais», a pessoa na água em apuros sem verbo de sumiço (longe demais, longe do barco, ficou para trás), o que demora a subir, o bote com a pessoa, «gente a menos», «ninguém viu mais»
                   'meu filho estava na popa e agora não está', 'o menino está nadando longe demais', 'meu filho está longe do barco', 'a Letícia ficou para trás na água', 'o mergulhador demorou a subir', 'o bote com meus filhos virou', 'tem gente a menos',
-                  'ninguém viu mais meu filho', 'faltam dois dos nossos']
+                  'ninguém viu mais meu filho', 'faltam dois dos nossos',
+                  # fechamento do grupo home (P4G, 2ª instância; pendentes 1 e 7): a pessoa de um substantivo que nenhuma lista conhece, a grafia do ditado e a pessoa que boia (a ESTRUTURA do cérebro, não a lista)
+                  'o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram',
+                  'Zacarias não volta do mergulho']   # (o mergulho é a água: socorro com a janela — saiu da REDE_PAGINA, que é a ESPERA)
+# as que também conferem a janela: depois da água, «qual a posição?» é a instrução do plotter (pendente 8)
+PERDIDA_JANELA = ['o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'meu filho ficou pra trás no mar']
 
 
 def teste_home_perdida(b, tela):
@@ -6422,15 +6427,19 @@ def teste_home_perdida(b, tela):
         if not m or 'Emergência' not in m[-1]['txt']: prob.append('%s: «%s» devia abrir a resposta com a instrução de segurança («Emergência — …»): %r' % (tela, q, (m[-1]['txt'] if m else '')[:140]))
         if SITUACAO_DE_BORDO.search(txt) or confere.R_COORD.search(txt): prob.append('%s: «%s»: a conversa leva SOG, proa, a situação de bordo ou coordenada: %s' % (tela, q, (SITUACAO_DE_BORDO.search(txt) or confere.R_COORD.search(txt)).group(0)))
         if not pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: «%s» não marcou a janela de 15 min' % (tela, q))
+        if q in PERDIDA_JANELA:
+            m2 = pergunta_home(pg, tela, 'qual a posição?')
+            t2 = m2[-1]['txt'] if m2 else ''
+            if est['pedidos'] or 'LEIA NO PLOTTER' not in t2 or SITUACAO_DE_BORDO.search(t2) or confere.R_COORD.search(t2): prob.append('%s: depois de «%s», «qual a posição?» devia ser a instrução do plotter (a janela vale), sem SOG, proa nem coordenada e sem IA: %r' % (tela, q, t2[:140]))
         if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
         ctx.close()
     return prob
 
 
 # a REDE larga do pedeIA (5ª rodada): a pessoa com o sinal de sumiço ou de ausência que a escala, o «hoje» ou o «ainda» tiram da rota sos NÃO é emergência, mas também nunca vai à IA com o SOG e a proa do quadro: é respondida no aparelho
-REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o marinheiro não voltou da folga', 'a Ana não está a bordo ainda',
+REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o imediato não aparece', 'a Ana não está a bordo ainda',   # (fechamento: «o marinheiro não voltou da folga» saiu — é a ROTINA, a folga; o imediato é a ESPERA do duvidoso)
                # 6ª rodada: o que a rota sos não toma (o pronome, o nome com a escala, «proa» na frase, a contagem que não bate, o nome que abre a frase, a pessoa na água sem apuro)
-               'ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'Zacarias não volta do mergulho', 'o menino está nadando', 'o Pedro não está vindo',
+               'ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o menino está nadando', 'o Pedro não está vindo',
                # 6ª rodada, 3ª passada: a embarcação pequena que volta sem a pessoa, o contato perdido, o pulo, a correnteza
                'o tender voltou vazio', 'perdi o contato com a Ana', 'vi alguém pular do barco', 'meu filho está na correnteza']
 REDE_SEGURANCA = 'Se há pessoa no mar ou sumida: abra o SOS e siga o procedimento padrão — confirmar com o protocolo de bordo.'
@@ -6676,22 +6685,22 @@ MUTANTES_P4G = [
     ('o microfone da CONVERSA da H2 nunca reabre depois da resposta da IA que chega muda (MAYDAY no meio)', 'H2-Home-Mobile.dc.html', [("if (mudo) { if (!this._fala && !this._dead && !this.rec && !this.state.pending) this.startVoice(true); return; }", "if (mudo) { return; }")], 'tardio'),
     ('a pessoa perdida fora do predicado do cérebro (só as formas fixas): «ela foi nadar e não voltou» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("return PESSOA_SUMIDA.some(function (r) { return r.test(q); }) || pessoaPerdida(q);", "return PESSOA_SUMIDA.some(function (r) { return r.test(q); });")], 'perdida'),
     ('a pessoa perdida fora do predicado do cérebro (só as formas fixas): «ela foi nadar e não voltou» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("return PESSOA_SUMIDA.some(function (r) { return r.test(q); }) || pessoaPerdida(q);", "return PESSOA_SUMIDA.some(function (r) { return r.test(q); });")], 'perdida'),
-    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (Main)', 'capitao-brain.js@Main', [("    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", "    if ((socorroImplicito(q) || nomeSumiu(qRaw)) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
+    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (Main)', 'capitao-brain.js@Main', [("    if (socorroImplicito(q) || risco(qRaw).n === 2) return 'sos';", "    if ((socorroImplicito(q) || risco(qRaw).n === 2) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
     ('a distância entre a pessoa e o verbo some (a pessoa colada ao sumiço): «o menino estava brincando e sumiu» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("    ' ' + PES_ELE + gap(8) + ' ' + SUMI + ' ',", "    ' ' + PES_ELE + gap(0) + ' ' + SUMI + ' ',")], 'perdida'),
     ('a distância entre a pessoa e o verbo some (a pessoa colada ao sumiço): «o menino estava brincando e sumiu» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    ' ' + PES_ELE + gap(8) + ' ' + SUMI + ' ',", "    ' ' + PES_ELE + gap(0) + ' ' + SUMI + ' ',")], 'perdida'),
-    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("|| nomeSumiu(String(q || '')) || pessoaRede(String(q || ''))) return false;", "|| nomeSumiu(String(q || ''))) return false;")], 'rede'),
-    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|| nomeSumiu(String(q || '')) || pessoaRede(String(q || ''))) return false;", "|| nomeSumiu(String(q || ''))) return false;")], 'rede'),
-    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (socorroImplicito(q) || nomeSumiu(qRaw)) return 'sos';", "    if ((socorroImplicito(q) || nomeSumiu(qRaw)) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
-    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (pessoaRede(qRaw)) return 'fallback';", "")], 'rede'),
-    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (pessoaRede(qRaw)) return 'fallback';", "")], 'rede'),
+    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("|| risco(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
+    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|| risco(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
+    ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (socorroImplicito(q) || risco(qRaw).n === 2) return 'sos';", "    if ((socorroImplicito(q) || risco(qRaw).n === 2) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
+    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (risco(qRaw).n >= 1) return 'fallback';", "")], 'rede'),
+    ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (risco(qRaw).n >= 1) return 'fallback';", "")], 'rede'),
     ('o fallback seguro da pessoa não é restaurado: «ele sumiu» recebe o fallback com a situação de bordo (SOG e proa) (Main)', 'capitao-brain.js@Main', [("    if (segura !== null) { a = segura; key = 'fallback'; }", "")], 'rede'),
     ('o fallback seguro da pessoa não é restaurado: «ele sumiu» recebe o fallback com a situação de bordo (SOG e proa) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (segura !== null) { a = segura; key = 'fallback'; }", "")], 'rede'),
-    ('a pessoa na água em apuros fora do predicado (a rota sos sem o PERIGO_S): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (Main)', 'capitao-brain.js@Main', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", "")], 'perdida'),
-    ('a pessoa na água em apuros fora do predicado (a rota sos sem o PERIGO_S): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", "")], 'perdida'),
-    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (CRAFT_VAZIO.test(q)) return true;\n", "")], 'rede'),
-    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (CRAFT_VAZIO.test(q)) return true;\n", "")], 'rede'),
-    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (Main)', 'capitao-brain.js@Main', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|sem contato com|", "|")], 'rede'),
-    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|sem contato com|", "|")], 'rede'),
+    ('a pessoa na água em apuros fora do predicado (a regra precisa sem o PERIGO_S e a rede sem o PERIGO_ANY e o PERIGO_AGUA): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (Main)', 'capitao-brain.js@Main', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", ""), ("    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));", "    perigo = false;")], 'perdida'),
+    ('a pessoa na água em apuros fora do predicado (a regra precisa sem o PERIGO_S e a rede sem o PERIGO_ANY e o PERIGO_AGUA): «meu filho está longe do barco» vira o fallback seguro, não a emergência com a janela (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (pesA && AGUA_RE.test(s) && PERIGO_S.test(s)) return true;", ""), ("    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));", "    perigo = false;")], 'perdida'),
+    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (CRAFT_VAZIO.test(q)) return 1;\n", "")], 'rede'),
+    ('a rede sem a embarcação pequena que volta sem a pessoa: «o tender voltou vazio» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (CRAFT_VAZIO.test(q)) return 1;\n", "")], 'rede'),
+    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (Main)', 'capitao-brain.js@Main', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|", "|")], 'rede'),
+    ('a rede sem o contato perdido: «perdi o contato com a Ana» vai à rota de contatos com o telefone e à IA (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|perd(?:i|emos|eu|eram) (?:o )?contato com|", "|")], 'rede'),
 ]
 # cada conferência roda só na tela do arquivo que recebeu o defeito (a Main, a H2 ou a H3)
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),

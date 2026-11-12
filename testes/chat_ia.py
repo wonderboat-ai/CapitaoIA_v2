@@ -285,9 +285,19 @@ def main():
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     ok(tela + ': a pessoa perdida «%s» é emergência local: nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
                     pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")   # (a janela vale por aba: as conferências de baixo partem sem ela)
+                # Fechamento do grupo home (P4G, 2ª instância; pendentes 1 e 7): a pessoa de um substantivo que NENHUMA lista conhece (o dono do barco, o técnico, as moças) ou escrita errada (sumio) ou vista na água (boiando) é emergência LOCAL pela
+                # ESTRUTURA do cérebro: nenhum pedido ao Worker, a instrução de segurança, a janela marcada — e a pergunta de dado DEPOIS da água (o pendente 8) é a instrução do plotter, sem SOG, proa nem coordenada, sem pedido ao Worker
+                for q in ('o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram'):
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    ok(tela + ': a pessoa aberta «%s» é emergência local (a estrutura, não a lista): nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
+                    t, n, _ = digita('qual a posição?')
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': depois de «%s», a pergunta «qual a posição?» é a instrução do plotter (a janela vale): nenhum pedido ao Worker, sem SOG, proa nem coordenada' % q, n == 0 and 'LEIA NO PLOTTER' in u and TEXTO_IA not in t and not re.search(r'\bSOG\b|\d+,\d+ nós|\bproa \d', u) and not confere.R_COORD.search(u), 'pedidos=%d · %s' % (n, u[-200:]))
+                    pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")
                 # 6ª rodada: a REDE de pessoa — o que a rota sos não toma (o pronome, o nome com a escala, «na proa: falta o marinheiro», a contagem que não bate) nunca vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS na 1ª linha,
                 # sem a situação de bordo, sem a janela)
-                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete'):
+                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o imediato não aparece'):
                     t, n, _ = digita(q)
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     # (a resposta é a ÚLTIMA mensagem do Capitão: a Main mostra a leitura de bordo — SOG, proa — no cabeçalho, fora da conversa)
