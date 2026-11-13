@@ -18,7 +18,7 @@ const TELAS = [
 const CORE = [
   './', './index.html', './login.html', './dados.html', './relatorio.html', './support.js', './capitao-dados.js', './capitao-replay.js', './capitao-alertas.js', './capitao-grafico.js', './capitao-sensores.js', './capitao-faq.js', './capitao-auth.js', './capitao-app.js', './capitao-theme.js', './capitao-brain.js',
   './capitao-clima.js', './capitao-voz.js', './capitao-barra.js', './capitao-telemetria.js', './capitao-moldura.js', './capitao-ia.js', './base-conhecimento.json', './faq-equipamentos.json',
-  './capitao-simbolo.js', './capitao-rosto.js', './deck-stage.js', './manifest.webmanifest',
+  './capitao-simbolo.js', './deck-stage.js', './manifest.webmanifest',
   './assets/wonderhub-simbolo.png', './assets/wonderhub-assinatura.jpg', './assets/logo-wonderboat-240.png', './assets/wonderhub-favicon.ico',
   './assets/wonderhub-apple-touch-icon.png', './assets/wonderhub-icon-192.png', './assets/sensores-perfil.svg', './assets/sensores-planta.svg',
   // React (sem ele nenhuma tela abre, nem o SOS): do próprio site, cópia do pacote npm com o hash SRI do support.js (antes: unpkg,
