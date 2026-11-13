@@ -133,7 +133,7 @@ Desfazer a tira, «O que verificar?» vai à IA com o relato, o toque não leva 
 A única asserção que já existia e mudou: `problemas_selo` de Main e H2 passou de «a caixa do cabeçalho é a ÚLTIMA LEITURA» para «nenhuma caixa de selo» (a linha da P4G manda `demo ''`; com o replay ao vivo a caixa dizia uma
 leitura de 26/09 ao lado do «AO VIVO»).
 
-Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 101 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência, a frase de emergência com equipamento nomeado («fogo no motor», «água entrando no motor», «barco afundando», FRASES_EMERGENCIA) trazendo o cartão EM-xx entre os 3 primeiros na F6 e no hub, a frase de segurança com palavra que o arquivo não tem («colete salva-vidas», «bote salva-vidas», «foguete de sinalização», «Seafire», «onde fica o epirb», FRASES_SEGURANCA) trazendo o cartão da salvatagem, do Seafire ou do EPIRB entre os 3 primeiros na F6 e no hub (e a seção filtrando-o), a frase de conversa («gostaria de saber sobre o estabilizador», «onde fica o radar», «onde está o plotter», FRASES_CONVERSA) abrindo com os itens do equipamento que ela nomeia, e o corte de cobertura —; os itens de emergência e de segurança do catálogo achados pelo título, pela pergunta e pelas variantes; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
+Fase 4, P4H (o FAQ dos equipamentos: o hub F1, os FAQs F2 a F5 e a F6, web e app; `--so-p4h [Tela…]` roda só as conferências dela e `--mutantes-p4h` planta 107 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem cota da IA): a lista da F6 com os selos EMERGÊNCIA (os 9 EM-xx) e SEGURANÇA e a prévia de cada linha; a busca — o código, a frase, a palavra solta (começo de palavra: «sos» não está em «passos»), os exemplos que o campo sugere (EXEMPLOS_FAQ: o item certo entre os 3 primeiros e, quando o exemplo nomeia um equipamento, o 1º resultado é dele), digitados tecla por tecla com os espaços, as palavras de socorro abrindo os cartões de emergência, a frase de emergência com equipamento nomeado («fogo no motor», «água entrando no motor», «barco afundando», FRASES_EMERGENCIA) trazendo o cartão EM-xx entre os 3 primeiros na F6 e no hub, a frase de segurança com palavra que o arquivo não tem («colete salva-vidas», «bote salva-vidas», «foguete de sinalização», «Seafire», «onde fica o epirb», FRASES_SEGURANCA) trazendo o cartão da salvatagem, do Seafire ou do EPIRB entre os 3 primeiros na F6 e no hub (e a seção filtrando-o), a frase de conversa («gostaria de saber sobre o estabilizador», «onde fica o radar», «onde está o plotter», FRASES_CONVERSA) abrindo com os itens do equipamento que ela nomeia, e o corte de cobertura —; os itens de emergência e de segurança do catálogo achados pelo título, pela pergunta e pelas variantes; a rolagem (o item aberto começa no topo com a ação imediata e o SOS à vista; no app, fechar devolve a lista); e o prefixo da barra de perguntas do app vindo de D.equipamentos.
 
 Fase 4, P4I (Documentos G1 e Abastecimento G2, web e app; `--so-p4i [Tela…]` roda só as conferências dela e `--mutantes-p4i` planta 48 defeitos, todos acusados; `MUT_FILTRO=texto` refaz só os mutantes cujo nome tem o texto; sem Worker): G1 aba
 Documentos com a validade de cada documento = hoje + o prazo relativo (venceEm), conferida contra o relógio da própria página e refeita com o dia virado (fixar 60@1152, sem recarregar), a situação do CapitaoAgora (VENCIDO, VENCE EM n D,
@@ -6705,8 +6705,8 @@ MUTANTES_P4G = [
     ('o quadro «Abrem direto» da H3 web fora da área visível (empurrado para baixo do cartão)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="margin-top: 700px; display: flex;')], 'h3'),
     ('o quadro «Abrem direto» da H3 web cortado pelo próprio quadro (altura de 40 px com o excesso escondido)', 'H3-Atalhos-Editar-Web.dc.html', [('<div data-h3="telas" style="display: flex;', '<div data-h3="telas" style="max-height: 40px; overflow: hidden; display: flex;')], 'h3'),
     # —— revisão final, 4ª rodada: o que o pedido à IA leva do ditado corrigido, a COR dos cartões e o microfone da CONVERSA depois do MAYDAY ——
-    ('os trechos do guia que vão à IA saem do ditado cru (Main: B.buscaBase(q, 3), não o corrigido)', 'Main.dc.html', [("IA.perguntar(qc, B.buscaBase(qc, 3),", "IA.perguntar(qc, B.buscaBase(q, 3),")], 'ia'),
-    ('os trechos do guia que vão à IA saem do ditado cru (H2: B.buscaBase(q, 3), não o corrigido)', 'H2-Home-Mobile.dc.html', [("IA.perguntar(qc, B.buscaBase(qc, 3),", "IA.perguntar(qc, B.buscaBase(q, 3),")], 'ia'),
+    ('os trechos do guia que vão à IA saem do ditado cru (Main: B.buscaBase(q, 3), não o corrigido)', 'Main.dc.html', [(".concat(B.buscaBase(qc, 3)), B.resumoAgora", ".concat(B.buscaBase(q, 3)), B.resumoAgora")], 'ia'),
+    ('os trechos do guia que vão à IA saem do ditado cru (H2: B.buscaBase(q, 3), não o corrigido)', 'H2-Home-Mobile.dc.html', [(".concat(B.buscaBase(qc, 3)), B.resumoAgora", ".concat(B.buscaBase(q, 3)), B.resumoAgora")], 'ia'),
     ('a ficha que vai à IA sai do ditado cru (Main: B.ficha(\'web\', q, …), não o corrigido)', 'Main.dc.html', [("B.ficha('web', qc, a, { emergencia: emg })", "B.ficha('web', q, a, { emergencia: emg })")], 'ia'),
     ('a ficha que vai à IA sai do ditado cru (H2: B.ficha(\'app\', q, …), não o corrigido)', 'H2-Home-Mobile.dc.html', [("B.ficha('app', qc, a, { emergencia: emg })", "B.ficha('app', q, a, { emergencia: emg })")], 'ia'),
     ('o chip «N ATRASADAS» do CONSOLE da Main verde com tarefa atrasada (sempre ok)', 'Main.dc.html', [("}, chip(atr ? 'crit' : 'ok')),", "}, chip('ok')),")], 'leitura'),
@@ -7234,9 +7234,9 @@ def teste_f6_rolagem(b, tela):
     return prob
 
 
-def abre_chat_do_f6(b, tela, item, ia=True):
-    """A F6 aberta com o Worker da IA de mentira; toca no item e em «PERGUNTAR AO BARCO»: a navegação real leva ao chat (Main ou H2) com o referrer da própria tela. Devolve (ctx, pg, erros, est, mensagens)."""
-    ctx, pg, erros, est = abre_home(b, tela, ia=ia)
+def abre_chat_do_f6(b, tela, item, ia=True, texto=None):
+    """A F6 aberta com o Worker da IA de mentira (que responde `texto`); toca no item e em «PERGUNTAR AO BARCO»: a navegação real leva ao chat (Main ou H2) com o referrer da própria tela. Devolve (ctx, pg, erros, est, mensagens)."""
+    ctx, pg, erros, est = abre_home(b, tela, ia=ia, texto=texto)
     try: pg.wait_for_function("() => document.querySelector('[data-f6=item]')", timeout=10000)
     except Exception: pass
     pg.evaluate("(i) => document.querySelector('[data-f6=item][data-id=' + i + ']').click()", item); pg.wait_for_timeout(300)
@@ -7252,13 +7252,14 @@ def abre_chat_do_f6(b, tela, item, ia=True):
 
 
 def teste_f6_chat(b, tela):
-    """F6 → chat (o toque numa pergunta do FAQ): a resposta é o item com o código e a fonte (ctx.faq do cérebro), o chat é o da plataforma, o botão leva ao item no FAQ, e NENHUM pedido sai ao Worker da IA (a IA entra nele
-    com o item como trecho [1] na Fase 6); o cartão de emergência (EM-06) abre local, abre a janela de conversa em emergência (como o SOS) e não grava no diário; o de salvatagem (EM-09) não abre a janela."""
+    """F6 → chat (o toque numa pergunta do FAQ): a resposta é o item com o código e a fonte (ctx.faq do cérebro), o chat é o da plataforma, o botão leva ao item no FAQ, e o item comum (MO-02) vai à IA 1 vez com o
+    ITEM como 1º trecho ([1], F30), antes dos trechos do guia — com a IA sem dado o item fica na tela; o cartão de emergência (EM-06) e o item de segurança (EP-02) nunca enviam pedido: abrem local; o cartão abre a
+    janela de conversa em emergência (como o SOS) e não grava no diário; o de salvatagem (EM-09) não abre a janela."""
     prob = []
     p = plat(tela)
-    for item in ('MO-02', 'EM-06', 'EM-09', 'EP-02'):
+    for item in ('MO-02', 'SK-03', 'EM-06', 'EM-09', 'EP-02'):   # (SK-03: a pergunta do item tem 3 trechos do guia; MO-02: nenhum)
         it = FAQ_ITENS[item]
-        ctx, pg, erros, est, msgs = abre_chat_do_f6(b, tela, item)
+        ctx, pg, erros, est, msgs = abre_chat_do_f6(b, tela, item, texto='SEM DADOS — isso não está nas fontes de bordo.')   # (a IA sem dado não troca o item: as conferências do texto, da fonte e das ações valem com e sem pedido)
         bots = [m for m in msgs if m['papel'] == 'bot']
         st = pg.evaluate(LE_ESTADO_HOME)
         rot = '%s → %s %s' % (tela, CHAT_DE[p].split('.')[0], item)
@@ -7268,7 +7269,15 @@ def teste_f6_chat(b, tela):
         elif ('Fonte: FAQ dos equipamentos ' + item) not in bots[0]['txt']: prob.append('%s: a resposta não traz a fonte com o código (FAQ dos equipamentos %s): %s' % (rot, item, bots[0]['txt'][-160:]))
         if bots and not any(a['l'] == 'Abrir %s no FAQ' % item and a['href'] == f6_arq(tela) + '#id=' + item for a in bots[0]['acoes']): prob.append('%s: falta a ação «Abrir %s no FAQ» → %s#id=%s: %s' % (rot, item, f6_arq(tela), item, bots[0]['acoes']))
         if bots and any(a['l'] == 'Abrir SOS' for a in bots[0]['acoes']) != bool(it.get('emerg')): prob.append('%s: o botão «Abrir SOS» só vem no cartão de emergência: %s' % (rot, bots[0]['acoes']))
-        if est['pedidos']: prob.append('%s: o toque no FAQ chamou a IA (%d pedido(s) ao Worker)' % (rot, len(est['pedidos'])))
+        if it.get('emerg') or it.get('seguranca'):
+            if est['pedidos']: prob.append('%s: o cartão de emergência ou o item de segurança do FAQ enviou pedido à IA (%d pedido(s) ao Worker)' % (rot, len(est['pedidos'])))
+        else:   # F30: 1 pedido, com o item como 1º trecho (a fonte com o código, o título e o texto do item) e os trechos do guia depois
+            tr = (est['pedidos'][0].get('trechos') or []) if len(est['pedidos']) == 1 else []
+            if len(est['pedidos']) != 1: prob.append('%s: o toque no item comum do FAQ devia ir à IA 1 vez (F30): %d pedido(s)' % (rot, len(est['pedidos'])))
+            elif not tr or not tr[0].get('fonte', '').startswith('FAQ dos equipamentos ' + item) or tr[0].get('secao') != it['titulo'] or lin(it['resposta'])[:60] not in lin(tr[0].get('texto', '')): prob.append('%s: o 1º trecho do pedido devia ser o item (F30): %s' % (rot, json.dumps(tr[:1], ensure_ascii=False)[:200]))
+            elif len(tr) != min(3, 1 + pg.evaluate('(q) => window.CapitaoBrain.buscaBase(q, 3).length', it['pergunta'])) or len(tr) != {'MO-02': 1, 'SK-03': 3}[item] or any('FAQ dos equipamentos' in (x.get('fonte') or '') for x in tr[1:]):
+                prob.append('%s: depois do item deviam vir os trechos do guia da pergunta (B.buscaBase; 3 trechos ao todo no máximo): %s' % (rot, [x.get('fonte') for x in tr]))
+            elif confere.R_COORD.search(json.dumps(est['pedidos'][0], ensure_ascii=False)): prob.append('%s: coordenada no pedido do toque do FAQ' % rot)
         if st['emerg'] != bool(it.get('emerg') and item != 'EM-09'): prob.append('%s: a janela de conversa em emergência está %s (esperado %s: abre com os cartões de emergência, menos o de salvatagem)' % (rot, st['emerg'], bool(it.get('emerg') and item != 'EM-09')))
         if st['diario']: prob.append('%s: abrir o FAQ gravou no diário: %s' % (rot, st['diario']))
         if st['url'].split('#')[0].endswith(CHAT_DE[p]) and '#' in st['url']: prob.append('%s: o endereço do chat devia ficar limpo depois da pergunta: %s' % (rot, st['url']))
@@ -7564,12 +7573,13 @@ def teste_faq_codigo():
             if 'setInterval' in cod: prob.append('%s: setInterval novo (a tela anda pelo evento da telemetria)' % n)
             if 'if (document.hidden) return;' not in cod or 'if (k !== this._bk)' not in cod: prob.append('%s: o tique não pausa com document.hidden ou redesenha sem comparar o texto' % n)
             if 'I.calc.faltam' not in cod and n.startswith('F4'): prob.append('%s: as horas que faltam não vêm do instante (calc.faltam)' % n)
-    for a in ('Main.dc.html', 'H2-Home-Mobile.dc.html'):   # o toque no FAQ: o código (#faq=) chega ao cérebro, espera o arquivo (até 3 s) e não chama a IA (a Fase 6 liga com o item como trecho [1])
+    for a in ('Main.dc.html', 'H2-Home-Mobile.dc.html'):   # o toque no FAQ: o código (#faq=) chega ao cérebro, espera o arquivo (até 3 s) e vai à IA com o item como trecho [1] (F30; a emergência e a segurança não: B.pedeIA)
         h = le_arq(a)
         n = a.split('.')[0]
         if 'this.ask(h.q, null, true, faq ? { faq: faq } : null)' not in h or 'emergencia: emg, faq: faq }' not in h: prob.append('%s: o código do FAQ (#faq=) não chega ao cérebro (ctx.faq)' % n)
         if 'Promise.race([atual().carregaFaq().then(() => atual().carregaFaq()), new Promise((ok) => setTimeout(ok, 3000))])' not in h or 'faqPronto && atual().faqPronto()' not in h: prob.append('%s: não espera o arquivo do FAQ (até 3 s) antes de responder pelo código' % n)
-        if 'const pede = !att && interno && !faq &&' not in h: prob.append('%s: o toque no FAQ chama a IA (a Fase 6 liga, com o item como trecho [1])' % n)
+        if 'const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });' not in h or '(itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3))' not in h or "a.key === 'faqEquip' && typeof a.faq === 'string'" not in h:
+            prob.append('%s: o toque no FAQ não vai à IA com o item como 1º trecho (F30), ou passa por fora do B.pedeIA' % n)
         if "(a.key === 'base' || a.key === 'faqEquip')" not in h or "a.key === 'base' || a.key === 'faqEquip' ? a.actions : []" not in h: prob.append('%s: a IA sem dado troca o item do FAQ (o item de faqEquip deve ficar, como o trecho do guia) ou perde as ações' % n)
     m = le_arq('capitao-faq.js')
     cod = re.sub(r'/\*.*?\*/', '', m, flags=re.S)
@@ -7599,7 +7609,7 @@ def teste_faq_codigo():
 
 def teste_chat_faq(b, tela):
     """Main e H2: a pergunta digitada que cai no FAQ (a «sonda mostrando pouca profundidade» é o EL-08) vai à IA como o trecho do guia; a IA que responde SEM DADOS NÃO troca o item (o texto local, com o código, a fonte e as ações,
-    fica); a IA que responde com dado troca o texto e guarda as ações do item («Abrir EL-08 no FAQ»); o toque no FAQ (#q=…&faq=…, de dentro do app) nunca chama a IA."""
+    fica); a IA que responde com dado troca o texto e guarda as ações do item («Abrir EL-08 no FAQ»); o toque no FAQ (#q=…&faq=…, de dentro do app) leva o item como 1º trecho (F30: teste_f6_chat)."""
     prob = []
     p = plat(tela)
     q = 'sonda mostrando pouca profundidade'
@@ -7657,7 +7667,7 @@ def p4h_conferencias(b, lista):
         out.append((tela + ' · os 91 itens abertos um a um', teste_f6_itens(b, tela)))
         out.append((tela + ' · o arquivo lento (a 2ª cópia do cérebro) e sem rede', teste_f6_carga_lenta(b, tela)))
         out.append((tela + ' · o toque: abrir, fechar, ver também e o botão do SOS', teste_f6_navegacao(b, tela)))
-        out.append((tela + ' · do FAQ ao chat: o item com o código e a fonte, sem IA, e a janela de emergência', teste_f6_chat(b, tela)))
+        out.append((tela + ' · do FAQ ao chat: o item com o código e a fonte, o item como 1º trecho da IA (F30), a emergência sem pedido e a janela de emergência', teste_f6_chat(b, tela)))
     for tela in [t for t in TELAS_CHAT_FAQ if t in lista]:
         out.append((tela + ' · a pergunta do FAQ na IA: o item fica com a IA sem dado e guarda as ações', teste_chat_faq(b, tela)))
         out.append((tela + ' · o código do FAQ com o arquivo lento: a tela espera o arquivo', teste_chat_faq_lento(b, tela)))
@@ -7693,8 +7703,14 @@ MUTANTES_P4H = [
     # —— o chat (o toque no FAQ) ——
     ('a Main não passa o código do FAQ ao cérebro', 'Main.dc.html', [("this.ask(h.q, null, true, faq ? { faq: faq } : null)", "this.ask(h.q, null, true, null)")], 'chat_web'),
     ('a H2 não passa o código do FAQ ao cérebro', 'H2-Home-Mobile.dc.html', [("this.ask(h.q, null, true, faq ? { faq: faq } : null)", "this.ask(h.q, null, true, null)")], 'chat_app'),
-    ('a Main chama a IA no toque do FAQ', 'Main.dc.html', [("const pede = !att && interno && !faq && !!IA", "const pede = !att && interno && !!IA")], 'chat_web'),
-    ('a H2 chama a IA no toque do FAQ', 'H2-Home-Mobile.dc.html', [("const pede = !att && interno && !faq && !!IA", "const pede = !att && interno && !!IA")], 'chat_app'),
+    ('a Main não chama a IA no toque do FAQ (F30 desligado)', 'Main.dc.html', [("const pede = !att && interno && !!IA", "const pede = !att && interno && !faq && !!IA")], 'chat_web'),
+    ('a H2 não chama a IA no toque do FAQ (F30 desligado)', 'H2-Home-Mobile.dc.html', [("const pede = !att && interno && !!IA", "const pede = !att && interno && !faq && !!IA")], 'chat_app'),
+    ('a Main manda o toque do FAQ à IA sem o item como 1º trecho', 'Main.dc.html', [("(itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3))", "B.buscaBase(qc, 3)")], 'chat_web'),
+    ('a H2 manda o toque do FAQ à IA sem o item como 1º trecho', 'H2-Home-Mobile.dc.html', [("(itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3))", "B.buscaBase(qc, 3)")], 'chat_app'),
+    ('a Main põe o item do FAQ depois dos trechos do guia', 'Main.dc.html', [("(itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3))", "B.buscaBase(qc, 3).concat(itemFaq ? [itemFaq] : [])")], 'chat_web'),
+    ('a H2 põe o item do FAQ depois dos trechos do guia', 'H2-Home-Mobile.dc.html', [("(itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3))", "B.buscaBase(qc, 3).concat(itemFaq ? [itemFaq] : [])")], 'chat_app'),
+    ('a Main manda o cartão de emergência do FAQ à IA (passa por fora do B.pedeIA)', 'Main.dc.html', [("const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });", "const pede = !att && interno && !!IA;")], 'chat_web'),
+    ('a H2 manda o cartão de emergência do FAQ à IA (passa por fora do B.pedeIA)', 'H2-Home-Mobile.dc.html', [("const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });", "const pede = !att && interno && !!IA;")], 'chat_app'),
     ('a Main não espera o arquivo do FAQ antes de responder pelo código', 'Main.dc.html', [("if (faq && atual().carregaFaq && !pronto()) Promise.race", "if (false) Promise.race")], 'lento_web'),
     ('a H2 não espera o arquivo do FAQ antes de responder pelo código', 'H2-Home-Mobile.dc.html', [("if (faq && atual().carregaFaq && !pronto()) Promise.race", "if (false) Promise.race")], 'lento_app'),
     ('a IA sem dado troca o item do FAQ na Main', 'Main.dc.html', [("if (r && !(r.semDados && (a.key === 'base' || a.key === 'faqEquip'))) {", "if (r && !(r.semDados && a.key === 'base')) {")], 'semdados_web'),

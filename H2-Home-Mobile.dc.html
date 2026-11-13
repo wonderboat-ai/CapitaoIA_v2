@@ -325,8 +325,13 @@ class Component extends DCLogic {
       let interno = !link;
       if (link) { try { interno = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) { interno = false; } }
       const qc = B.corrigeVoz ? B.corrigeVoz(q) : q;   // o que vai à IA: o ditado já corrigido (o answer() e a conversa também corrigem)
-      // O toque no FAQ (o código do item) mostra o item local, com o código e a fonte; a IA entra nele com o item como trecho [1] na Fase 6 (F30). O cartão de emergência (EM-xx) e o item de segurança nunca vão à IA (B.pedeIA).
-      const pede = !att && interno && !faq && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });
+      // F30: a resposta que é um item do FAQ dos equipamentos (o toque, #faq=<código>, ou a pergunta que casa com um item) vai à IA com o ITEM como 1º trecho ([1]: o código, a fonte e o texto do item), antes dos trechos
+      // do guia. O cartão de emergência (EM-xx) e o item de segurança nunca vão à IA (B.pedeIA: nenhum pedido sai).
+      const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });
+      const itemFaq = a.key === 'faqEquip' && typeof a.faq === 'string' && a.text ? { d: { fonte: String(a.src || 'FAQ dos equipamentos ' + a.faq).replace(/^Fonte:\s*/, ''), secao: ((B.faqItem && B.faqItem(a.faq)) || {}).titulo || '', texto: a.text }, nota: 0 } : null;
+      // Fase 5 (decisão 5): na simulação a falha OPERACIONAL da IA (sem chave, 401, 429, sem rede, demora, filtro) não é falada nem vira aviso grande: o motivo fica só na linha da fonte (e no «diagnóstico»),
+      // e o botão «Ativar IA na nuvem» continua na resposta. Com simulacao:false, o aviso grande e a fala de sempre.
+      const quieta = (window.CapitaoDados || {}).simulacao === true;
       // "diagnóstico": o texto local diz versões, internet e estado da IA; o teste da chave no servidor (sem gastar a cota)
       // vem junto, na mesma mensagem.
       if (a.key === 'diagnostico' && IA && IA.testar) {
@@ -343,7 +348,7 @@ class Component extends DCLogic {
         // Aparelho sem a chave (ou com chave inválida): a linha da fonte é pequena e a CONVERSA cobre a tela — avisa grande
         // e, na voz, fala o aviso uma vez por sessão.
         const precisaAtivar = pede && IA.estado && /^(sem-chave|chave-invalida)$/.test(IA.estado());
-        if (precisaAtivar) {
+        if (precisaAtivar && !quieta) {
           this.flash('IA NA NUVEM NÃO ATIVADA NESTE APARELHO — TOQUE EM ATIVAR IA NA NUVEM', 12000);
           if (this.state.conversa && !this._avisouIA) { this._avisouIA = true; fin.extraFala = 'A IA na nuvem não está ativada neste aparelho. Encerre a conversa e toque em Ativar IA na nuvem.'; }
         }
@@ -351,7 +356,7 @@ class Component extends DCLogic {
       }
       if (this.state.conversa && B.vozPensando) B.vozPensando(q);
       this.setState((s) => ({ iaN: (s.iaN || 0) + 1 }));
-      IA.perguntar(qc, B.buscaBase(qc, 3), B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', { ficha: B.ficha ? B.ficha('app', qc, a, { emergencia: emg }) : '', historico: this.historico(um, emg) }).then((r) => {
+      IA.perguntar(qc, (itemFaq ? [itemFaq] : []).concat(B.buscaBase(qc, 3)), B.resumoAgora ? B.resumoAgora(a, { emergencia: emg }) : '', { ficha: B.ficha ? B.ficha('app', qc, a, { emergencia: emg }) : '', historico: this.historico(um, emg) }).then((r) => {
         // Resposta sem dado da IA não troca um trecho do guia (a local tem o trecho e a fonte); troca a resposta genérica.
         // O cérebro não vê a resposta da IA: a tela a conta (B.conversa), para «o gerador» continuar uma pergunta que a IA fez.
         // A resposta tardia não recoloca o que o NOVA ou o ENCERRAR zeraram (ctxN) nem o que a emergência que abriu no meio encerrou (a janela vale agora).
@@ -363,8 +368,9 @@ class Component extends DCLogic {
           if (!this._dead && ctxN === (this._ctxN || 0)) { try { if (B.conversa) B.conversa(qc, r.text); } catch (e) {} }
           entrega({ key: 'ia', text: r.text, src: r.src, actions: a.key === 'base' || a.key === 'faqEquip' ? a.actions : [] }, true);
         } else {
-          const nota = r ? '' : IA.falha ? IA.falha() : '', fin = local(nota);
-          if (nota && this.state.conversa) fin.extraFala = nota.replace(/ — /g, ', ') + '.'; // na voz, o motivo também é falado
+          // (null com a falha vazia — a resposta filtrada, o 502 com `parou` —: fica a resposta local, sem nota e sem fala a mais)
+          const nota = r ? '' : (IA.falha && IA.falha()) || '', fin = local(nota);
+          if (nota && this.state.conversa && !quieta) fin.extraFala = nota.replace(/ — /g, ', ') + '.'; // na voz, o motivo também é falado (fora da simulação)
           entrega(fin, true);
         }
       }, () => entrega(local(''), true));
