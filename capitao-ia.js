@@ -6,7 +6,9 @@
    buscado e o chat segue 100% local (respostas prontas + base de bordo + SEM DADOS), com o aviso na linha da fonte.
    Serve aos dois proxies (mesmo contrato): integracoes/workers-ai/ (gratuito) ou integracoes/claude-api/ (pago).
    Como foi ligado e como ativar um aparelho: integracoes/workers-ai/README.md.
-   Nenhuma chave de provedor passa por aqui: o app só conhece a URL do proxy e a CHAVE_APP deste aparelho. */
+   Nenhuma chave de provedor passa por aqui: o app só conhece a URL do proxy e a CHAVE_APP deste aparelho.
+   1.1.0 (modo simulação): com CapitaoDados.simulacao o pedido leva modo 'simulacao' e a resposta passa pelo filtro de saída
+   (barrada → a tela fica com a resposta local, sem nota); nos dois modos, nada do que sai do aparelho leva coordenadas. */
 (function () {
   if (window.CapitaoIA) return;
   var URL_PROXY = 'https://capitao-ia.luka-araujos.workers.dev'; // Worker capitao-ia (Workers AI) — ligado na demonstração em 27/09/2026
@@ -145,6 +147,44 @@
       '• Última falha: ' + (ULTIMA.falha || 'nenhuma nesta sessão')
     ];
   }
+  // ——— 1.1.0 · modo simulação (window.CapitaoDados.simulacao === true) ———
+  // Lista única de termos (PROMPT §3): as MESMAS fontes do ferramentas/prompts/clone-avanti-1.1.0/termos.json, do
+  // CapitaoBrain.TERMOS_FONTES e dos dois Workers. Sem lookbehind (iOS < 16.4) e sem \w para palavra em português. Só as 5
+  // do filtro de saída da IA.
+  var TERMOS_FONTES = {
+    ROTULOS: { src: '\\bSEM (?:DADOS|LEITURA)\\b|\\bMANUAL NO DRIVE\\b|\\bDEMO\\b', flags: '' },
+    AUTENTICIDADE: { src: '(?:^|[^A-Za-zÀ-ÿ])(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:fict[ií]ci|simulad|inventad|de demonstra[çc][ãa]o)|dados de teste|fict[ií]ci|inventad[oa]s?(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:barc|embarca[çc]|navega[çc]|viage|rota|cen[áa]ri|agenda|guia|registro|mmsi)[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:simulad|de demonstra[çc][ãa]o|hipot[ée]tic|ilustrativ|de exemplo)|(?:^|[^A-Za-zÀ-ÿ])(?:é|são|foi|está|estão) (?:uma? )?(?:simula[çc][ãa]o|demonstra[çc][ãa]o)(?! d[oa]s? )|n[ãa]o (?:é|são) (?:reais?|verdadeir[A-Za-zÀ-ÿ]*|de verdade)(?![A-Za-zÀ-ÿ])|\\(demonstra[çc][ãa]o\\)|(?:^|[^A-Za-zÀ-ÿ])(?:na|da|para) demonstra[çc][ãa]o(?! d[oa]s? )|(?:^|[^A-Za-zÀ-ÿ])modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)(?![A-Za-zÀ-ÿ])', flags: 'i' },
+    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro', flags: 'i' },
+    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b', flags: 'i' },
+    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )', flags: 'i' }
+  };
+  var TERMOS = {};
+  Object.keys(TERMOS_FONTES).forEach(function (k) { TERMOS[k] = new RegExp(TERMOS_FONTES[k].src, TERMOS_FONTES[k].flags); });
+  // Filtro de saída (só na simulação): o que a resposta da IA não pode trazer — rótulo, autenticidade, dinheiro, dado pessoal
+  // e lugar de equipamento de segurança. '' = passa. O Worker 1.1.0 faz o mesmo e devolve 502 com `parou`; este vale também
+  // enquanto o Worker publicado for o anterior. Barrou → null com falha() vazia: a tela fica com a resposta local, que é
+  // completa, sem nota e sem fala.
+  function filtroSaida(t) {
+    t = String(t == null ? '' : t);
+    if (TERMOS.ROTULOS.test(t) || TERMOS.AUTENTICIDADE.test(t)) return 'rotulo';
+    if (TERMOS.DINHEIRO.test(t) || TERMOS.PESSOAIS.test(t)) return 'privacidade';
+    if (TERMOS.LOCAL_SEGURANCA.test(t)) return 'seguranca';
+    return '';
+  }
+  function barrada(e) { var p = e && e.status === 502 && e.j ? e.j.parou : null; return p === 'rotulo' || p === 'privacidade' || p === 'seguranca'; }
+  function simulacao() { try { return !!(window.CapitaoDados && window.CapitaoDados.simulacao === true); } catch (e) { return false; } }
+  // Coordenadas não saem do aparelho (PROMPT §2.8; vale nos DOIS modos): ponto único, antes do fetch, sobre a pergunta, a
+  // ficha, a leitura, cada mensagem do histórico e cada trecho — e ANTES do corte (cortar primeiro deixaria meia coordenada).
+  // A mesma regra do semCoord do capitao-brain.js e dos Workers: graus-minutos com vírgula ou ponto, decimais com 4 ou mais
+  // casas ou em par — e nunca o milhar do pt-BR (1.236,4 h, 1.600 L, 12.000).
+  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}/g;
+  var SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = /\(coordenadas só na tela do app\)(?:\s*[,;\/·]?\s*\(coordenadas só na tela do app\))+/g;
+  function semCoord(s) { return String(s == null ? '' : s).replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
+  function semCoordSe(v) { return typeof v === 'string' ? semCoord(v) : v; } // fonte, página e seção: null continua null
+  // Teto da ficha (decisão (i)): 16.000 letras na simulação (a ficha da navegação passa de 11.500), 12.000 no modo real — os
+  // mesmos dos Workers e o CapitaoBrain.FICHA_MAX.
+  var FICHA_MAX = 12000, FICHA_MAX_SIMULACAO = 16000;
+
   // Texto simples na tela e na voz: sem negrito, título, crase de código; lista "- x" vira "• x".
   function limpaMd(s) {
     return String(s).replace(/\r/g, '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/__([^_\n]+)__/g, '$1').replace(/`([^`\n]+)`/g, '$1')
@@ -152,22 +192,33 @@
   }
 
   // perguntar(pergunta, hits, contexto, extra) → Promise<{ text, src, key: 'ia', semDados } | null>
-  //   hits: o retorno de CapitaoBrain.buscaBase(pergunta, 3) — [{ d: { fonte, pag, secao, texto }, nota }]
+  //   hits: o retorno de CapitaoBrain.buscaBase(pergunta, 3) — [{ d: { fonte, pag, secao, texto }, nota }]; o item do FAQ dos
+  //     equipamentos entra como 1º trecho com d.faq = o código do item (F30): na simulação o Worker o manda inteiro
   //   contexto: leitura que a tela já mostra, em texto curto (pode ser '')
   //   extra: { ficha: CapitaoBrain.ficha() — o que o app sabe agora, com as fontes; historico: [{ papel: 'usuario'|'capitao', texto }] }
   //   null = IA desligada, sem rede, demora, recusa ou erro → a tela mantém a resposta local; falha() diz o porquê.
+  //     Resposta barrada pelo filtro de saída (502 com parou 'rotulo' | 'privacidade' | 'seguranca', ou barrada aqui na
+  //     simulação) → null com falha() VAZIA: a tela fica com a resposta local, sem nota e sem fala.
+  //   Com CapitaoDados.simulacao o pedido leva modo: 'simulacao'. Nos dois modos, nada do que sai leva coordenadas.
   //   semDados = a IA também não achou (a tela decide: com trecho do guia na resposta local, fica a local).
   function perguntar(pergunta, hits, contexto, extra) {
     ULTIMA.falha = '';
     if (!ativa() || !window.fetch) { ULTIMA.falha = aviso(); return Promise.resolve(null); }
     extra = extra || {};
-    var trechos = (hits || []).slice(0, 3).map(function (h) { var d = h && h.d ? h.d : h; return { fonte: d.fonte, pag: d.pag, secao: d.secao, texto: d.texto }; });
-    var historico = (Array.isArray(extra.historico) ? extra.historico : []).slice(-6).map(function (x) { return { papel: x && x.papel === 'capitao' ? 'capitao' : 'usuario', texto: String((x && x.texto) || '').slice(0, 600) }; }).filter(function (x) { return x.texto.trim(); });
+    var sim = simulacao();
+    var trechos = (hits || []).slice(0, 3).map(function (h) {
+      var d = h && h.d ? h.d : h, t = { fonte: semCoordSe(d.fonte), pag: semCoordSe(d.pag), secao: semCoordSe(d.secao), texto: semCoordSe(d.texto) };
+      if (typeof d.faq === 'string' && d.faq.trim()) t.faq = d.faq.trim().slice(0, 16);
+      return t;
+    });
+    var historico = (Array.isArray(extra.historico) ? extra.historico : []).slice(-6).map(function (x) { return { papel: x && x.papel === 'capitao' ? 'capitao' : 'usuario', texto: semCoord(String((x && x.texto) || '')).slice(0, 600) }; }).filter(function (x) { return x.texto.trim(); });
+    var corpo = { pergunta: semCoord(String(pergunta || '')).slice(0, 500), trechos: trechos, contexto: contexto ? semCoord(String(contexto)).slice(0, 2000) : '', ficha: extra.ficha ? semCoord(String(extra.ficha)).slice(0, sim ? FICHA_MAX_SIMULACAO : FICHA_MAX) : '', historico: historico };
+    if (sim) corpo.modo = 'simulacao'; // o Worker escolhe o SISTEMA_SIMULACAO; sem o campo, o modo real de sempre
     var ctl = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (ctl) ctl.abort(); }, ESPERA);
     return fetch(URL_PROXY, {
       method: 'POST', cache: 'no-store', signal: ctl ? ctl.signal : undefined,
       headers: { 'Content-Type': 'application/json', 'X-Capitao-Chave': chave() },
-      body: JSON.stringify({ pergunta: String(pergunta || '').slice(0, 500), trechos: trechos, contexto: contexto ? String(contexto).slice(0, 2000) : '', ficha: extra.ficha ? String(extra.ficha).slice(0, 12000) : '', historico: historico })
+      body: JSON.stringify(corpo)
     }).then(function (r) {
       return r.json().catch(function () { return null; }).then(function (j) { if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; e.j = j; throw e; } return j; });
     }).then(function (j) {
@@ -183,12 +234,15 @@
       }
       var texto = linhas.join('\n').trim();
       if (!texto) { ULTIMA.falha = 'IA na nuvem sem resposta'; return null; }
+      // Simulação: o mesmo filtro de saída do Worker → null com a falha vazia (a tela fica com a resposta local). E a IA
+      // nunca dá a posição em coordenadas.
+      if (sim) { if (filtroSaida(texto) || filtroSaida(fonte)) return null; texto = semCoord(texto); fonte = semCoord(fonte); }
       // Provedor e modelo vêm do proxy (Workers AI · llama-3.3-70b-…, Claude API · claude-opus-5); sem eles, só "IA na nuvem".
       var quem = [j.provedor, j.modelo].filter(function (x) { return typeof x === 'string' && x; }).map(function (x) { return x.replace(/^@cf\/[^/]+\//, '').slice(0, 60); }).join(' · ');
       return { text: texto, src: 'Fonte: ' + (fonte ? fonte.slice(0, 220) + ' · via ' : '') + 'IA na nuvem' + (quem ? ' (' + quem + ')' : ''), key: 'ia', semDados: /^\s*SEM DADOS/i.test(texto) };
-    }, function (e) { clearTimeout(t); ULTIMA.falha = motivo(e); return null; })
+    }, function (e) { clearTimeout(t); ULTIMA.falha = barrada(e) ? '' : motivo(e); return null; })
       .catch(function () { clearTimeout(t); ULTIMA.falha = 'IA na nuvem sem resposta'; return null; });
   }
 
-  window.CapitaoIA = Object.assign(api, { VERSAO: VERSAO, ativa: ativa, estado: estado, aviso: aviso, falha: falha, perguntar: perguntar, testar: testar, diagnostico: diagnostico, normalizaChave: normalizaChave, chaveValida: chaveValida });
+  window.CapitaoIA = Object.assign(api, { VERSAO: VERSAO, ativa: ativa, estado: estado, aviso: aviso, falha: falha, perguntar: perguntar, testar: testar, diagnostico: diagnostico, normalizaChave: normalizaChave, chaveValida: chaveValida, semCoord: semCoord, filtroSaida: filtroSaida, TERMOS_FONTES: TERMOS_FONTES });
 })();
