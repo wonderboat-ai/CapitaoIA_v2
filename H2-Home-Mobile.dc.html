@@ -328,7 +328,7 @@ class Component extends DCLogic {
       // F30: a resposta que é um item do FAQ dos equipamentos (o toque, #faq=<código>, ou a pergunta que casa com um item) vai à IA com o ITEM como 1º trecho ([1]: o código, a fonte e o texto do item), antes dos trechos
       // do guia. O cartão de emergência (EM-xx) e o item de segurança nunca vão à IA (B.pedeIA: nenhum pedido sai).
       const pede = !att && interno && !!IA && !!B.pedeIA && B.pedeIA(a, qc, { emergencia: emg });
-      const itemFaq = a.key === 'faqEquip' && typeof a.faq === 'string' && a.text ? { d: { fonte: String(a.src || 'FAQ dos equipamentos ' + a.faq).replace(/^Fonte:\s*/, ''), secao: ((B.faqItem && B.faqItem(a.faq)) || {}).titulo || '', texto: a.text }, nota: 0 } : null;
+      const itemFaq = a.key === 'faqEquip' && typeof a.faq === 'string' && a.text ? { d: { fonte: String(a.src || 'FAQ dos equipamentos ' + a.faq).replace(/^Fonte:\s*/, ''), secao: ((B.faqItem && B.faqItem(a.faq)) || {}).titulo || '', texto: a.text, faq: a.faq }, nota: 0 } : null;
       // Fase 5 (decisão 5): na simulação a falha OPERACIONAL da IA (sem chave, 401, 429, sem rede, demora, filtro) não é falada nem vira aviso grande: o motivo fica só na linha da fonte (e no «diagnóstico»),
       // e o botão «Ativar IA na nuvem» continua na resposta. Com simulacao:false, o aviso grande e a fala de sempre.
       const quieta = (window.CapitaoDados || {}).simulacao === true;

@@ -434,8 +434,11 @@ def main():
                 ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste navegador' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('diagnóstico', chave=False)
                 ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste navegador (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste navegador (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
+                # (decisões 3 e 5: na simulação o «SEM DADOS» da IA é rótulo — o filtro de saída do cliente o barra, com a falha vazia — e a tela fica com a resposta local, sem o rótulo e sem motivo; a troca
+                # do texto genérico pelo «SEM DADOS» da IA é do modo real e roda mais abaixo, na passada com simulacao:false)
                 t, n, _ = digita('como se faz um nó lais de guia?', modo='semdados')
-                ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and FALLBACK_LOCAL not in t, 'pedidos=%d' % n)
+                ok(tela + ': simulação: o "SEM DADOS" da IA é barrado pelo filtro de saída: 1 pedido, a tela fica com a resposta local, sem o rótulo e sem motivo', n == 1 and FALLBACK_LOCAL in t and 'os trechos não respondem' not in t
+                   and re.search(r'\bSEM DADOS\b', t) is None and 'IA na nuvem fora' not in t and pg.evaluate("() => window.CapitaoIA.falha()") == '', 'pedidos=%d · %s' % (n, t[-200:]))
                 t, n, _ = digita('como ligar o gerador?', chave=False)
                 ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede (fica o trecho local)', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('como se faz um nó lais de guia?', chave=False)
@@ -552,6 +555,8 @@ def main():
                 ok(tela + ': simulacao:false: sem a CHAVE_APP, aviso grande na tela "IA NA NUVEM NÃO ATIVADA NESTE APARELHO"', 'IA NA NUVEM NÃO ATIVADA NESTE APARELHO' in t, t[-300:])
                 t, n, livre = digita('como ligar o gerador?', modo='erro')
                 ok(tela + ': simulacao:false: erro do proxy mantém a resposta local com o motivo (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and 'IA na nuvem fora agora' in t and livre, 'pedidos=%d' % n)
+                t, n, _ = digita('como se faz um nó lais de guia?', modo='semdados')
+                ok(tela + ': simulacao:false: "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and FALLBACK_LOCAL not in t, 'pedidos=%d · %s' % (n, t[-200:]))
                 f, n = conversa('o que você faz', chave=False)
                 ok(tela + ': simulacao:false: CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
                 f, n = conversa('como se faz um nó lais de guia', modo='erro')
@@ -746,7 +751,8 @@ def main():
                     it = FAQ_ITENS[cod]
                     nb = pg.evaluate('(q) => window.CapitaoBrain.buscaBase(q, 3).length', q)   # quantos trechos do guia a pergunta tem (o cliente manda no máximo 3 trechos ao todo)
                     return (len(tr) == min(3, 1 + nb) and (guia is None or nb == guia) and tr[0].get('fonte', '').startswith('FAQ dos equipamentos ' + cod) and tr[0].get('secao') == it['titulo'] and it['resposta'][:60] in tr[0].get('texto', '')
-                            and all(x.get('fonte') and 'FAQ dos equipamentos' not in x['fonte'] for x in tr[1:]))
+                            and tr[0].get('faq') == cod   # (o código em `faq`: é ele que faz o Worker marcar o trecho 1 como item do FAQ e mandá-lo inteiro, com as linhas dos passos)
+                            and all(x.get('fonte') and 'FAQ dos equipamentos' not in x['fonte'] and 'faq' not in x for x in tr[1:]))
                 for cod, guia in (('SK-03', 3), ('MO-02', 0)):
                     t, n = por_link(FAQ_ITENS[cod]['pergunta'], interno=True, extra='&faq=' + cod)
                     ped = estado['pedidos'][-1] if n else {}
