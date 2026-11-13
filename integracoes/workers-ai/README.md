@@ -2,6 +2,36 @@
 
 **Publicado em 27/09/2026** na conta Cloudflare do proprietário: `https://capitao-ia.luka-araujos.workers.dev` (código deste `ia-worker/worker.js`, colado pelo painel), binding `AI`, `MODELO`, `MAX_TOKENS`, `ORIGENS` e `GATEWAY=capitao-ia`; `CHAVE_APP` como Secret. AI Gateway `capitao-ia`: **30 pedidos por hora, janela deslizante** (desde a 1.0.5; eram 3 na 1.0.4, pouco para conversar), sem coleta de logs, autenticado. **Código da 1.0.5** (ficha de bordo + histórico) colado no painel em 27/09/2026 — versão `bd5b8774`, 100% do tráfego; bindings, variáveis e segredo mantidos. **Logs de invocação do Worker desligados** — eles gravavam os cabeçalhos do pedido, inclusive o `X-Capitao-Chave`, em texto claro. Ligado como **exceção aprovada pelo proprietário** à regra do login no servidor (dados fictícios, origem própria); **antes de dados reais, pôr o Cloudflare Access** na frente do Worker.
 
+## 1.1.0 · modo simulação — código 1.1.0 pronto, ainda não colado no painel
+
+O `ia-worker/worker.js` desta pasta já é o da 1.1.0. O Worker publicado continua com o código da 1.0.5 até o proprietário colar o novo. **Site e Worker podem ir no ar em qualquer ordem**: o app manda o campo `modo: "simulacao"` e o Worker antigo o ignora (o cliente filtra a resposta do mesmo jeito e, se ela trouxer rótulo, fica a resposta local); o Worker novo sem o campo `modo` se comporta como o da 1.0.9.
+
+**Passo a passo para colar** (só o proprietário, pelo painel; a API do painel barra o envio — não contornar):
+
+1. Cloudflare › **Workers & Pages › capitao-ia › Edit code** › apagar o código do editor › colar o `ia-worker/worker.js` inteiro › **Deploy**. Não mexer no binding `AI`, nas variáveis (`MODELO`, `MAX_TOKENS`, `ORIGENS`, `GATEWAY`) nem no Secret `CHAVE_APP`.
+2. **Conferir só o 422**, que não gasta a cota (a IA nem é chamada). Com a `CHAVE_APP` lida do arquivo PRIVADO, sem imprimir a chave:
+
+   ```sh
+   curl -s -o /dev/null -w '%{http_code}\n' -X POST https://capitao-ia.luka-araujos.workers.dev \
+     -H 'Origin: https://v2.capitaoia.com.br' -H 'Content-Type: application/json' \
+     -H "X-Capitao-Chave: $(cat ARQUIVO_PRIVADO_DA_CHAVE)" \
+     -d '{"pergunta":"teste da chave","trechos":[],"contexto":"","ficha":"","historico":[],"modo":"simulacao"}'
+   ```
+
+   Tem de responder `422`. `401` = chave errada; `403` = faltou o `Origin`; `500` = o binding `AI` saiu do lugar. (Python `urllib` leva "error code: 1010" da Cloudflare: usar `curl`. No app, digitar **diagnóstico** no chat faz o mesmo teste.) O 422 é igual no código antigo e no novo: ele prova que origem, chave e binding continuam certos, não qual código está no ar.
+3. **Depois do Deploy**, o proprietário passa o id da versão que o painel mostra em **Deployments**. Só então esse id entra aqui e no `ia-worker/wrangler.toml`. Até lá vale esta frase: *código 1.1.0 pronto, ainda não colado no painel* — nenhum id é escrito antes disso.
+
+**O que muda com `modo: "simulacao"`** (sem o campo, nada muda):
+
+- **Outro texto de sistema** (`SISTEMA_SIMULACAO`, o mesmo nos dois proxies): responde como telemetria ao vivo, com o número e a hora; não usa os rótulos de dado ausente nem comenta a autenticidade dos dados (e nunca afirma que são reais: usa a frase do bloco "Sobre o app" da ficha); conhecimento de náutica aplicado aos valores do barco, sem rótulo. **Emergência:** primeiro o SOS do app e o canal 16; a posição do MAYDAY é a lida no plotter na hora — nunca posição, rumo, velocidade, MMSI ou pessoas a bordo da ficha; depois o passo a passo das fontes, com o rótulo "procedimento padrão — confirmar com o protocolo de bordo". Localização de equipamento de segurança, MMSI, indicativo e HEX ID ficam na placa de salvatagem, na etiqueta ou na Licença de Estação: nunca inventados. Telefone, e-mail, CPF/CNPJ e nome de terceiro nunca; fora do barco e dinheiro, a IA diz que isso fica fora do barco e volta à situação de bordo.
+- **Regras de resposta (F29):** direto, sem frase de abertura; pergunta o que falta em vez de dizer que não sabe; item do FAQ inteiro e na ordem; nunca "consulte o manual".
+- **Fonte no fim sem rótulo:** `telemetria ao vivo · HH:MM:SS` (a hora que a leitura traz), `ficha de bordo` e o guia do trecho.
+- **Limpeza da resposta (F29):** a frase que só anuncia a resposta sai ("Claro!", "Primeiramente,", "é necessário seguir alguns passos:"); resposta **cortada no limite de tokens** sai sem a linha pela metade e com uma nota, `200` com `parou: "cortada"` (sem nenhuma frase inteira, `502` como antes).
+- **Filtro de saída** (as regex da lista única de termos, `testes/proibidos.json`): a resposta que trouxer rótulo ou comentário de autenticidade → `502` com `parou: "rotulo"`; dinheiro, telefone, e-mail ou CPF/CNPJ → `parou: "privacidade"`; equipamento de salvatagem com lugar a bordo → `parou: "seguranca"`. O app fica com a resposta local, que é completa, **sem nota e sem fala** (`CapitaoIA.falha()` vazia). O cliente repete o mesmo filtro na resposta.
+- **Ficha até 16.000 letras** (12.000 no modo real) e **item do FAQ como trecho 1**: o trecho com `faq` (o código do item) vai inteiro, até 3.000 letras, com as linhas dos passos.
+
+**Nos dois modos — coordenadas não saem do aparelho:** o cliente tira as coordenadas (graus-minutos, decimais com 4 ou mais casas, pares) de tudo o que manda — pergunta, ficha, leitura, histórico e trechos — antes de cortar; o Worker repete o filtro antes de montar a mensagem. O milhar do pt-BR (1.236,4 h, 1.600 L) não é coordenada.
+
 **Ativar um aparelho** (uma vez por celular ou computador): entrar no app com login e senha e, **depois**, abrir `https://v2.capitaoia.com.br/#ia=ativar` — ou, desde a 1.0.5, tocar em **Ativar IA na nuvem** numa resposta do chat (o botão aparece quando a IA deveria responder e o aparelho não tem a chave; serve também no app instalado, que não tem barra de endereço). Aparece uma caixa: colar a `CHAVE_APP` (do arquivo PRIVADO do proprietário, fora do repositório) e confirmar. Desde a 1.0.6 a chave colada é limpa ("CHAVE_APP:", aspas, espaços, quebras e caracteres invisíveis saem) e validada, e o app a confere no Worker **antes de guardar**, sem gastar a cota (pedido sem ficha, trecho e leitura → `422` antes do modelo; `401` = chave recusada, que nunca apaga uma chave que funciona) e mostra "IA na nuvem ativada no app instalado / neste navegador ✓" ou o motivo — o app da tela de início e o navegador guardam à parte. Link `#ia=ativar` aberto sem login: a caixa abre depois de entrar. **Conferir um aparelho:** digite **diagnóstico** no chat (versões, estado da IA, chave — só o tamanho — e o teste no servidor). A chave fica só no aparelho e **nunca passa pelo endereço** (o endereço fica no histórico do navegador, que pode sincronizar). `#ia=sair` desativa; qualquer outro valor em `#ia=` é ignorado.
 
 **Trocar a chave:** gerar outra, atualizar o Secret `CHAVE_APP` no painel (Workers & Pages › capitao-ia › Settings › Variables and Secrets) e reativar os aparelhos com `#ia=ativar`.
@@ -50,6 +80,8 @@ Nunca em emergência, pressão de óleo, registro no diário nem resposta pronta
   "ficha": "## Agora …\n## Sobre o app …\n## Telemetria … (CapitaoBrain.ficha(), até 12.000 letras)",
   "historico": [{ "papel": "usuario", "texto": "como está o diesel?" }, { "papel": "capitao", "texto": "BB 54 % · BE 52 %…" }] }
 ```
+
+Na 1.1.0, com `CapitaoDados.simulacao`, o app acrescenta `"modo": "simulacao"` (a ficha vai até 16.000 letras) e o item do FAQ dos equipamentos entra como 1º trecho com `"faq": "<código do item>"`. A resposta pode vir com `"parou": "cortada"` (cortada no limite, já sem a linha pela metade e com nota), e o `502` pode trazer `"parou": "rotulo" | "privacidade" | "seguranca"` (filtro de saída). Detalhes na seção da 1.1.0, acima.
 
 **Proxy → app** · `200 { "texto": "…\nFonte: …", "provedor": "Workers AI", "modelo": "@cf/meta/llama-3.3-70b-instruct-fp8-fast", "parou": "fim" }` (só sai `200` com a resposta inteira)
 O chat mostra o texto e, na linha da fonte, a `Fonte:` da IA + *via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)*.
@@ -129,5 +161,6 @@ Testar antes de ligar: `python -X utf8 testes/worker_ia.py`. O `wrangler dev` ta
 
 - **1.0.5 (27/09/2026):** o proprietário achou a IA "burra" — ela só entrava em trecho do guia, nunca no SEM DADOS nem na conversa por voz, e com 3 pedidos por hora. Agora entra no SEM DADOS, no trecho do guia e em pergunta sobre o app, no chat e na voz, com a ficha de bordo e o histórico; **conhecimento geral rotulado** passou a valer (dado do barco continua só das fontes).
 - **1.0.6 (27/09/2026):** "pra mim não funciona" — as métricas mostraram 0 pedidos do celular ao Worker depois da 1.0.5 (o Worker respondia certo em 3 a 5 s). Causas: arquivos velhos/misturados no aparelho (Pages `max-age=600` + SW buscando pelo cache HTTP + app instalado vivo com o JS antigo) e chave/ativação sem retorno. Correções no site (SW, recarga automática, guarda de versões, chave limpa e testada, aviso visível e falado, "diagnóstico"); o Worker não mudou.
+- **1.1.0 (modo simulação):** a IA responde como telemetria ao vivo, com número e hora, e não comenta a autenticidade dos dados; emergência, salvatagem, MMSI e autenticidade continuam respondidos só no aparelho (`pedeIA` false). O Worker escolhe o texto de sistema pelo campo `modo`, limpa a resposta (F29) e filtra a saída; coordenadas não seguem para o modelo em nenhum modo. Código 1.1.0 pronto, ainda não colado no painel.
 - Em aberto: `MODELO` — medir qualidade em português nas perguntas reais antes de trocar o padrão (um modelo com entrada mais barata renderia mais perguntas por dia com a ficha).
 - Em aberto: posição do barco (coordenadas) na ficha só depois do login no servidor — hoje sai "coordenadas só na tela do app".
