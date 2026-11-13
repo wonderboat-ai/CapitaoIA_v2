@@ -11027,15 +11027,17 @@ def teste_offline(b, lista, paginas=()):
     except Exception as e:
         prob.append('lista offline: ' + str(e)[:120])
     pg4.close()
-    # rosto da conversa por voz: entra à parte (capitao-voz.js), tem de vir da cópia guardada
+    # núcleo da conversa por voz (Fase 5, F27: anéis em canvas dentro do capitao-voz.js, com o ∞ da marca no centro): o arquivo do núcleo e a
+    # imagem do ∞ têm de vir da cópia guardada (CORE do sw.js)
     pg3 = ctx.new_page()
     try:
         pg3.goto(BASE + 'S2-SOS-Mobile.dc.html', wait_until='load', timeout=20000)
-        st = pg3.evaluate("() => fetch('./capitao-rosto.js').then((r) => r.status, () => 'falhou')")
-        if st != 200:
-            prob.append('capitao-rosto.js offline: ' + str(st))
+        for arq in ('capitao-voz.js', 'assets/wonderhub-simbolo.png'):
+            st = pg3.evaluate("(a) => fetch('./' + a).then((r) => r.status, () => 'falhou')", arq)
+            if st != 200:
+                prob.append(arq + ' offline (núcleo da conversa): ' + str(st))
     except Exception as e:
-        prob.append('capitao-rosto.js offline: ' + str(e)[:120])
+        prob.append('núcleo da conversa offline: ' + str(e)[:120])
     pg3.close()
     ctx.close()
     if unpkg:

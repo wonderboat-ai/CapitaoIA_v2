@@ -95,10 +95,10 @@ def capturas(b, base):
     def voz(estado, texto, quadro):
         def f(pg):
             pg.evaluate("([e, t]) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: e, texto: t, som: e === 'falando' } }))", [estado, texto])
-            # rosto de partículas (capitao-rosto.js, entra com o app ocioso): espera ele existir e fixa um quadro (sempre igual)
-            pg.wait_for_function("() => window.CapitaoVoz && window.CapitaoVoz.rosto && window.CapitaoVoz.rosto()", timeout=20000)
+            # núcleo de anéis (canvas do capitao-voz.js, com o ∞ da marca no centro): espera a camada e o ∞ e fixa um quadro (sempre igual)
+            pg.wait_for_function("() => window.CapitaoVoz && window.CapitaoVoz.nucleo && window.CapitaoVoz.nucleo().estado().ligado && window.CapitaoVoz.nucleo().estado().simbolo", timeout=20000)
             pg.wait_for_timeout(700)
-            pg.evaluate("(t) => window.CapitaoVoz.rosto().quadro(t)", quadro)
+            pg.evaluate("(t) => window.CapitaoVoz.nucleo().quadro(t)", quadro)
             pg.wait_for_timeout(300)
         return f
 

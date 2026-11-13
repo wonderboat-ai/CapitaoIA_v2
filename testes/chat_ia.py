@@ -7,8 +7,9 @@ que erro do proxy mantém a resposta local com o motivo; que "SEM DADOS" da IA m
 genérico; que a resposta entra logo depois da pergunta dela; que na CONVERSA por voz a IA responde e a resposta dela é a
 falada; que na CONVERSA a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s e o VOZ→TEXTO a mantém; que link de fora
 (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
-que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com o rosto
-de partículas (canvas + CapitaoRosto) e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
+que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com os anéis
+pintados no canvas (cor por estado, ∞ no centro, só reage ao som com som true), o HUD lê o quadro do instante e, em alerta, mostra só
+a instrução do plotter, e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
     python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; o React vem do próprio site, assets/vendor)
 """
@@ -64,7 +65,7 @@ VOZ_FALSA = r"""(() => {
 # Voz de verdade do cérebro (B.speak) sobre um speechSynthesis de mentira: guarda cada fala (texto e velocidade) em
 # window.__sint e chama onstart → onboundary (palavra) → onend.
 SINTESE_FALSA = r"""(() => {
-  window.__sint = []; window.__estRosto = []; window.__somRosto = [];
+  window.__sint = [];
   const ss = window.speechSynthesis;
   ss.cancel = () => {}; ss.pause = () => {}; ss.resume = () => {};
   ss.speak = (u) => {
@@ -77,24 +78,93 @@ SINTESE_FALSA = r"""(() => {
   };
 })()"""
 
-# O rosto do núcleo (CapitaoRosto.criar) é espiado desde que o capitao-rosto.js chega — o capitao-voz.js já o cria escondido,
-# com o app ocioso, antes da 1ª conversa: opções em window.__rostoOp, estados em window.__estRosto e o som em
-# window.__somRosto.
-ESPIA_ROSTO = r"""(() => {
-  window.__estRosto = []; window.__somRosto = [];
-  let R;
-  Object.defineProperty(window, 'CapitaoRosto', { configurable: true, get() { return R; }, set(v) {
-    R = v; if (!v || v.__espiado) return; v.__espiado = true;
-    const criar = v.criar;
-    v.criar = (tela, op) => {
-      const r = criar(tela, op), est = r.estado, som = r.som;
-      window.__rostoOp = op;
-      r.estado = (n) => { window.__estRosto.push(n); return est(n); };
-      r.som = (x) => { window.__somRosto.push(!!x); return som(x); };
-      return r;
-    };
-  } });
+# O núcleo de anéis (Fase 5, F27: capitao-voz.js, canvas) é espiado a cada evento 'capitao-voz', DEPOIS de o núcleo tratar o evento
+# (microtarefa): o estado dele (CapitaoVoz.nucleo().estado()) e o texto do HUD da direita ficam em window.__nucleo.
+ESPIA_NUCLEO = r"""(() => {
+  window.__nucleo = [];
+  window.addEventListener('capitao-voz', (e) => {
+    const d = e.detail || {};
+    Promise.resolve().then(() => {
+      try {
+        const V = window.CapitaoVoz, n = V && V.nucleo ? V.nucleo().estado() : null, h = document.querySelector('.cpz .cpz-tr');
+        if (n) window.__nucleo.push({ ev: d.estado, texto: d.texto || '', evAlerta: d.alerta, estado: n.estado, som: n.som, alerta: n.alerta, ligado: n.ligado, hud: h ? h.innerText : '' });
+      } catch (x) {}
+    });
+  });
 })()"""
+
+# O canvas pintado de verdade: quadro(t) fixa o quadro do instante t e a amostra lê os pixels da caixa do palco — no anel graduado
+# (0,90 a 0,98 do raio: só as marcas, na cor do estado) e no centro (o ∞ da marca, pixels claros e opacos sobre o disco escuro).
+PINTURA_NUCLEO = r"""async () => {
+  const ev = (d) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: d })), N = () => window.CapitaoVoz.nucleo(), out = {};
+  const tela = () => document.querySelector('.cpz canvas.cpz-tela'), espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const amostra = () => {
+    const n = N().estado(), g = tela().getContext('2d'), k = n.razao, R = n.raio * k, x0 = Math.round(n.x * k), y0 = Math.round(n.y * k), L = Math.ceil(R) + 2;
+    const im = g.getImageData(x0 - L, y0 - L, 2 * L, 2 * L).data;
+    let anel = 0, r = 0, v = 0, b = 0, centro = 0;
+    for (let y = 0; y < 2 * L; y++) for (let x = 0; x < 2 * L; x++) {
+      const dx = x - L, dy = y - L, dist = Math.sqrt(dx * dx + dy * dy) / R, i = (y * 2 * L + x) * 4;
+      if (dist > 0.9 && dist < 0.98 && im[i + 3] > 150) { anel++; r += im[i]; v += im[i + 1]; b += im[i + 2]; }
+      if (Math.abs(dx) < 0.25 * R && Math.abs(dy) < 0.1 * R && im[i + 3] > 240 && im[i] + im[i + 1] + im[i + 2] > 300) centro++;
+    }
+    return { anel: anel, cor: anel ? [Math.round(r / anel), Math.round(v / anel), Math.round(b / anel)] : null, centro: centro };
+  };
+  ev({ estado: 'ouvindo', texto: '', alerta: false });
+  await espera(450);
+  out.vivo = N().estado();                                   // camada ligada: o laço (um requestAnimationFrame) roda e pinta
+  N().quadro(1.6); out.ouvindo = amostra(); const u1 = tela().toDataURL();
+  N().quadro(1.6); out.igual = tela().toDataURL() === u1;    // o mesmo instante dá o mesmo quadro
+  N().quadro(2.9); out.muda = tela().toDataURL() !== u1;     // outro instante, outro quadro (os anéis giram)
+  const q0 = N().estado().quadros; await espera(250); out.parado = N().estado().quadros === q0 && !N().estado().laco;   // quadro(t) deixa o núcleo parado
+  ev({ estado: 'pensando', texto: 'x', segura: true }); N().quadro(1.6); out.pensando = amostra();
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: false, alerta: false }); N().quadro(0.2); out.semSom = N().estado().energia;
+  ev({ estado: 'pulso' }); out.pulsoSemSom = N().estado().energia;
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: true, alerta: false }); N().quadro(0.2); out.comSom = N().estado().energia; out.falando = amostra();
+  ev({ estado: 'pulso' }); out.pulsoComSom = N().estado().energia;
+  ev({ estado: 'livre' }); out.livre = N().estado().energia;
+  window.CapitaoVoz.esconde();
+  const q1 = N().estado().quadros; await espera(350);
+  out.escondida = { on: !!document.querySelector('.cpz.on'), laco: N().estado().laco, quadros: N().estado().quadros - q1, inerte: document.querySelector('.cpz').inert === true };
+  out.rosto = !!window.CapitaoVoz.rosto;   // a API antiga saiu com o rosto
+  return out;
+}"""
+
+# O HUD vivo: com a camada ligada lê o quadro do instante (CapitaoAgora: a fonte e os formatadores das telas) a cada 1 s, em nós Text; com
+# `alerta` no evento ou com a janela de emergência valendo, só a instrução do plotter; com simulacao:false e sem leitura, o texto do modo real.
+HUD_NUCLEO = r"""async () => {
+  const ev = (d) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: d })), out = {}, espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const A = window.CapitaoAgora, f = A.fmt.campo, D = window.CapitaoDados, caixa = () => document.querySelector('.cpz .cpz-tr'), hud = () => caixa().innerText;
+  const esperado = () => { const I = A.instante(); return [I.hora, A.fmt.coord(I.q.lat, I.q.lon), 'SOG ' + f(I.q, 'sog_nos') + ' NÓS', 'RPM ' + f(I.q, 'motor_bb_rpm') + ' · ' + f(I.q, 'motor_be_rpm'), 'DIESEL ' + f(I.q, 'diesel_litros') + ' L (' + A.fmt.nb(I.calc.diesel_pct, 1) + ' %)'].join('\n'); };
+  ev({ estado: 'ouvindo', texto: '', alerta: false });
+  out.vivo = hud(); out.esperado = esperado();
+  out.sog = 'SOG ' + f(A.instante().q, 'sog_nos') + ' NÓS'; out.diesel = out.esperado.split('\n')[4];
+  out.pagina = document.getElementById('dc-root').innerText.replace(/\s+/g, ' ');
+  // o tique: outro instante do replay → o HUD o mostra em até 1 s, sem evento de voz, trocando só o .data dos MESMOS nós
+  const nos = [...caixa().childNodes]; let filhos = 0, dados = 0;
+  const conta = (l) => l.forEach((m) => { if (m.type === 'childList') filhos++; else dados++; });
+  const mo = new MutationObserver(conta); mo.observe(caixa(), { childList: true, subtree: true, characterData: true });
+  window.CapitaoReplay.fixar('75');
+  await espera(1300);
+  out.depois = hud(); out.esperado2 = esperado(); conta(mo.takeRecords()); mo.disconnect();
+  out.mesmosNos = caixa().childNodes.length === nos.length && [...caixa().childNodes].every((n, i) => n === nos[i]); out.filhos = filhos; out.dados = dados;
+  window.CapitaoReplay.fixar('60');
+  await espera(50);
+  // alerta no evento (a resposta falada é de emergência), sem a janela
+  ev({ estado: 'falando', texto: 'Emergência — abra o SOS.', som: true, alerta: true }); out.alerta = hud();
+  ev({ estado: 'falando', texto: '2. Colete em todos.', som: true, alerta: false }); out.alertaSegue = hud();   // as outras linhas da MESMA fala
+  ev({ estado: 'livre' }); ev({ estado: 'ouvindo', texto: '', alerta: false }); out.volta = hud(); out.esperado3 = esperado();
+  // a janela de conversa em emergência valendo (CapitaoEmergencia), com o evento sem alerta
+  window.CapitaoEmergencia.marca(); out.janela = hud();
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: true, alerta: false }); out.janelaFala = hud();
+  window.CapitaoEmergencia.zera(); out.semJanela = hud();
+  // modo real (simulacao:false) e sem leitura nenhuma: o texto do modo real continua
+  const q = D.snapshot.quadro; D.simulacao = false; delete D.snapshot.quadro;
+  ev({ estado: 'ouvindo', texto: '', alerta: false }); out.real = hud();
+  D.simulacao = true; D.snapshot.quadro = q;
+  out.plotter = D.protocolos.hud;
+  window.CapitaoVoz.esconde();
+  return out;
+}"""
 
 
 def versoes():
@@ -148,7 +218,7 @@ def main():
                 ctx.add_init_script(SESSAO)
                 ctx.add_init_script(REPLAY_FIXO)
                 ctx.add_init_script(VOZ_FALSA)
-                ctx.add_init_script(ESPIA_ROSTO)
+                ctx.add_init_script(ESPIA_NUCLEO)
                 pg = ctx.new_page()
                 erros = []
                 pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
@@ -484,46 +554,77 @@ def main():
                 ok(tela + ': CONVERSA: a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s (< 200 ms do fim do ditado) e a resposta é falada', rc['ms'] is not None and rc['ms'] < 200 and len(rc['faladas']) >= 2 and 'gerador' in rc['faladas'][1].lower(), json.dumps(rc, ensure_ascii=False)[:300])
                 ok(tela + ': VOZ→TEXTO (fora da conversa) mantém a pausa visual (≥ 600 ms do fim do ditado ao cérebro)', rv['ms'] is not None and rv['ms'] >= 600, json.dumps(rv, ensure_ascii=False)[:300])
 
-                # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o rosto, e o núcleo com o rosto de
-                # partículas: CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira.
+                # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o núcleo, e o núcleo de anéis em canvas (Fase 5, F27):
+                # CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira. Sempre roda (o núcleo não vem à parte).
                 abre()
-                try:
-                    pg.wait_for_function('() => !!window.CapitaoRosto', timeout=15000)  # vem à parte, com o app ocioso
+                pg.evaluate(SINTESE_FALSA)
+                pg.evaluate("() => { try { window.CapitaoEmergencia.zera(); } catch (e) {} window.__voz.length = 0; window.__nucleo.length = 0; window.__falas.push('homem ao mar'); }")   # (a janela vale por aba: sem a marca das conferências de antes)
+                pg.click(CONVERSA)
+                try:  # abertura falada, pergunta ouvida, SOS falado inteiro e o microfone de volta
+                    pg.wait_for_function("() => { const v = window.__voz, i = v.findIndex((x) => x.estado === 'pensando'); return i >= 0 && v.slice(i).some((x) => x.estado === 'falando' && x.som === true) && v[v.length - 1].estado === 'ouvindo'; }", timeout=25000)
                 except Exception:
                     pass
-                tem_rosto = pg.evaluate('() => !!window.CapitaoRosto')
-                ok(tela + ': capitao-rosto.js carregado à parte (com o app ocioso)', tem_rosto)
-                if tem_rosto:
-                    pg.evaluate(SINTESE_FALSA)
-                    pg.evaluate("() => { window.__voz.length = 0; window.__falas.push('homem ao mar'); }")
-                    pg.click(CONVERSA)
-                    try:  # abertura falada, pergunta ouvida, SOS falado inteiro e o microfone de volta
-                        pg.wait_for_function("() => { const v = window.__voz, i = v.findIndex((x) => x.estado === 'pensando'); return i >= 0 && v.slice(i).some((x) => x.estado === 'falando' && x.som === true) && v[v.length - 1].estado === 'ouvindo'; }", timeout=25000)
-                    except Exception:
-                        pass
-                    pg.wait_for_timeout(300)
-                    sint = pg.evaluate('() => window.__sint')
-                    voz = pg.evaluate('() => window.__voz')
-                    sos = pg.evaluate("() => { const B = window.CapitaoBrain; return B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; }")
-                    faladas_sos = ' '.join(x['t'] for x in sint[1:])
-                    # a velocidade volta do navegador como float32 (1,1499999…); a abertura sai falável ("Capitão i a online")
-                    ok(tela + ': voz a 1,15x em toda fala — abertura e emergência (SOS "homem ao mar" falado inteiro)', len(sint) >= 2 and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint) and sint[0]['t'].startswith('Capitão i a online') and sos and len(faladas_sos) >= len(sos) * 0.9, json.dumps(sint, ensure_ascii=False)[:300])
-                    fal = [x.get('som') for x in voz if x.get('estado') == 'falando']
-                    ok(tela + ': eventos "falando" levam o som (false antes de a voz começar, true no onstart, false no fim do bloco) e as palavras viram "pulso"', fal and all(isinstance(x, bool) for x in fal) and fal[0] is False and True in fal and fal[-1] is False and any(x.get('estado') == 'pulso' for x in voz), json.dumps(fal)[:300])
-                    est = pg.evaluate("() => ({ on: !!document.querySelector('.cpz.on'), tela: !!document.querySelector('.cpz canvas.cpz-tela'), rosto: !!(window.CapitaoVoz.rosto && window.CapitaoVoz.rosto()), op: window.__rostoOp || null, est: window.__estRosto, som: window.__somRosto, palco: !!document.querySelector('.cpz .cpz-palco .cpz-btn'), velho: !!document.querySelector('.cpz svg circle') })")
-                    op = est['op'] or {}
-                    ok(tela + ': o núcleo abre com o canvas do rosto e o CapitaoRosto criado (dprMax 2, fpsMax 60, crescer 0,35), sem os anéis antigos', est['on'] and est['tela'] and est['rosto'] and est['palco'] and not est['velho'] and op.get('dprMax') == 2 and op.get('fpsMax') == 60 and op.get('crescer') == 0.35, json.dumps(est, ensure_ascii=False)[:300])
-                    ok(tela + ': o rosto segue a conversa (falando, ouvindo, pensando) e recebe o som da voz', all(e in est['est'] for e in ('falando', 'ouvindo', 'pensando')) and True in est['som'] and False in est['som'], json.dumps(est, ensure_ascii=False)[:300])
-                    i = pg.evaluate('() => window.__voz.length')
-                    pg.keyboard.press('Escape')
-                    pg.wait_for_timeout(1200)
-                    fim = pg.evaluate("(i) => ({ on: !!document.querySelector('.cpz.on'), depois: window.__voz.slice(i).map((x) => x.estado), est: window.__estRosto.slice(-1)[0] })", i)
-                    ok(tela + ': Esc encerra a conversa: o núcleo some, o rosto vai para "livre" e o microfone não volta', not fim['on'] and fim['est'] == 'livre' and all(e == 'livre' for e in fim['depois']), json.dumps(fim, ensure_ascii=False))
-                    # Pressão de óleo (emergência) também a 1,15x
-                    pg.evaluate("() => { window.__sint.length = 0; const B = window.CapitaoBrain; B.speak(B.falaCurta(B.answer('a pressão de óleo caiu', { platform: 'web', commit: false }))); }")
-                    pg.wait_for_timeout(1500)
-                    sint = pg.evaluate('() => window.__sint')
-                    ok(tela + ': voz a 1,15x também no passo a passo da pressão de óleo', sint and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint), json.dumps(sint, ensure_ascii=False)[:300])
+                pg.wait_for_timeout(300)
+                sint = pg.evaluate('() => window.__sint')
+                voz = pg.evaluate('() => window.__voz')
+                sos = pg.evaluate("() => { const B = window.CapitaoBrain; return B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; }")
+                faladas_sos = ' '.join(x['t'] for x in sint[1:])
+                # a velocidade volta do navegador como float32 (1,1499999…); a abertura sai falável ("Capitão i a online")
+                ok(tela + ': voz a 1,15x em toda fala — abertura e emergência (SOS "homem ao mar" falado inteiro)', len(sint) >= 2 and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint) and sint[0]['t'].startswith('Capitão i a online') and sos and len(faladas_sos) >= len(sos) * 0.9, json.dumps(sint, ensure_ascii=False)[:300])
+                fal = [x.get('som') for x in voz if x.get('estado') == 'falando']
+                ok(tela + ': eventos "falando" levam o som (false antes de a voz começar, true no onstart, false no fim do bloco) e as palavras viram "pulso"', fal and all(isinstance(x, bool) for x in fal) and fal[0] is False and True in fal and fal[-1] is False and any(x.get('estado') == 'pulso' for x in voz), json.dumps(fal)[:300])
+                est = pg.evaluate("() => { const V = window.CapitaoVoz, n = V && V.nucleo ? V.nucleo() : null, c = document.querySelector('.cpz'), s = document.querySelector('.cpz .cpz-sos'); return { on: !!document.querySelector('.cpz.on'), tela: !!document.querySelector('.cpz canvas.cpz-tela'), palco: !!document.querySelector('.cpz .cpz-palco .cpz-btn'), fim: !!document.querySelector('.cpz .cpz-fim'), velho: !!document.querySelector('.cpz svg circle'), rosto: !!(V && V.rosto), api: !!(n && typeof n.quadro === 'function' && typeof n.estado === 'function'), e: n ? n.estado() : {}, papel: c ? c.getAttribute('role') : '', inerte: c ? c.inert : null, sos: s ? s.getAttribute('href') : '', sosTopo: s ? (() => { const r = s.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t === s; })() : false, reg: window.__nucleo }; }")
+                e = est['e'] or {}
+                ok(tela + ': o núcleo abre com os anéis no canvas em tela cheia (canvas.cpz-tela, .cpz-palco .cpz-btn, ENCERRAR, role=dialog, SOS por cima apontando para S1/S2), ∞ carregado, razão de pixels ≤ 2 e o laço ligado; sem SVG de anéis e sem o rosto',
+                   est['on'] and est['tela'] and est['palco'] and est['fim'] and not est['velho'] and not est['rosto'] and est['api'] and est['papel'] == 'dialog' and est['inerte'] is False and re.search(r'S[12]-SOS-', est['sos'] or '') and est['sosTopo']
+                   and e.get('simbolo') is True and 0 < (e.get('razao') or 0) <= 2 and e.get('laco') is True and e.get('ligado') is True, json.dumps({k: v for k, v in est.items() if k != 'reg'}, ensure_ascii=False)[:300])
+                reg = est['reg'] or []
+                ok(tela + ': o núcleo segue a conversa (falando, ouvindo, pensando) e recebe o som da voz (som true só com a voz tocando)', all(any(r['estado'] == x for r in reg) for x in ('falando', 'ouvindo', 'pensando')) and any(r['ev'] == 'falando' and r['som'] is True for r in reg) and any(r['ev'] == 'falando' and r['som'] is False for r in reg) and all(r['som'] is False for r in reg if r['estado'] != 'falando'), json.dumps([[r['ev'], r['estado'], r['som']] for r in reg], ensure_ascii=False)[:300])
+                # HUD (CLAUDE.md 10): na abertura, o quadro do instante; ouvida a emergência (o alerta do evento) e com a janela aberta pela resposta, só a instrução do plotter
+                ip = next((k for k, r in enumerate(reg) if r['ev'] == 'pensando'), len(reg))
+                antes = [r['hud'] for r in reg[:ip] if r['ev'] == 'falando']
+                depois = [r['hud'].strip() for r in reg[ip:] if r['ev'] in ('pensando', 'falando', 'ouvindo')]
+                ruim = [h for h in depois if h != 'POSIÇÃO · LEIA NO PLOTTER' or confere.R_COORD.search(h) or confere.R_EMERG_PROTOCOLO.search(h) or confere.R_PESSOAS.search(h) or re.search(r'nós|\bmn\b|°|\d', h, re.I)]
+                ok(tela + ': HUD da CONVERSA: na abertura mostra o quadro do instante (hora, SOG, rpm, diesel) e, da emergência ouvida em diante (alerta no evento e janela valendo), só «POSIÇÃO · LEIA NO PLOTTER» — nenhuma coordenada, nós, mn, rumo nem pessoas',
+                   antes and all(re.match(r'\d\d:\d\d:\d\d\n', h) and 'SOG ' in h and ' NÓS' in h and 'RPM ' in h and 'DIESEL ' in h for h in antes) and len(depois) >= 3 and not ruim
+                   and any(r['evAlerta'] is True for r in reg[ip:]) and all(r['evAlerta'] is False for r in reg[:ip] if r['ev'] == 'falando') and all(r['alerta'] is True for r in reg[ip:] if r['ev'] in ('pensando', 'falando')),
+                   json.dumps({'antes': antes[:1], 'ruim': ruim[:2], 'n': len(depois)}, ensure_ascii=False)[:300])
+                i = pg.evaluate('() => window.__voz.length')
+                pg.keyboard.press('Escape')
+                pg.wait_for_timeout(1200)
+                fim = pg.evaluate("(i) => { const e = window.CapitaoVoz.nucleo().estado(); return { on: !!document.querySelector('.cpz.on'), depois: window.__voz.slice(i).map((x) => x.estado), est: e.estado, laco: e.laco, energia: e.energia, inerte: document.querySelector('.cpz').inert === true }; }", i)
+                ok(tela + ': Esc encerra a conversa: o núcleo some (inerte), vai para "livre" com o laço parado e o microfone não volta', not fim['on'] and fim['inerte'] and fim['est'] == 'livre' and fim['laco'] is False and fim['energia'] == 0 and all(e == 'livre' for e in fim['depois']), json.dumps(fim, ensure_ascii=False))
+                # Pressão de óleo (emergência) também a 1,15x
+                pg.evaluate("() => { window.__sint.length = 0; const B = window.CapitaoBrain; B.speak(B.falaCurta(B.answer('a pressão de óleo caiu', { platform: 'web', commit: false }))); }")
+                pg.wait_for_timeout(1500)
+                sint = pg.evaluate('() => window.__sint')
+                ok(tela + ': voz a 1,15x também no passo a passo da pressão de óleo', sint and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint), json.dumps(sint, ensure_ascii=False)[:300])
+
+                # O núcleo pintado de verdade (Fase 5, F27): pixels no anel e no centro, uma cor por estado (ESCUTA ciano, PROCESSANDO violeta, RESPOSTA azul), o quadro(t) determinístico,
+                # o espectro e o brilho só com som, 'livre' zera na hora, e a camada escondida não pinta. Eventos de mentira: nada é falado nem ouvido.
+                pg.evaluate("() => { try { window.CapitaoBrain.stopSpeaking(); window.CapitaoVoz.esconde(); window.CapitaoEmergencia.zera(); } catch (e) {} }")
+                pg.wait_for_timeout(300)
+                pint = pg.evaluate(PINTURA_NUCLEO)
+                perto = lambda a, b: bool(a) and all(abs(x - y) <= 14 for x, y in zip(a, b))
+                o, pn, fa, vv = pint['ouvindo'], pint['pensando'], pint['falando'], pint['vivo']
+                ok(tela + ': o canvas do núcleo é pintado de verdade: pixels no anel graduado e o ∞ no centro, nos três estados', all(x['anel'] >= 60 and x['centro'] >= 200 for x in (o, pn, fa)) and not pint['rosto'], json.dumps({'o': o, 'p': pn, 'f': fa}, ensure_ascii=False))
+                ok(tela + ': cor por estado, as da marca: ESCUTA ciano #00F4FD, PROCESSANDO violeta #A22BFD, RESPOSTA azul #00A1FE', perto(o['cor'], (0, 244, 253)) and perto(pn['cor'], (162, 43, 253)) and perto(fa['cor'], (0, 161, 254)), json.dumps([o['cor'], pn['cor'], fa['cor']]))
+                ok(tela + ': com a camada ligada o laço roda (um requestAnimationFrame pintando); quadro(t) é determinístico (mesmo t, mesmo quadro; outro t, outro quadro) e deixa o núcleo parado', vv['ligado'] and vv['laco'] and vv['quadros'] >= 3 and pint['igual'] and pint['muda'] and pint['parado'], json.dumps({'vivo': vv, 'igual': pint['igual'], 'muda': pint['muda'], 'parado': pint['parado']}, ensure_ascii=False)[:300])
+                ok(tela + ': o espectro e o brilho só reagem à voz com som true (e ao pulso de cada palavra); "livre" zera na hora', pint['semSom'] < 0.15 and pint['pulsoSemSom'] == pint['semSom'] and pint['comSom'] > 0.3 and pint['pulsoComSom'] > pint['comSom'] and pint['livre'] == 0, json.dumps({k: pint[k] for k in ('semSom', 'pulsoSemSom', 'comSom', 'pulsoComSom', 'livre')}))
+                esc_ = pint['escondida']
+                ok(tela + ': camada escondida: inerte, sem laço e sem pintar nenhum quadro', not esc_['on'] and esc_['inerte'] and esc_['laco'] is False and esc_['quadros'] == 0, json.dumps(esc_))
+                # O HUD vivo (Fase 5): o quadro do instante a cada 1 s, com a fonte e os formatadores das telas, em nós Text; em alerta, só a instrução do plotter
+                h = pg.evaluate(HUD_NUCLEO)
+                plot = 'POSIÇÃO · LEIA NO PLOTTER'
+                ok(tela + ': HUD do núcleo: hora HH:MM:SS, posição, SOG, rpm e diesel do instante, com o texto dos formatadores das telas' + (' (o mesmo SOG e o mesmo diesel da faixa da Main)' if not movel else ''),
+                   h['vivo'] == h['esperado'] and re.match(r'\d\d:\d\d:\d\d\n', h['vivo']) and (movel or (h['sog'] in h['pagina'] and h['diesel'] in h['pagina'])), json.dumps({'hud': h['vivo'], 'esperado': h['esperado']}, ensure_ascii=False)[:300])
+                ok(tela + ': HUD do núcleo: lê o instante de novo em até 1 s (outro instante do replay, sem evento de voz) trocando só o .data dos mesmos nós Text (nenhuma mutação de filhos)',
+                   h['depois'] == h['esperado2'] and h['depois'] != h['vivo'] and h['mesmosNos'] and h['filhos'] == 0 and h['dados'] >= 1, json.dumps({'depois': h['depois'], 'esperado': h['esperado2'], 'nos': h['mesmosNos'], 'filhos': h['filhos'], 'dados': h['dados']}, ensure_ascii=False)[:300])
+                alertas = [h[k].strip() for k in ('alerta', 'alertaSegue', 'janela', 'janelaFala')]
+                ruim = [x for x in alertas if x != plot or confere.R_COORD.search(x) or confere.R_EMERG_PROTOCOLO.search(x) or confere.R_PESSOAS.search(x) or re.search(r'nós|\bmn\b|°|\d', x, re.I)]
+                ok(tela + ': HUD do núcleo em alerta (o evento com alerta, as outras linhas da mesma fala, a janela de emergência valendo): só «POSIÇÃO · LEIA NO PLOTTER», sem coordenada, nós, mn, rumo nem pessoas; sem alerta e sem janela, a leitura volta',
+                   h['plotter'] == plot and not ruim and h['volta'] == h['esperado3'] and h['semJanela'] == h['esperado3'], json.dumps({'alertas': alertas, 'volta': h['volta'], 'semJanela': h['semJanela']}, ensure_ascii=False)[:300])
+                ok(tela + ': HUD do núcleo com simulacao:false e sem leitura: o texto do modo real (POSIÇÃO · SEM LEITURA, sem número do replay)', re.match(r'\d\d:\d\d:\d\d\nPOSIÇÃO\nSEM LEITURA\s*$', h['real']) is not None, json.dumps(h['real'], ensure_ascii=False))
 
                 # Versões misturadas (cérebro velho vindo do cache): o app recarrega sozinho uma vez e fica tudo na mesma versão.
                 cont = {'n': 0}
