@@ -5956,10 +5956,16 @@
   function calaTimers() { clearTimeout(FALA.timer); clearInterval(FALA.vivo); FALA.timer = FALA.vivo = null; }
   // Eventos 'capitao-voz' ({ estado: ouvindo | pensando | falando | pulso | livre, texto, segura?, som? }) — núcleo de IA
   // (capitao-voz.js). segura: esperando a IA na nuvem (vozPensando). som (no 'falando'): a voz está tocando (true, no onstart)
-  // ou calada (false: antes de o bloco começar e no fim dele) — o rosto abre a boca e solta as ondas só com som.
+  // ou calada (false: antes de o bloco começar e no fim dele) — o espectro e o brilho do núcleo só reagem à voz com som.
+  // alerta (Fase 5, CLAUDE.md 10): true enquanto a janela de conversa em emergência vale (a marca única das telas, CapitaoEmergencia; a resposta que a abre já a
+  // marcou antes de ser falada) ou quando o texto do evento — o trecho ouvido ou a linha falada — é de emergência pelo predicado único do cérebro
+  // (emergenciaTexto). Com ele o HUD do núcleo troca a leitura do quadro por «POSIÇÃO · LEIA NO PLOTTER». Nenhum estado novo: só lê o que já existe.
   function evVoz(estado, texto, extra) {
-    var det = { estado: estado, texto: texto || '' };
+    var det = { estado: estado, texto: texto || '' }, alerta = janela();
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) det[k] = extra[k];
+    if (!alerta) { try { var E = window.CapitaoEmergencia; alerta = !!(E && E.valendo()); } catch (e) { alerta = false; } }
+    if (!alerta && det.texto) { try { alerta = !!emergenciaTexto(det.texto); } catch (e) { alerta = false; } }
+    det.alerta = alerta;
     try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: det })); } catch (e) {}
   }
   var ESCUTA = { rec: null };
