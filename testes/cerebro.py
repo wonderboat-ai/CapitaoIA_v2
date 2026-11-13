@@ -8192,6 +8192,7 @@ GRUPOS_3A['p4g_final3_rotina'] = grupo_p4g_final3_rotina
 # «fora de alcance», «onde será que X se meteu?», «alguém sabe onde X está?»; (2) «dar falta DE X» sem artigo; (3) a pessoa com complemento de lugar ou organização + o verbo fraco de água; (13) «está boiando» com cauda de dado;
 # (18) o papel ambíguo com complemento. As frases LITERAIS dos achados e os controles de rotina estão em testes/dados/pessoa-bloqueios.tsv; aqui, além delas, o MESMO quadro com Pedro, meu filho, a criança e 3 substantivos abertos,
 # a matriz cabeça × complemento × verbo do papel ambíguo, o apuro sem sujeito × as caudas de dado × o vocativo e a monotonia da cauda (risco(q + cauda) >= risco(q)). O sinal novo SEM a água é a ESPERA (sem janela); com a água é o socorro.
+# Tamanho em 13/11/2026: 132 frases literais (44 de nível 1, 32 de nível 2, 12 «seguro» e 44 controles de rotina) e 1.151 frases de matriz (b1 393 · b2 124 · b3 84 · b13 102 · b18 448).
 BQ_LITERAIS = [tuple(l.split('\t')) for l in le_dados('pessoa-bloqueios.tsv')]   # (frase, nível, bloqueio)
 BQ_PESSOAS = [('o Pedro', 'do Pedro', 'de Pedro', 'o'), ('meu filho', 'do meu filho', 'de meu filho', 'o'), ('a criança', 'da criança', 'de uma criança', 'a'),
               ('o encarregado', 'do encarregado', 'de um encarregado', 'o'), ('a sanfoneira', 'da sanfoneira', 'de uma sanfoneira', 'a'), ('nosso tenente', 'do nosso tenente', 'de nosso tenente', 'o')]   # (S, do S, de S, gênero): 3 conhecidos e 3 substantivos abertos
