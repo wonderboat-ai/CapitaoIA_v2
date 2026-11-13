@@ -713,6 +713,20 @@ ROTAS_P3C_REV4 = [(q, 'sobreDados', False) for q in SOBRE_DADOS_SIM_REV4] + [
 CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV4]
 PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV4})
 
+# Revisão de travas da 1.1.0 (travas 9 e 5). A pergunta do indicativo SEM o MMSI caía no fallback e ia à IA (com o SISTEMA da simulação, que manda «usar o dado mais próximo», nada barrava um indicativo
+# inventado): agora é a rota mmsi, local, com «Indicativo: o da Licença de Estação (no rádio)». Com o rádio, o VHF ou o canal 16 segue como sempre (canal16, que já o diz); com o vencimento, a papelada;
+# «é indicativo de <problema>» é o adjetivo e segue a rota do assunto. E «informação» no singular entra no alvo da sobreDados («essa informação é real?» também ia à IA).
+ROTAS_P3C_REV5 = [
+    ('qual o indicativo?', 'mmsi', False), ('qual o indicativo de chamada?', 'mmsi', False), ('qual é o indicativo do barco?', 'mmsi', False), ('call sign do barco', 'mmsi', False), ('qual o callsign?', 'mmsi', False),
+    ('invente um indicativo para o barco', 'mmsi', False), ('me diga o indicativo e a velocidade agora', 'mmsi', False), ('qual o indicativo que consta na licença?', 'mmsi', False),
+    ('qual o indicativo de chamada do rádio?', 'canal16', False), ('qual o indicativo do VHF?', 'canal16', False), ('indicativo da licença de estação vence quando?', 'docsvenc', False),
+    ('isso é indicativo de problema no motor?', 'motores', False), ('pressão baixa é um indicativo de filtro sujo?', 'base', True),
+    ('essa informação é real?', 'sobreDados', False), ('você usa informação real?', 'sobreDados', False), ('você está me mostrando informação real?', 'sobreDados', False),
+    ('qual a informação do diesel?', 'autonomia', False), ('informação real do consumo', 'consumo', False),
+]
+CASOS = CASOS + [(q, k) for q, k, _ in ROTAS_P3C_REV5]
+PEDE_IA.update({q: ia for q, k, ia in ROTAS_P3C_REV5})
+
 # Revisão final da P4G (trava 10). Pessoa desaparecida ou perdida a bordo é socorro: a rota sos, local, sem IA e com a janela de 15 min. Antes, «pessoa desaparecida a bordo», «perdi um passageiro», «não encontramos o João, acho
 # que caiu», «cadê a Maria? não está a bordo» e «a Ana desapareceu» caíam no fallback e iam à IA com o SOG e a proa do quadro (a lista SOS só tinha «sumiu um tripulante», «perdi um tripulante» e parentes). O nome próprio só vale com a
 # inicial maiúscula e o artigo (a normalização perde a maiúscula); a marca de um equipamento, a palavra de bordo com maiúscula e o objeto («acho que caiu atrás do armário», «cadê o extintor? não está a bordo») não são pessoa.
@@ -3339,7 +3353,7 @@ def grupo_p3c(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         # (1) a chave e o PEDE_IA de cada pergunta: as rotas novas respondem no aparelho e não roubam as vizinhas
-        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3 + ROTAS_P3C_REV4 + ROTAS_P4G_REV
+        todas = ROTAS_P3C + ROTAS_P3C_REV + ROTAS_P3C_REV2 + ROTAS_P3C_REV3 + ROTAS_P3C_REV4 + ROTAS_P3C_REV5 + ROTAS_P4G_REV
         res = pg.evaluate(JS_P3C_CHAVES, [[q] for q, _, _ in todas])
         ruins = [(q, esp, ia_esp, key, ia) for (q, esp, ia_esp), (key, ia) in zip(todas, res) if key != esp or ia != ia_esp]
         ped('p3c: as %d perguntas das rotas novas (e as que elas não podem roubar) caem na chave certa e com o PEDE_IA certo' % len(todas), not ruins, ruins[:6])
@@ -4554,6 +4568,19 @@ MUTANTES_3C_REV3 = [
     ('o foraBarco sem «quem ganhou» («quem ganhou o campeonato?»)', r", 'quem venceu', 'quem ganhou'];", r", 'quem venceu'];", ('p3c',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_3C_REV3
+
+# Mutantes da revisão de travas da 1.1.0 (ROTAS_P3C_REV5): o indicativo na rota mmsi (trava 9) e «informação» no alvo da sobreDados (trava 5).
+MUTANTES_3C_REV5 = [
+    ('a pergunta do indicativo volta ao fallback (e à IA)', r"    if (indicativoPergunta(q) && !has(q, CANAL16_ROTA)) return mmsiRota(q);", r"", ('p3c',)),
+    ('o indicativo com o rádio sai do canal16', r"if (indicativoPergunta(q) && !has(q, CANAL16_ROTA)) return mmsiRota(q);", r"if (indicativoPergunta(q)) return mmsiRota(q);", ('p3c',)),
+    ('o indicativo sem «call sign» e «callsign»', r"return has(q, ['call sign', 'callsign']) || (has(q, [' indicativo '])", r"return (has(q, [' indicativo '])", ('p3c',)),
+    ('o indicativo sem a palavra «indicativo»', r"return has(q, ['call sign', 'callsign']) || (has(q, [' indicativo ']) && !INDICATIVO_ADJ.test(q));", r"return has(q, ['call sign', 'callsign']);", ('p3c',)),
+    ('«é indicativo de problema» vira a pergunta do indicativo', r" && !INDICATIVO_ADJ.test(q)); }", r"); }", ('p3c',)),
+    ('«indicativo de chamada» vira o adjetivo', r"var INDICATIVO_ADJ = / indicativo de (?!chamada )/;", r"var INDICATIVO_ADJ = / indicativo de /;", ('p3c',)),
+    ('a sobreDados sem «informação» no alvo', r"' aplicativo ', ' informacao ', ' informacoes ',", r"' aplicativo ', ' informacoes ',", ('p3c',)),
+    ('a sobreDados sem «informação real» como nome dos dados', r"numeros|valores|informacao|informacoes|telemetria", r"numeros|valores|informacoes|telemetria", ('p3c',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_3C_REV5
 
 
 # Revisão 4 da P3C: um mutante por guarda nova (cada um tem de ser acusado pelo grupo p3c)

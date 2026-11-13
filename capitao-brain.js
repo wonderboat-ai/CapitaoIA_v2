@@ -3461,7 +3461,7 @@
   var AUT_EXISTE = [' o barco existe ', ' a embarcacao existe ', ' isso existe ', ' esse barco existe ', ' este barco existe ', ' a lancha existe ', ' essa lancha existe ', ' essa embarcacao existe ', ' existe de verdade ', ' voce existe '];
   var AUT_ALVO = [' dado ', ' dados ', ' leitura ', ' leituras ', ' valores ', ' numeros ', ' telemetria ', ' isso ', ' isto ', ' barco ', ' embarcacao ', ' navegacao ', ' app ',
     ' alarme ', ' alarmes ', ' alerta ', ' alertas ', ' sensor ', ' sensores ', ' gps ', ' posicao ', ' rota ', ' viagem ',
-    ' lancha ', ' lanchas ', ' voce ', ' vc ', ' capitao ', ' ia ', ' sistema ', ' aplicativo ', ' informacoes ', ' diesel ', ' combustivel ', ' velocidade ', ' rumo ', ' vento ', ' ondas ', ' profundidade ',
+    ' lancha ', ' lanchas ', ' voce ', ' vc ', ' capitao ', ' ia ', ' sistema ', ' aplicativo ', ' informacao ', ' informacoes ', ' diesel ', ' combustivel ', ' velocidade ', ' rumo ', ' vento ', ' ondas ', ' profundidade ',
     ' consumo ', ' autonomia ', ' temperatura ', ' calado ', ' horimetros '];
   // (revisão 3) o alarme, o alerta, o sensor e o GPS com «falso/fake» são o falso alarme, nunca a autenticidade; «alarme/alerta/sensor DE <coisa>» é o equipamento (o guia), e quem pede ajuda ou diz que é risco não recebe a frase de apresentação
   var AUT_SENSOR = [' alarme ', ' alarmes ', ' alerta ', ' alertas ', ' sensor ', ' sensores ', ' gps '];
@@ -3473,7 +3473,7 @@
   // o que pode vir depois do «real»: «certo», «mesmo», «né», «de verdade» (a cauda «ou simulado» é da ordem invertida e das palavras fortes)
   var AUT_CAUDA = '(?: (?:mesmo|ne|certo|de fato|de verdade|hein|ou nao|nao e|nao))*';
   var AUT_PRED = new RegExp(' ' + AUT_COP + ' (?:[a-z0-9]+ ){0,3}' + AUT_AW + AUT_CAUDA + ' $');
-  var AUT_NOME = new RegExp(' (?:dado|dados|leitura|leituras|numeros|valores|informacoes|telemetria|navegacao|viagem|barco|embarcacao|lancha|app|aplicativo|sistema) ' + AUT_AW + AUT_CAUDA + ' $');
+  var AUT_NOME = new RegExp(' (?:dado|dados|leitura|leituras|numeros|valores|informacao|informacoes|telemetria|navegacao|viagem|barco|embarcacao|lancha|app|aplicativo|sistema) ' + AUT_AW + AUT_CAUDA + ' $');
   var AUT_INV = new RegExp(' ' + AUT_COP + ' ' + AUT_AW + '(?: [a-z0-9]+){1,3} $');
   // «o que é real aqui?», «estamos navegando de verdade?»: sem a palavra do alvo
   var AUT_QUE_E = / (?:o que|oque|oq) (?:e|eh) (?:real|de verdade|verdadeir[oa]|simulad[oa]|fals[oa]|fake)(?: (?:aqui|ai|nisso|nisto|disso|no app|neste app|nesse app|a bordo|no barco))* $/;
@@ -4732,6 +4732,10 @@
     if (has(q, MMSI_VENCE)) return 'docsvenc';
     return 'mmsi';
   }
+  // Indicativo (CLAUDE.md 9): a pergunta do indicativo de chamada («qual o indicativo?», «call sign do barco») é da rota mmsi — local, sem IA, «o da Licença de Estação (no rádio)» —, nunca do fallback
+  // (que vai à IA, e nada barraria um indicativo inventado). «É indicativo de <problema>» é o adjetivo e segue a rota do assunto.
+  var INDICATIVO_ADJ = / indicativo de (?!chamada )/;
+  function indicativoPergunta(q) { return has(q, ['call sign', 'callsign']) || (has(q, [' indicativo ']) && !INDICATIVO_ADJ.test(q)); }
   // ETA, distância e waypoint. «Quanto falta» só vale junto de chegar, chegada, destino, waypoint, ponto, ETA ou o nome de um ponto da rota (nunca «quanto falta para a troca de óleo?»);
   // a autonomia, o diesel, o alcance, o consumo e o checklist têm as rotas deles.
   var ETA_PALAVRAS = [' eta ', 'hora de chegada', 'horario de chegada', 'chegada prevista', 'previsao de chegada', 'quando chegamos', 'quando vamos chegar', 'quando a gente chega', 'que horas chegamos',
@@ -4878,6 +4882,8 @@
     if (sobreDados(q)) return 'sobreDados';
     // mmsi (CLAUDE.md 8): a pergunta do MMSI não é o roteiro MAYDAY; a 1ª linha manda usar o MMSI da etiqueta do rádio, a 2ª diz o do cadastro do app
     if (has(q, ['mmsi'])) return mmsiRota(q);
+    // indicativo (CLAUDE.md 9): a pergunta do indicativo sem o MMSI é da mesma rota, local («o da Licença de Estação (no rádio)»); com o rádio, o VHF, o canal 16, o DSC ou o PAN-PAN segue como sempre (canal16, que já o diz)
+    if (indicativoPergunta(q) && !has(q, CANAL16_ROTA)) return mmsiRota(q);
     // P3E (revisão 4): a cabeça de equipamento de segurança antes de qualquer rota de dado (a pergunta mista é do equipamento, local, sem o quadro: trava 10)
     var eq = equipRota(q); if (eq) return eq;
     // F16: o botão «O que verificar?» do relato: a busca no FAQ e nos guias pelo texto do relato (e a IA, se a tela a chamar), antes das rotas por palavra (depois da emergência e da cabeça de segurança)
