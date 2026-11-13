@@ -288,7 +288,9 @@ def main():
                 # Fechamento do grupo home (P4G, 2ª instância; pendentes 1 e 7): a pessoa de um substantivo que NENHUMA lista conhece (o dono do barco, o técnico, as moças) ou escrita errada (sumio) ou vista na água (boiando) é emergência LOCAL pela
                 # ESTRUTURA do cérebro: nenhum pedido ao Worker, a instrução de segurança, a janela marcada — e a pergunta de dado DEPOIS da água (o pendente 8) é a instrução do plotter, sem SOG, proa nem coordenada, sem pedido ao Worker
                 # (2ª rodada de correção do fechamento: o sujeito SEM substantivo («os nossos», «dois»), a cabeça de 2 letras («minha vó», «o DJ»), o nome sem artigo («Tuca está boiando»), a queda sem destino («o grumete caiu») e o que a onda faz («a onda levou o Pedro»))
-                for q in ('o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro'):
+                for q in ('o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro',
+                          'o Marcão sumiu', 'o de óculos sumiu', 'vejo uma cabeça na água', 'foi nadar e não voltou', 'o Pedro foi mergulhar no sábado e não voltou',
+                          'man overboard', 'vi o de óculos cair no mar', 'o bote virou com dois dentro'):   # (3ª rodada de correção, parte final: o inglês, o objeto de «vi» que cai, o bote que vira com gente dentro; antes: o apelido em -cão, o «o de óculos», a água sem verbo de queda, o sujeito oculto, a água que o sábado não derruba)
                     t, n, _ = digita(q)
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     ok(tela + ': a pessoa aberta «%s» é emergência local (a estrutura, não a lista): nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
@@ -298,12 +300,21 @@ def main():
                     pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")
                 # 6ª rodada: a REDE de pessoa — o que a rota sos não toma (o pronome, o nome com a escala, «na proa: falta o marinheiro», a contagem que não bate) nunca vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS na 1ª linha,
                 # sem a situação de bordo, sem a janela)
-                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o imediato não aparece', 'o cliente sumiu', 'o fiscal sumiu'):   # (os 2 últimos: a pessoa que também é item de dado — a ESPERA, 2ª rodada de correção do fechamento)
+                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o imediato não aparece', 'o cliente sumiu', 'o fiscal sumiu',
+                          'não tem o Pedro a bordo', 'voltaram só três e eram quatro', 'perdemos os nossos', 'procurei valdemar no barco inteiro e nada', 'não tenho notícia do Pedro desde ontem',
+                          'sem o supervisor a bordo', 'my son is missing', 'procuramos meu amigo'):   # (parte final: o «sem» + o sujeito aberto + o lugar de bordo, o inglês que só avisa de um sumiço, o possessivo da busca)
+                    #   # (3ª rodada de correção: a ausência com a pessoa explícita, a contagem sem substantivo, o possuidor sem cabeça como objeto, o nome raro em minúscula)   # (os 2 últimos: a pessoa que também é item de dado — a ESPERA, 2ª rodada de correção do fechamento)
                     t, n, _ = digita(q)
                     jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
                     # (a resposta é a ÚLTIMA mensagem do Capitão: a Main mostra a leitura de bordo — SOG, proa — no cabeçalho, fora da conversa)
                     u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
                     ok(tela + ': a pessoa da rede «%s» não vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS, sem a situação de bordo nem coordenada, sem a janela)' % q, n == 0 and 'Se há pessoa no mar ou sumida' in u and TEXTO_IA not in t and 'Situação de bordo' not in u and not re.search(r'\bSOG\b|\d+,\d+ nós|\bproa \d', u) and not jan, 'pedidos=%d · janela=%s · %s' % (n, jan, u[-200:]))
+                # 3ª rodada de correção do fechamento: a ROTINA que a rede tomava por socorro (o dado que «cai», a cidade, a milha, o que o outro disse) tem a resposta da rota (local, sem o Worker) e nunca a instrução do SOS nem a janela
+                for q in ('a autonomia caiu depois do abastecimento?', 'falta diesel pra chegar em Itajaí?', 'quantas milhas faltam?', 'o Pedro disse que o motor não responde'):
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': a rotina «%s» tem a resposta da rota, no aparelho: nenhum pedido ao Worker, sem a instrução do SOS e sem a janela de 15 min' % q, n == 0 and 'Se há pessoa no mar ou sumida' not in u and 'Emergência' not in u and u.strip() != '' and not jan, 'pedidos=%d · janela=%s · %s' % (n, jan, u[-200:]))
                 # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
                 # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
                 t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')

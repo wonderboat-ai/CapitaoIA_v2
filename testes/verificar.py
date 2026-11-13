@@ -6412,9 +6412,13 @@ PERDIDA_PAGINA = ['o Pedro saiu de caiaque e não voltou', 'ela foi nadar e não
                   'o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram',
                   # 2ª rodada de correção do fechamento: o sujeito sem substantivo, a cabeça de 2 letras, o nome sem artigo, a queda sem destino, o que a onda faz
                   'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro',
-                  'Zacarias não volta do mergulho']   # (o mergulho é a água: socorro com a janela — saiu da REDE_PAGINA, que é a ESPERA)
+                  'Zacarias não volta do mergulho',   # (o mergulho é a água: socorro com a janela — saiu da REDE_PAGINA, que é a ESPERA)
+                  # 3ª rodada de correção do fechamento: o apelido em -cão, a cabeça na água sem verbo de queda e a água que a guarda da rotina (o sábado) não derruba
+                  'o Marcão sumiu', 'Marcão sumiu', 'vejo uma cabeça na água', 'o Pedro foi mergulhar no sábado e não voltou',
+                  # fechamento, parte final: o pedido de socorro em inglês, o bote que vira com gente dentro e o objeto de «vi» que cai («o de óculos»)
+                  'man overboard', 'o bote virou com dois dentro', 'vi o de óculos cair no mar']
 # as que também conferem a janela: depois da água, «qual a posição?» é a instrução do plotter (pendente 8)
-PERDIDA_JANELA = ['o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'meu filho ficou pra trás no mar', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro']
+PERDIDA_JANELA = ['man overboard', 'vi o de óculos cair no mar', 'o Marcão sumiu', 'Marcão sumiu', 'vejo uma cabeça na água', 'o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'meu filho ficou pra trás no mar', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro']
 
 
 def teste_home_perdida(b, tela):
@@ -6445,7 +6449,11 @@ REDE_PAGINA = ['o Pedro ainda não apareceu', 'não vi o Pedro hoje', 'o imediat
                # 6ª rodada, 3ª passada: a embarcação pequena que volta sem a pessoa, o contato perdido, o pulo, a correnteza
                'o tender voltou vazio', 'perdi o contato com a Ana', 'vi alguém pular do barco', 'meu filho está na correnteza',
                # 2ª rodada de correção do fechamento: a pessoa que também é item de dado (a ESPERA) e a ausência em forma nova
-               'o cliente sumiu', 'o fiscal sumiu', 'chamei o Pedro três vezes e nada', 'a lancha do Pedro está aqui e ele não', 'quem viu o Pedro por último?', 'não temos notícia dele']
+               'o cliente sumiu', 'o fiscal sumiu', 'chamei o Pedro três vezes e nada', 'a lancha do Pedro está aqui e ele não', 'quem viu o Pedro por último?', 'não temos notícia dele',
+               # 3ª rodada de correção do fechamento: a ausência com a pessoa explícita, a contagem sem substantivo de pessoa e o possuidor sem cabeça como objeto
+               'não tem o Pedro a bordo', 'voltaram só três e eram quatro', 'perdemos os nossos',
+               # fechamento, parte final: a ausência com o sujeito que nenhuma lista conhece, o inglês que só avisa de um sumiço e o possessivo da busca
+               'sem o supervisor a bordo', 'my son is missing', 'procuramos meu amigo']
 REDE_SEGURANCA = 'Se há pessoa no mar ou sumida: abra o SOS e siga o procedimento padrão — confirmar com o protocolo de bordo.'
 
 
@@ -6460,6 +6468,25 @@ def teste_home_rede(b, tela):
         if not m: prob.append('%s: «%s» não teve resposta local' % (tela, q))
         elif not re.sub(r'^\s*CAPITÃO IA\s*', '', m[-1]['txt']).startswith(REDE_SEGURANCA) or SITUACAO_DE_BORDO.search(' | '.join(x['txt'] for x in m)) or confere.R_COORD.search(' | '.join(x['txt'] for x in m)):
             prob.append('%s: «%s» devia abrir a resposta com a instrução do SOS (o fallback seguro) e não levar a situação de bordo (SOG, proa) nem coordenada: %r' % (tela, q, m[-1]['txt'][:160]))
+        if pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: «%s» não é emergência e não devia marcar a janela de 15 min' % (tela, q))
+        if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
+        ctx.close()
+    return prob
+
+
+# a ROTINA que a rede tomava por socorro (3ª rodada de correção do fechamento): o dado que «cai», a cidade com inicial maiúscula, a unidade que «falta», o que o outro disse — a resposta é a da rota de assunto, nunca a instrução do SOS, e a pergunta não abre a janela
+ROTINA_PAGINA = ['a autonomia caiu depois do abastecimento?', 'falta diesel pra chegar em Itajaí?', 'quantas milhas faltam?', 'o Pedro disse que o motor não responde', 'falta trocar o rotor?']
+
+
+def teste_home_rotina(b, tela):
+    """A pergunta de rotina com «caiu», «falta», «sumiu» e uma pessoa que só FALA nunca recebe a instrução do SOS nem marca a janela de 15 min: a resposta é a local da rota (autonomia, ETA, motores)."""
+    prob = []
+    for q in ROTINA_PAGINA:
+        ctx, pg, erros, est = abre_home(b, tela)
+        m = pergunta_home(pg, tela, q)
+        t = re.sub(r'^\s*CAPITÃO IA\s*', '', m[-1]['txt']) if m else ''
+        if not m: prob.append('%s: «%s» não teve resposta' % (tela, q))
+        elif t.startswith(REDE_SEGURANCA) or t.startswith('Emergência'): prob.append('%s: «%s» é rotina e devia ter a resposta da rota, não a instrução do SOS: %r' % (tela, q, t[:140]))
         if pg.evaluate(LE_ESTADO_HOME)['emerg']: prob.append('%s: «%s» não é emergência e não devia marcar a janela de 15 min' % (tela, q))
         if erros: prob += ['%s: %s' % (tela, e) for e in erros[:2]]
         ctx.close()
@@ -6585,6 +6612,7 @@ def p4g_conferencias(b, lista):
         out.append((tela + ' · a resposta tardia da IA não recoloca o contexto zerado (NOVA, ENCERRAR, emergência)', teste_home_tardio(b, tela)))
         out.append((tela + ' · a pessoa perdida (foi nadar, não está aqui, «proa» na frase) é emergência local: nada vai à IA e a resposta não leva SOG nem proa', teste_home_perdida(b, tela)))
         out.append((tela + ' · a pessoa ausente que não é emergência (a escala, o «hoje», a folga) também não vai à IA: a rede larga do pedeIA', teste_home_rede(b, tela)))
+        out.append((tela + ' · a rotina com «caiu», «falta», «sumiu» e a pessoa que só fala (a autonomia, a cidade, a milha, o motor) tem a resposta da rota, não a instrução do SOS', teste_home_rotina(b, tela)))
     for tela in [t for t in TELAS_H3 if t in lista]:
         out.append((tela + ' · sem rótulo e com o atalho das telas novas', teste_h3(b, tela)))
     return out
@@ -6692,8 +6720,28 @@ MUTANTES_P4G = [
     ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (Main)', 'capitao-brain.js@Main', [("    if (socorroImplicito(q) || risco(qRaw).n === 2) return 'sos';", "    if ((socorroImplicito(q) || risco(qRaw).n === 2) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
     ('a distância entre a pessoa e o verbo some (a pessoa colada ao sumiço): «o menino estava brincando e sumiu» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("    ' ' + PES_ELE + gap(8) + ' ' + SUMI + ' ',", "    ' ' + PES_ELE + gap(0) + ' ' + SUMI + ' ',")], 'perdida'),
     ('a distância entre a pessoa e o verbo some (a pessoa colada ao sumiço): «o menino estava brincando e sumiu» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    ' ' + PES_ELE + gap(8) + ' ' + SUMI + ' ',", "    ' ' + PES_ELE + gap(0) + ' ' + SUMI + ' ',")], 'perdida'),
-    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("|| risco(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
-    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|| risco(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
+    ('o apelido em -cão/-são vira substantivo comum: «o Marcão sumiu» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [('|| substComum(tk.w); }', '|| SUBST_COMUM_RE.test(tk.w); }')], 'perdida'),
+    ('o apelido em -cão/-são vira substantivo comum: «o Marcão sumiu» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [('|| substComum(tk.w); }', '|| SUBST_COMUM_RE.test(tk.w); }')], 'perdida'),
+    ('o sinal do texto bruto sem a cabeça na água: «vejo uma cabeça na água» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [('    if (CORPO_AGUA.test(rn) || IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '    if (IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;')], 'perdida'),
+    ('o sinal do texto bruto sem a cabeça na água: «vejo uma cabeça na água» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [('    if (CORPO_AGUA.test(rn) || IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '    if (IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;')], 'perdida'),
+    ('a guarda do sábado vence a água: «o Pedro foi mergulhar no sábado e não voltou» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [(' && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 :', ') ? 0 :')], 'perdida'),
+    ('a guarda do sábado vence a água: «o Pedro foi mergulhar no sábado e não voltou» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [(' && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 :', ') ? 0 :')], 'perdida'),
+    ('a contagem sem substantivo de pessoa: «voltaram só três e eram quatro» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [('cn = contagemNua(aGente(pad(raw)), agua,', 'cn = 0 && contagemNua(aGente(pad(raw)), agua,')], 'rede'),
+    ('a contagem sem substantivo de pessoa: «voltaram só três e eram quatro» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [('cn = contagemNua(aGente(pad(raw)), agua,', 'cn = 0 && contagemNua(aGente(pad(raw)), agua,')], 'rede'),
+    ('o texto bruto sem o inglês: «man overboard» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [('|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '|| VIROU_DENTRO.test(rn)) return 2;')], 'perdida'),
+    ('o bote que vira com gente dentro não é socorro: «o bote virou com dois dentro» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [('|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '|| EN_AGUA2.test(rn)) return 2;')], 'perdida'),
+    ('o verbo de queda depois do «o de óculos» é engolido: «vi o de óculos cair no mar» perde a janela (Main)', 'capitao-brain.js@Main', [("!== -1 || QUEDA_OBJ.test(t[k])) && k > i + 2)) break;", "!== -1) && k > i + 2)) break;")], 'perdida'),
+    ('o «sem» bloqueia o sintagma: «sem o supervisor a bordo» vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("prepComExcecao(out) || (ant === 'sem' && SEM_AQUI.test(' ' + t.slice(i, i + 6).join(' ') + ' '));", "prepComExcecao(out);")], 'rede'),
+    ('o infinitivo depois de «falta» é o nome: «falta trocar o rotor?» recebe a instrução do SOS (Main)', 'capitao-brain.js@Main', [('(INF_ER.test(w) || /(?:ar|ir)$/.test(w))', 'INF_ER.test(w)')], 'rotina'),
+    ('o texto bruto sem o inglês: «man overboard» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [('|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '|| VIROU_DENTRO.test(rn)) return 2;')], 'perdida'),
+    ('o bote que vira com gente dentro não é socorro: «o bote virou com dois dentro» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [('|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;', '|| EN_AGUA2.test(rn)) return 2;')], 'perdida'),
+    ('o verbo de queda depois do «o de óculos» é engolido: «vi o de óculos cair no mar» perde a janela (H2)', 'capitao-brain.js@H2-Home-Mobile', [("!== -1 || QUEDA_OBJ.test(t[k])) && k > i + 2)) break;", "!== -1) && k > i + 2)) break;")], 'perdida'),
+    ('o «sem» bloqueia o sintagma: «sem o supervisor a bordo» vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("prepComExcecao(out) || (ant === 'sem' && SEM_AQUI.test(' ' + t.slice(i, i + 6).join(' ') + ' '));", "prepComExcecao(out);")], 'rede'),
+    ('o infinitivo depois de «falta» é o nome: «falta trocar o rotor?» recebe a instrução do SOS (H2)', 'capitao-brain.js@H2-Home-Mobile', [('(INF_ER.test(w) || /(?:ar|ir)$/.test(w))', 'INF_ER.test(w)')], 'rotina'),
+    ('a coisa como sujeito sem a guarda C8: «o Pedro disse que o motor não responde» recebe a instrução do SOS (Main)', 'capitao-brain.js@Main', [('    if (SEM_C8) return q;', '    return q;')], 'rotina'),
+    ('a coisa como sujeito sem a guarda C8: «o Pedro disse que o motor não responde» recebe a instrução do SOS (H2)', 'capitao-brain.js@H2-Home-Mobile', [('    if (SEM_C8) return q;', '    return q;')], 'rotina'),
+    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (Main)', 'capitao-brain.js@Main', [("|| risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
+    ('o pedeIA sem a rede larga: «o Pedro ainda não apareceu» (a escala tira da rota sos) vai à IA com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("|| risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", ") return false;")], 'rede'),
     ('«proa» e «popa» desviam a pessoa perdida para a rota da posição (o predicado depois das rotas de dado) (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (socorroImplicito(q) || risco(qRaw).n === 2) return 'sos';", "    if ((socorroImplicito(q) || risco(qRaw).n === 2) && !/ (?:proa|popa) /.test(q)) return 'sos';")], 'perdida'),
     ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (Main)', 'capitao-brain.js@Main', [("    if (risco(qRaw).n >= 1) return 'fallback';", "")], 'rede'),
     ('a rede de pessoa não pré-empta as rotas de assunto: «na proa: falta o marinheiro» vai à rota da posição com SOG e proa (H2)', 'capitao-brain.js@H2-Home-Mobile', [("    if (risco(qRaw).n >= 1) return 'fallback';", "")], 'rede'),
@@ -6710,7 +6758,7 @@ MUTANTES_P4G = [
 QUAL_P4G = {'leitura': lambda b, t: teste_home_leitura(b, t), 'real': lambda b, t: teste_home_real(b, t), 'dados': lambda b, t: teste_home_dados(b, t) + teste_home_codigo(),
             'vivo': lambda b, t: teste_home_vivo(b, t) + teste_home_codigo(), 'ouvintes': lambda b, t: teste_home_ouvintes(b, t) + teste_home_codigo(), 'ia': lambda b, t: teste_home_ia(b, t),
             'janela': lambda b, t: teste_home_janela(b, t), 'botoes': lambda b, t: teste_home_botoes(b, t), 'h3': lambda b, t: teste_h3(b, t), 'codigo': lambda b, t: teste_home_codigo(),
-            'anexo': lambda b, t: teste_home_anexo(b, t), 'tardio': lambda b, t: teste_home_tardio(b, t), 'antiga': lambda b, t: teste_home_proposta_antiga(b, t), 'perdida': lambda b, t: teste_home_perdida(b, t), 'rede': lambda b, t: teste_home_rede(b, t)}
+            'anexo': lambda b, t: teste_home_anexo(b, t), 'tardio': lambda b, t: teste_home_tardio(b, t), 'antiga': lambda b, t: teste_home_proposta_antiga(b, t), 'perdida': lambda b, t: teste_home_perdida(b, t), 'rede': lambda b, t: teste_home_rede(b, t), 'rotina': lambda b, t: teste_home_rotina(b, t)}
 
 
 def mutantes_p4g(b):
