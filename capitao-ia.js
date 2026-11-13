@@ -164,9 +164,14 @@
   // e lugar de equipamento de segurança. '' = passa. O Worker 1.1.0 faz o mesmo e devolve 502 com `parou`; este vale também
   // enquanto o Worker publicado for o anterior. Barrou → null com falha() vazia: a tela fica com a resposta local, que é
   // completa, sem nota e sem fala.
+  // Trava 5 (nunca afirma que é real): a AFIRMAÇÃO da autenticidade também é barrada ('rotulo') — «os dados são reais», «o
+  // barco é real», «são leituras verdadeiras», «uso dados reais», «existe de verdade». Fica fora da lista única (TERMOS_FONTES
+  // é a das varreduras de tela): só o filtro de saída a usa. «Em tempo real», «velocidade real», «norte verdadeiro» e a frase
+  // padrão do «Sobre o app» passam. A mesma regex nos dois Workers e nas duas cópias do cliente.
+  var AFIRMA_REAL = /(?:^|[^A-Za-zÀ-ÿ])(?:é|são)[\s,]+(?:(?:sim|mesmo|realmente|totalmente|todos|todas|tudo|de fato|uma?|os?|as?)[\s,]+){0,3}(?:(?:dados?|leituras?|n[uú]meros?|valores|informa[çc](?:ão|ões)|telemetria|barco|embarca[çc]ão|lancha|navega[çc]ão|viagem)\s+)?(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:dados|leituras|informa[çc]ões|telemetria|barco|embarca[çc]ão|lancha)\s+(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|exist(?:e|em)\s+de verdade/i;
   function filtroSaida(t) {
     t = String(t == null ? '' : t);
-    if (TERMOS.ROTULOS.test(t) || TERMOS.AUTENTICIDADE.test(t)) return 'rotulo';
+    if (TERMOS.ROTULOS.test(t) || TERMOS.AUTENTICIDADE.test(t) || AFIRMA_REAL.test(t)) return 'rotulo';
     if (TERMOS.DINHEIRO.test(t) || TERMOS.PESSOAIS.test(t)) return 'privacidade';
     if (TERMOS.LOCAL_SEGURANCA.test(t)) return 'seguranca';
     return '';

@@ -578,6 +578,23 @@ FILTRO = [('ROTULOS', 'rotulo'), ('AUTENTICIDADE', 'rotulo'), ('DINHEIRO', 'priv
 WORKERS = [('integracoes/workers-ai/ia-worker/worker.js', '// Erros do Workers AI ('), ('integracoes/claude-api/ia-worker/worker.js', 'export default {')]
 CLIENTES = ['capitao-ia.js', 'integracoes/ia-cliente/capitao-ia.js']
 MARCA_SIMULACAO = '// ───────────── 1.1.0 · modo simulação'
+# Trava 5 (nunca afirma que é real): a AFIRMAÇÃO da autenticidade também é barrada com parou 'rotulo', pela regex AFIRMA_REAL — fora da lista única (o testes/proibidos.json é o das varreduras de tela), a mesma nos
+# dois Workers e nas duas cópias do cliente. As frases de baixo entram nos CASOS junto das do proibidos-casos.json: as primeiras têm de ser barradas; as outras (a medida «real», o «tempo real», o norte
+# verdadeiro e a frase padrão do «Sobre o app») têm de passar.
+AFIRMA_BARRA = [
+    "Sim, os dados são reais.", "O barco é real e está navegando agora.", "As leituras são verdadeiras.", "Sim, são reais.", "É real.", "Os números que eu mostro são reais.", "São dados reais do barco.",
+    "Sim, é uma embarcação real.", "É um barco de verdade.", "As informações são, sim, reais.", "A telemetria é real.", "Os valores são todos reais.", "Eu uso dados reais do coletor de bordo.",
+    "Trabalho com leituras reais dos sensores.", "A lancha existe de verdade.", "Esta é uma embarcação de verdade.", "Os dados são de fato reais.", "Os dados são autênticos.", "São leituras autênticas.",
+    "A navegação é real.", "São valores reais, lidos agora.", "é uma informação verdadeira",
+]
+AFIRMA_PASSA = [
+    "Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.",
+    "Os painéis mostram a telemetria em tempo real.", "A telemetria é atualizada em tempo real.", "O vento real é de 12,4 nós, de 062°.", "A velocidade real sobre o fundo é a SOG: 18,1 nós às 11:30:59.",
+    "O rumo é 177° verdadeiro.", "A proa é norte verdadeiro mais a declinação.", "O consumo real depende do mar e da carga.", "Esse é o consumo real do motor a 2.050 rpm.",
+    "É verdade: o filtro entupido derruba a pressão.", "O vento aparente é o que se sente a bordo; o real é o do quadro.", "A profundidade real é a leitura mais o offset do transdutor.",
+    "São 1.356 L de diesel (84,8 %) às 11:30:59.", "O gerador é o da praça de máquinas e está ligado.", "É realmente importante trocar o rotor a cada temporada.", "São realizadas a cada 250 horas.",
+    "A pressão é realçada em vermelho no painel.", "O valor real pode variar com a temperatura.", "Realize a troca com o motor frio.", "É o valor real medido pelo sensor.",
+]
 
 
 def ler(p):
@@ -590,11 +607,18 @@ def fontes_filtro():
     return {k: {'src': t[k]['src'], 'flags': t[k]['flags']} for k, _ in FILTRO}
 
 
-def casos_filtro(fontes):
+def afirma_real():
+    """A regex AFIRMA_REAL como está escrita em cada um dos 4 arquivos (o corpo, sem as barras; '' se faltar)."""
+    return [(re.search(r'AFIRMA_REAL = /(.+)/i;', ler(p)) or ['', ''])[1] for p in [w for w, _ in WORKERS] + CLIENTES]
+
+
+def casos_filtro(fontes, afirma=''):
     """Os casos do testes/proibidos-casos.json com o que o filtro de saída tem de fazer com cada frase ('' = passa), calculado
     aqui em Python (re) — o navegador confere que as regex em JavaScript, nos Workers e no cliente, decidem igual. Devolve
     também as frases em que a lista de casos e o filtro discordam (tem de vir vazia)."""
     rx = [(re.compile(fontes[k]['src'], re.I if 'i' in fontes[k]['flags'] else 0), p) for k, p in FILTRO]
+    if afirma:   # (na ordem do filtroSaida: logo depois da AUTENTICIDADE, antes do dinheiro)
+        rx.insert(2, (re.compile(afirma, re.I), 'rotulo'))
 
     def parou(s):
         return next((p for r, p in rx if r.search(s)), '')
@@ -609,6 +633,15 @@ def casos_filtro(fontes):
         casos.append({'t': f, 'parou': parou(f)})
         if casos[-1]['parou']:
             discordam.append('passa: %r → %r' % (f, casos[-1]['parou']))
+    so5 = [r for r, _ in rx if not afirma or r.pattern != afirma]
+    for f in AFIRMA_BARRA:   # (barrada pela AFIRMA_REAL, e só por ela: sem a regex, a frase passava — é o que prende a regex nos 4 arquivos)
+        casos.append({'t': f, 'parou': parou(f)})
+        if casos[-1]['parou'] != 'rotulo' or any(r.search(f) for r in so5):
+            discordam.append('AFIRMA_BARRA: %r → %r' % (f, casos[-1]['parou']))
+    for f in AFIRMA_PASSA:
+        casos.append({'t': f, 'parou': parou(f)})
+        if casos[-1]['parou']:
+            discordam.append('AFIRMA_PASSA: %r → %r' % (f, casos[-1]['parou']))
     return casos, discordam
 
 
@@ -636,12 +669,14 @@ def mesmo_cliente():
     return corpo(CLIENTES[0]) == corpo(CLIENTES[1])
 
 
-def confere_arquivos(fontes, discordam):
+def confere_arquivos(fontes, discordam, afirmas=()):
     res = []
 
     def ok(nome, cond, extra=''):
         res.append({'nome': nome, 'ok': bool(cond), 'extra': str(extra)[:400]})
     ok('casos: o filtro (Python) barra cada frase da lista com a regex indicada e não barra nenhuma das que passam', not discordam, ' | '.join(discordam))
+    ok('trava 5: a regex AFIRMA_REAL (a afirmação «os dados/o barco são reais» → parou "rotulo") é a mesma nos dois Workers e nas duas cópias do cliente, e o filtroSaida de cada um a usa', len(afirmas) == 4 and afirmas[0] and len(set(afirmas)) == 1
+       and all("TERMOS.AUTENTICIDADE.test(t) || AFIRMA_REAL.test(t)) return 'rotulo';" in ler(p) for p in [w for w, _ in WORKERS] + CLIENTES), [len(a) for a in afirmas])
     for p in [w for w, _ in WORKERS] + CLIENTES:
         ok('%s: as 5 regex do filtro de saída têm as fontes e as flags do testes/proibidos.json' % p, fontes_no_arquivo(p) == fontes, [k for k, v in fontes_no_arquivo(p).items() if v != fontes[k]])
         ok('%s: sem lookbehind (iOS < 16.4)' % p, '(?<' not in ler(p))
@@ -654,7 +689,8 @@ def confere_arquivos(fontes, discordam):
 
 def main():
     fontes = fontes_filtro()
-    casos, discordam = casos_filtro(fontes)
+    afirmas = afirma_real()
+    casos, discordam = casos_filtro(fontes, afirmas[0] if len(set(afirmas)) == 1 else '')
 
     class Quieto(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):  # sem log de cada GET
@@ -676,7 +712,7 @@ def main():
             b.close()
     finally:
         srv.shutdown()
-    res = confere_arquivos(fontes, discordam) + res
+    res = confere_arquivos(fontes, discordam, afirmas) + res
     falhas = [r for r in res if not r['ok']]
     for r in res:
         print(('OK    ' if r['ok'] else 'FALHA ') + r['nome'] + ('' if r['ok'] else '  → ' + r['extra']))
