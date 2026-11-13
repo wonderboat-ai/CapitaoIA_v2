@@ -187,7 +187,7 @@ import urllib.parse
 import urllib.request
 from playwright.sync_api import sync_playwright
 
-BASE = 'http://127.0.0.1:8765/'
+BASE = __import__('os').environ.get('CAPITAO_BASE', 'http://127.0.0.1:8765').rstrip('/') + '/'   # CAPITAO_BASE: outro endereço (outra árvore/porta em paralelo)
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
 import confere  # noqa: E402  (barco_sos: o dado da embarcação que o SOS nunca mostra, a mesma regra do gerador)

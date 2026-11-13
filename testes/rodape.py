@@ -55,7 +55,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 from playwright.sync_api import sync_playwright
 
-BASE = 'http://127.0.0.1:8765'
+BASE = __import__('os').environ.get('CAPITAO_BASE', 'http://127.0.0.1:8765').rstrip('/')   # CAPITAO_BASE: outro endereço (outra árvore/porta em paralelo)
 CANAL = 'msedge'
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BR = timezone(timedelta(hours=-3))

@@ -36,7 +36,7 @@ sys.path.insert(0, AQUI)
 import confere  # noqa: E402  (barco_sos, R_COORD: as regras do gerador, uma só)
 from verificar import TEXTOS_SOS, achados_texto_sos  # noqa: E402  (a leitura do texto e dos atributos: fechada, roteiro aberto, cada cartão aberto; e as regras)
 
-BASE = 'http://127.0.0.1:8765/'
+BASE = __import__('os').environ.get('CAPITAO_BASE', 'http://127.0.0.1:8765').rstrip('/') + '/'   # CAPITAO_BASE: outro endereço (outra árvore/porta em paralelo)
 CANAL = 'msedge'
 TELAS = (('S1-SOS-Web', 1440, 900, 'web · SOS'), ('S2-SOS-Mobile', 390, 844, 'app · SOS'))
 CHAVE_DIARIO, CHAVE_SOS, CHAVE_EQUIPE = 'capitao.diario.v1', 'capitao.sos.v1', 'capitao.equipe.v1'

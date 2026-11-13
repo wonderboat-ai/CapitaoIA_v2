@@ -25,7 +25,7 @@ from playwright.sync_api import sync_playwright
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ferramentas', 'demo'))
 import confere  # noqa: E402
 
-BASE = 'http://127.0.0.1:8765/'
+BASE = __import__('os').environ.get('CAPITAO_BASE', 'http://127.0.0.1:8765').rstrip('/') + '/'   # CAPITAO_BASE: outro endereço (outra árvore/porta em paralelo)
 CANAL = 'msedge'
 
 # (pergunta, chave esperada)
