@@ -158,10 +158,6 @@ giria	tiazinha	f	s
 giria	mocinha	f	s
 giria	pequenininho	m	s
 giria	anjinho	m	s
-soc	hóspede	m	s
-soc	colega	m	s
-soc	vizinho	m	s
-soc	vizinha	f	s
 soc	sócio	m	s
 soc	sócia	f	s
 soc	freguês	m	s
@@ -186,7 +182,6 @@ plural	músicos	m	p
 plural	caras	m	p
 plural	moças	f	p
 plural	marujos	m	p
-plural	vizinhos	m	p
 plural	sócios	m	p
 plural	advogados	m	p
 plural	médicos	m	p

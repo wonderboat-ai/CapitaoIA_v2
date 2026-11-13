@@ -1,0 +1,155 @@
+# o item do cotidiano (cozinha, casa, mala, escritório, celular, carteira, mostrador) com o artigo: «a bandeira», «o pendrive», «o voucher» — o que some todo dia e nunca é gente (a 3ª rodada de correção do fechamento da home)
+# (fora desta lista, de propósito: «o óleo de cozinha» é a rota do óleo e «o kit de primeiros socorros» tem a palavra «socorro» da lista de emergência do gerador: as duas abrem a janela por desenho)
+a bandeira
+a playlist
+o tapete
+o guarda-sol
+a escada de popa
+a escada
+o cooler
+a prancha
+o colchao
+a vara de pesca
+a vara
+o carretel
+o anzol
+a isca
+o gelo
+a cerveja
+o vinho
+a churrasqueira
+a mesa
+a cadeira
+o banco
+o almofadao
+a almofada
+o travesseiro
+o lencol
+a toalha
+o roupao
+o biquini
+a bermuda
+o oculos
+o oculos de sol
+a camera
+a GoPro
+o drone
+o binoculo
+o relogio
+a carteira
+a bolsa
+a mochila
+a sacola
+o guarda-chuva
+a lanterna
+a pilha
+o cabo USB
+o carregador portatil
+o power bank
+o HD externo
+o pendrive
+o notebook
+o mouse
+o teclado
+a impressora
+o caderno
+a caneta
+o livro
+a revista
+o mapa de papel
+a carta de papel
+o regulamento
+a apolice
+o contrato
+o recibo
+a procuracao
+o cartao
+o cartao de credito
+a senha
+o login
+o token
+o QR code
+o ingresso
+a reserva
+o voucher
+o cupom
+a conta de luz
+o boleto
+a fatura
+o extrato
+o saldo
+o app
+o widget
+o atalho
+o icone
+o contato
+a foto
+o video
+o audio
+a nota
+o lembrete
+o alarme do celular
+a agenda
+o evento
+a tarefa
+o checklist
+o relatorio
+o grafico
+o filtro de busca
+a aba
+a pasta
+o arquivo
+o anexo
+o link
+o QR
+a legenda
+o texto
+a frase
+o comentario
+o ranking
+o placar
+a tabela
+a lista de compras
+a receita
+a sobremesa
+o pao
+o leite
+o cafe
+o acucar
+o sal
+o gas
+o fogao
+a geladeira
+o freezer
+o microondas
+a cafeteira
+o liquidificador
+a TV
+o decoder
+a antena de TV
+o roteador
+o modem
+o cabo de rede
+a tomada
+o extensor
+o filtro de linha
+o adaptador
+a lampada
+o abajur
+o ventilador
+a cortina
+o tapete da sala
+o pano de prato
+a esponja
+o detergente
+o sabao
+o shampoo
+o protetor solar
+o repelente
+o remedio
+a curativo
+o termometro
+a pulseira
+o colar
+o anel
+o brinco

@@ -1914,7 +1914,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -6023,7 +6023,6 @@ MUTANTES_3E_CABECAS = mutantes_cabecas() + [
     ('p3e cabeças: a pergunta sobre o app com a baliza vira o trecho dela (sem a exceção do SOBRE e do «ajuda»)', r"if (cabecaSemRota(q) && !SOBRE.test(q) && !has(q, ['ajuda'])) return 'fallback';", r"if (cabecaSemRota(q)) return 'fallback';", ('checklist',)),
     ('p3e cabeças: a cabeça sem rota própria (DISTRESS, baliza) com cauda de dado vai ao fallback (sem o trecho dela)', r"if (rota0 === 'fallback' && (key === 'fallback' || key === 'base') && !a.seguranca) {", r"if (false) {", ('cabecas',)),
     ('p3e cabeças: a cabeça sem rota própria fica com o trecho da cauda (sem trocar o trecho que não é de segurança)', r"(key === 'fallback' || key === 'base') && !a.seguranca) {", r"(key === 'fallback') && !a.seguranca) {", ('cabecas',)),
-    ('p3e cabeças: o pedeIA não barra a cabeça de emergência', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1) return false;", '', ('checklist',)),
     ('p3e cabeças: o FAQ toma a pergunta de cabeça de emergência', r"if (key === 'fallback' && !cabecaEmerg(pad(q))) { var fq = null;", r"if (key === 'fallback') { var fq = null;", ('cabecas',)),
     ('p3e cabeças: o estoque de peças toma a pergunta de cabeça de emergência (sem a guarda do topo)', r"  function pecasPergunta(q) {" "\n" r"    if (cabecaEmerg(q)) return false;", r"  function pecasPergunta(q) {", ('pecas',)),
     ('p3e cabeças: o checklist toma a pergunta de cabeça de emergência (sem a guarda)', r"    if (!cabecaEmerg(q)) {", r"    if (true) {", ('checklist',)),
@@ -7669,9 +7668,16 @@ def es_pagina_antiga(b, src):
 
 
 def es_vocab_livre(corpo, vocab=None):
-    """As palavras do vocabulário reservado que o CÓDIGO do cérebro tem (os comentários não contam; palavra inteira, sem acento): tem de ser nenhuma — a pessoa é a estrutura, não uma lista."""
+    """As palavras do vocabulário reservado que o CÓDIGO do cérebro tem (os comentários não contam; sem acento): tem de ser nenhuma — a pessoa é a estrutura, não uma lista. A palavra INTEIRA conta, e também a forma de ALTERNÂNCIA de regex
+    (`sogr[oa]s?`, `hospedes?`, `colegas?`, `vizinh[oa]s?`): o radical da palavra seguido de `[oa]`, `s?`, `es?` ou da vogal que a flexão troca (3ª rodada de correção: o teste só via a palavra inteira)."""
     t = sem_acento_es(re.sub(r'(?<=\s)//[^\n]*', '', corpo).lower())
-    return [w for w in (ES_VOCAB if vocab is None else vocab) if re.search(r'(?<![a-z0-9])' + re.escape(sem_acento_es(w.lower())) + r'(?![a-z0-9])', t)]
+    achadas = []
+    for w in (ES_VOCAB if vocab is None else vocab):
+        n = sem_acento_es(w.lower())
+        rad = re.sub(r'[oae]s?$', '', n) if len(n) > 5 else n
+        if re.search(r'(?<![a-z0-9])' + re.escape(n) + r'(?![a-z0-9])', t) or (len(rad) >= 5 and re.search(r'(?<![a-z0-9])' + re.escape(rad) + r'(?:\[[oae]+\]|[oae])?(?:s\?|es\?)(?![a-z0-9])|(?<![a-z0-9])' + re.escape(rad) + r'\[[oae]+\]', t)):
+            achadas.append(w)
+    return achadas
 
 
 JS_ES_FOTO = r"""(qs) => qs.map((txt) => { const B = window.CapitaoBrain; localStorage.clear(); const a = B.answerAttachment('foto', { name: 'a.jpg', size: 2048 }, { platform: 'app', texto: txt }); return { txt: txt, pedido: a.pedido === true, linhas: B.loadDiario().map((x) => x.t) }; })"""
@@ -7859,6 +7865,10 @@ JS_ES2_SEM = r"""(casos) => { const B = window.CapitaoBrain; return casos.map((q
 
 
 def grupo_p4g_estrutura2(b, muta, ped):
+    corpo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'capitao-brain.js'), encoding='utf-8').read()
+    if muta and corpo.count(muta[0]) == 1: corpo = corpo.replace(muta[0], muta[1])
+    livre = es_vocab_livre(corpo, [f[1] for f in ES2_VOCAB])   # (3ª rodada de correção: o vocabulário 2 também é conferido contra o CÓDIGO — a palavra inteira e a alternância de regex)
+    ped('p4g estrutura2: o cérebro não tem NENHUMA das %d palavras do vocabulário reservado 2 em lista nenhuma (nem como alternância de regex: «vizinh[oa]s?», «colegas?»)' % len(ES2_VOCAB), not livre, livre[:8])
     pg = pagina(b, muta=muta, fixo='60')
     try:
         # (1) a MATRIZ do vocabulário 2 (papéis, profissões, parentesco com e sem hífen, gírias, coletivos, plurais, 2 letras) × os quadros antigos e novos
@@ -7945,6 +7955,225 @@ def grupo_p4g_rotina2(b, muta, ped):
 
 
 GRUPOS_3A['p4g_rotina2'] = grupo_p4g_rotina2
+
+
+# ═══ Fechamento do grupo home (P4G), 3ª rodada de correção: a pessoa em risco que a ESTRUTURA ainda deixava ir à IA e a rotina que ela tomava por socorro ═══
+# A revisão da 2ª rodada achou, com matrizes novas, duas coisas: (A) a pessoa em risco que continuava indo à IA com SOG e proa — a ausência com a pessoa explícita («não tem o Pedro a bordo», «só voltaram quatro, o Pedro não veio»,
+# «não tenho notícia do Pedro desde ontem»), a contagem sem substantivo de pessoa («voltaram só três e eram quatro»), o apelido em -cão/-são («o Marcão sumiu»), o nome raro em minúscula ou em CAIXA ALTA como objeto («procurei valdemar no barco inteiro»),
+# o «o de óculos», o «seu João», o «os nossos» como objeto, o erro de digitação NO verbo, a água sem verbo de queda, o sujeito oculto («foi nadar e não voltou») — e a água que as guardas da rotina derrubavam («o Pedro foi mergulhar no sábado e não voltou»);
+# (B) a rotina que a rede tomava por socorro — a comunicação com objeto («o Pedro não respondeu a proposta»), o lugar de terra («não apareceu no churrasco»), o dado e o item do cotidiano que «cai» e «some» («a autonomia caiu», «a bandeira sumiu»), a cidade
+# («falta diesel pra chegar em Itajaí?»), o que o outro disse («o mecânico disse que o motor não responde»). Este grupo prova os dois lados com MATRIZES (vocabulário × quadros × caixa), a janela e o oráculo f3b121c (a rotina não muda).
+F3_DIARIO = ['registre no diário: a onda levou o Pedro', 'registre no diário: o grumete caiu', 'registre no diário: Tuca está boiando', 'registre no diário: meu filho ficou pra trás no mar', 'registre no diário: o Zé caiu', 'registre no diário: o bebê caiu',
+             'registre no diário: perdemos o contato com o mergulhador', 'registre no diário: deixamos o Pedro para trás', 'registre no diário: tem uma cabeça na água', 'registre no diário: foi nadar e não voltou']
+F3_DIARIO_ESPERA = ['registre no diário: não tem o Pedro a bordo', 'registre no diário: voltaram só três e eram quatro']
+F3_DIARIO_ROTINA = ['registre no diário que o sinal do GPS caiu às 10h', 'registre no diário: o diário do dia 3 sumiu', 'registre no diário: o Pedro não respondeu a proposta', 'registre no diário: a autonomia caiu depois do abastecimento']
+F3_PESSOAS = [('o Pedro', 'do Pedro'), ('meu filho', 'do meu filho'), ('a criança', 'da criança'), ('o supervisor', 'do supervisor'), ('um dos meus', 'de um dos meus'), ('a Maristela', 'da Maristela'), ('os meninos', 'dos meninos'), ('o mais novo', 'do mais novo'),
+              ('a babá', 'da babá'), ('o dono', 'do dono'), ('ele', 'dele')]
+F3_AUSENCIA = ['não tem {S} a bordo', 'não tinha {S} a bordo', 'não há {S} aqui no barco', 'sem {S} a bordo', 'não existe {S} aqui', 'só voltaram quatro, {S} não veio', 'só voltaram quatro e {S} não veio', 'quatro voltaram e {S} não',
+               'voltaram quatro e {S} não voltou', 'só chegaram três, {S} não chegou', 'não tenho notícia {DE} desde ontem', 'não temos notícia {DE} desde cedo', 'sem notícias {DE} desde o lanche', 'não tenho notícias {DE} desde ontem à noite']
+F3_CONTAGEM = ['voltaram só três', 'voltaram só três e eram quatro', 'saímos em seis e voltamos em cinco', 'somos cinco, eram seis', 'eram seis e agora são cinco', 'estamos em quatro, eram seis', 'dos seis só voltaram quatro', 'tem um a menos', 'só sobraram dois a bordo',
+               'sobrou um na ilha', 'ficou um pra trás na ilha', 'ficou um na praia e a gente já saiu', 'sobrou gente na ilha', 'a gente não tá completo', 'a tripulação não está completa', 'nao estamos completos', 'nao estamos em numero completo',
+               'faltam dois, só tem três a bordo mas saímos em cinco', 'só voltou um', 'eram oito e agora são sete', 'vieram dez e voltaram nove', 'só sobraram três a bordo', 'saímos em oito e voltamos em sete', 'estamos em cinco mas eram seis',
+               'tem dois a menos', 'são quatro mas deviam ser cinco', 'tem só três a bordo e eram quatro', 'dois ficaram na ilha']
+F3_NOMES_CAO = ['Marcão', 'Ricão', 'Maicão', 'Dicão', 'Jucão', 'Gilsão', 'Assunção', 'Ascensão', 'Nicão']
+F3_ATRIBUTOS = ['óculos', 'boné', 'camisa listrada', 'mochila', 'barba', 'relógio', 'chapéu', 'colar', 'tatuagem', 'short', 'camiseta azul', 'vestido azul']
+F3_ELIPSE = [('{D} {A} sumiu', 'seguro'), ('{D} {A} não voltou', 'seguro'), ('vi {D} {A} cair no mar', 'sos'), ('esquecemos {D} {A} na praia', 'sos'), ('{D} {A} tá desaparecido faz meia hora', 'seguro'), ('perdemos {D} {A} de vista', 'seguro'),
+             ('cadê {D} {A}?', 'seguro'), ('não achei {D} {A}', 'seguro'), ('{D} {A} caiu no mar', 'sos'), ('{D} {A} está boiando', 'sos')]
+F3_AGUA = [('o Pedro foi sugado pela correnteza', 'sos'), ('o Pedro tá longe no mar', 'sos'), ('o Pedro tá nadando pro lado errado', 'sos'), ('ficou o Pedro pra trás no mar', 'sos'), ('ficou um pra trás no mar', 'sos'), ('o Pedro foi nadar e ninguém mais voltou', 'sos'),
+           ('a turma foi nadar e ninguém mais voltou', 'sos'), ('meu filho foi sugado pela maré', 'sos'), ('vi o Pedro cair', 'sos'), ('vi meu filho caindo', 'sos'), ('o Pedro foi puxado pra baixo', 'sos'),
+           ('vejo uma cabeça na água', 'sos'), ('perdemos o seu Antônio na água', 'sos'), ('tem um braço na água', 'sos'), ('vi um vulto na água', 'sos'), ('tem uma cabeça na água', 'sos'), ('escutei um grito vindo da água', 'sos'),
+           ('ouvi gritos vindo do mar', 'sos'), ('tem alguém na água', 'sos'), ('tem uma pessoa no mar sem colete', 'sos'),
+           ('foi nadar e não voltou', 'sos'), ('foi tomar banho de mar e não voltou', 'sos'), ('foi mergulhar e ainda não subiu', 'sos'), ('foi de caiaque e não voltou', 'sos'), ('foi de stand up e não voltou', 'sos'), ('foi de jet ski e não voltou', 'sos'), ('ninguém voltou do mergulho', 'sos'),
+           ('ninguém voltou', 'seguro'), ('ninguém apareceu', 'seguro'), ('nenhum voltou', 'seguro'), ('nenhum deles voltou', 'seguro'), ('foi visto pela última vez na popa', 'seguro'), ('não se sabe dele', 'seguro'), ('sem paradeiro', 'seguro'),
+           ('o jet ski voltou sem o rapaz', 'seguro'), ('o jet ski voltou vazio', 'seguro'), ('o tender voltou vazio', 'seguro'), ('o caiaque voltou vazio', 'seguro'), ('o bote voltou sem ninguém', 'seguro')]
+F3_DETS_SEU = ['meu', 'minha', 'nosso', 'nossa', 'seu', 'sua', 'teu', 'tua', 'o seu', 'a sua']
+F3_VERBOS_SEU = [('perdemos {D} {N}', 'seguro'), ('perdi {D} {N}', 'seguro'), ('procuramos {D} {N}', 'seguro'), ('esquecemos {D} {N} na praia', 'sos'), ('deixamos {D} {N} para trás', 'sos'), ('cadê {D} {N}?', 'seguro'), ('não achei {D} {N}', 'seguro'), ('perdemos {D} {N} na água', 'sos')]
+F3_POSSESSIVOS = ['os nossos', 'os meus', 'as nossas', 'os seus', 'as minhas']
+F3_OBJ_POSS = ['perdemos {P}', 'perdi {P}', 'cadê {P}?', 'não vejo {P}', 'não achei {P}', 'não encontramos {P}', 'ninguém viu {P}', 'falta {P}', 'faltam {P}', 'não estamos achando {P}']
+F3_TIPO_VERBOS = [('sumiu', ['{S} {V}', '{V} {S}']), ('desapareceu', ['{S} {V}']), ('caiu', ['{S} {V} no mar', '{S} {V} da proa']), ('perdemos', ['{V} {S}', '{V} {S} de vista']), ('perdi', ['{V} {S}']), ('falta', ['{V} {S}']), ('faltam', ['{V} {S}']),
+                  ('voltou', ['{S} não {V}']), ('boiando', ['{S} tá {V}']), ('afogando', ['{S} tá se {V}']), ('achei', ['não {V} {S}']), ('esquecemos', ['{V} {S} na praia']), ('deixamos', ['{V} {S} para trás']), ('pulou', ['{S} {V} no mar e não voltou'])]
+F3_TIPO_REAIS = ('falam',)
+F3_INGLES = [('man overboard', 'sos'), ('man overboard!', 'sos'), ('someone fell in the water', 'sos'), ('person in the water', 'sos'), ('he fell off the boat', 'sos'), ('my son fell off the boat', 'sos'), ('she fell overboard', 'sos'), ('there is a child in the water', 'sos'),
+             ('somebody is drowning', 'sos'), ('my wife is in the water and she cannot swim', 'sos'), ('he was swept overboard', 'sos'), ('they jumped into the water and did not come back', 'sos'),
+             ('o bote virou com dois dentro', 'sos'), ('o caiaque virou com a criança', 'sos'), ('a banana boat virou com gente dentro', 'sos'), ('o jet ski virou com duas pessoas', 'sos'),
+             ('my son is missing', 'seguro'), ('we lost the guy', 'seguro'), ('he is gone', 'seguro'), ('she is gone', 'seguro'), ('my friend is missing', 'seguro'), ('we lost him', 'seguro'), ('we cannot find my daughter', 'seguro'), ('the passenger is missing', 'seguro'), ('the kids are missing', 'seguro')]
+F3_TIPO_PESSOAS = ['meu filho', 'o Pedro', 'a criança', 'o supervisor', 'a babá', 'nosso vô']
+F3_RAROS_QUADROS = [('procurei {N} no barco inteiro e nada', 'seguro'), ('onde foi parar {N}?', 'seguro'), ('não consigo achar {N} em lugar nenhum', 'seguro'), ('não consigo falar com {N}, será que aconteceu algo no barco?', 'seguro'), ('{N} entrou no mar e não saiu', 'sos'),
+                    ('deixamos {N} no mar', 'sos'), ('vi {N} cair no mar', 'sos'), ('esquecemos {N} na praia e já saímos', 'sos'), ('{N} caiu e a gente não achou', 'seguro'), ('{N} se jogou da proa', 'sos'), ('{N} se perdeu da gente', 'seguro'), ('não vejo {N} desde cedo', 'seguro')]
+
+
+def f3_typo(w, k):
+    j = len(w) // 2
+    return [w[:j] + w[j + 1:], w[:j] + w[j + 1] + w[j] + w[j + 2:], w[:j] + w[j] + w[j:], (w.replace('u', 'o', 1) if 'u' in w else w[:-1] + 'o'), w[:1] + w[2:]][k]
+
+
+def f3_casos_risco():
+    """[(frase, esperado, família)]: 'sos' = a rota sos com a janela; 'seguro' = a rota sos ou o fallback seguro (a instrução do SOS, sem a situação de bordo, sem IA, sem dado)."""
+    out = []
+    for S, DE in F3_PESSOAS:
+        for t in F3_AUSENCIA:
+            f = t.replace('{S}', S).replace('{DE}', DE)
+            out += [(f, 'seguro', 'ausencia'), (f + ', qual a posição?', 'seguro', 'ausencia'), (f.capitalize() + '.', 'seguro', 'ausencia')]
+    for t in F3_CONTAGEM: out += [(t, 'seguro', 'contagem'), (t + ', qual a posição?', 'seguro', 'contagem'), (t.capitalize() + '!', 'seguro', 'contagem')]
+    for n in F3_NOMES_CAO:
+        for s in ((('a ' if n.endswith('ção') else 'o ') + n), n):
+            for fam, modelo, esp in ES_QUADROS: out.append((modelo.replace('{S}', s).replace('{DE}', es_de(s)), esp, 'cao'))
+    for a in F3_ATRIBUTOS:
+        for d in ('o de', 'aquele de', 'a de'):
+            for modelo, esp in F3_ELIPSE: out.append((modelo.replace('{D}', d).replace('{A}', a), esp, 'elipse'))
+    for q, esp in F3_AGUA: out.append((q, esp, 'agua'))
+    for q, esp in F3_INGLES: out += [(q, esp, 'ingles'), (q + ', what is our position?', esp, 'ingles'), (q.upper(), esp, 'ingles')]
+    for n in ('filho', 'esposa', 'mãe', 'João', 'Antônio', 'amigo', 'avó'):
+        for d in F3_DETS_SEU:
+            for modelo, esp in F3_VERBOS_SEU: out.append((modelo.replace('{D}', d).replace('{N}', n), esp, 'seu'))
+    for p in F3_POSSESSIVOS:
+        for modelo in F3_OBJ_POSS: out += [(modelo.replace('{P}', p), 'seguro', 'nossos'), (modelo.replace('{P}', p).rstrip('?') + ', qual a posição?', 'seguro', 'nossos')]
+    for v, fr in F3_TIPO_VERBOS:
+        for k in range(5):
+            m = f3_typo(v, k)
+            if m == v or m in F3_TIPO_REAIS: continue   # («falam» é a palavra «eles falam», não o erro de «faltam»)
+            for i, f in enumerate(fr): out.append((f.replace('{S}', F3_TIPO_PESSOAS[(len(out) + i) % len(F3_TIPO_PESSOAS)]).replace('{V}', m), 'seguro', 'digitacao'))
+    for n in le_dados('pessoa-nomes-raros.txt'):
+        for caixa in ('lower', 'upper', 'sem'):
+            for modelo, esp in F3_RAROS_QUADROS: out.append((perd_caixa(modelo.replace('{N}', n), caixa), esp, 'raro'))
+    for w in le_dados('pessoa-guarda.txt'):
+        for modelo in ('o Pedro foi mergulhar e não voltou, {W}', '{W}: o menino foi nadar e não voltou', 'o Pedro foi mergulhar e não voltou na {W}', 'o aluno da aula de mergulho não voltou, {W}', 'meu filho saiu de caiaque e não voltou, {W}'):
+            out.append((modelo.replace('{W}', w), 'sos', 'guarda'))
+    return out
+
+
+def f3_ruim(r, esp):
+    ok = r6_seguro(r) and (esp != 'sos' or r['key'] == 'sos')
+    return None if ok else r6_ruim(r) + (esp,)
+
+
+def grupo_p4g_final3(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        casos = f3_casos_risco()
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in casos])
+        por = {}
+        for (q, esp, fam), r in zip(casos, res):
+            x = f3_ruim(r, esp)
+            por.setdefault(fam, [0, []])
+            por[fam][0] += 1
+            if x: por[fam][1].append(x)
+        rotulos = {'ausencia': 'a AUSÊNCIA com a pessoa explícita («não tem o Pedro a bordo», «só voltaram quatro, o Pedro não veio», «quatro voltaram e o Pedro não», «não tenho notícia do Pedro desde ontem»: %d pessoas × 14 formas × pura/cauda/maiúscula)',
+                   'contagem': 'a CONTAGEM sem substantivo de pessoa («voltaram só três e eram quatro», «saímos em seis e voltamos em cinco», «tem um a menos», «sobrou um na ilha», «a tripulação não está completa»: %d frases × pura/cauda/pontuação)',
+                   'cao': 'o APELIDO em -cão/-são («o Marcão», «Gilsão», «a Assunção»: %d frases dos 9 nomes × 53 quadros, com e sem artigo)',
+                   'elipse': 'o sintagma ELÍPTICO («o de óculos», «aquele de boné», «a do vestido azul»: %d frases dos 12 atributos × 3 determinantes × 10 sinais)',
+                   'agua': 'a ÁGUA sem verbo de queda («foi sugado pela correnteza», «tá longe no mar», «tem uma cabeça na água», «foi nadar e não voltou», o jet ski que volta vazio: %d frases)',
+                   'seu': 'o «seu/sua/teu/tua» e o «o seu» como o «meu» («perdemos seu João», «esquecemos sua esposa na praia»: %d frases)',
+                   'nossos': 'o «os nossos», «os meus», «as nossas» como OBJETO («perdemos os nossos», «cadê os meus?», «não vejo as nossas», «falta os seus»: %d frases)',
+                   'digitacao': 'o ERRO DE DIGITAÇÃO NO VERBO («somio», «ciu no mar», «fata», «perrdi», «achano»: %d frases, 5 erros por verbo)',
+                   'raro': 'o NOME RARO fora de PRENOMES em minúscula, em CAIXA ALTA e sem acento como objeto e na água («procurei valdemar no barco inteiro», «onde foi parar baltazar», «gumercindo entrou no mar e não saiu», «deixamos X no mar»: %d frases)',
+                   'ingles': 'o PEDIDO DE SOCORRO EM INGLÊS e o bote que vira com gente dentro («man overboard», «someone fell in the water», «my son is missing», «o bote virou com dois dentro»: %d frases)',
+                   'guarda': 'a ÁGUA que as guardas da rotina NÃO derrubam («o Pedro foi mergulhar e não voltou, <aula, agenda, lista, sábado, nota, peixe, marina…>»: %d frases, a janela abre)'}
+        for fam, (n, ruins) in sorted(por.items()):
+            ped('p4g final3: ' + rotulos[fam] % n + ' é a rota sos (com a janela quando é a água) ou o fallback seguro: nunca a IA, nunca rota de dado, sem posição, rumo, SOG, ETA nem pessoas', not ruins, (len(ruins), ruins[:5]))
+        ped('p4g final3: a matriz cobre as 11 famílias e tem milhares de frases', set(por) == set(rotulos) and len(casos) >= 4000, (len(casos), sorted(por)))
+        sos = [q for (q, esp, fam) in casos if esp == 'sos'][::11]
+        jr = pg.evaluate(JS_ES_JANELA, sos)
+        pl = jr['plotter']
+        ruins = [(o['q'], o['key'], p['p'], p['l1'][:60]) for o in jr['out'] for p in o['pos'] if not (o['abre'] and p['l1'] == pl and p['jan'] and not p['ia'] and not PERD_VEDADO.search(p['txt']) and not confere.R_COORD.search(p['txt']))]
+        ped('p4g final3: depois da frase de água da matriz (%d frases), a janela abre e a pergunta de posição, rumo, ETA, pessoas e velocidade é a instrução do plotter, sem IA nem dado' % len(sos), not ruins and len(sos) >= 100, (len(ruins), ruins[:4]))
+        # o diário (a mesma pergunta, mandada registrar): o socorro abre com a instrução e a janela; a ESPERA leva a instrução sem a janela; a rotina é só a linha (a 3ª rodada de correção: o `risco` do texto, não a lista)
+        dr = pg.evaluate(JS_ES_DIARIO, F3_DIARIO + F3_DIARIO_ESPERA + F3_DIARIO_ROTINA)
+        n1, n2 = len(F3_DIARIO), len(F3_DIARIO_ESPERA)
+        ruins = [(x['q'], x['key'], x['abre'], x['soSOS']) for x in dr[:n1] if not (x['key'] == 'diario' and x['abre'] and x['soSOS'] and not x['coord'])]
+        ped('p4g final3: o DIÁRIO com a pessoa que só o `risco()` reconhece («registre no diário: a onda levou o Pedro», «…o grumete caiu», «…Tuca está boiando», «…tem uma cabeça na água», «…foi nadar e não voltou») grava 1 linha E abre com a instrução de segurança e a janela', not ruins, ruins[:4])
+        ruins = [(x['q'], x['key'], x['abre'], x['soSOS']) for x in dr[n1:n1 + n2] if not (x['key'] == 'diario' and not x['abre'] and x['soSOS'])]
+        ped('p4g final3: o DIÁRIO com a ESPERA («registre no diário: não tem o Pedro a bordo», «voltaram só três e eram quatro») leva a instrução do SOS e NÃO abre a janela', not ruins, ruins[:4])
+        ruins = [(x['q'], x['key'], x['abre'], x['soSOS']) for x in dr[n1 + n2:] if not (x['key'] == 'diario' and not x['abre'] and not x['soSOS'])]
+        ped('p4g final3: o DIÁRIO da rotina («o sinal do GPS caiu às 10h», «o diário do dia 3 sumiu», «a autonomia caiu», «o Pedro não respondeu a proposta») é só a linha: sem a instrução e sem a janela', not ruins, ruins[:4])
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p4g_final3'] = grupo_p4g_final3
+
+
+F3_VERBOS_COM = ['não respondeu', 'não responde', 'não atende', 'não atendeu', 'não retornou', 'parou de responder']
+F3_SUJEITOS_COM = ['o Pedro', 'a Maria', 'o comandante', 'o mecânico', 'o pessoal']
+F3_FRAMES_LUGAR = ['{S} não voltou d{L}', '{S} não apareceu n{L}', '{S} ainda não chegou n{L}', '{S} foi n{L} e não voltou']
+F3_CITA = ['{S} disse que o motor não responde', '{S} avisou que o radar sumiu', '{S} falou que o wifi sumiu', '{S} disse que o sinal do GPS caiu', '{S} avisou que a internet caiu', '{S} disse que não achou o filtro', '{S} não viu o alarme', '{S} disse que o filtro não aparece no estoque',
+           '{S} falou que o gerador sumiu', '{S} disse que o plotter sumiu', '{S} falou que a bomba não responde', '{S} avisou que o painel não responde']
+F3_CITA_PESSOAS = ['o Pedro', 'a Maria', 'o comandante', 'o mecânico', 'o técnico da Garmin', 'o eletricista', 'o marinheiro', 'o vendedor', 'o fornecedor', 'o dono da marina', 'o fiscal', 'o instrutor']
+F3_FRAMES_ITEM = ['{I} sumiu', '{I} desapareceu', 'perdi {I}', 'não acho {I}', 'cadê {I}?']
+F3_FRAMES_DADO = ['{I} caiu', '{I} caiu depois da viagem', '{I} despencou', '{I} sumiu', '{I} desapareceu']
+F3_CIDADES_FRAMES = ['falta diesel pra chegar em {C}?', 'falta combustível pra {C}?', 'quanto falta pra {C}?', 'a que horas chegamos em {C}?', 'não chegamos em {C} hoje?']
+F3_INFINITIVOS = ['falta trocar o rotor?', 'falta limpar', 'falta verificar a bomba', 'falta conferir os coletes', 'falta abastecer', 'falta revisar o gerador', 'procuro trocar o filtro', 'falta instalar o plotter', 'falta regular o leme', 'faltou comprar gelo',
+                 'faltou trocar o filtro', 'falta desligar o inversor', 'falta carregar a bateria']
+F3_MILHAS = ['quantas milhas faltam', 'quantas milhas faltam?', 'quantas milhas ainda faltam?', 'quantas voltas faltam', 'quantas braças faltam', 'quantas semanas faltam', 'quantas paradas faltam', 'quantos quilos faltam', 'quantas curvas faltam', 'quantos minutos faltam',
+             'quantas horas faltam', 'quantos litros faltam', 'quantas milhas faltam para a Barra Sul?', 'quantos nós faltam']
+
+
+def f3_casos_rotina():
+    out = []
+    for o in le_dados('pessoa-objetos.txt'):
+        for s in F3_SUJEITOS_COM:
+            for v in F3_VERBOS_COM: out.append((s + ' ' + v + ' ' + o, 'comunica'))
+    for l in le_dados('pessoa-lugares.txt'):
+        art = 'a ' if l.endswith(('a', 'ção', 'cao')) and l not in ('check-in', 'pier') else 'o '
+        for s in F3_SUJEITOS_COM[:3]:
+            for f in F3_FRAMES_LUGAR:
+                de = 'da ' if art == 'a ' else 'do '
+                out.append((f.replace('{S}', s).replace('d{L}', de + l).replace('n{L}', ('na ' if art == 'a ' else 'no ') + l), 'lugar'))
+    for i in le_dados('pessoa-itens.txt'):
+        for f in F3_FRAMES_ITEM: out.append((f.replace('{I}', i), 'item'))
+    for i in le_dados('pessoa-dados.txt'):
+        for f in F3_FRAMES_DADO: out.append((f.replace('{I}', i), 'dado'))
+    for c in le_dados('pessoa-cidades.txt'):
+        for f in F3_CIDADES_FRAMES: out.append((f.replace('{C}', c), 'cidade'))
+    for p in F3_CITA_PESSOAS:
+        for f in F3_CITA: out.append((f.replace('{S}', p), 'cita'))
+    for q in F3_MILHAS: out.append((q, 'milhas'))
+    for q in F3_INFINITIVOS: out.append((q, 'infinitivo'))
+    return out
+
+
+def grupo_p4g_final3_rotina(b, muta, ped):
+    casos = f3_casos_rotina()
+    src = es_cerebro_antigo()
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        qs = [q for q, _ in casos]
+        res = pg.evaluate(JS_REDE, qs)
+        dif = pg.evaluate(JS_ES_DIF, qs)
+    finally:
+        pg.ctx.close()
+    ant = None
+    if src:
+        pa = es_pagina_antiga(b, src)
+        try:
+            ant = pa.evaluate(JS_ES_DIF, qs)
+        finally:
+            pa.ctx.close()
+    nomes = {'comunica': 'a COMUNICAÇÃO com objeto («o Pedro não respondeu a proposta», «não atende os e-mails», «parou de responder o grupo»: 58 objetos × 5 sujeitos × 6 verbos)',
+             'lugar': 'o LUGAR de terra («não voltou do churrasco», «não apareceu no cais», «foi na pousada e não voltou»: 74 lugares × 3 sujeitos × 4 frames)',
+             'item': 'o ITEM do cotidiano («a bandeira sumiu», «perdi o pendrive», «cadê o voucher?»: 155 itens × 5 frames)', 'dado': 'o DADO de bordo que cai e some («a autonomia caiu», «o desempenho despencou», «a vazão sumiu»: 57 dados × 5 frames)',
+             'cidade': 'a CIDADE com a inicial maiúscula («falta diesel pra chegar em Itajaí?», «quanto falta pra Floripa?»: 33 cidades × 5 frames)', 'cita': 'o que o OUTRO disse («o mecânico disse que o motor não responde», «o Pedro avisou que o radar sumiu», «o Pedro não viu o alarme»: 12 pessoas × 12 frames)',
+             'milhas': '«quantas milhas faltam?» e as unidades (milhas, voltas, braças, semanas, paradas, quilos)',
+             'infinitivo': 'o INFINITIVO depois de «falta» («falta trocar o rotor?», «falta limpar», «procuro trocar o filtro»: o -ar/-ir não é o nome)'}
+    por = {}
+    for i, (q, fam) in enumerate(casos):
+        r = res[i]
+        d = dif[i]
+        por.setdefault(fam, [0, []])
+        por[fam][0] += 1
+        ruim = []
+        if r['key'] == 'sos' or r['pessoa'] or r['jan']: ruim.append(('socorro/fallback de pessoa', r['key'], r['jan'], r['pessoa']))
+        # (a pessoa que CITA a coisa — «o Pedro falou que o wifi sumiu» — nunca vai à IA com a situação de bordo, por desenho: a rede larga do pedeIA; a rota é a mesma, só a IA some)
+        igual = ant is None or (ant[i][1], ant[i][2]) == (d[1], d[2]) or (fam == 'cita' and ant[i][1] == d[1] and ant[i][2] and not d[2])
+        if not igual: ruim.append(('o oráculo f3b121c', ant[i][1] + '->' + d[1], 'IA %s->%s' % (ant[i][2], d[2])))
+        if ruim: por[fam][1].append((q,) + ruim[0])
+    for fam, (n, ruins) in sorted(por.items()):
+        ped('p4g final3 rotina: ' + nomes[fam] + ' NÃO é socorro nem o fallback seguro e é igual ao cérebro f3b121c (mesma rota, mesma IA)', not ruins, (len(ruins), ruins[:6]))
+    ped('p4g final3 rotina: as 8 famílias e milhares de frases', set(por) == set(nomes) and len(casos) >= 3500, (len(casos), sorted(por)))
+    if ant is None: ped('p4g final3 rotina: o git tem o commit-oráculo %s (clone raso não serve)' % ES_ORACULO, False)
+
+
+GRUPOS_3A['p4g_final3_rotina'] = grupo_p4g_final3_rotina
 
 
 
@@ -10582,7 +10811,6 @@ MUTANTES_P4G_REV = [
     ('p4g nome: «Cadê Pedro? Não está a bordo» (o grupo de 2 na abertura da frase) fica sem nome', "        else if (g.length > 1) ini = g[1].i;\n", "        else if (g.length > 1) return;\n", ('p3c',)),
     # —— as guardas do que é rotina (cada uma é acusada por uma pergunta que só ela segura) ——
     ('p4g guarda: a lista SOS lê «o passageiro sumiu da lista» sem tirar o sumiço de dados (a emergencia sem a guarda)', r"q = semSumicoDeDados(q.split(' a gente ').join(' nos '));", r"q = q.split(' a gente ').join(' nos ');", ('p3c',)),
-    ('p4g guarda: a pessoaSumida sem tirar o sumiço de dados («perdi um passageiro na lista de saída»)', 'pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(fulaniza(comPrenomes(aGente(grafia(q))))))))', 'pronPessoa(semPossuidor(semRetornoRotina(fulaniza(comPrenomes(aGente(grafia(q)))))))', ('p3c',)),
     ('p4g guarda: sem o verbo + lugar de dado («o passageiro sumiu da lista»)', r"new RegExp(' ' + V_ANY + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
     ('p4g guarda: sem o verbo + pessoa + lugar de dado («sumiu um passageiro da lista», «falta gente no cadastro»)', r"new RegExp(' ' + V_ANY + ' ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
     ('p4g guarda: sem o perdi + pessoa + lugar de dado («perdi um passageiro na lista de saída»)', r"new RegExp(' (?:perdi|perdemos|perdeu|perderam) ' + DETN + PES_ELE + LOC_ADMIN, 'g'),", r"new RegExp('(?!)', 'g'),", ('p3c',)),
@@ -10597,7 +10825,6 @@ MUTANTES_P4G_REV = [
     ('p4g nome: a palavra de bordo com maiúscula é pessoa («o Plotter sumiu», «o Sonar sumiu»)', r"var NAO_NOME = ' ' + ['plotter', 'radar', 'sonar', 'radio',", r"var NAO_NOME = ' ' + ['xplotter', 'xradar', 'xsonar', 'xradio',", ('p3c',)),
     ('p4g nome: o aplicativo e o serviço com maiúscula são pessoa («o Bluetooth sumiu», «o Android desapareceu»)', r"'bluetooth', 'android', 'ios', 'iphone',", r"'xbluetooth', 'xandroid', 'xios', 'xiphone',", ('p3c',)),
     ('p4g nome: a marca com maiúscula é pessoa («o Volvo sumiu», «o Simrad desapareceu»)', r"'pix', 'garmin', 'raymarine', 'simrad', 'furuno', 'lowrance', 'volvo',", r"'pix', 'xgarmin', 'xraymarine', 'xsimrad', 'xfuruno', 'xlowrance', 'xvolvo',", ('p3c',)),
-    ('p4g nome: o substantivo comum com maiúscula é pessoa («a Manutenção desapareceu», «a Informação sumiu»)', r"|| SUBST_COMUM.test(tk.w); }", r"; }", ('p3c',)),
     ('p4g nome: o advérbio que abre a frase é pessoa («Ontem desapareceu o sinal do AIS», «Hoje sumiu o alarme»)', r"'ontem', 'hoje', 'agora', 'depois', 'tambem', 'entao',", r"'xontem', 'xhoje', 'xagora', 'xdepois', 'xtambem', 'xentao',", ('p3c',)),
     ('p4g nome: o pronome que abre a frase é pessoa («Isso sumiu de repente»)', r"'logo', 'aqui', 'ainda', 'quando', 'algo', 'tudo', 'nada', 'isso', 'aquilo',", r"'logo', 'aqui', 'ainda', 'quando', 'algo', 'xtudo', 'xnada', 'xisso', 'xaquilo',", ('p3c',)),
     # —— o registro no diário e a foto com o texto ——
@@ -10645,8 +10872,6 @@ MUTANTES_P4G_REV3 = [
     ('p4g3 nome: o prenome em minúscula não é nome («o pedro desapareceu», «PERDI O JOAO DE VISTA»)', r"    return mudou ? out : q;", r"    return q;", ('p3c',)),
     ('p4g3 nome: o prenome de 2 letras em minúscula («o ze sumiu», «a lu desapareceu») fora da lista', r"'gui', 'leo', 'ze', 'ed', 'rui',", r"'gui', 'leo', 'xze', 'xed', 'rui',", ('p3c',)),
     ('p4g3 nome: a lista dos prenomes sem «joao» e «jose»', r"var PRENOMES = ' ' + ['joao', 'jose',", r"var PRENOMES = ' ' + ['xjoao', 'xjose',", ('p3c', 'p4g_estrutura')),
-    ('p4g3 nome: a marca do cadastro é prenome («o beto» com o fabricante Beto no D.equipamentos)', r"if (w === '' || PRENOMES.indexOf(' ' + w + ' ') === -1 || (marcas !== null && marcas.indexOf(' ' + w + ' ') !== -1)) return w;", r"if (w === '' || PRENOMES.indexOf(' ' + w + ' ') === -1) return w;", ('p4g_pessoa',)),
-    ('p4g3 nome: o prenome troca só depois da guarda do sumiço de dados («perdi o lucas no whatsapp»)', 'pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(fulaniza(comPrenomes(aGente(grafia(q))))))))', 'pronPessoa(semPossuidor(semRetornoRotina(fulaniza(comPrenomes(semSumicoDeDados(aGente(grafia(q))))))))', ('p3c',)),
     ('p4g3 nome: «Não sumiu o alarme» é pessoa (sem «não» entre as palavras que abrem a frase)', r"'tem', 'nao', 'nem', 'nunca',", r"'tem', 'xnao', 'xnem', 'nunca',", ('p3c',)),
     ('p4g3 nome: «Já sumiu o sinal» é pessoa (sem as palavras de 2 letras)', r"'ja', 'so', 'ai', 'la', 'se', 'um', 'uma',", r"'xja', 'xso', 'xai', 'xla', 'xse', 'xum', 'xuma',", ('p3c',)),
     ('p4g3 nome: a sigla de 2 letras com a 2ª minúscula é nome («o Tv sumiu», «o Pc desapareceu»)', r"'tv', 'pc', 'hd', 'ar', 'ac', 'ip', 'id',", r"'xtv', 'xpc', 'xhd', 'xar', 'xac', 'xip', 'xid',", ('p3c',)),
@@ -10659,13 +10884,11 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_REV3
 # literais dos achados, os falsos positivos e a rede) acusa cada um; os de forma antiga (as formas fixas) seguem acusados pelo `p3c`.
 MUTANTES_P4G_REV4 = [
     # —— a rede de segurança e a ordem ——
-    ('p4g perdida: o pedeIA sem o nomeSumiu nem a rede (a pessoa com o nome com maiúscula passa à IA por qualquer rota que não seja a sos)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1) return false;", "    if (cabecaEmerg(pad(String(q || '')))) return false;", ('p4g_perdida',)),
-    ('p4g perdida: o pedeIA só com o nomeSumiu e a rede (a cabeça de emergência passa à IA)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1) return false;", "    if (risco(String(q || '')).n >= 1) return false;", ('checklist',)),
     ('p4g perdida: «proa», «onde», «agora» e «posição» na frase desviam a pessoa perdida para a rota de dado (o predicado depois das rotas de posição, rumo, ETA)', "    if (socorroImplicito(q) || risco(qRaw).n === 2) return 'sos';", "    if ((socorroImplicito(q) || risco(qRaw).n === 2) && !/ (?:proa|popa|onde|agora|posicao|rumo|eta|velocidade|pessoas a bordo) /.test(q)) return 'sos';", ('p4g_perdida',)),
     # —— a pessoa: o pronome, o possuidor, o partitivo, o nome ——
     ('p4g perdida: ele/ela nunca viram pessoa («ela pulou na água e não voltou», «ele foi nadar e sumiu»)', r"    return q.replace(/ (?:ele|ela|eles|elas)(?= )/g, ' pronpes');", r"    return q;", ('p4g_perdida',)),
-    ('p4g perdida: ele/ela são sempre pessoa, sem a pessoa nem a água na frase («ele sumiu» do plotter, «ela não responde»)', r"if (!/ (?:ele|ela|eles|elas) /.test(q) || !(PES_RE.test(q) || AGUA_RE.test(q))) return q;", r"if (!/ (?:ele|ela|eles|elas) /.test(q)) return q;", ('p4g_perdida',)),
-    ('p4g perdida: a água não é contexto do pronome (só a pessoa): «ele foi nadar e não voltou» fica sem pessoa', r"!(PES_RE.test(q) || AGUA_RE.test(q))) return q;", r"!PES_RE.test(q)) return q;", ('p4g_perdida',)),
+    ('p4g perdida: ele/ela são sempre pessoa, sem a pessoa nem a água na frase («ele sumiu» do plotter, «ela não responde»)', r"if (!/ (?:ele|ela|eles|elas) /.test(q) || !(PES_RE.test(q) || AGUA_RE.test(q) || PRON_EXIST.test(q))) return q;", r"if (!/ (?:ele|ela|eles|elas) /.test(q)) return q;", ('p4g_perdida',)),
+    ('p4g perdida: a água não é contexto do pronome (só a pessoa): «ele foi nadar e não voltou» fica sem pessoa', r"!(PES_RE.test(q) || AGUA_RE.test(q) || PRON_EXIST.test(q))) return q;", r"!(PES_RE.test(q) || PRON_EXIST.test(q))) return q;", ('p4g_perdida',)),
     ('p4g perdida: o pronome fora da lista de pessoas (PES_ELE sem «pronpes»)', r"'|fulano|pronpes)';   // («fulano» é o lugar do nome próprio", r"'|fulano)';   // («fulano» é o lugar do nome próprio", ('p4g_perdida',)),
     ('p4g perdida: sem a guarda do possuidor («o celular do Pedro», «o WhatsApp do Pedro» somem e viram socorro)', "  function semPossuidor(q) { return q.replace(POSSUIDOR, function", "  function semPossuidor(q) { return q; }\n  function xsemPossuidor(q) { return q.replace(POSSUIDOR, function", ('p4g_perdida',)),
     ('p4g perdida: o partitivo é possuidor («um dos passageiros» some do texto)', "return PARTITIVO.test(' ' + prev) || /^(?:desaparecimento|sumico|perda|falta|ausencia|noticias?|sinal|resposta|retorno|rastro|paradeiro|pista|vestigio|nada|perna|pernas|braco|bracos|mao|maos|pe|pes|cabeca|corpo|cabelo|pescoco|cintura|tornozelo|dedo|dedos) $/.test(prev) ? m :", 'return /^(?:desaparecimento|sumico|perda|falta|ausencia|noticias?|sinal|resposta|retorno|rastro|paradeiro|pista|vestigio|nada|perna|pernas|braco|bracos|mao|maos|pe|pes|cabeca|corpo|cabelo|pescoco|cintura|tornozelo|dedo|dedos) $/.test(prev) ? m :', ('p4g_perdida',)),
@@ -10711,7 +10934,6 @@ MUTANTES_P4G_REV5 = [
     ('p4g5 ausência: o «não está a bordo» só com outra pessoa na frase (o «ela não está a bordo» sozinho vira rotina)', '(pes && P_PRESENCA.some(function (r) { return r.test(s); })) || P_PRESENCA_PRES.some(function (r) { return r.test(s); }) ||', '(pes && P_PRESENCA.some(function (r) { return r.test(s); })) || (pes && P_PRESENCA_PRES.some(function (r) { return r.test(s); })) ||', ('p3c', 'p4g_perdida')),
     ('p4g5 possuidor: a guarda do possuidor não olha «de», «do», «da» («o colete da criança não está a bordo»)', "var POSSUIDOR = new RegExp(' ((?:[a-z0-9]+ )?)(?:do|da|dos|das) ", "var POSSUIDOR = new RegExp(' ((?:[a-z0-9]+ )?)(?:xdo|xda|xdos|xdas) ", ('p3c', 'p4g_perdida')),
     ('p4g5 família: sem o convidado e o hóspede que faltam («falta um dos convidados», «falta o hóspede»)', '|turistas?|hospedes?|convidad[oa]s?|cara|colegas?|', '|turistas?|xhospedes?|xconvidad[oa]s?|cara|colegas?|', ('p4g_perdida',)),
-    ('p4g5 rede: o pedeIA sem a rede larga (a pessoa que a escala, o dado ou o «hoje» tiram da rota sos vai à IA com o SOG e a proa)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1) return false;", "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n === 2) return false;", ('p4g_perdida',)),
     ('p4g5 rede: a rede sem a pessoa (só o sinal: «o motor não volta ao normal» deixa de ir à IA)', '    if (!pes) return PRON_SINAL.test(q) ? (agua || PALPITE_RE.test(q) ? 2 : 1) : (agua && PERIGO_SEMPES.test(q) ? 2 : 0);', '    if (!pes) return SINAL_FRACO.test(q) ? 1 : PRON_SINAL.test(q) ? (agua || PALPITE_RE.test(q) ? 2 : 1) : (agua && PERIGO_SEMPES.test(q) ? 2 : 0);', ('p4g_perdida',)),
     ('p4g5 rede: a rede sem o sinal (só a pessoa: «como ensinar meu filho a pilotar» deixa de ir à IA)', '    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));', '    perigo = true;', ('p4g_perdida',)),
     ('p4g5 distância: sem a barreira (o verbo é de outra coisa: «o Pedro disse que o motor sumiu» vira socorro)', "var GAP_PAL = '(?: (?!' + GAP_BARRA + '(?= ))[a-z0-9\\'’-]+)';", "var GAP_PAL = '(?: [a-z0-9\\'’-]+)';", ('p4g_perdida',)),
@@ -10820,7 +11042,6 @@ MUTANTES_P4G_REV7 = [
     ('p4g estrutura M1: o sujeito aberto depois do sumiço («sumiu o dono») não é mais fulano', "    if (SUMICO_V.test(ant)) return 'fulano';\n", "", E7),
     ('p4g estrutura: o sujeito aberto antes do sumiço («o dono sumiu», «a babá se perdeu») não é mais fulano', "      if (SUMICO_V.test(w) || (w === 'se' && /^perd/.test(t[k + 1] || ''))) return 'fulano';\n", "", E7),
     ('p4g estrutura: o sujeito aberto da queda com lugar («a babá caiu da proa») não é mais fulano', "    if (QUEDA_LUGAR_RE.test(' ' + t.slice(fim, fim + 9).join(' ') + ' ')) return 'fulano';", "    if (false) return 'fulano';", E7),
-    ('p4g estrutura M3: a lista das coisas é vazia (o plotter, o Spotify, a pressão, o sinal viram pessoa)', "    [FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, NAO_NOME, GAP_OBJ, CONT_ADMIN, CONT_DIGITAL, HEAD_DADO, BARCOS, PARTES, DURO_MAR].forEach(add);", "", E7),
     ('p4g estrutura: o equipamento, a marca e o modelo de D não são coisa (o que o cadastro conhece vira pessoa)', "    add(marcas);\n", "", E7),
     ('p4g estrutura: o piloto, o capitão, o imediato e o guia sem o complemento de coisa são o DUVIDOSO (a ESPERA), não pessoa aberta (o socorro de «o piloto sumiu»)', "if (AMBIGUAS_NP.indexOf(' ' + cab + ' ') !== -1) return ", "if (false) return ", E7),
     ('p4g estrutura: o «piloto automático» e o «guia de bordo» são pessoa duvidosa', "return /^(?:automatico|automatica|de|do|da|dos|das|rapido|rapida)$/.test(t[j + 1] || '') ? null : { tok: 'pessoax', fim: j + 1 };", "return { tok: 'pessoax', fim: j + 1 };", E7),
@@ -10838,11 +11059,8 @@ MUTANTES_P4G_REV7 = [
     # —— as guardas da rotina ——
     ('p4g estrutura M2: o retorno de rotina («não voltou a ligar/responder») é sinal', "    new RegExp(' (?:nao|ainda nao|nunca mais|ja nao) ' + V_RETORNO + ' (?:a|de) ' + ROT_RETORNO_INF + '(?= )', 'g'),", "    new RegExp('(?!)', 'g'),", E7),
     ('p4g estrutura: «não retorna as ligações» é sinal', "(?:retorna|retornou|retornam|responde|respondeu|respondem|atende|atendeu|atendem|volta|voltou) (?:as|a|os|o) (?:ligacoes|", "(?:xretorna|xretornou|xretornam|xresponde|xrespondeu|xrespondem|xatende|xatendeu|xatendem|xvolta|xvoltou) (?:as|a|os|o) (?:ligacoes|", E7),
-    ('p4g estrutura: «não voltou com a peça» (a coisa que ele deveria trazer) é sinal', "    return q.replace(RETORNO_COM, function (m, w) { return ehCoisa(w) ? ' ' : m; });", "    return q;", E7),
     ('p4g estrutura: «não voltou da marina/do almoço/do mercado» (o lugar de terra) é sinal', "V_RETORNO + ' d[oae]s? (?:(?:a|o|as|os) )?' + LUGAR_TERRA", "V_RETORNO + ' xd[oae]s? (?:(?:a|o|as|os) )?' + LUGAR_TERRA", E7),
     ('p4g estrutura: «não volta hoje/amanhã» (a hora de voltar) é sinal', "(?:hoje|amanha|depois|mais tarde|so amanha|segunda|terca|quarta|quinta|sexta|sabado|domingo|na semana que vem|semana que vem|no mes que vem)(?= )', 'g')", "(?:xhoje|xamanha|xdepois|xmais tarde|xso amanha)(?= )', 'g')", E7),
-    ('p4g estrutura: «não deu retorno sobre o orçamento» (a coisa do retorno) é sinal', "    q = q.replace(RETORNO_DEU, function (m, w) { return ehCoisa(w) ? ' ' : m; });\n", "", E7),
-    ('p4g estrutura M-C2: a escala, a lista, o WhatsApp, a mensagem, o e-mail, o telefone na frase NÃO tiram a ausência da rede (pendente 6)', "adm = ADM_RE.test(pad(raw).replace(/ contatos? com /g, ' '));", "adm = false;", E7 + ('p4g_perdida',)),
     ('p4g estrutura: «não está na equipe» / «na tripulação» (o lugar de lista) não é sinal, mas «grupo de amigos» e «tripulação extra» (coletivo de pessoas) são', "|n[ao]s? (?:equipes?|tripulacao)(?! d[eao]s? | extra )|reuniao|", "|reuniao|", E7),
     ('p4g estrutura: «não está vindo» / «não vem de volta» sem a água é a ESPERA (n=1), não o socorro nem nada (o apuro declarado precisa da água)', "fraco = SINAL_FRACO.test(q) || PERIGO_VEM.test(q);", "fraco = SINAL_FRACO.test(q);", E7),
     ('p4g estrutura: a ausência com o «para o passeio de sábado», «na reunião de amanhã» (o evento) é sinal', "|' + ROTINA_PAL + ') |' + ROT_EVENTO);", "|' + ROTINA_PAL + ') ');", E7),
@@ -10854,7 +11072,6 @@ MUTANTES_P4G_REV7 = [
     ('p4g estrutura: «deixamos X para trás / esquecemos X na praia» não é sinal', "    DEIXOU + ' ' + DETN + PES_ELX + '(?: [a-z0-9]+){0,2} (?:para tras|pra tras|na praia|na ilha|na agua|no mar|la fora)|' +", "    '(?!)|' +", E7),
     ('p4g estrutura: «X está boiando», «um corpo na água» não é sinal', "    PES_ELX + gap(3) + ' (?:boiando|flutuando)|(?:corpo|cadaver|afogad[oa]s?|vitima)(?: [a-z0-9]+){0,2} (?:na agua|no mar|boiando|flutuando)) ');", "    '(?!)) ');", E7),
     ('p4g estrutura: o corpo e o afogado não são núcleo da água', "var PES_AGUA_ROLE = '(?:corpos?|cadaver(?:es)?|afogad[oa]s?|esquiador(?:es)?|", "var PES_AGUA_ROLE = '(?:esquiador(?:es)?|", E7),
-    ('p4g estrutura: «não está X aqui / a bordo» (a pessoa dentro do verbo) não é sinal', "'|' + NAO_ESTA_X + '|' + SEM_NOTICIA_X + '|'", "'|' + SEM_NOTICIA_X + '|'", E7),
     ('p4g estrutura: «não temos notícia de X» não é sinal', "'|' + SEM_NOTICIA_X + '|' + SEM_CONTATO_X", "'|' + SEM_CONTATO_X", E7),
     ('p4g estrutura: «não consigo contato com X» não é sinal', "'|' + SEM_CONTATO_X + '|' + CHAMOU_X", "'|' + CHAMOU_X", E7),
     ('p4g estrutura: «chamamos X e ninguém respondeu» não é sinal', "'|' + CHAMOU_X + '|nao (?:embarcou", "'|nao (?:embarcou", E7),
@@ -10865,8 +11082,6 @@ MUTANTES_P4G_REV7 = [
     ('p4g estrutura M9: o ele/ela depois do verbo («sumiu ele», «perdi ele», «ninguém encontra ele») não é sinal', "' + V_PRON_OBJ + ' ' + PRON + '|(?:nao|ninguem) (?:sei", "' + V_PRON_OBJ + ' xxx|(?:nao|ninguem) (?:sei", E7),
     ('p4g estrutura: o apuro (se debatendo, parou de nadar, ficou para trás) com a pessoa duvidosa não é socorro', "    if (perigo) return 2;\n", "    if (perigo) return 1;\n", E7),
     ('p4g estrutura M6: a água com o sinal forte é a ESPERA, não o socorro («perdemos X no mar», «X caiu na água»)', "|na agua|no mar|corpo|cadaver|afogad[oa]s?|de vista) /.test(q) ? 2 : 1;", "|na agua|no mar|corpo|cadaver|afogad[oa]s?|de vista) /.test(q) ? 1 : 1;", E7),
-    ('p4g estrutura: a água com a ausência («X não volta do mergulho») é a ESPERA, não o socorro', "    if (fraco) return adm && !agua ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);", "    if (fraco) return adm && !agua ? 0 : 1;", E7),
-    ('p4g estrutura: o palpite da queda («será que caiu?») com a ausência é a ESPERA', "    if (fraco) return adm && !agua ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);", "    if (fraco) return adm && !agua ? 0 : (agua ? 2 : 1);", E7),
     ('p4g estrutura: a ausência de pessoa de terra com a água («a pessoa do stand up paddle») nunca é a água', "    agua = AGUA_RE.test(sa) || PESSOA_NA_AGUA.test(sa);", "    agua = AGUA_RE.test(sa);", E7),
     # —— o ponto de entrada único ——
     ('p4g estrutura M10: o diário não leva a pessoa aberta («registre no diário: o dono sumiu»)', "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }", "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n); }", E7 + ('p4g_pessoa',)),
@@ -10924,8 +11139,6 @@ MUTANTES_P4G_R2 = [
     ('p4g R2 ambígua: «o fiscal», «o cliente», «o resto» (a pessoa que também é item de dado) não é a ESPERA', "      if (AMBIGUAS_PES.indexOf(' ' + cb + ' ') !== -1) return { tok: 'pessoax', fim: j + 1 };", "      if (false) return { tok: 'pessoax', fim: j + 1 };", ('p4g_sujeito',)),
     ('p4g R2 ambígua: «o contador não volta do mergulho» (a coisa que também é pessoa, com a água) é coisa', "return FULA_AGUA && !/^(?:de|do|da|dos|das)$/.test(t[j + 1] || '') ? { tok: 'fulano', fim: j + 1, aberta: true } : { coisa: true };", 'return { coisa: true };', ('p4g_sujeito',)),
     ('p4g R2 2 letras: «a vó», «o DJ», «o fã» (a cabeça de 2 letras depois do artigo) não é candidata', '    if (w.length < 3 && !(depoisDeDet && /^[a-z]{2}$/.test(w))) return false;', '    if (w.length < 3) return false;', ('p4g_estrutura2', 'p4g_estrutura')),
-    ('p4g R2 composta: «ex-marido», «sub-oficial», «guarda-vidas» (a palavra com hífen) não é candidata', '    if (!w || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(w) || /^[0-9]+$/.test(w)) return false;', '    if (!w || !/^[a-z0-9]+$/.test(w) || /^[0-9]+$/.test(w)) return false;', ('p4g_estrutura2', 'p4g_estrutura')),
-    ('p4g R2 coletivo: «a delegação», «a multidão», «a criatura» (o -ção de pessoa) é abstrato', '  var ABSTRATO_NP = /^(?!(?:tripulacao|delegacao|comissao|congregacao|multidao|populacao|selecao|criatura|autoridade|assistencia|presidencia|gerencia|direcao|comunidade|irmandade|fraternidade|figura)s?$)', '  var ABSTRATO_NP = /^(?!tripulacao$)', ('p4g_sujeito',)),
     ('p4g R2 crase: «foi à farmácia e não voltou» (o «a» depois do verbo de movimento é artigo)', "        if (w === 'a' && MOV_RE.test(ant)) { out.push(w); i++; continue; }", '', ('p4g_rotina2',)),
     ('p4g R2 infinitivo: «não volta a funcionar» (o «a» + infinitivo é artigo)', "        if (w === 'a' && /^(?:volta|voltou|voltam|voltaram|comecou|comecaram|continua|continuou|continuam|passou|passaram|tornou|tornaram|pos|ajudou|aprendeu|conseguiu|tentou)$/.test(ant) && t[i + 1] && /(?:ar|ir|er)$/.test(t[i + 1])) { out.push(w); i++; continue; }", '', ('p4g_rotina2',)),
     ('p4g R2 demonstrativo: «notícia desse X», «nada daquele X» (a contração) não tem a pessoa', "      if (DEM_CONTR[w] && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", "      if (false && DEM_CONTR[w] && SLOT_NOTICIA.indexOf(' ' + ant + ' ') !== -1) {", ('p4g_sujeito', 'p4g_estrutura')),
@@ -10939,9 +11152,6 @@ MUTANTES_P4G_R2 = [
     ('p4g R2 rotina: «sem colete» é apuro sem a água («quem está sem colete?»)', '    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));', '    perigo = PERIGO_ANY.test(q) || / sem (?:colete|boia) /.test(q) || (agua && PERIGO_AGUA.test(q));', ('p4g_rotina2', 'p4g_estrutura')),
     ('p4g R2 rotina: «alguém viu o Pedro na marina / hoje» é socorro', "'(?!(?: [a-z0-9]+){0,2} (?:n[ao]|em) (?:' + LUGAR_TERRA + ')(?= )| (?:hoje|ontem|de manha|de tarde|de noite)(?= )) ',", "' ',", ('p4g_rotina2',)),
     ('p4g R2 rotina: a escala («estamos sem o mecânico hoje», «quem faltou hoje?») é ausência', ' || FALTA_HOJE.test(pad(raw));', ';', ('p4g_rotina2',)),
-    ('p4g R2 rotina: o curso de mergulho na agenda é a atividade na água com a ausência', '(ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q))', 'false', ('p4g_rotina2',)),
-    ('p4g R2 rotina: «foi comprar gelo e não voltou», «saiu para almoçar» (a ida por um propósito de terra) é sinal', "q = q.replace(IDA_TERRA, ' ').replace(IDA_INF, function", "q = q.replace(IDA_TERRA, ' ').replace(/(?!)/, function", ('p4g_rotina2',)),
-    ('p4g R2 rotina: «o rapaz do ar-condicionado», «o técnico do gerador» (o profissional do equipamento) é a pessoa que some', "(?:' + LUGAR_TERRA + '|' + GAP_OBJ + ')(?= )', 'g');", "(?:' + LUGAR_TERRA + ')(?= )', 'g');", ('p4g_rotina2',)),
     ('p4g R2 rotina: as palavras das telas do app e o dinheiro (horímetro, checklist, widget, euro, dólar) são coisa', "BARCOS, PARTES, DURO_MAR, COISAS_APP, FORA_BARCO.join(' ')].forEach(add);", 'BARCOS, PARTES, DURO_MAR].forEach(add);', ('p4g_rotina2',)),
     ('p4g R2 rotina: o «próximo», o «seguinte», o «atual» (o modificador nominal) é cabeça de sintagma', " proximo proxima proximos proximas seguinte seguintes atual atuais principal principais maior maiores menor menores melhor melhores pior piores terceiro terceira antigo antiga antigos antigas anterior anteriores posterior posteriores certo certa inteiro inteira proprio propria demais ';", " ';", ('p4g_rotina2',)),
     ('p4g R2 ditado: «sumiu armador» (a palavra solta depois do verbo do sumiço) não é a pessoa', '        if ((SUMICO_V.test(ant) || QUEDA_V.test(ant)) && fim) {', '        if (false) {', ('p4g_estrutura2',)),
@@ -10955,6 +11165,104 @@ MUTANTES_P4G_R2 = [
     ('p4g R2 sem substantivo: «quase todos» (o quantificador com «quase») não é sujeito', "    if (/ quase (?:todos|todas|todo mundo)/.test(q)) q = q.replace(/ quase (todos|todas|todo mundo)/g, ' $1');", '', ('p4g_sujeito',)),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_R2
+
+
+# —— os mutantes do fechamento da home, 3ª rodada de correção (cada um é acusado por um grupo NOVO: p4g_final3 e p4g_final3_rotina) ——
+MUTANTES_P4G_F3 = [
+    ('p4g final3 C8: o sujeito é a coisa («o motor não responde», «o radar sumiu», «o sinal do GPS caiu») — sem a guarda, a pessoa que FALA vira a que some', "    if (SEM_C8) return q;", "    return q;", ('p4g_final3_rotina',)),
+    ('p4g final3 C8: a pessoa depois do verbo não cancela a guarda («qual a posição? desapareceu a Ana»)', "        if (t.slice(k + 1, k + 4).some(function (x) { return x !== 'zz' && pessoaTok(x); })) continue;", "", ('p4g_final3', 'p4g_perdida')),
+    ('p4g final3 C8: a cabeça do sintagma é o complemento («o equipe de filmagem sumiu»: a coisa é «filmagem»)', "        j = cabecaAntes(t, j);\n", "", ('p4g_estrutura',)),
+    ('p4g final3 C8: o objeto coisa do verbo de busca («não achei o filtro», «o Pedro não viu o alarme») não cancela', "        if (j < t.length && !pessoaTok(t[j]) && coisaObjeto(t[j]) && !(SLOT_CONTATO_OBJ.test(t[j]) && t.slice(j + 1, j + 5).some(pessoaTok))) { t[k] = 'xx'; ch = true; }", "        if (false) { t[k] = 'xx'; ch = true; }", ('p4g_final3_rotina',)),
+    ('p4g final3 C8: «perdi o contato com a Ana» é objeto de coisa (o contato) e não a pessoa', " && !(SLOT_CONTATO_OBJ.test(t[j]) && t.slice(j + 1, j + 5).some(pessoaTok))) { t[k] = 'xx'; ch = true; }", ") { t[k] = 'xx'; ch = true; }", ('p4g_rede', 'p4g_estrutura')),
+    ('p4g final3 pedeIA: a rede larga SEM a guarda C8 não vale (a pessoa com o sinal de uma coisa de bordo vai à IA)', " || riscoLargo(String(q || '')).n >= 1) return false;", ") return false;", ('p4g_perdida',)),
+    ('p4g final3 comunicação: «não respondeu a proposta», «parou de responder os e-mails» (o verbo de resposta com objeto) é sinal de pessoa', "q = q.replace(COMUNICA, function (m, w) { return PES_CLITICO.test(w) ||", "q = q.replace(COMUNICA, function (m, w) { return true || PES_CLITICO.test(w) ||", ('p4g_final3_rotina',)),
+    ('p4g final3 comunicação: a duração depois de «não responde» («desde hoje cedo») é o objeto', "return PES_CLITICO.test(w) || TEMPO_PAL.test(w) ||", "return PES_CLITICO.test(w) ||", ('p4g_perdida',)),
+    ('p4g final3 lugar: «não voltou do churrasco», «não apareceu no cais» (o lugar de terra QUALQUER) é sinal', ".replace(LOCATIVO, function (m, w) { return pessoaOuAgua(w) ? m : ' '; });", ";", ('p4g_final3_rotina',)),
+    ('p4g final3 lugar: «foi no churrasco e não voltou» (a ida a um lugar de terra QUALQUER) é sinal', ".replace(IDA_LOC, function (m, x) { return pessoaOuAgua(x) ? m : ' '; })", "", ('p4g_final3_rotina',)),
+    ('p4g final3 lugar: o palpite do lugar («deve estar no banco») não tira a ausência', "      q = q.replace(DEVE_ESTAR, ' ').replace(IDA_TERRA, ' ')", "      q = q.replace(IDA_TERRA, ' ')", ('p4g_final3_rotina', 'p4g_rotina2')),
+    ('p4g final3 água: a guarda do retorno físico vence a água («o Pedro foi mergulhar no sábado e não voltou»)', " && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 :", ") ? 0 :", ('p4g_final3',)),
+    ('p4g final3 água: as guardas do retorno físico (a ida a terra, o lugar) valem com a água na frase («foi à marina de caiaque e não voltou»)', "    if (!aAt) {\n      RETORNO_ROTINA.slice(3)", "    if (true) {\n      RETORNO_ROTINA.slice(3)", ('p4g_final3',)),
+    ('p4g final3 água: a ida por um propósito de terra vale para qualquer infinitivo («foi buscar o remo e não voltou»)', "return !IDA_LAND.test(inf) || IDA_INF_AGUA.test(inf)", "return IDA_INF_AGUA.test(inf)", ('p4g_final3',)),
+    ('p4g final3 água: o «não voltou com o caiaque» é a coisa que ele deveria trazer', "    return aAt ? q : q.replace(RETORNO_COM,", "    return q.replace(RETORNO_COM,", ('p4g_final3',)),
+    ('p4g final3 cotidiano: a lista do cotidiano e do mostrador é vazia («a bandeira sumiu», «a autonomia caiu», «quantas milhas faltam»)', "[FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, ITENS_COTIDIANOS, NAO_NOME,", "[FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, NAO_NOME,", ('p4g_final3_rotina',)),
+    ('p4g final3 cidade: a inicial maiúscula depois de «em», «até», «pra chegar em» é nome («falta diesel pra chegar em Itajaí?»)', "      if (destino(antes) || (fimDestino >= 0", "      if (false || (fimDestino >= 0", ('p4g_final3_rotina',)),
+    ('p4g final3 cidade: o prenome que é cidade («em Vitória») é nome', " || destinoTok(ts[k - 1] || '', ts[k - 2] || '')) return w;", ") return w;", ('p4g_final3_rotina',)),
+    ('p4g final3 contagem: a contagem sem substantivo de pessoa («voltaram só três e eram quatro») não é sinal', "cn = contagemNua(aGente(pad(raw)), agua,", "cn = 0 && contagemNua(aGente(pad(raw)), agua,", ('p4g_final3',)),
+    ('p4g final3 contagem: o «completo» sem numeral («a tripulação não está completa», «não estamos completos») não é sinal', "    if (!pergunta && /nao (?:esta|estamos|estao|ta|tamos) (?:em numero )?(?:completo|completa|completos|completas)|", "    if (false && /nao (?:esta|estamos|estao|ta|tamos) (?:em numero )?(?:completo|completa|completos|completas)|", ('p4g_final3',)),
+    ('p4g final3 contagem: o «ficou um na ilha / sobrou gente na praia» não é sinal', "      if (/^(?:sobrou|sobraram|ficou|ficaram|restou)$/.test(t[k]) && (nums.indexOf(k + 1) !== -1", "      if (false && /^(?:sobrou|sobraram|ficou|ficaram|restou)$/.test(t[k]) && (nums.indexOf(k + 1) !== -1", ('p4g_final3',)),
+    ('p4g final3 ausência: o existencial negado («não tem o Pedro a bordo») não é sinal', "|' + NAO_ESTA_X + '|' + NAO_TEM_X + '|'", "|' + NAO_ESTA_X + '|'", ('p4g_final3',)),
+    ('p4g final3 ausência: o contraste do número com o sujeito negado («só voltaram quatro, o Pedro não veio») não é sinal', "'|' + NAO_TEM_X + '|' + SEM_X_BORDO + '|' + CONTRASTE_X + '|'", "'|' + NAO_TEM_X + '|' + SEM_X_BORDO + '|'", ('p4g_final3',)),
+    ('p4g final3 ausência: a duração («desde ontem», «desde cedo», «desde o lanche») é a escala do dia e tira a ausência da rede', "adm = ADM_RE.test(pad(raw).replace(/ contatos? com /g, ' ').replace(DESDE_QUALQUER, ' '))", "adm = ADM_RE.test(pad(raw).replace(/ contatos? com /g, ' '))", ('p4g_final3',)),
+    ('p4g final3 apelido: o -cão/-são com maiúscula é substantivo comum («o Marcão», «Gilsão», «a Assunção»)', "|| substComum(tk.w); }", "|| SUBST_COMUM_RE.test(tk.w); }", ('p4g_final3',)),
+    ('p4g final3 apelido: o -cão/-são curto em minúscula é abstrato («o marcão sumiu»)', "  var ABSTRATO_NP = { test: function (w) { return ABSTRATO_RE.test(w) && !(/(?:cao|sao)$/.test(w) && w.length <= 7 && !SUBST_LISTA.test(w)); } };", "  var ABSTRATO_NP = ABSTRATO_RE;", ('p4g_final3',)),
+    ('p4g final3 nome raro: a palavra terminada em -ar/-ir («valdemar», «baltazar») é verbo, mesmo como objeto', "|| ant === 'com' || FULA_AGUA || ant === 'parar' || sinalNome(t, i)) &&", "|| ant === 'com') &&", ('p4g_final3',)),
+    ('p4g final3 nome raro: o objeto de «procurei», «achar», «falar com» não é pessoa', "(?:perdemos|perdi|perdeu|perderam|vejo|vemos|vi|vimos|viu|viram|ve|vendo|achei|achamos|acho|acha|achou|achando|achar|encontro|encontra|encontrou|encontramos|encontrei|encontrando|encontrar|procuro|procura|procuramos|procurei|procurar|procurando|", "(?:perdemos|perdi|perdeu|perderam|vejo|vemos|vi|vimos|viu|viram|ve|vendo|achei|achamos|acho|acha|achou|achando|encontro|encontra|encontrou|encontramos|encontrei|encontrando|procuro|procura|procuramos|procurando|", ('p4g_final3',)),
+    ('p4g final3 nome raro: o «entrou no mar e não saiu» não tem sujeito (o verbo «entrou»)', "  var VSINAL = /^(?:entrou|entraram|entra|sum(?:iu|", "  var VSINAL = /^(?:sum(?:iu|", ('p4g_final3',)),
+    ('p4g final3 elipse: o «o de óculos» é coisa (o atributo é uma coisa de bordo)', "      if (!viuAtrib && !ATRIB_PES.test(t[k]) && (GAP_OBJ_RE.test(t[k])", "      if (!viuAtrib && (GAP_OBJ_RE.test(t[k])", ('p4g_final3',)),
+    ('p4g final3 elipse: o «aquele de boné» (o demonstrativo) não tem a pessoa', "        if (/^(?:aquele|aquela|aqueles|aquelas|esse|essa|esses|essas|este|esta|estes|estas)$/.test(w) && /^(?:de|do|da|dos|das)$/.test(t[i + 1] || '') && (r = anafora(t, i, ant))) {", "        if (false) {", ('p4g_final3',)),
+    ('p4g final3 «seu/sua/teu/tua»: o possessivo do tratamento fica fora do determinante', "|nosso|nossa|nossos|nossas|seu|sua|seus|suas|teu|tua|teus|tuas|esse|essa|esses|essas|aquel[ea]s?|est[ea]s?|mais de [a-z]+|", "|nosso|nossa|nossos|nossas|esse|essa|esses|essas|aquel[ea]s?|est[ea]s?|mais de [a-z]+|", ('p4g_final3',)),
+    ('p4g final3 «os nossos»: o possessivo sem cabeça como OBJETO («perdemos os nossos», «cadê os meus?») não é pessoa', "          if (POSSESSIVO.test(t[i + 1] || '') && (OBJ_V.test(ant) ||", "          if (false && POSSESSIVO.test(t[i + 1] || '') && (OBJ_V.test(ant) ||", ('p4g_final3',)),
+    ('p4g final3 digitação: a pessoa de núcleo («meu filho», «a criança») não é o candidato do verbo digitado errado', " || /^(?:ele|ela|eles|elas)$/.test(t[m]) || NUCLEO_RE.test(t[m])) perto = true;", " || /^(?:ele|ela|eles|elas)$/.test(t[m])) perto = true;", ('p4g_final3',)),
+    ('p4g final3 digitação: a queda digitada («ciu no mar», «caio no mar») não é a queda', "    if (CAIU_TIPO.test(q)) q = q.replace(CAIU_TIPO, ' caiu ');", "", ('p4g_final3',)),
+    ('p4g final3 digitação: o «somio» do ditado não é o sumiço', "[' somio ', ' sumiu '], [' somiu ', ' sumiu '],", "", ('p4g_final3',)),
+    ('p4g final3 digitação: a letra dobrada («perrdi») junto da pessoa não vale', "      if (!alvo) { c = w.replace(/(.)\\1+/g, '$1');", "      if (false) { c = w.replace(/(.)\\1+/g, '$1');", ('p4g_final3',)),
+    ('p4g final3 água: a cabeça, o braço, o vulto, o grito na água não são a pessoa', "    if (CORPO_AGUA.test(rn) || IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;", "    if (IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;", ('p4g_final3',)),
+    ('p4g final3 água: o sujeito oculto que foi nadar e não voltou («foi nadar e não voltou») não é sinal', "    if (CORPO_AGUA.test(rn) || IDA_AGUA_OCULTA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;", "    if (CORPO_AGUA.test(rn) || NINGUEM_AGUA.test(rn) || EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;", ('p4g_final3',)),
+    ('p4g final3 água: o «ninguém voltou», «nenhum apareceu» (a ESPERA) não é sinal', "    return !adm && NINGUEM_NAO.test(semRetornoRotina(rn)) ? 1 : 0;", "    return 0;", ('p4g_final3',)),
+    ('p4g final3 água: o estado na água sem verbo de queda («longe no mar», «sugado», «ficou pra trás no mar», «ninguém mais voltou») não é apuro', "|sugad[oa]s?|afundando|lado errado|(?:pra|para) tras|ninguem mais (?:volta|voltou|apareceu|viu|sabe)|(?:esta|ta|estao|tao|ficou|ficaram|anda|andam)(?: [a-z]+){0,2} longe) ');", ") ');", ('p4g_final3',)),
+    ('p4g final3 diário: o `risco` do texto não abre a janela (só a lista SOS e o implícito)', "return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }", "return emergencia(n) || socorroImplicito(n); }", ('p4g_final3',)),
+    ('p4g final3 hora: «às 10h», «dia 3» é a pessoa («caiu às 10h», «o diário do dia 3 sumiu»)', "/^[0-9]+$/.test(w) || /^[0-9]/.test(w)) return false;", "/^[0-9]+$/.test(w)) return false;", ('p4g_final3',)),
+    ('p4g final3 coletivo: «o pessoal da seguradora» (o coletivo de uma organização qualquer) é pessoa', ".replace(COLETIVO_DE, function (m, x) { return pessoaOuAgua(x) ? m : ' terra '; });", ";", ('p4g_final3_rotina',)),
+    ('p4g final3 «a reserva»: a composta «timoneiro-reserva» é coisa', "(cb !== cab && cb !== 'reserva' && ehCoisa(cb))", "(cb !== cab && ehCoisa(cb))", ('p4g_estrutura2',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_F3
+
+# (as versões ATUALIZADAS dos mutantes antigos cujo trecho mudou com a 3ª rodada de correção: o mesmo defeito plantado no texto novo)
+MUTANTES_P4G_F3_REV = [
+    ('p3e cabeças: o pedeIA não barra a cabeça de emergência', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", '', ('checklist',)),
+    ('p4g perdida: o pedeIA sem o nomeSumiu nem a rede (a pessoa com o nome com maiúscula passa à IA por qualquer rota que não seja a sos)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", "    if (cabecaEmerg(pad(String(q || '')))) return false;", ('p4g_perdida',)),
+    ('p4g perdida: o pedeIA só com o nomeSumiu e a rede (a cabeça de emergência passa à IA)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", "    if (risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", ('checklist',)),
+    ('p4g5 rede: o pedeIA sem a rede larga (a pessoa que a escala, o dado ou o «hoje» tiram da rota sos vai à IA com o SOG e a proa)', "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;", "    if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n === 2) return false;", ('p4g_perdida',)),
+    ('p4g guarda: a pessoaSumida sem tirar o sumiço de dados («perdi um passageiro na lista de saída»)', "  function preparaPessoa(q) { return semSinalDeCoisa(pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q)))))))))).replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", "  function preparaPessoa(q) { return semSinalDeCoisa(pronPessoa(semPossuidor(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q))))))))).replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", ('p3c',)),
+    ('p4g3 nome: o prenome troca só depois da guarda do sumiço de dados («perdi o lucas no whatsapp»)', "  function preparaPessoa(q) { return semSinalDeCoisa(pronPessoa(semPossuidor(semSumicoDeDados(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(aGente(grafia(q)))))))))).replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", "  function preparaPessoa(q) { return semSinalDeCoisa(pronPessoa(semPossuidor(semRetornoRotina(consertaPerto(fulaniza(comPrenomes(semSumicoDeDados(aGente(grafia(q)))))))))).replace(QUEDA_FIGURADA, ' ').replace(QUEDA_MOVEL, ' '); }", ('p3c',)),
+    ('p4g nome: o substantivo comum com maiúscula é pessoa («a Manutenção desapareceu», «a Informação sumiu»)', '|| substComum(tk.w); }', '; }', ('p3c',)),
+    ('p4g3 nome: a marca do cadastro é prenome («o beto» com o fabricante Beto no D.equipamentos)', "(marcas !== null && marcas.indexOf(' ' + w + ' ') !== -1) || destinoTok(ts[k - 1] || '', ts[k - 2] || '')) return w;", "destinoTok(ts[k - 1] || '', ts[k - 2] || '')) return w;", ('p4g_pessoa',)),
+    ('p4g estrutura M3: a lista das coisas é vazia (o plotter, o Spotify, a pressão, o sinal viram pessoa)', "    [FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, ITENS_COTIDIANOS, NAO_NOME, GAP_OBJ, CONT_ADMIN, CONT_DIGITAL, HEAD_DADO, BARCOS, PARTES, DURO_MAR, COISAS_APP, FORA_BARCO.join(' ')].forEach(add);", '', ('p4g_estrutura',)),
+    ('p4g estrutura: «não voltou com a peça» (a coisa que ele deveria trazer) é sinal', "    return aAt ? q : q.replace(RETORNO_COM, function (m, w) { return ehCoisa(w) ? ' ' : m; });", '    return q;', ('p4g_estrutura',)),
+    ('p4g estrutura: «não deu retorno sobre o orçamento» (a coisa do retorno) é sinal', "    if (!aEv) q = q.replace(RETORNO_DEU, function (m, w) { return PES_CLITICO.test(w) || NUCLEO_RE.test(w) || (AJUDA_PAL.test(w) && m.indexOf(' sobre ') === -1) ? m : ' '; });\n", '', ('p4g_estrutura',)),
+    ('p4g estrutura M-C2: a escala, a lista, o WhatsApp, a mensagem, o e-mail, o telefone na frase NÃO tiram a ausência da rede (pendente 6)', "adm = ADM_RE.test(pad(raw).replace(/ contatos? com /g, ' ').replace(DESDE_QUALQUER, ' ')) || FALTA_HOJE.test(pad(raw));", 'adm = false;', ('p4g_estrutura', 'p4g_perdida')),
+    ('p4g estrutura: «não está X aqui / a bordo» (a pessoa dentro do verbo) não é sinal', "'|' + NAO_ESTA_X + '|' + NAO_TEM_X + '|'", "'|' + NAO_TEM_X + '|'", ('p4g_estrutura',)),
+    ('p4g estrutura: a água com a ausência («X não volta do mergulho») é a ESPERA, não o socorro', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q) && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q) && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 : 1;', ('p4g_estrutura',)),
+    ('p4g estrutura: o palpite da queda («será que caiu?») com a ausência é a ESPERA', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q) && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 : (agua || PALPITE_RE.test(q) ? 2 : 1);', '    if (fraco) return (adm && !agua) || (ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q) && !(agua && RETORNO_FISICO_NEG.test(q))) ? 0 : (agua ? 2 : 1);', ('p4g_estrutura',)),
+    ('p4g R2 composta: «ex-marido», «sub-oficial», «guarda-vidas» (a palavra com hífen) não é candidata', '    if (!w || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(w) || /^[0-9]+$/.test(w) || /^[0-9]/.test(w)) return false;', '    if (!w || !/^[a-z0-9]+$/.test(w) || /^[0-9]+$/.test(w) || /^[0-9]/.test(w)) return false;', ('p4g_estrutura2', 'p4g_estrutura')),
+    ('p4g R2 coletivo: «a delegação», «a multidão», «a criatura» (o -ção de pessoa) é abstrato', '  var ABSTRATO_RE = /^(?!(?:tripulacao|delegacao|comissao|congregacao|multidao|populacao|selecao|criatura|autoridade|assistencia|presidencia|gerencia|direcao|comunidade|irmandade|fraternidade|figura)s?$)', '  var ABSTRATO_RE = /^(?!tripulacao$)', ('p4g_sujeito',)),
+    ('p4g R2 rotina: o curso de mergulho na agenda é a atividade na água com a ausência', '(ADM_ADMIN.test(pad(raw)) && !AGUA_EVENTO.test(sa) && !PALPITE_RE.test(q) && !(agua && RETORNO_FISICO_NEG.test(q)))', 'false', ('p4g_rotina2',)),
+    ('p4g R2 rotina: «foi comprar gelo e não voltou», «saiu para almoçar» (a ida por um propósito de terra) é sinal', '    q = q.replace(IDA_INF, function (m, inf, resto) {', '    q = q.replace(/(?!)/, function (m, inf, resto) {', ('p4g_rotina2',)),
+    ('p4g R2 rotina: «o rapaz do ar-condicionado», «o técnico do gerador» (o profissional do equipamento) é a pessoa que some', "  var LUGAR_OU_OBJ = new RegExp('^(?:' + LUGAR_TERRA + '|' + GAP_OBJ + ')$');", "  var LUGAR_OU_OBJ = new RegExp('^(?:' + LUGAR_TERRA + ')$');", ('p4g_rotina2',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_F3_REV
+
+
+# —— os mutantes da 3ª rodada de correção, parte final (o «sem X a bordo», o pronome do existencial, a anáfora que cai, o nome que parece verbo, o erro de vogal, o possessivo de «procuramos», o inglês, o cotidiano, o infinitivo) ——
+MUTANTES_P4G_F4 = [
+    ('p4g final4 ausência: o «sem» + o sujeito + o lugar de bordo bloqueia o sintagma («sem o supervisor a bordo», «sem a babá a bordo»)', "prepComExcecao(out) || (ant === 'sem' && SEM_AQUI.test(' ' + t.slice(i, i + 6).join(' ') + ' '));", "prepComExcecao(out);", ('p4g_final3',)),
+    ('p4g final4 ausência: o existencial negado com o pronome («não tem ele a bordo», «sem ela aqui», «não existe ele aqui») não é pessoa', "|| PRON_EXIST.test(q))) return q;", ")) return q;", ('p4g_final3',)),
+    ('p4g final4 elipse: o verbo de queda depois da anáfora é engolido pelo sintagma («vi o de óculos cair no mar»)', "!== -1 || QUEDA_OBJ.test(t[k])) && k > i + 2)) break;", "!== -1) && k > i + 2)) break;", ('p4g_final3',)),
+    ('p4g final4 nome raro: «onde foi parar valdemar?» (o nome em -ar depois de «parar») é verbo', "FULA_AGUA || ant === 'parar' || sinalNome(t, i))", "FULA_AGUA || sinalNome(t, i))", ('p4g_final3',)),
+    ('p4g final4 nome raro: «valdemar se perdeu», «baltazar sumiu» (o nome em -ar com o sinal forte logo depois) é verbo', "FULA_AGUA || ant === 'parar' || sinalNome(t, i))", "FULA_AGUA || ant === 'parar')", ('p4g_final3',)),
+    ('p4g final4 nome raro: o abstrato curto em -ncia («vicência») é substantivo comum', "&& !(w.length >= 7 && w.length <= 9 && /(?:ncia|dade)$/.test(w))) return false;", ") return false;", ('p4g_final3',)),
+    ('p4g final4 nome raro: o nome em -indo («gumercindo se jogou da proa») é verbo mesmo com o sinal forte', "    return forte || !VERBO_NP.test(w) || /^[a-z]{6,}(?:indo|ando|endo)$/.test(w);", "    return !VERBO_NP.test(w);", ('p4g_final3',)),
+    ('p4g final4 digitação: a vogal trocada ou comida no verbo («falto», «perdo», «acheo», «voltoo», «fltam») não é o verbo', "if (!alvo) { for (j = 0; j < PERTO_CURTOS.length && !alvo; j++) if (PERTO_CURTOS[j].length >= 5 && vogalPerto(", "if (false) { for (j = 0; j < PERTO_CURTOS.length && !alvo; j++) if (PERTO_CURTOS[j].length >= 5 && vogalPerto(", ('p4g_final3',)),
+    ('p4g final4 busca: «procuramos meu amigo», «procuramos seu amigo» (o possessivo + a pessoa) não é a ESPERA', "(?:(?:o|a) )?(?:meu|minha|nosso|nossa|seu|sua|teu|tua) ' + PES_ELX + '|", "(?:(?:o|a) )?(?:meu|minha|nosso|nossa|seu|sua|teu|tua) xxx|", ('p4g_final3',)),
+    ('p4g final4 inglês: «man overboard», «someone fell in the water», «person in the water» não são socorro', "|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;\n    if (EN_AGUA1.test(rn)) return 1;", "|| VIROU_DENTRO.test(rn)) return 2;\n    if (EN_AGUA1.test(rn)) return 1;", ('p4g_final3',)),
+    ('p4g final4 inglês: «my son is missing», «we lost the guy» não são a ESPERA', "    if (EN_AGUA1.test(rn)) return 1;\n", "", ('p4g_final3',)),
+    ('p4g final4 inglês: «o bote virou com dois dentro», «a banana boat virou com gente dentro» não são socorro', "|| EN_AGUA2.test(rn) || VIROU_DENTRO.test(rn)) return 2;\n    if (EN_AGUA1.test(rn)) return 1;", "|| EN_AGUA2.test(rn)) return 2;\n    if (EN_AGUA1.test(rn)) return 1;", ('p4g_final3',)),
+    ('p4g final4 cotidiano: o roupão, a sacola, o power bank (os itens que o revisor não listou) são pessoa', "var ITENS_COTIDIANOS = ' reserva reservas roupao roupoes sacola sacolas power bank guardachuva tamborete banqueta", "var ITENS_COTIDIANOS = ' reserva reservas tamborete banqueta", ('p4g_final3_rotina',)),
+    ('p4g final4 infinitivo: «falta trocar o rotor?», «falta limpar», «falta verificar a bomba» (o -ar/-ir depois do verbo de falta) é o nome', "(INF_ER.test(w) || /(?:ar|ir)$/.test(w))", "INF_ER.test(w)", ('p4g_final3_rotina',)),
+    ('p4g final4 infinitivo: «falta abastecer», «falta responder», «falta fazer» (o -er da lista de rotina) é o nome', "var INF_ER = /^(?:abastecer|responder|fazer|ler|aquecer|defender|descer|prender|atender|desfazer|refazer|acender|estender|", "var INF_ER = /^(?:", ('p4g_final3_rotina',)),
+    ('p4g final4 cotidiano: o guarda-chuva (a composta que o `add` parte) é pessoa', "set['guarda-sol'] = 1; set['guarda-chuva'] = 1;", "set['guarda-sol'] = 1;", ('p4g_final3_rotina',)),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_F4
 
 
 def instante_3a(b):

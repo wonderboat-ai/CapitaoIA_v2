@@ -204,3 +204,36 @@ meu deus! ele sumiu	1	ctl
 sumiu armador ponto final	2	ctl
 caiu tonhão ponto de exclamação	2	ctl
 sumiu armador vírgula qual o rumo	2	ctl
+# 3ª rodada de correção do fechamento da home (revisão da 2ª rodada): o possuidor sem cabeça como OBJETO, a ausência com a pessoa explícita, a contagem sem substantivo, a água sem verbo de queda, a comunicação com objeto, o lugar de terra, o dado e a cidade
+perdemos os nossos	1	1
+perdi os meus	1	1
+cadê os meus?	1	1
+não vejo as nossas	1	1
+perdemos seu João	2	1
+esquecemos seu filho na praia	2	1
+o Marcão sumiu	2	1
+procurei valdemar no barco inteiro e nada	1	1
+o de óculos sumiu	2	1
+não tem o Pedro a bordo	1	2
+só voltaram quatro, o Pedro não veio	1	2
+quatro voltaram e a Maria não	1	2
+não tenho notícia do Pedro desde ontem	1	2
+voltaram só três e eram quatro	1	4
+tem um a menos	1	4
+sobrou um na ilha	1	4
+a tripulação não está completa	1	4
+o Pedro não respondeu a proposta	0	5
+o Pedro parou de responder os emails	0	5
+o Pedro não apareceu no churrasco	0	5
+o pessoal da seguradora não retornou	0	5
+o Pedro foi mergulhar no sábado e não voltou	2	8
+o aluno da aula de mergulho não voltou	2	8
+o Pedro foi sugado pela correnteza	2	8
+vejo uma cabeça na água	2	8
+foi nadar e não voltou	2	8
+a autonomia caiu depois do abastecimento?	0	ctl
+a bandeira sumiu	0	ctl
+falta diesel pra chegar em Itajaí?	0	ctl
+quantas milhas faltam?	0	ctl
+o mecânico disse que o motor não responde	0	ctl
+o Pedro avisou que o radar sumiu	0	ctl
