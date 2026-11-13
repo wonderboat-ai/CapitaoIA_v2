@@ -1914,7 +1914,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina', 'p4g_bloqueios')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -8187,6 +8187,113 @@ def grupo_p4g_final3_rotina(b, muta, ped):
 GRUPOS_3A['p4g_final3_rotina'] = grupo_p4g_final3_rotina
 
 
+# ═══ A PASSADA DOS 5 BLOQUEIOS de falso negativo da classe «pessoa ao mar / sumida» (decisão do proprietário de 13/11/2026: os achados 1, 2, 3, 13 e 18 do RESIDUO-PESSOA-AO-MAR) ═══
+# (1) o sinal de sumiço fora da tabela — «não foi visto / encontrado / localizado», «não se sabe de X», «incomunicável», «paradeiro desconhecido», «em local incerto», «não deu sinal de vida», «ninguém tem notícia de X», «segue sem contato»,
+# «fora de alcance», «onde será que X se meteu?», «alguém sabe onde X está?»; (2) «dar falta DE X» sem artigo; (3) a pessoa com complemento de lugar ou organização + o verbo fraco de água; (13) «está boiando» com cauda de dado;
+# (18) o papel ambíguo com complemento. As frases LITERAIS dos achados e os controles de rotina estão em testes/dados/pessoa-bloqueios.tsv; aqui, além delas, o MESMO quadro com Pedro, meu filho, a criança e 3 substantivos abertos,
+# a matriz cabeça × complemento × verbo do papel ambíguo, o apuro sem sujeito × as caudas de dado × o vocativo e a monotonia da cauda (risco(q + cauda) >= risco(q)). O sinal novo SEM a água é a ESPERA (sem janela); com a água é o socorro.
+BQ_LITERAIS = [tuple(l.split('\t')) for l in le_dados('pessoa-bloqueios.tsv')]   # (frase, nível, bloqueio)
+BQ_PESSOAS = [('o Pedro', 'do Pedro', 'de Pedro', 'o'), ('meu filho', 'do meu filho', 'de meu filho', 'o'), ('a criança', 'da criança', 'de uma criança', 'a'),
+              ('o encarregado', 'do encarregado', 'de um encarregado', 'o'), ('a sanfoneira', 'da sanfoneira', 'de uma sanfoneira', 'a'), ('nosso tenente', 'do nosso tenente', 'de nosso tenente', 'o')]   # (S, do S, de S, gênero): 3 conhecidos e 3 substantivos abertos
+BQ_Q1 = ['{S} não foi vist{o} desde que fundeamos', '{S} não foi encontrad{o}', '{S} não foi localizad{o}', '{S} ainda não foi achad{o}', '{S} nunca mais foi avistad{o}', 'não se sabe {DO}', 'não se sabe onde {S} está', '{S} ficou incomunicável',
+         '{S} está incomunicável', 'o paradeiro {DO} é desconhecido', 'o paradeiro {DO} é incerto', '{S} está com paradeiro ignorado', '{S} está em local incerto', '{S} não deu sinal de vida', 'ninguém tem notícia {DO}', '{S} segue sem contato',
+         'onde será que {S} se meteu?', 'alguém sabe onde {S} está?', 'alguém sabe onde {S} foi?', 'alguém sabe por onde {S} anda?']
+BQ_Q1_NUCLEO = ['{S} está fora de alcance']   # (só com o nome e o núcleo: «o destino», «o porto» fora de alcance são a autonomia)
+BQ_Q1_AGUA = ['{S} não foi vist{o} depois do mergulho', '{S} ficou incomunicável no mar', 'o paradeiro {DO} é desconhecido desde que foi nadar', 'não se sabe {DO} desde que caiu na água']
+BQ_Q2 = ['dei falta {DE}', 'dei falta {DE} agora há pouco', 'demos falta {DE}', 'notei falta {DE}', 'dei falta {DO}', 'dei falta {DO} agora há pouco', 'demos falta {DO}']
+BQ_NOMES = ['Pedro', 'Maria', 'Ana', 'João', 'Zuleide', 'Ubiratan', 'Clebson', 'Cleonice']   # 4 prenomes da lista e 4 fora dela
+BQ_LUGAR = [('o Pedro da marina', 'o', False), ('a dona da pousada', 'a', False), ('os clientes do charter', 'o', True), ('o pessoal da marina', 'o', False), ('o rapaz do quiosque', 'o', False), ('a recepcionista do hotel', 'a', False),
+            ('o instrutor da escola', 'o', False)]   # (a pessoa com complemento de lugar ou organização, gênero, plural): 4 dos achados e 3 papéis fora de qualquer lista
+BQ_Q3 = ['{S} {foi} arrastad{o} por uma onda', '{S} {foi} levad{o} pela correnteza', '{S} {foi} sugad{o} pela corrente', '{S} {engoliu} muita água', 'eu vi {S} cair', 'joguei a boia para {S}']
+BQ_APURO = ['está boiando', 'boiando', 'tá boiando', 'está flutuando', 'está se afogando', 'afogando']
+BQ_CAUDAS = [', qual a posição?', ', qual o rumo?', ', qual a velocidade?', ', qual o vento?', ' e o diesel?', ', a bateria está bem?', ', quanto falta para chegar?', ', quantas pessoas a bordo?']
+BQ_CABECAS = ['o guia', 'o capitão', 'o imediato', 'o piloto']
+BQ_COMPL = ['do mergulho', 'de mergulho', 'de pesca', 'da lancha', 'do barco', 'do tender', 'do outro barco', 'dos mergulhadores']
+BQ_VERBOS = [('sumiu', 's'), ('desapareceu', 's'), ('não voltou', 's'), ('não subiu', 's'), ('caiu', 's'), ('caiu no mar', '2'), ('está boiando', '2')]
+JS_BQ_MONO = r"""(pares) => { const B = window.CapitaoBrain; return pares.map(([q, c]) => [q, c, B.risco(q).n, B.risco(q + c).n]); }"""
+
+
+def bq_casos():
+    """(frase, nível, família) da matriz gerada dos 5 bloqueios."""
+    out = []
+    for s, do, de, g in BQ_PESSOAS:
+        fem = g == 'a'
+        def f(m): return m.replace('{S}', s).replace('{DO}', do).replace('{DE}', de).replace('{o}', 'a' if fem else 'o')
+        for m in BQ_Q1 + (BQ_Q1_NUCLEO if s in ('o Pedro', 'meu filho', 'a criança') else []):
+            q = f(m)
+            out += [(q, 's', 'b1'), ('capitão, ' + q.rstrip('?') + ', qual a posição?', 's', 'b1'), (q.rstrip('?') + ' e o diesel?', 's', 'b1')]
+        for m in BQ_Q1_AGUA: out.append((f(m), '2', 'b1'))
+        for m in BQ_Q2: out += [(f(m), 's', 'b2'), (f(m) + ', qual o rumo?', 's', 'b2')]
+    for n in BQ_NOMES:
+        for m in ('dei falta de {N}', 'dei falta de {N} agora há pouco', 'dei falta do {N}', 'dei falta {N}'):
+            if m == 'dei falta do {N}' and n in ('Maria', 'Ana', 'Zuleide', 'Cleonice'): m = 'dei falta da {N}'
+            out.append((m.replace('{N}', n), 's', 'b2'))
+        out.append(('dei falta de %s agora há pouco' % n.lower(), 's', 'b2'))   # (o ditado em minúscula)
+    for s, g, pl in BQ_LUGAR:
+        for m in BQ_Q3:
+            q = m.replace('{S}', s).replace('{foi}', 'foram' if pl else 'foi').replace('{engoliu}', 'engoliram' if pl else 'engoliu').replace('{o}', ('a' if g == 'a' else 'o') + ('s' if pl else ''))
+            out += [(q, '2', 'b3'), (q + ', qual o rumo?', '2', 'b3')]
+    for a in BQ_APURO:
+        out.append((a, '2', 'b13'))
+        for c in BQ_CAUDAS: out += [(a + c, '2', 'b13'), ('capitão, ' + a + c, '2', 'b13')]
+    for h in BQ_CABECAS:
+        for c in BQ_COMPL:
+            for v, n in BQ_VERBOS: out += [('%s %s %s' % (h, c, v), n, 'b18'), ('%s %s %s, qual a posição?' % (h, c, v), n, 'b18')]
+    return out
+
+
+def bq_ok(r, n):
+    if n == '2': return r['key'] == 'sos' and r6_seguro(r)
+    if n == '1': return r['key'] == 'fallback' and r6_seguro(r)
+    if n == 's': return r6_seguro(r)
+    return r['key'] != 'sos' and not r['pessoa'] and not r['jan']
+
+
+def grupo_p4g_bloqueios(b, muta, ped):
+    nomes = {'b1': 'o SINAL de sumiço fora da tabela («não foi visto / encontrado / localizado», «não se sabe de X», «incomunicável», «paradeiro desconhecido», «em local incerto», «não deu sinal de vida», «ninguém tem notícia», «segue sem contato», «fora de alcance», «onde será que X se meteu?», «alguém sabe onde X está?»)',
+             'b2': '«dar / sentir / notar falta DE X» com o nome ou o possessivo SEM artigo («dei falta de Pedro», «dei falta de meu filho»)',
+             'b3': 'a pessoa com complemento de LUGAR ou organização + o verbo fraco de água («o Pedro da marina foi arrastado por uma onda», «a dona da pousada engoliu muita água», «vi X cair», «joguei a boia pro X»)',
+             'b13': '«está boiando» (o apuro SEM sujeito) com a cauda de dado', 'b18': 'o papel de bordo AMBÍGUO (guia, capitão, imediato, piloto) com o complemento «de / do / da …»'}
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        # (1) as frases LITERAIS dos achados e os controles de rotina, com o nível esperado
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in BQ_LITERAIS])
+        for bl in ('b1', 'b2', 'b3', 'b13', 'b18'):
+            lit = [(q, n, r) for (q, n, k), r in zip(BQ_LITERAIS, res) if k == bl]
+            ruins = [(q, n, r['key'], 'janela' if r['jan'] else '', 'IA' if r['ia'] or r['iaApp'] else '') for q, n, r in lit if n != '0' and not bq_ok(r, n)]
+            ped('p4g bloqueios %s: %s — as %d frases LITERAIS do achado têm o nível esperado (2 = a rota sos com a janela, 1 = o fallback seguro sem janela, s = um dos dois): nunca a IA, nunca rota de dado, sem posição, rumo, SOG, ETA nem pessoas'
+                % (bl, nomes[bl], len([1 for _, n, _ in lit if n != '0'])), not ruins and len(lit) >= 14, (len(ruins), ruins[:6]))
+            ruins = [(q, r['key'], 'pessoa' if r['pessoa'] else '', 'janela' if r['jan'] else '') for q, n, r in lit if n == '0' and not bq_ok(r, n)]
+            ped('p4g bloqueios %s: os %d controles de ROTINA NÃO disparam (nem a rota sos, nem o fallback seguro de pessoa, nem a janela)' % (bl, len([1 for _, n, _ in lit if n == '0'])), not ruins, ruins[:6])
+        # (2) a matriz gerada: o MESMO quadro com Pedro, meu filho, a criança e 3 substantivos abertos; cabeça × complemento × verbo; o apuro sem sujeito × as caudas × o vocativo
+        casos = bq_casos()
+        res = pg.evaluate(JS_REDE, [q for q, _, _ in casos])
+        por = {}
+        for (q, n, fam), r in zip(casos, res):
+            por.setdefault(fam, [0, []])
+            por[fam][0] += 1
+            if not bq_ok(r, n) or (', qual a posição?' in q and r['key'] == 'posicao'): por[fam][1].append(r6_ruim(r) + (n,))
+        for fam, (n, ruins) in sorted(por.items()):
+            ped('p4g bloqueios %s: a MATRIZ (%d frases: o quadro com Pedro, meu filho, a criança e os substantivos abertos, pura e com cauda de dado e vocativo) é a rota sos (com a janela quando há água) ou o fallback seguro: nunca a IA, nunca rota de dado' % (fam, n), not ruins, (len(ruins), ruins[:6]))
+        ped('p4g bloqueios: a matriz cobre os 5 bloqueios e tem mais de 1.000 frases', set(por) == set(nomes) and len(casos) >= 1000, (len(casos), sorted(por)))
+        # (3) a monotonia da cauda (DESIGN F-iv e): a cauda de dado nunca desfaz o sinal
+        pares = [(q, c) for q, n, k in BQ_LITERAIS if n in ('1', '2', 's') and k != 'b18' and not q.endswith('?') and ',' not in q for c in BQ_CAUDAS]   # (o b18 fica de fora: «não retornou» + «a bateria…» é a guarda da comunicação com objeto, que já existia)
+        mono = pg.evaluate(JS_BQ_MONO, pares)
+        ruins = [x for x in mono if x[3] < x[2]]
+        ped('p4g bloqueios: a MONOTONIA da cauda — risco(frase + cauda de dado) >= risco(frase) nas %d combinações das frases literais dos bloqueios 1, 2, 3 e 13 com as %d caudas («…, qual a posição?», «… e o diesel?», «…, a bateria está bem?»)' % (len(pares), len(BQ_CAUDAS)), not ruins and len(pares) >= 300, (len(ruins), ruins[:6]))
+        # (4) a janela: depois da frase de água, a pergunta de dado é a instrução do plotter
+        sos = [q for q, n, _ in BQ_LITERAIS if n == '2' and '?' not in q]
+        jr = pg.evaluate(JS_ES_JANELA, sos)
+        pl = jr['plotter']
+        ruins = [(o['q'], o['key'], x['p'], x['l1'][:60]) for o in jr['out'] for x in o['pos'] if not (o['abre'] and x['l1'] == pl and x['jan'] and not x['ia'] and not PERD_VEDADO.search(x['txt']) and not confere.R_COORD.search(x['txt']))]
+        ped('p4g bloqueios: depois da frase de água (%d frases literais de nível 2), a janela abre e a pergunta de posição, rumo, ETA, pessoas e velocidade é a instrução do plotter, sem IA nem dado' % len(sos), not ruins and len(sos) >= 20, (len(ruins), ruins[:4]))
+    finally:
+        pg.ctx.close()
+
+
+GRUPOS_3A['p4g_bloqueios'] = grupo_p4g_bloqueios
+
+
 
 # —— os mutantes do registro, das linhas de ação e das propostas (P3F) ——
 MUTANTES_P3F = [
@@ -11090,7 +11197,7 @@ MUT_REESCRITOS = {
     'p4g estrutura: o sujeito aberto da queda com lugar («a babá caiu da proa») não é mais fulano': ("    if (QUEDA_LUGAR_RE.test(ad) || LEVADO_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", "    if (false) return 'fulano';", ('p4g_estrutura',)),
     'p4g estrutura M3: a lista das coisas é vazia (o plotter, o Spotify, a pressão, o sinal viram pessoa)': ("    [FENOMENOS, LUGARES_TEMPO, ITENS_BORDO, NAO_NOME, GAP_OBJ, CONT_ADMIN, CONT_DIGITAL, HEAD_DADO, BARCOS, PARTES, DURO_MAR, COISAS_APP, FORA_BARCO.join(' ')].forEach(add);", '', ('p4g_estrutura',)),
     'p4g estrutura: o piloto, o capitão, o imediato e o guia sem o complemento de coisa são o DUVIDOSO (a ESPERA), não pessoa aberta (o socorro de «o piloto sumiu»)': ("      if (AMBIGUAS_DE.indexOf(' ' + cb + ' ') !== -1) return ", '      if (false) return ', ('p4g_estrutura',)),
-    'p4g estrutura: o «piloto automático» e o «guia de bordo» são pessoa duvidosa': ("return /^(?:automatico|automatica|de|do|da|dos|das|rapido|rapida|ia)$/.test(t[j + 1] || '') ? { coisa: true } : { tok: 'pessoax', fim: j + 1 };", "return { tok: 'pessoax', fim: j + 1 };", ('p4g_estrutura',)),
+    'p4g estrutura: o «piloto automático» e o «guia de bordo» são pessoa duvidosa': ("return ambiguaCoisa(t, j) ? { coisa: true } : { tok:", "return false ? { coisa: true } : { tok:", ('p4g_estrutura',)),
     'p4g estrutura: o abstrato por morfologia («a calibração», «a pressão») é pessoa': (' && !VERBO_NP.test(w) && !ABSTRATO_NP.test(ultimaParte(w));', ' && !VERBO_NP.test(w);', ('p4g_estrutura',)),
     'p4g estrutura: o verbo é cabeça de sintagma («voltou a ligar»: o infinitivo vira fulano e o retorno de rotina escapa)': ("MOD_NP.indexOf(' ' + w + ' ') === -1 && !VERBO_NP.test(w) &&", "MOD_NP.indexOf(' ' + w + ' ') === -1 &&", ('p4g_estrutura',)),
     'p4g estrutura M11: a preposição não bloqueia o sintagma («o sinal sumiu para o dono»)': ("      if (DET_NP.indexOf(' ' + w + ' ') !== -1 && w !== '' && livre) {", "      if (DET_NP.indexOf(' ' + w + ' ') !== -1 && w !== '') {", ('p4g_estrutura',)),
@@ -11130,7 +11237,6 @@ MUTANTES_P4G_R2 = [
     ('p4g R2 digitação: o verbo do sumiço com erro («sumiiu», «desaparceu») não vale', '  function consertaVerbo(w) {\n    var c, k;', '  function consertaVerbo(w) { return w;\n    var c, k;', ('p4g_sujeito', 'p4g_estrutura2')),
     ('p4g R2 digitação junto da pessoa: «não achie o armador», «faltta o armador» não vale', "  function consertaPerto(q) {\n    var t = q.split(' '), ch = false, k, m, w, c, perto, j, alvo;", "  function consertaPerto(q) { return q;\n    var t = q.split(' '), ch = false, k, m, w, c, perto, j, alvo;", ('p4g_sujeito',)),
     ('p4g R2 agente natural: «a onda levou o Pedro», «vi o Pedro cair no mar», «jogamos a boia para o Pedro» não são apuro', "perd(?:i|emos|eu|eram) de vista|' + AGENTE_PES + ') ');", "perd(?:i|emos|eu|eram) de vista) ');", ('p4g_estrutura',)),
-    ('p4g R2 levado: «o catraieiro foi levado pela correnteza» (o substantivo aberto) não é sinal', "    if (QUEDA_LUGAR_RE.test(ad) || LEVADO_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", "    if (QUEDA_LUGAR_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", ('p4g_estrutura',)),
     ('p4g R2 queda sem destino: «o grumete caiu», «o dono caiu» (o substantivo aberto) não é a pessoa', "(k < fim + 2 && QUEDA_V.test(w))) return 'fulano';", "false) return 'fulano';", ('p4g_estrutura',)),
     ('p4g R2 rotina: a ausência de ligação, mensagem, reunião de uma pessoa NOMEADA volta a ser socorro («o Pedro não retornou minha ligação»)', '  var ADM_ROT = / (?:reuniao|reunioes|revisao|revisoes|vistoria|orcamento|fatura|faturas|nota|notas|curso|aula|aulas|treino|treinos|folga|ferias|recado|recados|ligacao|ligacoes|chamadas?|expediente|trabalho|servico|entrega|encomenda|peca|pecas|material|convite|convites|escritorio|viagem|licenca|voo|hotel|treinamento|aviso|avisos|confirmar|escalar|assinar|cracha|vaga|vagas|mensagens?|mensagem|whatsapp|zap|emails?|e-mail|telefone|celular|online|offline) /;', '  var ADM_ROT = /(?!)/;', ('p4g_rotina2',)),
     ('p4g R2 rotina: «sem colete» é apuro sem a água («quem está sem colete?»)', '    perigo = PERIGO_ANY.test(q) || (agua && PERIGO_AGUA.test(q));', '    perigo = PERIGO_ANY.test(q) || / sem (?:colete|boia) /.test(q) || (agua && PERIGO_AGUA.test(q));', ('p4g_rotina2', 'p4g_estrutura')),
@@ -11227,7 +11333,7 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_F3_REV
 
 # —— os mutantes da 3ª rodada de correção, parte final (o «sem X a bordo», o pronome do existencial, a anáfora que cai, o nome que parece verbo, o erro de vogal, o possessivo de «procuramos», o inglês, o cotidiano, o infinitivo) ——
 MUTANTES_P4G_F4 = [
-    ('p4g final4 ausência: o «sem» + o sujeito + o lugar de bordo bloqueia o sintagma («sem o supervisor a bordo», «sem a babá a bordo»)', "prepComExcecao(out) || (ant === 'sem' && SEM_AQUI.test(' ' + t.slice(i, i + 6).join(' ') + ' '));", "prepComExcecao(out);", ('p4g_final3',)),
+    ('p4g final4 ausência: o «sem» + o sujeito + o lugar de bordo bloqueia o sintagma («sem o supervisor a bordo», «sem a babá a bordo»)', "prepComExcecao(out) || (ant === 'sem' && SEM_AQUI.test(' ' + t.slice(i, i + 6).join(' ') + ' ')) ||", "prepComExcecao(out) ||", ('p4g_final3',)),
     ('p4g final4 ausência: o existencial negado com o pronome («não tem ele a bordo», «sem ela aqui», «não existe ele aqui») não é pessoa', "|| PRON_EXIST.test(q))) return q;", ")) return q;", ('p4g_final3',)),
     ('p4g final4 elipse: o verbo de queda depois da anáfora é engolido pelo sintagma («vi o de óculos cair no mar»)', "!== -1 || QUEDA_OBJ.test(t[k])) && k > i + 2)) break;", "!== -1) && k > i + 2)) break;", ('p4g_final3',)),
     ('p4g final4 nome raro: «onde foi parar valdemar?» (o nome em -ar depois de «parar») é verbo', "FULA_AGUA || ant === 'parar' || sinalNome(t, i))", "FULA_AGUA || sinalNome(t, i))", ('p4g_final3',)),
@@ -11282,7 +11388,59 @@ MUTANTES_P4G_EQUIVALENTES = [
     ('p4g estrutura: o corpo e o afogado não são núcleo da água', "var PES_AGUA_ROLE = '(?:corpos?|cadaver(?:es)?|afogad[oa]s?|esquiador(?:es)?|", "var PES_AGUA_ROLE = '(?:esquiador(?:es)?|", E7),
     ('p4g estrutura: «não voltou com a peça» (a coisa que ele deveria trazer) é sinal', "    return aAt ? q : q.replace(RETORNO_COM, function (m, w) { return ehCoisa(w) ? ' ' : m; });", '    return q;', ('p4g_estrutura',)),
     ('p4g estrutura: «não deu retorno sobre o orçamento» (a coisa do retorno) é sinal', "    if (!aEv) q = q.replace(RETORNO_DEU, function (m, w) { return PES_CLITICO.test(w) || NUCLEO_RE.test(w) || (AJUDA_PAL.test(w) && m.indexOf(' sobre ') === -1) ? m : ' '; });\n", '', ('p4g_estrutura',)),
+    # (passada dos 5 bloqueios, 13/11/2026: o quadro de água do `riscoQuadro` — candidato + «foi levado / arrastado / sugado pela correnteza» — dá o mesmo socorro ao substantivo aberto, com e sem o LEVADO_RE da classeAberta: medido nas frases do nome e em 6 variantes)
+    ('p4g R2 levado: «o catraieiro foi levado pela correnteza» (o substantivo aberto) não é sinal', "    if (QUEDA_LUGAR_RE.test(ad) || LEVADO_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", "    if (QUEDA_LUGAR_RE.test(ad) || PALPITE_RE.test(ad)) return 'fulano';", ('p4g_estrutura',)),
 ]
+
+# —— os mutantes da passada dos 5 bloqueios de falso negativo (13/11/2026): pelo menos um por regra nova, todos acusados pelo grupo p4g_bloqueios
+BQ = ('p4g_bloqueios',)
+MUTANTES_P4G_BLOQ = [
+    ('p4g bloqueios: os quadros novos fora do ponto de entrada único (o riscoQuadro não entra no risco)', "    if (v.n < 2) v.n = Math.max(v.n, riscoQuadro(raw));", "", BQ),
+    ('p4g bloqueios b1: sem o particípio («o encarregado não foi encontrado», «a sanfoneira não foi vista»)', "QD_SUJ + ' ' + QD_NEG + ' ' + QD_SER + ' (?:mais )?' + QD_PART + ' ',", "QD_SUJ + ' ' + QD_NEG + ' ' + QD_SER + ' (?:mais )?x' + QD_PART + ' ',", BQ),
+    ('p4g bloqueios b1: o particípio depois de «não foi» é a palavra solta que vira pessoa («não foi visto» = «não foi tonhão»)', "var BARE_NAO = /^(?:vist[oa]s?|encontrad[oa]s?|localizad[oa]s?|achad[oa]s?|avistad[oa]s?|incomunicavel|incomunicaveis|", "var BARE_NAO = /^(?:incomunicavel|incomunicaveis|", BQ),
+    ('p4g bloqueios b1: sem «não se sabe do meu filho»', "' nao se sabe (?:mais )?(?:nada )?", "' xnao se sabe (?:mais )?(?:nada )?", BQ),
+    ('p4g bloqueios b1: sem «ficou / está incomunicável»', "?incomunicave(?:l|is) ',   // «o Pedro está incomunicável»", "?xincomunicave(?:l|is) ',   // «o Pedro está incomunicável»", BQ),
+    ('p4g bloqueios b1: sem «o paradeiro de X é desconhecido»', "' paradeiro d[eoa]s? ' + DETN + QD_X + QD_CMP", "' xparadeiro d[eoa]s? ' + DETN + QD_X + QD_CMP", BQ),
+    ('p4g bloqueios b1: «o paradeiro» é pessoa (o slot da notícia fora da lista das coisas)', "set['paradeiro'] = 1; ", "", BQ),
+    ('p4g bloqueios b1: sem «em local incerto» e «com paradeiro ignorado»', "(?:paradeiro|local|lugar|destino) (?:desconhecido|incerto|ignorado|nao sabido) ',", "(?:xparadeiro|xlocal|xlugar|xdestino) (?:desconhecido|incerto|ignorado|nao sabido) ',", BQ),
+    ('p4g bloqueios b1: sem «não deu sinal de vida»', "sina(?:l|is) de vida ',   // «o Pedro não deu sinal de vida»", "xsina(?:l|is) de vida ',   // «o Pedro não deu sinal de vida»", BQ),
+    ('p4g bloqueios b1: sem «ninguém tem notícia de X»', "' ninguem (?:mais )?(?:tem|teve|tinha|recebeu) (?:mais )?", "' xninguem (?:mais )?(?:tem|teve|tinha|recebeu) (?:mais )?", BQ),
+    ('p4g bloqueios b1: sem «segue sem contato»', "' (?:ainda |ja |totalmente )?sem (?:contato|comunicacao|dar noticias?|dar sinal|noticias?|sinal de vida) ',", "' (?:ainda |ja |totalmente )?xsem (?:contato|comunicacao|dar noticias?|dar sinal|noticias?|sinal de vida) ',", BQ),
+    ('p4g bloqueios b1: sem «está fora de alcance»', "fora d[eo] alcance ',", "xfora d[eo] alcance ',", BQ),
+    ('p4g bloqueios b1: o «fora de alcance» vale com o substantivo aberto («o destino está fora de alcance» vira pessoa)', "' ' + PES_ELE + QD_CMP + QD_ADV + ' ' + QD_ESTADO + ' (?:ainda |ja |totalmente |muito )?fora", "QD_SUJ + ' ' + QD_ESTADO + ' (?:ainda |ja |totalmente |muito )?fora", BQ),
+    ('p4g bloqueios b1: sem «onde será que X se meteu?»', "' (?:se )?(?:meteu|meteram|enfiou|enfiaram|foi parar|foram parar) ',", "' (?:se )?(?:xmeteu|xmeteram|enfiou|enfiaram|foi parar|foram parar) ',", BQ),
+    ('p4g bloqueios b1: sem «alguém sabe onde X está?»', "' (?:alguem|voces?|vcs?|quem|ninguem)(?: (?:ai|aqui|por|acaso|me|nos)){0,2} (?:sabe|sabem|viu|viram|tem ideia|faz ideia|fazem ideia)", "' (?:xalguem|voces?|vcs?|quem|ninguem)(?: (?:ai|aqui|por|acaso|me|nos)){0,2} (?:sabe|sabem|viu|viram|tem ideia|faz ideia|fazem ideia)", BQ),
+    ('p4g bloqueios b1: o sinal novo com a água, o mar ou o mergulho fica na ESPERA (sem a janela)', "    return agua ? 2 : 1;\n  }\n  var Q_LUGAR_RE", "    return 1;\n  }\n  var Q_LUGAR_RE", BQ),
+    ('p4g bloqueios b1: sem a guarda da rotina escrita («o Pedro não foi encontrado na lista», «incomunicável no WhatsApp» viram a ESPERA)', "&& !agua) || (ADM_ADMIN.test(n) && !AGUA_EVENTO.test(sa))) return 0;   // (a rotina escrita", "&& false) || false) return 0;   // (a rotina escrita", BQ),
+    ('p4g bloqueios b1: o possuidor é o sujeito («o barco do Pedro não foi visto», «a boia do Pedro foi levada pela correnteza»)', "? m : ' ' + prev + 'zz'; });\n    if (QUADRO_AGUA", "? m : m; });\n    if (QUADRO_AGUA", BQ),
+    ('p4g bloqueios b1: «aquelas três» sem substantivo não é o sujeito («aquelas três ficaram incomunicável»)', "|esses|essas|aqueles|aquelas|estes|estas)$/", "|esses|essas)$/", BQ),
+    ('p4g bloqueios b1: sem o adjetivo colado ao candidato («o homem de camisa listrada», «minha mocinha loira», «nosso personal trainer»)', "[a-z-]+)?';   // (o adjetivo colado ao candidato", "[a-z-]+){0}';   // (o adjetivo colado ao candidato", BQ),
+    ('p4g bloqueios b1: sem a coordenação («a Ana e a Bia»)', "var QD_X = PES_ELX + '(?: e ' + DETN + PES_ELX + ')?',", "var QD_X = PES_ELX,", BQ),
+    ('p4g bloqueios b2: sem «dei falta de Pedro» (o «de» sem artigo)', "(?:a |pela |muita )?falta de ' + DETN + QD_X + ' '", "(?:a |pela |muita )?xfalta de ' + DETN + QD_X + ' '", BQ),
+    ('p4g bloqueios b2: o «de» depois de «dei falta» bloqueia o candidato («dei falta de zuleide», «notei falta de um encarregado»)', "    if (a === 'de' && b === 'falta' && DAR_FALTA_V.test(out[out.length - 3] || '')) return true;", "    if (false) return true;", BQ),
+    ('p4g bloqueios b2: o «dei» de «dei falta» é a palavra solta que vira pessoa', "incomunicaveis|dei|deu|dou|dar|senti|sinto|percebi|atras|", "incomunicaveis|atras|", BQ),
+    ('p4g bloqueios b2: sem a ESPERA de «dei falta do <qualquer objeto>» que já existia («dei falta do doutorando»)', "    art = QD_FALTA_ART.test(f);", "    art = false;", BQ),
+    ('p4g bloqueios b2: a contração de «demos falta do X» não é desfeita', "    f = f.replace(QD_FALTA_CONTR, function (m, v, d) { return ' ' + v + ' falta de ' + (QD_CONTR_DET[d] || d) + ' '; });", "", BQ),
+    ('p4g bloqueios b2: sem «senti falta de uma sanfoneira» (o «sentir falta de» + determinante)', " || (ant === 'de' && out[out.length - 2] === 'falta' && SENTIR_FALTA_V.test(out[out.length - 3] || '') && DET_NP.indexOf(' ' + w + ' ') !== -1);", ";", BQ),
+    ('p4g bloqueios b2: o «sentir falta de» + palavra solta é pessoa («senti falta de casa»)', "perceberam)$/, SENTIR_FALTA_V", "perceberam|senti|sinto)$/, SENTIR_FALTA_V", BQ),
+    ('p4g bloqueios b3: sem «foi levado / arrastado / sugado pela correnteza» com o complemento de lugar', "QD_SUJW + ' (?:foi|foram|esta sendo", "QD_SUJW + ' x(?:foi|foram|esta sendo", BQ),
+    ('p4g bloqueios b3: sem «engoliu muita água» com o complemento de lugar', "QD_SUJW + ' (?:engoliu|engoliram|engolindo|engole|engolem|bebeu|beberam|bebendo)", "QD_SUJW + ' x(?:engoliu|engoliram|engolindo|engole|engolem|bebeu|beberam|bebendo)", BQ),
+    ('p4g bloqueios b3: sem «vi X cair»', "' (?:vi|vimos|viu|viram|vejo|vendo) (?:quando )?' + DETN + QD_XW + QD_CMP + ' (?:cair|", "' x(?:vi|vimos|viu|viram|vejo|vendo) (?:quando )?' + DETN + QD_XW + QD_CMP + ' (?:cair|", BQ),
+    ('p4g bloqueios b3: sem «joguei a boia para X» (a salvatagem toma a frase)', "' (?:joguei|jogamos|jogou|jogaram|lancei|lancamos|lancou|lancaram|atirei|atiramos|atirou|arremessei|arremessamos) (?:a|o|uma|um|as|os) (?:boias?|coletes?|corda|retinida)(?: (?:circular|salva-vidas))? (?:pra|para|a)", "' x(?:joguei|jogamos|jogou|jogaram|lancei|lancamos|lancou|lancaram|atirei|atiramos|atirou|arremessei|arremessamos) (?:a|o|uma|um|as|os) (?:boias?|coletes?|corda|retinida)(?: (?:circular|salva-vidas))? (?:pra|para|a)", BQ),
+    ('p4g bloqueios b3: a água do verbo fraco não vale para o candidato («jurandir foi sugado pela corrente»)', " || AGUA_FRACA.test(q);", ";", BQ),
+    ('p4g bloqueios b3: o nome solto antes de «engoliu» não é candidato («joelma engoliu muita água»)', " || /^(?:engoliu|engoliram|engolindo)$/.test(t[i + 1] || '') || (PREP_NP", " || (PREP_NP", BQ),
+    ('p4g bloqueios b3: a composta «recém-chegada» é coisa (a rota do checklist de chegada)', "if (/^recem-[a-z]+$/.test(cab)) return", "if (false) return", BQ),
+    ('p4g bloqueios b3: «joguei a boia pro X» sem desfazer o «pro»', ".replace(/ (boias?|coletes?|corda|retinida) (?:pro|ao) /g, ' $1 pra o ')", "", BQ),
+    ('p4g bloqueios b13: a coisa da cauda é quem boia («está boiando qual a posição», «está boiando perto do motor»)', "        if (apuro && m > k && !(m === k + 1 || (m === k + 2 && DET_V.test(t[k + 1])))) break;", "", BQ),
+    ('p4g bloqueios b13: a oração depois da pontuação desfaz o apuro («está boiando, a bateria está bem?»)', "    return fim === -1 ? r : Math.max(r, riscoNetTexto(raw.slice(0, m.index + m[0].length + fim)));", "    return r;", BQ),
+    ('p4g bloqueios b18: o papel ambíguo com qualquer «de/do/da» é coisa («o guia do mergulho», «o capitão da lancha»)', "    return !(AMB_COMPL_PES.test(c) || PES_TOKEN.test(c) || NUCLEO_RE.test(c));", "    return true;", BQ),
+    ('p4g bloqueios b18: o papel com complemento de gente e a queda logo depois fica duvidoso («o capitão da lancha caiu» vai à IA)', "? classeAberta(t, j + (DET_NP.indexOf(' ' + t[j + 2] + ' ') !== -1 || MOD_NP.indexOf(' ' + t[j + 2] + ' ') !== -1 ? 4 : 3)) || 'pessoax' : 'pessoax'", "? 'pessoax' : 'pessoax'", BQ),
+    ('p4g bloqueios b18: o «de + atividade» que só nomeia o papel é a água da cena («o guia de mergulho não retornou» abre a janela)', "fim: t[j + 1] === 'de' && AMB_COMPL_PES.test(t[j + 2] || '') ? j + 3 : j + 1 };", "fim: j + 1 };", BQ),
+    ('p4g bloqueios b18: «o guia do outro barco não voltou» é a pessoa de terra', "(?:outr[oa]s? )?([a-z0-9-]+)(?= )', 'g');", "([a-z0-9-]+)(?= )', 'g');", BQ),
+    ('p4g bloqueios b18: «a pia da lancha sumiu» é pessoa', "    if (t[j] === 'pia') return true;\n", "", BQ),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_BLOQ
+
 
 def instante_3a(b):
     falhas = 0

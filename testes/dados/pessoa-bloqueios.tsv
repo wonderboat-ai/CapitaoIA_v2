@@ -1,0 +1,141 @@
+# A PASSADA DOS 5 BLOQUEIOS de falso negativo da classe «pessoa ao mar / sumida» (decisão do proprietário de 13/11/2026; achados 1, 2, 3, 13 e 18 do RESIDUO-PESSOA-AO-MAR). frase<TAB>nível<TAB>bloqueio (b1, b2, b3, b13, b18).
+# nível 2 = ÁGUA (a rota sos, local, COM a janela de 15 min) · 1 = ESPERA (o fallback SEGURO: a instrução do SOS, sem situação de bordo, sem IA, SEM janela) · s = seguro (a rota sos ou o fallback seguro: nunca a IA nem rota de dado)
+# · 0 = controle de ROTINA (a rota de assunto ou a IA: nunca a rota sos, nunca o fallback seguro de pessoa, nunca a janela). As frases dos achados entram LITERAIS; os controles são a rotina que os sinais novos não podem tomar.
+# «a Ana não deu sinal de vida» e «alguém sabe onde o Pedro está?» eram controles de rotina (pessoa-rotina2.txt) e passaram a ESPERA por esta decisão: são o próprio sinal do bloqueio 1.
+# —— b1: o sinal de sumiço que a tabela não tinha (o particípio, o estado, o substantivo): ESPERA sem a água; socorro com a água, o mar ou o mergulho
+o Pedro não foi visto desde as três	s	b1
+meu filho não foi encontrado	s	b1
+a Maria não foi localizada	s	b1
+a criança não foi vista desde que fundeamos	s	b1
+não se sabe do meu filho	1	b1
+o Pedro está incomunicável	1	b1
+a criança ficou incomunicável	1	b1
+o paradeiro do Pedro é incerto	1	b1
+o paradeiro da criança é desconhecido	1	b1
+meu filho está em local incerto	1	b1
+o Pedro não deu sinal de vida	1	b1
+a Ana não deu sinal de vida	1	b1
+onde será que o Pedro se meteu?	1	b1
+alguém sabe onde meu filho está?	1	b1
+alguém sabe onde a criança está?	1	b1
+alguém sabe onde o Pedro está?	1	b1
+ninguém tem notícia do Pedro	1	b1
+o Pedro segue sem contato	1	b1
+o Pedro está fora de alcance	1	b1
+o sanfoneiro não foi visto desde que fundeamos	1	b1
+nossa repórter de tv ficou incomunicável	1	b1
+o paradeiro do meu tenente é desconhecido	1	b1
+o paradeiro daqueles anfitriões é desconhecido	1	b1
+o paradeiro de Terezinha é desconhecido	1	b1
+alguém sabe onde aqueles cientistas estão?	1	b1
+alguém sabe onde o homem de camisa listrada está?	1	b1
+alguém sabe onde a Ana e a Bia estão?	1	b1
+alguém sabe onde nosso personal trainer está?	1	b1
+aquelas três ficaram incomunicável	1	b1
+o Pedro não foi visto depois do mergulho	2	b1
+a sanfoneira ficou incomunicável no mar	2	b1
+o paradeiro do encarregado é desconhecido desde que foi nadar	2	b1
+o barco do Pedro não foi visto	0	b1
+a carteira do meu filho não foi encontrada	0	b1
+o radar não foi localizado	0	b1
+o Pedro disse que o radar não foi localizado	0	b1
+o Pedro não foi encontrado na lista	0	b1
+o fornecedor não foi localizado no sistema	0	b1
+a marina está fora de alcance	0	b1
+o destino está fora de alcance	0	b1
+o paradeiro da encomenda é desconhecido	0	b1
+ninguém tem notícia da peça	0	b1
+alguém sabe onde o filtro está?	0	b1
+alguém sabe onde fica a marina?	0	b1
+alguém sabe onde o Pedro mora?	0	b1
+não se sabe se o Pedro vem amanhã	0	b1
+não se sabe do orçamento	0	b1
+o Pedro está incomunicável no WhatsApp	0	b1
+o Pedro não está incomunicável	0	b1
+o Lucas foi visto na marina	0	b1
+onde será que o cabo se meteu?	0	b1
+# —— b2: «dar / sentir / notar falta DE X» com o nome ou o possessivo SEM artigo (com o artigo já era a ESPERA)
+dei falta de Pedro	1	b2
+dei falta de Maria	1	b2
+dei falta de Ana agora há pouco	1	b2
+dei falta de Zuleide	1	b2
+dei falta de meu filho	1	b2
+dei falta de pedro agora há pouco	1	b2
+dei falta de zuleide agora há pouco	1	b2
+dei falta de Ubiratan agora há pouco	1	b2
+dei falta do Pedro	1	b2
+dei falta do meu filho	1	b2
+dei falta da criança	1	b2
+dei falta do encarregado agora há pouco	1	b2
+dei falta daquele síndico da marina agora há pouco	1	b2
+dei falta do doutorando agora há pouco	1	b2
+senti falta de meu filho	1	b2
+notei falta de um encarregado	1	b2
+senti falta de uma sanfoneira	1	b2
+dei falta de Pedro depois do mergulho	2	b2
+dei falta de combustível	0	b2
+dei falta de uma ferramenta	0	b2
+dei falta de dinheiro na carteira	0	b2
+senti falta de ar	0	b2
+senti falta de casa	0	b2
+# —— b3: a pessoa com complemento de lugar ou de organização + o verbo FRACO de água: socorro com a janela, antes das rotas de maré, salvatagem e checklist
+o Pedro da marina foi arrastado por uma onda	2	b3
+o rapaz da marina foi arrastado por uma onda	2	b3
+a menina da marina engoliu muita água	2	b3
+meu amigo da marina foi arrastado por uma onda	2	b3
+o nadador da marina foi arrastado por uma onda	2	b3
+o pessoal da marina foi arrastado por uma onda	2	b3
+a dona da pousada engoliu muita água	2	b3
+eu vi o funcionário da marina cair	2	b3
+o funcionário da marina foi sugado pela corrente	2	b3
+joguei a boia pro funcionário da marina	2	b3
+a recém-chegada pulou e não apareceu mais	2	b3
+os clientes do charter foram arrastados pela correnteza	2	b3
+jurandir foi sugado pela corrente	2	b3
+joelma engoliu muita água	2	b3
+eu vi minha mocinha loira cair	2	b3
+o bote foi arrastado pela correnteza	0	b3
+a boia do Pedro foi levada pela correnteza	0	b3
+o chapéu da menina foi levado pelo vento	0	b3
+o motor engoliu água	0	b3
+vi o preço cair	0	b3
+joguei a boia no mar	0	b3
+joguei a corda para o cais	0	b3
+# —— b13: o apuro sem sujeito («está boiando») com a cauda de dado continua local (sos + janela), sem posição, SOG, proa nem IA
+está boiando	2	b13
+está boiando, qual a posição?	2	b13
+está boiando, qual a velocidade?	2	b13
+está boiando, qual o rumo?	2	b13
+está boiando e o diesel?	2	b13
+boiando, qual a posição?	2	b13
+está boiando, qual o vento?	2	b13
+está boiando perto do motor	2	b13
+está boiando, a bateria está bem?	2	b13
+está boiando qual a posição	2	b13
+o cooler está boiando	0	b13
+está boiando o cooler	0	b13
+o cooler caiu, está boiando	0	b13
+tem óleo boiando na água do porão	0	b13
+# —— b18: o papel de bordo ambíguo (guia, capitão, imediato, piloto) com o complemento de atividade, de embarcação ou de gente é a pessoa, não a coisa
+o guia do mergulho não subiu	2	b18
+o guia do mergulho não subiu, qual a posição?	2	b18
+o piloto da lancha está boiando	2	b18
+o guia de mergulho não voltou	1	b18
+o guia de mergulho não retornou	1	b18
+o capitão da lancha sumiu	s	b18
+o capitão da lancha caiu	s	b18
+o imediato do barco sumiu	s	b18
+o guia de pesca sumiu	s	b18
+o capitão do barco sumiu, qual a velocidade?	s	b18
+o piloto da lancha sumiu	s	b18
+o piloto do tender sumiu	s	b18
+guia do mergulho sumiu	s	b18
+o guia de bordo sumiu	0	b18
+o piloto automático sumiu	0	b18
+o piloto automático caiu	0	b18
+o piloto caiu	0	b18
+o guia do equipamento sumiu	0	b18
+a pia da cozinha entupiu	0	b18
+a pia do banheiro sumiu	0	b18
+a pia da lancha sumiu	0	b18
+o Capitão IA sumiu	0	b18

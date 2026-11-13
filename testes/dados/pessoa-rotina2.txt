@@ -1087,7 +1087,7 @@ a Ana está de atestado
 a Ana não vai no passeio
 a Ana ainda não voltou de viagem
 a Ana não leu a mensagem
-a Ana não deu sinal de vida
+# («a Ana não deu sinal de vida» saiu daqui em 13/11/2026: a decisão do proprietário sobre os 5 bloqueios de falso negativo faz do «não deu sinal de vida» a ESPERA — está em pessoa-bloqueios.tsv com o nível 1)
 a Ana perdeu o prazo
 a Ana esqueceu a chave
 a Ana esqueceu o notebook na oficina
@@ -1317,7 +1317,7 @@ ninguém achou o controle remoto
 ninguém encontrou a chave do paiol
 alguém sabe do Pedro?
 alguém tem notícia do Pedro?
-alguém sabe onde o Pedro está?
+# («alguém sabe onde o Pedro está?» saiu daqui em 13/11/2026 pelo mesmo motivo: «alguém sabe onde X está / anda / foi?» é a ESPERA — está em pessoa-bloqueios.tsv com o nível 1)
 alguém sabe quando o mecânico chega?
 alguém conseguiu falar com o fornecedor?
 alguém conseguiu contato com a seguradora?
