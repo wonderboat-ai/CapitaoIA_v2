@@ -1,8 +1,8 @@
 # Claude API · IA na nuvem — ESTRUTURA (desligada)
 
 Nada publicado, nenhuma tela chama. **Alternativa gratuita com o mesmo contrato e o mesmo cliente:** [`workers-ai/`](../workers-ai/README.md) — publique uma das duas como `capitao-ia`.
-Sem IA, o chat e a voz respondem **só no aparelho**: resposta pronta (`ANSWERS`) → trecho da base de bordo (`buscaBase`) → **SEM DADOS**.
-Com a IA (hoje o proxy ligado é o do Workers AI), ela entra no SEM DADOS, no trecho do guia e na pergunta sobre o app — no chat e na conversa por voz —, com a ficha de bordo e o histórico. Não substitui as respostas prontas nem o SOS: emergência continua roteada no aparelho, offline. Detalhes em [`workers-ai/`](../workers-ai/README.md).
+Sem IA, o chat e a voz respondem **só no aparelho**: resposta pronta (`ANSWERS`) → trecho da base de bordo (`buscaBase`) → resposta de bordo com número e hora (na simulação) ou **SEM DADOS** (modo real).
+Com a IA (hoje o proxy ligado é o do Workers AI), ela entra no SEM DADOS, no trecho do guia e na pergunta sobre o app — no chat e na conversa por voz —, com a ficha de bordo e o histórico. Na 1.1.0 este Worker tem o mesmo `SISTEMA_SIMULACAO`, a mesma escolha por `corpo.modo`, o mesmo filtro de saída (502 com `parou` `rotulo`, `privacidade` ou `seguranca`), o filtro de coordenadas e a ficha de até 16.000 letras (12.000 no modo real) do proxy do Workers AI; `testes/worker_ia.py` confere que o texto de sistema é igual nos dois. Não substitui as respostas prontas nem o SOS: emergência continua roteada no aparelho, offline. Detalhes em [`workers-ai/`](../workers-ai/README.md).
 
 ## Arquivos
 
@@ -19,9 +19,10 @@ Com a IA (hoje o proxy ligado é o do Workers AI), ela entra no SEM DADOS, no tr
 
 ```json
 { "pergunta": "até 500 letras",
-  "trechos": [{ "fonte": "Guia de bordo (DEMO) — Gerador Onan", "pag": null, "secao": "2 · Ligar", "texto": "…" }],
+  "trechos": [{ "fonte": "Guia de bordo — Gerador Onan", "pag": null, "secao": "2 · Ligar", "texto": "…", "faq": "código do item do FAQ tocado (só no trecho 1 e opcional; o trecho vai inteiro)" }],
   "contexto": "leitura que a tela já mostra (snapshot ou ao vivo), até 2.000 letras",
-  "ficha": "CapitaoBrain.ficha(): o que o app sabe agora, cada bloco com a fonte, até 12.000 letras",
+  "ficha": "CapitaoBrain.ficha(): o que o app sabe agora, cada bloco com a fonte, até 16.000 letras (12.000 no modo real)",
+  "modo": "simulacao (opcional; sem o campo vale o modo real)",
   "historico": [{ "papel": "usuario", "texto": "…" }, { "papel": "capitao", "texto": "…" }] }
 ```
 

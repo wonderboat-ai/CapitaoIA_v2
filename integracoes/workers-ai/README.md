@@ -1,8 +1,10 @@
-# Workers AI · IA na nuvem gratuita — LIGADA na demonstração (1.0.4 · conversa na 1.0.5)
+# Workers AI · IA na nuvem gratuita — LIGADA na simulação (1.0.4 · conversa na 1.0.5 · modo simulação na 1.1.0)
 
 **Publicado em 27/09/2026** na conta Cloudflare do proprietário: `https://capitao-ia.luka-araujos.workers.dev` (código deste `ia-worker/worker.js`, colado pelo painel), binding `AI`, `MODELO`, `MAX_TOKENS`, `ORIGENS` e `GATEWAY=capitao-ia`; `CHAVE_APP` como Secret. AI Gateway `capitao-ia`: **30 pedidos por hora, janela deslizante** (desde a 1.0.5; eram 3 na 1.0.4, pouco para conversar), sem coleta de logs, autenticado. **Código da 1.0.5** (ficha de bordo + histórico) colado no painel em 27/09/2026 — versão `bd5b8774`, 100% do tráfego; bindings, variáveis e segredo mantidos. **Logs de invocação do Worker desligados** — eles gravavam os cabeçalhos do pedido, inclusive o `X-Capitao-Chave`, em texto claro. Ligado como **exceção aprovada pelo proprietário** à regra do login no servidor (dados fictícios, origem própria); **antes de dados reais, pôr o Cloudflare Access** na frente do Worker.
 
 ## 1.1.0 · modo simulação — código 1.1.0 pronto, ainda não colado no painel
+
+> Daqui para baixo, as seções «Quando a IA entra», «O que o proxy garante», «Regras que o proxy passa para a IA» e «Decisões» da 1.0.5 e 1.0.6 descrevem o **modo real** (`simulacao: false`, ou pedido sem `modo`): dado só das fontes, SEM DADOS quando falta e conhecimento geral rotulado. Com `modo: "simulacao"` valem as regras desta seção.
 
 O `ia-worker/worker.js` desta pasta já é o da 1.1.0. O Worker publicado continua com o código da 1.0.5 até o proprietário colar o novo. **Site e Worker podem ir no ar em qualquer ordem**: o app manda o campo `modo: "simulacao"` e o Worker antigo o ignora (o cliente filtra a resposta do mesmo jeito e, se ela trouxer rótulo, fica a resposta local); o Worker novo sem o campo `modo` se comporta como o da 1.0.9.
 
@@ -75,7 +77,7 @@ Nunca em emergência, pressão de óleo, registro no diário nem resposta pronta
 
 ```json
 { "pergunta": "até 500 letras",
-  "trechos": [{ "fonte": "Guia de bordo (DEMO) — Gerador Onan", "pag": null, "secao": "2 · Ligar", "texto": "…" }],
+  "trechos": [{ "fonte": "Guia de bordo — Gerador Onan", "pag": null, "secao": "2 · Ligar", "texto": "…" }],
   "contexto": "leitura que a tela já mostra (snapshot ou ao vivo), até 2.000 letras",
   "ficha": "## Agora …\n## Sobre o app …\n## Telemetria … (CapitaoBrain.ficha(), até 12.000 letras)",
   "historico": [{ "papel": "usuario", "texto": "como está o diesel?" }, { "papel": "capitao", "texto": "BB 54 % · BE 52 %…" }] }
