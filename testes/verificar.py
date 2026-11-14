@@ -165,6 +165,11 @@ a privacidade (telefone — inclusive o +55, o número de 10 ou mais dígitos co
 o diário vigente (com duas correções da mesma linha, a mais nova; a manutenção que a G3 e o chat gravam com sys «Diário» entra no histórico) e o selo apresentação, o dia de hoje igual ao das telas com o replay livre às 03:00 de Brasília, o ramo simulacao false, a atualização sem timer, a impressão (mídia de papel, PDF A4) e o layout.
 O fechamento (rodada completa): o registro das telas novas e do relatório (TELAS, CORE, lista, mapa APP, manifest), PENDENTES_ROTULO e PENDENTES_MUDA vazias, nenhum {{…}} em atributo de SVG, nenhum setInterval novo e a varredura do §3 em
 TODAS as telas com o replay SOLTO em 4 pontos da volta de 150 s (a faixa de alerta nunca no SOS, no Manual nem na C3).
+F35 (Fase 7; PARIDADE «Textos cortados: detector em 8 tamanhos e 2 temas», aqui em Python, sem Node): o detector lê na página a tinta de cada nó de texto contra a caixa de quem esconde o excesso (overflow hidden/clip, seguindo o bloco de
+contenção e a escala da prancheta), as reticências, o teto de linhas, o texto que sai do próprio cartão e o texto de desenho (SVG) que passa da área do desenho; não conta o que se alcança rolando, o que é do leitor de tela, o invisível e a
+caixa fechada; a dica (title) com o texto inteiro só salva as reticências nas telas da web. Vale nas telas novas — A4, A5, C4 web e app (os 4 tipos), F6 web e app (lista, item aberto e busca) — nos 4 tamanhos da plataforma, 2 temas e 2
+instantes (60 s e 105 s, com a faixa de alerta), e no relatório nos 8 tamanhos e 2 temas (o registro de sempre e texto comprido sem espaço): 0 texto cortado. A única prévia de propósito (a 2ª linha do item da lista da F6) está em PREVIAS_F35.
+A prova do detector é uma página de exemplos (cada tipo de corte achado, nenhum falso positivo) e 15 defeitos plantados (--mutantes-f35).
 
 Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py                     todas as telas, todos os tamanhos e temas
@@ -172,6 +177,7 @@ Uso (site servido em http://127.0.0.1:8765):
     python testes/verificar.py --fotos             salva capturas em testes/saida/
     python testes/verificar.py --offline           testa a abertura offline depois da 1ª visita
     python testes/verificar.py --so-offline        só o teste offline (sem a matriz)
+    python testes/verificar.py --so-f35 [telas]    só a F35 (texto cortado nas telas novas e no relatório, ~2,5 min); --mutantes-f35: os defeitos plantados dela
 Navegador: Edge instalado (channel="msedge").
 """
 import datetime
@@ -809,6 +815,20 @@ def tamanhos_105(tela):
 
 
 def main():
+    if '--so-f35' in sys.argv or '--mutantes-f35' in sys.argv:   # só a F35, o detector de texto cortado nas telas novas (e, com --mutantes-f35, os defeitos plantados dela); sem argumento, as 6 telas novas e o relatório
+        with sync_playwright() as p:
+            b = p.chromium.launch(channel='msedge', headless=True)
+            t0, falhas = time.time(), []
+            if '--mutantes-f35' in sys.argv:
+                falhas = mutantes_f35(b)
+            else:
+                args35 = [a for a in sys.argv[1:] if not a.startswith('--')]
+                for nome, prob in f35_conferencias(b, [a for a in args35 if a in TELAS_F35] if args35 else list(TELAS_F35), [a for a in args35 if a == 'relatorio'] if args35 else ['relatorio']):
+                    print('FALHA' if prob else 'ok   ', nome, ' | '.join(prob[:6]) if prob else '')
+                    if prob: falhas.append(nome)
+            b.close()
+        print('%d falhas · %.0f s' % (len(falhas), time.time() - t0))
+        sys.exit(1 if falhas else 0)
     if '--so-p4k' in sys.argv or '--mutantes-p4k' in sys.argv:   # só as conferências da P4K (e, com --mutantes-p4k, os defeitos plantados delas); sem argumento, o relatório, o fechamento e o replay livre de todas as telas
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge', headless=True)
@@ -1080,6 +1100,11 @@ def main():
                 if prob:
                     falhas.append({'tela': nome, 'tema': 'P4K', 'prob': prob[:8]})
                     print('FALHA P4K ·', nome, ' | '.join(prob[:4]))
+            for nome, prob in f35_conferencias(b, lista, paginas):   # F35: o detector de texto cortado (a prova dele numa página de exemplos) nas telas novas — A4, A5, C4 web e app, F6 web e app — e no relatório, em 8 tamanhos e 2 temas
+                total += 1
+                if prob:
+                    falhas.append({'tela': nome, 'tema': 'F35', 'prob': prob[:8]})
+                    print('FALHA F35 ·', nome, ' | '.join(prob[:4]))
             for tela in [t for t in SEM_UNPKG if t in lista]:
                 total += 1
                 prob = teste_sem_unpkg(b, tela)
@@ -10897,6 +10922,294 @@ def mutantes_p4k(b):
     print('%d mutantes · %d vivos' % (len(MUTANTES_P4K), len(vivos)))
     return vivos
 
+
+# ——— F35 (PARIDADE «Textos cortados: detector em 8 tamanhos e 2 temas»; PROMPT Fase 7): 0 texto cortado nas telas novas ———
+# O detector roda na página (Playwright em Python, sem Node) e ACHA o texto que o layout não deixa ler inteiro:
+#   (a) a tinta de um nó de texto (Range.getClientRects) passa mais de 1 px da caixa de um ancestral que esconde o excesso (overflow hidden/clip, na largura ou na altura), seguindo o bloco de
+#       contenção (o absoluto escapa de quem não é posicionado); «escondido» quando a linha some inteira (lista sem rolagem, cartão baixo);
+#   (b) reticências (text-overflow: ellipsis) com o conteúdo maior que a caixa — menos quando a dica (title) traz o texto inteiro, a regra da moldura;
+#   (c) teto de linhas (-webkit-line-clamp) com o conteúdo mais alto que a caixa;
+#   (d) o texto sai do próprio cartão (o 1º ancestral com fundo ou borda) sem nada que esconda, enquanto está no fluxo (nada posicionado, transformado nem com margem negativa no caminho);
+#   e o texto de um desenho (SVG) que passa da área do desenho.
+# Não conta: o que se alcança rolando (ancestral com overflow auto/scroll e a própria página), o que é só do leitor de tela (caixa de até 1,5 px, clip, clip-path), o invisível (display,
+# visibility, opacidade 0, camada inerte), a caixa fechada (sanfona recolhida) e a folga da linha (a caixa do texto é mais alta que a tinta: 15 % do corpo em cima e 6 % embaixo).
+# A prévia de lista de propósito (teto de linhas num item que abre inteiro ao tocar) só passa pela lista PREVIAS_F35, por tela e por seletor; fora dela reprova.
+LE_F35 = r"""([previas, dica]) => {
+  const de = document.documentElement, out = [], vistos = new Set(); let textos = 0, caixas = 0;
+  const lin = (s) => (s || '').replace(/\s+/g, ' ').trim();
+  const nome = (e) => { let s = e.tagName.toLowerCase(); for (const a of e.attributes) if (/^data-/.test(a.name) && !/^data-(dc|sc|reactroot)/.test(a.name)) { s += '[' + a.name + (a.value ? '=' + a.value.slice(0, 24) : '') + ']'; break; } return s; };
+  const onde = (e) => { const p = []; for (let x = e; x && x !== document.body && p.length < 4; x = x.parentElement) p.unshift(nome(x)); return p.join(' › '); };
+  const cs = (e) => getComputedStyle(e);
+  const some = (e) => { for (let x = e; x && x !== de; x = x.parentElement) { const c = cs(x); if (c.display === 'none' || c.visibility !== 'visible' || +c.opacity === 0 || x.inert) return true;
+    if (c.position === 'absolute' && ((c.clip && c.clip !== 'auto') || (c.clipPath && c.clipPath !== 'none'))) return true;
+    if (c.overflowX !== 'visible' && (x.offsetWidth <= 1.5 || x.offsetHeight <= 1.5)) return true; } return false; };
+  // a caixa de dentro (padding box) em px da janela: a prancheta é escalada pelo capitao-app.js, e a escala sai da razão entre a caixa da janela e a do layout
+  const caixa = (a) => { const r = a.getBoundingClientRect(), sx = a.offsetWidth ? r.width / a.offsetWidth : 1, sy = a.offsetHeight ? r.height / a.offsetHeight : 1;
+    const l = r.left + a.clientLeft * sx, t = r.top + a.clientTop * sy; return { l, t, r: l + a.clientWidth * sx, b: t + a.clientHeight * sy, sx, sy }; };
+  const previa = (a) => (previas || []).some((s) => !!a.closest(s));
+  const anota = (grupo, tipo, e, txt, extra, k) => { const chave = grupo + '|' + onde(e) + '|' + txt.slice(0, 60); if (vistos.has(chave)) return; vistos.add(chave);
+    out.push({ tipo, texto: txt.slice(0, 90), onde: onde(e), det: extra, previa: !!k }); };
+  const jaCaixa = new Set();   // as caixas que a regra (a) já acusou: as regras (b) e (c) não repetem o mesmo corte
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;
+  while ((n = w.nextNode())) {
+    const e = n.parentElement, txt = lin(n.data); if (!txt || !e || /^(SCRIPT|STYLE|NOSCRIPT|OPTION|TITLE|TEMPLATE)$/.test(e.tagName) || e.closest('svg') || some(e)) continue;
+    const rg = document.createRange(); rg.selectNodeContents(n);
+    let rs = [...rg.getClientRects()].filter((r) => r.width > 0.5 && r.height > 0.5).map((r) => ({ l: r.left, t: r.top, r: r.right, b: r.bottom })); if (!rs.length) continue;
+    textos++;
+    const fs = parseFloat(cs(e).fontSize) || 12;
+    let abs = false, px = false, py = false, cartao = false, solto = false, achou = false;
+    for (let a = e; a && a !== document.body && a !== de; a = a.parentElement) {
+      const c = cs(a), pos = c.position, contem = pos !== 'static' || c.transform !== 'none' || /paint|strict|content/.test(c.contain);
+      if (abs) { if (!contem) continue; abs = false; }   // o absoluto escapa de quem não é o bloco de contenção dele
+      if (c.display !== 'inline' && c.display !== 'contents') {   // (caixa em linha não esconde nem é cartão)
+        const q = caixa(a), tol = 1, tolT = (1 + 0.15 * fs) * q.sy, tolB = (1 + 0.06 * fs) * q.sy;
+        const ox = c.overflowX, oy = c.overflowY, hx = !px && (ox === 'hidden' || ox === 'clip'), hy = !py && (oy === 'hidden' || oy === 'clip');
+        if (hx || hy) {
+          caixas++;
+          const fechada = (hx && (q.r - q.l) <= 1.5) || (hy && (q.b - q.t) <= 1.5);   // caixa fechada (sanfona recolhida, painel de altura zero): não é texto cortado
+          for (const r of rs) {
+            const fx = hx ? Math.max(q.l - r.l, r.r - q.r) : 0, fyT = hy ? q.t - r.t : 0, fyB = hy ? r.b - q.b : 0;
+            if (!achou && !fechada && (fx > tol || fyT > tolT || fyB > tolB)) {
+              const todo = (hx && (r.r <= q.l + tol || r.l >= q.r - tol)) || (hy && (r.b <= q.t + tolT || r.t >= q.b - tolB));
+              const ret = c.textOverflow === 'ellipsis' && fx > tol, tit = lin((a.closest('[title]') || { title: '' }).title);
+              achou = true; jaCaixa.add(a);
+              if (!(dica && ret && tit && tit.indexOf(lin(a.innerText)) !== -1))   // (no computador, as reticências COM a dica do texto inteiro passam: a regra da moldura)
+                anota('corte', ret ? 'reticências' : c.webkitLineClamp !== 'none' ? 'teto de linhas' : todo ? 'escondido' : 'cortado', e, txt,
+                  nome(a) + ' esconde ' + Math.round(Math.max(fx, fyT, fyB)) + ' px' + (fx > tol ? ' na largura' : ' na altura'), previa(a));
+            }
+          }
+          // o que segue para os ancestrais é só a parte que esta caixa deixa ver
+          rs = rs.map((r) => ({ l: hx ? Math.max(r.l, q.l) : r.l, r: hx ? Math.min(r.r, q.r) : r.r, t: hy ? Math.max(r.t, q.t - tolT) : r.t, b: hy ? Math.min(r.b, q.b + tolB) : r.b })).filter((r) => r.r - r.l > 0.5 && r.b - r.t > 0.5);
+          if (!rs.length) break;
+        }
+        // (d) o cartão do próprio texto: a 1ª caixa com fundo ou borda (a dele ou a de um ancestral), enquanto o texto está no fluxo
+        if (!cartao && !solto) {
+          const temCaixa = (c.backgroundColor !== 'rgba(0, 0, 0, 0)' && c.backgroundColor !== 'transparent') || parseFloat(c.borderTopWidth) + parseFloat(c.borderBottomWidth) + parseFloat(c.borderLeftWidth) + parseFloat(c.borderRightWidth) > 0;
+          if (temCaixa) {
+            cartao = true; const b = a.getBoundingClientRect();
+            for (const r of rs) { const fx = Math.max(b.left - r.l, r.r - b.right), fy = Math.max(b.top - r.t - tolT, r.b - b.bottom - tolB);
+              if (fx > tol || fy > 0) { anota('fora', 'fora do bloco', e, txt, 'passa ' + Math.round(Math.max(fx, fy)) + ' px da caixa de ' + nome(a)); break; } }
+          }
+        }
+        if (ox === 'auto' || ox === 'scroll') px = true;   // rolagem legítima: o que passa se alcança rolando
+        if (oy === 'auto' || oy === 'scroll') py = true;
+        if (px && py) break;
+      }
+      if (pos === 'absolute' || pos === 'fixed' || pos === 'sticky' || c.transform !== 'none' || parseFloat(c.marginLeft) < 0 || parseFloat(c.marginTop) < 0 || parseFloat(c.marginRight) < 0 || parseFloat(c.marginBottom) < 0) solto = true;
+      if (pos === 'fixed') break;   // preso à janela: nada acima o esconde
+      if (pos === 'absolute') abs = true;
+    }
+  }
+  // (b) reticências e (c) teto de linhas: o conteúdo não cabe na própria caixa
+  document.querySelectorAll('body *').forEach((e) => {
+    if (e.closest('svg')) return; const c = cs(e), ret = c.textOverflow === 'ellipsis' && c.overflowX !== 'visible' && e.scrollWidth > e.clientWidth + 1, teto = c.webkitLineClamp !== 'none' && e.scrollHeight > e.clientHeight + 1;
+    if (!(ret || teto) || jaCaixa.has(e) || !lin(e.innerText) || some(e)) return;
+    const tit = lin((e.closest('[title]') || { title: '' }).title); if (dica && ret && tit && tit.indexOf(lin(e.innerText)) !== -1) return;
+    anota('corte', ret ? 'reticências' : 'teto de linhas', e, lin(e.innerText), ret ? e.scrollWidth + ' px de conteúdo em ' + e.clientWidth : e.scrollHeight + ' px de conteúdo em ' + e.clientHeight, previa(e));
+  });
+  // o texto de um desenho (SVG) que passa da área do desenho
+  document.querySelectorAll('svg text').forEach((t) => {
+    const s = t.closest('svg'), txt = lin(t.textContent); let raiz = s; for (let x = s; x; x = x.parentElement && x.parentElement.closest('svg')) raiz = x;
+    if (!txt || some(raiz) || cs(t).display === 'none' || cs(t).visibility !== 'visible' || cs(raiz).overflow === 'visible') return;
+    const r = t.getBoundingClientRect(), b = raiz.getBoundingClientRect(); if (r.width < 0.5) return;
+    textos++;
+    const f = Math.max(b.left - r.left, r.right - b.right, b.top - r.top, r.bottom - b.bottom);
+    if (f > 1.5) anota('corte', 'cortado no desenho', t, txt, 'passa ' + Math.round(f) + ' px da área do svg');
+  });
+  const raiz = document.getElementById('dc-root') || document.body, T = window.CapitaoTheme, A = window.CapitaoAgora; let hora = null; try { hora = A && A.instante() ? A.instante().hora : null; } catch (x) {}
+  return { achados: out, textos, caixas, tema: T && T.get ? T.get() : null, hora, hash: location.hash, pagina: lin(raiz.innerText) }; }"""
+
+C4_TIPOS = ['#tipo=saida', '#tipo=chegada', '#tipo=abastecimento', '#tipo=fundeio']
+F6_ESTADOS = ['', '#id=GE-02', '#busca=gerador']
+# tela nova → os estados por endereço (cada um nos 2 instantes — 60 s e 105 s, com a faixa de alerta — e nos 2 temas); as telas da web nos 4 tamanhos da web, as do app nos 4 do app
+TELAS_F35 = {'A4-Sensores-Web': [''], 'A5-Sensores-Mobile': [''], 'C4-Checklist-Web': C4_TIPOS, 'C4-Checklist-Mobile': C4_TIPOS, 'F6-FAQ-Equipamentos-Web': F6_ESTADOS, 'F6-FAQ-Equipamentos': F6_ESTADOS}
+# a única prévia de propósito: a 2ª linha de cada item da lista da F6 (o item abre inteiro ao tocar; a resposta aberta entra na conta, no estado #id=)
+PREVIAS_F35 = {'F6-FAQ-Equipamentos-Web': ['button[data-f6=item] [data-f6=previa]'], 'F6-FAQ-Equipamentos': ['button[data-f6=item] [data-f6=previa]']}
+HORA_F35 = {'60': '12:01:00', '105': '12:01:45'}
+MUDA_F35 = "([v, f, t]) => { if (v !== null && location.hash !== v) location.hash = v || '#'; if (f && window.CapitaoReplay) window.CapitaoReplay.fixar(f); window.CapitaoTheme.set(t); }"
+
+
+def achados_f35(rot, r):
+    """Os textos cortados de uma leitura do detector, já sem as prévias de propósito."""
+    return ['%s: texto %s «%s» em %s (%s)' % (rot, x['tipo'], x['texto'][:70], x['onde'], x['det']) for x in r['achados'] if not x['previa']]
+
+
+def teste_f35_tela(b, tela, tamanhos=None):
+    """Uma tela nova nos 4 tamanhos da plataforma dela, em cada estado por endereço, nos 2 instantes e nos 2 temas: nenhum texto cortado. O estado tem de ter valido (o tema e a hora lidos na
+    página, o texto que muda de um estado para o outro) e o detector tem de ter olhado texto e caixas de verdade (a conferência não passa por não ter visto nada)."""
+    prob, estados, previas = [], TELAS_F35[tela], PREVIAS_F35.get(tela, [])
+    n_previas = 0
+    for (w, h) in (tamanhos or (APP if eh_app(tela) else WEB)):
+        ctx, pg, erros = abre_tela(b, tela, w=w, h=h, hash_=estados[0])
+        rot0 = '%s %dx%d' % (tela, w, h)
+        vistos = {}
+        for v in estados:
+            for fixo in ('60', '105'):
+                for tema in ('escuro', 'claro'):
+                    pg.evaluate(MUDA_F35, [v, fixo, tema])
+                    pg.wait_for_timeout(450 if tema == 'escuro' else 150)   # o estado e o instante refazem a tela; o tema só troca as cores
+                    r = pg.evaluate(LE_F35, [previas, not eh_app(tela)])   # a dica (title) só vale onde há ponteiro: nas telas da web
+                    rot = '%s %s t = %s s %s' % (rot0, v or '(sem endereço)', fixo, tema)
+                    prob += achados_f35(rot, r)
+                    n_previas += sum(1 for x in r['achados'] if x['previa'])
+                    if r['tema'] != tema or r['hora'] != HORA_F35[fixo]: prob.append('%s: o estado não valeu (tema %r, hora %r)' % (rot, r['tema'], r['hora']))
+                    if r['textos'] < 15 or r['caixas'] < 1: prob.append('%s: o detector quase não viu texto (%d nós, %d caixas que escondem)' % (rot, r['textos'], r['caixas']))
+                    if tema == 'escuro' and fixo == '60': vistos[v] = r['pagina']
+        if len(set(vistos.values())) != len(estados): prob.append('%s: os estados por endereço mostram o mesmo texto (%d estados, %d textos diferentes): o endereço não valeu' % (rot0, len(estados), len(set(vistos.values()))))
+        prob += ['%s: %s' % (rot0, e) for e in erros[:2]]
+        ctx.close()
+    if previas and not n_previas: prob.append('%s: a lista PREVIAS_F35 não casou nenhuma prévia cortada (%s): retire a exceção' % (tela, previas))
+    return prob
+
+
+REL_LONGO_F35 = 'X' * 90   # texto comprido sem espaço (nome de arquivo, local de peça): o que mais estoura uma célula
+
+
+def teste_f35_relatorio(b, tamanhos=None):
+    """O relatório nos 8 tamanhos e nos 2 temas, com o registro de sempre e com texto comprido sem espaço no documento, na peça e no diário: nenhum texto cortado."""
+    prob = []
+    ls = {'capitao.docs.v1': json.dumps([{'n': 'laudo-' + REL_LONGO_F35 + '.pdf', 's': '1 KB', 'dd': '10/11/2026', 'st': 'A CONFERIR', 'cat': 'Laudos'}]),
+          'capitao.pecas.v1': json.dumps({'novas': [{'id': 'ulong', 'n': 'Peça ' + REL_LONGO_F35, 'qtd': 1, 'min': 1, 'local': 'local-' + REL_LONGO_F35, 'obs': 'obs-' + REL_LONGO_F35}], 'movs': []}),
+          'capitao.diario.v1': json.dumps([{'d': '10/11', 'iso': '2026-11-10T12:00:00.000Z', 'sys': 'Manutenção', 'who': 'Lucas', 'src': 'console · manutenção', 't': 'registro-' + REL_LONGO_F35}])}
+    for (w, h) in (tamanhos or (WEB + APP)):
+        for nome, reg in (('registro de sempre', None), ('texto comprido', ls)):
+            ctx, pg, erros = abre_rel(b, w=w, h=h, ls=reg)
+            for tema in ('escuro', 'claro'):
+                pg.evaluate(MUDA_F35, [None, None, tema])
+                pg.wait_for_timeout(150)
+                r = pg.evaluate(LE_F35, [[], (w, h) in WEB])
+                rot = 'relatório %dx%d %s %s' % (w, h, nome, tema)
+                prob += achados_f35(rot, r)
+                if r['tema'] != tema: prob.append('%s: o tema não valeu (%r)' % (rot, r['tema']))
+                if r['textos'] < 60: prob.append('%s: o detector quase não viu texto (%d nós)' % (rot, r['textos']))
+                if reg and REL_LONGO_F35 not in r['pagina'].replace(' ', ''): prob.append('%s: o texto comprido não entrou no relatório (o teste não vale)' % rot)
+            prob += ['relatório %dx%d %s: %s' % (w, h, nome, e) for e in erros[:2]]
+            ctx.close()
+    return prob
+
+
+# A prova do detector: uma página de exemplos, cada um num [data-caso]. Os de CORTA_F35 têm de ser achados com o tipo certo; os outros (o que rola, o que é do leitor de tela, a sanfona recolhida,
+# as reticências com a dica, o absoluto que escapa, o invisível, o que cabe, a prancheta escalada) não podem ser; a prévia só passa quando está na lista.
+CORTA_F35 = {'largura': 'cortado', 'reticencias': 'reticências', 'teto': 'teto de linhas', 'altura': 'cortado', 'fora': 'fora do bloco', 'fora-direto': 'fora do bloco', 'desenho': 'cortado no desenho', 'absoluto': 'cortado', 'lista': 'escondido',
+             'escala': 'cortado', 'previa-solta': 'teto de linhas'}
+LONGO_F35 = 'Texto comprido de exemplo que não cabe na caixa de jeito nenhum'
+PAGINA_F35 = """<!doctype html><meta charset="utf-8"><title>F35</title><body style="margin: 0; font: 14px/1.4 sans-serif; width: 900px;">
+<div data-caso="largura" style="width: 90px; overflow: hidden; white-space: nowrap;">%(t)s</div>
+<div data-caso="reticencias" style="width: 90px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">%(t)s</div>
+<div data-caso="teto" style="width: 120px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">%(t)s %(t)s</div>
+<div data-caso="altura" style="width: 120px; height: 12px; overflow: hidden;">%(t)s</div>
+<div data-caso="fora" style="width: 70px; background: #cde; white-space: nowrap;"><span>%(t)s</span></div>
+<div data-caso="desenho"><svg width="100" height="24" viewBox="0 0 100 24"><text x="60" y="16" font-size="12">%(t)s</text></svg></div>
+<div data-caso="absoluto" style="position: relative; width: 100px; height: 24px; overflow: hidden;"><span style="position: absolute; left: 60px; top: 2px; white-space: nowrap;">%(t)s</span></div>
+<div data-caso="lista" style="width: 300px; height: 22px; overflow: hidden;"><div>primeira linha da lista</div><div>segunda linha da lista some inteira</div></div>
+<div data-caso="fora-direto" style="width: 70px; border: 1px solid #89a; white-space: nowrap;">%(t)s</div>
+<div data-caso="rola-dentro" style="width: 150px; overflow: hidden;"><div style="width: 150px; overflow: auto; white-space: nowrap;">%(t)s</div></div>
+<div style="transform: scale(0.5); transform-origin: 0 0; width: 400px; height: 40px;"><div data-caso="escala" style="width: 260px; overflow: hidden; white-space: nowrap;">%(t)s</div><div data-caso="escala-cabe" style="width: 390px; overflow: hidden; white-space: nowrap;">cabe na caixa</div></div>
+<button data-caso="previa-solta" style="width: 140px; padding: 0; border: 0; text-align: left; font: inherit;"><span style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">%(t)s</span></button>
+<button data-caso="previa-da-lista" style="width: 140px; padding: 0; border: 0; text-align: left; font: inherit;"><span data-previa style="display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">%(t)s</span></button>
+<div data-caso="rola" style="width: 90px; overflow: auto; white-space: nowrap;">%(t)s</div>
+<div data-caso="rola-fora" style="width: 200px; height: 40px; overflow: auto;"><div style="width: 120px; white-space: nowrap; overflow: visible;">%(t)s</div></div>
+<div data-caso="leitor" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">%(t)s</div>
+<div data-caso="sanfona" style="height: 0; overflow: hidden;">%(t)s</div>
+<div data-caso="dica" title="%(t)s" style="width: 90px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">%(t)s</div>
+<div style="position: relative; width: 500px; height: 30px;"><div data-caso="escapa" style="width: 60px; height: 20px; overflow: hidden;"><span style="position: absolute; left: 0; top: 0; white-space: nowrap;">%(t)s</span></div></div>
+<div data-caso="some" style="width: 60px; overflow: hidden; white-space: nowrap;"><span style="display: none;">%(t)s</span><span style="visibility: hidden;">%(t)s</span><span style="opacity: 0;">%(t)s</span></div>
+<div data-caso="cabe" style="width: 600px; padding: 8px; background: #cde; border: 1px solid #89a; overflow: hidden;">%(t)s</div>
+<div data-caso="quebra" style="width: 120px; padding: 6px; background: #cde; overflow: hidden; overflow-wrap: anywhere;">%(t)s semespaçonenhumparaquebrarnomeiodapalavraenormedemais</div>
+</body>""" % {'t': LONGO_F35}
+
+
+def teste_f35_detector(b):
+    prob = []
+    ctx = b.new_context(viewport={'width': 1000, 'height': 900})
+    pg = ctx.new_page()
+    pg.set_content(PAGINA_F35)
+    r = pg.evaluate(LE_F35, [['[data-caso=previa-da-lista] [data-previa]'], True])
+    sem_dica = pg.evaluate(LE_F35, [[], False])   # no celular não há ponteiro: a dica (title) não salva as reticências
+    ctx.close()
+    caso = lambda x: (re.search(r'\[data-caso=([\w-]+)\]', x['onde']) or [None, '?'])[1]
+    if 'reticências' not in [x['tipo'] for x in sem_dica['achados'] if caso(x) == 'dica']: prob.append('sem a dica valendo (telas do app), as reticências com title deviam ser acusadas')
+    achou = {}
+    for x in r['achados']:
+        achou.setdefault(caso(x), []).append(x)
+    casos = set(re.findall(r'data-caso="([\w-]+)"', PAGINA_F35))
+    for k, tipo in CORTA_F35.items():
+        tipos = [x['tipo'] for x in achou.get(k, []) if not x['previa']]
+        if tipo not in tipos: prob.append('o detector não achou o exemplo «%s» como %s (achou %s)' % (k, tipo, tipos or 'nada'))
+    for k in sorted(casos - set(CORTA_F35) - {'previa-da-lista'}):
+        if achou.get(k): prob.append('o detector acusou o exemplo «%s», que não é texto cortado: %s' % (k, [(x['tipo'], x['det']) for x in achou[k]][:2]))
+    pv = achou.get('previa-da-lista', [])
+    if not pv or not all(x['previa'] for x in pv): prob.append('a prévia da lista devia ser achada E marcada como prévia (só a lista a deixa passar): %s' % pv[:2])
+    if any(x['previa'] for k, v in achou.items() if k != 'previa-da-lista' for x in v): prob.append('um exemplo fora da lista de prévias foi marcado como prévia')
+    if r['textos'] < len(casos) - 4: prob.append('o detector olhou só %d textos na página de %d exemplos' % (r['textos'], len(casos)))
+    return prob
+
+
+def f35_conferencias(b, lista, paginas):
+    """[(nome, problemas)] da F35: a prova do detector (sempre), cada tela nova da rodada e o relatório (quando é da rodada)."""
+    out = [('F35 · o detector de texto cortado acha cada tipo de corte na página de exemplos e não acusa o que rola, some, cabe ou é do leitor de tela', teste_f35_detector(b))]
+    for tela in [t for t in TELAS_F35 if t in lista]:
+        out.append(('F35 · %s: nenhum texto cortado nos 4 tamanhos, 2 temas e 2 instantes (%d estado(s) por endereço)' % (tela, len(TELAS_F35[tela])), teste_f35_tela(b, tela)))
+    if 'relatorio' in paginas:
+        out.append(('F35 · relatório: nenhum texto cortado nos 8 tamanhos e 2 temas, com o registro de sempre e com texto comprido', teste_f35_relatorio(b)))
+    return out
+
+
+A4W, A5M, C4W, C4M, F6W, F6M = 'A4-Sensores-Web.dc.html', 'A5-Sensores-Mobile.dc.html', 'C4-Checklist-Web.dc.html', 'C4-Checklist-Mobile.dc.html', 'F6-FAQ-Equipamentos-Web.dc.html', 'F6-FAQ-Equipamentos.dc.html'
+# (nome, arquivo, [(trecho, no lugar)], tela ou 'relatorio' ou 'detector'): cada defeito plantado (no arquivo servido, nunca gravado) tem de ser acusado pela F35, num tamanho só
+MUTANTES_F35 = [
+    ('os valores de cada sensor da A4 numa linha só, cortados sem reticências (a dica do cartão não avisa de corte nenhum)', A4W, [('font-size: 12px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;">{{s.valores}}',
+                                                                              'font-size: 12px; font-weight: 600; line-height: 1.4; display: block; max-width: 60px; white-space: nowrap; overflow: hidden; font-variant-numeric: tabular-nums;">{{s.valores}}')], 'A4-Sensores-Web'),
+    ('o lugar de cada sensor da A4 com reticências e o cartão sem a dica do texto inteiro', A4W, [('<div data-sensor="{{s.id}}" title="{{s.titulo}}" style="box-sizing: border-box; padding: 8px 11px;', '<div data-sensor="{{s.id}}" style="box-sizing: border-box; padding: 8px 11px; max-width: 110px;')], 'A4-Sensores-Web'),
+    ('os valores de cada sensor da A5 numa caixa baixa que esconde o resto', A5M, [('font-size: 12.5px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;">{{s.valores}}',
+                                                                                    'font-size: 12.5px; font-weight: 600; line-height: 1.4; display: block; max-height: 9px; overflow: hidden; font-variant-numeric: tabular-nums;">{{s.valores}}')], 'A5-Sensores-Mobile'),
+    ('a leitura do painel «Agora a bordo» da C4 web cortada na largura', C4W, [('<span style="min-width: 0; font-weight: 500; color: {{g.tone}}; overflow-wrap: anywhere;">{{g.v}}</span>',
+                                                                                '<span style="min-width: 0; max-width: 34px; font-weight: 500; color: {{g.tone}}; white-space: nowrap; overflow: hidden;">{{g.v}}</span>')], 'C4-Checklist-Web'),
+    ('o texto do item do checklist da C4 do app com o teto de 1 linha (prévia fora da lista de exceções)', C4M, [('font-size: 13.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; color: {{i.tTone}};">{{i.t}}',
+                                                                                'font-size: 13.5px; font-weight: 700; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; max-width: 120px; color: {{i.tTone}};">{{i.t}}')], 'C4-Checklist-Mobile'),
+    ('o título do item aberto da F6 web com reticências', F6W, [('<h2 data-f6="titulo" class="f6-txt" style="margin: 0; font-size: 18px;', '<h2 data-f6="titulo" class="f6-txt" style="margin: 0; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 18px;')], 'F6-FAQ-Equipamentos-Web'),
+    ('a resposta do item aberto da F6 do app numa caixa baixa que esconde o resto', F6M, [('<span data-f6="resposta" class="f6-txt" style="font-size: 13.5px; font-weight: 600; line-height: 1.45;">', '<span data-f6="resposta" class="f6-txt" style="display: block; max-height: 22px; overflow: hidden; font-size: 13.5px; font-weight: 600; line-height: 1.45;">')], 'F6-FAQ-Equipamentos'),
+    ('a célula do relatório esconde o texto comprido (overflow hidden sem quebra)', REL, [("td { vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--linha); overflow-wrap: anywhere; }", "td { vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--linha); max-width: 40mm; overflow: hidden; white-space: nowrap; }")], 'relatorio'),
+    ('o título do topo do relatório de volta numa linha só com reticências (a 360 px sobrava «RELATÓRIO DO BAR…»)', REL, [(".top .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 800; line-height: 1.25;", ".top .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800;")], 'relatorio@360x640'),
+    ('o detector sem a regra da tinta que passa da caixa (só as reticências e o teto de linhas)', None, [("if (!achou && !fechada && (fx > tol || fyT > tolT || fyB > tolB)) {", "if (false) {")], 'detector'),
+    ('o detector sem a regra do texto fora do próprio cartão', None, [("if (fx > tol || fy > 0) { anota('fora', 'fora do bloco'", "if (false) { anota('fora', 'fora do bloco'")], 'detector'),
+    ('o detector deixa passar qualquer teto de linhas dentro de botão (a prévia sem lista)', None, [("const previa = (a) => (previas || []).some((s) => !!a.closest(s));", "const previa = (a) => (previas || []).some((s) => !!a.closest(s)) || (cs(a).webkitLineClamp !== 'none' && !!a.closest('button'));")], 'detector'),
+    ('o detector acusa o que se alcança rolando (a caixa com rolagem tratada como a que esconde)', None, [("hx = !px && (ox === 'hidden' || ox === 'clip')", "hx = !px && ox !== 'visible'")], 'detector'),
+    ('o detector esquece a rolagem de dentro e acusa pelo ancestral que esconde', None, [("if (ox === 'auto' || ox === 'scroll') px = true;", "if (false) px = true;")], 'detector'),
+    ('o detector ignora a escala da prancheta (mede a caixa em px do layout)', None, [("const r = a.getBoundingClientRect(), sx = a.offsetWidth ? r.width / a.offsetWidth : 1, sy = a.offsetHeight ? r.height / a.offsetHeight : 1;", "const r = a.getBoundingClientRect(), sx = 1, sy = 1;")], 'detector'),
+]
+
+
+def mutantes_f35(b):
+    global MUT_ARQ, LE_F35
+    vivos = []
+    filtro = os.environ.get('MUT_FILTRO', '')   # só os mutantes cujo nome tem este texto (ou um de a|b), para refazer um
+    for nome, arq, trocas, qual in MUTANTES_F35:
+        if filtro and not any(f in nome for f in filtro.split('|')): continue
+        src = LE_F35 if arq is None else open(os.path.join(RAIZ, arq), encoding='utf-8', newline='').read()
+        faltam = [x for x, _ in trocas if src.count(x) != 1]
+        if faltam:
+            print('ERRO no mutante «%s»: o trecho não está uma vez em %s: %s' % (nome, arq or 'LE_F35', faltam)); vivos.append(nome); continue
+        guardado, prob = LE_F35, []
+        try:
+            if arq is None:
+                for velho, novo in trocas: LE_F35 = LE_F35.replace(velho, novo, 1)
+                prob = teste_f35_detector(b)
+            else:
+                MUT_ARQ = {arq: trocas}
+                if qual.startswith('relatorio'):   # 'relatorio' (1440×900) ou 'relatorio@LxA'
+                    prob = teste_f35_relatorio(b, tamanhos=[tuple(int(x) for x in qual.split('@')[1].split('x'))] if '@' in qual else [(1440, 900)])
+                else:
+                    prob = teste_f35_tela(b, qual, tamanhos=[(390, 844) if eh_app(qual) else (1440, 900)])
+        except Exception as e:   # um erro do próprio teste não conta como acusação: o mutante fica vivo
+            print('ERRO do teste no mutante «%s»: %s' % (nome, str(e).splitlines()[-1][:160]))
+            prob = []
+        finally:
+            MUT_ARQ, LE_F35 = {}, guardado
+        print('MUTANTE %s: %s (%d problema(s))%s' % ('ACUSADO' if prob else 'VIVO', nome, len(prob), ' · ' + prob[0][:170] if prob else ''))
+        if not prob: vivos.append(nome)
+    print('%d mutantes · %d vivos' % (len(MUTANTES_F35), len(vivos)))
+    return vivos
 
 
 def teste_offline(b, lista, paginas=()):
