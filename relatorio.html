@@ -31,7 +31,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00
 .top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px; width: 100%; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 10px; background: rgba(var(--cap-bg-rgb, 5,8,22), 0.94); border-bottom: 1px solid var(--cap-line, #1a2240); }
 .top .marca { display: flex; align-items: center; flex-shrink: 0; min-height: 44px; text-decoration: none; }
 .top .marca img { display: block; width: 47px; height: 20px; object-fit: contain; }
-.top .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 800; letter-spacing: 0.16em; color: var(--cap-ink2, #b1bdd6); }
+.top .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 800; line-height: 1.25; letter-spacing: 0.16em; color: var(--cap-ink2, #b1bdd6); }
 .top .sos { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 64px; min-height: 44px; padding: 0 14px; border-radius: 14px; background: var(--cap-crit-fill, #d32f27); color: #fff; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.10em; box-shadow: 0 0 0 3px rgba(var(--cap-crit-rgb, 255,59,48), 0.28); }
 .top .sos:hover { color: #fff; filter: brightness(1.08); }
 .barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; width: 100%; max-width: 186mm; margin: 0 auto; padding: 14px 16px 0; }
