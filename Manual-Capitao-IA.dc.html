@@ -68,7 +68,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   <img src="guia-rapido/img/inicio-app.jpg" alt="Início app" style="width: 330px; height: 714px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
 </section>
 
-<section data-label="05 Entrar e sair" data-speaker-notes="Login da equipe e do convidado, manter conectado, sair em todas as abas, trava depois de cinco erros. O SOS abre sem login." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
+<section data-label="05 Entrar e sair" data-speaker-notes="Login da equipe e do convidado, manter conectado, sair em todas as abas, trava depois de cinco erros. O SOS abre sem login. O link Dados, no rodapé do início, baixa uma cópia do que fica só no aparelho e restaura em outro; restaurar só soma." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
   <img src="guia-rapido/img/login-app.jpg" alt="Login" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">ACESSO</span>
@@ -77,6 +77,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #eaf1ff;">Manter conectado</b>: 30 dias no aparelho; sem ele, 12 horas.</li>
       <li><b style="color: #eaf1ff;">Sair</b> no rodapé de qualquer tela — encerra em todas as abas.</li>
       <li>5 senhas erradas → trava de 30 s, dobrando até 15 min.</li>
+      <li><b style="color: #eaf1ff;">Dados</b> (link no rodapé do início): baixa uma cópia do que fica só neste aparelho — diário, atalhos, telefones da Equipe — e restaura em outro. Restaurar só soma: o que foi desfeito não volta. Guarde o arquivo em lugar seguro.</li>
       <li>Convidado: o botão <b style="color: #eaf1ff;">CONVIDADO</b> entra com o perfil Convidado. Senhas fora do site; no código, só o hash.</li>
       <li><b style="color: #ff6a60;">SOS abre sem login</b> — numa emergência ninguém fica preso na senha.</li>
       <li>Instalar: iPhone › Compartilhar › Tela de Início · Android › ⋮ › Instalar app.</li>
@@ -85,22 +86,23 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   </div>
 </section>
 
-<section data-label="06 Início web" data-speaker-notes="Anatomia do início: saudação, cinco botões fixos com estado, chat com fonte, atalhos, faixa de leitura, SOS." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
+<section data-label="06 Início web" data-speaker-notes="Anatomia do início: saudação, cinco botões fixos com estado, chat com fonte, atalhos, faixa de leitura, SOS. No cabeçalho: selo AO VIVO ou ÚLTIMA LEITURA, hora do barco, máxima e mínima, vento e rajada e maré agora." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
   <div style="display: flex; align-items: baseline; gap: 30px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">INÍCIO</span><h2 style="margin: 0; font-size: 56px; font-weight: 800;">Tudo começa numa pergunta</h2></div>
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/inicio-web.jpg" alt="Início web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
     <ul style="margin: 0; padding-left: 30px; font-size: 27px; line-height: 1.6; color: #b1bdd6;">
       <li><b style="color: #eaf1ff;">Saudação</b> com o nome e uma frase sorteada.</li>
-      <li><b style="color: #eaf1ff;">5 botões fixos</b>: Console · Gerador · Climatização · Estabilizador · Eletrônicos — com o estado (atrasadas, prazo, PRONTO, FAQ).</li>
+      <li><b style="color: #eaf1ff;">5 botões fixos</b>: Console · Gerador · Climatização · Estabilizador · Eletrônicos — com o estado (atrasadas, prazo, PRONTO, FAQ), o fabricante e o modelo de cada equipamento e as horas do gerador.</li>
       <li><b style="color: #eaf1ff;">Chat</b> com FOTO · VÍDEO · VOZ · CONVERSA.</li>
       <li><b style="color: #eaf1ff;">Atalhos</b> editáveis.</li>
       <li><b style="color: #eaf1ff;">Faixa</b>: SOG, proa, vento, 24 V, água doce e diesel do instante, com a hora e AO VIVO.</li>
       <li><b style="color: #ff6a60;">SOS</b> no canto.</li>
     </ul>
   </div>
+  <p style="margin: 0; font-size: 24px; line-height: 1.45; color: #b1bdd6;"><b style="color: #eaf1ff;">Cabeçalho</b>: selo AO VIVO · hh:mm:ss (LED verde que pulsa) ou ÚLTIMA LEITURA (âmbar); hora do barco, máxima e mínima de hoje, vento e rajada em nós e maré agora. Tocar abre o windy.com. Sem rede, vale a última leitura do dia, com a hora.</p>
 </section>
 
-<section data-label="07 Chat e fontes" data-speaker-notes="Como a resposta é montada: emergência primeiro, resposta pronta com número e hora, trecho do guia de bordo. Fora das fontes de bordo, o app diz o que não achou e oferece registrar a pendência; pergunta de náutica vai à IA. Sobre o que é o barco, o app responde com a frase padrão da plataforma." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
+<section data-label="07 Chat e fontes" data-speaker-notes="Como a resposta é montada: emergência primeiro, resposta pronta com número e hora, trecho do guia de bordo. Fora das fontes de bordo, o app diz o que não achou e oferece registrar a pendência; pergunta de náutica vai à IA. Sobre o que é o barco, o app responde com a frase padrão da plataforma. Pedidos que o chat entende: alarme, agendamento, meus alarmes, o que você pode fazer." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
   <img src="guia-rapido/img/resposta-gerador-app.jpg" alt="Resposta com fonte" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <img src="guia-rapido/img/resposta-nos-app.jpg" alt="Resposta com a velocidade, o rumo e a hora do barco" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
@@ -113,10 +115,11 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #eaf1ff;">Fora das fontes de bordo</b>: o app diz o que não achou e oferece registrar a pendência; pergunta de náutica vai à IA; preço, telefone e notícia ficam fora do barco.</li>
     </ol>
     <p style="margin: 0; font-size: 25px; color: #7985a6;">"Registre no diário…" grava uma linha nova. Pergunta nunca vira registro.</p>
+    <p style="margin: 0; font-size: 25px; line-height: 1.45; color: #7985a6;">Também entende: "me avise se o arrefecimento do motor BB passar de 90 graus" (aviso só na tela, nunca crítico), "meus alarmes", "apagar alarme #2", "agendar revisão do gerador para 15/11" e "o que você pode fazer?". Os botões da resposta (Registrar · Não registrar · O que verificar? · Confirmar · Recusar · Desfazer) valem como se você digitasse.</p>
   </div>
 </section>
 
-<section data-label="08 Conversa por voz" data-speaker-notes="O botão CONVERSA traz o infinito da WonderHUB.AI com as cores correndo. Na conversa, o núcleo de anéis: anel graduado, anel de segmentos, espectro de 48 barras e anel tracejado, com o infinito no centro. Ouvindo em ciano, pensando em violeta, falando em azul. O painel no alto mostra o instante do barco a cada segundo. Voz a 1,15x; fala a primeira linha; emergência inteira." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
+<section data-label="08 Conversa por voz" data-speaker-notes="O botão CONVERSA traz o infinito da WonderHUB.AI com as cores correndo. Na conversa, o núcleo de anéis: anel graduado, anel de segmentos, espectro de 48 barras e anel tracejado, com o infinito no centro. Ouvindo em ciano, pensando em violeta, falando em azul. O painel no alto mostra o instante do barco a cada segundo. Voz a 1,15x; fala a primeira linha; emergência inteira. A pergunta ouvida sai na hora, sem pausa." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00f4fd;">VOZ</span>
     <h2 style="margin: 0; font-size: 56px; font-weight: 800;">Mãos no leme</h2>
@@ -124,7 +127,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #eaf1ff;">CONVERSA</b>: o botão redondo com o infinito da WonderHUB.AI, as cores da logo correndo por ele.</li>
       <li>Núcleo de anéis com o ∞ no centro: <b style="color: #00f4fd;">ouvindo</b> (ciano, respira) · <b style="color: #b45cff;">pensando</b> (violeta, os anéis aceleram) · <b style="color: #00a1fe;">falando</b> (azul, o espectro segue a voz).</li>
       <li>Painel vivo no alto, a cada segundo: hora, posição, SOG, rpm e diesel. Em emergência: só "POSIÇÃO · LEIA NO PLOTTER".</li>
-      <li>Abertura: "Capitão IA online. Que precisa?" A legenda mostra o que ouviu e o que diz.</li>
+      <li>Abertura: "Capitão IA online. Que precisa?" A legenda mostra o que ouviu e o que diz; a pergunta falada sai na hora.</li>
       <li>Tocar no núcleo: envia (ouvindo) ou interrompe (falando). ENCERRAR ou Esc desliga; o SOS fica na tela.</li>
       <li>Voz a <b style="color: #eaf1ff;">1,15x</b> em tudo; fala só a 1ª linha — <b style="color: #ff6a60;">emergência é lida inteira</b>.</li>
       <li>Voz do aparelho: grátis, sem conta, funciona offline.</li>
@@ -142,10 +145,11 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
     <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;"><b style="color: #eaf1ff;">Padrão (6):</b> DIÁRIO DE BORDO · SEGURO PARA SAIR? · PARA ONDE VAMOS HOJE? · PRÓXIMAS MANUTENÇÕES · AUTONOMIA · MARÉ AGORA.</p>
     <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;"><b style="color: #eaf1ff;">Banco (12):</b> CLIMA · CANAL 16 · CHECKLIST DE SAÍDA · CONSUMO · TANQUES · CONTATOS · ANOMALIAS ABERTAS · PORÃO · GERADOR · POSIÇÃO AGORA · DOCUMENTOS VENCENDO · HORÍMETROS.</p>
     <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;">Reordenar, renomear, criar e restaurar — até 8 na tela, salvos só neste aparelho. <b style="color: #eaf1ff;">Fixos:</b> SOS, os 5 botões do início e a barra do assistente.</p>
+    <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;"><b style="color: #eaf1ff;">Abrem direto, sem passar pelo chat:</b> o mapa de sensores, os checklists guiados, o FAQ dos equipamentos e o relatório (<b style="color: #eaf1ff;">relatorio.html</b>: A4 para imprimir ou salvar em PDF — agenda, histórico, documentos, abastecimentos e peças; sem valores, telefones nem posição).</p>
   </div>
 </section>
 
-<section data-label="10 Telemetria" data-speaker-notes="Telemetria com hora: toda leitura do instante, com a origem. Mapa de sensores, gráficos e tendências. Alerta só como AVISO na tela. Num barco do cliente, as mesmas telas leem o coletor NMEA de bordo." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
+<section data-label="10 Telemetria" data-speaker-notes="Telemetria com hora: toda leitura do instante, com a origem. Mapa de sensores, gráficos e tendências. Alerta só como AVISO na tela; o alarme pedido no chat avisa desde quando. Num barco do cliente, as mesmas telas leem o coletor NMEA de bordo." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
   <div style="display: flex; align-items: baseline; gap: 30px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00f4fd;">TELEMETRIA</span><h2 style="margin: 0; font-size: 56px; font-weight: 800;">Toda leitura com hora e origem</h2></div>
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/telemetria-web.jpg" alt="Telemetria web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
@@ -157,9 +161,10 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #f0a63a;">AVISO</b> quando uma leitura sai da faixa do guia: só na tela, nunca abre o SOS.</li>
     </ul>
   </div>
+  <p style="margin: 0; font-size: 24px; line-height: 1.45; color: #b1bdd6;"><b style="color: #eaf1ff;">Alarme pedido</b> ("me avise se…", "meus alarmes"): aviso só na tela, nunca crítico, que diz desde quando — "desde HH:MM:SS" ou "há mais de 2 min 40 s" quando o começo passou da janela. Rotação abaixo de 1.000 rpm não vale: o motor só é avaliado em cruzeiro.</p>
 </section>
 
-<section data-label="11 Manutenção" data-speaker-notes="Escada D-90, D-60, D-30, D-0. Executado cria uma linha nova no diário; Desfazer também." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
+<section data-label="11 Manutenção" data-speaker-notes="Escada D-90, D-60, D-30, D-0. Executado cria uma linha nova no diário; Desfazer também. O alerta vivo (C3) abre pela faixa de alerta do topo." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
   <div style="display: flex; align-items: baseline; gap: 30px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #f0a63a;">MANUTENÇÃO</span><h2 style="margin: 0; font-size: 56px; font-weight: 800;">Executado vira linha no diário</h2></div>
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/manutencao-web.jpg" alt="Manutenção web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
@@ -171,9 +176,10 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #eaf1ff;">Checklists guiados</b> (saída, chegada, abastecimento, fundeio): CONCLUIR grava uma linha.</li>
     </ul>
   </div>
+  <p style="margin: 0; font-size: 24px; line-height: 1.45; color: #b1bdd6;"><b style="color: #eaf1ff;">Alerta vivo (C3)</b>: a faixa de alerta do topo abre com ABRIR ›. Mostra AVISO, NORMALIZADO às HH:MM ou DENTRO DA FAIXA, a leitura com lado e hora, a faixa do guia, a tendência de 10 s e os passos com a fonte. REGISTRAR grava uma linha só com o toque.</p>
 </section>
 
-<section data-label="12 Documentos e abastecimento" data-speaker-notes="Documentos com fonte em cada linha e o que vence primeiro. Envio de foto ou PDF vira A CONFERIR; nota fiscal vira A CONFIRMAR. Nada sensível no site." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
+<section data-label="12 Documentos e abastecimento" data-speaker-notes="Documentos com fonte em cada linha e o que vence primeiro. Envio de foto ou PDF vira A CONFERIR; nota fiscal vira A CONFIRMAR. Nada sensível no site. No abastecimento, a aba Consumo mostra litros por hora, horas e litros por faixa de rotação." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
   <div style="display: flex; align-items: baseline; gap: 30px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">DOCUMENTOS · ABASTECIMENTO</span><h2 style="margin: 0; font-size: 56px; font-weight: 800;">Vence primeiro, com a fonte</h2></div>
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/documentos-web.jpg" alt="Documentos web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
@@ -185,17 +191,18 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li>Diesel com a hora da leitura, consumo observado e autonomia com reserva de 10 %.</li>
     </ul>
   </div>
+  <p style="margin: 0; font-size: 24px; line-height: 1.45; color: #b1bdd6;"><b style="color: #eaf1ff;">Peças no chat</b>: "quantos filtros de óleo temos?", "tem rotor de reposição?", "onde está o rotor reserva?". <b style="color: #eaf1ff;">Aba CONSUMO</b> do abastecimento: litros por hora, horas e litros por faixa de rotação desde as 07:00; o total bate com o contador de diesel.</p>
 </section>
 
-<section data-label="13 Diário e equipe" data-speaker-notes="Diário só cresce: quem, quando e fonte. Equipe: perfis, convites PENDENTE, telefones só no aparelho." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
+<section data-label="13 Diário e equipe" data-speaker-notes="Diário só cresce: quem, quando e fonte. O que o chat propõe espera em A CONFIRMAR. Equipe: perfis, convites PENDENTE, prestadores, tarefas da equipe, telefones só no aparelho." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
   <img src="guia-rapido/img/diario-app.jpg" alt="Diário" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; min-width: 0;">
-    <div style="display: flex; flex-direction: column; gap: 20px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">DIÁRIO</span><h2 style="margin: 0; font-size: 50px; font-weight: 800;">Só cresce</h2><p style="margin: 0; font-size: 27px; line-height: 1.55; color: #b1bdd6;">Quem, quando e fonte em cada linha. Texto, voz ou pela barra do assistente. Correção é linha nova. Pendências abertas em destaque.</p></div>
-    <div style="display: flex; flex-direction: column; gap: 20px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">EQUIPE</span><h2 style="margin: 0; font-size: 50px; font-weight: 800;">Convites e contatos</h2><p style="margin: 0; font-size: 27px; line-height: 1.55; color: #b1bdd6;">Perfis e acessos (total · leitura). Convite sai por WhatsApp ou e-mail do aparelho e fica <b style="color: #00a1fe;">PENDENTE</b>. Telefones de apoio ficam só neste aparelho — o SOS usa marina e técnico.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 20px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">DIÁRIO</span><h2 style="margin: 0; font-size: 50px; font-weight: 800;">Só cresce</h2><p style="margin: 0; font-size: 27px; line-height: 1.55; color: #b1bdd6;">Quem, quando e fonte em cada linha. Texto, voz ou pela barra do assistente. Correção é linha nova (CORRIGIDO, ANULADO). Pendências abertas em destaque: Resolver e Reabrir também são linhas novas. O que o chat propõe — relato, agendamento, alarme — espera em <b style="color: #f0a63a;">A CONFIRMAR</b>: CONFIRMAR grava uma linha, ✎ edita, RECUSAR descarta, DESFAZER vale 10 s; o início mostra o selo «n A CONFIRMAR». "Registre no diário" sem texto pergunta "O que devo registrar?": a próxima frase é gravada, e "agora não" encerra sem gravar.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 20px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">EQUIPE</span><h2 style="margin: 0; font-size: 50px; font-weight: 800;">Convites e contatos</h2><p style="margin: 0; font-size: 27px; line-height: 1.55; color: #b1bdd6;">Perfis e acessos (total · leitura). Convite sai por WhatsApp ou e-mail do aparelho e fica <b style="color: #00a1fe;">PENDENTE</b>. Prestadores: + PRESTADOR, ✎, OCULTAR e RESTAURAR (nada se apaga). + TAREFA cria tarefa da equipe, com prazo na agenda. Telefones de apoio e de prestadores ficam só neste aparelho — o SOS usa marina e técnico.</p></div>
   </div>
 </section>
 
-<section data-label="14 FAQ de bordo" data-speaker-notes="Passo a passo por equipamento, tirado dos guias de bordo. PRONTO quando há passo a passo. O FAQ de equipamentos tem 91 perguntas em 9 seções, cada uma com código. EPIRB e Seafire: só o procedimento padrão." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
+<section data-label="14 FAQ de bordo" data-speaker-notes="Passo a passo por equipamento, tirado dos guias de bordo. PRONTO quando há passo a passo. O FAQ de equipamentos tem 91 perguntas em 9 seções, cada uma com código. O hub tem o cartão único Eletrônicos, as Emergências e o FAQ completo com busca. EPIRB e Seafire: só o procedimento padrão." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #34c77a;">FAQ DE BORDO</span>
     <h2 style="margin: 0; font-size: 56px; font-weight: 800;">Passo a passo por equipamento</h2>
@@ -203,7 +210,8 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li>Gerador Onan · Estabilizador Seakeeper · Climatização · Eletrônicos Garmin, áudio Fusion e rádios Icom — <b style="color: #34c77a;">PRONTO</b>.</li>
       <li>Sempre com fabricante e modelo do equipamento.</li>
       <li>Cada passo cita o guia e a seção. Não substitui o manual do fabricante.</li>
-      <li><b style="color: #eaf1ff;">FAQ de equipamentos</b>: 91 perguntas em 9 seções, cada uma com código (MO-02, EM-06…); tocar abre o chat com o código.</li>
+      <li><b style="color: #eaf1ff;">FAQ de equipamentos</b>: 91 perguntas em 9 seções, cada uma com código (MO-02, EM-06…), com busca, filtro por seção e glossário. Tocar abre o item: 1ª linha, passos, atenção, "se não resolver" e fontes; PERGUNTAR AO BARCO leva ao chat com o código.</li>
+      <li><b style="color: #eaf1ff;">Hub do FAQ</b>: o cartão <b style="color: #eaf1ff;">Eletrônicos</b> reúne plotters, áudio e rádios VHF; o cartão <b style="color: #ff6a60;">Emergências</b> abre os 9 cartões EM-01 a EM-09 com o botão do SOS; "FAQ completo" abre os 91 itens.</li>
       <li>EPIRB e Seafire: só o procedimento padrão; modelo, validade e acionamento: veja a etiqueta do equipamento.</li>
     </ul>
   </div>
