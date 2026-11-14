@@ -537,7 +537,12 @@ def main():
     class Quieto(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):
             pass
-    srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Quieto, directory=RAIZ))
+    class Servidor(http.server.ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            # o navegador que troca de página (ou fecha o contexto) no meio de um arquivo corta a conexão: é o servidor de teste escrevendo num cano fechado, não uma falha — sem o rastro no meio do resultado
+            if not isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+                super().handle_error(request, client_address)
+    srv = Servidor(('127.0.0.1', 0), functools.partial(Quieto, directory=RAIZ))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = 'http://127.0.0.1:%d/' % srv.server_address[1]
     res = []
