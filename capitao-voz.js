@@ -360,7 +360,8 @@
     var novo = e !== estado; estado = e; quieto = false;
     if (novo) { pinta(e); ultTexto = ''; if (e !== 'falando') temSom = false; }
     // alerta: vale enquanto o estado segue (as linhas de uma mesma fala, os trechos de uma mesma escuta); estado novo, fala nova (depois de um
-    // 'livre') ou escuta nova recomeçam. O evento sem o campo (a tela esperando a IA: vozPensando) não mexe nele.
+    // 'livre') ou escuta nova recomeçam. O evento da espera pela IA (vozPensando) também traz o campo, pelo emissor único do cérebro (evVoz); o
+    // evento que vier sem ele (um cérebro de versão anterior) não mexe no alerta.
     var comeca = novo || solto || (e === 'ouvindo' && !x.texto); solto = false;
     if ('alerta' in x) alertaEv = comeca ? !!x.alerta : alertaEv || !!x.alerta;
     if (e === 'ouvindo') {
