@@ -33,7 +33,7 @@ cadastrar um telefone e abrir um convite (G4), baixar, desfazer os três nas tel
 ficou de fora e a tarefa continua aberta (num aparelho sem esse diário, a cópia devolve os três); as telas do app gravam os mesmos
 textos. A cópia leva intacta a linha do SOS (com a posição) e a página avisa. Sem sessão, vai para o login. Abre offline
 (--offline, com "dados" na lista). No --offline, cada tela e página da rodada tem de estar no cache da instalação (TELAS/CORE).
-Nenhum selo (decisão b da 1.1.0; o Manual fica de fora até a Fase 8, que o reescreve): o rodapé de nenhuma tela ou página diz
+Nenhum selo (decisão b da 1.1.0; o Manual, reescrito na Fase 8, entra na regra como as outras telas): o rodapé de nenhuma tela ou página diz
 DEMO nem dados fictícios; nenhuma caixa com a borda violeta do antigo selo diz DEMO, fictício ou SNAPSHOT; na Main e na H2 a
 caixa do cabeçalho é a ÚLTIMA LEITURA (dia e hora do snapshot), nunca vazia; S1 e S2 sem caixa de selo; login e lista sem a
 linha DEMO; nenhum DEMO, Demo, demonstração ou fictício escrito no código de tela nenhuma (texto visível, title, aria-label e alt;
@@ -237,7 +237,6 @@ VARREDURA = ('ROTULOS', 'AUTENTICIDADE', 'VAZIOS', 'VISIVEL')
 # reescrita na Fase 8. Uma tela daqui que já está limpa nos dois instantes reprova (retire-a da lista): a lista só encolhe.
 PENDENTES_ROTULO = ()   # (vazia em 10/11/2026, depois da P4J: a G4 (web e app) saiu — o «TELEFONE A CADASTRAR» virou «+ ADICIONAR TELEFONE» — e a G3 já estava limpa. 2 telas em 10/11/2026, depois da P4I: G1 e G2 (web e app) saíram; só a G4 ainda tinha rótulo. 6 telas em 10/11/2026, depois da P4H: F1 a F5 (web e app) saíram; 16 telas depois da P4G: Main e H2 saíram (a H3 web e app já estavam limpas: o ' · DEMO' da H3 web só valia com D.demo). 18 telas depois da P4F: a E2 saiu (a E1 já estava limpa: o ramo ao vivo não tinha rótulo e a varredura a vigiava). 19 telas em 09/11/2026, depois da P4E: C1 e C3 saíram (a C2, a C4 web e app já nascem limpas). 21 depois da P4D: B1 e B2 saíram (a B3 já estava limpa). 23 depois da P4C: A1 e A2 saíram (e a A3, a A4 e a A5 já nascem limpas). Eram 25 depois da P4B: a moldura e o chip do clima já saíram; A3, B3, C2, E1, G3 e H3 já estão limpas e a varredura as vigia. A E2 mostra «snapshot 26/09/2026 10:12»
 #  no 1º meio segundo, antes de a leitura do replay entrar: a varredura a 900 ms pega, a sonda a 1,5 s não pegava)
-FORA_ATE_FASE_8 = ('Manual-Capitao-IA',)
 # Telas cuja leitura ainda não anda sem o replay congelado (a C3 vira alerta vivo na Fase 4): a mesma regra, a lista só encolhe.
 PENDENTES_MUDA = ()   # (a C3 saiu na P4E: virou alerta vivo)
 MUDA_SEM_FIXO = ('Main', 'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'C1-Leme-Web', 'C2-Leme-Mobile', 'C3-Leme-Alerta', 'C4-Checklist-Web', 'C4-Checklist-Mobile', 'E1-Navegando-Gatilhos', 'G2-Abastecimento-Web', 'G2-Abastecimento-Mobile')
@@ -779,12 +778,11 @@ def roda_tela(b, tela, tema, w, h, fixo='60', fotos=False):
     if not url.split('#')[0].endswith(tela + '.dc.html'): prob.append('redirecionou para ' + url)
     if tela in ('Main', 'H2-Home-Mobile') and 'dados.html' not in r['rodape']:
         prob.append('rodapé sem o link dos Dados do aparelho: %s' % r['rodape'])
-    # o Manual (apresentação) ainda descreve a 1.0.9, com os selos dela: é reescrito na Fase 8, que tira esta exceção
-    if not tela.startswith('Manual-'): prob += problemas_selo(tela, r)
+    prob += problemas_selo(tela, r)
     if tela in TELAS_SOS: prob += problemas_barco_sos(pg)
     if tela.startswith('F3-FAQ-Eletronicos'): prob += problemas_f3_mmsi(pg)
     if tela in TELAS_SEGURANCA: prob += problemas_seguranca(pg, tela)
-    if not tela.startswith('Manual-'): prob += problemas_validade(pg, tela)
+    prob += problemas_validade(pg, tela)
     # P4B: o replay carregou (o filtro de «Failed to load resource» esconde o script ausente) e o SOS não o carregou
     if tela in TELAS_SOS:
         if r['replay'] != 'undefined': prob.append('o SOS carregou o CapitaoReplay (typeof %s): ele nunca lê a reprodução' % r['replay'])
@@ -794,7 +792,7 @@ def roda_tela(b, tela, tema, w, h, fixo='60', fotos=False):
     prob += problemas_sos_alcance(pg, tela)
     ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
     n_ach = sum(len(v) for v in ach.values())
-    if ach and tela not in PENDENTES_ROTULO and tela not in FORA_ATE_FASE_8:
+    if ach and tela not in PENDENTES_ROTULO:
         prob.append('termo do §3 no texto da tela em t = %s (%s): %s' % (fixo, ' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:300]))
     if fotos:
         pg.screenshot(path=os.path.join(SAIDA, '%s_%s_%dx%d%s.png' % (tela, tema, w, h, '' if fixo == '60' else '_' + fixo)))

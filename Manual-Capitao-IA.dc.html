@@ -22,16 +22,16 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
 </helmet>
 <x-import component-from-global-scope="deck-stage" from="./deck-stage.js" width="1920" height="1080" hint-size="100%,100%">
 
-<section data-label="01 Capa" data-speaker-notes="Manual de uso do Capitão IA. Embarcação de demonstração, com dados fictícios rotulados DEMO. Duas telas — web e app — um cérebro só. Cerca de quinze minutos." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px;">
+<section data-label="01 Capa" data-speaker-notes="Manual de uso do Capitão IA, versão 1.1.0. Duas telas — web e app — um cérebro só. O barco navega num laço de 150 segundos e todas as telas leem o mesmo instante. Cerca de quinze minutos." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px;">
   <div aria-hidden="true" style="position: absolute; inset: 0; background: radial-gradient(ellipse 60% 46% at 50% -6%, rgba(0,161,254,0.16) 0%, rgba(0,161,254,0) 62%), radial-gradient(ellipse 34% 30% at 88% 6%, rgba(162,43,253,0.12) 0%, rgba(162,43,253,0) 70%), linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px) 0 0 / 100% 88px, linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px) 0 0 / 88px 100%;"></div>
   <img src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" style="position: relative; width: 384px; height: 221px; object-fit: contain; mix-blend-mode: lighten;">
   <div role="img" aria-label="Capitão IA" style="position: relative; display: flex; align-items: baseline; gap: 0.3em; font-size: 150px; font-weight: 800; letter-spacing: 0.1em; line-height: 1;"><span style="background: linear-gradient(180deg, #ffffff 12%, #d3dcef 46%, #5d6a8f 96%); -webkit-background-clip: text; background-clip: text; color: transparent;">CAPITÃO</span><span style="background: linear-gradient(120deg, #00f4fd 0%, #00a1fe 50%, #a22bfd 100%); -webkit-background-clip: text; background-clip: text; color: transparent;">IA</span></div>
   <h1 style="position: relative; margin: 0; font-size: 46px; font-weight: 500; letter-spacing: 0.02em; color: #b1bdd6;">Manual de uso · interfaces web e app</h1>
-  <span style="position: relative; font-size: 24px; letter-spacing: 0.16em; font-weight: 800; color: #b45cff; border: 2px solid rgba(162,43,253,0.6); background: rgba(162,43,253,0.10); border-radius: 12px; padding: 12px 24px;">DEMO · EMBARCAÇÃO DE DEMONSTRAÇÃO · DADOS FICTÍCIOS</span>
-  <p style="position: relative; margin: 0; font-size: 26px; letter-spacing: 0.16em; font-weight: 700; color: #7985a6;">CAPITÃO IA · BALNEÁRIO CAMBORIÚ · SETEMBRO 2026 · APP 1.0.9</p>
+  <span style="position: relative; font-size: 24px; letter-spacing: 0.16em; font-weight: 800; color: #00a1fe; border: 2px solid rgba(0,161,254,0.6); background: rgba(0,161,254,0.10); border-radius: 12px; padding: 12px 24px;">WEB · APP · CONVERSA POR VOZ · SOS OFFLINE</span>
+  <p style="position: relative; margin: 0; font-size: 26px; letter-spacing: 0.16em; font-weight: 700; color: #7985a6;">CAPITÃO IA · BALNEÁRIO CAMBORIÚ · NOVEMBRO 2026 · APP 1.1.0</p>
 </section>
 
-<section data-label="02 O que é" data-speaker-notes="Três coisas: perguntar ao barco, operar o console, agir na emergência. E as regras que valem em toda tela." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 96px 100px 80px; display: flex; flex-direction: column; gap: 48px;">
+<section data-label="02 O que é" data-speaker-notes="Três coisas: perguntar ao barco, operar o console, agir na emergência. E as regras que valem em toda tela: toda resposta com número e hora, emergência acima de tudo, registro que só cresce." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 96px 100px 80px; display: flex; flex-direction: column; gap: 48px;">
   <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">O QUE É</span><h2 style="margin: 0; font-size: 64px; font-weight: 800; letter-spacing: -0.01em;">O cérebro operacional da embarcação</h2></div>
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px;">
     <div style="padding: 40px; background: #0d1329; border: 1px solid #1a2240; border-radius: 22px; display: flex; flex-direction: column; gap: 18px;"><span style="font-size: 22px; letter-spacing: 0.18em; font-weight: 800; color: #00a1fe;">PERGUNTAR AO BARCO</span><p style="margin: 0; font-size: 30px; line-height: 1.4; color: #b1bdd6;">Texto, voz, foto ou vídeo. A primeira linha é a resposta; a fonte vem sempre embaixo.</p></div>
@@ -39,20 +39,21 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
     <div style="padding: 40px; background: #2a1520; border: 1px solid rgba(255,59,48,0.55); border-radius: 22px; display: flex; flex-direction: column; gap: 18px;"><span style="font-size: 22px; letter-spacing: 0.18em; font-weight: 800; color: #ff6a60;">AGIR NA EMERGÊNCIA</span><p style="margin: 0; font-size: 30px; line-height: 1.4; color: #eaf1ff;">SOS em todas as telas: canal 16, homem ao mar, incêndio, EPIRB. Abre offline e sem senha.</p></div>
   </div>
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; font-size: 28px; line-height: 1.45; color: #b1bdd6;">
-    <p style="margin: 0;"><b style="color: #eaf1ff;">Nada inventado.</b> Sem fonte → SEM DADOS. Sensor ausente → SEM LEITURA.</p>
+    <p style="margin: 0;"><b style="color: #eaf1ff;">Número e hora em toda resposta.</b> A leitura do barco vem com a hora; a fonte, embaixo.</p>
     <p style="margin: 0;"><b style="color: #eaf1ff;">Emergência acima de tudo.</b> Resposta e voz completas, sem concisão.</p>
     <p style="margin: 0;"><b style="color: #eaf1ff;">Registro só cresce.</b> Diário e Executado criam linha nova; nada se apaga.</p>
   </div>
 </section>
 
-<section data-label="03 Demonstração" data-speaker-notes="Esta embarcação é de demonstração. O que é fictício, o que é SEM DADOS e onde estão as fontes." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 96px 100px 80px; display: flex; flex-direction: column; gap: 42px;">
-  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #b45cff;">DEMONSTRAÇÃO</span><h2 style="margin: 0; font-size: 64px; font-weight: 800;">Dados fictícios, regras reais</h2></div>
-  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px;">
-    <div style="padding: 36px; background: rgba(162,43,253,0.08); border: 1px solid rgba(162,43,253,0.5); border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #b45cff;">FICTÍCIO · DEMO</span><p style="margin: 0; font-size: 27px; line-height: 1.45; color: #b1bdd6;">Leituras do coletor, agenda de manutenção, documentos, diário, abastecimentos e guias de bordo. MMSI 710123456.</p></div>
-    <div style="padding: 36px; background: #0d1329; border: 1px solid #1a2240; border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #97a3c0;">SEM DADOS</span><p style="margin: 0; font-size: 27px; line-height: 1.45; color: #b1bdd6;">Fabricante/modelo e registro do barco, modelos dos equipamentos, Seafire e EPIRB, indicativo, rotas.</p></div>
-    <div style="padding: 36px; background: rgba(240,166,58,0.08); border: 1px solid rgba(240,166,58,0.5); border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #f0a63a;">PADRÃO ROTULADO</span><p style="margin: 0; font-size: 27px; line-height: 1.45; color: #b1bdd6;">MAYDAY, PAN-PAN e homem ao mar: procedimento padrão — confirmar com o protocolo de bordo.</p></div>
+<section data-label="03 Navegação" data-speaker-notes="O barco navega o tempo todo: a rota de Balneário Camboriú roda num laço de 150 segundos, a partir das 7 da manhã no fuso de Brasília. Todas as telas, o chat e a conversa leem o mesmo instante. O SOS fica fora do laço: só nome e protocolos. Tempo e maré vêm do Open-Meteo. Fontes das respostas: a pasta Capitão IA v2 no Drive." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; flex-direction: column; gap: 32px;">
+  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00f4fd;">NAVEGAÇÃO</span><h2 style="margin: 0; font-size: 64px; font-weight: 800;">O barco navega o tempo todo</h2></div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+    <div style="padding: 28px 34px; background: rgba(0,161,254,0.08); border: 1px solid rgba(0,161,254,0.5); border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #00a1fe;">LAÇO DE 150 S</span><p style="margin: 0; font-size: 26px; line-height: 1.42; color: #b1bdd6;">A rota se repete a cada 150 segundos, a partir das 07:00 (America/Sao_Paulo). A posição é contínua pela rota; SOG, proa, rpm, diesel, óleo, arrefecimento e alarmes andam juntos.</p></div>
+    <div style="padding: 28px 34px; background: #0d1329; border: 1px solid #1a2240; border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #00f4fd;">UM INSTANTE SÓ</span><p style="margin: 0; font-size: 26px; line-height: 1.42; color: #b1bdd6;">Cabeçalho, faixa de leitura, telas, chat e conversa por voz leem o mesmo instante. "Quantos nós estamos fazendo?" → "Navegando a 18,1 nós, rumo 207° … 12:01:00".</p></div>
+    <div style="padding: 28px 34px; background: rgba(240,166,58,0.08); border: 1px solid rgba(240,166,58,0.5); border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #f0a63a;">TEMPO E MARÉ</span><p style="margin: 0; font-size: 26px; line-height: 1.42; color: #b1bdd6;">Previsão e maré vêm do Open-Meteo, na posição de referência. O vento e o mar do quadro valem só como "a bordo agora". Sem internet, vale a última leitura do dia, com a hora.</p></div>
+    <div style="padding: 28px 34px; background: #2a1520; border: 1px solid rgba(255,59,48,0.55); border-radius: 22px; display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 22px; letter-spacing: 0.16em; font-weight: 800; color: #ff6a60;">SOS FORA DO LAÇO</span><p style="margin: 0; font-size: 26px; line-height: 1.42; color: #eaf1ff;">O SOS não lê o quadro: só o nome da embarcação e os protocolos. Posição: o GPS do aparelho ou LEIA NO PLOTTER. Nunca rumo, SOG nem pessoas a bordo.</p></div>
   </div>
-  <div style="padding: 32px 36px; background: #0d1329; border: 1px solid #1a2240; border-radius: 22px; font-size: 27px; line-height: 1.5; color: #b1bdd6;"><b style="color: #eaf1ff;">Fontes:</b> Google Drive › <b style="color: #eaf1ff;">Capitão IA v2</b> (privada) — 01 Manuais e guias de bordo · 02 Documentos · 03 Agenda de manutenção · 04 Diário de bordo · 05 Telemetria — coletor NMEA · 06 Abastecimento · 07 Protocolos de emergência. Cada resposta cita o arquivo daqui. Clima e maré são reais (Open-Meteo), na posição de referência de Balneário Camboriú.</div>
+  <div style="padding: 26px 34px; background: #0d1329; border: 1px solid #1a2240; border-radius: 22px; font-size: 25px; line-height: 1.45; color: #b1bdd6;"><b style="color: #eaf1ff;">Fontes:</b> Google Drive › <b style="color: #eaf1ff;">Capitão IA v2</b> (privada) — 01 Manuais e guias de bordo · 02 Documentos · 03 Agenda de manutenção · 04 Diário de bordo · 05 Telemetria — coletor NMEA · 06 Abastecimento · 07 Protocolos de emergência. Cada resposta cita o arquivo daqui. Procedimentos de emergência: procedimento padrão — confirmar com o protocolo de bordo.</div>
 </section>
 
 <section data-label="04 Duas telas" data-speaker-notes="Web para ponte, escritório e tablet; app para o bolso. Mesmas respostas, atalhos e dados no mesmo aparelho." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 60px; align-items: center;">
@@ -67,7 +68,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   <img src="guia-rapido/img/inicio-app.jpg" alt="Início app" style="width: 330px; height: 714px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
 </section>
 
-<section data-label="05 Entrar e sair" data-speaker-notes="Login da equipe e do convidado DEMO, manter conectado, sair em todas as abas, trava depois de cinco erros. O SOS abre sem login." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
+<section data-label="05 Entrar e sair" data-speaker-notes="Login da equipe e do convidado, manter conectado, sair em todas as abas, trava depois de cinco erros. O SOS abre sem login." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
   <img src="guia-rapido/img/login-app.jpg" alt="Login" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">ACESSO</span>
@@ -76,7 +77,7 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
       <li><b style="color: #eaf1ff;">Manter conectado</b>: 30 dias no aparelho; sem ele, 12 horas.</li>
       <li><b style="color: #eaf1ff;">Sair</b> no rodapé de qualquer tela — encerra em todas as abas.</li>
       <li>5 senhas erradas → trava de 30 s, dobrando até 15 min.</li>
-      <li>Convidado: <b style="color: #eaf1ff;">DEMO</b>. Senhas fora do site; no código, só o hash.</li>
+      <li>Convidado: o botão <b style="color: #eaf1ff;">CONVIDADO</b> entra com o perfil Convidado. Senhas fora do site; no código, só o hash.</li>
       <li><b style="color: #ff6a60;">SOS abre sem login</b> — numa emergência ninguém fica preso na senha.</li>
       <li>Instalar: iPhone › Compartilhar › Tela de Início · Android › ⋮ › Instalar app.</li>
     </ul>
@@ -90,46 +91,47 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
     <img src="guia-rapido/img/inicio-web.jpg" alt="Início web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
     <ul style="margin: 0; padding-left: 30px; font-size: 27px; line-height: 1.6; color: #b1bdd6;">
       <li><b style="color: #eaf1ff;">Saudação</b> com o nome e uma frase sorteada.</li>
-      <li><b style="color: #eaf1ff;">5 botões fixos</b>: Console · Gerador · Climatização · Estabilizador · Eletrônicos — com o estado (atrasadas, PRONTO · DEMO).</li>
+      <li><b style="color: #eaf1ff;">5 botões fixos</b>: Console · Gerador · Climatização · Estabilizador · Eletrônicos — com o estado (atrasadas, prazo, PRONTO, FAQ).</li>
       <li><b style="color: #eaf1ff;">Chat</b> com FOTO · VÍDEO · VOZ · CONVERSA.</li>
       <li><b style="color: #eaf1ff;">Atalhos</b> editáveis.</li>
-      <li><b style="color: #eaf1ff;">Faixa</b>: SNAPSHOT DEMO com hora.</li>
+      <li><b style="color: #eaf1ff;">Faixa</b>: SOG, proa, vento, 24 V, água doce e diesel do instante, com a hora e AO VIVO.</li>
       <li><b style="color: #ff6a60;">SOS</b> no canto.</li>
     </ul>
   </div>
 </section>
 
-<section data-label="07 Chat e fontes" data-speaker-notes="Como a resposta é montada: resposta pronta com os dados, trecho do guia de bordo, e SEM DADOS quando não há fonte." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
+<section data-label="07 Chat e fontes" data-speaker-notes="Como a resposta é montada: emergência primeiro, resposta pronta com número e hora, trecho do guia de bordo. Fora das fontes de bordo, o app diz o que não achou e oferece registrar a pendência; pergunta de náutica vai à IA. Sobre o que é o barco, o app responde com a frase padrão da plataforma." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
   <img src="guia-rapido/img/resposta-gerador-app.jpg" alt="Resposta com fonte" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
-  <img src="guia-rapido/img/resposta-semdados-app.jpg" alt="Resposta SEM DADOS" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
+  <img src="guia-rapido/img/resposta-nos-app.jpg" alt="Resposta com a velocidade, o rumo e a hora do barco" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">CHAT</span>
     <h2 style="margin: 0; font-size: 56px; font-weight: 800;">Toda resposta traz a fonte</h2>
     <ol style="margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.55; color: #b1bdd6;">
       <li><b style="color: #eaf1ff;">Emergência primeiro</b>: SOS e pressão de óleo roteados antes de tudo.</li>
-      <li><b style="color: #eaf1ff;">Resposta pronta</b> com os dados do barco (agenda, snapshot, documentos).</li>
-      <li><b style="color: #eaf1ff;">Trecho do guia</b> quando a pergunta é específica (como, alarme, filtro…).</li>
-      <li><b style="color: #eaf1ff;">SEM DADOS</b> — nunca um chute.</li>
+      <li><b style="color: #eaf1ff;">Resposta pronta</b> com número e hora do barco (navegação, motores, diesel, agenda, documentos).</li>
+      <li><b style="color: #eaf1ff;">Trecho do guia</b> ("Guia de bordo — Gerador Onan §2") quando a pergunta é específica (como, alarme, filtro…).</li>
+      <li><b style="color: #eaf1ff;">Fora das fontes de bordo</b>: o app diz o que não achou e oferece registrar a pendência; pergunta de náutica vai à IA; preço, telefone e notícia ficam fora do barco.</li>
     </ol>
     <p style="margin: 0; font-size: 25px; color: #7985a6;">"Registre no diário…" grava uma linha nova. Pergunta nunca vira registro.</p>
   </div>
 </section>
 
-<section data-label="08 Conversa por voz" data-speaker-notes="O botão CONVERSA traz o infinito da WonderHUB.AI com as cores correndo. Na conversa, um rosto de perfil feito de partículas: ouvindo em ciano, pensando em violeta, falando com ondas que saem da boca, do ciano ao magenta. Voz a 1,15x; fala a primeira linha; emergência inteira." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
+<section data-label="08 Conversa por voz" data-speaker-notes="O botão CONVERSA traz o infinito da WonderHUB.AI com as cores correndo. Na conversa, o núcleo de anéis: anel graduado, anel de segmentos, espectro de 48 barras e anel tracejado, com o infinito no centro. Ouvindo em ciano, pensando em violeta, falando em azul. O painel no alto mostra o instante do barco a cada segundo. Voz a 1,15x; fala a primeira linha; emergência inteira." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00f4fd;">VOZ</span>
     <h2 style="margin: 0; font-size: 56px; font-weight: 800;">Mãos no leme</h2>
     <ul style="margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.55; color: #b1bdd6;">
       <li><b style="color: #eaf1ff;">CONVERSA</b>: o botão redondo com o infinito da WonderHUB.AI, as cores da logo correndo por ele.</li>
-      <li>Rosto de perfil feito de partículas: <b style="color: #00f4fd;">ouvindo</b> (ciano, respira) · <b style="color: #b45cff;">pensando</b> (violeta, neurônios) · <b style="color: #00a1fe;">falando</b> (ondas da boca, do ciano ao magenta).</li>
+      <li>Núcleo de anéis com o ∞ no centro: <b style="color: #00f4fd;">ouvindo</b> (ciano, respira) · <b style="color: #b45cff;">pensando</b> (violeta, os anéis aceleram) · <b style="color: #00a1fe;">falando</b> (azul, o espectro segue a voz).</li>
+      <li>Painel vivo no alto, a cada segundo: hora, posição, SOG, rpm e diesel. Em emergência: só "POSIÇÃO · LEIA NO PLOTTER".</li>
       <li>Abertura: "Capitão IA online. Que precisa?" A legenda mostra o que ouviu e o que diz.</li>
-      <li>Tocar no rosto: envia (ouvindo) ou interrompe (falando). ENCERRAR ou Esc desliga; o SOS fica na tela.</li>
+      <li>Tocar no núcleo: envia (ouvindo) ou interrompe (falando). ENCERRAR ou Esc desliga; o SOS fica na tela.</li>
       <li>Voz a <b style="color: #eaf1ff;">1,15x</b> em tudo; fala só a 1ª linha — <b style="color: #ff6a60;">emergência é lida inteira</b>.</li>
       <li>Voz do aparelho: grátis, sem conta, funciona offline.</li>
     </ul>
   </div>
-  <img src="guia-rapido/img/voz-escuta-app.jpg" alt="Rosto ouvindo" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
-  <img src="guia-rapido/img/voz-resposta-app.jpg" alt="Rosto falando" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
+  <img src="guia-rapido/img/voz-escuta-app.jpg" alt="Núcleo de anéis ouvindo" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
+  <img src="guia-rapido/img/voz-resposta-app.jpg" alt="Núcleo de anéis falando" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
 </section>
 
 <section data-label="09 Atalhos" data-speaker-notes="Seis atalhos padrão, banco de doze, até oito na tela. Editar, reordenar, criar e restaurar." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
@@ -143,16 +145,16 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   </div>
 </section>
 
-<section data-label="10 Telemetria" data-speaker-notes="Telemetria com hora: snapshot de demonstração, sensores que chegam e os que ficam SEM LEITURA. Ao vivo, desligada até o login no servidor." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
+<section data-label="10 Telemetria" data-speaker-notes="Telemetria com hora: toda leitura do instante, com a origem. Mapa de sensores, gráficos e tendências. Alerta só como AVISO na tela. Num barco do cliente, as mesmas telas leem o coletor NMEA de bordo." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 70px 100px 60px; display: flex; flex-direction: column; gap: 30px;">
   <div style="display: flex; align-items: baseline; gap: 30px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00f4fd;">TELEMETRIA</span><h2 style="margin: 0; font-size: 56px; font-weight: 800;">Toda leitura com hora e origem</h2></div>
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/telemetria-web.jpg" alt="Telemetria web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
     <ul style="margin: 0; padding-left: 30px; font-size: 27px; line-height: 1.6; color: #b1bdd6;">
-      <li><b style="color: #eaf1ff;">SNAPSHOT DEMO</b> · 26/09/2026 10:12 — nunca "ao vivo".</li>
+      <li><b style="color: #eaf1ff;">AO VIVO · hh:mm:ss</b>: toda leitura com hora e origem; a tela anda sozinha.</li>
       <li>Motor desligado: <b style="color: #eaf1ff;">última leitura com motor ligado</b> e a hora, nunca zero.</li>
-      <li>Porão e âncora: <b style="color: #00f4fd;">SEM LEITURA</b>.</li>
-      <li>Histórico: só a série 24 V · 7 dias; o resto SEM DADOS.</li>
-      <li>Ao vivo: pronto e <b style="color: #eaf1ff;">desligado</b> até o login no servidor.</li>
+      <li><b style="color: #00f4fd;">Mapa de sensores</b>: 22 na rede, cada um com leitura e hora.</li>
+      <li>Gráficos de 150 s a 1 ano, com a faixa do guia; tendências por regra fixa.</li>
+      <li><b style="color: #f0a63a;">AVISO</b> quando uma leitura sai da faixa do guia: só na tela, nunca abre o SOS.</li>
     </ul>
   </div>
 </section>
@@ -162,11 +164,11 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/manutencao-web.jpg" alt="Manutenção web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
     <ul style="margin: 0; padding-left: 30px; font-size: 27px; line-height: 1.6; color: #b1bdd6;">
-      <li>Agenda DEMO: 11 tarefas, <b style="color: #ff6a60;">3 atrasadas</b>.</li>
+      <li>Agenda: 16 tarefas, as <b style="color: #ff6a60;">atrasadas</b> primeiro.</li>
       <li>Filtros: atrasadas · D-30 · em dia.</li>
       <li><b style="color: #eaf1ff;">Executado</b> → linha nova com data e quem marcou.</li>
       <li><b style="color: #eaf1ff;">Desfazer</b> → outra linha nova. Nada se apaga.</li>
-      <li>Falta registrar: EPIRB e Seafire (SEM DADOS).</li>
+      <li><b style="color: #eaf1ff;">Checklists guiados</b> (saída, chegada, abastecimento, fundeio): CONCLUIR grava uma linha.</li>
     </ul>
   </div>
 </section>
@@ -176,8 +178,8 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   <div style="display: flex; gap: 44px; align-items: flex-start;">
     <img src="guia-rapido/img/documentos-web.jpg" alt="Documentos web" style="width: 1150px; height: 719px; object-fit: contain; border-radius: 18px; border: 1px solid #27315a; flex-shrink: 0;">
     <ul style="margin: 0; padding-left: 30px; font-size: 27px; line-height: 1.6; color: #b1bdd6;">
-      <li>Seguro D-19 · licença de rádio D-65 (DEMO).</li>
-      <li>TIE e certificado do EPIRB: SEM DADOS.</li>
+      <li>Vence primeiro: seguro D-19 · Licença de Estação D-65.</li>
+      <li>Aba <b style="color: #eaf1ff;">PEÇAS</b>: estoque com o mínimo; o −1 USADA tem Desfazer.</li>
       <li>Foto ou PDF enviado → <b style="color: #f0a63a;">A CONFERIR</b>; não sai do aparelho.</li>
       <li>Foto da NF → <b style="color: #f0a63a;">A CONFIRMAR</b>; o app não lê valores.</li>
       <li>Diesel com a hora da leitura, consumo observado e autonomia com reserva de 10 %.</li>
@@ -193,36 +195,38 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
   </div>
 </section>
 
-<section data-label="14 FAQ de bordo" data-speaker-notes="Passo a passo por equipamento, tirado dos guias de bordo de demonstração. PRONTO só com passo a passo; sem manual, SEM DADOS." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
+<section data-label="14 FAQ de bordo" data-speaker-notes="Passo a passo por equipamento, tirado dos guias de bordo. PRONTO quando há passo a passo. O FAQ de equipamentos tem 91 perguntas em 9 seções, cada uma com código. EPIRB e Seafire: só o procedimento padrão." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #34c77a;">FAQ DE BORDO</span>
     <h2 style="margin: 0; font-size: 56px; font-weight: 800;">Passo a passo por equipamento</h2>
     <ul style="margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.55; color: #b1bdd6;">
-      <li>Gerador Onan · Estabilizador Seakeeper · Climatização · Eletrônicos Garmin, áudio Fusion e rádios Icom — <b style="color: #34c77a;">PRONTO · DEMO</b>.</li>
-      <li>Sempre com fabricante e modelo — "modelo SEM DADOS" quando não informado.</li>
+      <li>Gerador Onan · Estabilizador Seakeeper · Climatização · Eletrônicos Garmin, áudio Fusion e rádios Icom — <b style="color: #34c77a;">PRONTO</b>.</li>
+      <li>Sempre com fabricante e modelo do equipamento.</li>
       <li>Cada passo cita o guia e a seção. Não substitui o manual do fabricante.</li>
-      <li>EPIRB e Seafire: <b style="color: #eaf1ff;">SEM DADOS</b>.</li>
+      <li><b style="color: #eaf1ff;">FAQ de equipamentos</b>: 91 perguntas em 9 seções, cada uma com código (MO-02, EM-06…); tocar abre o chat com o código.</li>
+      <li>EPIRB e Seafire: só o procedimento padrão; modelo, validade e acionamento: veja a etiqueta do equipamento.</li>
     </ul>
   </div>
   <img src="guia-rapido/img/faq-gerador-app.jpg" alt="FAQ gerador" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
 </section>
 
-<section data-label="15 SOS" data-speaker-notes="SOS em todas as telas, offline e sem login. Canal 16 com roteiro MAYDAY e homem ao mar como procedimento padrão rotulado. Seafire e EPIRB SEM DADOS." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center; box-shadow: inset 0 0 0 4px rgba(255,59,48,0.6);">
+<section data-label="15 SOS" data-speaker-notes="SOS em todas as telas, offline e sem login. O SOS não lê a navegação: só o nome da embarcação e os protocolos; a posição é o GPS do aparelho ou LEIA NO PLOTTER. Canal 16 com o roteiro MAYDAY e o MMSI do rádio de bordo. Homem ao mar, Seafire e EPIRB: procedimento padrão — confirmar com o protocolo de bordo." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 70px; align-items: center; box-shadow: inset 0 0 0 4px rgba(255,59,48,0.6);">
   <img src="guia-rapido/img/sos-app.jpg" alt="SOS" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #5a2a30; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 24px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 800; color: #ff6a60;">EMERGÊNCIA</span>
     <h2 style="margin: 0; font-size: 58px; font-weight: 800;">SOS em todas as telas</h2>
     <ul style="margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.55; color: #b1bdd6;">
-      <li><b style="color: #eaf1ff;">Canal 16 · MAYDAY</b> com roteiro: nome ×3, MMSI (fictício na demo), posição lida no plotter, perigo, pessoas, auxílio. PAN-PAN para urgência.</li>
+      <li><b style="color: #eaf1ff;">Canal 16 · MAYDAY</b> com roteiro: nome ×3, MMSI do rádio de bordo (etiqueta / Licença de Estação), posição lida no plotter, perigo, pessoas, auxílio. PAN-PAN para urgência.</li>
       <li><b style="color: #eaf1ff;">Homem ao mar</b>: gritar, boia, apontar, MOB no plotter, voltar em neutro.</li>
-      <li><b style="color: #f0a63a;">Seafire e EPIRB: SEM DADOS</b> — perigo grave: MAYDAY.</li>
-      <li>Abre <b style="color: #eaf1ff;">offline e sem login</b>; grava uma linha no diário por acionamento.</li>
+      <li><b style="color: #f0a63a;">Incêndio (Seafire) e EPIRB</b>: só o procedimento padrão. Modelo, validade e acionamento: veja a etiqueta do equipamento.</li>
+      <li><b style="color: #eaf1ff;">Posição</b>: o botão MOSTRAR GPS DO CELULAR ou LEIA NO PLOTTER — nunca rumo, SOG nem pessoas do quadro.</li>
+      <li>Abre <b style="color: #eaf1ff;">offline e sem login</b>; só a ação (MAYDAY, MOB ou ligar) grava uma linha no diário.</li>
     </ul>
     <p style="margin: 0; font-size: 25px; color: #f0a63a; font-weight: 700;">Procedimento padrão — confirmar com o protocolo de bordo.</p>
   </div>
 </section>
 
-<section data-label="16 App e modo navegação" data-speaker-notes="No celular: início, console com oito blocos, barra do assistente em toda tela, modo navegação com gatilhos grandes e triagem de sintoma." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
+<section data-label="16 App e modo navegação" data-speaker-notes="No celular: início, console com oito blocos, barra do assistente em toda tela, modo navegação com gatilhos grandes que mudam com a velocidade e triagem de sintoma." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 80px 100px 70px; display: flex; gap: 56px; align-items: center;">
   <img src="guia-rapido/img/console-app.jpg" alt="Console app" style="width: 360px; height: 779px; object-fit: contain; border-radius: 22px; border: 1px solid #27315a; flex-shrink: 0;">
   <div style="flex: 1; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
     <span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">APP</span>
@@ -230,50 +234,50 @@ section[data-label] :is(p, li, span, h3) { text-wrap-style: pretty; }
     <ul style="margin: 0; padding-left: 34px; font-size: 28px; line-height: 1.55; color: #b1bdd6;">
       <li><b style="color: #eaf1ff;">Console</b>: 8 blocos (Motores · Manutenção · Telemetria · Documentos · Equipamentos · Navegação · Abastecer · Diário), banco de 17, editar ícone e ordem.</li>
       <li><b style="color: #eaf1ff;">Barra do assistente</b> em toda tela, abaixo do SOS: TEXTO · VOZ→TEXTO · CONVERSA · FOTO · VÍDEO.</li>
-      <li><b style="color: #eaf1ff;">Modo navegação</b>: 6 gatilhos grandes e triagem de sintoma com resposta do cérebro e fonte. A vigia automática depende da telemetria ao vivo (desligada).</li>
+      <li><b style="color: #eaf1ff;">Modo navegação</b>: troca sozinho os gatilhos grandes pela velocidade do quadro (navegando: homem ao mar, água no porão, pane de motor, alarme, registrar posição, canal 16; parado: âncora, checklist de saída, abastecer, diário) e tem triagem de sintoma com resposta do cérebro e fonte. Nunca abre o SOS nem grava sozinho.</li>
       <li>Celular deitado: tela em tamanho real e SOS flutuante.</li>
     </ul>
   </div>
 </section>
 
-<section data-label="17 Estados e fontes" data-speaker-notes="Os estados honestos e a hierarquia quando as fontes divergem." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 40px;">
+<section data-label="17 Estados e fontes" data-speaker-notes="Os estados e selos que a tela mostra e a hierarquia quando as fontes divergem." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 40px;">
   <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">ESTADOS HONESTOS</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Quando não sabe, diz</h2></div>
   <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; font-size: 25px; line-height: 1.45; color: #b1bdd6;">
-    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #97a3c0; letter-spacing: 0.1em;">SEM DADOS</b><br>não há fonte carregada</div>
-    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00f4fd; letter-spacing: 0.1em;">SEM LEITURA</b><br>o sensor não chega na rede</div>
-    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #f0a63a; letter-spacing: 0.1em;">MANUAL NO DRIVE</b><br>manual existe, passo a passo não confirmado</div>
+    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #34c77a; letter-spacing: 0.1em;">AO VIVO · hh:mm:ss</b><br>leitura do instante, com hora e origem</div>
+    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00f4fd; letter-spacing: 0.1em;">ÚLTIMA LEITURA</b><br>sem leitura nova: a última salva, com dia e hora</div>
+    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #f0a63a; letter-spacing: 0.1em;">AVISO</b><br>leitura fora da faixa do guia; só na tela, nunca abre o SOS</div>
     <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #f0a63a; letter-spacing: 0.1em;">A CONFERIR · A CONFIRMAR</b><br>entrou por foto, upload ou nota</div>
-    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #34c77a; letter-spacing: 0.1em;">PRONTO · DEMO</b><br>FAQ com passo a passo do guia</div>
+    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #34c77a; letter-spacing: 0.1em;">PRONTO</b><br>FAQ com passo a passo do guia</div>
     <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00a1fe; letter-spacing: 0.1em;">PENDENTE</b><br>convite aguardando confirmação</div>
     <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #ff6a60; letter-spacing: 0.1em;">ATRASADA · D-n</b><br>escada D-90 · D-60 · D-30 · D-0</div>
-    <div style="padding: 28px; background: rgba(162,43,253,0.08); border: 1px solid rgba(162,43,253,0.5); border-radius: 20px;"><b style="color: #b45cff; letter-spacing: 0.1em;">DEMO</b><br>dado fictício de demonstração</div>
+    <div style="padding: 28px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #97a3c0; letter-spacing: 0.1em;">FORA DAS FONTES</b><br>o app diz o que não achou e oferece registrar a pendência</div>
   </div>
   <p style="margin: 0; font-size: 30px; color: #eaf1ff;"><b>Fontes divergentes:</b> manual oficial › registro oficial › laudo › diário › foto › nota informal.</p>
 </section>
 
-<section data-label="18 Integrações" data-speaker-notes="Tudo que tem chave passa por um Worker na Cloudflare e vem desligado. Ordem para ligar." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 40px;">
-  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">INTEGRAÇÕES</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Prontas e desligadas</h2></div>
+<section data-label="18 Integrações" data-speaker-notes="Tudo que tem chave passa por um Worker na Cloudflare. A telemetria ao vivo e a voz em nuvem vêm desligadas; a IA entra só em aparelho ativado. Coordenadas nunca saem do aparelho. Ordem para ligar." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 40px;">
+  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">INTEGRAÇÕES</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Chave só no Worker</h2></div>
   <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; font-size: 26px; line-height: 1.5; color: #b1bdd6;">
     <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00f4fd;">capitao-telemetria</b><br>coletor NMEA → Drive (privado) → Worker com conta de serviço → app.</div>
-    <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00a1fe;">capitao-ia</b><br>Workers AI (grátis, ligada na demo) ou Claude API — conversa no chat e na voz com a ficha de bordo e as regras do projeto.</div>
+    <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #00a1fe;">capitao-ia</b><br>Workers AI (grátis) ou Claude API — conversa no chat e na voz com a ficha de bordo e as regras do projeto, com filtros de saída e de coordenadas; só em aparelho ativado.</div>
     <div style="padding: 32px; background: #0d1329; border: 1px solid #1a2240; border-radius: 20px;"><b style="color: #b45cff;">capitao-voz</b><br>voz em nuvem opcional; emergência sempre na voz do aparelho.</div>
   </div>
   <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #b1bdd6;">Regra: chave só no Worker · <b style="color: #eaf1ff;">ORIGENS</b> + <b style="color: #eaf1ff;">CHAVE_APP</b> (X-Capitao-Chave) + freio por IP · app com <b style="color: #eaf1ff;">URL_PROXY = ''</b> cai no dado local em erro, demora ou sem internet.</p>
   <p style="margin: 0; font-size: 28px; line-height: 1.55; color: #eaf1ff;">Ordem: login no servidor → conta de serviço Google → telemetria ao vivo → IA → documentos sensíveis → voz em nuvem.</p>
 </section>
 
-<section data-label="19 Próximos passos" data-speaker-notes="O que falta para a demonstração virar a embarcação real." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 36px; position: relative;">
-  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">PRÓXIMOS PASSOS</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Da demonstração ao barco real</h2></div>
+<section data-label="19 Próximos passos" data-speaker-notes="O que muda quando o Capitão IA é ligado à embarcação do cliente." style="box-sizing: border-box; width: 1920px; height: 1080px; background: #050816; color: #eaf1ff; padding: 90px 100px 70px; display: flex; flex-direction: column; gap: 36px; position: relative;">
+  <div style="display: flex; flex-direction: column; gap: 14px;"><span style="font-size: 26px; letter-spacing: 0.22em; font-weight: 700; color: #00a1fe;">PRÓXIMOS PASSOS</span><h2 style="margin: 0; font-size: 60px; font-weight: 800;">Para a embarcação do cliente</h2></div>
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px 60px; font-size: 27px; line-height: 1.5; color: #b1bdd6;">
-    <p style="margin: 0;"><b style="color: #eaf1ff;">Dados reais</b> no Drive: manuais dos fabricantes, agenda, documentos, diário — com a fonte de cada um.</p>
-    <p style="margin: 0;"><b style="color: #eaf1ff;">Protocolo de bordo</b>: MMSI e indicativo do registro, Seafire e EPIRB.</p>
+    <p style="margin: 0;"><b style="color: #eaf1ff;">Dados do cliente</b> no Drive: manuais dos fabricantes, agenda, documentos, diário — com a fonte de cada um.</p>
+    <p style="margin: 0;"><b style="color: #eaf1ff;">Protocolo de bordo</b>: MMSI do rádio e indicativo da Licença de Estação, Seafire e EPIRB (a etiqueta de cada equipamento).</p>
     <p style="margin: 0;"><b style="color: #eaf1ff;">Modelos</b> de motores, gerador, estabilizador, climatização e eletrônicos.</p>
     <p style="margin: 0;"><b style="color: #eaf1ff;">Posição de referência</b> da marina (hoje, o centro de Balneário Camboriú).</p>
     <p style="margin: 0;"><b style="color: #eaf1ff;">Login no servidor</b> (Cloudflare Access) e, depois, telemetria ao vivo e documentos sensíveis.</p>
-    <p style="margin: 0;"><b style="color: #eaf1ff;">Alerta crítico e modo navegação</b> automáticos — dependem da telemetria ao vivo.</p>
+    <p style="margin: 0;"><b style="color: #eaf1ff;">Coletor NMEA de bordo</b> no lugar do laço de 150 s; o alerta crítico entra junto com ele.</p>
   </div>
   <div style="margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; padding-top: 26px; border-top: 1px solid #1a2240;">
-    <span style="font-size: 24px; letter-spacing: 0.16em; font-weight: 700; color: #7985a6;">CAPITÃO IA · MANUAL · APP 1.0.9 · 29/09/2026</span>
+    <span style="font-size: 24px; letter-spacing: 0.16em; font-weight: 700; color: #7985a6;">CAPITÃO IA · MANUAL · APP 1.1.0 · 14/11/2026</span>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
       <span style="font-size: 20px; letter-spacing: 0.22em; font-weight: 700; color: #7985a6;">DESIGN BY</span>
       <div style="display: flex; align-items: center; gap: 44px;"><img src="assets/logo-wonderboat.png" alt="Wonder BOAT" style="height: 150px; width: 276px; object-fit: contain;"><span aria-hidden="true" style="width: 2px; height: 130px; background: #27315a;"></span><img src="assets/wonderhub-assinatura.jpg" alt="WonderHUB.AI" style="width: 262px; height: 151px; object-fit: contain; mix-blend-mode: lighten;"></div>
