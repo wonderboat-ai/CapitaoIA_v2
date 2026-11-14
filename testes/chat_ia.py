@@ -11,7 +11,16 @@ que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando
 pintados no canvas (cor por estado, ∞ no centro, só reage ao som com som true), o HUD lê o quadro do instante e, em alerta, mostra só
 a instrução do plotter, e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
+Fase 7 (PROMPT «Testes novos»; função fase7, nas duas telas e nas sessões lucas e demo, com o cliente da IA de verdade): o que vai ao Worker nunca leva
+coordenada — depois do SOS com o GPS do aparelho (set_geolocation), da «posição agora», do «roteiro do canal 16» e de uma pergunta digitada com coordenada —,
+com simulacao true e false; a conversa em emergência na CONVERSA («homem ao mar», a posição, as pessoas, «e agora?») não faz pedido nenhum, fala o SOS inteiro
+(≥ 90 % do falável, nos dois modos) e não traz coordenada, nós, mn, rumo nem pessoas na fala, no HUD nem na tela; o 502 {parou:'rotulo'}, o 401, o preço, o
+telefone e o lugar da salvatagem devolvidos pelo Worker simulado não são falados nem mostrados (só a resposta local); e nenhuma fala nem HUD casa ROTULOS ou
+AUTENTICIDADE, em 2 instantes do replay com os valores mudando.
+
     python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; o React vem do próprio site, assets/vendor)
+    python -X utf8 testes/chat_ia.py --so-fase7 [Main|H2-Home-Mobile] [lucas|demo] [coord|emerg|filtro|varre]   só as conferências da Fase 7
+    python -X utf8 testes/chat_ia.py --mutantes-fase7      planta os 10 defeitos da Fase 7 (12 passadas: os 2 da lógica da tela, na Main e na H2), todos acusados; MUT_FILTRO=texto refaz só os de nome com o texto
 """
 import functools
 import http.server
@@ -174,6 +183,331 @@ HUD_NUCLEO = r"""async () => {
 }"""
 
 
+# ——— Fase 7 (PROMPT «Testes novos», chat_ia.py): as travas do chat e da CONVERSA, ponta a ponta, nas sessões lucas e demo ———
+TELAS = (('H2-Home-Mobile', True, '#pergunta-m'), ('Main', False, '#pergunta'))
+USUARIOS = ('lucas', 'demo')
+PARTES_F7 = ('coord', 'emerg', 'filtro', 'varre')
+TERMOS = confere.carrega_termos()   # as regex do PROMPT §3 (testes/proibidos.json): ROTULOS, AUTENTICIDADE, DINHEIRO, PESSOAIS, LOCAL_SEGURANCA
+CAB = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
+# o GPS do APARELHO de teste (ctx.set_geolocation: só o SOS o lê), longe da rota do replay; os pedaços dele em graus-minutos e em decimal não podem aparecer em nenhum pedido ao Worker
+GPS = {'latitude': -27.4321, 'longitude': -48.3456, 'accuracy': 12}
+GPS_TELA = r"27°25,9\d'S 048°20,7\d'W"
+GPS_PEDACOS = ('27°25', '048°20', '27.432', '48.345', '27,432', '48,345')
+AVISO_COORD = '(coordenadas só na tela do app)'   # o que o semCoord (cérebro e cliente da IA) põe no lugar da coordenada
+Q_COORD = "anotei 27°25,93'S 048°20,74'W e -27.4321 / -48.3456 no papel, como se faz um nó de escota?"   # a pergunta vai à IA como foi digitada: só o cliente a limpa
+# posição, rumo, velocidade, distância, ETA e número de pessoas: o que a conversa em emergência nunca traz (trava 10), na fala, no HUD e na tela
+R_NAVEG = re.compile(r'\d\s*(?:nós|mn|kt|milhas?)(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:rumo|proa|COG|HDG|SOG)(?![A-Za-zÀ-ÿ])[^\n]{0,12}\d', re.I)
+R_FALHA_IA = re.compile(r'IA na nuvem|não está ativada|Ativar IA|chave', re.I)
+PERGUNTAS_IA = ('como se faz um nó lais de guia', 'como se faz um nó de escota', 'como se faz um nó volta do fiel', 'como se dá um nó de pescador', 'como se faz um nó catau')   # náutica geral sem rota: fallback, pedeIA true
+_RESP_IA = lambda t: {'texto': t + '\nFonte: conhecimento geral de náutica', 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}
+# as cinco respostas do Worker simulado que a tela nunca fala nem mostra (PROMPT Fase 7): o 502 do filtro de saída, a chave recusada, o preço, o telefone e o lugar da salvatagem
+FILTRADAS = (
+    ('502 {parou: rotulo}', 502, {'erro': 'resposta barrada pelo filtro de saída', 'parou': 'rotulo'}),
+    ('401', 401, {'erro': 'chave recusada'}),
+    ('o preço', 200, _RESP_IA('O dólar está cotado a 5,40.')),
+    ('o telefone', 200, _RESP_IA('Ligue para a marina: (47) 3367-1234.')),
+    ('o lugar da salvatagem', 200, _RESP_IA('Os coletes ficam no paiol de proa.')),
+)
+LITERAIS_IA = ('5,40', '3367', 'paiol', 'cotado', 'Ligue para')
+# a varredura falada: a leitura do instante, a pergunta sobre os dados (a frase padrão) e uma pergunta que vai à IA e volta com o rótulo (barrado)
+VARRE_Q = ('como está a telemetria', 'posição agora', 'como estão os motores', 'quantas horas tem o gerador', 'autonomia', 'quanto diesel tem', 'a que horas chegamos?', 'manutenção atrasada',
+           'esses dados são reais?', 'isso é uma demonstração?', 'como se faz um nó lais de guia')
+EMERG_Q = ('homem ao mar', 'qual a nossa posição?', 'quantas pessoas a bordo?', 'e agora?')
+# o overlay inteiro da CONVERSA (HUD da esquerda e da direita, legenda) a cada evento de voz, depois de o núcleo o tratar
+ESPIA_CPZ = r"""(() => {
+  window.__cpz = [];
+  window.addEventListener('capitao-voz', (e) => {
+    const d = e.detail || {};
+    Promise.resolve().then(() => { try { const c = document.querySelector('.cpz'); if (c) window.__cpz.push({ ev: d.estado, t: c.innerText }); } catch (x) {} });
+  });
+})()"""
+# a fala da CONVERSA: `real` = a voz de verdade do cérebro (sobre o speechSynthesis de mentira; cada bloco em __sint, com a marca da fala a que pertence); senão só o texto. __fins conta as falas que TERMINARAM.
+# Ouvida a frase, o teste a ENVIA (B.vozEnviar: o controle do overlay) em vez de esperar os 2,5 s de silêncio do ditado — a pausa é da passada de cima; aqui cada pergunta sai no evento, sem relógio
+PREPARA_FALA = r"""([qs, real]) => {
+  const B = window.CapitaoBrain, sp = B.speak;
+  try { window.CapitaoEmergencia.zera(); } catch (e) {}
+  window.__voz.length = 0; window.__nucleo.length = 0; window.__cpz.length = 0; window.__faladas.length = 0; window.__fins = 0;
+  qs.forEach((q) => window.__falas.push(q));
+  window.addEventListener('capitao-voz', (e) => { const d = e.detail || {}; if (d.estado === 'ouvindo' && d.texto) setTimeout(() => { try { window.CapitaoBrain.vozEnviar(); } catch (x) {} }, 0); });
+  B.speak = real
+    ? function (t, fim) { window.__faladas.push(t); window.__sint.push({ fala: window.__faladas.length - 1 }); return sp.call(B, t, function () { window.__fins++; if (fim) fim(); }); }
+    : (t, fim) => { window.__faladas.push(t); setTimeout(() => { window.__fins++; if (fim) fim(); }, 80); return true; };
+}"""
+COLHE_FALA = r"""() => {
+  const B = window.CapitaoBrain, o = { janela: !!window.CapitaoEmergencia.valendo(), faladas: window.__faladas.slice(), fins: window.__fins, sint: (window.__sint || []).slice(), nucleo: window.__nucleo.slice(), cpz: window.__cpz.slice(),
+    bots: [...document.querySelectorAll('[data-home=msg][data-papel=bot]')].map((m) => m.innerText), sim: window.CapitaoDados.simulacao, plotter: (window.CapitaoDados.protocolos || {}).hud };
+  try { o.sos = B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; } catch (e) { o.sos = ''; }
+  return o;
+}"""
+N_BOTS = "() => document.querySelectorAll('[data-home=msg][data-papel=bot]').length"
+# defeitos plantados (--mutantes-fase7): (nome, arquivo — None = a tela —, as trocas (o trecho, o que entra no lugar), a parte da Fase 7 que o acusa). O arquivo trocado é servido pelo page.route: nada muda no disco
+MUTANTES_F7 = (
+    ('o cliente da IA não tira a coordenada do que envia', 'capitao-ia.js', (("function semCoord(s) { return String(s == null ? '' : s).replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }", "function semCoord(s) { return String(s == null ? '' : s); }"),), 'coord'),
+    ('o cliente da IA sem o filtro de saída', 'capitao-ia.js', (('if (sim) { if (filtroSaida(texto) || filtroSaida(fonte)) return null;', 'if (sim) { if (false) return null;'),), 'filtro'),
+    ('o 502 do filtro de saída vira motivo na linha da fonte', 'capitao-ia.js', (("ULTIMA.falha = barrada(e) ? '' : motivo(e);", 'ULTIMA.falha = motivo(e);'),), 'filtro'),
+    ('a tela fala o motivo da falha da IA na simulação', None, (('if (nota && this.state.conversa && !quieta) fin.extraFala', 'if (nota && this.state.conversa) fin.extraFala'),), 'filtro'),
+    ('a tela ignora a janela de conversa em emergência', None, (('let emg = false; try { emg = !!(EM && EM.valendo()); }', 'let emg = false; try { emg = false; }'),), 'emerg'),
+    ('o HUD do núcleo mostra o quadro na emergência', 'capitao-voz.js', (("if (emAlerta()) return [plotter(), '', '', '', ''];", "if (false) return [plotter(), '', '', '', ''];"),), 'emerg'),
+    ('o SOS falado só na 1ª linha', 'capitao-brain.js', (('var FALA_INTEIRA = { sos: 1, oleo: 1, epirb: 1, seafire: 1 };', 'var FALA_INTEIRA = { oleo: 1, epirb: 1, seafire: 1 };'),), 'emerg'),
+    ('a resposta sobre os dados diz «fictícios» (a trava da voz segura a fala: só a resposta escrita acusa)', 'capitao-brain.js', (("var SOBRE_DADOS = 'Esta é a embarcação de apresentação", "var SOBRE_DADOS = 'Os dados são fictícios. Esta é a embarcação de apresentação"),), 'varre'),
+    ('a resposta sobre os dados diz «fictícios» com a trava da voz desligada (a fala e a resposta escrita acusam)', 'capitao-brain.js', (("var SOBRE_DADOS = 'Esta é a embarcação de apresentação", "var SOBRE_DADOS = 'Os dados são fictícios. Esta é a embarcação de apresentação"),
+     ("var s = String(t == null ? '' : t), k, n, orig = s;\n    if (!sim()) return s;", "var s = String(t == null ? '' : t), k, n, orig = s;\n    return s;")), 'varre'),
+    ('o HUD do núcleo com o rótulo', 'capitao-voz.js', (("'SOG ' + c('sog_nos', ' NÓS'),", "'DEMO SOG ' + c('sog_nos', ' NÓS'),"),), 'varre'),
+)
+
+
+def folhas(v):
+    """Todo texto de um pedido ao Worker (pergunta, trechos, contexto, ficha, histórico), um por folha."""
+    if isinstance(v, dict):
+        return [t for x in v.values() for t in folhas(x)]
+    if isinstance(v, (list, tuple)):
+        return [t for x in v for t in folhas(x)]
+    return [v] if isinstance(v, str) else []
+
+
+def com_coord(corpo):
+    """As folhas do pedido que trazem coordenada: a regex do §2.8 (graus-minutos e decimal) ou um pedaço do GPS do aparelho de teste."""
+    return [t[:80] for t in folhas(corpo) if confere.R_COORD.search(t) or any(p in t for p in GPS_PEDACOS)]
+
+
+def navegacao(t):
+    """O que a conversa em emergência nunca traz (trava 10): coordenada, nós, mn, rumo, ETA e número de pessoas."""
+    return [n for n, rx in (('coordenada', confere.R_COORD), ('quadro', confere.R_EMERG_PROTOCOLO), ('pessoas', confere.R_PESSOAS), ('nós/mn/rumo', R_NAVEG)) if rx.search(t or '')]
+
+
+def rotulos(t):
+    return [(n, TERMOS[n].search(t).group(0)) for n in ('ROTULOS', 'AUTENTICIDADE') if TERMOS[n].search(t or '')]
+
+
+def fase7(b, base, ok, tela, movel, campo, usuario, partes=PARTES_F7, trocas=()):
+    """As travas da Fase 7 numa tela de conversa (Main ou H2), numa sessão (lucas ou demo), com o cliente da IA de verdade e o Worker simulado no page.route.
+    `partes`: coord (o que vai ao Worker nunca leva coordenada, nos dois modos) · emerg (a conversa em emergência e o SOS falado inteiro, nos dois modos) · filtro (as cinco respostas barradas) ·
+    varre (nenhuma fala nem HUD com rótulo, em 2 instantes). `trocas` = [(arquivo, trecho, novo)]: o defeito plantado, servido no lugar do arquivo."""
+    rot = '%s [%s] · Fase 7: ' % (tela, usuario)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel,
+                        service_workers='block', permissions=['geolocation'])
+    ctx.set_geolocation(GPS)
+    ctx.add_init_script(SESSAO.replace("u: 'lucas'", "u: '%s'" % usuario))
+    for s in (REPLAY_FIXO, VOZ_FALSA, ESPIA_NUCLEO, ESPIA_CPZ):
+        ctx.add_init_script(s)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+    # (a falha de rede de um recurso de fora — o Open-Meteo sem internet — não é erro de script: a passada de sempre, acima, é que a acusa)
+    pg.on('console', lambda m: erros.append(m.text[:200]) if m.type == 'error' and 'FAILED' in m.text and 'net::ERR_' not in m.text else None)
+    est = {'pedidos': [], 'fila': [], 'modo': 'ok', 'sim': True}
+
+    def rota(route):
+        req = route.request
+        if req.method == 'OPTIONS':
+            return route.fulfill(status=204, headers=CAB)
+        corpo = json.loads(req.post_data or '{}')
+        est['pedidos'].append(corpo)
+        if not corpo.get('ficha') and not corpo.get('trechos') and not corpo.get('contexto'):
+            return route.fulfill(status=422, content_type='application/json', headers=CAB, body='{"erro":"sem fontes","motivo":"sem_fontes"}')
+        if est['fila']:
+            st, j = est['fila'].pop(0)
+            return route.fulfill(status=st, content_type='application/json', headers=CAB, body=json.dumps(j))
+        return route.fulfill(status=200, content_type='application/json', headers=CAB, body=json.dumps(_RESP_IA('SEM DADOS — os trechos não respondem.' if est['modo'] == 'semdados' else TEXTO_IA)))
+    pg.route(URL_ARQ.rstrip('/') + '**', rota)
+
+    def arquivo(route):
+        # o capitao-dados.js com a simulação desligada (a passada com simulacao:false) e os arquivos do defeito plantado
+        nome = urllib.parse.urlparse(route.request.url).path.rsplit('/', 1)[-1]
+        corpo = open(os.path.join(RAIZ, nome), encoding='utf-8').read()
+        for arq, velho, novo in trocas:
+            if arq == nome:
+                corpo = corpo.replace(velho, novo)
+        if nome == 'capitao-dados.js' and not est['sim']:
+            corpo += '\nwindow.CapitaoDados.simulacao = false;\n'
+        return route.fulfill(status=200, content_type=('text/html' if nome.endswith('.html') else 'text/javascript') + '; charset=utf-8', body=corpo)
+    for nome in sorted({'capitao-dados.js'} | {arq for arq, _, _ in trocas}):
+        pg.route('**/' + nome + '*', arquivo)
+
+    def abre(chave=True):
+        pg.goto(base + 'README.md')
+        pg.evaluate("(c) => { if (c) localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); else localStorage.removeItem('capitao.ia.chave.v1'); }", chave)
+        pg.goto(base + tela + '.dc.html')
+        pg.wait_for_function(PRONTA, timeout=20000)
+        pg.wait_for_selector(campo, timeout=15000)
+        try:
+            pg.wait_for_function('() => window.__cerebros >= 2', timeout=8000)   # as duas cópias do cérebro (ver o VOZ_FALSA)
+        except Exception:
+            pass
+
+    def envia(q):
+        """Pergunta digitada: espera a RESPOSTA dela entrar na conversa (a local espera a IA) e devolve o texto dela e quantos pedidos saíram."""
+        p0, n0 = len(est['pedidos']), pg.evaluate(N_BOTS)
+        pg.fill(campo, q)
+        pg.press(campo, 'Enter')
+        try:
+            pg.wait_for_function("(n) => document.querySelectorAll('[data-home=msg][data-papel=bot]').length > n && !document.querySelector('[data-capitao-pensando]')", arg=n0, timeout=20000)
+        except Exception:
+            pass
+        bots = pg.evaluate("() => [...document.querySelectorAll('[data-home=msg][data-papel=bot]')].map((m) => m.innerText)")
+        return (bots[-1] if len(bots) > n0 else ''), len(est['pedidos']) - p0
+
+    def conversa(frases, real=False, inst=None):
+        """As frases ouvidas na CONVERSA, uma a uma (microfone de mentira): espera cada fala TERMINAR (a abertura e uma resposta por frase) e colhe as falas, os blocos da voz, o HUD, o overlay e a conversa escrita."""
+        abre()
+        if inst:
+            pg.evaluate('(t) => window.CapitaoReplay.fixar(t)', inst)
+        if real:
+            pg.evaluate(SINTESE_FALSA)
+        pg.evaluate(PREPARA_FALA, [list(frases), real])
+        p0 = len(est['pedidos'])
+        pg.click(CONVERSA)
+        try:
+            pg.wait_for_function('(n) => window.__fins >= n', arg=len(frases) + 1, timeout=60000)
+        except Exception:
+            pass
+        r = pg.evaluate(COLHE_FALA)
+        r['pedidos'] = est['pedidos'][p0:]
+        r['onde'] = pg.evaluate(ONDE_IA)['onde']
+        pg.keyboard.press('Escape')
+        pg.wait_for_timeout(150)
+        pg.evaluate(FECHA_JANELA)
+        return r
+
+    def blocos(r, i):
+        """Os blocos que a voz de verdade falou na fala `i` (entre a marca dela e a da seguinte)."""
+        out, dentro = [], False
+        for x in r['sint']:
+            if 'fala' in x:
+                dentro = x['fala'] == i
+            elif dentro:
+                out.append(x)
+        return out
+
+    def modo(sim):
+        est['sim'], est['modo'], est['fila'] = sim, 'ok', []
+        return 'simulacao:true' if sim else 'simulacao:false'
+
+    # 1 · O que vai ao Worker nunca leva coordenada (trava 14), nos dois modos: depois do SOS com o GPS do aparelho, da «posição agora» (coordenada na tela), do «roteiro do canal 16» e de uma pergunta
+    # digitada com coordenada — a pergunta, a ficha, a leitura de agora, os trechos e o histórico de cada pedido
+    for sim in ((True, False) if 'coord' in partes else ()):
+        m = modo(sim)
+        pg.goto(base + ('S2-SOS-Mobile' if movel else 'S1-SOS-Web') + '.dc.html')
+        try:
+            pg.wait_for_function("(rx) => new RegExp(rx).test(document.body.innerText)", arg=GPS_TELA, timeout=12000)
+        except Exception:
+            pass
+        gps = re.search(GPS_TELA, pg.evaluate('() => document.body.innerText'))
+        abre()
+        simp = pg.evaluate('() => window.CapitaoDados.simulacao')
+        pos, n_pos = envia('posição agora')
+        p0 = len(est['pedidos'])
+        envia('como se faz um nó lais de guia?')
+        envia(Q_COORD)
+        c16, n_c16 = envia('roteiro do canal 16')
+        jan = pg.evaluate('() => window.CapitaoEmergencia.valendo()')
+        pg.evaluate(FECHA_JANELA)   # (os 15 min da janela passam: a conversa segue e o que veio antes entra no histórico, menos a emergência)
+        envia('como se dá um nó de pescador?')
+        corpos = est['pedidos'][p0:]
+        ok(rot + m + ': preparo da conferência das coordenadas — o SOS mostra o GPS do aparelho, a «posição agora» é local' + (' e traz a coordenada na tela' if sim else '') + ', o «roteiro do canal 16» é local, manda ler o plotter e abre a janela',
+           simp is sim and gps and n_pos == 0 and (not sim or confere.R_COORD.search(pos)) and n_c16 == 0 and 'LEIA NO PLOTTER' in c16 and jan, json.dumps([simp, bool(gps), n_pos, pos[:90], n_c16, jan], ensure_ascii=False))
+        ruim = [(k, x) for k, c in enumerate(corpos) for x in com_coord(c)]
+        hist = folhas(corpos[2].get('historico')) if len(corpos) == 3 else []
+        ok(rot + m + ': nenhum dos 3 pedidos ao Worker (pergunta, ficha, leitura de agora, trechos e histórico) casa a regex de coordenada nem leva o GPS do aparelho — depois do SOS com o GPS, da «posição agora», do «roteiro do canal 16» e da pergunta digitada com coordenada',
+           len(corpos) == 3 and not ruim and all(c.get('ficha') and c.get('contexto') for c in corpos), json.dumps([len(corpos), ruim[:4]], ensure_ascii=False))
+        ok(rot + m + ': o filtro agiu (a conferência não é vazia): a pergunta com coordenada chega ao Worker com o aviso no lugar dela, e o histórico do último pedido traz a «posição agora» e a pergunta, as duas com o aviso' + ('' if not sim else ' (e a resposta da posição sem a coordenada)')
+           + ', e nada do roteiro do canal 16', len(corpos) == 3 and AVISO_COORD in corpos[1].get('pergunta', '') and 'nó de escota' in corpos[1].get('pergunta', '') and 'posição agora' in hist and sum(AVISO_COORD in t for t in hist) >= (2 if sim else 1)
+           and not any('MAYDAY' in t or 'canal 16' in t for t in hist) and (corpos[0].get('modo') == 'simulacao') is sim, json.dumps([c.get('pergunta') for c in corpos] + hist, ensure_ascii=False)[:300])
+
+    # 2 · A conversa em emergência na CONVERSA (trava 10), com a voz de verdade do cérebro, nos dois modos: «homem ao mar» falado inteiro (≥ 90 % do falável) e, depois, a posição, as pessoas e o «e agora?» —
+    # nenhum pedido ao Worker (a chave está ligada) e nenhuma fala, HUD nem resposta escrita com coordenada, nós, mn, rumo ou número de pessoas
+    for sim in ((True, False) if 'emerg' in partes else ()):
+        m = modo(sim)
+        r = conversa(EMERG_Q, real=True)
+        f, n = r['faladas'], len(EMERG_Q) + 1
+        ok(rot + m + ': conversa em emergência: «homem ao mar» e depois a posição, as pessoas e o «e agora?» — as 4 respostas faladas, a janela valendo e NENHUM pedido ao Worker (com a chave ligada)',
+           r['sim'] is sim and len(f) == n and r['fins'] >= n and r['janela'] and not r['pedidos'] and len(r['bots']) == len(EMERG_Q), json.dumps([r['sim'], len(f), r['fins'], r['janela'], len(r['pedidos']), len(r['bots'])]))
+        sos, voz = r['sos'], blocos(r, 1)
+        dito = ' '.join(x['t'] for x in voz)
+        ok(rot + m + ': «homem ao mar» falado em pelo menos 90 %% do falavel(falaCurta(…)) (%d de %d letras), a 1,15x' % (len(dito), len(sos)), len(sos) > 400 and len(dito) >= 0.9 * len(sos) and voz and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in voz), dito[:200])
+        ditos = [(k, x) for k in range(1, len(f)) for x in [f[k]] + [y['t'] for y in blocos(r, k)]]
+        ruim = [(k, navegacao(x), x[:80]) for k, x in ditos if navegacao(x)] + [('tela', navegacao(x), x[:80]) for x in r['bots'] if navegacao(x)]
+        ok(rot + m + ': conversa em emergência: nenhuma fala (o texto e os blocos da voz) nem resposta escrita com coordenada, nós, mn, rumo, ETA ou número de pessoas; a posição e as pessoas respondem «LEIA NO PLOTTER» e o «e agora?», o plotter ou o SOS',
+           len(f) == n and not ruim and all('LEIA NO PLOTTER' in f[k] for k in (2, 3)) and ('LEIA NO PLOTTER' in f[4] or 'SOS' in f[4]) and all(blocos(r, k) for k in range(1, n)), json.dumps([ruim[:3], f[2:]], ensure_ascii=False)[:300])
+        ip = next((k for k, x in enumerate(r['nucleo']) if x['ev'] == 'pensando'), len(r['nucleo']))
+        hud = [x['hud'].strip() for x in r['nucleo'][ip:] if x['ev'] in ('pensando', 'falando', 'ouvindo', 'pulso')]
+        ic = next((k for k, x in enumerate(r['cpz']) if x['ev'] == 'pensando'), len(r['cpz']))
+        tela_voz = [x['t'] for x in r['cpz'][ic:]]
+        ruim = [h for h in hud if h != r['plotter'] or re.search(r'\d', h)] + [(navegacao(t), t[-80:]) for t in tela_voz if navegacao(t)]
+        ok(rot + m + ': conversa em emergência: da emergência ouvida em diante o HUD é só «POSIÇÃO · LEIA NO PLOTTER» (%d leituras) e o overlay inteiro (HUD e legenda, %d leituras) não traz coordenada, nós, mn, rumo nem pessoas' % (len(hud), len(tela_voz)),
+           r['plotter'] == 'POSIÇÃO · LEIA NO PLOTTER' and len(hud) >= 8 and len(tela_voz) >= 8 and not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+        if sim:
+            ruim = [(o, rotulos(x)) for o, x in [('fala', x) for _, x in ditos] + [('hud', h) for h in hud] + [('overlay', x['t']) for x in r['cpz'] if x['ev'] in ('falando', 'pulso')] + [('tela', x) for x in r['bots']] if rotulos(x)]
+            ok(rot + m + ': conversa em emergência: nenhuma fala, HUD, legenda nem resposta escrita com ROTULOS ou AUTENTICIDADE', not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+
+    # 3 · O filtro de saída ponta a ponta (decisões 5 e 13, travas 9 e 17): o Worker simulado devolve o 502 {parou:'rotulo'}, o 401, o preço, o telefone e o lugar da salvatagem; o cliente de verdade os barra e a
+    # CONVERSA fala só a resposta local — nenhum «IA na nuvem», preço, telefone ou lugar na voz nem na conversa escrita (o motivo do 401 fica só na linha da fonte, com o botão)
+    if 'filtro' in partes:
+        m = modo(True)
+        abre()
+        locais = pg.evaluate("(qs) => qs.map((q) => { const B = window.CapitaoBrain, a = B.answer(q, { platform: 'web', commit: false }); return { k: a.key, pede: B.pedeIA(a, q, {}), fala: B.falaCurta(a) }; })", list(PERGUNTAS_IA))
+        est['fila'] = [(st, j) for _, st, j in FILTRADAS]
+        r = conversa(PERGUNTAS_IA)
+        f, n = r['faladas'], len(PERGUNTAS_IA) + 1
+        ok(rot + 'filtro de saída: as 5 perguntas de náutica geral vão à IA (fallback, pedeIA true): 5 pedidos com a ficha e o modo «simulacao», e o Worker simulado devolve o 502 {parou: rotulo}, o 401, o preço, o telefone e o lugar',
+           all(x['k'] == 'fallback' and x['pede'] is True for x in locais) and len(r['pedidos']) == 5 and all(c.get('ficha') and c.get('modo') == 'simulacao' for c in r['pedidos']) and not est['fila'] and [c.get('pergunta') for c in r['pedidos']] == list(PERGUNTAS_IA),
+           json.dumps([[x['k'], x['pede']] for x in locais] + [len(r['pedidos']), len(est['fila'])]))
+        ruim = [(k, x[:90]) for k, x in enumerate(f) if R_FALHA_IA.search(x) or any(TERMOS[t].search(x) for t in ('DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA')) or any(s in x for s in LITERAIS_IA)]
+        ok(rot + 'filtro de saída: em __faladas, só a resposta local de cada pergunta — nenhum «IA na nuvem», preço, telefone ou lugar (%s)' % ', '.join(x[0] for x in FILTRADAS),
+           len(f) == n and r['fins'] >= n and f[1:] == [x['fala'] for x in locais] and all(x.strip() for x in f) and not ruim, json.dumps([ruim[:3], f[1:3]], ensure_ascii=False)[:300])
+        escrito = r['bots'] + [x['t'] for x in r['cpz']]
+        ruim = [x[-90:] for x in escrito if any(TERMOS[t].search(x) for t in ('DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA')) or any(s in x for s in LITERAIS_IA) or TEXTO_IA in x]
+        fontes = [x for x in r['onde'] if x['fonte']]
+        ok(rot + 'filtro de saída: na conversa escrita e na legenda, as 5 respostas locais, sem preço, telefone nem lugar; «IA na nuvem» só na linha da fonte da resposta do 401 (o motivo, uma vez) e no botão «Ativar IA na nuvem» — o 502 e as 3 barradas não deixam nota',
+           len(r['bots']) == 5 and not ruim and len(fontes) == 1 and 'recusou a chave' in fontes[0]['t'] and all(x['fonte'] or x['acao'] for x in r['onde']) and any(x['acao'] for x in r['onde']), json.dumps([ruim[:3], r['onde']], ensure_ascii=False)[:300])
+
+    # 4 · Nenhuma fala nem HUD com ROTULOS ou AUTENTICIDADE (decisões 3 e 5), em 2 instantes do replay com os valores mudando: a leitura do instante, a pergunta sobre os dados e a resposta da IA que volta com
+    # o rótulo «SEM DADOS» (barrada: fala a local)
+    if 'varre' in partes:
+        modo(True)
+        est['modo'] = 'semdados'
+        v = {t: conversa(VARRE_Q, inst=t) for t in ('60', '105')}
+        est['modo'] = 'ok'
+        n = len(VARRE_Q) + 1
+        lidos = lambda r: [('fala', x) for x in r['faladas']] + [('hud', x['hud']) for x in r['nucleo']] + [('overlay', x['t']) for x in r['cpz'] if x['ev'] in ('falando', 'pulso')]
+        ruim = [(t, o, rotulos(x), x[-60:]) for t, r in v.items() for o, x in lidos(r) if rotulos(x)]
+        ok(rot + 'varredura falada (%d perguntas, em 12:01:00 e 12:01:45): nenhuma fala, HUD nem legenda com ROTULOS ou AUTENTICIDADE; a IA que devolve «SEM DADOS» é barrada (1 pedido por passada, fala a resposta local)' % len(VARRE_Q),
+           all(len(r['faladas']) == n and r['fins'] >= n and len(r['pedidos']) == 1 and all(x.strip() for x in r['faladas']) and len(r['nucleo']) >= n for r in v.values()) and not ruim,
+           json.dumps([[len(r['faladas']), r['fins'], len(r['pedidos'])] for r in v.values()] + ruim[:3], ensure_ascii=False)[:300])
+        ruim = [(t, rotulos(x), x[-60:]) for t, r in v.items() for x in r['bots'] if rotulos(x)]
+        ok(rot + 'varredura falada: a conversa escrita das duas passadas (%d respostas em cada) também sem ROTULOS nem AUTENTICIDADE' % len(VARRE_Q), all(len(r['bots']) == len(VARRE_Q) for r in v.values()) and not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+        a, c = v['60'], v['105']
+        mudou = [k for k in range(1, min(len(a['faladas']), len(c['faladas']))) if a['faladas'][k] != c['faladas'][k]]
+        huds = [sorted({x['hud'] for x in r['nucleo'] if re.match(r'\d\d:\d\d:\d\d\n', x['hud'])}) for r in (a, c)]
+        ok(rot + 'varredura falada em 2 instantes, com os valores mudando: a hora de cada passada na fala (12:01:00 e 12:01:45), pelo menos 5 falas diferentes entre elas e o HUD com outra leitura',
+           '12:01:00' in a['faladas'][1] and '12:01:45' in c['faladas'][1] and len(mudou) >= 5 and huds[0] and huds[1] and not set(huds[0]) & set(huds[1]) and all(h.startswith('12:01:00') for h in huds[0]) and all(h.startswith('12:01:45') for h in huds[1]),
+           json.dumps([mudou, a['faladas'][1][:70], c['faladas'][1][:70], huds[0][:1], huds[1][:1]], ensure_ascii=False)[:300])
+    # a sessão da passada (lucas, o proprietário; demo, o convidado da decisão k), lida na tela de conversa em que a última parte terminou
+    quem = pg.evaluate("() => { const A = window.CapitaoAuth, u = A && A.usuario && A.usuario(); return u ? { id: u.id, convidado: u.convidado, logado: !!A.logado() } : null; }")
+    ok(rot + 'a passada rodou na sessão «%s» (%s), na tela de conversa' % (usuario, 'convidado' if usuario == 'demo' else 'proprietário'), bool(quem) and quem['id'] == usuario and quem['convidado'] is (usuario == 'demo') and quem['logado'] and (tela + '.dc.html') in pg.url, json.dumps([quem, pg.url.replace(base, '/')]))
+    ok(rot + 'sem erro de script (%s)' % ', '.join(partes), not erros, '; '.join(erros))
+    ctx.close()
+
+
+def mutantes_fase7(b, base, ok):
+    """Defeitos plantados da Fase 7: cada um é servido no lugar do arquivo (nada muda no disco) e tem de ser acusado por uma conferência da parte dele. `MUT_FILTRO=texto` refaz só os de nome com o texto."""
+    filtro = os.environ.get('MUT_FILTRO', '')
+    for nome, arq, pares, parte in MUTANTES_F7:
+        if filtro and filtro not in nome:
+            continue
+        for tela, movel, campo in (TELAS if arq is None else TELAS[1:]):   # o arquivo comum, na Main; a lógica da tela, nas duas
+            alvo = arq or tela + '.dc.html'
+            fonte = open(os.path.join(RAIZ, alvo), encoding='utf-8').read()
+            falta = [velho[:80] for velho, _ in pares if velho not in fonte]
+            if falta:
+                ok('mutante «%s» em %s: o trecho a trocar existe' % (nome, alvo), False, falta)
+                continue
+            r = []
+            fase7(b, base, lambda n, c, e='': r.append((n, bool(c), str(e)[:200])), tela, movel, campo, 'lucas', partes=(parte,), trocas=tuple((alvo, velho, novo) for velho, novo in pares))
+            acusam = [n for n, c, _ in r if not c and 'sem erro de script' not in n]
+            ok('mutante «%s» em %s (%s): acusado por %d de %d conferências' % (nome, alvo, parte, len(acusam), len(r)), acusam, ' | '.join(n[len(tela) + 20:100] for n in acusam) or 'VIVO')
+
+
 def versoes():
     """A mesma versão em todo lugar que a declara (o capitao-app.js recarrega se cérebro/cliente vierem de outra)."""
     ler = lambda p: open(os.path.join(RAIZ, p), encoding='utf-8').read()
@@ -216,10 +550,13 @@ def main():
     vs = versoes()
     ok('mesma versão em auth, cérebro, cliente da IA (as duas cópias), sw.js e README (' + VERSAO + ')', len(set(vs.values())) == 1, vs)
 
+    # --so-fase7 [Tela…] [lucas|demo] [coord|emerg|filtro|varre]: só as conferências da Fase 7; --mutantes-fase7: só os defeitos plantados delas
+    so7 = '--so-fase7' in sys.argv or '--mutantes-fase7' in sys.argv
+    pedido = [x for x in sys.argv[1:] if not x.startswith('--')]
     try:
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge')
-            for tela, movel, campo in (('H2-Home-Mobile', True, '#pergunta-m'), ('Main', False, '#pergunta')):
+            for tela, movel, campo in (() if so7 else TELAS):
                 ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900},
                                     user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
                 ctx.add_init_script(SESSAO)
@@ -778,6 +1115,16 @@ def main():
                     pg.evaluate(FECHA_JANELA)
                 ok(tela + ': sem erro de script', not erros, '; '.join(erros))
                 ctx.close()
+            # Fase 7 (PROMPT «Testes novos»): as travas do chat e da CONVERSA nas duas telas, nas sessões lucas e demo (a passada de cima é a do lucas)
+            if '--mutantes-fase7' in sys.argv:
+                mutantes_fase7(b, base, ok)
+            else:
+                quais = lambda todos: [x for x in pedido if x in todos] or list(todos)   # (o que o --so-fase7 pediu; sem pedido, tudo)
+                for tela, movel, campo in TELAS:
+                    for usuario in USUARIOS:
+                        if so7 and (tela not in quais([t[0] for t in TELAS]) or usuario not in quais(USUARIOS)):
+                            continue
+                        fase7(b, base, ok, tela, movel, campo, usuario, partes=tuple(quais(PARTES_F7)) if so7 else PARTES_F7)
             # Sem sessão: o login não pode levar nada do #ia= para o ?next= (vai ao servidor e ao histórico).
             ctx = b.new_context(service_workers='block')
             pg = ctx.new_page()
