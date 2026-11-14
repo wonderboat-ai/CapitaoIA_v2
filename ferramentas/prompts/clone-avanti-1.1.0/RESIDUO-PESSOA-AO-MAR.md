@@ -1,10 +1,10 @@
 # Resíduo da classe «pessoa ao mar / sumida» — fim da Fase 4 (grupo home)
 
-Documento para o proprietário. Interno; não faz parte do app. Escrito em 13/11/2026, sobre o commit `700d9ea`.
+Documento para o proprietário. Interno; não faz parte do app. Escrito em 13/11/2026, sobre o commit `700d9ea`; atualizado em 14/11/2026 com a passada dos 5 bloqueios (seção «Depois da passada», logo antes da recomendação, que agora vale na forma lá registrada).
 
 ## Em uma frase
 
-Depois de 3 rodadas de correção e revisão adversarial por estrutura, a classe caiu de **88,70 %** para **9,24 %** de falha na matriz adversarial, sem nenhuma frase pior que no cérebro antigo. Restam **19 achados** (9 bloqueiam). A classe é **aberta** (o português tem formas ilimitadas de dizer «alguém sumiu»), então outra rodada adversarial sempre acha mais. A recomendação está no fim: parar a revisão aberta, aceitar um critério de taxa e decidir se vale uma passada curta e focada nos 5 bloqueios de falso negativo antes do merge na `main`.
+Depois de 3 rodadas de correção e revisão adversarial por estrutura, a classe caiu de **88,70 %** para **9,24 %** de falha na matriz adversarial; a passada curta nos 5 bloqueios de falso negativo (13/11/2026) levou a **2,68 %** (1.581 frases), dentro do critério de 3 %, sem nenhuma frase pior que no cérebro antigo. Ficam **14 achados** (eram 19; nenhum dos 5 bloqueios de falso negativo). A classe é **aberta** (o português tem formas ilimitadas de dizer «alguém sumiu»), então outra rodada adversarial sempre acha mais: a revisão aberta parou, e restam três decisões de produto para o proprietário confirmar (seção «Depois da passada»).
 
 ## O que é a classe e o que vale como falha
 
@@ -64,11 +64,31 @@ Cada rodada com um revisor de vocabulário novo acha furos novos: 26 achados (12
 - No pior caso dos 9,24 %, a frase vai à IA, que responde com a situação de bordo e sem a instrução de segurança, e a pergunta seguinte («qual a posição?») é respondida normalmente. Não há coordenada fora do aparelho (trava 14) nem alteração de registro.
 - O custo do outro lado é só resposta local (a instrução do SOS e a janela de 15 min).
 
-## Recomendação
+## Depois da passada dos 5 bloqueios (13/11/2026)
 
-1. **Aceitar este estado como base da Fase 4** e seguir para as Fases 5 a 8. As rodadas abertas param aqui.
-2. **Antes do merge na `main`, autorizar uma passada curta e focada nos 5 bloqueios de falso negativo** (itens 1, 2, 3, 13 e 18), com os patches já descritos pelos revisores (tabela de sinais, «dar falta de», complemento de lugar, cauda de dado depois de «está boiando», papel ambíguo). Custo estimado: de 1,5 a 2 h e cerca de 0,6 M de tokens, sem rodada adversarial depois.
-3. **Critério de aceite por taxa, não por contagem de achados:** matriz fixa de 58.929 frases com no máximo 3 % de falha; corpus natural de 1.341 frases com no máximo 5 % de falso positivo no mesmo diferencial; zero frases piores que o `f3b121c`. Esse critério vale também para qualquer mudança futura na classe.
-4. **Os 4 bloqueios de falso positivo (7 a 10) são decisão de produto:** aceitar a instrução do SOS para ofício de terra e para «sumiu da escala/grupo» (seguro, mas incomoda quem só fala de rotina) ou pedir a passada para os dois lados. Como a regra do projeto prefere o falso positivo, a sugestão é aceitar e corrigir só o item 9 (o diário não deve ligar a janela).
+A passada autorizada na recomendação 2 tratou os itens 1, 2, 3, 13 e 18: a função `riscoQuadro`, o papel ambíguo pelo complemento («o guia do mergulho não subiu», «o capitão da lancha sumiu») e a cauda de dado depois do apuro («está boiando, qual a posição?»). A pergunta do indicativo ficou local, na rota `mmsi` («o da Licença de Estação (no rádio)»).
+
+**Números (mesma matriz fixa de 58.929 frases, portão por taxa):**
+- falha de **9,24 % para 2,68 %** (**1.581 frases**), abaixo do teto de 3 % da recomendação 3;
+- **0 regressões** e **0 frases piores** que o cérebro antigo `f3b121c`;
+- **0 frases de rotina** passando a abrir a janela de 15 min;
+- **1 frase de rotina** passou a receber a instrução do SOS, sem janela: «o guia de mergulho não retornou».
+
+**Achados:** dos 19 da rodada 3, os 5 bloqueios de falso negativo foram tratados. Ficam **14**: 8 de falso negativo («corrigir») e 6 de falso positivo, 4 deles marcados como bloqueio de produto (itens 7 a 10). Os limites de cada um estão no relatório do pacote, e a lista completa continua em `RESIDUO-PESSOA-AO-MAR-achados.json`.
+
+**Três decisões para o proprietário confirmar:**
+1. Dois controles de rotina mudaram de lado e passaram ao nível 1 (instrução do SOS, sem janela): «a Ana não deu sinal de vida» e «alguém sabe onde o Pedro está?».
+2. «O Pedro não foi visto», com nome próprio, dá nível 2 (instrução e janela) por uma regra que já existia e estava morta; com substantivo aberto («o fornecedor não foi visto») dá nível 1.
+3. «O guia de mergulho não retornou / não voltou» é nível 1, não socorro: instrução do SOS sem janela.
+
+**Conferências da rodada 1 sobre a árvore integrada:** `cerebro.py` principal 1.859 perguntas, 0 falhas; `sos.py` 137/0; `worker_ia.py` 157/0; `chat_ia.py` 324 conferências só com as 2 falhas esperadas do contêiner.
+
+## Recomendação (estado em 14/11/2026)
+
+1. **Base aceita:** a Fase 4 seguiu e as Fases 5 a 8 também; as rodadas abertas de revisão pararam.
+2. **Passada nos 5 bloqueios de falso negativo: feita** (seção anterior). A matriz fixa de 58.929 frases está em 2,68 %.
+3. **Critério de aceite por taxa, não por contagem de achados:** matriz fixa com no máximo 3 % de falha (2,68 % hoje); corpus natural de 1.341 frases com no máximo 5 % de falso positivo no mesmo diferencial; zero frases piores que o `f3b121c`. O critério vale para qualquer mudança futura na classe.
+4. **Os 4 bloqueios de falso positivo (7 a 10) seguem como decisão de produto:** aceitar a instrução do SOS para ofício de terra e para «sumiu da escala/grupo» (seguro, mas incomoda quem só fala de rotina). O item 9 (o diário não deve ligar a janela) continua o único que vale corrigir.
+5. **Decidir as três questões da seção anterior** antes do merge na `main`; nenhuma delas muda trava.
 
 Valores e modelos do Avanti: nenhum neste documento.
