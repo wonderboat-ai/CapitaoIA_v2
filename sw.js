@@ -5,7 +5,7 @@
    Arquivo novo usado offline → CORE/TELAS. Tudo o que o SW guarda é do próprio site (o React, de assets/vendor, desde a
    paridade com o Avanti 1.24.0); clima, maré, proxies e a reserva do React no unpkg (support.js: só se a cópia local falhar,
    para a troca a partir da 1.0.x, cujo cache guarda essa cópia) vão direto para a rede. */
-const CACHE = 'capitao-site-v1.0.9';
+const CACHE = 'capitao-site-v1.1.0';
 const TELAS = [
   'Main', 'H2-Home-Mobile', 'S1-SOS-Web', 'S2-SOS-Mobile', 'C3-Leme-Alerta', 'Manual-Capitao-IA',
   'A1-Ponte-Web', 'A2-Ponte-Mobile', 'A3-Ponte-Editar', 'A4-Sensores-Web', 'A5-Sensores-Mobile', 'B1-Carta-Web', 'B2-Carta-Mobile', 'B3-Carta-Resposta',
