@@ -338,6 +338,7 @@ A rota do contrato (15,42 mn, fator 0,9407) mudou no portão manual: os pontos d
 
 **Fase 7 — testes** (rodada 2, em curso)
 - [ ] Quebras previstas por fase; `proibidos.py`; `replay.py`; F35; acréscimos no `cerebro.py`, `chat_ia.py`, `worker_ia.py` e `verificar.py`; grep final: em andamento em outro pacote da rodada 2
+- [x] Grep final do `testes/proibidos.py` (14/11/2026, árvore da 1.1.0): 94 arquivos · 468 casamentos · 410 nas EXCECOES do PROMPT §3 (193 comentário de código, 38 identificador, 77 rótulo dos anexos, 102 literal do ramo `simulacao: false`) · 58 justificados (11 lista de termos, 7 rota ou filtro, 19 aviso do aparelho, 4 código, 17 pontuais) · 0 de resto; o teste inteiro: 21 conferências, 0 falhas. Para listar cada justificado com arquivo:linha: `python3 -X utf8 testes/proibidos.py --grep-final --lista`
 
 **Fase 8 — versão, docs e PR** (rodada 2, em curso)
 - [x] 1.1.0 em todos os lugares de código (`capitao-auth.js`, `capitao-brain.js`, as duas cópias do `capitao-ia.js`, `CACHE` do `sw.js`: commit «Fase 8: versão 1.1.0…»)
