@@ -1,5 +1,7 @@
 # Capitão IA 1.1.0 — paridade com a última versão do Avanti Vessel, CONVERSA do Avanti, dados completos e navegação ao vivo simulada (150 s)
 
+> Errata da execução da 1.1.0: algumas regras deste documento foram construídas de outro jeito; a lista está em DOCS-PENDENTES.md, grupo B. Onde o texto e o construído divergem, vale o construído (e a PARIDADE).
+
 Especificação para o Claude Code **na máquina Windows do Lucas**, aberto na pasta do repositório `CapitaoIA_v2`.
 
 - Anexo: `ferramentas/prompts/clone-avanti-1.1.0/MAPA.md`, com o caminho:linha de cada mudança, levantado na 1.0.9.
