@@ -1,0 +1,57 @@
+# (fora desta lista, de propósito: «o nível do óleo» é a ROTA do óleo, que abre a janela de emergência por desenho; «a banda» é também o grupo de músicos)
+# o dado de bordo, do mostrador e do app com o artigo: «a autonomia», «o desempenho», «a vazão», «o 4G» — o que «cai», «sobe» e «some» (a 3ª rodada de correção do fechamento da home)
+a autonomia
+o rendimento
+a eficiencia
+a potencia
+o desempenho
+a performance
+a carga
+a carga da bateria
+a voltagem
+a amperagem
+o nivel do tanque
+o volume
+a vazao
+o fluxo de agua
+a pressao
+a rotacao
+a temperatura
+o consumo
+a velocidade
+a media de velocidade
+a media de consumo
+o ritmo
+a frequencia
+a visibilidade
+a audiencia
+o sinal
+a cobertura de celular
+o 4G
+o 5G
+o ping
+a qualidade do sinal
+o saldo do cartao
+o preco do diesel
+o dolar
+a cotacao do dolar
+o valor da marina
+a mensalidade
+o preco da vaga
+a taxa
+o rateio
+a diaria
+o ar condicionado
+a economia de combustivel
+a margem
+a reserva de combustivel
+a altura da onda
+o periodo da onda
+a mare
+o nivel da mare
+a corrente
+o vento de rajada
+a rajada
+a nebulosidade
+a umidade
+a pressao atmosferica

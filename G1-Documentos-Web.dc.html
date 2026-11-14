@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Documentos (web)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -16,8 +18,8 @@
 <style>
 body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
 a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
-a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
-button, select { font: inherit; }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button, select, input { font: inherit; }
 </style>
 <script src="./capitao-telemetria.js"></script>
 <script src="./capitao-brain.js"></script>
@@ -28,19 +30,26 @@ button, select { font: inherit; }
   <div style="flex-grow: 1; display: flex; min-height: 0;">
     <x-import component-from-global-scope="capitao-trilho" from="./capitao-moldura.js" ativo="docs" hint-size="96px,788px"></x-import>
 
-    <main style="flex-grow: 1; box-sizing: border-box; padding: 22px 26px; display: flex; flex-direction: column; gap: 16px; min-width: 0; min-height: 0;">
+    <main style="flex-grow: 1; box-sizing: border-box; padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0;">
       <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
         <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
           <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Documentos</h1>
-          <span style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
+          <span data-g1="resumo" style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
         </div>
-        <span role="status" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 420px; text-align: right;">{{note}}</span>
-        <a href="Main.dc.html#q=Quais%20documentos%20e%20licen%C3%A7as%20vencem%20primeiro%3F" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
+        <span role="status" data-g1="nota" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 420px; text-align: right;">{{note}}</span>
+        <a href="{{perguntarHref}}" data-g1="perguntar" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
       </div>
 
-      <section style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; flex-shrink: 0;">
-        <sc-for list="{{tiles}}" as="k" hint-placeholder-count="4">
-          <button type="button" onClick="{{k.onClick}}" aria-pressed="{{k.active}}" style="box-sizing: border-box; padding: 12px 16px; background: var(--cap-card, #0d1329); border: 1px solid {{k.line}}; border-radius: 18px; color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; font-family: inherit; min-width: 0;">
+      <div role="tablist" aria-label="Documentos e peças" style="display: flex; gap: 4px; padding: 3px; align-self: flex-start; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px; flex-shrink: 0;">
+        <sc-for list="{{abas}}" as="a" hint-placeholder-count="2">
+          <button type="button" role="tab" data-g1="aba" data-aba="{{a.k}}" aria-selected="{{a.on}}" onClick="{{a.onClick}}" style="min-height: 44px; min-width: 132px; padding: 0 18px; border-radius: 9px; border: none; background: {{a.bg}}; color: {{a.tone}}; font-size: 13px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; white-space: nowrap;">{{a.l}}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{abaDocs}}" hint-placeholder-val="{{true}}">
+      <section style="display: grid; grid-template-columns: repeat({{ncol}}, minmax(0, 1fr)); gap: 14px; flex-shrink: 0;">
+        <sc-for list="{{tiles}}" as="k" hint-placeholder-count="3">
+          <button type="button" data-g1="tile" data-k="{{k.k}}" onClick="{{k.onClick}}" aria-pressed="{{k.active}}" style="box-sizing: border-box; padding: 12px 16px; background: var(--cap-card, #0d1329); border: 1px solid {{k.line}}; border-radius: 18px; color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; font-family: inherit; min-width: 0;">
             <span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: {{k.wash}}; display: flex; align-items: center; justify-content: center;">{{k.ico}}</span>
             <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
               <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
@@ -48,7 +57,7 @@ button, select { font: inherit; }
                 <span style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.l}}</span>
                 <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: var(--cap-accent, #00a1fe); white-space: nowrap;">{{k.go}}</span>
               </span>
-              <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.sub}}</span>
+              <span title="{{k.sub}}" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.sub}}</span>
             </span>
           </button>
         </sc-for>
@@ -73,23 +82,26 @@ button, select { font: inherit; }
           </div>
           <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
             <sc-for list="{{rows}}" as="x" hint-placeholder-count="8">
-              <div data-novo="{{x.novo}}" style="box-sizing: border-box; display: grid; grid-template-columns: 112px minmax(0, 1fr) 100px 124px 44px; gap: 10px; align-items: center; padding: 5px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{x.line}}; flex-shrink: 0;">
+              <div data-g1="doc" data-id="{{x.id}}" data-novo="{{x.novo}}" style="box-sizing: border-box; display: grid; grid-template-columns: 112px minmax(0, 1fr) 100px 124px 44px; gap: 10px; align-items: center; padding: 5px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{x.line}}; flex-shrink: 0;">
                 <span style="display: flex; align-items: center; gap: 9px; min-width: 0;">
                   <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: {{x.wash}}; display: flex; align-items: center; justify-content: center;">{{x.ico}}</span>
                   <span style="font-size: 12px; font-weight: 600; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{x.cat}}</span>
                 </span>
                 <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-                  <span style="font-size: 13.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere;">{{x.n}} <span style="font-size: 12px; font-weight: 500; color: var(--cap-ink3, #97a3c0);">· {{x.nota}}</span></span>
+                  <span style="font-size: 13.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere;"><span data-g1="doc-nome">{{x.n}}</span> <span style="font-size: 12px; font-weight: 500; color: var(--cap-ink3, #97a3c0);">· {{x.nota}}</span></span>
                   <span title="{{x.fonte}}" style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{x.fonte}}</span>
                 </span>
                 <span style="display: flex; flex-direction: column; gap: 1px; min-width: 0; font-variant-numeric: tabular-nums;">
-                  <span style="font-size: 12.5px; font-weight: 700; color: {{x.valTone}};">{{x.validade}}</span>
+                  <span data-g1="validade" style="font-size: 12.5px; font-weight: 700; color: {{x.valTone}};">{{x.validade}}</span>
                   <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{x.dd}}</span>
                 </span>
-                <span style="padding: 6px 0; border-radius: 999px; background: {{x.wash}}; color: {{x.tone}}; font-size: 10.5px; letter-spacing: 0.08em; font-weight: 800; text-align: center; white-space: nowrap;">{{x.st}}</span>
+                <span style="display: flex; flex-direction: column; align-items: stretch; gap: 3px;">
+                  <span data-g1="st" style="padding: 6px 0; border-radius: 999px; background: {{x.wash}}; color: {{x.tone}}; font-size: 10.5px; letter-spacing: 0.08em; font-weight: 800; text-align: center; white-space: nowrap;">{{x.st}}</span>
+                  <sc-if value="{{x.temSelo}}" hint-placeholder-val="{{false}}"><span data-g1="selo" style="font-size: 9.5px; letter-spacing: 0.08em; font-weight: 800; text-align: center; color: var(--cap-ink3, #97a3c0);">APRESENTAÇÃO</span></sc-if>
+                </span>
                 <span style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
                   <sc-if value="{{x.temAsk}}" hint-placeholder-val="{{true}}">
-                    <a href="{{x.ask}}" aria-label="{{x.askLabel}}" title="{{x.askLabel}}" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--cap-accent, #00a1fe); text-decoration: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></a>
+                    <a href="{{x.ask}}" data-g1="ask" aria-label="{{x.askLabel}}" title="{{x.askLabel}}" style="width: 44px; height: 44px; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--cap-accent, #00a1fe); text-decoration: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></a>
                   </sc-if>
                 </span>
               </div>
@@ -112,10 +124,10 @@ button, select { font: inherit; }
                   <option value="{{o.v}}" label="{{o.v}}"></option>
                 </sc-for>
               </select>
-              <button type="button" onClick="{{pickFoto}}" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Foto</button>
-              <button type="button" onClick="{{pickPdf}}" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>PDF</button>
-              <input type="file" accept="image/*" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
-              <input type="file" accept=".pdf,application/pdf" ref="{{pdfRef}}" onChange="{{onPdf}}" aria-hidden="true" tabindex="-1" style="display: none;">
+              <button type="button" data-g1="foto" onClick="{{pickFoto}}" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Foto</button>
+              <button type="button" data-g1="pdf" onClick="{{pickPdf}}" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>PDF</button>
+              <input type="file" accept="image/*" data-g1="arq-foto" ref="{{fotoRef}}" onChange="{{onFoto}}" aria-hidden="true" tabindex="-1" style="display: none;">
+              <input type="file" accept=".pdf,application/pdf" data-g1="arq-pdf" ref="{{pdfRef}}" onChange="{{onPdf}}" aria-hidden="true" tabindex="-1" style="display: none;">
             </div>
             <div style="display: flex; gap: 9px; align-items: flex-start; padding: 9px 11px; border-radius: 12px; background: rgba(var(--cap-warn-rgb, 240,166,58), 0.08); border: 1px solid rgba(var(--cap-warn-rgb, 240,166,58), 0.30);">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M6 11h12v9H6z M8.5 11V8a3.5 3.5 0 0 1 7 0v3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-warn, #f0a63a);"></path></svg>
@@ -126,9 +138,9 @@ button, select { font: inherit; }
           </div>
 
           <div style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;">
-            <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span style="font-size: 15px; font-weight: 700;">Vence primeiro</span><button type="button" onClick="{{verVencendo}}" aria-pressed="{{vencAtivo}}" style="min-height: 32px; border: none; background: transparent; color: var(--cap-accent, #00a1fe); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 2px;">{{vencGo}}</button></span>
+            <span style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><span style="font-size: 15px; font-weight: 700;">Vence primeiro</span><button type="button" data-g1="vencendo" onClick="{{verVencendo}}" aria-pressed="{{vencAtivo}}" style="min-height: 44px; border: none; background: transparent; color: var(--cap-accent, #00a1fe); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 2px;">{{vencGo}}</button></span>
             <sc-for list="{{proximos}}" as="p" hint-placeholder-count="2">
-              <span style="display: flex; align-items: center; gap: 10px; padding: 7px 11px; background: var(--cap-row, #10162e); border-radius: 12px; min-width: 0;">
+              <span data-g1="proximo" style="display: flex; align-items: center; gap: 10px; padding: 7px 11px; background: var(--cap-row, #10162e); border-radius: 12px; min-width: 0;">
                 <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
                   <span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{p.n}}</span>
                   <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0);">{{p.s}}</span>
@@ -140,13 +152,141 @@ button, select { font: inherit; }
           </div>
 
           <span style="flex-grow: 1;"></span>
-          <div style="box-sizing: border-box; padding: 12px 16px; margin-right: 100px; background: var(--cap-card, #0d1329); border: 1px dashed var(--cap-dash, #34406a); border-radius: 18px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
-            <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">FALTA REGISTRAR</span>
-            <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{falta}}</span>
-            <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{faltaFonte}}</span>
-          </div>
+          <sc-if value="{{temFalta}}" hint-placeholder-val="{{false}}">
+            <div style="box-sizing: border-box; padding: 12px 16px; margin-right: 100px; background: var(--cap-card, #0d1329); border: 1px dashed var(--cap-dash, #34406a); border-radius: 18px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+              <span style="font-size: 11px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-warn, #f0a63a);">FALTA REGISTRAR</span>
+              <span style="font-size: 11.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4;">{{falta}}</span>
+              <span style="font-size: 10.5px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{faltaFonte}}</span>
+            </div>
+          </sc-if>
         </section>
       </div>
+      </sc-if>
+
+      <sc-if value="{{abaPecas}}" hint-placeholder-val="{{false}}">
+      <section style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; flex-shrink: 0;">
+        <sc-for list="{{ptiles}}" as="k" hint-placeholder-count="4">
+          <button type="button" data-g1="ptile" data-k="{{k.k}}" onClick="{{k.onClick}}" aria-pressed="{{k.active}}" style="box-sizing: border-box; padding: 12px 16px; background: var(--cap-card, #0d1329); border: 1px solid {{k.line}}; border-radius: 18px; color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; font-family: inherit; min-width: 0;">
+            <span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: {{k.wash}}; display: flex; align-items: center; justify-content: center;">{{k.ico}}</span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex-grow: 1;">
+              <span style="display: flex; align-items: baseline; gap: 8px; min-width: 0;">
+                <span style="font-size: 30px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; color: {{k.tone}};">{{k.v}}</span>
+                <span style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.l}}</span>
+                <span style="margin-left: auto; font-size: 11px; font-weight: 700; color: var(--cap-accent, #00a1fe); white-space: nowrap;">{{k.go}}</span>
+              </span>
+              <span title="{{k.sub}}" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{k.sub}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </section>
+
+      <div style="flex-grow: 1; display: flex; gap: 16px; min-height: 0;">
+        <section style="flex-grow: 1; box-sizing: border-box; padding: 14px 20px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-accent-rgb, 0,161,254), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-accent, #00a1fe);"></path></svg></span>
+            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+              <span style="font-size: 15px; font-weight: 700;">{{pTitle}}</span>
+              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{pSub}}</span>
+            </span>
+          </div>
+          <div aria-hidden="true" style="display: grid; grid-template-columns: minmax(0, 1.5fr) 92px 132px minmax(0, 1.3fr) 212px; gap: 10px; padding: 4px 12px 0; font-size: 10.5px; letter-spacing: 0.12em; font-weight: 700; color: var(--cap-ink4, #7985a6); flex-shrink: 0;">
+            <span>PEÇA · LOCAL</span><span>QTD / MÍN.</span><span>SITUAÇÃO</span><span>TAREFAS LIGADAS</span><span>AÇÕES</span>
+          </div>
+          <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{prows}}" as="p" hint-placeholder-count="8">
+              <div data-g1="peca" data-id="{{p.id}}" data-nivel="{{p.nivel}}" style="box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 6px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{p.line}}; flex-shrink: 0;">
+                <div style="display: grid; grid-template-columns: minmax(0, 1.5fr) 92px 132px minmax(0, 1.3fr) 212px; gap: 10px; align-items: center;">
+                  <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                    <span data-g1="nome" style="font-size: 13.5px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere;">{{p.n}}</span>
+                    <span style="font-size: 11px; color: var(--cap-ink3, #97a3c0); line-height: 1.3; overflow-wrap: anywhere;">{{p.sub}}</span>
+                  </span>
+                  <span data-g1="qtd" style="font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; color: {{p.tone}};">{{p.qtd}} <span style="font-size: 11.5px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">/ {{p.min}}</span></span>
+                  <span style="display: flex; flex-direction: column; align-items: stretch; gap: 3px;">
+                    <span data-g1="st" style="padding: 6px 0; border-radius: 999px; background: {{p.wash}}; color: {{p.tone}}; font-size: 10px; letter-spacing: 0.06em; font-weight: 800; text-align: center; white-space: nowrap;">{{p.st}}</span>
+                    <sc-if value="{{p.temSelo}}" hint-placeholder-val="{{false}}"><span data-g1="selo" style="font-size: 9.5px; letter-spacing: 0.08em; font-weight: 800; text-align: center; color: var(--cap-ink3, #97a3c0);">APRESENTAÇÃO</span></sc-if>
+                  </span>
+                  <span data-g1="tarefas" style="display: block; min-width: 0; white-space: pre-line; font-size: 11.5px; line-height: 1.35; color: var(--cap-ink2, #b1bdd6);">{{p.tarefasTxt}}</span>
+                  <span style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                    <button type="button" data-g1="usa" onClick="{{p.onUsa}}" aria-disabled="{{p.semEstoque}}" aria-label="{{p.usaLabel}}" title="{{p.usaLabel}}" style="min-height: 44px; min-width: 96px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: {{p.usaTone}}; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer; white-space: nowrap;">−1 USADA</button>
+                    <button type="button" data-g1="editar" onClick="{{p.onEditar}}" aria-expanded="{{p.editando}}" aria-label="{{p.edLabel}}" title="{{p.edLabel}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); display: flex; align-items: center; justify-content: center; cursor: pointer;">{{p.icoEdit}}</button>
+                    <a href="{{p.ask}}" data-g1="ask" aria-label="{{p.askLabel}}" title="{{p.askLabel}}" style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--cap-accent, #00a1fe); text-decoration: none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></a>
+                  </span>
+                </div>
+                <sc-if value="{{p.editando}}" hint-placeholder-val="{{false}}">
+                  <div data-g1="editor" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0 4px; border-top: 1px solid var(--cap-line, #1a2240);">
+                    <label for="{{p.edId}}" style="font-size: 12px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">Quantas a bordo agora?</label>
+                    <input id="{{p.edId}}" data-g1="editar-campo" type="text" inputmode="numeric" autocomplete="off" maxlength="8" value="{{p.edVal}}" onChange="{{p.onEdVal}}" aria-label="{{p.edLabel2}}" style="width: 88px; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-card, #0d1329); color: var(--cap-ink, #eaf1ff); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;">
+                    <button type="button" data-g1="editar-ok" onClick="{{p.onSalvar}}" style="min-height: 44px; padding: 0 16px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 12.5px; font-weight: 800; cursor: pointer;">Salvar</button>
+                    <button type="button" data-g1="editar-cancela" onClick="{{p.onCancela}}" style="min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12.5px; font-weight: 700; cursor: pointer;">Cancelar</button>
+                    <span role="alert" data-g1="erro" style="flex-basis: 100%; font-size: 12px; font-weight: 700; color: var(--cap-crit, #ff3b30); line-height: 1.4;">{{p.erro}}</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{pVazio}}" hint-placeholder-val="{{false}}">
+              <div style="padding: 16px; border: 1px dashed var(--cap-dash, #34406a); border-radius: 14px; font-size: 12.5px; color: var(--cap-ink3, #97a3c0); text-align: center; flex-shrink: 0;">Nenhuma peça neste filtro.</div>
+            </sc-if>
+          </div>
+          <span style="font-size: 11.5px; color: var(--cap-ink4, #7985a6); flex-shrink: 0;">{{pFonte}}</span>
+        </section>
+
+        <section style="width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto;">
+          <sc-if value="{{temUso}}" hint-placeholder-val="{{false}}">
+            <div data-g1="uso" style="box-sizing: border-box; padding: 12px 18px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-ok-rgb, 52,199,122), 0.45); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+              <span data-g1="uso-texto" style="font-size: 12.5px; font-weight: 700; line-height: 1.4;">{{usoTexto}}</span>
+              <span style="display: flex; gap: 8px;">
+                <button type="button" data-g1="desfazer" onClick="{{onDesfazer}}" style="min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 12.5px; font-weight: 800; cursor: pointer;">Desfazer</button>
+                <button type="button" data-g1="uso-fecha" onClick="{{onUsoFecha}}" style="min-height: 44px; padding: 0 12px; border: none; background: transparent; color: var(--cap-ink3, #97a3c0); font-size: 12px; font-weight: 700; cursor: pointer;">Dispensar</button>
+              </span>
+            </div>
+          </sc-if>
+
+          <div style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.35); border-radius: 18px; display: flex; flex-direction: column; gap: 9px; flex-shrink: 0;">
+            <button type="button" data-g1="nova" onClick="{{onNova}}" aria-expanded="{{formAberto}}" style="min-height: 46px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13.5px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;">{{novaLabel}}</button>
+            <sc-if value="{{formAberto}}" hint-placeholder-val="{{false}}">
+              <div data-g1="form" style="display: flex; flex-direction: column; gap: 8px;">
+                <label for="g1-f-nome" style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">Nome da peça</label>
+                <input id="g1-f-nome" data-g1="f-nome" type="text" maxlength="80" autocomplete="off" value="{{fNome}}" onChange="{{onFNome}}" placeholder="Ex.: filtro de ar do gerador" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; min-width: 0;">
+                <div style="display: flex; gap: 8px;">
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                    <label for="g1-f-qtd" style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">A bordo</label>
+                    <input id="g1-f-qtd" data-g1="f-qtd" type="text" inputmode="numeric" maxlength="8" autocomplete="off" value="{{fQtd}}" onChange="{{onFQtd}}" placeholder="0 a 999" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; min-width: 0;">
+                  </span>
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+                    <label for="g1-f-min" style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">Mínimo</label>
+                    <input id="g1-f-min" data-g1="f-min" type="text" inputmode="numeric" maxlength="8" autocomplete="off" value="{{fMin}}" onChange="{{onFMin}}" placeholder="0 a 999" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; min-width: 0;">
+                  </span>
+                </div>
+                <label for="g1-f-local" style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">Onde fica (opcional)</label>
+                <input id="g1-f-local" data-g1="f-local" type="text" maxlength="60" autocomplete="off" value="{{fLocal}}" onChange="{{onFLocal}}" placeholder="Ex.: estante técnica 2" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 13px; min-width: 0;">
+                <label for="g1-f-tarefa" style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">Tarefa da agenda que usa a peça (opcional)</label>
+                <select id="g1-f-tarefa" data-g1="f-tarefa" value="{{fTarefa}}" onChange="{{onFTarefa}}" style="height: 44px; box-sizing: border-box; padding: 0 8px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-row, #10162e); color: var(--cap-ink, #eaf1ff); font-size: 12.5px; min-width: 0;">
+                  <option value="" label="Nenhuma"></option>
+                  <sc-for list="{{tarefasOpts}}" as="o" hint-placeholder-count="6">
+                    <option value="{{o.v}}" label="{{o.l}}"></option>
+                  </sc-for>
+                </select>
+                <span role="alert" data-g1="erro" style="font-size: 12px; font-weight: 700; color: var(--cap-crit, #ff3b30); line-height: 1.4;">{{formErro}}</span>
+                <button type="button" data-g1="f-salvar" onClick="{{onSalvaNova}}" style="min-height: 46px; border-radius: 12px; border: 1px solid var(--cap-accent, #00a1fe); background: transparent; color: var(--cap-accent, #00a1fe); font-size: 13px; font-weight: 800; cursor: pointer;">Cadastrar peça</button>
+                <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">Sem código de fabricante e sem valor em dinheiro. A quantidade e o mínimo são números inteiros de 0 a 999.</span>
+              </div>
+            </sc-if>
+          </div>
+          <div data-g1="aviso" style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid {{avisoLine}}; border-radius: 18px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;">
+            <span style="font-size: 15px; font-weight: 700;">{{avisoTitulo}}</span>
+            <sc-for list="{{aviso}}" as="a" hint-placeholder-count="3">
+              <span style="display: flex; align-items: center; gap: 10px; padding: 7px 11px; background: var(--cap-row, #10162e); border-radius: 12px; min-width: 0;">
+                <span style="flex-grow: 1; min-width: 0; font-size: 12.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;">{{a.n}}</span>
+                <span style="flex-shrink: 0; padding: 5px 10px; border-radius: 999px; background: {{a.wash}}; color: {{a.tone}}; font-size: 11.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap;">{{a.q}}</span>
+              </span>
+            </sc-for>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{avisoFonte}}</span>
+          </div>
+
+          <span aria-hidden="true" style="flex-shrink: 0; height: 64px;"></span>
+        </section>
+      </div>
+      </sc-if>
     </main>
   </div>
   <x-import component-from-global-scope="capitao-faixa" from="./capitao-moldura.js" hint-size="1440px,44px"></x-import>
@@ -155,33 +295,50 @@ button, select { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
-  state = { cat: 'todas', sit: 'todas', catEnvio: '', envios: [], novo: '', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  state = { aba: 'docs', cat: 'todas', sit: 'todas', pf: 'todas', catEnvio: '', envios: [], novo: '', note: '', noteTone: 'var(--cap-ok, #34c77a)', vivo: '',
+    uso: null, ed: '', edVal: '', erro: '', formAberto: false, fNome: '', fQtd: '', fMin: '', fLocal: '', fTarefa: '', formErro: '' };
   fotoRef = React.createRef(); pdfRef = React.createRef(); selRef = React.createRef();
   componentDidMount() {
-    this.whenBrain(() => this.setState({ envios: window.CapitaoBrain.loadDocs() }));
-    // Documento enviado em outra aba/tela: recarrega
-    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.docs.v1')) this.setState({ envios: window.CapitaoBrain.loadDocs() }); };
+    const h = () => { const m = /(?:^#|&)aba=(docs|pecas)\b/.exec(location.hash || ''); if (m && m[1] !== this.state.aba) this.setState({ aba: m[1] }); };
+    h(); this._onHash = h; window.addEventListener('hashchange', this._onHash);
+    this.whenBrain(() => { const e = window.CapitaoBrain.loadDocs(); this.setState({ envios: e }); this.atualiza(e); });
+    // Documento enviado, peça movida ou Executado em outra aba/tela: recarrega
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || /^capitao\.(docs|pecas|executado|tarefas)\.v1$/.test(e.key))) { const l = window.CapitaoBrain.loadDocs(); this.setState({ envios: l }); this.atualiza(l); } };
     window.addEventListener('storage', this._st);
+    // Os prazos são refeitos pelo CapitaoAgora quando o dia vira (07:00 e meia-noite, ou ao fixar o instante): a tela só se redesenha se o texto que exibe mudou. Nenhuma leitura anda aqui: sem timer e sem o tique de 1 s.
+    this._onRebase = () => { if (!document.hidden) this.atualiza(); };
+    window.addEventListener('capitao-rebase', this._onRebase);
+    this.atualiza();
   }
-  componentWillUnmount() { window.removeEventListener('storage', this._st); clearTimeout(this._n); clearTimeout(this._r); }
+  componentWillUnmount() {
+    window.removeEventListener('hashchange', this._onHash); window.removeEventListener('storage', this._st); window.removeEventListener('capitao-rebase', this._onRebase);
+    clearTimeout(this._n); clearTimeout(this._r); clearInterval(this._b);
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
-    const t = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
+  }
+  // `envios`: a lista que acabou de ser lida do aparelho (o setState dela ainda não chegou ao this.state)
+  atualiza(envios) {
+    const d = this.dinamico(envios), k = JSON.stringify(d);
+    if (k === this._k) return;
+    this._k = k; this._din = d; this._fresco = true;
+    this.setState({ vivo: k });
   }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
   quem() { const B = window.CapitaoBrain; if (B) return B.quem(); try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'sem sessão'; } }
   toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 5000); }
   hoje() { const d = new Date(), p = (n) => (n < 10 ? '0' : '') + n; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear(); }
-  tamanho(b) { if (typeof b !== 'number' || !isFinite(b)) return 'tamanho SEM DADOS'; return b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
+  tamanho(b) { if (typeof b !== 'number' || !isFinite(b)) return 'tamanho do arquivo não lido'; return b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; }
   pick(tipo) {
     if (!this.state.catEnvio) { this.toast('Escolha a categoria do documento antes de enviar', 'var(--cap-warn, #f0a63a)'); if (this.selRef.current) this.selRef.current.focus(); return; }
     const r = tipo === 'PDF' ? this.pdfRef.current : this.fotoRef.current; if (r) r.click();
   }
-  // Upload: o arquivo não sai do aparelho — só nome, tamanho e data viram uma linha A CONFERIR (capitao.docs.v1) + linha no diário
+  // Upload: o arquivo não sai do aparelho — só nome, tamanho e data viram uma linha A CONFERIR (capitao.docs.v1, carimbada pelo cérebro) + linha no diário
   onArquivo(tipo, e) {
     const f = e.target.files && e.target.files[0]; if (!f) return; e.target.value = '';
     const B = window.CapitaoBrain; if (!B) return this.toast('Ainda carregando — tente de novo em instantes', 'var(--cap-warn, #f0a63a)');
@@ -190,6 +347,7 @@ class Component extends DCLogic {
     const envios = B.addDoc({ n: f.name, s: s, dd: dd, st: 'A CONFERIR', cat: cat, fonte: 'enviado no console por ' + quem });
     B.addDiario({ sys: 'Documentos', tone: 'var(--cap-violeta, #b45cff)', t: 'Documento enviado no console (' + tipo + '): ' + f.name + ' · ' + s + ' · categoria ' + cat + ' — linha criada como A CONFERIR. O arquivo ficou no aparelho; conferir e arquivar o original no Drive. Enviado por ' + quem + ' — linha nova, nada se apaga.', who: quem, src: 'console · documento' });
     this.setState({ envios: envios, cat: 'todas', sit: 'todas', novo: f.name + '|' + dd + '|' + s });
+    this.atualiza(envios);
     this.toast('Documento recebido — linha A CONFERIR na lista e registro no diário');
     clearTimeout(this._r); this._r = setTimeout(() => this.revela(), 80);
   }
@@ -202,75 +360,205 @@ class Component extends DCLogic {
     const r = el.getBoundingClientRect(), q = p.getBoundingClientRect(), k = (q.height / p.offsetHeight) || 1;
     if (r.top < q.top) p.scrollTop -= (q.top - r.top) / k + 8; else if (r.bottom > q.bottom) p.scrollTop += (r.bottom - q.bottom) / k + 8;
   }
+  abre(k) {
+    this.setState({ aba: k, erro: '', formErro: '', ed: '' });
+    try { history.replaceState(null, '', location.pathname + location.search + '#aba=' + k); } catch (e) {}
+  }
+  // ——— peças (F22): só um toque grava; o estoque e os movimentos vivem no cérebro (B.usaPeca, B.desfazUsoPeca, B.ajustaPeca, B.addPeca) ———
+  inteiro(t) { return /^\d{1,3}$/.test(String(t == null ? '' : t).trim()); }   // o inteiro puro de 0 a 999 (a mesma regra do cérebro); o texto vai ao cérebro como está
+  usa(p) {
+    const B = window.CapitaoBrain; if (!B) return;
+    if (!(p.qtd > 0)) return this.toast(p.n + ' já está zerada: não há o que tirar do estoque', 'var(--cap-warn, #f0a63a)');
+    const u = B.usaPeca(p.id);
+    if (!u) return this.toast('Não deu para tirar uma unidade de ' + p.n + ': ela já está zerada ou saiu da lista', 'var(--cap-crit, #ff3b30)');
+    this.setState({ uso: { id: u.id, ant: u.ant, novo: u.novo, iso: u.iso, n: p.n }, erro: '', ed: '' });
+    this.atualiza();
+    this.toast('−1 USADA: ' + p.n + ' — ' + u.ant + ' → ' + u.novo + ' a bordo');
+  }
+  desfaz() {
+    const B = window.CapitaoBrain, u = this.state.uso; if (!B || !u) return;
+    const r = B.desfazUsoPeca({ id: u.id, ant: u.ant, novo: u.novo, iso: u.iso });
+    if (!r) { this.setState({ uso: null }); this.atualiza(); return this.toast('Não deu para desfazer: a quantidade de ' + u.n + ' mudou depois do −1', 'var(--cap-crit, #ff3b30)'); }
+    this.setState({ uso: null }); this.atualiza();
+    this.toast('Desfeito: ' + u.n + ' voltou a ' + r.qtd + ' a bordo');
+  }
+  edita(p) { this.setState({ ed: this.state.ed === p.id ? '' : p.id, edVal: String(p.qtd), erro: '' }); }
+  salvaQtd(p) {
+    const B = window.CapitaoBrain, v = this.state.edVal; if (!B) return;
+    if (!this.inteiro(v)) return this.setState({ erro: 'Quantidade inválida: use um número inteiro de 0 a 999 (nada de 1e2, 3,5 ou letras).' });
+    if (parseInt(String(v).trim(), 10) === p.qtd) return this.setState({ erro: 'Já são ' + p.qtd + ' a bordo: nada mudou.' });
+    const r = B.ajustaPeca(p.id, v);
+    if (!r) return this.setState({ erro: 'Não deu para ajustar: a peça saiu da lista ou o valor foi recusado.' });
+    this.setState({ ed: '', erro: '', uso: null }); this.atualiza();
+    this.toast('Ajustado: ' + p.n + ' — ' + p.qtd + ' → ' + r.qtd + ' a bordo');
+  }
+  novaPeca() {
+    const B = window.CapitaoBrain, s = this.state; if (!B) return;
+    if (!String(s.fNome || '').trim()) return this.setState({ formErro: 'Dê um nome à peça.' });
+    if (String(s.fQtd || '').trim() && !this.inteiro(s.fQtd)) return this.setState({ formErro: 'Quantidade inválida: use um número inteiro de 0 a 999 (nada de 1e2, 3,5 ou letras).' });
+    if (String(s.fMin || '').trim() && !this.inteiro(s.fMin)) return this.setState({ formErro: 'Mínimo inválido: use um número inteiro de 0 a 999 (nada de 1e2, 3,5 ou letras).' });
+    const it = B.addPeca({ n: s.fNome, qtd: s.fQtd, min: s.fMin, local: s.fLocal, tarefas: s.fTarefa ? [s.fTarefa] : [] });
+    if (!it) return this.setState({ formErro: 'Não deu para cadastrar a peça: confira o nome e os números.' });
+    this.setState({ formAberto: false, fNome: '', fQtd: '', fMin: '', fLocal: '', fTarefa: '', formErro: '', uso: null, pf: 'todas' }); this.atualiza();
+    this.toast('Peça cadastrada: ' + it.n + ' — ' + it.qtd + ' a bordo (mínimo ' + it.min + ')');
+  }
+  // Tudo o que a tela mostra, em texto puro (dinamico(): só dado, nenhum elemento React); só chama setState se ele mudou (atualiza()). Os prazos vêm do CapitaoAgora (D.documentos[].dn e D.agenda[].dn já
+  // refeitos para o dia do instante; docDe/prazoDe dão a situação e o tom); as peças, do cérebro (a base gerada mais os movimentos deste aparelho). Com a simulação o dado sempre existe; o caminho `null` →
+  // SEM DADOS é do ramo simulacao:false e nunca chega à tela da simulação (falta()).
+  dinamico(envios0) {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, B = window.CapitaoBrain, s = this.state, sim = D.simulacao === true, SD = 'SEM DADOS';
+    const num = (x) => typeof x === 'number' && isFinite(x);
+    const falta = (rot) => (sim ? 'sem prazo' : rot);
+    const docDe = (n) => { try { return A.docDe(n); } catch (e) { return { st: n < 0 ? 'VENCIDO' : n <= 90 ? 'VENCE EM ' + n + ' D' : 'EM DIA', tom: n < 0 ? 'crit' : n <= 30 ? 'warn' : n <= 60 ? 'tele' : n <= 90 ? 'accent' : 'ok' }; } };
+    const prazoDe = (n) => { try { return A.prazoDe(n) || {}; } catch (e) { return {}; } };
+    const desde = D.versao || SD;
+    const base = (D.documentos || []).map((x) => ({ id: x.id, n: x.n, cat: x.cat || SD, vence: x.vence || null, dn: num(x.dn) ? x.dn : null, st0: x.st, nota: [x.nota, x.numero ? 'nº ' + x.numero : '', x.emitido ? 'emitido em ' + x.emitido : ''].filter(Boolean).join(' · '), fonte: D.docsFonte || x.fonte || SD, envio: false }));
+    const envios = (envios0 || s.envios || []).map((x) => ({ id: 'env-' + x.n + '|' + x.dd, n: x.n, cat: x.cat || SD, vence: null, dn: null, st0: 'A CONFERIR', nota: 'enviado ' + (x.dd || 'sem data') + ' · ' + (x.s || 'tamanho não lido') + ' · o arquivo ficou no aparelho — conferir e arquivar o original no Drive', fonte: (x.fonte || 'enviado no app') + (x.dd ? ' · ' + x.dd : ''), envio: true, selo: x.sim === true && !sim, chave: x.n + '|' + x.dd + '|' + x.s }));
+    const grupo = (x) => (x.dn != null ? (x.dn < 0 ? 'vencido' : x.dn <= 90 ? 'venc90' : 'emdia') : x.envio ? 'enviado' : x.st0 === 'CONFERIDA' ? 'emdia' : 'semdados');
+    const peso = (x) => (x.dn != null ? x.dn : x.envio ? 1e6 : 2e6);
+    const todos = envios.concat(base).map((x, i) => Object.assign(x, { i: i, g: grupo(x) })).sort((a, b) => peso(a) - peso(b) || a.i - b.i);
+    todos.forEach((x) => {
+      const dd = x.dn != null ? docDe(x.dn) : null;
+      x.st = dd ? dd.st : x.envio ? 'A CONFERIR' : x.st0 === 'CONFERIDA' ? 'CONFERIDA' : falta(SD);
+      x.tom = dd ? dd.tom : x.envio ? 'violeta' : x.g === 'emdia' ? 'ok' : 'neutro';
+      x.validade = x.vence || (x.envio ? 'a conferir' : x.st0 === 'CONFERIDA' ? 'sem prazo' : falta(SD));
+      x.dd = x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D-' + x.dn) : '';
+    });
+    const conta = (g) => todos.filter((x) => (g === 'venc90' ? x.g === 'venc90' || x.g === 'vencido' : x.g === g));
+    const curto = (n) => String(n).split(' (')[0];
+    const nEm = conta('emdia'), nV = conta('venc90'), nSD = conta('semdados'), nEnv = conta('enviado');
+    const ordCats = (D.documentos || []).map((x) => x.cat).filter((c, i, a) => c && a.indexOf(c) === i);
+    const catList = ordCats.concat(todos.map((x) => x.cat).filter((c, i, a) => a.indexOf(c) === i && ordCats.indexOf(c) === -1));
+    const exec = B && B.loadExec ? B.loadExec() : {};
+    const agenda = D.agenda || [];
+    // as peças COMO O CÉREBRO AS LÊ (a base gerada mais as cadastradas aqui, com a quantidade já somada dos movimentos); o selo «apresentação» é só das cadastradas aqui com a simulação ligada na gravação, vista com simulacao false
+    let pecas = []; try { pecas = B && typeof B.pecas === 'function' ? B.pecas() : []; } catch (e) { pecas = []; }
+    let est = { novas: [] }; try { est = B && typeof B.loadPecas === 'function' ? B.loadPecas() : est; } catch (e) { est = { novas: [] }; }
+    const seloDe = {}; (est.novas || []).forEach((x) => { if (x && x.sim === true) seloDe[x.id] = true; });
+    const tarefaDe = (id) => {
+      const t = agenda.filter((x) => x.id === id)[0]; if (!t) return null;
+      const e = exec[id];
+      if (e) return { id: id, t: t.t, prazo: 'executada em ' + (e.d || ''), tom: 'ok', feita: true };
+      const p = num(t.dn) ? prazoDe(t.dn) : {};
+      return { id: id, t: t.t, prazo: (p.rot || '') + (t.vence ? ' · ' + String(t.vence).slice(0, 5) : ''), tom: p.tom || 'neutro', feita: false };
+    };
+    const lista = pecas.map((p) => ({ id: p.id, n: p.n, qtd: p.qtd, min: p.min, local: p.local || '', obs: p.obs || '', nivel: p.nivel, st: p.st, selo: !!seloDe[p.id] && !sim, tarefas: (p.tarefas || []).map(tarefaDe).filter(Boolean) }));
+    const pz = lista.filter((p) => p.nivel === 'zero'), pb = lista.filter((p) => p.nivel === 'baixa'), pok = lista.filter((p) => p.nivel === 'ok');
+    return {
+      sim: sim, desde: desde, todos: todos.map((x) => ({ id: x.id, n: x.n, cat: x.cat, nota: x.nota, fonte: x.fonte, envio: x.envio, selo: !!x.selo, chave: x.chave || '', g: x.g, st: x.st, tom: x.tom, validade: x.validade, dd: x.dd, vence: x.vence, dn: x.dn })),
+      catList: catList,
+      cont: { em: nEm.length, v: nV.length, sd: nSD.length, env: nEnv.length,
+        emSub: nEm.map((x) => curto(x.n)).join(' · ') || 'nenhum',
+        vSub: (nV.map((x) => curto(x.n) + ' D-' + x.dn).join(' · ') || 'nenhum') + (todos.some((x) => x.g === 'vencido') ? '' : ' · nenhum vencido'),
+        sdSub: nSD.map((x) => curto(x.n)).join(' · ') || 'nenhum',
+        envSub: (nEnv.length ? nEnv.length + (nEnv.length === 1 ? ' enviado' : ' enviados') + ' neste aparelho · ' + curto(nEnv[0].n) : 'nenhum enviado neste aparelho') },
+      falta: nSD.map((x) => curto(x.n) + ' — ' + (x.nota || SD)).join(' · '),
+      pecas: lista, pCont: { z: pz.length, b: pb.length, ok: pok.length, t: lista.length },
+      avisoTxt: pz.concat(pb).map((p) => ({ n: p.n, q: p.qtd + ' / ' + p.min, nivel: p.nivel })),
+      tarefasOpts: agenda.map((t) => ({ v: t.id, l: t.t })),
+      fontePecas: 'Fonte: estoque de peças a bordo · cadastro do app'
+    };
+  }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, S = D.snapshot || {};
+    const s = this.state, D = window.CapitaoDados || {};
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (filtro, aba, aviso) refaz o texto agora
+    let d = this._din;
+    if (!this._fresco || !d) { d = this._din = this.dinamico(); this._k = JSON.stringify(d); }
+    this._fresco = false;
     const TOM = {
       crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
       tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'],
       ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], neutro: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-plat-rgb, 211,220,239), 0.10)'],
       violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)']
     };
+    const cor = (k) => TOM[k] || TOM.neutro;
     const ICON = {
       'Registro': 'M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h4', 'Seguro': 'M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z', 'Licenças': 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5',
       'Laudos': 'M9 4h6v3H9z M7 5H5v16h14V5h-2 M9 13l2 2 4-4', 'Garantias': 'M12 3a6 6 0 1 0 0 12 6 6 0 0 0 0-12z M9 14l-2 7 5-3 5 3-2-7', 'Segurança': 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6',
       'Notas': 'M6 3h12v18l-3-2-3 2-3-2-3 2z M9 8h6 M9 12h6'
     };
     const DOC = 'M6 3h8l4 4v14H6z M14 3v4h4';
-    const base = (D.documentos || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: x.vence || null, dn: typeof x.dn === 'number' ? x.dn : null, st0: x.st, nota: x.nota || '', fonte: D.docsFonte || x.fonte || 'SEM DADOS', envio: false }));
-    const envios = (s.envios || []).map((x) => ({ n: x.n, cat: x.cat || 'SEM DADOS', vence: null, dn: null, st0: 'A CONFERIR', nota: 'enviado ' + (x.dd || 'data SEM DADOS') + ' · ' + (x.s || 'tamanho SEM DADOS') + ' · o arquivo ficou no aparelho — conferir e arquivar o original no Drive', fonte: (x.fonte || 'enviado no app') + (x.dd ? ' · ' + x.dd : ''), envio: true, chave: x.n + '|' + x.dd + '|' + x.s }));
-    const grupo = (x) => (x.dn != null ? (x.dn < 0 ? 'vencido' : x.dn <= 90 ? 'venc90' : 'emdia') : x.st0 === 'A CONFERIR' ? 'conferir' : 'semdados');
-    const sit = (x) => ({ vencido: 'VENCIDO', venc90: 'VENCE EM ' + x.dn + ' D', emdia: 'EM DIA', conferir: 'A CONFERIR', semdados: 'SEM DADOS' })[grupo(x)];
-    const tom = (x) => { const g = grupo(x); return g === 'vencido' ? 'crit' : g === 'venc90' ? (x.dn <= 30 ? 'warn' : x.dn <= 60 ? 'tele' : 'accent') : g === 'emdia' ? 'ok' : g === 'conferir' ? 'violeta' : 'neutro'; };
-    // vence primeiro: com data (menor prazo antes) · depois A CONFERIR (envio mais novo antes) · por fim SEM DADOS
-    const peso = (x) => (x.dn != null ? x.dn : x.st0 === 'A CONFERIR' ? 1e6 : 2e6);
-    const todos = envios.concat(base).map((x, i) => Object.assign(x, { i: i })).sort((a, b) => peso(a) - peso(b) || a.i - b.i);
-    const conta = (g) => todos.filter((x) => (g === 'venc90' ? grupo(x) === 'venc90' || grupo(x) === 'vencido' : grupo(x) === g));
-    const curto = (n) => String(n).split(' (')[0];
-    const nEm = conta('emdia'), nV = conta('venc90'), nSD = conta('semdados'), nC = conta('conferir'), nVencido = todos.filter((x) => grupo(x) === 'vencido').length;
-    const cats = []; todos.forEach((x) => { if (cats.indexOf(x.cat) === -1) cats.push(x.cat); });
-    const ordCats = (D.documentos || []).map((x) => x.cat).filter((c, i, a) => c && a.indexOf(c) === i);
-    const catList = ordCats.concat(cats.filter((c) => ordCats.indexOf(c) === -1));
-    const passa = (x) => (s.cat === 'todas' || x.cat === s.cat) && (s.sit === 'todas' || (s.sit === 'venc90' ? grupo(x) === 'venc90' || grupo(x) === 'vencido' : grupo(x) === s.sit));
-    const lista = todos.filter(passa);
+    const sim = d.sim, aba = s.aba === 'pecas' ? 'pecas' : 'docs', SD = sim ? '—' : 'SEM DADOS';
+    const passa = (x) => (s.cat === 'todas' || x.cat === s.cat) && (s.sit === 'todas' || (s.sit === 'venc90' ? x.g === 'venc90' || x.g === 'vencido' : x.g === s.sit));
+    const lista = d.todos.filter(passa);
     const setSit = (k) => () => this.setState({ sit: s.sit === k ? 'todas' : k });
     const setCat = (k) => () => this.setState({ cat: k });
-    const desde = D.versao || (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS');
-    const sitNome = { todas: 'vence primeiro', emdia: 'em dia', venc90: 'vencem em 90 dias', semdados: 'SEM DADOS', conferir: 'A CONFERIR' };
-    const tiles = [
-      { k: 'emdia', v: nEm.length, l: 'em dia', sub: nEm.map((x) => curto(x.n)).join(' · ') || 'nenhum', tone: 'ok', d: 'M5 12.5l4.5 4.5L19 7.5' },
-      { k: 'venc90', v: nV.length, l: 'vencem em 90 dias', sub: (nV.map((x) => curto(x.n) + ' D-' + x.dn).join(' · ') || 'nenhum') + (nVencido ? '' : ' · nenhum vencido'), tone: 'warn', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
-      { k: 'semdados', v: nSD.length, l: 'SEM DADOS', sub: nSD.map((x) => curto(x.n)).join(' · ') || 'nenhum', tone: 'neutro', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7 M12 17h.01' },
-      { k: 'conferir', v: nC.length, l: 'A CONFERIR', sub: (nC.filter((x) => !x.envio).map((x) => curto(x.n)).join(' · ') || '—') + ' · ' + envios.length + (envios.length === 1 ? ' enviado' : ' enviados') + ' neste aparelho', tone: 'violeta', d: 'M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z' }
-    ].map((k) => { const c = TOM[k.tone], on = s.sit === k.k; return Object.assign(k, { v: String(k.v), ico: this.ico(k.d, 22, 1.7, c[0]), tone: c[0], wash: c[1], active: on, go: on ? 'filtro ativo' : 'filtrar ›', onClick: setSit(k.k), line: on ? c[0] : 'var(--cap-line, #1a2240)' }); });
+    const sitNome = { todas: 'vence primeiro', emdia: 'em dia', venc90: 'vencem em 90 dias', semdados: SD, enviado: 'enviados neste aparelho' };
+    const defs = [
+      { k: 'emdia', v: d.cont.em, l: 'em dia', sub: d.cont.emSub, tone: 'ok', d: 'M5 12.5l4.5 4.5L19 7.5' },
+      { k: 'venc90', v: d.cont.v, l: 'vencem em 90 dias', sub: d.cont.vSub, tone: 'warn', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' }
+    ];
+    if (!sim) defs.push({ k: 'semdados', v: d.cont.sd, l: 'SEM DADOS', sub: d.cont.sdSub, tone: 'neutro', d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7 M12 17h.01' });
+    defs.push({ k: 'enviado', v: d.cont.env, l: 'enviados', sub: d.cont.envSub, tone: 'violeta', d: 'M4 8h3l2-2h6l2 2h3v11H4z M12 16a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z' });
+    const tiles = defs.map((k) => { const c = cor(k.tone), on = s.sit === k.k; return Object.assign({}, k, { v: String(k.v), ico: this.ico(k.d, 22, 1.7, c[0]), tone: c[0], wash: c[1], active: on, go: on ? 'filtro ativo' : 'filtrar ›', onClick: setSit(k.k), line: on ? c[0] : 'var(--cap-line, #1a2240)' }); });
     const chip = (v, l, on) => ({ l: l, onClick: setCat(v), active: on, line: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', tone: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' });
-    const chips = [chip('todas', 'Todos · ' + todos.length, s.cat === 'todas')].concat(catList.map((c) => chip(c, c + ' · ' + todos.filter((x) => x.cat === c).length, s.cat === c)));
-    const proximos = todos.filter((x) => x.dn != null).slice(0, 2).map((x) => { const c = TOM[tom(x)]; return { n: x.n, s: 'vence ' + x.vence + ' · ' + x.cat, dd: x.dn < 0 ? 'VENCIDO' : 'D-' + x.dn, tone: c[0], wash: c[1] }; });
-    const ult = (s.envios || [])[0], curtoF = String(D.docsFonte || 'SEM DADOS').split(' · ')[0];
+    const chips = [chip('todas', 'Todos · ' + d.todos.length, s.cat === 'todas')].concat(d.catList.map((c) => chip(c, c + ' · ' + d.todos.filter((x) => x.cat === c).length, s.cat === c)));
+    const proximos = d.todos.filter((x) => x.dn != null).slice(0, 2).map((x) => { const c = cor(x.tom); return { n: x.n, s: 'vence ' + x.vence + ' · ' + x.cat, dd: x.dn < 0 ? 'VENCIDO' : 'D-' + x.dn, tone: c[0], wash: c[1] }; });
+    const ult = (s.envios || [])[0], curtoF = String(D.docsFonte || SD).split(' · ')[0];
+    const nEnvios = d.cont.env;
+    // ——— peças ———
+    const pnome = { todas: 'todas as peças', zero: 'zeradas', baixa: 'no mínimo ou abaixo', ok: 'acima do mínimo' };
+    const pPassa = (p) => s.pf === 'todas' || p.nivel === s.pf;
+    const plista = d.pecas.filter(pPassa);
+    const setPf = (k) => () => this.setState({ pf: s.pf === k ? 'todas' : k });
+    const pdefs = [
+      { k: 'todas', v: d.pCont.t, l: 'peças', sub: 'estoque de bordo · cadastro do app', tone: 'accent', d: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z' },
+      { k: 'zero', v: d.pCont.z, l: 'zeradas', sub: d.pecas.filter((p) => p.nivel === 'zero').map((p) => p.n).join(' · ') || 'nenhuma zerada', tone: 'crit', d: 'M12 4 21 20H3z M12 10v4 M12 17h.01' },
+      { k: 'baixa', v: d.pCont.b, l: 'no mínimo', sub: d.pecas.filter((p) => p.nivel === 'baixa').map((p) => p.n).join(' · ') || 'nenhuma no mínimo', tone: 'warn', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
+      { k: 'ok', v: d.pCont.ok, l: 'acima do mínimo', sub: 'sem aviso', tone: 'ok', d: 'M5 12.5l4.5 4.5L19 7.5' }
+    ];
+    const ptiles = pdefs.map((k) => { const c = cor(k.tone), on = s.pf === k.k && k.k !== 'todas'; return Object.assign({}, k, { v: String(k.v), ico: this.ico(k.d, 22, 1.7, c[0]), tone: c[0], wash: c[1], active: on, go: k.k === 'todas' ? 'todas' : on ? 'filtro ativo' : 'filtrar ›', onClick: setPf(k.k), line: on ? c[0] : 'var(--cap-line, #1a2240)' }); });
+    const nivelTom = { zero: 'crit', baixa: 'warn', ok: 'ok' };
+    const prows = plista.map((p) => {
+      const c = cor(nivelTom[p.nivel] || 'ok'), edit = s.ed === p.id, tarefasTxt = p.tarefas.length ? p.tarefas.map((t) => t.t + ' — ' + t.prazo).join('\n') : 'nenhuma tarefa da agenda';
+      return { id: p.id, n: p.n, nivel: p.nivel, sub: [p.local, p.obs].filter(Boolean).join(' · ') || 'sem local anotado', qtd: String(p.qtd), min: String(p.min), st: p.st, tone: c[0], wash: c[1], line: p.nivel === 'ok' ? 'transparent' : c[0],
+        temSelo: p.selo, tarefasTxt: tarefasTxt, semEstoque: p.qtd <= 0, usaTone: p.qtd <= 0 ? 'var(--cap-ink4, #7985a6)' : 'var(--cap-ink, #eaf1ff)', usaLabel: p.qtd <= 0 ? p.n + ': zerada, nada a tirar' : 'Tirar uma unidade de ' + p.n + ' do estoque (−1 USADA)',
+        onUsa: () => this.usa(p), onEditar: () => this.edita(p), editando: edit, icoEdit: this.ico('M4 20h4L19 9l-4-4L4 16z M13.5 6.5l4 4', 17, 1.8, 'currentColor'),
+        edId: 'g1-ed-' + p.id, edLabel: 'Ajustar a quantidade de ' + p.n, edLabel2: 'Quantidade a bordo de ' + p.n, edVal: s.edVal, onEdVal: (e) => this.setState({ edVal: e.target.value }),
+        onSalvar: () => this.salvaQtd(p), onCancela: () => this.setState({ ed: '', erro: '' }), erro: edit ? s.erro : '',
+        ask: 'Main.dc.html#q=' + encodeURIComponent('Estoque de peças: ' + p.n), askLabel: 'Perguntar sobre: ' + p.n };
+    });
+    const nAv = d.avisoTxt.length;
     return {
-      note: s.note, noteTone: s.noteTone,
-      resumo: todos.length + ' documentos · ' + nEm.length + ' em dia · ' + nV.length + ' vencem em 90 dias · ' + nSD.length + ' SEM DADOS · prazos contados a partir de ' + desde + (D.demo ? ' · DEMO' : ''),
-      tiles: tiles,
+      note: s.note, noteTone: s.noteTone, abaDocs: aba === 'docs', abaPecas: aba === 'pecas',
+      abas: [['docs', 'DOCUMENTOS'], ['pecas', 'PEÇAS']].map((a) => ({ k: a[0], l: a[1], on: aba === a[0], onClick: () => this.abre(a[0]), bg: aba === a[0] ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tone: aba === a[0] ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
+      perguntarHref: aba === 'pecas' ? 'Main.dc.html#q=' + encodeURIComponent('Quais peças estão zeradas ou no mínimo?') : 'Main.dc.html#q=' + encodeURIComponent('Quais documentos e licenças vencem primeiro?'),
+      resumo: aba === 'pecas'
+        ? d.pCont.t + ' peças · ' + d.pCont.z + (d.pCont.z === 1 ? ' zerada' : ' zeradas') + ' · ' + d.pCont.b + ' no mínimo ou abaixo · estoque a bordo, movimentos só neste aparelho'
+        : d.todos.length + ' documentos · ' + d.cont.em + ' em dia · ' + d.cont.v + ' vencem em 90 dias' + (sim ? '' : ' · ' + d.cont.sd + ' SEM DADOS') + ' · prazos contados a partir de ' + d.desde,
+      ncol: tiles.length, tiles: tiles,
       listTitle: 'Documentos · ' + (s.cat === 'todas' ? 'todas as categorias' : s.cat) + ' · ' + sitNome[s.sit],
-      listSub: 'Ordenados por vence primeiro · ' + lista.length + ' de ' + todos.length + ' · fonte em cada linha · enviados neste aparelho ficam A CONFERIR',
+      listSub: 'Ordenados por vence primeiro · ' + lista.length + ' de ' + d.todos.length + ' · fonte em cada linha',
       chips: chips,
       rows: lista.map((x) => {
-        const c = TOM[tom(x)], novo = x.envio && x.chave === s.novo;
-        return { n: x.n, cat: x.cat, nota: x.nota || '—', ico: this.ico(ICON[x.cat] || DOC, 17, 1.7, c[0]), wash: c[1], tone: c[0], st: sit(x),
-          validade: x.vence || (x.envio ? 'a conferir' : 'SEM DADOS'), valTone: x.vence ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', dd: x.dn != null ? (x.dn < 0 ? 'vencido há ' + (-x.dn) + ' d' : 'D-' + x.dn) : '',
+        const c = cor(x.tom), novo = x.envio && x.chave === s.novo;
+        return { id: x.id, n: x.n, cat: x.cat, nota: x.nota || '—', ico: this.ico(ICON[x.cat] || DOC, 17, 1.7, c[0]), wash: c[1], tone: c[0], st: x.st, temSelo: x.selo,
+          validade: x.validade, valTone: x.vence ? 'var(--cap-ink, #eaf1ff)' : 'var(--cap-ink3, #97a3c0)', dd: x.dd,
           fonte: 'Fonte: ' + x.fonte, temAsk: !x.envio, ask: 'Main.dc.html#q=' + encodeURIComponent('Situação e vencimento do documento: ' + x.n), askLabel: 'Perguntar sobre: ' + x.n,
           novo: novo ? 'sim' : 'nao', line: novo ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.60)' : 'transparent' };
       }),
       vazio: lista.length === 0,
-      fonte: 'Fonte: ' + (D.docsFonte || 'SEM DADOS') + ' · enviados: só neste aparelho · prazos a partir de ' + desde,
-      catEnvio: s.catEnvio, catOpts: catList.map((c) => ({ v: c })), onCat: (e) => this.setState({ catEnvio: e.target.value }), selRef: this.selRef,
+      fonte: 'Fonte: ' + (D.docsFonte || SD) + ' · enviados: só neste aparelho · prazos a partir de ' + d.desde,
+      catEnvio: s.catEnvio, catOpts: d.catList.map((c) => ({ v: c })), onCat: (e) => this.setState({ catEnvio: e.target.value }), selRef: this.selRef,
       pickFoto: () => this.pick('foto'), pickPdf: () => this.pick('PDF'), fotoRef: this.fotoRef, pdfRef: this.pdfRef,
       onFoto: (e) => this.onArquivo('foto', e), onPdf: (e) => this.onArquivo('PDF', e),
       ultimoEnvio: ult ? 'Último envio: ' + ult.n + ' · ' + ult.dd + ' · ' + ult.s + ' · ' + ult.cat + ' · A CONFERIR' : 'Nenhum documento enviado neste aparelho.',
-      envioFonte: 'Fonte: envios deste aparelho (' + envios.length + ') · nada vai ao servidor',
+      envioFonte: 'Fonte: envios deste aparelho (' + nEnvios + ') · nada vai ao servidor',
       proximos: proximos, verVencendo: setSit('venc90'), vencAtivo: s.sit === 'venc90', vencGo: s.sit === 'venc90' ? 'filtro ativo' : 'Filtrar ›',
       proxFonte: 'Fonte: ' + curtoF,
-      falta: nSD.map((x) => curto(x.n) + ' — ' + (x.nota || 'SEM DADOS')).join(' · ') || 'nada',
-      faltaFonte: 'Fonte: ' + curtoF
+      falta: d.falta, temFalta: !sim && d.cont.sd > 0, faltaFonte: 'Fonte: ' + curtoF,
+      // peças
+      ptiles: ptiles, pTitle: 'Peças · ' + pnome[s.pf], pSub: plista.length + ' de ' + d.pecas.length + ' · a quantidade é a da base mais os movimentos deste aparelho (nada se apaga)',
+      prows: prows, pVazio: plista.length === 0, pFonte: d.fontePecas + ' · movimentos: só neste aparelho · sem código de fabricante e sem valor em dinheiro',
+      avisoTitulo: nAv ? nAv + (nAv === 1 ? ' peça zerada ou no mínimo' : ' peças zeradas ou no mínimo') : 'Estoque acima do mínimo',
+      aviso: d.avisoTxt.map((a) => { const c = cor(nivelTom[a.nivel]); return { n: a.n, q: a.q, tone: c[0], wash: c[1] }; }),
+      avisoLine: d.pCont.z ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)' : nAv ? 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)' : 'var(--cap-line, #1a2240)',
+      avisoFonte: d.fontePecas,
+      temUso: !!s.uso, usoTexto: s.uso ? '−1 USADA: ' + s.uso.n + ' — ' + s.uso.ant + ' → ' + s.uso.novo + ' a bordo.' : '', onDesfazer: () => this.desfaz(), onUsoFecha: () => this.setState({ uso: null }),
+      formAberto: s.formAberto, novaLabel: s.formAberto ? 'FECHAR' : '+ PEÇA', onNova: () => this.setState({ formAberto: !s.formAberto, formErro: '' }),
+      fNome: s.fNome, fQtd: s.fQtd, fMin: s.fMin, fLocal: s.fLocal, fTarefa: s.fTarefa, formErro: s.formErro,
+      onFNome: (e) => this.setState({ fNome: e.target.value }), onFQtd: (e) => this.setState({ fQtd: e.target.value }), onFMin: (e) => this.setState({ fMin: e.target.value }), onFLocal: (e) => this.setState({ fLocal: e.target.value }), onFTarefa: (e) => this.setState({ fTarefa: e.target.value }),
+      tarefasOpts: d.tarefasOpts.map((o) => ({ v: o.v, l: o.l })), onSalvaNova: () => this.novaPeca()
     };
   }
 }

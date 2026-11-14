@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Equipe e acessos (web)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -16,8 +18,8 @@
 <style>
 body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
 a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
-button { font: inherit; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button, input, select { font: inherit; }
 input::placeholder { color: var(--cap-ph, #4a5578); }
 .cap-in:focus { border-color: var(--cap-accent, #00a1fe) !important; box-shadow: 0 0 0 3px rgba(var(--cap-accent-rgb, 0,161,254), 0.18); }
 .cap-so { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -35,60 +37,133 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
       <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
         <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
           <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Equipe e acessos</h1>
-          <span style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
+          <span data-g4="resumo" style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{resumo}}">{{resumo}}</span>
         </div>
-        <span role="status" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 460px; text-align: right;">{{note}}</span>
-        <a href="{{perguntar}}" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
+        <span role="status" data-g4="nota" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 460px; text-align: right;">{{note}}</span>
+        <a href="{{perguntar}}" data-g4="perguntar" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
       </div>
 
       <div style="flex-grow: 1; display: grid; grid-template-columns: minmax(0, 1fr) 360px 330px; gap: 16px; min-height: 0;">
 
-        <section aria-label="Apoio e prestadores" style="box-sizing: border-box; padding: 14px 20px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden;">
+        <section aria-label="Apoio, prestadores e tarefas da equipe" style="box-sizing: border-box; padding: 14px 20px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden;">
           <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
-            <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
-              <span style="font-size: 15px; font-weight: 700;">Apoio e prestadores</span>
-              <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">Papéis, sem nomes de terceiros · o telefone fica só neste aparelho e aparece no SOS</span>
-            </span>
+            <div role="tablist" aria-label="Apoio e tarefas" style="display: flex; gap: 4px; padding: 3px; background: var(--cap-row, #10162e); border: 1px solid var(--cap-line, #1a2240); border-radius: 14px;">
+              <sc-for list="{{abas}}" as="a" hint-placeholder-count="2">
+                <button type="button" role="tab" data-g4="aba" data-aba="{{a.k}}" aria-selected="{{a.on}}" onClick="{{a.onClick}}" style="min-height: 44px; padding: 0 16px; border-radius: 11px; border: none; background: {{a.bg}}; color: {{a.tone}}; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{a.l}}</button>
+              </sc-for>
+            </div>
+            <span style="flex-grow: 1;"></span>
             <a href="C1-Leme-Web.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 4px; font-size: 12.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;">Ver agenda ›</a>
           </div>
-          <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
-            <sc-for list="{{apoio}}" as="v" hint-placeholder-count="4">
-              <div style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--cap-row, #10162e); flex-shrink: 0;">
-                <span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: {{v.wash}}; display: flex; align-items: center; justify-content: center;">{{v.ico}}</span>
-                <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
-                  <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                    <span style="flex-grow: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.papel}} <span style="font-weight: 500; color: var(--cap-ink3, #97a3c0);">· {{v.onde}}</span></span>
-                    <span style="flex-shrink: 0; padding: 4px 9px; border-radius: 999px; background: {{v.wash}}; color: {{v.tone}}; font-size: 10.5px; letter-spacing: 0.06em; font-weight: 800; white-space: nowrap;">{{v.st}}</span>
-                  </span>
-                  <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.4;">{{v.detalhe}}</span>
-                  <span style="display: flex; align-items: center; gap: 6px; min-width: 0;">
-                    <sc-if value="{{v.hasFone}}" hint-placeholder-val="{{false}}">
-                      <span style="flex-grow: 1; min-width: 0; font-size: 13px; font-weight: 700; color: var(--cap-ok, #34c77a); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.fone}}</span>
-                      <a href="{{v.tel}}" aria-label="{{v.ariaLigar}}" style="flex-shrink: 0; height: 44px; box-sizing: border-box; padding: 0 16px; border-radius: 11px; border: 1px solid rgba(var(--cap-ok-rgb, 52,199,122), 0.45); background: rgba(var(--cap-ok-rgb, 52,199,122), 0.10); color: var(--cap-ok, #34c77a); font-size: 11.5px; letter-spacing: 0.08em; font-weight: 800; display: flex; align-items: center; gap: 7px; text-decoration: none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>LIGAR</a>
-                      <button type="button" onClick="{{v.editar}}" aria-label="{{v.ariaEditar}}" title="Corrigir ou remover o telefone" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20h4l10-10-4-4L4 16z M14 6l4 4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></button>
-                    </sc-if>
-                    <sc-if value="{{v.editing}}" hint-placeholder-val="{{false}}">
-                      <input class="cap-in" ref="{{foneRef}}" onKeyDown="{{onFoneKey}}" maxlength="25" placeholder="{{v.ph}}" aria-label="{{v.ariaCampo}}" inputmode="tel" autocomplete="off" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13.5px; outline: none;">
-                      <button type="button" onClick="{{salvarFone}}" style="flex-shrink: 0; height: 44px; padding: 0 16px; border-radius: 11px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 11.5px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer;">SALVAR</button>
-                      <button type="button" onClick="{{cancelaFone}}" aria-label="Cancelar edição do telefone" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M7 7l10 10 M17 7L7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
-                    </sc-if>
-                    <sc-if value="{{v.needsFone}}" hint-placeholder-val="{{true}}">
-                      <button type="button" onClick="{{v.editar}}" aria-label="{{v.ariaCadastrar}}" style="flex-shrink: 0; height: 44px; padding: 0 14px; border-radius: 11px; border: 1px dashed var(--cap-dash, #34406a); background: transparent; color: var(--cap-warn, #f0a63a); font-size: 11px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer; white-space: nowrap;">TELEFONE A CADASTRAR +</button>
-                    </sc-if>
-                  </span>
+
+          <sc-if value="{{abaApoio}}" hint-placeholder-val="{{true}}">
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+              <span style="flex-grow: 1; font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; min-width: 0;">Papéis, sem nomes de terceiros · o nome, o telefone e a observação ficam só neste aparelho</span>
+              <button type="button" data-g4="novo-prest" onClick="{{novoPrest}}" aria-pressed="{{prestAberto}}" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11.5px; letter-spacing: 0.06em; font-weight: 800; cursor: pointer; flex-shrink: 0;">{{prestLabel}}</button>
+              <sc-if value="{{temOcultos}}" hint-placeholder-val="{{false}}"><button type="button" data-g4="restaura" onClick="{{restauraPrest}}" title="Volta os prestadores ocultados" style="height: 44px; padding: 0 14px; border-radius: 999px; border: 1px dashed var(--cap-dash, #34406a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11px; letter-spacing: 0.04em; font-weight: 700; cursor: pointer; flex-shrink: 0;">↺ RESTAURAR ({{nOcultos}})</button></sc-if>
+            </div>
+            <sc-if value="{{prestAberto}}" hint-placeholder-val="{{false}}">
+              <div data-g4="form-prest" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.35); background: var(--cap-row, #10162e); flex-shrink: 0;">
+                <span data-g4="form-titulo" style="font-size: 11px; letter-spacing: 0.14em; font-weight: 700; color: var(--cap-accent, #00a1fe);">{{prestTitulo}}</span>
+                <span style="display: flex; gap: 8px;">
+                  <input class="cap-in" data-g4="f-n" value="{{fN}}" onChange="{{onFN}}" maxlength="80" placeholder="Nome ou empresa" aria-label="Nome ou empresa" autocomplete="off" style="flex-grow: 1; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;">
+                  <input class="cap-in" data-g4="f-role" value="{{fRole}}" onChange="{{onFRole}}" maxlength="80" placeholder="Serviço · ex.: elétrica, vela, casco" aria-label="Serviço" autocomplete="off" style="flex-grow: 1; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;">
+                </span>
+                <span style="display: flex; gap: 8px;">
+                  <input class="cap-in" data-g4="f-s" value="{{fS}}" onChange="{{onFS}}" maxlength="200" placeholder="Observação · ex.: atende de segunda a sexta" aria-label="Observação" autocomplete="off" style="flex-grow: 1; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;">
+                  <sc-if value="{{prestNovo}}" hint-placeholder-val="{{true}}"><input class="cap-in" data-g4="f-fone" value="{{fFone}}" onChange="{{onFFone}}" maxlength="25" inputmode="tel" placeholder="Telefone com DDD (só neste aparelho)" aria-label="Telefone" autocomplete="off" style="width: 230px; height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;"></sc-if>
+                </span>
+                <sc-if value="{{prestErro}}" hint-placeholder-val="{{false}}"><span data-g4="f-erro" role="alert" style="font-size: 11.5px; font-weight: 700; color: var(--cap-warn, #f0a63a);">{{prestErro}}</span></sc-if>
+                <span style="display: flex; gap: 8px; align-items: center;">
+                  <button type="button" data-g4="f-salva" onClick="{{salvaPrest}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 11px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer;">SALVAR</button>
+                  <button type="button" data-g4="f-cancela" onClick="{{cancelaPrest}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11px; font-weight: 700; cursor: pointer;">Cancelar</button>
+                  <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{prestDica}}</span>
                 </span>
               </div>
-            </sc-for>
-          </div>
-          <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">{{notaApoio}}</span>
-          <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); flex-shrink: 0; line-height: 1.4;">{{fonteApoio}}</span>
+            </sc-if>
+            <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+              <sc-for list="{{apoio}}" as="v" hint-placeholder-count="4">
+                <div data-g4="apoio" data-id="{{v.id}}" data-origem="{{v.origem}}" style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 14px; background: var(--cap-row, #10162e); flex-shrink: 0;">
+                  <span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: {{v.wash}}; display: flex; align-items: center; justify-content: center;">{{v.ico}}</span>
+                  <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+                    <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                      <span data-g4="a-nome" title="{{v.tituloFull}}" style="flex-grow: 1; min-width: 0; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.titulo}} <span style="font-weight: 500; color: var(--cap-ink3, #97a3c0);">· {{v.onde}}</span></span>
+                      <sc-if value="{{v.temSelo}}" hint-placeholder-val="{{false}}"><span data-g4="selo" style="flex-shrink: 0; font-size: 9.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">APRESENTAÇÃO</span></sc-if>
+                      <span data-g4="a-st" style="flex-shrink: 0; padding: 4px 9px; border-radius: 999px; background: {{v.wash}}; color: {{v.tone}}; font-size: 10.5px; letter-spacing: 0.06em; font-weight: 800; white-space: nowrap;">{{v.st}}</span>
+                    </span>
+                    <span data-g4="a-detalhe" style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.4; overflow-wrap: anywhere;">{{v.detalhe}}</span>
+                    <span style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                      <sc-if value="{{v.hasFone}}" hint-placeholder-val="{{false}}">
+                        <span data-g4="a-fone" style="flex-grow: 1; min-width: 0; font-size: 13px; font-weight: 700; color: var(--cap-ok, #34c77a); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{v.fone}}</span>
+                        <a href="{{v.tel}}" data-g4="a-ligar" aria-label="{{v.ariaLigar}}" style="flex-shrink: 0; height: 44px; box-sizing: border-box; padding: 0 16px; border-radius: 11px; border: 1px solid rgba(var(--cap-ok-rgb, 52,199,122), 0.45); background: rgba(var(--cap-ok-rgb, 52,199,122), 0.10); color: var(--cap-ok, #34c77a); font-size: 11.5px; letter-spacing: 0.08em; font-weight: 800; display: flex; align-items: center; gap: 7px; text-decoration: none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>LIGAR</a>
+                        <button type="button" data-g4="fone-edita" onClick="{{v.editar}}" aria-label="{{v.ariaEditar}}" title="Corrigir ou remover o telefone" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20h4l10-10-4-4L4 16z M14 6l4 4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg></button>
+                      </sc-if>
+                      <sc-if value="{{v.editing}}" hint-placeholder-val="{{false}}">
+                        <input class="cap-in" data-g4="fone-campo" ref="{{foneRef}}" onKeyDown="{{onFoneKey}}" maxlength="25" placeholder="{{v.ph}}" aria-label="{{v.ariaCampo}}" inputmode="tel" autocomplete="off" style="flex-grow: 1; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 11px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.55); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13.5px; outline: none;">
+                        <button type="button" data-g4="fone-salva" onClick="{{salvarFone}}" style="flex-shrink: 0; height: 44px; padding: 0 16px; border-radius: 11px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 11.5px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer;">SALVAR</button>
+                        <button type="button" onClick="{{cancelaFone}}" aria-label="Cancelar edição do telefone" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M7 7l10 10 M17 7L7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+                      </sc-if>
+                      <sc-if value="{{v.needsFone}}" hint-placeholder-val="{{true}}">
+                        <button type="button" data-g4="fone-cadastra" onClick="{{v.editar}}" aria-label="{{v.ariaCadastrar}}" style="flex-shrink: 0; height: 44px; padding: 0 14px; border-radius: 11px; border: 1px dashed var(--cap-dash, #34406a); background: transparent; color: var(--cap-accent, #00a1fe); font-size: 11px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer; white-space: nowrap;">+ ADICIONAR TELEFONE</button>
+                      </sc-if>
+                      <span style="flex-grow: 1;"></span>
+                      <button type="button" data-g4="a-edita" onClick="{{v.editaPrest}}" aria-label="{{v.ariaEditaPrest}}" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 10.5px; letter-spacing: 0.06em; font-weight: 800; cursor: pointer;">✎ EDITAR</button>
+                      <button type="button" data-g4="a-oculta" onClick="{{v.ocultaPrest}}" aria-label="{{v.ariaOculta}}" title="Esconde da lista neste aparelho; volta com RESTAURAR" style="flex-shrink: 0; height: 44px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 10.5px; letter-spacing: 0.06em; font-weight: 800; cursor: pointer;">OCULTAR</button>
+                    </span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+            <span data-g4="nota-apoio" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); flex-shrink: 0;">{{notaApoio}}</span>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); flex-shrink: 0; line-height: 1.4;">{{fonteApoio}}</span>
+          </sc-if>
+
+          <sc-if value="{{abaTarefas}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+              <span data-g4="tarefas-sub" style="flex-grow: 1; font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.35; min-width: 0;">{{tarefasSub}}</span>
+              <button type="button" data-g4="nova-tarefa" onClick="{{novaTarefa}}" aria-pressed="{{tarAberto}}" style="height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 11.5px; letter-spacing: 0.06em; font-weight: 800; cursor: pointer; flex-shrink: 0;">{{tarLabel}}</button>
+            </div>
+            <sc-if value="{{tarAberto}}" hint-placeholder-val="{{false}}">
+              <div data-g4="form-tarefa" style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.35); background: var(--cap-row, #10162e); flex-shrink: 0;">
+                <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 700; color: var(--cap-accent, #00a1fe);">NOVA TAREFA DA EQUIPE</span>
+                <input class="cap-in" data-g4="t-n" value="{{tN}}" onChange="{{onTN}}" maxlength="120" placeholder="Tarefa · ex.: revisar as mangueiras do porão" aria-label="Nome da tarefa" autocomplete="off" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;">
+                <span style="display: flex; gap: 8px;">
+                  <label style="flex: 1 1 0; display: flex; flex-direction: column; gap: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--cap-ink3, #97a3c0); min-width: 0;">VENCE<input class="cap-in" type="date" data-g4="t-vence" min="{{tMin}}" value="{{tVence}}" onChange="{{onTVence}}" aria-label="Dia em que vence" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;"></label>
+                  <label style="flex: 1 1 0; display: flex; flex-direction: column; gap: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--cap-ink3, #97a3c0); min-width: 0;">RESPONSÁVEL<select class="cap-in" data-g4="t-quem" value="{{tQuem}}" onChange="{{onTQuem}}" aria-label="Responsável" style="height: 44px; box-sizing: border-box; padding: 0 10px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: inherit; font-size: 13px; outline: none; min-width: 0;"><sc-for list="{{quemOpts}}" as="o" hint-placeholder-count="3"><option value="{{o.v}}">{{o.l}}</option></sc-for></select></label>
+                </span>
+                <sc-if value="{{tarErro}}" hint-placeholder-val="{{false}}"><span data-g4="t-erro" role="alert" style="font-size: 11.5px; font-weight: 700; color: var(--cap-warn, #f0a63a);">{{tarErro}}</span></sc-if>
+                <span style="display: flex; gap: 8px; align-items: center;">
+                  <button type="button" data-g4="t-salva" onClick="{{salvaTarefa}}" style="height: 44px; padding: 0 16px; border-radius: 10px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 11px; letter-spacing: 0.08em; font-weight: 800; cursor: pointer;">AGENDAR</button>
+                  <button type="button" data-g4="t-cancela" onClick="{{cancelaTarefa}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 11px; font-weight: 700; cursor: pointer;">Cancelar</button>
+                  <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">O prazo conta do dia de hoje e se refaz sozinho em todas as telas.</span>
+                </span>
+              </div>
+            </sc-if>
+            <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+              <sc-for list="{{tarefas}}" as="t" hint-placeholder-count="2">
+                <div data-g4="tarefa" data-id="{{t.id}}" data-feita="{{t.feitaTxt}}" data-origem="{{t.origem}}" style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--cap-row, #10162e); flex-shrink: 0;">
+                  <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                    <span data-g4="t-nome" style="font-size: 14px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; text-decoration: {{t.risco}}; color: {{t.ink}};">{{t.n}}</span>
+                    <span data-g4="t-meta" style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.4; overflow-wrap: anywhere;">{{t.meta}}</span>
+                  </span>
+                  <span style="flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span data-g4="t-prazo" style="padding: 4px 9px; border-radius: 999px; background: {{t.wash}}; color: {{t.tone}}; font-size: 10.5px; letter-spacing: 0.06em; font-weight: 800; white-space: nowrap;">{{t.prazo}}</span>
+                    <span data-g4="t-origem" style="font-size: 9.5px; letter-spacing: 0.12em; font-weight: 800; color: var(--cap-ink4, #7985a6);">{{t.origemTxt}}</span>
+                    <sc-if value="{{t.temSelo}}" hint-placeholder-val="{{false}}"><span data-g4="selo" style="font-size: 9.5px; letter-spacing: 0.08em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">APRESENTAÇÃO</span></sc-if>
+                  </span>
+                </div>
+              </sc-for>
+              <sc-if value="{{semTarefas}}" hint-placeholder-val="{{false}}"><span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">Nenhuma tarefa da equipe.</span></sc-if>
+            </div>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); flex-shrink: 0; line-height: 1.4;">{{fonteTarefas}}</span>
+          </sc-if>
         </section>
 
         <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0;">
           <section aria-label="Perfis com acesso" style="box-sizing: border-box; padding: 14px 18px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
             <span style="font-size: 15px; font-weight: 700;">{{perfisTitulo}}</span>
             <sc-for list="{{perfis}}" as="p" hint-placeholder-count="1">
-              <div style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{p.line}}; min-width: 0;">
+              <div data-g4="perfil" style="display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{p.line}}; min-width: 0;">
                 <span style="width: 44px; height: 44px; flex-shrink: 0; box-sizing: border-box; border-radius: 50%; border: 1.5px solid {{p.tone}}; color: {{p.tone}}; background: var(--cap-bg, #050816); font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{p.ini}}</span>
                 <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px;">
                   <span style="display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;"><span style="font-size: 15px; font-weight: 700;">{{p.nome}}</span><span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{p.papel}}</span></span>
@@ -148,7 +223,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M7 11V8a5 5 0 0 1 10 0v3 M5 11h14v9H5z" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-warn, #f0a63a);"></path></svg>
             <span style="display: flex; flex-direction: column; gap: 5px; min-width: 0;">
               <span style="font-size: 13px; font-weight: 700; line-height: 1.4;">Senhas são combinadas fora do site; o login é porta de entrada, não proteção real.</span>
-              <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.4;">Telefones e convites ficam só neste aparelho — o site não tem servidor.</span>
+              <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.4;">Telefones, nomes de prestadores e convites ficam só neste aparelho — o site não tem servidor.</span>
               <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">Fonte: login do Capitão IA · sessão deste aparelho</span>
             </span>
           </section>
@@ -174,7 +249,7 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
               <span style="font-size: 11.5px; line-height: 1.35;"><b style="color: var(--cap-accent, #00a1fe); letter-spacing: 0.08em; font-size: 10px;">LEITURA</b> · {{quemLeitura}}</span>
             </span>
             <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.4;">Leitura é combinado: o site ainda não trava a edição por perfil.</span>
-            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">Fonte: regras de acesso do Capitão IA (DEMO)</span>
+            <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">Fonte: regras de acesso do Capitão IA</span>
           </section>
         </div>
       </div>
@@ -186,47 +261,166 @@ input::placeholder { color: var(--cap-ph, #4a5578); }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
-  state = { eq: { fones: {}, convites: [] }, exec: {}, atalhos: 0, fone: null, acesso: 'total', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  // Equipe e acessos. Telefones, nomes de prestadores e convites ficam SÓ neste aparelho (capitao.equipe.v1, capitao.prestadores.v1): nada vai ao diário com nome ou número, nada vai à IA. As tarefas da equipe (F15) são
+  // as geradas (g01, g02) e as do aparelho (capitao.tarefas.v1, pelo cérebro); o prazo vem do CapitaoAgora (o dia do instante) e se refaz sozinho quando o dia vira.
+  state = { aba: 'apoio', fone: null, acesso: 'total', note: '', noteTone: 'var(--cap-ok, #34c77a)', vivo: '',
+    prest: null, fN: '', fRole: '', fS: '', fFone: '', prestErro: '', tarAberto: false, tN: '', tVence: '', tQuem: '', tarErro: '' };
   foneRef = React.createRef(); nomeRef = React.createRef(); funcRef = React.createRef(); contatoRef = React.createRef();
   componentDidMount() {
-    this.whenBrain(() => this.load());
-    // Outra aba/tela salvou (SOS lê os telefones; Manutenção marca Executado): recarrega
-    this._st = (e) => { if (!e || e.key === null || e.key === 'capitao.equipe.v1' || e.key === 'capitao.executado.v1' || e.key === 'capitao.atalhos.v1') this.load(); };
+    const h = () => { const m = /(?:^#|&)aba=(apoio|tarefas)\b/.exec(location.hash || ''); if (m && m[1] !== this.state.aba) this.setState({ aba: m[1] }); };
+    h(); this._onHash = h; window.addEventListener('hashchange', this._onHash);
+    this.whenBrain(() => this.atualiza());
+    // Outra aba/tela salvou (SOS lê os telefones; Manutenção marca Executado; o Diário confirma uma tarefa): recarrega só se o que a tela mostra mudou
+    this._st = (e) => { if (!e || e.key === null || /^capitao\.(equipe|executado|atalhos|prestadores|tarefas)\.v1$/.test(e.key)) this.atualiza(); };
     window.addEventListener('storage', this._st);
     this._ses = () => this.forceUpdate(); window.addEventListener('capitao-sessao', this._ses);
+    // Os prazos (a agenda e as tarefas) são refeitos pelo CapitaoAgora quando o dia vira: a tela se redesenha só se o texto que exibe mudou. Sem timer e sem o tique de 1 s (nenhuma leitura anda aqui).
+    this._onRebase = () => { if (!document.hidden) this.atualiza(); };
+    window.addEventListener('capitao-rebase', this._onRebase);
+    this.atualiza();
   }
-  componentWillUnmount() { window.removeEventListener('storage', this._st); window.removeEventListener('capitao-sessao', this._ses); clearTimeout(this._n); }
+  componentWillUnmount() {
+    window.removeEventListener('hashchange', this._onHash); window.removeEventListener('storage', this._st); window.removeEventListener('capitao-sessao', this._ses); window.removeEventListener('capitao-rebase', this._onRebase);
+    clearTimeout(this._n); clearInterval(this._b);
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
-    const t = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
-  load() { const B = window.CapitaoBrain; if (B) this.setState({ eq: B.loadEquipe(), exec: B.loadExec(), atalhos: B.loadShortcuts().length }); }
+  atualiza() {
+    const k = JSON.stringify(this.dinamico());
+    if (k === this._k) return;
+    this._k = k;
+    this.setState({ vivo: k });
+  }
+  refresh(extra) { this.setState(Object.assign({ vivo: String(Date.now()) }, extra || {})); }
+  // Tudo o que a tela mostra, em dado puro (nenhum elemento React): o que o aparelho guardou, a agenda e as tarefas com o prazo de hoje
+  dinamico() {
+    const B = window.CapitaoBrain, D = window.CapitaoDados || {}, A = window.CapitaoAgora, EQ = D.equipe || {};
+    let eq = { fones: {}, convites: [] }, ex = {}, atalhos = 0, tarLs = [];
+    if (B) { eq = B.loadEquipe(); ex = B.loadExec(); atalhos = B.loadShortcuts().length; tarLs = B.loadTarefas(); }
+    // as tarefas da equipe (as geradas e as do aparelho) com o prazo do dia do INSTANTE (A.relogio, o mesmo de contagens() e da agenda), pelo CapitaoAgora.prazoDe
+    const hojeIso = A && A.relogio ? A.relogio.hojeIso : '', dia = (iso) => Math.floor(Date.parse(iso + 'T00:00:00Z') / 86400000), hojeN = hojeIso ? dia(hojeIso) : NaN;
+    const tarefas = (D.tarefasEquipe || []).map((t) => ({ id: t.id, n: t.n, vence: t.vence, quem: t.quem || '', origem: 'equipe', aparelho: false }))
+      .concat(tarLs.map((t) => ({ id: t.id, n: t.n, vence: t.vence, quem: t.quem || '', origem: t.origem || 'tela', aparelho: true }))).map((t) => {
+        const n = dia(t.vence) - hojeN, z = !isNaN(n) && A && A.prazoDe ? A.prazoDe(n) : {};
+        return Object.assign(t, { dn: n, st: z.st, rot: z.rot || '—', tom: z.tom || 'ink', feita: !!ex[t.id] });
+      }).sort((a, b) => ((isNaN(a.dn) ? 1e9 : a.dn) - (isNaN(b.dn) ? 1e9 : b.dn)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    const agenda = (D.agenda || []).map((t) => ({ id: t.id, t: t.t, quem: t.quem || '', dn: t.dn, rot: t.rot }));
+    const ab = (D.abastecimentos || [])[0];
+    const feitas = {}; Object.keys(ex).forEach((k) => { feitas[k] = { sim: !!(ex[k] && ex[k].sim === true), d: ex[k] && ex[k].d || '' }; });
+    return { eq: eq, feitas: feitas, atalhos: atalhos, tarefas: tarefas, tarSim: tarLs.map((t) => [t.id, t.sim === true]), agenda: agenda, prest: this.loadPrest(), apoio: EQ.apoio || [], perfis: EQ.perfis || [], nota: EQ.nota || '',
+      ab: ab ? { d: ab.d, litros: ab.litros, combustivel: ab.combustivel, st: ab.st } : null, embFonte: ((D.embarcacao || {}).fonte) || '', agendaFonte: D.agendaFonte || '', abastFonte: D.abastFonte || '', sim: D.simulacao === true, hoje: A && A.relogio ? A.relogio.hoje : '', hojeIso: hojeIso };
+  }
+  // ——— capitao.prestadores.v1 = { novos: [{ id: 'r…', n, role, s, iso, who, sim? }], fixos: { <id do apoio ou do prestador>: { n?, role?, oculto? } } } ———
+  // O nome, o serviço e a observação ficam só aqui; o telefone, em capitao.equipe.v1 (fones), como o dos contatos de apoio. Ocultar e restaurar não apagam nada: só ligam e desligam a marca `oculto` (vale para os de
+  // apoio e para os cadastrados). A gravação parte do JSON guardado: o que a tela não entende (chaves de topo, linhas de outra forma) fica como está; valor que não é um objeto vai para a chave `.antes`.
+  loadPrest() {
+    let v = null; try { const s = localStorage.getItem('capitao.prestadores.v1'); v = s ? JSON.parse(s) : null; } catch (e) { v = null; }
+    const ok = v && typeof v === 'object' && !Array.isArray(v);
+    return { novos: ok && Array.isArray(v.novos) ? v.novos.filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && /^r[A-Za-z0-9_-]{2,60}$/.test(x.id) && typeof x.n === 'string') : [], fixos: ok && v.fixos && typeof v.fixos === 'object' && !Array.isArray(v.fixos) ? v.fixos : {} };
+  }
+  gravaPrest(fn) {
+    const K = 'capitao.prestadores.v1';
+    let s = null, v = null; try { s = localStorage.getItem(K); v = s ? JSON.parse(s) : null; } catch (e) { v = null; }
+    const ok = v && typeof v === 'object' && !Array.isArray(v);
+    if (s && !ok) { try { if (localStorage.getItem(K + '.antes') === null) localStorage.setItem(K + '.antes', s); } catch (e) {} }
+    const raiz = ok ? v : {};
+    if (!Array.isArray(raiz.novos)) { if (raiz.novos != null) raiz.novosAntes = raiz.novos; raiz.novos = []; }
+    if (!raiz.fixos || typeof raiz.fixos !== 'object' || Array.isArray(raiz.fixos)) { if (raiz.fixos != null) raiz.fixosAntes = raiz.fixos; raiz.fixos = {}; }
+    fn(raiz);
+    try { localStorage.setItem(K, JSON.stringify(raiz)); return true; } catch (e) { return false; }
+  }
+  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); try { return window.CapitaoAuth ? String(window.CapitaoAuth.nome()) : 'Lucas'; } catch (e) { return 'sem sessão'; } }
   // Ler-alterar-gravar: relê antes de gravar para não perder o que outra aba salvou
-  fresh() { const B = window.CapitaoBrain; const eq = B ? B.loadEquipe() : this.state.eq; return { fones: Object.assign({}, eq.fones), convites: (eq.convites || []).slice() }; }
-  save(eq) { const B = window.CapitaoBrain; if (B) B.saveEquipe(eq); this.setState({ eq: B ? B.loadEquipe() : eq }); }
-  quem() { const B = window.CapitaoBrain; if (B) return B.quem(); return window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'; }
-  diario(t) { const B = window.CapitaoBrain; if (B) B.addDiario({ sys: 'Equipe', tone: 'var(--cap-ink3, #97a3c0)', t: t, who: this.quem(), src: 'console · equipe' }); }
-  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '' }), 5000); }
-  papel(id) { const a = ((window.CapitaoDados || {}).equipe || {}).apoio || []; const x = a.filter((v) => v.id === id)[0]; return x ? x.papel : id; }
-  abreFone(id) { this.setState({ fone: id }, () => { const el = this.foneRef.current; if (el) { el.value = (this.state.eq.fones || {})[id] || ''; el.focus(); } }); }
+  fresh() { const B = window.CapitaoBrain; const eq = B ? B.loadEquipe() : { fones: {}, convites: [] }; return { fones: Object.assign({}, eq.fones), convites: (eq.convites || []).slice() }; }
+  save(eq) { const B = window.CapitaoBrain; if (B) B.saveEquipe(eq); this.refresh(); }
+  // o registro só cresce: a linha de uma ação em Equipe NÃO leva nome, telefone nem observação (o diário entra na ficha da IA)
+  diario(t, sys) { const B = window.CapitaoBrain; if (B) B.addDiario({ sys: sys || 'Equipe', tone: 'var(--cap-ink3, #97a3c0)', t: t, who: this.quem(), src: 'console · equipe' }); }
+  toast(msg, tone) { this.setState({ note: msg, noteTone: tone || 'var(--cap-ok, #34c77a)', vivo: String(Date.now()) }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '', vivo: String(Date.now()) }), 5000); }
+  papel(id) { const a = ((window.CapitaoDados || {}).equipe || {}).apoio || []; const x = a.filter((v) => v.id === id)[0]; if (x) return x.papel; const p = this.loadPrest().novos.filter((r) => r.id === id)[0]; return p ? 'prestador' : id; }
+  abreFone(id) { this.setState({ fone: id }, () => { const el = this.foneRef.current; if (el) { el.value = (this.fresh().fones || {})[id] || ''; el.focus(); } }); }
+  valFone(v) { const dg = v.replace(/\D/g, ''); return !v || (/^\+?[\d ().-]+$/.test(v) && dg.length >= 8 && dg.length <= 15); }
   salvarFone() {
     const id = this.state.fone; if (!id) return;
     const v = (this.foneRef.current ? this.foneRef.current.value : '').replace(/\s+/g, ' ').trim();
     const eq = this.fresh(), antes = eq.fones[id] || '';
     if (!v && !antes) return this.toast('Digite o telefone com DDD', 'var(--cap-warn, #f0a63a)');
     // Só dígitos, espaço, + no início, ( ) . e -; 8 a 15 dígitos (E.164)
-    const dg = v.replace(/\D/g, '');
-    if (v && (!/^\+?[\d ().-]+$/.test(v) || dg.length < 8 || dg.length > 15)) return this.toast('Telefone inválido — 8 a 15 dígitos com DDD · números e + ( ) . -', 'var(--cap-warn, #f0a63a)');
-    if (v === antes) return this.setState({ eq: eq, fone: null });
+    if (!this.valFone(v)) return this.toast('Telefone inválido — 8 a 15 dígitos com DDD · números e + ( ) . -', 'var(--cap-warn, #f0a63a)');
+    if (v === antes) return this.setState({ fone: null }, () => this.refresh());
     if (v) eq.fones[id] = v; else delete eq.fones[id];
     this.save(eq); this.setState({ fone: null });
     const acao = !v ? 'removido' : antes ? 'alterado' : 'cadastrado';
     this.toast('Telefone ' + acao + ' · ' + this.papel(id) + ' · só neste aparelho');
     this.diario('Telefone de ' + this.papel(id) + ' ' + acao + ' em Equipe (fica só neste aparelho).');
+  }
+  // ——— prestadores (F21) ———
+  novoPrest() { if (this.state.prest) return this.setState({ prest: null, prestErro: '' }); this.setState({ prest: { modo: 'novo' }, fN: '', fRole: '', fS: '', fFone: '', prestErro: '' }, () => { const el = document.querySelector('[data-g4=f-n]'); if (el) el.focus(); }); }
+  editaPrest(c) { this.setState({ prest: { modo: 'edita', id: c.id, novo: c.origem === 'novo' }, fN: c.n || '', fRole: c.role || '', fS: c.s || '', fFone: '', prestErro: '' }, () => { const el = document.querySelector('[data-g4=f-n]'); if (el) el.focus(); }); }
+  salvaPrest() {
+    const s = this.state, f = s.prest, D = window.CapitaoDados || {}; if (!f) return;
+    const lim = (x, n) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, n), n = lim(s.fN, 80), role = lim(s.fRole, 80), obs = lim(s.fS, 200), fone = lim(s.fFone, 25);
+    if (f.modo === 'novo' || f.novo) { if (!n) return this.setState({ prestErro: 'Digite o nome ou a empresa do prestador.' }); }
+    if (f.modo === 'novo' && !this.valFone(fone)) return this.setState({ prestErro: 'Telefone inválido — 8 a 15 dígitos com DDD · números e + ( ) . -' });
+    let id = f.id, acao = '';
+    if (f.modo === 'novo') {
+      id = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      const row = { id: id, n: n, role: role, s: obs, iso: new Date().toISOString(), who: this.quem() }; if (D.simulacao === true) row.sim = true;
+      if (!this.gravaPrest((r) => { r.novos.unshift(row); })) return this.setState({ prestErro: 'Não consegui guardar neste aparelho (armazenamento cheio ou bloqueado).' });
+      if (fone) { const eq = this.fresh(); eq.fones[id] = fone; const B = window.CapitaoBrain; if (B) B.saveEquipe(eq); }
+      acao = 'cadastrado';
+    } else if (f.novo) {
+      if (!this.gravaPrest((r) => { const i = r.novos.findIndex((x) => x && x.id === id); if (i >= 0) r.novos[i] = Object.assign({}, r.novos[i], { n: n, role: role, s: obs }); })) return this.setState({ prestErro: 'Não consegui guardar neste aparelho (armazenamento cheio ou bloqueado).' });
+      acao = 'editado';
+    } else {
+      if (!this.gravaPrest((r) => { const o = Object.assign({}, r.fixos[id] || {}); if (n) o.n = n; else delete o.n; if (role) o.role = role; else delete o.role; if (Object.keys(o).length) r.fixos[id] = o; else delete r.fixos[id]; })) return this.setState({ prestErro: 'Não consegui guardar neste aparelho (armazenamento cheio ou bloqueado).' });
+      acao = 'editado';
+    }
+    this.setState({ prest: null, prestErro: '' }); this.refresh();
+    this.toast('Prestador ' + acao + ' · nome, serviço e telefone ficam só neste aparelho');
+    this.diario('Prestador ' + acao + ' em Equipe (nome, serviço e telefone ficam só neste aparelho).');
+  }
+  ocultaPrest(c) {
+    if (!this.gravaPrest((r) => { r.fixos[c.id] = Object.assign({}, r.fixos[c.id] || {}, { oculto: true }); })) return this.toast('Não consegui guardar neste aparelho', 'var(--cap-warn, #f0a63a)');
+    this.setState({ prest: this.state.prest && this.state.prest.id === c.id ? null : this.state.prest, fone: this.state.fone === c.id ? null : this.state.fone }); this.refresh();
+    this.toast('Prestador oculto neste aparelho · volta com RESTAURAR', 'var(--cap-warn, #f0a63a)');
+    this.diario('Prestador ocultado em Equipe (volta com RESTAURAR).');
+  }
+  restauraPrest() {
+    let n = 0;
+    if (!this.gravaPrest((r) => { Object.keys(r.fixos).forEach((k) => { const o = r.fixos[k]; if (o && o.oculto) { n++; const c = Object.assign({}, o); delete c.oculto; if (Object.keys(c).length) r.fixos[k] = c; else delete r.fixos[k]; } }); })) return this.toast('Não consegui guardar neste aparelho', 'var(--cap-warn, #f0a63a)');
+    this.refresh();
+    this.toast(n ? n + (n === 1 ? ' prestador restaurado' : ' prestadores restaurados') : 'Nenhum prestador oculto');
+    if (n) this.diario((n === 1 ? 'Prestador restaurado' : 'Prestadores restaurados') + ' em Equipe: ' + n + '.');
+  }
+  // ——— tarefas da equipe (F15) ———
+  novaTarefa() { if (this.state.tarAberto) return this.setState({ tarAberto: false, tarErro: '' }); this.setState({ tarAberto: true, tN: '', tVence: '', tQuem: (this.opcoesQuem()[0] || { v: '' }).v, tarErro: '' }, () => { const el = document.querySelector('[data-g4=t-n]'); if (el) el.focus(); }); }
+  // o responsável: o papel de cada contato de apoio (como a agenda o escreve) e o primeiro nome de cada perfil
+  QUEM() { return { marina: 'marina', oficina: 'oficina de motores', tecnico: 'técnico', eletronica: 'técnico de eletrônicos', refrigeracao: 'técnico de refrigeração', posto: 'posto de combustível' }; }
+  quemDe(a) { return this.QUEM()[a.id] || String(a.papel || a.id).toLowerCase(); }
+  opcoesQuem() { const D = window.CapitaoDados || {}, EQ = D.equipe || {}; return (EQ.perfis || []).map((p) => ({ v: String(p.nome || '').split(' ')[0], l: String(p.nome || '').split(' ')[0] + ' · ' + (p.papel || 'perfil') })).concat((EQ.apoio || []).map((a) => ({ v: this.quemDe(a), l: a.papel }))); }
+  dadoPessoal(t) { const T = (window.CapitaoBrain || {}).TERMOS || {}; return !!((T.PESSOAIS && T.PESSOAIS.test(t)) || (T.DINHEIRO && T.DINHEIRO.test(t))); }
+  salvaTarefa() {
+    const B = window.CapitaoBrain, s = this.state, A = window.CapitaoAgora; if (!B) return;
+    const n = String(s.tN || '').replace(/\s+/g, ' ').trim(), v = String(s.tVence || '').trim(), hoje = A && A.relogio ? A.relogio.hojeIso : '';
+    if (!n) return this.setState({ tarErro: 'Digite o nome da tarefa.' });
+    // o nome vai à agenda (Manutenção) e ao diário, e os dois entram na ficha da IA: telefone, e-mail, CPF/CNPJ e valor (as regex do §3, a fonte única) ficam de fora; o telefone de um contato tem o lugar dele na aba Apoio
+    if (this.dadoPessoal(n)) return this.setState({ tarErro: 'Tire telefone, e-mail, CPF/CNPJ ou valor do nome da tarefa: esses dados não entram na agenda (o telefone de um contato vai na aba Apoio).' });
+    if (!/^\d{4}-\d\d-\d\d$/.test(v) || isNaN(Date.parse(v + 'T00:00:00Z'))) return this.setState({ tarErro: 'Escolha o dia em que a tarefa vence.' });
+    if (hoje && v < hoje) return this.setState({ tarErro: 'Esse dia já passou: escolha hoje ou um dia à frente.' });
+    const antes = B.loadTarefas().map((x) => x.id);
+    const t = B.addTarefa({ n: n, vence: v, quem: s.tQuem || '', origem: 'tela' });
+    if (!t) return this.setState({ tarErro: 'Não consegui agendar: confira o nome e o dia.' });
+    this.setState({ tarAberto: false, tarErro: '', tN: '', tVence: '' }); this.refresh();
+    // o cérebro não duplica a mesma tarefa (nome e dia) ainda aberta e devolve a que já está: nada novo foi agendado, então nenhuma linha nova no diário (o registro só cresce, a linha repetida não sai)
+    if (antes.indexOf(t.id) >= 0) return this.toast('Essa tarefa já está agendada para ' + v.split('-').reverse().join('/') + ' — nada foi gravado de novo', 'var(--cap-warn, #f0a63a)');
+    this.toast('Tarefa agendada na equipe · vence ' + v.split('-').reverse().join('/'));
+    this.diario('Tarefa da equipe: ' + t.n + ' — vence ' + v.split('-').reverse().join('/') + (t.quem ? ' · responsável: ' + t.quem : '') + '. Agendada em Equipe — linha nova, nada se apaga.', 'Manutenção');
   }
   // Abre WhatsApp (nova aba) ou o e-mail do aparelho — o site não envia nada sozinho
   abrir(lk) {
@@ -247,89 +441,129 @@ class Component extends DCLogic {
     const ja = eq.convites.filter((c) => c.nome === nome && c.contato === lk.contato && c.acesso === acesso)[0];
     this.abrir(lk);
     if (ja) return this.toast('Convite de ' + nome + ' já estava PENDENTE — reaberto no ' + lk.canal, 'var(--cap-warn, #f0a63a)');
-    eq.convites.push({ nome: nome, func: func || 'função a confirmar', acesso: acesso, d: B.now().d, contato: lk.contato, canal: lk.canal });
+    // a referência identifica o convite no diário SEM o nome, a função nem o contato (o diário entra na ficha da IA); o dados.html a lê para não devolver um convite cancelado depois
+    const ref = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    eq.convites.push({ nome: nome, func: func || 'função a confirmar', acesso: acesso, d: B.now().d, contato: lk.contato, canal: lk.canal, ref: ref });
     this.save(eq);
     [this.nomeRef, this.funcRef, this.contatoRef].forEach((r) => { if (r.current) r.current.value = ''; });
     this.toast('Convite aberto no ' + lk.canal + ' · ' + nome + ' fica PENDENTE');
-    this.diario('Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' para ' + nome + (func ? ' · ' + func : '') + ' — PENDENTE até o cadastro do acesso.');
+    this.diario('Convite de acesso (' + acesso + ') aberto no ' + lk.canal + ' (convite ' + ref + ') — PENDENTE até o cadastro do acesso (nome, função e contato ficam só neste aparelho).');
   }
   cancelarConvite(c) {
     const eq = this.fresh();
     const k = eq.convites.findIndex((x) => x.nome === c.nome && x.d === c.d && x.func === c.func && x.acesso === c.acesso && x.contato === c.contato);
-    if (k < 0) return this.setState({ eq: eq });
+    if (k < 0) return this.refresh();
     eq.convites.splice(k, 1); this.save(eq);
     this.toast('Convite de ' + c.nome + ' cancelado — nunca virou acesso', 'var(--cap-warn, #f0a63a)');
-    this.diario('Convite de ' + c.nome + ' (' + c.acesso + ') cancelado em Equipe — nunca virou acesso.');
+    this.diario('Convite de acesso (' + c.acesso + ') cancelado em Equipe' + (/^[0-9a-z]{4,16}$/.test(String(c.ref || '')) ? ' (convite ' + c.ref + ')' : '') + ' — nunca virou acesso.');
   }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, B = window.CapitaoBrain, EQ = D.equipe || {};
-    const fones = (s.eq && s.eq.fones) || {}, convites = (s.eq && s.eq.convites) || [], ex = s.exec || {};
+    const s = this.state, d = this.dinamico(), B = window.CapitaoBrain;
+    this._k = JSON.stringify(d);
+    const fones = (d.eq && d.eq.fones) || {}, convites = (d.eq && d.eq.convites) || [], real = !d.sim;
     const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     const TOM = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], ink: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-hl-rgb, 255,255,255), 0.06)'] };
     const ICON = { marina: 'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5', oficina: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', tecnico: 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z', posto: 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4' };
     const PESSOA = 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M3 20a6 6 0 0 1 12 0 M16 11a3 3 0 1 0 0-6 M21 20a6 6 0 0 0-5-5.9';
-    const AG = D.agenda || [];
-    // Responsável na agenda → papel de apoio (técnico, marina, oficina Volvo Penta)
-    const idDe = (q) => { const n = norm(q); return n.indexOf('tecnico') === 0 ? 'tecnico' : n.indexOf('marina') === 0 ? 'marina' : n.indexOf('oficina') === 0 ? 'oficina' : n.indexOf('posto') === 0 ? 'posto' : null; };
-    const abertas = (lista) => lista.filter((t) => !ex[t.id]);
     const tel = (v) => 'tel:' + String(v).replace(/[^+\d]/g, '');
     const nq = (x) => String(x).replace(/D-(\d)/g, 'D‑$1'); // D-66 não quebra na linha
-    const AB = (D.abastecimentos || [])[0];
-    const apoio = (EQ.apoio || []).map((a) => {
-      const tarefas = AG.filter((t) => idDe(t.quem) === a.id), ab = abertas(tarefas);
+    const nbm = (x) => { const A = window.CapitaoAgora; return A && A.fmt && typeof x === 'number' ? A.fmt.mil(x) : String(x); };
+    const brData = (iso) => String(iso || '').split('-').reverse().join('/');
+    // ——— contatos de apoio (os gerados, menos os ocultos) e prestadores cadastrados ———
+    const fixos = d.prest.fixos || {};
+    const quemDe = (a) => this.quemDe(a);
+    const apoioTodos = d.apoio;
+    const idDe = (q) => { const n = norm(q); const a = apoioTodos.filter((x) => norm(quemDe(x)) === n || norm(x.papel) === n)[0]; return a ? a.id : null; };
+    const abertas = (lista) => lista.filter((t) => !d.feitas[t.id]);
+    const tarAb = d.tarefas.filter((t) => !t.feita);
+    const nOcultosApoio = apoioTodos.filter((a) => fixos[a.id] && fixos[a.id].oculto).length, nOcultosNovos = d.prest.novos.filter((r) => fixos[r.id] && fixos[r.id].oculto).length, nOcultos = nOcultosApoio + nOcultosNovos;
+    const cardApoio = (a) => {
+      const ov = fixos[a.id] || {}, papel = ov.role || a.papel;
+      const tarefas = d.agenda.filter((t) => idDe(t.quem) === a.id).concat(tarAb.filter((t) => idDe(t.quem) === a.id)), ab = abertas(tarefas);
       const atr = ab.filter((t) => t.dn < 0).sort((x, y) => x.dn - y.dn);
       const prox = ab.filter((t) => t.dn >= 0).sort((x, y) => x.dn - y.dn)[0];
+      const nm = (t) => t.t || t.n;
       let st, tom, det;
       if (tarefas.length) {
         st = atr.length ? atr.length + (atr.length === 1 ? ' ATRASADA' : ' ATRASADAS') : prox ? 'D-' + prox.dn : 'EM DIA';
         tom = atr.length ? 'crit' : prox && prox.dn <= 30 ? 'warn' : 'ok';
-        det = tarefas.length + (tarefas.length === 1 ? ' tarefa' : ' tarefas') + ' na agenda' + (atr.length ? ' · atrasada: ' + atr.map((t) => t.t + ' (' + (-t.dn) + ' d)').join('; ') : prox ? ' · próxima: ' + prox.t + ' (' + prox.rot + ')' : '');
-      } else if (a.id === 'posto' && AB) {
-        st = 'ÚLTIMO ' + AB.d.slice(0, 5); tom = 'ok';
-        det = 'Último abastecimento ' + AB.d + ' · ' + AB.litros + ' L de ' + AB.combustivel + ' · ' + AB.st;
+        det = tarefas.length + (tarefas.length === 1 ? ' tarefa' : ' tarefas') + ' na agenda' + (atr.length ? ' · atrasada: ' + atr.map((t) => nm(t) + ' (' + (-t.dn) + ' d)').join('; ') : prox ? ' · próxima: ' + nm(prox) + ' (' + prox.rot + ')' : '');
+      } else if (a.id === 'posto' && d.ab) {
+        st = 'ÚLTIMO ' + String(d.ab.d).slice(0, 5); tom = 'ok';
+        det = 'Último abastecimento ' + d.ab.d + ' · ' + nbm(d.ab.litros) + ' L de ' + d.ab.combustivel + (d.ab.st ? ' · ' + d.ab.st : '');
       } else { st = 'SEM TAREFAS'; tom = 'ink'; det = 'Nenhuma tarefa na agenda'; }
-      const f = fones[a.id] || '', ed = s.fone === a.id, c = TOM[tom];
-      return {
-        papel: a.papel, onde: a.onde || 'SEM DADOS', detalhe: nq('Para: ' + (a.para || 'SEM DADOS') + ' · ' + det), st: st, tone: c[0], wash: c[1], ico: this.ico(ICON[a.id] || PESSOA, 19, 1.7, c[0] === TOM.ink[0] ? 'var(--cap-accent, #00a1fe)' : c[0]),
+      return { id: a.id, origem: 'fixo', n: ov.n || '', role: ov.role || '', s: '', titulo: (ov.n ? ov.n + ' · ' : '') + papel, onde: a.onde || '', icone: ICON[a.id] || PESSOA, st: st, tom: tom, detalhe: nq((ov.n ? '' : '') + 'Para: ' + (a.para || '—') + ' · ' + det), ariaNome: papel, sim: false };
+    };
+    const cardNovo = (r) => {
+      const tarefas = tarAb.filter((t) => norm(t.quem) === norm(r.n)), atr = tarefas.filter((t) => t.dn < 0);
+      return { id: r.id, origem: 'novo', n: r.n, role: r.role || '', s: r.s || '', titulo: r.n + (r.role ? ' · ' + r.role : ''), onde: 'cadastrado neste aparelho', icone: PESSOA, st: atr.length ? atr.length + (atr.length === 1 ? ' ATRASADA' : ' ATRASADAS') : tarefas.length ? 'EM DIA' : 'CADASTRADO', tom: atr.length ? 'crit' : tarefas.length ? 'ok' : 'accent',
+        detalhe: r.s ? r.s : 'Cadastrado por ' + (r.who || '—') + ' · fica só neste aparelho', ariaNome: r.n, sim: r.sim === true };
+    };
+    const todosCards = apoioTodos.map(cardApoio).concat(d.prest.novos.map(cardNovo)).filter((c) => !(fixos[c.id] && fixos[c.id].oculto));
+    const apoio = todosCards.map((c) => {
+      const f = fones[c.id] || '', ed = s.fone === c.id, k = TOM[c.tom];
+      return { id: c.id, origem: c.origem, titulo: c.titulo, tituloFull: c.titulo + ' · ' + c.onde, onde: c.onde, detalhe: c.detalhe, st: c.st, tone: k[0], wash: k[1], ico: this.ico(c.icone, 19, 1.7, c.tom === 'ink' ? 'var(--cap-accent, #00a1fe)' : k[0]), temSelo: c.sim === true && real,
         fone: f, hasFone: !!f && !ed, editing: ed, needsFone: !f && !ed, tel: f ? tel(f) : '#', ph: f ? 'vazio = remover' : 'celular ou fixo com DDD',
-        editar: () => this.abreFone(a.id), ariaLigar: 'Ligar para ' + a.papel + ' · ' + f, ariaEditar: 'Editar telefone de ' + a.papel, ariaCadastrar: 'Cadastrar telefone de ' + a.papel, ariaCampo: 'Telefone de ' + a.papel
-      };
+        editar: () => this.abreFone(c.id), ariaLigar: 'Ligar para ' + c.ariaNome + ' · ' + f, ariaEditar: 'Editar telefone de ' + c.ariaNome, ariaCadastrar: 'Cadastrar telefone de ' + c.ariaNome, ariaCampo: 'Telefone de ' + c.ariaNome,
+        editaPrest: () => this.editaPrest(c), ocultaPrest: () => this.ocultaPrest(c), ariaEditaPrest: 'Editar nome, serviço e observação de ' + c.ariaNome, ariaOculta: 'Ocultar ' + c.ariaNome + ' da lista' };
     });
-    // Perfis (capitao-dados) + usuário logado (capitao-auth)
+    const nFones = todosCards.filter((c) => fones[c.id]).length;
+    // ——— as tarefas da equipe: abertas primeiro (pelo prazo), as feitas no fim, riscadas ———
+    const tarSimMap = {}; d.tarSim.forEach((x) => { tarSimMap[x[0]] = x[1]; });
+    const tarOrd = d.tarefas.filter((t) => !t.feita).concat(d.tarefas.filter((t) => t.feita));
+    const ORI_T = { equipe: 'EQUIPE', tela: 'APP', chat: 'CHAT', diario: 'DIÁRIO' };
+    const tarefas = tarOrd.map((t) => {
+      const c = TOM[t.tom] || TOM.ink, fe = t.feita, exSim = fe && d.feitas[t.id] && d.feitas[t.id].sim === true;
+      return { id: t.id, n: t.n, origem: t.aparelho ? 'aparelho' : 'gerada', origemTxt: ORI_T[t.origem] || 'APP', feitaTxt: fe ? 'sim' : 'nao', risco: fe ? 'line-through' : 'none', ink: fe ? 'var(--cap-ink3, #97a3c0)' : 'var(--cap-ink, #eaf1ff)',
+        meta: 'Responsável: ' + (t.quem || '—') + ' · vence ' + brData(t.vence) + (fe ? ' · feita' + (d.feitas[t.id] && d.feitas[t.id].d ? ' em ' + d.feitas[t.id].d : '') : ''), prazo: fe ? 'FEITA' : t.rot, tone: fe ? TOM.ok[0] : c[0], wash: fe ? TOM.ok[1] : c[1],
+        temSelo: real && (tarSimMap[t.id] === true || exSim) };
+    });
+    const nTar = tarAb.length;
+    // ——— perfis (capitao-dados) + o usuário logado (capitao-auth) ———
     let u = null; try { u = window.CapitaoAuth ? window.CapitaoAuth.usuario() : null; } catch (e) { u = null; }
-    const perfisD = (EQ.perfis || []).slice();
-    // Login fora da lista da embarcação → A CONFIRMAR; o convidado da demonstração (capitao-auth.js) é fora da lista por definição.
-    if (u && !perfisD.some((p) => p.id === u.id)) perfisD.push({ id: u.id, nome: u.completo || u.nome, ini: u.ini, papel: (u.papel || 'função') + ' · fora da lista da embarcação' + (u.convidado ? '' : ' — A CONFIRMAR'), acesso: u.convidado ? 'convidado' : null });
+    const perfisD = d.perfis.slice();
+    // Login fora da lista da embarcação (o convidado, por definição): papel e chip dizem isso; só o que não é convidado pede conferência
+    if (u && !perfisD.some((p) => p.id === u.id)) perfisD.push({ id: u.id, nome: u.completo || u.nome, ini: u.ini, papel: (u.papel || 'função') + ' · fora da lista da embarcação' + (u.convidado ? '' : ' — a confirmar'), acesso: u.convidado ? 'convidado' : null });
     const perfis = perfisD.map((p) => {
       const eu = !!u && u.id === p.id, total = p.acesso === 'total', conv = p.acesso === 'convidado';
       const primeiro = norm(String(p.nome || '').split(' ')[0]);
-      const minhas = abertas(AG.filter((t) => norm(t.quem) === primeiro));
-      const s1 = minhas.length ? minhas.length + (minhas.length === 1 ? ' tarefa' : ' tarefas') + ' na agenda: ' + minhas.map((t) => t.t + ' · ' + t.rot).join('; ') : 'Nenhuma tarefa aberta na agenda em seu nome';
-      return { nome: p.nome, ini: p.ini || '—', papel: p.papel || 'SEM DADOS', eu: eu,
-        s: nq((eu ? 'Sessão ativa neste aparelho · ' : '') + s1 + (eu ? ' · ' + s.atalhos + ' atalhos na tela inicial' : '')),
-        chip: total ? 'ACESSO TOTAL' : p.acesso === 'leitura' ? 'SÓ LEITURA' : conv ? 'CONVIDADO' : 'ACESSO SEM DADOS', chipTone: total ? 'var(--cap-ok, #34c77a)' : conv ? 'var(--cap-violeta, #b45cff)' : 'var(--cap-warn, #f0a63a)', chipLine: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', chipWash: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.10)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)',
+      const minhas = abertas(d.agenda.filter((t) => norm(t.quem) === primeiro)).concat(tarAb.filter((t) => norm(t.quem) === primeiro));
+      const s1 = minhas.length ? minhas.length + (minhas.length === 1 ? ' tarefa' : ' tarefas') + ' na agenda: ' + minhas.map((t) => (t.t || t.n) + ' · ' + t.rot).join('; ') : 'Nenhuma tarefa aberta na agenda em seu nome';
+      return { nome: p.nome, ini: p.ini || '—', papel: p.papel || 'função a confirmar', eu: eu,
+        s: nq((eu ? 'Sessão ativa neste aparelho · ' : '') + s1 + (eu ? ' · ' + d.atalhos + ' atalhos na tela inicial' : '')),
+        chip: total ? 'ACESSO TOTAL' : p.acesso === 'leitura' ? 'SÓ LEITURA' : conv ? 'CONVIDADO' : 'FORA DA LISTA', chipTone: total ? 'var(--cap-ok, #34c77a)' : conv ? 'var(--cap-violeta, #b45cff)' : 'var(--cap-warn, #f0a63a)', chipLine: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.45)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', chipWash: total ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)' : conv ? 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.10)' : 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)',
         tone: eu ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-tele, #00f4fd)', line: eu ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line, #1a2240)' };
     });
     const totais = perfisD.filter((p) => p.acesso === 'total').map((p) => p.nome), leitura = perfisD.filter((p) => p.acesso === 'leitura').map((p) => p.nome);
     const pendT = convites.filter((c) => c.acesso === 'total').length, pendL = convites.filter((c) => c.acesso === 'leitura').length;
     // Regras do app: total vê e registra; leitura vê e pergunta (combinado — o site ainda não trava por perfil)
-    const PERMS = [['Ver painéis, agenda, documentos e diário', 1, 1], ['Perguntar ao assistente (texto e voz)', 1, 1], ['SOS e emergência (abre sem login)', 1, 1], ['Registrar no diário e marcar Executado', 1, 0], ['Enviar documentos, notas e abastecimentos', 1, 0], ['Cadastrar telefones e convidar', 1, 0]];
+    const PERMS = [['Ver painéis, agenda, documentos e diário', 1, 1], ['Perguntar ao assistente (texto e voz)', 1, 1], ['SOS e emergência (abre sem login)', 1, 1], ['Registrar no diário e marcar Executado', 1, 0], ['Enviar documentos, notas e abastecimentos', 1, 0], ['Cadastrar telefones, prestadores, tarefas e convidar', 1, 0]];
     const icoOk = (ok) => this.ico(ok ? 'M5 12.5l4.5 4.5L19 7.5' : 'M7 7l10 10 M17 7L7 17', 15, 2.2, ok ? 'var(--cap-ok, #34c77a)' : 'var(--cap-ink4, #7985a6)');
     const washOk = (ok) => (ok ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)' : 'var(--cap-row, #10162e)');
     const quemTxt = (nomes, pend) => (nomes.length ? nomes.join(', ') : 'ninguém') + (pend ? ' · ' + pend + (pend === 1 ? ' convite pendente' : ' convites pendentes') : '');
-    const nFones = (EQ.apoio || []).filter((a) => fones[a.id]).length;
     const q = 'Equipe, oficina, marina e prestadores — quem chamar.';
+    const f = s.prest;
+    const abas = [['apoio', 'Apoio e prestadores'], ['tarefas', 'Tarefas da equipe · ' + nTar]].map((a) => { const on = s.aba === a[0]; return { k: a[0], l: a[1], on: on, bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tone: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)', onClick: () => this.setState({ aba: a[0] }) }; });
     return {
       note: s.note, noteTone: s.noteTone,
-      resumo: perfisD.length + (perfisD.length === 1 ? ' perfil' : ' perfis') + ' com acesso · ' + apoio.length + ' contatos de apoio (' + nFones + ' com telefone neste aparelho) · ' + convites.length + (convites.length === 1 ? ' convite pendente' : ' convites pendentes') + (D.demo ? ' · DEMO' : ''),
+      resumo: perfisD.length + (perfisD.length === 1 ? ' perfil' : ' perfis') + ' com acesso · ' + todosCards.length + ' contatos de apoio (' + nFones + ' com telefone neste aparelho) · ' + convites.length + (convites.length === 1 ? ' convite pendente' : ' convites pendentes') + ' · ' + nTar + (nTar === 1 ? ' tarefa da equipe aberta' : ' tarefas da equipe abertas'),
       perguntar: 'Main.dc.html#q=' + encodeURIComponent(q),
+      abas: abas, abaApoio: s.aba === 'apoio', abaTarefas: s.aba === 'tarefas',
       perfisTitulo: 'Perfis com acesso · ' + perfisD.length, perfis: perfis,
-      fontePerfis: 'Fonte: ' + String(((D.embarcacao || {}).fonte) || 'SEM DADOS').split(' · ')[0] + ' · login deste aparelho',
+      fontePerfis: 'Fonte: ' + String(d.embFonte).split(' · ')[0] + (d.embFonte ? ' · ' : '') + 'login deste aparelho',
       apoio: apoio, foneRef: this.foneRef,
       salvarFone: () => this.salvarFone(), cancelaFone: () => this.setState({ fone: null }),
       onFoneKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.salvarFone(); } if (e.key === 'Escape') this.setState({ fone: null }); },
-      notaApoio: EQ.nota || 'Telefones: A CADASTRAR',
-      fonteApoio: 'Fonte: ' + String(D.agendaFonte || 'SEM DADOS').split(' · ')[0] + ' (responsáveis) · ' + String(D.abastFonte || 'SEM DADOS').split(' · ')[0] + ' · telefones: este aparelho',
+      notaApoio: d.nota || 'Telefones: ficam só no aparelho (Equipe).',
+      fonteApoio: 'Fonte: ' + String(d.agendaFonte).split(' · ')[0] + ' (responsáveis) · ' + String(d.abastFonte).split(' · ')[0] + ' · nomes e telefones: este aparelho',
+      prestAberto: !!f, prestNovo: !!f && (f.modo === 'novo'), prestLabel: f ? 'FECHAR' : '+ PRESTADOR', novoPrest: () => this.novoPrest(), temOcultos: nOcultos > 0, nOcultos: nOcultos, restauraPrest: () => this.restauraPrest(),
+      prestTitulo: f ? (f.modo === 'novo' ? 'NOVO PRESTADOR' : 'EDITAR PRESTADOR') : '', prestDica: f && f.modo === 'novo' ? 'Nome, serviço e telefone ficam só neste aparelho.' : f && !f.novo ? 'Um prestador de apoio aceita um nome e um serviço seus; vazio = o texto original.' : 'Nome, serviço e observação ficam só neste aparelho.', prestErro: s.prestErro,
+      fN: s.fN, fRole: s.fRole, fS: s.fS, fFone: s.fFone, onFN: (e) => this.setState({ fN: e.target.value }), onFRole: (e) => this.setState({ fRole: e.target.value }), onFS: (e) => this.setState({ fS: e.target.value }), onFFone: (e) => this.setState({ fFone: e.target.value }),
+      salvaPrest: () => this.salvaPrest(), cancelaPrest: () => this.setState({ prest: null, prestErro: '' }),
+      tarefas: tarefas, semTarefas: tarefas.length === 0, tarefasSub: 'As geradas da equipe e as agendadas neste aparelho · prazo contado de hoje (' + d.hoje + ')',
+      tarAberto: s.tarAberto, tarLabel: s.tarAberto ? 'FECHAR' : '+ TAREFA', novaTarefa: () => this.novaTarefa(), tN: s.tN, tVence: s.tVence, tQuem: s.tQuem, tMin: d.hojeIso, quemOpts: this.opcoesQuem(), tarErro: s.tarErro,
+      onTN: (e) => this.setState({ tN: e.target.value }), onTVence: (e) => this.setState({ tVence: e.target.value }), onTQuem: (e) => this.setState({ tQuem: e.target.value }), salvaTarefa: () => this.salvaTarefa(), cancelaTarefa: () => this.setState({ tarAberto: false, tarErro: '' }),
+      fonteTarefas: 'Fonte: ' + String(d.agendaFonte).split(' · ')[0] + ' (tarefas da equipe) · tarefas agendadas: este aparelho',
       perms: PERMS.map((x) => ({ l: x[0], icoT: icoOk(x[1]), txtT: x[1] ? 'sim' : 'não', washT: washOk(x[1]), icoL: icoOk(x[2]), txtL: x[2] ? 'sim' : 'não', washL: washOk(x[2]) })),
       quemTotal: quemTxt(totais, pendT), quemLeitura: quemTxt(leitura, pendL),
       nomeRef: this.nomeRef, funcRef: this.funcRef, contatoRef: this.contatoRef,
@@ -340,7 +574,7 @@ class Component extends DCLogic {
       convTitulo: 'CONVITES PENDENTES · ' + convites.length,
       convites: convites.map((c) => {
         const lk = c.contato && B ? B.linkConvite(c.nome, c.contato, c.acesso) : null;
-        return { nome: c.nome, meta: (c.func || 'função a confirmar') + ' · acesso ' + (c.acesso || 'SEM DADOS') + ' · convidado ' + (c.d || '—') + ' · ' + (c.canal || '') + (c.contato ? ' · ' + c.contato : ''),
+        return { nome: c.nome, meta: (c.func || 'função a confirmar') + ' · acesso ' + (c.acesso || '—') + ' · convidado ' + (c.d || '—') + ' · ' + (c.canal || '') + (c.contato ? ' · ' + c.contato : ''),
           temReenvio: !!lk, reenvio: lk ? lk.href : '#', alvo: lk && lk.canal === 'WhatsApp' ? '_blank' : '_self', ariaReenviar: 'Reenviar convite para ' + c.nome, ariaCancelar: 'Cancelar convite de ' + c.nome, cancelar: () => this.cancelarConvite(c) };
       }),
       semConvites: convites.length === 0

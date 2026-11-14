@@ -1,0 +1,10 @@
+Dia de bordo (0 = hoje; o dia de bordo começa às 07:00),Hora,Sistema,Registro,Quem,Pendência
+0,07:00,Navegação,Saída da Barra Sul às 07:00 com 4 pessoas a bordo: passeio Barra Sul ⇄ Estaleirinho pela Interpraias. Checklist de saída feito; o teste das bombas de porão continua pendente.,Lucas,
+0,07:00,Combustível,"Abastecimento de 1.086 L de diesel no posto da marina da base para a saída das 07:00, com água completada e servidas esvaziadas; tanques de diesel em 97,5 %.",Lucas,
+2,17:10,Manutenção,Inspeção do rotor do gerador não feita no prazo — reagendar; rotor de reserva em falta no estoque.,técnico,ABERTA
+3,19:30,Motores,"Motor BE 1 a 2 °C acima do BB em cruzeiro nos últimos dias, com picos acima de 88 °C — acompanhar; rotor da bomba de água salgada dos motores na agenda.",Lucas,
+6,11:05,Equipamentos,Climatização da cabine de proa com fluxo fraco. Suspeita: filtro de água salgada sujo (limpeza atrasada).,Lucas,ABERTA
+18,08:30,Segurança,Autoteste do EPIRB feito: luz de teste conforme a etiqueta.,Lucas,
+21,10:00,Segurança,Teste das bombas de porão adiado por chuva.,técnico,ABERTA
+29,16:25,Eletrônicos,Cartas do plotter desatualizadas; a atualização está na agenda.,Lucas,
+39,09:00,Documentos,Vistoria anual feita; laudo arquivado no Drive.,Lucas,

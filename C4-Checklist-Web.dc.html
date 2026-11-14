@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Capitão IA — Checklists (web)</title>
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-theme.js"></script>
+<style>
+body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+button { font: inherit; }
+</style>
+<script src="./capitao-telemetria.js"></script>
+<script src="./capitao-brain.js"></script>
+</helmet>
+
+<div style="width: 1440px; height: 900px; box-sizing: border-box; display: flex; flex-direction: column; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); overflow: hidden; position: relative;">
+  <x-import component-from-global-scope="capitao-cabecalho" from="./capitao-moldura.js" hint-size="1440px,68px"></x-import>
+  <div style="flex-grow: 1; display: flex; min-height: 0;">
+    <x-import component-from-global-scope="capitao-trilho" from="./capitao-moldura.js" ativo="manut" hint-size="96px,788px"></x-import>
+
+    <main style="flex-grow: 1; box-sizing: border-box; padding: 20px 26px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0;">
+      <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
+        <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Checklists</h1>
+          <span data-c4="resumo" title="{{resumo}}" style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
+        </div>
+        <a href="C1-Leme-Web.dc.html" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--cap-line2, #27315a); color: var(--cap-ink2, #b1bdd6); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>Manutenção</a>
+      </div>
+
+      <section role="tablist" aria-label="Checklists" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; flex-shrink: 0;">
+        <sc-for list="{{abas}}" as="a" hint-placeholder-count="4">
+          <button type="button" role="tab" data-c4="aba" data-tipo="{{a.id}}" onClick="{{a.on}}" aria-selected="{{a.ativa}}" style="box-sizing: border-box; padding: 12px 16px; background: var(--cap-card, #0d1329); border: 1px solid {{a.line}}; border-radius: 16px; color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; gap: 12px; cursor: pointer; text-align: left; font-family: inherit;">
+            <span style="width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; background: {{a.wash}}; display: flex; align-items: center; justify-content: center;">{{a.ico}}</span>
+            <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+              <span style="display: flex; align-items: baseline; gap: 8px;"><span style="font-size: 15.5px; font-weight: 800;">{{a.l}}</span><span data-c4="aba-conta" style="margin-left: auto; font-size: 13px; font-weight: 800; color: {{a.tone}}; font-variant-numeric: tabular-nums;">{{a.n}}</span></span>
+              <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{a.sub}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </section>
+
+      <div style="flex-grow: 1; min-height: 0; display: flex; gap: 16px;">
+        <section aria-label="Itens" style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0;">
+          <span style="display: flex; align-items: baseline; gap: 12px; flex-shrink: 0;">
+            <span data-c4="titulo" style="font-size: 16px; font-weight: 800;">{{titulo}}</span>
+            <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{andamento}}</span>
+          </span>
+          <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            <sc-for list="{{itens}}" as="i" hint-placeholder-count="8">
+              <div data-c4="item" data-item="{{i.id}}" data-feito="{{i.feitoTxt}}" style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px; padding: 8px 12px 8px 8px; border-radius: 13px; background: var(--cap-row, #10162e); border: 1px solid {{i.line}}; flex-shrink: 0;">
+                <button type="button" data-c4="marca" onClick="{{i.on}}" aria-pressed="{{i.feito}}" aria-label="{{i.aria}}" style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; border: 1.5px solid {{i.boxLine}}; background: {{i.boxBg}}; color: {{i.boxTone}}; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">{{i.check}}</button>
+                <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-top: 2px;">
+                  <span style="font-size: 14px; font-weight: 700; line-height: 1.3; color: {{i.tTone}};">{{i.t}}</span>
+                  <sc-if value="{{i.temAuto}}" hint-placeholder-val="{{false}}">
+                    <span style="display: flex; align-items: flex-start; gap: 8px;">
+                      <span data-c4="auto-rotulo" style="flex-shrink: 0; padding: 2px 8px; border-radius: 999px; background: {{i.aWash}}; color: {{i.aTone}}; font-size: 10px; font-weight: 800; letter-spacing: 0.06em; white-space: nowrap;">{{i.aRot}}</span>
+                      <span data-c4="auto-valor" style="min-width: 0; font-size: 12.5px; line-height: 1.35; color: var(--cap-ink2, #b1bdd6); overflow-wrap: anywhere;">{{i.aValor}}</span>
+                    </span>
+                  </sc-if>
+                  <span style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+                    <span data-c4="fonte" style="font-size: 11px; line-height: 1.35; color: var(--cap-ink4, #7985a6);">Fonte: {{i.fonte}}</span>
+                    <sc-if value="{{i.temLink}}" hint-placeholder-val="{{false}}">
+                      <a href="{{i.href}}" data-c4="link" style="display: flex; align-items: center; min-height: 32px; font-size: 11.5px; font-weight: 700; text-decoration: none; white-space: nowrap;">{{i.linkL}}</a>
+                    </sc-if>
+                  </span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+
+        <aside style="width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; padding-bottom: 92px; box-sizing: border-box;">
+          <section aria-label="Concluir" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 9px;">
+            <span style="display: flex; align-items: baseline; gap: 8px;">
+              <span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">ANDAMENTO</span>
+              <span data-c4="conta" style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: {{tomCor}}; font-variant-numeric: tabular-nums;">{{conta}}</span>
+            </span>
+            <span style="display: block; height: 8px; border-radius: 4px; background: var(--cap-track, #1f2740); overflow: hidden;"><span style="display: block; height: 8px; border-radius: 4px; width: {{barW}}; background: {{tomCor}};"></span></span>
+            <span data-c4="pend" style="font-size: 12.5px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6);">{{pendTxt}}</span>
+            <span style="display: flex; gap: 8px;">
+              <button type="button" data-c4="concluir" onClick="{{conclui}}" style="flex-grow: 1; height: 44px; border-radius: 12px; border: none; background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-size: 13px; font-weight: 800; letter-spacing: 0.04em; cursor: pointer;">CONCLUIR NO DIÁRIO</button>
+              <button type="button" data-c4="zera" onClick="{{zera}}" style="height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--cap-line2, #27315a); background: transparent; color: var(--cap-ink2, #b1bdd6); font-size: 12.5px; font-weight: 700; cursor: pointer; flex-shrink: 0;">Recomeçar</button>
+            </span>
+            <sc-if value="{{temAviso}}" hint-placeholder-val="{{false}}">
+              <div data-c4="aviso" role="status" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 12px; background: {{avisoBg}}; border: 1px solid {{avisoLine}};">
+                <span style="font-size: 12px; font-weight: 600; line-height: 1.35; color: var(--cap-ink, #eaf1ff);">{{note}}</span>
+                <sc-if value="{{temDiario}}" hint-placeholder-val="{{false}}">
+                  <a href="G3-Diario-Web.dc.html" style="align-self: flex-start; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); color: var(--cap-accent, #00a1fe); font-size: 11.5px; font-weight: 800; display: flex; align-items: center; text-decoration: none;">VER NO DIÁRIO ›</a>
+                </sc-if>
+              </div>
+            </sc-if>
+            <span style="font-size: 11px; line-height: 1.4; color: var(--cap-ink4, #7985a6);">{{nota}}</span>
+          </section>
+          <section aria-label="Agora a bordo" style="flex-shrink: 0; box-sizing: border-box; padding: 14px 16px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 18px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="flex-grow: 1; font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">AGORA A BORDO</span><a href="A1-Ponte-Web.dc.html" style="display: flex; align-items: center; min-height: 32px; font-size: 12px; font-weight: 700; text-decoration: none;">Telemetria ›</a></span>
+            <sc-for list="{{agora}}" as="g" hint-placeholder-count="5">
+              <span data-c4="agora" style="display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; line-height: 1.35;"><span style="width: 78px; flex-shrink: 0; color: var(--cap-ink3, #97a3c0);">{{g.k}}</span><span style="min-width: 0; font-weight: 500; color: {{g.tone}}; overflow-wrap: anywhere;">{{g.v}}</span></span>
+            </sc-for>
+            <span data-c4="agora-hora" style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{agoraFonte}}</span>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <x-import component-from-global-scope="capitao-faixa" from="./capitao-moldura.js" hint-size="1440px,44px"></x-import>
+  <x-import component-from-global-scope="capitao-sos-web" from="./capitao-moldura.js" hint-size="78px,78px"></x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  // tipo pelo #tipo=saida|chegada|abastecimento|fundeio (a C1, a E1 e o chat chegam já na aba certa); `vivo` guarda o texto do último tique (só redesenha se ele mudou)
+  state = { tipo: 'saida', vivo: '', note: '', noteTone: 'ok', diario: false };
+  tipoDoHash() { const m = /tipo=([a-z]+)/.exec(location.hash || ''); return m ? m[1] : null; }
+  componentDidMount() {
+    const t = this.tipoDoHash(); if (t) this.setState({ tipo: t });
+    this._hash = () => { const x = this.tipoDoHash(); if (x && x !== this.state.tipo) this.setState({ tipo: x }); };
+    window.addEventListener('hashchange', this._hash);
+    // marcações, diário, Executado e tarefas feitos em outra aba (e o tique da telemetria, os alertas e a virada do dia, que mudam os itens conferidos pelo quadro): relê; só chama setState se o texto mudou
+    this._st = (e) => { if (!e || e.key === null || /^capitao\.(checklist|diario|executado|tarefas|docs)\.v1$/.test(e.key)) this.atualiza(); };
+    window.addEventListener('storage', this._st);
+    this._onTele = () => { if (!document.hidden) this.atualiza(); };
+    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));
+    this.whenBrain((B) => { try { if (B.carregaFaq) B.carregaFaq().then(() => { if (!this._dead) this.atualiza(); }); } catch (e) {} this.atualiza(); });
+    this.atualiza();
+  }
+  componentWillUnmount() {
+    this._dead = true;
+    window.removeEventListener('hashchange', this._hash); window.removeEventListener('storage', this._st);
+    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));
+    clearTimeout(this._n); clearInterval(this._b);
+  }
+  whenBrain(cb) {
+    if (window.CapitaoBrain) return cb(window.CapitaoBrain);
+    let n = 0;
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(window.CapitaoBrain); return; }
+      if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
+    }, 50);
+  }
+  atualiza() {
+    const d = this.dinamico(), k = JSON.stringify(d);
+    if (k === this._k) return;
+    this._k = k; this._din = d; this._fresco = true;
+    this.setState({ vivo: k });
+  }
+  ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  aviso(msg, tone, diario, ms) {
+    this.setState({ note: msg, noteTone: tone || 'ok', diario: !!diario });
+    clearTimeout(this._n); this._n = setTimeout(() => this.setState({ note: '', diario: false }), ms || 4000);
+  }
+  aba(t) {
+    this.setState({ tipo: t });
+    try { history.replaceState(null, '', '#tipo=' + t); } catch (e) {}
+  }
+  // ✓ do quadro pode ser desmarcado: fica «não conferido» até a pessoa tocar de novo (volta ao automático)
+  alterna(i) {
+    const B = window.CapitaoBrain; if (!B) return;
+    const tipo = this._tipo;
+    if (i.porQuadro) { B.checklistMarca(tipo, i.id, 'n'); this.atualiza(); return this.aviso('Marcado como NÃO conferido (o app dizia: ' + i.aValor + ') — toque de novo para voltar', 'warn'); }
+    if (i.anulado) B.checklistMarca(tipo, i.id, false); else B.checklistMarca(tipo, i.id, !i.manual);
+    this.atualiza();
+  }
+  // CONCLUIR: UMA linha nova no diário (só com o toque; o registro só cresce, nada se apaga) com o placar e os pendentes; as marcações em andamento saem do aparelho
+  conclui() {
+    const B = window.CapitaoBrain; if (!B || Date.now() - (this._tq || 0) < 1500) return; this._tq = Date.now();
+    let r = null; try { r = B.checklistConcluir(this._tipo); } catch (e) { r = null; }
+    this.atualiza();
+    if (!r || !r.entrada) return this.aviso('Não gravado — anote o checklist no diário de bordo.', 'warn');
+    this.aviso('No diário: ' + r.t, 'ok', true, 10000);
+  }
+  zera() { const B = window.CapitaoBrain; if (!B) return; B.checklistZera(this._tipo); this.atualiza(); this.aviso('Marcações apagadas neste aparelho'); }
+  // Tudo o que a tela mostra, em texto puro: os itens, a fonte e a verificação pelo quadro vêm do cérebro (B.checklist*, do D.checklists gerado e do instante do CapitaoAgora); nada fixo na tela.
+  dinamico() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, B = window.CapitaoBrain, s = this.state, sim = D.simulacao === true;
+    const num = (x) => typeof x === 'number' && isFinite(x), cap1 = (t) => { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+    let tipos = []; try { tipos = B && typeof B.checklistTipos === 'function' ? B.checklistTipos() : []; } catch (e) { tipos = []; }
+    if (!tipos.length) return { pronto: false, tipo: s.tipo, resumo: 'Carregando os checklists…', abas: [], itens: [], agora: [], titulo: '', andamento: '', conta: '', barW: '0%', feitos: 0, total: 0, pendTxt: '', nota: '' };
+    const tipo = tipos.filter((t) => t.id === s.tipo)[0] || tipos[0];
+    this._tipo = tipo.id;
+    const L = {}; tipos.forEach((t) => { try { L[t.id] = B.checklistItens(t.id); } catch (e) { L[t.id] = []; } });
+    const lista = L[tipo.id], feitos = lista.filter((i) => i.feito).length, total = lista.length, pq = lista.filter((i) => i.porQuadro).length;
+    let I = null; try { I = typeof B.instante === 'function' ? B.instante() : (typeof A.instante === 'function' ? A.instante() : null); } catch (e) { I = null; }
+    const fonteTxt = I ? (I.fonte === 'snapshot' ? 'Última leitura · ' + String(I.fonteTxt || '').replace(/^.*leitura de /, '') : cap1(I.fonteTxt)) : (sim ? '—' : 'Leitura SEM LEITURA');
+    const faq = (id) => { try { return id && B.faqItem ? B.faqItem(id) : null; } catch (e) { return null; } };
+    const itens = lista.map((i) => {
+      const f = i.faq ? faq(i.faq) : null;
+      return { id: i.id, c: i.c, t: i.t, fonte: i.fonte, feito: !!i.feito, manual: !!i.manual, anulado: !!i.anulado, porQuadro: !!i.porQuadro, parcial: !!i.parcial,
+        aEstado: i.auto ? i.auto.estado : '', aValor: i.auto ? String(i.auto.valor) : '',
+        link: i.link ? i.link : f ? 'faq' : '', faq: i.faq || '', faqPergunta: f ? f.pergunta : '' };
+    });
+    const pend = lista.filter((i) => !i.feito).map((i) => i.c);
+    const aB = I && I.txt ? I.txt : {};
+    // os alarmes primeiro: é a linha que muda e a que a pessoa precisa ver antes de largar (o painel nunca corta: se a altura não bastar, a coluna rola e os alarmes continuam no alto)
+    const agora = [['Alarmes', aB.alarmes ? aB.alarmes : (I && I.q && Array.isArray(I.q.alarmes) ? 'nenhum alarme ativo' : '')], ['Diesel', aB.dieselLados && aB.diesel ? aB.dieselLados + ' — ' + aB.diesel : ''], ['Tanques', aB.tanques || ''], ['Baterias', aB.b24 && aB.b12 ? aB.b24 + ' · 12 V ' + aB.b12 : ''], ['Porão', aB.porao || ''], ['Gerador', aB.gerador || '']]
+      .filter((x) => x[1]).map((x) => ({ k: x[0], v: x[1], tomK: x[0] === 'Alarmes' ? (/^(AVISO|CRÍTICO)/.test(x[1]) ? 'warn' : 'ok') : '' }));
+    return {
+      pronto: true, tipo: tipo.id, nome: tipo.nome, sys: tipo.sys,
+      resumo: 'Itens dos guias de bordo (fonte em cada linha) · o que o quadro confirma já vem marcado · ' + fonteTxt,
+      abas: tipos.map((x) => { const l = L[x.id], n = l.filter((i) => i.feito).length; return { id: x.id, l: x.l, aba: x.aba, n: n + '/' + l.length, tudo: n === l.length && l.length > 0, ativa: x.id === tipo.id }; }),
+      titulo: tipo.nome, andamento: (pq ? pq + (pq === 1 ? ' item conferido' : ' itens conferidos') + ' pelo quadro · ' : '') + 'toque no quadrado ao conferir; «boa prática» é procedimento comum de marinharia.',
+      itens: itens, conta: feitos + '/' + total, barW: total ? Math.round(feitos / total * 100) + '%' : '0%', feitos: feitos, total: total,
+      pendTxt: pend.length ? 'Pendentes: ' + pend.join(', ') + '. Pode concluir assim mesmo — os pendentes vão para a linha do diário.' : 'Tudo conferido. Conclua para registrar no diário.',
+      nota: 'Concluir grava uma linha nova no diário (categoria ' + tipo.sys + ') com o placar e os pendentes. As marcações em andamento ficam só neste aparelho.',
+      agora: agora, agoraFonte: fonteTxt
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (aba, aviso) refaz o texto agora
+    let d = this._din;
+    if (!this._fresco || !d) { d = this._din = this.dinamico(); this._k = JSON.stringify(d); }
+    this._fresco = false;
+    const EST = { ok: ['TELEMETRIA ✓', 'var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], falta: ['ATENÇÃO', 'var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'],
+      ler: ['CONFIRA', 'var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], sem: ['SEM LEITURA', 'var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-ink2-rgb, 177,189,214), 0.12)'] };
+    const CHECK = 'M5 12.5l4.5 4.5L19 7.5';
+    const ABA = { saida: 'M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z M9 12l2 2 4-4', chegada: 'M12 3v10 M7 9l5 5 5-5 M5 20h14', abastecimento: 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4', fundeio: 'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5' };
+    const LINK = { 'G3-Diario': ['G3-Diario-Web.dc.html', 'Abrir o Diário ›'], 'G2-Abastecimento': ['G2-Abastecimento-Web.dc.html', 'Abrir Abastecimento ›'] };
+    const abas = (d.abas || []).map((x) => ({ id: x.id, l: x.l, sub: x.aba, n: x.n, ativa: x.ativa, ico: this.ico(ABA[x.id] || ABA.saida, 22, 1.7, x.ativa ? 'var(--cap-accent, #00a1fe)' : x.tudo ? 'var(--cap-ok, #34c77a)' : 'var(--cap-ink2, #b1bdd6)'),
+      tone: x.tudo ? 'var(--cap-ok, #34c77a)' : x.ativa ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)', wash: x.ativa ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'rgba(var(--cap-ink2-rgb, 177,189,214), 0.10)',
+      line: x.ativa ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.55)' : 'var(--cap-line, #1a2240)', on: () => this.aba(x.id) }));
+    const itens = (d.itens || []).map((i) => {
+      const e = i.aEstado ? EST[i.aEstado] || EST.sem : null, falta = i.aEstado === 'falta' && !i.feito;
+      const link = i.link && LINK[i.link] ? LINK[i.link] : i.link === 'faq' && i.faqPergunta ? ['F6-FAQ-Equipamentos-Web.dc.html#id=' + encodeURIComponent(i.faq), 'FAQ ' + i.faq + ' — passo a passo ›'] : null;
+      return { id: i.id, t: i.t, fonte: i.fonte, feito: i.feito, feitoTxt: i.feito ? (i.porQuadro ? 'quadro' : 'pessoa') : i.anulado ? 'anulado' : 'aberto', temAuto: !!e, aRot: e ? e[0] : '', aTone: e ? e[1] : '', aWash: e ? e[2] : '', aValor: i.aValor,
+        tTone: i.feito ? 'var(--cap-ink2, #b1bdd6)' : 'var(--cap-ink, #eaf1ff)',
+        line: falta ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.45)' : i.feito ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.30)' : 'var(--cap-line, #1a2240)',
+        boxLine: i.feito ? (i.porQuadro ? 'var(--cap-tele, #00f4fd)' : 'var(--cap-ok, #34c77a)') : 'var(--cap-line2, #27315a)',
+        boxBg: i.feito ? (i.porQuadro ? 'rgba(var(--cap-tele-rgb, 0,244,253), 0.14)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)') : 'transparent',
+        boxTone: i.porQuadro ? 'var(--cap-tele, #00f4fd)' : 'var(--cap-ok, #34c77a)', check: i.feito ? this.ico(CHECK, 20, 2.4, 'currentColor') : null,
+        aria: (i.feito ? 'Conferido' : i.anulado ? 'Não conferido (você desmarcou o ✓ do app)' : 'Marcar como conferido') + (i.porQuadro ? ' (pelo quadro de bordo; toque para desmarcar)' : '') + ': ' + i.t,
+        temLink: !!link, href: link ? link[0] : '', linkL: link ? link[1] : '', on: () => this.alterna(i) };
+    });
+    const tudo = d.pronto && d.feitos === d.total && d.total > 0, tom = tudo ? 'var(--cap-ok, #34c77a)' : 'var(--cap-accent, #00a1fe)', ruim = s.noteTone === 'warn';
+    const agora = (d.agora || []).map((g) => ({ k: g.k, v: g.v, tone: g.tomK === 'warn' ? 'var(--cap-warn, #f0a63a)' : g.tomK === 'ok' ? 'var(--cap-ok, #34c77a)' : 'var(--cap-ink, #eaf1ff)' }));
+    return {
+      resumo: d.resumo, abas: abas, titulo: d.titulo, andamento: d.andamento, itens: itens,
+      conta: d.conta, barW: d.barW, tomCor: tom, pendTxt: d.pendTxt, nota: d.nota,
+      conclui: () => this.conclui(), zera: () => this.zera(),
+      temAviso: !!s.note, note: s.note, temDiario: !!(s.diario && s.note), avisoBg: ruim ? 'rgba(var(--cap-warn-rgb, 240,166,58), 0.10)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.10)', avisoLine: ruim ? 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)',
+      agora: agora, agoraFonte: d.agoraFonte || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

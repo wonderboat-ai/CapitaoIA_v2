@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Relatório do barco · Capitão IA</title>
+<meta name="theme-color" content="#050816">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./assets/wonderhub-favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="./assets/wonderhub-apple-touch-icon.png">
+<!-- Relatório para imprimir ou salvar em PDF (F24, paridade Avanti 1.24.0): agenda, histórico de manutenção, documentos, abastecimentos e peças, A4.
+     Tudo sai do que o app já tem (capitao-dados.js: agenda, documentos, abastecimentos e peças geradas; capitao-brain.js: Executado, diário, documentos e abastecimentos
+     enviados, tarefas e peças deste aparelho), com os prazos do CapitaoAgora (hoje, no fuso do barco; nunca um prazo fixo). Sem telefones, sem valores em dinheiro e sem a
+     posição do barco: o texto livre do aparelho passa pelo DINHEIRO e pelo PESSOAIS do §3 (B.TERMOS_FONTES, a fonte única) e pelo semCoord do cérebro. Não lê a leitura ao vivo
+     (nada de replay, telemetria nem faixa de alerta aqui: é um documento do registro) e não tem timer: redesenha ao voltar para a aba, quando o registro muda em outra aba e
+     antes de imprimir. Atrás do login como as telas (capitao-auth.js) e abre offline (CORE do sw.js). IMPRIMIR / SALVAR PDF → window.print() (no celular: Compartilhar › Imprimir). -->
+<script src="./capitao-dados.js"></script>
+<script src="./capitao-auth.js"></script>
+<script src="./capitao-theme.js"></script>
+<script src="./capitao-app.js"></script>
+<script src="./capitao-brain.js"></script>
+<style>
+:root { --tinta: #10151c; --tinta2: #3d4652; --tinta3: #566170; --linha: #d6dbe2; --faixa: #f3f5f8; --ok: #1d7a46; --aviso: #9a5b00; --crit: #b3261e; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body { margin: 0; background: var(--cap-bg, #050816); color: var(--cap-ink, #eaf1ff); font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+a { color: var(--cap-accent, #00a1fe); } a:hover { color: var(--cap-link-hover, #5cc2ff); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--cap-accent, #00a1fe); outline-offset: 2px; }
+/* Topo fixo na rolagem: o SOS fica sempre à vista (SOS em todas as telas). */
+.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px; width: 100%; padding: max(10px, env(safe-area-inset-top, 0px)) 16px 10px; background: rgba(var(--cap-bg-rgb, 5,8,22), 0.94); border-bottom: 1px solid var(--cap-line, #1a2240); }
+.top .marca { display: flex; align-items: center; flex-shrink: 0; min-height: 44px; text-decoration: none; }
+.top .marca img { display: block; width: 47px; height: 20px; object-fit: contain; }
+.top .t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 800; line-height: 1.25; letter-spacing: 0.16em; color: var(--cap-ink2, #b1bdd6); }
+.top .sos { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 64px; min-height: 44px; padding: 0 14px; border-radius: 14px; background: var(--cap-crit-fill, #d32f27); color: #fff; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.10em; box-shadow: 0 0 0 3px rgba(var(--cap-crit-rgb, 255,59,48), 0.28); }
+.top .sos:hover { color: #fff; filter: brightness(1.08); }
+.barra { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; width: 100%; max-width: 186mm; margin: 0 auto; padding: 14px 16px 0; }
+.barra .dica { flex: 1 1 260px; min-width: 0; margin: 0; font-size: 13px; line-height: 1.5; color: var(--cap-ink3, #97a3c0); }
+.barra button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px; border-radius: 14px; border: 1px solid var(--cap-accent, #00a1fe); background: var(--cap-accent, #00a1fe); color: var(--cap-on-accent, #050816); font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.2; text-align: center; cursor: pointer; }
+/* A folha: papel branco nos dois temas (é o que sai na impressão), centrada na tela escura ou clara. */
+.folha { flex-grow: 1; width: 100%; max-width: 186mm; margin: 14px auto 28px; padding: 6mm 8mm 8mm; background: #fff; color: var(--tinta); border-radius: 12px; font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.folha a { color: #1f6fd1; }
+.capa { padding: 0 0 4mm; border-bottom: 2px solid var(--tinta); margin-bottom: 4mm; }
+.capa .marca { font-size: 11px; letter-spacing: 0.18em; font-weight: 800; color: var(--tinta3); }
+.capa h1 { margin: 2mm 0 1mm; font-size: 24px; letter-spacing: -0.01em; }
+.capa .barco { font-size: 15px; font-weight: 700; }
+.capa dl { display: grid; grid-template-columns: max-content 1fr; gap: 1mm 6mm; margin: 4mm 0 0; font-size: 12.5px; }
+.capa dt { color: var(--tinta3); font-weight: 600; } .capa dd { margin: 0; font-weight: 600; }
+.capa .nota { margin: 3mm 0 0; font-size: 11px; color: var(--tinta3); }
+section { margin: 6mm 0 0; }
+h2 { margin: 0 0 2mm; font-size: 15px; letter-spacing: -0.005em; break-after: avoid; page-break-after: avoid; border-bottom: 1px solid var(--linha); padding-bottom: 1mm; }
+h3 { margin: 3mm 0 1.5mm; font-size: 12.5px; break-after: avoid; page-break-after: avoid; }
+p.sub { margin: 0 0 2mm; font-size: 11.5px; color: var(--tinta3); }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+thead { display: table-header-group; }
+th { text-align: left; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta3); font-weight: 800; padding: 1.4mm 2mm; border-bottom: 1px solid var(--tinta2); }
+td { vertical-align: top; padding: 1.6mm 2mm; border-bottom: 1px solid var(--linha); overflow-wrap: anywhere; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+tbody tr:nth-child(even) td { background: var(--faixa); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.st { display: inline-block; max-width: 100%; padding: 0.3mm 1.6mm; border-radius: 3mm; font-size: 9.5px; line-height: 1.35; font-weight: 800; letter-spacing: 0.04em; border: 1px solid currentColor; }
+.ok { color: var(--ok); } .aviso { color: var(--aviso); } .crit { color: var(--crit); } .cinza { color: var(--tinta3); }
+.det { display: block; font-size: 11px; color: var(--tinta3); }
+.vazio { margin: 0; padding: 3mm; border: 1px dashed var(--linha); border-radius: 2mm; color: var(--tinta3); font-size: 12px; }
+.cartoes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
+.cartao { border: 1px solid var(--linha); border-radius: 2mm; padding: 2.5mm 3mm; break-inside: avoid; page-break-inside: avoid; }
+.cartao .r { font-size: 10px; letter-spacing: 0.1em; font-weight: 800; color: var(--tinta3); }
+.cartao .v { font-size: 20px; font-weight: 800; margin: 0.5mm 0; font-variant-numeric: tabular-nums; }
+.cartao .s { font-size: 11px; color: var(--tinta3); }
+.rodape-folha { margin: 8mm 0 0; padding-top: 2mm; border-top: 1px solid var(--linha); font-size: 10.5px; color: var(--tinta3); }
+/* Celular: cada linha da tabela vira um bloco com o nome da coluna (sem rolagem lateral). */
+@media screen and (max-width: 640px) {
+  .folha { margin-top: 10px; padding: 14px 14px 16px; border-radius: 10px; }
+  .cartoes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  table, tbody, tr, td { display: block; width: auto !important; } thead { display: none; }
+  tr { padding: 2mm 0; border-bottom: 1px solid var(--linha); } tbody tr:nth-child(even) td { background: none; }
+  td { border: none; padding: 0.4mm 0; text-align: left !important; } td[data-r]::before { content: attr(data-r) ' · '; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 800; color: var(--tinta3); }
+  .capa dl { grid-template-columns: 1fr; gap: 0; } .capa dd { margin-bottom: 1.5mm; }
+}
+@page { size: A4; margin: 13mm 12mm 14mm; @bottom-right { content: counter(page) " / " counter(pages); font-size: 9px; color: #566170; } }
+@media print {
+  .sem-print, capitao-rodape { display: none !important; }
+  html, body { background: #fff !important; min-height: 0; display: block; }
+  .folha { max-width: none; margin: 0; padding: 0; border-radius: 0; box-shadow: none; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<header class="top sem-print">
+  <a class="marca" href="index.html" aria-label="Início"><img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" width="47" height="20"></a>
+  <span class="t">RELATÓRIO DO BARCO</span>
+  <capitao-theme-toggle size="40"></capitao-theme-toggle>
+  <a class="sos" id="sos" href="S1-SOS-Web.dc.html" aria-label="SOS — emergência">SOS</a>
+</header>
+<div class="barra sem-print">
+  <p class="dica" id="dica">Relatório para seguradora, vistoria ou arquivo: agenda, histórico de manutenção, documentos, abastecimentos e peças, como estão agora. Sem telefones, sem valores em dinheiro e sem a posição do barco. No celular: Compartilhar › Imprimir › salvar em PDF.</p>
+  <button type="button" id="imprimir">IMPRIMIR / SALVAR PDF</button>
+</div>
+<main class="folha" id="rel" aria-live="polite"><p class="sub">Montando o relatório…</p></main>
+<capitao-rodape></capitao-rodape>
+<script>
+(function () {
+  // SOS: celular → tela do app (S2), computador → web (S1), com a mesma escolha "Sempre web/app" do index.html.
+  (function () {
+    var pick = null; try { pick = localStorage.getItem('capitao.plataforma.v1'); } catch (e) {}
+    var ua = navigator.userAgent || '', uad = navigator.userAgentData;
+    var movel = uad && typeof uad.mobile === 'boolean' ? uad.mobile : /Android.+Mobile|iPhone|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua);
+    var curto = Math.min(screen.width || 9999, screen.height || 9999);
+    var toque = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    var estreita = Math.min(window.innerWidth || 9999, document.documentElement.clientWidth || 9999) < 900;
+    if (pick === 'app' || (pick !== 'web' && (movel || (toque && curto < 600) || estreita))) document.getElementById('sos').href = 'S2-SOS-Mobile.dc.html';
+  })();
+
+  var D = window.CapitaoDados, A = window.CapitaoAgora, B = window.CapitaoBrain, Auth = window.CapitaoAuth, rel = document.getElementById('rel');
+  document.getElementById('imprimir').addEventListener('click', function () { try { window.print(); } catch (e) {} });
+  if (!D || !A || !B) { rel.innerHTML = '<p class="vazio">Não consegui carregar os dados do app nesta página. Volte ao início e tente de novo.</p>'; return; }
+
+  // ——— utilidades ———
+  var SD = 'SEM DADOS', FUSO = A.fuso || 'America/Sao_Paulo', F = A.fmt || {};
+  function sim() { return D.simulacao === true; }                       // SEM DADOS só no ramo simulacao false (o caminho null do modo real)
+  function falta(txtSim) { return sim() ? txtSim : SD; }
+  function semItem(m) { return sim() ? m : SD + ': ' + m.charAt(0).toLowerCase() + m.slice(1); }   // «nenhum item» da seção
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function num(x) { return typeof x === 'number' && isFinite(x); }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function nb(x, c, mil) { var t = F.nb ? F.nb(x, c, mil) : null; return t == null ? null : t; }
+  // Texto livre (diário, nome de arquivo, local de peça, responsável): sem telefone, e-mail, CPF/CNPJ (PESSOAIS), sem valor em dinheiro (DINHEIRO; estendido aos dígitos que
+  // seguem) e sem coordenada (semCoord do cérebro). As regex são as do §3 (B.TERMOS_FONTES): nenhuma lista paralela. Só o telefone com rótulo («tel 3333-4444») é daqui.
+  var TF = B.TERMOS_FONTES || {};
+  function rx(nome, depois) { var f = TF[nome]; return f ? new RegExp(depois ? '(?:' + f.src + ')' + depois : f.src, 'g' + (f.flags || '')) : null; }
+  var RX_PESSOAL = rx('PESSOAIS'), RX_DINHEIRO = rx('DINHEIRO', '[\\d.,]*'), RX_FONE = /\b(tel|telefone|fone|cel|celular|whatsapp|whats|zap)\b\.?\s*:?\s*\+?[\d()\s.-]{8,}/gi;
+  // O PESSOAIS do §3 é um DETECTOR: de «+55 47 98888-7777» ele reconhece só o começo («+55 4»); trocar só esse pedaço deixaria o resto do número no papel. Por isso o número com o código do país sai inteiro antes dele, e depois dele
+  // sai o telefone de qualquer agrupamento: a sequência de 10 ou mais dígitos com, no máximo, dois separadores simples entre eles (espaço, ponto, hífen, parêntese: «47 9 9999 1234», «47-3333-4444», «4799991234»; o DDD, o 9 e os 8
+  // dígitos, em qualquer forma) e o número sem DDD de 4 ou 5 + 4 dígitos com hífen ou ponto («99999-1234», «3333-4444»), menos o intervalo de dois anos («garantia 2025-2027», «temporada 2026-2027»: é a vigência da garantia, não um telefone). Número de peça de 8 dígitos seguidos, hora e data com barra não são telefone e ficam.
+  var RX_FONE_PAIS = /\+\d{1,3}(?:[\s().-]*\d){8,}/g, RX_FONE_LONGO = /(^|\D)\d(?:[ ().-]{0,2}\d){9,}(?!\d)/g, RX_FONE_CURTO = /(^|\D)(?!(?:19|20)\d\d-(?:19|20)\d\d(?!\d))\d{4,5}[-.]\d{4}(?!\d)/g;
+  function limpa(s) {
+    s = String(s == null ? '' : s);
+    s = s.replace(RX_FONE, '$1 [contato omitido]');
+    s = s.replace(RX_FONE_PAIS, '[contato omitido]');
+    if (RX_PESSOAL) s = s.replace(RX_PESSOAL, '[contato omitido]');
+    s = s.replace(RX_FONE_LONGO, '$1[contato omitido]').replace(RX_FONE_CURTO, '$1[contato omitido]');
+    if (RX_DINHEIRO) s = s.replace(RX_DINHEIRO, '[valor omitido]');
+    return B.semCoord ? B.semCoord(s) : s;
+  }
+  function e(s) { return esc(limpa(s)); }                                // célula de texto: limpa e escapa
+  // Datas no fuso do barco (o mesmo do cabeçalho e do CapitaoAgora)
+  function diaDe(iso) {
+    var t = Date.parse(iso || ''); if (isNaN(t)) return '';
+    try { return new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(t)); }
+    catch (x) { var d = new Date(t - 3 * 3600e3); return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+  }
+  function horaDe(iso) { var t = Date.parse(iso || ''); return isNaN(t) ? '' : F.hora ? F.hora(t, false) : ''; }
+  function brDeIso(s) { var m = /^(\d{4})-(\d\d)-(\d\d)/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+  function tempo(x) { var d = x ? Date.parse(x.iso || '') : NaN; return isNaN(d) ? 0 : d; }
+  // chip de situação; tom pelo texto
+  function chip(st, tom) { return '<span class="st ' + tom + '">' + esc(st) + '</span>'; }
+  function det(t) { return t ? '<span class="det">' + t + '</span>' : ''; }
+  // Coluna = [rótulo, largura, classe, nome inteiro]; linha = { id, c: [html das células] }; o rótulo da coluna vai em cada célula no celular (data-r)
+  function tabela(sec, cab, linhas, vazio) {
+    if (!linhas.length) return '<p class="vazio" data-rel="vazio">' + esc(vazio) + '</p>';
+    return '<table><thead><tr>' + cab.map(function (c) { return '<th' + (c[1] ? ' style="width:' + c[1] + '"' : '') + (c[2] ? ' class="' + c[2] + '"' : '') + (c[3] ? ' title="' + esc(c[3]) + '" aria-label="' + esc(c[3]) + '"' : '') + '>' + esc(c[0]) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      linhas.map(function (l) { return '<tr data-rel="linha" data-sec="' + sec + '"' + (l.id ? ' data-id="' + esc(l.id) + '"' : '') + '>' + l.c.map(function (x, i) { return '<td' + (cab[i] && cab[i][2] ? ' class="' + cab[i][2] + '"' : '') + (i && cab[i] ? ' data-r="' + esc(cab[i][3] || cab[i][0]) + '"' : '') + '>' + x + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>';
+  }
+  var APRES = '<span class="det"><span class="st cinza">APRESENTAÇÃO</span></span>';   // a linha gravada com a simulação ligada, vista com simulacao false
+
+  // ——— a agenda: a gerada e as tarefas da equipe (as do aparelho também) ———
+  function agendaLinhas() {
+    var ex = B.loadExec(), out = [], apar = {};
+    try { B.loadTarefas().forEach(function (t) { if (t && t.sim === true) apar[t.id] = true; }); } catch (x) {}
+    (D.agenda || []).forEach(function (t) {
+      out.push({ id: t.id, nome: t.t, det: [t.equip, t.intervalo].filter(Boolean).join(' · '), quem: t.quem || '', vence: t.vence || '', dn: num(t.dn) ? t.dn : null,
+        horas: t.horas && num(t.horas.limite) ? t.horas.limite : null, ultima: t.ultima || '', gerada: true });
+    });
+    var eq = []; try { eq = B.tarefasEquipe(); } catch (x) { eq = D.tarefasEquipe || []; }
+    (eq || []).forEach(function (t) {
+      out.push({ id: t.id, nome: t.n, det: 'tarefa da equipe' + (t.sistema ? ' · ' + t.sistema : ''), quem: t.quem || '', vence: brDeIso(t.vence), dn: num(t.dn) ? t.dn : null, horas: null, ultima: '', gerada: false, apres: !!apar[t.id] && !sim() });
+    });
+    out.forEach(function (t) { var x = ex[t.id]; t.feita = !!x; t.exec = x || null; if (x && x.sim === true && !sim()) t.apres = true; });
+    return out.sort(function (a, b) { return (a.feita - b.feita) || ((a.dn == null ? 1e9 : a.dn) - (b.dn == null ? 1e9 : b.dn)) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+  }
+  function situacao(t) {
+    if (t.feita) return { st: 'FEITA', tom: 'ok', det: '' };
+    if (t.dn == null) return { st: falta('sem prazo'), tom: 'cinza', det: '' };
+    if (t.dn < 0) return { st: 'ATRASADA', tom: 'crit', det: 'há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') };
+    if (t.dn <= 30) return { st: 'D-' + t.dn, tom: 'aviso', det: '' };
+    return { st: 'EM DIA', tom: 'ok', det: 'D-' + t.dn };
+  }
+  function secAgenda() {
+    var ts = agendaLinhas(), hoje = A.relogio ? A.relogio.hoje : '';
+    var linhas = ts.map(function (t) {
+      var s = situacao(t), x = t.exec;
+      var vence = (t.vence ? t.vence : falta('sem prazo')) + (t.horas != null ? ' ou ' + nb(t.horas, 0, true) + ' h' : '');
+      var ult = x ? (diaDe(x.iso) ? diaDe(x.iso) + (horaDe(x.iso) ? ' às ' + horaDe(x.iso) : '') : esc(x.d || '')) + det('Executado neste aparelho') : t.ultima ? esc(t.ultima) + det('pela agenda') : 'ainda não executada';
+      return { id: t.id, c: [e(t.nome) + det(e(t.det)) + (t.apres ? APRES : ''), e(t.quem || 'equipe'), esc(vence), chip(s.st, s.tom) + det(esc(s.det)), ult] };
+    });
+    return '<section data-rel="secao" data-secao="agenda"><h2>Agenda de manutenção</h2><p class="sub">Prazos contados a partir de ' + esc(hoje) + ' (hoje): data de vencimento menos o dia de hoje, refeito a cada abertura. ' +
+      'A tarefa marcada como Executado neste aparelho aparece como FEITA; o Executado só cresce e nada se apaga.</p>' +
+      tabela('agenda', [['Tarefa', '38%'], ['Resp.', '13%', '', 'Responsável'], ['Vence', '17%'], ['Situação', '14%'], ['Última execução', '18%']], linhas, semItem('Nenhuma tarefa com prazo.')) + '</section>';
+  }
+
+  // ——— o histórico de manutenção: a versão VIGENTE de cada linha do diário (a anulada sai, a corrigida mostra o texto novo; as linhas de ação não são registros) ———
+  var SYS_MANUT = { 'Manutenção': 1, 'Motores': 1, 'Equipamentos': 1, 'Eletrônicos': 1 };
+  // O que a pessoa escreve no Diário (a G3 e o chat «registre no diário») grava sys 'Diário': sem categoria, e a manutenção anotada ali (a troca do filtro, a limpeza…) é histórico de manutenção do mesmo jeito. O que o aparelho
+  // grava com outra categoria (Navegação, Combustível, Segurança, Documentos, Equipe) não é. O cadastro do app, que a geração já categoriza, segue só com SYS_MANUT e as tarefas da agenda.
+  var SYS_APARELHO = { 'Manutenção': 1, 'Motores': 1, 'Equipamentos': 1, 'Eletrônicos': 1, 'Diário': 1 };
+  function historicoLinhas() {
+    var app = B.loadDiario(), anul = {}, corr = {}, ids = {}, pend = {}, gerou = [], dev = [];
+    (D.agenda || []).forEach(function (t) { ids[t.id] = 1; });
+    app.forEach(function (x) { if (x.acao === 'anula' && typeof x.alvo === 'string') anul[x.alvo] = x; else if (x.acao === 'corrige' && typeof x.alvo === 'string' && !corr[x.alvo]) corr[x.alvo] = x; });
+    try { B.pendenciasLista().forEach(function (p) { pend[p.alvo] = p; }); } catch (x) {}
+    var origem = String(D.diarioFonte || 'diário de bordo').split(' · ')[0];
+    app.forEach(function (x) {
+      if (x.acao || anul[x.iso] || /^(?:web|app) · SOS/.test(String(x.src || '')) || !SYS_APARELHO[x.sys]) return;
+      var p = x.pend === true ? pend[x.iso] : null;
+      dev.push({ id: x.iso, ts: tempo(x), dia: diaDe(x.iso), hora: horaDe(x.iso), t: corr[x.iso] ? corr[x.iso].t : x.t, who: x.who || '', src: 'neste aparelho · ' + (x.src || 'app'), corrigida: !!corr[x.iso], pend: p ? (p.aberta ? 'PENDENTE' : 'RESOLVIDA') : '', apres: x.sim === true && !sim() });
+    });
+    (D.diario || []).forEach(function (x) {
+      if (!x || !(SYS_MANUT[x.sys] || (x.ref && ids[x.ref]))) return;
+      var p = x.pend && x.id ? pend[x.id] : null;
+      gerou.push({ id: x.id || x.iso, ts: tempo(x), dia: diaDe(x.iso) || '', hora: x.h || horaDe(x.iso), t: x.t, who: x.who || '', src: 'cadastro do app · ' + origem, corrigida: false, pend: p ? (p.aberta ? 'PENDENTE' : 'RESOLVIDA') : x.pend ? 'PENDENTE' : '', apres: false });
+    });
+    return dev.concat(gerou).sort(function (a, b) { return b.ts - a.ts; });
+  }
+  function secHistorico() {
+    var l = historicoLinhas();
+    return '<section data-rel="secao" data-secao="historico"><h2>Histórico de manutenção</h2><p class="sub">Registros do Diário de bordo sobre manutenção e equipamentos (motores, equipamentos, eletrônicos e as tarefas da agenda) e o que foi anotado no Diário sem categoria, do mais novo ao mais antigo, ' +
+      'com a data e a hora do barco. Registro anulado fica de fora; registro corrigido mostra o texto novo.</p>' +
+      tabela('historico', [['Data', '14%'], ['Registro', '60%'], ['Quem · origem', '26%']], l.map(function (x) {
+        return { id: x.id, c: [esc(x.dia || falta('sem data')) + det(esc(x.hora)), e(x.t) + (x.pend ? det(chip(x.pend, x.pend === 'PENDENTE' ? 'aviso' : 'ok')) : '') + (x.corrigida ? det(chip('CORRIGIDO', 'aviso')) : '') + (x.apres ? APRES : ''), e(x.who || 'equipe') + det(e(x.src))] };
+      }), semItem('Nenhum registro de manutenção no Diário.')) + '</section>';
+  }
+
+  // ——— os documentos: os do cadastro e os enviados neste aparelho (A CONFERIR: o app não lê o arquivo) ———
+  function secDocumentos() {
+    var docs = [], envios = [];
+    (D.documentos || []).forEach(function (x) {
+      var dn = num(x.dn) ? x.dn : null, d = dn != null ? A.docDe(dn) : null;
+      docs.push({ id: x.id, dn: dn, n: x.n, det: [x.cat, x.numero ? 'nº ' + x.numero : '', x.nota, x.emitido ? 'emitido em ' + x.emitido : ''].filter(Boolean).join(' · '),
+        venc: x.vence || (x.st === 'CONFERIDA' ? 'sem prazo' : falta('sem prazo')), st: d ? d.st : x.st === 'CONFERIDA' ? 'CONFERIDA' : falta('sem prazo'), tom: d ? (d.tom === 'crit' ? 'crit' : d.tom === 'ok' ? 'ok' : 'aviso') : x.st === 'CONFERIDA' ? 'ok' : 'cinza' });
+    });
+    B.loadDocs().forEach(function (x, i) {
+      envios.push({ id: 'env-' + i, dn: null, n: x.n, det: [x.cat, 'enviado ' + (x.dd || 'sem data'), x.s, 'o arquivo ficou no aparelho'].filter(Boolean).join(' · '), venc: 'a conferir', st: 'A CONFERIR', tom: 'aviso', apres: x.sim === true && !sim(), envio: true });
+    });
+    docs.sort(function (a, b) { return (a.dn == null ? 2e6 : a.dn) - (b.dn == null ? 2e6 : b.dn); });   // (o cadastro com prazo primeiro; depois os enviados; o sem prazo por último, como na G1)
+    var ordem = []; docs.forEach(function (x) { if (x.dn != null) ordem.push(x); }); envios.forEach(function (x) { ordem.push(x); }); docs.forEach(function (x) { if (x.dn == null) ordem.push(x); });
+    var conf = envios.length;
+    return '<section data-rel="secao" data-secao="documentos"><h2>Documentos</h2><p class="sub">Registro, seguro, licenças, laudos, garantias e notas do cadastro do app e os documentos enviados neste aparelho. Vencimentos contados a partir de ' + esc(A.relogio ? A.relogio.hoje : '') + ' (hoje).' +
+      (conf ? ' ' + conf + (conf === 1 ? ' documento enviado ainda sem conferência (A CONFERIR)' : ' documentos enviados ainda sem conferência (A CONFERIR)') + ': confira antes de usar.' : '') + '</p>' +
+      tabela('documentos', [['Documento', '36%'], ['Detalhe', '30%'], ['Vencimento', '16%'], ['Situação', '18%']], ordem.map(function (x) {
+        return { id: x.id, c: [e(x.n) + (x.envio ? det('enviado pela equipe') : '') + (x.apres ? APRES : ''), e(x.det), esc(x.venc), chip(x.st, x.tom)] };
+      }), semItem('Nenhum documento.')) + '</section>';
+  }
+
+  // ——— os abastecimentos (sem valores em dinheiro) e o consumo de referência ———
+  function dtN(t) { var m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(t || ''); return m ? Date.UTC(+m[3], +m[2] - 1, +m[1]) : 0; }
+  function hmN(t) { var m = /^(\d{2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : 0; }
+  function secAbastecimentos() {
+    var reg = (D.abastecimentos || []).slice().sort(function (a, b) { return (dtN(b.d) - dtN(a.d)) || (hmN(b.h) - hmN(a.h)); });
+    var env = B.loadAbast();
+    var linhas = [];
+    env.forEach(function (x, i) {
+      linhas.push({ t: dtN(x.d), h: 1e9, id: 'env-' + i, c: [e(x.d || 'sem data'), 'foto da nota fiscal' + det(e(x.n) + ' · o arquivo ficou no aparelho'), 'a conferir na NF', 'a conferir na NF', chip(x.st || 'A CONFIRMAR', 'aviso') + (x.sim === true && !sim() ? APRES : '')] });
+    });
+    reg.forEach(function (a) {
+      var dep = num(a.nivelDepois) ? nb(a.nivelDepois, 1) + ' %' : falta('sem leitura');
+      var st = a.st || falta('sem situação');
+      linhas.push({ t: dtN(a.d), h: hmN(a.h), id: a.id || a.d, c: [esc(a.d || falta('sem data')) + det(esc(a.h || '')), e(a.local || falta('sem local')) + det(e([a.combustivel, a.nota].filter(Boolean).join(' · '))),
+        num(a.litros) ? esc(nb(a.litros, 0, true)) : falta('sem litros'), esc(dep), chip(st, st === 'CONFERIDO' ? 'ok' : 'aviso')] });
+    });
+    linhas.sort(function (a, b) { return (b.t - a.t) || (b.h - a.h); });
+    var C = D.consumo || {}, taxa = [];
+    [['Cruzeiro', C.cruzeiro], ['Marcha lenta', C.lenta], ['Máxima', C.maxima]].forEach(function (k) {
+      var c = k[1]; if (!c || !num(c.lph)) return;
+      taxa.push({ id: k[0], c: [esc(k[0]), esc(nb(c.nos, 0)) + ' nós', esc(nb(c.rpm, 0, true)) + ' rpm', esc(nb(c.lph, c.lph < 10 ? 1 : 0)) + ' L/h'] });
+    });
+    var regra = D.regraAbast ? String(D.regraAbast).charAt(0).toUpperCase() + String(D.regraAbast).slice(1) : falta('sem regra');
+    return '<section data-rel="secao" data-secao="abastecimentos"><h2>Abastecimentos</h2><p class="sub">Registro de abastecimento do cadastro do app e fotos de nota fiscal enviadas neste aparelho (A CONFIRMAR: litros e posto a conferir na nota). A nota fiscal é a fonte; o app não guarda valores em dinheiro.</p>' +
+      tabela('abastecimentos', [['Data', '14%'], ['Posto · combustível', '34%'], ['L', '10%', 'num', 'Litros'], ['Tanques depois', '16%'], ['Situação', '26%']], linhas, semItem('Nenhum abastecimento.')) +
+      '<h3>Regra e consumo de referência</h3><p class="sub" data-rel="regra">' + e(regra) + '.' + (num(C.gerador_lph) ? ' Gerador: ' + esc(nb(C.gerador_lph, 1)) + ' L/h.' : '') + '</p>' +
+      tabela('consumo', [['Regime', '28%'], ['Velocidade', '24%'], ['Rotação', '24%'], ['Consumo dos motores', '24%', 'num']], taxa, semItem('Sem consumo de referência.')) +
+      '<p class="sub" style="margin-top:1.5mm" data-rel="fonte-consumo">Fonte: ' + e(C.fonte || D.abastFonte || falta('sem fonte')) + '.</p></section>';
+  }
+
+  // ——— as peças (estoque a bordo) ligadas às tarefas da agenda ———
+  function secPecas() {
+    var ps = []; try { ps = B.pecas(); } catch (x) { ps = []; }
+    var est = { novas: [] }; try { est = B.loadPecas(); } catch (x) {}
+    var selo = {}; (est.novas || []).forEach(function (x) { if (x && x.sim === true) selo[x.id] = true; });
+    var ex = B.loadExec(), ag = {}; (D.agenda || []).forEach(function (t) { ag[t.id] = t; });
+    var TOM = { zero: 'crit', baixa: 'aviso', ok: 'ok' };
+    var linhas = ps.map(function (p) {
+      var tf = (p.tarefas || []).map(function (id) {
+        var t = ag[id]; if (!t) return null;
+        if (ex[id]) return e(t.t) + ' (executada)';
+        return e(t.t) + (num(t.dn) ? ' (' + esc(t.dn < 0 ? 'atrasada há ' + (-t.dn) + (t.dn === -1 ? ' dia' : ' dias') : 'D-' + t.dn) + (t.vence ? ' · vence ' + esc(String(t.vence).slice(0, 5)) : '') + ')' : '');
+      }).filter(Boolean);
+      return { id: p.id, c: [e(p.n) + det(chip(p.st, TOM[p.nivel] || 'ok')) + (selo[p.id] && !sim() ? APRES : ''), esc(String(p.qtd)) + ' / ' + esc(String(p.min)), e(p.local || falta('sem local')) + det(e(p.obs)), tf.length ? tf.join('<br>') : 'nenhuma tarefa da agenda'] };
+    });
+    return '<section data-rel="secao" data-secao="pecas"><h2>Peças a bordo</h2><p class="sub">Estoque de peças a bordo (cadastro do app e o que foi registrado neste aparelho), com o mínimo de cada uma e as tarefas da agenda que a usam.</p>' +
+      tabela('pecas', [['Peça', '34%'], ['A bordo / mínimo', '14%'], ['Local', '22%'], ['Tarefas da agenda', '30%']], linhas, semItem('Nenhuma peça cadastrada.')) + '</section>';
+  }
+
+  // ——— a capa e o resumo ———
+  function capa() {
+    var E = D.embarcacao || {}, agora = Date.now(), quando = diaDe(new Date(agora).toISOString()) + ' às ' + (F.hora ? F.hora(agora, false) : ''), quem = '';
+    try { quem = Auth ? String(Auth.nome()) : ''; } catch (x) {}
+    var hoje = A.relogio ? A.relogio.hoje : '';
+    var linhas = [['Estaleiro', E.fabricante], ['Registro', E.registro], ['Base', E.base]].filter(function (k) { return k[1]; });
+    return '<div class="capa" data-rel="capa"><div class="marca">CAPITÃO IA · RELATÓRIO DO BARCO</div><h1>' + e(E.nome || falta('Embarcação')) + '</h1>' +
+      '<div class="barco">' + e([E.rotulo, E.motorizacao].filter(Boolean).join(' · ') || falta('sem cadastro')) + '</div>' +
+      '<dl>' + linhas.map(function (k) { return '<dt>' + esc(k[0]) + '</dt><dd>' + e(k[1]) + '</dd>'; }).join('') +
+      '<dt>Gerado em</dt><dd data-rel="gerado">' + esc(quando) + ' (' + esc(FUSO === 'America/Sao_Paulo' ? 'Brasília' : FUSO) + ')</dd><dt>Gerado por</dt><dd>' + e(quem || 'equipe') + '</dd><dt>Prazos</dt><dd>contados a partir de ' + esc(hoje) + ' (hoje)</dd></dl>' +
+      '<p class="nota">Registros deste aparelho (diário, Executado, documentos, abastecimentos e peças) somados ao cadastro do app. Sem telefones, e-mails, valores em dinheiro nem a posição do barco.</p></div>';
+  }
+  function resumo() {
+    var c = {}; try { c = A.contagens(); } catch (x) {}
+    var ps = []; try { ps = B.pecas(); } catch (x) {}
+    var z = ps.filter(function (p) { return p.nivel === 'zero'; }).length, b = ps.filter(function (p) { return p.nivel === 'baixa'; }).length;
+    function cartao(id, r, v, s) { return '<div class="cartao" data-rel="cartao" data-id="' + id + '"><div class="r">' + esc(r) + '</div><div class="v">' + esc(String(v)) + '</div><div class="s">' + esc(s) + '</div></div>'; }
+    return '<section data-rel="secao" data-secao="resumo"><div class="cartoes">' +
+      cartao('atrasadas', 'TAREFAS ATRASADAS', c.atrasadas || 0, 'vencem em 30 dias: ' + (c.d30 || 0)) +
+      cartao('docs', 'DOCUMENTOS VENCIDOS', c.docsVencidos || 0, 'vencem em 90 dias: ' + (c.docsVencem90 || 0)) +
+      cartao('pecas', 'PEÇAS ZERADAS', z, 'no mínimo ou abaixo: ' + b) +
+      cartao('pendencias', 'PENDÊNCIAS ABERTAS', c.pendencias || 0, 'no Diário de bordo') + '</div></section>';
+  }
+  function rodapeFolha() {
+    var v = Auth && Auth.VERSAO ? ' · v' + esc(Auth.VERSAO.v) : '';
+    var fontes = [D.agendaFonte, D.docsFonte, D.abastFonte, D.diarioFonte].filter(Boolean).map(function (s) { return String(s).split(' · ')[0]; });
+    return '<p class="rodape-folha" data-rel="rodape">Capitão IA' + v + ' · fontes: ' + e(fontes.join(', ') || falta('sem fonte')) + ' e os registros deste aparelho. Sem dado, sem linha.</p>';
+  }
+
+  var ultimo = '';
+  function desenha(forca) {
+    try { if (typeof A.rebase === 'function') A.rebase(Date.now()); } catch (x) {}
+    var html;
+    try { html = capa() + resumo() + secAgenda() + secHistorico() + secDocumentos() + secAbastecimentos() + secPecas() + rodapeFolha(); }
+    catch (x) { html = '<p class="vazio">Não consegui montar o relatório: ' + esc(x && x.message) + '</p>'; }
+    if (html === ultimo && !forca) return;   // só redesenha se o texto mudou (o «Gerado em» muda a cada minuto: o resto, só com o registro)
+    ultimo = html; rel.innerHTML = html;
+  }
+  desenha(true);
+  // Sem timer: ao voltar para a aba (o dia pode ter virado), quando o registro muda em outra aba e antes de imprimir (o PDF sai com a data e o registro de agora).
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) desenha(); });
+  window.addEventListener('storage', function (ev) { if (!ev || ev.key === null || /^capitao\.(diario|executado|docs|abast|pecas|tarefas|tickets)\.v1$/.test(ev.key)) desenha(); });
+  window.addEventListener('beforeprint', function () { desenha(true); });
+})();
+</script>
+</body>
+</html>

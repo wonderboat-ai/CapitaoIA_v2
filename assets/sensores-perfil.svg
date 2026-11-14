@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Desenho esquemático do barco, vista de perfil (proa à direita). Próprio e genérico: serve de fundo aos sensores (referência: popa 0,04 · proa 0,95 · quilha 0,92 · topo 0,08). Só o traço conta: a tela o usa como máscara e pinta com a cor do tema. -->
+  <!-- casco -->
+  <path d="M52 198 L62 300 C80 325 140 331 300 331 L780 331 C930 331 1040 300 1120 235 C1132 224 1140 214 1140 204 C1000 197 800 192 600 194 C400 196 200 197 52 198 Z" fill="#fff" fill-opacity="0.06"/>
+  <path d="M62 300 C100 296 160 296 240 296 M700 296 C860 296 1000 280 1100 250" stroke-opacity="0.35"/>
+  <!-- linha d'água e ondas -->
+  <path d="M30 290 L1100 290" stroke-dasharray="10 8" stroke-opacity="0.55"/>
+  <path d="M20 302 q14 -8 28 0 t28 0 M1110 276 q12 -7 24 0 t24 0" stroke-opacity="0.45"/>
+  <!-- plataforma de popa, leme e hélice -->
+  <path d="M30 296 L62 296 M34 296 L34 312 M34 312 L62 312" stroke-opacity="0.7"/>
+  <path d="M96 304 L96 326 C96 334 104 334 104 326 L104 304" stroke-opacity="0.8"/>
+  <ellipse cx="136" cy="321" rx="6" ry="17" stroke-opacity="0.8"/>
+  <path d="M104 321 L300 321" stroke-opacity="0.35" stroke-dasharray="3 6"/>
+  <!-- cabine e capota -->
+  <path d="M330 194 L342 82 L700 76 L792 188 L800 194" fill="#fff" fill-opacity="0.04"/>
+  <path d="M322 82 L710 74 L704 60 L330 66 Z" fill="#fff" fill-opacity="0.12"/>
+  <path d="M392 108 L470 107 L470 160 L388 160 Z M488 107 L576 106 L576 160 L488 160 Z M594 106 L682 105 L682 160 L594 160 Z" stroke-opacity="0.8"/>
+  <path d="M700 82 L778 182" stroke-opacity="0.8"/>
+  <path d="M600 160 L606 194" stroke-opacity="0.45"/>
+  <!-- arco do radar, mastro da antena de GPS -->
+  <path d="M562 66 L562 29 L640 29 L640 63" />
+  <path d="M572 29 L572 38 M616 29 L616 38" stroke-opacity="0.7"/>
+  <path d="M649 60 L649 46"/>
+  <circle cx="649" cy="42" r="4.5"/>
+  <!-- pulpito e roldana da âncora na proa -->
+  <path d="M808 194 L808 168 L900 168 M900 168 L940 190" stroke-opacity="0.7"/>
+  <path d="M1110 226 L1140 224" stroke-opacity="0.7"/>
+  <!-- praça de máquinas -->
+  <path d="M250 232 L560 232 L560 316 L250 316 Z" stroke-dasharray="8 6" stroke-opacity="0.6"/>
+  <rect x="285" y="262" width="130" height="48" rx="5" stroke-opacity="0.75"/>
+  <path d="M300 262 L300 252 M330 262 L330 252 M360 262 L360 252 M390 262 L390 252" stroke-opacity="0.6"/>
+  <circle cx="539" cy="271" r="17" stroke-opacity="0.8"/>
+  <circle cx="539" cy="271" r="6" stroke-opacity="0.6"/>
+  <!-- tanques de combustível e água (sombras) -->
+  <path d="M600 306 L860 306 L860 322 L600 322 Z" stroke-opacity="0.3"/>
+  <!-- sonda no casco -->
+  <path d="M719 331 L719 322 L731 322 L731 331" stroke-opacity="0.8"/>
+  <!-- piso da cabine -->
+  <path d="M342 224 L780 224" stroke-opacity="0.4" stroke-dasharray="14 8"/>
+</svg>

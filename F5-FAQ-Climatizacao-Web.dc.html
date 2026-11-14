@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — FAQ Climatização (web)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -47,16 +49,16 @@ button { font: inherit; }
               <span style="font-size: 15px; font-weight: 700;">Perguntas · passo a passo</span>
               <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{listaSub}}</span>
             </span>
+            <a href="{{f6}}" data-faq="f6" style="flex-shrink: 0; min-height: 36px; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); color: var(--cap-accent, #00a1fe); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap;">FAQ completo ›</a>
             <button type="button" onClick="{{onTodas}}" aria-pressed="{{todas}}" aria-controls="faq-lista" style="flex-shrink: 0; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid {{todasLinha}}; background: {{todasBg}}; color: {{todasTom}}; font-size: 12px; font-weight: 700; cursor: pointer;">Abrir todas</button>
           </div>
           <div style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-radius: 12px; background: {{seloBanner}}; border: 1px solid {{seloLinha}};">
-            <span style="flex-shrink: 0; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: {{seloTom}}; border: 1px solid {{seloLinha}}; border-radius: 6px; padding: 4px 8px; white-space: nowrap;">{{selo}}<span style="color: var(--cap-violeta, #b45cff);">{{seloDemo}}</span></span>
+            <span style="flex-shrink: 0; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: {{seloTom}}; border: 1px solid {{seloLinha}}; border-radius: 6px; padding: 4px 8px; white-space: nowrap;">{{selo}}</span>
             <span style="flex-grow: 1; font-size: 12.5px; color: var(--cap-ink2, #b1bdd6); line-height: 1.4; min-width: 0;">{{seloTxt}}</span>
-            <span style="flex-shrink: 0; font-size: 12px; color: var(--cap-ink3, #97a3c0); white-space: nowrap;">Manual do fabricante: <b style="color: var(--cap-warn, #f0a63a); font-weight: 700;">{{manualFab}}</b></span>
           </div>
           <div id="faq-lista" style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px;">
             <sc-if value="{{semPerguntas}}" hint-placeholder-val="{{false}}">
-              <div style="flex-shrink: 0; padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 13px;">SEM DADOS — nenhum passo a passo carregado para este equipamento. Pergunte ao barco.</div>
+              <div style="flex-shrink: 0; padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 13px;">{{semPerguntasTxt}}</div>
             </sc-if>
             <sc-for list="{{perguntas}}" as="p" hint-placeholder-count="4">
               <div id="{{p.cid}}" style="flex-shrink: 0; box-sizing: border-box; border-radius: 14px; background: var(--cap-row, #10162e); border: 1px solid {{p.linha}}; transition: border-color .2s;">
@@ -95,7 +97,7 @@ button { font: inherit; }
               <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.14); display: flex; align-items: center; justify-content: center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg></span>
               <span style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
                 <span style="font-size: 15px; font-weight: 700;">Estado a bordo</span>
-                <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0);">{{relSub}}</span>
+                <span data-faq="rel-sub" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0);">{{relSub}}</span>
               </span>
               <a href="C1-Leme-Web.dc.html" style="flex-shrink: 0; min-height: 44px; display: flex; align-items: center; padding: 0 2px; font-size: 12.5px; font-weight: 700; text-decoration: none; white-space: nowrap;">Manutenção ›</a>
             </div>
@@ -103,14 +105,14 @@ button { font: inherit; }
               <sc-for list="{{rel}}" as="r" hint-placeholder-count="3">
                 <div style="flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 7px 10px 7px 12px; border-radius: 12px; background: var(--cap-row, #10162e);">
                   <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-size: 13px; font-weight: 700; line-height: 1.3;">{{r.k}}</span>
-                    <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{r.s}}</span>
+                    <span data-faq="rel-k" style="font-size: 13px; font-weight: 700; line-height: 1.3;">{{r.k}}</span>
+                    <span data-faq="rel-s" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{r.s}}</span>
                   </span>
-                  <span style="flex-shrink: 0; max-width: 128px; box-sizing: border-box; padding: 5px 9px; border-radius: 999px; background: {{r.wash}}; color: {{r.tom}}; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">{{r.v}}</span>
+                  <span data-faq="rel-v" style="flex-shrink: 0; max-width: 128px; box-sizing: border-box; padding: 5px 9px; border-radius: 999px; background: {{r.wash}}; color: {{r.tom}}; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums;">{{r.v}}</span>
                 </div>
               </sc-for>
             </div>
-            <span style="flex-shrink: 0; font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">{{relFonte}}</span>
+            <span data-faq="rel-fonte" style="flex-shrink: 0; font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.4;">{{relFonte}}</span>
           </section>
         </aside>
       </div>
@@ -122,8 +124,9 @@ button { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 // FAQ de Climatização (web): perguntas e passos só de D.faq.climatizacao (capitao-dados.js) — nenhum passo escrito à mão.
-// Acordeão com aria-expanded; #p=<n> abre a pergunta n; estado relacionado vem da agenda, do snapshot, dos documentos e do diário.
-const CFG = { chave: 'climatizacao', ids: ['climatizacao'], nome: 'Climatização', chat: 'Main.dc.html', semPrefixo: false, tom: 'tele', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18' };
+// Acordeão com aria-expanded; #p=<n> abre a pergunta n. O estado a bordo vem do INSTANTE (CapitaoAgora: a reprodução, o coletor ou a última leitura salva — o mesmo texto da moldura e do cérebro),
+// da agenda, dos documentos e do diário; ele anda com a telemetria e só redesenha quando o texto exibido muda. O fabricante e o modelo vêm de D.equipamentos, nunca escritos aqui.
+const CFG = { chave: 'climatizacao', ids: ['climatizacao'], nome: 'Climatização', chat: 'Main.dc.html', suf: '-Web', semPrefixo: false, tom: 'tele', d: 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', f6: '#s=5' };
 const TOM = {
   crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'],
   warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
@@ -134,13 +137,13 @@ const TOM = {
   ink: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.14)']
 };
 const cor = (k) => TOM[k] || TOM.accent;
-const SD = 'SEM DADOS';
+const SD = 'SEM DADOS';   // só no ramo simulacao false (falta()); com a simulação o dado sempre existe
 const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
 const mil = (x, d) => { if (typeof x !== 'number' || !isFinite(x)) return '—'; const p = x.toFixed(d == null ? 1 : d).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (p[1] ? ',' + p[1] : ''); };
-const secao = (x) => (x ? '§' + String(x).replace(/^(\d+)\s*·\s*/, '$1 ') : 'seção ' + SD);
+const cap1 = (t) => { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
 
 class Component extends DCLogic {
-  state = { abertos: { 0: true }, exec: {}, nota: '', notaTom: 'var(--cap-ok, #34c77a)' };
+  state = { abertos: { 0: true }, exec: {}, nota: '', notaTom: 'var(--cap-ok, #34c77a)', vivo: '' };
   componentDidMount() {
     this.setState({ exec: this.lerExec() });
     this._hash = () => this.lerHash();
@@ -149,8 +152,15 @@ class Component extends DCLogic {
     // Executado marcado na Manutenção (outra aba/tela): relê
     this._st = (e) => { if (!e || e.key === null || e.key === 'capitao.executado.v1') this.setState({ exec: this.lerExec() }); };
     window.addEventListener('storage', this._st);
+    // o estado a bordo anda com o quadro (1 s) e com a virada do dia (os prazos): só chama setState quando o texto exibido mudou, e nunca com a aba escondida
+    this._onTele = () => { if (document.hidden) return; const k = JSON.stringify(this.bordo()); if (k !== this._bk) { this._bk = k; this.setState({ vivo: k }); } };
+    ['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));
   }
-  componentWillUnmount() { window.removeEventListener('hashchange', this._hash); window.removeEventListener('storage', this._st); clearTimeout(this._n); clearTimeout(this._r); }
+  componentWillUnmount() {
+    window.removeEventListener('hashchange', this._hash); window.removeEventListener('storage', this._st);
+    ['capitao-telemetria', 'capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));
+    clearTimeout(this._n); clearTimeout(this._r);
+  }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
   toast(msg, tone) { this.setState({ nota: msg, notaTom: tone || 'var(--cap-ok, #34c77a)' }); clearTimeout(this._n); this._n = setTimeout(() => this.setState({ nota: '' }), 4000); }
   lerExec() { try { const v = JSON.parse(localStorage.getItem('capitao.executado.v1') || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } }
@@ -174,71 +184,101 @@ class Component extends DCLogic {
     const o = {}; for (let i = 0; i < n; i++) o[i] = true;
     this.setState({ abertos: o }); this.toast(n + (n === 1 ? ' pergunta aberta' : ' perguntas abertas'), 'var(--cap-accent, #00a1fe)');
   }
+  // ——— o estado a bordo: o instante (a leitura de agora), a agenda, os documentos e o diário. Texto puro (o que a tela mostra), para comparar entre os tiques. ———
+  bordo() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, E = D.embarcacao || {}, sim = D.simulacao === true, falta = (r) => (sim ? '' : r), exec = this.state.exec || {};
+    const rel = [], fontes = [];
+    let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
+    const q = I && I.q ? I.q : null, reserva = !!(I && I.fonte === 'snapshot');
+    const fonteTxt = I ? (reserva ? 'Última leitura · ' + String(I.fonteTxt || '').replace(/^.*leitura de /, '') : cap1(I.fonteTxt)) : (sim ? '—' : 'Leitura SEM LEITURA');
+    const c = (n) => { let t = null; try { t = q && F.campo ? F.campo(q, n) : null; } catch (e) { t = null; } return t === undefined || t === '' ? null : t; };
+    const lig = (v) => (v === true ? 'ligado' : v === false ? 'desligado' : null);
+    const addF = (f) => { if (f && fontes.indexOf(f) === -1) fontes.push(f); };
+    // a linha entra só com valor; sem valor (o coletor não mandou o campo) a simulação omite e o ramo simulacao false escreve SEM LEITURA
+    const linha = (k, v, sub, tom) => { if (v === null || v === undefined || v === '') v = falta('SEM LEITURA'); if (!v) return; rel.push({ k: k, v: String(v), s: String(sub || '').replace(/^ · /, ''), tom: cor(tom)[0], wash: cor(tom)[1] }); };
+    const eq = (id) => (D.equipamentos || []).filter((e) => e.id === id)[0] || {};
+    const nomeEq = (id, base) => { const e = eq(id); return e.fabricante ? base + ' ' + e.fabricante : base; };
+    const hora = I && I.hora ? ' · leitura ' + I.hora : '';
+    // as horas que faltam para a revisão: as do instante (o horímetro de agora); a da agenda gerada só de reserva
+    const faltam = (t) => { const h = t.horas; if (!h) return null; const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return typeof f === 'number' && isFinite(f) ? f : typeof h.faltam === 'number' ? h.faltam : null; };
+    const agenda = (re) => (D.agenda || []).filter((t) => re.test(t.equip || '') || re.test(t.t || '')).forEach((t) => {
+      const e = exec[t.id], f = faltam(t);
+      linha(t.t, e ? 'EXECUTADO ' + (e.d || '') : (t.rot || falta(SD)), (e ? 'marcado no app · ' : '') + 'vence ' + (t.vence || falta(SD)) + (t.horas ? ' ou ' + mil(t.horas.limite, 0) + ' h' + (f !== null ? ' · faltam ' + mil(f) + ' h' : '') : '') + ' · ' + (t.quem || falta(SD)), e ? 'ok' : t.tom);
+      addF(t.fonte || 'agenda');
+    });
+    const docs = (re) => (D.documentos || []).filter((x) => re.test(x.n || '')).forEach((x) => {
+      linha(x.n, x.st || falta(SD), (x.vence ? 'vence ' + x.vence : 'vencimento ' + falta(SD)) + (x.nota ? ' · ' + x.nota : ''), x.dn == null ? 'ink' : x.dn < 0 ? 'crit' : x.dn <= 30 ? 'warn' : x.dn <= 60 ? 'tele' : x.dn <= 90 ? 'accent' : 'ok');
+      addF(x.fonte || 'documentos');
+    });
+    const diario = (re) => (D.diario || []).filter((x) => x.pend && re.test(x.t || '')).slice(0, 2).forEach((x) => {
+      linha('Pendência no diário · ' + (x.d || '') + ' ' + (x.h || '') + ' · ' + (x.who || falta(SD)), 'PENDENTE', x.t, 'warn');
+      addF((D.drive && D.drive.arquivos && D.drive.arquivos.diario) || 'diário de bordo');
+    });
+    const leitura = () => addF(I ? fonteTxt : '');
+    // o gerador (fonte do carregador e da climatização): ligado ou desligado, a potência e o horímetro de agora
+    const geradorAC = () => {
+      const l = q ? lig(q.gerador_ativo) : null, kw = c('gerador_kw'), h = c('gerador_horimetro_h');
+      linha(nomeEq('gerador', 'Gerador') + ' (energia AC)', l ? l.toUpperCase() : null, [l === 'ligado' && kw !== null ? kw + ' kW' : null, h !== null ? 'horímetro ' + h + ' h' : null].filter(Boolean).join(' · ') + hora, l === 'ligado' ? 'ok' : 'ink'); leitura();
+    };
+    const horimetroGerador = () => {
+      const l = q ? lig(q.gerador_ativo) : null, kw = c('gerador_kw'), h = c('gerador_horimetro_h');
+      linha('Horímetro do gerador', h !== null ? h + ' h' : null, [l, l === 'ligado' && kw !== null ? kw + ' kW' : null].filter(Boolean).join(' · ') + hora, 'tele'); leitura();
+    };
+    const climatizacao = () => {
+      const l = q ? lig(q.climatizacao_ativa) : null;
+      linha(nomeEq('climatizacao', 'Climatização'), l ? (l === 'ligado' ? 'LIGADA' : 'DESLIGADA') : null, (l === 'ligado' ? 'funcionando' : 'parada') + hora, l === 'ligado' ? 'ok' : 'ink'); leitura();
+    };
+    climatizacao(); geradorAC();
+    agenda(/climatiza/i);
+    diario(/climatiza/i);
+    const alertaT = rel.filter((r) => r.tom === cor('crit')[0])[0];
+    return { rel: rel, relSub: fonteTxt, relFonte: fontes.length ? 'Fonte: ' + fontes.join(' · ') : 'Fonte: nenhuma' + (sim ? '' : ' — ' + SD), alerta: alertaT ? alertaT.k + ' · ' + alertaT.v : '' };
+  }
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, F = this.faq() || {}, S = D.snapshot || {}, E = D.embarcacao || {};
-    const DEMO = D.demo ? ' DEMO' : '', snapTxt = 'snapshot' + DEMO + ' ' + (S.quando || SD), exec = s.exec || {};
+    const s = this.state, D = window.CapitaoDados || {}, F = this.faq() || {}, sim = D.simulacao === true, falta = (r) => (sim ? '' : r);
     const chat = (q) => CFG.chat + '#q=' + encodeURIComponent(q);
     const EQ = (D.equipamentos || []).filter((e) => CFG.ids.indexOf(e.id) !== -1);
     const prefixo = CFG.semPrefixo || !F.equip ? '' : F.equip + ': ';
     const geral = CFG.semPrefixo ? (EQ[0] ? EQ[0].nome + (EQ[0].fabricante ? ' ' + EQ[0].fabricante : '') : CFG.nome) + ': passo a passo' : (F.equip || CFG.nome) + ': passo a passo';
     const PERG = Array.isArray(F.perguntas) ? F.perguntas : [], ab = s.abertos || {};
-    const eqLinhas = EQ.length ? EQ.map((e) => ({ n: e.nome + (e.fabricante ? ' ' + e.fabricante : ''), m: (e.fabricante ? '' : 'fabricante ' + SD + ' · ') + 'modelo ' + (e.modelo || SD) + (e.qtd && e.qtd !== SD ? ' · qtd ' + e.qtd : '') }))
-      : [{ n: F.equip || CFG.nome, m: 'modelo ' + (F.modelo || SD) }];
+    const eqLinhas = EQ.length ? EQ.map((e) => ({ n: e.nome + (e.fabricante ? ' ' + e.fabricante : ''), m: [e.fabricante ? '' : falta('fabricante ' + SD), e.modelo ? 'modelo ' + e.modelo : falta('modelo ' + SD), e.qtd && e.qtd !== SD ? 'qtd ' + e.qtd : ''].filter(Boolean).join(' · ') }))
+      : [{ n: F.equip || CFG.nome, m: F.modelo ? 'modelo ' + F.modelo : falta('modelo ' + SD) }];
     const pronto = F.status === 'PRONTO', ct = pronto ? cor('ok') : cor('ink');
     // ——— perguntas (acordeão) ———
+    const secao = (x) => (x ? '§' + String(x).replace(/^(\d+)\s*·\s*/, '$1 ') : falta('seção ' + SD));
     const perguntas = PERG.map((p, i) => {
       const aberto = !!ab[i], passos = Array.isArray(p.passos) ? p.passos : [], secs = [];
       passos.forEach((x) => { const t = secao(x.secao); if (x.secao && secs.indexOf(t) === -1) secs.push(t); });
-      return { i: String(i + 1), q: p.q || SD, cid: 'faq-' + CFG.chave + '-c' + i, bid: 'faq-' + CFG.chave + '-b' + i, pid: 'faq-' + CFG.chave + '-p' + i,
+      return { i: String(i + 1), q: p.q || falta(SD), cid: 'faq-' + CFG.chave + '-c' + i, bid: 'faq-' + CFG.chave + '-b' + i, pid: 'faq-' + CFG.chave + '-p' + i,
         aberto: aberto, fechado: !aberto, disp: aberto ? 'flex' : 'none', giro: aberto ? 'rotate(180deg)' : 'none',
         linha: aberto ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line, #1a2240)',
         numBg: aberto ? 'var(--cap-accent, #00a1fe)' : 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)', numTom: aberto ? 'var(--cap-on-accent, #050816)' : 'var(--cap-accent, #00a1fe)',
-        nPassos: passos.length ? passos.length + (passos.length === 1 ? ' passo' : ' passos') : 'passos ' + SD,
-        passos: passos.map((x) => ({ n: String(x.n || ''), t: x.t || SD, sec: secao(x.secao) })),
-        fonte: 'Fonte: ' + (F.fonte || SD) + (secs.length ? ' · ' + secs.join(' · ') : ''),
+        nPassos: passos.length ? passos.length + (passos.length === 1 ? ' passo' : ' passos') : falta('passos ' + SD),
+        passos: passos.map((x) => ({ n: String(x.n || ''), t: x.t || falta(SD), sec: secao(x.secao) })),
+        fonte: 'Fonte: ' + (F.fonte || falta(SD)) + (secs.length ? ' · ' + secs.join(' · ') : ''),
         ask: chat(prefixo + (p.q || '')), onToggle: () => this.alternar(i) };
     });
-    // ——— estado a bordo (agenda · snapshot · documentos · diário) ———
-    const rel = [], fontes = [];
-    const addF = (f) => { if (f && fontes.indexOf(f) === -1) fontes.push(f); };
-    const linha = (k, v, sub, tom) => rel.push({ k: k, v: v, s: sub, tom: cor(tom)[0], wash: cor(tom)[1] });
-    const agenda = (re) => (D.agenda || []).filter((t) => re.test(t.equip || '') || re.test(t.t || '')).forEach((t) => {
-      const e = exec[t.id];
-      linha(t.t, e ? 'EXECUTADO ' + (e.d || '') : (t.rot || SD), (e ? 'marcado no app · ' : '') + 'vence ' + (t.vence || SD) + (t.horas ? ' ou ' + mil(t.horas.limite, 0) + ' h · faltam ' + mil(t.horas.faltam) + ' h' : '') + ' · ' + (t.quem || SD), e ? 'ok' : t.tom);
-      addF(t.fonte || 'agenda');
-    });
-    const docs = (re) => (D.documentos || []).filter((x) => re.test(x.n || '')).forEach((x) => {
-      linha(x.n, x.st || SD, (x.vence ? 'vence ' + x.vence : 'vencimento ' + SD) + (x.nota ? ' · ' + x.nota : ''), x.dn == null ? 'ink' : x.dn < 0 ? 'crit' : x.dn <= 30 ? 'warn' : x.dn <= 60 ? 'tele' : x.dn <= 90 ? 'accent' : 'ok');
-      addF(x.fonte || 'documentos');
-    });
-    const diario = (re) => (D.diario || []).filter((x) => x.pend && re.test(x.t || '')).slice(0, 2).forEach((x) => {
-      linha('Pendência no diário · ' + (x.d || '') + ' ' + (x.h || '') + ' · ' + (x.who || SD), 'PENDENTE', x.t, 'warn');
-      addF((D.drive && D.drive.arquivos && D.drive.arquivos.diario) || 'diário de bordo');
-    });
-    const snap = () => addF(S.fonte || 'snapshot');
-    const geradorAC = () => { const G = S.gerador || {}; linha('Gerador Onan (energia AC)', G.estado ? String(G.estado).split(' ')[0].toUpperCase() : 'SEM LEITURA', (G.estado || SD) + (G.hora ? ' · leitura ' + G.hora : ''), G.estado ? 'ok' : 'ink'); snap(); };
-    agenda(/climatiza/i);
-    diario(/climatiza/i);
-    geradorAC();
-    const alertaT = rel.filter((r) => r.tom === cor('crit')[0])[0];
+    // ——— estado a bordo (o instante · agenda · documentos · diário): o mesmo texto que o tique comparou ———
+    const bd = this.bordo(); this._bk = JSON.stringify(bd);
     const todas = this.todasAbertas();
     return {
       nota: s.nota, notaTom: s.notaTom,
       titulo: CFG.nome + ' · FAQ de bordo',
-      resumo: eqLinhas.map((e) => e.n + ' · ' + e.m).join(' / ') + ' · ' + PERG.length + (PERG.length === 1 ? ' pergunta' : ' perguntas') + ' · ' + (F.fonte || SD),
+      resumo: eqLinhas.map((e) => e.n + (e.m ? ' · ' + e.m : '')).join(' / ') + ' · ' + PERG.length + (PERG.length === 1 ? ' pergunta' : ' perguntas') + ' · ' + (F.fonte || falta(SD)),
       eqIco: this.ico(CFG.d, 26, 1.7, cor(CFG.tom)[0]), eqWash: cor(CFG.tom)[1], eqLinhas: eqLinhas,
-      guia: F.fonte || SD, manualFab: SD,
-      eqFonte: 'Fonte: ' + (D.equipNota || 'lista de equipamentos ' + SD),
-      selo: pronto ? 'PRONTO' : (F.status || SD), seloDemo: pronto && D.demo ? ' · DEMO' : '', seloTom: ct[0], seloLinha: pronto ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)' : 'var(--cap-line2, #27315a)', seloBanner: pronto ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.07)' : 'transparent',
-      seloTxt: pronto ? 'passo a passo do guia de bordo' + (D.demo ? ' de demonstração' : '') + ' — confirmar no manual do fabricante' : 'sem passo a passo confirmado — pergunte ao barco',
+      guia: F.fonte || falta(SD),
+      eqFonte: 'Fonte: ' + (D.equipNota || 'lista de equipamentos' + (sim ? '' : ' ' + SD)),
+      selo: pronto ? 'PRONTO' : (F.status || falta(SD)), seloTom: ct[0], seloLinha: pronto ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)' : 'var(--cap-line2, #27315a)', seloBanner: pronto ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.07)' : 'transparent',
+      seloTxt: pronto ? 'passo a passo do guia de bordo — confirmar no manual do fabricante' : 'sem passo a passo confirmado — pergunte ao barco',
       listaSub: PERG.length + (PERG.length === 1 ? ' pergunta' : ' perguntas') + ' · toque para abrir · cada passo cita a seção do guia',
       listaRot: PERG.length + (PERG.length === 1 ? ' PERGUNTA' : ' PERGUNTAS') + ' · PASSO A PASSO',
-      semPerguntas: !PERG.length, perguntas: perguntas,
+      semPerguntas: !PERG.length, semPerguntasTxt: sim ? 'Os passos deste equipamento estão no guia de bordo: pergunte ao barco.' : SD + ' — nenhum passo a passo carregado para este equipamento. Pergunte ao barco.', perguntas: perguntas,
       todas: todas, onTodas: () => this.alternarTodas(),
       todasLinha: todas ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', todasBg: todas ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', todasTom: todas ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)',
-      fonteLista: 'Fonte: ' + (F.fonte || SD) + ' · ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || SD),
-      rel: rel, relSub: snapTxt, relFonte: fontes.length ? 'Fonte: ' + fontes.join(' · ') : 'Fonte: nenhuma — ' + SD,
-      alerta: alertaT ? alertaT.k + ' · ' + alertaT.v : '',
+      fonteLista: 'Fonte: ' + (F.fonte || falta(SD)) + ' · ' + ((D.drive && D.drive.raiz) || 'Drive') + ' › ' + ((D.drive && D.drive.pastas && D.drive.pastas.manuais) || falta(SD)),
+      rel: bd.rel, relSub: bd.relSub, relFonte: bd.relFonte,
+      alerta: bd.alerta,
+      f6: 'F6-FAQ-Equipamentos' + CFG.suf + '.dc.html' + CFG.f6,
       perguntarHref: chat(geral)
     };
   }

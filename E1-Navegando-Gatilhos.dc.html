@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Modo navegação (app)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -32,19 +34,21 @@ button { font: inherit; }
 
   <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; order: 1;">
 
-    <section aria-label="Vigia da IA" style="box-sizing: border-box; padding: 11px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{vigia.line}}; border-radius: 18px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;">
-      <div style="display: flex; align-items: center; gap: 10px;">
+    <section aria-label="Vigia da IA" data-e1="vigia" data-modo="{{vigia.modo}}" style="box-sizing: border-box; padding: 11px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{vigia.line}}; border-radius: 18px; display: flex; flex-direction: column; gap: 7px; flex-shrink: 0;">
+      <div style="display: flex; align-items: flex-start; gap: 10px;">
         <span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; background: {{vigia.wash}}; display: flex; align-items: center; justify-content: center;">{{vigia.ico}}</span>
-        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
-          <span style="font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">VIGIA DA IA</span>
-          <span style="font-size: 13.5px; font-weight: 800; line-height: 1.3; color: {{vigia.tone}};">{{vigia.estado}}</span>
+        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+          <span style="display: flex; align-items: center; gap: 8px;">
+            <span style="flex-grow: 1; min-width: 0; font-size: 10.5px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">VIGIA DA IA</span>
+            <span data-e1="chip" style="flex-shrink: 0; padding: 4px 8px; border-radius: 6px; border: 1px solid {{vigia.chipLine}}; background: {{vigia.chipWash}}; color: {{vigia.chipTone}}; font-size: 10px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums;">{{vigia.chip}}</span>
+          </span>
+          <span data-e1="estado" style="font-size: 13.5px; font-weight: 800; line-height: 1.3; color: {{vigia.tone}};">{{vigia.estado}}</span>
         </span>
-        <span style="flex-shrink: 0; padding: 4px 8px; border-radius: 6px; border: 1px solid {{vigia.chipLine}}; background: {{vigia.wash}}; color: {{vigia.tone}}; font-size: 10px; letter-spacing: 0.12em; font-weight: 800; white-space: nowrap;">{{vigia.chip}}</span>
       </div>
-      <span style="font-size: 12px; line-height: 1.35; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{vigia.subLongo}}">{{vigia.sub}}</span>
-      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.5fr); gap: 5px;">
+      <span data-e1="sub" style="font-size: 12px; line-height: 1.35; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{vigia.subLongo}}">{{vigia.sub}}</span>
+      <div style="display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.3fr); gap: 5px;">
         <sc-for list="{{leituras}}" as="l" hint-placeholder-count="5">
-          <div title="{{l.dica}}" style="box-sizing: border-box; padding: 6px 6px; background: var(--cap-elev, #131a33); border-radius: 11px; display: flex; flex-direction: column; gap: 0; min-width: 0;">
+          <div data-e1="leitura" title="{{l.dica}}" style="box-sizing: border-box; padding: 6px 4px; background: var(--cap-elev, #131a33); border-radius: 11px; display: flex; flex-direction: column; gap: 0; min-width: 0;">
             <span style="font-size: 9.5px; letter-spacing: 0.06em; font-weight: 700; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.k}}</span>
             <span style="font-size: 15px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.v}}<span style="font-size: 10px; font-weight: 700; letter-spacing: 0; color: var(--cap-ink3, #97a3c0);">{{l.u}}</span></span>
             <span style="font-size: 10px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.s}}</span>
@@ -54,14 +58,14 @@ button { font: inherit; }
       <span style="font-size: 10.5px; line-height: 1.4; color: var(--cap-ink4, #7985a6);"><span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--cap-ink2, #b1bdd6);">{{vigia.pos}}</span> · {{vigia.fonte}}</span>
     </section>
 
-    <div style="display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; padding-top: 2px;">
-      <span style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">GATILHOS · UM TOQUE</span>
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; flex-shrink: 0; padding-top: 2px;">
+      <span data-e1="gatilhos-titulo" style="font-size: 11px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-ink3, #97a3c0);">{{gatilhosTitulo}}</span>
       <span style="flex-grow: 1;"></span>
-      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{gatilhosSub}}</span>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); white-space: nowrap;">{{gatilhosSub}}</span>
     </div>
     <div role="group" aria-label="Gatilhos do modo navegação" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex-shrink: 0;">
       <sc-for list="{{links}}" as="g" hint-placeholder-count="5">
-        <a href="{{g.href}}" aria-label="{{g.aria}}" style="box-sizing: border-box; min-height: 84px; padding: 11px 12px; border-radius: 16px; background: {{g.bg}}; border: 2px solid {{g.line}}; color: {{g.ink}}; text-decoration: none; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; order: {{g.ordem}};">
+        <a href="{{g.href}}" data-e1="gatilho" data-id="{{g.id}}" aria-label="{{g.aria}}" style="box-sizing: border-box; min-height: 84px; padding: 11px 12px; border-radius: 16px; background: {{g.bg}}; border: 2px solid {{g.line}}; color: {{g.ink}}; text-decoration: none; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; order: {{g.ordem}}; grid-column: {{g.col}};">
           <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
             {{g.ico}}
             <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.15;">{{g.l}}</span>
@@ -69,13 +73,15 @@ button { font: inherit; }
           <span style="font-size: 11px; line-height: 1.3; font-weight: 600; color: {{g.subTone}};">{{g.sub}}</span>
         </a>
       </sc-for>
-      <button type="button" onClick="{{registrar}}" aria-label="{{reg.aria}}" style="box-sizing: border-box; min-height: 84px; padding: 11px 12px; border-radius: 16px; background: {{reg.bg}}; border: 2px solid {{reg.line}}; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left; font-family: inherit; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; order: 5;">
-        <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-          {{reg.ico}}
-          <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.15;">REGISTRAR POSIÇÃO</span>
-        </span>
-        <span style="font-size: 11px; line-height: 1.3; font-weight: 600; color: {{reg.subTone}};">{{reg.sub}}</span>
-      </button>
+      <sc-if value="{{reg.on}}" hint-placeholder-val="{{true}}">
+        <button type="button" data-e1="gatilho" data-id="registrar" onClick="{{registrar}}" aria-label="{{reg.aria}}" style="box-sizing: border-box; min-height: 84px; padding: 11px 12px; border-radius: 16px; background: {{reg.bg}}; border: 2px solid {{reg.line}}; color: var(--cap-ink, #eaf1ff); cursor: pointer; text-align: left; font-family: inherit; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; order: 5;">
+          <span style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            {{reg.ico}}
+            <span style="font-size: 15px; font-weight: 800; letter-spacing: 0.04em; line-height: 1.15;">REGISTRAR POSIÇÃO</span>
+          </span>
+          <span style="font-size: 11px; line-height: 1.3; font-weight: 600; color: {{reg.subTone}};">{{reg.sub}}</span>
+        </button>
+      </sc-if>
     </div>
 
     <div role="status" aria-live="polite" style="flex-shrink: 0; display: flex; flex-direction: column;">
@@ -90,7 +96,7 @@ button { font: inherit; }
     </div>
 
     <div style="box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
-      <span><b style="color: var(--cap-violeta, #b45cff); letter-spacing: 0.08em;">ESPECIFICADO</b> · {{especificado}}</span>
+      <span><b style="color: var(--cap-violeta, #b45cff); letter-spacing: 0.08em;">TROCA AUTOMÁTICA</b> · <span data-e1="troca">{{especificado}}</span></span>
       <span style="font-size: 11px; color: var(--cap-ink4, #7985a6);">{{especFonte}}</span>
     </div>
   </div>
@@ -103,14 +109,19 @@ button { font: inherit; }
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
 class Component extends DCLogic {
   // Layout: a barra SOS da moldura vem antes do conteúdo no DOM (order: 2 na tela) — é o 1º link de SOS, o que o SOS flutuante do capitao-app.js acompanha.
-  state = { vivo: 0, reg: null, gravando: false };
+  state = { vivo: '', reg: null };
   componentDidMount() {
-    // Telemetria ao vivo (se ligada): redesenha a cada leitura nova do coletor
-    this._tele = () => this.setState({ vivo: Date.now() });
-    window.addEventListener('capitao-telemetria', this._tele);
-    this.whenBrain(() => this.setState({ vivo: Date.now() }));
+    // A cada tique da telemetria (replay ou coletor), a cada alerta que começa, muda de nível ou acaba e na virada do dia de bordo: monta o texto que a tela exibe (tele(): só dado, sem elemento React) e só
+    // chama setState se ele mudou (o __setLogicState do support.js troca o __v sem comparar nada). Com o instante fixado o texto não muda e nenhum tique redesenha; sem fixar, um por segundo (a hora do chip).
+    this._onTele = () => { if (!document.hidden) this.atualiza(); };
+    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.addEventListener(ev, this._onTele));
+    this.atualiza();
+    this.whenBrain(() => this.atualiza(true));
   }
-  componentWillUnmount() { window.removeEventListener('capitao-telemetria', this._tele); clearInterval(this._b); }
+  componentWillUnmount() {
+    ['capitao-telemetria', 'capitao-alerta', 'capitao-rebase'].forEach((ev) => window.removeEventListener(ev, this._onTele));
+    clearInterval(this._b);
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
@@ -119,88 +130,166 @@ class Component extends DCLogic {
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
+  atualiza(forca) {
+    const t = this.tele(), k = JSON.stringify(t);
+    if (!forca && k === this._k) return;
+    this._k = k; this._din = t; this._fresco = true;
+    this.setState({ vivo: k });
+  }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
-  // REGISTRAR POSIÇÃO: o cérebro grava no diário o resumo da telemetria (linha nova, nada se apaga) e a tela confirma só se a linha está lá.
+  // REGISTRAR POSIÇÃO: o cérebro grava no diário o resumo da telemetria (linha nova, nada se apaga, só com o toque) e a tela confirma só se a linha está lá. Com a janela de conversa em emergência valendo
+  // (CapitaoEmergencia, 15 min) a resposta sai com a posição trocada por «LEIA NO PLOTTER», como nas telas de conversa.
   registrar() {
     const B = window.CapitaoBrain;
     if (!B) return this.setState({ reg: { falhou: true, texto: 'Cérebro do app ainda carregando — toque de novo em alguns segundos.' } });
     if (this._ult && Date.now() - this._ult < 2500) return; // toque duplo sem querer não vira duas linhas
     this._ult = Date.now();
     const antes = B.loadDiario().length, n = B.now();
+    let emergencia = false; try { emergencia = !!(window.CapitaoEmergencia && window.CapitaoEmergencia.valendo()); } catch (e) { emergencia = false; }
     let a = null;
-    try { a = B.answer('Registre posição e hora no diário', { platform: 'app' }); } catch (e) { a = null; }
+    try { a = B.answer('Registre posição e hora no diário', { platform: 'app', emergencia: emergencia }); } catch (e) { a = null; }
     const depois = B.loadDiario(), linha = depois[0];
     const ok = !!(a && depois.length > antes && linha && /atalho|telemetria/.test(String(linha.src || '')));
     this.setState({ reg: ok ? { ok: true, d: n.d, t: n.t, texto: a.text, fonte: a.src } : { falhou: true, texto: 'Não consegui gravar no diário deste aparelho (armazenamento indisponível?). Anote posição e hora no Diário.', fonte: a ? a.src : '' } });
   }
-  renderVals() {
-    const D = window.CapitaoDados || {}, S = D.snapshot || {}, DI = S.diesel || {}, T = window.CapitaoTelemetria;
-    const v = T && T.atual ? T.atual() : null;
-    const B = window.CapitaoBrain;
-    const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
-    const g3 = (x) => (typeof x === 'number' && isFinite(x) ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : '—');
-    const mil = (x) => (typeof x === 'number' ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—');
-    const ok = 'var(--cap-ok, #34c77a)', warn = 'var(--cap-warn, #f0a63a)';
-    const OLHO = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z';
-    const hd = String(DI.hora || 'SEM DADOS');
-    const diesel = typeof DI.bb === 'number' ? { k: 'DIESEL', v: nb(DI.bb, 0) + '/' + nb(DI.be, 0), u: ' %', s: 'às ' + hd.slice(-5), dica: 'Diesel BB ' + nb(DI.bb) + ' % · BE ' + nb(DI.be) + ' % · ≈ ' + mil(DI.litros) + ' L de ' + mil(DI.capacidade) + ' · ' + (DI.nota || 'última leitura') + ' ' + hd } : { k: 'DIESEL', v: 'SEM DADOS', u: '', s: 'sem leitura', dica: 'Diesel SEM DADOS' };
-    let vigia, leituras;
-    if (v) {
-      const h = T.hora(v);
-      vigia = { estado: 'Leitura ao vivo do coletor · ' + h, chip: 'AO VIVO', tone: ok, wash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.12)', chipLine: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)', line: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)',
-        sub: (v.sog_nos >= 1 ? 'Navegando' : 'Parado') + ' pela telemetria · diesel: última leitura ' + (DI.hora || 'SEM DADOS'), subLongo: 'Diesel sem sentença ao vivo: última leitura ' + (DI.hora || 'SEM DADOS') + '.',
-        pos: T.posicao ? T.posicao(v) : 'posição SEM LEITURA', fonte: 'Fonte: coletor NMEA · ao vivo ' + h + ' · diesel: ' + (S.fonte || 'SEM DADOS') };
-      leituras = [
-        { k: 'SOG', v: nb(v.sog_nos), u: ' nó', s: h, dica: 'SOG ao vivo ' + h },
-        { k: 'PROA', v: g3(v.proa_graus), u: '', s: h, dica: 'Proa ao vivo ' + h },
-        { k: 'VENTO', v: nb(v.vento_verdadeiro_nos), u: ' nós', s: 'de ' + g3(v.vento_verdadeiro_angulo), dica: 'Vento verdadeiro ao vivo ' + h },
-        { k: 'PROF.', v: typeof v.profundidade_m === 'number' ? nb(v.profundidade_m) : 'SEM LEITURA', u: typeof v.profundidade_m === 'number' ? ' m' : '', s: h, dica: 'Profundidade ao vivo ' + h },
-        diesel
-      ];
-    } else {
-      vigia = { estado: 'Vigia automática inativa · SEM LEITURA ao vivo', chip: 'INATIVA', tone: warn, wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)', chipLine: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)',
-        sub: 'Última leitura real · snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'),
-        subLongo: 'Telemetria ao vivo desligada. Última leitura real: snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS') + ' · ' + (S.estado || 'SEM DADOS') + (S.local ? ' · ' + S.local : '') + '.',
-        pos: (S.estado ? S.estado + ' · ' : '') + ((S.gps && S.gps.texto) || 'posição SEM LEITURA'),
-        fonte: 'Fonte: ' + (S.fonte || 'SEM DADOS') + ' · leitura de ' + (S.quando || 'SEM DADOS') + ' (diesel ' + (DI.hora || 'SEM DADOS') + ', ' + (DI.nota || 'última leitura') + ') · telemetria ao vivo desligada' };
-      const hs = S.hora || 'SEM DADOS';
-      leituras = [
-        { k: 'SOG', v: typeof S.sog === 'number' ? nb(S.sog) : 'SEM LEITURA', u: typeof S.sog === 'number' ? ' nó' : '', s: 'às ' + hs, dica: 'SOG · snapshot ' + (S.quando || '') },
-        { k: 'PROA', v: typeof S.proa === 'number' ? g3(S.proa) : 'SEM LEITURA', u: '', s: 'às ' + hs, dica: 'Proa · snapshot ' + (S.quando || '') },
-        { k: 'VENTO', v: typeof S.vento === 'number' ? nb(S.vento) : 'SEM LEITURA', u: typeof S.vento === 'number' ? ' nós' : '', s: 'de ' + g3(S.ventoDe), dica: 'Vento verdadeiro de ' + g3(S.ventoDe) + ' · snapshot ' + (S.quando || '') },
-        { k: 'PROF.', v: typeof S.profundidade === 'number' ? nb(S.profundidade) : 'SEM LEITURA', u: typeof S.profundidade === 'number' ? ' m' : '', s: 'às ' + hs, dica: 'Profundidade · snapshot ' + (S.quando || '') },
-        diesel
-      ];
+  // A troca automática NAVEGANDO × FUNDEADO/ATRACADO (F05, F34): NAVEGANDO quando o SOG fica em 1 nó ou mais por 5 s seguidos; FUNDEADO ou ATRACADO quando fica abaixo de 0,5 nó por 5 s seguidos; entre
+  // 0,5 e 1 nó vale o que já era (histerese: o SOG que oscila em torno de 1 nó não pisca o conjunto). A 1ª leitura decide na hora (a tela nunca abre sem conjunto); sem SOG o modo não muda. Os 5 s contam no
+  // relógio da tela (com o instante fixado do teste o quadro não anda, o relógio sim), e um intervalo sem tique (aba escondida) zera a contagem: um instante só nunca vale 5 s.
+  modo(sog) {
+    const ENTRA = 1, SAI = 0.5, ESPERA = 5000, agora = Date.now();
+    if (this._ult1 && agora - this._ult1 > 2500) this._cand = null;
+    this._ult1 = agora;
+    if (typeof sog !== 'number' || !isFinite(sog)) { this._cand = null; return this._nav === undefined ? null : this._nav; }
+    const alvo = sog >= ENTRA ? true : sog < SAI ? false : (this._nav === undefined ? null : this._nav);
+    if (this._nav === undefined || this._nav === null) { this._nav = alvo === null ? sog >= ENTRA : alvo; this._cand = null; }
+    else if (alvo !== this._nav) {
+      if (this._cand !== alvo) { this._cand = alvo; this._desde = agora; }
+      else if (agora - this._desde >= ESPERA) { this._nav = alvo; this._cand = null; }
+    } else this._cand = null;
+    return this._nav;
+  }
+  // O que a tela exibe e vem do instante do CapitaoAgora (replay, coletor ou a última leitura salva: o mesmo texto da moldura e do cérebro), em texto puro (sem elementos React): é a chave do «só redesenha quando
+  // o texto exibido muda». Com a simulação o dado sempre existe; o caminho `null` → SEM DADOS / SEM LEITURA é do ramo simulacao:false (falta()). O ramo da última leitura só vale como reserva.
+  tele() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, AL = window.CapitaoAlertas, B = window.CapitaoBrain;
+    const sim = D.simulacao === true, SD = 'SEM DADOS', SL = 'SEM LEITURA', falta = (r) => (sim ? '—' : r), num = (x) => typeof x === 'number' && isFinite(x), cap = (s) => { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); };
+    let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
+    const q = I && I.q ? I.q : null, reserva = !!(I && I.fonte === 'snapshot'), aoVivo = !!I && !reserva;
+    const c = (nome) => { let t = null; try { t = q && F.campo ? F.campo(q, nome) : null; } catch (e) { t = null; } return t === undefined ? null : t; };
+    const nav = this.modo(q && num(q.sog_nos) ? q.sog_nos : null);   // true | false | null (sem SOG ainda)
+    const est = q && typeof q.estado === 'string' ? q.estado : '', local = q && typeof q.local === 'string' ? q.local : '';
+    const rot = nav === true ? 'NAVEGANDO' : nav === false ? (/atrac/i.test(est) ? 'ATRACADO' : /fundead/i.test(est) ? 'FUNDEADO' : 'FUNDEADO / ATRACADO') : falta('SEM LEITURA DO SOG');
+    const fonte = I ? String(I.fonteTxt || '') : falta(SD);
+    // alertas abertos, a mesma lista da faixa do topo e da Ponte: os do CapitaoAlertas e os alarmes pedidos no chat (F12, B.alarmesPedidosAtivos: só se houver algum guardado, a conta varre até 160 s por regra), crítico
+    // antes de aviso, o mais antigo primeiro (o que não tem começo conhecido, desdeMs null, vai para o fim) e por fim o id. O alarme pedido é sempre AVISO e não tem tela de detalhe: o cartão dele leva à lista de alertas da Ponte.
+    let lista = []; try { lista = AL && typeof AL.ativos === 'function' ? AL.ativos() : []; } catch (e) { lista = []; }
+    lista = (Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string' && a.id && (a.nivel === 'aviso' || a.nivel === 'critico'))
+      .map((a) => ({ id: a.id, nivel: a.nivel, texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, quando: num(a.desdeMs) && a.hora ? 'desde ' + a.hora : 'agora', detalhe: typeof a.detalhe === 'string' ? a.detalhe : '', sistema: a.sistema, lado: a.lado, pedido: false }));
+    let emerg = false; try { emerg = !!(window.CapitaoEmergencia && window.CapitaoEmergencia.valendo()); } catch (e) { emerg = false; }   // na janela de conversa em emergência a velocidade do alarme pedido sai sem limite nem leitura (CLAUDE.md 10)
+    let pedidos = []; try { if (B && typeof B.alarmesPedidosAtivos === 'function') { let tem = ''; try { tem = localStorage.getItem('capitao.alarmes.v1') || ''; } catch (e) {} if (tem.length >= 3) { const l = B.alarmesPedidosAtivos(undefined, { emergencia: emerg }); pedidos = Array.isArray(l) ? l : []; } } } catch (e) { pedidos = []; }
+    pedidos.forEach((a) => { if (a && typeof a.id === 'string' && a.id && a.nivel === 'aviso') lista.push({ id: a.id, nivel: 'aviso', texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, quando: String(a.desdeTxt || ''), detalhe: '', sistema: a.sistema, lado: a.lado, pedido: true }); });
+    const peso = (n) => (n === 'critico' ? 2 : 1), inf = (x) => (x === null ? Infinity : x);
+    lista.sort((x, y) => (peso(y.nivel) - peso(x.nivel)) || (inf(x.desdeMs) < inf(y.desdeMs) ? -1 : inf(x.desdeMs) > inf(y.desdeMs) ? 1 : 0) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+    const al = lista[0] || null, mais = Math.max(0, lista.length - 1), crit = !!al && al.nivel === 'critico';
+    const SISTEMA = { motores: 'Motores', eletrico: 'Elétrico', porao: 'Porão', eletronicos: 'Eletrônicos', tanques: 'Tanques', gerador: 'Gerador', estabilizador: 'Estabilizador' };
+    const alTxt = al ? al.texto + ' · ' + (al.quando || 'agora') + (mais ? ' · +' + mais + (mais === 1 ? ' alerta' : ' alertas') : '') : '';
+    // o conjunto: com alarme, o 1º cartão leva ao detalhe do alarme (C3-Leme-Alerta.dc.html#alarme=<id>); os links vêm do estado
+    const ask = (p) => (B && B.askHref ? B.askHref('app', p) : 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(p));
+    const C16 = (D.protocolos && D.protocolos.canal16) || {};
+    const porao = c('porao_bb_nivel') !== null && c('porao_be_nivel') !== null ? 'BB ' + c('porao_bb_nivel') + ' · BE ' + c('porao_be_nivel') + ' cm' : falta(SL);
+    const dieselL = c('diesel_litros'), pct = I && I.calc && num(I.calc.diesel_pct) && F.nb ? F.nb(I.calc.diesel_pct, 1) + ' %' : '';
+    const T = (id, l, sub, href, d, tom, ordem, aria) => ({ id: id, l: l, sub: sub, href: href, d: d, tom: tom, ordem: ordem, aria: aria || l + ' — ' + sub });
+    const tiles = [];
+    if (al) {
+      const sist = (SISTEMA[al.sistema] || cap(al.sistema) || 'Alarme pedido') + (al.lado ? ' ' + String(al.lado).toUpperCase() : '');
+      tiles.push(T('alerta', (crit ? 'ALERTA CRÍTICO' : 'AVISO') + ' · ' + sist.toUpperCase(), alTxt, al.detalhe ? al.detalhe : al.pedido ? 'A2-Ponte-Mobile.dc.html#alertas' : 'C3-Leme-Alerta.dc.html#alarme=' + al.id,
+        'M12 4 21 20H3z M12 10v4 M12 17h.01', crit ? 'critico' : 'aviso', 0, (crit ? 'Alerta crítico' : 'Aviso') + ': ' + al.texto + (al.pedido ? ' — abrir a lista de alertas' : ' — abrir o detalhe do alarme')));
+      tiles[0].col = '1 / -1';
     }
-    vigia.ico = this.ico(OLHO, 20, 1.8, vigia.tone);
+    if (nav === false) {
+      tiles.push(T('ancora', 'ÂNCORA / GARRA', 'Âncora ' + (q && typeof q.ancora_estado === 'string' ? q.ancora_estado : falta(SL)) + ' · alarme de âncora e corrente', ask('A âncora está garrando?'),
+        'M12 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M12 7.5V21 M4 13a8 8 0 0 0 16 0 M2.5 13H6 M18 13h3.5', 'porao', 1, 'Âncora e garra — perguntar ao Capitão IA'));
+      tiles.push(T('checklist', 'CHECKLIST DE SAÍDA', 'Item a item, com o que o quadro já confirma', 'C4-Checklist-Mobile.dc.html#tipo=saida', 'M10 6h10 M10 12h10 M10 18h10 M4 6l1.5 1.5L8 5 M4 12l1.5 1.5L8 11 M4 18l1.5 1.5L8 17', 'canal', 2));
+      tiles.push(T('abastecer', 'ABASTECER', dieselL !== null ? 'Diesel ≈ ' + dieselL + ' L' + (pct ? ' · ' + pct : '') : 'Diesel ' + falta(SL), 'G2-Abastecimento-Mobile.dc.html', 'M5 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14 M4 20h12 M15 9h2a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V8l-3-3 M8 8h4', 'motor', 3));
+      tiles.push(T('diario', 'DIÁRIO', 'Anotar e ver o registro de bordo', 'G3-Diario-Mobile.dc.html', 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z M8 20a3 3 0 0 1 0-6h11', 'card', 4));
+    } else {
+      tiles.push(T('mob', 'HOMEM AO MAR', 'Abre o SOS · protocolo MOB', 'S2-SOS-Mobile.dc.html', 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 13l4-4 4 4 M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0', 'crit', 1, 'Homem ao mar — abrir o SOS'));
+      tiles.push(T('porao', 'ÁGUA NO PORÃO', 'Passo a passo do Capitão IA · sensor ' + porao, ask('Tem água no porão'), 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z M3 21h18', 'porao', 2, 'Água no porão — passo a passo do Capitão IA (sensor de porão ' + porao + ')'));
+      tiles.push(T('pane', 'PANE DE MOTOR', 'Triagem do sintoma pelo guia dos motores', 'E2-Navegando-Sintoma.dc.html#sis=motores', 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', 'motor', 3, 'Pane de motor — abrir a triagem de sintoma'));
+      tiles.push(T('alarme', 'ALARME', 'Triagem: escolha o sistema e o sintoma', 'E2-Navegando-Sintoma.dc.html', 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 21h4', 'motor', 4, 'Alarme — abrir a triagem de sintoma'));
+      tiles.push(T('canal16', 'CANAL 16', 'Roteiro VHF · ' + (C16.mhz ? C16.mhz + ' MHz' : falta('MHz SEM DADOS')), ask('Canal 16'), 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', 'canal', 6, 'Canal 16 — roteiro de chamada no VHF'));
+    }
+    tiles.forEach((t) => { if (!t.col) t.col = 'auto'; });
+    // vigia: o estado, o chip e as leituras de agora (SOG, proa, vento, profundidade e diesel do quadro)
+    let estado, chip, tom, chipTom, sub, subLongo;
+    if (aoVivo) {
+      estado = 'Vigia ligada · ' + (al ? (crit ? 'ALERTA CRÍTICO ativo' : 'AVISO ativo') + (mais ? ' · +' + mais : '') : 'nenhum alarme ativo');
+      chip = 'AO VIVO ' + I.hora; tom = al ? (crit ? 'crit' : 'warn') : 'ok'; chipTom = 'ok';
+      sub = rot + (local ? ' · ' + local : '');
+      subLongo = 'Estado: ' + rot + (c('sog_nos') !== null ? ' · SOG ' + c('sog_nos') + ' nós' : '') + (local ? ' · ' + local : '') + ' · ' + fonte + '.';
+    } else {
+      estado = sim ? 'Vigia à espera da leitura ao vivo' : 'Vigia automática inativa · SEM LEITURA ao vivo';
+      chip = reserva ? 'ÚLTIMA LEITURA' : sim ? 'AGUARDANDO' : 'INATIVA'; tom = 'warn'; chipTom = 'warn';
+      sub = 'Última leitura salva · ' + (reserva ? fonte : falta(SD));
+      subLongo = sub + (est ? ' · ' + est : '') + (local ? ' · ' + local : '') + '.';
+    }
+    const h = I ? (reserva ? String(I.fonteTxt || '').slice(-5) : I.hhmm) : falta(SL);   // (a hora da leitura; na última leitura salva, a do dia dela)
+    const L = (k, v, u, s, dica) => ({ k: k, v: v === null ? falta(SL) : v, u: v === null ? '' : u, s: s, dica: dica });
+    const prof = c('profundidade_m'), vv = c('vento_verdadeiro_nos'), va = c('vento_verdadeiro_angulo'), proa = c('proa_graus'), sog = c('sog_nos');
+    const dieselOk = c('diesel_bb_pct') !== null && c('diesel_be_pct') !== null, cap_d = D.embarcacao && D.embarcacao.tanques ? D.embarcacao.tanques.diesel_l : null;
+    const leituras = [
+      L('SOG', sog, '', 'nós', 'SOG ' + (sog !== null ? sog + ' nós' : falta(SL)) + ' · ' + fonte),
+      L('PROA', proa === null ? null : proa + '°', '', h, 'Proa ' + (proa !== null ? proa + '°' : falta(SL)) + ' · ' + fonte),
+      L('VENTO', vv, '', 'nós' + (va !== null ? ' · ' + va + '°' : ''), 'Vento verdadeiro a bordo agora' + (va !== null ? ', de ' + va + '°' : '') + ' · ' + fonte),
+      L('PROF.', prof, '', 'm', 'Profundidade ' + (prof !== null ? prof + ' m' : falta(SL)) + ' · ' + fonte),
+      L('DIESEL', dieselOk ? Math.round(q.diesel_bb_pct) + '/' + Math.round(q.diesel_be_pct) : null, ' %', dieselL !== null ? dieselL + ' L' : h,
+        'Diesel BB ' + c('diesel_bb_pct') + ' % · BE ' + c('diesel_be_pct') + ' %' + (dieselL !== null ? ' · ≈ ' + dieselL + ' L' + (cap_d ? ' de ' + F.nb(cap_d, 0, true) : '') : '') + ' · ' + fonte)
+    ];
+    const pos = q && num(q.lat) && num(q.lon) && F.coord ? F.coord(q.lat, q.lon) : 'posição ' + falta(SL);
+    return {
+      nav: nav, conj: nav === false ? 'parado' : 'nav', rot: rot, tiles: tiles, leituras: leituras,
+      vigia: { modo: nav === null ? '' : nav ? 'nav' : 'parado', estado: estado, chip: chip, tom: tom, chipTom: chipTom, sub: sub, subLongo: subLongo, pos: pos, fonte: 'Fonte: ' + fonte },
+      gatilhosTitulo: 'GATILHOS · ' + rot, gatilhosSub: nav === null ? 'sem o SOG não há troca' : 'muda sozinho com o SOG',
+      especificado: 'o conjunto de botões muda sozinho com o SOG: NAVEGANDO com 1 nó ou mais por 5 s, FUNDEADO ou ATRACADO com menos de 0,5 nó por 5 s. Agora: ' + rot + (sog !== null ? ' · SOG ' + sog + ' nós' : '') + '.',
+      especFonte: 'Fonte: especificação do modo navegação · SOG: ' + fonte
+    };
+  }
+  renderVals() {
+    const ok = 'var(--cap-ok, #34c77a)', warn = 'var(--cap-warn, #f0a63a)', crit = 'var(--cap-crit, #ff3b30)';
+    const OLHO = 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z';
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (o toque em REGISTRAR) refaz o texto agora
+    let tele = this._din;
+    if (!this._fresco || !tele) { tele = this._din = this.tele(); this._k = JSON.stringify(tele); }
+    this._fresco = false;
+    const TOM = { ok: [ok, 'rgba(var(--cap-ok-rgb, 52,199,122), 0.12)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.40)'], warn: [warn, 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)'], crit: [crit, 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.55)'] };
+    const v = tele.vigia, tv = TOM[v.tom] || TOM.ok, tc = TOM[v.chipTom] || TOM.ok;
+    const vigia = { modo: v.modo, estado: v.estado, chip: v.chip, sub: v.sub, subLongo: v.subLongo, pos: v.pos, fonte: v.fonte, tone: tv[0], wash: tv[1], line: tv[2], chipTone: tc[0], chipWash: tc[1], chipLine: tc[2], ico: this.ico(OLHO, 20, 1.8, tv[0]) };
     const card = { bg: 'var(--cap-card, #0d1329)', ink: 'var(--cap-ink, #eaf1ff)', subTone: 'var(--cap-ink2, #b1bdd6)' };
     const tom = (rgb, cor) => ({ line: 'rgba(' + rgb + ', 0.65)', cor: cor });
-    const PORAO = tom('var(--cap-accent-rgb, 0,161,254)', 'var(--cap-accent, #00a1fe)'), MOTOR = tom('var(--cap-warn-rgb, 240,166,58)', warn), CANAL = tom('var(--cap-tele-rgb, 0,244,253)', 'var(--cap-tele, #00f4fd)');
-    const ask = (q) => (B ? B.askHref('app', q) : 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(q));
-    const C16 = (D.protocolos && D.protocolos.canal16) || {};
-    const links = [
-      { l: 'HOMEM AO MAR', sub: 'Abre o SOS · protocolo MOB', href: 'S2-SOS-Mobile.dc.html', aria: 'Homem ao mar — abrir o SOS', d: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 13l4-4 4 4 M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0', bg: 'var(--cap-crit-fill, #d32f27)', line: 'var(--cap-crit-fill, #d32f27)', ink: '#ffffff', subTone: 'rgba(255,255,255,0.88)', cor: '#ffffff', ordem: 1 },
-      Object.assign({ l: 'ÁGUA NO PORÃO', sub: 'Pergunta ao Capitão IA · sensor de porão ' + (S.porao == null ? 'SEM LEITURA' : 'com leitura'), href: ask('Porão'), aria: 'Água no porão — perguntar ao Capitão IA', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z M3 21h18' }, card, PORAO, { ordem: 2 }),
-      Object.assign({ l: 'PANE DE MOTOR', sub: 'Triagem do sintoma pelo guia dos motores', href: 'E2-Navegando-Sintoma.dc.html#sis=motores', aria: 'Pane de motor — abrir a triagem de sintoma', d: 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8' }, card, MOTOR, { ordem: 3 }),
-      Object.assign({ l: 'ALARME', sub: 'Triagem: escolha o sistema e o sintoma', href: 'E2-Navegando-Sintoma.dc.html', aria: 'Alarme — abrir a triagem de sintoma', d: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 21h4' }, card, MOTOR, { ordem: 4 }),
-      Object.assign({ l: 'CANAL 16', sub: 'Roteiro VHF · ' + (C16.mhz ? C16.mhz + ' MHz' : 'MHz SEM DADOS'), href: ask('Canal 16'), aria: 'Canal 16 — roteiro de chamada no VHF', d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5' }, card, CANAL, { ordem: 6 })
-    ].map((g) => Object.assign(g, { ico: this.ico(g.d, 22, 1.9, g.cor) }));
+    const TILE = {
+      porao: tom('var(--cap-accent-rgb, 0,161,254)', 'var(--cap-accent, #00a1fe)'), motor: tom('var(--cap-warn-rgb, 240,166,58)', warn), canal: tom('var(--cap-tele-rgb, 0,244,253)', 'var(--cap-tele, #00f4fd)'),
+      card: tom('var(--cap-accent-rgb, 0,161,254)', 'var(--cap-accent, #00a1fe)'),
+      crit: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'var(--cap-crit-fill, #d32f27)', ink: '#ffffff', subTone: 'rgba(255,255,255,0.88)' },
+      critico: { line: 'var(--cap-crit-fill, #d32f27)', cor: '#ffffff', bg: 'var(--cap-crit-fill, #d32f27)', ink: '#ffffff', subTone: 'rgba(255,255,255,0.92)' },
+      aviso: { line: 'var(--cap-warn, #f0a63a)', cor: warn, bg: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.12)' }
+    };
+    const links = tele.tiles.map((g) => { const t = TILE[g.tom] || TILE.card; return Object.assign({ id: g.id, l: g.l, sub: g.sub, href: g.href, aria: g.aria, ordem: g.ordem, col: g.col }, card, { line: t.line }, t.bg ? { bg: t.bg } : {}, t.ink ? { ink: t.ink } : {}, t.subTone ? { subTone: t.subTone } : {}, { ico: this.ico(g.d, 22, 1.9, t.cor) }); });
     const r = this.state.reg;
     const conf = !r ? { on: false } : r.ok
       ? { on: true, titulo: 'REGISTRADO NO DIÁRIO · ' + r.d + ' ' + r.t, texto: r.texto, fonte: r.fonte || '', tone: ok, wash: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.08)', line: 'rgba(var(--cap-ok-rgb, 52,199,122), 0.45)' }
       : { on: true, titulo: 'NÃO REGISTRADO', texto: r.texto, fonte: r.fonte || '', tone: warn, wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.08)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.45)' };
-    const REG = tom('var(--cap-tele-rgb, 0,244,253)', 'var(--cap-tele, #00f4fd)');
+    const REG = TILE.canal;
     return {
-      vigia: vigia, leituras: leituras,
-      gatilhosSub: 'toque grande · alto contraste',
+      vigia: vigia, leituras: tele.leituras,
+      gatilhosTitulo: tele.gatilhosTitulo, gatilhosSub: tele.gatilhosSub,
       links: links,
       registrar: () => this.registrar(),
-      reg: { ico: this.ico('M12 21s6-6 6-11a6 6 0 0 0-12 0c0 5 6 11 6 11z M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 22, 1.9, REG.cor), bg: 'var(--cap-card, #0d1329)', line: REG.line,
+      reg: { on: tele.conj === 'nav', ico: this.ico('M12 21s6-6 6-11a6 6 0 0 0-12 0c0 5 6 11 6 11z M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 22, 1.9, REG.cor), bg: 'var(--cap-card, #0d1329)', line: REG.line,
         sub: r && r.ok ? 'Gravado às ' + r.t + ' · toque de novo = linha nova' : 'Grava posição e hora no diário de bordo', subTone: r && r.ok ? ok : 'var(--cap-ink2, #b1bdd6)',
         aria: 'Registrar posição e hora no diário de bordo' },
       conf: conf,
-      especificado: 'o conjunto de botões muda sozinho com a telemetria (navegando × atracado) — ' + (v ? 'telemetria ao vivo ligada, mas a troca automática ainda não está ativa nesta demonstração.' : 'inativo sem telemetria ao vivo.'),
-      especFonte: 'Fonte: especificação do modo navegação · telemetria: ' + (v ? 'coletor NMEA ao vivo' : 'snapshot' + (D.demo ? ' DEMO ' : ' ') + (S.quando || 'SEM DADOS'))
+      especificado: tele.especificado,
+      especFonte: tele.especFonte
     };
   }
 }
