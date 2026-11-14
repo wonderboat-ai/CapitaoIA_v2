@@ -4820,7 +4820,7 @@
   // «situação agora / atual / de bordo» só vale como a pergunta inteira («situação atual do gerador», «situação agora dos tanques» têm a rota do assunto)
   var NAVEGACAO_SITUACAO = /^ (?:e )?(?:entao )?(?:(?:qual|como|que) (?:e |esta )?)?(?:me (?:da|diga|fale|mostre|passa|passe) )?(?:a |o )?(?:situacao|status)(?: (?:geral|da navegacao|de bordo|do barco|da lancha|da embarcacao|a bordo|atual|agora|neste momento|por ai|ai))* $/;
   function navegacaoPergunta(q) { return NAVEGACAO_CURTA.test(q) || NAVEGACAO_SITUACAO.test(semVocativo(q)) || (has(q, NAVEGACAO_PALAVRAS) && leitura(q, NAVEGACAO_OK)); }   // («como está a navegação do piloto automático?», do documento, da manutenção ou do tanque tem palavra fora da lista branca: é do assunto)
-  // foraBarco (§2.7): dinheiro, esporte, notícia, política. Depois de todas as rotas de bordo: «quanto custa o diesel em reais?» é do diesel
+  // foraBarco (§2.7): dinheiro, esporte, notícia, política. Depois de todas as rotas de bordo: «quanto custa a revisão dos motores?» e o relato de falha com o preço junto seguem a rota do assunto (local, sem preço)
   // «câmbio» (a reversora), «jogo» (o balanço do barco, a folga de uma peça, o jogo de cabos) e «bolsa» (estanque, de primeiros socorros) têm outro sentido a bordo: só são dinheiro ou esporte sem o vocabulário de bordo junto
   var FORA_BARCO = [' dolar ', ' dolares ', ' cotacao ', ' cotacoes ', ' bitcoin ', ' preco ', ' precos ', 'quanto custa', ' placar ', ' placares ', ' campeonato ', ' campeonatos ', ' noticia ', ' noticias ', ' eleicao ', ' eleicoes ', ' euro ', ' euros ', 'quem venceu', 'quem ganhou'];   // (palavra inteira: «preco» está dentro de «preconizado» e «precoce»)
   var CAMBIO_BORDO = ['engat', 'marcha', 'reversor', 'reversora', 'embreagem', 'alavanca', 'manete', 'duro', 'dura ', 'trava', 'motor', 'helice', 'oleo', 'barulho', 'vibra', 'falha', 'defeito', 'problema', 'neutro', 'acelerador', 'solta', 'arranha',
@@ -4830,6 +4830,15 @@
   function foraBarcoPergunta(q) {
     return has(q, FORA_BARCO) || (has(q, ['cambio']) && !has(q, CAMBIO_BORDO)) || (has(q, [' jogo ', ' jogos ']) && !has(q, JOGO_BORDO)) || (has(q, ['bolsa']) && !has(q, BOLSA_BORDO));
   }
+  // O DINHEIRO do insumo de bordo (trava 13): «qual o preço do diesel hoje?», «quanto custa o litro do diesel?», «quanto paguei no abastecimento?», «o diesel está caro?» são a rota foraBarco (local, sem preço), ANTES das rotas de dado: a
+  // autonomia, o consumo e o guia não respondem preço. Só a pergunta NEUTRA (lista branca): a pergunta de DADO («quanto diesel tem?», «quanto gastamos de diesel?», «quanto abasteci?») não tem palavra de dinheiro, e o relato de
+  // falha com o preço junto («o filtro entupiu, quanto custa um novo?») tem palavra fora da lista; os dois seguem a rota de antes. «O litro do diesel» é preço («quanto está o litro do diesel?»); «caro capitão» é vocativo, não preço (e o plural feminino fica de fora da lista: é palavra de pessoa, do vocabulário reservado). A emergência, o óleo e a cabeça de segurança vêm antes, na route().
+  var DINHEIRO_BORDO = / (?:precos?|custa|custam|custou|custar|custos?|pago|paga|pagar|paguei|pagamos|pagou|pagando|r\$|reais|o litro d[aeo]|(?:car[oa]|caros|barat[oa]s?)(?! capitao)) /;
+  var INSUMO_BORDO = [' diesel ', ' combustivel ', ' gasolina ', ' oleo ', ' filtro ', ' filtros ', ' peca ', ' pecas ', ' abastec', ' litro ', ' litros ', ' tanque '];
+  var DINHEIRO_BORDO_OK = NEUTRAS_BASE + 'preco precos custa custam custou custar custo custos pago paga pagar paguei pagamos pagou pagando r$ reais caro cara caros barato barata baratos baratas valor valores total conta diesel combustivel gasolina oleo '
+    + 'filtro filtros peca pecas abastecimento abastecimentos abastecer abastecida abasteci abastecemos litro litros motor motores gerador lubrificante tanque que foi ficou fica sai saiu vai vou se ja muito mais tao bem pelo pela por para pra com um uma cada '
+    + 'ultimo ultima vez la marina posto bomba cais encher completar troca trocar novo nova ';
+  function dinheiroBordo(q) { return DINHEIRO_BORDO.test(q) && has(q, INSUMO_BORDO) && soNeutras(q.replace(/ \d+(?= )/g, ''), DINHEIRO_BORDO_OK); }   // (o número inteiro não tira a pergunta da lista: «quanto custam 100 litros de diesel?»)
   // O AIS «por perto» («tem barco por perto?», «tem algum navio perto?», «quantas embarcações próximas?»): a contagem de alvos do AIS, a mesma resposta do «quantos alvos?» (o app não vê o radar nem o plotter)
   var AIS_PERTO = / (?:barcos?|embarcacoes?|navios?|lanchas?|veleiros?|alvos?|trafego|movimento) (?:por perto|perto|proximos?|proximas?|aqui perto|ao redor|em volta|na area|por aqui|por ai)(?= )/;
   var AIS_PERTO_OK = AIS_OK + 'tem ha existe algum alguns outro outros por perto perto proximo proximos proxima proximas aqui ao redor em volta na area navio navios barcos veleiros lanchas embarcacoes trafego movimento quantos quantas quais ';
@@ -4900,6 +4909,8 @@
     // o rumo, o ETA, as pessoas a bordo, a telemetria, o fora do barco e os contatos levam a situação de bordo ou a hora do quadro; «proa», «popa», «onde» e «agora» não a desviam —: é o fallback SEGURO (a instrução do SOS, sem a
     // situação de bordo, sem a janela), local; o pedeIA também é false para ela. Os falsos positivos custam só a resposta do outro assunto (a rede é larga, mas não toma «quanto falta para a Barra Sul?», «perdeu o voo» nem o lugar da rota).
     if (risco(qRaw).n >= 1) return 'fallback';
+    // o dinheiro do insumo de bordo (trava 13: rota local, nunca preço): depois da emergência, do óleo e da cabeça de segurança e antes de qualquer rota de dado («qual o preço do diesel hoje?» não é a autonomia)
+    if (dinheiroBordo(q)) return 'foraBarco';
     // F12/F15 (depois da cabeça de emergência: a pergunta de segurança nunca é delas): o pedido de alarme (incompleto também), o «apagar alarme #n», os alarmes pedidos e o «agendar … para dd/mm»
     if (almPedido(q)) return 'alarmePedido';
     if (almApagaN(qRaw) >= 0) return 'alarmeApaga';

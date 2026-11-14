@@ -522,7 +522,7 @@ ROTAS_P3C = [
     # sobreDados (§2.6) e o que NÃO cai nela
     ('esses dados são reais?', 'sobreDados', False), ('isso é simulado?', 'sobreDados', False), ('o barco existe?', 'sobreDados', False), ('isso é real?', 'sobreDados', False), ('é de verdade?', 'sobreDados', False),
     ('a posição é real?', 'sobreDados', False), ('o alarme é real?', 'sobreDados', False), ('os números são reais?', 'sobreDados', False), ('isso é uma simulação?', 'sobreDados', False),
-    ('quanto custa o diesel em reais?', 'autonomia', False), ('qual a velocidade real do barco?', 'posicao', False), ('qual o vento real no barco agora?', 'clima', False), ('como realizar a troca de óleo do barco?', 'base', True),
+    ('quanto custa o diesel em reais?', 'foraBarco', False), ('qual a velocidade real do barco?', 'posicao', False), ('qual o vento real no barco agora?', 'clima', False), ('como realizar a troca de óleo do barco?', 'base', True),
     ('existe alguma pendência no barco?', 'anomalias', False), ('qual o consumo real do barco?', 'consumo', False), ('dados em tempo real', 'fallback', True), ('a bateria do barco é real?', 'eletrico', False),
     ('quanto custa isso, é de verdade?', 'foraBarco', False), ('qual o preço de uma lancha?', 'foraBarco', False),
     # o que as rotas novas não podem roubar (PROMPT Fase 3: «checklist de chegada», «alarme de óleo acendeu», «temperatura hoje», «alarme de fluxo da climatização»)
@@ -679,7 +679,25 @@ ROTAS_P3C_REV4 = [(q, 'sobreDados', False) for q in SOBRE_DADOS_SIM_REV4] + [
     ('qual o intervalo de troca preconizado pelo fabricante?', 'fallback', True), ('desgaste precoce do rotor', 'fallback', True), ('o desgaste precoce do impeller', 'fallback', True),
     ('falha precoce do alternador', 'fallback', True), ('qual a pressão preconizada dos pneus do bote?', 'fallback', True), ('corrosão precoce no casco', 'fallback', True),
     ('o filtro está com desgaste precoce', 'fallback', True), ('como evitar falha precoce da hélice', 'fallback', True), ('o que fazer com desgaste precoce das buchas', 'fallback', True),
-    ('quais os preços?', 'foraBarco', False), ('qual o preço do dólar?', 'foraBarco', False), ('preço do bitcoin', 'foraBarco', False), ('qual o preço do diesel hoje?', 'autonomia', False),
+    ('quais os preços?', 'foraBarco', False), ('qual o preço do dólar?', 'foraBarco', False), ('preço do bitcoin', 'foraBarco', False), ('qual o preço do diesel hoje?', 'foraBarco', False),
+    # o DINHEIRO do insumo de bordo (trava 13) é a rota foraBarco, local, ANTES das rotas de dado: o preço, o custo, o quanto se paga, o R$ e o caro ou barato do diesel, da gasolina, do óleo, do filtro, da peça e do abastecimento
+    # (antes, a autonomia, o tanque ou o guia respondiam «qual o preço do diesel hoje?»: local e sem preço, mas fora do assunto)
+    ('quanto custa o litro do diesel?', 'foraBarco', False), ('quanto está o litro do diesel?', 'foraBarco', False), ('preço do diesel', 'foraBarco', False), ('qual o custo do diesel?', 'foraBarco', False),
+    ('quanto paguei no diesel?', 'foraBarco', False), ('quanto pago pelo óleo do motor?', 'foraBarco', False), ('qual o preço do óleo do motor?', 'foraBarco', False), ('o diesel está caro?', 'foraBarco', False),
+    ('o diesel tá barato hoje?', 'foraBarco', False), ('a gasolina está cara?', 'foraBarco', False), ('preço da gasolina', 'foraBarco', False), ('quanto custa o filtro de óleo?', 'foraBarco', False),
+    ('qual o preço do filtro do gerador?', 'foraBarco', False), ('quanto custa a peça?', 'foraBarco', False), ('qual o valor do abastecimento em reais?', 'foraBarco', False), ('quanto foi o abastecimento em R$?', 'foraBarco', False),
+    ('quanto custa abastecer?', 'foraBarco', False), ('quanto custa encher o tanque?', 'foraBarco', False), ('quanto custam 100 litros de diesel?', 'foraBarco', False), ('quanto custa o combustível?', 'foraBarco', False),
+    # … e não rouba a pergunta de DADO (sem palavra de dinheiro: os litros, o consumo, a autonomia, a pressão do óleo) …
+    ('quanto diesel tem?', 'autonomia', False), ('quantos litros de diesel tem?', 'autonomia', False), ('qual o consumo?', 'consumo', False), ('quanto gastamos de diesel?', 'consumo', False), ('qual o consumo real de diesel?', 'consumo', False),
+    ('qual a autonomia?', 'autonomia', False), ('quanto abasteci?', 'autonomia', False), ('quantos litros abasteci?', 'autonomia', False), ('qual o valor do abastecimento?', 'autonomia', False), ('quanto está o diesel?', 'autonomia', False),
+    ('qual o valor da pressão do óleo?', 'oleoLeitura', False),
+    # … nem a pergunta mista com o dado, o relato com o preço junto (palavra fora da lista branca), o vocativo («caro capitão») e o «custa a pegar» …
+    ('qual o preço do diesel e a autonomia?', 'autonomia', False), ('o diesel está caro, qual a autonomia?', 'autonomia', False), ('sem diesel, qual o preço do diesel?', 'autonomia', False),
+    ('o motor parou por falta de diesel, quanto custa o diesel?', 'autonomia', False), ('caro capitão, quanto diesel tem?', 'autonomia', False), ('o motor custa a pegar', 'motores', False),
+    # … e a emergência, o óleo, a pessoa em risco e a cabeça de segurança continuam no topo (a instrução de segurança, nunca o «fora do barco» com a situação de bordo: trava 10)
+    ('fogo no motor, quanto custa o diesel?', 'sos', False), ('homem ao mar, qual o preço do diesel?', 'sos', False), ('vazamento de diesel, quanto custa o diesel?', 'sos', False), ('o João caiu na água, quanto custa o diesel?', 'sos', False),
+    ('a pressão do óleo caiu, quanto custa o óleo?', 'oleo', False), ('o preço do óleo caiu?', 'oleo', False), ('quanto custa um EPIRB novo?', 'epirb', False), ('qual o preço da recarga do Seafire?', 'seafire', False),
+    ('quanto custa o colete?', 'salvatagem', False),
     # a sobreDados não responde a relato de falha ou de perigo (lista branca): a rota do assunto, o guia ou a IA
     ('o motor parou, os dados são reais?', 'motores', False), ('tem muita água no barco, isso é real?', 'fallback', True), ('o bote virou, isso é real?', 'fallback', True),
     ('estamos perdidos, isso é real?', 'fallback', True), ('vamos morrer, isso é real?', 'fallback', True), ('pelo amor de Deus, isso é real?', 'fallback', True),
@@ -3256,6 +3274,7 @@ P3C_PERGUNTAS = {
     'arref': 'qual a temperatura do motor?', 'ondas': 'como está o estado do mar?', 'agua': 'qual a temperatura da água?', 'nav': 'como está a navegação?', 'pessoas': 'quantas pessoas a bordo?',
     'calado': 'qual o calado do barco?', 'compr': 'qual o comprimento?', 'boca': 'qual a boca do barco?', 'lotacao': 'qual a lotação?', 'registro': 'qual o registro do barco?', 'modelo': 'qual o modelo do barco?',
     'dim': 'dimensões do barco', 'mmsi': 'qual o MMSI do barco?', 'ais': 'quantos alvos no AIS?', 'sobre': 'esses dados são reais?', 'fora': 'qual o preço do dólar?',
+    'foraDiesel': 'qual o preço do diesel hoje?', 'foraLitro': 'quanto custa o litro do diesel?',   # (o dinheiro do insumo de bordo: a mesma resposta do «fora do barco», sem preço)
     # revisão 4: a chegada em outro ponto da rota, as horas que faltam, o vento a bordo e o fundo no jeito de bordo
     'etaEst': 'quanto falta para o Estaleirinho?', 'etaBarra': 'quanto falta para a Barra Sul?', 'etaCabras': 'quanto falta para a Ilha das Cabras?', 'etaLaranj': 'quanto falta para a Ponta das Laranjeiras?',
     'etaQuando': 'quando chegamos?', 'faltaOleo': 'quanto falta para a troca de óleo?', 'faltaGer': 'quanto falta para a revisão do gerador?',
@@ -3493,6 +3512,10 @@ def grupo_p3c(b, muta, ped):
             ped('p3c %s: foraBarco diz «Isso fica fora do barco.» e a situação de bordo sem posição com a hora; sem preço, telefone nem número inventado' % no,
                 l('fora') == ['Isso fica fora do barco.', 'Situação de bordo agora: ' + t['resumoSemPosicao']] and r['fora']['src'] == 'Fonte: fontes de bordo consultadas às ' + h and r['fora']['ia'] is False
                 and r['fora']['fala'] == 'Isso fica fora do barco.' and not RX['DINHEIRO'].search(r['fora']['text']) and not RX['PESSOAIS'].search(r['fora']['text']), (l('fora'), r['fora']['src']))
+            ruins = [k for k in ('foraDiesel', 'foraLitro') if not (r[k]['key'] == 'foraBarco' and l(k) == l('fora') and r[k]['src'] == r['fora']['src'] and r[k]['ia'] is False and r[k]['fala'] == 'Isso fica fora do barco.'
+                                                                    and 'R$' not in r[k]['text'] and not RX['DINHEIRO'].search(r[k]['text']) and not re.search(r'autonomia|L/h|litros?\b', r[k]['text'], re.I))]
+            ped('p3c %s: o dinheiro do insumo de bordo («qual o preço do diesel hoje?», «quanto custa o litro do diesel?») é a MESMA resposta do «fora do barco» (rota foraBarco, local): sem R$, sem preço e sem a autonomia ou o consumo no lugar dele' % no,
+                not ruins, [(k, r[k]['key'], l(k)) for k in ruins])
             # nenhuma resposta nova leva coordenada fora da posição; a voz é a 1ª linha (sem parênteses)
             ruins = [k for k, v in r.items() if k != 'posicao' and confere.R_COORD.search(v['text'] + v['src'] + v['fala'])]
             ped('p3c %s: nenhuma das respostas novas, fora a posição, leva coordenada (texto, fonte nem fala)' % no, not ruins, ruins)
@@ -4355,7 +4378,7 @@ MUTANTES_3C = [
     ('a pergunta do MMSI volta ao canal16', r"if (has(q, ['mmsi'])) return mmsiRota(q);", r"if (has(q, ['mmsi'])) return 'canal16';", ('p3c',)),
     ('o AIS volta ao canal16 (sem a rota própria)', r"if (aisPergunta(q)) return 'ais';", r"if (aisPergunta(q)) return 'canal16';", ('p3c',)),
     ('a sobreDados sai da route()', r"    if (sobreDados(q)) return 'sobreDados';", r"", ('p3c',)),
-    ('o foraBarco antes das rotas de bordo («quanto custa o diesel em reais?» deixa de ser o diesel)', r"if (sobreDados(q)) return 'sobreDados';", r"if (sobreDados(q)) return 'sobreDados'; if (has(q, FORA_BARCO)) return 'foraBarco';", ('p3c',)),
+    ('o foraBarco antes das rotas de bordo e da cabeça de segurança («quanto custa um EPIRB novo?» deixa de ser a instrução do EPIRB; «qual o preço do diesel e a autonomia?», a autonomia)', r"if (sobreDados(q)) return 'sobreDados';", r"if (sobreDados(q)) return 'sobreDados'; if (has(q, FORA_BARCO)) return 'foraBarco';", ('p3c',)),
     ('o foraBarco sem «dolar»', r"var FORA_BARCO = [' dolar ', ' dolares ', ", r"var FORA_BARCO = [", ('p3c',)),
     ('o foraBarco sem «preco»', r"' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' bitcoin ', 'quanto custa'", ('p3c',)),
     # (P3E, F10: o `pedeIA` ganhou o 'faqEquip' na mesma linha; a mutação é a mesma, ancorada no texto novo)
@@ -4588,6 +4611,10 @@ MUTANTES_3C_REV4 = [
     # —— «preço» é palavra inteira ——
     ('o foraBarco casa «preco» solto (preconizado, precoce)', r"' cotacao ', ' cotacoes ', ' bitcoin ', ' preco ', ' precos ', 'quanto custa'", r"' cotacao ', ' cotacoes ', ' bitcoin ', 'preco', 'quanto custa'", ('p3c',)),
     ('o foraBarco sem «preços» (o plural)', r"' preco ', ' precos ', 'quanto custa'", r"' preco ', 'quanto custa'", ('p3c',)),
+    # —— o dinheiro do insumo de bordo (trava 13) ——
+    ('o dinheiro do insumo de bordo volta para a rota de dado («qual o preço do diesel hoje?» responde a autonomia)', r"    if (dinheiroBordo(q)) return 'foraBarco';", r"", ('p3c',)),
+    ('o dinheiro do insumo sem a lista branca (a pergunta mista com o dado e o relato com o preço junto viram «fora do barco»)', r" && soNeutras(q.replace(/ \d+(?= )/g, ''), DINHEIRO_BORDO_OK); }", r"; }", ('p3c',)),
+    ('o dinheiro do insumo toma o vocativo («caro capitão, quanto diesel tem?»)', r"|(?:car[oa]|caros|barat[oa]s?)(?! capitao)) /;", r"|(?:car[oa]|caros|barat[oa]s?)) /;", ('p3c',)),
     # —— a sobreDados: lista branca ——
     ('a sobreDados responde ao relato de falha ou de perigo (sem a lista branca)', r"(has(q, AUT_SENSOR) && AUT_FALSO.test(q)) || !soAutenticidade(q)) return false;", r"(has(q, AUT_SENSOR) && AUT_FALSO.test(q))) return false;", ('p3c',)),
     ('a sobreDados perde o vocabulário do pedido («preciso saber», «é sério», «é urgente»)', r"existe existem preciso precisamos saber confirmar urgente serio relatorio decidir saio quero queria gostaria checar conferir verificar afinal pergunto duvida curiosidade ');", r"existe existem ');", ('p3c',)),
@@ -8772,7 +8799,7 @@ NAO_ROTAS_REV3_P3F = [
     ('qual a temperatura do ar condicionado?', 'base'), ('quando trocar o óleo do gerador?', 'base'), ('quando trocar o óleo do motor?', 'base'), ('quando trocar o filtro de óleo?', 'base'), ('o piloto em espera', 'eletronicos'),
     ('qual o jogo do barco agora', 'fallback'), ('o vento está forte agora', 'clima'), ('clima e vento', 'clima'), ('como foi a travessia ontem?', 'fallback'), ('tem barco perto do píer?', 'fallback'),
     ('como estamos de diesel?', 'autonomia'), ('qual a autonomia?', 'autonomia'), ('quando vence a troca do filtro?', 'manutencao'), ('quais documentos vencem?', 'docsvenc'), ('é seguro sair hoje?', 'seguro'),
-    ('quanto custa o diesel?', 'autonomia'), ('quando é a próxima troca de óleo do gerador?', 'base'), ('o radar está ligado desde ontem?', 'eletronicos'),
+    ('quanto custa o diesel?', 'foraBarco'), ('quando é a próxima troca de óleo do gerador?', 'base'), ('o radar está ligado desde ontem?', 'eletronicos'),   # (o dinheiro do insumo de bordo é a rota foraBarco, local: nenhuma rota de dado o toma)
 ]
 
 
@@ -8789,7 +8816,7 @@ def grupo_p3f_rev3_rotas(b, muta, ped):
                 ruins.append((q, key, ia, l1[:80], esp))
         ped('p3f rev3 rotas: as %d perguntas de UM dado (o AIS por perto, o tempo até a marina, o ar, a próxima troca de óleo, o vencimento do seguro, o motor mais quente, a tarefa atrasada, o consumo, o barômetro, o vento e a chuva, a inclinação, os satélites, a marcha, o resumo da viagem, o nível do diesel, o piloto e o radar) caem na rota do dado, locais, e a 1ª linha é o dado (com a hora)' % n, not ruins, ruins)
         nao = [(q, k, key) for (q, k), (_, key, *_resto) in zip(NAO_ROTAS_REV3_P3F, r[n:]) if key != k]
-        ped('p3f rev3 rotas: o que as rotas novas não podem tomar (o ar condicionado, o óleo do gerador ou do motor, o piloto em espera, o jogo do barco, o relato do vento, «clima e vento», a travessia de ontem, a autonomia, o dinheiro) segue a rota de antes (%d perguntas)' % len(NAO_ROTAS_REV3_P3F), not nao, nao)
+        ped('p3f rev3 rotas: o que as rotas novas não podem tomar (o ar condicionado, o óleo do gerador ou do motor, o piloto em espera, o jogo do barco, o relato do vento, «clima e vento», a travessia de ontem, a autonomia) segue a rota de antes, e o dinheiro, a foraBarco (%d perguntas)' % len(NAO_ROTAS_REV3_P3F), not nao, nao)
         # a fala curta de cada uma traz a hora do instante (dado de bordo) e nenhuma coordenada
         pg3 = pagina(b, muta=muta, fixo='10@0')
         try:
@@ -11483,7 +11510,7 @@ FASE7_ROTAS = ([(q, 'sos', False) for q in F7_SOS] + [(q, 'salvatagem', False) f
     ('o sistema de supressão disparou sozinho', 'seafire', False), ('existe EPIRB no barco?', 'epirb', False), ('como testar a baliza?', 'base', False),
     ('esses dados são reais?', 'sobreDados', False), ('isso é simulado?', 'sobreDados', False), ('o barco existe?', 'sobreDados', False),
     ('qual o preço do dólar?', 'foraBarco', False), ('quem ganhou o jogo ontem', 'foraBarco', False),
-    ('quanto custa o diesel em reais?', 'autonomia', False), ('qual a velocidade real do barco?', 'posicao', False), ('qual o vento real no barco agora?', 'clima', False),
+    ('quanto custa o diesel em reais?', 'foraBarco', False), ('qual a velocidade real do barco?', 'posicao', False), ('qual o vento real no barco agora?', 'clima', False),
     ('como realizar a troca de óleo do barco?', 'base', True), ('existe algum alarme ativo no barco?', 'alarmes', False), ('existe alguma pendência no barco?', 'anomalias', False),
     ('quanto falta para a troca de óleo?', 'horimetros', False), ('como se faz um nó lais de guia?', 'fallback', True)])
 F7_NAO_SOBRE_DADOS = ['quanto custa o diesel em reais?', 'qual a velocidade real do barco?', 'qual o vento real no barco agora?', 'como realizar a troca de óleo do barco?', 'existe algum alarme ativo no barco?',
