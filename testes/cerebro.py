@@ -1928,7 +1928,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina', 'p4g_bloqueios')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina', 'p4g_bloqueios', 'fase7')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -11468,6 +11468,144 @@ MUTANTES_P4G_BLOQ = [
     ('p4g bloqueios b18: «a pia da lancha sumiu» é pessoa', "    if (t[j] === 'pia') return true;\n", "", BQ),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_P4G_BLOQ
+
+
+# ——————————————— Fase 7 (PROMPT «Testes novos e acréscimos», cerebro.py): a auditoria do plano, item a item ———————————————
+# O que o plano pede e ainda não tinha a sua conferência literal: as perguntas do plano (chave e pedeIA) nas DUAS sessões (lucas e convidado) e nos DOIS instantes (60 e 105);
+# as travas de emergência com a regex do plano (salvatagem sem lugar nem número de pessoas; o relato de falha sem « bar» nem «%»; o registro «posição e hora» com alerta, com o alerta
+# antes ou depois, grava «plotter» e nada do quadro; as chaves do §2.2 e o «## Emergência» fora da regex; o canal16 com «LEIA NO PLOTTER AGORA»); a varredura das respostas também na
+# sessão do convidado; e o evento 'capitao-voz' da espera pela IA (vozPensando) com o campo `alerta`, pelo mesmo emissor dos outros estados.
+F7_SOS = ['o que fazer em caso de alagamento?', 'afogamento', 'o barco está adernando', 'alguém se machucou', 'vamos abandonar o barco', 'tem fogo, cadê o extintor', 'tem água no porão']
+F7_SALVATAGEM = ['onde ficam os coletes?', 'onde fica o extintor?', 'onde fica a boia?', 'onde ficam os equipamentos de segurança?', 'balsa salva-vidas', 'sinalizador', 'existe colete salva-vidas no barco?']
+# (pergunta, chave, pedeIA). «como testar a baliza?» o plano só pede fora da IA (hoje é o trecho de segurança da base); as 7 que NÃO caem em sobreDados levam a chave de hoje
+# («quanto falta para a troca de óleo?» → horimetros, que o plano aceita como horimetros/manutencao); a pergunta de náutica geral sem rota é o gatilho «sem resposta pronta → IA»
+FASE7_ROTAS = ([(q, 'sos', False) for q in F7_SOS] + [(q, 'salvatagem', False) for q in F7_SALVATAGEM] + [
+    ('o sistema de supressão disparou sozinho', 'seafire', False), ('existe EPIRB no barco?', 'epirb', False), ('como testar a baliza?', 'base', False),
+    ('esses dados são reais?', 'sobreDados', False), ('isso é simulado?', 'sobreDados', False), ('o barco existe?', 'sobreDados', False),
+    ('qual o preço do dólar?', 'foraBarco', False), ('quem ganhou o jogo ontem', 'foraBarco', False),
+    ('quanto custa o diesel em reais?', 'autonomia', False), ('qual a velocidade real do barco?', 'posicao', False), ('qual o vento real no barco agora?', 'clima', False),
+    ('como realizar a troca de óleo do barco?', 'base', True), ('existe algum alarme ativo no barco?', 'alarmes', False), ('existe alguma pendência no barco?', 'anomalias', False),
+    ('quanto falta para a troca de óleo?', 'horimetros', False), ('como se faz um nó lais de guia?', 'fallback', True)])
+F7_NAO_SOBRE_DADOS = ['quanto custa o diesel em reais?', 'qual a velocidade real do barco?', 'qual o vento real no barco agora?', 'como realizar a troca de óleo do barco?', 'existe algum alarme ativo no barco?',
+                      'existe alguma pendência no barco?', 'quanto falta para a troca de óleo?']
+# as mesmas perguntas entram na tabela do main() (t=60, sessão lucas): a chave, a fonte e o pedeIA de cada uma
+CASOS = CASOS + [(q, k) for q, k, _ in FASE7_ROTAS if q not in {c[0] for c in CASOS}]
+PEDE_IA.update({q: ia for q, _, ia in FASE7_ROTAS})
+F7_QUADRO = [('alarme de óleo acendeu', 'oleo'), ('tem água no porão', 'sos')]   # o relato de falha: nada do quadro (« bar», «%»)
+F7_REGISTROS = ['registre posição e hora do MOB', 'registre: homem ao mar, posição e hora']
+F7_LUGAR = re.compile(r'paiol|arm[áa]rio|cabine|\bproa\b|\bpopa\b', re.I)
+JS_F7 = """([xs, rotas, q22, quadro, regs]) => { const B = window.CapitaoBrain, R = window.CapitaoReplay, op = { platform: 'app', commit: false }, out = { quem: B.quem(), t: [] };
+  const um = (q) => { const a = B.answer(q, op); return { q, key: a.key, ia: B.pedeIA(a, q), text: a.text, src: a.src, fala: B.falaCurta(a) }; };
+  xs.forEach((x) => { R.fixar(x); const i = B.instante(), f = B.ficha('app'), k = f.indexOf('## Emergência'), fim = f.indexOf('\\n## ', k + 5);
+    out.t.push({ x, hora: i.hora, sog: i.txt.sog, rotas: rotas.map(um), q22: q22.map(um), quadro: quadro.map(um), pessoas: um('quantas pessoas a bordo?').text, emerg: k < 0 ? '' : f.slice(k, fim < 0 ? undefined : fim) }); });
+  xs.forEach((x, n) => { R.fixar(x); out.t[n].regs = regs.map((q) => { localStorage.clear(); const antes = B.loadDiario().length, a = B.answer(q, { platform: 'app' }), l = B.loadDiario();
+    return { q, key: a.key, ia: B.pedeIA(a, q), emerg: a.emerg === true, novas: l.length - antes, linha: l.length > antes ? l[0].t : '', text: a.text, fala: B.falaCurta(a) }; }); });
+  localStorage.clear(); return out; }"""
+JS_F7_VOZ = """() => { const B = window.CapitaoBrain, evs = [], h = (e) => evs.push(Object.assign({ temAlerta: 'alerta' in e.detail }, e.detail)); window.addEventListener('capitao-voz', h);
+  B.vozPensando('como se faz um nó lais de guia?'); B.vozPensando('homem ao mar'); B.vozPensando();
+  window.CapitaoEmergencia = { valendo: () => true }; B.vozPensando('qual a autonomia?'); delete window.CapitaoEmergencia; B.vozPensando('qual a autonomia?');
+  window.removeEventListener('capitao-voz', h); return evs; }"""
+
+
+def grupo_fase7(b, muta, ped):
+    por_sessao = {}
+    for nome, quem, extra in (('lucas', 'Lucas', ''), ('demo', 'Convidado', AUTH_DEMO_JAN)):
+        pg = pagina(b, muta=muta, extra=extra)
+        try:
+            pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+            if nome == 'lucas':
+                ev = pg.evaluate(JS_F7_VOZ)
+                ped('fase7 voz: o evento «capitao-voz» da espera pela IA (vozPensando) sai pelo mesmo emissor dos outros estados — estado pensando, segura, o texto, e o campo `alerta` em TODOS '
+                    '(false na pergunta comum e sem texto, true no texto de emergência e com a janela de emergência valendo, false de novo sem ela)',
+                    len(ev) == 5 and all(e['estado'] == 'pensando' and e.get('segura') is True and e['temAlerta'] and isinstance(e.get('alerta'), bool) for e in ev)
+                    and [e['alerta'] for e in ev] == [False, True, False, True, False] and [e['texto'] for e in ev] == ['como se faz um nó lais de guia?', 'homem ao mar', '', 'qual a autonomia?', 'qual a autonomia?'],
+                    [(e.get('estado'), e.get('texto'), e.get('segura'), e.get('alerta', 'SEM O CAMPO')) for e in ev])
+            o = pg.evaluate(JS_F7, [['60', '105'], [q for q, _, _ in FASE7_ROTAS], PERGUNTAS_2_2, [q for q, _ in F7_QUADRO], F7_REGISTROS])
+        finally:
+            pg.ctx.close()
+        por_sessao[nome] = o
+        ped('fase7 (%s): a sessão é a de «%s» (o cérebro lê o nome no CapitaoAuth)' % (nome, quem), o['quem'] == quem, o['quem'])
+        for t in o['t']:
+            rot = 'fase7 (%s, t=%s)' % (nome, t['x'])
+            ruins = [(r['q'], r['key'], r['ia']) for r, (q, k, ia) in zip(t['rotas'], FASE7_ROTAS) if r['key'] != k or r['ia'] is not ia]
+            ped(rot + ': as %d perguntas do plano caem na chave certa com o pedeIA certo (sos, salvatagem, seafire, epirb, sobreDados, foraBarco e a baliza fora da IA; a náutica geral sem rota no fallback com a IA)' % len(FASE7_ROTAS),
+                not ruins and len(t['rotas']) == len(FASE7_ROTAS), ruins[:5])
+            sobre = [r['q'] for r in t['rotas'] if r['q'] in F7_NAO_SOBRE_DADOS and r['key'] == 'sobreDados']
+            ped(rot + ': «real», «reais», «existe», «realizar» e «quanto falta» na pergunta de bordo NÃO caem na sobreDados (%d perguntas)' % len(F7_NAO_SOBRE_DADOS), not sobre, sobre)
+            # — travas de emergência —
+            n = re.search(r'\d+', t['pessoas'])
+            gente = re.compile(r'\b%s\s+(?:pessoas|tripulantes|passageiros|a bordo)' % n.group(0)) if n else None
+            salv = [r for r in t['rotas'] if r['q'] in F7_SALVATAGEM]
+            sujas = [(r['q'], (F7_LUGAR.search(x) or confere.R_PESSOAS.search(x) or (gente and gente.search(x))).group(0)) for r in salv for x in [r['text'] + '\n' + r['fala'] + '\n' + r['src']]
+                     if F7_LUGAR.search(x) or confere.R_PESSOAS.search(x) or (gente and gente.search(x))]
+            ped(rot + ': a salvatagem (%d perguntas) sem paiol, armário, cabine, proa ou popa e sem o número de pessoas do quadro (%s)' % (len(F7_SALVATAGEM), n.group(0) if n else '?'),
+                not sujas and len(salv) == len(F7_SALVATAGEM) and bool(n) and all(r['key'] == 'salvatagem' for r in salv), sujas[:3] or t['pessoas'][:80])
+            leit = [(r['q'], r['key']) for r, (q, k) in zip(t['quadro'], F7_QUADRO) if r['key'] != k or ' bar' in r['text'] + r['fala'] + r['src'] or '%' in r['text'] + r['fala'] + r['src']]
+            ped(rot + ': «alarme de óleo acendeu» (oleo) e «tem água no porão» (sos) não trazem « bar» nem «%» (relato de falha sem leitura do quadro)', not leit and len(t['quadro']) == 2, leit)
+            regs = []
+            for r in t['regs']:
+                tudo = r['linha'] + '\n' + r['text'] + '\n' + r['fala']
+                m = R_TRAVA_EMERG.search(tudo) or confere.R_COORD.search(tudo)
+                if r['key'] != 'diario' or r['novas'] != 1 or 'plotter' not in r['linha'] or m or r['ia'] or not r['emerg'] or t['sog'] in tudo:
+                    regs.append((r['q'], r['key'], r['novas'], r['linha'][:80], m and m.group(0)))
+            ped(rot + ': «registre posição e hora do MOB» e «registre: homem ao mar, posição e hora» gravam UMA linha com «plotter» e a linha, a resposta e a fala não casam a regex das travas '
+                '(MMSI do cadastro, último fix, mn, nós, coordenada, rumo, ETA, pessoas a bordo); abrem a janela e não vão à IA', not regs and len(t['regs']) == 2, regs)
+            casadas = []
+            for r, k in zip(t['q22'], CHAVES_2_2):
+                tudo = r['text'] + '\n' + r['fala'] + '\n' + r['src']
+                if k == 'mmsi':   # CLAUDE.md 8: o número do cadastro só na 2ª linha da rota `mmsi` («Cadastro do app: MMSI …»); o resto da resposta entra na regex
+                    tudo = re.sub(r'(?m)^Cadastro do app: MMSI \d+\.$', '', tudo)
+                m = R_TRAVA_EMERG.search(tudo)
+                if r['key'] != k or r['ia'] or m:
+                    casadas.append((r['q'], r['key'], m and m.group(0)))
+            me = R_TRAVA_EMERG.search(t['emerg'])
+            ped(rot + ': as chaves do §2.2 (sos, canal16, epirb, seafire, salvatagem, mmsi, oleo) e o «## Emergência» da ficha não casam a regex das travas de emergência do plano',
+                not casadas and not me and t['emerg'].startswith('## Emergência\n') and len(t['emerg']) > 100, (casadas[:3], me and me.group(0), t['emerg'][:60]))
+            c16 = [r for r, k in zip(t['q22'], CHAVES_2_2) if k == 'canal16']
+            ped(rot + ': o canal16 contém «LEIA NO PLOTTER AGORA»', len(c16) == 1 and 'LEIA NO PLOTTER AGORA' in c16[0]['text'], c16 and c16[0]['text'][:200])
+        a, c = o['t']
+        mudou = [r['q'] for r, s in zip(a['q22'] + a['quadro'] + a['regs'], c['q22'] + c['quadro'] + c['regs']) if (r['text'], r['fala']) != (s['text'], s['fala'])]   # (a hora da linha do diário é a do relógio do aparelho, a mesma nos dois)
+        ped('fase7 (%s): as respostas de emergência e do registro com alerta são as MESMAS em 12:01:00 e em 12:01:45 (nada do quadro), e o quadro mudou (o SOG do instante)' % nome,
+            not mudou and a['sog'] != c['sog'] and a['hora'] == '12:01:00' and c['hora'] == '12:01:45', (mudou[:3], a['sog'], c['sog']))
+    # as duas sessões dão a mesma chave e o mesmo pedeIA (o nome muda o texto do registro e da saudação, nunca a rota)
+    dif = [(r['q'], r['key'], s['key']) for tl, td in zip(por_sessao['lucas']['t'], por_sessao['demo']['t']) for r, s in zip(tl['rotas'] + tl['q22'], td['rotas'] + td['q22']) if (r['key'], r['ia']) != (s['key'], s['ia'])]
+    ped('fase7: a sessão do convidado roteia igual à do Lucas (chave e pedeIA das perguntas do plano e das chaves do §2.2)', not dif, dif[:3])
+    # — a varredura das respostas (uma pergunta por chave de ANSWERS) na sessão do convidado, nos dois instantes —
+    pg = pagina(b, muta=muta, extra=AUTH_DEMO_JAN)
+    try:
+        out = pg.evaluate(JS_ROTULOS, [['60', '105'], PERGUNTA_CHAVE])
+        quem = pg.evaluate("() => window.CapitaoBrain.quem()")
+    finally:
+        pg.ctx.close()
+    varre_rotulos(ped, 'fase7 (sessão demo)', out)
+    a, c = out['r']
+    sem = [k for (k, ka, ta, sa, fa), (_, kc, tc, sc, fc) in zip(a['r'], c['r']) if k not in SEM_HORA and not (a['hora'] in ta + sa and c['hora'] in tc + sc and re.search(r'\d', ta) and re.search(r'\d', tc))]
+    igual = [k for (k, _, ta, sa, _), (_, _, tc, sc, _) in zip(a['r'], c['r']) if k in MUDAM and sem_hora(ta + sa) == sem_hora(tc + sc)]
+    errada = [(k, ka, kc) for (k, ka, *_), (_, kc, *_) in zip(a['r'], c['r']) if ka != k or kc != k]
+    ped('fase7 (sessão demo): é a sessão do convidado, cada pergunta cai na sua chave, toda resposta de dado de bordo traz número e a hora do instante, e os números mudam de 12:01:00 para 12:01:45 onde devem',
+        quem == 'Convidado' and not sem and not igual and not errada and len(a['r']) == len(PERGUNTA_CHAVE), (quem, sem[:4], igual[:4], errada[:4]))
+
+
+GRUPOS_3A['fase7'] = grupo_fase7
+F7 = ('fase7',)
+MUTANTES_F7 = [
+    ('fase7: a espera pela IA (vozPensando) emite o evento direto, sem o campo alerta', r"function vozPensando(texto) { evVoz('pensando', texto, { segura: true }); }",
+     r"function vozPensando(texto) { try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: 'pensando', texto: texto || '', segura: true } })); } catch (e) {} }", F7),
+    ('fase7: o alerta antes do «posição e hora» («registre: homem ao mar, posição e hora») grava a linha sem «plotter»', r"var junto = resumoMais(nota) || resumoNoFim(nota);", r"var junto = resumoMais(nota);", F7),
+    ('fase7: a salvatagem diz o lugar do equipamento', r"text: (P.salvatagem || '') + '\n(' + ROTULO + ')'", r"text: (P.salvatagem || '') + ' Os coletes ficam no paiol.\n(' + ROTULO + ')'", F7),
+    ('fase7: a salvatagem diz o número de pessoas do quadro', r"text: (P.salvatagem || '') + '\n(' + ROTULO + ')'", r"text: (P.salvatagem || '') + ' ' + (ANSWERS.pessoas(p).text.match(/\d+/) || [''])[0] + ' pessoas a bordo.\n(' + ROTULO + ')'", F7),
+    ('fase7: o relato de pressão de óleo traz a leitura em bar', r"oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS",
+     r"oleo: function (p) { return { text: 'Se a pressão de óleo cair ou o alarme acender, verifique nesta ordem:\n' + OLEO_PASSOS + '\nAgora: 3,4 bar.'", F7),
+    ('fase7: o SOS da água no porão traz o nível em %', r"sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS.'",
+     r"sos: function (p, ctx, q) { var esp = sosEspecifico(q); return { text: 'Emergência — abra o SOS. Porão em 62 %.'", F7),
+    ('fase7: o roteiro do canal 16 troca «LEIA NO PLOTTER AGORA» pela posição relativa', r"(P.roteiro || []).join(' — ') + '.\n' + (P.panpan", r"(P.roteiro || []).join(' — ').replace('LEIA NO PLOTTER AGORA', 'A 0,5 MN DA BARRA SUL') + '.\n' + (P.panpan", F7),
+    ('fase7: o «## Emergência» da ficha traz a distância do destino', r"out.push('## Emergência\nAbrir o SOS do app. ' + SOS_FICHA + '\n(' + FT.proto + ')');", r"out.push('## Emergência\nAbrir o SOS do app. A 0,5 mn da Barra Sul. ' + SOS_FICHA + '\n(' + FT.proto + ')');", F7),
+    ('fase7: «afogamento» sai da lista de emergência', r"'alagament', 'afogament', 'inundac',", r"'alagament', 'inundac',", F7),
+    ('fase7: a pergunta de fora do barco («quem ganhou o jogo ontem») vai à IA', r"if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;",
+     r"if (k === 'foraBarco') return true; if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;", F7),
+    ('fase7: a saudação ganha um selo só na sessão do convidado', r"'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. '", r"'Capitão IA online. Que precisa?\nOlá, ' + quem() + (quem() === 'Convidado' ? ' (DEMO)' : '') + '. '", F7),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_F7
 
 
 def instante_3a(b):
