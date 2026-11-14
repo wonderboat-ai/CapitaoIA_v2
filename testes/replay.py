@@ -49,12 +49,17 @@ não for 127.0.0.1 ou unpkg.com; o unpkg só serve o React das telas de verdade)
 - D.replay PARCIAL (chave, rota, tanque, velocidade ou contador ausente; chave curta; ETA infinita): a tabela se recusa na carga (`ativo()` false, tudo null, nenhum tique, o
   `instante()` cai no snapshot) e, com o D em uso quebrado depois da carga, a guarda de cada saída (quadro, contadores, consumo por faixa, série) devolve null, nunca NaN/Infinity;
 - nunca lança erro (argumentos absurdos, D quebrado, localStorage que lança); desempenho do `em()`; o código (sem lookbehind, sem snapshot, sem
-  `window.CapitaoTelemetria =`); as 36 telas com o <script> no lugar certo, S1/S2 sem ele, e o CORE do sw.js.
+  `window.CapitaoTelemetria =`); as 36 telas com o <script> no lugar certo, S1/S2 sem ele, e o CORE do sw.js;
+- Fase 7 (PROMPT «testes/replay.py»), nas páginas de verdade: com `fixar('60')` e `fixar('105')`, rpm, SOG e diesel são o MESMO texto na faixa da Main, nos cartões da A1, nas leituras da E1, no HUD da CONVERSA
+  (Main e H2), em `answer('telemetria')` e no `## Navegação agora` da ficha — o texto esperado é refeito em Python (confere.em() + as casas do D.campos), a medida que some de um lugar reprova, sessões `lucas`
+  e `demo`, e o HUD, a resposta, a fala e o bloco da ficha sem ROTULOS nem AUTENTICIDADE; e o modo real na Main (`simulacao = false` e `embarcacao.calado = null` no fim do capitao-dados.js, antes do cérebro):
+  o replay não anda, «qual o calado?» é SEM DADOS, o pedido à IA (Worker de mentira) sai sem `modo`, o histórico com a resposta de posição sai sem coordenada e a ficha não tem `## Navegação agora`, com a
+  mesma conversa na simulação como controle; 11 mutantes (HUD, Main, A1, E1, cérebro, cliente da IA e replay).
 
-Fica para as Fases 3 a 7 (depende do cérebro, das telas ou da IA, que a Fase 2 não toca):
-- o mesmo texto de rpm, SOG e diesel na Main, A1, E1, HUD, `answer('telemetria')` e `## Navegação agora` (um instante só, `fixar('60')`);
-- a ficha, a tendência de 30 s (`instante().tend`, que a Fase 3 monta), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos;
-- o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas), o `sim: true` nas linhas gravadas e o modo real do cérebro e da IA;
+Fica nas outras suítes (depende do cérebro, das telas ou da IA):
+- a ficha, a tendência de 30 s (`instante().tend`), a trava do ar e da água nas telas (A1 × Main) e as séries nos gráficos (cerebro.py e verificar.py);
+- o grep final (SEM DADOS, SEM LEITURA, DEMO e demais rótulos nas respostas e nas telas: cerebro.py e verificar.py), o `sim: true` nas linhas gravadas e o selo «apresentação» com simulacao false
+  (cerebro.py e verificar.py), o `window.CapitaoDados` sem null nem '' (rodape.py) e sem termo do §3 (gerador.py), o GPS do aparelho no SOS com a geolocalização simulada (sos.py);
 - a faixa de alerta, a lista da Ponte, a C3 viva, a E1 NAVEGANDO × FUNDEADO (P4F: verificar.py --so-p4f; aqui, o setState só quando o texto muda) e as rotas de alarmes do cérebro (Fases 3 e 4; a API que elas vão ler, o capitao-alertas.js, é da P2C e está coberta acima);
 - o cérebro, a moldura e a E1 ainda dizem «ao vivo» / «coletor NMEA» sobre o quadro do replay e misturam o diesel do D.snapshot (estado transitório do
   CONTRATO §6.6, até a Fase 3 — VIVO generalizado e instante() — e a Fase 4: a P2B só trocou a mecânica da moldura, os textos e rótulos ficam para elas): lá entra a conferência de que nenhum texto diz «coletor NMEA»
@@ -64,6 +69,7 @@ Uso (com o site servido em http://127.0.0.1:8765, na raiz do repositório):
     python -X utf8 testes/replay.py            os testes de sempre (~5 min)
     python -X utf8 testes/replay.py --dia      mais a paridade dos 86.400 segundos do dia de bordo contra o confere.em() (~4 min a mais)
     python -X utf8 testes/replay.py --moldura mais o desempenho da moldura nas 30 telas que a importam (3 por vez, ~4 min a mais)
+    python -X utf8 testes/replay.py --so-fase7 só as conferências da Fase 7 (o mesmo texto em seis lugares e o modo real na página) e os 11 mutantes delas (~4 min)
 Navegador: Edge instalado (Playwright com channel="msedge"); troque CANAL para "chrome" se preferir.
 """
 import copy
@@ -2532,6 +2538,225 @@ def mutantes_arq(b):
         ok('mutante: %s — acusado (%d conferência(s) falham)' % (nome, len(achados)), len(achados) > 0 and not caiu, caiu or achados)
 
 
+# ——— Fase 7 (PROMPT «testes/replay.py»): o mesmo texto de rpm, SOG e diesel em seis lugares, e o modo real na página do início ———
+# Com o instante fixado em 60 s (12:01:00) e depois em 105 s (12:01:45), a rotação dos dois motores, a SOG e os litros de diesel são UM texto só na faixa da Main, nos cartões da A1, nas leituras da
+# E1, no HUD da CONVERSA (a camada de voz aberta na Main e na H2), na resposta «telemetria» e no «## Navegação agora» da ficha que vai à IA. Cada lugar é lido na página de verdade, pelo rótulo da
+# medida (MEDIDAS), e o que cada lugar mostra é fixo: a medida que some de um lugar reprova. O texto esperado é refeito em Python (confere.em() do mesmo segundo + br_num: as casas do D.campos), não
+# pelo formatador da página. Sessões `lucas` e `demo` (decisão k) na Main; o HUD, a resposta, a fala curta dela e o bloco da ficha não casam ROTULOS nem AUTENTICIDADE (§3).
+URL_IA = re.search(r"var URL_PROXY = '([^']+)'", le('capitao-ia.js')).group(1)
+N_MIL, N_DEC = r'\d{1,3}(?:\.\d{3})*', r'\d+,\d'
+MEDIDAS = {   # lugar → medida → regex; cada casamento é o texto da medida naquele lugar (rpm: BB e BE)
+    'faixa da Main': {'sog': r'\bSOG (%s) NÓS' % N_DEC, 'diesel': r'\bDIESEL (%s) L\b' % N_MIL},
+    'cartões da A1': {'sog': r'\bSOG (%s) nós' % N_DEC, 'rpm': r'(?<![\d.])(%s) · (%s) rpm' % (N_MIL, N_MIL), 'diesel': r'\bDiesel ≈ (%s) L\b' % N_MIL},
+    'leituras da E1': {'sog': r'\bSOG (%s) nós' % N_DEC, 'diesel': r'\bDIESEL [^|]*?(%s) L\b' % N_MIL},
+    'HUD da CONVERSA': {'sog': r'\bSOG (%s) NÓS' % N_DEC, 'rpm': r'\bRPM (%s) · (%s)' % (N_MIL, N_MIL), 'diesel': r'\bDIESEL (%s) L\b' % N_MIL},
+    "answer('telemetria')": {'sog': r'(?:\bSOG|, a) (%s) nós' % N_DEC, 'rpm': r'\bBB (%s) · BE (%s) rpm' % (N_MIL, N_MIL), 'diesel': r'≈ (%s) L de' % N_MIL},
+    '## Navegação agora': {'sog': r'\bSOG (%s) nós' % N_DEC, 'rpm': r'\bmotores BB (%s) · BE (%s) rpm' % (N_MIL, N_MIL), 'diesel': r'\bdiesel (%s) L\b' % N_MIL},
+}
+LUGARES_CEREBRO = (("answer('telemetria')", 'tele'), ('## Navegação agora', 'nav'))
+# (tela, sessão, largura, altura, abre o HUD, [(lugar, campo lido)])
+MESMO_TELAS = (
+    ('Main', 'lucas', 1440, 900, True, (('faixa da Main', 'pagina'), ('HUD da CONVERSA', 'hud')) + LUGARES_CEREBRO),
+    ('Main', 'demo', 1440, 900, True, (('faixa da Main', 'pagina'), ('HUD da CONVERSA', 'hud')) + LUGARES_CEREBRO),
+    ('H2-Home-Mobile', 'lucas', 390, 844, True, (('HUD da CONVERSA', 'hud'),) + LUGARES_CEREBRO),
+    ('A1-Ponte-Web', 'lucas', 1440, 900, False, (('cartões da A1', 'pagina'),) + LUGARES_CEREBRO),
+    ('E1-Navegando-Gatilhos', 'lucas', 390, 844, False, (('leituras da E1', 'e1'),) + LUGARES_CEREBRO),
+)
+LE_MESMO = r"""async ([x, hud]) => {
+  const R = window.CapitaoReplay, A = window.CapitaoAgora, B = window.CapitaoBrain, lin = (s) => (s || '').replace(/\s+/g, ' ').trim(), espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  R.fixar(x); await espera(1500);
+  const I = A.instante(), ms = R.agora(), out = { hora: I && I.hora, fonte: I && I.fonte, ms, anc: A.ancora(ms), u: (JSON.parse(localStorage.getItem('capitao.sessao.v1') || '{}')).u };
+  out.pagina = lin(document.getElementById('dc-root').innerText);
+  out.e1 = [...document.querySelectorAll('[data-e1=leitura]')].map((e) => lin(e.innerText)).join(' | ');
+  const a = B.answer('telemetria'), fc = B.falaCurta(a);
+  out.tele = a.text; out.key = a.key; out.fala = B.falavel(typeof fc === 'string' ? fc : a.text); out.ficha = B.ficha(/Mobile|Navegando/.test(location.pathname) ? 'app' : 'web', 'telemetria', a);
+  if (hud) { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: 'ouvindo', texto: '', alerta: false } })); await espera(60);
+    const c = document.querySelector('.cpz.on .cpz-tr'); out.hud = c ? c.innerText : ''; window.CapitaoVoz.esconde(); }
+  return out; }"""
+ESPERA_MESMO = ("() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0 && window.CapitaoReplay && window.CapitaoAgora "
+                "&& window.CapitaoBrain && typeof window.CapitaoBrain.ficha === 'function'")
+
+
+def bloco_ficha(ficha, titulo):
+    """O bloco «## titulo» da ficha (até o bloco seguinte); '' se a ficha não o tem."""
+    m = re.search(r'^## ' + re.escape(titulo) + r'\n(.*?)(?=\n## |\Z)', ficha or '', re.M | re.S)
+    return m.group(1) if m else ''
+
+
+def sessao_de(u):
+    return "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: '%s', em: n, exp: n + 3600e3 })); })();" % u
+
+
+def mesmo_texto(b, telas=MESMO_TELAS):
+    print("O mesmo texto: com fixar(60) e fixar(105), rpm, SOG e diesel iguais na Main, na A1, na E1, no HUD da CONVERSA, em answer('telemetria') e no «## Navegação agora»")
+    termos = C.carrega_termos()
+    visto = {'60': {}, '105': {}}   # instante → medida → {texto: [lugares]}
+    esperado = {}
+    for tela, u, w, h, hud, lugares in telas:
+        init = sessao_de(u) + "localStorage.setItem('capitao.replay.fixo', '60'); localStorage.setItem('capitao.plataforma.v1', '%s');" % ('app' if w < 1000 else 'web')
+        pg = abre(b, caminho='/%s.dc.html' % tela, init=init, viewport={'width': w, 'height': h}, espera=ESPERA_MESMO + (' && window.CapitaoVoz' if hud else ''))
+        pg.wait_for_timeout(800)
+        rs = {x: pg.evaluate(LE_MESMO, [x, hud]) for x in ('60', '105')}
+        erros = list(pg.erros)
+        fecha(pg)
+        rot = '%s (sessão %s)' % (tela, u)
+        horas = {}
+        for x, r in rs.items():
+            q = C.em(P, (r['ms'] - r['anc']) // 1000, ancora_s=r['anc'] // 1000)
+            esperado[x] = {'sog': br_num(q['sog_nos'], 1), 'rpm': (br_num(q['motor_bb_rpm'], 0, True), br_num(q['motor_be_rpm'], 0, True)), 'diesel': br_num(q['diesel_litros'], 0, True)}
+            horas[x] = datetime.fromtimestamp(r['ms'] / 1000, BR).strftime('%H:%M:%S')
+            r['nav'] = bloco_ficha(r['ficha'], 'Navegação agora')
+            for campo in ('tele', 'nav'):   # a tendência dos últimos 30 s é a VARIAÇÃO da medida («SOG 0,0 nós» quando não mudou), não a medida: fica fora da leitura
+                r[campo] = re.sub(r'(?im)tend[êe]ncia\s*—.*$', '', r[campo] or '')
+        ok('%s: a página lê o instante fixado (12:01:00 e 12:01:45, fonte replay), na sessão pedida, e «telemetria» é a rota da resposta' % rot,
+           [horas[x] for x in ('60', '105')] == ['12:01:00', '12:01:45'] and all(r['hora'] == horas[x] and r['fonte'] == 'replay' and r['u'] == u and r['key'] == 'telemetria' for x, r in rs.items()) and not erros,
+           ([(r['hora'], r['fonte'], r['u'], r['key']) for r in rs.values()], erros[:2]))
+        for lugar, campo in lugares:
+            ruins = []
+            for x, r in rs.items():
+                for medida, rx in MEDIDAS[lugar].items():
+                    achados = re.findall(rx, r.get(campo) or '')
+                    if not achados:
+                        ruins.append('%s s: %s sumiu do lugar' % (x, medida))
+                    for v in achados:
+                        visto[x].setdefault(medida, {}).setdefault(v, []).append('%s · %s' % (rot, lugar))
+                        if v != esperado[x][medida]:
+                            ruins.append('%s s: %s diz %r (o quadro do instante dá %r)' % (x, medida, v, esperado[x][medida]))
+            ok('%s · %s: %s com o texto do quadro do instante, em 12:01:00 e em 12:01:45' % (rot, lugar, ', '.join(MEDIDAS[lugar])), not ruins, ruins[:4])
+        if hud:
+            lidos = '\n'.join('\n'.join([r['hud'] or '', r['tele'] or '', r['fala'] or '', r['nav']]) for r in rs.values())
+            achados = [(k, m.group(0)) for k in ('ROTULOS', 'AUTENTICIDADE') for m in termos[k].finditer(lidos)]
+            ok('%s: o HUD, a resposta «telemetria», a fala curta dela e o «## Navegação agora» sem ROTULOS nem AUTENTICIDADE (§3), nos dois instantes' % rot, not achados and len(lidos) > 400, achados[:4])
+    if telas is MESMO_TELAS:
+        for x, hora in (('60', '12:01:00'), ('105', '12:01:45')):
+            um = {m: list(v) for m, v in visto[x].items()}
+            e = esperado.get(x) or {}
+            ok('fixar(%s) = %s: um texto só nos seis lugares — rpm BB %s · BE %s, SOG %s nós, diesel %s L (%d leituras)' % (x, hora, (e.get('rpm') or ('?', '?'))[0], (e.get('rpm') or ('?', '?'))[1], e.get('sog'), e.get('diesel'),
+               sum(len(ls) for v in visto[x].values() for ls in v.values())),
+               set(um) == {'sog', 'rpm', 'diesel'} and all(len(v) == 1 for v in um.values()) and um == {m: [e[m]] for m in ('sog', 'rpm', 'diesel')}, um)
+        ok('de 60 s para 105 s o texto das três medidas muda (os lugares acompanham o quadro, não um texto parado)', all(esperado['60'][m] != esperado['105'][m] for m in ('sog', 'rpm', 'diesel')), esperado)
+
+
+# O modo real na página do início (PROMPT «testes/replay.py», bloco «modo real»): com `CapitaoDados.simulacao = false` e `embarcacao.calado = null` no fim do capitao-dados.js (antes do cérebro),
+# a Main não anda (o replay inerte, nenhum tique), «qual o calado?» responde SEM DADOS na tela, a resposta de posição mostra a coordenada na tela e, na pergunta seguinte que vai à IA, o pedido sai
+# sem `modo`, sem coordenada (a pergunta, a ficha, a leitura e o histórico com a resposta de posição) e com a ficha sem «## Navegação agora». O controle é a mesma conversa na simulação (o replay
+# anda, o calado tem número, o pedido leva modo 'simulacao' e a ficha tem o bloco). O Worker é de mentira (a rota do contexto): nenhum pedido sai da máquina.
+MODO_REAL = "window.CapitaoDados.simulacao = false; window.CapitaoDados.embarcacao.calado = null;"
+PERGUNTA_IA = 'como se faz um nó lais de guia?'   # sem resposta pronta: cai no fallback e vai à IA
+R_COORD = C.R_COORD
+LE_CONVERSA = """() => [...document.querySelectorAll('[data-home=msg]')].map((m) => ({ papel: m.dataset.papel, txt: m.innerText.replace(/\\s+/g, ' ').trim() }))"""
+
+
+def pergunta_inicio(pg, q):
+    """Digita no campo da Main e envia; devolve o texto da última resposta ('' se a tela não respondeu: quem chama acusa pelo conteúdo)."""
+    n0 = pg.evaluate("() => document.querySelectorAll('[data-home=msg][data-papel=bot]').length")
+    pg.fill('#pergunta', q)
+    pg.press('#pergunta', 'Enter')
+    try:
+        pg.wait_for_function("(n) => document.querySelectorAll('[data-home=msg][data-papel=bot]').length > n && !document.querySelector('[data-capitao-pensando]')", arg=n0, timeout=20000)
+    except Exception:
+        return ''
+    pg.wait_for_timeout(300)
+    ms = pg.evaluate(LE_CONVERSA)
+    return ms[-1]['txt'] if ms and ms[-1]['papel'] == 'bot' else ''
+
+
+def conversa_inicio(b, real):
+    """A Main com a IA ligada num Worker de mentira; devolve o estado do replay, as três respostas da tela, os corpos dos pedidos à IA, quantos saíram antes da 3ª pergunta e os erros de script."""
+    pedidos = []
+
+    def rota(route):
+        cab = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
+        if route.request.method == 'OPTIONS':
+            return route.fulfill(status=204, headers=cab)
+        pedidos.append(json.loads(route.request.post_data or '{}'))
+        return route.fulfill(status=200, content_type='application/json', headers=cab, body=json.dumps({'texto': 'Resposta da IA de teste.\nFonte: ficha de bordo', 'provedor': 'Workers AI', 'modelo': 'teste', 'parou': 'fim'}))
+    pg = abre(b, caminho='/Main.dc.html', sessao=True, init="localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); localStorage.setItem('capitao.plataforma.v1', 'web');",
+              depois=MODO_REAL if real else '', viewport={'width': 1440, 'height': 900}, espera=ESPERA_MESMO + " && window.CapitaoIA && document.querySelector('#pergunta')")
+    pg.context.route(URL_IA.rstrip('/') + '**', rota)   # (a rota mais nova ganha da que corta a rede)
+    pg.wait_for_timeout(2600)
+    est = pg.evaluate("""() => { const R = window.CapitaoReplay, D = window.CapitaoDados, I = window.CapitaoAgora.instante(); let em = 'x'; try { em = R.em(Date.now()); } catch (e) { em = 'lançou'; }
+      return { ativo: R.ativo(), quadro: R.quadro() === null, em: em === null, tiques: window.__conta('capitao-telemetria'), sim: D.simulacao, calado: D.embarcacao.calado, fonte: I ? I.fonte : null }; }""")
+    resp = {k: pergunta_inicio(pg, q) for k, q in (('calado', 'qual o calado?'), ('posicao', 'qual a posição agora?'))}
+    n_antes = len(pedidos)
+    resp['ia'] = pergunta_inicio(pg, PERGUNTA_IA)
+    erros = list(pg.erros)
+    fecha(pg)
+    return est, resp, pedidos, n_antes, erros
+
+
+def modo_real_pagina(b):
+    print('Modo real na Main (simulacao = false e calado = null no fim do capitao-dados.js): o replay não anda, o calado é SEM DADOS, e o pedido à IA sai sem `modo`, sem coordenada e sem «## Navegação agora»')
+    est, resp, pedidos, n_antes, erros = conversa_inicio(b, True)
+    ok('modo real: a injeção valeu (D.simulacao false, calado null) e a página abre sem erro de script', est['sim'] is False and est['calado'] is None and not erros, (est, erros[:2]))
+    ok('modo real: o CapitaoReplay não anda na página (ativo() false, quadro() e em() null, nenhum tique capitao-telemetria em 2,6 s) e o instante não é do replay',
+       est['ativo'] is False and est['quadro'] and est['em'] and est['tiques'] == 0 and est['fonte'] != 'replay', est)
+    ok('modo real: «qual o calado?» responde SEM DADOS na tela, sem número de calado e sem ir à IA', 'O calado do barco é SEM DADOS' in resp['calado'] and not re.search(r'calado (?:é |de )?\d', resp['calado']) and n_antes == 0, (resp['calado'][:160], n_antes))
+    ok('modo real: a resposta de posição mostra a coordenada NA TELA (o controle: o histórico tem o que filtrar) e não vai à IA', R_COORD.search(resp['posicao']) is not None and n_antes == 0, resp['posicao'][:200])
+    c = pedidos[-1] if pedidos else {}
+    hist = c.get('historico') or []
+    corpo = json.dumps(c, ensure_ascii=False)
+    ok('modo real: a pergunta sem resposta pronta vai à IA uma vez e a tela mostra a resposta dela', len(pedidos) == 1 and 'Resposta da IA de teste.' in resp['ia'], (len(pedidos), resp['ia'][:120]))
+    ok('modo real: o pedido à IA sai SEM `modo`', bool(c) and 'modo' not in c, sorted(c))
+    ok('modo real: o histórico leva a resposta de posição (4 mensagens: calado e posição) e nada do pedido casa a regex de coordenada (pergunta, ficha, leitura, histórico, trechos)',
+       [m.get('papel') for m in hist] == ['usuario', 'capitao', 'usuario', 'capitao'] and hist[2]['texto'] == 'qual a posição agora?' and 'SOG' in hist[3]['texto'] and not R_COORD.search(corpo),
+       ([m.get('texto', '')[:90] for m in hist], [m.group(0) for m in R_COORD.finditer(corpo)][:3]))
+    tit = re.findall(r'^## (.*)$', c.get('ficha') or '', re.M)
+    ok('modo real: a ficha do pedido não tem «## Navegação agora» (tem «## Agora», «## Emergência» e «## Telemetria»)', 'Navegação agora' not in tit and {'Agora', 'Emergência', 'Telemetria'} <= set(tit), tit[:8])
+    # o controle: a mesma conversa na simulação
+    est, resp, pedidos, n_antes, erros = conversa_inicio(b, False)
+    c = pedidos[-1] if pedidos else {}
+    tit = re.findall(r'^## (.*)$', c.get('ficha') or '', re.M)
+    ok('controle (simulação): o replay anda (≥ 2 tiques em 2,6 s), o calado tem número e a hora, o pedido leva modo "simulacao", a ficha tem «## Navegação agora» e nada do pedido casa a regex de coordenada',
+       est['sim'] is True and est['ativo'] is True and est['tiques'] >= 2 and est['fonte'] == 'replay' and re.search(r'O calado do barco é \d+,\d\d m — \d\d:\d\d:\d\d', resp['calado']) is not None
+       and R_COORD.search(resp['posicao']) is not None and len(pedidos) == 1 and c.get('modo') == 'simulacao' and 'Navegação agora' in tit and not R_COORD.search(json.dumps(c, ensure_ascii=False)) and not erros,
+       (est, resp['calado'][:80], len(pedidos), c.get('modo'), tit[:3], erros[:2]))
+
+
+SO_A1 = tuple(t for t in MESMO_TELAS if t[0] == 'A1-Ponte-Web')
+SO_E1 = tuple(t for t in MESMO_TELAS if t[0] == 'E1-Navegando-Gatilhos')
+SO_MAIN = tuple(t for t in MESMO_TELAS if t[0] == 'Main' and t[1] == 'lucas')
+# (nome, {arquivo: [(trecho, no lugar)]}, teste): cada defeito plantado num arquivo do site (servido ao navegador, nunca gravado) tem de ser acusado
+MUTANTES_F7 = [
+    ('o HUD da CONVERSA arredonda a SOG para inteiro (outro texto que o da faixa)', {'capitao-voz.js': [("'SOG ' + c('sog_nos', ' NÓS'),", "'SOG ' + (Math.round(q.sog_nos) + ' NÓS'),")]}, lambda b: mesmo_texto(b, SO_MAIN)),
+    ('o HUD da CONVERSA mostra a rotação crua do quadro (sem o ponto de milhar)', {'capitao-voz.js': [("'RPM ' + (bb === null || bb === undefined ? falta : bb + ' · '", "'RPM ' + (bb === null || bb === undefined ? falta : q.motor_bb_rpm + ' · '")]}, lambda b: mesmo_texto(b, SO_MAIN)),
+    ('a faixa da Main escreve os litros de diesel sem o ponto de milhar', {'Main.dc.html': [("litros === undefined ? falta('SEM LEITURA') : litros + ' L'", "litros === undefined ? falta('SEM LEITURA') : String(litros).replace('.', '') + ' L'")]}, lambda b: mesmo_texto(b, SO_MAIN)),
+    ('o cartão dos motores da A1 repete a rotação de BB em BE', {'A1-Ponte-Web.dc.html': [("dsc('motor_bb_rpm') + ' · ' + (dsc('motor_be_rpm') || '—') + ' rpm'", "dsc('motor_bb_rpm') + ' · ' + (dsc('motor_bb_rpm') || '—') + ' rpm'")]}, lambda b: mesmo_texto(b, SO_A1)),
+    ('a leitura de SOG da E1 sai arredondada para inteiro', {'E1-Navegando-Gatilhos.dc.html': [("L('SOG', sog, '', 'nós',", "L('SOG', sog === null ? null : String(Math.round(q.sog_nos)), '', 'nós',")]}, lambda b: mesmo_texto(b, SO_E1)),
+    ('o texto único da SOG no cérebro (a ficha e a 1ª linha da telemetria) sai arredondado para inteiro', {'capitao-brain.js': [("t.sog = com(cp('sog_nos'), ' nós');", "t.sog = com(cp('sog_nos') === null ? null : String(Math.round(q.sog_nos)), ' nós');")]}, lambda b: mesmo_texto(b, SO_A1)),
+    ('os litros de diesel da resposta «telemetria» saem arredondados para a dezena', {'capitao-brain.js': [("' % (≈ ' + mil(q.diesel_litros) + ' L de '", "' % (≈ ' + mil(Math.floor(q.diesel_litros / 10) * 10) + ' L de '")]}, lambda b: mesmo_texto(b, SO_A1)),
+    ('o pedido à IA leva modo "simulacao" também no modo real', {'capitao-ia.js': [("if (sim) corpo.modo = 'simulacao';", "corpo.modo = 'simulacao';")]}, modo_real_pagina),
+    ('o histórico vai à IA com a coordenada da resposta de posição (sem o filtro do cérebro nem o do cliente)',
+     {'capitao-brain.js': [("texto: semCoord(bruto).slice(0, 600), bruto: bruto };", "texto: bruto.slice(0, 600), bruto: bruto };")],
+      'capitao-ia.js': [("texto: semCoord(String((x && x.texto) || '')).slice(0, 600)", "texto: String((x && x.texto) || '').slice(0, 600)")]}, modo_real_pagina),
+    ('a ficha do modo real ganha um «## Navegação agora»', {'capitao-brain.js': [("      bloco('Navegação agora', navegacaoAgora);", "      bloco('Navegação agora', function () { return navegacaoAgora() || { text: 'SOG 0,1 nós', src: 'Fonte: leitura' }; });")]}, modo_real_pagina),
+    ('o replay anda no modo real (a flag D.simulacao ignorada)', {'capitao-replay.js': [("if (!d || d.simulacao !== true || !d.replay", "if (!d || !d.replay")]}, modo_real_pagina),
+]
+
+
+def mutantes_f7(b):
+    global MUT_ARQ, CAPTURA
+    print('Mutantes da Fase 7 (o mesmo texto e o modo real na página): cada defeito plantado tem de ser acusado')
+    for nome, arqs, teste in MUTANTES_F7:
+        faltam = [(arq, x) for arq, trocas in arqs.items() for x, _ in trocas if le(arq).count(x) != 1]
+        if faltam:
+            ok('mutante «%s»: cada trecho está uma vez no arquivo' % nome, False, faltam)
+            continue
+        MUT_ARQ, CAPTURA, caiu = dict(arqs), [], ''
+        sai = sys.stdout
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            try:
+                teste(b)
+            except Exception as e:   # um erro do próprio teste não conta como acusação (esconderia um erro de código do teste): reprova
+                caiu = 'o teste caiu: %s' % str(e).splitlines()[0][:160]
+        finally:
+            sys.stdout.close()
+            sys.stdout = sai
+            achados, MUT_ARQ, CAPTURA = CAPTURA, None, None
+        ok('mutante: %s — acusado (%d conferência(s) falham)' % (nome, len(achados)), len(achados) > 0 and not caiu, caiu or achados)
+
+
 def mutantes(b):
     global MUT, CAPTURA, TOL_TRIG
     print('Mutantes do motor: cada defeito plantado tem de ser acusado pelo teste que cuida dele (paridade sempre exata, sem a tolerância do CAPITAO_TOL_TRIG)')
@@ -2561,6 +2786,13 @@ def mutantes(b):
 def main():
     with sync_playwright() as p:
         browser = p.chromium.launch(channel=CANAL, headless=True)
+        if '--so-fase7' in sys.argv:   # só as conferências da Fase 7 (o mesmo texto em seis lugares e o modo real na página) e os defeitos plantados delas (~4 min)
+            mesmo_texto(browser)
+            modo_real_pagina(browser)
+            mutantes_f7(browser)
+            browser.close()
+            print('%d conferências · %d falhas' % (total, falhas))
+            sys.exit(1 if falhas else 0)
         a_volta(browser)
         a_fase(browser)
         o_dia(browser)
@@ -2608,9 +2840,12 @@ def main():
         a_alertas_sos(browser)
         a_alertas_telas(browser)
         codigo_alertas()
+        mesmo_texto(browser)
+        modo_real_pagina(browser)
         mutantes(browser)
         mutantes_arq(browser)
         mutantes_alertas(browser)
+        mutantes_f7(browser)
         browser.close()
     print('%d conferências · %d falhas' % (total, falhas))
     sys.exit(1 if falhas else 0)
