@@ -116,8 +116,9 @@ Guia-Rapido-Capitao-IA.pdf · guia-rapido/     guia rápido A4
 manifest.webmanifest · sw.js · .nojekyll      app instalável e cache offline
 assets/ · favicon.ico           ∞ e assinatura WonderHUB.AI, ícones, favicon e atalhos do app instalado (atalho-*.png), logo Wonder BOAT (crédito), desenho dos sensores e o React (vendor/)
 integracoes/                    estrutura desligada das integrações
-ferramentas/                    gerador dos dados, gerador do guia, gerador dos ícones dos atalhos, gerador de senha, plano da versão (prompts/)
-testes/                         cérebro, SOS, rodapé, gerador, reprodução, termos, matriz de telas, proxies da IA (worker_ia.py), IA no chat (chat_ia.py) e publicação
+ferramentas/                    gerador dos dados, gerador do guia (GUIA_CLIMA_AMOSTRA=1 e GUIA_FONTE: no topo do script), gerador dos ícones dos atalhos, gerador de senha, plano da versão (prompts/)
+testes/                         cérebro, SOS, rodapé, gerador, reprodução, termos (proibidos.py: as 8 regex e o grep final), matriz de telas, proxies da IA (worker_ia.py), IA no chat (chat_ia.py) e publicação
+                                opções de cada teste (--so-fase7, --mutantes-fase7, --so-f35, --grep-final --lista…): no topo do arquivo e no CLAUDE.md › Testes locais
 CLAUDE.md                       guia do projeto para o Claude
 ```
 
