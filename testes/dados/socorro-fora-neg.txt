@@ -1,0 +1,214 @@
+# Matriz FIXA do pedido de socorro de fora — NEGATIVAS: rotina com o mesmo vocabulário (resgate, salvamento, marinha, bombeiros, ligar, chamar, ajuda, 185, 193).
+# Frases dos dois revisores independentes de 14/11/2026. O grupo socorro_fora do testes/cerebro.py conta quantas recebem a rota sos e não aceita mais que o número de hoje
+# (as que já recebem são falso positivo conhecido: resgate de coisa com «ser resgatado», pergunta de procedimento, diário com o pedido, uso regional).
+a balsa de resgate vem com ração?
+o bote de resgate chegou da revisão?
+o kit de resgate vem com o quê?
+a escada de resgate está muito alta
+a retinida de resgate tá muito velha
+o treinamento de resgate demora muito?
+o curso de resgate vai demorar quantos dias?
+quando é o treino de resgate?
+quando vence a balsa de salvamento?
+onde fica o colete de salvamento?
+a boia de resgate está muito ressecada
+qual a validade do sling de resgate?
+o que tem no manual sobre resgate de homem ao mar?
+resgatei a defensa que caiu
+como resgatar o cabo que enroscou na hélice?
+vamos resgatar o bote que soltou
+resgatar o drone que caiu na água
+o seguro cobre resgate?
+o valor da aplicação pode ser resgatado?
+o histórico pode ser resgatado depois?
+me resgata o registro da última troca de óleo
+quanto tempo demora um resgate em alto mar?
+quem faz resgate na região de Balneário Camboriú?
+a marinha faz resgate de graça?
+o helicóptero de resgate pousa em lancha?
+vi uma operação de resgate ontem na praia
+na hora do resgate, o que eu levo?
+filme de resgate no mar
+a equipe fez o simulado de resgate
+tem ponto de resgate no canal?
+o plano de resgate está atualizado?
+equipamentos de salvamento a bordo
+lista do material de salvamento
+quero ver os equipamentos de salvamento
+preciso conferir a balsa de salvamento
+preciso de coletes de salvamento novos
+chama o Pedro pra conferir o material de resgate
+pedir orçamento da revisão da balsa
+manda a lista de salvatagem
+resgate de pontos do cartão
+qual a previsão da marinha para amanhã?
+o aviso aos navegantes da marinha saiu?
+tem aviso de mau tempo da marinha?
+a carta da marinha está atualizada?
+norma da marinha para colete
+o que a NORMAM diz sobre extintor?
+a marinha exige balsa para esse barco?
+a marinha pode multar por falta de colete?
+vistoria da marinha quando vence?
+o marinheiro ligou hoje?
+chama o marinheiro pra lavar o barco
+liga pro marinheiro
+manda o marinheiro abastecer
+ligar para a marina e reservar a vaga
+chama a marina no canal 68
+a marina fecha que horas?
+avisa a marina que chegamos às 15h
+preciso ligar pra marinha pra marcar a prova de mestre
+ligar pra marinha pra tirar a carteira de motonauta
+liga pra marinha pra transferir o barco de nome
+tenho que ligar para a marinha para regularizar o barco
+ligar pra marinha pra perguntar do farol apagado
+ligar para a marinha para tirar dúvida da NORMAM
+a que horas a gente liga pra marinha pra avisar da saída?
+amanhã eu ligo pra marinha pra ver o seguro DPEM
+ligar para a marinha para agendar a vistoria
+ligar para a marinha por causa da multa
+liga pra marinha pra renovar a habilitação
+chamar a marinha para vistoriar o barco novo
+meu primo é da marinha
+a marinha do brasil tem app?
+o salvamar atende em qual canal?
+qual a área do salvamar sul?
+o que é o salvamar?
+quem é a guarda costeira no brasil?
+tem guarda costeira aqui?
+a guarda da marina fica até que horas?
+o certificado dos bombeiros vence quando?
+a vistoria dos bombeiros foi feita?
+os bombeiros exigem quantos extintores?
+chama o bombeiro pra ver o vazamento do banheiro
+o marinheiro vai chamar os bombeiros para recarregar os extintores
+ligar para os bombeiros para saber do alvará da marina
+bombeiro hidráulico para a bomba de água doce
+curso de primeiros socorros dos bombeiros
+liga o gerador
+liga a bomba de porão
+ligar o ar condicionado
+como ligar o motor?
+liga as luzes de navegação
+o gerador liga a 185 horas?
+a bomba liga no 193?
+o motor liga os 185 cavalos?
+o termostato liga a 193 graus
+liga pra oficina
+ligar para o mecânico amanhã
+chama o mecânico
+chamar o eletricista
+manda mensagem pro mecânico
+manda o relatório
+mandar o barco pra revisão
+me manda uma ajuda com o gerador
+manda uma ajuda aí no menu
+mandar ajuda de custo pro marinheiro
+preciso de ajuda
+ajuda
+me ajuda com o checklist
+preciso de ajuda com o diário
+ajuda para trocar o filtro
+envia o relatório pro Lucas
+enviar ajuda de custo
+quem pode me ajudar com a manutenção?
+motor com 185 horas
+horímetro em 193 horas
+rpm 1850
+faltam 185 litros
+193 milhas até lá
+canal 16 ou 68?
+registre no diário: ligamos para a marina às 10h
+registre no diário: treinamento de resgate com a tripulação
+registre no diário: marinha fez inspeção no cais
+anota no diário: bombeiros vistoriaram a marina
+o que tem no diário de ontem?
+quem está de serviço hoje?
+bom dia capitão
+obrigado pela ajuda
+qual a previsão do tempo?
+quando chega a peça do gerador?
+que horas a gente chega?
+cadê o marinheiro?
+onde está o extintor?
+quando vem o mecânico?
+o técnico não chega
+a peça está demorando muito
+esperando o mecânico
+aguardando a peça do motor
+registre no diário: pedimos resgate às 10h
+registre no diário: chamamos a marinha às 9h
+anote no diário que o resgate chegou
+registre no diário: treinamento de resgate feito
+lembrar de ligar para a marinha amanhã
+amanhã ligar para os bombeiros sobre o extintor
+tarefa: ligar para a marinha na segunda
+me lembre de chamar o salvamar para o curso
+troquei o bote de resgate hoje
+fizemos o treinamento de resgate hoje
+a gente resgata a âncora amanhã
+como a gente resgata a âncora presa?
+a gente resgata o bote depois
+a gente resgatar o drone
+nós resgatamos o cabo
+como nos resgatar se a âncora prender?
+a âncora ficou presa e precisa ser resgatada
+o bote precisa ser resgatado
+o cabo caiu e precisa ser resgatado
+como resgatar o bote?
+resgatar um cabo do hélice
+quando vence o seguro de resgate?
+quando o resgate do seguro vence
+qual o horário do treinamento de resgate?
+onde está o bote de resgate?
+onde fica o resgate mais próximo?
+qual a hora do resgate do investimento
+quero o resgate do seguro
+preciso do resgate do seguro
+cinto de resgate
+escada de resgate
+onde está o resgate do homem ao mar na lista?
+hora do resgate
+previsão do resgate
+norma da marinha
+aviso aos navegantes da marinha
+previsão da marinha
+carta da marinha
+a marinha exige colete?
+como chamar a marinha pelo rádio?
+como acionar o salvamar?
+qual o canal para chamar a marinha?
+quando devo chamar a marinha?
+em que caso acionar os bombeiros?
+os bombeiros fazem vistoria?
+ligar para a marinha para saber a previsão
+liga pra marinha e pergunta a previsão do tempo
+chamar o despachante da marinha
+ligar para a marinha sobre a taxa
+ligar para a marinha para o cadastro
+ligar para a marinha sobre a habilitação
+ligar para a marinha sobre a arrais
+ligar para a marinha sobre o título
+ligar para a marinha sobre a inscrição
+ligar para a marinha sobre a licença
+ligar para a marinha sobre o boleto
+ligar para os bombeiros sobre o certificado
+chame os bombeiros para a vistoria
+ligar para a marinha para tirar uma dúvida
+ligar para a marinha amanhã cedo
+vou ligar para a marinha depois
+o gerador liga a 185 volts?
+a bomba liga a 193 psi?
+o motor liga aos 185 graus
+ligar os 193 litros
+liga a marinha no plotter
+ligar o rádio para chamar a marinha
+chama o marinheiro
+chamar a marina
+ligar para a marina
+ligar para o salvatagem
+manda ajuda do menu
+mandar ajuda para o prestador
+manda mais ajuda no menu
+enviar uma ajuda de custo
