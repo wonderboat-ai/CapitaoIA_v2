@@ -10784,9 +10784,8 @@ def teste_varredura_livre(b, tela):
             if min(d, 150 - d) > 4: prob.append('%s: o teste pediu o segundo %d e a tela está em %.0f (o relógio não chegou lá)' % (tela, alvo, st['t']))
         if st['fixo'] is not None: prob.append('%s: o replay está fixado (%s) no teste do replay livre' % (tela, st['fixo']))
         if tela in SEM_FAIXA and st['faixa']: prob.append('%s (%s): tem a faixa de alerta (nunca no SOS, no Manual nem na C3)' % (tela, rot))
-        if not tela.startswith('Manual-'):
-            ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
-            if ach: prob.append('%s: termo do §3 no texto (%s): %s' % (rot, ' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:240]))
+        ach = achados_termos(tela, pg.evaluate(LE_TEXTOS))
+        if ach: prob.append('%s: termo do §3 no texto (%s): %s' % (rot, ' · '.join('%s %d' % (k, len(v)) for k, v in ach.items()), '; '.join(x for v in ach.values() for x in v[:2])[:240]))
     prob += ['%s livre: %s' % (tela, e) for e in erros[:2]]
     ctx.close()
     return prob
