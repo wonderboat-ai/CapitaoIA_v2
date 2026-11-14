@@ -1702,6 +1702,13 @@
   // "posição e hora do MOB", "posição e hora, homem ao mar": grava o resumo da telemetria junto com as palavras do usuário
   var RESUMO_MAIS = new RegExp('^(?:' + ITEM_RESUMO + '(?:(?:,? e |, )' + ITEM_RESUMO + ')+,? |' + ITEM_RESUMO + ', )(?=[a-z0-9])');
   function resumoMais(nota) { return !!nota && RESUMO_MAIS.test(norm(nota)); }
+  // «homem ao mar, posição e hora» (o alerta ANTES do pedido de posição; PROMPT Fase 7 «Travas de emergência»): só no relato de emergência, de pessoa em risco ou de pressão de óleo vale como
+  // «posição e hora, homem ao mar» — a linha gravada leva «posição: ler no plotter» em vez de sair sem a posição pedida. Fora do alerta a nota segue como é («chegamos, posição e hora» grava a nota).
+  var RESUMO_NO_FIM = new RegExp('[a-z0-9],? (?:(?:com|e) )?' + ITEM_RESUMO + '(?:(?:,? e |, )' + ITEM_RESUMO + ')*$');
+  function resumoNoFim(nota) {
+    var m = RESUMO_NO_FIM.exec(norm(nota || '').replace(/[.!?;:]+/g, ' ').replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ').trim());
+    return !!m && / posicao/.test(m[0]) && (!!emergenciaTexto(nota) || risco(nota).n === 1 || oleo(pad(nota)) === 1);
+  }
   function notaDoUsuario(q) {
     var s = String(q || '').replace(/^[\s"“”«»]+|[\s"“”«»]+$/g, ''); // “registre posição e hora” dito entre aspas
     if (!s || norm(s).trim() === CANON.diario) return '';
@@ -2726,7 +2733,7 @@
     diario: function (p, ctx, q) {
       var n = now(), grava = !ctx || ctx.commit !== false, nota = notaDoUsuario(q);
       var como = 'Para registrar, diga ou digite aqui “registre no diário…” seguido do texto';
-      var junto = resumoMais(nota); // nota que pede posição/hora: resumo + nota numa linha só
+      var junto = resumoMais(nota) || resumoNoFim(nota); // nota que pede posição/hora: resumo + nota numa linha só (no fim da nota, só com alerta: «homem ao mar, posição e hora»)
       if (nota && !junto) {
         var alerta = emergenciaTexto(nota), espera = !alerta && risco(nota).n === 1, pressao = oleo(pad(nota)) === 1, reg = null, ef; // relato de emergência (inclui a pessoa que some, falta ou se perde, com ou sem nome) / pressão de óleo: grava a nota e traz os passos
         // F20/F15: o registro que conclui um serviço fecha a pendência que cita (com Desfazer) e propõe o Executado ou a tarefa; o texto de emergência, de pressão de óleo ou de cabeça de segurança (EPIRB, Seafire, rádio…) não mexe na agenda pelo chat
@@ -5568,8 +5575,8 @@
   function ficha(p, q, a, ctx) { return comJanela({ emergencia: !!(ctx && ctx.emergencia === true) || !!(a && typeof a === 'object' && (a.janela === true || a.emergencia === true || a.emerg === true)) }, function () { try { return congela(function () { return ficha1(p, q, a); }, a && a._inst); } finally { EXEC_SEM_SIM = false; } }); }
   // O teto da ficha (letras). Decisão (i) do CLAUDE.md: se a ficha passa de ~11.500, o teto vai a 16.000. Medida nos 150 instantes do laço e em 4 instantes de cada uma das 576 voltas do dia:
   // 11.382 a 11.523 letras sem a previsão e a maré (a página sem o capitao-clima.js), 11.658 a 11.802 COM elas (o app real sempre as tem: o capitao-clima.js grava a leitura do dia e a série da maré) e
-  // até 12.213 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js: `.slice(0, 12000)`) e os dois Workers cortam a ficha em 12.000
-  // PELO FIM (Clima e maré e Guias de bordo caem primeiro) e sobem juntos para 16.000 na Fase 6: este valor é o que eles têm de acompanhar. O testes/cerebro.py (grupo ficha) cobra a regra: acima
+  // até 12.213 com 3 linhas longas de diário do aparelho; a resumida, 3.919 a 3.992. Então o teto é 16.000. O cliente (capitao-ia.js) e os dois Workers cortam a ficha PELO FIM (Clima e maré e Guias
+  // de bordo caem primeiro): em 16.000 na simulação e em 12.000 no modo real (`simulacao: false`). Este valor é o que o corte da simulação tem de acompanhar. O testes/cerebro.py (grupo ficha) cobra a regra: acima
   // de 11.500 este valor TEM de ser 16.000. Exposto em B.FICHA_MAX. O «## Emergência» fica perto do topo porque o corte do cliente é pelo fim.
   var FICHA_MAX = 16000;
   // «## Navegação agora» (PROMPT Fase 3 «ficha()»): a hora e a fase, SOG/STW, rumo/COG e proa, a posição relativa (§2.8: só com a simulação e só dos pontos com fonte, nunca coordenada),
@@ -6179,7 +6186,8 @@
     return travaVoz(comHoraNaFala(a, t));
   }
   // A tela avisa o núcleo de voz que espera a IA na nuvem: ele fica em PROCESSANDO até a resposta ser falada (sem sumir em 2,5 s).
-  function vozPensando(texto) { try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: { estado: 'pensando', texto: texto || '', segura: true } })); } catch (e) {} }
+  // pelo mesmo emissor dos outros estados (evVoz): o evento da espera pela IA também leva o campo `alerta` (CLAUDE.md 10), em vez de sair sem ele
+  function vozPensando(texto) { evVoz('pensando', texto, { segura: true }); }
 
   // Controles do overlay de voz (capitao-voz.js)
   function vozEnviar() { if (ESCUTA.rec) ESCUTA.rec.parar(); }
