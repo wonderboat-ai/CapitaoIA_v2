@@ -200,9 +200,11 @@ function filtroSaida(t) {
 // Coordenadas não saem do aparelho (PROMPT §2.8; vale nos DOIS modos): a mesma regra do semCoord do capitao-brain.js e do
 // cliente. Graus-minutos com vírgula ou ponto, decimais com 4 ou mais casas ou em par — e nunca o milhar do pt-BR
 // (1.236,4 h, 1.600 L, 12.000). O filtro vem ANTES do corte: cortar primeiro deixaria meia coordenada.
-// Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, ou em par próximo mesmo sem letra
-// (26.991 S 48.634 W; -26.991 -48.634); só N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
-const COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-?\d{1,3}[.,]\d{2,}\s*[NSEW]?[^\d\n]{1,2}-?\d{1,3}[.,]\d{2,}\s*[NSEW]?/g;
+// Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, mesmo sozinho (26.991 S); ou duas
+// casas de 3+ decimais, as duas negativas, separadas só por espaço, sem letra (-26.991 -48.634) — igual ao par com
+// vírgula já existente, trocando a vírgula por espaço (nenhuma leitura de bordo é negativa com 3+ casas). Letra só
+// N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
+const COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-\d{1,3}[.,]\d{3,}\s+-?\d{1,3}[.,]\d{3,}/g;
 const SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = /\(coordenadas só na tela do app\)(?:\s*[,;\/·]?\s*\(coordenadas só na tela do app\))+/g;
 function semCoord(s) { return String(s == null ? '' : s).replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
 

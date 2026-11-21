@@ -11105,7 +11105,7 @@ MUTANTES_P4G_REV = [
     # —— o registro no diário e a foto com o texto ——
     ('p4g diário: «registre no diário: o João sumiu» sem a instrução de segurança (o diário só conhece a lista SOS)', r"var alerta = emergenciaTexto(nota), espera", r"var alerta = emergencia(pad(nota)), espera", ('p4g_pessoa',)),
     ('p4g diário: «registre a posição e a hora, o João sumiu» sem a instrução de segurança (o ramo do resumo)', r"var al = junto && emergenciaTexto(nota), es", r"var al = junto && emergencia(pad(nota)), es", ('p4g_pessoa',)),
-    ('p4g diário: o texto de rotina vira alerta (o predicado único sem a guarda do sumiço de dados)', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || cabecaEmerg(n); }', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || cabecaEmerg(n) || /sumiu|desapareceu/.test(n); }', ('p4g_pessoa',)),
+    ('p4g diário: o texto de rotina vira alerta (o predicado único sem a guarda do sumiço de dados)', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }', 'function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || /sumiu|desapareceu/.test(n); }', ('p4g_pessoa',)),
     ('p4g diário: o pedido de registro com a foto grava a pessoa que some como legenda de rotina', r"!resumoMais(nota) && !instrucaoTexto(nota) && oleo(pad(nota)) !== 1", r"!resumoMais(nota) && !emergencia(pad(nota)) && oleo(pad(nota)) !== 1", ('p4g_pessoa',)),
     ('p4g nome: o nome dito com a foto vira legenda (o texto de emergência entra na linha)', 'socorroImplicito(n) || risco(raw).n >= 1 || cabecaEmerg(n) || /\\?/.test(raw)', 'socorroImplicito(n) || cabecaEmerg(n) || /\\?/.test(raw)', ('p3f_foto', 'p4g_pessoa')),
 ]
@@ -11335,7 +11335,7 @@ MUTANTES_P4G_REV7 = [
     ('p4g estrutura M6: a água com o sinal forte é a ESPERA, não o socorro («perdemos X no mar», «X caiu na água»)', "|na agua|no mar|corpo|cadaver|afogad[oa]s?|de vista) /.test(q) ? 2 : 1;", "|na agua|no mar|corpo|cadaver|afogad[oa]s?|de vista) /.test(q) ? 1 : 1;", E7),
     ('p4g estrutura: a ausência de pessoa de terra com a água («a pessoa do stand up paddle») nunca é a água', "    agua = AGUA_RE.test(sa) || PESSOA_NA_AGUA.test(sa);", "    agua = AGUA_RE.test(sa);", E7),
     # —— o ponto de entrada único ——
-    ('p4g estrutura M10: o diário não leva a pessoa aberta («registre no diário: o dono sumiu»)', "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || cabecaEmerg(n); }", "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || cabecaEmerg(n); }", E7 + ('p4g_pessoa',)),
+    ('p4g estrutura M10: o diário não leva a pessoa aberta («registre no diário: o dono sumiu»)', "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }", "function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n); }", E7 + ('p4g_pessoa',)),
     ('p4g estrutura: a memória das últimas perguntas devolve a resposta de OUTRA pergunta', "if (RISCO_MEM[i].k === raw && RISCO_MEM[i].s === sig) return RISCO_MEM[i].v;", "if (RISCO_MEM[i].s === sig) return RISCO_MEM[i].v;", E7),
     ('p4g estrutura: a grafia do ditado («sumio», «sumiru») não vale', "  function grafia(q) { var i;", "  function grafia(q) { return q; var i;", E7),
 ]

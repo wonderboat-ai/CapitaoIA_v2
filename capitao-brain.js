@@ -4701,7 +4701,7 @@
   }
   // O predicado único do TEXTO que se manda registrar (o diário, a foto com o pedido de registro): a lista SOS, o pedido de socorro implícito («estamos em risco», «isso não é um teste») e a pessoa que some, falta ou se perde,
   // com ou sem nome próprio (o texto original). «registre no diário: homem ao mar» e «registre no diário: o João sumiu» abrem a resposta com a instrução de segurança e ligam a janela de 15 min do mesmo jeito.
-  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || cabecaEmerg(n); }
+  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }
   // (o texto que merece a instrução de segurança, com ou sem janela: a ESPERA, n=1, leva a instrução e a linha sem a janela de 15 min — a escala e o palpite não custam 15 min de emergência)
   function instrucaoTexto(raw) { return emergenciaTexto(raw) || risco(raw).n >= 1; }
   function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q) || pessoaSumidaG(q); }
@@ -5606,9 +5606,11 @@
   // PROMPT §2.8 (vale nos dois modos: é privacidade, não simulação): graus-minutos com vírgula ou ponto, com ou sem espaço e sinal (26°59,6'S, -26°59.6', 26°59'S, 26°59'35"S, 26º 59,6),
   // decimais com 4 ou mais casas (-26.9931) ou em par (-26,993 / -48,614; -26.993,-48.614) — e NUNCA o milhar do pt-BR (1.236,4 h, 1.600 L, 2.050 rpm, 12.000). A mesma regra do R_COORD do
   // testes/cerebro.py e do gerador (ferramentas/demo/confere.py). O par de coordenadas que o texto traz vira UM aviso só.
-  // Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, ou em par próximo mesmo sem letra
-  // (26.991 S 48.634 W; -26.991 -48.634); só N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
-  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-?\d{1,3}[.,]\d{2,}\s*[NSEW]?[^\d\n]{1,2}-?\d{1,3}[.,]\d{2,}\s*[NSEW]?/g;
+  // Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, mesmo sozinho (26.991 S); ou duas
+  // casas de 3+ decimais, as duas negativas, separadas só por espaço, sem letra (-26.991 -48.634) — igual ao par com
+  // vírgula já existente, trocando a vírgula por espaço (nenhuma leitura de bordo é negativa com 3+ casas). Letra só
+  // N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
+  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-\d{1,3}[.,]\d{3,}\s+-?\d{1,3}[.,]\d{3,}/g;
   var SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = new RegExp('\\(coordenadas só na tela do app\\)(?:\\s*[,;/·]?\\s*\\(coordenadas só na tela do app\\))+', 'g');
   function semCoord(s) { return String(s || '').replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
   // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
@@ -6020,12 +6022,16 @@
   // ou calada (false: antes de o bloco começar e no fim dele) — o espectro e o brilho do núcleo só reagem à voz com som.
   // alerta (Fase 5, CLAUDE.md 10): true enquanto a janela de conversa em emergência vale (a marca única das telas, CapitaoEmergencia; a resposta que a abre já a
   // marcou antes de ser falada) ou quando o texto do evento — o trecho ouvido ou a linha falada — é de emergência pelo predicado único do cérebro
-  // (emergenciaTexto). Com ele o HUD do núcleo troca a leitura do quadro por «POSIÇÃO · LEIA NO PLOTTER». Nenhum estado novo: só lê o que já existe.
+  // (emergenciaTexto) OU de cabeça de equipamento de emergência (cabecaEmerg: EPIRB, Seafire, canal16/DSC, óleo — emenda de 21/11/2026, auditoria):
+  // enquanto a CONVERSA ouve ou fala sobre esses equipamentos, o HUD troca o quadro por «POSIÇÃO · LEIA NO PLOTTER», mesmo sem palavra da lista SOS
+  // («Como eu testo o EPIRB?»). cabecaEmerg É intencionalmente amplo (qualquer menção, rotina ou não) — correto aqui, mas por isso NÃO entra em
+  // emergenciaTexto(): a rota `diario` usa a mesma função para decidir se abre a janela de 15 min, e aí «o EPIRB foi testado» (rotina) não pode
+  // abrir — só «a baliza disparou sozinha» (avaria) deveria, o que pede um sinal mais estreito (avaria × rotina) que ainda não existe; pendência da auditoria de 21/11/2026.
   function evVoz(estado, texto, extra) {
     var det = { estado: estado, texto: texto || '' }, alerta = janela();
     if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) det[k] = extra[k];
     if (!alerta) { try { var E = window.CapitaoEmergencia; alerta = !!(E && E.valendo()); } catch (e) { alerta = false; } }
-    if (!alerta && det.texto) { try { alerta = !!emergenciaTexto(det.texto); } catch (e) { alerta = false; } }
+    if (!alerta && det.texto) { try { alerta = !!(emergenciaTexto(det.texto) || cabecaEmerg(pad(det.texto))); } catch (e) { alerta = false; } }
     det.alerta = alerta;
     try { window.dispatchEvent(new CustomEvent('capitao-voz', { detail: det })); } catch (e) {}
   }

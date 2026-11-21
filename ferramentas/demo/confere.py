@@ -174,13 +174,15 @@ R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:dados?|leituras?|barco|embarca[�
 # (1.236,4 h · 1.600 L · 12.000 · "1.000, 1.500 rpm") fica de fora. Além das do §2.8, a forma do semCoord de hoje
 # (capitao-brain.js: minutos inteiros com o apóstrofo e o hemisfério, 26°59'S), os segundos (26°59'35"), o "º" ordinal no lugar
 # do grau e o par separado por vírgula quando o 1º número tem sinal (-26.993,-48.614: a linha típica de CSV).
-# Emenda de 21/11/2026 (auditoria da 1.1.0): decimal de 2-3 casas com letra do hemisfério sem °, ou em par próximo mesmo sem
-# letra (26.991 S 48.634 W; -26.991 -48.634); só N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
+# Emenda de 21/11/2026 (auditoria da 1.1.0): decimal de 2-3 casas com letra do hemisfério sem °, mesmo sozinho (26.991 S);
+# ou duas casas de 3+ decimais, as duas negativas, separadas só por espaço, sem letra (-26.991 -48.634) — igual ao par com
+# vírgula já existente, trocando a vírgula por espaço (nenhuma leitura de bordo é negativa com 3+ casas). Letra só N/S/E/W
+# (sem L/O: colidem com litros e a letra O comum em pt-BR).
 R_COORD = re.compile(r"-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?"
                      r"|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:[\"″”]|''|’’))"
                      r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}"
                      r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}"
-                     r"|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-?\d{1,3}[.,]\d{2,}\s*[NSEW]?[^\d\n]{1,2}-?\d{1,3}[.,]\d{2,}\s*[NSEW]?")
+                     r"|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-\d{1,3}[.,]\d{3,}\s+-?\d{1,3}[.,]\d{3,}")
 # MMSI9 (§6.4, trava §2.2): nunca instrução de programar o MMSI. O verbo no imperativo, no infinitivo ou no gerúndio (o grupo 1
 # ou o 2) na mesma frase que "MMSI", a até 80 letras; "programado(a)" descreve o rádio e passa (protocolos.dsc do §1.3).
 _PROGRAMAR = r'(?<![A-Za-zÀ-ÿ])((?:re)?program(?:e|em|ar|ando|á-l[oa]|e-[oa])(?![A-Za-zÀ-ÿ]))'
