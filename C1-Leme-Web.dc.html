@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Manutenção (web)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -32,7 +34,7 @@ button { font: inherit; }
       <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
         <div style="flex-grow: 1; display: flex; flex-direction: column; min-width: 0;">
           <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.01em;">Manutenção</h1>
-          <span style="font-size: 13px; color: var(--cap-ink2, #b1bdd6);">{{resumo}}</span>
+          <span data-c1="resumo" title="{{resumoTitle}}" style="font-size: 13px; color: var(--cap-ink2, #b1bdd6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{resumo}}</span>
         </div>
         <span role="status" style="font-size: 12.5px; font-weight: 600; color: {{noteTone}}; max-width: 420px; text-align: right;">{{note}}</span>
         <a href="Main.dc.html#q=Pr%C3%B3ximas%20manuten%C3%A7%C3%B5es" style="display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.08); color: var(--cap-accent, #00a1fe); font-size: 13.5px; font-weight: 600; text-decoration: none; flex-shrink: 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>Perguntar</a>
@@ -59,16 +61,16 @@ button { font: inherit; }
           <span style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.14); display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg></span>
           <span style="flex-grow: 1; display: flex; flex-direction: column;">
             <span style="font-size: 15px; font-weight: 700;">Leitura de agora</span>
-            <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{leituraSub}}</span>
+            <span data-c1="leitura-sub" style="font-size: 12px; color: var(--cap-ink3, #97a3c0);">{{leituraSub}}</span>
           </span>
           <a href="A1-Ponte-Web.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 10px; font-size: 13px; font-weight: 600; text-decoration: none;">Telemetria ›</a>
         </div>
         <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px;">
           <sc-for list="{{live}}" as="l" hint-placeholder-count="6">
-            <div style="padding: 10px 14px; background: var(--cap-elev, #131a33); border-radius: 14px; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <div data-live="{{l.id}}" style="padding: 10px 14px; background: var(--cap-elev, #131a33); border-radius: 14px; display: flex; flex-direction: column; gap: 3px; min-width: 0;">
               <span style="display: flex; align-items: center; gap: 7px;">{{l.ico}}<span style="font-size: 12px; font-weight: 600; color: var(--cap-ink3, #97a3c0);">{{l.k}}</span></span>
               <span style="font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums;">{{l.v}} <span style="font-size: 13px; font-weight: 600; color: var(--cap-ink3, #97a3c0); letter-spacing: 0;">{{l.u}}</span></span>
-              <span style="font-size: 11.5px; font-weight: 500; color: {{l.stone}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.s}}</span>
+              <span title="{{l.s}}" style="font-size: 11.5px; font-weight: 500; line-height: 1.3; color: {{l.stone}}; overflow-wrap: anywhere;">{{l.s}}</span>
             </div>
           </sc-for>
         </div>
@@ -89,7 +91,7 @@ button { font: inherit; }
         </div>
         <div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 96px;">
           <sc-for list="{{rows}}" as="a" hint-placeholder-count="4">
-            <div style="box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 14px; background: var(--cap-row, #10162e); flex-shrink: 0;">
+            <div data-tarefa="{{a.id}}" style="box-sizing: border-box; display: flex; align-items: center; gap: 14px; padding: 7px 12px; border-radius: 14px; background: var(--cap-row, #10162e); flex-shrink: 0;">
               <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: {{a.wash}}; display: flex; align-items: center; justify-content: center;">{{a.ico}}</span>
               <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
                 <span style="font-size: 14.5px; font-weight: 700;">{{a.t}}</span>
@@ -108,7 +110,9 @@ button { font: inherit; }
             </div>
           </sc-for>
           <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12.5px; flex-shrink: 0;">
-            <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+            <sc-if value="{{temFalta}}" hint-placeholder-val="{{false}}">
+              <span><b style="color: var(--cap-warn, #f0a63a); letter-spacing: 0.08em;">FALTA REGISTRAR</b> · {{falta}}</span>
+            </sc-if>
             <span style="font-size: 11.5px; color: var(--cap-ink4, #7985a6);">{{fonte}}</span>
           </div>
         </div>
@@ -121,23 +125,39 @@ button { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
-  state = { filter: 'all', exec: {}, last: '', note: '', noteTone: 'var(--cap-ok, #34c77a)' };
+  state = { filter: 'all', exec: {}, last: '', note: '', noteTone: 'var(--cap-ok, #34c77a)', vivo: '' };
   componentDidMount() {
     const f = () => { const m = /f=(\w+)/.exec(location.hash || ''); if (m && ['atrasadas', 'd30', 'emdia', 'all'].indexOf(m[1]) !== -1) this.setState({ filter: m[1] }); };
     f(); this._onHash = f; window.addEventListener('hashchange', this._onHash);
-    this.whenBrain(() => this.setState({ exec: window.CapitaoBrain.loadExec() }));
+    this.whenBrain(() => { this.setState({ exec: window.CapitaoBrain.loadExec() }); this.atualiza(); });
     // Executado em outra aba/tela: recarrega
-    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || e.key === 'capitao.executado.v1')) this.setState({ exec: window.CapitaoBrain.loadExec() }); };
+    this._st = (e) => { if (window.CapitaoBrain && (!e || e.key === null || /^capitao\.(executado|tarefas)\.v1$/.test(e.key))) { this.setState({ exec: window.CapitaoBrain.loadExec() }); this.atualiza(); } };
     window.addEventListener('storage', this._st);
+    // A cada tique da telemetria (replay ou coletor) e a cada virada de dia (os prazos são refeitos): monta o texto que a tela exibe (dinamico(): só dado, nenhum elemento React) e só chama setState se ele
+    // mudou. Com o instante fixado não há redesenho nenhum; a leitura anda quase todo segundo, e a tela fica parada com a aba oculta (document.hidden).
+    this._onTele = () => { if (!document.hidden) this.atualiza(); };
+    window.addEventListener('capitao-telemetria', this._onTele);
+    window.addEventListener('capitao-rebase', this._onTele);
+    this.atualiza();
   }
-  componentWillUnmount() { window.removeEventListener('hashchange', this._onHash); window.removeEventListener('storage', this._st); clearTimeout(this._n); }
+  componentWillUnmount() {
+    window.removeEventListener('hashchange', this._onHash); window.removeEventListener('storage', this._st);
+    window.removeEventListener('capitao-telemetria', this._onTele); window.removeEventListener('capitao-rebase', this._onTele);
+    clearTimeout(this._n); clearInterval(this._b);
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
-    const t = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
+  }
+  atualiza() {
+    const d = this.dinamico(), k = JSON.stringify(d);
+    if (k === this._k) return;
+    this._k = k; this._din = d; this._fresco = true;
+    this.setState({ vivo: k });
   }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
   quem() { return window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'; }
@@ -158,60 +178,97 @@ class Component extends DCLogic {
     B.addDiario({ sys: 'Manutenção', tone: 'var(--cap-warn, #f0a63a)', t: 'Desfeito: ' + t.t + ' volta para a agenda (Executado marcado por engano). Desfeito no console por ' + this.quem() + ' — linha nova, nada se apaga.', who: this.quem(), src: 'console · manutenção' });
     this.setState({ exec: B.loadExec(), last: '' }); this.toast('Desfeito — ' + t.t + ' voltou para a agenda', 'var(--cap-warn, #f0a63a)');
   }
+  // Tudo o que a tela mostra, em texto puro. A leitura de agora e as horas que faltam para a troca vêm do instante do CapitaoAgora (replay, coletor ou a última leitura salva: o mesmo texto da moldura e do
+  // cérebro, CapitaoAgora.fmt.campo, com as casas do D.campos); os prazos, da agenda e das tarefas da equipe (as do aparelho também) já refeitos pelo CapitaoAgora no dia do instante; nunca da leitura fixa de 26/09.
+  // Com a simulação o dado sempre existe; o caminho `null` → SEM DADOS / SEM LEITURA é do ramo simulacao:false e nunca chega à tela da simulação (falta()).
+  dinamico() {
+    const D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, B = window.CapitaoBrain, s = this.state, ex = s.exec || {};
+    let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
+    const q = I && I.q ? I.q : null, sim = D.simulacao === true, SD = 'SEM DADOS', SL = 'SEM LEITURA', falta = (rot) => (sim ? '—' : rot);
+    const num = (x) => typeof x === 'number' && isFinite(x), cap1 = (t) => { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); };
+    const nbm = (x, c, m) => { const t = F.nb ? F.nb(x, c, m) : null; return t === null || t === undefined ? '—' : t; };
+    const nb = (x, c) => nbm(x, c == null ? 1 : c, false), mil = (x) => nbm(x, 0, true);
+    const tem = (nome) => !!(q && F.campo && F.campo(q, nome) !== null && F.campo(q, nome) !== undefined);
+    const c = (nome) => { const t = q && F.campo ? F.campo(q, nome) : null; return t === null || t === undefined ? falta(SL) : t; };
+    const lv = (nomes) => { let r = null; nomes.forEach((nome) => { try { const n = q && A.nivel ? A.nivel(nome, q) : null; if (n && n.nivel === 'critico') r = 'crit'; else if (n && n.nivel === 'aviso' && r !== 'crit') r = 'warn'; } catch (e) {} }); return r; };
+    const reserva = !!(I && I.fonte === 'snapshot');
+    const lei = I ? String(I.fonteTxt || '').replace(/^.*leitura de /, '') : '';   // 'dd/mm hh:mm' da última leitura salva (ramo simulacao:false)
+    const fonteTxt = I ? (reserva ? 'Última leitura · ' + lei : cap1(I.fonteTxt)) : falta('Leitura ' + SL);
+    const fase = I && I.fase && I.fase.nome ? I.fase.nome : '';
+
+    // ——— a agenda gerada e as tarefas da equipe (as do aparelho também): as executadas saem das contas, como no CapitaoAgora.contagens() ———
+    let equipe = []; try { equipe = B && typeof B.tarefasEquipe === 'function' ? B.tarefasEquipe() : (D.tarefasEquipe || []); } catch (e) { equipe = D.tarefasEquipe || []; }
+    equipe = Array.isArray(equipe) ? equipe : [];
+    const tarefas = (D.agenda || []).map((t) => ({ id: t.id, t: t.t, equip: t.equip || '', quem: t.quem || '', intervalo: t.intervalo || '', vence: t.vence, dn: t.dn, horas: t.horas, tom: t.tom, feita: false }))
+      .concat(equipe.map((t) => ({ id: t.id, t: t.n, equip: cap1(t.sistema || 'Equipe'), quem: t.quem || '', intervalo: '', vence: t.vence ? String(t.vence).split('-').reverse().join('/') : '', dn: t.dn, horas: null, tom: t.tom, feita: !!t.feita })))
+      .filter((t) => num(t.dn));
+    const grupo = (n) => (n < 0 ? 'atrasadas' : n <= 30 ? 'd30' : 'emdia');
+    const abertas = (g) => tarefas.filter((t) => grupo(t.dn) === g && !ex[t.id] && !t.feita);
+    const atr = abertas('atrasadas'), d30 = abertas('d30');
+    const feitas = tarefas.filter((t) => ex[t.id] || t.feita).length;
+    const nEmDia = tarefas.length - atr.length - d30.length;
+    const curto = (arr, vazio) => { const x = arr.map((t) => t.equip.split(' (')[0] + (t.dn < 0 ? ' ' + (-t.dn) + ' d' : ' D-' + t.dn)).join(' · '); return x || vazio; };
+    // as horas que faltam para a troca: as do instante (o horímetro de agora), com a agenda gerada só de reserva
+    const faltam = (t) => { const h = t.horas; if (!h) return null; const f = I && I.calc && I.calc.faltam ? I.calc.faltam[t.id] : undefined; return num(f) ? f : num(h.faltam) ? h.faltam : null; };
+    const h3 = (t) => { const f = faltam(t); return t.horas && num(t.horas.limite) ? ' ou ' + mil(t.horas.limite) + ' h' + (f !== null ? ' (faltam ' + nb(f) + ' h)' : '') : ''; };
+    const filtered = s.filter === 'all' ? tarefas : tarefas.filter((t) => grupo(t.dn) === s.filter);
+    const labels = { all: 'todas as tarefas', atrasadas: 'atrasadas', d30: 'vencem em 30 dias', emdia: 'em dia' };
+    const oleo = tarefas.filter((t) => t.id === 'motores-oleo')[0];
+
+    const status = [
+      { k: 'atrasadas', v: String(atr.length), l: atr.length === 1 ? 'atrasada' : 'atrasadas', sub: curto(atr, 'Nada atrasado · executadas registradas no diário'), tone: 'crit', d: 'M12 4 21 20H3z M12 10v4 M12 17h.01' },
+      { k: 'd30', v: String(d30.length), l: 'em 30 dias', sub: curto(d30, 'Nada vence nos próximos 30 dias'), tone: 'warn', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
+      { k: 'emdia', v: String(nEmDia), l: 'em dia', sub: 'De ' + tarefas.length + ' tarefas' + (feitas ? ' · inclui ' + feitas + (feitas === 1 ? ' executada' : ' executadas') : '') + (oleo && oleo.horas && faltam(oleo) !== null ? ' · óleo dos motores: faltam ' + nb(faltam(oleo)) + ' h ou D-' + oleo.dn : ''), tone: 'ok', d: 'M5 12.5l4.5 4.5L19 7.5' }
+    ];
+    const live = [
+      { id: 'sog', k: 'Velocidade', v: c('sog_nos'), u: 'nós', s: [q && q.estado ? String(q.estado).toLowerCase() : '', fase].filter(Boolean).join(' · ') || falta(SL), d: 'M3 12h4l2-6 3 12 2.5-8 1.5 4h5', t: 'tele' },
+      { id: 'proa', k: 'Proa', v: tem('proa_graus') ? c('proa_graus') + '°' : falta(SL), u: '', s: tem('gps_satelites') ? c('gps_satelites') + ' satélites' : falta('GPS ' + SL), d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', t: 'tele' },
+      { id: 'vento', k: 'Vento', v: c('vento_verdadeiro_nos'), u: 'nós', s: 'a bordo agora · verdadeiro de ' + (tem('vento_verdadeiro_angulo') ? c('vento_verdadeiro_angulo') + '°' : falta(SL)), d: 'M3 8h11a3 3 0 1 0-3-3 M3 12h15a3 3 0 1 1-3 3 M3 16h8a2 2 0 1 1-2 2', t: 'tele' },
+      { id: 'bateria', k: 'Banco 24 V', v: c('bateria_0_tensao_v'), u: 'V', s: 'banco 12 V ' + c('bateria_2_tensao_v') + ' V', d: 'M13 3L5 14h6l-1 7 8-11h-6z', t: lv(['bateria_0_tensao_v', 'bateria_1_tensao_v', 'bateria_2_tensao_v']) || 'ok' },
+      { id: 'agua-mar', k: 'Água do mar', v: c('temp_agua_c'), u: '°C', s: 'ar ' + c('temp_ar_externo_c') + ' °C · ' + c('pressao_barometrica_hpa') + ' hPa', d: 'M10 4a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z', t: 'ok' },
+      { id: 'agua-doce', k: 'Água doce', v: c('tanque_agua_pct'), u: '%', s: 'cinzas ' + c('tanque_cinzas_pct') + ' % · negras ' + c('tanque_negras_pct') + ' %', d: 'M5 6h14v12H5z M5 13h14', t: lv(['tanque_agua_pct', 'tanque_cinzas_pct', 'tanque_negras_pct']) || 'accent' }
+    ];
+    const rows = filtered.map((t) => ({ id: t.id, t: t.t, equip: t.equip, meta: [t.equip, t.quem, t.intervalo, 'vence ' + t.vence + h3(t)].filter(Boolean).join(' · '), icoD: t.equip, tom: t.dn < 0 ? 'crit' : t.tom, dn: t.dn,
+      dd: t.dn < 0 ? (-t.dn) + (t.dn === -1 ? ' dia atrás' : ' dias atrás') : 'D-' + t.dn + ' · ' + String(t.vence).slice(0, 5) }));
+    const resumo = fonteTxt + ' · ' + tarefas.length + ' tarefas · ' + (atr.length ? atr.length + (atr.length === 1 ? ' atrasada' : ' atrasadas') : 'nenhuma atrasada') + ' · horímetros BB ' + c('motor_bb_horimetro_h') + ' h · BE ' + c('motor_be_horimetro_h') + ' h · prazos contados a partir de ' + (D.versao || falta(SD));
+    return {
+      resumo: resumo, leituraSub: fonteTxt, live: live, status: status, rows: rows, filterLabel: labels[s.filter] || labels.all,
+      falta: (D.agendaFalta || []).join(' · '), temFalta: !!(D.agendaFalta || []).length,
+      fonte: 'Fonte: ' + (D.agendaFonte || falta(SD)) + ' · prazos contados a partir de ' + (D.versao || falta(SD))
+    };
+  }
   renderVals() {
-    const s = this.state, ex = s.exec || {}, D = window.CapitaoDados || {}, S = D.snapshot || {}, M = S.motores || {};
-    const AG = D.agenda || [];
+    const s = this.state, ex = s.exec || {};
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (Executado, filtro, aviso) refaz o texto agora
+    let d = this._din;
+    if (!this._fresco || !d) { d = this._din = this.dinamico(); this._k = JSON.stringify(d); }
+    this._fresco = false;
     const TOM = {
       crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'],
       tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)']
     };
     const ICON = { 'Climatização': 'M12 3v18 M3 12h18 M6 6l12 12 M18 6L6 18', 'Bombas': 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', 'Gerador': 'M13 3L5 14h6l-1 7 8-11h-6z', 'Casco': 'M3 16c2-3 4-3 6 0s4 3 6 0 4-3 6 0M3 9c2-3 4-3 6 0s4 3 6 0 4-3 6 0', 'Motores': 'M4 17V9l3-4h7l3 4v8z M8 17v3 M16 17v3 M8 9h8', 'Estabilizador': 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M3 12h18 M12 7a5 5 0 0 0 0 10', 'Sistema': 'M7 7h10v10H7z M10 3v4 M14 3v4 M10 17v4 M14 17v4', 'Eletrônicos': 'M4 5h16v11H4z M9 20h6 M12 16v4' };
-    const icoDe = (eq) => { for (const k in ICON) if (eq.indexOf(k) === 0) return ICON[k]; return 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z'; };
-    const grupo = (t) => (t.dn < 0 ? 'atrasadas' : t.dn <= 30 ? 'd30' : 'emdia');
-    const abertas = (g) => AG.filter((t) => grupo(t) === g && !ex[t.id]);
-    const nAtr = abertas('atrasadas').length, nD30 = abertas('d30').length;
-    const feitas = AG.filter((t) => ex[t.id]).length;
-    const nEmDia = AG.length - nAtr - nD30;
-    const curto = (g, vazio) => { const x = abertas(g).map((t) => t.equip.split(' (')[0] + (t.dn < 0 ? ' ' + (-t.dn) + ' d' : ' D-' + t.dn)).join(' · '); return x || vazio; };
-    const filtered = s.filter === 'all' ? AG : AG.filter((t) => grupo(t) === s.filter);
-    const labels = { all: 'todas as tarefas', atrasadas: 'atrasadas', d30: 'vencem em 30 dias', emdia: 'em dia' };
+    const icoDe = (eq) => { for (const k in ICON) if (String(eq).indexOf(k) === 0) return ICON[k]; return 'M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-.5-.5-2.5z'; };
+    const cor = (k) => TOM[k] || TOM.accent;
     const setF = (k) => () => this.setState({ filter: k });
     const active = (k) => s.filter === k;
-    const nb = (x, d) => (typeof x === 'number' && isFinite(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
-    const g3 = (x) => (typeof x === 'number' ? ('00' + Math.round(x)).slice(-3) + '°' : '—');
-    const oleo = AG.filter((t) => t.id === 'motores-oleo')[0];
-    const cor = (k) => TOM[k] || TOM.accent;
-    const status = [
-      { v: String(nAtr), l: nAtr === 1 ? 'atrasada' : 'atrasadas', sub: curto('atrasadas', 'Nada atrasado · executadas registradas no diário'), k: 'atrasadas', tone: 'crit', d: 'M12 4 21 20H3z M12 10v4 M12 17h.01' },
-      { v: String(nD30), l: 'em 30 dias', sub: curto('d30', 'Nada vence nos próximos 30 dias'), k: 'd30', tone: 'warn', d: 'M12 7v5l3 2 M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' },
-      { v: String(nEmDia), l: 'em dia', sub: 'De ' + AG.length + ' tarefas' + (feitas ? ' · inclui ' + feitas + (feitas === 1 ? ' executada' : ' executadas') : '') + (oleo && oleo.horas ? ' · óleo dos motores: faltam ' + nb(oleo.horas.faltam) + ' h ou D-' + oleo.dn : ''), k: 'emdia', tone: 'ok', d: 'M5 12.5l4.5 4.5L19 7.5' }
-    ].map((x) => Object.assign(x, { ico: this.ico(x.d, 26, 1.7, cor(x.tone)[0]), tone: cor(x.tone)[0], wash: cor(x.tone)[1].replace('0.14', '0.12'), go: active(x.k) ? 'filtro ativo' : 'filtrar ›', onClick: setF(x.k), active: active(x.k), line: active(x.k) ? cor(x.tone)[1].replace('0.14', '0.55').replace('0.12', '0.55') : 'var(--cap-line, #1a2240)' }));
-    const tq = S.tanques || {};
-    const live = [
-      { k: 'Velocidade', v: nb(S.sog), u: 'nós', s: (S.estado || 'SEM DADOS').toLowerCase(), d: 'M3 12h4l2-6 3 12 2.5-8 1.5 4h5', t: 'tele' },
-      { k: 'Proa', v: g3(S.proa), u: '', s: (S.gps && S.gps.satelites ? S.gps.satelites + ' satélites' : 'GPS SEM LEITURA'), d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M15.5 8.5l-2 5-5 2 2-5z', t: 'tele' },
-      { k: 'Vento', v: nb(S.vento), u: 'nós', s: 'verdadeiro · de ' + g3(S.ventoDe), d: 'M3 8h11a3 3 0 1 0-3-3 M3 12h15a3 3 0 1 1-3 3 M3 16h8a2 2 0 1 1-2 2', t: 'tele' },
-      { k: 'Banco 24 V', v: nb(S.bat24), u: 'V', s: 'banco 12 V ' + nb(S.bat12, 2) + ' V', d: 'M13 3L5 14h6l-1 7 8-11h-6z', t: 'ok' },
-      { k: 'Água do mar', v: nb(S.agua), u: '°C', s: 'ar ' + nb(S.ar) + ' °C · ' + nb(S.pressao, 0) + ' hPa', d: 'M10 4a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z', t: 'ok' },
-      { k: 'Água doce', v: typeof tq.agua === 'number' ? String(Math.round(tq.agua)) : '—', u: '%', s: 'cinzas ' + nb(tq.cinzas, 0) + '% · negras ' + nb(tq.negras, 0) + '%', d: 'M5 6h14v12H5z M5 13h14', t: 'accent' }
-    ].map((l) => Object.assign(l, { ico: this.ico(l.d, 15, 1.7, cor(l.t)[0]), stone: l.t === 'ok' ? 'var(--cap-ok, #34c77a)' : 'var(--cap-ink3, #97a3c0)' }));
+    const status = d.status.map((x) => Object.assign({}, x, { ico: this.ico(x.d, 26, 1.7, cor(x.tone)[0]), tone: cor(x.tone)[0], wash: cor(x.tone)[1].replace('0.14', '0.12'), go: active(x.k) ? 'filtro ativo' : 'filtrar ›', onClick: setF(x.k), active: active(x.k), line: active(x.k) ? cor(x.tone)[1].replace('0.14', '0.55').replace('0.12', '0.55') : 'var(--cap-line, #1a2240)' }));
+    const live = d.live.map((l) => Object.assign({}, l, { ico: this.ico(l.d, 15, 1.7, cor(l.t)[0]), stone: l.t === 'ok' ? 'var(--cap-ok, #34c77a)' : l.t === 'warn' || l.t === 'crit' ? cor(l.t)[0] : 'var(--cap-ink3, #97a3c0)' }));
     return {
       note: s.note, noteTone: s.noteTone,
-      resumo: AG.length + ' tarefas · ' + (nAtr ? nAtr + (nAtr === 1 ? ' atrasada' : ' atrasadas') : 'nenhuma atrasada') + ' · horímetros ' + (M.hora || 'SEM DADOS') + (D.demo ? ' · DEMO' : ''),
+      resumo: d.resumo, resumoTitle: d.resumo,
       status: status,
-      leituraSub: 'Coletor NMEA' + (D.demo ? ' (DEMO)' : '') + ' · snapshot ' + (S.quando || 'SEM DADOS') + ' · telemetria ao vivo desligada',
+      leituraSub: d.leituraSub,
       live: live,
-      filterLabel: labels[s.filter],
+      filterLabel: d.filterLabel,
       chips: [['all', 'Todas'], ['atrasadas', 'Atrasadas'], ['d30', 'D-30'], ['emdia', 'Em dia']].map((c) => ({ l: c[1], onClick: setF(c[0]), active: active(c[0]), line: active(c[0]) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', bg: active(c[0]) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', tone: active(c[0]) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
-      rows: filtered.map((t) => {
+      rows: d.rows.map((t) => {
         const e = ex[t.id], c = cor(t.tom);
-        const dd = t.dn < 0 ? (-t.dn) + (t.dn === -1 ? ' dia atrás' : ' dias atrás') : 'D-' + t.dn + ' · ' + t.vence.slice(0, 5);
-        return { t: t.t, meta: t.equip + ' · ' + t.quem + ' · ' + t.intervalo + ' · vence ' + t.vence + (t.horas ? ' ou ' + String(t.horas.limite).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' h (faltam ' + nb(t.horas.faltam) + ' h)' : ''), ico: this.ico(icoDe(t.equip), 20, 1.7, c[0]), wash: c[1],
+        return { id: t.id, t: t.t, meta: t.meta, ico: this.ico(icoDe(t.icoD), 20, 1.7, c[0]), wash: c[1],
           done: !!e, notDone: !e, doneLabel: e ? 'EXECUTADO ' + e.d : '', onDone: () => this.markDone(t), ariaDone: 'Marcar como executado: ' + t.t, canUndo: !!e && s.last === t.id, onUndo: () => this.undo(t),
-          dd: e ? 'feito · ' + e.d : dd, chipTone: e ? 'var(--cap-ok, #34c77a)' : c[0], chipWash: e ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)' : c[1] };
+          dd: e ? 'feito · ' + e.d : t.dd, chipTone: e ? 'var(--cap-ok, #34c77a)' : c[0], chipWash: e ? 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)' : c[1] };
       }),
-      falta: (D.agendaFalta || []).join(' · ') || 'nada',
-      fonte: 'Fonte: ' + (D.agendaFonte || 'SEM DADOS') + ' · prazos contados a partir de ' + (S.quando ? S.quando.slice(0, 10) : 'SEM DADOS')
+      falta: d.falta, temFalta: d.temFalta, fonte: d.fonte
     };
   }
 }

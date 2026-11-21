@@ -1,0 +1,239 @@
+# Os 8 pendentes LITERAIS do fechamento do grupo home (P4G) + os controles. frase<TAB>nível<TAB>pendente (1 a 8, ctl).
+# nível 0 = não é pessoa em risco (segue a rota de assunto; nunca a rota sos nem o fallback seguro) · 1 = ESPERA (o fallback SEGURO: a instrução do SOS, sem situação de bordo, sem IA, SEM janela) · 2 = ÁGUA (a rota sos, local, COM a janela de 15 min).
+# Desvios do projeto (decisões a registrar): «sumiu ele» e «desapareceu ele» são ESPERA (1: o ele/ela sem antecedente fica do lado seguro, mas pode ser a lancha ou o piloto) e «onde está o Lucas?» também (1: as perguntas «cadê/onde está <nome>?» já eram a rede da 5ª rodada).
+# «registre no diário: o dono sumiu» (nível 2) é conferido à parte: a chave é `diario`, com a instrução do SOS e a janela.
+o dono sumiu	2	1
+o técnico sumiu	2	1
+as moças sumiram	2	1
+todos sumiram	2	1
+os três desapareceram	2	1
+o dono do barco sumiu	2	1
+a babá desapareceu	2	1
+os caras sumiram	2	1
+o mais novo sumiu	2	1
+o ajudante sumiu	2	1
+o piloto sumiu	1	1
+o capitão sumiu	1	1
+o imediato não aparece	1	1
+o menininho sumiu	2	1
+meu filho sumio	2	1
+não vejo os dois	1	1
+um deles não voltou	1	1
+saiu um e não voltou	1	1
+a lancha está sem um passageiro	1	1
+não vejo mais ninguém na popa	1	1
+avistei uma pessoa boiando	2	1
+tem um corpo na água	2	1
+registre no diário: o dono sumiu	2	1
+não está o Pedro aqui	1	2
+não está meu filho a bordo	1	2
+não temos notícia do Pedro	1	2
+não consigo contato com o Pedro	1	2
+chamamos o Pedro e ninguém respondeu	1	2
+perdi ele	1	3
+perdemos ela	1	3
+ninguém encontra ele	1	3
+sumiu ele	1	3
+desapareceu ele	1	3
+está faltando ela	1	3
+não estamos achando ele, será que caiu?	2	3
+Perdi ele, qual a velocidade?	1	3
+Desapareceu ele, qual a posição?	1	3
+Está faltando ela e o diesel?	1	3
+nem todo mundo voltou	1	4
+nem todos voltaram	1	4
+não está todo mundo a bordo	1	4
+nem todos estão a bordo	1	4
+o Pedro está boiando	2	4
+esquecemos o Pedro na praia	2	4
+deixamos o Pedro para trás	2	4
+o Pedro ficou na ilha	1	4
+o Pedro não embarcou	1	4
+o Pedro está demorando	1	4
+o Pedro não voltou a ligar	0	5
+a Maria não voltou a responder	0	5
+o Pedro não retorna as ligações	0	5
+o mecânico não voltou com a peça	0	5
+o Pedro não voltou da marina	0	5
+o Pedro não voltou do almoço	0	5
+o Pedro não aparece na escala	0	6
+o Pedro não aparece na escala de hoje	0	6
+o João não aparece na lista	0	6
+o Pedro não respondeu a mensagem	0	6
+a Maria não respondeu o WhatsApp	0	6
+o mecânico não respondeu o e-mail	0	6
+o Pedro não aparece no WhatsApp	0	6
+o Pedro não está no grupo	0	6
+o Pedro faltou ontem	0	6
+o Pedro não atende o telefone	0	6
+tem gente faltando na reunião de amanhã	0	6
+falta gente para a revisão	0	6
+o capitão não volta do mergulho	2	7
+a loira sumiu	2	7
+o sujeito sumiu	2	7
+o cidadão desapareceu	2	7
+a lancha está sem um passageiro	1	7
+meu filho ficou pra trás no mar	2	8
+o nadador ficou para trás	2	8
+perdemos o contato com o mergulhador	2	8
+o Zé caiu	2	8
+o bebê caiu	2	8
+o Lucas caiu, onde estamos?	2	8
+a Letícia ficou para trás na água	2	8
+o Pedro foi nadar e não voltou	2	8
+qual a proa?	0	ctl
+posição	0	ctl
+quem está na equipe hoje?	0	ctl
+lista de tarefas do Pedro	0	ctl
+o Spotify sumiu	0	ctl
+o Garmin sumiu da tela	0	ctl
+o plotter sumiu	0	ctl
+o sinal sumiu	0	ctl
+o barulho desapareceu	0	ctl
+a pressão caiu	0	ctl
+o vento caiu	0	ctl
+a ligação caiu	0	ctl
+como ensinar meu filho a nadar?	0	ctl
+cadê o colete da criança? não está a bordo	0	ctl
+onde está o Lucas?	1	ctl
+# controles da estrutura (nível 0: coisa de bordo, abstrato, possuído, ambíguo com complemento, preposição) e a palavra solta (nível 1: duvidosa)
+o piloto automático sumiu	0	ctl
+o efeito imediato desapareceu	0	ctl
+o guia de bordo sumiu	0	ctl
+o chinelo da menina não está a bordo	0	ctl
+o remédio do meu filho não está a bordo	0	ctl
+o sinal sumiu para o dono	0	ctl
+a calibração sumiu	0	ctl
+o Capitão IA caiu	0	ctl
+o motor sumiu no flybridge	0	ctl
+o tacômetro apagou	0	ctl
+dono sumiu	1	ctl
+zacarias sumiu	1	ctl
+o saquinho da menina não está a bordo	0	ctl
+o presente do meu filho não está a bordo	0	ctl
+o Pedro não está vindo	1	ctl
+o menino não vem de volta	1	ctl
+o Pedro está nadando e não vem de volta	2	ctl
+joao não voltou do mergulho	2	ctl
+jose caiu no mar	2	ctl
+joão não aparece mais	2	ctl
+o joao caiu	2	ctl
+joao sumiu	2	ctl
+jose desapareceu	2	ctl
+a Maria foi puxada para fora da lancha	2	ctl
+o Carlos foi puxado para fora do barco	2	ctl
+o menino foi arrastado para fora do barco	2	ctl
+a criança não alcança o barco	2	ctl
+a menina não alcança a escada	2	ctl
+o menino não alcança a escada	2	ctl
+o jet ski está sozinho e não vejo o piloto	2	ctl
+não estamos achando ele, será que caiu?	2	ctl
+# —— 2ª rodada de correção do fechamento: os literais que a revisão achou fora da estrutura (o partitivo, o sem substantivo, o nome sem artigo, a composta, as 2 letras, a pessoa que também é coisa, a queda sem destino, o que a onda faz, a contração) e os controles da rotina ——
+os nossos sumiram	2	1
+dois sumiram	2	1
+faltam dois	2	1
+sumiram todos	2	1
+sumiu todo mundo	2	1
+o que foi nadar não voltou	2	8
+o de azul sumiu	2	1
+um dos meus trabalhadores não voltou	1	1
+Genivaldo se perdeu	2	1
+Tuca está boiando	2	4
+Tuca foi levado pela correnteza	2	8
+o DJ sumiu	2	7
+o dj desapareceu	2	7
+o cliente sumiu	1	7
+os clientes sumiram	1	7
+o cliente não volta do mergulho	2	7
+o fiscal está boiando	2	7
+minha vó sumiu	2	7
+meu vô sumiu	2	7
+a vó desapareceu	2	7
+o ex-marido sumiu	2	7
+a ex-namorada sumiu	2	7
+o guarda-vidas desapareceu	2	7
+um fã sumiu	2	1
+nossa delegação desapareceu	2	1
+o dono caiu	2	8
+caiu o técnico	2	8
+o dono caiu, onde estamos?	2	8
+o técnico escorregou e caiu	2	8
+o grumete caiu	2	8
+não sei onde o arrais está, será que caiu	2	8
+o catraieiro foi levado pela correnteza	2	8
+a onda levou o Pedro	2	8
+o Pedro foi engolido por uma onda	2	8
+vi o Pedro cair no mar	2	8
+o Pedro nadou no mar e não veio de volta	2	8
+jogamos a boia para o Pedro mas não alcança	2	8
+chamei o Pedro três vezes e nada	1	2
+a lancha do Pedro está aqui e ele não	1	2
+quem viu o Pedro por último?	1	2
+não temos notícia desse gordinho	1	2
+não temos notícia dele	1	2
+o Pedro sumiiu	2	1
+sumiu-se o armador	2	1
+o armador evaporou	2	1
+o Fábio foi à farmácia e não voltou	0	ctl
+o Pedro não retornou minha ligação	0	ctl
+o Pedro não apareceu na reunião	0	ctl
+o compressor sumiu	0	ctl
+o horímetro sumiu	0	ctl
+o ar-condicionado não volta a funcionar	0	ctl
+onde está o próximo ponto da rota?	0	ctl
+estamos sem o mecânico hoje	0	ctl
+quem está sem colete?	0	ctl
+o curso de mergulho não aparece na agenda	0	ctl
+o euro caiu?	0	ctl
+o vento caiu	0	ctl
+o contador sumiu	0	ctl
+o guia de bordo sumiu	0	ctl
+o tender voltou vazio	1	5
+vi alguém pular do barco	1	ctl
+vi o Pedro pular do barco	1	ctl
+vi alguém cair no mar	2	ctl
+não sei onde está marujo, será que caiu?	2	ctl
+não sei onde está padeiro, será que caiu?	2	ctl
+Genivaldo se perdeu	2	ctl
+estamos sem notícias desse hóspede	2	ctl
+procuramos o barco todo e nada desse colega	1	ctl
+o catraieiro está sendo levado pela correnteza	2	ctl
+o grumete está sendo arrastado pela onda	2	ctl
+meu deus! perdemos ele	1	ctl
+meu deus! ele sumiu	1	ctl
+sumiu armador ponto final	2	ctl
+caiu tonhão ponto de exclamação	2	ctl
+sumiu armador vírgula qual o rumo	2	ctl
+# 3ª rodada de correção do fechamento da home (revisão da 2ª rodada): o possuidor sem cabeça como OBJETO, a ausência com a pessoa explícita, a contagem sem substantivo, a água sem verbo de queda, a comunicação com objeto, o lugar de terra, o dado e a cidade
+perdemos os nossos	1	1
+perdi os meus	1	1
+cadê os meus?	1	1
+não vejo as nossas	1	1
+perdemos seu João	2	1
+esquecemos seu filho na praia	2	1
+o Marcão sumiu	2	1
+procurei valdemar no barco inteiro e nada	1	1
+o de óculos sumiu	2	1
+não tem o Pedro a bordo	1	2
+só voltaram quatro, o Pedro não veio	1	2
+quatro voltaram e a Maria não	1	2
+não tenho notícia do Pedro desde ontem	1	2
+voltaram só três e eram quatro	1	4
+tem um a menos	1	4
+sobrou um na ilha	1	4
+a tripulação não está completa	1	4
+o Pedro não respondeu a proposta	0	5
+o Pedro parou de responder os emails	0	5
+o Pedro não apareceu no churrasco	0	5
+o pessoal da seguradora não retornou	0	5
+o Pedro foi mergulhar no sábado e não voltou	2	8
+o aluno da aula de mergulho não voltou	2	8
+o Pedro foi sugado pela correnteza	2	8
+vejo uma cabeça na água	2	8
+foi nadar e não voltou	2	8
+a autonomia caiu depois do abastecimento?	0	ctl
+a bandeira sumiu	0	ctl
+falta diesel pra chegar em Itajaí?	0	ctl
+quantas milhas faltam?	0	ctl
+o mecânico disse que o motor não responde	0	ctl
+o Pedro avisou que o radar sumiu	0	ctl

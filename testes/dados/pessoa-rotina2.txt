@@ -1,0 +1,1370 @@
+# ROTINA 2 (P4G, fechamento, 2ª rodada de correção): perguntas de rotina com pessoa, equipamento, item do app, lugar de terra, ligação, mensagem, reunião, convite e escala que NÃO são socorro nem o fallback seguro de pessoa (a rota de assunto ou a IA),
+# como no cérebro de antes das rodadas (f3b121c) e como hoje: a ligação e a mensagem sem resposta, a ida à farmácia ao mercado, o «saiu para almoçar», o equipamento e o item do app que some ou não volta a funcionar, o «próximo» e o «seguinte»,
+# a escala de hoje, «sem colete» na checagem, «alguém viu o Pedro na marina», o curso de mergulho na agenda. Uma frase por linha.
+o Pedro não aparece na escala
+quem faltou na vistoria?
+a Letícia não está na escala de sábado
+o marinheiro não está escalado para o fim de semana
+quem está de plantão hoje?
+o Marcos não foi escalado para a próxima saída
+faltou alguém na reunião de segurança?
+a equipe está completa para o passeio de sábado?
+o Rodrigo não consta na lista de tripulantes
+a Camila não aparece na lista da equipe
+quem não assinou o diário de bordo?
+o Fernando não está na escala da semana que vem
+falta alguém assinar a ordem de serviço?
+o comandante não está escalado para quinta
+quem está na equipe hoje?
+quem está de folga amanhã?
+o Zé não veio trabalhar hoje, quem cobre?
+o Thiago tirou folga na sexta?
+o imediato não está na lista de tripulação
+o cozinheiro não aparece no cadastro da equipe
+a Juliana não confirmou presença na saída de domingo
+quantos tripulantes estão escalados?
+o pessoal da manutenção não assinou a ordem de serviço
+o eletricista não consta na escala
+faltou o Rafael no treinamento de segurança
+quem tem curso de mestre arrais na equipe?
+o Bruno não está na planilha de plantão
+a Marina não está de serviço hoje?
+o João não voltou da folga ainda?
+quem está de serviço no sábado?
+o novo marinheiro ainda não tem cadastro
+a Larissa não assinou o termo de responsabilidade
+falta alguém na lista de presença do treinamento?
+o mecânico não está na lista de contatos
+o capitão não está escalado essa semana?
+os marinheiros não estão na escala de domingo
+a Ana não vem trabalhar amanhã
+o nome do Paulo desapareceu da lista de equipe
+o Carlos não aparece mais na escala depois da atualização
+cadê o Pedro na lista de tripulantes?
+cadê a escala da semana?
+faltam dois nomes na escala
+o Gabriel foi excluído da equipe?
+o patrão não está na escala de feriado
+a babá não consta na lista de passageiros do sábado
+o dono do barco não está na lista de convidados?
+os convidados não estão na lista ainda
+o Eduardo não bateu o ponto hoje
+quem não bateu o ponto hoje?
+o Pedro não retornou minha ligação
+a Maria não respondeu o WhatsApp
+o Pedro não respondeu a mensagem
+o fornecedor não respondeu o e-mail
+o técnico não atendeu o telefone
+a Ana não atende o celular desde cedo
+o Carlos não retornou o recado
+o mecânico não me ligou de volta
+a Camila não deu retorno sobre o orçamento
+o pessoal da marina não atende o telefone
+tentei ligar para o Rodrigo e ninguém atendeu
+liguei para o estaleiro e ninguém respondeu
+chamei o Pedro no zap e ele não respondeu
+a Juliana não visualizou a mensagem
+o contato do Pedro sumiu do meu celular
+o número da marina sumiu da agenda
+cadê o telefone do mecânico?
+não consegui contato com a seguradora
+não tenho notícia do orçamento
+não tenho retorno do estaleiro
+o cliente não retornou o contato
+não temos resposta da marina sobre a vaga
+o despachante não respondeu o e-mail
+o Pedro não está atendendo o telefone
+o Pedro não está respondendo as mensagens
+o Pedro não me manda notícia há dias
+o João desapareceu do grupo do WhatsApp
+a Marta saiu do grupo da equipe
+o Fábio não entrou no grupo ainda
+não vejo o Pedro no grupo do zap
+ninguém me respondeu no grupo
+ninguém respondeu o e-mail da marina
+o rapaz da oficina não respondeu a proposta
+a moça do escritório não retornou
+o cara do guincho não atendeu
+o gerente da marina não me respondeu
+o Pedro não me ligou ontem
+sem resposta do mecânico desde ontem
+sem notícias do fornecedor desde segunda
+a mensagem do Pedro não chegou
+o áudio do Marcos sumiu do WhatsApp
+a mensagem que a Ana mandou desapareceu do chat
+o Pedro não está online
+o João não está visível no app
+o capitão não me retornou
+manda mensagem para o Pedro
+liga para o mecânico
+avisa a Ana que o barco sai às 9
+quem ainda não confirmou a saída de sábado?
+ninguém atende no escritório da marina
+o telefone da marina não atende
+o plantão da seguradora não atende
+quem não respondeu o convite?
+o mecânico não voltou com a peça
+o Pedro não voltou com o filtro
+o fornecedor não entregou a peça ainda
+a peça do gerador não chegou
+a encomenda do rotor não chegou
+o rapaz da loja ainda não voltou com o impulsor
+o técnico não trouxe o relé
+o motoboy não voltou com o documento
+o eletricista não trouxe o fusível
+o pessoal da oficina ainda não voltou com a bomba
+o mecânico não voltou da oficina
+o rapaz da marina não trouxe a mangueira
+o Marcos não voltou com o pedido do diesel
+o caminhão de combustível não chegou
+o pedido do filtro de óleo não chegou ainda
+a nota fiscal da peça sumiu
+perdi a nota da bomba de porão
+perdi o recibo do filtro
+faltou peça na entrega?
+falta uma peça no kit de manutenção
+o kit de reparo não veio completo
+faltou o rotor no pedido
+quantas peças faltam para a revisão?
+o técnico disse que não consegue vir amanhã
+o mecânico não vem hoje
+o mecânico ainda não chegou
+o eletricista não chegou ainda
+o Pedro não voltou da marina
+a Ana foi na marina e não voltou ainda
+o Pedro não voltou do almoço
+o Lucas ainda não voltou do mercado
+a Camila não voltou da loja
+o Marcos foi ao posto e ainda não voltou
+o pessoal foi jantar e não voltou
+o marinheiro foi à oficina e não voltou
+o Pedro saiu cedo e não volta hoje
+a Juliana foi ao banco e não voltou
+o João não voltou do escritório
+o comandante foi pra marina e não voltou
+o mecânico foi na marina buscar a peça e não voltou
+o Rafael não volta amanhã
+a Ana não volta antes de segunda
+o capitão foi ao estaleiro e ainda não voltou
+o Pedro desceu na marina e não subiu de volta ainda
+a equipe foi almoçar e não voltou
+o pessoal da marina não voltou do almoço
+o Fábio foi à farmácia e não voltou
+o Lucas saiu para o mercado e não voltou ainda
+o dono não voltou de viagem
+ainda não voltou ninguém do almoço
+ninguém voltou da marina ainda
+a Ana está demorando para responder
+o mecânico está demorando para entregar a peça
+quanto tempo o Pedro vai demorar na marina?
+o Pedro saiu e não disse quando volta
+o Pedro está na marina?
+o Pedro está em casa hoje?
+a Camila está no escritório?
+o Lucas está de folga?
+o Pedro está de férias?
+a tarefa do rotor desapareceu da agenda
+o item da revisão sumiu do checklist
+o alarme de porão sumiu do painel
+o lembrete da revisão do gerador sumiu
+perdi a agenda de manutenção
+a manutenção do Seakeeper não aparece na agenda
+a revisão do motor não aparece no calendário
+faltou registrar a troca de óleo
+falta registrar a manutenção de ontem
+faltam três tarefas no checklist
+faltou assinar o checklist de saída
+o registro do Pedro sumiu do diário
+o diário de ontem sumiu
+a entrada do diário de sexta desapareceu
+não encontro o registro da troca de filtro
+não acho a ordem de serviço do gerador
+não vejo a tarefa do filtro de água salgada
+não encontrei o manual do Seakeeper
+não acho o checklist de saída
+o manual do gerador não abre
+o PDF do manual sumiu
+cadê o manual do guincho?
+cadê o registro do abastecimento de terça?
+o abastecimento de ontem não aparece
+o abastecimento do Pedro não foi registrado
+a Ana não registrou o abastecimento
+ninguém registrou a troca do rotor
+ninguém assinou o checklist
+ninguém fez a revisão do porão
+ninguém viu o relatório de manutenção?
+quem fez a última troca de óleo?
+quem registrou o abastecimento de ontem?
+o gerador não liga
+o gerador não está ligando
+o motor não pega
+a bomba de porão não aciona
+o Seakeeper não responde
+o guincho não sobe
+a âncora não sobe direito
+o compressor não volta a funcionar
+a bomba não voltou a funcionar depois da troca
+o dessalinizador não está produzindo
+o plotter não responde ao toque
+o motor de boreste parou de vibrar depois da troca
+a temperatura do motor caiu para 80 graus
+a tensão da bateria caiu
+a rotação caiu ontem?
+o consumo caiu depois da limpeza do casco?
+o nível do tanque caiu rápido
+a velocidade caiu para 12 nós
+o sinal do GPS caiu
+a conexão caiu de novo
+a internet caiu
+o wifi caiu
+a energia caiu no cais
+a luz da cabine apagou
+a lâmpada do flybridge queimou
+o disjuntor caiu
+o disjuntor do guincho desarmou
+a chave do gerador sumiu
+perdi a chave do paiol
+perdi o controle do guincho
+perdi a senha do wifi do barco
+perdi o link da planilha de manutenção
+o filtro caiu no porão
+o parafuso caiu atrás do motor
+o abastecimento sumiu do histórico
+a última nota de diesel desapareceu
+faltam litros no registro de abastecimento
+faltou registrar a nota do posto
+a nota do diesel não aparece
+quanto o Pedro abasteceu ontem?
+quem abasteceu o barco na terça?
+o posto não aceitou o cartão
+o posto não tem diesel hoje
+o caminhão de diesel não chegou
+o consumo não bate com o abastecimento
+o nível do tanque não bate com a leitura
+a conta do combustível não fecha
+o diesel que o Marcos pediu não veio
+a bomba do posto não funciona
+o litro de diesel subiu?
+quanto falta de diesel para chegar?
+quanto falta para o tanque encher?
+quanto falta para chegar na Barra Sul?
+quanto falta para o próximo abastecimento?
+falta quanto de combustível para a volta?
+faltam quantas milhas para a marina?
+faltam quantos minutos para chegar?
+falta pouco para chegar?
+a licença de estação não está na pasta de documentos
+o documento da embarcação sumiu do app
+perdi o documento do barco
+perdi a licença do rádio
+cadê o seguro do barco?
+o seguro não aparece em documentos
+faltou anexar a nota fiscal
+faltam documentos no cadastro
+o documento do Pedro desapareceu da pasta
+a habilitação do comandante não está no cadastro
+a arrais do Marcos venceu?
+a carteira do marinheiro não consta nos documentos
+o PDF da apólice não abre
+o anexo sumiu do registro
+a foto do documento sumiu
+o comprovante de pagamento desapareceu do app
+não encontro o documento da marina
+não achei o contrato da marina
+não vejo o seguro na lista
+o que falta para renovar a licença?
+quais documentos faltam anexar?
+quem tem a chave do armário de documentos?
+o vento não para de aumentar?
+a previsão não bate com o que eu vejo
+o mar caiu depois da frente fria?
+o vento caiu à tarde?
+a chuva não passa hoje?
+a maré não sobe mais hoje?
+o tempo não melhora até sábado?
+a frente fria não chega antes de domingo?
+o sol não aparece amanhã?
+o nevoeiro sumiu?
+o vento sumiu agora
+a onda não passa de um metro?
+a previsão de amanhã sumiu do app
+o gráfico de maré desapareceu
+o ícone do clima sumiu
+o mapa do tempo não carrega
+a previsão não aparece
+não vejo a previsão de maré
+não acho a previsão do vento
+a ressaca não vai passar até quando?
+tem ressaca amanhã?
+a correnteza está forte hoje na enseada?
+como está a correnteza?
+a ressaca atrapalha a saída?
+o mar está bom para nadar?
+posso nadar na enseada amanhã?
+dá para mergulhar amanhã com esse vento?
+está seguro mergulhar com essa maré?
+quando é a melhor hora para nadar?
+qual a temperatura da água para mergulhar?
+a visibilidade está boa para mergulho amanhã?
+vai ter ressaca no fim de semana?
+o mar está calmo para caiaque?
+dá pra fazer stand up paddle amanhã?
+que horas é a maré baixa?
+o vento vai aumentar?
+o Spotify sumiu
+o Spotify sumiu do painel
+o Garmin sumiu da tela
+o sinal do AIS desapareceu
+o AIS sumiu do plotter
+o Raymarine desapareceu da lista de aparelhos
+o Windy sumiu do celular
+o Navionics desapareceu do tablet
+o WhatsApp sumiu do meu celular
+o Waze não abre
+o Bluetooth sumiu
+o Wi-Fi do barco sumiu
+o Starlink caiu
+o Starlink não conecta
+o Instagram caiu
+o Google Maps sumiu
+o app sumiu da tela inicial
+o ícone do app desapareceu
+o Capitão sumiu da tela
+o Capitão IA caiu?
+capitão, o alarme sumiu
+capitão, a tela desapareceu
+capitão, cadê o gráfico?
+capitão, o menu sumiu
+o menu sumiu
+o botão desapareceu
+o gráfico sumiu
+o widget sumiu
+a tela apagou
+a tela caiu
+a tela do plotter congelou
+o plotter não liga
+o plotter reiniciou sozinho
+o radar não aparece na tela
+o radar sumiu
+o sonda não mostra fundo
+a sonda perdeu o fundo
+o GPS perdeu o sinal
+o GPS não achou satélite
+perdi o sinal do GPS
+perdi a conexão
+perdi a internet
+perdi o sinal do celular
+o celular não pega sinal
+o tablet caiu
+o tablet sumiu
+o notebook desapareceu da cabine
+cadê o tablet?
+cadê o carregador?
+não acho o controle remoto
+não encontro o celular
+onde está o tablet?
+a câmera da proa não aparece
+a câmera sumiu
+a câmera de ré não mostra imagem
+o piloto automático desconectou
+o piloto automático desligou sozinho
+o piloto automático sumiu do menu
+o imediato sumiu do app
+o transponder AIS não aparece na lista
+o Seakeeper sumiu do painel
+o estabilizador desapareceu da tela
+o dessalinizador sumiu
+a bateria caiu
+a bateria sumiu da tela
+o bimini caiu
+o toldo caiu
+a defensa caiu
+a defensa sumiu
+a boia de ancoragem sumiu
+o cooler caiu
+o cooler está boiando?
+a cadeira caiu da proa
+o barco da frente sumiu do radar
+o alvo sumiu do radar
+o alvo AIS desapareceu
+como ensinar meu filho a nadar?
+meu filho quer aprender a nadar, qual a idade ideal?
+a lista de tarefas do Pedro
+quais são as tarefas do Pedro hoje?
+o que o Pedro precisa fazer hoje?
+o que a Ana tem na agenda?
+quem é o comandante de sábado?
+quem faz o plantão da noite?
+quem é o responsável pela manutenção?
+qual o telefone do Pedro?
+o filho do Pedro vai no passeio?
+meu filho vai passear no barco no sábado
+as crianças podem ir no flybridge?
+a minha esposa vai viajar com a gente
+o marido da Ana vem no sábado
+a família vai chegar às 10
+o pessoal chega às 9
+a galera já chegou?
+o casal chega mais tarde
+meu sogro vai junto no passeio
+minha mãe não vai poder ir
+meu pai não vai no passeio
+meu irmão não vem hoje
+meu tio não pode ir no sábado
+meus amigos não vão poder vir
+os convidados não vão mais
+a turma da marina não vem
+o mergulhador que contratamos não confirmou
+o nadador do grupo não confirmou presença
+o rapaz do caiaque não chegou ainda
+o guia de pesca não confirmou
+o pescador não voltou com os peixes
+o cozinheiro não trouxe as compras
+o chef não chegou ainda
+a babá não vem sábado
+a moça da limpeza não veio hoje
+o pessoal da limpeza ainda não chegou
+os caras do guincho não chegaram
+o mais novo não vai no passeio
+os três não vão no sábado
+todos confirmaram presença?
+todos assinaram o termo?
+todo mundo já respondeu?
+todos vão no passeio de sábado?
+o outro mecânico não vem
+o segundo marinheiro não confirmou
+os dois mecânicos não vêm hoje
+o médico não vem hoje
+o gerente não está na marina hoje
+o secretário não passou a lista
+o despachante não está no escritório
+o vizinho de vaga não está
+o imediato não vai estar a bordo no sábado
+a tripulação não chegou ainda
+a tripulação não está completa?
+a tripulação já está a bordo?
+a tripulação de sábado está confirmada?
+quantas pessoas a bordo?
+quantas pessoas estão a bordo agora?
+quantas pessoas cabem no barco?
+qual a lotação?
+quantos passageiros estão a bordo?
+quantos tripulantes temos hoje?
+quantos convidados vêm no sábado?
+quantas crianças vêm no passeio?
+quantas pessoas faltam confirmar?
+quantos faltam confirmar presença?
+quantos não confirmaram?
+quantos não responderam o convite?
+somos oito no sábado
+serão 10 pessoas no passeio
+a lotação é de 12 pessoas?
+somos dez no total
+quantos somos?
+quantas cadeiras temos no flybridge?
+quantas camas tem?
+quantos camarotes tem o barco?
+quantas pessoas dormem a bordo?
+quantas pessoas a bordo no sábado passado?
+quantos estavam a bordo ontem?
+quantas refeições precisamos para o passeio?
+quantas garrafas de água por pessoa?
+qual a posição?
+qual o rumo?
+qual a velocidade agora?
+quanto falta para chegar?
+qual a proa agora?
+qual a popa?
+onde estamos?
+onde estamos agora?
+onde fica a proa?
+em que direção está a proa?
+qual o rumo da proa?
+a proa está apontando para onde?
+proa 207 está certo?
+a popa está a favor do vento?
+o vento está pela popa?
+o vento entra pela proa agora?
+qual a velocidade do vento agora?
+qual o SOG agora?
+qual o ETA?
+que horas chegamos?
+a que horas chegamos na Barra Sul?
+onde estamos em relação à marina?
+a que distância estamos da marina?
+qual a profundidade agora?
+qual a próxima waypoint?
+onde está o próximo ponto da rota?
+em que ponto da rota estamos?
+qual a posição do barco agora?
+qual o heading?
+qual a direção do vento agora?
+a que velocidade estamos indo?
+estamos na rota?
+estamos no horário?
+o barco está no prumo?
+qual o rumo para a marina?
+para onde estamos indo?
+quanto tempo até a marina?
+quanto falta de rota?
+onde está o Seakeeper?
+onde está a chave do paiol?
+onde estão os documentos?
+onde está o manual do gerador?
+onde está a bomba de porão?
+onde fica o filtro de água salgada?
+onde está o registro do abastecimento?
+agora o gerador está ligado?
+agora os motores estão ligados?
+como está a pressão do óleo agora?
+como está o nível de diesel?
+a que horas foi o último abastecimento?
+qual a rotação dos motores agora?
+resumo da situação agora
+resumo do barco agora
+como está o barco agora?
+tudo bem a bordo?
+o que tem de pendência hoje?
+quais tarefas estão atrasadas?
+quais alertas estão ativos agora?
+tem algum alarme agora?
+tem alguma pendência de segurança?
+o que vence essa semana?
+o pedro nao voltou da marina ainda
+a ana nao respondeu o zap
+o marcos nao apareceu na escala
+cade o pedro na lista da equipe
+o mecanico nao voltou com a peca
+o spotify sumiu da tela
+o garmin sumiu
+o ais desapareceu do plotter
+o lucas nao respondeu o email
+faltou o joao na reuniao
+o carlos nao atendeu o telefone
+o pedro foi pro mercado e nao voltou
+a maria nao voltou do almoco
+o rapaz da oficina nao veio hoje
+meu filho quer aprender a nadar
+qual a posicao agora
+qual o rumo agora
+quanto falta pra chegar
+o filtro sumiu da lista
+o aplicativo sumiu do celular
+o wifi do barco caiu
+a internet caiu de novo
+o pedro nao esta na escala
+a ana nao esta de plantao
+quem faltou hoje
+quem nao veio hoje
+o cozinheiro nao veio hoje
+a babá nao veio hoje
+o dono nao veio hoje
+o comandante nao respondeu a mensagem
+o imediato nao respondeu o zap
+o fulano nao voltou da marina
+alguem viu o manual do gerador
+ninguem viu o manual do gerador
+ninguem sabe onde esta a nota do diesel
+ninguem achou a nota do posto
+ninguem encontrou o controle do guincho
+nao sei onde esta o pedro na escala
+nao achei o pedro na lista
+nao achei a ana no cadastro
+nao encontro o marcos na equipe
+nao vejo o lucas na lista de convidados
+o Pedro está demorando para assinar o diário
+a Ana está sem celular hoje
+o Pedro está sem acesso ao app
+o Pedro ficou sem senha
+o marinheiro ficou sem login
+o Pedro perdeu a senha do app
+o Pedro perdeu o prazo da renovação
+a Ana perdeu o voo
+o Marcos perdeu o ônibus e não vem hoje
+o Pedro perdeu o telefone
+o capitão perdeu a habilitação?
+o Pedro ficou na marina
+a Ana ficou na oficina
+o Pedro ficou em casa hoje
+o Marcos ficou para trás na fila da marina
+o Pedro ficou preso no trânsito
+a Ana ficou presa na reunião
+o Pedro saiu para o almoço
+o Pedro saiu mais cedo hoje
+a Ana foi embora mais cedo
+o Pedro não está nem aí para o prazo
+o Pedro não sabe onde fica o filtro
+o Pedro não conseguiu entrar no sistema
+o Pedro não consegue abrir o app
+a Ana não consegue acessar o diário
+o Pedro não vê o checklist no celular
+a Ana não vê a escala no app
+ninguém vê a escala no app
+ninguém consegue entrar no app
+ninguém consegue abrir o diário
+ninguém sabe a senha do wifi
+ninguém tem a chave do paiol
+todos os alarmes sumiram do painel
+todos os checklists sumiram
+todos os registros desapareceram do app
+todos os documentos sumiram da pasta
+todo mundo perdeu o sinal do celular
+todos perderam o sinal do wifi
+a gente perdeu o sinal do GPS
+a gente não consegue conexão
+nós perdemos a conexão com o Starlink
+perdemos o sinal do AIS
+perdemos a conexão com o plotter
+perdemos a leitura do sensor
+perdemos o registro de ontem
+não temos sinal de celular na enseada
+não temos retorno da capitania
+chamei a marina no canal 72 e não responderam
+chamamos o mecânico e não veio
+chamamos o guincho e ninguém veio
+o guincho não chegou
+o reboque não chegou ainda
+o barco de apoio não chegou
+o tender não voltou da marina
+o bote não voltou do abastecimento
+o tender ainda não voltou do posto
+o tender não está aqui
+o tender não está a bordo
+o tender sumiu do guindaste
+o bote não está na garagem
+o caiaque não está no convés
+o caiaque sumiu
+o stand up não está a bordo
+o stand up paddle sumiu do convés
+a prancha caiu no convés
+a prancha de surf não está a bordo
+o binóculo não está no armário
+o binóculo sumiu
+o mergulhador contratado não confirmou presença
+o curso de mergulho não aparece na agenda
+o curso de nado não está na agenda
+a aula de caiaque não está na agenda
+o instrutor de stand up não confirmou
+o passeio de snorkel não está na agenda
+o mergulho de sábado foi cancelado?
+o mergulho não está agendado
+o mergulho de amanhã não aparece na agenda
+o mergulho foi remarcado
+o Pedro não respondeu minha mensagem
+o Pedro não apareceu na reunião
+o Pedro não confirmou a data
+o Pedro não respondeu o convite
+o Pedro não me avisou
+a Ana não retornou meu e-mail
+a Ana não me ligou de volta
+a Ana não chegou ainda
+a Ana não pagou a fatura
+a Ana não retornou o contato
+o mecânico não retornou minha ligação
+o mecânico não respondeu minha mensagem
+o mecânico não apareceu na reunião
+o mecânico não confirmou a data
+o mecânico não respondeu o convite
+o mecânico não me avisou
+o técnico não retornou meu e-mail
+o técnico não me ligou de volta
+o técnico não chegou ainda
+o técnico não pagou a fatura
+o técnico não retornou o contato
+o fornecedor não retornou minha ligação
+o fornecedor não respondeu minha mensagem
+o fornecedor não apareceu na reunião
+o fornecedor não confirmou a data
+o fornecedor não respondeu o convite
+o fornecedor não me avisou
+o cliente não retornou meu e-mail
+o cliente não me ligou de volta
+o cliente não chegou ainda
+o cliente não pagou a fatura
+a seguradora não retornou minha ligação
+a seguradora não respondeu minha mensagem
+a seguradora não apareceu na reunião
+a seguradora não confirmou a data
+a seguradora não respondeu o convite
+a seguradora não me avisou
+o pessoal da oficina não retornou meu e-mail
+o pessoal da oficina não me ligou de volta
+o pessoal da oficina não apareceu na reunião
+o pessoal da oficina não confirmou a data
+o pessoal da oficina não respondeu o convite
+o pessoal da oficina não me avisou
+o rapaz da marina não retornou meu e-mail
+o rapaz da marina não me ligou de volta
+o rapaz da marina não apareceu na reunião
+o rapaz da marina não confirmou a data
+o rapaz da marina não respondeu o convite
+o rapaz da marina não me avisou
+o eletricista não retornou meu e-mail
+o eletricista não me ligou de volta
+o eletricista não pagou a fatura
+o eletricista não retornou o contato
+o Marcos não retornou minha ligação
+o Marcos não respondeu minha mensagem
+o Marcos não apareceu na reunião
+o Marcos não confirmou a data
+o Marcos não respondeu o convite
+o Marcos não me avisou
+a Camila não retornou meu e-mail
+a Camila não me ligou de volta
+a Camila não chegou ainda
+a Camila não pagou a fatura
+a Camila não retornou o contato
+o Pedro foi à farmácia e não voltou
+o Pedro foi ao açougue e não voltou
+o Pedro foi ao aeroporto e não voltou
+o Pedro foi ao shopping e não voltou
+o Pedro foi ao cartório e não voltou
+o Pedro foi ao supermercado e não voltou
+o Pedro foi à delegacia e não voltou
+a Ana foi à farmácia e não voltou
+a Ana foi ao açougue e não voltou
+a Ana foi ao aeroporto e não voltou
+a Ana foi ao shopping e não voltou
+a Ana foi ao cartório e não voltou
+a Ana foi ao supermercado e não voltou
+a Ana foi à delegacia e não voltou
+o mecânico foi à farmácia e não voltou
+o mecânico foi ao açougue e não voltou
+o mecânico foi ao aeroporto e não voltou
+o mecânico foi ao shopping e não voltou
+o mecânico foi ao cartório e não voltou
+o mecânico foi ao supermercado e não voltou
+o mecânico foi à delegacia e não voltou
+o pessoal foi à farmácia e não voltou
+o pessoal foi ao açougue e não voltou
+o pessoal foi ao aeroporto e não voltou
+o pessoal foi ao shopping e não voltou
+o pessoal foi ao cartório e não voltou
+o pessoal foi ao supermercado e não voltou
+o pessoal foi à delegacia e não voltou
+o Pedro foi pro mercado e não voltou
+o Pedro foi pra loja e não voltou
+o Pedro foi pra cidade e não voltou
+o Pedro foi comprar pão e demorou
+o Pedro foi pegar o carro e não voltou
+a Ana foi pro mercado e não voltou
+a Ana foi pra loja e não voltou
+a Ana foi pra cidade e não voltou
+a Ana foi comprar pão e demorou
+a Ana foi pegar o carro e não voltou
+o mecânico foi pro mercado e não voltou
+o mecânico foi pra loja e não voltou
+o mecânico foi pra cidade e não voltou
+o mecânico foi comprar pão e demorou
+o mecânico foi pegar o carro e não voltou
+o pessoal foi pro mercado e não voltou
+o pessoal foi pra loja e não voltou
+o pessoal foi pra cidade e não voltou
+o pessoal foi comprar pão e demorou
+o pessoal foi pegar o carro e não voltou
+o ar-condicionado sumiu
+o ar-condicionado não volta a funcionar
+o ar-condicionado parou de responder
+o compressor não aparece mais
+o compressor faltou
+o tacômetro sumiu
+o tacômetro não volta a funcionar
+o tacômetro parou de responder
+o horímetro não aparece mais
+o horímetro faltou
+o flap sumiu
+o flap não volta a funcionar
+o flap parou de responder
+o trim tab não aparece mais
+o trim tab faltou
+o bow thruster sumiu
+o bow thruster não volta a funcionar
+o bow thruster parou de responder
+o joystick não aparece mais
+o joystick faltou
+o anemômetro sumiu
+o anemômetro não volta a funcionar
+o anemômetro parou de responder
+o barômetro não aparece mais
+o barômetro faltou
+o sensor de vento sumiu
+o sensor de vento não volta a funcionar
+o sensor de vento parou de responder
+o sensor de nível não aparece mais
+o sensor de nível faltou
+o transdutor sumiu
+o transdutor não volta a funcionar
+o transdutor parou de responder
+o inversor não aparece mais
+o inversor faltou
+o carregador de bateria sumiu
+o carregador de bateria não volta a funcionar
+o carregador de bateria parou de responder
+o alternador não aparece mais
+o alternador faltou
+o quadro elétrico sumiu
+o quadro elétrico não volta a funcionar
+o quadro elétrico parou de responder
+a bomba d'água não aparece mais
+a bomba d'água faltou
+o hidróforo sumiu
+o hidróforo não volta a funcionar
+o hidróforo parou de responder
+o boiler não aparece mais
+o boiler faltou
+o aquecedor sumiu
+o aquecedor não volta a funcionar
+o aquecedor parou de responder
+a máquina de gelo não aparece mais
+a máquina de gelo faltou
+a lavadora sumiu
+a lavadora não volta a funcionar
+a lavadora parou de responder
+o roteador não aparece mais
+o roteador faltou
+o modem sumiu
+o modem não volta a funcionar
+o modem parou de responder
+a antena do Starlink não aparece mais
+a antena do Starlink faltou
+a câmera de ré sumiu
+a câmera de ré não volta a funcionar
+a câmera de ré parou de responder
+o farol de busca não aparece mais
+o farol de busca faltou
+o holofote sumiu
+o holofote não volta a funcionar
+o holofote parou de responder
+a luz de navegação não aparece mais
+a luz de navegação faltou
+a buzina sumiu
+a buzina não volta a funcionar
+a buzina parou de responder
+o limpador de para-brisa não aparece mais
+o limpador de para-brisa faltou
+a escada de popa sumiu
+a escada de popa não volta a funcionar
+a escada de popa parou de responder
+a plataforma de popa não volta a funcionar
+a plataforma de popa não está a bordo
+a passarela não responde
+a passarela caiu
+o jet ski desapareceu
+o jet ski não está aqui
+o jet ski não está a bordo
+o cabo de reboque não responde
+o cabo de reboque caiu
+o cunho desapareceu
+o cunho não está aqui
+o cunho não está a bordo
+a retranca não responde
+a retranca caiu
+o fluxômetro desapareceu
+o fluxômetro não está aqui
+o fluxômetro não está a bordo
+o manômetro não responde
+o manômetro caiu
+o termômetro desapareceu
+o termômetro não está aqui
+o termômetro não está a bordo
+a válvula de fundo não responde
+a válvula de fundo caiu
+o ralo do convés desapareceu
+o ralo do convés não está aqui
+o ralo do convés não está a bordo
+o esguicho não responde
+o esguicho caiu
+a mangueira desapareceu
+a mangueira não está aqui
+a mangueira não está a bordo
+o impulsor não responde
+o impulsor caiu
+o rotor desapareceu
+o rotor não está aqui
+o rotor não está a bordo
+o filtro Racor não responde
+o filtro Racor caiu
+o separador de água desapareceu
+o separador de água não está aqui
+o separador de água não está a bordo
+o ícone do sino não responde
+o ícone do sino caiu
+o relatório desapareceu
+o relatório não está aqui
+o relatório não está a bordo
+o widget não responde
+o widget caiu
+o gráfico de consumo desapareceu
+o gráfico de consumo não está aqui
+o gráfico de consumo não está a bordo
+o mapa de calor não responde
+o mapa de calor caiu
+o alerta de porão desapareceu
+o alerta de porão não está aqui
+o alerta de porão não está a bordo
+o cartão da bomba não responde
+o cartão da bomba caiu
+a aba de peças desapareceu
+a aba de peças não está aqui
+a aba de peças não está a bordo
+o painel de alertas não responde
+o painel de alertas caiu
+o botão de ligar desapareceu
+o botão de ligar não está aqui
+o botão de ligar não está a bordo
+o campo de busca não responde
+o campo de busca caiu
+a barra de status desapareceu
+a barra de status não está aqui
+a barra de status não está a bordo
+o seletor de idioma não responde
+o seletor de idioma caiu
+o tema escuro desapareceu
+o tema escuro não está aqui
+o tema escuro não está a bordo
+o selo não responde
+o selo caiu
+o PDF do manual desapareceu
+o PDF do manual não está aqui
+o PDF do manual não está a bordo
+o link do guia não responde
+o link do guia caiu
+o item do checklist desapareceu
+o item do checklist não está aqui
+o item do checklist não está a bordo
+o lembrete não responde
+o lembrete caiu
+a notificação desapareceu
+a notificação não está aqui
+a notificação não está a bordo
+o waypoint não responde
+o waypoint caiu
+o ponto de fundeio não responde
+o ponto de fundeio parou de responder
+o track não aparece mais
+o track faltou
+o trajeto sumiu
+o trajeto não volta a funcionar
+o trajeto parou de responder
+a rota salva não aparece mais
+a rota salva faltou
+o gelo sumiu
+o gelo não volta a funcionar
+o gelo parou de responder
+o cooler não aparece mais
+o cooler faltou
+a churrasqueira sumiu
+a churrasqueira não volta a funcionar
+a churrasqueira parou de responder
+a mesa do flybridge não aparece mais
+a mesa do flybridge faltou
+o guarda-sol sumiu
+o guarda-sol não volta a funcionar
+o guarda-sol parou de responder
+a cortina da cabine não aparece mais
+a cortina da cabine faltou
+o espelho sumiu
+o espelho não volta a funcionar
+o espelho parou de responder
+o lençol não aparece mais
+o lençol faltou
+o travesseiro sumiu
+o travesseiro não volta a funcionar
+o travesseiro parou de responder
+o chuveiro não aparece mais
+o chuveiro faltou
+o vaso sanitário sumiu
+o vaso sanitário não volta a funcionar
+o vaso sanitário parou de responder
+a descarga não aparece mais
+a descarga caiu
+o tanque cinza não aparece mais
+o tanque cinza faltou
+o hélice sumiu
+o hélice não volta a funcionar
+o hélice parou de responder
+a rabeta não aparece mais
+a rabeta faltou
+o semáforo da marina sumiu
+o semáforo da marina não volta a funcionar
+o semáforo da marina parou de responder
+onde está o próximo checklist?
+onde está o próximo alerta?
+onde está o próximo registro?
+onde está o próximo abastecimento?
+onde está o seguinte ponto da rota?
+onde está o seguinte checklist?
+onde está o seguinte alerta?
+onde está o seguinte registro?
+onde está o seguinte abastecimento?
+onde está o atual ponto da rota?
+onde está o atual checklist?
+onde está o atual alerta?
+onde está o atual registro?
+onde está o atual abastecimento?
+onde está o principal ponto da rota?
+onde está o principal checklist?
+onde está o principal alerta?
+onde está o principal registro?
+onde está o principal abastecimento?
+onde está o maior ponto da rota?
+onde está o maior checklist?
+onde está o maior alerta?
+onde está o maior registro?
+onde está o maior abastecimento?
+onde está o melhor ponto da rota?
+onde está o melhor checklist?
+onde está o melhor alerta?
+onde está o melhor registro?
+onde está o melhor abastecimento?
+onde está o segundo ponto da rota?
+onde está o segundo checklist?
+onde está o segundo alerta?
+onde está o segundo registro?
+onde está o segundo abastecimento?
+onde está o terceiro ponto da rota?
+onde está o terceiro checklist?
+onde está o terceiro alerta?
+onde está o terceiro registro?
+onde está o terceiro abastecimento?
+onde está o antigo ponto da rota?
+onde está o antigo checklist?
+onde está o antigo alerta?
+onde está o antigo registro?
+onde está o antigo abastecimento?
+onde está o velho ponto da rota?
+onde está o velho checklist?
+onde está o velho alerta?
+onde está o velho registro?
+onde está o velho abastecimento?
+onde está o novo ponto da rota?
+onde está o novo checklist?
+onde está o novo alerta?
+onde está o novo registro?
+onde está o novo abastecimento?
+onde está o último ponto da rota?
+onde está o último checklist?
+onde está o último alerta?
+onde está o último registro?
+onde está o último abastecimento?
+onde está o mesmo ponto da rota?
+onde está o mesmo checklist?
+onde está o mesmo alerta?
+onde está o mesmo registro?
+onde está o mesmo abastecimento?
+onde está o outro ponto da rota?
+onde está o outro checklist?
+onde está o outro alerta?
+onde está o outro registro?
+onde está o outro abastecimento?
+o Pedro faltou na reunião
+o Pedro não compareceu ao treinamento
+o Pedro chegou atrasado
+o Pedro não confirmou o plantão
+o Pedro não está cadastrado
+o Pedro não assinou o diário
+o Pedro sumiu do cadastro
+o Pedro pediu demissão
+o Pedro não vem na sexta
+o Pedro não voltou de férias
+o Pedro não respondeu o e-mail
+o Pedro não manda notícia
+o Pedro perdeu a hora
+o Pedro perdeu o contato do fornecedor
+o Pedro deixou o documento no carro
+o Pedro ficou no escritório
+o Pedro demorou para chegar
+o Pedro trabalha na marina
+o Pedro está de caiaque hoje
+o Pedro caiu da moto ontem
+a Ana faltou no treinamento
+a Ana não apareceu para o plantão
+a Ana está atrasado
+a Ana não está no grupo
+a Ana ainda não foi cadastrado
+a Ana desapareceu da lista
+a Ana está de atestado
+a Ana não vai no passeio
+a Ana ainda não voltou de viagem
+a Ana não leu a mensagem
+# («a Ana não deu sinal de vida» saiu daqui em 13/11/2026: a decisão do proprietário sobre os 5 bloqueios de falso negativo faz do «não deu sinal de vida» a ESPERA — está em pessoa-bloqueios.tsv com o nível 1)
+a Ana perdeu o prazo
+a Ana esqueceu a chave
+a Ana esqueceu o notebook na oficina
+a Ana ficou para trás na fila
+a Ana está sem sinal hoje
+a Ana está longe daqui
+a Ana tem curso de mergulho
+a Ana vai de caiaque no domingo
+a Ana caiu da cama
+o Marcos faltou ao trabalho hoje
+o Marcos não apareceu no escritório
+o Marcos está demorando para chegar
+o Marcos não está no app
+o Marcos não entrou no sistema ainda
+o Marcos não preencheu o relatório
+o Marcos saiu da equipe
+o Marcos está doente hoje
+o Marcos não pode ir no sábado
+a Camila faltou no treinamento
+a Camila não apareceu para o plantão
+a Camila está atrasado
+a Camila não está no grupo
+a Camila ainda não foi cadastrado
+a Camila não registrou o abastecimento
+a Camila desapareceu da lista
+a Camila está de atestado
+a Camila não vai no passeio
+o João faltou na reunião
+o João não compareceu ao treinamento
+o João chegou atrasado
+o João não confirmou o plantão
+o João não está cadastrado
+o João não assinou o diário
+o João sumiu do cadastro
+o João pediu demissão
+o João não vem na sexta
+o João não voltou de férias
+onde está o checklist de saída?
+não vejo o checklist de saída no app
+sumiu o checklist de saída
+não encontro o checklist de chegada
+falta o checklist de chegada
+não acho o relatório
+faltou o relatório
+cadê o relatório do dia?
+não aparece o relatório do dia
+onde está o diário?
+não vejo o diário no app
+sumiu o diário
+não encontro o diário de bordo
+falta o diário de bordo
+não acho a agenda
+faltou a agenda
+cadê a tarefa?
+não aparece a tarefa
+onde está a próxima tarefa?
+não vejo a próxima tarefa no app
+sumiu a próxima tarefa
+não encontro o manual do gerador
+falta o manual do gerador
+não acho o guia do Seakeeper
+faltou o guia do Seakeeper
+cadê o histórico?
+não aparece o histórico
+onde está o estoque de peças?
+não vejo o estoque de peças no app
+sumiu o estoque de peças
+não encontro a lista de peças
+falta a lista de peças
+não acho a planilha de consumo
+faltou a planilha de consumo
+cadê o extrato?
+não aparece o extrato
+onde está o comprovante?
+não vejo o comprovante no app
+sumiu o comprovante
+não encontro o recibo
+falta o recibo
+não acho a nota fiscal
+faltou a nota fiscal
+cadê a apólice?
+não aparece a apólice
+onde está o certificado?
+não vejo o certificado no app
+sumiu o certificado
+não encontro o laudo
+falta o laudo
+não acho a vistoria
+faltou a vistoria
+cadê o protocolo?
+não aparece o protocolo
+onde está o procedimento?
+não vejo o procedimento no app
+sumiu o procedimento
+não encontro as fotos
+falta as fotos
+não acho o anexo
+faltou o anexo
+cadê o próximo vencimento?
+não aparece o próximo vencimento
+onde está a próxima revisão?
+não vejo a próxima revisão no app
+sumiu a próxima revisão
+não encontro o próximo abastecimento
+falta o próximo abastecimento
+não acho o último abastecimento
+faltou o último abastecimento
+cadê o último registro?
+não aparece o último registro
+onde está a última leitura?
+não vejo a última leitura no app
+sumiu a última leitura
+não encontro o último alerta
+falta o último alerta
+não acho o alerta de ontem
+faltou o alerta de ontem
+cadê o alarme de porão?
+não aparece o alarme de porão
+onde está a pendência?
+não vejo a pendência no app
+sumiu a pendência
+não encontro a pendência de segurança
+falta a pendência de segurança
+não acho o prazo da vistoria
+faltou o prazo da vistoria
+cadê o seguro?
+não aparece o seguro
+onde está o contrato da marina?
+não vejo o contrato da marina no app
+sumiu o contrato da marina
+não encontro a licença
+falta a licença
+não acho o tender
+faltou o tender
+cadê o guincho?
+não aparece o guincho
+onde está a âncora?
+não vejo a âncora no app
+sumiu a âncora
+não encontro o gerador
+falta o gerador
+não acho o Seakeeper
+faltou o Seakeeper
+cadê o piloto automático?
+não aparece o piloto automático
+onde está o plotter?
+não vejo o plotter no app
+sumiu o plotter
+não encontro o radar
+falta o radar
+não acho o AIS
+faltou o AIS
+cadê o sonar?
+não aparece o sonar
+onde está a sonda?
+não vejo a sonda no app
+sumiu a sonda
+não encontro o termômetro da água
+falta o termômetro da água
+não acho o filtro de óleo
+faltou o filtro de óleo
+não acho o filtro de combustível
+faltou o filtro de combustível
+cadê o rotor da bomba?
+não aparece o rotor da bomba
+onde está o kit de reparo?
+não vejo o kit de reparo no app
+sumiu o kit de reparo
+não encontro o óleo do motor
+falta o óleo do motor
+não encontro o diesel
+falta o diesel
+não acho a água doce
+faltou a água doce
+cadê o tanque de água?
+não aparece o tanque de água
+onde está o tanque de diesel?
+não vejo o tanque de diesel no app
+sumiu o tanque de diesel
+não encontro o tanque cinza
+falta o tanque cinza
+quem não confirmou presença?
+quem não assinou o termo?
+quem não veio hoje?
+quem faltou hoje?
+quem faltou ontem?
+quem faltou no treinamento?
+quantos faltaram no treinamento?
+quantos não vieram hoje?
+quem ainda não chegou?
+quem ainda não chegou no escritório?
+quem não voltou do almoço?
+quem não voltou da marina?
+quantos não responderam?
+quantas pessoas faltam assinar?
+quantos tripulantes faltam escalar?
+quem não está escalado?
+quem não está na escala?
+quem não está no grupo?
+quem não está no app?
+quem não aparece na lista?
+quem não consta na equipe?
+quem ainda não entrou no app?
+quem não leu a mensagem?
+quem não viu o aviso?
+quem não fez o checklist?
+quem não registrou o abastecimento?
+quem não está de plantão?
+quem não vai no passeio?
+quem não pode ir no sábado?
+quem não tem curso de mergulho?
+quem está sem acesso ao app?
+quem está sem celular?
+quem não tem habilitação?
+quem não renovou a carteira?
+quem não passou na vistoria?
+quem perdeu o prazo da renovação?
+quem perdeu a senha?
+quem não aparece no cadastro?
+ninguém assinou o diário hoje?
+ninguém registrou nada hoje?
+ninguém fez a revisão?
+ninguém viu o aviso da marina?
+ninguém atende o telefone da marina
+ninguém sabe onde está o manual
+ninguém achou o controle remoto
+ninguém encontrou a chave do paiol
+alguém sabe do Pedro?
+alguém tem notícia do Pedro?
+# («alguém sabe onde o Pedro está?» saiu daqui em 13/11/2026 pelo mesmo motivo: «alguém sabe onde X está / anda / foi?» é a ESPERA — está em pessoa-bloqueios.tsv com o nível 1)
+alguém sabe quando o mecânico chega?
+alguém conseguiu falar com o fornecedor?
+alguém conseguiu contato com a seguradora?
+alguém tem o telefone do mecânico?
+não sei onde o Pedro está hoje
+não sei onde o mecânico está
+não sei se o Pedro vem hoje
+não sei quem vai no sábado
+não sei quem está de plantão
+não sei se o Pedro chegou
+o Pedro chegou?
+o Pedro já chegou na marina?
+o Pedro já chegou?
+a Ana já voltou?
+o Pedro já voltou do almoço?
+o Pedro voltou da marina?
+o mecânico já chegou?
+o mecânico já voltou?
+o pessoal já chegou?
+o pessoal já voltou?
+todo mundo voltou?
+todo mundo chegou?
+todos chegaram?
+todo mundo está a bordo?
+todos estão a bordo?
+todos já embarcaram?
+o Pedro está aqui?
+o Pedro está a bordo?
+onde está todo mundo?
+cadê o gerente da marina?
+estamos sem diesel?
+ficamos sem gelo
+estamos sem água doce
+estou sem sinal de celular
+estamos sem internet
+ficamos sem o Pedro hoje, quem cobre?
+estamos sem o mecânico hoje
+ficamos sem eletricista essa semana
+estamos sem comandante no sábado
+ficamos sem cozinheiro no passeio
+estamos sem o Marcos na escala de sábado
+ficamos sem a Ana na equipe
+estamos sem o capitão hoje
+estou sem o Pedro para assinar o diário
+alguém viu o Pedro hoje de manhã?
+alguém viu o relatório?
+alguém viu o Marcos no escritório?
+alguém viu o manual do gerador?
+alguém viu o controle do guincho?
+alguém viu meu celular?

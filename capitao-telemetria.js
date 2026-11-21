@@ -1,5 +1,6 @@
 /* Capitão IA — telemetria ao vivo do coletor (coletor NMEA → Drive → proxy protegido → app).
-   DESLIGADA por padrão: sem URL configurada, nada é buscado e o app segue com o snapshot do capitao-dados.js.
+   DESLIGADA por padrão: sem URL configurada, nada é buscado e atual() devolve o quadro da reprodução (capitao-replay.js, com simulado: true)
+   ou, sem ele, null — e a tela cai no snapshot do capitao-dados.js.
    Para ligar (junto com o login no servidor): publicar o Worker de integracoes/telemetria-worker/, pôr a URL em URL_PROXY
    e abrir o app uma vez por aparelho com #tele=<chave> no fim do endereço (a chave fica só no aparelho).
    Nunca aponte para um link público do Drive: o arquivo tem a posição do barco. */
@@ -41,7 +42,14 @@
   var ultima = null;
   try { ultima = ativa() ? JSON.parse(localStorage.getItem(KD) || 'null') : null; } catch (e) {}
   function idade() { return ultima && ultima.timestamp_utc ? Date.now() - Date.parse(ultima.timestamp_utc) : Infinity; }
-  function atual() { return ativa() && idade() < VELHA ? ultima : null; }
+  // Leitura real do proxy (recente), ou o quadro da reprodução (capitao-replay.js) com simulado: true; sem nenhum dos dois, null (a tela cai no D.snapshot).
+  // ativa() continua querendo dizer "proxy real": o replay é outro global e nunca se registra como CapitaoTelemetria.
+  function replay() {
+    try { var R = window.CapitaoReplay, q = R && typeof R.ativo === 'function' && R.ativo() ? R.quadro() : null; if (q) q.simulado = true; return q || null; } catch (e) { return null; }
+  }
+  function real() { return ativa() && idade() < VELHA ? ultima : null; }
+  function atual() { return real() || replay(); }
+  function fonte() { return real() ? 'coletor' : replay() ? 'replay' : null; }   // 'coletor' | 'replay' | null
   function avisa() { try { window.dispatchEvent(new CustomEvent('capitao-telemetria', { detail: ultima })); } catch (e) {} }
 
   var busy = false, tempo = 0;
@@ -72,5 +80,5 @@
     try { return new Intl.DateTimeFormat('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }).format(new Date(t.timestamp_utc)); } catch (e) { return ''; }
   }
 
-  window.CapitaoTelemetria = { ativa: ativa, atual: atual, idade: idade, posicao: posicao, hora: hora, busca: busca, coord: coord };
+  window.CapitaoTelemetria = { ativa: ativa, atual: atual, fonte: fonte, idade: idade, posicao: posicao, hora: hora, busca: busca, coord: coord };
 })();

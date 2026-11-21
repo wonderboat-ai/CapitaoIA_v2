@@ -1,0 +1,3 @@
+# Bytes exatos: o React de assets/vendor é conferido pelo hash SRI do support.js. Sem isto, um checkout com
+# core.autocrlf=true (padrão do Git para Windows) troca LF por CRLF, o hash não bate e nenhuma tela monta localmente, nem o SOS.
+assets/vendor/** -text

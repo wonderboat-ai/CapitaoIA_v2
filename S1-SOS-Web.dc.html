@@ -13,7 +13,6 @@
 <helmet>
 <script src="./capitao-app.js"></script>
 <script src="./capitao-theme.js"></script>
-<script src="./capitao-telemetria.js"></script>
 <script src="./capitao-brain.js"></script>
 <style>
 body { margin: 0; font-family: "Nimbus Sans", "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cap-bg, #050816); -webkit-font-smoothing: antialiased; }
@@ -42,12 +41,8 @@ button { font: inherit; }
   <a href="Main.dc.html" style="display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
     <img src="assets/wonderhub-simbolo.png" alt="WonderHUB.AI" style="height: 28px; width: 66px; object-fit: contain; flex-shrink: 0;">
     <b style="font-weight: 800; border-bottom: 2px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.6); padding-bottom: 2px;">CAPITÃO IA</b>
-    <span style="color: var(--cap-ph, #4a5578);">—</span>
-    <b style="font-weight: 700;">{{local}}</b>
   </a>
-  <span style="font-size: 10px; letter-spacing: 0.14em; font-weight: 800; color: var(--cap-violeta, #b45cff); border: 1px solid rgba(var(--cap-violeta-rgb, 162,43,253), 0.55); background: rgba(var(--cap-violeta-rgb, 162,43,253), 0.10); border-radius: 6px; padding: 4px 8px;">{{demo}}</span>
   <span style="flex-grow: 1;"></span>
-  <span style="color: var(--cap-ink3, #97a3c0); font-weight: 600;">REG. {{reg}}</span>
   <x-import component-from-global-scope="capitao-hora-clima" from="./capitao-clima.js" tamanho="13" hint-size="190px,24px"></x-import>
   <x-import component-from-global-scope="capitao-theme-toggle" from="./capitao-theme.js" size="34" hint-size="34px,34px"></x-import>
 </header>
@@ -71,6 +66,9 @@ button { font: inherit; }
         <a href="Main.dc.html" aria-label="Fechar e voltar ao início" style="position: absolute; top: -8px; right: -10px; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cap-ink3, #97a3c0); font-size: 20px; text-decoration: none; background: rgba(var(--cap-hl-rgb, 255,255,255), 0.04);">✕</a>
       </div>
       <span style="font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; color: var(--cap-ink3, #97a3c0); letter-spacing: 0.02em; text-align: center; line-height: 1.45;">{{marca}}</span>
+      <sc-if value="{{gpsBotao}}" hint-placeholder-val="{{false}}">
+        <button type="button" onClick="{{gpsPedir}}" style="align-self: center; min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid rgba(var(--cap-accent-rgb, 0,161,254), 0.45); background: rgba(var(--cap-accent-rgb, 0,161,254), 0.10); color: var(--cap-accent, #00a1fe); font-size: 12px; font-weight: 700; letter-spacing: 0.10em; cursor: pointer;">{{gpsLabel}}</button>
+      </sc-if>
       <div style="display: flex; flex-direction: column; gap: 9px;">
         <sc-for list="{{proto}}" as="p" hint-placeholder-count="4">
           <button type="button" onClick="{{p.toggle}}" aria-expanded="{{p.open}}" style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: {{p.bg}}; border: 1px solid {{p.line}}; border-radius: 12px; color: var(--cap-ink, #eaf1ff); min-height: 56px; cursor: pointer; text-align: left; font-family: inherit; width: 100%; box-sizing: border-box;">
@@ -105,7 +103,7 @@ button { font: inherit; }
       <div style="display: flex; gap: 10px;">
         <button type="button" onClick="{{toggleMayday}}" aria-pressed="{{mayday}}" style="flex-grow: 1; height: 52px; border-radius: 12px; border: none; background: var(--cap-crit-fill, #d32f27); color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; font-weight: 800; letter-spacing: 0.10em; white-space: nowrap; padding: 0 14px; cursor: pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: #ffffff;"></path></svg> {{maydayLabel}}</button>
         <sc-for list="{{chamar}}" as="c" hint-placeholder-count="2">
-          <a href="{{c.href}}" aria-label="{{c.aria}}" title="{{c.aria}}" style="flex-grow: 1; height: 52px; border-radius: 12px; border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: rgba(var(--cap-hl-rgb, 255,255,255), 0.04); color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; justify-content: center; gap: 9px; text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;">{{c.ico}}<span style="display: flex; flex-direction: column; line-height: 1.2;"><span>{{c.n}}</span><span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--cap-ink3, #97a3c0);">{{c.sub}}</span></span></a>
+          <a href="{{c.href}}" onClick="{{c.click}}" aria-label="{{c.aria}}" title="{{c.aria}}" style="flex-grow: 1; height: 52px; border-radius: 12px; border: 1px solid rgba(var(--cap-hl-rgb, 255,255,255), 0.14); background: rgba(var(--cap-hl-rgb, 255,255,255), 0.04); color: var(--cap-ink, #eaf1ff); display: flex; align-items: center; justify-content: center; gap: 9px; text-decoration: none; font-size: 13px; font-weight: 700; letter-spacing: 0.06em;">{{c.ico}}<span style="display: flex; flex-direction: column; line-height: 1.2;"><span>{{c.n}}</span><span style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--cap-ink3, #97a3c0);">{{c.sub}}</span></span></a>
         </sc-for>
         <button type="button" onClick="{{silence}}" aria-pressed="{{muted}}" aria-label="Pausar a sirene visual por 60 segundos" style="flex-grow: 1; height: 52px; border-radius: 12px; border: 1px solid {{silenceLine}}; background: transparent; color: {{silenceTone}}; font-size: 12.5px; font-weight: 700; cursor: pointer;">{{silenceLabel}}</button>
       </div>
@@ -116,9 +114,14 @@ button { font: inherit; }
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
 class Component extends DCLogic {
-  state = { open: -1, mayday: false, left: 0, reg: null, fones: {} };
-  componentDidMount() { this.whenBrain((B) => this.setState({ reg: this.registrar(B), fones: B.loadEquipe().fones }), () => this.setState({ reg: { falhou: true } })); }
-  componentWillUnmount() { clearInterval(this._t); clearInterval(this._b); }
+  state = { open: -1, mayday: false, left: 0, reg: null, fones: {}, gps: { st: 'nada' } };
+  componentDidMount() {
+    this._vivo = true;
+    // Permissão de localização já concedida: lê o GPS do aparelho sem perguntar. Sem ela, só com o toque em MOSTRAR GPS DO CELULAR (PROMPT §2.1).
+    try { if (navigator.permissions && navigator.permissions.query) navigator.permissions.query({ name: 'geolocation' }).then((r) => { if (this._vivo && r && r.state === 'granted') this.gpsLer(); }).catch(() => {}); } catch (e) {}
+    this.whenBrain((B) => { this._B = B; this.setState({ reg: this.recente(), fones: B.loadEquipe().fones }); const c = this._pend; this._pend = null; if (c) this.aciona(c); }, () => { this._semBrain = true; if (this._pend) this.setState({ reg: { falhou: true } }); });
+  }
+  componentWillUnmount() { this._vivo = false; clearInterval(this._t); clearInterval(this._b); }
   whenBrain(cb, fail) {
     if (window.CapitaoBrain) return cb(window.CapitaoBrain);
     let n = 0;
@@ -127,22 +130,61 @@ class Component extends DCLogic {
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
-  // SOS acionado: uma linha no diário por acionamento (10 min · vale também para a tela do app). Só diz "gravado" se a linha está no diário.
-  registrar(B) {
-    const K = 'capitao.sos.v1'; let prev = null;
-    try { prev = JSON.parse(sessionStorage.getItem(K) || 'null'); } catch (e) {}
-    if (prev && prev.t && Date.now() - prev.em < 600e3) return prev;
-    const n = B.now(); let e = null;
-    try { e = B.addDiario({ sys: 'Segurança', tone: 'var(--cap-crit, #ff3b30)', t: 'SOS acionado na web às ' + n.t + ' · último fix ' + this.pos() + '.', who: (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'), src: 'web · SOS' }); } catch (x) {}
-    if (!e || !B.loadDiario().some((x) => x.iso === e.iso && x.src === 'web · SOS')) return { falhou: true };
-    const r = { em: Date.now(), t: n.t };
-    try { sessionStorage.setItem(K, JSON.stringify(r)); } catch (x) {}
-    return r;
+  // SOS acionado (F04): a linha vai ao diário só na AÇÃO — abrir o roteiro do MAYDAY, abrir o MOB ou tocar em ligar —, nunca ao abrir a tela
+  // (tela aberta por engano ou restaurada pelo navegador virava "SOS acionado"); Seafire e EPIRB só informam e não gravam. Uma linha por
+  // acionamento (10 min · vale também para a tela do app) que diz o que foi tocado. Só diz "gravado" se a linha está no diário.
+  recente() {
+    let p = null; try { p = JSON.parse(sessionStorage.getItem('capitao.sos.v1') || 'null'); } catch (e) {}
+    p = p || this._ult || null; // sem sessionStorage (janela privada), a memória desta tela segura os 10 minutos
+    return p && p.t && Date.now() - p.em < 600e3 ? p : null;
   }
-  pos() {
-    const D = window.CapitaoDados || {}, S = D.snapshot || {}, g = S.gps || {}, T = window.CapitaoTelemetria, v = T && T.atual ? T.atual() : null;
-    if (v) return T.posicao(v) + ' (ao vivo ' + T.hora(v) + ')';
-    return (g.texto || 'posição SEM LEITURA') + ' (' + (D.demo ? 'snapshot DEMO ' : 'snapshot ') + (S.quando || 'SEM DADOS') + ')';
+  aciona(como) {
+    const B = this._B;
+    if (!B) { if (this._semBrain) this.setState({ reg: { falhou: true } }); else this._pend = this._pend || como; return; }
+    const prev = this.recente(); if (prev) { if (!this.state.reg || this.state.reg.falhou) this.setState({ reg: prev }); return; }
+    const n = B.now(); let e = null;
+    try { e = B.addDiario({ sys: 'Segurança', tone: 'var(--cap-crit, #ff3b30)', t: 'SOS acionado na web às ' + n.t + ' (' + como + ') · ' + this.posDiario() + '.', who: (window.CapitaoAuth ? window.CapitaoAuth.nome() : 'Lucas'), src: 'web · SOS' }); } catch (x) {}
+    if (!e || !B.loadDiario().some((x) => x.iso === e.iso && x.src === 'web · SOS')) return this.setState({ reg: { falhou: true } });
+    const r = { em: Date.now(), t: n.t };
+    this._ult = r;
+    try { sessionStorage.setItem('capitao.sos.v1', JSON.stringify(r)); } catch (x) {}
+    this.setState({ reg: r });
+  }
+  // Posição do SOS = GPS do aparelho (PROMPT §2.1): nunca o snapshot, o replay nem a telemetria. Precisão pior que 100 m: sem coordenada.
+  gpsLer() {
+    if (!navigator.geolocation) { this.setState({ gps: { st: 'sem' } }); return; }
+    if (this.state.gps.pedindo) return;
+    this.setState({ gps: Object.assign({}, this.state.gps, { pedindo: true }) });
+    const fim = (g) => { if (this._vivo) this.setState({ gps: g }); };
+    try {
+      navigator.geolocation.getCurrentPosition((p) => {
+        const c = (p && p.coords) || {}, acc = Math.round(c.accuracy);
+        if (typeof c.latitude !== 'number' || typeof c.longitude !== 'number' || !isFinite(acc)) return fim({ st: 'sem' });
+        if (acc > 100) return fim({ st: 'baixa', acc: acc });
+        const d = new Date(p.timestamp || Date.now()), p2 = (x) => (x < 10 ? '0' : '') + x;
+        fim({ st: 'ok', lat: c.latitude, lon: c.longitude, acc: acc, hora: p2(d.getHours()) + ':' + p2(d.getMinutes()) });
+      }, () => fim({ st: 'sem' }), { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 });
+    } catch (e) { fim({ st: 'sem' }); }
+  }
+  // 26°59,58'S 048°36,84'W (graus e minutos: o formato que o semCoord reconhece)
+  coord(v, pos, neg, g) {
+    const a = Math.abs(v); let d = Math.floor(a), mn = Math.round((a - d) * 6000) / 100;
+    if (mn >= 60) { d += 1; mn = 0; }
+    return (g === 3 ? ('00' + d).slice(-3) : d) + '°' + mn.toFixed(2).replace('.', ',').padStart(5, '0') + "'" + (v < 0 ? neg : pos);
+  }
+  gpsTxt() { const g = this.state.gps; return this.coord(g.lat, 'N', 'S', 2) + ' ' + this.coord(g.lon, 'E', 'W', 3) + ' ± ' + g.acc + ' m às ' + g.hora; }
+  posTxt() {
+    const g = this.state.gps;
+    if (g.st === 'ok') return 'GPS DO CELULAR ' + this.gpsTxt() + ' — confira no plotter';
+    if (g.st === 'baixa') return 'PRECISÃO BAIXA (± ' + g.acc + ' m) — LEIA NO PLOTTER';
+    return 'POSIÇÃO: LEIA NO PLOTTER';
+  }
+  // a posição que a linha do diário leva: a do GPS do aparelho ou "ler no plotter" (nada do snapshot, do replay ou da rota)
+  posDiario() {
+    const g = this.state.gps;
+    if (g.st === 'ok') return 'posição do GPS do celular ' + this.gpsTxt() + ' (confira no plotter)';
+    if (g.st === 'baixa') return 'posição: GPS do celular com precisão baixa (± ' + g.acc + ' m), ler no plotter';
+    return 'posição: ler no plotter';
   }
   silence() {
     if (this.state.left > 0) { clearInterval(this._t); this.setState({ left: 0 }); return; }
@@ -150,35 +192,38 @@ class Component extends DCLogic {
     this._t = setInterval(() => { const l = this.state.left - 1; if (l <= 0) { clearInterval(this._t); this.setState({ left: 0 }); } else this.setState({ left: l }); }, 1000);
   }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
+  // O SOS lê só o D.protocolos (e o nome da embarcação, que vem na 2ª linha do roteiro): nunca o snapshot, o registro, o MMSI, o modelo, a base
+  // nem a telemetria; o texto de MMSI é o do rádio de bordo, a posição é a do aparelho e Seafire e EPIRB são o procedimento padrão.
   renderVals() {
-    const s = this.state, D = window.CapitaoDados || {}, P = D.protocolos || {}, E = D.embarcacao || {}, S = D.snapshot || {}, r = s.reg;
+    const s = this.state, D = window.CapitaoDados || {}, P = D.protocolos || {}, r = s.reg;
     const ROT = (P.rotulo || 'procedimento padrão — confirmar com o protocolo de bordo').toUpperCase();
-    const mmsi = E.mmsi ? 'MMSI ' + E.mmsi + (E.mmsiNota ? ' (' + E.mmsiNota + ')' : '') : 'MMSI SEM DADOS';
+    const mmsi = P.mmsiRadio || 'MMSI do rádio de bordo (etiqueta / Licença de Estação)';
+    const c16 = P.canal16 || {}, sf = P.seafire || {}, ep = P.epirb || {};
     const fonteP = 'Fonte: ' + (P.fonte || 'protocolo de emergência');
-    const docs = 'G1-Documentos-Web.dc.html', faq3 = 'F3-FAQ-Eletronicos-Web.dc.html';
+    const faq3 = 'F3-FAQ-Eletronicos-Web.dc.html';
+    const cap = (t) => (t ? String(t).charAt(0).toUpperCase() + String(t).slice(1) : '');
+    const passos = (xs) => { const l = (xs || []).map((t, i) => ({ n: String(i + 1), t: t })); return l.length ? l : [{ n: '1', t: 'Perigo grave e iminente: MAYDAY no canal 16 (roteiro abaixo).' }]; };
     const RED = { tone: 'var(--cap-crit, #ff3b30)', wash: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)', bg: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.08)', line: 'rgba(var(--cap-crit-rgb, 255,59,48), 0.30)' };
     const STD = { tone: 'var(--cap-ink, #eaf1ff)', wash: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)', bg: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.04)', line: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.08)' };
-    const SEM = { tone: 'var(--cap-warn, #f0a63a)', wash: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)', bg: 'rgba(var(--cap-hl-rgb, 255,255,255), 0.04)', line: 'rgba(var(--cap-warn-rgb, 240,166,58), 0.40)' };
     const L = [
-      Object.assign({ n: 'VHF Canal 16 — MAYDAY', s: mmsi + ' · rádios VHF 315', d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', rot: ROT, steps: [{ n: '1', t: 'Canal 16 · 156,800 MHz. Só MAYDAY em perigo grave e iminente; urgência sem risco de vida é PAN-PAN ×3.' }, { n: '2', t: 'Abra o roteiro em CANAL 16 · MAYDAY e leia devagar: nome ×3, MMSI, posição lida no plotter, natureza do perigo, pessoas a bordo, auxílio.' }, { n: '3', t: 'Repita até ter resposta. Rádio com DSC: o botão DISTRESS envia o alerta com o MMSI programado; depois, a chamada por voz no 16.' }], src: fonteP + ' · canal 16 e MMSI informados pelo proprietário', href: '', hl: '' }, RED),
-      Object.assign({ n: 'Homem ao mar (MOB)', s: 'Grite, jogue a boia, aponte e marque MOB no plotter Garmin', d: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 13l4-4 4 4 M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0', rot: ROT, steps: (P.mob || []).map((t, i) => ({ n: String(i + 1), t: t })), src: fonteP + ' · ' + ((D.guias && D.guias.g_eletronicos) || '') + ' §1', href: faq3, hl: 'FAQ eletrônicos' }, STD),
-      Object.assign({ n: 'Incêndio · Seafire', s: 'SEM DADOS — localização, acionamento e tempo de espera não carregados', d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', rot: 'SEM DADOS', steps: [{ n: '!', t: 'O procedimento do sistema Seafire não foi carregado: não há passo a passo confirmado.' }, { n: '1', t: 'Perigo grave e iminente: MAYDAY no canal 16 (roteiro abaixo).' }], src: 'Fonte: nenhuma para o Seafire — enviar o manual ou o protocolo de bordo', href: '', hl: '' }, SEM),
-      Object.assign({ n: 'EPIRB', s: 'SEM DADOS — modelo, localização a bordo e acionamento não carregados', d: 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6', rot: 'SEM DADOS', steps: [{ n: '!', t: 'Modelo, localização, forma de acionamento e validade da bateria do EPIRB não foram carregados.' }, { n: '1', t: 'Envie a foto da etiqueta e do certificado para completar este item.' }], src: 'Fonte: nenhuma para o EPIRB — ' + mmsi, href: docs, hl: 'Documentos' }, SEM)
+      Object.assign({ n: 'VHF Canal 16 — MAYDAY', s: mmsi, d: 'M4 9h16v11H4z M8 4l8 5 M8 13h.01 M8 16h.01 M12 13h5 M12 16h5', rot: ROT, steps: [{ n: '1', t: 'Canal ' + (c16.canal || '16') + ' · ' + (c16.mhz || '156,800') + ' MHz. Só MAYDAY em perigo grave e iminente; urgência sem risco de vida é PAN-PAN ×3.' }, { n: '2', t: 'Abra o roteiro em CANAL 16 · MAYDAY e leia devagar: nome ×3, MMSI do rádio de bordo, posição lida no plotter, natureza do perigo, pessoas a bordo (conte agora), auxílio.' }, { n: '3', t: P.dsc || 'Rádio com DSC: o botão DISTRESS envia o alerta; depois, a chamada por voz no 16.' }], src: fonteP, href: '', hl: '' }, RED),
+      Object.assign({ n: 'Homem ao mar (MOB)', s: 'Grite, jogue a boia, aponte e marque MOB no plotter', d: 'M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z M8 13l4-4 4 4 M3 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0', rot: ROT, steps: passos(P.mob), src: fonteP, href: faq3, hl: 'FAQ eletrônicos' }, STD),
+      Object.assign({ n: 'Incêndio · Seafire', s: cap(sf.nota), d: 'M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z', rot: ROT, steps: passos(sf.passos), src: fonteP, href: '', hl: '' }, STD),
+      Object.assign({ n: 'EPIRB', s: cap(ep.nota), d: 'M12 21V9 M8 5a6 6 0 0 1 8 0 M5 2a10 10 0 0 1 14 0 M9 21h6', rot: ROT, steps: passos(ep.passos), src: fonteP, href: '', hl: '' }, STD)
     ];
     const eq = 'G4-Equipe-Web.dc.html', fone = 'M6.5 4h4l1.5 4-2.2 1.6a12 12 0 0 0 4.6 4.6L16 12l4 1.5v4a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 4.5 6.2 2 2 0 0 1 6.5 4z';
-    const liga = (id, n, quem) => { const f = s.fones[id]; return f ? { n: 'Ligar · ' + n, sub: f, href: 'tel:' + String(f).replace(/[^+\d]/g, ''), aria: 'Ligar para ' + quem + ' · ' + f, ico: this.ico(fone, 18) } : { n: n, sub: 'cadastrar tel.', href: eq, aria: 'Telefone de ' + quem + ' não cadastrado — abrir Equipe para cadastrar', ico: this.ico(fone, 18) }; };
-    const pos = this.pos();
-    const nb = (x, d) => (typeof x === 'number' ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
+    const liga = (id, n, quem) => { const f = s.fones[id]; return f ? { n: 'Ligar · ' + n, sub: f, href: 'tel:' + String(f).replace(/[^+\d]/g, ''), click: () => this.aciona('ligação para ' + quem), aria: 'Ligar para ' + quem + ' · ' + f, ico: this.ico(fone, 18) } : { n: n, sub: 'cadastrar tel.', href: eq, aria: 'Telefone de ' + quem + ' não cadastrado — abrir Equipe para cadastrar', ico: this.ico(fone, 18) }; };
+    const g = s.gps;
     return {
-      local: (E.base || 'SEM DADOS').replace(/\s*\(.*\)$/, '').toUpperCase(), demo: D.demo ? 'DEMO' : '', reg: E.registro || 'SEM DADOS',
-      faixa: 'SOG ' + nb(S.sog) + ' NÓ · PROA ' + (typeof S.proa === 'number' ? ('00' + S.proa).slice(-3) + '°' : '—') + ' · ' + (S.estado || '').toUpperCase() + ' · ' + (S.local || '').toUpperCase() + ' · SNAPSHOT' + (D.demo ? ' DEMO' : '') + ' ' + (S.quando || ''),
-      marca: pos + ' · ' + (!r ? 'gravando no diário de bordo…' : r.falhou ? 'não gravado — registre posição e hora no diário' : 'SOS ' + r.t + ' · posição e hora gravadas no diário de bordo'),
+      faixa: P.plotter || 'POSIÇÃO, RUMO E VELOCIDADE: LEIA NO PLOTTER',
+      marca: this.posTxt() + ' · ' + (!r ? 'MAYDAY, MOB ou ligar grava no diário' : r.falhou ? 'não gravado — registre posição e hora no diário' : 'SOS ' + r.t + ' · gravado no diário de bordo'),
+      gpsBotao: !!navigator.geolocation, gpsPedir: () => this.gpsLer(), gpsLabel: g.pedindo ? 'LENDO O GPS…' : g.st === 'nada' ? 'MOSTRAR GPS DO CELULAR' : 'ATUALIZAR GPS DO CELULAR',
       chamar: [liga('marina', 'Marina', 'a marina da base'), liga('tecnico', 'Técnico', 'o técnico de bordo')],
-      proto: L.map((p, i) => Object.assign({}, p, { ico: this.ico(p.d, 20, 1.8, p.tone), open: s.open === i, toggle: () => this.setState({ open: s.open === i ? -1 : i }), chev: this.ico(s.open === i ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 16, 2, 'var(--cap-ink3, #97a3c0)') })),
-      mayday: s.mayday, toggleMayday: () => this.setState({ mayday: !s.mayday }), maydayLabel: s.mayday ? 'FECHAR ROTEIRO' : 'CANAL 16 · MAYDAY',
-      roteiro: (P.roteiro || []).map((l) => (/^POSIÇÃO/.test(l) ? l + ' (último fix ' + pos + ')' : l)),
+      proto: L.map((p, i) => Object.assign({}, p, { ico: this.ico(p.d, 20, 1.8, p.tone), open: s.open === i, toggle: () => { if (i === 1 && s.open !== 1) this.aciona('MOB'); this.setState({ open: s.open === i ? -1 : i }); }, chev: this.ico(s.open === i ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6', 16, 2, 'var(--cap-ink3, #97a3c0)') })),
+      mayday: s.mayday, toggleMayday: () => { if (!s.mayday) this.aciona('MAYDAY'); this.setState({ mayday: !s.mayday }); }, maydayLabel: s.mayday ? 'FECHAR ROTEIRO' : 'CANAL 16 · MAYDAY',
+      roteiro: P.roteiro || [],
       rotuloRoteiro: 'Procedimento padrão — confirmar com o protocolo de bordo. Urgência sem perigo de vida: PAN-PAN ×3. ' + fonteP + '.',
-      fonteGeral: fonteP + ' · Seafire e EPIRB: SEM DADOS.',
+      fonteGeral: fonteP + '.',
       silence: () => this.silence(), muted: s.left > 0, silenceLabel: s.left > 0 ? 'Pausada · ' + s.left + ' s' : 'Pausar sirene', sireneOp: s.left > 0 ? 0 : 1,
       silenceLine: s.left > 0 ? 'rgba(var(--cap-warn-rgb, 240,166,58), 0.55)' : 'rgba(var(--cap-hl-rgb, 255,255,255), 0.14)', silenceTone: s.left > 0 ? 'var(--cap-warn, #f0a63a)' : 'var(--cap-ink, #eaf1ff)'
     };

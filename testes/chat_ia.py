@@ -5,11 +5,22 @@ e nunca em resposta pronta ou só num "oi"; que o pedido leva a ficha de bordo (
 que sem a CHAVE_APP no aparelho nada vai para a rede e a linha da fonte diz por quê (com o botão "Ativar IA na nuvem");
 que erro do proxy mantém a resposta local com o motivo; que "SEM DADOS" da IA mantém o trecho do guia mas troca o SEM DADOS
 genérico; que a resposta entra logo depois da pergunta dela; que na CONVERSA por voz a IA responde e a resposta dela é a
-falada; que link de fora (#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
-que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com o rosto
-de partículas (canvas + CapitaoRosto) e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
+falada; que na CONVERSA a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s e o VOZ→TEXTO a mantém; que link de fora
+(#q=) não gasta a cota e link de dentro do app usa a IA; que o indicador some ao fim;
+que a voz vai a 1,15x em toda fala (abertura, SOS e óleo) e os eventos "falando" levam o som; que o núcleo abre com os anéis
+pintados no canvas (cor por estado, ∞ no centro, só reage ao som com som true), o HUD lê o quadro do instante e, em alerta, mostra só
+a instrução do plotter, e o Esc encerra; e que o login não leva a chave do endereço para o ?next=.
 
-    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; precisa de internet para o React do unpkg)
+Fase 7 (PROMPT «Testes novos»; função fase7, nas duas telas e nas sessões lucas e demo, com o cliente da IA de verdade): o que vai ao Worker nunca leva
+coordenada — depois do SOS com o GPS do aparelho (set_geolocation), da «posição agora», do «roteiro do canal 16» e de uma pergunta digitada com coordenada —,
+com simulacao true e false; a conversa em emergência na CONVERSA («homem ao mar», a posição, as pessoas, «e agora?») não faz pedido nenhum, fala o SOS inteiro
+(≥ 90 % do falável, nos dois modos) e não traz coordenada, nós, mn, rumo nem pessoas na fala, no HUD nem na tela; o 502 {parou:'rotulo'}, o 401, o preço, o
+telefone e o lugar da salvatagem devolvidos pelo Worker simulado não são falados nem mostrados (só a resposta local); e nenhuma fala nem HUD casa ROTULOS ou
+AUTENTICIDADE, em 2 instantes do replay com os valores mudando.
+
+    python -X utf8 testes/chat_ia.py        (sobe um servidor local próprio; o React vem do próprio site, assets/vendor)
+    python -X utf8 testes/chat_ia.py --so-fase7 [Main|H2-Home-Mobile] [lucas|demo] [coord|emerg|filtro|varre]   só as conferências da Fase 7
+    python -X utf8 testes/chat_ia.py --mutantes-fase7      planta os 10 defeitos da Fase 7 (12 passadas: os 2 da lógica da tela, na Main e na H2), todos acusados; MUT_FILTRO=texto refaz só os de nome com o texto
 """
 import functools
 import http.server
@@ -18,21 +29,46 @@ import os
 import re
 import sys
 import threading
+import time
 import urllib.parse
 
 from playwright.sync_api import sync_playwright
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Fase 3 (P3D), PROMPT Fase 7 linha 3 (`:210`): a ficha que vai à IA não leva coordenada pela regex do §2.8 (graus-minutos e decimal; a mesma do cerebro.py e do gerador), e não a posição literal do snapshot
+sys.path.insert(0, os.path.join(RAIZ, 'ferramentas', 'demo'))
+import confere  # noqa: E402
 URL_ARQ = re.search(r"var URL_PROXY = '([^']+)'", open(os.path.join(RAIZ, 'capitao-ia.js'), encoding='utf-8').read()).group(1)
+# Fase 3 (P3B): o fallback local não diz mais «Não encontrei esse dado … SEM DADOS» (decisão 5); a conferência «a tela mostra a resposta da IA e não o texto local» passa a procurar o texto novo
+FALLBACK_LOCAL = 'Isso não está nas fontes de bordo'
+# Fase 4 (P4H, F6): o toque numa pergunta do FAQ dos equipamentos abre o chat com o código do item (#q=<pergunta>&faq=<código>)
+FAQ_ITENS = {it['id']: it for it in json.load(open(os.path.join(RAIZ, 'faq-equipamentos.json'), encoding='utf-8'))['itens']}
 SESSAO = "(() => { const n = Date.now(); localStorage.setItem('capitao.sessao.v1', JSON.stringify({ u: 'lucas', em: n, exp: n + 3600e3 })); })()"
+# Fase 3 (P3A, PROMPT Fase 7 «Mudanças nos testes»: «:254 ("≈ 11,2 h") com o quadro congelado»): a autonomia da resposta lê o instante do
+# replay. Congelado em 12:01:00 (fixar('60')), são 1.333 L menos a reserva de 10 %: 17,6 h a 18 nós (CapitaoAgora.instante().calc).
+REPLAY_FIXO = "(() => { try { localStorage.setItem('capitao.replay.fixo', '60'); } catch (e) {} })()"
+AUTONOMIA = '≈ 17,6 h'
 MOBILE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Mobile Safari/537.36'
 TEXTO_IA = 'Resposta simulada da IA: segure PARTIDA até o motor pegar.'
-FONTE_IA = 'Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
+# Contrato C2: o título do guia perdeu o "(DEMO)" (Decisão 1.1.0, b); o Worker devolve a fonte do trecho que o app mandou.
+FONTE_IA = 'Guia de bordo — Gerador Onan · 2 · Ligar · via IA na nuvem (Workers AI · llama-3.3-70b-instruct-fp8-fast)'
 PRONTA = "() => document.getElementById('dc-root') && document.getElementById('dc-root').children.length > 0"
 CONVERSA = '[aria-label="Conversa contínua por voz — sem tocar na tela"]'
+# Fase 5 (decisão 5): onde a tela escreve «IA na nuvem» (sem diferença de caixa: o aviso grande sai em maiúsculas): cada folha do DOM com o texto, se é a linha da fonte («Fonte: …»), o botão de uma resposta
+# (data-home=acao: «Ativar IA na nuvem») e o tamanho da letra — e o tamanho da letra do texto da resposta (a maior letra da mensagem), para a comparação «letra pequena»
+ONDE_IA = """() => { const m = [...document.querySelectorAll('[data-home=msg][data-papel=bot]')].pop();
+  return { texto: m ? Math.max(...[...m.querySelectorAll('*')].filter((e) => !e.children.length && (e.innerText || '').trim()).map((e) => parseFloat(getComputedStyle(e).fontSize))) : 0, bot: m ? m.innerText : '',
+    onde: [...document.querySelectorAll('body *')].filter((e) => !e.children.length && !/^(SCRIPT|STYLE|TEMPLATE|NOSCRIPT)$/.test(e.tagName) && e.getClientRects().length && /ia na nuvem/i.test(e.innerText || '')).map((e) => ({ t: e.innerText.trim().slice(0, 600), fonte: /^Fonte:/.test(e.innerText.trim()), acao: !!e.closest('[data-home=acao]'), px: parseFloat(getComputedStyle(e).fontSize) })) }; }"""
+# a marca da janela de conversa em emergência (capitao-app.js): encerrada no fim de cada conferência que a abre (a janela vale por aba)
+FECHA_JANELA = "() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }"
+VOZ = '[aria-label="Falar — a pergunta é transcrita e respondida em texto e voz"]'  # VOZ (web) e VOZ→TEXTO (app)
 # Microfone e voz de mentira para a CONVERSA: o reconhecedor "ouve" as frases de window.__falas (uma por vez) e a fala só
 # registra o texto em window.__faladas. Os eventos do núcleo de voz ficam em window.__voz.
 VOZ_FALSA = r"""(() => {
+  // o <head> das telas roda o capitao-brain.js DUAS vezes e a 2ª cópia assume o window.CapitaoBrain: com a máquina carregada ela chega depois de a tela estar pronta (~200 ms) e leva embora a fala de mentira
+  // posta na 1ª. O abre() espera as duas (window.__cerebros >= 2) antes de qualquer conferência mexer no B.speak.
+  let B_; window.__cerebros = 0;
+  Object.defineProperty(window, 'CapitaoBrain', { configurable: true, get() { return B_; }, set(v) { B_ = v; window.__cerebros++; } });
   window.__falas = []; window.__faladas = []; window.__voz = [];
   window.addEventListener('capitao-voz', (e) => window.__voz.push(e.detail));
   class SR {
@@ -45,7 +81,7 @@ VOZ_FALSA = r"""(() => {
 # Voz de verdade do cérebro (B.speak) sobre um speechSynthesis de mentira: guarda cada fala (texto e velocidade) em
 # window.__sint e chama onstart → onboundary (palavra) → onend.
 SINTESE_FALSA = r"""(() => {
-  window.__sint = []; window.__estRosto = []; window.__somRosto = [];
+  window.__sint = [];
   const ss = window.speechSynthesis;
   ss.cancel = () => {}; ss.pause = () => {}; ss.resume = () => {};
   ss.speak = (u) => {
@@ -58,24 +94,418 @@ SINTESE_FALSA = r"""(() => {
   };
 })()"""
 
-# O rosto do núcleo (CapitaoRosto.criar) é espiado desde que o capitao-rosto.js chega — o capitao-voz.js já o cria escondido,
-# com o app ocioso, antes da 1ª conversa: opções em window.__rostoOp, estados em window.__estRosto e o som em
-# window.__somRosto.
-ESPIA_ROSTO = r"""(() => {
-  window.__estRosto = []; window.__somRosto = [];
-  let R;
-  Object.defineProperty(window, 'CapitaoRosto', { configurable: true, get() { return R; }, set(v) {
-    R = v; if (!v || v.__espiado) return; v.__espiado = true;
-    const criar = v.criar;
-    v.criar = (tela, op) => {
-      const r = criar(tela, op), est = r.estado, som = r.som;
-      window.__rostoOp = op;
-      r.estado = (n) => { window.__estRosto.push(n); return est(n); };
-      r.som = (x) => { window.__somRosto.push(!!x); return som(x); };
-      return r;
-    };
-  } });
+# O núcleo de anéis (Fase 5, F27: capitao-voz.js, canvas) é espiado a cada evento 'capitao-voz', DEPOIS de o núcleo tratar o evento
+# (microtarefa): o estado dele (CapitaoVoz.nucleo().estado()) e o texto do HUD da direita ficam em window.__nucleo.
+ESPIA_NUCLEO = r"""(() => {
+  window.__nucleo = [];
+  window.addEventListener('capitao-voz', (e) => {
+    const d = e.detail || {};
+    Promise.resolve().then(() => {
+      try {
+        const V = window.CapitaoVoz, n = V && V.nucleo ? V.nucleo().estado() : null, h = document.querySelector('.cpz .cpz-tr');
+        if (n) window.__nucleo.push({ ev: d.estado, texto: d.texto || '', evAlerta: d.alerta, estado: n.estado, som: n.som, alerta: n.alerta, ligado: n.ligado, hud: h ? h.innerText : '' });
+      } catch (x) {}
+    });
+  });
 })()"""
+
+# O canvas pintado de verdade: quadro(t) fixa o quadro do instante t e a amostra lê os pixels da caixa do palco — no anel graduado
+# (0,90 a 0,98 do raio: só as marcas, na cor do estado) e no centro (o ∞ da marca, pixels claros e opacos sobre o disco escuro).
+PINTURA_NUCLEO = r"""async () => {
+  const ev = (d) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: d })), N = () => window.CapitaoVoz.nucleo(), out = {};
+  const tela = () => document.querySelector('.cpz canvas.cpz-tela'), espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const amostra = () => {
+    const n = N().estado(), g = tela().getContext('2d'), k = n.razao, R = n.raio * k, x0 = Math.round(n.x * k), y0 = Math.round(n.y * k), L = Math.ceil(R) + 2;
+    const im = g.getImageData(x0 - L, y0 - L, 2 * L, 2 * L).data;
+    let anel = 0, r = 0, v = 0, b = 0, centro = 0;
+    for (let y = 0; y < 2 * L; y++) for (let x = 0; x < 2 * L; x++) {
+      const dx = x - L, dy = y - L, dist = Math.sqrt(dx * dx + dy * dy) / R, i = (y * 2 * L + x) * 4;
+      if (dist > 0.9 && dist < 0.98 && im[i + 3] > 150) { anel++; r += im[i]; v += im[i + 1]; b += im[i + 2]; }
+      if (Math.abs(dx) < 0.25 * R && Math.abs(dy) < 0.1 * R && im[i + 3] > 240 && im[i] + im[i + 1] + im[i + 2] > 300) centro++;
+    }
+    return { anel: anel, cor: anel ? [Math.round(r / anel), Math.round(v / anel), Math.round(b / anel)] : null, centro: centro };
+  };
+  ev({ estado: 'ouvindo', texto: '', alerta: false });
+  await espera(450);
+  out.vivo = N().estado();                                   // camada ligada: o laço (um requestAnimationFrame) roda e pinta
+  N().quadro(1.6); out.ouvindo = amostra(); const u1 = tela().toDataURL();
+  N().quadro(1.6); out.igual = tela().toDataURL() === u1;    // o mesmo instante dá o mesmo quadro
+  N().quadro(2.9); out.muda = tela().toDataURL() !== u1;     // outro instante, outro quadro (os anéis giram)
+  const q0 = N().estado().quadros; await espera(250); out.parado = N().estado().quadros === q0 && !N().estado().laco;   // quadro(t) deixa o núcleo parado
+  ev({ estado: 'pensando', texto: 'x', segura: true }); N().quadro(1.6); out.pensando = amostra();
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: false, alerta: false }); N().quadro(0.2); out.semSom = N().estado().energia;
+  ev({ estado: 'pulso' }); out.pulsoSemSom = N().estado().energia;
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: true, alerta: false }); N().quadro(0.2); out.comSom = N().estado().energia; out.falando = amostra();
+  ev({ estado: 'pulso' }); out.pulsoComSom = N().estado().energia;
+  ev({ estado: 'livre' }); out.livre = N().estado().energia;
+  window.CapitaoVoz.esconde();
+  const q1 = N().estado().quadros; await espera(350);
+  out.escondida = { on: !!document.querySelector('.cpz.on'), laco: N().estado().laco, quadros: N().estado().quadros - q1, inerte: document.querySelector('.cpz').inert === true };
+  out.rosto = !!window.CapitaoVoz.rosto;   // a API antiga saiu com o rosto
+  return out;
+}"""
+
+# O HUD vivo: com a camada ligada lê o quadro do instante (CapitaoAgora: a fonte e os formatadores das telas) a cada 1 s, em nós Text; com
+# `alerta` no evento ou com a janela de emergência valendo, só a instrução do plotter; com simulacao:false e sem leitura, o texto do modo real.
+HUD_NUCLEO = r"""async () => {
+  const ev = (d) => window.dispatchEvent(new CustomEvent('capitao-voz', { detail: d })), out = {}, espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const A = window.CapitaoAgora, f = A.fmt.campo, D = window.CapitaoDados, caixa = () => document.querySelector('.cpz .cpz-tr'), hud = () => caixa().innerText;
+  const esperado = () => { const I = A.instante(); return [I.hora, A.fmt.coord(I.q.lat, I.q.lon), 'SOG ' + f(I.q, 'sog_nos') + ' NÓS', 'RPM ' + f(I.q, 'motor_bb_rpm') + ' · ' + f(I.q, 'motor_be_rpm'), 'DIESEL ' + f(I.q, 'diesel_litros') + ' L (' + A.fmt.nb(I.calc.diesel_pct, 1) + ' %)'].join('\n'); };
+  ev({ estado: 'ouvindo', texto: '', alerta: false });
+  out.vivo = hud(); out.esperado = esperado();
+  out.sog = 'SOG ' + f(A.instante().q, 'sog_nos') + ' NÓS'; out.diesel = out.esperado.split('\n')[4];
+  out.pagina = document.getElementById('dc-root').innerText.replace(/\s+/g, ' ');
+  // o tique: outro instante do replay → o HUD o mostra em até 1 s, sem evento de voz, trocando só o .data dos MESMOS nós
+  const nos = [...caixa().childNodes]; let filhos = 0, dados = 0;
+  const conta = (l) => l.forEach((m) => { if (m.type === 'childList') filhos++; else dados++; });
+  const mo = new MutationObserver(conta); mo.observe(caixa(), { childList: true, subtree: true, characterData: true });
+  window.CapitaoReplay.fixar('75');
+  await espera(1300);
+  out.depois = hud(); out.esperado2 = esperado(); conta(mo.takeRecords()); mo.disconnect();
+  out.mesmosNos = caixa().childNodes.length === nos.length && [...caixa().childNodes].every((n, i) => n === nos[i]); out.filhos = filhos; out.dados = dados;
+  window.CapitaoReplay.fixar('60');
+  await espera(50);
+  // alerta no evento (a resposta falada é de emergência), sem a janela
+  ev({ estado: 'falando', texto: 'Emergência — abra o SOS.', som: true, alerta: true }); out.alerta = hud();
+  ev({ estado: 'falando', texto: '2. Colete em todos.', som: true, alerta: false }); out.alertaSegue = hud();   // as outras linhas da MESMA fala
+  ev({ estado: 'livre' }); ev({ estado: 'ouvindo', texto: '', alerta: false }); out.volta = hud(); out.esperado3 = esperado();
+  // a janela de conversa em emergência valendo (CapitaoEmergencia), com o evento sem alerta
+  window.CapitaoEmergencia.marca(); out.janela = hud();
+  ev({ estado: 'falando', texto: 'Gerador ligado.', som: true, alerta: false }); out.janelaFala = hud();
+  window.CapitaoEmergencia.zera(); out.semJanela = hud();
+  // modo real (simulacao:false) e sem leitura nenhuma: o texto do modo real continua
+  const q = D.snapshot.quadro; D.simulacao = false; delete D.snapshot.quadro;
+  ev({ estado: 'ouvindo', texto: '', alerta: false }); out.real = hud();
+  D.simulacao = true; D.snapshot.quadro = q;
+  out.plotter = D.protocolos.hud;
+  window.CapitaoVoz.esconde();
+  return out;
+}"""
+
+
+# ——— Fase 7 (PROMPT «Testes novos», chat_ia.py): as travas do chat e da CONVERSA, ponta a ponta, nas sessões lucas e demo ———
+TELAS = (('H2-Home-Mobile', True, '#pergunta-m'), ('Main', False, '#pergunta'))
+USUARIOS = ('lucas', 'demo')
+PARTES_F7 = ('coord', 'emerg', 'filtro', 'varre')
+TERMOS = confere.carrega_termos()   # as regex do PROMPT §3 (testes/proibidos.json): ROTULOS, AUTENTICIDADE, DINHEIRO, PESSOAIS, LOCAL_SEGURANCA
+CAB = {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, X-Capitao-Chave', 'Access-Control-Allow-Methods': 'POST, OPTIONS'}
+# o GPS do APARELHO de teste (ctx.set_geolocation: só o SOS o lê), longe da rota do replay; os pedaços dele em graus-minutos e em decimal não podem aparecer em nenhum pedido ao Worker
+GPS = {'latitude': -27.4321, 'longitude': -48.3456, 'accuracy': 12}
+GPS_TELA = r"27°25,9\d'S 048°20,7\d'W"
+GPS_PEDACOS = ('27°25', '048°20', '27.432', '48.345', '27,432', '48,345')
+AVISO_COORD = '(coordenadas só na tela do app)'   # o que o semCoord (cérebro e cliente da IA) põe no lugar da coordenada
+Q_COORD = "anotei 27°25,93'S 048°20,74'W e -27.4321 / -48.3456 no papel, como se faz um nó de escota?"   # a pergunta vai à IA como foi digitada: só o cliente a limpa
+# posição, rumo, velocidade, distância, ETA e número de pessoas: o que a conversa em emergência nunca traz (trava 10), na fala, no HUD e na tela
+R_NAVEG = re.compile(r'\d\s*(?:nós|mn|kt|milhas?)(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:rumo|proa|COG|HDG|SOG)(?![A-Za-zÀ-ÿ])[^\n]{0,12}\d', re.I)
+R_FALHA_IA = re.compile(r'IA na nuvem|não está ativada|Ativar IA|chave', re.I)
+PERGUNTAS_IA = ('como se faz um nó lais de guia', 'como se faz um nó de escota', 'como se faz um nó volta do fiel', 'como se dá um nó de pescador', 'como se faz um nó catau')   # náutica geral sem rota: fallback, pedeIA true
+_RESP_IA = lambda t: {'texto': t + '\nFonte: conhecimento geral de náutica', 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}
+# as cinco respostas do Worker simulado que a tela nunca fala nem mostra (PROMPT Fase 7): o 502 do filtro de saída, a chave recusada, o preço, o telefone e o lugar da salvatagem
+FILTRADAS = (
+    ('502 {parou: rotulo}', 502, {'erro': 'resposta barrada pelo filtro de saída', 'parou': 'rotulo'}),
+    ('401', 401, {'erro': 'chave recusada'}),
+    ('o preço', 200, _RESP_IA('O dólar está cotado a 5,40.')),
+    ('o telefone', 200, _RESP_IA('Ligue para a marina: (47) 3367-1234.')),
+    ('o lugar da salvatagem', 200, _RESP_IA('Os coletes ficam no paiol de proa.')),
+)
+LITERAIS_IA = ('5,40', '3367', 'paiol', 'cotado', 'Ligue para')
+# a varredura falada: a leitura do instante, a pergunta sobre os dados (a frase padrão) e uma pergunta que vai à IA e volta com o rótulo (barrado)
+VARRE_Q = ('como está a telemetria', 'posição agora', 'como estão os motores', 'quantas horas tem o gerador', 'autonomia', 'quanto diesel tem', 'a que horas chegamos?', 'manutenção atrasada',
+           'esses dados são reais?', 'isso é uma demonstração?', 'como se faz um nó lais de guia')
+EMERG_Q = ('homem ao mar', 'qual a nossa posição?', 'quantas pessoas a bordo?', 'e agora?')
+# o overlay inteiro da CONVERSA (HUD da esquerda e da direita, legenda) a cada evento de voz, depois de o núcleo o tratar
+ESPIA_CPZ = r"""(() => {
+  window.__cpz = [];
+  window.addEventListener('capitao-voz', (e) => {
+    const d = e.detail || {};
+    Promise.resolve().then(() => { try { const c = document.querySelector('.cpz'); if (c) window.__cpz.push({ ev: d.estado, t: c.innerText }); } catch (x) {} });
+  });
+})()"""
+# a fala da CONVERSA: `real` = a voz de verdade do cérebro (sobre o speechSynthesis de mentira; cada bloco em __sint, com a marca da fala a que pertence); senão só o texto. __fins conta as falas que TERMINARAM.
+# Ouvida a frase, o teste a ENVIA (B.vozEnviar: o controle do overlay) em vez de esperar os 2,5 s de silêncio do ditado — a pausa é da passada de cima; aqui cada pergunta sai no evento, sem relógio
+PREPARA_FALA = r"""([qs, real]) => {
+  const B = window.CapitaoBrain, sp = B.speak;
+  try { window.CapitaoEmergencia.zera(); } catch (e) {}
+  window.__voz.length = 0; window.__nucleo.length = 0; window.__cpz.length = 0; window.__faladas.length = 0; window.__fins = 0;
+  qs.forEach((q) => window.__falas.push(q));
+  window.addEventListener('capitao-voz', (e) => { const d = e.detail || {}; if (d.estado === 'ouvindo' && d.texto) setTimeout(() => { try { window.CapitaoBrain.vozEnviar(); } catch (x) {} }, 0); });
+  B.speak = real
+    ? function (t, fim) { window.__faladas.push(t); window.__sint.push({ fala: window.__faladas.length - 1 }); return sp.call(B, t, function () { window.__fins++; if (fim) fim(); }); }
+    : (t, fim) => { window.__faladas.push(t); setTimeout(() => { window.__fins++; if (fim) fim(); }, 80); return true; };
+}"""
+COLHE_FALA = r"""() => {
+  const B = window.CapitaoBrain, o = { janela: !!window.CapitaoEmergencia.valendo(), faladas: window.__faladas.slice(), fins: window.__fins, sint: (window.__sint || []).slice(), nucleo: window.__nucleo.slice(), cpz: window.__cpz.slice(),
+    bots: [...document.querySelectorAll('[data-home=msg][data-papel=bot]')].map((m) => m.innerText), sim: window.CapitaoDados.simulacao, plotter: (window.CapitaoDados.protocolos || {}).hud };
+  try { o.sos = B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; } catch (e) { o.sos = ''; }
+  return o;
+}"""
+N_BOTS = "() => document.querySelectorAll('[data-home=msg][data-papel=bot]').length"
+# defeitos plantados (--mutantes-fase7): (nome, arquivo — None = a tela —, as trocas (o trecho, o que entra no lugar), a parte da Fase 7 que o acusa). O arquivo trocado é servido pelo page.route: nada muda no disco
+MUTANTES_F7 = (
+    ('o cliente da IA não tira a coordenada do que envia', 'capitao-ia.js', (("function semCoord(s) { return String(s == null ? '' : s).replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }", "function semCoord(s) { return String(s == null ? '' : s); }"),), 'coord'),
+    ('o cliente da IA sem o filtro de saída', 'capitao-ia.js', (('if (sim) { if (filtroSaida(texto) || filtroSaida(fonte)) return null;', 'if (sim) { if (false) return null;'),), 'filtro'),
+    ('o 502 do filtro de saída vira motivo na linha da fonte', 'capitao-ia.js', (("ULTIMA.falha = barrada(e) ? '' : motivo(e);", 'ULTIMA.falha = motivo(e);'),), 'filtro'),
+    ('a tela fala o motivo da falha da IA na simulação', None, (('if (nota && this.state.conversa && !quieta) fin.extraFala', 'if (nota && this.state.conversa) fin.extraFala'),), 'filtro'),
+    ('a tela ignora a janela de conversa em emergência', None, (('let emg = false; try { emg = !!(EM && EM.valendo()); }', 'let emg = false; try { emg = false; }'),), 'emerg'),
+    ('o HUD do núcleo mostra o quadro na emergência', 'capitao-voz.js', (("if (emAlerta()) return [plotter(), '', '', '', ''];", "if (false) return [plotter(), '', '', '', ''];"),), 'emerg'),
+    ('o SOS falado só na 1ª linha', 'capitao-brain.js', (('var FALA_INTEIRA = { sos: 1, oleo: 1, epirb: 1, seafire: 1 };', 'var FALA_INTEIRA = { oleo: 1, epirb: 1, seafire: 1 };'),), 'emerg'),
+    ('a resposta sobre os dados diz «fictícios» (a trava da voz segura a fala: só a resposta escrita acusa)', 'capitao-brain.js', (("var SOBRE_DADOS = 'Esta é a embarcação de apresentação", "var SOBRE_DADOS = 'Os dados são fictícios. Esta é a embarcação de apresentação"),), 'varre'),
+    ('a resposta sobre os dados diz «fictícios» com a trava da voz desligada (a fala e a resposta escrita acusam)', 'capitao-brain.js', (("var SOBRE_DADOS = 'Esta é a embarcação de apresentação", "var SOBRE_DADOS = 'Os dados são fictícios. Esta é a embarcação de apresentação"),
+     ("var s = String(t == null ? '' : t), k, n, orig = s;\n    if (!sim()) return s;", "var s = String(t == null ? '' : t), k, n, orig = s;\n    return s;")), 'varre'),
+    ('o HUD do núcleo com o rótulo', 'capitao-voz.js', (("'SOG ' + c('sog_nos', ' NÓS'),", "'DEMO SOG ' + c('sog_nos', ' NÓS'),"),), 'varre'),
+)
+
+
+def folhas(v):
+    """Todo texto de um pedido ao Worker (pergunta, trechos, contexto, ficha, histórico), um por folha."""
+    if isinstance(v, dict):
+        return [t for x in v.values() for t in folhas(x)]
+    if isinstance(v, (list, tuple)):
+        return [t for x in v for t in folhas(x)]
+    return [v] if isinstance(v, str) else []
+
+
+def com_coord(corpo):
+    """As folhas do pedido que trazem coordenada: a regex do §2.8 (graus-minutos e decimal) ou um pedaço do GPS do aparelho de teste."""
+    return [t[:80] for t in folhas(corpo) if confere.R_COORD.search(t) or any(p in t for p in GPS_PEDACOS)]
+
+
+def navegacao(t):
+    """O que a conversa em emergência nunca traz (trava 10): coordenada, nós, mn, rumo, ETA e número de pessoas."""
+    return [n for n, rx in (('coordenada', confere.R_COORD), ('quadro', confere.R_EMERG_PROTOCOLO), ('pessoas', confere.R_PESSOAS), ('nós/mn/rumo', R_NAVEG)) if rx.search(t or '')]
+
+
+def rotulos(t):
+    return [(n, TERMOS[n].search(t).group(0)) for n in ('ROTULOS', 'AUTENTICIDADE') if TERMOS[n].search(t or '')]
+
+
+def fase7(b, base, ok, tela, movel, campo, usuario, partes=PARTES_F7, trocas=()):
+    """As travas da Fase 7 numa tela de conversa (Main ou H2), numa sessão (lucas ou demo), com o cliente da IA de verdade e o Worker simulado no page.route.
+    `partes`: coord (o que vai ao Worker nunca leva coordenada, nos dois modos) · emerg (a conversa em emergência e o SOS falado inteiro, nos dois modos) · filtro (as cinco respostas barradas) ·
+    varre (nenhuma fala nem HUD com rótulo, em 2 instantes). `trocas` = [(arquivo, trecho, novo)]: o defeito plantado, servido no lugar do arquivo."""
+    rot = '%s [%s] · Fase 7: ' % (tela, usuario)
+    ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900}, user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel,
+                        service_workers='block', permissions=['geolocation'])
+    ctx.set_geolocation(GPS)
+    ctx.add_init_script(SESSAO.replace("u: 'lucas'", "u: '%s'" % usuario))
+    for s in (REPLAY_FIXO, VOZ_FALSA, ESPIA_NUCLEO, ESPIA_CPZ):
+        ctx.add_init_script(s)
+    pg = ctx.new_page()
+    erros = []
+    pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
+    # (a falha de rede de um recurso de fora — o Open-Meteo sem internet — não é erro de script: a passada de sempre, acima, é que a acusa)
+    pg.on('console', lambda m: erros.append(m.text[:200]) if m.type == 'error' and 'FAILED' in m.text and 'net::ERR_' not in m.text else None)
+    est = {'pedidos': [], 'fila': [], 'modo': 'ok', 'sim': True}
+
+    def rota(route):
+        req = route.request
+        if req.method == 'OPTIONS':
+            return route.fulfill(status=204, headers=CAB)
+        corpo = json.loads(req.post_data or '{}')
+        est['pedidos'].append(corpo)
+        if not corpo.get('ficha') and not corpo.get('trechos') and not corpo.get('contexto'):
+            return route.fulfill(status=422, content_type='application/json', headers=CAB, body='{"erro":"sem fontes","motivo":"sem_fontes"}')
+        if est['fila']:
+            st, j = est['fila'].pop(0)
+            return route.fulfill(status=st, content_type='application/json', headers=CAB, body=json.dumps(j))
+        return route.fulfill(status=200, content_type='application/json', headers=CAB, body=json.dumps(_RESP_IA('SEM DADOS — os trechos não respondem.' if est['modo'] == 'semdados' else TEXTO_IA)))
+    pg.route(URL_ARQ.rstrip('/') + '**', rota)
+
+    def arquivo(route):
+        # o capitao-dados.js com a simulação desligada (a passada com simulacao:false) e os arquivos do defeito plantado
+        nome = urllib.parse.urlparse(route.request.url).path.rsplit('/', 1)[-1]
+        corpo = open(os.path.join(RAIZ, nome), encoding='utf-8').read()
+        for arq, velho, novo in trocas:
+            if arq == nome:
+                corpo = corpo.replace(velho, novo)
+        if nome == 'capitao-dados.js' and not est['sim']:
+            corpo += '\nwindow.CapitaoDados.simulacao = false;\n'
+        return route.fulfill(status=200, content_type=('text/html' if nome.endswith('.html') else 'text/javascript') + '; charset=utf-8', body=corpo)
+    for nome in sorted({'capitao-dados.js'} | {arq for arq, _, _ in trocas}):
+        pg.route('**/' + nome + '*', arquivo)
+
+    def abre(chave=True):
+        pg.goto(base + 'README.md')
+        pg.evaluate("(c) => { if (c) localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); else localStorage.removeItem('capitao.ia.chave.v1'); }", chave)
+        pg.goto(base + tela + '.dc.html')
+        pg.wait_for_function(PRONTA, timeout=20000)
+        pg.wait_for_selector(campo, timeout=15000)
+        try:
+            pg.wait_for_function('() => window.__cerebros >= 2', timeout=8000)   # as duas cópias do cérebro (ver o VOZ_FALSA)
+        except Exception:
+            pass
+
+    def envia(q):
+        """Pergunta digitada: espera a RESPOSTA dela entrar na conversa (a local espera a IA) e devolve o texto dela e quantos pedidos saíram."""
+        p0, n0 = len(est['pedidos']), pg.evaluate(N_BOTS)
+        pg.fill(campo, q)
+        pg.press(campo, 'Enter')
+        try:
+            pg.wait_for_function("(n) => document.querySelectorAll('[data-home=msg][data-papel=bot]').length > n && !document.querySelector('[data-capitao-pensando]')", arg=n0, timeout=20000)
+        except Exception:
+            pass
+        bots = pg.evaluate("() => [...document.querySelectorAll('[data-home=msg][data-papel=bot]')].map((m) => m.innerText)")
+        return (bots[-1] if len(bots) > n0 else ''), len(est['pedidos']) - p0
+
+    def conversa(frases, real=False, inst=None):
+        """As frases ouvidas na CONVERSA, uma a uma (microfone de mentira): espera cada fala TERMINAR (a abertura e uma resposta por frase) e colhe as falas, os blocos da voz, o HUD, o overlay e a conversa escrita."""
+        abre()
+        if inst:
+            pg.evaluate('(t) => window.CapitaoReplay.fixar(t)', inst)
+        if real:
+            pg.evaluate(SINTESE_FALSA)
+        pg.evaluate(PREPARA_FALA, [list(frases), real])
+        p0 = len(est['pedidos'])
+        pg.click(CONVERSA)
+        try:
+            pg.wait_for_function('(n) => window.__fins >= n', arg=len(frases) + 1, timeout=60000)
+        except Exception:
+            pass
+        r = pg.evaluate(COLHE_FALA)
+        r['pedidos'] = est['pedidos'][p0:]
+        r['onde'] = pg.evaluate(ONDE_IA)['onde']
+        pg.keyboard.press('Escape')
+        pg.wait_for_timeout(150)
+        pg.evaluate(FECHA_JANELA)
+        return r
+
+    def blocos(r, i):
+        """Os blocos que a voz de verdade falou na fala `i` (entre a marca dela e a da seguinte)."""
+        out, dentro = [], False
+        for x in r['sint']:
+            if 'fala' in x:
+                dentro = x['fala'] == i
+            elif dentro:
+                out.append(x)
+        return out
+
+    def modo(sim):
+        est['sim'], est['modo'], est['fila'] = sim, 'ok', []
+        return 'simulacao:true' if sim else 'simulacao:false'
+
+    # 1 · O que vai ao Worker nunca leva coordenada (trava 14), nos dois modos: depois do SOS com o GPS do aparelho, da «posição agora» (coordenada na tela), do «roteiro do canal 16» e de uma pergunta
+    # digitada com coordenada — a pergunta, a ficha, a leitura de agora, os trechos e o histórico de cada pedido
+    for sim in ((True, False) if 'coord' in partes else ()):
+        m = modo(sim)
+        pg.goto(base + ('S2-SOS-Mobile' if movel else 'S1-SOS-Web') + '.dc.html')
+        try:
+            pg.wait_for_function("(rx) => new RegExp(rx).test(document.body.innerText)", arg=GPS_TELA, timeout=12000)
+        except Exception:
+            pass
+        gps = re.search(GPS_TELA, pg.evaluate('() => document.body.innerText'))
+        abre()
+        simp = pg.evaluate('() => window.CapitaoDados.simulacao')
+        pos, n_pos = envia('posição agora')
+        p0 = len(est['pedidos'])
+        envia('como se faz um nó lais de guia?')
+        envia(Q_COORD)
+        c16, n_c16 = envia('roteiro do canal 16')
+        jan = pg.evaluate('() => window.CapitaoEmergencia.valendo()')
+        pg.evaluate(FECHA_JANELA)   # (os 15 min da janela passam: a conversa segue e o que veio antes entra no histórico, menos a emergência)
+        envia('como se dá um nó de pescador?')
+        corpos = est['pedidos'][p0:]
+        ok(rot + m + ': preparo da conferência das coordenadas — o SOS mostra o GPS do aparelho, a «posição agora» é local' + (' e traz a coordenada na tela' if sim else '') + ', o «roteiro do canal 16» é local, manda ler o plotter e abre a janela',
+           simp is sim and gps and n_pos == 0 and (not sim or confere.R_COORD.search(pos)) and n_c16 == 0 and 'LEIA NO PLOTTER' in c16 and jan, json.dumps([simp, bool(gps), n_pos, pos[:90], n_c16, jan], ensure_ascii=False))
+        ruim = [(k, x) for k, c in enumerate(corpos) for x in com_coord(c)]
+        hist = folhas(corpos[2].get('historico')) if len(corpos) == 3 else []
+        ok(rot + m + ': nenhum dos 3 pedidos ao Worker (pergunta, ficha, leitura de agora, trechos e histórico) casa a regex de coordenada nem leva o GPS do aparelho — depois do SOS com o GPS, da «posição agora», do «roteiro do canal 16» e da pergunta digitada com coordenada',
+           len(corpos) == 3 and not ruim and all(c.get('ficha') and c.get('contexto') for c in corpos), json.dumps([len(corpos), ruim[:4]], ensure_ascii=False))
+        ok(rot + m + ': o filtro agiu (a conferência não é vazia): a pergunta com coordenada chega ao Worker com o aviso no lugar dela, e o histórico do último pedido traz a «posição agora» e a pergunta, as duas com o aviso' + ('' if not sim else ' (e a resposta da posição sem a coordenada)')
+           + ', e nada do roteiro do canal 16', len(corpos) == 3 and AVISO_COORD in corpos[1].get('pergunta', '') and 'nó de escota' in corpos[1].get('pergunta', '') and 'posição agora' in hist and sum(AVISO_COORD in t for t in hist) >= (2 if sim else 1)
+           and not any('MAYDAY' in t or 'canal 16' in t for t in hist) and (corpos[0].get('modo') == 'simulacao') is sim, json.dumps([c.get('pergunta') for c in corpos] + hist, ensure_ascii=False)[:300])
+
+    # 2 · A conversa em emergência na CONVERSA (trava 10), com a voz de verdade do cérebro, nos dois modos: «homem ao mar» falado inteiro (≥ 90 % do falável) e, depois, a posição, as pessoas e o «e agora?» —
+    # nenhum pedido ao Worker (a chave está ligada) e nenhuma fala, HUD nem resposta escrita com coordenada, nós, mn, rumo ou número de pessoas
+    for sim in ((True, False) if 'emerg' in partes else ()):
+        m = modo(sim)
+        r = conversa(EMERG_Q, real=True)
+        f, n = r['faladas'], len(EMERG_Q) + 1
+        ok(rot + m + ': conversa em emergência: «homem ao mar» e depois a posição, as pessoas e o «e agora?» — as 4 respostas faladas, a janela valendo e NENHUM pedido ao Worker (com a chave ligada)',
+           r['sim'] is sim and len(f) == n and r['fins'] >= n and r['janela'] and not r['pedidos'] and len(r['bots']) == len(EMERG_Q), json.dumps([r['sim'], len(f), r['fins'], r['janela'], len(r['pedidos']), len(r['bots'])]))
+        sos, voz = r['sos'], blocos(r, 1)
+        dito = ' '.join(x['t'] for x in voz)
+        ok(rot + m + ': «homem ao mar» falado em pelo menos 90 %% do falavel(falaCurta(…)) (%d de %d letras), a 1,15x' % (len(dito), len(sos)), len(sos) > 400 and len(dito) >= 0.9 * len(sos) and voz and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in voz), dito[:200])
+        ditos = [(k, x) for k in range(1, len(f)) for x in [f[k]] + [y['t'] for y in blocos(r, k)]]
+        ruim = [(k, navegacao(x), x[:80]) for k, x in ditos if navegacao(x)] + [('tela', navegacao(x), x[:80]) for x in r['bots'] if navegacao(x)]
+        ok(rot + m + ': conversa em emergência: nenhuma fala (o texto e os blocos da voz) nem resposta escrita com coordenada, nós, mn, rumo, ETA ou número de pessoas; a posição e as pessoas respondem «LEIA NO PLOTTER» e o «e agora?», o plotter ou o SOS',
+           len(f) == n and not ruim and all('LEIA NO PLOTTER' in f[k] for k in (2, 3)) and ('LEIA NO PLOTTER' in f[4] or 'SOS' in f[4]) and all(blocos(r, k) for k in range(1, n)), json.dumps([ruim[:3], f[2:]], ensure_ascii=False)[:300])
+        ip = next((k for k, x in enumerate(r['nucleo']) if x['ev'] == 'pensando'), len(r['nucleo']))
+        hud = [x['hud'].strip() for x in r['nucleo'][ip:] if x['ev'] in ('pensando', 'falando', 'ouvindo', 'pulso')]
+        ic = next((k for k, x in enumerate(r['cpz']) if x['ev'] == 'pensando'), len(r['cpz']))
+        tela_voz = [x['t'] for x in r['cpz'][ic:]]
+        ruim = [h for h in hud if h != r['plotter'] or re.search(r'\d', h)] + [(navegacao(t), t[-80:]) for t in tela_voz if navegacao(t)]
+        ok(rot + m + ': conversa em emergência: da emergência ouvida em diante o HUD é só «POSIÇÃO · LEIA NO PLOTTER» (%d leituras) e o overlay inteiro (HUD e legenda, %d leituras) não traz coordenada, nós, mn, rumo nem pessoas' % (len(hud), len(tela_voz)),
+           r['plotter'] == 'POSIÇÃO · LEIA NO PLOTTER' and len(hud) >= 8 and len(tela_voz) >= 8 and not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+        if sim:
+            ruim = [(o, rotulos(x)) for o, x in [('fala', x) for _, x in ditos] + [('hud', h) for h in hud] + [('overlay', x['t']) for x in r['cpz'] if x['ev'] in ('falando', 'pulso')] + [('tela', x) for x in r['bots']] if rotulos(x)]
+            ok(rot + m + ': conversa em emergência: nenhuma fala, HUD, legenda nem resposta escrita com ROTULOS ou AUTENTICIDADE', not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+
+    # 3 · O filtro de saída ponta a ponta (decisões 5 e 13, travas 9 e 17): o Worker simulado devolve o 502 {parou:'rotulo'}, o 401, o preço, o telefone e o lugar da salvatagem; o cliente de verdade os barra e a
+    # CONVERSA fala só a resposta local — nenhum «IA na nuvem», preço, telefone ou lugar na voz nem na conversa escrita (o motivo do 401 fica só na linha da fonte, com o botão)
+    if 'filtro' in partes:
+        m = modo(True)
+        abre()
+        locais = pg.evaluate("(qs) => qs.map((q) => { const B = window.CapitaoBrain, a = B.answer(q, { platform: 'web', commit: false }); return { k: a.key, pede: B.pedeIA(a, q, {}), fala: B.falaCurta(a) }; })", list(PERGUNTAS_IA))
+        est['fila'] = [(st, j) for _, st, j in FILTRADAS]
+        r = conversa(PERGUNTAS_IA)
+        f, n = r['faladas'], len(PERGUNTAS_IA) + 1
+        ok(rot + 'filtro de saída: as 5 perguntas de náutica geral vão à IA (fallback, pedeIA true): 5 pedidos com a ficha e o modo «simulacao», e o Worker simulado devolve o 502 {parou: rotulo}, o 401, o preço, o telefone e o lugar',
+           all(x['k'] == 'fallback' and x['pede'] is True for x in locais) and len(r['pedidos']) == 5 and all(c.get('ficha') and c.get('modo') == 'simulacao' for c in r['pedidos']) and not est['fila'] and [c.get('pergunta') for c in r['pedidos']] == list(PERGUNTAS_IA),
+           json.dumps([[x['k'], x['pede']] for x in locais] + [len(r['pedidos']), len(est['fila'])]))
+        ruim = [(k, x[:90]) for k, x in enumerate(f) if R_FALHA_IA.search(x) or any(TERMOS[t].search(x) for t in ('DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA')) or any(s in x for s in LITERAIS_IA)]
+        ok(rot + 'filtro de saída: em __faladas, só a resposta local de cada pergunta — nenhum «IA na nuvem», preço, telefone ou lugar (%s)' % ', '.join(x[0] for x in FILTRADAS),
+           len(f) == n and r['fins'] >= n and f[1:] == [x['fala'] for x in locais] and all(x.strip() for x in f) and not ruim, json.dumps([ruim[:3], f[1:3]], ensure_ascii=False)[:300])
+        escrito = r['bots'] + [x['t'] for x in r['cpz']]
+        ruim = [x[-90:] for x in escrito if any(TERMOS[t].search(x) for t in ('DINHEIRO', 'PESSOAIS', 'LOCAL_SEGURANCA')) or any(s in x for s in LITERAIS_IA) or TEXTO_IA in x]
+        fontes = [x for x in r['onde'] if x['fonte']]
+        ok(rot + 'filtro de saída: na conversa escrita e na legenda, as 5 respostas locais, sem preço, telefone nem lugar; «IA na nuvem» só na linha da fonte da resposta do 401 (o motivo, uma vez) e no botão «Ativar IA na nuvem» — o 502 e as 3 barradas não deixam nota',
+           len(r['bots']) == 5 and not ruim and len(fontes) == 1 and 'recusou a chave' in fontes[0]['t'] and all(x['fonte'] or x['acao'] for x in r['onde']) and any(x['acao'] for x in r['onde']), json.dumps([ruim[:3], r['onde']], ensure_ascii=False)[:300])
+
+    # 4 · Nenhuma fala nem HUD com ROTULOS ou AUTENTICIDADE (decisões 3 e 5), em 2 instantes do replay com os valores mudando: a leitura do instante, a pergunta sobre os dados e a resposta da IA que volta com
+    # o rótulo «SEM DADOS» (barrada: fala a local)
+    if 'varre' in partes:
+        modo(True)
+        est['modo'] = 'semdados'
+        v = {t: conversa(VARRE_Q, inst=t) for t in ('60', '105')}
+        est['modo'] = 'ok'
+        n = len(VARRE_Q) + 1
+        lidos = lambda r: [('fala', x) for x in r['faladas']] + [('hud', x['hud']) for x in r['nucleo']] + [('overlay', x['t']) for x in r['cpz'] if x['ev'] in ('falando', 'pulso')]
+        ruim = [(t, o, rotulos(x), x[-60:]) for t, r in v.items() for o, x in lidos(r) if rotulos(x)]
+        ok(rot + 'varredura falada (%d perguntas, em 12:01:00 e 12:01:45): nenhuma fala, HUD nem legenda com ROTULOS ou AUTENTICIDADE; a IA que devolve «SEM DADOS» é barrada (1 pedido por passada, fala a resposta local)' % len(VARRE_Q),
+           all(len(r['faladas']) == n and r['fins'] >= n and len(r['pedidos']) == 1 and all(x.strip() for x in r['faladas']) and len(r['nucleo']) >= n for r in v.values()) and not ruim,
+           json.dumps([[len(r['faladas']), r['fins'], len(r['pedidos'])] for r in v.values()] + ruim[:3], ensure_ascii=False)[:300])
+        ruim = [(t, rotulos(x), x[-60:]) for t, r in v.items() for x in r['bots'] if rotulos(x)]
+        ok(rot + 'varredura falada: a conversa escrita das duas passadas (%d respostas em cada) também sem ROTULOS nem AUTENTICIDADE' % len(VARRE_Q), all(len(r['bots']) == len(VARRE_Q) for r in v.values()) and not ruim, json.dumps(ruim[:3], ensure_ascii=False)[:300])
+        a, c = v['60'], v['105']
+        mudou = [k for k in range(1, min(len(a['faladas']), len(c['faladas']))) if a['faladas'][k] != c['faladas'][k]]
+        huds = [sorted({x['hud'] for x in r['nucleo'] if re.match(r'\d\d:\d\d:\d\d\n', x['hud'])}) for r in (a, c)]
+        ok(rot + 'varredura falada em 2 instantes, com os valores mudando: a hora de cada passada na fala (12:01:00 e 12:01:45), pelo menos 5 falas diferentes entre elas e o HUD com outra leitura',
+           '12:01:00' in a['faladas'][1] and '12:01:45' in c['faladas'][1] and len(mudou) >= 5 and huds[0] and huds[1] and not set(huds[0]) & set(huds[1]) and all(h.startswith('12:01:00') for h in huds[0]) and all(h.startswith('12:01:45') for h in huds[1]),
+           json.dumps([mudou, a['faladas'][1][:70], c['faladas'][1][:70], huds[0][:1], huds[1][:1]], ensure_ascii=False)[:300])
+    # a sessão da passada (lucas, o proprietário; demo, o convidado da decisão k), lida na tela de conversa em que a última parte terminou
+    quem = pg.evaluate("() => { const A = window.CapitaoAuth, u = A && A.usuario && A.usuario(); return u ? { id: u.id, convidado: u.convidado, logado: !!A.logado() } : null; }")
+    ok(rot + 'a passada rodou na sessão «%s» (%s), na tela de conversa' % (usuario, 'convidado' if usuario == 'demo' else 'proprietário'), bool(quem) and quem['id'] == usuario and quem['convidado'] is (usuario == 'demo') and quem['logado'] and (tela + '.dc.html') in pg.url, json.dumps([quem, pg.url.replace(base, '/')]))
+    ok(rot + 'sem erro de script (%s)' % ', '.join(partes), not erros, '; '.join(erros))
+    ctx.close()
+
+
+def mutantes_fase7(b, base, ok):
+    """Defeitos plantados da Fase 7: cada um é servido no lugar do arquivo (nada muda no disco) e tem de ser acusado por uma conferência da parte dele. `MUT_FILTRO=texto` refaz só os de nome com o texto."""
+    filtro = os.environ.get('MUT_FILTRO', '')
+    for nome, arq, pares, parte in MUTANTES_F7:
+        if filtro and filtro not in nome:
+            continue
+        for tela, movel, campo in (TELAS if arq is None else TELAS[1:]):   # o arquivo comum, na Main; a lógica da tela, nas duas
+            alvo = arq or tela + '.dc.html'
+            fonte = open(os.path.join(RAIZ, alvo), encoding='utf-8').read()
+            falta = [velho[:80] for velho, _ in pares if velho not in fonte]
+            if falta:
+                ok('mutante «%s» em %s: o trecho a trocar existe' % (nome, alvo), False, falta)
+                continue
+            r = []
+            fase7(b, base, lambda n, c, e='': r.append((n, bool(c), str(e)[:200])), tela, movel, campo, 'lucas', partes=(parte,), trocas=tuple((alvo, velho, novo) for velho, novo in pares))
+            acusam = [n for n, c, _ in r if not c and 'sem erro de script' not in n]
+            ok('mutante «%s» em %s (%s): acusado por %d de %d conferências' % (nome, alvo, parte, len(acusam), len(r)), acusam, ' | '.join(n[len(tela) + 20:100] for n in acusam) or 'VIVO')
 
 
 def versoes():
@@ -107,7 +537,12 @@ def main():
     class Quieto(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):
             pass
-    srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Quieto, directory=RAIZ))
+    class Servidor(http.server.ThreadingHTTPServer):
+        def handle_error(self, request, client_address):
+            # o navegador que troca de página (ou fecha o contexto) no meio de um arquivo corta a conexão: é o servidor de teste escrevendo num cano fechado, não uma falha — sem o rastro no meio do resultado
+            if not isinstance(sys.exc_info()[1], (BrokenPipeError, ConnectionResetError)):
+                super().handle_error(request, client_address)
+    srv = Servidor(('127.0.0.1', 0), functools.partial(Quieto, directory=RAIZ))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     base = 'http://127.0.0.1:%d/' % srv.server_address[1]
     res = []
@@ -120,15 +555,19 @@ def main():
     vs = versoes()
     ok('mesma versão em auth, cérebro, cliente da IA (as duas cópias), sw.js e README (' + VERSAO + ')', len(set(vs.values())) == 1, vs)
 
+    # --so-fase7 [Tela…] [lucas|demo] [coord|emerg|filtro|varre]: só as conferências da Fase 7; --mutantes-fase7: só os defeitos plantados delas
+    so7 = '--so-fase7' in sys.argv or '--mutantes-fase7' in sys.argv
+    pedido = [x for x in sys.argv[1:] if not x.startswith('--')]
     try:
         with sync_playwright() as p:
             b = p.chromium.launch(channel='msedge')
-            for tela, movel, campo in (('H2-Home-Mobile', True, '#pergunta-m'), ('Main', False, '#pergunta')):
+            for tela, movel, campo in (() if so7 else TELAS):
                 ctx = b.new_context(viewport={'width': 390, 'height': 844} if movel else {'width': 1440, 'height': 900},
                                     user_agent=MOBILE_UA if movel else None, is_mobile=movel, has_touch=movel, service_workers='block')
                 ctx.add_init_script(SESSAO)
+                ctx.add_init_script(REPLAY_FIXO)
                 ctx.add_init_script(VOZ_FALSA)
-                ctx.add_init_script(ESPIA_ROSTO)
+                ctx.add_init_script(ESPIA_NUCLEO)
                 pg = ctx.new_page()
                 erros = []
                 pg.on('pageerror', lambda e: erros.append(str(e)[:200]))
@@ -149,7 +588,7 @@ def main():
                     if estado['modo'] == 'erro':
                         return route.fulfill(status=503, content_type='application/json', headers=cab, body='{"erro":"cota grátis diária da IA esgotada"}')
                     texto = ('SEM DADOS — os trechos não respondem.\nFonte: nenhuma — a ficha, os trechos e a leitura enviados pelo app não respondem a pergunta'
-                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo (DEMO) — Gerador Onan · 2 · Ligar')
+                             if estado['modo'] == 'semdados' else TEXTO_IA + '\nFonte: Guia de bordo — Gerador Onan · 2 · Ligar')  # sem "(DEMO)" desde o C2
                     return route.fulfill(status=200, content_type='application/json', headers=cab,
                                          body=json.dumps({'texto': texto, 'provedor': 'Workers AI', 'modelo': '@cf/meta/llama-3.3-70b-instruct-fp8-fast', 'parou': 'fim'}))
                 pg.route(URL_ARQ.rstrip('/') + '**', rota)
@@ -162,6 +601,13 @@ def main():
                         pass
                     pg.wait_for_timeout(600)
 
+                def espera_pedido(antes, prazo=8.0):
+                    # espera o PEDIDO chegar ao Worker simulado (não o relógio): a tela adia a pergunta em ~650 ms (setTimeout do ask) e o «Fonte:» da proposta do relato já está na tela, então
+                    # espera_resposta() sozinho sairia antes do pedido (corrida: reprovava ~50% das vezes). Sem pedido no prazo, segue (a conferência que vem depois acusa).
+                    t0 = time.time()
+                    while len(estado['pedidos']) <= antes and time.time() - t0 < prazo:
+                        pg.wait_for_timeout(50)
+
                 def prepara(chave):
                     pg.goto(base + 'README.md')
                     pg.evaluate("(c) => { if (c) localStorage.setItem('capitao.ia.chave.v1', 'chave-de-teste'); else localStorage.removeItem('capitao.ia.chave.v1'); }", chave)
@@ -172,6 +618,10 @@ def main():
                     pg.goto(base + tela + '.dc.html')
                     pg.wait_for_function(PRONTA, timeout=20000)
                     pg.wait_for_selector(campo, timeout=15000)
+                    try:
+                        pg.wait_for_function('() => window.__cerebros >= 2', timeout=8000)   # as duas cópias do cérebro (ver o VOZ_FALSA)
+                    except Exception:
+                        pass
 
                 def envia(q):
                     antes = len(estado['pedidos'])
@@ -185,12 +635,12 @@ def main():
                     abre(chave, modo)
                     return envia(q)
 
-                def por_link(q, interno):
-                    """Pergunta por link #q=: de fora (sem referrer) ou de dentro do app (referrer da mesma origem)."""
+                def por_link(q, interno, extra=''):
+                    """Pergunta por link #q=: de fora (sem referrer) ou de dentro do app (referrer da mesma origem); `extra` vai depois da pergunta (&faq=<código>: o toque no FAQ)."""
                     estado['modo'] = 'ok'
                     prepara(True)
                     antes = len(estado['pedidos'])
-                    alvo = base + tela + '.dc.html#q=' + urllib.parse.quote(q)
+                    alvo = base + tela + '.dc.html#q=' + urllib.parse.quote(q) + extra
                     if interno:
                         pg.evaluate('(u) => { location.href = u; }', alvo)  # sai do README.md (mesma origem) → referrer interno
                         pg.wait_for_url(re.compile(re.escape(tela)), timeout=15000)
@@ -207,29 +657,149 @@ def main():
                 ped = estado['pedidos'][-1] if estado['pedidos'] else {}
                 f = ped.get('ficha', '')
                 ok(tela + ': pedido leva a pergunta e trechos do guia do gerador', ped.get('pergunta') == 'como ligar o gerador?' and ped.get('trechos') and 'Gerador' in ped['trechos'][0].get('fonte', ''), json.dumps(ped, ensure_ascii=False)[:200])
-                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' in f and "26°59" not in f and ped.get('historico') == [], len(f))
+                # 'DEMO' not in f: desde o C2 a ficha não leva o rótulo (Decisão 1.1.0, b); antes exigia 'DEMO' in f
+                ok(tela + ': trecho do guia leva a ficha COMPLETA (a resumida tirava o dado pedido), sem coordenadas nem o rótulo DEMO, e o histórico vazio', '## Sobre o app' in f and '## Telemetria' in f and '## Manutenção' in f and '## Ficha resumida' not in f and 'DEMO' not in f and not confere.R_COORD.search(f) and ped.get('historico') == [], len(f))
                 t, n, _ = digita('quantas horas tem o gerador')
                 ok(tela + ': resposta pronta (não base) não chama a IA', n == 0 and TEXTO_IA not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('oi')
                 ok(tela + ': só um "oi" não chama a IA (saudação pronta)', n == 0 and 'Capitão IA online' in t, 'pedidos=%d' % n)
                 t, n, _ = digita('Oque você faz?')
                 ok(tela + ': "Oque você faz?" chama a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?')
+                # Fase 3 (P3E, F10): o FAQ dos equipamentos responde no chat o que nenhuma resposta pronta nem trecho do guia responde, com o código do item e a fonte. O item de segurança (CK-03)
+                # fica no aparelho (nunca à IA); o item comum (EL-08) vai à IA como o trecho do guia e, sem a chave, mostra o item
+                def faq_pronto():
+                    pg.evaluate("() => window.CapitaoBrain.carregaFaq()")
+                abre(True, 'ok'); faq_pronto()
+                t, n, _ = envia('boletim da Marinha antes de sair')
+                ok(tela + ': o item de segurança do FAQ (CK-03) responde no aparelho, com o código e a fonte, sem chamar a IA', n == 0 and 'FAQ dos equipamentos CK-03' in t and 'Antes de largar: um colete por pessoa' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                abre(True, 'ok'); faq_pronto()
+                t, n, _ = envia('sonda mostrando pouca profundidade')
+                ok(tela + ': o item comum do FAQ (EL-08) chama a IA 1 vez como o trecho do guia e mostra a resposta dela', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
+                abre(False, 'ok'); faq_pronto()
+                t, n, _ = envia('sonda mostrando pouca profundidade')
+                ok(tela + ': sem a CHAVE_APP o item do FAQ (EL-08) fica na tela, com o código e a fonte, e nada vai à rede', n == 0 and 'FAQ dos equipamentos EL-08' in t and 'Profundidade mínima de navegação' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                # Fase 3 (P3C), PROMPT Fase 7 «Mudanças nos testes»: o «calado» passou a ter dado (rota embarcacao, resposta local); o gatilho «sem resposta pronta → IA» é uma
+                # pergunta de náutica geral sem rota (cai em fallback, pedeIA true). Vale em todos os usos abaixo (SEM DADOS da IA, sem chave, ordem da resposta, CONVERSA e erro).
+                t, n, _ = digita('como se faz um nó lais de guia?')
                 fc = estado['pedidos'][-1].get('ficha', '') if estado['pedidos'] else ''
-                ok(tela + ': SEM DADOS local chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'Não encontrei esse dado' not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and "26°59" not in fc, 'pedidos=%d ficha=%d' % (n, len(fc)))
+                ok(tela + ': pergunta sem rota (fallback) chama a IA com a ficha COMPLETA e mostra a resposta dela', n == 1 and TEXTO_IA in t and FALLBACK_LOCAL not in t and '## Telemetria' in fc and '## Ficha resumida' not in fc and not confere.R_COORD.search(fc), 'pedidos=%d ficha=%d' % (n, len(fc)))
+                # Fase 4 (P4G): o 3º argumento do IA.perguntar é a leitura de agora (B.resumoAgora, o instante da resposta; antes era '': o pedido só levava a ficha): com o replay fixado em 60 s é o resumo de 12:01:00,
+                # sem coordenada, e o botão «O que verificar?» do relato manda a pergunta pronta à IA com ele (a tela escuta o link #capitao-relato-…, o cérebro o transforma na pergunta)
+                resumo = pg.evaluate('() => window.CapitaoBrain.resumoAgora()')
+                cx = estado['pedidos'][-1].get('contexto', '') if estado['pedidos'] else ''
+                ok(tela + ': o pedido à IA leva a leitura de agora (3º argumento = B.resumoAgora: SOG e hora 12:01:00, sem coordenadas, ≤ 300 letras)', cx == resumo and re.search(r'SOG \d+,\d nós', cx) and '12:01:00' in cx and not confere.R_COORD.search(cx) and len(cx) <= 300, cx[:120])
+                t, n, _ = digita('O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
+                antes = len(estado['pedidos'])
+                pg.locator('a:has-text("O que verificar?")').last.click()
+                espera_pedido(antes)
+                espera_resposta()
+                ped = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
+                ok(tela + ': o botão «O que verificar?» do relato vai à IA (1 pedido, a pergunta pronta com o relato, a leitura de agora) sem navegar nem gravar no diário', len(estado['pedidos']) == antes + 1 and ped.get('pergunta', '').startswith('O que verificar') and 'desligou sozinho' in ped.get('pergunta', '') and bool(ped.get('contexto'))
+                   and tela in pg.url and pg.evaluate("() => localStorage.getItem('capitao.diario.v1')") is None, ped.get('pergunta', '')[:80])
+                # Fase 4 (P4G, revisão final 4ª rodada, trava 10): a pessoa que some, não volta ou não se acha é emergência LOCAL: com a chave ligada e o replay fixado em 60 s, a pergunta (a que foi nadar, a que sai de caiaque, a que
+                # «não está aqui, estava na popa») não faz pedido nenhum ao Worker, abre com a instrução de segurança e não traz a situação de bordo (SOG, proa) que o fallback levava à IA
+                for q in ('ela foi nadar e não voltou', 'o Pedro saiu de caiaque e não voltou', 'meu filho não está aqui, estava na popa agora há pouco', 'quem foi de caiaque não volta', 'um de nós sumiu', 'cadê o Pedro? ninguém vê',
+              'o menino está nadando longe demais', 'meu filho está longe do barco', 'a Letícia ficou para trás na água', 'meu filho estava na popa e agora não está'):   # (os 3 da 5ª rodada, achado 7; os 4 últimos: 6ª rodada, achados 1 e 7)
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    ok(tela + ': a pessoa perdida «%s» é emergência local: nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
+                    pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")   # (a janela vale por aba: as conferências de baixo partem sem ela)
+                # Fechamento do grupo home (P4G, 2ª instância; pendentes 1 e 7): a pessoa de um substantivo que NENHUMA lista conhece (o dono do barco, o técnico, as moças) ou escrita errada (sumio) ou vista na água (boiando) é emergência LOCAL pela
+                # ESTRUTURA do cérebro: nenhum pedido ao Worker, a instrução de segurança, a janela marcada — e a pergunta de dado DEPOIS da água (o pendente 8) é a instrução do plotter, sem SOG, proa nem coordenada, sem pedido ao Worker
+                # (2ª rodada de correção do fechamento: o sujeito SEM substantivo («os nossos», «dois»), a cabeça de 2 letras («minha vó», «o DJ»), o nome sem artigo («Tuca está boiando»), a queda sem destino («o grumete caiu») e o que a onda faz («a onda levou o Pedro»))
+                for q in ('o dono do barco sumiu', 'meu filho sumio', 'avistei uma pessoa boiando', 'o técnico sumiu', 'as moças sumiram', 'os nossos sumiram', 'dois sumiram', 'o DJ sumiu', 'minha vó sumiu', 'Tuca está boiando', 'o grumete caiu', 'a onda levou o Pedro',
+                          'o Marcão sumiu', 'o de óculos sumiu', 'vejo uma cabeça na água', 'foi nadar e não voltou', 'o Pedro foi mergulhar no sábado e não voltou',
+                          'man overboard', 'vi o de óculos cair no mar', 'o bote virou com dois dentro'):   # (3ª rodada de correção, parte final: o inglês, o objeto de «vi» que cai, o bote que vira com gente dentro; antes: o apelido em -cão, o «o de óculos», a água sem verbo de queda, o sujeito oculto, a água que o sábado não derruba)
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    ok(tela + ': a pessoa aberta «%s» é emergência local (a estrutura, não a lista): nenhum pedido ao Worker, a instrução de segurança, a janela de 15 min marcada e sem a situação de bordo' % q, n == 0 and 'Emergência' in t and TEXTO_IA not in t and 'Situação de bordo' not in t and jan, 'pedidos=%d · janela=%s · %s' % (n, jan, t[-200:]))
+                    t, n, _ = digita('qual a posição?')
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': depois de «%s», a pergunta «qual a posição?» é a instrução do plotter (a janela vale): nenhum pedido ao Worker, sem SOG, proa nem coordenada' % q, n == 0 and 'LEIA NO PLOTTER' in u and TEXTO_IA not in t and not re.search(r'\bSOG\b|\d+,\d+ nós|\bproa \d', u) and not confere.R_COORD.search(u), 'pedidos=%d · %s' % (n, u[-200:]))
+                    pg.evaluate("() => { window.CapitaoEmergencia.marca(Date.now() - 1000); sessionStorage.removeItem('capitao.emergenciaAte'); }")
+                # 6ª rodada: a REDE de pessoa — o que a rota sos não toma (o pronome, o nome com a escala, «na proa: falta o marinheiro», a contagem que não bate) nunca vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS na 1ª linha,
+                # sem a situação de bordo, sem a janela)
+                for q in ('ele sumiu', 'o Pedro não está mais no barco', 'na proa: falta o marinheiro', 'somos oito mas só contei sete', 'o imediato não aparece', 'o cliente sumiu', 'o fiscal sumiu',
+                          'não tem o Pedro a bordo', 'voltaram só três e eram quatro', 'perdemos os nossos', 'procurei valdemar no barco inteiro e nada', 'não tenho notícia do Pedro desde ontem',
+                          'sem o supervisor a bordo', 'my son is missing', 'procuramos meu amigo'):   # (parte final: o «sem» + o sujeito aberto + o lugar de bordo, o inglês que só avisa de um sumiço, o possessivo da busca)
+                    #   # (3ª rodada de correção: a ausência com a pessoa explícita, a contagem sem substantivo, o possuidor sem cabeça como objeto, o nome raro em minúscula)   # (os 2 últimos: a pessoa que também é item de dado — a ESPERA, 2ª rodada de correção do fechamento)
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    # (a resposta é a ÚLTIMA mensagem do Capitão: a Main mostra a leitura de bordo — SOG, proa — no cabeçalho, fora da conversa)
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': a pessoa da rede «%s» não vai à IA nem a uma rota de dado: o fallback seguro (a instrução do SOS, sem a situação de bordo nem coordenada, sem a janela)' % q, n == 0 and 'Se há pessoa no mar ou sumida' in u and TEXTO_IA not in t and 'Situação de bordo' not in u and not re.search(r'\bSOG\b|\d+,\d+ nós|\bproa \d', u) and not jan, 'pedidos=%d · janela=%s · %s' % (n, jan, u[-200:]))
+                # 3ª rodada de correção do fechamento: a ROTINA que a rede tomava por socorro (o dado que «cai», a cidade, a milha, o que o outro disse) tem a resposta da rota (local, sem o Worker) e nunca a instrução do SOS nem a janela
+                for q in ('a autonomia caiu depois do abastecimento?', 'falta diesel pra chegar em Itajaí?', 'quantas milhas faltam?', 'o Pedro disse que o motor não responde'):
+                    t, n, _ = digita(q)
+                    jan = pg.evaluate("() => window.CapitaoEmergencia.valendo()")
+                    u = pg.evaluate("() => { const m = document.querySelectorAll('[data-home=msg][data-papel=bot]'); return m.length ? m[m.length - 1].innerText : ''; }")
+                    ok(tela + ': a rotina «%s» tem a resposta da rota, no aparelho: nenhum pedido ao Worker, sem a instrução do SOS e sem a janela de 15 min' % q, n == 0 and 'Se há pessoa no mar ou sumida' not in u and 'Emergência' not in u and u.strip() != '' and not jan, 'pedidos=%d · janela=%s · %s' % (n, jan, u[-200:]))
+                # Fase 3 (P3C): as rotas novas respondem no aparelho, na tela, sem chamar a IA nem mostrar o texto dela (o calado do cadastro, o fora do barco e a pergunta sobre os dados)
+                # P3F (revisão): a pergunta pronta do botão «O que verificar?» do relato é a rota relatoVerifica: chama a IA (1 pedido), em vez de a resposta pronta do gerador que o relato já recebeu
+                t, n, _ = digita('O que verificar e qual pode ser a causa: O gerador desligou sozinho duas vezes hoje de manhã quando ligamos o ar condicionado')
+                ok(tela + ': O que verificar? (revisão P3F): a pergunta pronta do relato chama a IA (1 pedido, com o texto do relato) e mostra a resposta dela', n == 1 and TEXTO_IA in t and 'desligou sozinho duas vezes' in json.dumps(estado['pedidos'][-1], ensure_ascii=False), 'pedidos=%d' % n)
+                t, n, _ = digita('qual o calado do barco?')
+                cal = ('%.2f' % pg.evaluate('() => window.CapitaoDados.embarcacao.calado')).replace('.', ',')
+                ok(tela + ': o calado tem dado: a rota embarcacao responde na tela, no aparelho, sem chamar a IA', n == 0 and ('O calado do barco é %s m' % cal) in t and TEXTO_IA not in t and FALLBACK_LOCAL not in t, 'pedidos=%d calado=%s' % (n, cal))
+                t, n, _ = digita('qual o preço do dólar?')
+                ok(tela + ': dinheiro e fora do barco (foraBarco) respondem no aparelho, sem IA e sem preço', n == 0 and 'Isso fica fora do barco.' in t and 'Situação de bordo agora' in t and TEXTO_IA not in t and not re.search(r'R\$|US\$|\d,\d\d\s*(?:reais|dólares)', t), 'pedidos=%d' % n)
+                t, n, _ = digita('esses dados são reais?')
+                ok(tela + ': a pergunta sobre os dados (sobreDados) é local: a frase padrão e a situação de bordo, sem IA', n == 0 and 'Esta é a embarcação de apresentação da plataforma Capitão IA' in t and 'Situação de bordo agora' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                # Fase 3 (P3G, F12/F15/F20/F26): o alarme pedido, a agenda, a pendência fechada pelo registro e o que o app faz respondem NO APARELHO, na tela, sem chamar a IA — mesmo com a chave
+                # ligada. (Os botões Confirmar/Recusar/Desfazer das propostas são links #capitao-prop-…; a tela passa a escutá-los na Fase 4: aqui vale a frase digitada, «confirmar alarme», «sim», «desfazer».)
+                t, n, _ = digita('me avise se a pressão do óleo do BB cair abaixo de 2 bar')
+                ok(tela + ': o pedido de alarme (F12) é local: a proposta com a regra, o aviso só na tela e o Confirmar, sem IA e sem gravar', n == 0 and 'Posso criar este alarme: Pressão de óleo BB abaixo de 2,0 bar.' in t and 'Aviso só na tela do app' in t and TEXTO_IA not in t
+                   and pg.evaluate("() => localStorage.getItem('capitao.alarmes.v1')") is None, 'pedidos=%d' % n)
+                t, n, _ = envia('confirmar alarme')
+                guardado = pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]')")
+                ok(tela + ': «confirmar alarme» grava a regra (1 linha usr_1) no aparelho, sem IA', n == 0 and 'Alarme criado: #1 Pressão de óleo BB abaixo de 2,0 bar.' in t and len(guardado) == 1 and guardado[0]['id'] == 'usr_1', 'pedidos=%d guardado=%s' % (n, guardado))
+                t, n, _ = envia('meus alarmes')
+                ok(tela + ': «meus alarmes» lista a regra com a leitura de agora e a hora, sem IA', n == 0 and '• #1 Pressão de óleo BB abaixo de 2,0 bar — agora ' in t and re.search(r'1 alarme pedido às \d\d:\d\d:\d\d', t) is not None, 'pedidos=%d' % n)
+                t, n, _ = envia('apagar alarme #1')
+                guardado = pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.alarmes.v1') || '[]')")
+                ok(tela + ': «apagar alarme #1» é uma linha NOVA (acao apaga): o registro tem 2 linhas, sem IA', n == 0 and 'Alarme #1 apagado' in t and [x.get('acao') for x in guardado] == ['apaga', None], 'pedidos=%d guardado=%s' % (n, guardado))
+                t, n, _ = digita('agendar revisão do gerador para 15/11')
+                ok(tela + ': «agendar … para 15/11» (F15) é a proposta local da tarefa da equipe, com a data e o prazo, sem IA e sem gravar a tarefa', n == 0 and 'Posso agendar na equipe: Revisão do gerador — vence 15/11/' in t and TEXTO_IA not in t and pg.evaluate("() => localStorage.getItem('capitao.tarefas.v1')") is None, 'pedidos=%d' % n)
+                t, n, _ = envia('sim')
+                tarefas = pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]')")
+                ok(tela + ': o «sim» logo depois grava a tarefa (vence AAAA-11-15) e 1 linha no diário, sem IA', n == 0 and 'Tarefa agendada: Revisão do gerador' in t and len(tarefas) == 1 and tarefas[0]['vence'].endswith('-11-15'), 'pedidos=%d tarefas=%s' % (n, tarefas))
+                t, n, _ = envia('desfazer')
+                ok(tela + ': «desfazer» tira a tarefa (a linha do diário é anulada por uma linha nova), sem IA', n == 0 and 'Desfeito: a tarefa saiu da agenda da equipe' in t and pg.evaluate("() => JSON.parse(localStorage.getItem('capitao.tarefas.v1') || '[]').length") == 0, 'pedidos=%d' % n)
+                t, n, _ = digita('registre no diário que limpei o filtro de água salgada da climatização')
+                ok(tela + ': o registro que conclui um serviço (F20/F15) fecha a pendência que cita e propõe o Executado, no aparelho, sem IA', n == 0 and 'Pendência fechada: Climatização da cabine de proa com fluxo fraco' in t and 'Proposta: marcar “Limpeza do filtro de água salgada da climatização” como executada na agenda.' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                t, n, _ = envia('desfazer')
+                ok(tela + ': «desfazer» reabre a pendência com uma linha nova, sem IA', n == 0 and 'Desfeito: a pendência' in t and 'voltou a ficar aberta' in t, 'pedidos=%d' % n)
+                t, n, _ = digita('o que você pode fazer?')
+                ok(tela + ': «o que você pode fazer?» (F26) é a lista local do que o app faz — sem IA, mesmo com a chave ligada —, com a fonte e os exemplos', n == 0 and 'Sou o Capitão IA, o assistente de bordo. Posso:' in t and 'Fonte: funções do app Capitão IA' in t and TEXTO_IA not in t, 'pedidos=%d' % n)
+                pg.evaluate("() => ['capitao.alarmes.v1', 'capitao.tarefas.v1', 'capitao.tickets.v1', 'capitao.diario.v1', 'capitao.executado.v1'].forEach((k) => localStorage.removeItem(k))")   # (o que este bloco gravou no aparelho de teste; as conferências de baixo partem do aparelho limpo)
                 t, n, _ = digita('diagnóstico')
                 ok(tela + ': "diagnóstico" mostra versões e estado e testa a chave no servidor sem gastar a cota (pedido sem fontes → 422)', n == 1 and 'Diagnóstico do Capitão IA neste aparelho' in t and 'LIGADA neste navegador' in t and 'Chave aceita pelo servidor' in t and 'versões diferentes' not in t, 'pedidos=%d' % n)
                 t, n, _ = digita('diagnóstico', chave=False)
                 ok(tela + ': "diagnóstico" sem chave diz "DESLIGADA neste navegador (sem chave)" e não vai para a rede', n == 0 and 'DESLIGADA neste navegador (sem chave)' in t and 'Nenhuma chave guardada' in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?', modo='semdados')
-                ok(tela + ': "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and 'Não encontrei esse dado' not in t, 'pedidos=%d' % n)
+                # (decisões 3 e 5: na simulação o «SEM DADOS» da IA é rótulo — o filtro de saída do cliente o barra, com a falha vazia — e a tela fica com a resposta local, sem o rótulo e sem motivo; a troca
+                # do texto genérico pelo «SEM DADOS» da IA é do modo real e roda mais abaixo, na passada com simulacao:false)
+                t, n, _ = digita('como se faz um nó lais de guia?', modo='semdados')
+                ok(tela + ': simulação: o "SEM DADOS" da IA é barrado pelo filtro de saída: 1 pedido, a tela fica com a resposta local, sem o rótulo e sem motivo', n == 1 and FALLBACK_LOCAL in t and 'os trechos não respondem' not in t
+                   and re.search(r'\bSEM DADOS\b', t) is None and 'IA na nuvem fora' not in t and pg.evaluate("() => window.CapitaoIA.falha()") == '', 'pedidos=%d · %s' % (n, t[-200:]))
                 t, n, _ = digita('como ligar o gerador?', chave=False)
                 ok(tela + ': sem a CHAVE_APP no aparelho nada vai para a rede (fica o trecho local)', n == 0 and TEXTO_IA not in t and 'PARTIDA' in t, 'pedidos=%d' % n)
-                t, n, _ = digita('qual o calado do barco?', chave=False)
+                t, n, _ = digita('como se faz um nó lais de guia?', chave=False)
                 ok(tela + ': sem a CHAVE_APP, a fonte diz "IA na nuvem desligada neste aparelho" e oferece "Ativar IA na nuvem"', n == 0 and 'IA na nuvem desligada neste aparelho' in t and pg.query_selector('a[href="#ia=ativar"]') is not None, t[-300:])
-                ok(tela + ': sem a CHAVE_APP, aviso grande na tela "IA NA NUVEM NÃO ATIVADA NESTE APARELHO"', 'IA NA NUVEM NÃO ATIVADA NESTE APARELHO' in t, t[-300:])
+                # Fase 5 (decisão 5; PROMPT «Mudanças nos testes», linha 5): com a simulação (o capitao-dados.js como está) a falha OPERACIONAL da IA não vira aviso grande nem é falada: o motivo fica SÓ na linha da
+                # fonte, em letra pequena, e o botão «Ativar IA na nuvem» continua na resposta. O texto de antes (o aviso grande, o motivo falado) roda mais abaixo, na passada com simulacao:false.
+                def so_na_fonte(motivo, botao):
+                    """O motivo aparece uma vez, na linha «Fonte: …» da última resposta, em letra menor que a do texto; fora dela, «IA na nuvem» só no botão da resposta (nenhum aviso grande)."""
+                    o = pg.evaluate(ONDE_IA)
+                    com = [x for x in o['onde'] if motivo in x['t']]
+                    resto = [x for x in o['onde'] if not x['fonte'] and not x['acao']]
+                    return (len(com) == 1 and com[0]['fonte'] and 0 < com[0]['px'] < o['texto'] and not resto and any(x['acao'] for x in o['onde']) == botao and 'IA NA NUVEM' not in o['bot']), o
+                bom, o = so_na_fonte('IA na nuvem desligada neste aparelho', True)
+                ok(tela + ': simulação: sem a CHAVE_APP não há aviso grande ("IA NA NUVEM NÃO ATIVADA…"): o motivo fica só na linha da fonte, em letra pequena, e o botão "Ativar IA na nuvem" continua',
+                   pg.evaluate('() => window.CapitaoDados.simulacao') is True and 'IA NA NUVEM NÃO ATIVADA' not in t and bom, json.dumps(o['onde'], ensure_ascii=False)[:300])
                 t, n, livre = digita('como ligar o gerador?', modo='erro')
                 ok(tela + ': erro do proxy mantém a resposta local com o motivo (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and 'IA na nuvem fora agora' in t and livre, 'pedidos=%d' % n)
+                bom, o = so_na_fonte('IA na nuvem fora agora', False)
+                ok(tela + ': simulação: o erro do proxy não vira aviso: o motivo fica só na linha da fonte, em letra pequena', bom, json.dumps(o['onde'], ensure_ascii=False)[:300])
                 t, n, _ = digita('como ligar o gerador?', modo='semdados')
                 ok(tela + ': "SEM DADOS" da IA mantém o trecho local com a fonte', n == 1 and 'PARTIDA' in t and 'Fonte: nenhuma' not in t, 'pedidos=%d' % n)
 
@@ -243,20 +813,20 @@ def main():
                 # Ordem: a resposta da IA (demorada) entra logo depois da pergunta dela, antes da pergunta seguinte.
                 abre()
                 pg.evaluate("() => { const IA = window.CapitaoIA; IA.ativa = () => true; IA.perguntar = (q) => new Promise((r) => setTimeout(() => r({ text: 'IA respondeu: ' + q, src: 'Fonte: teste · via IA na nuvem', key: 'ia', semDados: false }), 1800)); }")
-                pg.fill(campo, 'qual o calado do barco?')
+                pg.fill(campo, 'como se faz um nó lais de guia?')
                 pg.press(campo, 'Enter')
                 pg.wait_for_timeout(300)
                 pg.fill(campo, 'autonomia')
                 pg.press(campo, 'Enter')
                 espera_resposta()
-                pg.wait_for_function("() => /IA respondeu: qual o calado/.test(document.body.innerText)", timeout=10000)
+                pg.wait_for_function("() => /IA respondeu: como se faz um nó lais/.test(document.body.innerText)", timeout=10000)
                 t = pg.evaluate('() => document.body.innerText')
-                i1, i2, i3 = t.find('IA respondeu: qual o calado do barco?'), t.find('\nautonomia\n'), t.find('≈ 11,2 h')
+                i1, i2, i3 = t.find('IA respondeu: como se faz um nó lais de guia?'), t.find('\nautonomia\n'), t.find(AUTONOMIA)
                 ok(tela + ': resposta da IA entra logo depois da pergunta dela (ordem pergunta › resposta mantida)', -1 < i1 < i2 < i3, (i1, i2, i3))
 
                 # CONVERSA por voz: a pergunta falada vai para a IA e a resposta falada é a da IA (o núcleo fica em PROCESSANDO).
                 abre()
-                pg.evaluate("() => { window.__falas.push('qual o calado do barco'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
+                pg.evaluate("() => { window.__falas.push('como se faz um nó lais de guia'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
                 antes = len(estado['pedidos'])
                 pg.click(CONVERSA)
                 try:
@@ -266,7 +836,7 @@ def main():
                 faladas = pg.evaluate('() => window.__faladas')
                 segura = pg.evaluate("() => window.__voz.some((v) => v.estado === 'pensando' && v.segura)")
                 ultimo = estado['pedidos'][-1] if len(estado['pedidos']) > antes else {}
-                ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'qual o calado do barco' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
+                ok(tela + ': CONVERSA: a pergunta falada chama a IA e a resposta falada é a da IA', len(estado['pedidos']) - antes == 1 and ultimo.get('pergunta') == 'como se faz um nó lais de guia' and len(faladas) >= 2 and faladas[1] == TEXTO_IA, json.dumps(faladas, ensure_ascii=False)[:300])
                 ok(tela + ': CONVERSA: o núcleo de voz fica em PROCESSANDO esperando a IA', segura)
                 pg.keyboard.press('Escape')
 
@@ -284,53 +854,212 @@ def main():
                     pg.keyboard.press('Escape')
                     return f, len(estado['pedidos']) - antes
 
+                # Fase 5 (decisão 5): na simulação a voz não fala a falha da IA (nem «não está ativada», nem o motivo do servidor): fala só a resposta local; o motivo fica na linha da fonte da conversa escrita, com o botão
+                R_FALHA_FALADA = re.compile(r'IA na nuvem|não está ativada|Ativar IA|chave', re.I)
                 f, n = conversa('o que você faz', chave=False)
-                ok(tela + ': CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                bom, o = so_na_fonte('IA na nuvem desligada neste aparelho', True)
+                ok(tela + ': simulação: CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e NÃO fala da IA; nada vai para a rede; o motivo fica na linha da fonte, com o botão', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria')
+                   and not any(R_FALHA_FALADA.search(x) for x in f) and bom, json.dumps([f, o['onde']], ensure_ascii=False)[:400])
                 f, n = conversa('Capitão, diagnóstico')
                 ok(tela + ': CONVERSA: "Capitão, diagnóstico" fala se a IA está ligada e o resultado do teste da chave (sem gastar a cota)', n == 1 and len(f) >= 2 and 'IA na nuvem: LIGADA' in f[1] and 'Chave aceita pelo servidor' in f[1], json.dumps(f, ensure_ascii=False)[:300])
-                f, n = conversa('qual o calado do barco', modo='erro')
-                ok(tela + ': CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                f, n = conversa('como se faz um nó lais de guia', modo='erro')
+                bom, o = so_na_fonte('IA na nuvem fora agora', False)
+                ok(tela + ': simulação: CONVERSA com erro do servidor: a voz fala só a resposta local (não o motivo); o motivo fica na linha da fonte', n == 1 and len(f) >= 2 and f[1].strip() and not any(R_FALHA_FALADA.search(x) for x in f) and bom, json.dumps([f, o['onde']], ensure_ascii=False)[:400])
 
-                # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o rosto, e o núcleo com o rosto de
-                # partículas: CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira.
+                # Contrato com o cliente da IA (Fase 6): a resposta filtrada (ou o 502 com `parou`) chega como null com a falha VAZIA: a tela fica com a resposta local, sem nota na linha da fonte, sem aviso e sem fala a mais
+                NULA = "() => { const IA = window.CapitaoIA; window.__nulas = 0; IA.ativa = () => true; IA.perguntar = () => { window.__nulas++; return Promise.resolve(null); }; IA.falha = () => ''; }"
                 abre()
+                pg.evaluate(NULA)
+                t, n, livre = envia('como ligar o gerador?')
+                o = pg.evaluate(ONDE_IA)
+                ok(tela + ': null com a falha vazia (resposta filtrada): fica a resposta local com a fonte dela, sem nota, sem aviso e sem botão (e o indicador some)', pg.evaluate('() => window.__nulas') == 1 and 'PARTIDA' in o['bot'] and 'Fonte: Guia de bordo' in o['bot'] and not o['onde'] and livre, json.dumps(o, ensure_ascii=False)[:300])
+                abre()
+                pg.evaluate(NULA)
+                pg.evaluate("() => { window.__falas.push('como se faz um nó lais de guia'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; window.__local = B.falaCurta(B.answer('como se faz um nó lais de guia', { platform: 'web', commit: false })); }")
+                pg.click(CONVERSA)
                 try:
-                    pg.wait_for_function('() => !!window.CapitaoRosto', timeout=15000)  # vem à parte, com o app ocioso
+                    pg.wait_for_function('() => window.__faladas.length >= 2', timeout=20000)
                 except Exception:
                     pass
-                tem_rosto = pg.evaluate('() => !!window.CapitaoRosto')
-                ok(tela + ': capitao-rosto.js carregado à parte (com o app ocioso)', tem_rosto)
-                if tem_rosto:
-                    pg.evaluate(SINTESE_FALSA)
-                    pg.evaluate("() => { window.__voz.length = 0; window.__falas.push('homem ao mar'); }")
+                r = pg.evaluate('() => ({ f: window.__faladas, n: window.__nulas, local: window.__local })')
+                pg.keyboard.press('Escape')
+                ok(tela + ': CONVERSA: null com a falha vazia: a voz fala só a resposta local, nada sobre a IA', r['n'] == 1 and len(r['f']) >= 2 and r['f'][1] == r['local'] and not any(R_FALHA_FALADA.search(x) for x in r['f']), json.dumps(r, ensure_ascii=False)[:300])
+
+                # A passada com simulacao:false (PROMPT «Mudanças nos testes», linhas 5 e 6): a rota acrescenta «window.CapitaoDados.simulacao = false;» ao fim do capitao-dados.js e o texto de antes vale inteiro —
+                # o aviso grande sem a chave, a voz que diz que a IA não está ativada e o motivo do servidor falado
+                def sem_simulacao(route):
+                    corpo = open(os.path.join(RAIZ, 'capitao-dados.js'), encoding='utf-8').read() + '\nwindow.CapitaoDados.simulacao = false;\n'
+                    return route.fulfill(status=200, content_type='text/javascript; charset=utf-8', body=corpo)
+                pg.route('**/capitao-dados.js*', sem_simulacao)
+                t, n, _ = digita('como se faz um nó lais de guia?', chave=False)
+                ok(tela + ': simulacao:false: a rota de teste desliga a simulação na página (D.simulacao === false)', pg.evaluate('() => window.CapitaoDados.simulacao') is False)
+                ok(tela + ': simulacao:false: sem a CHAVE_APP, a fonte diz "IA na nuvem desligada neste aparelho" e oferece "Ativar IA na nuvem"', n == 0 and 'IA na nuvem desligada neste aparelho' in t and pg.query_selector('a[href="#ia=ativar"]') is not None, t[-300:])
+                ok(tela + ': simulacao:false: sem a CHAVE_APP, aviso grande na tela "IA NA NUVEM NÃO ATIVADA NESTE APARELHO"', 'IA NA NUVEM NÃO ATIVADA NESTE APARELHO' in t, t[-300:])
+                t, n, livre = digita('como ligar o gerador?', modo='erro')
+                ok(tela + ': simulacao:false: erro do proxy mantém a resposta local com o motivo (e o indicador some)', n == 1 and TEXTO_IA not in t and 'PARTIDA' in t and 'IA na nuvem fora agora' in t and livre, 'pedidos=%d' % n)
+                t, n, _ = digita('como se faz um nó lais de guia?', modo='semdados')
+                ok(tela + ': simulacao:false: "SEM DADOS" da IA troca o SEM DADOS genérico da tela', n == 1 and 'os trechos não respondem' in t and FALLBACK_LOCAL not in t, 'pedidos=%d · %s' % (n, t[-200:]))
+                f, n = conversa('o que você faz', chave=False)
+                ok(tela + ': simulacao:false: CONVERSA sem a chave: fala o que o Capitão faz (não repete a abertura) e que a IA não está ativada; nada vai para a rede', n == 0 and len(f) >= 2 and f[1].startswith('Respondo sobre telemetria') and 'não está ativada neste aparelho' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                f, n = conversa('como se faz um nó lais de guia', modo='erro')
+                ok(tela + ': simulacao:false: CONVERSA com erro do servidor: a voz fala o motivo ("IA na nuvem fora agora…")', n == 1 and len(f) >= 2 and 'IA na nuvem fora agora' in f[1], json.dumps(f, ensure_ascii=False)[:300])
+                pg.unroute('**/capitao-dados.js*', sem_simulacao)
+
+                # A marca da janela de conversa em emergência (trava 10; window.CapitaoEmergencia, capitao-app.js): «homem ao mar» no chat escrito e na CONVERSA deixa a marca valendo (15 min, no sessionStorage) — é ela que
+                # a faixa global de alerta e o HUD leem para não mostrar a SOG —; nada vai à IA; o ENCERRAR da conversa a zera
+                LE_MARCA = "() => { const E = window.CapitaoEmergencia; return { v: E.valendo(), falta: E.ate() - Date.now(), ss: sessionStorage.getItem('capitao.emergenciaAte') }; }"
+                abre()
+                m0 = pg.evaluate(LE_MARCA)
+                t, n, _ = envia('homem ao mar')
+                m = pg.evaluate(LE_MARCA)
+                ok(tela + ': marca de emergência: «homem ao mar» no chat deixa a marca valendo (15 min, no sessionStorage), sem pedido ao Worker', m0['v'] is False and m['v'] is True and 14 * 60e3 < m['falta'] <= 15 * 60e3 and m['ss'] is not None and n == 0 and 'Emergência' in t, json.dumps([m0, m, n]))
+                pg.evaluate(FECHA_JANELA)
+                abre()
+                pg.evaluate("() => { window.__falas.push('homem ao mar'); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; }")
+                antes = len(estado['pedidos'])
+                m0 = pg.evaluate(LE_MARCA)
+                pg.click(CONVERSA)
+                try:
+                    pg.wait_for_function('() => window.__faladas.length >= 2 && window.CapitaoEmergencia.valendo()', timeout=20000)
+                except Exception:
+                    pass
+                m = pg.evaluate(LE_MARCA)
+                f = pg.evaluate('() => window.__faladas')
+                pg.keyboard.press('Escape')
+                pg.wait_for_timeout(400)
+                m2 = pg.evaluate(LE_MARCA)
+                ok(tela + ': marca de emergência: «homem ao mar» falado na CONVERSA deixa a marca valendo (15 min), sem pedido ao Worker, e o ENCERRAR a zera', m0['v'] is False and m['v'] is True and 14 * 60e3 < m['falta'] <= 15 * 60e3 and len(estado['pedidos']) == antes
+                   and len(f) >= 2 and 'Emergência' in f[1] and m2['v'] is False, json.dumps([m0, m, m2, f], ensure_ascii=False)[:300])
+                pg.evaluate(FECHA_JANELA)
+
+                # P3F, F17: registrar pela CONVERSA. O pedido com o texto grava UMA linha e a voz confirma; o «tá bom» seguinte não grava. O pedido cortado pela pausa («registrar no diário que») pergunta o que
+                # registrar, e a PRÓXIMA frase é a linha (o «tá bom» depois não). Nada vai para a rede (o registro é local).
+                def conversa_seq(frases, n_falas):
+                    abre(False)
+                    pg.evaluate("(qs) => { qs.forEach((q) => window.__falas.push(q)); const B = window.CapitaoBrain; B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; }; window.__n0 = B.loadDiario().length; }", frases)
+                    antes = len(estado['pedidos'])
                     pg.click(CONVERSA)
-                    try:  # abertura falada, pergunta ouvida, SOS falado inteiro e o microfone de volta
-                        pg.wait_for_function("() => { const v = window.__voz, i = v.findIndex((x) => x.estado === 'pensando'); return i >= 0 && v.slice(i).some((x) => x.estado === 'falando' && x.som === true) && v[v.length - 1].estado === 'ouvindo'; }", timeout=25000)
+                    try:
+                        pg.wait_for_function('(n) => window.__faladas.length >= n', arg=n_falas, timeout=25000)
                     except Exception:
                         pass
-                    pg.wait_for_timeout(300)
-                    sint = pg.evaluate('() => window.__sint')
-                    voz = pg.evaluate('() => window.__voz')
-                    sos = pg.evaluate("() => { const B = window.CapitaoBrain; return B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; }")
-                    faladas_sos = ' '.join(x['t'] for x in sint[1:])
-                    # a velocidade volta do navegador como float32 (1,1499999…); a abertura sai falável ("Capitão i a online")
-                    ok(tela + ': voz a 1,15x em toda fala — abertura e emergência (SOS "homem ao mar" falado inteiro)', len(sint) >= 2 and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint) and sint[0]['t'].startswith('Capitão i a online') and sos and len(faladas_sos) >= len(sos) * 0.9, json.dumps(sint, ensure_ascii=False)[:300])
-                    fal = [x.get('som') for x in voz if x.get('estado') == 'falando']
-                    ok(tela + ': eventos "falando" levam o som (false antes de a voz começar, true no onstart, false no fim do bloco) e as palavras viram "pulso"', fal and all(isinstance(x, bool) for x in fal) and fal[0] is False and True in fal and fal[-1] is False and any(x.get('estado') == 'pulso' for x in voz), json.dumps(fal)[:300])
-                    est = pg.evaluate("() => ({ on: !!document.querySelector('.cpz.on'), tela: !!document.querySelector('.cpz canvas.cpz-tela'), rosto: !!(window.CapitaoVoz.rosto && window.CapitaoVoz.rosto()), op: window.__rostoOp || null, est: window.__estRosto, som: window.__somRosto, palco: !!document.querySelector('.cpz .cpz-palco .cpz-btn'), velho: !!document.querySelector('.cpz svg circle') })")
-                    op = est['op'] or {}
-                    ok(tela + ': o núcleo abre com o canvas do rosto e o CapitaoRosto criado (dprMax 2, fpsMax 60, crescer 0,35), sem os anéis antigos', est['on'] and est['tela'] and est['rosto'] and est['palco'] and not est['velho'] and op.get('dprMax') == 2 and op.get('fpsMax') == 60 and op.get('crescer') == 0.35, json.dumps(est, ensure_ascii=False)[:300])
-                    ok(tela + ': o rosto segue a conversa (falando, ouvindo, pensando) e recebe o som da voz', all(e in est['est'] for e in ('falando', 'ouvindo', 'pensando')) and True in est['som'] and False in est['som'], json.dumps(est, ensure_ascii=False)[:300])
-                    i = pg.evaluate('() => window.__voz.length')
+                    pg.wait_for_timeout(400)
+                    r = pg.evaluate('() => ({ f: window.__faladas, linhas: window.CapitaoBrain.loadDiario().slice(0, window.CapitaoBrain.loadDiario().length - window.__n0).map((e) => e.t) })')
                     pg.keyboard.press('Escape')
-                    pg.wait_for_timeout(1200)
-                    fim = pg.evaluate("(i) => ({ on: !!document.querySelector('.cpz.on'), depois: window.__voz.slice(i).map((x) => x.estado), est: window.__estRosto.slice(-1)[0] })", i)
-                    ok(tela + ': Esc encerra a conversa: o núcleo some, o rosto vai para "livre" e o microfone não volta', not fim['on'] and fim['est'] == 'livre' and all(e == 'livre' for e in fim['depois']), json.dumps(fim, ensure_ascii=False))
-                    # Pressão de óleo (emergência) também a 1,15x
-                    pg.evaluate("() => { window.__sint.length = 0; const B = window.CapitaoBrain; B.speak(B.falaCurta(B.answer('a pressão de óleo caiu', { platform: 'web', commit: false }))); }")
-                    pg.wait_for_timeout(1500)
-                    sint = pg.evaluate('() => window.__sint')
-                    ok(tela + ': voz a 1,15x também no passo a passo da pressão de óleo', sint and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint), json.dumps(sint, ensure_ascii=False)[:300])
+                    return r, len(estado['pedidos']) - antes
+                r, n = conversa_seq(['registre no diário que saímos da marina às sete', 'tá bom'], 3)
+                ok(tela + ': CONVERSA (F17): «registre no diário que…» grava 1 linha com o texto, a voz confirma «Registrado no diário de bordo.» e o «tá bom» seguinte não grava', len(r['f']) >= 3 and r['f'][1] == 'Registrado no diário de bordo.' and r['linhas'] == ['Saímos da marina às sete'], json.dumps(r, ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'bom dia'], 3)
+                ok(tela + ': CONVERSA (revisão P3F): depois do «o que devo registrar?» a saudação não vira linha do diário (a espera acaba, nada gravado, nada na rede)', len(r['f']) >= 3 and r['f'][1] == 'O que devo registrar no diário?' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'o gerador foi ligado às sete', 'tá bom'], 4)
+                ok(tela + ': CONVERSA (F17): o pedido cortado pela pausa pergunta «O que devo registrar no diário?», a próxima frase vira a linha (1) e o «tá bom» depois não grava; nada vai para a rede', len(r['f']) >= 4 and r['f'][1] == 'O que devo registrar no diário?' and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['O gerador foi ligado às sete'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+
+                # P3F (revisão 3): a promessa do «o que devo registrar?» nunca fica no silêncio, e o adiamento não grava. Nada vai para a rede (o registro e o aviso são locais).
+                r, n = conversa_seq(['registrar no diário que', 'sem ocorrências'], 3)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): depois do «o que devo registrar?», «sem ocorrências» vira a linha (1) e a voz confirma «Registrado no diário de bordo.»; nada na rede', len(r['f']) >= 3 and r['f'][2] == 'Registrado no diário de bordo.' and r['linhas'] == ['Sem ocorrências'] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registrar no diário que', 'tô pensando aqui'], 3)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): a fala que não é nota nem pedido recebe «Não registrei isso…» na voz (não o silêncio, não a IA): 0 linhas, 0 pedidos', len(r['f']) >= 3 and r['f'][2] == 'Não registrei isso. Para registrar, diga registre no diário e o texto.' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+                r, n = conversa_seq(['registra depois'], 2)
+                ok(tela + ': CONVERSA (revisão 3 da P3F): «registra depois» não grava (nem o resumo da telemetria): a voz diz «Certo, nada registrado agora.»; 0 linhas, 0 pedidos', len(r['f']) >= 2 and r['f'][1] == 'Certo, nada registrado agora.' and r['linhas'] == [] and n == 0, json.dumps([r, n], ensure_ascii=False)[:400])
+
+                # Sem a pausa de 0,65 s na CONVERSA (paridade Avanti 1.21.2): a frase final do reconhecedor vai direto ao cérebro;
+                # fora da conversa (VOZ→TEXTO) a pausa visual fica. Medido no navegador (performance.now), do fim do ditado à
+                # chamada do B.answer com a frase: o piso do VOZ→TEXTO é o setTimeout de 0,65 s da tela, que nunca dispara antes
+                # da hora (não depende da carga da máquina); o teto da conversa (200 ms) fica ~15× acima do que a tela leva (~10 ms).
+                def atraso(botao):
+                    abre()
+                    pg.evaluate("""(q) => {
+                      const B = window.CapitaoBrain, dit = B.ditado, ans = B.answer;
+                      window.__tFim = null; window.__atraso = null; window.__falas.push(q);
+                      B.speak = (t, fim) => { window.__faladas.push(t); setTimeout(() => fim && fim(), 80); return true; };
+                      B.ditado = (o) => dit(Object.assign({}, o, { fim: (t) => { if (t && window.__tFim == null) window.__tFim = performance.now(); return o.fim(t); } }));
+                      B.answer = function (p) { if (p === q && window.__tFim != null && window.__atraso == null) window.__atraso = performance.now() - window.__tFim; return ans.apply(this, arguments); };
+                    }""", 'quantas horas tem o gerador')
+                    pg.click(botao)
+                    try:
+                        pg.wait_for_function('() => window.__atraso != null', timeout=20000)
+                        if botao == CONVERSA:
+                            pg.wait_for_function('() => window.__faladas.length >= 2', timeout=10000)
+                    except Exception:
+                        pass
+                    r = pg.evaluate('() => ({ ms: window.__atraso, faladas: window.__faladas })')
+                    pg.keyboard.press('Escape')
+                    return r
+                rc, rv = atraso(CONVERSA), atraso(VOZ)
+                ok(tela + ': CONVERSA: a pergunta ouvida vai ao cérebro sem a pausa de 0,65 s (< 200 ms do fim do ditado) e a resposta é falada', rc['ms'] is not None and rc['ms'] < 200 and len(rc['faladas']) >= 2 and 'gerador' in rc['faladas'][1].lower(), json.dumps(rc, ensure_ascii=False)[:300])
+                ok(tela + ': VOZ→TEXTO (fora da conversa) mantém a pausa visual (≥ 600 ms do fim do ditado ao cérebro)', rv['ms'] is not None and rv['ms'] >= 600, json.dumps(rv, ensure_ascii=False)[:300])
+
+                # Voz a 1,15x em TODA fala (abertura e emergência), com o sinal de som para o núcleo, e o núcleo de anéis em canvas (Fase 5, F27):
+                # CONVERSA "homem ao mar" com a fala de verdade do cérebro sobre o speechSynthesis de mentira. Sempre roda (o núcleo não vem à parte).
+                abre()
+                pg.evaluate(SINTESE_FALSA)
+                pg.evaluate("() => { try { window.CapitaoEmergencia.zera(); } catch (e) {} window.__voz.length = 0; window.__nucleo.length = 0; window.__falas.push('homem ao mar'); }")   # (a janela vale por aba: sem a marca das conferências de antes)
+                pg.click(CONVERSA)
+                try:  # abertura falada, pergunta ouvida, SOS falado inteiro e o microfone de volta
+                    pg.wait_for_function("() => { const v = window.__voz, i = v.findIndex((x) => x.estado === 'pensando'); return i >= 0 && v.slice(i).some((x) => x.estado === 'falando' && x.som === true) && v[v.length - 1].estado === 'ouvindo'; }", timeout=25000)
+                except Exception:
+                    pass
+                pg.wait_for_timeout(300)
+                sint = pg.evaluate('() => window.__sint')
+                voz = pg.evaluate('() => window.__voz')
+                sos = pg.evaluate("() => { const B = window.CapitaoBrain; return B.route('homem ao mar') === 'sos' ? B.falavel(B.falaCurta(B.answer('homem ao mar', { platform: 'web', commit: false }))) : ''; }")
+                faladas_sos = ' '.join(x['t'] for x in sint[1:])
+                # a velocidade volta do navegador como float32 (1,1499999…); a abertura sai falável ("Capitão i a online")
+                ok(tela + ': voz a 1,15x em toda fala — abertura e emergência (SOS "homem ao mar" falado inteiro)', len(sint) >= 2 and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint) and sint[0]['t'].startswith('Capitão i a online') and sos and len(faladas_sos) >= len(sos) * 0.9, json.dumps(sint, ensure_ascii=False)[:300])
+                fal = [x.get('som') for x in voz if x.get('estado') == 'falando']
+                ok(tela + ': eventos "falando" levam o som (false antes de a voz começar, true no onstart, false no fim do bloco) e as palavras viram "pulso"', fal and all(isinstance(x, bool) for x in fal) and fal[0] is False and True in fal and fal[-1] is False and any(x.get('estado') == 'pulso' for x in voz), json.dumps(fal)[:300])
+                est = pg.evaluate("() => { const V = window.CapitaoVoz, n = V && V.nucleo ? V.nucleo() : null, c = document.querySelector('.cpz'), s = document.querySelector('.cpz .cpz-sos'); return { on: !!document.querySelector('.cpz.on'), tela: !!document.querySelector('.cpz canvas.cpz-tela'), palco: !!document.querySelector('.cpz .cpz-palco .cpz-btn'), fim: !!document.querySelector('.cpz .cpz-fim'), velho: !!document.querySelector('.cpz svg circle'), rosto: !!(V && V.rosto), api: !!(n && typeof n.quadro === 'function' && typeof n.estado === 'function'), e: n ? n.estado() : {}, papel: c ? c.getAttribute('role') : '', inerte: c ? c.inert : null, sos: s ? s.getAttribute('href') : '', sosTopo: s ? (() => { const r = s.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t === s; })() : false, reg: window.__nucleo }; }")
+                e = est['e'] or {}
+                ok(tela + ': o núcleo abre com os anéis no canvas em tela cheia (canvas.cpz-tela, .cpz-palco .cpz-btn, ENCERRAR, role=dialog, SOS por cima apontando para S1/S2), ∞ carregado, razão de pixels ≤ 2 e o laço ligado; sem SVG de anéis e sem o rosto',
+                   est['on'] and est['tela'] and est['palco'] and est['fim'] and not est['velho'] and not est['rosto'] and est['api'] and est['papel'] == 'dialog' and est['inerte'] is False and re.search(r'S[12]-SOS-', est['sos'] or '') and est['sosTopo']
+                   and e.get('simbolo') is True and 0 < (e.get('razao') or 0) <= 2 and e.get('laco') is True and e.get('ligado') is True, json.dumps({k: v for k, v in est.items() if k != 'reg'}, ensure_ascii=False)[:300])
+                reg = est['reg'] or []
+                ok(tela + ': o núcleo segue a conversa (falando, ouvindo, pensando) e recebe o som da voz (som true só com a voz tocando)', all(any(r['estado'] == x for r in reg) for x in ('falando', 'ouvindo', 'pensando')) and any(r['ev'] == 'falando' and r['som'] is True for r in reg) and any(r['ev'] == 'falando' and r['som'] is False for r in reg) and all(r['som'] is False for r in reg if r['estado'] != 'falando'), json.dumps([[r['ev'], r['estado'], r['som']] for r in reg], ensure_ascii=False)[:300])
+                # HUD (CLAUDE.md 10): na abertura, o quadro do instante; ouvida a emergência (o alerta do evento) e com a janela aberta pela resposta, só a instrução do plotter
+                ip = next((k for k, r in enumerate(reg) if r['ev'] == 'pensando'), len(reg))
+                antes = [r['hud'] for r in reg[:ip] if r['ev'] == 'falando']
+                depois = [r['hud'].strip() for r in reg[ip:] if r['ev'] in ('pensando', 'falando', 'ouvindo')]
+                ruim = [h for h in depois if h != 'POSIÇÃO · LEIA NO PLOTTER' or confere.R_COORD.search(h) or confere.R_EMERG_PROTOCOLO.search(h) or confere.R_PESSOAS.search(h) or re.search(r'nós|\bmn\b|°|\d', h, re.I)]
+                ok(tela + ': HUD da CONVERSA: na abertura mostra o quadro do instante (hora, SOG, rpm, diesel) e, da emergência ouvida em diante (alerta no evento e janela valendo), só «POSIÇÃO · LEIA NO PLOTTER» — nenhuma coordenada, nós, mn, rumo nem pessoas',
+                   antes and all(re.match(r'\d\d:\d\d:\d\d\n', h) and 'SOG ' in h and ' NÓS' in h and 'RPM ' in h and 'DIESEL ' in h for h in antes) and len(depois) >= 3 and not ruim
+                   and any(r['evAlerta'] is True for r in reg[ip:]) and all(r['evAlerta'] is False for r in reg[:ip] if r['ev'] == 'falando') and all(r['alerta'] is True for r in reg[ip:] if r['ev'] in ('pensando', 'falando')),
+                   json.dumps({'antes': antes[:1], 'ruim': ruim[:2], 'n': len(depois)}, ensure_ascii=False)[:300])
+                i = pg.evaluate('() => window.__voz.length')
+                pg.keyboard.press('Escape')
+                pg.wait_for_timeout(1200)
+                fim = pg.evaluate("(i) => { const e = window.CapitaoVoz.nucleo().estado(); return { on: !!document.querySelector('.cpz.on'), depois: window.__voz.slice(i).map((x) => x.estado), est: e.estado, laco: e.laco, energia: e.energia, inerte: document.querySelector('.cpz').inert === true }; }", i)
+                ok(tela + ': Esc encerra a conversa: o núcleo some (inerte), vai para "livre" com o laço parado e o microfone não volta', not fim['on'] and fim['inerte'] and fim['est'] == 'livre' and fim['laco'] is False and fim['energia'] == 0 and all(e == 'livre' for e in fim['depois']), json.dumps(fim, ensure_ascii=False))
+                # Pressão de óleo (emergência) também a 1,15x
+                pg.evaluate("() => { window.__sint.length = 0; const B = window.CapitaoBrain; B.speak(B.falaCurta(B.answer('a pressão de óleo caiu', { platform: 'web', commit: false }))); }")
+                pg.wait_for_timeout(1500)
+                sint = pg.evaluate('() => window.__sint')
+                ok(tela + ': voz a 1,15x também no passo a passo da pressão de óleo', sint and all(abs((x['r'] or 0) - 1.15) < 1e-3 for x in sint), json.dumps(sint, ensure_ascii=False)[:300])
+
+                # O núcleo pintado de verdade (Fase 5, F27): pixels no anel e no centro, uma cor por estado (ESCUTA ciano, PROCESSANDO violeta, RESPOSTA azul), o quadro(t) determinístico,
+                # o espectro e o brilho só com som, 'livre' zera na hora, e a camada escondida não pinta. Eventos de mentira: nada é falado nem ouvido.
+                pg.evaluate("() => { try { window.CapitaoBrain.stopSpeaking(); window.CapitaoVoz.esconde(); window.CapitaoEmergencia.zera(); } catch (e) {} }")
+                pg.wait_for_timeout(300)
+                pint = pg.evaluate(PINTURA_NUCLEO)
+                perto = lambda a, b: bool(a) and all(abs(x - y) <= 14 for x, y in zip(a, b))
+                o, pn, fa, vv = pint['ouvindo'], pint['pensando'], pint['falando'], pint['vivo']
+                ok(tela + ': o canvas do núcleo é pintado de verdade: pixels no anel graduado e o ∞ no centro, nos três estados', all(x['anel'] >= 60 and x['centro'] >= 200 for x in (o, pn, fa)) and not pint['rosto'], json.dumps({'o': o, 'p': pn, 'f': fa}, ensure_ascii=False))
+                ok(tela + ': cor por estado, as da marca: ESCUTA ciano #00F4FD, PROCESSANDO violeta #A22BFD, RESPOSTA azul #00A1FE', perto(o['cor'], (0, 244, 253)) and perto(pn['cor'], (162, 43, 253)) and perto(fa['cor'], (0, 161, 254)), json.dumps([o['cor'], pn['cor'], fa['cor']]))
+                ok(tela + ': com a camada ligada o laço roda (um requestAnimationFrame pintando); quadro(t) é determinístico (mesmo t, mesmo quadro; outro t, outro quadro) e deixa o núcleo parado', vv['ligado'] and vv['laco'] and vv['quadros'] >= 3 and pint['igual'] and pint['muda'] and pint['parado'], json.dumps({'vivo': vv, 'igual': pint['igual'], 'muda': pint['muda'], 'parado': pint['parado']}, ensure_ascii=False)[:300])
+                ok(tela + ': o espectro e o brilho só reagem à voz com som true (e ao pulso de cada palavra); "livre" zera na hora', pint['semSom'] < 0.15 and pint['pulsoSemSom'] == pint['semSom'] and pint['comSom'] > 0.3 and pint['pulsoComSom'] > pint['comSom'] and pint['livre'] == 0, json.dumps({k: pint[k] for k in ('semSom', 'pulsoSemSom', 'comSom', 'pulsoComSom', 'livre')}))
+                esc_ = pint['escondida']
+                ok(tela + ': camada escondida: inerte, sem laço e sem pintar nenhum quadro', not esc_['on'] and esc_['inerte'] and esc_['laco'] is False and esc_['quadros'] == 0, json.dumps(esc_))
+                # O HUD vivo (Fase 5): o quadro do instante a cada 1 s, com a fonte e os formatadores das telas, em nós Text; em alerta, só a instrução do plotter
+                h = pg.evaluate(HUD_NUCLEO)
+                plot = 'POSIÇÃO · LEIA NO PLOTTER'
+                ok(tela + ': HUD do núcleo: hora HH:MM:SS, posição, SOG, rpm e diesel do instante, com o texto dos formatadores das telas' + (' (o mesmo SOG e o mesmo diesel da faixa da Main)' if not movel else ''),
+                   h['vivo'] == h['esperado'] and re.match(r'\d\d:\d\d:\d\d\n', h['vivo']) and (movel or (h['sog'] in h['pagina'] and h['diesel'] in h['pagina'])), json.dumps({'hud': h['vivo'], 'esperado': h['esperado']}, ensure_ascii=False)[:300])
+                ok(tela + ': HUD do núcleo: lê o instante de novo em até 1 s (outro instante do replay, sem evento de voz) trocando só o .data dos mesmos nós Text (nenhuma mutação de filhos)',
+                   h['depois'] == h['esperado2'] and h['depois'] != h['vivo'] and h['mesmosNos'] and h['filhos'] == 0 and h['dados'] >= 1, json.dumps({'depois': h['depois'], 'esperado': h['esperado2'], 'nos': h['mesmosNos'], 'filhos': h['filhos'], 'dados': h['dados']}, ensure_ascii=False)[:300])
+                alertas = [h[k].strip() for k in ('alerta', 'alertaSegue', 'janela', 'janelaFala')]
+                ruim = [x for x in alertas if x != plot or confere.R_COORD.search(x) or confere.R_EMERG_PROTOCOLO.search(x) or confere.R_PESSOAS.search(x) or re.search(r'nós|\bmn\b|°|\d', x, re.I)]
+                ok(tela + ': HUD do núcleo em alerta (o evento com alerta, as outras linhas da mesma fala, a janela de emergência valendo): só «POSIÇÃO · LEIA NO PLOTTER», sem coordenada, nós, mn, rumo nem pessoas; sem alerta e sem janela, a leitura volta',
+                   h['plotter'] == plot and not ruim and h['volta'] == h['esperado3'] and h['semJanela'] == h['esperado3'], json.dumps({'alertas': alertas, 'volta': h['volta'], 'semJanela': h['semJanela']}, ensure_ascii=False)[:300])
+                ok(tela + ': HUD do núcleo com simulacao:false e sem leitura: o texto do modo real (POSIÇÃO · SEM LEITURA, sem número do replay)', re.match(r'\d\d:\d\d:\d\d\nPOSIÇÃO\nSEM LEITURA\s*$', h['real']) is not None, json.dumps(h['real'], ensure_ascii=False))
 
                 # Versões misturadas (cérebro velho vindo do cache): o app recarrega sozinho uma vez e fica tudo na mesma versão.
                 cont = {'n': 0}
@@ -356,8 +1085,51 @@ def main():
                 ok(tela + ': link de fora (#q=, sem referrer) não chama a IA', n == 0 and 'PARTIDA' in t, 'pedidos=%d' % n)
                 t, n = por_link('como ligar o gerador?', interno=True)
                 ok(tela + ': link de dentro do app (#q=, referrer da mesma origem) usa a IA', n == 1 and TEXTO_IA in t, 'pedidos=%d' % n)
+                # F30 (Fase 6; antes, P4H: o toque não chamava a IA): o toque numa pergunta do FAQ (#q=…&faq=<código>, de dentro do app, com a IA ligada) vai à IA 1 vez com o ITEM como 1º trecho ([1]: a fonte com o
+                # código, o título e o texto do item), antes dos trechos do guia (B.buscaBase), e a resposta dela guarda as ações do item; de fora do app (sem referrer) fica o item local, sem pedido
+                # (SK-03: a pergunta do item tem 3 trechos do guia — o pedido leva o item e 2 deles, nesta ordem; MO-02: nenhum trecho do guia — o item é o único trecho do pedido)
+                def item_no_topo(ped, cod, q, guia=None):
+                    tr = ped.get('trechos') or []
+                    it = FAQ_ITENS[cod]
+                    nb = pg.evaluate('(q) => window.CapitaoBrain.buscaBase(q, 3).length', q)   # quantos trechos do guia a pergunta tem (o cliente manda no máximo 3 trechos ao todo)
+                    return (len(tr) == min(3, 1 + nb) and (guia is None or nb == guia) and tr[0].get('fonte', '').startswith('FAQ dos equipamentos ' + cod) and tr[0].get('secao') == it['titulo'] and it['resposta'][:60] in tr[0].get('texto', '')
+                            and tr[0].get('faq') == cod   # (o código em `faq`: é ele que faz o Worker marcar o trecho 1 como item do FAQ e mandá-lo inteiro, com as linhas dos passos)
+                            and all(x.get('fonte') and 'FAQ dos equipamentos' not in x['fonte'] and 'faq' not in x for x in tr[1:]))
+                for cod, guia in (('SK-03', 3), ('MO-02', 0)):
+                    t, n = por_link(FAQ_ITENS[cod]['pergunta'], interno=True, extra='&faq=' + cod)
+                    ped = estado['pedidos'][-1] if n else {}
+                    ok(tela + ': F30: o toque no FAQ (#q=…&faq=%s, de dentro do app, IA ligada) vai à IA 1 vez com o item como 1º trecho, antes dos %d trechos do guia, e mostra a resposta dela com a ação «Abrir %s no FAQ»' % (cod, guia, cod), n == 1 and item_no_topo(ped, cod, FAQ_ITENS[cod]['pergunta'], guia)
+                       and ped.get('pergunta') == FAQ_ITENS[cod]['pergunta'] and TEXTO_IA in t and ('Abrir %s no FAQ' % cod) in t and not confere.R_COORD.search(json.dumps(ped, ensure_ascii=False)), 'pedidos=%d · %s' % (n, json.dumps([x.get('fonte') for x in ped.get('trechos') or []], ensure_ascii=False)[:300]))
+                t, n = por_link(FAQ_ITENS['MO-02']['pergunta'], interno=False, extra='&faq=MO-02')
+                ok(tela + ': F30: o mesmo link de fora do app (sem referrer) mostra o item com o código e a fonte e não gasta a cota', n == 0 and 'Fonte: FAQ dos equipamentos MO-02' in t and TEXTO_IA not in t, 'pedidos=%d · %s' % (n, t[-160:]))
+                abre(True, 'ok')
+                faq_pronto()
+                t, n, _ = envia('sonda mostrando pouca profundidade')
+                ped = estado['pedidos'][-1] if n else {}
+                ok(tela + ': F30: a pergunta digitada que cai num item do FAQ (EL-08) também leva o item como 1º trecho', n == 1 and item_no_topo(ped, 'EL-08', 'sonda mostrando pouca profundidade') and TEXTO_IA in t, 'pedidos=%d · %s' % (n, json.dumps(ped.get('trechos'), ensure_ascii=False)[:300]))
+                # o cartão de emergência (EM-xx) e o item de segurança NUNCA enviam pedido: o B.pedeIA barra os 9 cartões e todo item `seguranca`, e o toque de verdade (EM-06, o de salvatagem EM-09 e o do EPIRB EP-02) abre local
+                barrados = pg.evaluate("""() => { const B = window.CapitaoBrain; return B.faqDados().itens.filter((it) => it.emerg || it.seguranca).map((it) => { const a = B.answer(it.pergunta, { platform: 'web', commit: false, faq: it.id });
+                  return { id: it.id, faq: a.faq, pede: B.pedeIA(a, it.pergunta, {}) }; }); }""")
+                pg.evaluate(FECHA_JANELA)
+                ems = [x['id'] for x in barrados if x['id'].startswith('EM-')]
+                ok(tela + ': F30: nenhum cartão de emergência (EM-01…09) nem item de segurança do FAQ pede a IA (B.pedeIA false nos %d itens)' % len(barrados), len(ems) == 9 and len(barrados) > 9 and all(x['faq'] == x['id'] and x['pede'] is False for x in barrados),
+                   [x for x in barrados if x['pede'] is not False or x['faq'] != x['id']][:5])
+                for cod in ('EM-06', 'EM-09', 'EP-02'):
+                    t, n = por_link(FAQ_ITENS[cod]['pergunta'], interno=True, extra='&faq=' + cod)
+                    ok(tela + ': F30: o toque no FAQ (#q=…&faq=%s, de dentro do app, IA ligada) mostra o item com o código e a fonte e não envia pedido nenhum ao Worker' % cod, n == 0 and ('Fonte: FAQ dos equipamentos ' + cod) in t and TEXTO_IA not in t, 'pedidos=%d · %s' % (n, t[-160:]))
+                    pg.evaluate(FECHA_JANELA)
                 ok(tela + ': sem erro de script', not erros, '; '.join(erros))
                 ctx.close()
+            # Fase 7 (PROMPT «Testes novos»): as travas do chat e da CONVERSA nas duas telas, nas sessões lucas e demo (a passada de cima é a do lucas)
+            if '--mutantes-fase7' in sys.argv:
+                mutantes_fase7(b, base, ok)
+            else:
+                quais = lambda todos: [x for x in pedido if x in todos] or list(todos)   # (o que o --so-fase7 pediu; sem pedido, tudo)
+                for tela, movel, campo in TELAS:
+                    for usuario in USUARIOS:
+                        if so7 and (tela not in quais([t[0] for t in TELAS]) or usuario not in quais(USUARIOS)):
+                            continue
+                        fase7(b, base, ok, tela, movel, campo, usuario, partes=tuple(quais(PARTES_F7)) if so7 else PARTES_F7)
             # Sem sessão: o login não pode levar nada do #ia= para o ?next= (vai ao servidor e ao histórico).
             ctx = b.new_context(service_workers='block')
             pg = ctx.new_page()

@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Capitão IA — Console (app)</title>
 <script src="./capitao-dados.js"></script>
+<script src="./capitao-replay.js"></script>
+<script src="./capitao-alertas.js"></script>
+<script src="./capitao-grafico.js"></script>
+<script src="./capitao-sensores.js"></script>
 <script src="./capitao-auth.js"></script>
 <script src="./support.js"></script>
 </head>
@@ -27,6 +31,27 @@ button { font: inherit; }
   <x-import component-from-global-scope="capitao-topo-app" from="./capitao-moldura.js" titulo="Console" voltar="H2-Home-Mobile.dc.html" hint-size="390px,44px"></x-import>
 
   <div style="flex-grow: 1; box-sizing: border-box; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+    <section id="alertas" aria-label="Alertas" style="flex-shrink: 0; box-sizing: border-box; padding: 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{al.borda}}; border-radius: 16px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+        <span style="width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px; background: {{al.wash}}; display: flex; align-items: center; justify-content: center;">{{al.ico}}</span>
+        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+          <span data-alertas="titulo" style="font-size: 14.5px; font-weight: 700;">{{al.titulo}}</span>
+          <span style="font-size: 11.5px; font-weight: 600; line-height: 1.35; color: {{al.cor}};">{{al.status}}</span>
+        </span>
+      </div>
+      <sc-for list="{{al.itens}}" as="a" hint-placeholder-count="1">
+        <a href="{{a.href}}" aria-label="{{a.aria}}" data-alerta="{{a.id}}" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px; background: {{a.fundo}}; border: 1px solid {{a.borda}}; border-radius: 12px; text-decoration: none; color: var(--cap-ink, #eaf1ff);">
+          <span style="flex-shrink: 0; width: 52px; box-sizing: border-box; margin-top: 1px; padding: 3px 0; border-radius: 999px; background: {{a.cor}}; color: var(--cap-bg, #050816); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-align: center;">{{a.rotulo}}</span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 11.5px; font-weight: 700; color: var(--cap-ink2, #b1bdd6);">{{a.sistema}}</span>
+            <span style="font-size: 13.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere;">{{a.txt}}</span>
+            <span style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); font-variant-numeric: tabular-nums;">{{a.quando}}</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0; align-self: center;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
+        </a>
+      </sc-for>
+    </section>
+
     <a href="C2-Leme-Mobile.dc.html" aria-label="{{atrAria}}" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 12px; background: var(--cap-card, #0d1329); border: 1px solid {{atrLine}}; border-radius: 18px; text-decoration: none; color: var(--cap-ink, #eaf1ff); flex-shrink: 0;">
       <span style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 14px; background: {{atrWash}}; display: flex; align-items: center; justify-content: center;"><span style="font-size: 23px; font-weight: 800; color: {{atrTone}}; line-height: 1;">{{atr}}</span></span>
       <span style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0;">
@@ -55,7 +80,7 @@ button { font: inherit; }
           </span>
           <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
             <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{b.label}}</span>
-            <span style="font-size: 11.5px; line-height: 1.3; color: {{b.subTom}}; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;">{{b.sub}}</span>
+            <span style="font-size: 11.5px; line-height: 1.3; color: {{b.subTom}}; overflow-wrap: anywhere;">{{b.sub}}</span>
           </span>
         </a>
       </sc-for>
@@ -63,6 +88,54 @@ button { font: inherit; }
         <a href="A3-Ponte-Editar.dc.html" style="grid-column: 1 / -1; box-sizing: border-box; min-height: 94px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px dashed var(--cap-dash, #34406a); border-radius: 18px; color: var(--cap-accent, #00a1fe); font-size: 13px; font-weight: 700; text-decoration: none; text-align: center; padding: 0 16px;">Nenhum bloco no console · Editar blocos ›</a>
       </sc-if>
     </div>
+
+    <section aria-label="Histórico" style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; display: flex; flex-direction: column; gap: 9px; min-width: 0;">
+      <span style="display: flex; flex-direction: column; min-width: 0;">
+        <span data-hist="titulo" style="font-size: 14.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Histórico · {{serieRot}}</span>
+        <span data-hist="sub" style="font-size: 11.5px; color: var(--cap-ink3, #97a3c0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{janelaTxt}}</span>
+      </span>
+      <span role="group" aria-label="Período" style="display: flex; gap: 2px; padding: 3px; background: var(--cap-elev, #131a33); border: 1px solid var(--cap-line, #1a2240); border-radius: 12px;">
+        <sc-for list="{{janelas}}" as="w" hint-placeholder-count="5">
+          <button type="button" onClick="{{w.onClick}}" aria-pressed="{{w.on}}" aria-disabled="{{w.off}}" title="{{w.tip}}" style="flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 4px; border-radius: 9px; border: none; background: {{w.bg}}; color: {{w.tom}}; font-size: 11.5px; letter-spacing: 0.04em; font-weight: 800; cursor: {{w.cursor}}; opacity: {{w.opac}}; white-space: nowrap;">{{w.l}}</button>
+        </sc-for>
+      </span>
+      <div role="group" aria-label="Série" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
+        <sc-for list="{{series}}" as="m" hint-placeholder-count="10">
+          <button type="button" onClick="{{m.onClick}}" aria-pressed="{{m.on}}" style="flex-shrink: 0; min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid {{m.line}}; background: {{m.bg}}; color: {{m.tom}}; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">{{m.l}}</button>
+        </sc-for>
+      </div>
+      <div style="min-width: 0;">{{grafico}}</div>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{histFonte}}</span>
+    </section>
+
+    <section aria-label="Tendências" style="flex-shrink: 0; box-sizing: border-box; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+        <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+          <span style="font-size: 11px; font-weight: 800; letter-spacing: 0.14em; color: var(--cap-ink3, #97a3c0);">TENDÊNCIAS</span>
+          <span style="font-size: 12px; color: var(--cap-ink3, #97a3c0); line-height: 1.35;">{{tendSub}}</span>
+        </span>
+        <a href="{{tendHref}}" style="display: flex; align-items: center; min-height: 44px; padding: 0 2px 0 8px; font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; flex-shrink: 0;">Ver tendências ›</a>
+      </div>
+      <sc-for list="{{tend}}" as="t" hint-placeholder-count="4">
+        <span data-tendencia="{{t.id}}" title="{{t.fonte}}" style="box-sizing: border-box; display: flex; align-items: flex-start; gap: 9px; padding: 8px 10px; background: var(--cap-row, #10162e); border-radius: 12px;">
+          <span aria-hidden="true" style="flex-shrink: 0; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: {{t.cor}};"></span>
+          <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="display: flex; align-items: center; gap: 8px;"><span style="flex-grow: 1; min-width: 0; font-size: 13px; font-weight: 700;">{{t.titulo}}</span><span style="flex-shrink: 0; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; color: {{t.cor}};">{{t.rotulo}}</span></span>
+            <span style="font-size: 12.5px; line-height: 1.4; color: var(--cap-ink2, #b1bdd6); overflow-wrap: anywhere;">{{t.texto}}</span>
+          </span>
+        </span>
+      </sc-for>
+      <span style="font-size: 11px; color: var(--cap-ink4, #7985a6); line-height: 1.35;">{{tendFonte}}</span>
+    </section>
+
+    <a href="A5-Sensores-Mobile.dc.html" aria-label="Mapa de sensores no desenho do barco (perfil e planta)" style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--cap-card, #0d1329); border: 1px solid var(--cap-line, #1a2240); border-radius: 16px; text-decoration: none; color: var(--cap-ink, #eaf1ff); min-height: 44px;">
+      <span style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px; background: rgba(var(--cap-tele-rgb, 0,244,253), 0.12); display: flex; align-items: center; justify-content: center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M8.5 15.5a5 5 0 0 1 0-7 M15.5 8.5a5 5 0 0 1 0 7 M5.6 18.4a9 9 0 0 1 0-12.8 M18.4 5.6a9 9 0 0 1 0 12.8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-tele, #00f4fd);"></path></svg></span>
+      <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 14.5px; font-weight: 700;">Mapa de sensores ›</span>
+        <span style="font-size: 12px; color: var(--cap-ink2, #b1bdd6); line-height: 1.35;">{{mapaSub}}</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="stroke: var(--cap-ink3, #97a3c0);"></path></svg>
+    </a>
 
     <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1px dashed var(--cap-dash, #34406a); color: var(--cap-ink3, #97a3c0); font-size: 12px; line-height: 1.4; flex-shrink: 0;">
       <span><b style="color: var(--cap-ink2, #b1bdd6); letter-spacing: 0.08em;">NESTE APARELHO</b> · {{aparelho}}</span>
@@ -141,6 +214,8 @@ class Component extends DCLogic {
     { id: 'anomalias', label: 'Anomalias', icon: 'alerta', q: 'Anomalias abertas' }
   ];
   PADRAO = ['motores', 'manutencao', 'telemetria', 'documentos', 'equipamentos', 'navegacao', 'abastecer', 'diario'];
+  // número e unidade na mesma linha: um espaço sem quebra entre o número e a unidade (a unidade nunca cai sozinha na linha de baixo); só no que a tela desenha, nunca no title nem no aria-label
+  un(s) { return String(s === null || s === undefined ? '' : s).replace(/(\d) (°C|°|%|rpm|bar|hPa|nós?|kW|V|Ah|L|h|m|cm|mn|ciclos?)(?![A-Za-zÀ-ÿ])/g, '$1\u00a0$2'); }
   porId(id) { return this.CATALOGO.filter((b) => b.id === id)[0] || null; }
   hrefDe(b) { return b.q ? 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent(b.q) : b.href; }
   padrao() { return this.PADRAO.map((id) => { const b = this.porId(id); return { id: b.id, label: b.label, icon: b.icon }; }); }
@@ -154,10 +229,10 @@ class Component extends DCLogic {
         .map((x) => { const b = this.porId(x.id); return { id: b.id, label: b.label, icon: typeof x.icon === 'string' && this.ICONES[x.icon] ? x.icon : b.icon }; });
     } catch (e) { return null; }
   }
-  state = { blocos: null, exec: {}, diarioLocal: [] };
+  state = { blocos: null, exec: {}, diarioLocal: [], vivo: '', serie: 'baterias', janela: '7D' };
   componentDidMount() {
     this.setState({ blocos: this.carregar() });
-    this.whenBrain(() => this.setState({ exec: window.CapitaoBrain.loadExec(), diarioLocal: window.CapitaoBrain.loadDiario() }));
+    this.whenBrain(() => { this.setState({ exec: window.CapitaoBrain.loadExec(), diarioLocal: window.CapitaoBrain.loadDiario() }); this.atualiza(); });
     // Outra aba/tela gravou: blocos (A3), Executado (C1/C2) ou diário
     this._st = (e) => {
       const k = e ? e.key : null;
@@ -165,93 +240,182 @@ class Component extends DCLogic {
       if (window.CapitaoBrain && (k === null || k === 'capitao.executado.v1' || k === 'capitao.diario.v1')) this.setState({ exec: window.CapitaoBrain.loadExec(), diarioLocal: window.CapitaoBrain.loadDiario() });
     };
     window.addEventListener('storage', this._st);
+    // A cada tique da telemetria (replay ou coletor) e a cada alerta que começa, muda de nível ou acaba: monta o texto que a tela exibe (dinamico(): só dado) e só chama setState se ele
+    // mudou (o setState refaz a tela inteira; o __setLogicState do support.js troca o __v sem comparar nada).
+    this._onTele = () => { if (!document.hidden) this.atualiza(); };
+    window.addEventListener('capitao-telemetria', this._onTele);
+    window.addEventListener('capitao-alerta', this._onTele);
+    window.addEventListener('capitao-rebase', this._onTele);
+    this.atualiza();
   }
-  componentWillUnmount() { window.removeEventListener('storage', this._st); }
+  componentWillUnmount() {
+    window.removeEventListener('storage', this._st);
+    window.removeEventListener('capitao-telemetria', this._onTele); window.removeEventListener('capitao-alerta', this._onTele); window.removeEventListener('capitao-rebase', this._onTele);
+    clearInterval(this._b);
+  }
   whenBrain(cb) {
     if (window.CapitaoBrain) return cb();
     let n = 0;
-    const t = setInterval(() => {
-      if (window.CapitaoBrain || ++n > 120) { clearInterval(t); if (window.CapitaoBrain) cb(); return; }
+    this._b = setInterval(() => {
+      if (window.CapitaoBrain || ++n > 120) { clearInterval(this._b); if (window.CapitaoBrain) cb(); return; }
       if (n === 6 && !document.querySelector('script[data-capitao-brain]')) { const s = document.createElement('script'); s.src = './capitao-brain.js'; s.setAttribute('data-capitao-brain', '1'); document.head.appendChild(s); }
     }, 50);
   }
+  atualiza() {
+    const d = this.dinamico(), k = JSON.stringify(d);
+    if (k === this._k) return;
+    this._k = k; this._din = d; this._fresco = true;
+    this.setState({ vivo: k });
+  }
   ico(d, n, sw, stroke) { const h = React.createElement; return h('svg', { width: n, height: n, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': 'true', style: { flexShrink: 0, display: 'block' } }, h('path', { d: d, strokeWidth: sw || 1.7, strokeLinecap: 'round', strokeLinejoin: 'round', style: { stroke: stroke || 'currentColor' } })); }
-  // Linha de estado de cada bloco, tirada dos dados (capitao-dados.js + Executado/diário deste aparelho)
-  estados(D, ex, diarioLocal) {
-    const S = D.snapshot || {}, AG = D.agenda || [], M = S.motores || {}, GE = S.gerador || {}, SK = S.seakeeper || {}, DI = S.diesel || {}, T = S.tanques || {}, G = S.gps || {};
-    const AUT = D.autonomia || {}, CON = D.consumo || {}, P = D.protocolos || {}, EQ = D.equipe || {}, FAQ = D.faq || {};
-    const SD = 'SEM DADOS', SL = 'SEM LEITURA', demo = D.demo ? ' DEMO' : '';
+  // Linha de estado de cada bloco, do instante do CapitaoAgora (replay, coletor ou a última leitura salva: o mesmo texto da moldura e do cérebro) e do Executado/diário deste aparelho.
+  // Com a simulação o dado sempre existe; o caminho `null` → SEM DADOS / SEM LEITURA é do ramo simulacao:false (falta()).
+  estados(D, ex, diarioLocal, I) {
+    const A = window.CapitaoAgora || {}, F = A.fmt || {}, q = I && I.q ? I.q : null, sim = D.simulacao === true;
+    const AG = D.agenda || [], FAQ = D.faq || {}, P = D.protocolos || {}, EQ = D.equipe || {}, CON = D.consumo || {};
+    const SD = 'SEM DADOS', SL = 'SEM LEITURA', falta = (r) => (sim ? '—' : r);
     const num = (x) => typeof x === 'number' && isFinite(x);
-    const nb = (x, d) => (num(x) ? x.toFixed(d == null ? 1 : d).replace('.', ',') : '—');
-    const mil = (x) => (num(x) ? String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—');
-    const horas = (x) => { if (!num(x)) return '—'; const p = x.toFixed(1).split('.'); return mil(+p[0]) + ',' + p[1]; };
-    const g3 = (x) => (num(x) ? ('00' + Math.round(((x % 360) + 360) % 360)).slice(-3) + '°' : '—');
-    const par = (a, i) => (Array.isArray(a) ? a[i] : null);
+    const c = (nome, un) => { const t = q && F.campo ? F.campo(q, nome) : null; return t === null || t === undefined ? falta(SL) : t + (un || ''); };
+    const tem = (nome) => !!(q && F.campo && F.campo(q, nome) !== null && F.campo(q, nome) !== undefined);
+    const reserva = !!(I && I.fonte === 'snapshot');
+    const equip = (id) => (D.equipamentos || []).filter((e) => e.id === id)[0] || {};
+    const fabMod = (e) => { const f = e.fabricante || '', m = e.modelo || ''; return m && f && m.toLowerCase().indexOf(f.toLowerCase()) === 0 ? m : [f, m].filter(Boolean).join(' ') || falta(SD); };
     const hm = (s) => String(s || '').slice(-5);
-    const atrasadas = (ids) => AG.filter((t) => (!ids || ids.indexOf(t.id) !== -1) && t.dn < 0 && !ex[t.id]);
+    const equipe = (() => { let l = []; try { const B = window.CapitaoBrain; l = B && typeof B.tarefasEquipe === 'function' ? B.tarefasEquipe() : (D.tarefasEquipe || []); } catch (e) { l = D.tarefasEquipe || []; } return Array.isArray(l) ? l.map((t) => ({ id: t.id, n: t.n, dn: t.dn, feita: !!t.feita, equip: String(t.sistema || 'equipe') })) : []; })();
+    const todas = AG.map((t) => ({ id: t.id, n: t.t, dn: t.dn, feita: false, equip: t.equip || '' })).concat(equipe);
+    const atrasadas = (ids) => todas.filter((t) => (!ids || ids.indexOf(t.id) !== -1) && num(t.dn) && t.dn < 0 && !ex[t.id] && !t.feita);
     const aberta = (id) => AG.filter((t) => t.id === id && !ex[t.id])[0] || null;
     const CRIT = 'var(--cap-crit, #ff3b30)', WARN = 'var(--cap-warn, #f0a63a)';
+    const nomeAgora = I ? (reserva ? 'última leitura ' + String(I.fonteTxt || '').replace(/^.*leitura de /, '') : 'ao vivo ' + I.hhmm) : falta('telemetria ' + SD);
     const e = {};
     const nAtr = atrasadas().length;
-    e.motores = { sub: Array.isArray(M.horimetro) ? 'BB ' + horas(par(M.horimetro, 0)) + ' h · BE ' + horas(par(M.horimetro, 1)) + ' h' : 'horímetros ' + SL, badge: atrasadas(['motores-oleo', 'motores-revisao']).length };
-    e.manutencao = { sub: (nAtr ? nAtr + (nAtr === 1 ? ' atrasada' : ' atrasadas') : 'nada atrasado') + ' · ' + AG.length + ' tarefas', badge: nAtr, tom: nAtr ? CRIT : '' };
-    e.telemetria = { sub: S.hora ? 'snapshot' + demo + ' ' + S.hora : 'snapshot ' + SD };
+    e.motores = { sub: tem('motor_bb_horimetro_h') ? 'BB ' + c('motor_bb_horimetro_h') + ' h · BE ' + c('motor_be_horimetro_h') + ' h' : 'horímetros ' + falta(SL), badge: atrasadas(['motores-oleo', 'motores-revisao']).length };
+    e.manutencao = { sub: (nAtr ? nAtr + (nAtr === 1 ? ' atrasada' : ' atrasadas') : 'nada atrasado') + ' · ' + todas.length + ' tarefas', badge: nAtr, tom: nAtr ? CRIT : '' };
+    e.telemetria = { sub: nomeAgora };
     const docs = (D.documentos || []).filter((d) => num(d.dn) && d.dn >= 0).sort((a, b) => a.dn - b.dn);
-    e.documentos = docs[0] ? { sub: docs[0].n.split(' ')[0].toLowerCase() + ' vence em ' + docs[0].dn + ' d', tom: docs[0].dn <= 30 ? WARN : '' } : { sub: 'vencimentos ' + SD };
+    e.documentos = docs[0] ? { sub: docs[0].n.split(' ')[0].toLowerCase() + ' vence em ' + docs[0].dn + ' d', tom: docs[0].dn <= 30 ? WARN : '' } : { sub: 'vencimentos ' + falta(SD) };
     const guias = Object.keys(FAQ).filter((k) => FAQ[k] && FAQ[k].status === 'PRONTO').length;
-    e.equipamentos = { sub: guias ? guias + ' guias PRONTO' + (demo ? ' ·' + demo : '') : 'guias ' + SD };
-    e.navegacao = { sub: String(S.estado || SD).toLowerCase() + ' · ' + (num(S.sog) ? nb(S.sog) + (S.sog < 2 ? ' nó' : ' nós') : SL) + ' · ' + g3(S.proa) };
-    e.abastecer = { sub: num(DI.litros) ? '≈ ' + mil(DI.litros) + ' L' + (num(DI.bb) && num(DI.be) ? ' · ' + Math.round((DI.bb + DI.be) / 2) + ' %' : '') : 'diesel ' + SL };
+    e.equipamentos = { sub: guias ? guias + ' guias de bordo' : 'guias ' + falta(SD) };
+    e.navegacao = { sub: (q && q.estado ? String(q.estado).toLowerCase() : falta(SD)) + ' · ' + (q && num(q.sog_nos) ? c('sog_nos', q.sog_nos < 2 ? ' nó' : ' nós') : falta(SL)) + ' · ' + c('proa_graus', '°') };
+    e.abastecer = { sub: tem('diesel_litros') ? '≈ ' + c('diesel_litros') + ' L' + (I && I.calc && num(I.calc.diesel_pct) && F.nb ? ' · ' + Math.round(I.calc.diesel_pct) + ' %' : '') : 'diesel ' + falta(SL) };
     const loc = (diarioLocal || [])[0], fon = (D.diario || [])[0];
     const hLoc = loc && loc.iso ? (() => { try { const d = new Date(loc.iso); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); } catch (x) { return ''; } })() : '';
-    e.diario = { sub: loc ? 'último ' + (loc.d || '') + (hLoc ? ' ' + hLoc : '') : fon ? 'último ' + fon.d + ' ' + fon.h : 'diário ' + SD };
-    e.gerador = { sub: 'Onan · ' + (num(GE.horas) ? horas(GE.horas) + ' h' : SL) + (GE.estado ? ' · ' + GE.estado.split(' ')[0] : ''), badge: atrasadas(['gerador-rotor', 'gerador-revisao']).length };
+    e.diario = { sub: loc ? 'último ' + (loc.d || '') + (hLoc ? ' ' + hLoc : '') : fon ? 'último ' + fon.d + ' ' + fon.h : 'diário ' + falta(SD) };
+    // gerador: o fabricante do inventário, a potência e as horas de agora
+    e.gerador = { sub: (equip('gerador').fabricante || falta(SD)) + (q && q.gerador_ativo === true && tem('gerador_kw') ? ' · ' + c('gerador_kw', ' kW') : q && q.gerador_ativo === false ? ' · desligado' : '') + (tem('gerador_horimetro_h') ? ' · ' + c('gerador_horimetro_h', ' h') : ''), badge: atrasadas(['gerador-rotor', 'gerador-revisao']).length };
     const filtro = aberta('clima-filtro');
-    e.climatizacao = { sub: filtro && filtro.dn < 0 ? 'filtro ' + filtro.rot : (FAQ.climatizacao && FAQ.climatizacao.status === 'PRONTO' ? 'guia PRONTO' + (demo ? ' ·' + demo : '') : 'guia ' + SD), badge: atrasadas(['clima-filtro', 'clima-revisao']).length, tom: filtro && filtro.dn < 0 ? CRIT : '' };
-    e.estabilizador = { sub: 'Seakeeper · ' + (SK.estado || SL) + (SK.hora ? ' ' + hm(SK.hora) : ''), badge: atrasadas(['seakeeper-anodo']).length };
-    e.eletronicos = { sub: FAQ.eletronicos && FAQ.eletronicos.equip ? FAQ.eletronicos.equip.replace(/^Eletrônicos\s+/, '') : SD, badge: atrasadas(['garmin-cartas']).length };
+    e.climatizacao = { sub: filtro && filtro.dn < 0 ? 'filtro ' + (A.prazoDe ? (A.prazoDe(filtro.dn).rot || filtro.rot) : filtro.rot) : (FAQ.climatizacao && FAQ.climatizacao.status === 'PRONTO' ? 'guia de bordo' : 'guia ' + falta(SD)), badge: atrasadas(['clima-filtro', 'clima-revisao']).length, tom: filtro && filtro.dn < 0 ? CRIT : '' };
+    e.estabilizador = { sub: fabMod(equip('estabilizador')) + ' · ' + (q && typeof q.seakeeper_ativo === 'boolean' ? (q.seakeeper_ativo ? 'ligado' + (tem('seakeeper_volante_pct') ? ' · ' + c('seakeeper_volante_pct', ' %') : '') : 'desligado') : falta(SL)), badge: atrasadas(['seakeeper-anodo']).length };
+    e.eletronicos = { sub: FAQ.eletronicos && FAQ.eletronicos.equip ? FAQ.eletronicos.equip.replace(/^Eletrônicos\s+/, '') : falta(SD), badge: atrasadas(['garmin-cartas']).length };
     e.equipe = { sub: (EQ.perfis || []).length + ((EQ.perfis || []).length === 1 ? ' perfil' : ' perfis') + ' · ' + (EQ.apoio || []).length + ' de apoio' };
     const eqs = D.equipamentos || [], semModelo = eqs.filter((x) => !x.modelo).length;
-    e.sistemas = { sub: eqs.length + ' equipamentos · ' + semModelo + ' modelos ' + SD };
-    e.mare = { sub: 'ref. ' + ((D.posicaoRef && D.posicaoRef.nome) || SD) };
-    e.clima = { sub: 'vento ' + (num(S.vento) ? nb(S.vento) + ' nós' : SL) + ' · ' + (num(S.pressao) ? nb(S.pressao, 0) + ' hPa' : SL) };
-    e.autonomia = { sub: num(AUT.horas) ? '≈ ' + nb(AUT.horas) + ' h · ≈ ' + mil(AUT.mn) + ' mn' : 'autonomia ' + SD };
-    e.tanques = { sub: 'água ' + (num(T.agua) ? Math.round(T.agua) + ' %' : SL) + ' · negras ' + (num(T.negras) ? Math.round(T.negras) + ' %' : SL) };
-    const porao = aberta('porao-teste');
-    e.porao = { sub: (S.porao == null ? SL : 'sensor na rede') + (porao && porao.dn < 0 ? ' · teste ' + porao.rot : ''), badge: atrasadas(['porao-teste']).length, tom: porao && porao.dn < 0 ? CRIT : '' };
-    e.canal16 = { sub: P.canal16 ? 'canal ' + P.canal16.canal + ' · ' + P.canal16.mhz + ' MHz' : 'canal 16 · ' + SD };
-    e.horimetros = { sub: Array.isArray(M.horimetro) ? 'BB ' + horas(par(M.horimetro, 0)) + ' · BE ' + horas(par(M.horimetro, 1)) + ' · ger. ' + horas(GE.horas) : SL };
-    e.posicao = { sub: G.texto || 'posição ' + SL };
-    e.checklist = { sub: (D.guias && D.guias.checklist) || SD };
-    e.consumo = { sub: CON.cruzeiro ? nb(CON.cruzeiro.lph, 0) + ' L/h a ' + CON.cruzeiro.nos + ' nós' + (CON.lenta ? ' · lenta ' + nb(CON.lenta.lph) + ' L/h' : '') : 'consumo ' + SD };
-    const pend = (D.diario || []).filter((x) => x.pend).length;
+    e.sistemas = { sub: eqs.length + ' equipamentos' + (semModelo ? ' · ' + semModelo + ' modelos ' + falta(SD) : ' com fabricante e modelo') };
+    e.mare = { sub: 'ref. ' + ((D.posicaoRef && D.posicaoRef.nome) || falta(SD)) };
+    e.clima = { sub: 'a bordo ' + c('vento_verdadeiro_nos', ' nós') + ' · ' + c('pressao_barometrica_hpa', ' hPa') };
+    e.autonomia = { sub: I && I.calc && I.calc.autonomia ? '≈ ' + F.nb(I.calc.autonomia.horas, 1) + ' h · ≈ ' + F.nb(I.calc.autonomia.mn, 0, true) + ' mn' : 'autonomia ' + falta(SD) };
+    e.tanques = { sub: 'água ' + c('tanque_agua_pct', ' %') + ' · negras ' + c('tanque_negras_pct', ' %') };
+    const porao = aberta('porao-teste'), ciclos = q && num(q.bomba_porao_ciclos) ? q.bomba_porao_ciclos : null;
+    e.porao = { sub: (tem('porao_bb_nivel') && tem('porao_be_nivel') ? 'BB ' + c('porao_bb_nivel') + ' · BE ' + c('porao_be_nivel') + ' cm' : falta(SL)) + (ciclos !== null ? ' · bomba ' + ciclos + (ciclos === 1 ? ' ciclo' : ' ciclos') + '/h' : '') + (porao && porao.dn < 0 ? ' · teste ' + (A.prazoDe ? (A.prazoDe(porao.dn).rot || porao.rot) : porao.rot) : ''), badge: atrasadas(['porao-teste']).length, tom: porao && porao.dn < 0 ? CRIT : '' };
+    e.canal16 = { sub: P.canal16 ? 'canal ' + P.canal16.canal + ' · ' + P.canal16.mhz + ' MHz' : 'canal 16 · ' + falta(SD) };
+    e.horimetros = { sub: tem('motor_bb_horimetro_h') ? 'BB ' + c('motor_bb_horimetro_h') + ' · BE ' + c('motor_be_horimetro_h') + ' · ger. ' + c('gerador_horimetro_h') : falta(SL) };
+    e.posicao = { sub: q && num(q.lat) && num(q.lon) && F.coord ? F.coord(q.lat, q.lon) : 'posição ' + falta(SL) };
+    e.checklist = { sub: (D.guias && D.guias.checklist) || falta(SD) };
+    e.consumo = { sub: CON.cruzeiro ? F.nb ? F.nb(CON.cruzeiro.lph, 0) + ' L/h a ' + CON.cruzeiro.nos + ' nós' + (CON.lenta ? ' · lenta ' + F.nb(CON.lenta.lph, 1) + ' L/h' : '') : '' : 'consumo ' + falta(SD) };
+    // pendências abertas: as do cérebro (as geradas e as do aparelho, menos as resolvidas por linha nova) e as anotações do app (anomalia, A CONFIRMAR/A CONFERIR de foto e vídeo): a mesma conta da B1 e
+    // do chat em «Anomalias abertas» (o CapitaoAgora.contagens() só vê as pendências do diário gerado e as do aparelho com `pend`: ficava abaixo)
+    let pend = 0;
+    try {
+      const Br = window.CapitaoBrain, pl = Br && typeof Br.pendenciasLista === 'function' ? Br.pendenciasLista().filter((p) => p.aberta) : null;
+      if (pl) { const noApp = {}; pl.forEach((p) => { if (p.origem === 'aparelho') noApp[p.iso] = 1; }); pend = pl.length + (diarioLocal || []).filter((x) => !x.acao && /pend[eê]ncia|anomalia|A CONFIRMAR|A CONFERIR/i.test(String(x.t || '')) && !noApp[x.iso]).length; }
+      else pend = A.contagens ? A.contagens().pendencias : (D.diario || []).filter((x) => x.pend).length;
+    } catch (x) { pend = 0; }
     e.anomalias = { sub: pend + (pend === 1 ? ' pendência aberta' : ' pendências abertas') + ' no diário' };
-    return e;
+    return { e: e, nAtr: nAtr, atr: atrasadas().map((t) => ({ n: t.equip.split(' (')[0], dn: t.dn })) };
+  }
+  // Tudo o que a tela exibe e vem do instante, em texto puro (dados, sem elemento React): é a chave do «só redesenha quando o texto exibido muda». As tendências custam ~5 ms:
+  // a conta se refaz quando o instante muda (a cada tique do replay livre; com o instante fixado não se refaz) e nunca fica atrás do alerta e dos blocos da mesma tela.
+  dinamico() {
+    const st = this.state, D = window.CapitaoDados || {}, A = window.CapitaoAgora || {}, F = A.fmt || {}, B = window.CapitaoBrain, ex = st.exec || {};
+    let I = null; try { I = typeof A.instante === 'function' ? A.instante() : null; } catch (e) { I = null; }
+    const sim = D.simulacao === true, SD = 'SEM DADOS', SL = 'SEM LEITURA', falta = (r) => (sim ? '—' : r), num = (x) => typeof x === 'number' && isFinite(x), cap = (s) => { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); };
+    const reserva = !!(I && I.fonte === 'snapshot'), q = I && I.q ? I.q : null;
+    const ee = this.estados(D, ex, st.diarioLocal, I);
+    const peso = (n) => (n === 'critico' ? 2 : 1), inf = (x) => (x === null || x === undefined ? Infinity : x);
+    let lista = []; try { lista = window.CapitaoAlertas && typeof window.CapitaoAlertas.ativos === 'function' ? window.CapitaoAlertas.ativos() : []; } catch (e) { lista = []; }
+    const emerg = !!(window.CapitaoEmergencia && (() => { try { return window.CapitaoEmergencia.valendo(); } catch (e) { return false; } })());
+    let pedidos = []; try { if (B && typeof B.alarmesPedidosAtivos === 'function') { let tem = ''; try { tem = localStorage.getItem('capitao.alarmes.v1') || ''; } catch (e) {} if (tem.length >= 3) { const l = B.alarmesPedidosAtivos(undefined, { emergencia: emerg }); pedidos = Array.isArray(l) ? l : []; } } } catch (e) { pedidos = []; }
+    const SISTEMA = { motores: 'Motores', eletrico: 'Elétrico', porao: 'Porão', eletronicos: 'Eletrônicos', tanques: 'Tanques', gerador: 'Gerador', estabilizador: 'Estabilizador' };
+    const itens = (Array.isArray(lista) ? lista : []).filter((a) => a && typeof a.id === 'string' && (a.nivel === 'aviso' || a.nivel === 'critico')).map((a) => ({
+      id: a.id, nivel: a.nivel, rotulo: a.rotulo || (a.nivel === 'critico' ? 'CRÍTICO' : 'AVISO'), texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null,
+      sistema: (SISTEMA[a.sistema] || cap(a.sistema)) + (a.lado ? ' · ' + String(a.lado).toUpperCase() : ''), quando: num(a.desdeMs) && a.hora ? 'desde ' + a.hora : 'agora', href: typeof a.detalhe === 'string' && a.detalhe ? a.detalhe : '#alertas' }));
+    pedidos.forEach((a) => { if (a && typeof a.id === 'string' && a.nivel === 'aviso') itens.push({ id: a.id, nivel: 'aviso', rotulo: a.rotulo || 'AVISO', texto: String(a.texto || ''), desdeMs: num(a.desdeMs) ? a.desdeMs : null, sistema: a.sistema ? (SISTEMA[a.sistema] || cap(a.sistema)) + (a.lado ? ' · ' + String(a.lado).toUpperCase() : '') : 'Alarme pedido', quando: String(a.desdeTxt || ''),
+      href: B && B.askHref ? B.askHref('app', 'meus alarmes') : 'H2-Home-Mobile.dc.html#q=meus%20alarmes' }); });
+    itens.sort((x, y) => (peso(y.nivel) - peso(x.nivel)) || (inf(x.desdeMs) < inf(y.desdeMs) ? -1 : inf(x.desdeMs) > inf(y.desdeMs) ? 1 : 0) || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0));
+    const nCrit = itens.filter((a) => a.nivel === 'critico').length, nAv = itens.length - nCrit;
+    const hh = I ? (reserva ? String(I.fonteTxt || '').replace(/^.*leitura de /, '') : I.hhmm) : '—';
+    const alertas = { n: itens.length, crit: nCrit, titulo: itens.length ? itens.length + (itens.length === 1 ? ' alerta ativo' : ' alertas ativos') : 'Nenhum alerta ativo',
+      status: itens.length ? (nCrit ? nCrit + ' crítico' + (nCrit > 1 ? 's' : '') : '') + (nCrit && nAv ? ' · ' : '') + (nAv ? nAv + (nAv === 1 ? ' aviso' : ' avisos') : '') : (I ? (reserva ? 'Última leitura salva · ' + hh : 'Faixas do guia de bordo · ' + hh) : falta(SL)),
+      itens: itens.map((a) => ({ id: a.id, nivel: a.nivel, rotulo: a.rotulo, sistema: a.sistema, texto: a.texto, txt: this.un(a.texto), quando: a.quando, href: a.href, aria: a.rotulo + ' — ' + a.texto + ' · ' + a.quando })) };
+    // tendências (F11): do cérebro, refeitas quando o instante (ou o Executado) muda — a cada tique do replay livre, para o texto nunca ficar atrás do alerta e dos blocos da mesma tela; com o instante fixado, a conta anterior vale
+    let tend = this._pred || [];
+    const slot = (I ? I.ms : -1) + '|' + JSON.stringify(ex);
+    if (B && typeof B.preditiva === 'function' && (slot !== this._predSlot || !this._pred)) { try { tend = this._pred = B.preditiva().map((x) => ({ id: x.id, nivel: x.nivel, rotulo: x.rotulo, titulo: x.titulo, texto: x.texto, fonte: x.fonte })); this._predSlot = slot; } catch (e) { tend = []; } }
+    const foraEst = tend.filter((x) => x.nivel !== 'ok').length;
+    const cs = window.CapitaoSensores ? window.CapitaoSensores.contagem() : { total: 0, comValor: 0 };
+    return { est: ee.e, nAtr: ee.nAtr, atr: ee.atr, alertas: alertas, tend: tend, foraEst: foraEst,
+      tendSub: tend.length ? (foraEst ? foraEst + (foraEst === 1 ? ' pede atenção' : ' pedem atenção') + ' · ' + (tend.length - foraEst) + ' estáveis' : 'Nenhuma preocupante · ' + tend.length + (tend.length === 1 ? ' estável' : ' estáveis')) : 'Sem histórico para calcular agora.',
+      tendFonte: 'Fonte: regras fixas sobre o histórico do coletor e o instante · ' + (I ? String(I.fonteTxt || '').replace(/(\d\d:\d\d):\d\d/, '$1').replace(/^Fonte: /, '') : falta(SD)),
+      mapaSub: (cs.total ? cs.comValor + ' de ' + cs.total + ' sensores na rede' : falta(SD)) + ' · perfil e planta do barco · ' + hh,
+      fonteAgora: I ? String(I.fonteTxt || '').replace(/(\d\d:\d\d):\d\d/, '$1') : falta(SD), histRef: D.historico && D.historico.fonte ? D.historico.fonte : falta(SD) };
   }
   renderVals() {
-    const s = this.state, ex = s.exec || {}, D = window.CapitaoDados || {}, S = D.snapshot || {}, AG = D.agenda || [];
-    const TOM = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)'] };
+    const s = this.state, D = window.CapitaoDados || {}, G = window.CapitaoGrafico;
+    // o texto do tique que acabou de chamar o setState vale; qualquer outro redesenho (blocos, Executado, série) refaz o texto agora
+    let d = this._din;
+    if (!this._fresco || !d) { d = this._din = this.dinamico(); this._k = JSON.stringify(d); }
+    this._fresco = false;
+    const TOM = { crit: ['var(--cap-crit, #ff3b30)', 'rgba(var(--cap-crit-rgb, 255,59,48), 0.14)'], warn: ['var(--cap-warn, #f0a63a)', 'rgba(var(--cap-warn-rgb, 240,166,58), 0.14)'], tele: ['var(--cap-tele, #00f4fd)', 'rgba(var(--cap-tele-rgb, 0,244,253), 0.12)'], accent: ['var(--cap-accent, #00a1fe)', 'rgba(var(--cap-accent-rgb, 0,161,254), 0.12)'], ok: ['var(--cap-ok, #34c77a)', 'rgba(var(--cap-ok-rgb, 52,199,122), 0.14)'], violeta: ['var(--cap-violeta, #b45cff)', 'rgba(var(--cap-violeta-rgb, 162,43,253), 0.14)'], neutro: ['var(--cap-ink3, #97a3c0)', 'rgba(var(--cap-ink3-rgb, 151,163,192), 0.16)'] };
     const cor = (k) => TOM[k] || TOM.accent;
-    const atr = AG.filter((t) => t.dn < 0 && !ex[t.id]), n = atr.length;
+    const n = d.nAtr;
     const lista = s.blocos || this.padrao();
-    const est = this.estados(D, ex, s.diarioLocal);
+    const est = d.est;
     const blocos = lista.map((b) => {
-      const c = this.porId(b.id), ic = this.ICONES[b.icon] || this.ICONES[c.icon], k = cor(ic.tom), e = est[b.id] || { sub: 'SEM DADOS' };
+      const c = this.porId(b.id), ic = this.ICONES[b.icon] || this.ICONES[c.icon], k = cor(ic.tom), e = est[b.id] || { sub: '—' };
       const badge = e.badge ? String(e.badge) : '';
-      return { href: this.hrefDe(c), label: b.label, sub: e.sub, subTom: e.tom || 'var(--cap-ink3, #97a3c0)', badge: badge, ico: this.ico(ic.d, 20, 1.7, k[0]), wash: k[1],
+      return { href: this.hrefDe(c), label: b.label, sub: this.un(e.sub), subTom: e.tom || 'var(--cap-ink3, #97a3c0)', badge: badge, ico: this.ico(ic.d, 20, 1.7, k[0]), wash: k[1],
         aria: b.label + ' — ' + e.sub + (badge ? ' · ' + badge + (badge === '1' ? ' tarefa atrasada' : ' tarefas atrasadas') : '') + (c.q ? ' · pergunta pronta' : '') };
     });
     const salvo = !!s.blocos;
+    // alertas
+    const al = d.alertas, aviso = al.n > 0, critico = al.crit > 0, alCor = critico ? TOM.crit : aviso ? TOM.warn : TOM.ok;
+    const alerta = Object.assign({}, al, { cor: alCor[0], wash: alCor[1], ico: this.ico(aviso ? 'M12 4 21 20H3z M12 10v4 M12 17h.01' : 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M8 12.5l2.7 2.7L16 9.8', 19, 1.8, alCor[0]),
+      borda: aviso ? 'rgba(' + (critico ? 'var(--cap-crit-rgb, 255,59,48)' : 'var(--cap-warn-rgb, 240,166,58)') + ', 0.55)' : 'var(--cap-line, #1a2240)',
+      itens: al.itens.map((a) => { const k = a.nivel === 'critico' ? TOM.crit : TOM.warn; return Object.assign({}, a, { cor: k[0], fundo: k[1], borda: 'rgba(' + (a.nivel === 'critico' ? 'var(--cap-crit-rgb, 255,59,48)' : 'var(--cap-warn-rgb, 240,166,58)') + ', 0.45)' }); }) });
+    // histórico: o gráfico compartilhado; as métricas do laço de 150 s só têm a janela de 150 s
+    const ORDEM = G ? G.ORDEM : [], JAN = G ? ['150S', '1D', '7D', '30D', '1A'] : [], JR = G ? G.JANELAS : {};
+    const jan = G ? G.janelaValida(s.serie, s.janela) : '7D', so150 = !!(G && G.so150(s.serie)), nome = (k) => (G ? G.rotulo(k) : k);
+    const onSel = (k) => s.serie === k, onJan = (k) => jan === k;
+    const tendCor = { ok: TOM.ok[0], atencao: TOM.warn[0], acao: TOM.crit[0] };
     return {
       atr: String(n), atrTitle: n === 1 ? 'Manutenção atrasada' : n ? n + ' manutenções atrasadas' : 'Nada atrasado',
-      atrSub: n ? atr.map((t) => t.equip.split(' (')[0] + ' · ' + (-t.dn) + ' d').join(' · ') : 'Executadas registradas no diário · ' + AG.length + ' tarefas',
+      atrSub: n ? d.atr.map((t) => t.n + ' · ' + (-t.dn) + ' d').join(' · ') : 'Executadas registradas no diário',
       atrTone: n ? 'var(--cap-crit, #ff3b30)' : 'var(--cap-ok, #34c77a)', atrWash: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.12)' : 'rgba(var(--cap-ok-rgb, 52,199,122), 0.12)', atrLine: n ? 'rgba(var(--cap-crit-rgb, 255,59,48), 0.40)' : 'var(--cap-line, #1a2240)',
       atrAria: (n ? n + (n === 1 ? ' manutenção atrasada' : ' manutenções atrasadas') : 'Nada atrasado') + ' — abrir manutenção',
       blocosTitulo: 'BLOCOS · ' + blocos.length + ' DE ' + this.MAX,
       blocosSub: salvo ? 'personalizados neste aparelho' : 'padrão · personalize em Editar',
       blocos: blocos, vazio: blocos.length === 0,
+      al: alerta,
+      serieRot: nome(s.serie) + ' · ' + (JR[jan] ? JR[jan].rot : jan), janelaTxt: JR[jan] ? JR[jan].nome + ' · ' + JR[jan].media : '',
+      janelas: JAN.map((k) => { const off = so150 && k !== '150S', on = onJan(k); return { l: JR[k].rot, tip: off ? nome(s.serie) + ' só tem a janela de 150 s' : JR[k].nome, on: on, off: off, cursor: off ? 'not-allowed' : 'pointer', opac: off ? '0.4' : '1',
+        onClick: () => { if (!off) this.setState({ janela: k }); }, bg: on ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.18)' : 'transparent', tom: on ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' }; }),
+      series: ORDEM.map((k) => ({ l: nome(k), on: onSel(k), onClick: () => this.setState({ serie: k }), bg: onSel(k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.14)' : 'transparent', line: onSel(k) ? 'rgba(var(--cap-accent-rgb, 0,161,254), 0.45)' : 'var(--cap-line2, #27315a)', tom: onSel(k) ? 'var(--cap-accent, #00a1fe)' : 'var(--cap-ink2, #b1bdd6)' })),
+      grafico: G ? G.elemento({ metrica: s.serie, janela: jan, altura: 176, compacto: true }) : null,
+      histFonte: 'Fonte: ' + (jan === '150S' ? d.fonteAgora.replace(/^Fonte: /, '') : d.histRef),
+      tend: d.tend.map((t) => Object.assign({}, t, { cor: tendCor[t.nivel] || TOM.neutro[0] })), tendSub: d.tendSub, tendFonte: d.tendFonte,
+      tendHref: window.CapitaoBrain && window.CapitaoBrain.askHref ? window.CapitaoBrain.askHref('app', 'Quais as tendências?') : 'H2-Home-Mobile.dc.html#q=' + encodeURIComponent('Quais as tendências?'),
+      mapaSub: d.mapaSub,
       aparelho: 'a escolha dos blocos fica salva só aqui; SOS e a barra do assistente são fixos.',
-      fonte: 'Fonte: ' + ((S.fonte || 'coletor NMEA') + ' · ' + (S.quando || 'SEM DADOS')) + ' · ' + (D.agendaFonte || 'agenda SEM DADOS').split(' · ')[0] + ' · ' + (D.docsFonte || 'documentos SEM DADOS').split(' · ')[0] + ' · ' + (D.diarioFonte || 'diário SEM DADOS').split(' · ')[0]
+      fonte: 'Fonte: ' + d.fonteAgora.replace(/^Fonte: /, '') + ' · ' + (D.agendaFonte || '—').split(' · ')[0] + ' · ' + (D.docsFonte || '—').split(' · ')[0] + ' · ' + (D.diarioFonte || '—').split(' · ')[0]
     };
   }
 }

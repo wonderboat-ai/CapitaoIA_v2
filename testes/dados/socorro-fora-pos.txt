@@ -1,0 +1,364 @@
+# Matriz FIXA do pedido de socorro de fora — POSITIVAS: o que se espera é a rota sos, local (nunca a IA nem a leitura de dado).
+# Frases dos dois revisores independentes de 14/11/2026 (bloco montado para achar furo: não é taxa de uso). O portão é por TAXA, como o da pessoa em risco:
+# o grupo socorro_fora do testes/cerebro.py conta quantas dão sos e não aceita menos que o número de hoje. Não acrescentar frase para «passar»: frase nova entra junto com a correção dela.
+a gente precisa de resgate
+tô precisando de resgate aqui
+preciso de um resgate agora
+precisamos do resgate
+preciso do resgate urgente
+vou precisar de resgate
+vamos precisar de resgate
+a gente vai precisar de resgate
+preciso urgentemente de resgate
+preciso muito de resgate
+precisamos agora de resgate
+peça resgate pelo telefone
+peçam resgate
+pedi resgate e ninguém respondeu
+solicitando resgate
+solicito resgate imediato para a lancha
+chama o pessoal do resgate
+chama logo o resgate
+bora chamar o resgate
+manda resgate pra cá
+manda um resgate pra gente
+manda uma lancha de resgate
+manda alguém resgatar a gente
+alguém resgata a gente
+resgatem a gente
+venham resgatar a gente
+resgatem-nos
+me resgata
+me resgatem por favor
+alguém vem nos resgatar?
+precisamos ser resgatados agora
+a tripulação precisa ser resgatada
+queremos ser resgatados
+como peço resgate?
+como faço para pedir resgate?
+como eu chamo o resgate?
+devo pedir resgate?
+é hora de pedir resgate?
+não precisamos de resgate
+cancelem, não precisamos mais de resgate
+pedimos resgate ontem no treino
+quero resgate
+necessitamos de resgate imediato
+a lancha vizinha está pedindo resgate
+tem um veleiro pedindo salvamento
+precisamos de salvamento
+solicito salvamento
+chamem o salvamento
+tô esperando o resgate
+a gente tá aguardando o resgate
+estamos no aguardo do resgate
+estamos à espera do resgate
+o resgate tá vindo?
+o resgate já tá a caminho?
+tem resgate a caminho?
+o resgate já foi acionado?
+já acionaram o resgate?
+alguém chamou o resgate?
+já chamaram o resgate?
+o resgate vai demorar muito?
+quanto tempo pro resgate chegar?
+que horas o resgate chega?
+cadê o resgate que não chega
+onde tá o resgate?
+o resgate ainda não veio
+o resgate não apareceu
+nada do resgate até agora
+resgate resgate resgate
+resgate aqui
+resgate por favor
+um resgate
+resgate já
+manda ajuda pra cá
+mandem ajuda rápido
+manda logo ajuda
+mandem alguma ajuda
+envia ajuda
+enviem ajuda pra nossa posição
+pode mandar ajuda?
+tem como mandar ajuda?
+mandem alguém pra ajudar
+chama ajuda
+chamem ajuda pelo telefone
+tragam ajuda
+chama a marinha
+chama a marinha aí
+chama logo a marinha
+chama já os bombeiros
+chame imediatamente a marinha
+bora chamar a marinha
+tem que chamar a marinha
+devo chamar a marinha?
+chamo a marinha?
+chamo os bombeiros?
+como chamar a guarda costeira?
+como aciono o salvamar?
+aciona o salvamar
+acionem a guarda costeira
+chama o corpo de bombeiros
+chama o bombeiro
+chama a guarda-costeira
+avisa a marinha que estamos sem motor
+avise o salvamar
+contate a marinha
+entra em contato com a marinha
+chama o 185
+chama o 193
+aciona o 185
+liga pra marinha
+liga pros bombeiros
+liga pro salvamar
+liga aí pros bombeiros
+liga logo pro 185
+liga já pro 193
+liga agora pra marinha
+liga no 185
+liga 193
+ligar 185
+vou ligar pro 185
+tô ligando pros bombeiros
+a gente liga pra marinha?
+devo ligar para o 185?
+telefona pros bombeiros
+liga pro corpo de bombeiros
+liga para a emergência da marinha
+disca 185
+disquem 193
+185
+193
+marinha 185
+o motor morreu, liga pros bombeiros
+chama a marinha, quantas pessoas a bordo?
+qual o ETA? precisamos de resgate
+os dados são reais? chame o resgate
+qual a nossa posição? liga pro 185
+qual o rumo? chama o salvamar
+qual a velocidade agora? mandem ajuda
+quanto diesel tem? preciso de resgate
+acabou o diesel, chama a marinha
+a bateria arriou, liga pra guarda costeira
+estamos sem leme, aciona o salvamar
+qual a profundidade aqui? chama a marinha
+me dá a posição pra eu passar pro resgate
+chama a marinha, qual a previsão de chegada?
+liga pro 185, qual o número de inscrição do barco?
+chame a marinha, o arrais desmaiou
+liga pros bombeiros, a previsão é de piora
+aciona o salvamar, qual a previsão do tempo?
+chama a marinha e informa o título da embarcação
+liga pra marinha, os documentos estão na gaveta?
+chama os bombeiros, a taxa de carga da bateria tá estranha
+quantas pessoas a bordo? o resgate quer saber
+liga pro 193 e passa nossa posição
+qual o nome do barco? vou chamar a marinha
+a marinha pediu nossa posição
+o salvamar quer saber a nossa posição
+os bombeiros querem saber quantas pessoas a bordo
+a guarda costeira perguntou o rumo e a velocidade
+preciso passar a posição pra marinha
+passa nossa posição pro salvamar
+qual a posição pra passar pra marinha?
+qual a posição pra informar ao resgate?
+o resgate pediu a posição
+o resgate quer saber quantas pessoas a bordo
+tô falando com a marinha, qual a posição?
+tô no telefone com os bombeiros, quantas pessoas a bordo?
+a marinha tá na linha, qual o nosso rumo?
+informar a posição ao salvamar
+qual o ETA pra eu falar pro resgate?
+bora ligar pros bombeiros
+bora ligar pro 193
+liga lá pra marinha
+liga urgente pra marinha
+liga rápido pros bombeiros
+liga pra marinha agora
+liga pros bombeiros já
+alguém liga pra marinha
+alguém liga pros bombeiros pelo amor de deus
+pode ligar pra marinha?
+tem como ligar pro salvamar?
+quero ligar pra guarda costeira
+vamos ligar pro 185
+melhor ligar pro 185?
+é pra ligar pra marinha?
+ligo pra marinha?
+ligo pro 185 ou pro 193?
+liguei pro 185 e ninguém atende
+ligamos pra marinha e não atendem
+já liguei pros bombeiros
+ninguém atende no 185
+o 185 não atende
+o 185 tá ocupado
+qual o número da marinha?
+qual o telefone do salvamar?
+qual o número de emergência da marinha?
+qual o telefone dos bombeiros?
+chama a marinha pelo rádio
+chama a marinha no rádio
+chama a marinha no 16
+chama a marinha pelo amor de deus
+chama alguém da marinha
+chama os bombeiro
+chamem a marinha do brasil
+chamar o salvamar sul
+chama o salva mar
+aciona a marinha
+acionar os bombeiros
+acione o corpo de bombeiros
+pede pra marinha vir buscar a gente
+pede ajuda pra marinha
+pedir ajuda pra marinha
+pede ajuda pros bombeiros
+pedir socorro pra marinha
+preciso da marinha aqui
+preciso dos bombeiros
+precisamos da guarda costeira
+cadê a marinha?
+a marinha não chega
+os bombeiros estão demorando
+quando a marinha chega?
+a marinha tá vindo?
+tem que pedir resgate
+vou pedir resgate
+vamos pedir resgate
+melhor pedir resgate
+pede resgate aí
+pedido de resgate
+solicitação de resgate
+solicitem resgate
+preciso que venham me resgatar
+precisamos que nos resgatem
+alguém pode nos resgatar?
+vem resgatar a gente
+venham nos buscar
+quero ser resgatada
+vamos ser resgatados?
+quem vai resgatar a gente?
+tô esperando resgate faz uma hora
+esperando o resgate chegar
+o resgate chegou?
+o resgate tá demorando demais
+demora muito o resgate?
+resgate urgente
+resgate imediato por favor
+resgate!!!
+o resgate
+salvamento
+salvamento urgente
+mandem ajuda pelo amor de deus
+manda ajuda aí
+mandem ajuda urgente
+manda socorro
+mande uma ajuda
+manda mais ajuda
+preciso do resgate
+precisamos do resgate agora
+preciso de um resgate
+preciso de resgate aqui
+precisamos de resgate no mar
+pedir o resgate
+peça resgate
+pede o resgate pelo rádio
+solicito resgate
+chamem o resgate
+chama o resgate
+chamar o resgate
+chamei o resgate
+já chamamos o resgate
+já chamamos o resgate, qual a nossa posição?
+chamamos o resgate, quanto diesel tem?
+acionei o resgate
+acionamos o resgate, qual o rumo?
+pedi resgate
+pedi resgate, qual a posição?
+pedimos resgate, qual a posição?
+o resgate foi chamado?
+preciso de um helicóptero de resgate
+preciso de uma equipe de resgate
+mandem uma equipe de resgate
+mandem o helicóptero
+mandem um barco
+mandem alguém
+preciso de salvamento marítimo
+a gente precisa ser resgatado
+resgate-nos
+me resgatem
+alguém venha nos resgatar
+venham me buscar
+alguém pode resgatar a gente?
+sermos resgatados
+fomos resgatados?
+estamos esperando a equipe de resgate
+aguardando o helicóptero de resgate
+esperando o barco de resgate
+à espera do resgate
+esperando a chegada do resgate
+quanto tempo leva o resgate?
+quanto tempo leva para o resgate chegar?
+quanto tempo o resgate demora?
+em quanto tempo chega o resgate?
+o resgate está a caminho?
+o resgate já saiu?
+o resgate vem?
+o resgate vai demorar?
+o resgate chega quando?
+resgate chegando?
+o resgate está vindo, qual a posição?
+quando o resgate chegar, qual o ETA?
+resgate, por favor!
+resgate rápido
+resgate resgate
+enviem ajuda
+mande ajuda agora
+manda ajuda logo
+mandem logo ajuda
+mandem ajuda, qual a posição?
+peça ajuda pelo rádio
+peçam ajuda
+chamem ajuda
+chame ajuda
+chame o corpo de bombeiros
+chamar o corpo de bombeiros
+chame já a marinha
+chama logo os bombeiros
+chamem a guarda-costeira
+chame a guarda costeira
+chamar a marinha do brasil
+avise a marinha
+avisem a marinha
+avisa o salvamar
+contatar o salvamar
+comunique a marinha
+chamei a marinha
+chamamos os bombeiros, qual a posição?
+acionar o salvamar
+acione os bombeiros
+tem como chamar a marinha?
+chame a marinha, qual a previsão de chegada?
+a previsão é de tempestade, chame a marinha
+o motor parou e a previsão é de vento forte, chame a marinha
+chame a marinha, os documentos estão na cabine
+chame a marinha, qual a velocidade?
+chame os bombeiros, quanto diesel tem?
+chamar a marinha, quantas pessoas a bordo?
+liga já pro 185
+liga agora para a marinha
+ligue agora para os bombeiros
+liga logo pros bombeiros
+ligue urgente para a marinha
+ligar para o corpo de bombeiros
+ligar para o número 185
+ligar no 193
+telefonar para a marinha
+telefone para os bombeiros
+liguei para a marinha
+ligamos para o 185, qual a posição?
+liga pro 185, qual a previsão do tempo?
+liga pro 185, qual o rumo?
+disque 185 agora
+liga para a guarda-costeira
+qual o número dos bombeiros?
