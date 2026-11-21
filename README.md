@@ -145,7 +145,7 @@ A versão aparece no rodapé de todas as telas. Para lançar: `VERSAO` em `capit
 1. Merge da branch `claude/…` da versão (a do PR aberto no GitHub) na `main` — **só quando o proprietário pedir** (publica o site).
 2. GitHub › Settings › Pages › Deploy from a branch › `main` · `/ (root)` › Save.
 3. A nova versão entra no ar em 1 a 2 minutos. Desde a 1.0.6 o celular se atualiza sozinho: a 1ª abertura depois de publicar ainda pode vir da versão anterior, e a tela se recarrega na nova assim que ela assume (o app instalado procura versão nova ao voltar para a frente). Para conferir: digite **diagnóstico** no chat.
-4. O Worker `capitao-ia` não se publica com o site: o código de `integracoes/workers-ai/ia-worker/worker.js` é colado no painel da Cloudflare pelo proprietário (passo a passo em `integracoes/workers-ai/README.md`). Site e Worker podem ir no ar em qualquer ordem.
+4. O Worker `capitao-ia` não se publica com o site: o código de `integracoes/workers-ai/ia-worker/worker.js` é publicado à parte, pelo painel da Cloudflare ou pela API oficial com um token do proprietário restrito a Workers Scripts, trocando só o código (passo a passo e como desfazer em `integracoes/workers-ai/README.md`; a 1.1.0 está no ar desde 21/11/2026). Site e Worker podem ir no ar em qualquer ordem.
 
 ---
 

@@ -76,19 +76,19 @@ A passada autorizada na recomendação 2 tratou os itens 1, 2, 3, 13 e 18: a fun
 
 **Achados:** dos 19 da rodada 3, os 5 bloqueios de falso negativo foram tratados. Ficam **14**: 8 de falso negativo («corrigir») e 6 de falso positivo, 4 deles marcados como bloqueio de produto (itens 7 a 10). Os limites de cada um estão no relatório do pacote, e a lista completa continua em `RESIDUO-PESSOA-AO-MAR-achados.json`.
 
-**Três decisões para o proprietário confirmar:**
+**Três decisões — confirmadas pelo proprietário em 21/11/2026:**
 1. Dois controles de rotina mudaram de lado e passaram ao nível 1 (instrução do SOS, sem janela): «a Ana não deu sinal de vida» e «alguém sabe onde o Pedro está?».
 2. «O Pedro não foi visto», com nome próprio, dá nível 2 (instrução e janela) por uma regra que já existia e estava morta; com substantivo aberto («o fornecedor não foi visto») dá nível 1.
 3. «O guia de mergulho não retornou / não voltou» é nível 1, não socorro: instrução do SOS sem janela.
 
 **Conferências da rodada 1 sobre a árvore integrada:** `cerebro.py` principal 1.859 perguntas, 0 falhas; `sos.py` 137/0; `worker_ia.py` 157/0; `chat_ia.py` 324 conferências só com as 2 falhas esperadas do contêiner.
 
-## Recomendação (estado em 14/11/2026)
+## Recomendação (estado em 14/11/2026; decisões do proprietário em 21/11/2026)
 
 1. **Base aceita:** a Fase 4 seguiu e as Fases 5 a 8 também; as rodadas abertas de revisão pararam.
 2. **Passada nos 5 bloqueios de falso negativo: feita** (seção anterior). A matriz fixa de 58.929 frases está em 2,68 %.
-3. **Critério de aceite por taxa, não por contagem de achados:** matriz fixa com no máximo 3 % de falha (2,68 % hoje); corpus natural de 1.341 frases com no máximo 5 % de falso positivo no mesmo diferencial; zero frases piores que o `f3b121c`. O critério vale para qualquer mudança futura na classe. **Medido em 14/11/2026 sobre o cérebro final:** a matriz e o «zero piores» estão dentro; o falso positivo no corpus natural é de 115 frases (8,6 %): as 86 desta página, que recebem a instrução sem a janela (6,4 %), mais 29 que recebem a instrução com a janela (2,2 %: ofício de terra com «sumiu» ou «não apareceu», «ficou para trás na escala», equipamento de mergulho que «sumiu»). A meta de falso positivo **não foi atingida**; fechar pede a passada dos itens 7 a 10, que é decisão de produto.
+3. **Critério de aceite por taxa, não por contagem de achados:** matriz fixa com no máximo 3 % de falha (2,68 % hoje); corpus natural de 1.341 frases com no máximo 5 % de falso positivo no mesmo diferencial; zero frases piores que o `f3b121c`. O critério vale para qualquer mudança futura na classe. **Medido em 14/11/2026 sobre o cérebro final:** a matriz e o «zero piores» estão dentro; o falso positivo no corpus natural é de 115 frases (8,6 %): as 86 desta página, que recebem a instrução sem a janela (6,4 %), mais 29 que recebem a instrução com a janela (2,2 %: ofício de terra com «sumiu» ou «não apareceu», «ficou para trás na escala», equipamento de mergulho que «sumiu»). A meta de falso positivo **não foi atingida**; fechar pede a passada dos itens 7 a 10, que é decisão de produto. **O proprietário aceitou assim em 21/11/2026**, sem a passada.
 4. **Os 4 bloqueios de falso positivo (7 a 10) seguem como decisão de produto:** aceitar a instrução do SOS para ofício de terra e para «sumiu da escala/grupo» (seguro, mas incomoda quem só fala de rotina). O item 9 (o diário não deve ligar a janela) continua o único que vale corrigir.
-5. **Decidir as três questões da seção anterior** antes do merge na `main`; nenhuma delas muda trava.
+5. **As três questões da seção anterior: confirmadas pelo proprietário em 21/11/2026**; nenhuma delas muda trava.
 
 Valores e modelos do Avanti: nenhum neste documento.

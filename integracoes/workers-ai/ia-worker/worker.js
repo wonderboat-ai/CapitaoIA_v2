@@ -1,7 +1,7 @@
 /* Capitão IA — proxy da IA na nuvem (Cloudflare Workers AI) · Cloudflare Worker `capitao-ia`.
    PUBLICADO em 27/09/2026 (1.0.4) e ligado na demonstração: https://capitao-ia.luka-araujos.workers.dev (código colado pelo
    painel). 1.0.5: ficha de bordo + histórico — a IA conversa, responde sobre o app e sobre o barco, e entra no SEM DADOS e na voz.
-   1.1.0 (modo simulação, campo `modo`): código 1.1.0 pronto, ainda não colado no painel (passo a passo no README desta pasta).
+   1.1.0 (modo simulação, campo `modo`): publicado em 21/11/2026 pela API da Cloudflare, só o código (binding, variáveis e segredo intactos).
    Alternativa GRATUITA ao integracoes/claude-api/: mesmo contrato e mesmo cliente (integracoes/ia-cliente/capitao-ia.js).
    Publique UM dos dois com o nome capitao-ia.
    Sem chave de API: o binding AI (wrangler.toml › [ai]) já autentica pela conta Cloudflare. A cota grátis é de 10.000 Neurons/dia
