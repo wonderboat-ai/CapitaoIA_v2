@@ -198,11 +198,12 @@
     function contagens() {
       var c = { atrasadas: 0, d30: 0, d60: 0, d90: 0, emDia: 0, docsVencidos: 0, docsVencem90: 0, pendencias: 0, tarefasEquipe: 0 };
       try {
-        var hoje = diaN(A.relogio ? A.relogio.ms : Date.now()), feitas = local('capitao.executado.v1', {}), acoes = {}, anuladas = {}, linhas = local('capitao.diario.v1', []), eq = [];
+        var hoje = diaN(A.relogio ? A.relogio.ms : Date.now()), feitas = local('capitao.executado.v1', {}), acoes = {}, anuladas = {}, linhas = local('capitao.diario.v1', []), eq = [], vistosT = {};
         var conta = function (dn) { c[dn < 0 ? 'atrasadas' : dn <= 30 ? 'd30' : dn <= 60 ? 'd60' : dn <= 90 ? 'd90' : 'emDia']++; };
         (D.agenda || []).forEach(function (t) { if (!feitas[t.id] && typeof t.dn === 'number') conta(t.dn); });
         (D.tarefasEquipe || []).forEach(function (t) { eq.push({ id: t.id, dn: t.dn }); });
-        local('capitao.tarefas.v1', []).forEach(function (t) { if (t && !isNaN(deData(t.vence))) eq.push({ id: t.id, dn: deData(t.vence) - hoje }); });
+        // a linha mais nova de cada id (acao:'cancela' sai da conta — registro só cresce, como o loadTarefas() do cérebro)
+        local('capitao.tarefas.v1', []).forEach(function (t) { if (t && typeof t.id === 'string' && !vistosT[t.id]) { vistosT[t.id] = 1; if (t.acao !== 'cancela' && !isNaN(deData(t.vence))) eq.push({ id: t.id, dn: deData(t.vence) - hoje }); } });
         eq.forEach(function (t) { if (!feitas[t.id] && typeof t.dn === 'number') { conta(t.dn); c.tarefasEquipe++; } });
         (D.documentos || []).forEach(function (x) { if (typeof x.dn === 'number') { if (x.dn < 0) c.docsVencidos++; else if (x.dn <= 90) c.docsVencem90++; } });
         // pendência aberta: linha com pend (gerada, pelo id; do aparelho, pelo iso) cuja última ação por alvo (resolve/reabre) não é "resolve"
