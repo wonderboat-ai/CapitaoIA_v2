@@ -18,6 +18,12 @@ Padrão comum:
 - Segredos com `npx wrangler secret put …`; variáveis no `[vars]` do `wrangler.toml`. Publicar com `npx wrangler deploy` dentro da pasta. Conta grátis atende.
 - No app, cada módulo vem com `URL_PROXY = ''` e cai no dado local em erro, demora ou sem internet.
 
+## Bot e WAF (reforço na borda, opcional)
+
+Hoje a defesa do Worker da IA é toda em código: `ORIGENS`, `CHAVE_APP` e o freio por IP (acima). Bot Fight Mode e as regras de WAF/Bot Management da Cloudflare são de **zona** (um domínio que passa pela Cloudflare) — e `capitao-ia.luka-araujos.workers.dev` é o subdomínio compartilhado do `workers.dev`, não uma zona da conta: essas regras não valem para ele hoje (achado pela documentação e por discussões da própria Cloudflare; sem teste direto nesta conta — conferir com `request.cf.botManagement` no Worker, se quiser confirmar).
+
+Para esse reforço valer no Worker da IA, ele precisaria de um **Custom Domain** ou uma **Route** numa zona da conta — um domínio ou subdomínio na Cloudflare, separado do DNS do site (hoje no Registro.br, fora da Cloudflare). É decisão do proprietário: qual domínio dedicar e se vale o trabalho para o risco de hoje (dados gerados, 30 pedidos/hora). Para eu configurar isso, preciso de um token da Cloudflare com o escopo certo (Zone e Workers Routes), como o que publicou a 1.1.0.
+
 ## Access — login no servidor (planejado)
 
 Pré-requisito para telemetria ao vivo, documentos sensíveis e IA sobre eles. Pontos a decidir:

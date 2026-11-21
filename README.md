@@ -85,9 +85,13 @@ Fora da prancheta: `index.html` e `login.html` (entrada), `dados.html` (dados do
 - **O que você edita fica no navegador** (localStorage): atalhos, blocos, diário, executadas, documentos e NFs enviados, peças, equipe e tema. Não sincroniza entre aparelhos; limpar os dados do navegador apaga — por isso a página **Dados do aparelho** baixa uma cópia e restaura (só soma, nunca apaga).
 - **Coordenadas nunca saem do aparelho** (nem para a IA). **Motor desligado** mostra a última leitura com motor ligado e a hora, nunca zero. **Telemetria real desligada:** o app usa a navegação em laço do próprio aparelho, sem proxy e sem rede.
 
+## Licença
+
+O repositório é público para apresentação a clientes e avaliação técnica — isso não dá licença de uso. Termos completos em [`LICENSE`](LICENSE): sem autorização do proprietário, nenhuma cópia, redistribuição ou obra derivada deste código.
+
 ## Integrações
 
-Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria real (`capitao-telemetria`), IA na nuvem (`capitao-ia`: **Workers AI, ligada desde a 1.0.4**; ou Claude API, paga — mesmo cliente) e voz em nuvem opcional (`capitao-voz`). O Worker com o modo da 1.1.0 está pronto no repositório e ainda não foi colado no painel da Cloudflare. Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
+Tudo que precisa de chave passa por um Cloudflare Worker (`ORIGENS` + `CHAVE_APP` no cabeçalho `X-Capitao-Chave` + freio por IP) e **vem desligado** (`URL_PROXY = ''`), caindo no dado local em erro, demora ou sem internet: telemetria real (`capitao-telemetria`), IA na nuvem (`capitao-ia`: **Workers AI, ligada desde a 1.0.4**; ou Claude API, paga — mesmo cliente) e voz em nuvem opcional (`capitao-voz`). O Worker com o modo da 1.1.0 está no ar desde 21/11/2026 (publicado pela API oficial da Cloudflare, código idêntico ao do repositório). Detalhes, status e ordem para ligar: [`integracoes/`](integracoes/README.md).
 
 ## Requisitos
 
