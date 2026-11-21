@@ -4020,6 +4020,16 @@ def grupo_voz(b, muta, ped):
         ped('voz: a hora da fala é a do instante da PRÓPRIA resposta (12:01:00), não a do relógio de quando a fala é montada, e vem uma vez só', r2['c'].count('12:01:00') == 1 and '12:02:30' not in r2['c'] and r2['t'].count('12:01:00') == 1, r2)
         ped('voz: a hora entra na abertura da lista («Pendências abertas, às 12:01:00: …») ou no fim da frase sem dois-pontos («… Às 12:01:00.»)', r2['abre'].startswith('Pendências abertas, às 12:01:00: ') and r2['fim'].endswith('. Às 12:01:00.') and r2['fim'].count(':') == 2, (r2['abre'][:60], r2['fim']))
         ped('voz: a tela copia a resposta (Object.assign) antes de falar e a fala ainda diz a hora do instante dela', r2['copia'].count('12:01:00') == 1, r2['copia'])
+        # achado 1 da auditoria (21/11/2026): o HUD da CONVERSA esconde o quadro (alerta=true via evVoz/cabecaEmerg, por vozPensando)
+        # mesmo sem palavra da lista SOS, quando a pergunta é sobre EPIRB, Seafire, canal16/DSC ou óleo; pergunta comum de dado não.
+        CASOS_ALERTA_VOZ = [('Como eu testo o EPIRB?', True), ('Qual o procedimento do Seafire?', True), ('canal 16, o que eu falo primeiro?', True),
+                            ('a pressão do óleo caiu, o alarme acendeu, o que eu faço?', True), ('qual nossa posição?', False), ('como está o tempo hoje?', False)]
+        r3 = pg.evaluate("""(frases) => frases.map(([t]) => { const B = window.CapitaoBrain; let det = null;
+          const ouvinte = (e) => { det = e.detail; }; window.addEventListener('capitao-voz', ouvinte);
+          try { B.vozPensando(t); } finally { window.removeEventListener('capitao-voz', ouvinte); }
+          return [t, det && det.alerta]; })""", CASOS_ALERTA_VOZ)
+        ruins = [(t, got, esp) for (t, esp), (_, got) in zip(CASOS_ALERTA_VOZ, r3) if got != esp]
+        ped('voz: o HUD esconde o quadro (alerta=true) para EPIRB/Seafire/canal16/óleo mesmo sem palavra da lista SOS, e fica false numa pergunta comum de dado', not ruins, ruins)
     finally:
         pg.ctx.close()
     # a trava de voz: só com a simulação; troca o termo (a palavra inteira, nunca um pedaço colado: «dado de bordoos»), não suprime nem encurta; as chaves de FALA_INTEIRA saem sempre inteiras
