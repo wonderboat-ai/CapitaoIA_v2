@@ -174,10 +174,13 @@ R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:dados?|leituras?|barco|embarca[�
 # (1.236,4 h · 1.600 L · 12.000 · "1.000, 1.500 rpm") fica de fora. Além das do §2.8, a forma do semCoord de hoje
 # (capitao-brain.js: minutos inteiros com o apóstrofo e o hemisfério, 26°59'S), os segundos (26°59'35"), o "º" ordinal no lugar
 # do grau e o par separado por vírgula quando o 1º número tem sinal (-26.993,-48.614: a linha típica de CSV).
+# Emenda de 21/11/2026 (auditoria da 1.1.0): decimal de 2-3 casas com letra do hemisfério sem °, ou em par próximo mesmo sem
+# letra (26.991 S 48.634 W; -26.991 -48.634); só N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
 R_COORD = re.compile(r"-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?"
                      r"|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:[\"″”]|''|’’))"
                      r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}"
-                     r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}")
+                     r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}"
+                     r"|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-?\d{1,3}[.,]\d{2,}\s*[NSEW]?[^\d\n]{1,2}-?\d{1,3}[.,]\d{2,}\s*[NSEW]?")
 # MMSI9 (§6.4, trava §2.2): nunca instrução de programar o MMSI. O verbo no imperativo, no infinitivo ou no gerúndio (o grupo 1
 # ou o 2) na mesma frase que "MMSI", a até 80 letras; "programado(a)" descreve o rádio e passa (protocolos.dsc do §1.3).
 _PROGRAMAR = r'(?<![A-Za-zÀ-ÿ])((?:re)?program(?:e|em|ar|ando|á-l[oa]|e-[oa])(?![A-Za-zÀ-ÿ]))'
@@ -921,8 +924,14 @@ def em(P, seg, ancora_s=ANCORA_REF_S, com_alarmes=True):
             al['sistema'] = a_['sistema']
         if a_.get('lado'):
             al['lado'] = a_['lado']
-        j = next((j for j in R.get('janelas') or [] if j.get('id') == aid and j.get('nivel') == nv['nivel'] and j['ini'] <= t <= j['fim']), None)
-        al.update(campo=campo, valor=res[campo], limite=nv['limite'], desde=_iso_utc(ancora_s + v * n + (j['ini'] if j else t)))
+        js_ = R.get('janelas') or []
+        j = next((j for j in js_ if j.get('id') == aid and j.get('nivel') == nv['nivel'] and j['ini'] <= t <= j['fim']), None)
+        ini = j['ini'] if j else t
+        if j and j['ini'] == 0:   # começa em t = 0 desta volta: pode ser a cauda de uma janela que já ia até o fim da volta anterior (a mesma costura do gruposJanela, em capitao-replay.js)
+            j0 = next((j0 for j0 in js_ if j0.get('id') == aid and j0.get('nivel') == nv['nivel'] and j0['fim'] == n - 1 and j0['ini'] != 0), None)
+            if j0:
+                ini = j0['ini'] - n
+        al.update(campo=campo, valor=res[campo], limite=nv['limite'], desde=_iso_utc(ancora_s + v * n + ini))
         alarmes.append(al)
     res['alarmes'] = alarmes
     return res
@@ -1209,11 +1218,17 @@ def carrega_termos(caminho=PROIBIDOS):
 
 def metades_local(termos):
     """As duas metades da LOCAL_SEGURANCA do proibidos.json, (equipamento, lugar), cada uma como grupo `(?:...)`: a regex pede o
-    equipamento antes do lugar, na mesma frase, a até 60 caracteres. Uma fonte só das duas listas (PROMPT §3), sem lista paralela."""
+    equipamento antes do lugar, na mesma frase, a até 60 caracteres — e, desde a emenda de 21/11/2026 (auditoria), também o
+    lugar antes do equipamento (mesmas duas listas, ordem invertida). Uma fonte só das duas listas (PROMPT §3), sem lista
+    paralela: aqui só EXTRAI as duas, não muda a regra «em qualquer ordem» que lugar_a_bordo()/equip_salvatagem() já aplicam."""
     partes = termos['LOCAL_SEGURANCA'].pattern.split(r'[^.\n]{0,60}')
-    if len(partes) != 2 or not all(p.startswith('(?:') and p.endswith(')') for p in partes):
-        raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar); ajuste metades_local()')
-    return partes
+    if len(partes) == 2 and all(p.startswith('(?:') and p.endswith(')') for p in partes):
+        return partes   # forma antiga, sem a ordem inversa dentro da própria regex
+    if len(partes) == 3 and partes[0] == partes[2]:
+        meio, n = partes[1], (len(partes[1]) - 1) // 2
+        if len(meio) % 2 == 1 and meio[n:n + 1] == '|' and meio[:n] == meio[n + 1:] and meio[:n].startswith('(?:') and meio[:n].endswith(')'):
+            return [partes[0], meio[:n]]
+    raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar, com ou sem a ordem inversa); ajuste metades_local()')
 
 
 def lugar_a_bordo(termos):

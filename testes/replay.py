@@ -509,6 +509,47 @@ def a_alarmes(b):
     fecha(pg)
 
 
+# janela sintética cruzando a costura da volta de 150 s (achado da auditoria 1.1.0: gruposJanela() não fundia um alarme contínuo que
+# atravessa t = 149 → t = 0; "desde" saltava pra frente mesmo com o alarme nunca tendo deixado de estar ativo). D.replay.janelas do
+# gerador nunca produz isso hoje (toda janela cabe em [95, 120], bem longe das pontas — ver a_janela() em confere.py, §6.3 JANELA), então o
+# teste troca a REFERÊNCIA de D.replay (não só o array) para forçar o motor a remontar a tabela com uma janela do arref_be artificialmente
+# plantada em 145–149 e 0–4 (duas pontas do mesmo id, tocando as duas bordas da volta).
+COSTURA_JS = r"""() => {
+  const D = window.CapitaoDados, R = window.CapitaoReplay, A = window.CapitaoAgora;
+  const anc = A.ancora(Date.now()), base = anc + 50 * R.DURACAO * 1000;   // uma volta qualquer, só de referência estável
+  const velho = D.replay;
+  const semArrefBe = (velho.janelas || []).filter((j) => j.id !== 'arref_be');
+  const comCostura = semArrefBe.concat([
+    { id: 'arref_be', campo: 'motor_be_arref_c', nivel: 'aviso', ini: 145, fim: 149 },
+    { id: 'arref_be', campo: 'motor_be_arref_c', nivel: 'aviso', ini: 0, fim: 4 }
+  ]);
+  D.replay = Object.assign({}, velho, { janelas: comCostura });   // referência nova: força o motor a remontar (gruposJanela de novo)
+  const antes = R.janela('arref_be', base + 149000);     // t = 149 da volta
+  const depois = R.janela('arref_be', base + 150000);    // 1 s real depois: t = 0 da volta seguinte — a MESMA janela, cruzando a costura
+  const meio = R.janela('arref_be', base + 147000);      // t = 147, dentro do 1º trecho
+  const fimReal = R.janela('arref_be', base + 155000);   // t = 5 da volta seguinte: já devia ter normalizado (fim = 4)
+  D.replay = velho;   // desfaz a injeção — sem resíduo para os testes seguintes (e remonta de novo, com a janela real)
+  const depoisDaVolta = R.janela('arref_be', base + 150000);
+  return { antes, depois, meio, fimReal, depoisDaVolta, base };
+}"""
+
+
+def a_costura(b):
+    print('Alarmes: janela() funde a costura da volta de 150 s (achado da auditoria 1.1.0)')
+    pg = abre(b)
+    r = pg.evaluate(COSTURA_JS)
+    base = r['base']
+    ok('janela sintética cruzando a costura (145–149 e 0–4 do mesmo id): "desde" não muda entre t = 149 de uma volta e t = 0 da volta seguinte, ativo true nos dois',
+       r['antes'] == {'ativo': True, 'desde': base + 145000, 'ate': None} and r['depois'] == r['antes'], (r['antes'], r['depois']))
+    ok('no meio do 1º trecho (t = 147) é a mesma janela fundida', r['meio'] == r['antes'], r['meio'])
+    ok('passado o trecho (t = 5 da volta seguinte) já normalizou, com o mesmo "desde" de antes (nunca andou pra frente)',
+       r['fimReal'] == {'ativo': False, 'desde': base + 145000, 'ate': base + 155000}, r['fimReal'])
+    ok('desfeita a injeção, a janela real do arref_be (99–116 s) volta a valer, sem resíduo',
+       r['depoisDaVolta'] == {'ativo': False, 'desde': base + 99000, 'ate': base + 117000}, r['depoisDaVolta'])
+    ok('sem erro de script', not pg.erros, pg.erros)
+    fecha(pg)
+
+
 # ——— 4. o relógio: sincronia entre abas, fixar, #replay, localStorage, sobre ———
 LEITURA_T = """() => { const R = window.CapitaoReplay, A = window.CapitaoAgora, now = Date.now(), anc = A.ancora(now);
   return { now, anc, t: R.t(now), esperado: Math.floor((now - anc) / 1000) % 150, agora: R.agora(), fase: R.fase(now).nome }; }"""
@@ -2797,6 +2838,7 @@ def main():
         a_fase(browser)
         o_dia(browser)
         a_alarmes(browser)
+        a_costura(browser)
         sincronia(browser)
         a_fixar(browser)
         eventos_ritmo(browser)

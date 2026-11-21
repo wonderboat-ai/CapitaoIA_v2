@@ -294,7 +294,12 @@
   // duas listas (as executadas não contam). Executado da tarefa = markExec(id), como o da agenda.
   var TAREFA_ID = /^g[A-Za-z0-9_-]{2,60}$/, ORIGEM_TAREFA = { chat: 1, diario: 1, tela: 1 };
   function ehTarefa(t) { return !!t && typeof t === 'object' && typeof t.id === 'string' && TAREFA_ID.test(t.id) && typeof t.n === 'string' && !!t.n.trim() && typeof t.vence === 'string' && /^\d{4}-\d\d-\d\d$/.test(t.vence) && !isNaN(diaData(t.vence)); }
-  function loadTarefas() { return listaCru(K.tarefas).filter(ehTarefa); }
+  // a linha mais nova de cada id (acao:'cancela' sai da lista — registro só cresce: desfazer é linha nova, nunca remoção, como almVigentes)
+  function loadTarefas() {
+    var vistos = {}, out = [];
+    listaCru(K.tarefas).filter(ehTarefa).forEach(function (t) { if (!tem(vistos, t.id)) { vistos[t.id] = 1; if (t.acao !== 'cancela') out.push(t); } });
+    return out;
+  }
   // grava a tarefa; { item, novo }: a mesma tarefa (nome e dia) ainda aberta não duplica — devolve a que já está (novo false). null = dado inválido (sem nome, data que não existe) ou o SOS.
   function criaTarefa(x) {
     var cru, n, ex, ja, item, id;
@@ -302,7 +307,7 @@
     n = limpaT(x.n, 120);
     if (!n || typeof x.vence !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(x.vence) || diaIso(diaData(x.vence)) !== x.vence) return null;
     cru = listaCru(K.tarefas); ex = loadExec();
-    ja = cru.filter(function (t) { return ehTarefa(t) && norm(t.n) === norm(n) && t.vence === x.vence && !ex[t.id]; })[0];
+    ja = loadTarefas().filter(function (t) { return norm(t.n) === norm(n) && t.vence === x.vence && !ex[t.id]; })[0];
     if (ja) return { item: ja, novo: false };
     do { id = 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); } while (cru.some(function (t) { return t && t.id === id; }) || (D.tarefasEquipe || []).some(function (t) { return t.id === id; }));
     item = { id: id, n: n, vence: x.vence, quem: limpaT(x.quem, 40), origem: tem(ORIGEM_TAREFA, x.origem) ? x.origem : 'tela', iso: new Date().toISOString(), who: quem() };
@@ -314,12 +319,16 @@
     return { item: item, novo: true };
   }
   function addTarefa(x) { var r = criaTarefa(x); return r ? r.item : null; }
-  // só o desfazer de uma proposta confirmada tira a tarefa (dentro da janela): a tela não apaga tarefa
+  // só o desfazer de uma proposta confirmada tira a tarefa (dentro da janela): registro só cresce — grava uma linha de cancelamento (como almApaga), nunca remove
   function removeTarefa(id) {
-    var cru = listaCru(K.tarefas), k;
-    if (EM_SOS) return false;
-    for (k = 0; k < cru.length; k++) if (ehTarefa(cru[k]) && cru[k].id === id) { cru.splice(k, 1); write(K.tarefas, cru); return true; }
-    return false;
+    var cru = listaCru(K.tarefas), orig = loadTarefas().filter(function (t) { return t.id === id; })[0], lin;
+    if (EM_SOS || !orig) return false;
+    lin = { id: id, n: orig.n, vence: orig.vence, acao: 'cancela', iso: almIsoUnico(cru, Math.max(Date.now(), Date.parse(orig.iso) + 1)), who: quem() };
+    if (orig.quem) lin.quem = orig.quem;
+    if (orig.sistema) lin.sistema = orig.sistema;
+    if (orig.sim) lin.sim = true;
+    cru.unshift(lin); write(K.tarefas, cru);
+    return true;
   }
   // as tarefas da equipe (as 2 geradas e as do aparelho) com o prazo do dia do instante e se já foram executadas; `ctx.semSim`: as do aparelho gravadas com a simulação ligada ficam fora (simulacao false)
   function tarefasEquipe(ctx) {
@@ -4692,7 +4701,7 @@
   }
   // O predicado único do TEXTO que se manda registrar (o diário, a foto com o pedido de registro): a lista SOS, o pedido de socorro implícito («estamos em risco», «isso não é um teste») e a pessoa que some, falta ou se perde,
   // com ou sem nome próprio (o texto original). «registre no diário: homem ao mar» e «registre no diário: o João sumiu» abrem a resposta com a instrução de segurança e ligam a janela de 15 min do mesmo jeito.
-  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2; }
+  function emergenciaTexto(raw) { var n = pad(raw); return emergencia(n) || socorroImplicito(n) || risco(raw).n >= 2 || cabecaEmerg(n); }
   // (o texto que merece a instrução de segurança, com ou sem janela: a ESPERA, n=1, leva a instrução e a linha sem a janela de 15 min — a escala e o palpite não custam 15 min de emergência)
   function instrucaoTexto(raw) { return emergenciaTexto(raw) || risco(raw).n >= 1; }
   function socorroImplicito(q) { return (SOCORRO_PEDE.test(q) && (SOCORRO_DECLARA.test(q) || has(q, DADOS_MAYDAY))) || NAO_TESTE.test(q) || EM_RISCO.test(q) || SOCORRO_AJUDA.test(q) || pessoaSumidaG(q); }
@@ -5597,7 +5606,9 @@
   // PROMPT §2.8 (vale nos dois modos: é privacidade, não simulação): graus-minutos com vírgula ou ponto, com ou sem espaço e sinal (26°59,6'S, -26°59.6', 26°59'S, 26°59'35"S, 26º 59,6),
   // decimais com 4 ou mais casas (-26.9931) ou em par (-26,993 / -48,614; -26.993,-48.614) — e NUNCA o milhar do pt-BR (1.236,4 h, 1.600 L, 2.050 rpm, 12.000). A mesma regra do R_COORD do
   // testes/cerebro.py e do gerador (ferramentas/demo/confere.py). O par de coordenadas que o texto traz vira UM aviso só.
-  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}/g;
+  // Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, ou em par próximo mesmo sem letra
+  // (26.991 S 48.634 W; -26.991 -48.634); só N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
+  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-?\d{1,3}[.,]\d{2,}\s*[NSEW]?[^\d\n]{1,2}-?\d{1,3}[.,]\d{2,}\s*[NSEW]?/g;
   var SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = new RegExp('\\(coordenadas só na tela do app\\)(?:\\s*[,;/·]?\\s*\\(coordenadas só na tela do app\\))+', 'g');
   function semCoord(s) { return String(s || '').replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
   // Ficha de bordo para a IA na nuvem: o que o app sabe agora, bloco a bloco, com a fonte de cada um — os mesmos textos das
@@ -5767,9 +5778,9 @@
   var TERMOS_FONTES = {
     ROTULOS: { src: '\\bSEM (?:DADOS|LEITURA)\\b|\\bMANUAL NO DRIVE\\b|\\bDEMO\\b', flags: '' },
     AUTENTICIDADE: { src: '(?:^|[^A-Za-zÀ-ÿ])(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:fict[ií]ci|simulad|inventad|de demonstra[çc][ãa]o)|dados de teste|fict[ií]ci|inventad[oa]s?(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:barc|embarca[çc]|navega[çc]|viage|rota|cen[áa]ri|agenda|guia|registro|mmsi)[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:simulad|de demonstra[çc][ãa]o|hipot[ée]tic|ilustrativ|de exemplo)|(?:^|[^A-Za-zÀ-ÿ])(?:é|são|foi|está|estão) (?:uma? )?(?:simula[çc][ãa]o|demonstra[çc][ãa]o)(?! d[oa]s? )|n[ãa]o (?:é|são) (?:reais?|verdadeir[A-Za-zÀ-ÿ]*|de verdade)(?![A-Za-zÀ-ÿ])|\\(demonstra[çc][ãa]o\\)|(?:^|[^A-Za-zÀ-ÿ])(?:na|da|para) demonstra[çc][ãa]o(?! d[oa]s? )|(?:^|[^A-Za-zÀ-ÿ])modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)(?![A-Za-zÀ-ÿ])', flags: 'i' },
-    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro', flags: 'i' },
-    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b', flags: 'i' },
-    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )', flags: 'i' },
+    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro|(?:custa|custou|custo|saiu por|ficou em|pre[çc]o (?:foi|ficou) de)[^\\n]{0,30}?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])', flags: 'i' },
+    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]?\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b|\\b\\d{11}\\b|\\b\\d{14}\\b', flags: 'i' },
+    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )|(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )[^.\\n]{0,60}(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)', flags: 'i' },
     VAZIOS: { src: '\\bn/?d\\b|n[ãa]o (?:informad|dispon[ií]vel|cadastrad)|A CADASTRAR|(?:^|[^A-Za-zÀ-ÿ])a definir(?![A-Za-zÀ-ÿ])|indispon[ií]vel|[:·]\\s*—\\s*(?=[·.,\\n]|$)', flags: '' },
     VISIVEL: { src: 'snapshot|ao vivo desligad|leitura fixa|modelo de alerta|nada o dispara', flags: 'i' },
     ANEXO: { src: '(?:^|[^A-Za-zÀ-ÿ])A (?:CONFERIR|CONFIRMAR)(?![A-Za-zÀ-ÿ])', flags: '' }
