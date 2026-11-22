@@ -12,7 +12,7 @@
   gerador (main() devolve 1 e nada é gravado); uma pendência que não ocorre mais também reprova; a varredura de termos
   reprova como as outras desde o C12 (as 8 regex; sem exceção de campo desde a 1b, que tirou o embarcacao.mmsiNota). Listas privadas e pasta do Avanti: só amostras sintéticas aqui, inclusive a troca de um
   modelo congelado (como o do VHF antigo, até o C5) por outro da lista, que reprova (modelos_sinteticos).
-- C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 16 guias e 91 trechos; a constante LIMITES confere com os §n dos guias
+- C5 (CONTRATO §1.4, §1.5, §3.3): 16 equipamentos, 17 guias e 254 trechos; a constante LIMITES confere com os §n dos guias
   (FONTE_LIMITES, antes do D.replay do C8); os textos de emergência do gerador são os do §1.3; EPIRB e Seafire com a nota da
   etiqueta e sem fabricante nem modelo nos trechos.
 - C6 (CONTRATO §1.3): o D.protocolos completo (18 campos, seafire e epirb com a nota da etiqueta), igual letra por letra ao texto do
@@ -52,7 +52,7 @@
   sensores (22 pontos, x/y pela fórmula, `bloco` das duas plataformas), peças (12, a única BAIXA e a única ZERO) e alarmes pedidos (18 métricas,
   `faixa` própria, nível só aviso), nos dois modos; a asserção FUNCOES (forma e referência do contrato) e as regras que o C10 ativou (IDS,
   NULO, SEM_EMERGENCIA, SEM_SALVATAGEM_EM, LOCAL_VOCAB, TERMOS) com amostras plantadas.
-- C11 (CONTRATO §1.6; c11_faq): faq-equipamentos.json (F10) — 91 itens (82 seções dos guias e do checklist, MO-01…CK-07, e os 9 cartões EM-01…09 do protocolo), 9 seções, glossário de
+- C11 (CONTRATO §1.6; c11_faq): faq-equipamentos.json (F10) — 254 itens (245 seções dos guias e do checklist, MO-01…VH-41, e os 9 cartões EM-01…09 do protocolo), 9 seções, glossário de
   14 termos, sem conf, edição nem anexos do Avanti; a 1ª fonte de cada item é o trecho da base do id e todo número do item está nele; EM, SF, EP e CK-03 com seguranca e o rótulo do
   procedimento padrão no fim; a asserção FAQ e as outras que leem o FAQ (TERMOS, NULO, TAMANHO, COORD_TEXTO, GRAFIA_SEAFIRE, CALADO_FORA, ESTABILIZADOR_12V, LOCAL_VOCAB, ROTULO_SEGURANCA,
   SEGURANCA_MARCADA, SEGURANCA_SEM_MODELO, IDS…) com amostras plantadas, e o main() que reprova o FAQ com defeito (sem gravar nada).
@@ -644,7 +644,7 @@ EXTRAS = [
       'protocolos.mob[3]: lugar a bordo') for frase in (
     'Pegue o extintor na praça de máquinas.', 'Coletes no paiol de proa.', 'Leve o EPIRB da cabine do comandante.',
     'Balsa no flybridge: solte e jogue.', 'Na popa, solte a balsa.')] + [
-    # C5: a base tem os 91 trechos do §1.5, e o plantado entra no fim (antes, no índice 46)
+    # C5: a base tem os 254 trechos do §1.5, e o plantado entra no fim (antes, no índice 46)
     ('SEGURANCA_MARCADA', 'g_epirb §4 sem palavra da lista (só a fonte casa)', lambda r: com_trecho(dict(T_EPIRB, seguranca=True) if not r else T_EPIRB),
      'base:trechos[%d] (Guia de bordo — EPIRB · 4 · Validade) casa' % len(G.base_conhecimento()['trechos'])),
     ('SEGURANCA_MARCADA', 'g_seafire §3 sem palavra da lista (fonte e equip casam)', lambda r: com_trecho(dict(T_SEAFIRE, seguranca=True) if not r else T_SEAFIRE),
@@ -1665,8 +1665,8 @@ def rotulos_c2():
              'abast': 'Registro de abastecimento', 'snapshot': 'Leitura do coletor NMEA — 26-09-2026 10h12.json',
              'protocolo': 'Protocolo de emergência — procedimento padrão'}
     fixos.update({'serie': 'Série do coletor NMEA — 150 s.csv', 'formato': 'Formato do quadro do coletor.csv'})   # C8 (§1.5)
-    ok('drive.arquivos: os 14 guias, o checklist, o protocolo e os 9 arquivos do §1.5 (a série de 150 s e o formato do quadro entram no C8), com o título do §1.5',
-       len(guias) == 14 and set(arq) - guias == set(fixos) and all(arq[c] == t for c, t in fixos.items())
+    ok('drive.arquivos: os 15 guias (o g_vhf da 1.1.0 soma ao g_eletronicos), o checklist, o protocolo e os 9 arquivos do §1.5 (a série de 150 s e o formato do quadro entram no C8), com o título do §1.5',
+       len(guias) == 15 and set(arq) - guias == set(fixos) and all(arq[c] == t for c, t in fixos.items())
        and all(arq[c].startswith('Guia de bordo — ') for c in guias), sorted(set(arq) - set(fixos) - guias))
     ok('drive.arquivos: nenhum título com DEMO, snapshot, fictício nem demonstração (o "snapshot" é só a chave)',
        not [t for t in arq.values() if rot.search(t)], [t for t in arq.values() if rot.search(t)])
@@ -1873,9 +1873,9 @@ def amostras():
     secoes = {}
     for t in B0['trechos']:
         secoes.setdefault(t['fonte'], []).append(t['secao'])
-    ok('C5 (§1.4, §1.5): 16 equipamentos, 16 guias (um para cada equipamento), 91 trechos e o g_gerador §2 · Ligar no lugar',
-       len(G.EQUIPAMENTOS) == 16 and len(G.FONTE_GUIA) == 16 and len(B0['trechos']) == 91 and all(e['guia'] in G.FONTE_GUIA for e in G.EQUIPAMENTOS)
-       and secoes[G.ARQ['g_gerador']][1] == '2 · Ligar' and [len(secoes[G.ARQ[k]]) for k in ('g_motores', 'g_seafire', 'g_epirb', 'checklist', 'protocolo')] == [10, 4, 4, 7, 9],
+    ok('C5 (§1.4, §1.5): 16 equipamentos, 17 guias (um para cada equipamento, mais o g_vhf que soma ao g_eletronicos), 254 trechos e o g_gerador §2 · Ligar no lugar',
+       len(G.EQUIPAMENTOS) == 16 and len(G.FONTE_GUIA) == 17 and len(B0['trechos']) == 254 and all(e['guia'] in G.FONTE_GUIA for e in G.EQUIPAMENTOS)
+       and secoes[G.ARQ['g_gerador']][1] == '2 · Ligar' and [len(secoes[G.ARQ[k]]) for k in ('g_motores', 'g_seafire', 'g_epirb', 'checklist', 'protocolo')] == [21, 4, 4, 7, 9],
        (len(G.EQUIPAMENTOS), len(G.FONTE_GUIA), len(B0['trechos'])))
     # Revisão 4 do C5: o passo a passo do Seafire fica só no §1 (os 5 passos do protocolo, letra por letra) e no §3 (o que dizer depois do
     # disparo). O §2 é só o disparo manual e não tem as palavras que casavam perguntas comuns ("disparou", "depois", "esfriar", "abra",
@@ -3222,28 +3222,31 @@ def c11_faq(tmp):
     novas, _, velhas = C.separa(Vf, set(C.OPCIONAIS))
     ok('o FAQ de hoje não acusa nada em nenhuma das %d asserções (a FAQ, a TERMOS, a SEGURANCA_MARCADA, o rótulo, a trava 17, a grafia, o tamanho…)' % len(C.NOMES),
        not novas and not velhas, {n: v[:2] for n, v in novas.items()} or velhas)
-    ok('o arquivo gerado tem o topo {versao, total, secoes, itens, glossario}, a versao de 8 hex do sha256 do conteúdo e total = itens = 91',
-       list(Q) == ['versao', 'total', 'secoes', 'itens', 'glossario'] and Q['total'] == len(itens) == 91
+    ok('o arquivo gerado tem o topo {versao, total, secoes, itens, glossario}, a versao de 8 hex do sha256 do conteúdo e total = itens = 254',
+       list(Q) == ['versao', 'total', 'secoes', 'itens', 'glossario'] and Q['total'] == len(itens) == 254
        and Q['versao'] == hashlib.sha256(G.serializa({k: v for k, v in Q.items() if k != 'versao'}).encode('utf-8')).hexdigest()[:8], list(Q))
     ok('o gerador é determinístico: duas rodadas dão o mesmo FAQ, e o texto gravado = gera_faq() (versao nova quando o texto muda)',
        G.faq_equipamentos(B) == Q and G.gera_faq(Q) == G.saidas(D, B, Q)['faq-equipamentos.json'] and G.gera_faq(Q).endswith('}\n'))
     kb = len(G.gera_faq(Q).encode('utf-8')) / 1024
-    ok('tamanho: %.1f KB (orçamento do contrato: 100 KB; estimativa 55–70 KB, com 91 itens e o glossário)' % kb, 40 < kb <= 100, kb)
+    ok('tamanho: %.1f KB (orçamento do contrato: 380 KB; estimativa 280–330 KB, com 254 itens e o glossário, inclusive os 41 do VH novo)' % kb, 250 < kb <= 380, kb)
     # ——— ids, seções e a ligação com a base ———
-    prefixos = {'EM': 9, 'MO': 10, 'GE': 9, 'SK': 8, 'CL': 6, 'EL': 8, 'EE': 3, 'DS': 4, 'PO': 4, 'AN': 4, 'PI': 4, 'RA': 4, 'AI': 3, 'SF': 4, 'EP': 4, 'CK': 7}
+    prefixos = {'EM': 9, 'MO': 21, 'GE': 18, 'SK': 15, 'CL': 16, 'EL': 42, 'EE': 10, 'DS': 11, 'PO': 9, 'AN': 11, 'PI': 15, 'RA': 13, 'AI': 8, 'SF': 4, 'EP': 4, 'CK': 7, 'VH': 41}
     ids = [x['id'] for x in itens]
-    ok('91 ids únicos: EM-01…09, MO-01…10, GE-01…09, SK-01…08, CL-01…06, EL-01…08, EE-01…03, DS-01…04, PO-01…04, AN, PI, RA 01…04, AI-01…03, SF e EP 01…04, CK-01…07',
-       len(set(ids)) == 91 and {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos} == prefixos
-       and all(re.fullmatch(r'[A-Z]{2}-\d{2}', i) for i in ids) and sum(prefixos.values()) == 91, {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos})
-    ok('cada seção de guia ou do checklist vira um item (82) e as 9 do protocolo os cartões EM (a base tem 91 trechos): a 1ª fonte de cada item é o trecho do id',
-       len(B['trechos']) == 91 and sum(1 for i in ids if not i.startswith('EM-')) == 82
-       and all(sum(1 for t in B['trechos'] if t['fonte'] == D['drive']['arquivos'][k]) == prefixos[p]
-               for p, k in (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
-                            ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
-                            ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))),
+    ok('254 ids únicos: EM-01…09, MO-01…21, GE-01…18, SK-01…15, CL-01…16, EL-01…42, EE-01…10, DS-01…11, PO-01…09, AN, PI, RA 01…11/15/13, AI-01…08, SF e EP 01…04, CK-01…07, VH-01…41',
+       len(set(ids)) == 254 and {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos} == prefixos
+       and all(re.fullmatch(r'[A-Z]{2}-\d{2}', i) for i in ids) and sum(prefixos.values()) == 254, {p: sum(1 for i in ids if i.startswith(p + '-')) for p in prefixos})
+    equip_el = G.equip_de('eletronicos', 'audio', 'vhf')
+    equip_vh = G.equip_de('vhf')
+    ok('cada seção de guia ou do checklist vira um item (245) e as 9 do protocolo os cartões EM (a base tem 254 trechos): a 1ª fonte de cada item é o trecho do id',
+       len(B['trechos']) == 254 and sum(1 for i in ids if not i.startswith('EM-')) == 245
+       and all(sum(1 for t in B['trechos'] if t['fonte'] == D['drive']['arquivos'][k] and (eq is None or t.get('equip') == eq)) == prefixos[p]
+               for p, k, eq in (('MO', 'g_motores', None), ('GE', 'g_gerador', None), ('SK', 'g_seakeeper', None), ('CL', 'g_clima', None),
+                                ('EL', 'g_eletronicos', equip_el), ('VH', 'g_vhf', equip_vh), ('EE', 'g_eletrico', None),
+                                ('DS', 'g_dessalinizador', None), ('PO', 'g_porao', None), ('AN', 'g_ancora', None), ('PI', 'g_piloto', None), ('RA', 'g_radar', None), ('AI', 'g_ais', None),
+                                ('SF', 'g_seafire', None), ('EP', 'g_epirb', None), ('CK', 'checklist', None))),
        len(B['trechos']))
     ok('9 seções {n, titulo, ids}: n = posição (D.secoes[n − 1]), os ids partem os itens e `secao` do item é o n; a 1ª é a Emergência com os 9 cartões',
-       [s['n'] for s in Q['secoes']] == list(range(1, 10)) and [len(s['ids']) for s in Q['secoes']] == [9, 10, 12, 8, 14, 8, 15, 8, 7]
+       [s['n'] for s in Q['secoes']] == list(range(1, 10)) and [len(s['ids']) for s in Q['secoes']] == [9, 21, 28, 15, 36, 83, 47, 8, 7]
        and Q['secoes'][0]['titulo'] == 'Emergência' and Q['secoes'][0]['ids'] == ['EM-%02d' % n for n in range(1, 10)]
        and all(x['secao'] == s['n'] for s in Q['secoes'] for i in s['ids'] for x in [faq_it(Q, i)]), [(s['n'], s['titulo'], len(s['ids'])) for s in Q['secoes']])
     ok('os itens vêm na ordem das seções (EM primeiro), cada item na chave do contrato e na ordem do contrato, sem chave de confiabilidade nem anexo',
@@ -3251,7 +3254,7 @@ def c11_faq(tmp):
        and not any(k in C.FAQ_PROIBIDAS for _, k in C.chaves_de(Q, 'faq:')), [x['id'] for x in itens if list(x) != [k for k in C.FAQ_CHAVES if k in x]])
     ok('o item: 3 variantes diferentes, `emerg` só nos 9 EM, passos e demais campos omitidos quando vazios, títulos e perguntas únicos',
        all(len(x['variantes']) == 3 == len(set(x['variantes'])) for x in itens) and [x['id'] for x in itens if x['emerg']] == ['EM-%02d' % n for n in range(1, 10)]
-       and len({x['titulo'] for x in itens}) == 91 == len({x['pergunta'] for x in itens})
+       and len({x['titulo'] for x in itens}) == 254 == len({x['pergunta'] for x in itens})
        and all(x.get('passos', ['x']) for x in itens) and sum(1 for x in itens if 'passos' not in x) > 0)
     tipos = {f['tipo'] for x in itens for f in x['fontes']}
     ok('fontes[].tipo ∈ {Guia de bordo, Protocolo, Boa prática}: nenhuma «Manual» nem «Foto»; os cartões EM citam o protocolo e os itens do checklist sem seção, a boa prática',
@@ -3260,8 +3263,12 @@ def c11_faq(tmp):
     # ——— segurança, rótulo e os cartões de emergência ———
     seg = {x['id'] for x in itens if x.get('seguranca')}
     minimo = {'EM-%02d' % n for n in range(1, 10)} | {'SF-%02d' % n for n in range(1, 5)} | {'EP-%02d' % n for n in range(1, 5)} | {'MO-04', 'EL-01', 'EL-05', 'PO-04', 'AI-02', 'CK-03'}
-    ok('seguranca: true nos EM, SF, EP, CK-03 e nas outras seções do mínimo do §1.5 (MO-04, EL-01, EL-05, PO-04, AI-02) e no CK-05 (extintor), mais o GE-01 (cheiro de combustível) e o PO-02 (alagamento): 26 itens',
-       minimo <= seg and {'CK-05', 'GE-01', 'PO-02'} <= seg and len(seg) == 26 and all(x.get('seguranca') in (None, True) for x in itens), sorted(seg ^ minimo))
+    extras_1_1_0 = {'CK-05', 'GE-01', 'PO-02', 'GE-18', 'MO-18', 'PO-06', 'PO-07', 'PO-08',
+                    'VH-01', 'VH-07', 'VH-11', 'VH-12', 'VH-13', 'VH-14', 'VH-15', 'VH-16', 'VH-17', 'VH-18', 'VH-19', 'VH-20', 'VH-21', 'VH-22',
+                    'VH-27', 'VH-28', 'VH-29', 'VH-31', 'VH-32', 'VH-33', 'VH-34', 'VH-39'}
+    ok('seguranca: true nos EM, SF, EP, CK-03 e nas outras seções do mínimo do §1.5 (MO-04, EL-01, EL-05, PO-04, AI-02) e no CK-05 (extintor), GE-01 (cheiro de combustível), PO-02 '
+       '(alagamento), mais da 1.1.0: GE-18 e MO-18 (CO), PO-06…08 (alagamento) e o grupo do VHF com DSC/MMSI/colisão/água (VH-01, VH-07, VH-11…22, VH-27…29, VH-31…34, VH-39): 53 itens',
+       minimo <= seg and extras_1_1_0 <= seg and len(seg) == 53 and all(x.get('seguranca') in (None, True) for x in itens), sorted(seg ^ minimo))
     base_seg = {(t['fonte'], t['secao']) for t in B['trechos'] if t.get('seguranca')}
     ok('nenhum trecho de segurança da base tem item sem seguranca: o item herda o trecho (nada com seguranca vai à IA, F30)',
        all(x.get('seguranca') or (lambda m: (m.group(1), m.group(2)))(C.R_FONTE.fullmatch(x['fontes'][0]['texto'])) not in base_seg for x in itens))
@@ -3426,7 +3433,7 @@ def c11_faq(tmp):
         ('anexo `invalidos` no topo', lambda D_, B_, Q_: Q_.update({'invalidos': []}), 'chave de invalidos'),
         ('`origem`, `selos`, `decisoes` e `limites` no topo', lambda D_, B_, Q_: Q_.update({'origem': 'x', 'selos': ['y'], 'decisoes': ['z'], 'limites': ['w']}), 'chave de selos'),
         ('versao que não é o hash de 8 hex', lambda D_, B_, Q_: Q_.update({'versao': 'v1'}), 'faq.versao'),
-        ('total errado', lambda D_, B_, Q_: Q_.update({'total': 281}), 'faq.total: 281 ≠ 91 itens'),
+        ('total errado', lambda D_, B_, Q_: Q_.update({'total': 281}), 'faq.total: 281 ≠ 254 itens'),
         ('id repetido', lambda D_, B_, Q_: it(Q_, 'MO-02').update({'id': 'MO-01'}), 'id repetido'),
         ('id fora do contrato', lambda D_, B_, Q_: it(Q_, 'MO-10').update({'id': 'MO-11'}), 'ids ≠ os do contrato'),
         ('`secao` do item fora da seção em que está', lambda D_, B_, Q_: it(Q_, 'MO-01').update({'secao': 3}), 'faq:MO-01.secao: 3'),

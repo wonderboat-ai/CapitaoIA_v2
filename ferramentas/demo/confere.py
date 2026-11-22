@@ -149,7 +149,10 @@ EXCECOES_MODELO = {'Seakeeper 3': 1}
 REPLAY_CHAVES = ('duracao', 'passo', 'passo_chave', 'cenario', 'ancora_hora', 'voltas_fixo', 'velocidade_media_nos', 'fases', 'chaves', 'ruido', 'fixos',
                  'contadores_base', 'taxas_h', 'por_volta', 'por_dia', 'diesel_piso_l', 'limites', 'alertas', 'janelas', 'diaDeBordo')
 
-TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 80, 'faq-equipamentos.json': 100}   # KB = 1.024 bytes
+TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 180, 'faq-equipamentos.json': 380}   # KB = 1.024 bytes
+# Orçamento levantado na integração dos 172 cartões de uso dos equipamentos (tarefa #3): base-conhecimento.json foi de ~34 KB/91
+# trechos para 150,5 KB/254 trechos; faq-equipamentos.json foi de ~76,5 KB/91 itens para 319,8 KB/254 itens — o app cresceu de
+# propósito (achado já previsto pelos agentes que escreveram os cartões, item (D) dos respectivos patches).
 DIAS_MESES_PADRAO = {1: 31, 6: 184, 12: 365}
 
 # ——————————————————————————————— regex fixas das asserções ———————————————————————————————
@@ -1750,9 +1753,14 @@ def salvatagem_e_lugar(X):
 
 
 def no_minimo(X, t):
-    """Chave de drive.arquivos do trecho, se a seção dele está no mínimo do §1.5 (MINIMO_SEGURANCA); senão None."""
+    """Chave de drive.arquivos do trecho, se a seção dele está no mínimo do §1.5 (MINIMO_SEGURANCA); senão None.
+    g_vhf reaproveita o `fonte` de g_eletronicos (mesmo arquivo-fonte, prefixo de FAQ diferente): sem o filtro por
+    `equip` (FAQ_GUIAS_EQUIP), uma seção '1'/'5' de g_vhf casaria por engano o mínimo de g_eletronicos."""
     for k, secoes in MINIMO_SEGURANCA.items():
         if X.arq.get(k) and t.get('fonte') == X.arq[k]:
+            equip_esperado = FAQ_GUIAS_EQUIP.get(k)
+            if equip_esperado is not None and t.get('equip') != equip_esperado:
+                continue
             sec = t.get('secao') or ''
             if secoes is None or sec in secoes or sec.split(' · ')[0] in secoes:
                 return k
@@ -3595,9 +3603,18 @@ FAQ_TEXTO = ('titulo', 'pergunta', 'resposta', 'acao', 'atencao', 'senao', 'obs'
 # Sem o chip de confiabilidade nem os anexos do Avanti (decisão 8 do §8.2): nada disto existe, em nenhum nível.
 FAQ_PROIBIDAS = {'conf', 'edicao', 'origem', 'selos', 'decisoes', 'limites', 'lacuna', 'lacunas', 'divergencias', 'invalidos', 'alertas'}
 FAQ_TIPOS = ('Guia de bordo', 'Protocolo', 'Boa prática')   # nunca "Manual" nem "Foto"
-FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
+FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'),
+             ('VH', 'g_vhf'), ('EE', 'g_eletrico'),
              ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
              ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))   # prefixo → chave de drive.arquivos; id = prefixo + número da seção
+# g_vhf reaproveita o mesmo arquivo-fonte (drive.arquivos) de g_eletronicos (ARQ['g_vhf'] = ARQ['g_eletronicos'] no gerador: VHF é
+# o mesmo guia/manual, só muda o agrupamento do FAQ) — por isso os dois têm o mesmo `fonte`, e o filtro abaixo (por `fonte` sozinho)
+# casaria os trechos dos dois guias num só. O `equip` de cada seção (herdado de GUIAS[chave]['equip']) é diferente entre eles
+# ('Plotters...·Áudio...·Rádios VHF...' para g_eletronicos; só 'Rádios VHF...' para g_vhf) e separa os dois corretamente.
+FAQ_GUIAS_EQUIP = {
+    'g_eletronicos': 'Plotters Garmin GPSMAP 1243xsv · Áudio Fusion MS-UD755 · Rádios VHF Icom IC-M510 e IC-M37',
+    'g_vhf': 'Rádios VHF Icom IC-M510 e IC-M37',
+}
 FAQ_EM = (('EM-01', 'MAYDAY · canal 16'), ('EM-02', 'PAN-PAN'), ('EM-03', 'DSC'), ('EM-04', 'Homem ao mar'), ('EM-05', 'Incêndio · Seafire'),
           ('EM-06', 'Água entrando'), ('EM-07', 'Abandono'), ('EM-08', 'EPIRB'), ('EM-09', 'Salvatagem'))   # id → seção do protocolo
 FAQ_GLOSSARIO = ('SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 'MOB', 'DSC', 'MMSI', 'EPIRB', 'BB/BE')
@@ -3745,7 +3762,9 @@ def a_faq(X):
         esperado.append(iid)
         trecho_de[iid] = por_trecho.get((X.arq.get('protocolo'), sec))
     for pre, chave in FAQ_GUIAS:
-        secoes = [t for t in X.trechos if t.get('fonte') == X.arq.get(chave)]
+        equip_esperado = FAQ_GUIAS_EQUIP.get(chave)
+        secoes = [t for t in X.trechos if t.get('fonte') == X.arq.get(chave) and
+                  (equip_esperado is None or t.get('equip') == equip_esperado)]
         for n, t in enumerate(secoes, 1):
             esperado.append('%s-%02d' % (pre, n))
             trecho_de[esperado[-1]] = t

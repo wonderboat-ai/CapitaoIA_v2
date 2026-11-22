@@ -5853,8 +5853,12 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F09
 # —— F10: o FAQ dos equipamentos no chat ——
 FAQ_JSON = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'faq-equipamentos.json'), encoding='utf-8'))
 # as 8 frases do próprio FAQ (pergunta ou variante) que nenhuma resposta pronta nem trecho do guia responde (iam à IA): agora o item, com o código e a fonte
-FAQ_TIPADAS = [('água rasa: o que faço', 'EL-08'), ('sonda mostrando pouca profundidade', 'EL-08'), ('conferência anual do guincho', 'AN-04'), ('Como vejo os outros barcos pelo AIS?', 'AI-01'),
-               ('transponder só recebendo', 'AI-03'), ('boletim da Marinha antes de sair', 'CK-03'), ('O que faço ao chegar na marina?', 'CK-04'), ('Quando completo a água e esvazio as servidas?', 'CK-06')]
+FAQ_TIPADAS = [('sonda mostrando pouca profundidade', 'EL-08'), ('transponder só recebendo', 'AI-03'), ('boletim da Marinha antes de sair', 'CK-03'),
+               ('Quando completo a água e esvazio as servidas?', 'CK-06')]
+# (tarefa #3, integração dos 172 cartões: «água rasa: o que faço», «conferência anual do guincho», «Como vejo os outros barcos pelo AIS?» e
+# «O que faço ao chegar na marina?» saíram desta lista — o conteúdo novo de EL §41, AN §11, AI §4 e PI §10 agora responde cada uma delas
+# direto pelo trecho do guia (key='base'), mais específico que o item de FAQ antigo que cada uma usava antes; não precisam mais do
+# mecanismo faqEquip para ter uma resposta local. Confirmado com o texto completo de cada resposta, não só a chave.)
 # o que o FAQ NÃO toma: a resposta pronta, o trecho do guia, a pergunta de uma palavra, a genérica sem item, a de náutica geral (essas seguem como antes)
 FAQ_NAO = [('como se faz um nó lais de guia?', 'fallback'), ('como silenciar o alarme?', 'fallback'), ('como ligar o gerador?', 'base'), ('gerador', 'gerador'), ('como abrir a ventilação', 'fallback'),
            ('o alarme disparou', 'fallback'), ('como desligar o sistema', 'fallback'), ('quando trocar o óleo do motor?', 'base'), ('alarme de fluxo da climatização', 'base'),
@@ -5896,9 +5900,9 @@ def grupo_faq(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         x = pg.evaluate(JS_FAQ)
-        ped('faq: o cérebro carrega o faq-equipamentos.json (91 itens) e dá o item pelo código; código que não existe, número e vazio devolvem null',
-            x['ok'] is True and x['pronto'] is True and x['total'] == 91 == len(itens) and x['id1'] == por['MO-02'] and x['nulos'] == [None] * 4, (x['ok'], x['total'], x['nulos']))
-        ped('faq: 91 itens, 26 de segurança (os 9 cartões EM e os outros do contrato §1.6) e 9 de emergência', sum(1 for i in itens if i.get('seguranca')) == 26 and sum(1 for i in itens if i.get('emerg')) == 9, (sum(1 for i in itens if i.get('seguranca')), sum(1 for i in itens if i.get('emerg'))))
+        ped('faq: o cérebro carrega o faq-equipamentos.json (254 itens, desde a integração dos 172 cartões na tarefa #3) e dá o item pelo código; código que não existe, número e vazio devolvem null',
+            x['ok'] is True and x['pronto'] is True and x['total'] == 254 == len(itens) and x['id1'] == por['MO-02'] and x['nulos'] == [None] * 4, (x['ok'], x['total'], x['nulos']))
+        ped('faq: 254 itens, 53 de segurança (os 9 cartões EM, os outros do contrato §1.6 e as novas seções de fronteira/DSC da tarefa #3) e 9 de emergência', sum(1 for i in itens if i.get('seguranca')) == 53 and sum(1 for i in itens if i.get('emerg')) == 9, (sum(1 for i in itens if i.get('seguranca')), sum(1 for i in itens if i.get('emerg'))))
         ruins = []
         for r in x['todos']:
             it = por[r['id']]
@@ -5930,7 +5934,7 @@ def grupo_faq(b, muta, ped):
         ped('faq (revisão 4): os 82 itens comuns abrem com «<título> — <resposta>» (SK-02: «Ligar o estabilizador antes de sair — Ligue pelo display…»); os 9 cartões de emergência abrem direto com a instrução, sem título antes (trava 10)',
             not ruins and sk['text'].startswith('Ligar o estabilizador antes de sair — Ligue pelo display') and sk['fala'].startswith('Ligar o estabilizador antes de sair — Ligue pelo display'), (ruins[:4], sk['text'][:80]))
         seg = [r for r in x['todos'] if por[r['id']].get('seguranca')]
-        ped('faq: os 26 itens de segurança e os 9 cartões de emergência NUNCA vão à IA (pedeIA false); os outros 65, sim (como o trecho do guia)', len(seg) == 26 and all(r['ia'] is False for r in seg) and all(r['ia'] is True for r in x['todos'] if not por[r['id']].get('seguranca')), [r['id'] for r in seg if r['ia']][:5])
+        ped('faq: os 53 itens de segurança e os 9 cartões de emergência NUNCA vão à IA (pedeIA false); os outros 201, sim (como o trecho do guia)', len(seg) == 53 and all(r['ia'] is False for r in seg) and all(r['ia'] is True for r in x['todos'] if not por[r['id']].get('seguranca')), [r['id'] for r in seg if r['ia']][:5])
         # o cartão de emergência: a resposta de emergência não leva o quadro (a ficha sai sem a Telemetria, a Navegação, os Horímetros e a Autonomia), nem a hora, e a fala é a resposta inteira (a 1ª linha)
         em = [r for r in x['todos'] if por[r['id']].get('emerg')]
         ped('faq: o cartão de emergência (EM-01…09) é resposta de emergência: a ficha sai sem o quadro e sem hora, e a fala é a 1ª linha inteira (a resposta toda, com o rótulo do procedimento padrão), sem a hora do instante',
@@ -5955,7 +5959,7 @@ def grupo_faq(b, muta, ped):
         ped('faq: a 1ª linha da resposta digitada é «<título> — <resposta>» do item e a fonte começa com «FAQ dos equipamentos <código> · <guia § seção>»', not ruins, ruins)
         ruins = [(q, esp, k, f) for (q, esp), (_, k, f) in zip(FAQ_NAO, x['nao']) if k != esp or f is not None]
         ped('faq: o FAQ não toma o que já responde (resposta pronta, trecho do guia) nem a pergunta de uma palavra, a genérica ou a de náutica geral (%d perguntas)' % len(FAQ_NAO), not ruins, ruins)
-        ped('faq: nas %d frases do próprio FAQ (pergunta e variantes), toda resposta que vem do FAQ traz o código do PRÓPRIO item' % (len(itens) * 4), len(x['frases']) == 8 and all(i == f for i, q, f in x['frases']), x['frases'])
+        ped('faq: nas %d frases do próprio FAQ (pergunta e variantes), toda resposta que vem do FAQ traz o código do PRÓPRIO item' % (len(itens) * 4), len(x['frases']) == 47 and all(i == f for i, q, f in x['frases']), x['frases'])
         # (revisão) o corte de 8 passos: nenhum item do FAQ tem mais de 8, então um item com 12 passos é plantado na cópia carregada (sem tocar o arquivo)
         longo = pg.evaluate("""() => { const B = window.CapitaoBrain, it = B.faqDados().itens.filter((x) => x.id === 'MO-02')[0], orig = it.passos; it.passos = Array.from({ length: 12 }, (_, k) => 'passo ' + (k + 1));
           const a = B.answer('x', { platform: 'app', commit: false, faq: 'MO-02' }); it.passos = orig; return a.text; }""")
