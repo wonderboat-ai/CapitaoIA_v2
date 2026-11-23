@@ -1,0 +1,3316 @@
+# Corpus NATURAL de frases de bordo de ROTINA (fase 1a, reconhecimento) — tarefa #12 do CLAUDE.md, item 6: nenhuma linha aqui descreve uma emergência real;
+# serve para medir falso positivo de uma correção futura em emergencia()/risco()/SOS_REGEX (mesmo papel do "corpus natural de 1.341 frases" do RESIDUO-PESSOA-AO-MAR.md
+# e do CLAUDE.md §Pendências, mas de ASSUNTO GERAL, não só pessoa ao mar). Fontes reais do projeto, uma por linha (formato: frase<TAB>fonte):
+#   faq_pergunta/faq_variante = faq-equipamentos.json, itens SEM emerg/seguranca (201 dos 254; variantes dos mesmos itens)
+#   pessoa_natural/pessoa_rotina/pessoa_rotina2 = testes/dados/pessoa-natural.txt, pessoa-rotina.txt, pessoa-rotina2.txt (reaproveitados, já são corpus natural)
+#   cerebro_casos = a lista-semente CASOS de testes/cerebro.py (linhas 32-394), tirando as rotas de emergência (sos, canal16, epirb, seafire, salvatagem, mmsi, oleo)
+# Deduplicado (frase idêntica conta uma vez, pela primeira fonte que a trouxe). Nenhum dado do Avanti.
+O que olho nos motores antes da partida?	faq_pergunta
+verificação antes da partida do motor	faq_variante
+motor frio: o que olhar primeiro	faq_variante
+checar o motor antes de ligar	faq_variante
+Como ligo os motores?	faq_pergunta
+dar partida no motor	faq_variante
+partida dos dois motores pelo painel	faq_variante
+ligar o motor de bombordo e o de boreste	faq_variante
+Preciso aquecer o motor antes de acelerar?	faq_pergunta
+motor frio: posso acelerar	faq_variante
+tempo de aquecimento do motor	faq_variante
+marcha lenta antes de acelerar	faq_variante
+O motor esquentou demais, o que faço?	faq_pergunta
+alarme de temperatura do motor	faq_variante
+arrefecimento do motor subindo	faq_variante
+motor superaquecendo	faq_variante
+Quanto tempo deixo o motor em marcha lenta antes de desligar?	faq_pergunta
+esfriar o motor antes de parar	faq_variante
+posso desligar o motor logo ao chegar	faq_variante
+marcha lenta antes de desligar	faq_variante
+Quando é a próxima troca de óleo e do rotor dos motores?	faq_pergunta
+troca de óleo e filtros do motor	faq_variante
+prazo de troca do rotor da bomba de água salgada	faq_variante
+revisão anual dos motores	faq_variante
+Onde vejo as horas de uso dos motores?	faq_pergunta
+horímetro dos motores de BB e BE	faq_variante
+quantas horas têm os motores	faq_variante
+horas de motor na telemetria	faq_variante
+Quais são os valores normais de rotação, óleo e temperatura dos motores?	faq_pergunta
+faixa normal do motor	faq_variante
+limites de pressão de óleo e arrefecimento	faq_variante
+rotação de cruzeiro dos motores	faq_variante
+Quanto os motores gastam de diesel por hora?	faq_pergunta
+consumo em marcha lenta e em cruzeiro	faq_variante
+litros por hora dos dois motores	faq_variante
+gasto de combustível na rotação máxima	faq_variante
+Quais são as faixas de rotação dos motores e para que serve cada uma?	faq_pergunta
+zonas de rotação do motor	faq_variante
+rpm de deslocamento, transição e planeio	faq_variante
+quando o casco sai do deslocamento e entra no planeio	faq_variante
+O que devo conferir nos motores enquanto navego?	faq_pergunta
+ronda pela praça de máquinas	faq_variante
+comparar o motor BB com o BE	faq_variante
+pressão de óleo e temperatura normais em cruzeiro	faq_variante
+Como confiro o nível de óleo e do líquido de arrefecimento do motor?	faq_pergunta
+vareta de óleo do motor	faq_variante
+completar o líquido de arrefecimento	faq_variante
+até onde posso completar o óleo	faq_variante
+O motor não pega, o que faço?	faq_pergunta
+motor não liga	faq_variante
+não dá partida no motor	faq_variante
+partida sem sucesso no painel	faq_variante
+Não sai água pelo escapamento do motor, o que faço?	faq_pergunta
+escapamento sem água	faq_variante
+falta de refrigeração no motor	faq_variante
+escapamento seco depois da partida	faq_variante
+O motor está perdendo rotação, o que pode ser?	faq_pergunta
+motor sem força	faq_variante
+motor não acelera como antes	faq_variante
+rpm caindo sem eu mexer na manete	faq_variante
+O barco está vibrando em certa rotação, o que pode ser?	faq_pergunta
+vibração no motor ou no eixo	faq_variante
+trepidação em certo giro	faq_variante
+vibração de um lado só do barco	faq_variante
+Como dreno a água do filtro separador de combustível?	faq_pergunta
+filtro de combustível com água	faq_variante
+diesel contaminado no motor	faq_variante
+drenar o separador antes de sair	faq_variante
+Quando troco o rotor da bomba de água salgada dos motores?	faq_pergunta
+impeller dos motores gasto	faq_variante
+rotor da bomba de água do mar	faq_variante
+como trocar o rotor da bomba de água salgada	faq_variante
+O que inspeciono nos motores de tempos em tempos?	faq_pergunta
+correia do motor gasta	faq_variante
+anodos de zinco do eixo	faq_variante
+mangueiras e braçadeiras do motor	faq_variante
+Como ligo o gerador?	faq_pergunta
+dar partida no gerador	faq_variante
+passar as cargas para o gerador	faq_variante
+ligar a climatização depois do gerador	faq_variante
+Como sei se o gerador está refrigerando?	faq_pergunta
+gerador sem água no escapamento	faq_variante
+saída de água do gerador	faq_variante
+falta de refrigeração do gerador	faq_variante
+Como desligo o gerador?	faq_pergunta
+parar o gerador	faq_variante
+retirar a carga e esfriar o gerador	faq_variante
+fechar a válvula de fundo do gerador	faq_variante
+O gerador deu alarme de temperatura alta, o que faço?	faq_pergunta
+gerador esquentando	faq_variante
+alarme de temperatura no gerador	faq_variante
+gerador superaquecido	faq_variante
+O gerador deu alarme de pressão de óleo, o que faço?	faq_pergunta
+gerador sem pressão de óleo	faq_variante
+alarme de óleo no gerador	faq_variante
+nível de óleo do gerador	faq_variante
+Quando é a próxima troca de óleo e a inspeção do rotor do gerador?	faq_pergunta
+troca de óleo e filtros do gerador	faq_variante
+inspeção do rotor (impeller)	faq_variante
+revisão do gerador na agenda	faq_variante
+Onde vejo as horas de uso do gerador?	faq_pergunta
+horas do gerador	faq_variante
+quantas horas tem o gerador	faq_variante
+horímetro do gerador na telemetria	faq_variante
+Quanta carga o gerador aguenta?	faq_pergunta
+potência nominal do gerador	faq_variante
+carga normal com a climatização ligada	faq_variante
+carga acima do normal no gerador	faq_variante
+O gerador não pega, o que confiro?	faq_pergunta
+gerador não liga	faq_variante
+partida do gerador falhando	faq_variante
+motor do gerador não pega	faq_variante
+Posso desligar o gerador com carga ligada?	faq_pergunta
+desligar o gerador com carga ligada	faq_variante
+passar para a energia do cais	faq_variante
+horímetro do gerador no diário	faq_variante
+Em que ordem ligo as cargas no gerador?	faq_pergunta
+posso ligar a climatização e o resto ao mesmo tempo	faq_variante
+qual é o limite de carga do gerador antes do aviso	faq_variante
+o que posso ligar no gerador	faq_variante
+O disjuntor do gerador desarmou, e agora?	faq_pergunta
+carga do gerador acima de 8,1 kW	faq_variante
+gerador sobrecarregado: consequências	faq_variante
+quais cargas tiro primeiro	faq_variante
+O gerador caiu sozinho, o que faço?	faq_pergunta
+por que o gerador desligou	faq_variante
+o gerador está perdendo rotação	faq_variante
+posso religar o gerador depois que ele desligou	faq_variante
+A frequência do gerador está diferente de 60 Hz, o que é?	faq_pergunta
+a tensão do gerador está oscilando, o que faço	faq_variante
+posso ligar a eletrônica com a tensão fora da faixa	faq_variante
+por que a frequência cai quando ligo uma carga	faq_variante
+Quando troco o óleo do gerador?	faq_pergunta
+como confiro o óleo do gerador	faq_variante
+alarme de pressão de óleo do gerador	faq_variante
+quantas horas faltam para a revisão do gerador	faq_variante
+Como sei se o rotor do gerador está gasto?	faq_pergunta
+quando inspeciono o rotor do gerador	faq_variante
+como troco o rotor (impeller) do gerador	faq_variante
+por que o gerador não joga água no escapamento	faq_variante
+Quantas baterias tem o barco e como estão ligadas?	faq_pergunta
+bancos de 24 V e 12 V	faq_variante
+banco de partida dos motores	faq_variante
+carregador de bordo	faq_variante
+Qual a tensão normal dos bancos de baterias?	faq_pergunta
+tensão baixa nas baterias	faq_variante
+faixa do banco de 12 V	faq_variante
+banco de serviço de 24 V	faq_variante
+Quando verifico as baterias?	faq_pergunta
+conferir as tensões antes de sair	faq_variante
+bornes das baterias	faq_variante
+verificação dos bancos a cada 6 meses	faq_variante
+Por que os bancos de baterias são separados?	faq_pergunta
+qual banco alimenta o estabilizador	faq_variante
+para que serve o banco de partida	faq_variante
+diferença entre banco de serviço e banco de partida	faq_variante
+Como leio a tensão das baterias no painel e na telemetria?	faq_pergunta
+tensão normal dos bancos de 24 V e 12 V	faq_variante
+a tensão dentro da faixa quer dizer que a bateria está carregada	faq_variante
+por que a tensão muda quando o gerador liga	faq_variante
+O que faço se a tensão de um banco de baterias estiver baixa?	faq_pergunta
+alarme de tensão baixa na bateria	faq_variante
+o banco de 24 V está abaixo de 24,4 V	faq_variante
+o banco de 12 V está abaixo de 12,2 V	faq_variante
+A tensão de um banco de baterias está alta, o que faço?	faq_pergunta
+aviso de tensão alta na bateria	faq_variante
+o banco de 24 V passou de 29,4 V	faq_variante
+o banco de 12 V passou de 14,7 V	faq_variante
+Como carrego os bancos de baterias do barco?	faq_pergunta
+o carregador de bordo funciona com o gerador	faq_variante
+como sei que as baterias terminaram de carregar	faq_variante
+como recarrego o banco de 12 V	faq_variante
+Que cuidados as baterias AGM precisam no dia a dia?	faq_pergunta
+preciso colocar água nas baterias AGM	faq_variante
+como faço as baterias do barco durarem mais	faq_variante
+posso misturar bateria nova com velha no mesmo banco	faq_variante
+Quando e como verifico os bancos de baterias e as conexões?	faq_pergunta
+revisão das baterias a cada 6 meses	faq_variante
+o que o técnico confere na verificação das baterias	faq_variante
+como vejo se os bornes estão com corrosão	faq_variante
+De onde o estabilizador tira energia?	faq_pergunta
+alimentação do Seakeeper	faq_variante
+banco de 12 V do estabilizador	faq_variante
+volante que não acelera	faq_variante
+Como ligo o estabilizador antes de sair?	faq_pergunta
+ligar o Seakeeper	faq_variante
+esperar o estabilizador ficar pronto	faq_variante
+rotação do volante no display	faq_variante
+Posso desligar o efeito do estabilizador sem parar o volante?	faq_pergunta
+botão de estabilização	faq_variante
+estabilizador na manobra de marina	faq_variante
+desligar só a estabilização	faq_variante
+Como desligo o estabilizador ao chegar?	faq_pergunta
+parar o Seakeeper	faq_variante
+volante ainda girando depois de desligar	faq_variante
+quando desligo o banco de 12 V	faq_variante
+Posso mexer no estabilizador com o volante girando?	faq_pergunta
+manutenção do estabilizador	faq_variante
+abrir tampas do Seakeeper	faq_variante
+conferir que o volante parou	faq_variante
+O estabilizador mostrou uma mensagem de alarme, o que faço?	faq_pergunta
+mensagem no display do Seakeeper	faq_variante
+estabilizador com temperatura alta	faq_variante
+tensão baixa no estabilizador	faq_variante
+Quando faço a manutenção do estabilizador?	faq_pergunta
+anodo do trocador de calor	faq_variante
+revisão anual do Seakeeper	faq_variante
+troca do anodo do estabilizador	faq_variante
+A partir de que rotação o estabilizador estabiliza?	faq_pergunta
+rotação do volante do Seakeeper	faq_variante
+volante abaixo do normal	faq_variante
+quando o estabilizador começa a funcionar	faq_variante
+Quanto tempo o volante leva para acelerar?	faq_pergunta
+Como sei que o estabilizador está pronto?	faq_variante
+O volante não acelera, o que confiro?	faq_variante
+Quanto tempo demora até a estabilização ficar disponível?	faq_variante
+Qual é a diferença entre desligar a estabilização e desligar o estabilizador?	faq_pergunta
+Como ativo a estabilização depois de o volante acelerar?	faq_variante
+Devo manter o estabilizador ativo na manobra de marina?	faq_variante
+O botão de estabilização para o volante?	faq_variante
+Quando posso cortar a energia do estabilizador?	faq_pergunta
+O volante ainda gira depois de desligar, é normal?	faq_variante
+Quanto tempo o volante demora para parar?	faq_variante
+Como sei que o volante já parou de girar?	faq_variante
+O estabilizador avisou tensão baixa, o que faço?	faq_pergunta
+Por que o volante do estabilizador não acelera?	faq_variante
+O que fazer quando o banco de 12 V está fraco?	faq_variante
+Qual é a tensão normal do banco de 12 V do estabilizador?	faq_variante
+O estabilizador deu alarme de temperatura alta, o que faço?	faq_pergunta
+Apareceu mensagem de arrefecimento no estabilizador, e agora?	faq_variante
+O que confiro quando o estabilizador esquenta?	faq_variante
+Posso continuar usando o estabilizador com a mensagem de arrefecimento?	faq_variante
+O que significa volante abaixo de 85 %?	faq_pergunta
+Por que o estabilizador não está estabilizando?	faq_variante
+O volante caiu de rotação, o que faço?	faq_variante
+O estabilizador acabou de ligar e não estabiliza, é normal?	faq_variante
+O que faço antes de qualquer serviço no estabilizador?	faq_pergunta
+Quando troco o anodo do estabilizador?	faq_variante
+Quem faz a manutenção do estabilizador?	faq_variante
+Posso abrir o estabilizador com o volante girando?	faq_variante
+Como ligo o ar-condicionado?	faq_pergunta
+ligar a climatização	faq_variante
+ligar o ar da cabine	faq_variante
+bomba de água salgada da climatização	faq_variante
+Como escolho frio, calor ou ventilação?	faq_pergunta
+ajustar a temperatura da cabine	faq_variante
+unidades de 16.000 e 12.000 BTU/h	faq_variante
+ligar uma unidade de cada vez	faq_variante
+A climatização deu alarme de fluxo ou de alta pressão, o que faço?	faq_pergunta
+alarme de água salgada na climatização	faq_variante
+ar-condicionado desligou por alarme	faq_variante
+filtro de água salgada sujo	faq_variante
+O ar da cabine está fraco, o que faço?	faq_pergunta
+fluxo de ar fraco	faq_variante
+limpar o filtro de ar da cabine	faq_variante
+unidade da cabine com pouco ar	faq_variante
+Como desligo a climatização?	faq_pergunta
+desligar o ar-condicionado	faq_variante
+desligar a bomba de água salgada da climatização	faq_variante
+fechar a válvula de fundo ao deixar o barco	faq_variante
+Quando limpo o filtro de água salgada da climatização?	faq_pergunta
+limpeza mensal do filtro	faq_variante
+revisão anual da climatização	faq_variante
+filtro de água salgada do ar-condicionado	faq_variante
+Por que a climatização depende da água salgada circulando?	faq_pergunta
+para que serve a válvula de fundo da climatização	faq_variante
+por que preciso ligar a bomba antes do ar-condicionado	faq_variante
+jato fraco na descarga do ar-condicionado	faq_variante
+Qual é a ordem certa para ligar a climatização, da energia ao controle da cabine?	faq_pergunta
+ligar o ar com o gerador ou no cabo de cais	faq_variante
+fechar portas antes de ligar o ar-condicionado	faq_variante
+esperar uma unidade estabilizar antes da próxima	faq_variante
+Qual a diferença entre os modos frio, calor e ventilação da climatização?	faq_pergunta
+usar só o ventilador do ar-condicionado	faq_variante
+aquecer a cabine com a climatização	faq_variante
+compressor demora para voltar ao trocar de modo	faq_variante
+A temperatura que ajusto no controle é a do ar que sai da unidade?	faq_pergunta
+velocidade do ventilador para dormir	faq_variante
+esperar antes de mudar a temperatura de novo	faq_variante
+Posso ligar todos os ares-condicionados ao mesmo tempo no gerador?	faq_pergunta
+climatização puxando o gerador	faq_variante
+carga do ar-condicionado no cabo de cais	faq_variante
+disjuntor desarma com o ar-condicionado ligado	faq_variante
+O alarme de fluxo ou de alta pressão voltou depois que liguei de novo, o que verifico?	faq_pergunta
+bomba ligada mas alarme continua	faq_variante
+jato fraco na descarga com alarme de fluxo	faq_variante
+alarme de fluxo depois de limpar o filtro	faq_variante
+Como limpo o filtro de água salgada da climatização?	faq_pergunta
+abrir a tampa do filtro com a válvula de fundo aberta	faq_variante
+trocar o anel de vedação do filtro	faq_variante
+religar a bomba depois de limpar o filtro	faq_variante
+O ar-condicionado está ligado, mas a cabine não esfria, o que confiro?	faq_pergunta
+ar-condicionado liga mas sai ar quente	faq_variante
+cabine demora para esfriar	faq_variante
+gelo na unidade do ar-condicionado	faq_variante
+Como limpo o filtro de ar da unidade de climatização?	faq_pergunta
+ar fraco saindo da cabine	faq_variante
+filtro de ar sujo da unidade	faq_variante
+gelo na serpentina por falta de limpeza	faq_variante
+Preciso fazer algo na climatização antes de deixar o barco parado por vários dias?	faq_pergunta
+secar a umidade da cabine antes de fechar o barco	faq_variante
+ordem para desligar a climatização	faq_variante
+a bomba de água salgada não pode puxar sem água	faq_variante
+Como ligo o dessalinizador?	faq_pergunta
+fazer água doce a bordo	faq_variante
+dessalinizador: válvula de fundo e pré-filtro	faq_variante
+ligar o dessalinizador pelo painel	faq_variante
+Quanta água o dessalinizador faz por hora?	faq_pergunta
+produção nominal em litros por hora	faq_variante
+salinidade da água produzida	faq_variante
+água dos primeiros minutos	faq_variante
+Como desligo o dessalinizador?	faq_pergunta
+lavagem com água doce no fim do ciclo	faq_variante
+desligar o dessalinizador pelo painel	faq_variante
+dessalinizador com o barco parado	faq_variante
+Quando troco os pré-filtros do dessalinizador?	faq_pergunta
+pré-filtros do dessalinizador	faq_variante
+conservação da membrana	faq_variante
+dessalinizador parado por muito tempo	faq_variante
+Posso fazer água doce na marina?	faq_pergunta
+O que confiro antes de fazer água doce?	faq_variante
+Como faço água doce no barco?	faq_variante
+Quanto tempo leva para encher o tanque com o dessalinizador?	faq_pergunta
+Quando mando a água do dessalinizador para o tanque?	faq_variante
+Quanta água o dessalinizador produz por hora?	faq_variante
+O que confiro no tanque antes de ligar o dessalinizador?	faq_variante
+Como sei se a água do dessalinizador está boa?	faq_pergunta
+A água do dessalinizador está salgada, o que faço?	faq_variante
+O que significa salinidade alta no painel do dessalinizador?	faq_variante
+Por que a salinidade subiu durante a produção?	faq_variante
+Posso desligar o dessalinizador no meio da lavagem?	faq_pergunta
+Preciso lavar o dessalinizador depois de usar?	faq_variante
+Por que não posso cortar a energia na lavagem?	faq_variante
+Posso usar água com cloro na lavagem do dessalinizador?	faq_variante
+O que derruba a produção do dessalinizador?	faq_pergunta
+Por que o dessalinizador está fazendo pouca água?	faq_variante
+O dessalinizador não chega a 30 litros por hora, é normal?	faq_variante
+Posso aumentar a pressão para compensar a produção baixa?	faq_variante
+Como troco o pré-filtro do dessalinizador?	faq_pergunta
+O pré-filtro do dessalinizador está sujo, o que faço?	faq_variante
+Posso usar qualquer filtro no lugar do original?	faq_variante
+Preciso desligar a energia para trocar o pré-filtro?	faq_variante
+O que faço com o dessalinizador se o barco ficar parado muito tempo?	faq_pergunta
+Preciso conservar a membrana do dessalinizador?	faq_variante
+Quem faz a conservação da membrana?	faq_variante
+Posso usar qualquer produto químico na membrana?	faq_variante
+As bombas de porão ligam sozinhas?	faq_pergunta
+sensor de nível do porão	faq_variante
+ciclos das bombas de porão	faq_variante
+bombas automáticas de BB e BE	faq_variante
+Como testo as bombas de porão?	faq_pergunta
+acionar a bomba de porão no manual	faq_variante
+teste mensal do porão	faq_variante
+alarme do painel do porão	faq_variante
+Qual a diferença entre automático e manual na bomba de porão?	faq_pergunta
+chave da bomba no painel	faq_variante
+esgotar o porão pelo manual	faq_variante
+bomba esquecida no manual	faq_variante
+Como limpo o sensor de nível da bomba de porão?	faq_pergunta
+limpar o sensor de nível do porão	faq_variante
+entrada da bomba entupida	faq_variante
+sensor tipo flutuador travado	faq_variante
+Quando deixo o piloto automático em espera?	faq_pergunta
+piloto em standby	faq_variante
+engatar o piloto automático	faq_variante
+piloto ao manobrar na marina	faq_variante
+Como ativo o alarme de âncora?	faq_pergunta
+raio do alarme de âncora	faq_variante
+ativar o alarme ao fundear	faq_variante
+contador de corrente e alarme de âncora	faq_variante
+Qual canal fica em escuta no rádio VHF?	faq_pergunta
+escuta permanente do canal 16	faq_variante
+dupla escuta do VHF	faq_variante
+rádio portátil carregado	faq_variante
+Como pareio o celular no som do barco?	faq_pergunta
+Bluetooth do Fusion	faq_variante
+conectar o celular ao áudio	faq_variante
+volume por zona do áudio	faq_variante
+Com que frequência atualizo as cartas e o software dos plotters?	faq_pergunta
+atualização anual dos plotters	faq_variante
+software do radar e do áudio	faq_variante
+cartas náuticas do plotter	faq_variante
+Qual a profundidade mínima para navegar?	faq_pergunta
+alarme de profundidade da sonda	faq_variante
+água rasa: o que faço	faq_variante
+sonda mostrando pouca profundidade	faq_variante
+Como eu mexo na tela do plotter (zoom, arrastar, selecionar)?	faq_pergunta
+ícones da barra de menu	faq_variante
+travar a tela do plotter	faq_variante
+abrir Go To, Route To ou Auto Guidance	faq_variante
+Como eu deixo a carta de navegação de um toque na tela inicial do plotter?	faq_pergunta
+remover um atalho fixado	faq_variante
+mudar a ordem dos atalhos	faq_variante
+atalhos definidos pelo estaleiro	faq_variante
+Como eu crio uma tela com várias funções juntas no plotter?	faq_pergunta
+layout SmartMode para cruzeiro ou atracação	faq_variante
+apagar uma página combinada	faq_variante
+SmartMode em mais de um display	faq_variante
+O que o aplicativo ActiveCaptain faz no plotter?	faq_pergunta
+atualizar cartas pelo ActiveCaptain	faq_variante
+transferir waypoints pelo celular	faq_variante
+comunidade ActiveCaptain	faq_variante
+Como eu conecto o celular ao plotter para usar o ActiveCaptain?	faq_pergunta
+distância do celular até o plotter no ActiveCaptain	faq_variante
+cartão de memória do ActiveCaptain	faq_variante
+senha da rede Wi-Fi do plotter	faq_variante
+Como eu recebo chamadas e mensagens do celular na tela do plotter?	faq_pergunta
+parear o celular por Bluetooth no plotter	faq_variante
+distância para parear a notificação no plotter	faq_variante
+desligar os avisos de notificação do plotter	faq_variante
+Quais tipos de carta o plotter oferece?	faq_pergunta
+diferença entre carta de navegação e carta de pesca	faq_variante
+vista submersa em 3D do fundo	faq_variante
+cartas premium no plotter	faq_variante
+Como eu escondo ou mostro informações na carta do plotter?	faq_pergunta
+camadas que precisam de cartas premium	faq_variante
+mostrar waypoints e trilhas salvas	faq_variante
+ajustar a trilha do barco na carta	faq_variante
+Como eu meço a distância entre dois pontos na carta?	faq_pergunta
+zoom com os dedos na carta	faq_variante
+alfinete de medição do plotter	faq_variante
+mudar o ponto de referência da medição	faq_variante
+Como eu vejo informações de maré ou corrente de um ponto da carta?	faq_pergunta
+criar um waypoint direto na carta	faq_variante
+serviços próximos marcados na carta	faq_variante
+dados astronômicos de um ponto da carta	faq_variante
+Como eu vejo os detalhes de uma luz ou sinalização marcada na carta?	faq_pergunta
+detalhes de uma obstrução na carta	faq_variante
+sinalização náutica na vista 3D	faq_variante
+nome de uma marca de navegação na carta	faq_variante
+Como eu marco a posição atual do barco como um waypoint?	faq_pergunta
+criar waypoint por coordenada	faq_variante
+waypoint por distância e direção	faq_variante
+waypoint em um ponto da carta	faq_variante
+Como eu mudo o nome ou a posição de um waypoint salvo?	faq_pergunta
+apagar todos os waypoints salvos	faq_variante
+mover um waypoint para outra posição	faq_variante
+lista de waypoints salvos no plotter	faq_variante
+Qual a diferença entre Go To, Route To e Auto Guidance no plotter?	faq_pergunta
+plotter desviar de obstáculos sozinho	faq_variante
+piloto automático seguir uma rota sozinho	faq_variante
+Auto Guidance só em cartas premium	faq_variante
+Como eu paro a navegação no meio do caminho?	faq_pergunta
+linha direta até um destino no plotter	faq_variante
+rumo corrigido ao sair da rota	faq_variante
+linha do Go To sobre terra ou água rasa	faq_variante
+Como eu crio uma rota com curvas para desviar de obstáculos?	faq_pergunta
+salvar uma rota no plotter	faq_variante
+editar as curvas de uma rota salva	faq_variante
+limite de curvas de uma rota	faq_variante
+O que significam as cores da linha no Auto Guidance?	faq_pergunta
+Auto Guidance garante água livre	faq_variante
+ativar o Auto Guidance até um destino	faq_variante
+trecho cinza do Auto Guidance	faq_variante
+O que significa cada símbolo de alvo AIS na carta?	faq_pergunta
+alvo AIS com transmissão perdida	faq_variante
+triângulo vermelho de alvo perigoso	faq_variante
+alvo AIS ativado na carta	faq_variante
+Como eu ativo um alvo AIS para acompanhar na carta?	faq_pergunta
+tempo até a aproximação de um alvo AIS	faq_variante
+desativar um alvo AIS acompanhado	faq_variante
+ver dados de um alvo AIS na carta	faq_variante
+Como eu ativo o alarme de zona de segurança para embarcações próximas?	faq_pergunta
+alarme também para alvos de radar	faq_variante
+raio do alarme de aproximação do AIS	faq_variante
+som do plotter para o alarme de AIS	faq_variante
+Como eu vejo sinalizações náuticas transmitidas por AIS na carta?	faq_pergunta
+símbolo de marca virtual por AIS	faq_variante
+plotter precisa de rádio AIS para mostrar sinalização	faq_variante
+ver informações de uma sinalização marcada	faq_variante
+Como eu troco a fonte do som do barco?	faq_pergunta
+colocar o rádio FM no Fusion	faq_variante
+tocar música do pendrive no Fusion	faq_variante
+mudar de Bluetooth para o rádio	faq_variante
+Como eu ajusto o volume de cada zona do Fusion?	faq_pergunta
+uma zona do Fusion sem som	faq_variante
+quantas zonas o Fusion tem	faq_variante
+volume alto demais para ouvir o VHF	faq_variante
+O celular já pareado não conecta sozinho ao Fusion, o que faço?	faq_pergunta
+tocar música do celular no Fusion	faq_variante
+dois celulares no Fusion ao mesmo tempo	faq_variante
+primeira vez pareando o celular no Fusion	faq_variante
+Como eu silencio o som do barco sem desligar o Fusion?	faq_pergunta
+voltar o som depois do mudo	faq_variante
+mudo desliga o Fusion	faq_variante
+silenciar uma zona só	faq_variante
+Por que o Bluetooth do Fusion não conecta?	faq_pergunta
+som do celular cortando no Fusion	faq_variante
+Fusion não aparece na lista de Bluetooth	faq_variante
+apagar e refazer o pareamento do Fusion	faq_variante
+O som do barco liga, mas não toca. O que faço?	faq_pergunta
+celular conectado sem som no Fusion	faq_variante
+Fusion mudo sem eu saber	faq_variante
+Por que o rádio FM do barco chia?	faq_pergunta
+pendrive que não toca no Fusion	faq_variante
+som baixo pela entrada auxiliar	faq_variante
+som falhando ao ligar outros equipamentos	faq_variante
+Como deixo a imagem da sonda mais clara?	faq_pergunta
+sonda não mostra o fundo	faq_variante
+diferença entre ganho e sensibilidade	faq_variante
+tela da sonda cheia de pontos	faq_variante
+Por que o fundo não aparece na tela da sonda?	faq_pergunta
+faixa automática ou manual na sonda	faq_variante
+sonda perde o fundo em mudança rápida	faq_variante
+escala de profundidade da sonda	faq_variante
+Como saber se o fundo é de areia ou de lama pela sonda?	faq_pergunta
+eco duplo na tela da sonda	faq_variante
+sonda garante o tipo de fundo	faq_variante
+linha de fundo muda de espessura	faq_variante
+Por que a sonda fica com ruído em velocidade alta?	faq_pergunta
+filtro de interferência da sonda	faq_variante
+bolhas no transdutor da sonda	faq_variante
+ruído elétrico constante na sonda	faq_variante
+Como configuro o alarme de água rasa na sonda?	faq_pergunta
+margem do alarme de profundidade mínima	faq_variante
+alarme de profundidade e a maré	faq_variante
+aviso antes do casco tocar o fundo	faq_variante
+Como configuro o alarme de fundeio no plotter?	faq_pergunta
+raio do alarme de âncora garrando	faq_variante
+alarme avisa se a âncora garrar	faq_variante
+o que fazer se o alarme de fundeio disparar	faq_variante
+Como ajusto o volume do rádio VHF?	faq_pergunta
+Para que serve o squelch?	faq_variante
+O rádio está mudo, não sai som, o que faço?	faq_variante
+Como ajusto o squelch do rádio?	faq_variante
+Como mudo de canal no VHF?	faq_pergunta
+Como troco o canal pelo microfone?	faq_variante
+Por que o canal aparece como 1001 ou 01A?	faq_variante
+O microfone só passa por alguns canais, por quê?	faq_variante
+Como vou para o canal 16 no rádio?	faq_pergunta
+Como seleciono o canal de chamada?	faq_variante
+Como volto ao canal em que estava depois do 16?	faq_variante
+Como mudo o canal de chamada?	faq_variante
+Como falo no rádio VHF?	faq_pergunta
+Por que a transmissão cortou depois de alguns minutos?	faq_variante
+A que distância devo segurar o microfone?	faq_variante
+Qual botão uso para transmitir?	faq_variante
+Como troco a potência do rádio VHF?	faq_pergunta
+Por que não consigo transmitir em potência alta?	faq_variante
+Quantos watts o IC-M510 transmite?	faq_variante
+O que significa o ícone 25W ou 1W?	faq_variante
+Como marco um canal como favorito?	faq_pergunta
+Como limpo todos os favoritos?	faq_variante
+Como volto os favoritos ao padrão?	faq_variante
+Por que o microfone só passa por alguns canais?	faq_variante
+Como faço o scan dos canais no VHF?	faq_pergunta
+Qual a diferença entre varredura normal e prioritária?	faq_variante
+O scan não inicia, o que faço?	faq_variante
+Como paro a varredura?	faq_variante
+Como ligo a dupla escuta no VHF?	faq_pergunta
+Qual a diferença entre dupla e tripla escuta?	faq_variante
+Como monitoro o canal 16 enquanto uso outro canal?	faq_variante
+Como cancelo a dupla escuta?	faq_variante
+Como diminuo a luz da tela do rádio?	faq_pergunta
+Como ligo o modo noite no VHF?	faq_variante
+Como ajusto o contraste da tela do rádio?	faq_variante
+Como apago a luz de fundo?	faq_variante
+Como desligo o bip das teclas do rádio?	faq_pergunta
+O rádio não faz bip ao apertar as teclas, por quê?	faq_variante
+Como volto o bip do rádio?	faq_variante
+ligar e desligar o Key Beep	faq_variante
+Como travo as teclas do rádio?	faq_pergunta
+Como destravo o microfone do VHF?	faq_variante
+O microfone não troca de canal, está travado?	faq_variante
+Como evito mudar de canal sem querer?	faq_variante
+Como reduzo o ruído do rádio?	faq_pergunta
+Para que serve o Noise Cancel?	faq_variante
+Como melhoro o áudio recebido no VHF?	faq_variante
+reduzir ruído na transmissão	faq_variante
+Como vejo os barcos AIS na tela do rádio?	faq_pergunta
+Como mudo a escala do plotter do rádio?	faq_variante
+Como vejo os detalhes de um barco AIS?	faq_variante
+Como marco um barco como amigo?	faq_variante
+O som do rádio está abafado, o que faço?	faq_pergunta
+Como tiro a água do alto-falante do VHF?	faq_variante
+Como limpo o rádio?	faq_variante
+Como lavo o rádio depois de molhar com água do mar?	faq_variante
+Como carrego o rádio VHF portátil?	faq_pergunta
+Quando devo carregar o portátil?	faq_variante
+Posso carregar o rádio molhado?	faq_variante
+A bateria do portátil descarrega rápido, o que faço?	faq_variante
+Como mudo de canal no VHF portátil?	faq_pergunta
+Como volto ao canal 16 no portátil?	faq_variante
+O que é canal de trabalho?	faq_variante
+Por que não converso no canal 16?	faq_variante
+Como mudo a potência do rádio portátil?	faq_pergunta
+Quando uso potência alta no VHF?	faq_variante
+Por que a bateria do portátil acaba rápido?	faq_variante
+O portátil alcança tão longe quanto o rádio fixo?	faq_variante
+O que confiro no rádio portátil antes de sair?	faq_pergunta
+Como testo o portátil com o rádio fixo?	faq_variante
+O portátil está pronto para uso?	faq_variante
+Posso testar o rádio no canal 16?	faq_variante
+O rádio portátil só chia, o que faço?	faq_pergunta
+Como ajusto o silenciador?	faq_variante
+Não ouço ninguém no portátil.	faq_variante
+Como lanço a âncora?	faq_pergunta
+fundear com o guincho	faq_variante
+quanto de corrente lançar	faq_variante
+dar ré até a âncora unhar	faq_variante
+Como sei quantos metros de corrente lancei?	faq_pergunta
+marca do contador de corrente	faq_variante
+metros de corrente no controle do guincho	faq_variante
+contador do guincho antes do alarme de âncora	faq_variante
+Como recolho a âncora?	faq_pergunta
+içar a âncora	faq_variante
+travar a corrente	faq_variante
+desligar o guincho no disjuntor	faq_variante
+Que cuidado o guincho precisa depois do uso?	faq_pergunta
+lavar o guincho com água doce	faq_variante
+corrente e destorcedor	faq_variante
+conferência anual do guincho	faq_variante
+Quanta corrente devo lançar?	faq_pergunta
+Como calculo o lance pela profundidade?	faq_variante
+Como uso o guincho para fundear?	faq_variante
+Quando dou ré depois de lançar a âncora?	faq_variante
+Como confiro o lance pelo contador?	faq_pergunta
+Quantos metros de corrente o barco tem?	faq_variante
+O contador volta a marcar zero com a âncora no rolete?	faq_variante
+Como uso o contador para saber quanto falta recolher?	faq_variante
+Posso recolher a âncora só com o guincho?	faq_pergunta
+Como uso o motor para ajudar a recolher a âncora?	faq_variante
+O que faço antes de recolher a âncora?	faq_variante
+Por que não posso puxar o barco contra o vento só com o guincho?	faq_variante
+Por que travar a corrente depois de fundear?	faq_pergunta
+Preciso desligar o guincho no disjuntor?	faq_variante
+Quando solto a trava da corrente?	faq_variante
+Como travo a corrente da âncora?	faq_variante
+A âncora está garrando, o que faço?	faq_pergunta
+Como sei que a âncora não está segurando?	faq_variante
+Quando devo aumentar o lance de corrente?	faq_variante
+O que faço quando a âncora não unha no fundo?	faq_variante
+O guincho da âncora não liga, o que confiro?	faq_pergunta
+Por que o guincho está lento ou sem força?	faq_variante
+O disjuntor do guincho desarma, o que pode ser?	faq_variante
+O que confiro antes de chamar o técnico do guincho?	faq_variante
+Quando confiro a corrente e o destorcedor?	faq_pergunta
+Quando troco a corrente da âncora?	faq_variante
+Que manutenção o guincho da âncora precisa?	faq_variante
+Como sei se a corrente está desgastada ou enferrujada?	faq_variante
+Como engato o piloto automático?	faq_pergunta
+ligar o piloto Raymarine	faq_variante
+piloto no posto de comando	faq_variante
+engatar com o rumo conferido no plotter	faq_variante
+Quando deixo o piloto em espera?	faq_pergunta
+piloto na marina	faq_variante
+piloto em situação de risco	faq_variante
+Como assumo o leme com o piloto ligado?	faq_pergunta
+sair do piloto automático	faq_variante
+governar pelo timão	faq_variante
+direção hidráulica do piloto	faq_variante
+O piloto deu alarme de desvio de rumo, o que faço?	faq_pergunta
+desvio de rumo do piloto	faq_variante
+alarme da direção hidráulica	faq_variante
+piloto alarmando	faq_variante
+Quais são os modos do piloto automático?	faq_pergunta
+diferença entre espera e automático	faq_variante
+o que faz o modo trilha	faq_variante
+para que serve o modo vento	faq_variante
+O que confiro antes de engatar o piloto?	faq_pergunta
+travar o rumo ao engatar	faq_variante
+engatar o piloto em curva	faq_variante
+mão perto do timão ao engatar	faq_variante
+Como mudo o rumo com o piloto ligado?	faq_pergunta
+curva com o piloto automático	faq_variante
+ajustar o rumo sem desengatar	faq_variante
+curva fechada com o piloto	faq_variante
+Como faço o piloto seguir a rota do plotter?	faq_pergunta
+piloto virando nos pontos da rota	faq_variante
+piloto não aceita a rota do plotter	faq_variante
+sair do modo trilha	faq_variante
+Como assumo o timão com o piloto ligado?	faq_pergunta
+devolver o governo ao timão	faq_variante
+o piloto soltou sozinho	faq_variante
+girar o timão com o piloto automático	faq_variante
+Por que deixar o piloto em espera para manobrar?	faq_pergunta
+piloto automático na marina	faq_variante
+quando engatar depois de sair da marina	faq_variante
+piloto em espera ao chegar	faq_variante
+O piloto apitou desvio de rumo, o que faço?	faq_pergunta
+silenciar o alarme do piloto	faq_variante
+alarme de desvio de rumo	faq_variante
+engatar de novo depois do alarme	faq_variante
+O rumo do piloto não bate com o plotter, o que faço?	faq_pergunta
+sensor de rumo do piloto	faq_variante
+interferência no sensor de rumo	faq_variante
+quem corrige o sensor de rumo	faq_variante
+O piloto deu alarme de bomba, o que faço?	faq_pergunta
+direção hidráulica falhou com o piloto ligado	faq_variante
+timão duro depois do alarme do piloto	faq_variante
+leme não se move com alarme do piloto	faq_variante
+O piloto não engata, o que verifico?	faq_pergunta
+piloto desliga sozinho	faq_variante
+controle do piloto apagou	faq_variante
+piloto não entra em automático	faq_variante
+Quando o piloto precisa de calibração?	faq_pergunta
+piloto serpenteia em automático	faq_variante
+calibrar o sensor de rumo	faq_variante
+testar o piloto depois do serviço	faq_variante
+Como ligo o radar?	faq_pergunta
+transmitir com o radar	faq_variante
+ligar o radar pelo plotter	faq_variante
+radar em espera na marina	faq_variante
+Como defino a zona de guarda do radar?	faq_pergunta
+alerta de alvo no radar	faq_variante
+zona de guarda em volta do barco	faq_variante
+radar avisando alvo próximo	faq_variante
+Como uso o radar na neblina?	faq_pergunta
+radar à noite	faq_variante
+conferir alvos com o AIS	faq_variante
+reduzir a velocidade na neblina	faq_variante
+Posso chegar perto do radar transmitindo?	faq_pergunta
+domo do radar ligado	faq_variante
+abrir o domo do radar	faq_variante
+cuidados com o radar transmitindo	faq_variante
+Quanto tempo leva o aquecimento do radar?	faq_pergunta
+radar em espera sem transmitir	faq_variante
+diferença entre magnetron e estado sólido	faq_variante
+tempo de aquecimento antes de transmitir	faq_variante
+Como deixo a imagem do radar mais nítida?	faq_pergunta
+ganho automático e manual do radar	faq_variante
+ruído de fundo na tela do radar	faq_variante
+alvo fraco que não aparece no radar	faq_variante
+Qual alcance devo usar no radar perto da costa?	faq_pergunta
+anéis de alcance na tela do radar	faq_variante
+alcance curto e alcance longo	faq_variante
+escala de distância do radar	faq_variante
+Como tirar o ruído de ondas da tela do radar?	faq_pergunta
+sea clutter perto do barco	faq_variante
+tela do radar suja perto do barco	faq_variante
+ruído de mar agitado no radar	faq_variante
+Como reduzir a mancha de chuva na tela do radar?	faq_pergunta
+rain clutter e FTC do radar	faq_variante
+mancha de chuva escondendo alvo	faq_variante
+radar em chuva forte	faq_variante
+Posso vigiar só um lado do barco com o radar?	faq_pergunta
+anel ou setor na zona de guarda	faq_variante
+testar a zona de guarda com um alvo	faq_variante
+zona de guarda não substitui vigilância	faq_variante
+O radar detecta qualquer tipo de embarcação?	faq_pergunta
+reduzir a velocidade navegando por radar	faq_variante
+alvo de madeira no radar	faq_variante
+vigilância visual além do radar	faq_variante
+O que é overlay de radar?	faq_pergunta
+sobrepor o radar à carta eletrônica	faq_variante
+contorno da costa no radar e na carta	faq_variante
+overlay substitui a carta eletrônica	faq_variante
+Por que preciso desligar o radar antes de fazer serviço perto da antena?	faq_pergunta
+radiofrequência da antena do radar	faq_variante
+desligar o radar antes de limpar a antena	faq_variante
+domo do radar e exposição à radiação	faq_variante
+Como vejo os outros barcos pelo AIS?	faq_pergunta
+alvos do AIS	faq_variante
+distância de passagem prevista	faq_variante
+nome, rumo e velocidade dos alvos	faq_variante
+O que faz o modo silencioso do AIS?	faq_pergunta
+transponder só recebendo	faq_variante
+AIS sem transmitir a posição	faq_variante
+voltar a transmitir o AIS	faq_variante
+O que o AIS faz?	faq_pergunta
+Qual a diferença entre AIS classe A e classe B?	faq_variante
+Os outros barcos me veem pelo AIS?	faq_variante
+O AIS substitui o radar?	faq_variante
+Como leio os dados de um alvo do AIS no plotter?	faq_pergunta
+O que significa CPA no plotter?	faq_variante
+Como sei se vou cruzar com aquele barco?	faq_variante
+O que o plotter mostra quando toco num alvo do AIS?	faq_variante
+Quando posso usar o AIS em silencioso?	faq_pergunta
+Como volto a transmitir no AIS?	faq_variante
+Com o AIS em silencioso, ainda vejo os outros barcos?	faq_variante
+Preciso registrar quando uso o modo silencioso?	faq_variante
+Por que não aparecem barcos no AIS do plotter?	faq_pergunta
+O AIS não recebe nada, o que verifico?	faq_variante
+Como sei se o AIS está funcionando?	faq_variante
+O modo silencioso impede de ver os alvos?	faq_variante
+Por que o alvo do AIS aparece sem nome?	faq_pergunta
+Por que o alvo do AIS some e volta?	faq_variante
+O alvo do AIS está parado, será que travou?	faq_variante
+O que é alvo perdido no AIS?	faq_variante
+O que confiro antes de sair: gerador, estabilizador e climatização?	faq_pergunta
+checklist de saída, itens 1 a 3	faq_variante
+água no escapamento do gerador na saída	faq_variante
+filtro de água salgada antes de ligar a climatização	faq_variante
+O que confiro antes de sair: eletrônicos, porão e diesel?	faq_pergunta
+checklist de saída, itens 4 a 6	faq_variante
+plotter, piloto e VHF antes de sair	faq_variante
+bombas de porão e diesel antes de largar	faq_variante
+O que faço ao chegar na marina?	faq_pergunta
+fechar a saída no diário	faq_variante
+desligar estabilizador, gerador e climatização ao atracar	faq_variante
+checklist ao atracar	faq_variante
+Quando completo a água e esvazio as servidas?	faq_pergunta
+água doce abaixo do aviso	faq_variante
+tanques de águas cinzas e negras	faq_variante
+servidas acima do aviso	faq_variante
+O que confiro ao fundear?	faq_pergunta
+checklist ao fundear	faq_variante
+alarme de âncora e diário no fundeio	faq_variante
+fundo de areia ou lama	faq_variante
+quando foi a última troca do filtro de óleo?	pessoa_natural
+como troco o filtro de óleo do motor?	pessoa_natural
+qual o filtro do gerador?	pessoa_natural
+o filtro de combustível está sujo	pessoa_natural
+quantos filtros de óleo eu tenho de reserva	pessoa_natural
+tem rotor sobrando?	pessoa_natural
+preciso trocar o rotor da bomba de água salgada	pessoa_natural
+o rotor do gerador quebrou	pessoa_natural
+o rotor do gerador acabou	pessoa_natural
+acabou o óleo do gerador	pessoa_natural
+acabou o diesel	pessoa_natural
+falta diesel para chegar?	pessoa_natural
+falta muito para chegar?	pessoa_natural
+quanto falta para a troca de óleo?	pessoa_natural
+o que falta fazer na manutenção?	pessoa_natural
+o que falta comprar?	pessoa_natural
+preciso comprar anodo	pessoa_natural
+onde fica o anodo do estabilizador	pessoa_natural
+quanto custa um filtro de óleo	pessoa_natural
+quem vende filtro de óleo	pessoa_natural
+tem correia sobressalente?	pessoa_natural
+tem fusível sobressalente?	pessoa_natural
+estoque de fusíveis	pessoa_natural
+qual o estoque de peças?	pessoa_natural
+lista de peças sobressalentes	pessoa_natural
+peças que vencem	pessoa_natural
+peças para a revisão dos 450 horas	pessoa_natural
+o que preciso para a troca de óleo dos motores?	pessoa_natural
+quais peças uso na troca de óleo?	pessoa_natural
+tendência de queda do dólar	pessoa_natural
+como está a tendência do mercado	pessoa_natural
+vai chover amanhã? tendência do tempo	pessoa_natural
+tendência da pressão barométrica	pessoa_natural
+a pressão do óleo está caindo?	pessoa_natural
+a temperatura do motor está subindo	pessoa_natural
+o BE está esquentando mais que o BB?	pessoa_natural
+por que o motor BE esquenta mais?	pessoa_natural
+a bateria está descarregando	pessoa_natural
+a bateria está perdendo carga rápido	pessoa_natural
+quanto tempo dura a bateria	pessoa_natural
+qual a saída do inversor?	pessoa_natural
+a saída de ar da climatização está fraca	pessoa_natural
+saída de água do escapamento do gerador	pessoa_natural
+como foi a saída de ontem?	pessoa_natural
+quando é a próxima saída?	pessoa_natural
+resumo da última saída	pessoa_natural
+hora de saída	pessoa_natural
+horário de saída	pessoa_natural
+checklist	pessoa_natural
+check-list de saída	pessoa_natural
+checklist de partida	pessoa_natural
+lista de verificação antes de sair	pessoa_natural
+estamos prontos para sair?	pessoa_natural
+posso sair agora?	pessoa_natural
+tudo pronto para largar?	pessoa_natural
+o que devo conferir antes de largar?	pessoa_natural
+antes de largar o que faço?	pessoa_natural
+antes de sair confira o porão	pessoa_natural
+fundeio	pessoa_natural
+como fundear	pessoa_natural
+como fundeio com 10 metros?	pessoa_natural
+qual a profundidade para fundear?	pessoa_natural
+checklist da âncora	pessoa_natural
+checklist do motor	pessoa_natural
+checklist do gerador	pessoa_natural
+checklist de segurança	pessoa_natural
+checklist de colete	pessoa_natural
+checklist do EPIRB	pessoa_natural
+chegada	pessoa_natural
+horário de chegada	pessoa_natural
+o que fazer na chegada	pessoa_natural
+abastecimento	pessoa_natural
+quando foi o último abastecimento?	pessoa_natural
+como abastecer?	pessoa_natural
+procedimento de abastecimento	pessoa_natural
+regra do diesel	pessoa_natural
+nível de diesel	pessoa_natural
+como ligo o rádio?	pessoa_natural
+como ligo o piloto automático?	pessoa_natural
+o piloto está desligando	pessoa_natural
+como programar o AIS?	pessoa_natural
+o plotter travou	pessoa_natural
+como silenciar o alarme?	pessoa_natural
+alarme de baixa pressão do óleo	pessoa_natural
+alarme do porão	pessoa_natural
+alarme de profundidade	pessoa_natural
+a sonda não lê	pessoa_natural
+sonda sem leitura	pessoa_natural
+luz do óleo acesa	pessoa_natural
+quais são os próximos vencimentos?	pessoa_natural
+quanto tempo falta pro seguro vencer?	pessoa_natural
+o seguro vence quando?	pessoa_natural
+quem chamar para consertar o gerador?	pessoa_natural
+telefone da oficina	pessoa_natural
+horas do motor	pessoa_natural
+quantas horas faltam para a revisão?	pessoa_natural
+revisão do gerador	pessoa_natural
+próxima revisão do motor	pessoa_natural
+qual o consumo?	pessoa_natural
+quanto consome por hora?	pessoa_natural
+qual a autonomia?	pessoa_natural
+que dia é hoje?	pessoa_natural
+quem sou eu?	pessoa_natural
+bom dia	pessoa_natural
+obrigado	pessoa_natural
+teste	pessoa_natural
+Como faço um pedido de socorro (MAYDAY) pelo rádio?	pessoa_natural
+chamada de socorro no canal 16	pessoa_natural
+o que falar no MAYDAY	pessoa_natural
+como chamar socorro no VHF	pessoa_natural
+MAYDAY: pedido de socorro pelo rádio	pessoa_natural
+Quando uso o PAN-PAN em vez do MAYDAY?	pessoa_natural
+diferença entre PAN-PAN e MAYDAY	pessoa_natural
+pane sem governo: que chamada faço	pessoa_natural
+chamada de urgência no canal 16	pessoa_natural
+PAN-PAN: urgência sem perigo imediato de vida	pessoa_natural
+Como mando o alerta DSC de socorro pelo rádio?	pessoa_natural
+botão DISTRESS do rádio VHF	pessoa_natural
+identificação do rádio no alerta de socorro	pessoa_natural
+depois do botão DISTRESS, o que faço	pessoa_natural
+Alerta DSC de socorro pelo rádio	pessoa_natural
+O que faço quando alguém cai na água?	pessoa_natural
+pessoa caiu do barco	pessoa_natural
+homem ao mar: primeiros passos	pessoa_natural
+como recuperar quem caiu	pessoa_natural
+Homem ao mar (MOB)	pessoa_natural
+O que faço se houver fogo a bordo?	pessoa_natural
+fogo no motor	pessoa_natural
+alarme do sistema fixo de incêndio	pessoa_natural
+como usar o extintor portátil no fogo	pessoa_natural
+Incêndio a bordo	pessoa_natural
+O que faço se estiver entrando água?	pessoa_natural
+alagamento no porão	pessoa_natural
+a bomba de porão não dá conta	pessoa_natural
+nível do porão subindo	pessoa_natural
+Água entrando no barco	pessoa_natural
+Quando e como abandono o barco?	pessoa_natural
+preciso abandonar o barco	pessoa_natural
+ordem de abandono	pessoa_natural
+o que levar para a balsa	pessoa_natural
+Abandono do barco	pessoa_natural
+Quando e como aciono o EPIRB?	pessoa_natural
+como disparar a radiobaliza	pessoa_natural
+acionar a baliza de emergência	pessoa_natural
+EPIRB em perigo grave	pessoa_natural
+EPIRB (radiobaliza): acionar	pessoa_natural
+Onde estão os coletes, a balsa e os extintores?	pessoa_natural
+equipamentos de salvatagem do barco	pessoa_natural
+quantos coletes preciso levar	pessoa_natural
+onde ficam os sinalizadores	pessoa_natural
+Salvatagem: coletes, balsa e extintores	pessoa_natural
+Antes de dar a partida nos motores	pessoa_natural
+Dar a partida nos motores	pessoa_natural
+Aquecer os motores	pessoa_natural
+O que faço se a pressão de óleo cair?	pessoa_natural
+alarme de pressão de óleo no motor	pessoa_natural
+manômetro de óleo baixo	pessoa_natural
+motor sem pressão de óleo	pessoa_natural
+Pressão de óleo baixa no motor	pessoa_natural
+Temperatura alta no motor	pessoa_natural
+Desligar os motores depois de navegar	pessoa_natural
+Manutenção dos motores na agenda	pessoa_natural
+Horímetros dos motores	pessoa_natural
+Faixas de operação dos motores	pessoa_natural
+Consumo de diesel dos motores	pessoa_natural
+O que olho no gerador antes de ligar?	pessoa_natural
+verificação do gerador antes da partida	pessoa_natural
+gerador parado: o que checar	pessoa_natural
+óleo e filtro de água salgada do gerador	pessoa_natural
+Antes de ligar o gerador	pessoa_natural
+Ligar o gerador	pessoa_natural
+Água no escapamento do gerador	pessoa_natural
+Desligar o gerador	pessoa_natural
+Alarme de alta temperatura do gerador	pessoa_natural
+Alarme de baixa pressão de óleo do gerador	pessoa_natural
+Manutenção do gerador na agenda	pessoa_natural
+Horímetro do gerador	pessoa_natural
+Potência e carga do gerador	pessoa_natural
+Bancos de baterias	pessoa_natural
+Faixas de tensão das baterias	pessoa_natural
+Verificação das baterias	pessoa_natural
+Energia do estabilizador	pessoa_natural
+Ligar o estabilizador antes de sair	pessoa_natural
+Ligar e desligar a estabilização	pessoa_natural
+Desligar o estabilizador ao atracar	pessoa_natural
+Segurança com o volante do estabilizador	pessoa_natural
+Alarmes e mensagens do estabilizador	pessoa_natural
+Manutenção do estabilizador na agenda	pessoa_natural
+Faixa do volante do estabilizador	pessoa_natural
+Ligar a climatização	pessoa_natural
+Modos e temperatura da climatização	pessoa_natural
+Alarme de fluxo da climatização	pessoa_natural
+Pouco ar saindo na cabine	pessoa_natural
+Desligar a climatização	pessoa_natural
+Manutenção da climatização na agenda	pessoa_natural
+Ligar o dessalinizador	pessoa_natural
+Produção do dessalinizador	pessoa_natural
+Desligar e lavar o dessalinizador	pessoa_natural
+Manutenção do dessalinizador	pessoa_natural
+Como funcionam as bombas de porão	pessoa_natural
+Qual o nível normal do porão?	pessoa_natural
+nível do poço das bombas	pessoa_natural
+alarme de nível do porão	pessoa_natural
+porão acima do normal	pessoa_natural
+Nível normal do porão	pessoa_natural
+Teste mensal das bombas de porão	pessoa_natural
+Entrou água no barco, o que faço?	pessoa_natural
+água subindo no porão	pessoa_natural
+bomba de porão sem dar conta	pessoa_natural
+Água entrando: bombas de porão	pessoa_natural
+Como marco um homem ao mar no plotter?	pessoa_natural
+função MOB do plotter	pessoa_natural
+alguém caiu na água: o que faço no plotter	pessoa_natural
+rumo de volta para quem caiu	pessoa_natural
+Marcar homem ao mar no plotter	pessoa_natural
+Piloto automático: espera e engate	pessoa_natural
+Alarme de âncora no plotter	pessoa_natural
+Rádio VHF: escuta do canal 16	pessoa_natural
+Para que serve o botão DISTRESS do rádio?	pessoa_natural
+alerta DSC do rádio VHF	pessoa_natural
+Rádio VHF: botão DISTRESS (DSC)	pessoa_natural
+Áudio Fusion: parear o celular	pessoa_natural
+Atualização de cartas e software	pessoa_natural
+Profundidade mínima na sonda	pessoa_natural
+Lançar a âncora	pessoa_natural
+Contador de corrente	pessoa_natural
+Recolher a âncora e travar a corrente	pessoa_natural
+Manutenção do guincho	pessoa_natural
+Engatar o piloto automático	pessoa_natural
+Piloto em espera ao manobrar	pessoa_natural
+Assumir o leme no timão	pessoa_natural
+Alarmes do piloto automático	pessoa_natural
+Ligar o radar e transmitir	pessoa_natural
+Zona de guarda do radar	pessoa_natural
+Radar com neblina ou à noite	pessoa_natural
+Segurança com o domo do radar	pessoa_natural
+Alvos do AIS no plotter	pessoa_natural
+Que identificação o AIS transmite?	pessoa_natural
+MMSI do AIS	pessoa_natural
+transponder classe B	pessoa_natural
+identificação do barco no AIS	pessoa_natural
+Identificação do AIS	pessoa_natural
+AIS em modo silencioso	pessoa_natural
+O que faço em caso de fogo no motor?	pessoa_natural
+quando usar o extintor portátil	pessoa_natural
+Fogo a bordo: sistema fixo de incêndio	pessoa_natural
+Como uso o disparo manual do sistema fixo?	pessoa_natural
+sistema fixo não disparou sozinho	pessoa_natural
+acionar o disparo manual de incêndio	pessoa_natural
+disparo manual com o motor desligado	pessoa_natural
+Disparo manual do sistema fixo	pessoa_natural
+O sistema fixo disparou, o que faço depois?	pessoa_natural
+sistema fixo descarregou	pessoa_natural
+quando abrir o acesso ao motor depois do disparo	pessoa_natural
+recarga do sistema fixo	pessoa_natural
+Depois do disparo do sistema fixo	pessoa_natural
+Quando inspeciono o sistema fixo de incêndio?	pessoa_natural
+inspeção do sistema e da carga	pessoa_natural
+revisão anual do sistema fixo	pessoa_natural
+técnico de bordo e o sistema fixo	pessoa_natural
+Inspeção anual do sistema fixo	pessoa_natural
+Como aciono o EPIRB?	pessoa_natural
+disparar a radiobaliza	pessoa_natural
+EPIRB: antena para cima e céu aberto	pessoa_natural
+levar o EPIRB para a balsa	pessoa_natural
+Acionar o EPIRB	pessoa_natural
+Como testo o EPIRB?	pessoa_natural
+autoteste da radiobaliza	pessoa_natural
+o teste do EPIRB envia alerta	pessoa_natural
+bateria e disparador hidrostático	pessoa_natural
+Teste da baliza (EPIRB)	pessoa_natural
+Disparei o EPIRB sem querer, o que faço?	pessoa_natural
+baliza disparou por engano	pessoa_natural
+desligar o EPIRB disparado	pessoa_natural
+avisar no canal 16 depois do disparo	pessoa_natural
+EPIRB disparado por engano	pessoa_natural
+Onde vejo a validade do EPIRB?	pessoa_natural
+validade da bateria da radiobaliza	pessoa_natural
+disparador hidrostático	pessoa_natural
+certificado do EPIRB	pessoa_natural
+Validade do EPIRB	pessoa_natural
+Checklist de saída: gerador, estabilizador e climatização	pessoa_natural
+Checklist de saída: eletrônicos, porão e diesel	pessoa_natural
+O que confiro antes de largar: coletes, balsa e previsão do dia?	pessoa_natural
+coletes, balsa e extintores antes de sair	pessoa_natural
+previsão do dia antes de largar	pessoa_natural
+boletim da Marinha antes de sair	pessoa_natural
+Checklist de saída: coletes, previsão e salvatagem	pessoa_natural
+Checklist de chegada	pessoa_natural
+Quando devo abastecer e o que registro?	pessoa_natural
+reserva técnica de diesel	pessoa_natural
+abastecer antes de 25 %	pessoa_natural
+Checklist de abastecimento	pessoa_natural
+Checklist de tanques	pessoa_natural
+Checklist de fundeio	pessoa_natural
+checklist de saída	pessoa_natural
+checklist de chegada	pessoa_natural
+checklist de abastecimento	pessoa_natural
+checklist de fundeio	pessoa_natural
+pronto para sair?	pessoa_natural
+checklist do rádio VHF	pessoa_natural
+tendências	pessoa_natural
+quais as tendências?	pessoa_natural
+tendência do óleo	pessoa_natural
+as baterias estão perdendo capacidade?	pessoa_natural
+tendência do arrefecimento	pessoa_natural
+que peça acabou?	pessoa_natural
+o que está acabando?	pessoa_natural
+o que está faltando a bordo?	pessoa_natural
+tem anodo?	pessoa_natural
+quantos filtros de óleo temos?	pessoa_natural
+tem peça de reposição do guincho Lewmar?	pessoa_natural
+tem peça sobressalente fictício?	pessoa_natural
+peças para a troca de óleo dos motores	pessoa_natural
+peças do gerador	pessoa_natural
+peças do rádio VHF	pessoa_natural
+quais peças estão no mínimo?	pessoa_natural
+tem rotor no estoque	pessoa_natural
+onde fica a correia do alternador?	pessoa_natural
+quanto custa o rotor do gerador?	pessoa_natural
+estoque	pessoa_natural
+estoque de água	pessoa_natural
+estoque de gelo	pessoa_natural
+tem peça sobressalente para o motor?	pessoa_natural
+qual a validade das peças?	pessoa_natural
+peças vencidas	pessoa_natural
+peças com validade	pessoa_natural
+oi	pessoa_natural
+é seguro sair hoje?	pessoa_natural
+para onde vamos hoje?	pessoa_natural
+próximas manutenções	pessoa_natural
+autonomia	pessoa_natural
+maré agora	pessoa_natural
+clima e vento	pessoa_natural
+roteiro do canal 16	pessoa_natural
+consumo de diesel	pessoa_natural
+nível dos tanques	pessoa_natural
+quem chamar da equipe?	pessoa_natural
+pendências abertas	pessoa_natural
+bombas de porão	pessoa_natural
+posição agora	pessoa_natural
+documentos vencendo	pessoa_natural
+horímetros	pessoa_natural
+motores volvo penta	pessoa_natural
+estabilizador Seakeeper	pessoa_natural
+climatização	pessoa_natural
+plotter garmin	pessoa_natural
+dessalinizador	pessoa_natural
+bateria 24 v	pessoa_natural
+âncora garrando?	pessoa_natural
+guias de bordo	pessoa_natural
+diário de bordo	pessoa_natural
+Telemetria agora	pessoa_natural
+qual a pressão do óleo?	pessoa_natural
+qual o calado do barco?	pessoa_natural
+qual o preço do dólar?	pessoa_natural
+diagnóstico	pessoa_natural
+áudio fusion	pessoa_natural
+motores	pessoa_natural
+quem está na escala hoje?	pessoa_natural
+o Pedro está de folga amanhã?	pessoa_natural
+o João assume o turno da noite?	pessoa_natural
+o marinheiro chega às 8h?	pessoa_natural
+qual o telefone do mecânico?	pessoa_natural
+o técnico da Cummins vem hoje?	pessoa_natural
+liguei para o dono e ele não atendeu	pessoa_natural
+o dono da marina não respondeu o e-mail	pessoa_natural
+o técnico vai trocar o rotor do gerador	pessoa_natural
+o mecânico não veio ainda	pessoa_natural
+o estaleiro não entregou a peça	pessoa_natural
+o joystick não responde	pessoa_natural
+o tacômetro não funciona	pessoa_natural
+o macaco hidráulico sumiu	pessoa_natural
+a escada de popa caiu	pessoa_natural
+a bomba de água salgada parou	pessoa_natural
+o capitão do porto liberou a saída?	pessoa_natural
+o piloto automático desligou	pessoa_natural
+o piloto desligou sozinho	pessoa_natural
+o imediato assinou o diário?	pessoa_natural
+o cliente pediu a nota fiscal	pessoa_natural
+a babá não respondeu a mensagem	pessoa_natural
+o dono não aprovou o orçamento	pessoa_natural
+o mestre da marina não voltou do almoço	pessoa_natural
+o eletricista não terminou o serviço	pessoa_natural
+o painel do dono não liga	pessoa_natural
+meu filho quer saber o consumo	pessoa_natural
+minha esposa perguntou a previsão do tempo	pessoa_natural
+a criança está dormindo na cabine	pessoa_natural
+o menino está no flybridge	pessoa_natural
+o Pedro está na proa	pessoa_natural
+o garoto caiu da cama e riu	pessoa_natural
+o Pedro está pescando	pessoa_natural
+os caras do estaleiro chegaram	pessoa_natural
+todo mundo já embarcou?	pessoa_natural
+todos assinaram o termo?	pessoa_natural
+o pessoal da marina falou que o óleo acabou	pessoa_natural
+quem faltou na vistoria?	pessoa_natural
+o fiscal não apareceu na vistoria	pessoa_natural
+o convidado não chegou ainda	pessoa_natural
+o hóspede perdeu o voo	pessoa_natural
+a Maria perdeu o celular	pessoa_natural
+o cooler caiu no chão	pessoa_natural
+o tendal caiu	pessoa_natural
+o sinal do GPS caiu	pessoa_natural
+a conexão com o Starlink caiu	pessoa_natural
+a temperatura do motor caiu	pessoa_natural
+o diesel acabou	pessoa_natural
+o gelo derreteu	pessoa_natural
+o técnico disse que o filtro está sujo	pessoa_natural
+o mecânico falou que a bomba precisa trocar	pessoa_natural
+o dono pediu o relatório	pessoa_natural
+o proprietário quer ver o diário	pessoa_natural
+o comandante assinou	pessoa_natural
+perdi o manual	pessoa_natural
+perdi o remo	pessoa_natural
+não encontro o filtro de óleo	pessoa_natural
+não acho a chave do porão	pessoa_natural
+cadê o extintor?	pessoa_natural
+cadê o manual do gerador?	pessoa_natural
+ninguém viu o controle remoto	pessoa_natural
+falta óleo no motor BB	pessoa_natural
+faltam duas peças no estoque	pessoa_natural
+falta uma assinatura no documento	pessoa_natural
+o óleo do motor sumiu do visor	pessoa_natural
+o sinal do rádio sumiu	pessoa_natural
+o barulho do motor desapareceu	pessoa_natural
+o cheiro de diesel sumiu	pessoa_natural
+a luz do painel sumiu	pessoa_natural
+o ícone do plotter sumiu da tela	pessoa_natural
+a foto do barco sumiu do app	pessoa_natural
+o nome do Pedro sumiu da lista	pessoa_natural
+o Pedro não voltou a ligar	pessoa_rotina
+a Maria não voltou a ligar	pessoa_rotina
+o dono não voltou a ligar	pessoa_rotina
+o técnico não voltou a ligar	pessoa_rotina
+a babá não voltou a ligar	pessoa_rotina
+o fotógrafo não voltou a ligar	pessoa_rotina
+meu filho não voltou a ligar	pessoa_rotina
+a cozinheira não voltou a ligar	pessoa_rotina
+o Pedro não voltou a responder	pessoa_rotina
+a Maria não voltou a responder	pessoa_rotina
+o dono não voltou a responder	pessoa_rotina
+o técnico não voltou a responder	pessoa_rotina
+a babá não voltou a responder	pessoa_rotina
+o fotógrafo não voltou a responder	pessoa_rotina
+meu filho não voltou a responder	pessoa_rotina
+a cozinheira não voltou a responder	pessoa_rotina
+o Pedro não retorna as ligações	pessoa_rotina
+a Maria não retorna as ligações	pessoa_rotina
+o dono não retorna as ligações	pessoa_rotina
+o técnico não retorna as ligações	pessoa_rotina
+a babá não retorna as ligações	pessoa_rotina
+o fotógrafo não retorna as ligações	pessoa_rotina
+meu filho não retorna as ligações	pessoa_rotina
+a cozinheira não retorna as ligações	pessoa_rotina
+o Pedro não voltou com a peça	pessoa_rotina
+a Maria não voltou com a peça	pessoa_rotina
+o dono não voltou com a peça	pessoa_rotina
+o técnico não voltou com a peça	pessoa_rotina
+a babá não voltou com a peça	pessoa_rotina
+o fotógrafo não voltou com a peça	pessoa_rotina
+meu filho não voltou com a peça	pessoa_rotina
+a cozinheira não voltou com a peça	pessoa_rotina
+o Pedro não voltou da marina	pessoa_rotina
+a Maria não voltou da marina	pessoa_rotina
+o dono não voltou da marina	pessoa_rotina
+o técnico não voltou da marina	pessoa_rotina
+a babá não voltou da marina	pessoa_rotina
+o fotógrafo não voltou da marina	pessoa_rotina
+meu filho não voltou da marina	pessoa_rotina
+a cozinheira não voltou da marina	pessoa_rotina
+o Pedro não voltou do almoço	pessoa_rotina
+a Maria não voltou do almoço	pessoa_rotina
+o dono não voltou do almoço	pessoa_rotina
+o técnico não voltou do almoço	pessoa_rotina
+a babá não voltou do almoço	pessoa_rotina
+o fotógrafo não voltou do almoço	pessoa_rotina
+meu filho não voltou do almoço	pessoa_rotina
+a cozinheira não voltou do almoço	pessoa_rotina
+o Pedro não voltou do mercado	pessoa_rotina
+a Maria não voltou do mercado	pessoa_rotina
+o dono não voltou do mercado	pessoa_rotina
+o técnico não voltou do mercado	pessoa_rotina
+a babá não voltou do mercado	pessoa_rotina
+o fotógrafo não voltou do mercado	pessoa_rotina
+meu filho não voltou do mercado	pessoa_rotina
+a cozinheira não voltou do mercado	pessoa_rotina
+o Pedro não aparece na escala	pessoa_rotina
+a Maria não aparece na escala	pessoa_rotina
+o dono não aparece na escala	pessoa_rotina
+o técnico não aparece na escala	pessoa_rotina
+a babá não aparece na escala	pessoa_rotina
+o fotógrafo não aparece na escala	pessoa_rotina
+meu filho não aparece na escala	pessoa_rotina
+a cozinheira não aparece na escala	pessoa_rotina
+o Pedro não aparece na escala de hoje	pessoa_rotina
+a Maria não aparece na escala de hoje	pessoa_rotina
+o dono não aparece na escala de hoje	pessoa_rotina
+o técnico não aparece na escala de hoje	pessoa_rotina
+a babá não aparece na escala de hoje	pessoa_rotina
+o fotógrafo não aparece na escala de hoje	pessoa_rotina
+meu filho não aparece na escala de hoje	pessoa_rotina
+a cozinheira não aparece na escala de hoje	pessoa_rotina
+o Pedro não aparece na lista	pessoa_rotina
+a Maria não aparece na lista	pessoa_rotina
+o dono não aparece na lista	pessoa_rotina
+o técnico não aparece na lista	pessoa_rotina
+a babá não aparece na lista	pessoa_rotina
+o fotógrafo não aparece na lista	pessoa_rotina
+meu filho não aparece na lista	pessoa_rotina
+a cozinheira não aparece na lista	pessoa_rotina
+o Pedro não respondeu a mensagem	pessoa_rotina
+a Maria não respondeu a mensagem	pessoa_rotina
+o dono não respondeu a mensagem	pessoa_rotina
+o técnico não respondeu a mensagem	pessoa_rotina
+o fotógrafo não respondeu a mensagem	pessoa_rotina
+meu filho não respondeu a mensagem	pessoa_rotina
+a cozinheira não respondeu a mensagem	pessoa_rotina
+o Pedro não respondeu o e-mail	pessoa_rotina
+a Maria não respondeu o e-mail	pessoa_rotina
+o dono não respondeu o e-mail	pessoa_rotina
+o técnico não respondeu o e-mail	pessoa_rotina
+a babá não respondeu o e-mail	pessoa_rotina
+o fotógrafo não respondeu o e-mail	pessoa_rotina
+meu filho não respondeu o e-mail	pessoa_rotina
+a cozinheira não respondeu o e-mail	pessoa_rotina
+o Pedro não respondeu o WhatsApp	pessoa_rotina
+a Maria não respondeu o WhatsApp	pessoa_rotina
+o dono não respondeu o WhatsApp	pessoa_rotina
+o técnico não respondeu o WhatsApp	pessoa_rotina
+a babá não respondeu o WhatsApp	pessoa_rotina
+o fotógrafo não respondeu o WhatsApp	pessoa_rotina
+meu filho não respondeu o WhatsApp	pessoa_rotina
+a cozinheira não respondeu o WhatsApp	pessoa_rotina
+o Pedro não está no grupo	pessoa_rotina
+a Maria não está no grupo	pessoa_rotina
+o dono não está no grupo	pessoa_rotina
+o técnico não está no grupo	pessoa_rotina
+a babá não está no grupo	pessoa_rotina
+o fotógrafo não está no grupo	pessoa_rotina
+meu filho não está no grupo	pessoa_rotina
+a cozinheira não está no grupo	pessoa_rotina
+o Pedro faltou ontem	pessoa_rotina
+a Maria faltou ontem	pessoa_rotina
+o dono faltou ontem	pessoa_rotina
+o técnico faltou ontem	pessoa_rotina
+a babá faltou ontem	pessoa_rotina
+o fotógrafo faltou ontem	pessoa_rotina
+meu filho faltou ontem	pessoa_rotina
+a cozinheira faltou ontem	pessoa_rotina
+o Pedro não atende o telefone	pessoa_rotina
+a Maria não atende o telefone	pessoa_rotina
+o dono não atende o telefone	pessoa_rotina
+o técnico não atende o telefone	pessoa_rotina
+a babá não atende o telefone	pessoa_rotina
+o fotógrafo não atende o telefone	pessoa_rotina
+meu filho não atende o telefone	pessoa_rotina
+a cozinheira não atende o telefone	pessoa_rotina
+o Pedro não veio trabalhar hoje	pessoa_rotina
+a Maria não veio trabalhar hoje	pessoa_rotina
+o dono não veio trabalhar hoje	pessoa_rotina
+o técnico não veio trabalhar hoje	pessoa_rotina
+a babá não veio trabalhar hoje	pessoa_rotina
+o fotógrafo não veio trabalhar hoje	pessoa_rotina
+meu filho não veio trabalhar hoje	pessoa_rotina
+a cozinheira não veio trabalhar hoje	pessoa_rotina
+o Pedro está de folga amanhã	pessoa_rotina
+a Maria está de folga amanhã	pessoa_rotina
+o dono está de folga amanhã	pessoa_rotina
+o técnico está de folga amanhã	pessoa_rotina
+a babá está de folga amanhã	pessoa_rotina
+o fotógrafo está de folga amanhã	pessoa_rotina
+meu filho está de folga amanhã	pessoa_rotina
+a cozinheira está de folga amanhã	pessoa_rotina
+o Pedro não assinou o diário	pessoa_rotina
+a Maria não assinou o diário	pessoa_rotina
+o dono não assinou o diário	pessoa_rotina
+o técnico não assinou o diário	pessoa_rotina
+a babá não assinou o diário	pessoa_rotina
+o fotógrafo não assinou o diário	pessoa_rotina
+meu filho não assinou o diário	pessoa_rotina
+a cozinheira não assinou o diário	pessoa_rotina
+o Pedro não está na lista de saída	pessoa_rotina
+a Maria não está na lista de saída	pessoa_rotina
+o dono não está na lista de saída	pessoa_rotina
+o técnico não está na lista de saída	pessoa_rotina
+a babá não está na lista de saída	pessoa_rotina
+o fotógrafo não está na lista de saída	pessoa_rotina
+meu filho não está na lista de saída	pessoa_rotina
+a cozinheira não está na lista de saída	pessoa_rotina
+o Pedro não aparece no cadastro	pessoa_rotina
+a Maria não aparece no cadastro	pessoa_rotina
+o dono não aparece no cadastro	pessoa_rotina
+o técnico não aparece no cadastro	pessoa_rotina
+a babá não aparece no cadastro	pessoa_rotina
+o fotógrafo não aparece no cadastro	pessoa_rotina
+meu filho não aparece no cadastro	pessoa_rotina
+a cozinheira não aparece no cadastro	pessoa_rotina
+o Pedro sumiu da lista de contatos	pessoa_rotina
+a Maria sumiu da lista de contatos	pessoa_rotina
+o dono sumiu da lista de contatos	pessoa_rotina
+o técnico sumiu da lista de contatos	pessoa_rotina
+a babá sumiu da lista de contatos	pessoa_rotina
+o fotógrafo sumiu da lista de contatos	pessoa_rotina
+meu filho sumiu da lista de contatos	pessoa_rotina
+a cozinheira sumiu da lista de contatos	pessoa_rotina
+o Pedro não está na equipe	pessoa_rotina
+a Maria não está na equipe	pessoa_rotina
+o dono não está na equipe	pessoa_rotina
+o técnico não está na equipe	pessoa_rotina
+a babá não está na equipe	pessoa_rotina
+o fotógrafo não está na equipe	pessoa_rotina
+meu filho não está na equipe	pessoa_rotina
+a cozinheira não está na equipe	pessoa_rotina
+o Pedro ainda não chegou na marina	pessoa_rotina
+a Maria ainda não chegou na marina	pessoa_rotina
+o dono ainda não chegou na marina	pessoa_rotina
+o técnico ainda não chegou na marina	pessoa_rotina
+a babá ainda não chegou na marina	pessoa_rotina
+o fotógrafo ainda não chegou na marina	pessoa_rotina
+meu filho ainda não chegou na marina	pessoa_rotina
+a cozinheira ainda não chegou na marina	pessoa_rotina
+o Pedro não confirmou a viagem de sábado	pessoa_rotina
+a Maria não confirmou a viagem de sábado	pessoa_rotina
+o dono não confirmou a viagem de sábado	pessoa_rotina
+o técnico não confirmou a viagem de sábado	pessoa_rotina
+a babá não confirmou a viagem de sábado	pessoa_rotina
+o fotógrafo não confirmou a viagem de sábado	pessoa_rotina
+meu filho não confirmou a viagem de sábado	pessoa_rotina
+a cozinheira não confirmou a viagem de sábado	pessoa_rotina
+o Pedro não mandou a nota fiscal	pessoa_rotina
+a Maria não mandou a nota fiscal	pessoa_rotina
+o dono não mandou a nota fiscal	pessoa_rotina
+o técnico não mandou a nota fiscal	pessoa_rotina
+a babá não mandou a nota fiscal	pessoa_rotina
+o fotógrafo não mandou a nota fiscal	pessoa_rotina
+meu filho não mandou a nota fiscal	pessoa_rotina
+a cozinheira não mandou a nota fiscal	pessoa_rotina
+o Pedro não deu retorno sobre o orçamento	pessoa_rotina
+a Maria não deu retorno sobre o orçamento	pessoa_rotina
+o dono não deu retorno sobre o orçamento	pessoa_rotina
+o técnico não deu retorno sobre o orçamento	pessoa_rotina
+a babá não deu retorno sobre o orçamento	pessoa_rotina
+o fotógrafo não deu retorno sobre o orçamento	pessoa_rotina
+meu filho não deu retorno sobre o orçamento	pessoa_rotina
+a cozinheira não deu retorno sobre o orçamento	pessoa_rotina
+o Pedro não voltou da oficina	pessoa_rotina
+a Maria não voltou da oficina	pessoa_rotina
+o dono não voltou da oficina	pessoa_rotina
+o técnico não voltou da oficina	pessoa_rotina
+a babá não voltou da oficina	pessoa_rotina
+o fotógrafo não voltou da oficina	pessoa_rotina
+meu filho não voltou da oficina	pessoa_rotina
+a cozinheira não voltou da oficina	pessoa_rotina
+o Pedro não voltou da reunião	pessoa_rotina
+a Maria não voltou da reunião	pessoa_rotina
+o dono não voltou da reunião	pessoa_rotina
+o técnico não voltou da reunião	pessoa_rotina
+a babá não voltou da reunião	pessoa_rotina
+o fotógrafo não voltou da reunião	pessoa_rotina
+meu filho não voltou da reunião	pessoa_rotina
+a cozinheira não voltou da reunião	pessoa_rotina
+o Pedro não atendeu a ligação da marina	pessoa_rotina
+a Maria não atendeu a ligação da marina	pessoa_rotina
+o dono não atendeu a ligação da marina	pessoa_rotina
+o técnico não atendeu a ligação da marina	pessoa_rotina
+a babá não atendeu a ligação da marina	pessoa_rotina
+o fotógrafo não atendeu a ligação da marina	pessoa_rotina
+meu filho não atendeu a ligação da marina	pessoa_rotina
+a cozinheira não atendeu a ligação da marina	pessoa_rotina
+o Pedro está sem sinal de celular	pessoa_rotina
+a Maria está sem sinal de celular	pessoa_rotina
+o dono está sem sinal de celular	pessoa_rotina
+o técnico está sem sinal de celular	pessoa_rotina
+a babá está sem sinal de celular	pessoa_rotina
+o fotógrafo está sem sinal de celular	pessoa_rotina
+meu filho está sem sinal de celular	pessoa_rotina
+a cozinheira está sem sinal de celular	pessoa_rotina
+o Pedro faltou na revisão	pessoa_rotina
+a Maria faltou na revisão	pessoa_rotina
+o dono faltou na revisão	pessoa_rotina
+o técnico faltou na revisão	pessoa_rotina
+a babá faltou na revisão	pessoa_rotina
+o fotógrafo faltou na revisão	pessoa_rotina
+meu filho faltou na revisão	pessoa_rotina
+a cozinheira faltou na revisão	pessoa_rotina
+o Pedro não compareceu à vistoria	pessoa_rotina
+a Maria não compareceu à vistoria	pessoa_rotina
+o dono não compareceu à vistoria	pessoa_rotina
+o técnico não compareceu à vistoria	pessoa_rotina
+a babá não compareceu à vistoria	pessoa_rotina
+o fotógrafo não compareceu à vistoria	pessoa_rotina
+meu filho não compareceu à vistoria	pessoa_rotina
+a cozinheira não compareceu à vistoria	pessoa_rotina
+o Pedro não entregou o relatório	pessoa_rotina
+a Maria não entregou o relatório	pessoa_rotina
+o dono não entregou o relatório	pessoa_rotina
+o técnico não entregou o relatório	pessoa_rotina
+a babá não entregou o relatório	pessoa_rotina
+o fotógrafo não entregou o relatório	pessoa_rotina
+meu filho não entregou o relatório	pessoa_rotina
+a cozinheira não entregou o relatório	pessoa_rotina
+o Pedro não pagou a taxa	pessoa_rotina
+a Maria não pagou a taxa	pessoa_rotina
+o dono não pagou a taxa	pessoa_rotina
+o técnico não pagou a taxa	pessoa_rotina
+a babá não pagou a taxa	pessoa_rotina
+o fotógrafo não pagou a taxa	pessoa_rotina
+meu filho não pagou a taxa	pessoa_rotina
+a cozinheira não pagou a taxa	pessoa_rotina
+o Pedro saiu cedo e não volta hoje	pessoa_rotina
+a Maria saiu cedo e não volta hoje	pessoa_rotina
+o dono saiu cedo e não volta hoje	pessoa_rotina
+o técnico saiu cedo e não volta hoje	pessoa_rotina
+a babá saiu cedo e não volta hoje	pessoa_rotina
+o fotógrafo saiu cedo e não volta hoje	pessoa_rotina
+meu filho saiu cedo e não volta hoje	pessoa_rotina
+a cozinheira saiu cedo e não volta hoje	pessoa_rotina
+o Pedro não vem no próximo passeio	pessoa_rotina
+a Maria não vem no próximo passeio	pessoa_rotina
+o dono não vem no próximo passeio	pessoa_rotina
+o técnico não vem no próximo passeio	pessoa_rotina
+a babá não vem no próximo passeio	pessoa_rotina
+o fotógrafo não vem no próximo passeio	pessoa_rotina
+meu filho não vem no próximo passeio	pessoa_rotina
+a cozinheira não vem no próximo passeio	pessoa_rotina
+o Pedro não está disponível no WhatsApp	pessoa_rotina
+a Maria não está disponível no WhatsApp	pessoa_rotina
+o dono não está disponível no WhatsApp	pessoa_rotina
+o técnico não está disponível no WhatsApp	pessoa_rotina
+a babá não está disponível no WhatsApp	pessoa_rotina
+o fotógrafo não está disponível no WhatsApp	pessoa_rotina
+meu filho não está disponível no WhatsApp	pessoa_rotina
+a cozinheira não está disponível no WhatsApp	pessoa_rotina
+o Pedro desapareceu do grupo do WhatsApp	pessoa_rotina
+a Maria desapareceu do grupo do WhatsApp	pessoa_rotina
+o dono desapareceu do grupo do WhatsApp	pessoa_rotina
+o técnico desapareceu do grupo do WhatsApp	pessoa_rotina
+a babá desapareceu do grupo do WhatsApp	pessoa_rotina
+o fotógrafo desapareceu do grupo do WhatsApp	pessoa_rotina
+meu filho desapareceu do grupo do WhatsApp	pessoa_rotina
+a cozinheira desapareceu do grupo do WhatsApp	pessoa_rotina
+o Pedro não apareceu na planilha	pessoa_rotina
+a Maria não apareceu na planilha	pessoa_rotina
+o dono não apareceu na planilha	pessoa_rotina
+o técnico não apareceu na planilha	pessoa_rotina
+a babá não apareceu na planilha	pessoa_rotina
+o fotógrafo não apareceu na planilha	pessoa_rotina
+meu filho não apareceu na planilha	pessoa_rotina
+a cozinheira não apareceu na planilha	pessoa_rotina
+qual o telefone do Pedro?	pessoa_rotina
+qual o telefone da Maria?	pessoa_rotina
+qual o telefone do dono?	pessoa_rotina
+qual o telefone do técnico?	pessoa_rotina
+qual o telefone da babá?	pessoa_rotina
+qual o telefone do fotógrafo?	pessoa_rotina
+qual o telefone de meu filho?	pessoa_rotina
+qual o telefone da cozinheira?	pessoa_rotina
+quem é o Pedro na equipe?	pessoa_rotina
+quem é a Maria na equipe?	pessoa_rotina
+quem é o dono na equipe?	pessoa_rotina
+quem é o técnico na equipe?	pessoa_rotina
+quem é a babá na equipe?	pessoa_rotina
+quem é o fotógrafo na equipe?	pessoa_rotina
+quem é meu filho na equipe?	pessoa_rotina
+quem é a cozinheira na equipe?	pessoa_rotina
+o Pedro está escalado para sábado?	pessoa_rotina
+a Maria está escalado para sábado?	pessoa_rotina
+o dono está escalado para sábado?	pessoa_rotina
+o técnico está escalado para sábado?	pessoa_rotina
+a babá está escalado para sábado?	pessoa_rotina
+o fotógrafo está escalado para sábado?	pessoa_rotina
+meu filho está escalado para sábado?	pessoa_rotina
+a cozinheira está escalado para sábado?	pessoa_rotina
+lista de tarefas do Pedro	pessoa_rotina
+lista de tarefas da Maria	pessoa_rotina
+lista de tarefas do dono	pessoa_rotina
+lista de tarefas do técnico	pessoa_rotina
+lista de tarefas da babá	pessoa_rotina
+lista de tarefas do fotógrafo	pessoa_rotina
+lista de tarefas de meu filho	pessoa_rotina
+lista de tarefas da cozinheira	pessoa_rotina
+o Pedro fez a manutenção do gerador?	pessoa_rotina
+a Maria fez a manutenção do gerador?	pessoa_rotina
+o dono fez a manutenção do gerador?	pessoa_rotina
+o técnico fez a manutenção do gerador?	pessoa_rotina
+a babá fez a manutenção do gerador?	pessoa_rotina
+o fotógrafo fez a manutenção do gerador?	pessoa_rotina
+meu filho fez a manutenção do gerador?	pessoa_rotina
+a cozinheira fez a manutenção do gerador?	pessoa_rotina
+a Ana voltou do mergulho	pessoa_rotina
+o menino voltou do mar	pessoa_rotina
+o Pedro saiu do mar e foi almoçar	pessoa_rotina
+o dono disse que o barco está pronto	pessoa_rotina
+o técnico chegou	pessoa_rotina
+o técnico está a caminho	pessoa_rotina
+o dono chegou hoje	pessoa_rotina
+o Pedro foi ao mercado e já volta	pessoa_rotina
+a Maria voltou da marina	pessoa_rotina
+Falta gente a bordo para o passeio de sábado	pessoa_rotina
+o Pedro não está vindo para o jantar	pessoa_rotina
+o Pedro não vem para a reunião	pessoa_rotina
+a Letícia não está na escala de sábado	pessoa_rotina2
+o marinheiro não está escalado para o fim de semana	pessoa_rotina2
+quem está de plantão hoje?	pessoa_rotina2
+o Marcos não foi escalado para a próxima saída	pessoa_rotina2
+faltou alguém na reunião de segurança?	pessoa_rotina2
+a equipe está completa para o passeio de sábado?	pessoa_rotina2
+o Rodrigo não consta na lista de tripulantes	pessoa_rotina2
+a Camila não aparece na lista da equipe	pessoa_rotina2
+quem não assinou o diário de bordo?	pessoa_rotina2
+o Fernando não está na escala da semana que vem	pessoa_rotina2
+falta alguém assinar a ordem de serviço?	pessoa_rotina2
+o comandante não está escalado para quinta	pessoa_rotina2
+quem está na equipe hoje?	pessoa_rotina2
+quem está de folga amanhã?	pessoa_rotina2
+o Zé não veio trabalhar hoje, quem cobre?	pessoa_rotina2
+o Thiago tirou folga na sexta?	pessoa_rotina2
+o imediato não está na lista de tripulação	pessoa_rotina2
+o cozinheiro não aparece no cadastro da equipe	pessoa_rotina2
+a Juliana não confirmou presença na saída de domingo	pessoa_rotina2
+quantos tripulantes estão escalados?	pessoa_rotina2
+o pessoal da manutenção não assinou a ordem de serviço	pessoa_rotina2
+o eletricista não consta na escala	pessoa_rotina2
+faltou o Rafael no treinamento de segurança	pessoa_rotina2
+quem tem curso de mestre arrais na equipe?	pessoa_rotina2
+o Bruno não está na planilha de plantão	pessoa_rotina2
+a Marina não está de serviço hoje?	pessoa_rotina2
+o João não voltou da folga ainda?	pessoa_rotina2
+quem está de serviço no sábado?	pessoa_rotina2
+o novo marinheiro ainda não tem cadastro	pessoa_rotina2
+a Larissa não assinou o termo de responsabilidade	pessoa_rotina2
+falta alguém na lista de presença do treinamento?	pessoa_rotina2
+o mecânico não está na lista de contatos	pessoa_rotina2
+o capitão não está escalado essa semana?	pessoa_rotina2
+os marinheiros não estão na escala de domingo	pessoa_rotina2
+a Ana não vem trabalhar amanhã	pessoa_rotina2
+o nome do Paulo desapareceu da lista de equipe	pessoa_rotina2
+o Carlos não aparece mais na escala depois da atualização	pessoa_rotina2
+cadê o Pedro na lista de tripulantes?	pessoa_rotina2
+cadê a escala da semana?	pessoa_rotina2
+faltam dois nomes na escala	pessoa_rotina2
+o Gabriel foi excluído da equipe?	pessoa_rotina2
+o patrão não está na escala de feriado	pessoa_rotina2
+a babá não consta na lista de passageiros do sábado	pessoa_rotina2
+o dono do barco não está na lista de convidados?	pessoa_rotina2
+os convidados não estão na lista ainda	pessoa_rotina2
+o Eduardo não bateu o ponto hoje	pessoa_rotina2
+quem não bateu o ponto hoje?	pessoa_rotina2
+o Pedro não retornou minha ligação	pessoa_rotina2
+o fornecedor não respondeu o e-mail	pessoa_rotina2
+o técnico não atendeu o telefone	pessoa_rotina2
+a Ana não atende o celular desde cedo	pessoa_rotina2
+o Carlos não retornou o recado	pessoa_rotina2
+o mecânico não me ligou de volta	pessoa_rotina2
+a Camila não deu retorno sobre o orçamento	pessoa_rotina2
+o pessoal da marina não atende o telefone	pessoa_rotina2
+tentei ligar para o Rodrigo e ninguém atendeu	pessoa_rotina2
+liguei para o estaleiro e ninguém respondeu	pessoa_rotina2
+chamei o Pedro no zap e ele não respondeu	pessoa_rotina2
+a Juliana não visualizou a mensagem	pessoa_rotina2
+o contato do Pedro sumiu do meu celular	pessoa_rotina2
+o número da marina sumiu da agenda	pessoa_rotina2
+cadê o telefone do mecânico?	pessoa_rotina2
+não consegui contato com a seguradora	pessoa_rotina2
+não tenho notícia do orçamento	pessoa_rotina2
+não tenho retorno do estaleiro	pessoa_rotina2
+o cliente não retornou o contato	pessoa_rotina2
+não temos resposta da marina sobre a vaga	pessoa_rotina2
+o despachante não respondeu o e-mail	pessoa_rotina2
+o Pedro não está atendendo o telefone	pessoa_rotina2
+o Pedro não está respondendo as mensagens	pessoa_rotina2
+o Pedro não me manda notícia há dias	pessoa_rotina2
+o João desapareceu do grupo do WhatsApp	pessoa_rotina2
+a Marta saiu do grupo da equipe	pessoa_rotina2
+o Fábio não entrou no grupo ainda	pessoa_rotina2
+não vejo o Pedro no grupo do zap	pessoa_rotina2
+ninguém me respondeu no grupo	pessoa_rotina2
+ninguém respondeu o e-mail da marina	pessoa_rotina2
+o rapaz da oficina não respondeu a proposta	pessoa_rotina2
+a moça do escritório não retornou	pessoa_rotina2
+o cara do guincho não atendeu	pessoa_rotina2
+o gerente da marina não me respondeu	pessoa_rotina2
+o Pedro não me ligou ontem	pessoa_rotina2
+sem resposta do mecânico desde ontem	pessoa_rotina2
+sem notícias do fornecedor desde segunda	pessoa_rotina2
+a mensagem do Pedro não chegou	pessoa_rotina2
+o áudio do Marcos sumiu do WhatsApp	pessoa_rotina2
+a mensagem que a Ana mandou desapareceu do chat	pessoa_rotina2
+o Pedro não está online	pessoa_rotina2
+o João não está visível no app	pessoa_rotina2
+o capitão não me retornou	pessoa_rotina2
+manda mensagem para o Pedro	pessoa_rotina2
+liga para o mecânico	pessoa_rotina2
+avisa a Ana que o barco sai às 9	pessoa_rotina2
+quem ainda não confirmou a saída de sábado?	pessoa_rotina2
+ninguém atende no escritório da marina	pessoa_rotina2
+o telefone da marina não atende	pessoa_rotina2
+o plantão da seguradora não atende	pessoa_rotina2
+quem não respondeu o convite?	pessoa_rotina2
+o mecânico não voltou com a peça	pessoa_rotina2
+o Pedro não voltou com o filtro	pessoa_rotina2
+o fornecedor não entregou a peça ainda	pessoa_rotina2
+a peça do gerador não chegou	pessoa_rotina2
+a encomenda do rotor não chegou	pessoa_rotina2
+o rapaz da loja ainda não voltou com o impulsor	pessoa_rotina2
+o técnico não trouxe o relé	pessoa_rotina2
+o motoboy não voltou com o documento	pessoa_rotina2
+o eletricista não trouxe o fusível	pessoa_rotina2
+o pessoal da oficina ainda não voltou com a bomba	pessoa_rotina2
+o mecânico não voltou da oficina	pessoa_rotina2
+o rapaz da marina não trouxe a mangueira	pessoa_rotina2
+o Marcos não voltou com o pedido do diesel	pessoa_rotina2
+o caminhão de combustível não chegou	pessoa_rotina2
+o pedido do filtro de óleo não chegou ainda	pessoa_rotina2
+a nota fiscal da peça sumiu	pessoa_rotina2
+perdi a nota da bomba de porão	pessoa_rotina2
+perdi o recibo do filtro	pessoa_rotina2
+faltou peça na entrega?	pessoa_rotina2
+falta uma peça no kit de manutenção	pessoa_rotina2
+o kit de reparo não veio completo	pessoa_rotina2
+faltou o rotor no pedido	pessoa_rotina2
+quantas peças faltam para a revisão?	pessoa_rotina2
+o técnico disse que não consegue vir amanhã	pessoa_rotina2
+o mecânico não vem hoje	pessoa_rotina2
+o mecânico ainda não chegou	pessoa_rotina2
+o eletricista não chegou ainda	pessoa_rotina2
+a Ana foi na marina e não voltou ainda	pessoa_rotina2
+o Lucas ainda não voltou do mercado	pessoa_rotina2
+a Camila não voltou da loja	pessoa_rotina2
+o Marcos foi ao posto e ainda não voltou	pessoa_rotina2
+o pessoal foi jantar e não voltou	pessoa_rotina2
+o marinheiro foi à oficina e não voltou	pessoa_rotina2
+a Juliana foi ao banco e não voltou	pessoa_rotina2
+o João não voltou do escritório	pessoa_rotina2
+o comandante foi pra marina e não voltou	pessoa_rotina2
+o mecânico foi na marina buscar a peça e não voltou	pessoa_rotina2
+o Rafael não volta amanhã	pessoa_rotina2
+a Ana não volta antes de segunda	pessoa_rotina2
+o capitão foi ao estaleiro e ainda não voltou	pessoa_rotina2
+o Pedro desceu na marina e não subiu de volta ainda	pessoa_rotina2
+a equipe foi almoçar e não voltou	pessoa_rotina2
+o pessoal da marina não voltou do almoço	pessoa_rotina2
+o Fábio foi à farmácia e não voltou	pessoa_rotina2
+o Lucas saiu para o mercado e não voltou ainda	pessoa_rotina2
+o dono não voltou de viagem	pessoa_rotina2
+ainda não voltou ninguém do almoço	pessoa_rotina2
+ninguém voltou da marina ainda	pessoa_rotina2
+a Ana está demorando para responder	pessoa_rotina2
+o mecânico está demorando para entregar a peça	pessoa_rotina2
+quanto tempo o Pedro vai demorar na marina?	pessoa_rotina2
+o Pedro saiu e não disse quando volta	pessoa_rotina2
+o Pedro está na marina?	pessoa_rotina2
+o Pedro está em casa hoje?	pessoa_rotina2
+a Camila está no escritório?	pessoa_rotina2
+o Lucas está de folga?	pessoa_rotina2
+o Pedro está de férias?	pessoa_rotina2
+a tarefa do rotor desapareceu da agenda	pessoa_rotina2
+o item da revisão sumiu do checklist	pessoa_rotina2
+o alarme de porão sumiu do painel	pessoa_rotina2
+o lembrete da revisão do gerador sumiu	pessoa_rotina2
+perdi a agenda de manutenção	pessoa_rotina2
+a manutenção do Seakeeper não aparece na agenda	pessoa_rotina2
+a revisão do motor não aparece no calendário	pessoa_rotina2
+faltou registrar a troca de óleo	pessoa_rotina2
+falta registrar a manutenção de ontem	pessoa_rotina2
+faltam três tarefas no checklist	pessoa_rotina2
+faltou assinar o checklist de saída	pessoa_rotina2
+o registro do Pedro sumiu do diário	pessoa_rotina2
+o diário de ontem sumiu	pessoa_rotina2
+a entrada do diário de sexta desapareceu	pessoa_rotina2
+não encontro o registro da troca de filtro	pessoa_rotina2
+não acho a ordem de serviço do gerador	pessoa_rotina2
+não vejo a tarefa do filtro de água salgada	pessoa_rotina2
+não encontrei o manual do Seakeeper	pessoa_rotina2
+não acho o checklist de saída	pessoa_rotina2
+o manual do gerador não abre	pessoa_rotina2
+o PDF do manual sumiu	pessoa_rotina2
+cadê o manual do guincho?	pessoa_rotina2
+cadê o registro do abastecimento de terça?	pessoa_rotina2
+o abastecimento de ontem não aparece	pessoa_rotina2
+o abastecimento do Pedro não foi registrado	pessoa_rotina2
+a Ana não registrou o abastecimento	pessoa_rotina2
+ninguém registrou a troca do rotor	pessoa_rotina2
+ninguém assinou o checklist	pessoa_rotina2
+ninguém fez a revisão do porão	pessoa_rotina2
+ninguém viu o relatório de manutenção?	pessoa_rotina2
+quem fez a última troca de óleo?	pessoa_rotina2
+quem registrou o abastecimento de ontem?	pessoa_rotina2
+o gerador não liga	pessoa_rotina2
+o gerador não está ligando	pessoa_rotina2
+o motor não pega	pessoa_rotina2
+a bomba de porão não aciona	pessoa_rotina2
+o Seakeeper não responde	pessoa_rotina2
+o guincho não sobe	pessoa_rotina2
+a âncora não sobe direito	pessoa_rotina2
+o compressor não volta a funcionar	pessoa_rotina2
+a bomba não voltou a funcionar depois da troca	pessoa_rotina2
+o dessalinizador não está produzindo	pessoa_rotina2
+o plotter não responde ao toque	pessoa_rotina2
+o motor de boreste parou de vibrar depois da troca	pessoa_rotina2
+a temperatura do motor caiu para 80 graus	pessoa_rotina2
+a tensão da bateria caiu	pessoa_rotina2
+a rotação caiu ontem?	pessoa_rotina2
+o consumo caiu depois da limpeza do casco?	pessoa_rotina2
+o nível do tanque caiu rápido	pessoa_rotina2
+a velocidade caiu para 12 nós	pessoa_rotina2
+a conexão caiu de novo	pessoa_rotina2
+a internet caiu	pessoa_rotina2
+o wifi caiu	pessoa_rotina2
+a energia caiu no cais	pessoa_rotina2
+a luz da cabine apagou	pessoa_rotina2
+a lâmpada do flybridge queimou	pessoa_rotina2
+o disjuntor caiu	pessoa_rotina2
+o disjuntor do guincho desarmou	pessoa_rotina2
+a chave do gerador sumiu	pessoa_rotina2
+perdi a chave do paiol	pessoa_rotina2
+perdi o controle do guincho	pessoa_rotina2
+perdi a senha do wifi do barco	pessoa_rotina2
+perdi o link da planilha de manutenção	pessoa_rotina2
+o filtro caiu no porão	pessoa_rotina2
+o parafuso caiu atrás do motor	pessoa_rotina2
+o abastecimento sumiu do histórico	pessoa_rotina2
+a última nota de diesel desapareceu	pessoa_rotina2
+faltam litros no registro de abastecimento	pessoa_rotina2
+faltou registrar a nota do posto	pessoa_rotina2
+a nota do diesel não aparece	pessoa_rotina2
+quanto o Pedro abasteceu ontem?	pessoa_rotina2
+quem abasteceu o barco na terça?	pessoa_rotina2
+o posto não aceitou o cartão	pessoa_rotina2
+o posto não tem diesel hoje	pessoa_rotina2
+o caminhão de diesel não chegou	pessoa_rotina2
+o consumo não bate com o abastecimento	pessoa_rotina2
+o nível do tanque não bate com a leitura	pessoa_rotina2
+a conta do combustível não fecha	pessoa_rotina2
+o diesel que o Marcos pediu não veio	pessoa_rotina2
+a bomba do posto não funciona	pessoa_rotina2
+o litro de diesel subiu?	pessoa_rotina2
+quanto falta de diesel para chegar?	pessoa_rotina2
+quanto falta para o tanque encher?	pessoa_rotina2
+quanto falta para chegar na Barra Sul?	pessoa_rotina2
+quanto falta para o próximo abastecimento?	pessoa_rotina2
+falta quanto de combustível para a volta?	pessoa_rotina2
+faltam quantas milhas para a marina?	pessoa_rotina2
+faltam quantos minutos para chegar?	pessoa_rotina2
+falta pouco para chegar?	pessoa_rotina2
+a licença de estação não está na pasta de documentos	pessoa_rotina2
+o documento da embarcação sumiu do app	pessoa_rotina2
+perdi o documento do barco	pessoa_rotina2
+perdi a licença do rádio	pessoa_rotina2
+cadê o seguro do barco?	pessoa_rotina2
+o seguro não aparece em documentos	pessoa_rotina2
+faltou anexar a nota fiscal	pessoa_rotina2
+faltam documentos no cadastro	pessoa_rotina2
+o documento do Pedro desapareceu da pasta	pessoa_rotina2
+a habilitação do comandante não está no cadastro	pessoa_rotina2
+a arrais do Marcos venceu?	pessoa_rotina2
+a carteira do marinheiro não consta nos documentos	pessoa_rotina2
+o PDF da apólice não abre	pessoa_rotina2
+o anexo sumiu do registro	pessoa_rotina2
+a foto do documento sumiu	pessoa_rotina2
+o comprovante de pagamento desapareceu do app	pessoa_rotina2
+não encontro o documento da marina	pessoa_rotina2
+não achei o contrato da marina	pessoa_rotina2
+não vejo o seguro na lista	pessoa_rotina2
+o que falta para renovar a licença?	pessoa_rotina2
+quais documentos faltam anexar?	pessoa_rotina2
+quem tem a chave do armário de documentos?	pessoa_rotina2
+o vento não para de aumentar?	pessoa_rotina2
+a previsão não bate com o que eu vejo	pessoa_rotina2
+o mar caiu depois da frente fria?	pessoa_rotina2
+o vento caiu à tarde?	pessoa_rotina2
+a chuva não passa hoje?	pessoa_rotina2
+a maré não sobe mais hoje?	pessoa_rotina2
+o tempo não melhora até sábado?	pessoa_rotina2
+a frente fria não chega antes de domingo?	pessoa_rotina2
+o sol não aparece amanhã?	pessoa_rotina2
+o nevoeiro sumiu?	pessoa_rotina2
+o vento sumiu agora	pessoa_rotina2
+a onda não passa de um metro?	pessoa_rotina2
+a previsão de amanhã sumiu do app	pessoa_rotina2
+o gráfico de maré desapareceu	pessoa_rotina2
+o ícone do clima sumiu	pessoa_rotina2
+o mapa do tempo não carrega	pessoa_rotina2
+a previsão não aparece	pessoa_rotina2
+não vejo a previsão de maré	pessoa_rotina2
+não acho a previsão do vento	pessoa_rotina2
+a ressaca não vai passar até quando?	pessoa_rotina2
+tem ressaca amanhã?	pessoa_rotina2
+a correnteza está forte hoje na enseada?	pessoa_rotina2
+como está a correnteza?	pessoa_rotina2
+a ressaca atrapalha a saída?	pessoa_rotina2
+o mar está bom para nadar?	pessoa_rotina2
+posso nadar na enseada amanhã?	pessoa_rotina2
+dá para mergulhar amanhã com esse vento?	pessoa_rotina2
+está seguro mergulhar com essa maré?	pessoa_rotina2
+quando é a melhor hora para nadar?	pessoa_rotina2
+qual a temperatura da água para mergulhar?	pessoa_rotina2
+a visibilidade está boa para mergulho amanhã?	pessoa_rotina2
+vai ter ressaca no fim de semana?	pessoa_rotina2
+o mar está calmo para caiaque?	pessoa_rotina2
+dá pra fazer stand up paddle amanhã?	pessoa_rotina2
+que horas é a maré baixa?	pessoa_rotina2
+o vento vai aumentar?	pessoa_rotina2
+o Spotify sumiu	pessoa_rotina2
+o Spotify sumiu do painel	pessoa_rotina2
+o Garmin sumiu da tela	pessoa_rotina2
+o sinal do AIS desapareceu	pessoa_rotina2
+o AIS sumiu do plotter	pessoa_rotina2
+o Raymarine desapareceu da lista de aparelhos	pessoa_rotina2
+o Windy sumiu do celular	pessoa_rotina2
+o Navionics desapareceu do tablet	pessoa_rotina2
+o WhatsApp sumiu do meu celular	pessoa_rotina2
+o Waze não abre	pessoa_rotina2
+o Bluetooth sumiu	pessoa_rotina2
+o Wi-Fi do barco sumiu	pessoa_rotina2
+o Starlink caiu	pessoa_rotina2
+o Starlink não conecta	pessoa_rotina2
+o Instagram caiu	pessoa_rotina2
+o Google Maps sumiu	pessoa_rotina2
+o app sumiu da tela inicial	pessoa_rotina2
+o ícone do app desapareceu	pessoa_rotina2
+o Capitão sumiu da tela	pessoa_rotina2
+o Capitão IA caiu?	pessoa_rotina2
+capitão, o alarme sumiu	pessoa_rotina2
+capitão, a tela desapareceu	pessoa_rotina2
+capitão, cadê o gráfico?	pessoa_rotina2
+capitão, o menu sumiu	pessoa_rotina2
+o menu sumiu	pessoa_rotina2
+o botão desapareceu	pessoa_rotina2
+o gráfico sumiu	pessoa_rotina2
+o widget sumiu	pessoa_rotina2
+a tela apagou	pessoa_rotina2
+a tela caiu	pessoa_rotina2
+a tela do plotter congelou	pessoa_rotina2
+o plotter não liga	pessoa_rotina2
+o plotter reiniciou sozinho	pessoa_rotina2
+o radar não aparece na tela	pessoa_rotina2
+o radar sumiu	pessoa_rotina2
+o sonda não mostra fundo	pessoa_rotina2
+a sonda perdeu o fundo	pessoa_rotina2
+o GPS perdeu o sinal	pessoa_rotina2
+o GPS não achou satélite	pessoa_rotina2
+perdi o sinal do GPS	pessoa_rotina2
+perdi a conexão	pessoa_rotina2
+perdi a internet	pessoa_rotina2
+perdi o sinal do celular	pessoa_rotina2
+o celular não pega sinal	pessoa_rotina2
+o tablet caiu	pessoa_rotina2
+o tablet sumiu	pessoa_rotina2
+o notebook desapareceu da cabine	pessoa_rotina2
+cadê o tablet?	pessoa_rotina2
+cadê o carregador?	pessoa_rotina2
+não acho o controle remoto	pessoa_rotina2
+não encontro o celular	pessoa_rotina2
+onde está o tablet?	pessoa_rotina2
+a câmera da proa não aparece	pessoa_rotina2
+a câmera sumiu	pessoa_rotina2
+a câmera de ré não mostra imagem	pessoa_rotina2
+o piloto automático desconectou	pessoa_rotina2
+o piloto automático desligou sozinho	pessoa_rotina2
+o piloto automático sumiu do menu	pessoa_rotina2
+o imediato sumiu do app	pessoa_rotina2
+o transponder AIS não aparece na lista	pessoa_rotina2
+o Seakeeper sumiu do painel	pessoa_rotina2
+o estabilizador desapareceu da tela	pessoa_rotina2
+o dessalinizador sumiu	pessoa_rotina2
+a bateria caiu	pessoa_rotina2
+a bateria sumiu da tela	pessoa_rotina2
+o bimini caiu	pessoa_rotina2
+o toldo caiu	pessoa_rotina2
+a defensa caiu	pessoa_rotina2
+a defensa sumiu	pessoa_rotina2
+a boia de ancoragem sumiu	pessoa_rotina2
+o cooler caiu	pessoa_rotina2
+o cooler está boiando?	pessoa_rotina2
+a cadeira caiu da proa	pessoa_rotina2
+o barco da frente sumiu do radar	pessoa_rotina2
+o alvo sumiu do radar	pessoa_rotina2
+o alvo AIS desapareceu	pessoa_rotina2
+como ensinar meu filho a nadar?	pessoa_rotina2
+meu filho quer aprender a nadar, qual a idade ideal?	pessoa_rotina2
+a lista de tarefas do Pedro	pessoa_rotina2
+quais são as tarefas do Pedro hoje?	pessoa_rotina2
+o que o Pedro precisa fazer hoje?	pessoa_rotina2
+o que a Ana tem na agenda?	pessoa_rotina2
+quem é o comandante de sábado?	pessoa_rotina2
+quem faz o plantão da noite?	pessoa_rotina2
+quem é o responsável pela manutenção?	pessoa_rotina2
+o filho do Pedro vai no passeio?	pessoa_rotina2
+meu filho vai passear no barco no sábado	pessoa_rotina2
+as crianças podem ir no flybridge?	pessoa_rotina2
+a minha esposa vai viajar com a gente	pessoa_rotina2
+o marido da Ana vem no sábado	pessoa_rotina2
+a família vai chegar às 10	pessoa_rotina2
+o pessoal chega às 9	pessoa_rotina2
+a galera já chegou?	pessoa_rotina2
+o casal chega mais tarde	pessoa_rotina2
+meu sogro vai junto no passeio	pessoa_rotina2
+minha mãe não vai poder ir	pessoa_rotina2
+meu pai não vai no passeio	pessoa_rotina2
+meu irmão não vem hoje	pessoa_rotina2
+meu tio não pode ir no sábado	pessoa_rotina2
+meus amigos não vão poder vir	pessoa_rotina2
+os convidados não vão mais	pessoa_rotina2
+a turma da marina não vem	pessoa_rotina2
+o mergulhador que contratamos não confirmou	pessoa_rotina2
+o nadador do grupo não confirmou presença	pessoa_rotina2
+o rapaz do caiaque não chegou ainda	pessoa_rotina2
+o guia de pesca não confirmou	pessoa_rotina2
+o pescador não voltou com os peixes	pessoa_rotina2
+o cozinheiro não trouxe as compras	pessoa_rotina2
+o chef não chegou ainda	pessoa_rotina2
+a babá não vem sábado	pessoa_rotina2
+a moça da limpeza não veio hoje	pessoa_rotina2
+o pessoal da limpeza ainda não chegou	pessoa_rotina2
+os caras do guincho não chegaram	pessoa_rotina2
+o mais novo não vai no passeio	pessoa_rotina2
+os três não vão no sábado	pessoa_rotina2
+todos confirmaram presença?	pessoa_rotina2
+todo mundo já respondeu?	pessoa_rotina2
+todos vão no passeio de sábado?	pessoa_rotina2
+o outro mecânico não vem	pessoa_rotina2
+o segundo marinheiro não confirmou	pessoa_rotina2
+os dois mecânicos não vêm hoje	pessoa_rotina2
+o médico não vem hoje	pessoa_rotina2
+o gerente não está na marina hoje	pessoa_rotina2
+o secretário não passou a lista	pessoa_rotina2
+o despachante não está no escritório	pessoa_rotina2
+o vizinho de vaga não está	pessoa_rotina2
+o imediato não vai estar a bordo no sábado	pessoa_rotina2
+a tripulação não chegou ainda	pessoa_rotina2
+a tripulação não está completa?	pessoa_rotina2
+a tripulação já está a bordo?	pessoa_rotina2
+a tripulação de sábado está confirmada?	pessoa_rotina2
+quantas pessoas a bordo?	pessoa_rotina2
+quantas pessoas estão a bordo agora?	pessoa_rotina2
+quantas pessoas cabem no barco?	pessoa_rotina2
+qual a lotação?	pessoa_rotina2
+quantos passageiros estão a bordo?	pessoa_rotina2
+quantos tripulantes temos hoje?	pessoa_rotina2
+quantos convidados vêm no sábado?	pessoa_rotina2
+quantas crianças vêm no passeio?	pessoa_rotina2
+quantas pessoas faltam confirmar?	pessoa_rotina2
+quantos faltam confirmar presença?	pessoa_rotina2
+quantos não confirmaram?	pessoa_rotina2
+quantos não responderam o convite?	pessoa_rotina2
+somos oito no sábado	pessoa_rotina2
+serão 10 pessoas no passeio	pessoa_rotina2
+a lotação é de 12 pessoas?	pessoa_rotina2
+somos dez no total	pessoa_rotina2
+quantos somos?	pessoa_rotina2
+quantas cadeiras temos no flybridge?	pessoa_rotina2
+quantas camas tem?	pessoa_rotina2
+quantos camarotes tem o barco?	pessoa_rotina2
+quantas pessoas dormem a bordo?	pessoa_rotina2
+quantas pessoas a bordo no sábado passado?	pessoa_rotina2
+quantos estavam a bordo ontem?	pessoa_rotina2
+quantas refeições precisamos para o passeio?	pessoa_rotina2
+quantas garrafas de água por pessoa?	pessoa_rotina2
+qual a posição?	pessoa_rotina2
+qual o rumo?	pessoa_rotina2
+qual a velocidade agora?	pessoa_rotina2
+quanto falta para chegar?	pessoa_rotina2
+qual a proa agora?	pessoa_rotina2
+qual a popa?	pessoa_rotina2
+onde estamos?	pessoa_rotina2
+onde estamos agora?	pessoa_rotina2
+onde fica a proa?	pessoa_rotina2
+em que direção está a proa?	pessoa_rotina2
+qual o rumo da proa?	pessoa_rotina2
+a proa está apontando para onde?	pessoa_rotina2
+proa 207 está certo?	pessoa_rotina2
+a popa está a favor do vento?	pessoa_rotina2
+o vento está pela popa?	pessoa_rotina2
+o vento entra pela proa agora?	pessoa_rotina2
+qual a velocidade do vento agora?	pessoa_rotina2
+qual o SOG agora?	pessoa_rotina2
+qual o ETA?	pessoa_rotina2
+que horas chegamos?	pessoa_rotina2
+a que horas chegamos na Barra Sul?	pessoa_rotina2
+onde estamos em relação à marina?	pessoa_rotina2
+a que distância estamos da marina?	pessoa_rotina2
+qual a profundidade agora?	pessoa_rotina2
+qual a próxima waypoint?	pessoa_rotina2
+onde está o próximo ponto da rota?	pessoa_rotina2
+em que ponto da rota estamos?	pessoa_rotina2
+qual a posição do barco agora?	pessoa_rotina2
+qual o heading?	pessoa_rotina2
+qual a direção do vento agora?	pessoa_rotina2
+a que velocidade estamos indo?	pessoa_rotina2
+estamos na rota?	pessoa_rotina2
+estamos no horário?	pessoa_rotina2
+o barco está no prumo?	pessoa_rotina2
+qual o rumo para a marina?	pessoa_rotina2
+para onde estamos indo?	pessoa_rotina2
+quanto tempo até a marina?	pessoa_rotina2
+quanto falta de rota?	pessoa_rotina2
+onde está o Seakeeper?	pessoa_rotina2
+onde está a chave do paiol?	pessoa_rotina2
+onde estão os documentos?	pessoa_rotina2
+onde está o manual do gerador?	pessoa_rotina2
+onde está a bomba de porão?	pessoa_rotina2
+onde fica o filtro de água salgada?	pessoa_rotina2
+onde está o registro do abastecimento?	pessoa_rotina2
+agora o gerador está ligado?	pessoa_rotina2
+agora os motores estão ligados?	pessoa_rotina2
+como está a pressão do óleo agora?	pessoa_rotina2
+como está o nível de diesel?	pessoa_rotina2
+a que horas foi o último abastecimento?	pessoa_rotina2
+qual a rotação dos motores agora?	pessoa_rotina2
+resumo da situação agora	pessoa_rotina2
+resumo do barco agora	pessoa_rotina2
+como está o barco agora?	pessoa_rotina2
+tudo bem a bordo?	pessoa_rotina2
+o que tem de pendência hoje?	pessoa_rotina2
+quais tarefas estão atrasadas?	pessoa_rotina2
+quais alertas estão ativos agora?	pessoa_rotina2
+tem algum alarme agora?	pessoa_rotina2
+tem alguma pendência de segurança?	pessoa_rotina2
+o que vence essa semana?	pessoa_rotina2
+o pedro nao voltou da marina ainda	pessoa_rotina2
+a ana nao respondeu o zap	pessoa_rotina2
+o marcos nao apareceu na escala	pessoa_rotina2
+cade o pedro na lista da equipe	pessoa_rotina2
+o mecanico nao voltou com a peca	pessoa_rotina2
+o spotify sumiu da tela	pessoa_rotina2
+o garmin sumiu	pessoa_rotina2
+o ais desapareceu do plotter	pessoa_rotina2
+o lucas nao respondeu o email	pessoa_rotina2
+faltou o joao na reuniao	pessoa_rotina2
+o carlos nao atendeu o telefone	pessoa_rotina2
+o pedro foi pro mercado e nao voltou	pessoa_rotina2
+a maria nao voltou do almoco	pessoa_rotina2
+o rapaz da oficina nao veio hoje	pessoa_rotina2
+meu filho quer aprender a nadar	pessoa_rotina2
+qual a posicao agora	pessoa_rotina2
+qual o rumo agora	pessoa_rotina2
+quanto falta pra chegar	pessoa_rotina2
+o filtro sumiu da lista	pessoa_rotina2
+o aplicativo sumiu do celular	pessoa_rotina2
+o wifi do barco caiu	pessoa_rotina2
+a internet caiu de novo	pessoa_rotina2
+o pedro nao esta na escala	pessoa_rotina2
+a ana nao esta de plantao	pessoa_rotina2
+quem faltou hoje	pessoa_rotina2
+quem nao veio hoje	pessoa_rotina2
+o cozinheiro nao veio hoje	pessoa_rotina2
+a babá nao veio hoje	pessoa_rotina2
+o dono nao veio hoje	pessoa_rotina2
+o comandante nao respondeu a mensagem	pessoa_rotina2
+o imediato nao respondeu o zap	pessoa_rotina2
+o fulano nao voltou da marina	pessoa_rotina2
+alguem viu o manual do gerador	pessoa_rotina2
+ninguem viu o manual do gerador	pessoa_rotina2
+ninguem sabe onde esta a nota do diesel	pessoa_rotina2
+ninguem achou a nota do posto	pessoa_rotina2
+ninguem encontrou o controle do guincho	pessoa_rotina2
+nao sei onde esta o pedro na escala	pessoa_rotina2
+nao achei o pedro na lista	pessoa_rotina2
+nao achei a ana no cadastro	pessoa_rotina2
+nao encontro o marcos na equipe	pessoa_rotina2
+nao vejo o lucas na lista de convidados	pessoa_rotina2
+o Pedro está demorando para assinar o diário	pessoa_rotina2
+a Ana está sem celular hoje	pessoa_rotina2
+o Pedro está sem acesso ao app	pessoa_rotina2
+o Pedro ficou sem senha	pessoa_rotina2
+o marinheiro ficou sem login	pessoa_rotina2
+o Pedro perdeu a senha do app	pessoa_rotina2
+o Pedro perdeu o prazo da renovação	pessoa_rotina2
+a Ana perdeu o voo	pessoa_rotina2
+o Marcos perdeu o ônibus e não vem hoje	pessoa_rotina2
+o Pedro perdeu o telefone	pessoa_rotina2
+o capitão perdeu a habilitação?	pessoa_rotina2
+o Pedro ficou na marina	pessoa_rotina2
+a Ana ficou na oficina	pessoa_rotina2
+o Pedro ficou em casa hoje	pessoa_rotina2
+o Marcos ficou para trás na fila da marina	pessoa_rotina2
+o Pedro ficou preso no trânsito	pessoa_rotina2
+a Ana ficou presa na reunião	pessoa_rotina2
+o Pedro saiu para o almoço	pessoa_rotina2
+o Pedro saiu mais cedo hoje	pessoa_rotina2
+a Ana foi embora mais cedo	pessoa_rotina2
+o Pedro não está nem aí para o prazo	pessoa_rotina2
+o Pedro não sabe onde fica o filtro	pessoa_rotina2
+o Pedro não conseguiu entrar no sistema	pessoa_rotina2
+o Pedro não consegue abrir o app	pessoa_rotina2
+a Ana não consegue acessar o diário	pessoa_rotina2
+o Pedro não vê o checklist no celular	pessoa_rotina2
+a Ana não vê a escala no app	pessoa_rotina2
+ninguém vê a escala no app	pessoa_rotina2
+ninguém consegue entrar no app	pessoa_rotina2
+ninguém consegue abrir o diário	pessoa_rotina2
+ninguém sabe a senha do wifi	pessoa_rotina2
+ninguém tem a chave do paiol	pessoa_rotina2
+todos os alarmes sumiram do painel	pessoa_rotina2
+todos os checklists sumiram	pessoa_rotina2
+todos os registros desapareceram do app	pessoa_rotina2
+todos os documentos sumiram da pasta	pessoa_rotina2
+todo mundo perdeu o sinal do celular	pessoa_rotina2
+todos perderam o sinal do wifi	pessoa_rotina2
+a gente perdeu o sinal do GPS	pessoa_rotina2
+a gente não consegue conexão	pessoa_rotina2
+nós perdemos a conexão com o Starlink	pessoa_rotina2
+perdemos o sinal do AIS	pessoa_rotina2
+perdemos a conexão com o plotter	pessoa_rotina2
+perdemos a leitura do sensor	pessoa_rotina2
+perdemos o registro de ontem	pessoa_rotina2
+não temos sinal de celular na enseada	pessoa_rotina2
+não temos retorno da capitania	pessoa_rotina2
+chamei a marina no canal 72 e não responderam	pessoa_rotina2
+chamamos o mecânico e não veio	pessoa_rotina2
+chamamos o guincho e ninguém veio	pessoa_rotina2
+o guincho não chegou	pessoa_rotina2
+o reboque não chegou ainda	pessoa_rotina2
+o barco de apoio não chegou	pessoa_rotina2
+o tender não voltou da marina	pessoa_rotina2
+o bote não voltou do abastecimento	pessoa_rotina2
+o tender ainda não voltou do posto	pessoa_rotina2
+o tender não está aqui	pessoa_rotina2
+o tender não está a bordo	pessoa_rotina2
+o tender sumiu do guindaste	pessoa_rotina2
+o bote não está na garagem	pessoa_rotina2
+o caiaque não está no convés	pessoa_rotina2
+o caiaque sumiu	pessoa_rotina2
+o stand up não está a bordo	pessoa_rotina2
+o stand up paddle sumiu do convés	pessoa_rotina2
+a prancha caiu no convés	pessoa_rotina2
+a prancha de surf não está a bordo	pessoa_rotina2
+o binóculo não está no armário	pessoa_rotina2
+o binóculo sumiu	pessoa_rotina2
+o mergulhador contratado não confirmou presença	pessoa_rotina2
+o curso de mergulho não aparece na agenda	pessoa_rotina2
+o curso de nado não está na agenda	pessoa_rotina2
+a aula de caiaque não está na agenda	pessoa_rotina2
+o instrutor de stand up não confirmou	pessoa_rotina2
+o passeio de snorkel não está na agenda	pessoa_rotina2
+o mergulho de sábado foi cancelado?	pessoa_rotina2
+o mergulho não está agendado	pessoa_rotina2
+o mergulho de amanhã não aparece na agenda	pessoa_rotina2
+o mergulho foi remarcado	pessoa_rotina2
+o Pedro não respondeu minha mensagem	pessoa_rotina2
+o Pedro não apareceu na reunião	pessoa_rotina2
+o Pedro não confirmou a data	pessoa_rotina2
+o Pedro não respondeu o convite	pessoa_rotina2
+o Pedro não me avisou	pessoa_rotina2
+a Ana não retornou meu e-mail	pessoa_rotina2
+a Ana não me ligou de volta	pessoa_rotina2
+a Ana não chegou ainda	pessoa_rotina2
+a Ana não pagou a fatura	pessoa_rotina2
+a Ana não retornou o contato	pessoa_rotina2
+o mecânico não retornou minha ligação	pessoa_rotina2
+o mecânico não respondeu minha mensagem	pessoa_rotina2
+o mecânico não apareceu na reunião	pessoa_rotina2
+o mecânico não confirmou a data	pessoa_rotina2
+o mecânico não respondeu o convite	pessoa_rotina2
+o mecânico não me avisou	pessoa_rotina2
+o técnico não retornou meu e-mail	pessoa_rotina2
+o técnico não me ligou de volta	pessoa_rotina2
+o técnico não chegou ainda	pessoa_rotina2
+o técnico não pagou a fatura	pessoa_rotina2
+o técnico não retornou o contato	pessoa_rotina2
+o fornecedor não retornou minha ligação	pessoa_rotina2
+o fornecedor não respondeu minha mensagem	pessoa_rotina2
+o fornecedor não apareceu na reunião	pessoa_rotina2
+o fornecedor não confirmou a data	pessoa_rotina2
+o fornecedor não respondeu o convite	pessoa_rotina2
+o fornecedor não me avisou	pessoa_rotina2
+o cliente não retornou meu e-mail	pessoa_rotina2
+o cliente não me ligou de volta	pessoa_rotina2
+o cliente não chegou ainda	pessoa_rotina2
+o cliente não pagou a fatura	pessoa_rotina2
+a seguradora não retornou minha ligação	pessoa_rotina2
+a seguradora não respondeu minha mensagem	pessoa_rotina2
+a seguradora não apareceu na reunião	pessoa_rotina2
+a seguradora não confirmou a data	pessoa_rotina2
+a seguradora não respondeu o convite	pessoa_rotina2
+a seguradora não me avisou	pessoa_rotina2
+o pessoal da oficina não retornou meu e-mail	pessoa_rotina2
+o pessoal da oficina não me ligou de volta	pessoa_rotina2
+o pessoal da oficina não apareceu na reunião	pessoa_rotina2
+o pessoal da oficina não confirmou a data	pessoa_rotina2
+o pessoal da oficina não respondeu o convite	pessoa_rotina2
+o pessoal da oficina não me avisou	pessoa_rotina2
+o rapaz da marina não retornou meu e-mail	pessoa_rotina2
+o rapaz da marina não me ligou de volta	pessoa_rotina2
+o rapaz da marina não apareceu na reunião	pessoa_rotina2
+o rapaz da marina não confirmou a data	pessoa_rotina2
+o rapaz da marina não respondeu o convite	pessoa_rotina2
+o rapaz da marina não me avisou	pessoa_rotina2
+o eletricista não retornou meu e-mail	pessoa_rotina2
+o eletricista não me ligou de volta	pessoa_rotina2
+o eletricista não pagou a fatura	pessoa_rotina2
+o eletricista não retornou o contato	pessoa_rotina2
+o Marcos não retornou minha ligação	pessoa_rotina2
+o Marcos não respondeu minha mensagem	pessoa_rotina2
+o Marcos não apareceu na reunião	pessoa_rotina2
+o Marcos não confirmou a data	pessoa_rotina2
+o Marcos não respondeu o convite	pessoa_rotina2
+o Marcos não me avisou	pessoa_rotina2
+a Camila não retornou meu e-mail	pessoa_rotina2
+a Camila não me ligou de volta	pessoa_rotina2
+a Camila não chegou ainda	pessoa_rotina2
+a Camila não pagou a fatura	pessoa_rotina2
+a Camila não retornou o contato	pessoa_rotina2
+o Pedro foi à farmácia e não voltou	pessoa_rotina2
+o Pedro foi ao açougue e não voltou	pessoa_rotina2
+o Pedro foi ao aeroporto e não voltou	pessoa_rotina2
+o Pedro foi ao shopping e não voltou	pessoa_rotina2
+o Pedro foi ao cartório e não voltou	pessoa_rotina2
+o Pedro foi ao supermercado e não voltou	pessoa_rotina2
+o Pedro foi à delegacia e não voltou	pessoa_rotina2
+a Ana foi à farmácia e não voltou	pessoa_rotina2
+a Ana foi ao açougue e não voltou	pessoa_rotina2
+a Ana foi ao aeroporto e não voltou	pessoa_rotina2
+a Ana foi ao shopping e não voltou	pessoa_rotina2
+a Ana foi ao cartório e não voltou	pessoa_rotina2
+a Ana foi ao supermercado e não voltou	pessoa_rotina2
+a Ana foi à delegacia e não voltou	pessoa_rotina2
+o mecânico foi à farmácia e não voltou	pessoa_rotina2
+o mecânico foi ao açougue e não voltou	pessoa_rotina2
+o mecânico foi ao aeroporto e não voltou	pessoa_rotina2
+o mecânico foi ao shopping e não voltou	pessoa_rotina2
+o mecânico foi ao cartório e não voltou	pessoa_rotina2
+o mecânico foi ao supermercado e não voltou	pessoa_rotina2
+o mecânico foi à delegacia e não voltou	pessoa_rotina2
+o pessoal foi à farmácia e não voltou	pessoa_rotina2
+o pessoal foi ao açougue e não voltou	pessoa_rotina2
+o pessoal foi ao aeroporto e não voltou	pessoa_rotina2
+o pessoal foi ao shopping e não voltou	pessoa_rotina2
+o pessoal foi ao cartório e não voltou	pessoa_rotina2
+o pessoal foi ao supermercado e não voltou	pessoa_rotina2
+o pessoal foi à delegacia e não voltou	pessoa_rotina2
+o Pedro foi pro mercado e não voltou	pessoa_rotina2
+o Pedro foi pra loja e não voltou	pessoa_rotina2
+o Pedro foi pra cidade e não voltou	pessoa_rotina2
+o Pedro foi comprar pão e demorou	pessoa_rotina2
+o Pedro foi pegar o carro e não voltou	pessoa_rotina2
+a Ana foi pro mercado e não voltou	pessoa_rotina2
+a Ana foi pra loja e não voltou	pessoa_rotina2
+a Ana foi pra cidade e não voltou	pessoa_rotina2
+a Ana foi comprar pão e demorou	pessoa_rotina2
+a Ana foi pegar o carro e não voltou	pessoa_rotina2
+o mecânico foi pro mercado e não voltou	pessoa_rotina2
+o mecânico foi pra loja e não voltou	pessoa_rotina2
+o mecânico foi pra cidade e não voltou	pessoa_rotina2
+o mecânico foi comprar pão e demorou	pessoa_rotina2
+o mecânico foi pegar o carro e não voltou	pessoa_rotina2
+o pessoal foi pro mercado e não voltou	pessoa_rotina2
+o pessoal foi pra loja e não voltou	pessoa_rotina2
+o pessoal foi pra cidade e não voltou	pessoa_rotina2
+o pessoal foi comprar pão e demorou	pessoa_rotina2
+o pessoal foi pegar o carro e não voltou	pessoa_rotina2
+o ar-condicionado sumiu	pessoa_rotina2
+o ar-condicionado não volta a funcionar	pessoa_rotina2
+o ar-condicionado parou de responder	pessoa_rotina2
+o compressor não aparece mais	pessoa_rotina2
+o compressor faltou	pessoa_rotina2
+o tacômetro sumiu	pessoa_rotina2
+o tacômetro não volta a funcionar	pessoa_rotina2
+o tacômetro parou de responder	pessoa_rotina2
+o horímetro não aparece mais	pessoa_rotina2
+o horímetro faltou	pessoa_rotina2
+o flap sumiu	pessoa_rotina2
+o flap não volta a funcionar	pessoa_rotina2
+o flap parou de responder	pessoa_rotina2
+o trim tab não aparece mais	pessoa_rotina2
+o trim tab faltou	pessoa_rotina2
+o bow thruster sumiu	pessoa_rotina2
+o bow thruster não volta a funcionar	pessoa_rotina2
+o bow thruster parou de responder	pessoa_rotina2
+o joystick não aparece mais	pessoa_rotina2
+o joystick faltou	pessoa_rotina2
+o anemômetro sumiu	pessoa_rotina2
+o anemômetro não volta a funcionar	pessoa_rotina2
+o anemômetro parou de responder	pessoa_rotina2
+o barômetro não aparece mais	pessoa_rotina2
+o barômetro faltou	pessoa_rotina2
+o sensor de vento sumiu	pessoa_rotina2
+o sensor de vento não volta a funcionar	pessoa_rotina2
+o sensor de vento parou de responder	pessoa_rotina2
+o sensor de nível não aparece mais	pessoa_rotina2
+o sensor de nível faltou	pessoa_rotina2
+o transdutor sumiu	pessoa_rotina2
+o transdutor não volta a funcionar	pessoa_rotina2
+o transdutor parou de responder	pessoa_rotina2
+o inversor não aparece mais	pessoa_rotina2
+o inversor faltou	pessoa_rotina2
+o carregador de bateria sumiu	pessoa_rotina2
+o carregador de bateria não volta a funcionar	pessoa_rotina2
+o carregador de bateria parou de responder	pessoa_rotina2
+o alternador não aparece mais	pessoa_rotina2
+o alternador faltou	pessoa_rotina2
+o quadro elétrico sumiu	pessoa_rotina2
+o quadro elétrico não volta a funcionar	pessoa_rotina2
+o quadro elétrico parou de responder	pessoa_rotina2
+a bomba d'água não aparece mais	pessoa_rotina2
+a bomba d'água faltou	pessoa_rotina2
+o hidróforo sumiu	pessoa_rotina2
+o hidróforo não volta a funcionar	pessoa_rotina2
+o hidróforo parou de responder	pessoa_rotina2
+o boiler não aparece mais	pessoa_rotina2
+o boiler faltou	pessoa_rotina2
+o aquecedor sumiu	pessoa_rotina2
+o aquecedor não volta a funcionar	pessoa_rotina2
+o aquecedor parou de responder	pessoa_rotina2
+a máquina de gelo não aparece mais	pessoa_rotina2
+a máquina de gelo faltou	pessoa_rotina2
+a lavadora sumiu	pessoa_rotina2
+a lavadora não volta a funcionar	pessoa_rotina2
+a lavadora parou de responder	pessoa_rotina2
+o roteador não aparece mais	pessoa_rotina2
+o roteador faltou	pessoa_rotina2
+o modem sumiu	pessoa_rotina2
+o modem não volta a funcionar	pessoa_rotina2
+o modem parou de responder	pessoa_rotina2
+a antena do Starlink não aparece mais	pessoa_rotina2
+a antena do Starlink faltou	pessoa_rotina2
+a câmera de ré sumiu	pessoa_rotina2
+a câmera de ré não volta a funcionar	pessoa_rotina2
+a câmera de ré parou de responder	pessoa_rotina2
+o farol de busca não aparece mais	pessoa_rotina2
+o farol de busca faltou	pessoa_rotina2
+o holofote sumiu	pessoa_rotina2
+o holofote não volta a funcionar	pessoa_rotina2
+o holofote parou de responder	pessoa_rotina2
+a luz de navegação não aparece mais	pessoa_rotina2
+a luz de navegação faltou	pessoa_rotina2
+a buzina sumiu	pessoa_rotina2
+a buzina não volta a funcionar	pessoa_rotina2
+a buzina parou de responder	pessoa_rotina2
+o limpador de para-brisa não aparece mais	pessoa_rotina2
+o limpador de para-brisa faltou	pessoa_rotina2
+a escada de popa sumiu	pessoa_rotina2
+a escada de popa não volta a funcionar	pessoa_rotina2
+a escada de popa parou de responder	pessoa_rotina2
+a plataforma de popa não volta a funcionar	pessoa_rotina2
+a plataforma de popa não está a bordo	pessoa_rotina2
+a passarela não responde	pessoa_rotina2
+a passarela caiu	pessoa_rotina2
+o jet ski desapareceu	pessoa_rotina2
+o jet ski não está aqui	pessoa_rotina2
+o jet ski não está a bordo	pessoa_rotina2
+o cabo de reboque não responde	pessoa_rotina2
+o cabo de reboque caiu	pessoa_rotina2
+o cunho desapareceu	pessoa_rotina2
+o cunho não está aqui	pessoa_rotina2
+o cunho não está a bordo	pessoa_rotina2
+a retranca não responde	pessoa_rotina2
+a retranca caiu	pessoa_rotina2
+o fluxômetro desapareceu	pessoa_rotina2
+o fluxômetro não está aqui	pessoa_rotina2
+o fluxômetro não está a bordo	pessoa_rotina2
+o manômetro não responde	pessoa_rotina2
+o manômetro caiu	pessoa_rotina2
+o termômetro desapareceu	pessoa_rotina2
+o termômetro não está aqui	pessoa_rotina2
+o termômetro não está a bordo	pessoa_rotina2
+a válvula de fundo não responde	pessoa_rotina2
+a válvula de fundo caiu	pessoa_rotina2
+o ralo do convés desapareceu	pessoa_rotina2
+o ralo do convés não está aqui	pessoa_rotina2
+o ralo do convés não está a bordo	pessoa_rotina2
+o esguicho não responde	pessoa_rotina2
+o esguicho caiu	pessoa_rotina2
+a mangueira desapareceu	pessoa_rotina2
+a mangueira não está aqui	pessoa_rotina2
+a mangueira não está a bordo	pessoa_rotina2
+o impulsor não responde	pessoa_rotina2
+o impulsor caiu	pessoa_rotina2
+o rotor desapareceu	pessoa_rotina2
+o rotor não está aqui	pessoa_rotina2
+o rotor não está a bordo	pessoa_rotina2
+o filtro Racor não responde	pessoa_rotina2
+o filtro Racor caiu	pessoa_rotina2
+o separador de água desapareceu	pessoa_rotina2
+o separador de água não está aqui	pessoa_rotina2
+o separador de água não está a bordo	pessoa_rotina2
+o ícone do sino não responde	pessoa_rotina2
+o ícone do sino caiu	pessoa_rotina2
+o relatório desapareceu	pessoa_rotina2
+o relatório não está aqui	pessoa_rotina2
+o relatório não está a bordo	pessoa_rotina2
+o widget não responde	pessoa_rotina2
+o widget caiu	pessoa_rotina2
+o gráfico de consumo desapareceu	pessoa_rotina2
+o gráfico de consumo não está aqui	pessoa_rotina2
+o gráfico de consumo não está a bordo	pessoa_rotina2
+o mapa de calor não responde	pessoa_rotina2
+o mapa de calor caiu	pessoa_rotina2
+o alerta de porão desapareceu	pessoa_rotina2
+o alerta de porão não está aqui	pessoa_rotina2
+o alerta de porão não está a bordo	pessoa_rotina2
+o cartão da bomba não responde	pessoa_rotina2
+o cartão da bomba caiu	pessoa_rotina2
+a aba de peças desapareceu	pessoa_rotina2
+a aba de peças não está aqui	pessoa_rotina2
+a aba de peças não está a bordo	pessoa_rotina2
+o painel de alertas não responde	pessoa_rotina2
+o painel de alertas caiu	pessoa_rotina2
+o botão de ligar desapareceu	pessoa_rotina2
+o botão de ligar não está aqui	pessoa_rotina2
+o botão de ligar não está a bordo	pessoa_rotina2
+o campo de busca não responde	pessoa_rotina2
+o campo de busca caiu	pessoa_rotina2
+a barra de status desapareceu	pessoa_rotina2
+a barra de status não está aqui	pessoa_rotina2
+a barra de status não está a bordo	pessoa_rotina2
+o seletor de idioma não responde	pessoa_rotina2
+o seletor de idioma caiu	pessoa_rotina2
+o tema escuro desapareceu	pessoa_rotina2
+o tema escuro não está aqui	pessoa_rotina2
+o tema escuro não está a bordo	pessoa_rotina2
+o selo não responde	pessoa_rotina2
+o selo caiu	pessoa_rotina2
+o PDF do manual desapareceu	pessoa_rotina2
+o PDF do manual não está aqui	pessoa_rotina2
+o PDF do manual não está a bordo	pessoa_rotina2
+o link do guia não responde	pessoa_rotina2
+o link do guia caiu	pessoa_rotina2
+o item do checklist desapareceu	pessoa_rotina2
+o item do checklist não está aqui	pessoa_rotina2
+o item do checklist não está a bordo	pessoa_rotina2
+o lembrete não responde	pessoa_rotina2
+o lembrete caiu	pessoa_rotina2
+a notificação desapareceu	pessoa_rotina2
+a notificação não está aqui	pessoa_rotina2
+a notificação não está a bordo	pessoa_rotina2
+o waypoint não responde	pessoa_rotina2
+o waypoint caiu	pessoa_rotina2
+o ponto de fundeio não responde	pessoa_rotina2
+o ponto de fundeio parou de responder	pessoa_rotina2
+o track não aparece mais	pessoa_rotina2
+o track faltou	pessoa_rotina2
+o trajeto sumiu	pessoa_rotina2
+o trajeto não volta a funcionar	pessoa_rotina2
+o trajeto parou de responder	pessoa_rotina2
+a rota salva não aparece mais	pessoa_rotina2
+a rota salva faltou	pessoa_rotina2
+o gelo sumiu	pessoa_rotina2
+o gelo não volta a funcionar	pessoa_rotina2
+o gelo parou de responder	pessoa_rotina2
+o cooler não aparece mais	pessoa_rotina2
+o cooler faltou	pessoa_rotina2
+a churrasqueira sumiu	pessoa_rotina2
+a churrasqueira não volta a funcionar	pessoa_rotina2
+a churrasqueira parou de responder	pessoa_rotina2
+a mesa do flybridge não aparece mais	pessoa_rotina2
+a mesa do flybridge faltou	pessoa_rotina2
+o guarda-sol sumiu	pessoa_rotina2
+o guarda-sol não volta a funcionar	pessoa_rotina2
+o guarda-sol parou de responder	pessoa_rotina2
+a cortina da cabine não aparece mais	pessoa_rotina2
+a cortina da cabine faltou	pessoa_rotina2
+o espelho sumiu	pessoa_rotina2
+o espelho não volta a funcionar	pessoa_rotina2
+o espelho parou de responder	pessoa_rotina2
+o lençol não aparece mais	pessoa_rotina2
+o lençol faltou	pessoa_rotina2
+o travesseiro sumiu	pessoa_rotina2
+o travesseiro não volta a funcionar	pessoa_rotina2
+o travesseiro parou de responder	pessoa_rotina2
+o chuveiro não aparece mais	pessoa_rotina2
+o chuveiro faltou	pessoa_rotina2
+o vaso sanitário sumiu	pessoa_rotina2
+o vaso sanitário não volta a funcionar	pessoa_rotina2
+o vaso sanitário parou de responder	pessoa_rotina2
+a descarga não aparece mais	pessoa_rotina2
+a descarga caiu	pessoa_rotina2
+o tanque cinza não aparece mais	pessoa_rotina2
+o tanque cinza faltou	pessoa_rotina2
+o hélice sumiu	pessoa_rotina2
+o hélice não volta a funcionar	pessoa_rotina2
+o hélice parou de responder	pessoa_rotina2
+a rabeta não aparece mais	pessoa_rotina2
+a rabeta faltou	pessoa_rotina2
+o semáforo da marina sumiu	pessoa_rotina2
+o semáforo da marina não volta a funcionar	pessoa_rotina2
+o semáforo da marina parou de responder	pessoa_rotina2
+onde está o próximo checklist?	pessoa_rotina2
+onde está o próximo alerta?	pessoa_rotina2
+onde está o próximo registro?	pessoa_rotina2
+onde está o próximo abastecimento?	pessoa_rotina2
+onde está o seguinte ponto da rota?	pessoa_rotina2
+onde está o seguinte checklist?	pessoa_rotina2
+onde está o seguinte alerta?	pessoa_rotina2
+onde está o seguinte registro?	pessoa_rotina2
+onde está o seguinte abastecimento?	pessoa_rotina2
+onde está o atual ponto da rota?	pessoa_rotina2
+onde está o atual checklist?	pessoa_rotina2
+onde está o atual alerta?	pessoa_rotina2
+onde está o atual registro?	pessoa_rotina2
+onde está o atual abastecimento?	pessoa_rotina2
+onde está o principal ponto da rota?	pessoa_rotina2
+onde está o principal checklist?	pessoa_rotina2
+onde está o principal alerta?	pessoa_rotina2
+onde está o principal registro?	pessoa_rotina2
+onde está o principal abastecimento?	pessoa_rotina2
+onde está o maior ponto da rota?	pessoa_rotina2
+onde está o maior checklist?	pessoa_rotina2
+onde está o maior alerta?	pessoa_rotina2
+onde está o maior registro?	pessoa_rotina2
+onde está o maior abastecimento?	pessoa_rotina2
+onde está o melhor ponto da rota?	pessoa_rotina2
+onde está o melhor checklist?	pessoa_rotina2
+onde está o melhor alerta?	pessoa_rotina2
+onde está o melhor registro?	pessoa_rotina2
+onde está o melhor abastecimento?	pessoa_rotina2
+onde está o segundo ponto da rota?	pessoa_rotina2
+onde está o segundo checklist?	pessoa_rotina2
+onde está o segundo alerta?	pessoa_rotina2
+onde está o segundo registro?	pessoa_rotina2
+onde está o segundo abastecimento?	pessoa_rotina2
+onde está o terceiro ponto da rota?	pessoa_rotina2
+onde está o terceiro checklist?	pessoa_rotina2
+onde está o terceiro alerta?	pessoa_rotina2
+onde está o terceiro registro?	pessoa_rotina2
+onde está o terceiro abastecimento?	pessoa_rotina2
+onde está o antigo ponto da rota?	pessoa_rotina2
+onde está o antigo checklist?	pessoa_rotina2
+onde está o antigo alerta?	pessoa_rotina2
+onde está o antigo registro?	pessoa_rotina2
+onde está o antigo abastecimento?	pessoa_rotina2
+onde está o velho ponto da rota?	pessoa_rotina2
+onde está o velho checklist?	pessoa_rotina2
+onde está o velho alerta?	pessoa_rotina2
+onde está o velho registro?	pessoa_rotina2
+onde está o velho abastecimento?	pessoa_rotina2
+onde está o novo ponto da rota?	pessoa_rotina2
+onde está o novo checklist?	pessoa_rotina2
+onde está o novo alerta?	pessoa_rotina2
+onde está o novo registro?	pessoa_rotina2
+onde está o novo abastecimento?	pessoa_rotina2
+onde está o último ponto da rota?	pessoa_rotina2
+onde está o último checklist?	pessoa_rotina2
+onde está o último alerta?	pessoa_rotina2
+onde está o último registro?	pessoa_rotina2
+onde está o último abastecimento?	pessoa_rotina2
+onde está o mesmo ponto da rota?	pessoa_rotina2
+onde está o mesmo checklist?	pessoa_rotina2
+onde está o mesmo alerta?	pessoa_rotina2
+onde está o mesmo registro?	pessoa_rotina2
+onde está o mesmo abastecimento?	pessoa_rotina2
+onde está o outro ponto da rota?	pessoa_rotina2
+onde está o outro checklist?	pessoa_rotina2
+onde está o outro alerta?	pessoa_rotina2
+onde está o outro registro?	pessoa_rotina2
+onde está o outro abastecimento?	pessoa_rotina2
+o Pedro faltou na reunião	pessoa_rotina2
+o Pedro não compareceu ao treinamento	pessoa_rotina2
+o Pedro chegou atrasado	pessoa_rotina2
+o Pedro não confirmou o plantão	pessoa_rotina2
+o Pedro não está cadastrado	pessoa_rotina2
+o Pedro sumiu do cadastro	pessoa_rotina2
+o Pedro pediu demissão	pessoa_rotina2
+o Pedro não vem na sexta	pessoa_rotina2
+o Pedro não voltou de férias	pessoa_rotina2
+o Pedro não manda notícia	pessoa_rotina2
+o Pedro perdeu a hora	pessoa_rotina2
+o Pedro perdeu o contato do fornecedor	pessoa_rotina2
+o Pedro deixou o documento no carro	pessoa_rotina2
+o Pedro ficou no escritório	pessoa_rotina2
+o Pedro demorou para chegar	pessoa_rotina2
+o Pedro trabalha na marina	pessoa_rotina2
+o Pedro está de caiaque hoje	pessoa_rotina2
+o Pedro caiu da moto ontem	pessoa_rotina2
+a Ana faltou no treinamento	pessoa_rotina2
+a Ana não apareceu para o plantão	pessoa_rotina2
+a Ana está atrasado	pessoa_rotina2
+a Ana não está no grupo	pessoa_rotina2
+a Ana ainda não foi cadastrado	pessoa_rotina2
+a Ana desapareceu da lista	pessoa_rotina2
+a Ana está de atestado	pessoa_rotina2
+a Ana não vai no passeio	pessoa_rotina2
+a Ana ainda não voltou de viagem	pessoa_rotina2
+a Ana não leu a mensagem	pessoa_rotina2
+a Ana perdeu o prazo	pessoa_rotina2
+a Ana esqueceu a chave	pessoa_rotina2
+a Ana esqueceu o notebook na oficina	pessoa_rotina2
+a Ana ficou para trás na fila	pessoa_rotina2
+a Ana está sem sinal hoje	pessoa_rotina2
+a Ana está longe daqui	pessoa_rotina2
+a Ana tem curso de mergulho	pessoa_rotina2
+a Ana vai de caiaque no domingo	pessoa_rotina2
+a Ana caiu da cama	pessoa_rotina2
+o Marcos faltou ao trabalho hoje	pessoa_rotina2
+o Marcos não apareceu no escritório	pessoa_rotina2
+o Marcos está demorando para chegar	pessoa_rotina2
+o Marcos não está no app	pessoa_rotina2
+o Marcos não entrou no sistema ainda	pessoa_rotina2
+o Marcos não preencheu o relatório	pessoa_rotina2
+o Marcos saiu da equipe	pessoa_rotina2
+o Marcos está doente hoje	pessoa_rotina2
+o Marcos não pode ir no sábado	pessoa_rotina2
+a Camila faltou no treinamento	pessoa_rotina2
+a Camila não apareceu para o plantão	pessoa_rotina2
+a Camila está atrasado	pessoa_rotina2
+a Camila não está no grupo	pessoa_rotina2
+a Camila ainda não foi cadastrado	pessoa_rotina2
+a Camila não registrou o abastecimento	pessoa_rotina2
+a Camila desapareceu da lista	pessoa_rotina2
+a Camila está de atestado	pessoa_rotina2
+a Camila não vai no passeio	pessoa_rotina2
+o João faltou na reunião	pessoa_rotina2
+o João não compareceu ao treinamento	pessoa_rotina2
+o João chegou atrasado	pessoa_rotina2
+o João não confirmou o plantão	pessoa_rotina2
+o João não está cadastrado	pessoa_rotina2
+o João não assinou o diário	pessoa_rotina2
+o João sumiu do cadastro	pessoa_rotina2
+o João pediu demissão	pessoa_rotina2
+o João não vem na sexta	pessoa_rotina2
+o João não voltou de férias	pessoa_rotina2
+onde está o checklist de saída?	pessoa_rotina2
+não vejo o checklist de saída no app	pessoa_rotina2
+sumiu o checklist de saída	pessoa_rotina2
+não encontro o checklist de chegada	pessoa_rotina2
+falta o checklist de chegada	pessoa_rotina2
+não acho o relatório	pessoa_rotina2
+faltou o relatório	pessoa_rotina2
+cadê o relatório do dia?	pessoa_rotina2
+não aparece o relatório do dia	pessoa_rotina2
+onde está o diário?	pessoa_rotina2
+não vejo o diário no app	pessoa_rotina2
+sumiu o diário	pessoa_rotina2
+não encontro o diário de bordo	pessoa_rotina2
+falta o diário de bordo	pessoa_rotina2
+não acho a agenda	pessoa_rotina2
+faltou a agenda	pessoa_rotina2
+cadê a tarefa?	pessoa_rotina2
+não aparece a tarefa	pessoa_rotina2
+onde está a próxima tarefa?	pessoa_rotina2
+não vejo a próxima tarefa no app	pessoa_rotina2
+sumiu a próxima tarefa	pessoa_rotina2
+não encontro o manual do gerador	pessoa_rotina2
+falta o manual do gerador	pessoa_rotina2
+não acho o guia do Seakeeper	pessoa_rotina2
+faltou o guia do Seakeeper	pessoa_rotina2
+cadê o histórico?	pessoa_rotina2
+não aparece o histórico	pessoa_rotina2
+onde está o estoque de peças?	pessoa_rotina2
+não vejo o estoque de peças no app	pessoa_rotina2
+sumiu o estoque de peças	pessoa_rotina2
+não encontro a lista de peças	pessoa_rotina2
+falta a lista de peças	pessoa_rotina2
+não acho a planilha de consumo	pessoa_rotina2
+faltou a planilha de consumo	pessoa_rotina2
+cadê o extrato?	pessoa_rotina2
+não aparece o extrato	pessoa_rotina2
+onde está o comprovante?	pessoa_rotina2
+não vejo o comprovante no app	pessoa_rotina2
+sumiu o comprovante	pessoa_rotina2
+não encontro o recibo	pessoa_rotina2
+falta o recibo	pessoa_rotina2
+não acho a nota fiscal	pessoa_rotina2
+faltou a nota fiscal	pessoa_rotina2
+cadê a apólice?	pessoa_rotina2
+não aparece a apólice	pessoa_rotina2
+onde está o certificado?	pessoa_rotina2
+não vejo o certificado no app	pessoa_rotina2
+sumiu o certificado	pessoa_rotina2
+não encontro o laudo	pessoa_rotina2
+falta o laudo	pessoa_rotina2
+não acho a vistoria	pessoa_rotina2
+faltou a vistoria	pessoa_rotina2
+cadê o protocolo?	pessoa_rotina2
+não aparece o protocolo	pessoa_rotina2
+onde está o procedimento?	pessoa_rotina2
+não vejo o procedimento no app	pessoa_rotina2
+sumiu o procedimento	pessoa_rotina2
+não encontro as fotos	pessoa_rotina2
+falta as fotos	pessoa_rotina2
+não acho o anexo	pessoa_rotina2
+faltou o anexo	pessoa_rotina2
+cadê o próximo vencimento?	pessoa_rotina2
+não aparece o próximo vencimento	pessoa_rotina2
+onde está a próxima revisão?	pessoa_rotina2
+não vejo a próxima revisão no app	pessoa_rotina2
+sumiu a próxima revisão	pessoa_rotina2
+não encontro o próximo abastecimento	pessoa_rotina2
+falta o próximo abastecimento	pessoa_rotina2
+não acho o último abastecimento	pessoa_rotina2
+faltou o último abastecimento	pessoa_rotina2
+cadê o último registro?	pessoa_rotina2
+não aparece o último registro	pessoa_rotina2
+onde está a última leitura?	pessoa_rotina2
+não vejo a última leitura no app	pessoa_rotina2
+sumiu a última leitura	pessoa_rotina2
+não encontro o último alerta	pessoa_rotina2
+falta o último alerta	pessoa_rotina2
+não acho o alerta de ontem	pessoa_rotina2
+faltou o alerta de ontem	pessoa_rotina2
+cadê o alarme de porão?	pessoa_rotina2
+não aparece o alarme de porão	pessoa_rotina2
+onde está a pendência?	pessoa_rotina2
+não vejo a pendência no app	pessoa_rotina2
+sumiu a pendência	pessoa_rotina2
+não encontro a pendência de segurança	pessoa_rotina2
+falta a pendência de segurança	pessoa_rotina2
+não acho o prazo da vistoria	pessoa_rotina2
+faltou o prazo da vistoria	pessoa_rotina2
+cadê o seguro?	pessoa_rotina2
+não aparece o seguro	pessoa_rotina2
+onde está o contrato da marina?	pessoa_rotina2
+não vejo o contrato da marina no app	pessoa_rotina2
+sumiu o contrato da marina	pessoa_rotina2
+não encontro a licença	pessoa_rotina2
+falta a licença	pessoa_rotina2
+não acho o tender	pessoa_rotina2
+faltou o tender	pessoa_rotina2
+cadê o guincho?	pessoa_rotina2
+não aparece o guincho	pessoa_rotina2
+onde está a âncora?	pessoa_rotina2
+não vejo a âncora no app	pessoa_rotina2
+sumiu a âncora	pessoa_rotina2
+não encontro o gerador	pessoa_rotina2
+falta o gerador	pessoa_rotina2
+não acho o Seakeeper	pessoa_rotina2
+faltou o Seakeeper	pessoa_rotina2
+cadê o piloto automático?	pessoa_rotina2
+não aparece o piloto automático	pessoa_rotina2
+onde está o plotter?	pessoa_rotina2
+não vejo o plotter no app	pessoa_rotina2
+sumiu o plotter	pessoa_rotina2
+não encontro o radar	pessoa_rotina2
+falta o radar	pessoa_rotina2
+não acho o AIS	pessoa_rotina2
+faltou o AIS	pessoa_rotina2
+cadê o sonar?	pessoa_rotina2
+não aparece o sonar	pessoa_rotina2
+onde está a sonda?	pessoa_rotina2
+não vejo a sonda no app	pessoa_rotina2
+sumiu a sonda	pessoa_rotina2
+não encontro o termômetro da água	pessoa_rotina2
+falta o termômetro da água	pessoa_rotina2
+não acho o filtro de óleo	pessoa_rotina2
+faltou o filtro de óleo	pessoa_rotina2
+não acho o filtro de combustível	pessoa_rotina2
+faltou o filtro de combustível	pessoa_rotina2
+cadê o rotor da bomba?	pessoa_rotina2
+não aparece o rotor da bomba	pessoa_rotina2
+onde está o kit de reparo?	pessoa_rotina2
+não vejo o kit de reparo no app	pessoa_rotina2
+sumiu o kit de reparo	pessoa_rotina2
+não encontro o óleo do motor	pessoa_rotina2
+falta o óleo do motor	pessoa_rotina2
+não encontro o diesel	pessoa_rotina2
+falta o diesel	pessoa_rotina2
+não acho a água doce	pessoa_rotina2
+faltou a água doce	pessoa_rotina2
+cadê o tanque de água?	pessoa_rotina2
+não aparece o tanque de água	pessoa_rotina2
+onde está o tanque de diesel?	pessoa_rotina2
+não vejo o tanque de diesel no app	pessoa_rotina2
+sumiu o tanque de diesel	pessoa_rotina2
+não encontro o tanque cinza	pessoa_rotina2
+falta o tanque cinza	pessoa_rotina2
+quem não confirmou presença?	pessoa_rotina2
+quem não assinou o termo?	pessoa_rotina2
+quem não veio hoje?	pessoa_rotina2
+quem faltou hoje?	pessoa_rotina2
+quem faltou ontem?	pessoa_rotina2
+quem faltou no treinamento?	pessoa_rotina2
+quantos faltaram no treinamento?	pessoa_rotina2
+quantos não vieram hoje?	pessoa_rotina2
+quem ainda não chegou?	pessoa_rotina2
+quem ainda não chegou no escritório?	pessoa_rotina2
+quem não voltou do almoço?	pessoa_rotina2
+quem não voltou da marina?	pessoa_rotina2
+quantos não responderam?	pessoa_rotina2
+quantas pessoas faltam assinar?	pessoa_rotina2
+quantos tripulantes faltam escalar?	pessoa_rotina2
+quem não está escalado?	pessoa_rotina2
+quem não está na escala?	pessoa_rotina2
+quem não está no grupo?	pessoa_rotina2
+quem não está no app?	pessoa_rotina2
+quem não aparece na lista?	pessoa_rotina2
+quem não consta na equipe?	pessoa_rotina2
+quem ainda não entrou no app?	pessoa_rotina2
+quem não leu a mensagem?	pessoa_rotina2
+quem não viu o aviso?	pessoa_rotina2
+quem não fez o checklist?	pessoa_rotina2
+quem não registrou o abastecimento?	pessoa_rotina2
+quem não está de plantão?	pessoa_rotina2
+quem não vai no passeio?	pessoa_rotina2
+quem não pode ir no sábado?	pessoa_rotina2
+quem não tem curso de mergulho?	pessoa_rotina2
+quem está sem acesso ao app?	pessoa_rotina2
+quem está sem celular?	pessoa_rotina2
+quem não tem habilitação?	pessoa_rotina2
+quem não renovou a carteira?	pessoa_rotina2
+quem não passou na vistoria?	pessoa_rotina2
+quem perdeu o prazo da renovação?	pessoa_rotina2
+quem perdeu a senha?	pessoa_rotina2
+quem não aparece no cadastro?	pessoa_rotina2
+ninguém assinou o diário hoje?	pessoa_rotina2
+ninguém registrou nada hoje?	pessoa_rotina2
+ninguém fez a revisão?	pessoa_rotina2
+ninguém viu o aviso da marina?	pessoa_rotina2
+ninguém atende o telefone da marina	pessoa_rotina2
+ninguém sabe onde está o manual	pessoa_rotina2
+ninguém achou o controle remoto	pessoa_rotina2
+ninguém encontrou a chave do paiol	pessoa_rotina2
+alguém sabe do Pedro?	pessoa_rotina2
+alguém tem notícia do Pedro?	pessoa_rotina2
+alguém sabe quando o mecânico chega?	pessoa_rotina2
+alguém conseguiu falar com o fornecedor?	pessoa_rotina2
+alguém conseguiu contato com a seguradora?	pessoa_rotina2
+alguém tem o telefone do mecânico?	pessoa_rotina2
+não sei onde o Pedro está hoje	pessoa_rotina2
+não sei onde o mecânico está	pessoa_rotina2
+não sei se o Pedro vem hoje	pessoa_rotina2
+não sei quem vai no sábado	pessoa_rotina2
+não sei quem está de plantão	pessoa_rotina2
+não sei se o Pedro chegou	pessoa_rotina2
+o Pedro chegou?	pessoa_rotina2
+o Pedro já chegou na marina?	pessoa_rotina2
+o Pedro já chegou?	pessoa_rotina2
+a Ana já voltou?	pessoa_rotina2
+o Pedro já voltou do almoço?	pessoa_rotina2
+o Pedro voltou da marina?	pessoa_rotina2
+o mecânico já chegou?	pessoa_rotina2
+o mecânico já voltou?	pessoa_rotina2
+o pessoal já chegou?	pessoa_rotina2
+o pessoal já voltou?	pessoa_rotina2
+todo mundo voltou?	pessoa_rotina2
+todo mundo chegou?	pessoa_rotina2
+todos chegaram?	pessoa_rotina2
+todo mundo está a bordo?	pessoa_rotina2
+todos estão a bordo?	pessoa_rotina2
+todos já embarcaram?	pessoa_rotina2
+o Pedro está aqui?	pessoa_rotina2
+o Pedro está a bordo?	pessoa_rotina2
+onde está todo mundo?	pessoa_rotina2
+cadê o gerente da marina?	pessoa_rotina2
+estamos sem diesel?	pessoa_rotina2
+ficamos sem gelo	pessoa_rotina2
+estamos sem água doce	pessoa_rotina2
+estou sem sinal de celular	pessoa_rotina2
+estamos sem internet	pessoa_rotina2
+ficamos sem o Pedro hoje, quem cobre?	pessoa_rotina2
+estamos sem o mecânico hoje	pessoa_rotina2
+ficamos sem eletricista essa semana	pessoa_rotina2
+estamos sem comandante no sábado	pessoa_rotina2
+ficamos sem cozinheiro no passeio	pessoa_rotina2
+estamos sem o Marcos na escala de sábado	pessoa_rotina2
+ficamos sem a Ana na equipe	pessoa_rotina2
+estamos sem o capitão hoje	pessoa_rotina2
+estou sem o Pedro para assinar o diário	pessoa_rotina2
+alguém viu o Pedro hoje de manhã?	pessoa_rotina2
+alguém viu o relatório?	pessoa_rotina2
+alguém viu o Marcos no escritório?	pessoa_rotina2
+alguém viu o manual do gerador?	pessoa_rotina2
+alguém viu o controle do guincho?	pessoa_rotina2
+alguém viu meu celular?	pessoa_rotina2
+oi, bom dia	cerebro_casos
+fumaça no escapamento do motor	cerebro_casos
+Registre no diário: saída com 4 pessoas	cerebro_casos
+vou registrar no diário depois	cerebro_casos
+não registre isso	cerebro_casos
+como ligar o gerador?	cerebro_casos
+Situação e vencimento do documento: Certificado do EPIRB (bateria e disparador hidrostático)	cerebro_casos
+alarme de fluxo da climatização	cerebro_casos
+parear bluetooth no fusion	cerebro_casos
+manual do gerador	cerebro_casos
+quem ganhou o jogo ontem	cerebro_casos
+como está o barco?	cerebro_casos
+troca do rotor do gerador	cerebro_casos
+Oque você faz?	cerebro_casos
+o que vc sabe fazer?	cerebro_casos
+quem é vc?	cerebro_casos
+como você funciona?	cerebro_casos
+pra que serve esse app?	cerebro_casos
+status da IA	cerebro_casos
+a IA está ligada?	cerebro_casos
+teste da IA	cerebro_casos
+qual o diagnóstico do gerador?	cerebro_casos
+a IA não está funcionando	cerebro_casos
+Capitão, diagnóstico	cerebro_casos
+diagnóstico, por favor	cerebro_casos
+rode o diagnóstico	cerebro_casos
+qual é o status da IA?	cerebro_casos
+a IA na nuvem está ligada?	cerebro_casos
+o motor BB não está funcionando	cerebro_casos
+o gerador onan tá ligado?	cerebro_casos
+vai ter rajada hoje?	cerebro_casos
+como estão as rajadas?	cerebro_casos
+rajadas?	cerebro_casos
+a âncora garrou com a rajada	cerebro_casos
+o motor BB apagou na rajada	cerebro_casos
+seakeeper desligou na rajada	cerebro_casos
+o gerador desligou com a rajada	cerebro_casos
+o piloto automático não segura com rajada	cerebro_casos
+o motor apagou na rajada hoje	cerebro_casos
+a rajada rasgou o toldo	cerebro_casos
+qual a rajada máxima que o barco aguenta?	cerebro_casos
+a rajada de hoje arrancou o toldo	cerebro_casos
+há rajada forte entrando, o que faço?	cerebro_casos
+quanto tempo dura uma rajada?	cerebro_casos
+tem rajada hoje?	cerebro_casos
+qual a previsão de rajada para amanhã?	cerebro_casos
+como se faz um nó lais de guia?	cerebro_casos
+teste da baliza	cerebro_casos
+botão distress	cerebro_casos
+transponder em-trak	cerebro_casos
+como lançar com o guincho Lewmar	cerebro_casos
+como ligar o radar Garmin	cerebro_casos
+como engatar o piloto automático Raymarine	cerebro_casos
+como você me ajuda com o teste da baliza?	cerebro_casos
+o que você sabe sobre o teste da baliza?	cerebro_casos
+quais equipamentos tem a bordo?	cerebro_casos
+equipamentos do barco	cerebro_casos
+modelo dos equipamentos	cerebro_casos
+como religar o gerador depois de desligar	cerebro_casos
+como abrir o motor	cerebro_casos
+como abrir o gerador	cerebro_casos
+como abrir o acesso ao motor	cerebro_casos
+posso abrir o acesso ao motor para conferir o óleo	cerebro_casos
+como abrir a ventilação	cerebro_casos
+como desligar a ventilação	cerebro_casos
+como ligar a ventilação depois de desligar	cerebro_casos
+como religar a ventilação depois de desligar	cerebro_casos
+o alarme disparou	cerebro_casos
+como desligar o sistema	cerebro_casos
+como religar o motor depois de desligar	cerebro_casos
+quando trocar o óleo do motor?	cerebro_casos
+como esfriar o motor	cerebro_casos
+como esfriar o motor depois de navegar	cerebro_casos
+como esfriar o motor depois de navegar rápido	cerebro_casos
+distress	cerebro_casos
+como usar o botão distress	cerebro_casos
+como ligar o plotter	cerebro_casos
+como ligar o sistema de som	cerebro_casos
+como ligar o sistema de áudio	cerebro_casos
+como funciona o sistema elétrico	cerebro_casos
+como está o sistema elétrico	cerebro_casos
+como funciona o sistema de baterias	cerebro_casos
+como desligar o sistema elétrico	cerebro_casos
+como desligar o piloto	cerebro_casos
+como desligar a bomba	cerebro_casos
+como esfriar a climatização	cerebro_casos
+como ligar o carregador	cerebro_casos
+como ligar o carregador de bateria	cerebro_casos
+seakeeper temperatura alta	cerebro_casos
+trocar o filtro do ar condicionado	cerebro_casos
+como ligar o ar	cerebro_casos
+como ligar o ar condicionado	cerebro_casos
+como desligar o ar	cerebro_casos
+substituir filtro de ar	cerebro_casos
+como funciona o piloto automático	cerebro_casos
+alarme de âncora	cerebro_casos
+sem governo	cerebro_casos
+barco sem governo	cerebro_casos
+pane no barco	cerebro_casos
+o parafuso caiu	cerebro_casos
+quantas pessoas a bordo	cerebro_casos
+a pessoa da marina	cerebro_casos
+o governo federal	cerebro_casos
+quando trocar o rotor da bomba de água salgada	cerebro_casos
+como trocar o impeller da bomba de água salgada	cerebro_casos
+rotor da bomba	cerebro_casos
+como inspecionar o rotor da bomba	cerebro_casos
+alarme da bomba de água salgada	cerebro_casos
+como ligar a bomba de água salgada	cerebro_casos
+como desligar a bomba de água salgada	cerebro_casos
+como ligar a bomba da climatização	cerebro_casos
+como desligar a bomba da climatização	cerebro_casos
+como trocar o rotor da bomba do gerador	cerebro_casos
+como trocar a bomba de óleo	cerebro_casos
+a bomba de circulação	cerebro_casos
+como testar as bombas de porão	cerebro_casos
+como testar a bomba de porão	cerebro_casos
+como ligar as bombas de porão	cerebro_casos
+como trocar a bateria de partida	cerebro_casos
+como verificar a bateria de partida	cerebro_casos
+bateria de partida	cerebro_casos
+o motor não pega, a bateria de partida está fraca	cerebro_casos
+o disjuntor caiu, qual o procedimento	cerebro_casos
+a bateria caiu, procedimento	cerebro_casos
+o gerador caiu, procedimento	cerebro_casos
+o plotter caiu, como resolver	cerebro_casos
+o motor caiu, como resolver	cerebro_casos
+a conexão do plotter caiu, procedimento	cerebro_casos
+a energia caiu	cerebro_casos
+a tensão caiu	cerebro_casos
+caiu a chave no mar	cerebro_casos
+onde fica o manual do motor	cerebro_casos
+como acho o manual do motor	cerebro_casos
+onde fica o manual	cerebro_casos
+tem vista para o mar?	cerebro_casos
+qual a vista do mar	cerebro_casos
+a temperatura do mar caiu	cerebro_casos
+onde fica o plotter	cerebro_casos
+como ver o radar	cerebro_casos
+como ver o garmin	cerebro_casos
+como ver o icom	cerebro_casos
+como ver o fusion	cerebro_casos
+como ver o som	cerebro_casos
+como ver o áudio	cerebro_casos
+onde fica o motor	cerebro_casos
+como ver os navios no radar	cerebro_casos
+como ver o radar no plotter	cerebro_casos
+como ver a posição no plotter	cerebro_casos
+como ver o motor no garmin	cerebro_casos
+como ver o gerador no garmin	cerebro_casos
+onde fica o ar condicionado	cerebro_casos
+onde fica o ar-condicionado	cerebro_casos
+onde fica o som	cerebro_casos
+como funciona a identificação do transponder	cerebro_casos
+o que fazer antes de largar	cerebro_casos
+a bomba de esgoto não para	cerebro_casos
+a bomba de esgoto está enchendo de água	cerebro_casos
+bomba de esgoto	cerebro_casos
+bomba do estabilizador	cerebro_casos
+alarme da bomba do seakeeper	cerebro_casos
+bomba do piloto automático	cerebro_casos
+bomba hidráulica	cerebro_casos
+a bomba do gerador	cerebro_casos
+bomba do dessalinizador	cerebro_casos
+como ligar a bomba do dessalinizador	cerebro_casos
+bomba de pressurização	cerebro_casos
+a bomba de circulação não funciona	cerebro_casos
+bomba de lavagem	cerebro_casos
+como funciona a bomba de porão	cerebro_casos
+em caso de alarme	cerebro_casos
+em caso de falha do motor	cerebro_casos
+qual o procedimento padrão	cerebro_casos
+qual o protocolo de bordo	cerebro_casos
+confirmar com o protocolo de bordo	cerebro_casos
+confirmar protocolo	cerebro_casos
+como testar a baliza?	cerebro_casos
+onde fica a baliza	cerebro_casos
+tem vista para o mar	cerebro_casos
+o piloto em espera	cerebro_casos
+bateu o horário do abastecimento	cerebro_casos
+sem governo federal	cerebro_casos
+a temperatura da água está subindo	cerebro_casos
+o consumo bateu em 40 litros por hora	cerebro_casos
+o tanque bateu em 50%	cerebro_casos
+o horímetro bateu em 1000 horas	cerebro_casos
+quando o gerador bateu em 1200 horas	cerebro_casos
+a temperatura bateu em 90 graus	cerebro_casos
+o relógio bateu em meia noite	cerebro_casos
+o vento bateu em 20 nós	cerebro_casos
+a bateria bateu em 12 volts	cerebro_casos
+o horário bateu em 10h	cerebro_casos
+a conta bateu em 500	cerebro_casos
+o consumo bateu em um litro por hora	cerebro_casos
+a onda bateu no casco	cerebro_casos
+a gente cai fora do porto às 10h	cerebro_casos
+vamos pro mar amanhã	cerebro_casos
+como sangrar o combustível do motor	cerebro_casos
+sangrando o ar do sistema	cerebro_casos
+sangra o ar da bomba	cerebro_casos
+o motor está tomando água do mar	cerebro_casos
+o passageiro perdeu o voo	cerebro_casos
+o mar está calmo hoje	cerebro_casos
+o sistema de bombas de porão disparou	cerebro_casos
+o sistema do porão disparou	cerebro_casos
+o sistema do seakeeper disparou o alarme	cerebro_casos
+o gerador descarregou	cerebro_casos
+o alarme do sistema de arrefecimento disparou	cerebro_casos
+o sistema hidráulico disparou o alarme de pressão	cerebro_casos
+o sistema do guincho disparou	cerebro_casos
+o sistema de esgoto disparou	cerebro_casos
+o sistema de alarme disparou	cerebro_casos
+alarme de sistema disparou	cerebro_casos
+o sistema de arrefecimento disparou	cerebro_casos
+o sistema de navegação disparou	cerebro_casos
+o sistema de direção disparou	cerebro_casos
+o sistema de ancoragem disparou	cerebro_casos
+descarregar as compras do barco	cerebro_casos
+descarreguei os cartões	cerebro_casos
+depois da descarga do vaso sanitário	cerebro_casos
+depois da descarga do banheiro	cerebro_casos
+o sistema da bomba disparou	cerebro_casos
+o sistema da âncora disparou	cerebro_casos
+o sistema do motor disparou	cerebro_casos
+o motor descarregou	cerebro_casos
+o sistema do gerador disparou	cerebro_casos
+o sistema do estabilizador descarregou	cerebro_casos
+a boia do porão está travada	cerebro_casos
+a boia da bomba de porão não sobe	cerebro_casos
+a boia de nível da bomba	cerebro_casos
+boia de nível do tanque	cerebro_casos
+a boia do tanque de combustível	cerebro_casos
+a boia de ancoragem	cerebro_casos
+coletei os dados	cerebro_casos
+o bálsamo	cerebro_casos
+a bateria descarregou	cerebro_casos
+o disjuntor do sistema elétrico disparou	cerebro_casos
+o sistema de som disparou o alarme	cerebro_casos
+luz da boia	cerebro_casos
+boia de amarração	cerebro_casos
+o consumo bateu em um valor alto	cerebro_casos
+a temperatura bateu em um pico de 90 graus	cerebro_casos
+o vento bateu em um pico de 30 nós	cerebro_casos
+a bateria bateu em um mínimo de 24 volts	cerebro_casos
+o horímetro bateu em uma marca de 1200 horas	cerebro_casos
+a rotação bateu em um limite	cerebro_casos
+o nível do tanque bateu num valor baixo	cerebro_casos
+bateu num limite	cerebro_casos
+o consumo bateu num recorde	cerebro_casos
+o motor bateu num limite de horas	cerebro_casos
+o gerador bateu numa média alta	cerebro_casos
+bateu num valor	cerebro_casos
+a pressão bateu num valor alto	cerebro_casos
+bateu num pico	cerebro_casos
+o motor bateu forte	cerebro_casos
+o preço bateu em cheio	cerebro_casos
+a previsão bateu em cheio	cerebro_casos
+a vela bateu forte	cerebro_casos
+o vento bateu forte	cerebro_casos
+o vento bateu em mim	cerebro_casos
+o ponteiro bateu no fundo	cerebro_casos
+o nível do tanque bateu no fundo	cerebro_casos
+o pix bateu no banco	cerebro_casos
+o dinheiro bateu no banco	cerebro_casos
+a vela bateu no mastro	cerebro_casos
+o sino bateu	cerebro_casos
+o relógio bateu 12 horas	cerebro_casos
+a mangueira de lavagem estourou	cerebro_casos
+a mangueira do chuveiro soltou	cerebro_casos
+validade das mangueiras	cerebro_casos
+estou tomando água	cerebro_casos
+estou fazendo água doce	cerebro_casos
+o dessalinizador está fazendo água	cerebro_casos
+dessalinizador fazendo água doce	cerebro_casos
+o dessalinizador está fazendo água potável	cerebro_casos
+o ar condicionado está fazendo água	cerebro_casos
+o ar-condicionado está fazendo água no chão	cerebro_casos
+estou fazendo agua quente	cerebro_casos
+fazendo água potável	cerebro_casos
+a geladeira está fazendo água	cerebro_casos
+a água entrou no tanque de água doce	cerebro_casos
+entrou água no tanque de água doce	cerebro_casos
+entrou água no ouvido	cerebro_casos
+por onde a água entra no motor?	cerebro_casos
+o Capitão IA caiu	cerebro_casos
+meu pai no mar pescando	cerebro_casos
+como sangrar o ar do sistema de combustível	cerebro_casos
+sangrar o filtro de diesel	cerebro_casos
+sangramento do ar da bomba de combustível	cerebro_casos
+sangramento do respiro do tanque	cerebro_casos
+sangrando o bico injetor	cerebro_casos
+doação de sangue	cerebro_casos
+mantenha o sangue frio	cerebro_casos
+o motor está queimando óleo	cerebro_casos
+estamos queimando 40 litros por hora	cerebro_casos
+lâmpada queimada	cerebro_casos
+a chama do fogão está azul	cerebro_casos
+choque térmico	cerebro_casos
+o preço deu um choque	cerebro_casos
+rombo no orçamento	cerebro_casos
+fomos abordados pela Marinha	cerebro_casos
+fomos atingidos por uma rajada	cerebro_casos
+fazendo água doce	cerebro_casos
+fazendo água na boca	cerebro_casos
+o bebedouro está fazendo água	cerebro_casos
+a máquina de gelo está fazendo água	cerebro_casos
+o dessalinizador do barco está fazendo água	cerebro_casos
+o ar está fazendo água	cerebro_casos
+entrou água na bota	cerebro_casos
+a temperatura da água subindo no barco	cerebro_casos
+o barco está cheio de água doce	cerebro_casos
+como testo as bombas de porão	cerebro_casos
+testar o alarme de porão	cerebro_casos
+como funciona o alarme do porão	cerebro_casos
+o que fazer quando o alarme do porão tocar	cerebro_casos
+a bomba de porão não está ligando	cerebro_casos
+a água do tanque acabou	cerebro_casos
+baliza cardinal	cerebro_casos
+a baliza de canal	cerebro_casos
+o eixo estava bom quando o barco partiu	cerebro_casos
+o eixo da hélice está ok	cerebro_casos
+a âncora tocou o fundo	cerebro_casos
+a âncora tocou no fundo	cerebro_casos
+quando a âncora tocou no fundo quantos metros de cabo eu solto?	cerebro_casos
+o ferro já tocou no fundo	cerebro_casos
+a poita tocou o fundo	cerebro_casos
+a sonda tocou o fundo	cerebro_casos
+o mergulhador tocou o fundo	cerebro_casos
+a âncora raspou numa pedra	cerebro_casos
+a âncora esbarrou numa pedra	cerebro_casos
+a mangueira de lavagem estourou e a pia entupiu	cerebro_casos
+o leme está com folga	cerebro_casos
+o leme do barco precisa de graxa	cerebro_casos
+como ajustar o leme	cerebro_casos
+o homem da marina chegou	cerebro_casos
+entra água no tanque de água doce	cerebro_casos
+o motor engasgou	cerebro_casos
+cortou a energia	cerebro_casos
+queimou o fusível	cerebro_casos
+quebrou o braço do guincho	cerebro_casos
+vamos bater um papo	cerebro_casos
+tem chama no fogão?	cerebro_casos
+o tanque de água doce está vazando	cerebro_casos
+o tanque está vazando	cerebro_casos
+zona de perigo da carta	cerebro_casos
+trocar a hélice	cerebro_casos
+o leme está pesado	cerebro_casos
+estamos indo para as pedras de Cabeçudas	cerebro_casos
+estou pegando água no cais	cerebro_casos
+perdi o controle remoto	cerebro_casos
+estamos sem controle remoto	cerebro_casos
+os dois motores desligaram	cerebro_casos
+por que a baliza do canal está piscando?	cerebro_casos
+a baliza do canal está apagada	cerebro_casos
+baliza lateral verde	cerebro_casos
+a baliza de entrada da barra está apagada	cerebro_casos
