@@ -4904,6 +4904,336 @@
   // O resumo da viagem («resumo da viagem», «como foi a saída hoje?», «balanço do passeio»): o percorrido desde a âncora do dia e a chegada prevista, a rota `eta` pelo lado do percorrido
   var RESUMO_VIAGEM = / (?:resumo|balanco|relatorio) (?:da|do|de) (?:viagem|saida|passeio|travessia|navegacao|dia) | como (?:foi|esta indo|esta sendo|foram) (?:a |o |as |os )?(?:viagem|saida|passeio|travessia|navegacao) /;
   var RESUMO_VIAGEM_OK = NEUTRAS_BASE + 'resumo balanco relatorio viagem saida passeio travessia navegacao dia como foi esta indo sendo foram hoje ate agora ';
+  // ——— Fase 2 da tarefa #12 (CLAUDE.md §Pendências, "Furo de segurança estrutural"): rede de 2ª camada para água, incêndio, médica e colisão ———
+  // Mesmo papel do `risco(qRaw).n >= 1` daqui a poucas linhas: route() só tinha essa rede para "pessoa ao mar/sumida". Medido na Fase 1 (Playwright real, matriz de
+  // 15.240 combinações em testes/dados/emergencia-ambigua-matriz-20261123.txt), uma cláusula AMBÍGUA destas 4 categorias — nunca a palavra ou a estrutura que emergencia()/SOS_REGEX
+  // já reconhecem («entrando agua», «alagad», «cheiro de queimado», «leme quebrou/travou», «bateu em…») — junto de uma pergunta de equipamento caía direto numa rota de dado
+  // (ancora, posição, maré, telemetria, clima…) que leva o quadro, ou habilitava a IA (pedeIA). {n:1} = a instrução de segurança, sem o quadro, sem IA (fallbackEmergenciaAmbigua, abaixo);
+  // {n:0} = nada, segue a rota de assunto. O falso positivo custa só a resposta local (sem o trecho do guia, sem a IA); o falso negativo é o estado de antes deste patch.
+  // O DESENHO é estrutural, não uma lista de frases: cada categoria combina raízes de palavra (o que acontece) com o CONTEXTO (onde, em quê) e, quando a raiz sozinha é rotina, com um sinal de
+  // ANOMALIA («do nada», «de repente», «demais», «sozinho», «estranho»), sempre numa JANELA de poucas palavras (a técnica de riscoNetTexto), com GUARDA de rotina e negação («não é chuva»
+  // não é guarda). Cada cláusula (pontuação) é avaliada à parte, e a pergunta de procedimento («como/qual/quando/onde… ?») não conta, só o relato. Primeiro incremento, não a sofisticação de
+  // risco()/pessoaPerdida() (várias rodadas datadas). Atenção ao ler os números: a matriz de 15.240 combinações é DENTRO da amostra (o vocabulário nasceu olhando para as 6 cláusulas por categoria);
+  // a generalização se mede nos conjuntos testes/dados/emergencia-ambigua-holdout{,2,3}-20261123.txt (cláusulas escritas à parte) e o falso positivo em corpus-natural-bordo e corpus-natural-hardneg.
+  // Limites conhecidos: cláusula SEM pontuação colada a uma pergunta com palavra de guarda («âncora», «troca»…) pode ser calada; a rota `oleo` e as de equipamento de segurança (acima do portão) seguem as suas.
+  function ambNorm(s) { var t = ' ' + norm(s).replace(/['’´`]/g, ' ').replace(/[^a-z0-9%]+/g, ' ').replace(/\s+/g, ' ').trim() + ' '; return t.replace(/ (?:de|por) baixo /g, ' debaixo '); }
+  function ambR(alt) { return new RegExp('^(?:' + alt + ')$'); }
+  function ambIdx(t, re) { var r = [], i; for (i = 0; i < t.length; i++) if (re.test(t[i])) r.push(i); return r; }
+  // negação («não», «nem», «sem», «nenhum(a)», «ninguém», «nunca») logo antes de t[k], nas n palavras anteriores; o «não sei» é desconhecer, não nega o que vem depois («não sei por que choveu»)
+  var AMB_NEG = ambR('nao|nem|sem|nenhum|nenhuma|ninguem|nunca|jamais'), AMB_SABE = ambR('sei|sabe|sabemos|sabia|sabiamos|entendo|lembro');
+  var AMB_CONJ = ambR('e|mas|ou|porem|entao|so|pois|que');   // (a negação não atravessa a conjunção: «sem forças e respirando rápido» não nega o respirar)
+  function ambNegado(t, k, n) {
+    var m;
+    for (m = k - 1; m >= Math.max(0, k - n); m--) {
+      if (AMB_CONJ.test(t[m]) && !(t[m] === 'e' && /^(?:nao|nem|isso|ele|ela|tudo|aquilo|esse|essa|este|que)$/.test(t[m - 1] || ''))) return false;   // (o «e» de «não é chuva» é o verbo, sem acento)
+      if (AMB_NEG.test(t[m]) && !(t[m] === 'nao' && AMB_SABE.test(t[m + 1] || '')) && !(t[m] === 'sem' && k - m > 2)) return true;
+    }
+    return false;
+  }
+  // há uma palavra de A a no máximo n palavras de uma de B (a janela de distância; nunca a mesma palavra)
+  // `semNeg` tira a palavra negada logo antes («não sai água» é a falta de água: ausência, não relato; «o piso não está molhado»): true ou 1 = de B, 2 = de A, 3 = de A e de B
+  function ambPerto(t, A, B, n, semNeg) {
+    var ia = ambIdx(t, A), ib, i, j, sn = semNeg === true ? 1 : (semNeg | 0);
+    if (!ia.length) return false;
+    ib = ambIdx(t, B);
+    if (sn & 1) ib = ib.filter(function (k) { return !ambNegado(t, k, 3); });
+    if (sn & 2) ia = ia.filter(function (k) { return !ambNegado(t, k, 3); });
+    for (i = 0; i < ia.length; i++) for (j = 0; j < ib.length; j++) if (ia[i] !== ib[j] && Math.abs(ia[i] - ib[j]) <= n) return true;
+    return false;
+  }
+  // a palavra de guarda (rotina) só vale sem negação logo antes: «não é chuva», «não foi o chuveiro», «sem chuva». A negação é a que só tem o verbo de ligação e o artigo entre ela e a guarda: «não responde ao piloto» não nega o piloto
+  var AMB_LIGA = ambR('e|foi|era|esta|ta|estava|sao|eram|tem|tinha|houve|ha|ser|o|a|os|as|um|uma|de|da|do|das|dos|nenhum|nenhuma|nada|so|apenas|mais|ainda|tambem');
+  function ambNegGuarda(t, k) {
+    var m;
+    for (m = k - 1; m >= Math.max(0, k - 4); m--) {
+      if (AMB_NEG.test(t[m])) return true;
+      if (!AMB_LIGA.test(t[m])) return false;
+    }
+    return false;
+  }
+  function ambGuarda(t, G) {
+    var k;
+    for (k = 0; k < t.length; k++) if (G.test(t[k]) && !ambNegGuarda(t, k)) return true;
+    return false;
+  }
+  // a expressão regular (com espaços nas pontas, em texto normalizado) casa fora de uma negação: o casamento só vale sem «não/sem/nenhum…» nas 4 palavras antes
+  function ambAcha(r, s, objeto) {
+    var g = new RegExp(r.source, 'g'), m, ant, dep;
+    while ((m = g.exec(s)) !== null) {
+      ant = s.slice(0, m.index + 1).trim().split(' ');
+      dep = s.slice(m.index + m[0].length - 1).trim().split(' ').slice(0, 4);
+      if (!ambNegado(ant.concat('@'), ant.length, 4) && !(objeto && ant.slice(-4).concat(dep).some(function (w) { return objeto.test(w); }))) return true;
+      if (m[0].length === 0) g.lastIndex++;
+      else g.lastIndex = m.index + 1;
+    }
+    return false;
+  }
+
+  // Água: algo molhado, úmido, pingando ou empoçado no INTERIOR do barco, sem explicação — nunca «entrando agua»/«alagad»/o porão cheio (já na lista SOS) —, fora do que já lida com água
+  // (tanque, torneira, chuveiro, pia, filtro, limpeza, chuva, ar-condicionado).
+  var AG_H = ambR('molhad[oa]s?|molhou|molhando|encharcad[oa]s?|encharcou|encharcando|ensopad[oa]s?|ensopou|ensopando|poca|pocas|pocinha|lamina|pinga|pingo|pingos|pingand[oa]|pingou|gotej[a-z]*|gotas?|goteiras?|minand[oa]|minou|escorrend[oa]|escorreu|escorre|escorrer|respingos?|transbord[a-z]*|empocad[oa]s?|empocou');
+  var AG_HU = ambR('umid[oa]s?|umidade'), AG_MOFO = ambR('mofo|mofado|bolor');   // (o úmido de manhã e o úmido com mofo são condensação; a poça e o pingo não)
+  var AG_MARE = / (?:subindo|sobe|subiu|enchendo|enche) ou (?:descendo|desce|desceu|vazando|vaza) | (?:descendo|desce|desceu|vazando|vaza) ou (?:subindo|sobe|subiu|enchendo|enche) /;   // (a maré, a pergunta do nível de fora)
+  var AG_EXT = / escada (?:de|da) (?:popa|banho|embarque|mergulho) /;   // (a escada de fora, molhada e escorregadia)
+  var AG_AGUA = ambR('aguas?');
+  var AG_V = ambR('empocad[oa]s?|correndo|corre|escorrend[oa]|escorrer|escorreu|acumulando|acumulada|acumulou|nova|suja|estranha|barrenta|oleosa|subindo|subiu|sobe|chacoalhando|mexendo|aparecendo|apareceu|aparece|minando|descendo|desce|soltando|saindo|brotando|pesad[oa]|cheio|cheia|cheios|cheias|pingando|vindo|vem|saiu|sai|batendo|mergulhad[oa]|boiando|flutuando|marcad[oa]|manchad[oa]|escura|escuro|fria|entrou|chegando|chegou|surgindo|surgiu');
+  var AG_C = ambR('aqui|ali|aca|embaixo|debaixo|dentro|cabine|cabines|camarote|camarotes|salao|piso|chao|assoalho|carpete|tapete|forro|teto|estofado|estofados|colchao|rodape|escada|motor|motores|maquinas|armario|armarios|gaveta|gavetas|escotilha|escotilhas|banheiro|lavabo|cozinha|assento|sofa|cama|beliche|travesseiro|parede|paredes|painel|casco|quilha|vao|ralo|praca|sala|bateria|baterias|quadro|fiacao|compartimento|paiol|paioes|sentina');
+  var AG_G = ambR('tanque|tanques|torneira|torneiras|chuveiro|chuveiros|ducha|pia|pias|filtro|filtros|dessalinizador|watermaker|potavel|doce|mineral|gelada|gelado|gelo|cafe|cha|copo|garrafa|jarra|coco|lavagem|lavar|lavando|lavei|lavamos|limpeza|limpar|limpando|limpei|faxina|mangueira|banho|piscina|praia|secar|secando|seca|secou|secagem|toalha|toalhas|roupa|roupas|varal|chuva|chuvas|chuvendo|chovendo|choveu|condicionado|climatizacao|dreno|drenagem|umidificador|desumidificador|relativa|[0-9]+%|%|percentual'
+    // (o que explica a água: condensação, orvalho, garoa, mofo, a limpeza, o que se derramou, o eletrodoméstico, o escapamento, o que é do lado de fora, a roupa que molhou)
+    + '|chove|condensacao|orvalho|garoa|sereno|rodo|esfregao|pano|enxugar|enxugando|enxuguei|pendurar|pendurei|derramei|derramou|derramamos|derramaram|derrubei|derrubou|suco|cerveja|refrigerante|vinho|leite|geladeira|freezer|frigobar|cooler|isopor|bebedouro|privada|sanitario|cafeteira|chaleira|casaco|biquini|sunga');
+  // o que explica a água SÓ quando está a até 6 palavras dela («o piso do cockpit», «água do escapamento», «reduzir a umidade»): a pergunta de equipamento do ditado, sem pontuação, usa as mesmas palavras longe do relato
+  var AG_GP = ambR('escapamento|escape|exaustao|descarga|deposito|reservatorio|cisterna|cockpit|flybridge|conves|deck|plataforma|passarela|cais|pier|marina|vaga|ideal|reduzir|reduzo|reduzindo|desumidificar');
+  function ambPertoAgua(t, G, n) { return ambPerto(t, G, AG_H, n) || ambPerto(t, G, AG_HU, n) || ambPerto(t, G, AG_AGUA, n); }
+  var AG_C_W = ambR('aqui|ali|aca');   // («aqui» sozinho é fraco: no píer, na marina, no canal)
+  var AG_C_F = ambR('embaixo|debaixo|dentro|cabine|cabines|camarote|camarotes|salao|piso|chao|assoalho|carpete|tapete|forro|teto|estofado|estofados|colchao|rodape|escada|motor|motores|maquinas|armario|armarios|gaveta|gavetas|escotilha|escotilhas|banheiro|lavabo|cozinha|assento|sofa|cama|beliche|travesseiro|parede|paredes|painel|casco|quilha|vao|ralo|praca|sala|bateria|baterias|quadro|fiacao|compartimento|paiol|paioes|sentina');
+  var AG_MAR = ambR('marina|marinas|pier|cais|baia|canal|mare|fundeio|enseada|barra|costao|praia|ilha|lagoa|vaga|porto|doca|rio|mergulhar|mergulho|nadar|deposito');   // (a água de fora, do lugar onde o barco está)
+  var AG_V_MOV = ambR('correndo|corre|escorrend[oa]|escorrer|escorreu|acumulando|acumulou|subindo|subiu|sobe|aparecendo|apareceu|aparece|minando|descendo|desce|soltando|saindo|brotando|vindo|vem|saiu|sai|entrou|chegando|chegou|surgindo|surgiu|batendo|boiando|flutuando|empocad[oa]s?');
+  var AG_OL = ambR('oleo|diesel|combustivel|lubrificante|graxa|fluido|gasolina');   // (vazar óleo ou combustível não é água: sem a palavra «água» na frase)
+  var AG_GW = / (?:de|pela|toda|na|cedo) manha | ao amanhecer | madrugada /;   // (a explicação que não pesa se a frase diz que ninguém sabe a causa)
+  var AG_UMID = / umidade(?: [a-z0-9]+){0,4} (?:alta|altas|elevada|excessiva|do ar|relativa|ambiente|ideal) /;   // (a umidade do ar não é a água dentro do barco)
+  var AG_DESC = / nao sei (?:de onde|por que|porque|o que|como) | sem saber | ninguem (?:sabe|derramou|molhou|mexeu) | do nada | de repente | sem (?:motivo|explicacao|razao) | misterios[oa] | estranh[oa] /;
+  var AG_EXISTE = / (?:tem|tinha|ha|havia|apareceu|aparecendo|surgiu|surgindo|entrou|entra|veio|vem|vindo|sobe|subiu|subindo) (?:[a-z0-9]+ ){0,2}aguas? (?:[a-z0-9]+ )?(?:aqui|ali|aca|dentro|embaixo|debaixo) /;   // «Tem água aqui»
+  var AG_PAREDE = / (?:parede|paredes|casco|teto|forro) (?:[a-z0-9]+ ){0,2}suand[oa] /;   // «as paredes estão suando» (a parede, não a pessoa; o vidro e o cano suam de condensação)
+  var AG_BOMBA_A = ambR('bombas?'), AG_BOMBA_B = ambR('porao'), AG_LIGA = ambR('ligou|ligando|ligaram|acionou|acionando|disparou|disparando|rodando|trabalhando'), AG_SOZ = ambR('sozinh[oa]s?|hora|direto|parar|toda|todo');   // a bomba do porão que liga sozinha, toda hora (a contagem «mais vezes que o normal» é relato de falha)
+  var AG_BOMBA_NP = / bombas? (?:[a-z0-9]+ ){0,3}porao (?:[a-z0-9]+ ){0,2}nao (?:esta )?(?:para|parando|desliga|desligando|da conta|dando conta) /;   // («a bomba do porão não para», «não dá conta»)
+  function ambAgua(t, s) {
+    var mar;
+    if (ambGuarda(t, AG_G) || AG_UMID.test(s) || AG_EXT.test(s) || AG_MARE.test(s) || ambPertoAgua(t, AG_GP, 6)) return false;
+    if (!ambIdx(t, AG_AGUA).length && ambPertoAgua(t, AG_OL, 6)) return false;
+    mar = ambPerto(t, AG_MAR, AG_C_W, 4);
+    if ((ambAcha(AG_EXISTE, s) && !mar) || AG_PAREDE.test(s)) return true;
+    if (ambPerto(t, AG_H, AG_C, 8, 2) || (ambPerto(t, AG_HU, AG_C, 8, 2) && !ambGuarda(t, AG_MOFO) && !(AG_GW.test(s) && !AG_DESC.test(s)))) return true;
+    if (ambPerto(t, AG_AGUA, AG_V, 7, true) && (ambPerto(t, AG_AGUA, AG_C_F, 8) || (!mar && ambPerto(t, AG_AGUA, AG_C_W, 8) && ambPerto(t, AG_AGUA, AG_V_MOV, 7, true)))) return true;
+    return AG_BOMBA_NP.test(s) || (ambPerto(t, AG_BOMBA_A, AG_BOMBA_B, 5) && ambPerto(t, AG_LIGA, AG_SOZ, 5));
+  }
+
+  // Incêndio: cheiro de coisa queimando, borracha, plástico ou fio; calor fora do normal no quadro, na tomada, no cabo, na bateria; fumaça mais fraca que a da lista SOS («névoa», «fumacinha»); brasa solta;
+  // fio escurecido. O motor e o gerador esquentarem é rotina (a rota do arrefecimento, a IA): «sozinho», «parou», «desligou», «do nada», «demais» do PRÓPRIO motor não bastam — só a EVIDÊNCIA de fogo (cheiro, estalo,
+  // material derretendo ou vermelho) ou o calor onde o motor é o LUGAR («perto do motor», «na parede do motor») junto de uma anomalia. O aparelho que esquenta por natureza (carregador, inversor, lâmpada) idem.
+  var IN_CHEIRO = ambR('cheiro|cheirinho|cheirando|cheira|fedor|fedendo|fede|fedid[oa]|bafo');
+  var IN_QUEIMA = ambR('queimad[oa]s?|queimando|queimou|queima|borracha|plastico|fio|fios|fiacao|cabo|cabos|curto|eletric[a-z]*|eletron[a-z]*|derret[a-z]*|esquentand[oa]|esquentou|quente|quentes|tomada|resina|isolamento|esturricad[oa]|acido|enxofre|ozonio|quimico');
+  var IN_ELET = ambR('painel|quadro|tomada|tomadas|carregador|bateria|baterias|cabo|cabos|fio|fios|fiacao|disjuntor|disjuntores|inversor|lampada|led|luminaria|resistencia|aquecedor|exaustor|compressor|fogao|arranque|soquete|interruptor|fusivel|alternador|transformador|conversor|conector|borne|bornes|console|reator');
+  var IN_ELET_S = ambR('painel|quadro|tomada|tomadas|carregador|bateria|baterias|cabo|cabos|fio|fios|fiacao|disjuntor|disjuntores|inversor|lampada|led|luminaria|soquete|interruptor|fusivel|fusiveis|alternador|transformador|conversor|conector|borne|bornes|console|reator');   // (só o elétrico: o calor aqui precisa só de intensidade)
+  var IN_MECA = ambR('motor|motores|gerador|compressor|ventilador|exaustor|bomba|helice|eixo|turbina|turbo|aquecedor|resistencia|fogao|geladeira|freezer|maquinas');   // (o calor aqui precisa de anomalia FORTE)
+  var IN_CALOR = ambR('quente|quentes|calor|calorao|esquent[a-z]*|ferv[a-z]*|abrasad[oa]|pelando|derret[a-z]*|amolec[a-z]*|forno|vermelh[oa]|abafad[oa]|bafo');
+  var IN_CALOR_F = ambR('ferv[a-z]*|pelando|abrasad[oa]|derret[a-z]*|derreteu|calorao');   // (o calor que já é a intensidade: «fervendo», «derreteu»)
+  var IN_CALOR_E = ambR('derret[a-z]*|amolec[a-z]*|vermelh[oa]');   // (o calor que já é a evidência: «derretida», «vermelha»)
+  var IN_MOLE = ambR('mole|molinho|amolec[a-z]*|derret[a-z]*|derretid[oa]');
+  var IN_BATERIA = ambR('bateria|baterias'), IN_INCHA = ambR('inchad[oa]s?|inchou|inchando|estufad[oa]s?|estufou');   // (a bateria estufada)
+  var IN_FRACA = ambR('demais|muito|absurdo|absurda|absurdamente|forte|fortes|fervendo|pelando|bem|mais|bastante|tanto|insuportavel|impossivel|repente|nada|sozinh[oa]|estranh[oa]|esquisit[oa]|anormal|diferente|mole|molinho|amolec[a-z]*|derret[a-z]*|estal[a-z]*|vermelh[oa]|desliga|ruim');
+  // (a EVIDÊNCIA de fogo: cheiro, névoa, estalo, material derretendo ou amolecendo, brasa. «Sozinho», «parou», «desligou», «do nada», «demais» são o motor ou o gerador esquentando e a proteção desarmando: rota do arrefecimento, não emergência)
+  var IN_FORTE = ambR('cheiro|cheirando|fedor|nevoa|estal[a-z]*|derret[a-z]*|amolec[a-z]*|mole|molinho|vermelh[oa]');
+  var IN_FUMO = ambR('nevoa|fumacinha|esfumac[a-z]*|fumaceira|fuligem');
+  var IN_CHEIRO_E = ambR('estranh[oa]|esquisit[oa]|diferente|forte|ruim|mal|doce|fortissimo|insuportavel');
+  var IN_FUMO_C = ambR('cinza|escura|escuro|preta|preto|branca|branco|painel|bateria|baterias|motor|motores|grade|vao|gerador|tomada|quadro|cabine|camarote|cozinha|fogao|panela|cabo|popa');
+  var IN_CLIMA = ambR('mar|horizonte|manha|visibilidade|neblina|serracao|nevoeiro|tempo|previsao|clima|vento|ventando|chuva');
+  var IN_BRASA = ambR('brasas?|chamusc[a-z]*|faiscas?');
+  var IN_BRASA_C = ambR('caiu|caindo|cair|levou|voou|soltou|espalhou|perto|estofado|almofada|sofa|toldo|carpete|cabo|cabine|camarote|tapete|colchao|forro|vela|pulou|saltou|saiu|quadro|painel|tomada|disjuntor'), IN_BRASA_E = ambR('caiu|caindo|cair|levou|voou|soltou|espalhou|pulou|saltou|saiu');   // (o evento — caiu, pulou, voou —; só o material perto de churrasco é rotina)
+  var IN_ESTALO = ambR('estal[a-z]*'), IN_ZUMBE = ambR('zumbindo|zumbido|chiando');   // (o zumbido sozinho é de carregador: só com calor ou cheiro)
+  var IN_PRETO = ambR('preto|preta|pretos|pretas|escurecid[oa]|escurecendo|chamuscad[oa]|derretid[oa]');
+  var IN_MARCA = ambR('marcas?|manchas?'), IN_ESCURA = ambR('escur[a-z]*|pret[oa]s?|queimad[a-z]*'), IN_ALVO = ambR('fogao|painel|quadro|tomada|disjuntor|forro|teto|soquete|cabo|fio');
+  var IN_AGUA = ambR('agua|aguas');
+  var IN_G = ambR('churrasco|churrasqueira|comida|pao|bolo|cafe|torrada|torrar|assado|assar|assando|carne|biscoito|ovo|pizza|alimento|cozinhando|cozinhar|receita|sol|bronze|bronzeador|protetor|vela|incenso|aromatizador|perfume|cheiroso|cheirosa|chuveiro|torneira|banho|ducha|pia|boiler|cha|sopa|neblina|serracao|nevoeiro|visibilidade|previsao|clima|temperatura|cerveja|bebida|refrigerante|gelo');
+  // O vapor (da cafeteira, do escapamento, do banho) só conta com cor ou cheiro de anormal, ou saindo do elétrico; o escapamento e a cozinha não contam.
+  var IN_VAPOR = ambR('vapor|vapores'), IN_VAPOR_Q = ambR('escur[oa]|pret[oa]|cinza|estranh[oa]|esquisit[oa]|anormal|diferente|forte|denso|densa|grosso|grossa|cheiro|cheirando|fedor');
+  var IN_ESCAPE = ambR('escapamento|escapamentos|escape|descarga|exaustao|partida'), IN_VAPOR_G = ambR('cafeteira|chaleira|panela|cozinha|cozinhando|banho|chuveiro|sauna|frio|fria');
+  // O cheiro que não é de fogo: de cozinha, de produto novo ou de química, de óleo (sem plástico, fio ou painel junto), de esgoto e mofo, e o que a frase nega. A palavra do cheiro some, o resto da cláusula segue.
+  var IN_COZ = ambR('forno|fogao|torradeira|jantar|almoco|janta|queimei|fritura|frito|fritando|microondas|grelha|grelhando|grelhar');
+  var IN_NOVO = ambR('nov[oa]s?|recem|zero'), IN_BURN = ambR('queimad[oa]s?|queimando|queimou|queima|derret[a-z]*|fumaca|esquent[a-z]*|quente|quentes|curto|estal[a-z]*|faisca[a-z]*|esturricad[oa]|fumegando');
+  var IN_QUIM = ambR('cola|tinta|resina|verniz|solvente|thinner|acetona|vedante|silicone|detergente|desinfetante|cloro|produto|produtos|quimico|quimica|limpeza|oficina|manutencao|polimento|cera|lixa|lixando|epoxi|gelcoat|esgoto|mofo|mofado|bolor|maresia|lixo|peixe|sanitario|urina');
+  var IN_OLEO = ambR('oleo|diesel|combustivel|lubrificante|graxa|gasolina'), IN_EVID = ambR('fio|fios|fiacao|cabo|cabos|plastico|borracha|painel|quadro|tomada|bateria|baterias|disjuntor|curto|eletric[a-z]*|eletron[a-z]*|isolamento|ozonio|alternador|inversor|carregador');
+  var IN_COM = ambR('garantia|comprei|compramos|loja|fornecedor|devolver|reembolso');   // (a bateria que estufou na caixa, na compra)
+  // O calor do elétrico: o que NÃO deve esquentar (painel, quadro, tomada, cabo, fio, bateria, disjuntor) pede só intensidade; o aparelho que esquenta por natureza (carregador, inversor, lâmpada) só com calor extremo ou fogo.
+  var IN_ELET_P = ambR('painel|quadro|tomada|tomadas|bateria|baterias|cabo|cabos|fio|fios|fiacao|soquete|interruptor|fusivel|fusiveis|conector|borne|bornes|console');
+  var IN_DISJ = / disjuntor(?:es)? (?:[a-z0-9]+ ){0,4}(?:quente|quentes|esquentando|esquentou|pelando|escaldante|derretido|derretendo) /;   // (o disjuntor que esquenta é o quadro; o que desarma é só proteção)
+  var IN_ATIVO = ambR('carregador|inversor|alternador|transformador|conversor|reator|lampada|led|luminaria');
+  var IN_EXTREMO = ambR('encostar|longe|escaldante|insuportavel|impossivel|absurdamente|absurdo|absurda|queimando|queima|estourou|estourando|explodiu|pipocou');
+  var IN_G_DISP = ambR('notebook|laptop|celular|tablet|iphone|telefone|fone|relogio');   // (a bateria do notebook esquenta: não é a do barco)
+  // O motor e o gerador como LUGAR do calor («perto do motor», «na parede do motor», «na praça de máquinas»): o calor que aparece onde não devia, junto de uma anomalia; o motor como SUJEITO que esquenta é rota do arrefecimento.
+  var IN_LOC = ambR('perto|proximo|junto|atras|redor|vao|parede|paredes|compartimento|compartimentos|praca|casa|vindo|saindo|lado|embaixo|debaixo|cima');
+  var IN_MECA_X = ambR('motor|motores|gerador|compressor|ventilador|exaustor|bomba|helice|eixo|turbina|turbo|aquecedor|resistencia|fogao|geladeira|freezer');
+  var IN_ANOM = ambR('demais|muito|repente|nada|estranh[oa]|esquisit[oa]|anormal|diferente|absurd[oa]|sozinh[oa]|parou|parando|desliga|desligou|pifou|forte|alguma|algo');
+  var IN_LUZ = /^(?:luz|led|lampada|botao|indicador|aviso|alarme|sinal|display|tela|pisca|piscando)$/, IN_ESTADO = /^(?:esta|ta|estao|tao|estava|tava|ficou|ficaram|ficando|virou|virando|parece|amanheceu)$/;
+  // as palavras que a frase usa de outro jeito saem da conta: «luz vermelha» (o indicador), «carregador de bateria» (o aparelho, não a bateria) e o cheiro que não é de fogo
+  function ambIncT(t) {
+    var o = [], k, w, oleoOk = ambIdx(t, IN_OLEO).length && !ambIdx(t, IN_EVID).length && ambIdx(t, IN_MECA_X).length > 0;
+    var neutro = ambGuarda(t, IN_COZ) || ambGuarda(t, IN_QUIM) || oleoOk || (ambIdx(t, IN_NOVO).length > 0 && !ambIdx(t, IN_BURN).length);
+    for (k = 0; k < t.length; k++) {
+      w = t[k];
+      if (/^(?:carregador|inversor|alternador|conversor)$/.test(w) && /^(?:de|da|do|das|dos)$/.test(t[k + 1] || '') && /^baterias?$/.test(t[k + 2] || '')) { o.push(w); k += 2; continue; }
+      if (/^vermelh[oa]$/.test(w) && (IN_LUZ.test(t[k - 1] || '') || IN_LUZ.test(t[k - 2] || ''))) w = 'x';
+      else if (IN_CHEIRO.test(w) && (neutro || ambNegado(t, k, 3))) w = 'x';
+      o.push(w);
+    }
+    return o;
+  }
+  function ambIncendio(t, s) {
+    t = ambIncT(t);
+    if (ambPerto(t, IN_BRASA, IN_BRASA_E, 5, 1) || (ambPerto(t, IN_BRASA, IN_BRASA_C, 5) && !ambGuarda(t, IN_G))) return true;
+    if (ambPerto(t, IN_FUMO, IN_FUMO_C, 5) && !ambGuarda(t, IN_CLIMA) && !ambGuarda(t, IN_ESCAPE)) return true;
+    if ((ambPerto(t, IN_VAPOR, IN_VAPOR_Q, 3) || ambPerto(t, IN_VAPOR, IN_ELET_S, 4)) && !ambGuarda(t, IN_CLIMA) && !ambGuarda(t, IN_ESCAPE) && !ambGuarda(t, IN_VAPOR_G) && !ambGuarda(t, IN_G)) return true;
+    if (ambGuarda(t, IN_G)) return false;
+    if (ambPerto(t, IN_CHEIRO, IN_QUEIMA, 4) || ambPerto(t, IN_CHEIRO, IN_ELET, 4)) return true;
+    if (ambPerto(t, IN_ESTALO, IN_ELET_S, 4) || ambPerto(t.map(function (w, k) { return /^pret[oa]s?$/.test(w) && !IN_ESTADO.test(t[k - 1] || '') && !IN_ESTADO.test(t[k - 2] || '') ? 'x' : w; }), IN_PRETO, IN_ELET_S, 4)) return true;   // («preto» de cor sem verbo de estado — «o cabo preto» — não é queimado)
+    if (ambPerto(t, IN_ZUMBE, IN_ELET_S, 4) && (ambPerto(t, IN_ZUMBE, IN_CALOR, 6) || ambPerto(t, IN_ZUMBE, IN_CHEIRO, 6))) return true;
+    if (ambPerto(t, IN_CALOR, IN_CHEIRO, 10) && !ambGuarda(t, IN_CLIMA) && !ambGuarda(t, ambR('dia|dias|sol|verao|tarde')) && !/ que calor /.test(' ' + t.join(' ') + ' ')) return true;   // «quente e cheira mal»
+    if (ambPerto(t, IN_CHEIRO, IN_CHEIRO_E, 3) && (ambPerto(t, IN_CHEIRO, IN_ELET, 8) || ambPerto(t, IN_CHEIRO, IN_MECA, 8))) return true;   // «cheirando diferente» junto de uma máquina ou do elétrico
+    if (ambPerto(t, IN_MARCA, IN_ESCURA, 3) && ambPerto(t, IN_MARCA, IN_ALVO, 8)) return true;
+    if ((ambPerto(t, IN_INCHA, IN_BATERIA, 5, 2) && !ambGuarda(t, IN_COM) && !ambGuarda(t, IN_G_DISP)) || (ambPerto(t, IN_MOLE, ambR('plastico'), 3) && ambPerto(t, ambR('plastico'), IN_ELET_S, 4))) return true;
+    if (ambGuarda(t, IN_AGUA)) return false;
+    if (ambAcha(IN_DISJ, ' ' + t.join(' ') + ' ') || ambPerto(t, IN_CALOR_F, IN_ELET_S, 6, 2) || (ambPerto(t, IN_CALOR, IN_ELET_P, 8, 2) && ambPerto(t, IN_CALOR, IN_FRACA, 6) && !ambGuarda(t, IN_G_DISP)) || (ambPerto(t, IN_CALOR, IN_ATIVO, 6, 2) && ambPerto(t, IN_CALOR, IN_EXTREMO, 6))) return true;
+    return ambPerto(t, IN_CALOR, IN_MECA, 6, 2) && (ambPerto(t, IN_CALOR_E, IN_MECA, 6) || ambPerto(t, IN_CALOR, IN_FORTE, 6) || (ambPerto(t, IN_LOC, IN_MECA_X, 3) && ambPerto(t, IN_CALOR, IN_ANOM, 6)));
+  }
+
+  // Médica: sintoma de mal-estar sério descrito do jeito de quem ainda não tem certeza, sem as palavras que já abrem o SOS (dor no peito, desmaiou, convulsão, parada cardíaca, não respira…).
+  // O sintoma só do corpo vale sozinho (palidez, suor frio, peito apertado, falta de ar, vista escura, fala enrolada, vômito); o que também é de coisa (roxo, inchado, mole, fraco, gelado, quente) só
+  // com uma pessoa na cláusula (ele, ela, meu, a criança, «estou», um nome com maiúscula); o fraco (tontura, enjoo, cansaço) só aos pares, ou com um sinal de relato («de repente», «não passa»).
+  // A estrutura é a do relato, não a do vocabulário: o sinal que só pode ser do corpo (duro) vale sozinho; o que é do corpo mas também de enjoo, calor ou esforço (mole) pede uma pessoa e nenhuma causa dita; o grave (sonolento que não reage,
+  // rosto inchado, pancada na cabeça) pede uma pessoa; o brando (febre, alergia, coceira, torção) pede uma pessoa de verdade (nome ou sintagma), nenhuma causa e nenhum pedido de remédio. A negação («ela não está pálida») tira o sinal.
+  var MD_PRON = ambR('ele|ela|eles|elas|estou|to|tou|fiquei|fico|sinto|sentindo|senti');   // (pronome e 1ª pessoa: prova de pessoa mais fraca que a estrutura; «meu», «a gente», «alguém» não provam)
+  var MD_DURO = [/ peito apertad[oa] /, / aperto no peito /, / pressao no peito /, / falta de ar(?! (?:fresco|condicionado)) /, / labios? (?:roxos?|azuis|azulad[oa]s?|arroxead[oa]s?) /,
+    / (?:labios?|boca|rosto|face|pele|unhas?|dedos?|maos?|extremidades|lingua|cara)(?: [a-z0-9]+){0,3} (?:rox[oa]s?|azulad[oa]s?|azuis|arroxead[oa]s?) /, / (?:rox[oa]s?|azulad[oa]s?) (?:nos|nas|na|no|de) (?:labios?|boca|rosto|face|pele|unhas|dedos|maos|extremidades|lingua|cara) /,
+    / (?:vista|visao)(?: [a-z0-9]+){0,2} (?:escura|escuro|escureceu|escurecendo|turva|turvo|embacada|embacado|dobrada|apagou) /, / vendo (?:tudo )?(?:escuro|turvo|dobrado|embacado|preto|estrelas) /,
+    / (?:fala|voz) (?:enrolada|embolada|arrastada|pastosa) /, / fala(?: [a-z0-9]+){0,2} (?:enrolad[oa]|embolad[oa]|arrastad[oa]) /, / boca torta /, / branc[oa] como (?:papel|cera|giz|neve) /, / olhos (?:revirando|revirados|virados|virando|parados) /,
+    / respira[a-z]*(?: [a-z0-9]+){0,2} dificuldade /, / desorientad[oa]s? /, / respira(?:cao|ndo)(?: [a-z0-9]+){0,2} (?:rapid[oa]|forte|pesad[oa]|chiando|ofegante|dificil|curta|acelerada|mal) /, / crise de panico /, / dor(?: [a-z0-9]+){0,2} (?:terrivel|insuportavel|intensa|aguda) /, / engoliu agua /, / (?:suando|suor) frio /];
+  var MD_MOLE = [/ pali(?:do|da|dos|das|dez) /, / formigamento /, / dormente /, / dormencia /, / vomit(?:ou|ando|o|aram|ei) /, / batedeira /, / (?:taquicardia|palpitacao|palpitacoes) /, / vontade de vomitar /, / coracao (?:disparad[oa]|acelerad[oa]|aos pulos|palpitando) /, / cabeca (?:girando|rodando) /, / (?:ofegante|ofegando) /, / dor nas? (?:juntas|articulacoes) /];
+  var MD_SER = [/ meio apagad[oa] /, / molinh[oa]s? /, / molenga /, / desfalec[a-z]+ /, / nao (?:esta |ta )?(?:reagindo|reage|reagiu)(?! (?:a|ao|aos|as|o|os|com|pra|para) )(?: [a-z0-9]+){0,2} /, / nao (?:esta |ta )?respondendo (?:direito|bem) /, / nao (?:responde|reage|reagiu)(?: [a-z0-9]+){0,2} (?:quando|se) (?:eu |a gente )?(?:chamo|chamamos|falo|falamos|chamar|sacudo|toco) /, / nao responde (?:direito|bem) /,
+    / nao consegue (?:se )?(?:levantar|falar|andar|respirar) /, / nao consegue (?:se )?(?:mexer|apoiar|levantar)(?: [a-z0-9]+){0,2} (?:perna|pernas|braco|bracos|pe|pes|mao|maos|dedos|corpo|lado|pescoco) /, / nao consegue (?:abrir|fechar) (?:os |a |as )?(?:olhos?|boca|maos?) /, / (?:rosto|boca|lingua|labios?|olhos?|garganta)(?: [a-z0-9]+){0,2} (?:inchou|inchad[oa]|inchando) /, / (?:inchou|inchad[oa]|inchando)(?: [a-z0-9]+){0,3} (?:rosto|boca|lingua|labios?|olhos?|garganta) /,
+    / (?:picad[oa]|ferroad[oa]|mordid[oa]) por /, / inchou todo /, / dor(?: [a-z0-9]+){0,2} (?:forte|fortissima) /, / pele(?: [a-z0-9]+){0,3} (?:manchada|empolada) /, / (?:muito |saindo |jorrando |escorrendo )sangue /, / sangue(?: [a-z0-9]+){0,2} (?:escorrendo|jorrando|saindo) /, / engasgou /,
+    / bateu a cabeca /, / (?:pancada|batida)(?: [a-z0-9]+){0,2} (?:na cabeca|forte) /, / (?:ficou|ficando|esta|ta|virou)(?: [a-z0-9]+){0,2} (?:rox[oa]|azulad[oa]|arroxead[oa])s? /,
+    / (?:estou|to|tou|fiquei|fico|ele|ela|eles|elas)(?: esta| ficou| ta| estao)?(?: [a-z0-9]+){0,1} (?:tremendo|tremer|com tremor|com tremedeira) /];   // (a 1ª pessoa ou o pronome logo antes do tremer: a pessoa, não a máquina)
+  var MD_MILD = [/ sonolent[oa]s? /, / sonolencia /, / cocando /, / vomitar /, / febre /, / febril /, / calafrios? /, / alergia(?! (?:a|ao|aos|as|de) ) /, / alergic[oa] /, / coceira /, / pele(?: [a-z0-9]+){0,3} (?:vermelha|descamando|soltando|descascando|bolhas) /, / torceu /, / caibras? /, / luxou /, / deslocou /];   // (o que só a pessoa tem: o pronome basta)
+  var MD_MILD_A = [/ tremend[oa] /, / tremer /, / tremor /, / tremedeira /, / bolhas? /];   // (o que a coisa também tem: a máquina treme, a pintura faz bolhas — pede a estrutura da pessoa)
+  var MD_FRACO = ambR('tontura|tonto|tonta|tonteira|zonz[oa]|fraco|fraca|fraqueza|suad[oa]|suando|dor|dores|doendo|inchad[oa]|caibra|tosse|tossindo|enjoad[oa]|enjoo|enjoada|nauseas?');
+  var MD_ENJOO = ambR('enjoad[oa]|enjoo|enjoada|nauseas?');   // (o enjoo e o cansaço contam no par, mas não bastam com o sinal de relato: o enjoo de quem navega é rotina)
+  var MD_MAR = ambR('tontura|tonto|tonta|tonteira|zonz[oa]|enjoad[oa]|enjoo|enjoada|nauseas?');   // (tontura + enjoo é o enjoo de quem navega: o par precisa de um sinal de fora dele)
+  var MD_RELATO = ambR('repente|passa|parar|piorando|estranh[oa]|esquisit[oa]|sempre');
+  var MD_G = / (?:se|caso|quando) (?:alguem|uma pessoa|um passageiro|o passageiro|a pessoa|algum) | prevenir | prevencao | evitar | sintomas de | curso | treinamento | aula | prova | alergia (?:a|ao|aos|as|de) | febre (?:amarela|tifoide) | (?:mensagem|mensagens|whatsapp|zap|telefone|celular|ligacao|ligacoes|chamada|email|site|internet|wifi|app|aplicativo|sistema|seakeeper|garmin|plotter|radar|piloto|vhf|radio|ais|gps|sensor|display|tela|botao|comando|motor|gerador|bomba|leme|sinal|colete|vacina|vacinas|cardapio) /;   // (o que se veste ou se toma; a alergia que se tem a um alimento; a vacina. A COISA que treme, esquenta ou fica pálida é MD_OBJ, só perto do sinal)
+  var MD_OBJ = ambR('guincho|geladeira|freezer|compressor|casco|gelcoat|tinta|pintura|costado|cabo|cabos|estofado|teak|inversor|carregador|condicionado|bateria|baterias|ventilador|janela|vidro|vidros');
+  // a causa dita («de tanto remar», «por causa do balanço»), o sol, e o pedido de remédio ou de material («tem termômetro?», «o que dou?») explicam o sintoma brando; o duro não se explica
+  var MD_CAUSA = / quando (?:vi|li|ouvi|soube|recebi) | ao (?:ver|ler|ouvir|saber|receber) | de tanto | de tanta | de (?:susto|medo|vergonha|raiva|nervoso|surpresa) | de ficar | de puxar | de remar | de levantar | por causa d[oae] | depois d[oae] (?:almoco|jantar|remedio|mergulho|exercicio|esforco|balanco|cerveja) | do balanco | do enjoo | de enjoo | enjoo de mar | mal de mar | do remedio | de remedio /;
+  var MD_COMIDA = / depois de (?:comer|beber|tomar) | comeu demais | bebeu demais /;   // (o enjoo e o vômito de quem comeu ou bebeu demais; a coceira e o inchaço depois de comer não: é alergia)
+  var MD_SOL = / pegou sol | pegando sol | queimad[oa] de sol | de sol | do sol | insolacao /;
+  var MD_REM = / (?:remedio|remedios|dramin|bonine|xarope|analgesico|pomada|termometro|atadura|curativo|farmacia|antialergico|antitermico|dipirona|paracetamol|gelo|toalha|kit|cardapio) | o que (?:dou|tomo|posso dar|posso tomar|dar para|tomar para|fazer para) | (?:para|pra) (?:o )?(?:enjoo|enjoar|dor|febre|tosse) /;
+  var MD_MAR_CTX = / (?:enjoo|enjoad[oa]|enjoou|enjoar|mal de mar|balanco) /;
+  // a pessoa da cláusula pela ESTRUTURA que o cérebro já tem (o prenome com maiúscula, «o menino», «meu filho»: comNomes/fulaniza escrevem «fulano»), nunca por lista de substantivo
+  var MD_PES_RE = new RegExp(' ' + PES_ELX + ' ');   // os NÚCLEOS de pessoa que o cérebro JÁ tem (PESSOA, PARENTE, PES_FAM, PES_NUC, «fulano», «pronpes», «pessoax»): nenhuma palavra nova de pessoa aqui
+  // 2 = a estrutura (nome, sintagma de pessoa: «o Paulo», «meu filho»); 1 = pronome («ele», «ela») ou a 1ª pessoa («estou», «fiquei»); 0 = nenhuma. O «a gente» é nós (não é a pessoa) e o «pessoax» que a estrutura põe no lugar da palavra do corpo não prova ninguém.
+  function ambPessoa(t, s, raw) {
+    var c, q;
+    if (MD_PES_RE.test(s.replace(/ a gente /g, ' '))) return 2;
+    c = comNomes(raw, true); q = preparaPessoa(c !== null ? c : pad(raw));   // (o prenome com maiúscula e o sintagma de pessoa viram «fulano»)
+    if (MD_PES_RE.test(q.replace(/ pessoax /g, ' ').replace(/ a gente /g, ' ')) || q.trim().split(' ').slice(0, 2).indexOf('pessoax') !== -1) return 2;   // (o «pessoax» só prova a pessoa quando é o SUJEITO — as duas primeiras palavras —, não quando a estrutura o põe no lugar do adjetivo: «ela não está pessoax»)
+    return ambIdx(t, MD_PRON).length ? 1 : 0;
+  }
+  function ambMedica(t, s, raw, full) {
+    var n, par, relato, p, causa, rem, brando;
+    if (MD_G.test(s)) return false;
+    if (MD_DURO.some(function (r) { return ambAcha(r, s); })) return true;
+    p = ambPessoa(t, s, raw); causa = MD_CAUSA.test(s); rem = MD_REM.test(full || s); brando = causa || rem || MD_SOL.test(s);
+    if (p >= 1 && !causa && !MD_COMIDA.test(s) && !(MD_MAR_CTX.test(s) && rem) && MD_MOLE.some(function (r) { return ambAcha(r, s, MD_OBJ); })) return true;
+    if (p >= 1 && MD_SER.some(function (r) { return ambAcha(r, s, MD_OBJ); })) return true;
+    if (p >= 1 && !brando && MD_MILD.some(function (r) { return ambAcha(r, s, MD_OBJ); })) return true;
+    if (p >= 2 && !brando && MD_MILD_A.some(function (r) { return ambAcha(r, s, MD_OBJ); })) return true;
+    n = ambIdx(t, MD_FRACO).filter(function (k) { return !ambNegado(t, k, 3); });
+    par = n.some(function (a, i) { return n.some(function (b, j) { return j > i && b - a <= 8 && !(MD_MAR.test(t[a]) && MD_MAR.test(t[b])); }); });
+    relato = n.some(function (k) { return !MD_ENJOO.test(t[k]); }) && ambPerto(t, MD_FRACO, MD_RELATO, 8);
+    return p >= 1 && !brando && (par || relato);
+  }
+
+  // Colisão e perda de governo: o impacto («raspada», «tranco», «solavanco», «estrondo»…) com o casco, a quilha, a hélice, uma pedra ou outro barco por perto; o toque fraco («encostou», «tocamos»)
+  // só com um sinal de dano («barulho feio»); a direção, o leme, o eixo e a hélice com um defeito («solto», «duro», «vibra», «não obedece»); o barco que não anda; o quase («quase batemos»).
+  // O «volante» é também o do Seakeeper (g_estabilizador: «volante girando depois de desligar» é rotina): só vale com a direção do barco por perto.
+  var CO_IMPACTO = ambR('raspad[oa]|raspou|raspamos|raspando|rocou|rocamos|rocando|tranco|trancos|solavanco|solavancos|baque|baques|estrondo|pancada|pancadao|impacto|craque|sacudida|sacudidela|balancao|batida|batidas|esbarrao');
+  var CO_RUIDO = ambR('estalou|estalo|estalido|rangeu|rangido|estremeceu|arranhando|arranhou|arrastando|rachou|trincou|rompeu');   // (o ruído só vale com a parte submersa: «o motor estalou ao ligar» é mecânica)
+  var CO_TOQUE = ambR('encostou|encostamos|encostaram|tocou|tocamos|tocaram|toquei|bateu|bateram|batemos|acertou|acertamos|atingiu|atingimos|esbarrou|esbarramos|esbarraram|esbarrei');
+  var CO_CASCO = ambR('casco|quilha|helice|helices|leme|eixo|costado|fundo|embaixo|debaixo|lateral|defensa|espelho|popa|proa|motor|motores|direcao|volante|barco|lancha|embarcacao|iate|rumo|mundo|gente|todos|tripulacao|cabine|chao|conves');
+  var CO_DURO = ambR('pedra|pedras|rocha|rochas|rochedo|recife|recifes|areia|cais|tronco|troncos|toco|tocos|tora|toras|container|containers|baleia|destrocos|rede|redes|laje|lajes|baixio|banco|outro|outra|lancha|barco|navio|jet|boia|pier|pontao|ponte|muro|objeto|objetos');
+  var CO_DANO = ambR('pesad[oa]|inclinad[oa]|tombad[oa]|forte|feio|feia|barulho|ruido|estranh[oa]|seco|bruto|violent[oa]|querer|vi|vimos|amassou|riscou|arranhou|danific[a-z]*|furou|rachou|quebrou|arrancou|soltou|alguma|algo|coisa|dura|duro|grande');
+  var CO_FUNDO = ambR('casco|quilha|helice|helices|leme|eixo|costado|fundo|embaixo|debaixo|lateral|defensa|espelho');
+  var CO_PRENDE = ambR('pegou|pegamos|pegaram'), CO_ENROLA = ambR('tronco|toco|tora|rede|redes|cabo|corda|linha|lixo|plastico|sacola|alga|algas|lona|destrocos|container'), CO_PARTE = ambR('helice|helices|eixo|leme|quilha|motor|motores|casco|frente');
+  var CO_DIRECAO = ambR('leme|volante|direcao|timao'), CO_BARCO = ambR('barco|lancha|embarcacao|iate|direcao|leme|rumo|governo|proa|circulo|casco|timao');   // (só SUBSTANTIVO do barco: «obedece», «vira» e «curva» são os verbos de CO_PERDE, e a frase não pode se aprovar sozinha — «o cachorro não obedece», «ele não vira contato»)
+  var CO_DEFEITO = ambR('solt[oa]|frouxo|frouxa|batendo|travando|travou|travad[oa]|emperrou|emperrad[oa]|vazando');   // (o ruído e a vibração — «o leme faz barulho», «a hélice vibra» — são rotina mecânica; o «meio solto» sai, em ambColisao)
+  var CO_PERDE = / nao (?:esta )?(?:obedece|obedecem|obedecendo|vira|virando|curva|responde|respondendo|responde nada|acompanha) | nao volta ao centro | parou de (?:responder|obedecer|virar) | sem resistencia | puxando(?: [a-z0-9]+){0,2} (?:lado|esquerda|direita|bombordo|boreste) | joga(?: [a-z0-9]+){0,2} (?:bombordo|boreste|lado|esquerda|direita)(?: [a-z0-9]+){0,3} sozinh[oa] | virando so (?:pra|para) /;   // (precisam da direção ou do barco por perto)
+  var CO_PERDE_A = / (?:girando|rodando)(?: [a-z0-9]+){0,2} (?:sem controle|em circulos?) | recusa a curva /;   // (valem sozinhas)
+  var CO_PRENDEU = ambR('prendeu|enroscou|enroscamos|enroscado|enroscada|emaranhou'), CO_ENROLA_P = ambR('helice|helices|eixo|leme|quilha');
+  var CO_CASCO2 = ambR('casco|quilha|helice|helices|leme|eixo|costado|barco|lancha|embarcacao|iate');
+  var CO_OBST = ambR('pedra|pedras|rocha|rochas|rochedo|recife|recifes|tronco|troncos|toco|tocos|tora|toras|container|containers|baleia|destrocos|rede|redes|laje|lajes|baixio|objeto|objetos');
+  var CO_BATEFUNDO = ambR('fundo'), CO_VIBRA = ambR('vibra|vibrando|tremendo|treme|trepidando|tremeu|tremer');
+  var CO_EIXO = ambR('helice|helices|eixo'), CO_EIXO_D = ambR('raspando|arranhando|raspar|metal|batendo|bater|bate|batida');   // (a vibração e o barulho em carga alta são desbalanceamento: rotina; o raspar e o bater são impacto)
+  var CO_ANDA = / (?:barco|lancha|embarcacao) (?:[a-z0-9]+ ){0,4}(?:nao (?:anda|ganha velocidade|sai do lugar|acelera|avanca|se move|se mexe)|parou de andar|se arrastando|arrastando|patinando) /;
+  var CO_ANDA_X = / como antes | como deveria | tanto | quanto | com (?:a |o )?(?:mare|mar|vento|corrente|ondas?) | quando (?:a |o )?(?:mare|mar|vento) | casco sujo | helice suja | suj[oa] /;   // («não acelera como antes», «não anda com a maré contra» é casco sujo e maré: desempenho)
+  var CO_QUASE = ambR('quase'), CO_QUASE_V = ambR('encontro|bater|batemos|pegou|pega|pegar|acertou|acertar|atingiu|tocou|tocamos|tocar|passamos|passou|cruzou|cruzamos|raspamos|raspou|colidir|abalroar');
+  var CO_SOBE = / (?:subir|subiu|passou|passamos|pisou|passando|passei) (?:em|numa|num|por cima de|por cima d[aeo]s?|sobre) (?:uma? |alguma |algo |umas? |uns )?(?:coisa|pedra|rocha|laje|tronco|troncos|recife|objeto) /;
+  var CO_G = ambR('ancora|ferro|corrente|amarra|prumo|musica|buzina|sino|campainha|alarme|radio|telefone|celular|tela|botao|playlist|manutencao|revisao|folga|regular|regulagem|lubrificar|graxa|trocar|troca|trocando|programar|configurar|calibrar|calibracao|simulador|jogo|filme|troco|folgado|folgada|estabilizador|seakeeper|ganho|elevador|predio|aviao|onibus|carro|carros|trem|caminhao|estacionamento|cancela');   // (a engrenagem da marcha dá tranco e batida; o leme «folgado» é ajuste; o ganho do estabilizador é ajuste)
+  // O contexto que tira o relato da colisão: o histórico e a papelada (ano, laudo, seguradora, estaleiro, conserto), a marola e a onda (o tranco do mar), a atracação e a defensa que segurou — a menos que haja pedra, tronco ou dano.
+  var CO_ADM = / (?:19|20)[0-9][0-9] | ano passado | ano retrasado | anos atras | laudo | seguradora | estaleiro | vistoria | vistoriad[oa] | reparad[oa] | consertad[oa] | conserto | historico | orcamento | apolice | sinistro | perito /;
+  var CO_ONDA = ambR('marola|marolas|onda|ondas|esteira|banzeiro|ondulacao|mar'), CO_ATRAC = ambR('atracou|atracamos|atracando|atracacao|atracar|defensa|defensas|manobra');
+  var CO_DURO_H = ambR('pedra|pedras|rocha|rochas|rochedo|recife|recifes|tronco|troncos|toco|tocos|tora|toras|container|containers|baleia|destrocos|laje|lajes|baixio|muro|rede|redes'), CO_DANO_F = ambR('amassou|riscou|arranhou|danific[a-z]*|furou|rachou|quebrou|arrancou|feio|feia');
+  var CO_DURO_I = ambR('pedra|pedras|rocha|rochas|rochedo|recife|recifes|areia|cais|tronco|troncos|toco|tocos|tora|toras|container|containers|baleia|destrocos|rede|redes|laje|lajes|baixio|banco|outro|outra|navio|jet|boia|pier|pontao|ponte|muro|objeto|objetos');   // (o objeto duro: não o «barco» da frase, que é o nosso)
+  var CO_GM = ambR('marcha|marchas|engata|engatar|engatou|engatei|engate|reversor|embreagem|neutro');   // (a engrenagem da marcha dá tranco e batida: só vale como guarda a até 4 palavras do impacto)
+  var CO_BATEU = ambR('bateu|bateram|batemos|acertou|acertamos|atingiu|atingimos');
+  var CO_QUASE_X = / quase (?:passamos|passou|passei|passaram) d[aeo]s? | recorde /;
+  var CO_PERDE_G = ambR('piloto|automatico|joystick|modo|ganho|planeio|trim|flap|flaps|aceleramos|acelerar|acelerando|acelero|acelerei|calibrar|calibro|calibracao');   // (o leme que «não responde» ao piloto, no joystick, em baixa velocidade, ou o barco que puxa ao acelerar: ajuste e trim)
+  function ambColisao(t, s) {
+    var td, mar, eng;
+    if (ambGuarda(t, CO_G) || CO_ADM.test(s)) return false;
+    mar = (ambGuarda(t, CO_ONDA) || ambGuarda(t, CO_ATRAC)) && !ambIdx(t, CO_DURO_H).length && !ambIdx(t, CO_DANO_F).length && !ambPerto(t, CO_BATEU, CO_DURO, 5, 2);   // («bateu contra o píer» é pancada, onda ou não)
+    eng = ambPerto(t, CO_GM, CO_IMPACTO, 4) || ambPerto(t, CO_GM, CO_TOQUE, 4) || ambPerto(t, CO_GM, CO_EIXO_D, 4) || ambPerto(t, CO_GM, CO_RUIDO, 4);
+    mar = mar || eng;
+    if ((!mar && (ambPerto(t, CO_IMPACTO, CO_CASCO, 6, 2) || ambPerto(t, CO_IMPACTO, CO_DURO_I, 6, 2))) || ambPerto(t, CO_RUIDO, CO_FUNDO, 5, 2)) return true;
+    if (!mar && ambPerto(t, CO_TOQUE, CO_FUNDO, 5, 2) && ambPerto(t, CO_TOQUE, CO_DANO, 10)) return true;
+    if (ambPerto(t, CO_TOQUE, CO_DURO, 5, 2) && ambPerto(t, CO_TOQUE, CO_DANO, 10)) return true;
+    if (ambPerto(t, CO_PRENDE, CO_ENROLA, 4, 2) && ambPerto(t, CO_ENROLA, CO_PARTE, 6)) return true;
+    if (ambPerto(t, CO_PRENDEU, CO_ENROLA_P, 8, 2)) return true;   // algo preso na hélice, no eixo ou no leme
+    if (ambPerto(t, CO_TOQUE, CO_BATEFUNDO, 3, 2) && ambPerto(t, CO_TOQUE, CO_CASCO2, 6)) return true;   // o casco no fundo
+    if (ambPerto(t, CO_VIBRA, CO_CASCO, 5) && ambPerto(t, CO_VIBRA, CO_OBST, 10)) return true;   // vibrando depois de passar por troncos, redes, pedras
+    if (ambPerto(t, CO_QUASE, CO_QUASE_V, 4) && ambPerto(t, CO_QUASE, CO_DURO, 12) && !CO_QUASE_X.test(s)) return true;
+    if (CO_SOBE.test(s) || (CO_ANDA.test(s) && !/ [0-9]+ /.test(s) && !CO_ANDA_X.test(s)) || CO_PERDE_A.test(s)) return true;   // («não anda a 18 nós, é normal?» é desempenho)
+    if (!eng && ambPerto(t, CO_EIXO, CO_EIXO_D, 8)) return true;
+    // o «volante» sem nenhuma palavra da direção do barco é o do Seakeeper: sai da conta
+    td = ambIdx(t, CO_BARCO).length ? t : t.filter(function (w) { return w !== 'volante'; });
+    if (ambPerto(td.filter(function (w, k) { return !(/^(?:solt[oa]|frouxo|frouxa)$/.test(w) && /^(?:meio|pouco|levemente|ligeiramente)$/.test(td[k - 1] || '')); }), CO_DIRECAO, CO_DEFEITO, 5)) return true;   // («meio solto» é folga, não defeito)
+    return CO_PERDE.test(s) && !ambGuarda(t, CO_PERDE_G) && (ambIdx(td, CO_DIRECAO).length > 0 || ambIdx(td, CO_BARCO).length > 0);
+  }
+
+  // A cláusula (pontuação) é a unidade; a pergunta de procedimento («como/qual/quando/onde… ?», «o que faço…?») não conta, só o relato — com vírgula, só a 1ª parte cai
+  // («como ligo o gerador, ele está cheirando a queimado?» fica com o relato). «Por que o painel está quente?» e «será que tem água entrando?» são relato com dúvida: contam.
+  var AMB_PERGUNTA = /^(?:e |mas |entao )?(?:como|qual|quais|quando|onde|aonde|quanto|quantos|quantas|quanta|posso|podemos|devo|devemos|pode|preciso saber|quero saber|existe|tem como|ha como|me explica|explique|me diga|me fale|e normal|eh normal|de onde|por onde|para que|pra que|com que|que cuidados|em que|o que (?:faco|fazer|devo|posso|preciso|confiro|olho|verifico|checo|checar|conferir|olhar|significa|quer dizer)) /;
+  var AMB_SUB = /^(?:e |mas |entao )?(?:como|qual|quais|quando|onde|aonde|quanto|quantos|quantas|quanta|posso|podemos|devo|devemos|pode|existe) (?:o|a|os|as|um|uma|uns|umas|meu|minha|meus|minhas|nosso|nossa|nossos|nossas|esse|essa|esses|essas|este|esta|estes|estas|aquele|aquela|todo|toda|todos|todas|ele|ela|eles|elas|alguem|ninguem|algo|algum|alguma) /;   // (a palavra da pergunta seguida de artigo, posse ou pronome é a oração subordinada: «quando o barco balança aparece água»)
+  var AMB_DESCONHECE = / nao sei (?:de onde|por que|porque|o que|como|se) | sem saber | de onde vem /;   // (a causa ignorada: o relato, mesmo dentro de uma frase que começa por pergunta)
+  var AMB_HIPOTESE = / (?:se|caso|quando|sempre que) (?:[a-z0-9]+ ){0,5}(?:estiver|estiverem|esquentar|esquentarem|ficar|ficarem|tiver|tiverem|houver|aparecer|cair|comecar|for|forem|vier|sair|pingar|molhar|queimar|travar|falhar|acontecer|ocorrer|apareca|esquente|fique|tenha|haja|caia|comece|pingue|molhe|queime|trave|falhe) /;   // («posso dar a partida se o piso estiver úmido»: o subjuntivo é condição, não relato)
+  function ambClausulas(raw) {
+    var s = String(raw == null ? '' : raw).slice(0, 1200), pcs = s.match(/[^.!?;\n]+[.!?;\n]*/g) || [], out = [];
+    pcs.forEach(function (pc) {
+      var partes = pc.split(','), ini = norm(partes[0]).replace(/^[^a-z0-9]+/, '') + ' ';
+      // a pergunta de procedimento vale com o «?» e SEM ele (o ditado do Chrome não pontua): sem «?», só a frase CURTA (até 10 palavras: a pergunta solta é curta, a longa traz mais de uma coisa) que começa com a palavra da pergunta e não diz que ninguém sabe a causa — a longa
+      // junta a pergunta e um relato que o ditado não separou («como lanço a âncora aqui embaixo tá todo molhado não sei por quê»)
+      if (AMB_PERGUNTA.test(ini) && (/\?\s*$/.test(pc) || (!/\?/.test(pc) && pc.trim().split(/\s+/).length <= 10 && !AMB_DESCONHECE.test(' ' + norm(pc) + ' ') && !AMB_SUB.test(ini)))) { if (partes.length < 2) return; partes.shift(); pc = partes.join(','); }
+      out.push(pc);
+    });
+    return out;
+  }
+  // Ponto de entrada único (mesmo papel de `risco()`): {n:1, cat} = a instrução de segurança, sem o quadro, sem IA; {n:0} = nada, segue a rota de assunto. `cat` é só diagnóstico e medição.
+  function riscoEmergAmbigua(raw) {
+    var cl = ambClausulas(raw), i, s, t, full = ambNorm(raw);
+    for (i = 0; i < cl.length; i++) {
+      s = ambNorm(cl[i]); t = s.trim().split(' ');
+      if (t.length < 2 || AMB_HIPOTESE.test(s)) continue;
+      if (ambAgua(t, s)) return { n: 1, cat: 'agua' };
+      if (ambIncendio(t, s)) return { n: 1, cat: 'incendio' };
+      if (ambMedica(t, s, cl[i], full)) return { n: 1, cat: 'saude' };
+      if (ambColisao(t, s)) return { n: 1, cat: 'colisao' };
+    }
+    return { n: 0, cat: null };
+  }
+  // O fallback SEGURO destas 4 categorias (mesmo papel de fallbackPessoa; trava 10: nunca posição, rumo, SOG, ETA nem pessoas a bordo do quadro). Um só texto genérico para as 4.
+  var AMBIGUA_SEGURANCA = 'Isso pode ser uma emergência de bordo (água, incêndio, saúde ou colisão): procedimento padrão — confirmar com o protocolo de bordo. Em caso de risco, abra o SOS.';
+  function fallbackEmergenciaAmbigua(p) {
+    var r = fallbackPessoa(p);   // a mesma forma (fonte, «Abrir SOS» / «Registrar pendência», a instrução do plotter dentro da janela), só a instrução muda
+    r.text = r.text.replace(PESSOA_SEGURANCA, AMBIGUA_SEGURANCA); r.pessoa = false; r.ambigua = true;
+    return r;
+  }
   function route(qRaw) {
     var q = pad(qRaw);
     if (!q.trim()) return 'saudacao';
@@ -4944,6 +5274,9 @@
     // o rumo, o ETA, as pessoas a bordo, a telemetria, o fora do barco e os contatos levam a situação de bordo ou a hora do quadro; «proa», «popa», «onde» e «agora» não a desviam —: é o fallback SEGURO (a instrução do SOS, sem a
     // situação de bordo, sem a janela), local; o pedeIA também é false para ela. Os falsos positivos custam só a resposta do outro assunto (a rede é larga, mas não toma «quanto falta para a Barra Sul?», «perdeu o voo» nem o lugar da rota).
     if (risco(qRaw).n >= 1) return 'fallback';
+    // Fase 2 da tarefa #12: a mesma rede, agora também para água, incêndio, médica e colisão ambíguas (riscoEmergAmbigua, acima) — no MESMO lugar,
+    // antes de qualquer rota que a Fase 1 confirmou que vaza o quadro (ancora, posição, telemetria, maré, clima e as rotas de equipamento comuns).
+    if (riscoEmergAmbigua(qRaw).n >= 1) return 'fallback';
     // o dinheiro do insumo de bordo (trava 13: rota local, nunca preço): depois da emergência, do óleo e da cabeça de segurança e antes de qualquer rota de dado («qual o preço do diesel hoje?» não é a autonomia)
     if (dinheiroBordo(q)) return 'foraBarco';
     // F12/F15 (depois da cabeça de emergência: a pergunta de segurança nunca é delas): o pedido de alarme (incompleto também), o «apagar alarme #n», os alarmes pedidos e o «agendar … para dd/mm»
@@ -5377,6 +5710,7 @@
     var a;
     try { a = ANSWERS[key](p, ctx, String(q || '').trim()); } catch (e) { key = 'fallback'; a = ANSWERS.fallback(p, ctx); }
     var segura = key === 'fallback' && risco(String(q || '')).n >= 1 ? fallbackPessoa(p) : null;   // (P4G, 6ª rodada: a pessoa que nenhuma rota tomou recebe o fallback SEGURO, pronto antes de o guia, o FAQ e a hora mexerem na resposta)
+    if (segura === null && key === 'fallback' && riscoEmergAmbigua(String(q || '')).n >= 1) segura = fallbackEmergenciaAmbigua(p);   // (Fase 2 da tarefa #12: a água, o incêndio, a saúde ou a colisão ambíguos que nenhuma rota tomou recebem o fallback SEGURO, no mesmo lugar e com o mesmo efeito do da pessoa)
     // toda resposta de dado de bordo leva a hora do instante (decisão 5): a que não a traz no texto nem na fonte ganha «consultado às HH:MM:SS» na fonte
     if (!SEM_HORA_NA_FONTE[key] && sim() && vivo() && a && a.src && a.janela !== true && !/\d\d:\d\d:\d\d/.test(a.text + '\n' + a.src)) a.src += ' · consultado às ' + vivo().hora;
     // Sem resposta pronta, ou pergunta específica sobre um equipamento (como, código, óleo, alarme, onde fica…): o trecho do guia vale mais que o resumo genérico.
@@ -5419,6 +5753,9 @@
   // A pergunta de emergência (SOS, óleo, canal 16, EPIRB, Seafire, salvatagem, MMSI do rádio): ela e a resposta dela nunca entram no contexto, e ENCERRAM o que havia (a fala «o gerador» depois de
   // «mayday» é a resposta pronta do gerador, nunca a continuação da pergunta de antes da emergência).
   function perguntaEmerg(q) { var n = pad(q); return !!(emergencia(n) || oleo(n) === 1 || cabecaEmerg(n) || risco(q).n >= 1 || EMERG[route(q)] === 1); }   // (a cabeça de segurança sem rota própria — o botão DISTRESS, a baliza do EPIRB — também: a resposta dela é a instrução de segurança)
+  // Fase 2 da tarefa #12: a água, o incêndio, a saúde e a colisão ambíguos (riscoEmergAmbigua, route() devolve o fallback SEGURO) também são pergunta de emergência para a conversa e para o histórico da IA, como a pessoa em risco:
+  // a frase e a resposta dela nunca voltam à IA numa pergunta seguinte («qual a previsão do tempo?» não leva «o piso do salão está molhado» em `anterior` nem no histórico). A linha de cima fica como está; a rede entra ao lado dela.
+  var perguntaEmergBase = perguntaEmerg; perguntaEmerg = function (q) { return perguntaEmergBase(q) || riscoEmergAmbigua(String(q || '')).n >= 1; };
   function conversa(q, texto) {
     if (EM_SOS || !String(q || '').trim()) return;
     if (perguntaEmerg(q)) { limpaConversa(); return; }
@@ -5542,6 +5879,7 @@
     if ((opts && opts.emergencia === true) || (a && typeof a === 'object' && (a.janela === true || a.emerg === true))) return false;
     if (a && a.seguranca) return false;
     if (cabecaEmerg(pad(String(q || ''))) || risco(String(q || '')).n >= 1 || riscoLargo(String(q || '')).n >= 1) return false;   // P3E (revisão 4): a pergunta de cabeça de emergência é local, qualquer que seja a rota que a tenha tomado (trava 10: nunca na IA); a pessoa perdida também, com o nome com maiúscula inclusive (P4G, 4ª rodada) e pela REDE larga (pessoa + qualquer sinal de sumiço, ausência ou perda, sem guarda: P4G, 5ª rodada)
+    if (riscoEmergAmbigua(String(q || '')).n >= 1) return false;   // Fase 2 da tarefa #12: água, incêndio, saúde e colisão ambíguas pela mesma regra (trava 10: nunca na IA)
     if (k !== 'fallback' && k !== 'base' && k !== 'saudacao' && k !== 'faqEquip' && k !== 'relatoVerifica') return false;
     var topo = String(q || '').trim() ? buscaBase(q, 1)[0] : null;
     if (topo && topo.d.seguranca) return false;
@@ -6256,7 +6594,7 @@
     // P3G (F15, F20, F12): a agenda (tarefas da equipe e propostas do diário), as pendências (resolver, reabrir, desfazer — linhas novas) e os alarmes pedidos (as regras, os ativos agora para a faixa)
     loadTarefas: loadTarefas, addTarefa: addTarefa, tarefasEquipe: tarefasEquipe, achaAgendar: achaAgendar, ticketDoRegistro: ticketDoRegistro, textoTicket: textoTicket, conclusao: conclusao,
     pendenciasLista: pendenciasLista, resolvePendencia: resolvePendencia, reabrePendencia: reabrePendencia, desfazPendencia: desfazPendencia, achaPendencia: achaPendencia,
-    alarmesPedidos: almVigentes, alarmesPedidosAtivos: almAtivos, criaAlarmePedido: almCria, apagaAlarmePedido: almApaga, alarmeTexto: almRegra, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, risco: risco, riscoTexto: function (raw) { var c = comNomes(raw, true); return preparaPessoa(c !== null ? c : pad(raw)); }, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, JANELA_EMERG_MS: JANELA_MS, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
+    alarmesPedidos: almVigentes, alarmesPedidosAtivos: almAtivos, criaAlarmePedido: almCria, apagaAlarmePedido: almApaga, alarmeTexto: almRegra, historicoIA: historicoIA, answer: answer, answerAttachment: answerAttachment, pedeIA: pedeIA, risco: risco, riscoEmergAmbigua: riscoEmergAmbigua, riscoTexto: function (raw) { var c = comNomes(raw, true); return preparaPessoa(c !== null ? c : pad(raw)); }, ficha: ficha, instante: instante, resumoAgora: resumoAgora, preditiva: preditivaLista, carregaFaq: carregaFaq, faqPronto: function () { return !!FAQ.itens; }, faqDados: function () { return FAQ.dados; }, faqItem: faqItem, faqBusca: faqBusca, checklistTipos: checkTipos, checklistItens: checklistItens, checklistLinha: checklistLinha, checklistMarca: checklistMarca, checklistMarcas: checkMarcas, checklistZera: checklistZera, checklistConcluir: checklistConcluir, loadPecas: pecasEstado, pecas: pecasLista, usaPeca: usaPeca, desfazUsoPeca: desfazUsoPeca, ajustaPeca: ajustaPeca, addPeca: addPeca, semCoord: semCoord, TERMOS: TERMOS, TERMOS_FONTES: TERMOS_FONTES, FICHA_MAX: FICHA_MAX, JANELA_EMERG_MS: JANELA_MS, CHAVES: CHAVES, SOBRE_DADOS: SOBRE_DADOS, vozPensando: vozPensando, quem: quem, route: route, parseHash: parseHash, clearHash: clearHash, recognizer: recognizer, ditado: ditado, linkConvite: linkConvite, speak: speak, stopSpeaking: stopSpeaking, abertura: abertura, falaCurta: falaCurta, travaVoz: travaVoz, corrigeVoz: corrigeVoz, conversa: conversa, limpaConversa: limpaConversa, FALA_INTEIRA: FALA_INTEIRA, vozEnviar: vozEnviar, pularFala: pularFala, vozEncerrar: vozEncerrar, falavel: falavel, voz: vozPtBr, now: now, askHref: askHref, nb: nb, mil: mil, horas: horas, grau3: grau3, SNAP: SNAP, SOS_PASSOS: SOS_PASSOS, OLEO_PASSOS: OLEO_PASSOS, MMSI: MMSI_RADIO, MMSI_RADIO: MMSI_RADIO, ROTULO: ROTULO,
     LISTAS: { SOS: SOS.slice(), SOS_REGEX: SOS_REGEX_FONTES.slice(), SALVATAGEM: SALVATAGEM.slice(), BOIA_FORA: BOIA_FORA.slice(), EPIRB: EPIRB_PALAVRAS.slice(), EPIRB_REGEX: EPIRB_REGEX_FONTE }, emergencia: emergencia };
   try { window.dispatchEvent(new CustomEvent('capitao-brain-ready')); } catch (e) {}
 })();
