@@ -1,0 +1,51 @@
+# Cláusulas de PERIGO do portão da água, do incêndio, da saúde e da colisão ambíguos (riscoEmergAmbigua, capitao-brain.js; tarefa #12, Fase 2, rodada 3). 12 por categoria, escritas à parte da matriz de 15.240
+# combinações e dos conjuntos de validação (nenhuma é daqui nem de lá): relato em linguagem natural SEM a palavra ou a estrutura que emergencia()/SOS_REGEX já reconhecem. O grupo `amb_emerg` de testes/cerebro.py
+# exige a TAXA (não o zero) de cláusulas reconhecidas, e, para as reconhecidas, o texto seguro (sem posição, rumo, SOG, ETA nem pessoas; sem IA; sem abrir a janela). Formato: cláusula<TAB>categoria
+Apareceu uma mancha de água crescendo no carpete do corredor.	agua
+O armário debaixo da escada está ensopado e ninguém mexeu nele.	agua
+Tem uma poça se espalhando ao lado do motor de boreste.	agua
+Ouço água batendo embaixo do piso do salão quando o barco joga.	agua
+A cama do camarote de proa amanheceu encharcada.	agua
+Tem água nova aparecendo debaixo do forro do camarote de popa.	agua
+Está pingando do forro do banheiro em cima da cama.	agua
+Tem água nova minando pelo rodapé da cabine principal.	agua
+O estofado do salão está úmido e não sei de onde vem.	agua
+Achei o fundo do paiol de ré cheio de água salgada.	agua
+A cama do camarote de hóspedes amanheceu molhada de baixo para cima.	agua
+A gaveta debaixo da cama está com uma poça e gotejando.	agua
+Saiu uma fumacinha escura de trás do painel elétrico.	incendio
+Estou sentindo um cheiro forte de fio esquentando na cabine de popa.	incendio
+A tomada do camarote está preta e muito quente.	incendio
+O carregador do celular derreteu na tomada do salão.	incendio
+Um fio solto no painel da cozinha está esquentando e com cheiro de plástico.	incendio
+A bateria de serviço está inchada e quente demais.	incendio
+O cabo que vai para o guincho está amolecendo de tão quente.	incendio
+Subiu um cheiro de plástico derretendo vindo da casa de máquinas.	incendio
+Tem um calor estranho vindo da parede do gerador.	incendio
+O painel do disjuntor está pelando e com cheiro esquisito.	incendio
+Subiu um cheiro de borracha esquentando perto do alternador.	incendio
+Está saindo uma névoa escura da grade de ventilação da cozinha.	incendio
+Meu pai está pálido, suando frio e com a mão no peito.	saude
+A menina está com os lábios roxos e mole no colo.	saude
+Ela está com os lábios azulados e a respiração curta.	saude
+O Marcos levou uma pancada forte na cabeça e está confuso.	saude
+Minha vista escureceu de repente e estou com o coração disparado.	saude
+O comandante está com a fala enrolada e o rosto torto.	saude
+A minha tia ficou meio apagada e agora está muito sonolenta.	saude
+Ele está vomitando sem parar e a boca está seca.	saude
+A Joana ficou branca como papel e não consegue falar direito.	saude
+O garoto engasgou e está tossindo sem conseguir respirar bem.	saude
+Meu marido sente um aperto no peito e o braço esquerdo formigando.	saude
+O avô está muito suado, gelado e com a fala arrastada.	saude
+Ouvimos um estrondo embaixo da quilha e o leme ficou estranho.	colisao
+O leme ficou muito pesado e o barco não vira mais para boreste.	colisao
+Passamos por cima de alguma coisa e a hélice começou a vibrar.	colisao
+A lancha parou de obedecer o timão e segue reto para a costa.	colisao
+Roçamos numa pedra e o casco ficou arranhado.	colisao
+Enroscou uma rede de pesca na hélice e o motor engasgou.	colisao
+Passamos por cima de uma coisa dura e o barco passou a puxar para um lado.	colisao
+Um barco ancorado nos acertou de lado e a defensa soltou, ouvi um barulho feio.	colisao
+Um tronco bateu forte na lateral e deixou uma marca no casco.	colisao
+Ouvi um estalo seco no fundo e depois o leme ficou duro.	colisao
+Quase fomos de encontro às pedras e o barco não respondeu a tempo.	colisao
+O volante gira sem resistência e o barco anda em círculos.	colisao

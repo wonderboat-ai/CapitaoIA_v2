@@ -1,0 +1,98 @@
+# Frases de ROTINA que usam o vocabulário do portão da água, do incêndio, da saúde e da colisão ambíguos (riscoEmergAmbigua, capitao-brain.js; tarefa #12, Fase 2, rodada 3): nenhuma descreve uma emergência.
+# O grupo `amb_emerg` de testes/cerebro.py exige que, no máximo, uma fração pequena delas receba o texto seguro (taxa, não zero) e que a rota normal e a IA continuem para o resto.
+# Formato: frase<TAB>família (falha, calor, proc?, proc, neg, fora, tema). `proc?` é a pergunta de procedimento COM o ponto de interrogação; `proc` é a mesma pergunta SEM ele (o ditado não pontua).
+O motor de bombordo esquentou na subida da barra e desligou sozinho.	calor
+O gerador esquentou demais e desarmou duas vezes hoje.	calor
+O compressor do freezer esquentou e parou de gelar.	calor
+A temperatura da água do motor de boreste passou de 90 graus na travessia.	calor
+O inversor esquentou demais e desligou sozinho com o forno ligado.	calor
+O carregador de baterias esquenta bastante quando carrega no máximo.	calor
+A lâmpada do camarote esquenta muito, posso trocar por LED?	calor
+O ventilador do compressor da climatização parou e o compressor esquentou.	calor
+O motor esquentou, esperei esfriar e ele voltou ao normal.	calor
+O gerador cheira a óleo quente depois de muitas horas ligado.	calor
+O motor soltou um pouco de vapor ao desligar depois de esquentar.	calor
+O escapamento do gerador solta vapor branco quando liga frio.	calor
+A bomba do porão está ligando mais vezes que o normal esta semana.	falha
+O ar-condicionado da cabine está pingando no chão desde ontem.	falha
+O leme está um pouco duro de virar depois da última lavagem.	falha
+A hélice vibra um pouco em alta rotação depois da limpeza do casco.	falha
+Senti um solavanco quando o motor engatou a ré, é normal?	falha
+O volante do timão está meio solto, dá para apertar?	falha
+O barco não acelera como antes, será casco sujo?	falha
+O piloto automático perdeu o rumo duas vezes hoje.	falha
+O Seakeeper está fazendo um ruído novo depois de ligar.	falha
+O carregador da bateria está zumbindo, é normal?	falha
+Como ligo o gerador?	proc?
+Qual a pressão normal do óleo do motor em cruzeiro?	proc?
+Quando devo trocar o filtro de combustível?	proc?
+Como limpo o piso molhado do banheiro?	proc?
+Posso religar o gerador depois que ele desarmou?	proc?
+O que faço se o motor esquentar na saída da barra?	proc?
+Como seco o colchão que ficou úmido?	proc?
+Como reduzo a umidade do camarote?	proc?
+Tem água aqui no píer para completar o tanque?	proc?
+Qual a umidade ideal dentro da cabine?	proc?
+como ligo o gerador	proc
+qual a pressão normal do óleo do motor em cruzeiro	proc
+quando devo trocar o filtro de combustível	proc
+como limpo o piso molhado do banheiro	proc
+posso religar o gerador depois que ele desarmou	proc
+o que faço se o motor esquentar na saída da barra	proc
+como seco o colchão que ficou úmido	proc
+como cadastro o email do tripulante, ele não vira contato	proc
+quando devo medir a umidade da casa de máquinas	proc
+onde fica o disjuntor da bomba de porão	proc
+Ela não está pálida, só um pouco cansada.	neg
+O casco não sofreu nenhuma pancada na atracação.	neg
+Não tem água no porão, só confirmei.	neg
+Ninguém passou mal durante a travessia.	neg
+Não senti cheiro de queimado nenhum na casa de máquinas.	neg
+O piso do salão não está molhado.	neg
+Nenhuma tomada está quente, conferi todas.	neg
+O barco não bateu em nada, só o píer balançou.	neg
+Sem vazamento nenhum no eixo depois da vistoria.	neg
+A bateria não está inchada, medi hoje.	neg
+O cachorro não obedece quando eu chamo.	fora
+O gelo não vira água tão rápido na caixa térmica.	fora
+A tarefa executada não vira feita no aplicativo.	fora
+Meu celular esquentou demais no sol, fechei o aplicativo.	fora
+O notebook esquenta muito quando abro dois programas.	fora
+Fiquei pálido de susto quando vi o preço do combustível.	fora
+A roupa ficou ensopada porque esqueci na chuva em casa.	fora
+O volante do meu carro vibra em alta velocidade.	fora
+A conversa me deixou com a cabeça girando de tanta ideia.	fora
+O jogo parou de responder, vou reiniciar o console.	fora
+A água do mar está gelada hoje para mergulhar.	tema
+O vapor da cozinha embaçou os vidros do salão.	tema
+Choveu a noite toda e o convés está encharcado.	tema
+A marola do barco que passou balançou a gente um pouco.	tema
+Atracamos de popa e a defensa encostou no cais, tudo normal.	tema
+Tem muita neblina e quase não vejo o horizonte.	tema
+O cheiro de tinta nova ainda está forte no camarote.	tema
+A maré está subindo e a água chega perto do cais.	tema
+O ar-condicionado está condensando e a água escorre pelo dreno.	tema
+Estou com um pouco de enjoo por causa do balanço do mar.	tema
+O churrasco acabou e as brasas ainda estão acesas na churrasqueira.	tema
+Ouvimos o baque da onda na proa quando entramos na barra.	tema
+A rede de pesca ficou guardada no paiol e a hélice está limpa.	tema
+A água do paiol de ré é doce, vem do tanque de água doce?	tema
+Ouvi um estalo na lona do toldo com o vento forte.	tema
+A bomba do porão não tem peça de reposição a bordo.	falha
+O céu ficou roxo no fim da tarde e a gente ficou olhando.	tema
+O Pedro vomitou de manhã por causa do enjoo de mar.	tema
+Meu filho está com febre, tem termômetro a bordo?	falha
+O estaleiro consertou o casco que raspou na pedra em 2023.	tema
+A capota nova está com cheiro de plástico.	tema
+Uma fumacinha branca sai do escapamento na partida.	calor
+O cabo preto vai no borne negativo da bateria.	proc
+A parede do camarote tem umidade de condensação.	tema
+A água aqui da marina está muito suja.	tema
+O piso do cockpit está molhado.	tema
+Minha bateria do celular está inchada, preciso trocar.	fora
+A marola deu um solavanco no barco.	tema
+Quase passamos da boia certa na saída da barra.	tema
+O leme não responde ao piloto automático, o que verifico?	falha
+Está vazando óleo do motor de boreste, uma gota por minuto.	falha
+O estofado do salão ficou pálido depois de um ano de sol.	tema
+A água da marina está subindo aqui com a maré cheia.	tema

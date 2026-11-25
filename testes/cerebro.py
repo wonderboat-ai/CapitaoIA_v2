@@ -1993,7 +1993,7 @@ JS_REAL = """(casos) => { const B = window.CapitaoBrain, R = window.CapitaoRepla
 
 
 def confere_instante(b, muta=None, grupos=('forma', 'uma', 'resumo', 'virada', 'sos', 'real', 'alarmes', 'aninhadas', 'transicao', 'coletor', 'falha', 'parcial', 'numeros', 'ligados', 'coordenada', 'marca', 'emerg',
-                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina', 'p4g_bloqueios', 'fase7', 'socorro_fora')):
+                                                    'rotulos', 'modos', 'prazos', 'tempo', 'textos', 'estados', 'rotas', 'p3c', 'p3c_dados', 'ficha', 'semcoord', 'termos', 'voz', 'preditiva', 'pecas', 'checklist', 'faq', 'cabecas', 'rev5', 'p3f_registro', 'p3f_tickets', 'p3f_f17', 'p3f_relato', 'p3f_contexto', 'p3f_foto', 'p3f_rev2', 'p3f_rev3', 'p3f_rev3_rotas', 'p3g_rotas', 'p3g_alarmes', 'p3g_agenda', 'p3g_prazo', 'p3g_pendencias', 'p3g_capacidades', 'p3g_rev', 'p3g_rev2', 'janela', 'p4g_pessoa', 'p4g_perdida', 'p4g_rede', 'p4g_rede_matriz', 'p4g_estrutura', 'p4g_estrutura2', 'p4g_sujeito', 'p4g_rotina2', 'p4g_final3', 'p4g_final3_rotina', 'p4g_bloqueios', 'fase7', 'socorro_fora', 'amb_emerg')):
     """Devolve a lista dos problemas do instante do cérebro (vazia = tudo certo). Com `muta`, o cérebro é o mutante: a lista tem de vir NÃO vazia."""
     ruins = []
     ped = lambda nome, ok, extra='': ruins.append('%s %s' % (nome, str(extra)[:300])) if not ok else None
@@ -4020,6 +4020,16 @@ def grupo_voz(b, muta, ped):
         ped('voz: a hora da fala é a do instante da PRÓPRIA resposta (12:01:00), não a do relógio de quando a fala é montada, e vem uma vez só', r2['c'].count('12:01:00') == 1 and '12:02:30' not in r2['c'] and r2['t'].count('12:01:00') == 1, r2)
         ped('voz: a hora entra na abertura da lista («Pendências abertas, às 12:01:00: …») ou no fim da frase sem dois-pontos («… Às 12:01:00.»)', r2['abre'].startswith('Pendências abertas, às 12:01:00: ') and r2['fim'].endswith('. Às 12:01:00.') and r2['fim'].count(':') == 2, (r2['abre'][:60], r2['fim']))
         ped('voz: a tela copia a resposta (Object.assign) antes de falar e a fala ainda diz a hora do instante dela', r2['copia'].count('12:01:00') == 1, r2['copia'])
+        # achado 1 da auditoria (21/11/2026): o HUD da CONVERSA esconde o quadro (alerta=true via evVoz/cabecaEmerg, por vozPensando)
+        # mesmo sem palavra da lista SOS, quando a pergunta é sobre EPIRB, Seafire, canal16/DSC ou óleo; pergunta comum de dado não.
+        CASOS_ALERTA_VOZ = [('Como eu testo o EPIRB?', True), ('Qual o procedimento do Seafire?', True), ('canal 16, o que eu falo primeiro?', True),
+                            ('a pressão do óleo caiu, o alarme acendeu, o que eu faço?', True), ('qual nossa posição?', False), ('como está o tempo hoje?', False)]
+        r3 = pg.evaluate("""(frases) => frases.map(([t]) => { const B = window.CapitaoBrain; let det = null;
+          const ouvinte = (e) => { det = e.detail; }; window.addEventListener('capitao-voz', ouvinte);
+          try { B.vozPensando(t); } finally { window.removeEventListener('capitao-voz', ouvinte); }
+          return [t, det && det.alerta]; })""", CASOS_ALERTA_VOZ)
+        ruins = [(t, got, esp) for (t, esp), (_, got) in zip(CASOS_ALERTA_VOZ, r3) if got != esp]
+        ped('voz: o HUD esconde o quadro (alerta=true) para EPIRB/Seafire/canal16/óleo mesmo sem palavra da lista SOS, e fica false numa pergunta comum de dado', not ruins, ruins)
     finally:
         pg.ctx.close()
     # a trava de voz: só com a simulação; troca o termo (a palavra inteira, nunca um pedaço colado: «dado de bordoos»), não suprime nem encurta; as chaves de FALA_INTEIRA saem sempre inteiras
@@ -5843,8 +5853,12 @@ MUTANTES_3A = MUTANTES_3A + MUTANTES_3E_F09
 # —— F10: o FAQ dos equipamentos no chat ——
 FAQ_JSON = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'faq-equipamentos.json'), encoding='utf-8'))
 # as 8 frases do próprio FAQ (pergunta ou variante) que nenhuma resposta pronta nem trecho do guia responde (iam à IA): agora o item, com o código e a fonte
-FAQ_TIPADAS = [('água rasa: o que faço', 'EL-08'), ('sonda mostrando pouca profundidade', 'EL-08'), ('conferência anual do guincho', 'AN-04'), ('Como vejo os outros barcos pelo AIS?', 'AI-01'),
-               ('transponder só recebendo', 'AI-03'), ('boletim da Marinha antes de sair', 'CK-03'), ('O que faço ao chegar na marina?', 'CK-04'), ('Quando completo a água e esvazio as servidas?', 'CK-06')]
+FAQ_TIPADAS = [('sonda mostrando pouca profundidade', 'EL-08'), ('transponder só recebendo', 'AI-03'), ('boletim da Marinha antes de sair', 'CK-03'),
+               ('Quando completo a água e esvazio as servidas?', 'CK-06')]
+# (tarefa #3, integração dos 172 cartões: «água rasa: o que faço», «conferência anual do guincho», «Como vejo os outros barcos pelo AIS?» e
+# «O que faço ao chegar na marina?» saíram desta lista — o conteúdo novo de EL §41, AN §11, AI §4 e PI §10 agora responde cada uma delas
+# direto pelo trecho do guia (key='base'), mais específico que o item de FAQ antigo que cada uma usava antes; não precisam mais do
+# mecanismo faqEquip para ter uma resposta local. Confirmado com o texto completo de cada resposta, não só a chave.)
 # o que o FAQ NÃO toma: a resposta pronta, o trecho do guia, a pergunta de uma palavra, a genérica sem item, a de náutica geral (essas seguem como antes)
 FAQ_NAO = [('como se faz um nó lais de guia?', 'fallback'), ('como silenciar o alarme?', 'fallback'), ('como ligar o gerador?', 'base'), ('gerador', 'gerador'), ('como abrir a ventilação', 'fallback'),
            ('o alarme disparou', 'fallback'), ('como desligar o sistema', 'fallback'), ('quando trocar o óleo do motor?', 'base'), ('alarme de fluxo da climatização', 'base'),
@@ -5886,9 +5900,9 @@ def grupo_faq(b, muta, ped):
     try:
         pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
         x = pg.evaluate(JS_FAQ)
-        ped('faq: o cérebro carrega o faq-equipamentos.json (91 itens) e dá o item pelo código; código que não existe, número e vazio devolvem null',
-            x['ok'] is True and x['pronto'] is True and x['total'] == 91 == len(itens) and x['id1'] == por['MO-02'] and x['nulos'] == [None] * 4, (x['ok'], x['total'], x['nulos']))
-        ped('faq: 91 itens, 26 de segurança (os 9 cartões EM e os outros do contrato §1.6) e 9 de emergência', sum(1 for i in itens if i.get('seguranca')) == 26 and sum(1 for i in itens if i.get('emerg')) == 9, (sum(1 for i in itens if i.get('seguranca')), sum(1 for i in itens if i.get('emerg'))))
+        ped('faq: o cérebro carrega o faq-equipamentos.json (254 itens, desde a integração dos 172 cartões na tarefa #3) e dá o item pelo código; código que não existe, número e vazio devolvem null',
+            x['ok'] is True and x['pronto'] is True and x['total'] == 254 == len(itens) and x['id1'] == por['MO-02'] and x['nulos'] == [None] * 4, (x['ok'], x['total'], x['nulos']))
+        ped('faq: 254 itens, 53 de segurança (os 9 cartões EM, os outros do contrato §1.6 e as novas seções de fronteira/DSC da tarefa #3) e 9 de emergência', sum(1 for i in itens if i.get('seguranca')) == 53 and sum(1 for i in itens if i.get('emerg')) == 9, (sum(1 for i in itens if i.get('seguranca')), sum(1 for i in itens if i.get('emerg'))))
         ruins = []
         for r in x['todos']:
             it = por[r['id']]
@@ -5920,7 +5934,7 @@ def grupo_faq(b, muta, ped):
         ped('faq (revisão 4): os 82 itens comuns abrem com «<título> — <resposta>» (SK-02: «Ligar o estabilizador antes de sair — Ligue pelo display…»); os 9 cartões de emergência abrem direto com a instrução, sem título antes (trava 10)',
             not ruins and sk['text'].startswith('Ligar o estabilizador antes de sair — Ligue pelo display') and sk['fala'].startswith('Ligar o estabilizador antes de sair — Ligue pelo display'), (ruins[:4], sk['text'][:80]))
         seg = [r for r in x['todos'] if por[r['id']].get('seguranca')]
-        ped('faq: os 26 itens de segurança e os 9 cartões de emergência NUNCA vão à IA (pedeIA false); os outros 65, sim (como o trecho do guia)', len(seg) == 26 and all(r['ia'] is False for r in seg) and all(r['ia'] is True for r in x['todos'] if not por[r['id']].get('seguranca')), [r['id'] for r in seg if r['ia']][:5])
+        ped('faq: os 53 itens de segurança e os 9 cartões de emergência NUNCA vão à IA (pedeIA false); os outros 201, sim (como o trecho do guia)', len(seg) == 53 and all(r['ia'] is False for r in seg) and all(r['ia'] is True for r in x['todos'] if not por[r['id']].get('seguranca')), [r['id'] for r in seg if r['ia']][:5])
         # o cartão de emergência: a resposta de emergência não leva o quadro (a ficha sai sem a Telemetria, a Navegação, os Horímetros e a Autonomia), nem a hora, e a fala é a resposta inteira (a 1ª linha)
         em = [r for r in x['todos'] if por[r['id']].get('emerg')]
         ped('faq: o cartão de emergência (EM-01…09) é resposta de emergência: a ficha sai sem o quadro e sem hora, e a fala é a 1ª linha inteira (a resposta toda, com o rótulo do procedimento padrão), sem a hora do instante',
@@ -5945,7 +5959,7 @@ def grupo_faq(b, muta, ped):
         ped('faq: a 1ª linha da resposta digitada é «<título> — <resposta>» do item e a fonte começa com «FAQ dos equipamentos <código> · <guia § seção>»', not ruins, ruins)
         ruins = [(q, esp, k, f) for (q, esp), (_, k, f) in zip(FAQ_NAO, x['nao']) if k != esp or f is not None]
         ped('faq: o FAQ não toma o que já responde (resposta pronta, trecho do guia) nem a pergunta de uma palavra, a genérica ou a de náutica geral (%d perguntas)' % len(FAQ_NAO), not ruins, ruins)
-        ped('faq: nas %d frases do próprio FAQ (pergunta e variantes), toda resposta que vem do FAQ traz o código do PRÓPRIO item' % (len(itens) * 4), len(x['frases']) == 8 and all(i == f for i, q, f in x['frases']), x['frases'])
+        ped('faq: nas %d frases do próprio FAQ (pergunta e variantes), toda resposta que vem do FAQ traz o código do PRÓPRIO item' % (len(itens) * 4), len(x['frases']) == 47 and all(i == f for i, q, f in x['frases']), x['frases'])
         # (revisão) o corte de 8 passos: nenhum item do FAQ tem mais de 8, então um item com 12 passos é plantado na cópia carregada (sem tocar o arquivo)
         longo = pg.evaluate("""() => { const B = window.CapitaoBrain, it = B.faqDados().itens.filter((x) => x.id === 'MO-02')[0], orig = it.passos; it.passos = Array.from({ length: 12 }, (_, k) => 'passo ' + (k + 1));
           const a = B.answer('x', { platform: 'app', commit: false, faq: 'MO-02' }); it.passos = orig; return a.text; }""")
@@ -9384,7 +9398,7 @@ JS_P3G_AGD = """() => { const B = window.CapitaoBrain, D = window.CapitaoDados, 
   o.equipe = B.tarefasEquipe().map((t) => [t.id, t.n, t.vence, t.dn, t.st, t.rot, t.tom, t.aparelho, t.feita]);
   // 3) o prazo recalculado: 20 dias depois a mesma tarefa está ATRASADA em todas as telas (contagens) — e sem ela (desfeita) a conta volta
   const ms0 = C.relogio.ms; C.rebase(ms0 + 20 * 86400000, true); o.cDepois = cont(); const des = r('desfazer'); o.cDepoisSem = cont(); C.rebase(ms0, true);
-  o.des = des; o.c2 = cont(); o.tarefaApos = tar().length; o.vig = r('diário de bordo').text; o.cru = B.loadDiario().slice(0, 2).map((e) => [e.acao || null, e.alvo === B.loadDiario()[1].iso]); o.tk2 = tk()[0].estado;
+  o.des = des; o.c2 = cont(); o.tarefaApos = tar().length; o.tarefaCru = tar(); o.tarefaEquipeDepois = B.tarefasEquipe().some((x) => x.id === o.tarefa[0].id); o.vig = r('diário de bordo').text; o.cru = B.loadDiario().slice(0, 2).map((e) => [e.acao || null, e.alvo === B.loadDiario()[1].iso]); o.tk2 = tk()[0].estado;
   // 4) recusar: 0 linhas, a proposta fica recusada; a recusada não ressuscita
   localStorage.clear(); const n0 = nd(); r('agendar limpeza do casco para dia 20/12 com a marina'); const rc = r('recusar'); o.rec = [rc.key, tar().length, nd() - n0, tk()[0].estado, r('sim').key];
   // 5) o pedido de link não propõe nem arma; o agendar sem data/passada/30-02 não propõe
@@ -9461,9 +9475,10 @@ def grupo_p3g_agenda(b, muta, ped):
         quer = dict(o['c0']); quer[bal] += 1; quer['tarefasEquipe'] += 1
         ped('p3g agendar: o prazo é recalculado em todas as telas — CapitaoAgora.contagens() soma a tarefa (tarefasEquipe +1 e a faixa do prazo +1: %s); a manutenção lista as «Tarefas da equipe agendadas» e tarefasEquipe() dá o prazo pelo prazoDe' % bal,
             o['c1'] == quer and 'Tarefas da equipe agendadas (1): Revisão do gerador — 15/11/2026 (em %d dias).' % d15 in o['manut'] and [e for e in o['equipe'] if e[7]] == [[t[0]['id'], 'Revisão do gerador', '2026-11-15', d15, 'D-30' if d15 <= 30 else 'D-60', 'D-%d' % d15, 'warn' if d15 <= 30 else 'accent', True, False]] and [e[0] for e in o['equipe']][:2] in (['g02', 'g01'], ['g02', t[0]['id']], [t[0]['id'], 'g01'], ['g02', 'g01']) , (o['c0'], o['c1'], o['manut'][-160:], o['equipe']))
-        ped('p3g agendar: 20 dias depois a tarefa está ATRASADA na contagem (e sem ela a conta volta); «desfazer» tira a tarefa, anula a linha (linha nova; a confirmada fica guardada) e a proposta volta a aberta; a contagem volta à de antes',
-            o['cDepois']['atrasadas'] == o['cDepoisSem']['atrasadas'] + 1 and o['cDepois']['tarefasEquipe'] == o['cDepoisSem']['tarefasEquipe'] + 1 and o['des']['key'] == 'ticketDesfaz' and o['des']['text'].startswith('Desfeito: a tarefa saiu da agenda da equipe') and o['tarefaApos'] == 0
-            and o['c2'] == o['c0'] and 'Tarefa da equipe' not in o['vig'] and o['cru'][0][0] == 'anula' and o['cru'][0][1] is True and o['cru'][1][0] is None and o['tk2'] == 'aberto', (o['cDepois'], o['cDepoisSem'], o['des']['text'], o['cru']))
+        ped('p3g agendar: 20 dias depois a tarefa está ATRASADA na contagem (e sem ela a conta volta); «desfazer» ANULA a tarefa (registro só cresce: linha nova com acao:\'cancela\' em capitao.tarefas.v1, nunca remoção — a confirmada fica guardada), tira da tarefasEquipe() e anula a linha do diário, e a proposta volta a aberta; a contagem volta à de antes',
+            o['cDepois']['atrasadas'] == o['cDepoisSem']['atrasadas'] + 1 and o['cDepois']['tarefasEquipe'] == o['cDepoisSem']['tarefasEquipe'] + 1 and o['des']['key'] == 'ticketDesfaz' and o['des']['text'].startswith('Desfeito: a tarefa saiu da agenda da equipe') and o['tarefaApos'] == 2
+            and o['tarefaCru'][0]['acao'] == 'cancela' and o['tarefaCru'][0]['id'] == t[0]['id'] and o['tarefaEquipeDepois'] is False
+            and o['c2'] == o['c0'] and 'Tarefa da equipe' not in o['vig'] and o['cru'][0][0] == 'anula' and o['cru'][0][1] is True and o['cru'][1][0] is None and o['tk2'] == 'aberto', (o['cDepois'], o['cDepoisSem'], o['des']['text'], o['cru'], o['tarefaCru']))
         ped('p3g agendar: RECUSAR grava 0 linhas e a tarefa não entra; a recusada não ressuscita («sim» depois não confirma)', o['rec'][0] == 'ticketRecusa' and o['rec'][1] == 0 and o['rec'][2] == 0 and o['rec'][3] == 'recusado' and o['rec'][4] != 'ticketConfirma', o['rec'])
         ped('p3g agendar (link, data, duplicado): o pedido de link não propõe nem arma («não agendado»); a data que já passou («01/10/2025») e a que não existe («30/02», responde «Essa data não existe — nada foi agendado») não viram proposta; a proposta repetida ainda aberta não duplica e a tarefa já agendada diz «já está na agenda»',
             o['link'][0] == 'agendar' and 'pedido vindo de link não grava na agenda' in o['link'][1] and o['link'][2] == 0 and o['link'][3].startswith('Não há proposta') and o['passada'][0].startswith('A data 01/10/2025 já passou') and o['passada'][1] == 0 and o['trinta'][0] == 'agendar' and o['trinta'][1] == 0 and o['trinta'][2].startswith('Essa data não existe — nada foi agendado.')
@@ -11740,6 +11755,72 @@ def grupo_socorro_fora(b, muta, ped):
 
 
 GRUPOS_3A['socorro_fora'] = grupo_socorro_fora
+
+
+# —— a água, o incêndio, a saúde e a colisão AMBÍGUOS (Fase 2 da tarefa #12, rodada 3): o portão `riscoEmergAmbigua` (capitao-brain.js) leva o RELATO — sem a palavra ou a estrutura que emergencia()/SOS_REGEX já reconhecem — ao fallback SEGURO:
+# sem o quadro (trava 10), sem a IA (pedeIA false), sem a janela de 15 min, e fora do histórico e do contexto que vão à IA. O portão é lexical e a classe é aberta: o que fecha é a TAXA numa lista que não muda (cláusulas de perigo por categoria
+# e frases de rotina com o mesmo vocabulário, em testes/dados/amb-emerg-*.txt), nunca a contagem de achados. A matriz de 15.240 combinações e os conjuntos de validação (holdouts) não entram aqui: números na PARIDADE. ——
+AE_PERIGO = [tuple(l.split('\t')) for l in le_dados('amb-emerg-perigo.txt')]   # (cláusula, categoria): 12 por categoria
+AE_ROTINA = [tuple(l.split('\t')) for l in le_dados('amb-emerg-rotina.txt')]   # (frase, família)
+AE_PERGUNTAS = ['Como lanço a âncora?', 'Como eu marco a posição atual do barco como um waypoint?', 'Como leio a tensão das baterias no painel e na telemetria?', 'Por que travar a corrente depois de fundear?',
+                'Como ligo o gerador?', 'Como eu vejo informações de maré ou corrente de um ponto da carta?']   # (antes do portão: âncora, posição, telemetria, maré e o gerador levavam o quadro ou a IA com o relato junto)
+AE_MIN_PERIGO, AE_MIN_POR_CATEGORIA, AE_MAX_ROTINA = 40, 9, 3   # hoje: 48 das 48 cláusulas de perigo (12 por categoria) e 0 das 95 frases de rotina (o C1 da rodada 2: 43 e 46); taxa, não zero (o teto da rotina é ~3 %). As listas nasceram junto do portão: o teste é a guarda de regressão, NÃO a medida de generalização (essa está na PARIDADE)
+AE_PONTOS = [('como limpo o piso molhado do banheiro', 0), ('como seco o colchão que ficou úmido', 0), ('quando devo medir a umidade da casa de máquinas', 0), ('ela não está pálida', 0), ('ninguém passou mal durante a travessia', 0),
+             ('o cachorro não obedece', 0), ('como cadastro o email, ele não vira contato', 0), ('o motor esquentou e parou na volta da marina', 0), ('o motor esquentou demais e desligou sozinho', 0), ('tem água aqui no píer', 0), ('a marola deu um solavanco no barco', 0), ('tem uma fumacinha branca saindo do escapamento quando liga o motor', 0),
+             ('quando o barco balança aparece água nova debaixo do banco da cozinha', 1), ('como ativo o alarme de âncora a tomada do cais está preta', 1), ('como seco o piso molhado não sei por quê', 1), ('o capitão levou uma pancada forte na costela e está pálido', 1),
+             ('a bomba do porão não está dando conta', 1), ('o disjuntor do ar-condicionado está esquentando demais', 1), ('tem um calor estranho vindo da parede do motor', 1), ('o comandante está sem forças e respirando rápido', 1), ('o barco não obedece mais ao leme', 1), ('tem água aqui', 1), ('caiu uma brasa da churrasqueira perto da almofada', 1), ('o pedro vomitou duas vezes por causa do balanço', 0), ('meu filho está com febre, tem termômetro a bordo?', 0), ('o estaleiro consertou o casco que raspou na pedra em 2023', 0), ('a seguradora quer o laudo do impacto no casco', 0), ('a capota nova está com cheiro de plástico', 0), ('o cabo preto vai no borne negativo da bateria', 0), ('a parede do camarote tem umidade de condensação', 0), ('o piso do cockpit está molhado', 0), ('a água aqui do fundeio sobe quanto na maré', 0), ('minha bateria do celular está inchada, preciso trocar', 0), ('o céu ficou roxo no fim da tarde e a gente ficou olhando', 0), ('está vazando óleo do motor de boreste, uma gota por minuto', 0), ('o estofado do salão ficou pálido depois de um ano de sol', 0), ('o barco não acelera como antes, será casco sujo', 0), ('o leme não responde ao piloto automático, o que verifico', 0), ('o painel está com cheiro de plástico queimando', 1), ('o rapaz não responde direito quando chamo', 1), ('quando o barco balança aparece água nova embaixo do piso', 1), ('sentimos uma pancada forte no casco', 1), ('o painel está bem mais quente do que o normal', 1), ('a menina ficou molinha e quieta no colo', 1), ('quase passamos da boia certa na saída da barra', 0), ('quase batemos o recorde de velocidade com o barco', 0), ('posso dar a partida no motor se o piso do compartimento estiver úmido', 0), ('nenhum disjuntor está quente, conferi um por um', 0), ('o elevador do prédio deu um solavanco e todo mundo se assustou', 0), ('fiquei pálido quando vi o valor da conta do restaurante', 0), ('meu filho vomitou depois de comer muito doce na festa', 0), ('o piso do compartimento do motor está úmido', 1), ('o disjuntor está quente demais', 1), ('o barco deu um solavanco forte e todo mundo se assustou', 1), ('ele ficou pálido e suando frio', 1), ('meu filho vomitou e não responde direito', 1), ('senti um solavanco quando o motor engatou a ré', 0), ('a hélice faz barulho de metal ao engatar a ré', 0), ('fomos tocados por uma onda de lado e o barco bateu contra o píer com estrondo', 1), ('marcha lenta antes de desligar sentimos uma pancada forte no casco', 1), ('o inversor esquentou demais e desligou sozinho', 0), ('o carregador de bateria esquentou demais hoje de manhã', 0)]
+JS_AE = r"""([perigo, rotina, perguntas, relatos, pontos]) => { const B = window.CapitaoBrain, op = { platform: 'app', commit: false }, out = {}, T = {};
+  Object.keys(B.TERMOS).forEach((k) => { T[k] = new RegExp(B.TERMOS[k].source, B.TERMOS[k].flags.replace('g', '')); });
+  const um = (q) => { sessionStorage.clear(); if (B.limpaConversa) B.limpaConversa(); const a = B.answer(q, op), tx = a.text + '\n' + (a.src || '') + '\n' + B.falaCurta(a);
+    return { key: a.key, ia: B.pedeIA(a, q), tx, abre: a.abreJanela === true || a.emerg === true || a.janela === true, termos: Object.keys(T).filter((k) => T[k].test(tx)) }; };
+  out.perigo = perigo.map(([c, cat]) => [c, cat, B.riscoEmergAmbigua(c).n, B.risco(c).n]);
+  out.combos = []; perigo.forEach(([c]) => { if (B.riscoEmergAmbigua(c).n === 1) perguntas.forEach((p) => [c + ' ' + p, p + ' ' + c].forEach((q) => out.combos.push([q, B.risco(c).n, um(q)]))); });
+  out.rotina = rotina.map(([f]) => [f, B.riscoEmergAmbigua(f).n]);
+  out.relatos = relatos.map((r) => { sessionStorage.clear(); const a = B.answer('O que verificar e qual pode ser a causa: ' + r, op); return [r, B.riscoEmergAmbigua(r).n, B.pedeIA(a, r), a.text.indexOf('Isso pode ser uma emerg') !== -1]; });
+  out.pontos = pontos.map(([q, esp]) => [q, esp, B.riscoEmergAmbigua(q).n]);
+  const h = (frase) => { sessionStorage.clear(); B.limpaConversa(); const a = B.answer(frase, op); return B.historicoIA([{ papel: 'usuario', texto: frase }, { papel: 'capitao', texto: a.text }, { papel: 'usuario', texto: 'qual a previsão do tempo?' }]).map((m) => (m.papel === 'usuario' ? 'u:' : 'c:') + m.texto.slice(0, 40)); };
+  out.hist = [h(perigo[0][0]), h('o motor esquentou demais e desligou sozinho hoje de manhã')];
+  const junto = (a1, a2) => { localStorage.clear(); sessionStorage.clear(); B.limpaConversa(); B.answer(a1, { platform: 'app' }); const r = B.answer(a2, { platform: 'app' }); return r.junto || null; };
+  out.junto = [junto(perigo[1][0], 'e o gerador?'), junto('como ligar o gerador?', 'e o BB?')];
+  const pat = ['água molhado '.repeat(800), 'ele esta pálido e '.repeat(600), 'tem agua '.repeat(1200), 'quente cheiro motor '.repeat(500), 'a,b,'.repeat(2500), 'como lanço a âncora? '.repeat(500), 'a '.repeat(5000)];
+  for (let i = 0; i < 200; i++) B.riscoEmergAmbigua('o motor esquentou e o piso da cabine está molhado ' + i);   // (aquece o JIT: a medida é do portão, não da 1ª compilação)
+  out.ms = pat.map((q) => { const t0 = performance.now(); B.riscoEmergAmbigua(q); return performance.now() - t0; });
+  const tip = perguntas.concat(perigo.map((x) => x[0]), rotina.map((x) => x[0])), t1 = performance.now(); for (let i = 0; i < 20; i++) tip.forEach((q) => B.riscoEmergAmbigua(q)); out.tipica = (performance.now() - t1) / (20 * tip.length);
+  return out; }"""
+
+
+def grupo_amb_emerg(b, muta, ped):
+    pg = pagina(b, muta=muta, fixo='60')
+    try:
+        pg.evaluate("() => new Promise(r => { window.CapitaoBrain.carregaBase(); setTimeout(r, 800); })")
+        o = pg.evaluate(JS_AE, [AE_PERIGO, AE_ROTINA, AE_PERGUNTAS, RELATOS_VERIFICA_P3F, AE_PONTOS])
+    finally:
+        pg.ctx.close()
+    cats = sorted(set(c for _, c in AE_PERIGO))
+    achou = {c: sum(1 for _, k, n, _ in o['perigo'] if k == c and n == 1) for c in cats}
+    ped('amb_emerg: nas %d cláusulas de perigo (%d por categoria: água, incêndio, saúde, colisão — relato ambíguo, sem a palavra que a lista SOS já reconhece), pelo menos %d são reconhecidas e pelo menos %d de cada categoria (hoje %s)'
+        % (len(AE_PERIGO), len(AE_PERIGO) // len(cats), AE_MIN_PERIGO, AE_MIN_POR_CATEGORIA, achou),
+        len(AE_PERIGO) >= 48 and len(cats) == 4 and sum(achou.values()) >= AE_MIN_PERIGO and min(achou.values()) >= AE_MIN_POR_CATEGORIA, (achou, [c for c, k, n, _ in o['perigo'] if n != 1][:6]))
+    ruins = []
+    for q, pessoa, r in o['combos']:
+        tx = r['tx']
+        if r['key'] != 'fallback' or r['ia'] or r['abre'] or r['termos'] or R_TRAVA_EMERG.search(tx) or confere.R_COORD.search(tx) or not ('Isso pode ser uma emerg' in tx or (pessoa and 'pessoa no mar ou sumida' in tx)):
+            ruins.append((q[:80], r['key'], r['ia'], r['abre'], r['termos'], (R_TRAVA_EMERG.search(tx) or confere.R_COORD.search(tx) or [None])[0]))
+    ped('amb_emerg: o relato reconhecido junto de uma pergunta de dado (âncora, posição, telemetria, maré, gerador; as duas ordens: %d frases) é o fallback seguro — «Isso pode ser uma emergência de bordo… procedimento padrão — confirmar com o protocolo de bordo. Em caso de risco, abra o SOS.» —, '
+        'sem posição, rumo, SOG, ETA nem pessoas a bordo, sem coordenada, sem as 8 regex dos termos, sem IA e sem abrir a janela de 15 min' % len(o['combos']), len(o['combos']) >= 6 * 2 * AE_MIN_PERIGO and not ruins, (len(ruins), ruins[:4]))
+    fp = [f for f, n in o['rotina'] if n == 1]
+    ped('amb_emerg: nas %d frases de ROTINA com o mesmo vocabulário (relato de falha e de calor, pergunta de procedimento com e sem «?», negação, uso fora do barco, mar e clima), no máximo %d recebem o texto seguro (hoje %d)' % (len(AE_ROTINA), AE_MAX_ROTINA, len(fp)),
+        len(AE_ROTINA) >= 60 and len(fp) <= AE_MAX_ROTINA, fp[:6])
+    ped('amb_emerg: os %d relatos canônicos do p3f rev2 (motor, guincho, gerador, ar-condicionado, bomba, plotter, Seakeeper) NÃO são do portão e seguem à IA (pedeIA true no «O que verificar?»), sem o texto seguro' % len(RELATOS_VERIFICA_P3F),
+        all(n == 0 and ia is True and not seg for _, n, ia, seg in o['relatos']) and len(o['relatos']) == len(RELATOS_VERIFICA_P3F), [x for x in o['relatos'] if x[1] != 0 or x[2] is not True or x[3]])
+    ped('amb_emerg: a pergunta de procedimento SEM «?» (o ditado não pontua) e a negação não são relato; a frase longa que junta a pergunta e o relato, a oração com «quando o barco balança», a causa ignorada, o «sem forças e respirando rápido» e a bomba que não para são',
+        all(esp == n for _, esp, n in o['pontos']), [x for x in o['pontos'] if x[1] != x[2]])
+    ped('amb_emerg (trava 10): o relato reconhecido e a resposta dele não voltam à IA numa pergunta seguinte (historicoIA) e encerram o contexto («e o gerador?» não leva a pergunta de antes); o relato de rotina e o contexto de rotina seguem',
+        o['hist'][0] == ['u:qual a previsão do tempo?'] and len(o['hist'][1]) == 3 and o['hist'][1][0].startswith('u:o motor esquentou') and o['junto'][0] is None and o['junto'][1] == 'como ligar o gerador? — e o BB?', (o['hist'], o['junto']))
+    ped('amb_emerg: o portão não é caro — as cláusulas de 10.000 letras patológicas (palavra repetida, vírgulas, perguntas em série) levam menos de 1 s cada (hoje ~20 ms: o portão só lê as primeiras 1.200 letras; a margem é para a máquina ocupada, o que o teste pega é o backtracking de segundos) e a frase comum menos de 5 ms (hoje ~0,01 ms)', max(o['ms']) < 1000 and o['tipica'] < 5, (max(o['ms']), o['tipica']))
+
+
+GRUPOS_3A['amb_emerg'] = grupo_amb_emerg
 GRUPOS_3A['fase7'] = grupo_fase7
 F7 = ('fase7',)
 MUTANTES_F7 = [
@@ -11760,6 +11841,69 @@ MUTANTES_F7 = [
     ('fase7: a saudação ganha um selo só na sessão do convidado', r"'Capitão IA online. Que precisa?\nOlá, ' + quem() + '. '", r"'Capitão IA online. Que precisa?\nOlá, ' + quem() + (quem() === 'Convidado' ? ' (DEMO)' : '') + '. '", F7),
 ]
 MUTANTES_3A = MUTANTES_3A + MUTANTES_F7
+
+
+# Mutantes do portão da água, do incêndio, da saúde e da colisão ambíguos (riscoEmergAmbigua; Fase 2 da tarefa #12, rodada 3): os 3 pontos de ligação (route, responde, pedeIA), o texto seguro, a rede da conversa e do histórico, cada família de
+# detecção (água, incêndio, saúde, colisão) e cada guarda de rotina (negação, objeto, causa, pedido de remédio, óleo, marola, atracação, marcha, piloto, condensação, a pergunta sem «?»). Cada um tem de ser acusado pelo grupo `amb_emerg`.
+AE = ('amb_emerg',)
+MUTANTES_AMB = [
+    ('amb_emerg: a route() deixa o portão de fora (o relato cai na rota de dado e leva o quadro)', r"if (riscoEmergAmbigua(qRaw).n >= 1) return 'fallback';", r"", AE),
+    ('amb_emerg: o responde() não troca o fallback pelo texto seguro (o relato sem rota leva o quadro)', r"segura = fallbackEmergenciaAmbigua(p);", r"segura = null;", AE),
+    ('amb_emerg: o pedeIA deixa o relato ir à IA', r"if (riscoEmergAmbigua(String(q || '')).n >= 1) return false;", r"", AE),
+    ('amb_emerg: o texto seguro mantém a instrução da pessoa em risco em vez da da água, incêndio, saúde e colisão', r"r.text = r.text.replace(PESSOA_SEGURANCA, AMBIGUA_SEGURANCA);", r"r.text = r.text;", AE),
+    ('amb_emerg: o texto seguro traz a velocidade do quadro', r"Em caso de risco, abra o SOS.';", r"Em caso de risco, abra o SOS. Navegando a 18,1 nós.';", AE),
+    ('amb_emerg: o relato reconhecido não é pergunta de emergência para a conversa e o histórico da IA', r"return perguntaEmergBase(q) || riscoEmergAmbigua(String(q || '')).n >= 1; };", r"return perguntaEmergBase(q); };", AE),
+    ('amb_emerg: o cérebro não exporta o portão', r"risco: risco, riscoEmergAmbigua: riscoEmergAmbigua,", r"risco: risco,", AE),
+    ('amb_emerg: a água só reconhece o «tem água aqui» e a parede suando (sai a poça, o molhado, o pingo)', r"ambPerto(t, AG_H, AG_C, 8, 2) ||", r"false ||", AE),
+    ('amb_emerg: a água perde o «tem água aqui»', r"if ((ambAcha(AG_EXISTE, s) && !mar) || AG_PAREDE.test(s)) return true;", r"if (AG_PAREDE.test(s)) return true;", AE),
+    ('amb_emerg: a água perde a palavra «água» com verbo e contexto («água nova minando»)', r"if (ambPerto(t, AG_AGUA, AG_V, 7, true) && (", r"if (false && (", AE),
+    ('amb_emerg: o incêndio perde o cheiro de queimado, plástico ou fio', r"if (ambPerto(t, IN_CHEIRO, IN_QUEIMA, 4) || ambPerto(t, IN_CHEIRO, IN_ELET, 4)) return true;", r"", AE),
+    ('amb_emerg: o incêndio perde o calor do painel, do cabo e da tomada', r"(ambPerto(t, IN_CALOR, IN_ELET_P, 8, 2) && ambPerto(t, IN_CALOR, IN_FRACA, 6) && !ambGuarda(t, IN_G_DISP))", r"false", AE),
+    ('amb_emerg: o incêndio perde o calor do motor e do gerador com evidência de fogo', r"return ambPerto(t, IN_CALOR, IN_MECA, 6, 2) && (ambPerto(t, IN_CALOR_E, IN_MECA, 6) ||", r"return false && (ambPerto(t, IN_CALOR_E, IN_MECA, 6) ||", AE),
+    ('amb_emerg: a saúde perde os sinais só do corpo (peito apertado, lábios roxos, vista escura, fala enrolada)', r"if (MD_DURO.some(function (r) { return ambAcha(r, s); })) return true;", r"", AE),
+    ('amb_emerg: a saúde perde o grave (não reage, rosto inchado, pancada na cabeça, engasgou)', r"if (p >= 1 && MD_SER.some(function (r) { return ambAcha(r, s, MD_OBJ); })) return true;", r"", AE),
+    ('amb_emerg: a colisão perde o impacto com o casco ou um objeto duro', r"(!mar && (ambPerto(t, CO_IMPACTO, CO_CASCO, 6, 2) || ambPerto(t, CO_IMPACTO, CO_DURO_I, 6, 2)))", r"false", AE),
+    ('amb_emerg: a colisão perde o leme que não obedece e o barco que puxa', r"return CO_PERDE.test(s) && !ambGuarda(t, CO_PERDE_G) &&", r"return false && !ambGuarda(t, CO_PERDE_G) &&", AE),
+    ('amb_emerg: a negação não tira o sinal («ela não está pálida», «sem forças e respirando rápido»)', r"if (AMB_NEG.test(t[m]) && !(t[m] === 'nao'", r"if (false && AMB_NEG.test(t[m]) && !(t[m] === 'nao'", AE),
+    ('amb_emerg: o óleo ou o diesel que vaza volta a ser água', r"!ambIdx(t, AG_AGUA).length && ambPertoAgua(t, AG_OL, 6)", r"false", AE),
+    ('amb_emerg: a coisa perto do sinal (a tinta pálida, a geladeira que treme) volta a ser a pessoa', r"!(objeto && ant.slice(-4)", r"!(false && ant.slice(-4)", AE),
+    ('amb_emerg: «quando o barco balança aparece água» (a oração subordinada) vira pergunta', r"&& !AMB_SUB.test(ini)))) {", r"&& true))) {", AE),
+    ('amb_emerg: a pergunta sem «?» vale para frase de qualquer tamanho (a que junta a pergunta e o relato some)', r"pc.trim().split(/\s+/).length <= 10 &&", r"pc.trim().split(/\s+/).length <= 40 &&", AE),
+    ('amb_emerg: a pergunta sem «?» deixa de ser pergunta (o ditado volta a disparar)', r"(!/\?/.test(pc) && pc.trim()", r"(false && pc.trim()", AE),
+    ('amb_emerg: a pergunta que diz «não sei por quê» deixa de ser relato', r"&& !AMB_DESCONHECE.test(' ' + norm(pc) + ' ')", r"", AE),
+    ('amb_emerg: «obedece» e «vira» voltam a aprovar sozinhos o verbo de CO_PERDE («o cachorro não obedece»)', r"|circulo|casco|timao');   // (só SUBSTANTIVO", r"|circulo|casco|timao|obedece|vira');   // (só SUBSTANTIVO", AE),
+    ('amb_emerg: «sozinho» do próprio motor volta a ser evidência de fogo', r"var IN_FORTE = ambR('cheiro|", r"var IN_FORTE = ambR('sozinh[oa]|cheiro|", AE),
+    ('amb_emerg: o motor como LUGAR do calor («parede do motor», «perto do motor») deixa de valer', r"(ambPerto(t, IN_LOC, IN_MECA_X, 3) && ambPerto(t, IN_CALOR, IN_ANOM, 6))", r"false", AE),
+    ('amb_emerg: «a gente» volta a ser prova de pessoa', r"var MD_PRON = ambR('ele|ela|eles|elas|estou|", r"var MD_PRON = ambR('gente|ele|ela|eles|elas|estou|", AE),
+    ('amb_emerg: a causa dita («por causa do enjoo») não explica o sintoma', r"causa = MD_CAUSA.test(s);", r"causa = false;", AE),
+    ('amb_emerg: o pedido de remédio («tem termômetro a bordo?») não explica o sintoma brando', r"rem = MD_REM.test(full || s);", r"rem = false;", AE),
+    ('amb_emerg: o histórico e o conserto (ano, laudo, estaleiro) voltam a ser colisão', r"if (ambGuarda(t, CO_G) || CO_ADM.test(s)) return false;", r"if (ambGuarda(t, CO_G)) return false;", AE),
+    ('amb_emerg: o cheiro de produto novo volta a ser incêndio', r"(ambIdx(t, IN_NOVO).length > 0 && !ambIdx(t, IN_BURN).length);", r"false;", AE),
+    ('amb_emerg: a fumacinha do escapamento na partida volta a ser incêndio', r"IN_FUMO_C, 5) && !ambGuarda(t, IN_CLIMA) && !ambGuarda(t, IN_ESCAPE)) return true;", r"IN_FUMO_C, 5) && !ambGuarda(t, IN_CLIMA)) return true;", AE),
+    ('amb_emerg: o cabo ou a tomada preta (a cor) volta a ser queimada', r"return /^pret[oa]s?$/.test(w) && !IN_ESTADO.test(t[k - 1] || '') && !IN_ESTADO.test(t[k - 2] || '') ? 'x' : w;", r"return w;", AE),
+    ('amb_emerg: a condensação deixa de explicar a umidade', r"|chove|condensacao|orvalho|garoa|", r"|chove|orvalho|garoa|", AE),
+    ('amb_emerg: a água do píer e da marina («tem água aqui no píer») volta a ser relato', r"mar = ambPerto(t, AG_MAR, AG_C_W, 4);", r"mar = false;", AE),
+    ('amb_emerg: o cockpit e o escapamento perto da água deixam de ser guarda', r"|| ambPertoAgua(t, AG_GP, 6)) return false;", r") return false;", AE),
+    ('amb_emerg: a bateria do celular inchada volta a ser incêndio de bordo', r"&& !ambGuarda(t, IN_COM) && !ambGuarda(t, IN_G_DISP)", r"&& !ambGuarda(t, IN_COM)", AE),
+    ('amb_emerg: o inversor e o carregador que esquentam por natureza voltam a ser incêndio', r"ambPerto(t, IN_CALOR, IN_ELET_P, 8, 2)", r"ambPerto(t, IN_CALOR, IN_ELET_S, 8, 2)", AE),
+    ('amb_emerg: a marola e a defensa na atracação voltam a ser colisão', r"mar = (ambGuarda(t, CO_ONDA) || ambGuarda(t, CO_ATRAC)) && !ambIdx(t, CO_DURO_H).length && !ambIdx(t, CO_DANO_F).length && !ambPerto(t, CO_BATEU, CO_DURO, 5, 2);", r"mar = false;", AE),
+    ('amb_emerg: a marcha engatada (tranco, batida) volta a ser colisão', r"mar = mar || eng;", r"mar = mar;", AE),
+    ('amb_emerg: o barulho de metal do eixo ao engatar a ré volta a ser colisão', r"if (!eng && ambPerto(t, CO_EIXO, CO_EIXO_D, 8)) return true;", r"if (ambPerto(t, CO_EIXO, CO_EIXO_D, 8)) return true;", AE),
+    ('amb_emerg: a onda que joga o barco contra o píer (bateu) deixa de ser colisão', r" && !ambPerto(t, CO_BATEU, CO_DURO, 5, 2);", r";", AE),
+    ('amb_emerg: «não acelera como antes» (casco sujo, maré) volta a ser barco preso', r"&& !CO_ANDA_X.test(s)) || CO_PERDE_A", r") || CO_PERDE_A", AE),
+    ('amb_emerg: «quase passamos da boia» volta a ser quase-colisão', r"&& !CO_QUASE_X.test(s)) return true;", r") return true;", AE),
+    ('amb_emerg: o leme que «não responde» ao piloto automático volta a ser perda de governo', r"return CO_PERDE.test(s) && !ambGuarda(t, CO_PERDE_G) &&", r"return CO_PERDE.test(s) &&", AE),
+    ('amb_emerg: o sujeito da frase (o «pessoax» das duas primeiras palavras) deixa de provar a pessoa', r"|| q.trim().split(' ').slice(0, 2).indexOf('pessoax') !== -1) return 2;", r") return 2;", AE),
+    ('amb_emerg: a bomba do porão que «não está dando conta» deixa de valer', r"return AG_BOMBA_NP.test(s) || (", r"return (", AE),
+    ('amb_emerg: o disjuntor que esquenta deixa de valer', r"if (ambAcha(IN_DISJ, ' ' + t.join(' ') + ' ') || ambPerto(t, IN_CALOR_F, IN_ELET_S, 6, 2) ||", r"if (ambPerto(t, IN_CALOR_F, IN_ELET_S, 6, 2) ||", AE),
+    ('amb_emerg: a brasa que caiu ou a faísca que pulou (junto do churrasco) deixam de valer', r"if (ambPerto(t, IN_BRASA, IN_BRASA_E, 5, 1) || (", r"if ((", AE),
+    ('amb_emerg: a condição hipotética («se o piso estiver úmido») vira relato', r"if (t.length < 2 || AMB_HIPOTESE.test(s)) continue;", r"if (t.length < 2) continue;", AE),
+    ('amb_emerg: a negação não tira o disjuntor quente («nenhum disjuntor está quente»)', r"if (ambAcha(IN_DISJ, ' ' + t.join(' ') + ' ') ||", r"if (IN_DISJ.test(' ' + t.join(' ') + ' ') ||", AE),
+    ('amb_emerg: o elevador, o ônibus, o carro e o avião (o que não é o barco) voltam a ser colisão', r"|ganho|elevador|predio|aviao|onibus|carro|carros|trem|caminhao|estacionamento|cancela');", r"|ganho');", AE),
+    ('amb_emerg: o susto de ver o preço («quando vi o valor da conta») deixa de explicar a palidez', r"var MD_CAUSA = / quando (?:vi|li|ouvi|soube|recebi) | ao (?:ver|ler|ouvir|saber|receber) | de tanto", r"var MD_CAUSA = / de tanto", AE),
+    ('amb_emerg: o vômito de quem comeu demais («depois de comer») volta a ser relato', r"!MD_COMIDA.test(s) &&", r"", AE),
+]
+MUTANTES_3A = MUTANTES_3A + MUTANTES_AMB
 
 
 def instante_3a(b):

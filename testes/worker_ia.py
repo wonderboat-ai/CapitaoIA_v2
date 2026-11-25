@@ -586,6 +586,7 @@ AFIRMA_BARRA = [
     "Sim, é uma embarcação real.", "É um barco de verdade.", "As informações são, sim, reais.", "A telemetria é real.", "Os valores são todos reais.", "Eu uso dados reais do coletor de bordo.",
     "Trabalho com leituras reais dos sensores.", "A lancha existe de verdade.", "Esta é uma embarcação de verdade.", "Os dados são de fato reais.", "Os dados são autênticos.", "São leituras autênticas.",
     "A navegação é real.", "São valores reais, lidos agora.", "é uma informação verdadeira",
+    "Cenário real, sem simulação.", "A rota real está sendo seguida agora.",
 ]
 AFIRMA_PASSA = [
     "Esta é a embarcação de apresentação da plataforma Capitão IA: as leituras seguem o roteiro de navegação e mudam a cada segundo. Numa embarcação do cliente, os mesmos painéis leem o coletor NMEA de bordo.",

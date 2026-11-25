@@ -6,7 +6,7 @@ O escopo não está definido. Abaixo, só o que já toca produtos Google e os po
 
 | Produto | Como está | Onde |
 |---|---|---|
-| Drive | pasta `Capitão IA v2` com as fontes (hoje DEMO) | [google-drive/](../google-drive/README.md) |
+| Drive | pasta `Capitão IA v2` com as fontes (hoje dados simulados da 1.1.0, sem rótulo de demonstração) | [google-drive/](../google-drive/README.md) |
 | NotebookLM | **não configurado** nesta embarcação (o chat não mostra botão de base externa) | `capitao-brain.js › BASE = null` |
 | Gemini | citado para documentos sensíveis, depois do login no servidor | `CLAUDE.md › Privacidade` |
 | E-mail | convites da Equipe saem por `mailto:` do próprio aparelho | `capitao-brain.js › linkConvite` |

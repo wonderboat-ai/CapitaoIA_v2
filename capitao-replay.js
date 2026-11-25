@@ -154,13 +154,24 @@
     for (k in p.C) if (k !== 'alarmes' && !(k in o)) return false;
     return true;
   }
-  // janelas de alarme por id, juntando as contíguas (aviso → crítico → aviso do cenário 'alarme-critico' é um alarme só)
+  // janelas de alarme por id, juntando as contíguas (aviso → crítico → aviso do cenário 'alarme-critico' é um alarme só). O laço de 150 s é
+  // CIRCULAR (como cogEm() já trata para os arcos de guinada, com bases = [a[0], a[0]+tot, a[0]-tot]): se, depois de juntar, o 1º grupo do id
+  // começa em t = 0 e o último termina em t = duração−1, são a MESMA janela cruzando a costura — funde os dois num grupo só com fim ≥ duração
+  // (sinal de que ele continua na volta seguinte); janela() interpreta esse sinal nas duas pontas, sem mudar nada do caso comum (sem costura).
   function gruposJanela(R) {
-    var por = {}, js = (R.janelas || []).slice().sort(function (a, b) { return a.ini - b.ini || a.fim - b.fim; });
+    var por = {}, n = R.duracao, js = (R.janelas || []).slice().sort(function (a, b) { return a.ini - b.ini || a.fim - b.fim; }), id, l;
     js.forEach(function (j) {
       var l = por[j.id] || (por[j.id] = []), u = l[l.length - 1];
       if (u && j.ini <= u.fim + 1) u.fim = Math.max(u.fim, j.fim); else l.push({ ini: j.ini, fim: j.fim });
     });
+    for (id in por) {
+      if (!Object.prototype.hasOwnProperty.call(por, id)) continue;
+      l = por[id];
+      if (l.length > 1 && l[0].ini === 0 && l[l.length - 1].fim === n - 1) {
+        l[l.length - 1] = { ini: l[l.length - 1].ini, fim: l[0].fim + n };
+        l.splice(0, 1);
+      }
+    }
     return por;
   }
   // a tabela vale enquanto o D.replay, a rota e o catálogo forem os mesmos objetos; o D.simulacao é lido a cada chamada
@@ -256,7 +267,7 @@
 
   // alarmes: a CapitaoAgora.nivel sobre D.replay.limites no valor mostrado; o `desde` vem da janela do gerador desta volta
   function alarmesDe(p, res, t, v, anc) {
-    var A = Ag(), lim = p.R.limites || {}, alertas = p.R.alertas || {}, js = p.R.janelas || [], out = [], campo, nv, aid, al, ale, j, k, critico = p.R.cenario === 'alarme-critico';
+    var A = Ag(), lim = p.R.limites || {}, alertas = p.R.alertas || {}, js = p.R.janelas || [], out = [], campo, nv, aid, al, ale, j, j0, k, ini, critico = p.R.cenario === 'alarme-critico';
     for (campo in lim) {
       if (!Object.prototype.hasOwnProperty.call(lim, campo)) continue;
       nv = A.nivel(campo, res);
@@ -269,8 +280,14 @@
       if (ale.lado) al.lado = ale.lado;
       j = null;
       for (k = 0; k < js.length; k++) if (js[k].id === aid && js[k].nivel === nv.nivel && js[k].ini <= t && t <= js[k].fim) { j = js[k]; break; }
+      ini = j ? j.ini : t;
+      if (j && j.ini === 0) {   // começa em t = 0 desta volta: pode ser a cauda de uma janela que já ia até o fim da volta anterior (a mesma costura do gruposJanela)
+        j0 = null;
+        for (k = 0; k < js.length; k++) if (js[k].id === aid && js[k].nivel === nv.nivel && js[k].fim === p.n - 1 && js[k].ini !== 0) { j0 = js[k]; break; }
+        if (j0) ini = j0.ini - p.n;
+      }
       al.campo = campo; al.valor = res[campo]; al.limite = nv.limite;
-      al.desde = iso(anc + (v * p.n + (j ? j.ini : t)) * 1000);
+      al.desde = iso(anc + (v * p.n + ini) * 1000);
       out.push(al);
     }
     return out;
@@ -390,7 +407,7 @@
   }
   function janela(id, ms) {
     try {
-      var p = tabela(), s, G, t, base, k, g;
+      var p = tabela(), s, G, t, base, k, g, ativa;
       ms = msDe(ms);
       if (!p || ms === null) return null;
       G = Object.prototype.hasOwnProperty.call(p.grupos, id) ? p.grupos[id] : null;
@@ -399,10 +416,11 @@
       t = s.seg % p.n; base = s.anc + Math.floor(s.seg / p.n) * p.n * 1000;
       for (k = G.length - 1; k >= 0; k--) {   // a última janela que já começou nesta volta…
         g = G[k];
-        if (g.ini <= t) { var ativa = t <= g.fim; return { ativo: ativa, desde: base + g.ini * 1000, ate: ativa ? null : base + (g.fim + 1) * 1000 }; }
+        if (g.ini <= t) { ativa = t <= g.fim; return { ativo: ativa, desde: base + g.ini * 1000, ate: ativa ? null : base + (g.fim + 1) * 1000 }; }
       }
-      g = G[G.length - 1]; base -= p.n * 1000;   // …ou, se nenhuma começou, a da volta anterior
-      return { ativo: false, desde: base + g.ini * 1000, ate: base + (g.fim + 1) * 1000 };
+      g = G[G.length - 1]; base -= p.n * 1000;   // …ou, se nenhuma começou nesta volta: a da volta anterior (cruza a costura se ainda vale em t + n)
+      ativa = g.fim >= p.n && (t + p.n) <= g.fim;
+      return { ativo: ativa, desde: base + g.ini * 1000, ate: ativa ? null : base + (g.fim + 1) * 1000 };
     } catch (e) { return null; }
   }
   function fase(ms) {

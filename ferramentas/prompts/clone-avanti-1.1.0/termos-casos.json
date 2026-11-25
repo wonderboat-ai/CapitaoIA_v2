@@ -34,6 +34,9 @@
    "uns 5 mil reais",
    "30 euros",
    "€ 30",
+   "O abastecimento de hoje custou mil e duzentos reais.",
+   "O preço foi de quinhentos dólares.",
+   "Saiu por cem euros, tudo incluso.",
    "O câmbio do dólar hoje está em 5,40.",
    "O câmbio hoje está em 5,40.",
    "O câmbio comercial está em 5,40.",
@@ -76,7 +79,10 @@
    "Ligue para a marina: (47) 3367-1234",
    "+55 47 99999-0000",
    "fale com joao@marina.com.br",
-   "CPF 123.456.789-00"
+   "CPF 123.456.789-00",
+   "Pode chamar no 47999998888 que é o número da marina.",
+   "O CPF do responsável é 12345678900.",
+   "Chama no (47)999998888 agora."
   ],
   "LOCAL_SEGURANCA": [
    "Os coletes ficam no paiol de proa.",
@@ -89,7 +95,10 @@
    "O Sea\u2011Fire fica na praça de máquinas.",
    "O Sea\u2012Fire fica na praça de máquinas.",
    "O Sea\u2013Fire fica na praça de máquinas.",
-   "O Sea\u2014Fire fica na praça de máquinas."
+   "O Sea\u2014Fire fica na praça de máquinas.",
+   "No paiol de proa você encontra os coletes salva-vidas.",
+   "No armário da cabine ficam os extintores reservas.",
+   "Debaixo do banco do cockpit está a balsa."
   ],
   "VAZIOS": [
    "modelo: n/d",

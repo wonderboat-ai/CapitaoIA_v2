@@ -1,6 +1,6 @@
 # Resíduo da classe «pessoa ao mar / sumida» — fim da Fase 4 (grupo home)
 
-Documento para o proprietário. Interno; não faz parte do app. Escrito em 13/11/2026, sobre o commit `700d9ea`; atualizado em 14/11/2026 com a passada dos 5 bloqueios (seção «Depois da passada», logo antes da recomendação, que agora vale na forma lá registrada).
+Documento para o proprietário. Interno; não faz parte do app. Escrito em 13/11/2026, sobre o commit `700d9ea`; atualizado em 14/11/2026 com a passada dos 5 bloqueios (seção «Depois da passada», logo antes da recomendação, que agora vale na forma lá registrada). Em 25/11/2026 entrou a seção final «Relação com o portão de emergência ambígua (24/11/2026)»; os números deste documento não mudaram.
 
 ## Em uma frase
 
@@ -90,5 +90,14 @@ A passada autorizada na recomendação 2 tratou os itens 1, 2, 3, 13 e 18: a fun
 3. **Critério de aceite por taxa, não por contagem de achados:** matriz fixa com no máximo 3 % de falha (2,68 % hoje); corpus natural de 1.341 frases com no máximo 5 % de falso positivo no mesmo diferencial; zero frases piores que o `f3b121c`. O critério vale para qualquer mudança futura na classe. **Medido em 14/11/2026 sobre o cérebro final:** a matriz e o «zero piores» estão dentro; o falso positivo no corpus natural é de 115 frases (8,6 %): as 86 desta página, que recebem a instrução sem a janela (6,4 %), mais 29 que recebem a instrução com a janela (2,2 %: ofício de terra com «sumiu» ou «não apareceu», «ficou para trás na escala», equipamento de mergulho que «sumiu»). A meta de falso positivo **não foi atingida**; fechar pede a passada dos itens 7 a 10, que é decisão de produto. **O proprietário aceitou assim em 21/11/2026**, sem a passada.
 4. **Os 4 bloqueios de falso positivo (7 a 10) seguem como decisão de produto:** aceitar a instrução do SOS para ofício de terra e para «sumiu da escala/grupo» (seguro, mas incomoda quem só fala de rotina). O item 9 (o diário não deve ligar a janela) continua o único que vale corrigir.
 5. **As três questões da seção anterior: confirmadas pelo proprietário em 21/11/2026**; nenhuma delas muda trava.
+
+## Relação com o portão de emergência ambígua (24/11/2026)
+
+Em 24/11/2026 entrou o portão `riscoEmergAmbigua(qRaw)` (`capitao-brain.js`, bloco logo antes de `route()`; commit `654d632`), irmão de `risco()`: a mesma rede de segunda camada, no mesmo lugar da `route()` (logo depois de `risco(qRaw).n >= 1`), estendida à água, ao incêndio, ao mal-estar de pessoa e à colisão ou perda de governo AMBÍGUOS. Ele **não toca a «pessoa ao mar / sumida»**: `risco()` e `riscoLargo()` ficaram como estavam, e nenhum número deste documento muda (matriz de 58.929 frases, 2,68 %, falso positivo de 8,6 %, 14 achados).
+
+- Na matriz do registro novo (15.240 combinações de 254 perguntas do FAQ com cláusulas ambíguas, `testes/dados/emergencia-ambigua-matriz-20261123.txt`), o perigoso foi de 2.344 (15,38 %) para 281 (1,84 %). Os 281 restantes são todos «pessoa ao mar», o domínio que o portão não toca; água, incêndio, saúde e colisão ficaram em 0. É outra medida: o «perigoso» de lá conta só `pedeIA` verdadeiro ou texto com o quadro, e a «falha» deste documento também reprova rota fora do `sos` ou do fallback seguro e janela sem abrir; os dois números não se somam nem se comparam.
+- Decisão 4 do proprietário, **pendente**: manter os 281 de «pessoa ao mar» como estão. Até a resposta, nem o portão nem a rodada 4 mexem nessa classe.
+- Não confundir com o item 9 acima: ele é a nota de diário da pessoa ao mar (grava e liga a janela). O resíduo do portão novo é a nota de perigo ambíguo («registre no diário: o piso está molhado»), que grava sem a instrução de segurança e entra depois na ficha da IA; depende da decisão 3.
+- A taxa do portão foi aceita pelo proprietário em 25/11/2026 (decisão 1 de 4; as decisões 2, 3 e 4 seguem pendentes). O critério de aceite é por taxa, como neste documento. Medidas, resíduo e a rodada 4: `ferramentas/prompts/clone-avanti-1.1.0/FURO-EMERGENCIA-AMBIGUA.md`.
 
 Valores e modelos do Avanti: nenhum neste documento.

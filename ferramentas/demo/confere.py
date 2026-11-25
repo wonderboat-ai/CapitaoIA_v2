@@ -149,7 +149,10 @@ EXCECOES_MODELO = {'Seakeeper 3': 1}
 REPLAY_CHAVES = ('duracao', 'passo', 'passo_chave', 'cenario', 'ancora_hora', 'voltas_fixo', 'velocidade_media_nos', 'fases', 'chaves', 'ruido', 'fixos',
                  'contadores_base', 'taxas_h', 'por_volta', 'por_dia', 'diesel_piso_l', 'limites', 'alertas', 'janelas', 'diaDeBordo')
 
-TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 80, 'faq-equipamentos.json': 100}   # KB = 1.024 bytes
+TAMANHO_KB = {'capitao-dados.js': 120, 'base-conhecimento.json': 180, 'faq-equipamentos.json': 380}   # KB = 1.024 bytes
+# Orçamento levantado na integração dos 172 cartões de uso dos equipamentos (tarefa #3): base-conhecimento.json foi de ~34 KB/91
+# trechos para 150,5 KB/254 trechos; faq-equipamentos.json foi de ~76,5 KB/91 itens para 319,8 KB/254 itens — o app cresceu de
+# propósito (achado já previsto pelos agentes que escreveram os cartões, item (D) dos respectivos patches).
 DIAS_MESES_PADRAO = {1: 31, 6: 184, 12: 365}
 
 # ——————————————————————————————— regex fixas das asserções ———————————————————————————————
@@ -174,10 +177,15 @@ R_AFIRMA = re.compile(r'(?:^|[^A-Za-zÀ-ÿ])((?:dados?|leituras?|barco|embarca[�
 # (1.236,4 h · 1.600 L · 12.000 · "1.000, 1.500 rpm") fica de fora. Além das do §2.8, a forma do semCoord de hoje
 # (capitao-brain.js: minutos inteiros com o apóstrofo e o hemisfério, 26°59'S), os segundos (26°59'35"), o "º" ordinal no lugar
 # do grau e o par separado por vírgula quando o 1º número tem sinal (-26.993,-48.614: a linha típica de CSV).
+# Emenda de 21/11/2026 (auditoria da 1.1.0): decimal de 2-3 casas com letra do hemisfério sem °, mesmo sozinho (26.991 S);
+# ou duas casas de 3+ decimais, as duas negativas, separadas só por espaço, sem letra (-26.991 -48.634) — igual ao par com
+# vírgula já existente, trocando a vírgula por espaço (nenhuma leitura de bordo é negativa com 3+ casas). Letra só N/S/E/W
+# (sem L/O: colidem com litros e a letra O comum em pt-BR).
 R_COORD = re.compile(r"-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?"
                      r"|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:[\"″”]|''|’’))"
                      r"|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;/]\s*-?\d{1,3}[.,]\d{3,}"
-                     r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}")
+                     r"|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}"
+                     r"|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-\d{1,3}[.,]\d{3,}\s+-?\d{1,3}[.,]\d{3,}")
 # MMSI9 (§6.4, trava §2.2): nunca instrução de programar o MMSI. O verbo no imperativo, no infinitivo ou no gerúndio (o grupo 1
 # ou o 2) na mesma frase que "MMSI", a até 80 letras; "programado(a)" descreve o rádio e passa (protocolos.dsc do §1.3).
 _PROGRAMAR = r'(?<![A-Za-zÀ-ÿ])((?:re)?program(?:e|em|ar|ando|á-l[oa]|e-[oa])(?![A-Za-zÀ-ÿ]))'
@@ -921,8 +929,14 @@ def em(P, seg, ancora_s=ANCORA_REF_S, com_alarmes=True):
             al['sistema'] = a_['sistema']
         if a_.get('lado'):
             al['lado'] = a_['lado']
-        j = next((j for j in R.get('janelas') or [] if j.get('id') == aid and j.get('nivel') == nv['nivel'] and j['ini'] <= t <= j['fim']), None)
-        al.update(campo=campo, valor=res[campo], limite=nv['limite'], desde=_iso_utc(ancora_s + v * n + (j['ini'] if j else t)))
+        js_ = R.get('janelas') or []
+        j = next((j for j in js_ if j.get('id') == aid and j.get('nivel') == nv['nivel'] and j['ini'] <= t <= j['fim']), None)
+        ini = j['ini'] if j else t
+        if j and j['ini'] == 0:   # começa em t = 0 desta volta: pode ser a cauda de uma janela que já ia até o fim da volta anterior (a mesma costura do gruposJanela, em capitao-replay.js)
+            j0 = next((j0 for j0 in js_ if j0.get('id') == aid and j0.get('nivel') == nv['nivel'] and j0['fim'] == n - 1 and j0['ini'] != 0), None)
+            if j0:
+                ini = j0['ini'] - n
+        al.update(campo=campo, valor=res[campo], limite=nv['limite'], desde=_iso_utc(ancora_s + v * n + ini))
         alarmes.append(al)
     res['alarmes'] = alarmes
     return res
@@ -1209,11 +1223,17 @@ def carrega_termos(caminho=PROIBIDOS):
 
 def metades_local(termos):
     """As duas metades da LOCAL_SEGURANCA do proibidos.json, (equipamento, lugar), cada uma como grupo `(?:...)`: a regex pede o
-    equipamento antes do lugar, na mesma frase, a até 60 caracteres. Uma fonte só das duas listas (PROMPT §3), sem lista paralela."""
+    equipamento antes do lugar, na mesma frase, a até 60 caracteres — e, desde a emenda de 21/11/2026 (auditoria), também o
+    lugar antes do equipamento (mesmas duas listas, ordem invertida). Uma fonte só das duas listas (PROMPT §3), sem lista
+    paralela: aqui só EXTRAI as duas, não muda a regra «em qualquer ordem» que lugar_a_bordo()/equip_salvatagem() já aplicam."""
     partes = termos['LOCAL_SEGURANCA'].pattern.split(r'[^.\n]{0,60}')
-    if len(partes) != 2 or not all(p.startswith('(?:') and p.endswith(')') for p in partes):
-        raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar); ajuste metades_local()')
-    return partes
+    if len(partes) == 2 and all(p.startswith('(?:') and p.endswith(')') for p in partes):
+        return partes   # forma antiga, sem a ordem inversa dentro da própria regex
+    if len(partes) == 3 and partes[0] == partes[2]:
+        meio, n = partes[1], (len(partes[1]) - 1) // 2
+        if len(meio) % 2 == 1 and meio[n:n + 1] == '|' and meio[:n] == meio[n + 1:] and meio[:n].startswith('(?:') and meio[:n].endswith(')'):
+            return [partes[0], meio[:n]]
+    raise SystemExit('confere.py: a LOCAL_SEGURANCA do proibidos.json mudou de forma (equipamento[^.\\n]{0,60}lugar, com ou sem a ordem inversa); ajuste metades_local()')
 
 
 def lugar_a_bordo(termos):
@@ -1733,9 +1753,14 @@ def salvatagem_e_lugar(X):
 
 
 def no_minimo(X, t):
-    """Chave de drive.arquivos do trecho, se a seção dele está no mínimo do §1.5 (MINIMO_SEGURANCA); senão None."""
+    """Chave de drive.arquivos do trecho, se a seção dele está no mínimo do §1.5 (MINIMO_SEGURANCA); senão None.
+    g_vhf reaproveita o `fonte` de g_eletronicos (mesmo arquivo-fonte, prefixo de FAQ diferente): sem o filtro por
+    `equip` (FAQ_GUIAS_EQUIP), uma seção '1'/'5' de g_vhf casaria por engano o mínimo de g_eletronicos."""
     for k, secoes in MINIMO_SEGURANCA.items():
         if X.arq.get(k) and t.get('fonte') == X.arq[k]:
+            equip_esperado = FAQ_GUIAS_EQUIP.get(k)
+            if equip_esperado is not None and t.get('equip') != equip_esperado:
+                continue
             sec = t.get('secao') or ''
             if secoes is None or sec in secoes or sec.split(' · ')[0] in secoes:
                 return k
@@ -3578,9 +3603,18 @@ FAQ_TEXTO = ('titulo', 'pergunta', 'resposta', 'acao', 'atencao', 'senao', 'obs'
 # Sem o chip de confiabilidade nem os anexos do Avanti (decisão 8 do §8.2): nada disto existe, em nenhum nível.
 FAQ_PROIBIDAS = {'conf', 'edicao', 'origem', 'selos', 'decisoes', 'limites', 'lacuna', 'lacunas', 'divergencias', 'invalidos', 'alertas'}
 FAQ_TIPOS = ('Guia de bordo', 'Protocolo', 'Boa prática')   # nunca "Manual" nem "Foto"
-FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'), ('EE', 'g_eletrico'),
+FAQ_GUIAS = (('MO', 'g_motores'), ('GE', 'g_gerador'), ('SK', 'g_seakeeper'), ('CL', 'g_clima'), ('EL', 'g_eletronicos'),
+             ('VH', 'g_vhf'), ('EE', 'g_eletrico'),
              ('DS', 'g_dessalinizador'), ('PO', 'g_porao'), ('AN', 'g_ancora'), ('PI', 'g_piloto'), ('RA', 'g_radar'), ('AI', 'g_ais'),
              ('SF', 'g_seafire'), ('EP', 'g_epirb'), ('CK', 'checklist'))   # prefixo → chave de drive.arquivos; id = prefixo + número da seção
+# g_vhf reaproveita o mesmo arquivo-fonte (drive.arquivos) de g_eletronicos (ARQ['g_vhf'] = ARQ['g_eletronicos'] no gerador: VHF é
+# o mesmo guia/manual, só muda o agrupamento do FAQ) — por isso os dois têm o mesmo `fonte`, e o filtro abaixo (por `fonte` sozinho)
+# casaria os trechos dos dois guias num só. O `equip` de cada seção (herdado de GUIAS[chave]['equip']) é diferente entre eles
+# ('Plotters...·Áudio...·Rádios VHF...' para g_eletronicos; só 'Rádios VHF...' para g_vhf) e separa os dois corretamente.
+FAQ_GUIAS_EQUIP = {
+    'g_eletronicos': 'Plotters Garmin GPSMAP 1243xsv · Áudio Fusion MS-UD755 · Rádios VHF Icom IC-M510 e IC-M37',
+    'g_vhf': 'Rádios VHF Icom IC-M510 e IC-M37',
+}
 FAQ_EM = (('EM-01', 'MAYDAY · canal 16'), ('EM-02', 'PAN-PAN'), ('EM-03', 'DSC'), ('EM-04', 'Homem ao mar'), ('EM-05', 'Incêndio · Seafire'),
           ('EM-06', 'Água entrando'), ('EM-07', 'Abandono'), ('EM-08', 'EPIRB'), ('EM-09', 'Salvatagem'))   # id → seção do protocolo
 FAQ_GLOSSARIO = ('SOG', 'STW', 'COG', 'HDG', 'TWS', 'TWA', 'AWA', 'DPT', 'ETA', 'MOB', 'DSC', 'MMSI', 'EPIRB', 'BB/BE')
@@ -3728,7 +3762,9 @@ def a_faq(X):
         esperado.append(iid)
         trecho_de[iid] = por_trecho.get((X.arq.get('protocolo'), sec))
     for pre, chave in FAQ_GUIAS:
-        secoes = [t for t in X.trechos if t.get('fonte') == X.arq.get(chave)]
+        equip_esperado = FAQ_GUIAS_EQUIP.get(chave)
+        secoes = [t for t in X.trechos if t.get('fonte') == X.arq.get(chave) and
+                  (equip_esperado is None or t.get('equip') == equip_esperado)]
         for n, t in enumerate(secoes, 1):
             esperado.append('%s-%02d' % (pre, n))
             trecho_de[esperado[-1]] = t

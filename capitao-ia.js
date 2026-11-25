@@ -154,9 +154,9 @@
   var TERMOS_FONTES = {
     ROTULOS: { src: '\\bSEM (?:DADOS|LEITURA)\\b|\\bMANUAL NO DRIVE\\b|\\bDEMO\\b', flags: '' },
     AUTENTICIDADE: { src: '(?:^|[^A-Za-zÀ-ÿ])(?:dad|leitur|valor|n[uú]mer|telemetri|informa[çc])[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:fict[ií]ci|simulad|inventad|de demonstra[çc][ãa]o)|dados de teste|fict[ií]ci|inventad[oa]s?(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:barc|embarca[çc]|navega[çc]|viage|rota|cen[áa]ri|agenda|guia|registro|mmsi)[A-Za-zÀ-ÿ]*\\s+(?:\\S+\\s+){0,3}?(?:simulad|de demonstra[çc][ãa]o|hipot[ée]tic|ilustrativ|de exemplo)|(?:^|[^A-Za-zÀ-ÿ])(?:é|são|foi|está|estão) (?:uma? )?(?:simula[çc][ãa]o|demonstra[çc][ãa]o)(?! d[oa]s? )|n[ãa]o (?:é|são) (?:reais?|verdadeir[A-Za-zÀ-ÿ]*|de verdade)(?![A-Za-zÀ-ÿ])|\\(demonstra[çc][ãa]o\\)|(?:^|[^A-Za-zÀ-ÿ])(?:na|da|para) demonstra[çc][ãa]o(?! d[oa]s? )|(?:^|[^A-Za-zÀ-ÿ])modo (?:de )?(?:demonstra[çc][ãa]o|simula[çc][ãa]o|demo)(?![A-Za-zÀ-ÿ])', flags: 'i' },
-    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro', flags: 'i' },
-    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b', flags: 'i' },
-    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )', flags: 'i' }
+    DINHEIRO: { src: 'R\\$\\s?\\d|US\\$\\s?\\d|€\\s?\\d|\\d+(?:[.,]\\d+)?\\s?(?:mil\\s+|milh(?:ão|ões)\\s+)?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])|(?:d[óo]lar|euro|cota[çc][ãa]o|pre[çc]o|custa|custo)[^\\n\\d]{0,25}\\d|c[âa]mbio[^\\S\\n]+(?:do|da|de|est[áa]|hoje|comercial|turismo|oficial)(?![A-Za-zÀ-ÿ])[^\\n\\d]{0,25}\\d|c[âa]mbio(?:[^\\S\\n]*:[^\\S\\n]*\\d|(?:[^\\n]{0,24}?[^\\d\\n])?\\d{1,2}[.,]\\d)|\\d+[.,]\\d{2}\\s*(?:o|por|cada)\\s+litro|(?:custa|custou|custo|saiu por|ficou em|pre[çc]o (?:foi|ficou) de)[^\\n]{0,30}?(?:reais|d[óo]lar(?:es)?|euros?)(?![A-Za-zÀ-ÿ])', flags: 'i' },
+    PESSOAIS: { src: '\\(?\\b\\d{2}\\)?\\s?9?\\d{4}[-\\s]?\\d{4}\\b|\\+55\\s?\\d|[\\w.+-]+@[\\w-]+\\.[a-z]{2,}|\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b|\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b|\\b\\d{11}\\b|\\b\\d{14}\\b', flags: 'i' },
+    LOCAL_SEGURANCA: { src: '(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)[^.\\n]{0,60}(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )|(?:popa|proa|paiol|arm[áa]rio|cabine|cockpit|pra[çc]a de m[áa]quinas|gaveta|compartimento|beliche|convés|flybridge|debaixo|embaixo|sob (?:o|a|os|as) )[^.\\n]{0,60}(?:colete|balsa|boia|extintor|sinalizador|foguete|facho|epirb|radiobaliza|sea[- \\u00a0\\u2010-\\u2014]?fire|kit)', flags: 'i' }
   };
   var TERMOS = {};
   Object.keys(TERMOS_FONTES).forEach(function (k) { TERMOS[k] = new RegExp(TERMOS_FONTES[k].src, TERMOS_FONTES[k].flags); });
@@ -168,7 +168,10 @@
   // barco é real», «são leituras verdadeiras», «uso dados reais», «existe de verdade». Fica fora da lista única (TERMOS_FONTES
   // é a das varreduras de tela): só o filtro de saída a usa. «Em tempo real», «velocidade real», «norte verdadeiro» e a frase
   // padrão do «Sobre o app» passam. A mesma regex nos dois Workers e nas duas cópias do cliente.
-  var AFIRMA_REAL = /(?:^|[^A-Za-zÀ-ÿ])(?:é|são)[\s,]+(?:(?:sim|mesmo|realmente|totalmente|todos|todas|tudo|de fato|uma?|os?|as?)[\s,]+){0,3}(?:(?:dados?|leituras?|n[uú]meros?|valores|informa[çc](?:ão|ões)|telemetria|barco|embarca[çc]ão|lancha|navega[çc]ão|viagem)\s+)?(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:dados|leituras|informa[çc]ões|telemetria|barco|embarca[çc]ão|lancha)\s+(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|exist(?:e|em)\s+de verdade/i;
+  // Emenda de 21/11/2026 (auditoria): «cenário real»/«rota real» soltos (sem é/são) também são barrados — só na 2ª
+  // alternativa. NÃO entram na 1ª (com é/são): ela aceita um artigo solto entre é/são e o substantivo («é o valor real
+  // medido pelo sensor», que é PASSA) — testado e descartado por isso, a mesma razão de número/valor não entrarem ali.
+  var AFIRMA_REAL = /(?:^|[^A-Za-zÀ-ÿ])(?:é|são)[\s,]+(?:(?:sim|mesmo|realmente|totalmente|todos|todas|tudo|de fato|uma?|os?|as?)[\s,]+){0,3}(?:(?:dados?|leituras?|n[uú]meros?|valores|informa[çc](?:ão|ões)|telemetria|barco|embarca[çc]ão|lancha|navega[çc]ão|viagem)\s+)?(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|(?:^|[^A-Za-zÀ-ÿ])(?:dados|leituras|informa[çc]ões|telemetria|barco|embarca[çc]ão|lancha|rota|cen[áa]rio)\s+(?:rea(?:l|is)|verdadeir[oa]s?|de verdade|aut[êe]ntic[oa]s?)(?![A-Za-zÀ-ÿ])|exist(?:e|em)\s+de verdade/i;
   function filtroSaida(t) {
     t = String(t == null ? '' : t);
     if (TERMOS.ROTULOS.test(t) || TERMOS.AUTENTICIDADE.test(t) || AFIRMA_REAL.test(t)) return 'rotulo';
@@ -182,7 +185,11 @@
   // ficha, a leitura, cada mensagem do histórico e cada trecho — e ANTES do corte (cortar primeiro deixaria meia coordenada).
   // A mesma regra do semCoord do capitao-brain.js e dos Workers: graus-minutos com vírgula ou ponto, decimais com 4 ou mais
   // casas ou em par — e nunca o milhar do pt-BR (1.236,4 h, 1.600 L, 12.000).
-  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}/g;
+  // Emenda de 21/11/2026 (auditoria): decimal de 2-3 casas com letra do hemisfério sem °, mesmo sozinho (26.991 S); ou duas
+  // casas de 3+ decimais, as duas negativas, separadas só por espaço, sem letra (-26.991 -48.634) — igual ao par com
+  // vírgula já existente, trocando a vírgula por espaço (nenhuma leitura de bordo é negativa com 3+ casas). Letra só
+  // N/S/E/W (sem L/O: colidem com litros e a letra O comum em pt-BR).
+  var COORD_RX = /-?\d{1,3}\s*[°º]\s*\d{1,2}\s*[,.]\s*\d+\s*['′’]?\s*[NSEWLO]?|-?\d{1,3}\s*[°º]\s*\d{1,2}\s*['′’]\s*(?:[NSEWLO]|\d{1,2}(?:[,.]\d+)?\s*(?:["″”]|''|’’))|-?\d{1,3}[.,]\d{4,}(?!\d)|-?\d{1,3}[.,]\d{3,}\s*[;\/]\s*-?\d{1,3}[.,]\d{3,}|-\d{1,3}[.,]\d{3,}\s*,\s*-?\d{1,3}[.,]\d{3,}|-?\d{1,3}[.,]\d{2,}\s*[NSEW](?![A-Za-zÀ-ÿ])|-\d{1,3}[.,]\d{3,}\s+-?\d{1,3}[.,]\d{3,}/g;
   var SEM_COORD = '(coordenadas só na tela do app)', SEM_COORD_PAR = /\(coordenadas só na tela do app\)(?:\s*[,;\/·]?\s*\(coordenadas só na tela do app\))+/g;
   function semCoord(s) { return String(s == null ? '' : s).replace(COORD_RX, SEM_COORD).replace(SEM_COORD_PAR, SEM_COORD); }
   function semCoordSe(v) { return typeof v === 'string' ? semCoord(v) : v; } // fonte, página e seção: null continua null
