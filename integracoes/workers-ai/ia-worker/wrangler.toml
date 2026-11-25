@@ -1,8 +1,11 @@
-# PUBLICADO em 27/09/2026: https://capitao-ia.luka-araujos.workers.dev (painel da Cloudflare; este arquivo espelha o painel).
+# PUBLICADO em 27/09/2026: https://capitao-ia.luka-araujos.workers.dev (painel da Cloudflare; este arquivo espelha o painel, menos as emendas da auditoria descritas abaixo).
 # 1.0.5: o worker.js ganhou ficha de bordo + histórico (conversa) — mesmas variáveis; código colado no painel em 27/09/2026 (versão bd5b8774).
 # 1.1.0: modo simulação (campo `modo`) — mesmas variáveis; publicado em 21/11/2026 pela API oficial da Cloudflare, só o código
 #        (PUT …/workers/scripts/capitao-ia/content, token do proprietário restrito a Workers Scripts), versão c0e4a850;
 #        a anterior, bd5b8774, fica nos Deployments para desfazer.
+# Emendas da auditoria da 1.1.0 (commits c492944 e 392332a, 21/11/2026) em cinco expressões do filtro do worker.js (AFIRMA_REAL, COORD_RX,
+#        LOCAL_SEGURANCA, DINHEIRO, PESSOAIS): código pronto, ainda não publicado; o código no ar é o da 1.1.0 sem elas. O id da versão
+#        que as publicar só entra aqui depois de publicado. Um `wrangler deploy` desta pasta já as levaria no ar.
 # Alternativa GRATUITA ao claude-api: publique ESTE ou o claude-api com o nome capitao-ia (mesmo endereço, mesmo cliente).
 # Publicar (precisa de Node.js): npx wrangler deploy   (dentro desta pasta) — sem dependências para instalar.
 # Segredo: npx wrangler secret put CHAVE_APP   (não há chave de API: o binding AI autentica pela conta Cloudflare)

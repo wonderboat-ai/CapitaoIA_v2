@@ -3,7 +3,7 @@
 Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google (Cloud, Drive, Workspace), GitHub, Claude API e ElevenLabs.
 **Tudo o que tem segredo vem desligado.** Nenhuma tela carrega arquivos desta pasta. O registro legível por máquina está em [`integracoes.json`](integracoes.json).
 
-## Status (14/11/2026 · app 1.1.0)
+## Status (25/11/2026 · app 1.1.0)
 
 | Integração | Status | Onde |
 |---|---|---|
@@ -16,13 +16,13 @@ Estrutura para conectar o assistente a Cloudflare (inclusive Workers AI), Google
 | Voz do aparelho (Web Speech) | **ativo** | `capitao-brain.js`, `capitao-voz.js` |
 | WhatsApp / e-mail (convites) | **ativo** · link do aparelho | `capitao-brain.js › linkConvite` |
 | Base de bordo (trechos dos guias) | **ativo** · offline | `base-conhecimento.json` |
-| Google Drive › Capitão IA v2 (fontes simuladas) | **ativo** · privado · arquivos da 1.1.0 a reenviar pelo proprietário | [google-drive/](google-drive/README.md) |
+| Google Drive › Capitão IA v2 (fontes simuladas) | **ativo** · privado · as 25 fontes da 1.1.0 reenviadas em 21/11/2026 (registro do `CLAUDE.md`); 12 guias mudaram em 22/11/2026 (FAQ de 91 para 254 itens, branch do PR #13) e, pela regra do `CLAUDE.md`, precisam ser reenviados pelo proprietário | [google-drive/](google-drive/README.md) |
 | Proxy da telemetria (`capitao-telemetria`) | **preparado · desligado** · o quadro simulado já tem o formato que o coletor real deve usar | [telemetria-worker/](telemetria-worker/README.md), `capitao-telemetria.js` |
 | Coletor NMEA → Drive | a definir (equipamento ainda não escolhido) | [telemetria-worker/](telemetria-worker/README.md) |
 | Google Cloud · conta de serviço | planejado | [google-cloud/](google-cloud/README.md) |
 | Login no servidor (Cloudflare Access ou repo privado) | planejado | [cloudflare/](cloudflare/README.md) |
-| IA na nuvem grátis · Workers AI (`capitao-ia`) | **ativo na simulação** (1.0.4; conversa com ficha de bordo e histórico na 1.0.5) · Llama 3.3 70B · AI Gateway com 30 perguntas/hora · entra quando o app não tem resposta pronta, no trecho do guia e na pergunta sobre o app, no chat e na voz · **1.1.0 (modo simulação) no ar desde 21/11/2026** (versão `c0e4a850`, só o código trocado; como publicar e desfazer no `workers-ai/README.md`) · aparelho ativa com `#ia=ativar` ou o botão **Ativar IA na nuvem** (caixa para colar a chave) | [workers-ai/](workers-ai/README.md) |
-| IA na nuvem paga · Claude API (`capitao-ia`) | **estrutura** · desligada · mesmo código 1.1.0 do Workers AI | [claude-api/](claude-api/README.md) |
+| IA na nuvem grátis · Workers AI (`capitao-ia`) | **ativo na simulação** (1.0.4; conversa com ficha de bordo e histórico na 1.0.5) · Llama 3.3 70B · AI Gateway com 30 perguntas/hora · entra quando o app não tem resposta pronta, no trecho do guia e na pergunta sobre o app, no chat e na voz · **1.1.0 (modo simulação) no ar desde 21/11/2026** (versão `c0e4a850`, só o código trocado; código no ar conferido de novo em 25/11/2026; como publicar e desfazer no `workers-ai/README.md`) · **emendas da auditoria (`c492944` e `392332a`) no `worker.js` do repositório: código pronto, ainda não publicado** · aparelho ativa com `#ia=ativar` ou o botão **Ativar IA na nuvem** (caixa para colar a chave) | [workers-ai/](workers-ai/README.md) |
+| IA na nuvem paga · Claude API (`capitao-ia`) | **estrutura** · desligada, nada publicado · mesmo código do Workers AI no repositório (1.1.0 com as emendas da auditoria) | [claude-api/](claude-api/README.md) |
 | ElevenLabs (`capitao-voz`) | **opcional** · estrutura desligada | [elevenlabs/](elevenlabs/README.md) |
 | NotebookLM | planejado (não configurado) | `capitao-brain.js › BASE` |
 | Gemini (documentos sensíveis) | planejado | `CLAUDE.md › Privacidade` |
@@ -57,7 +57,7 @@ O site é estático e público. Por isso:
 1. Login no servidor — [cloudflare/](cloudflare/README.md) (Access) ou [github/](github/README.md) (repositório privado).
 2. Conta de serviço Google — [google-cloud/](google-cloud/README.md).
 3. Telemetria ao vivo — [telemetria-worker/](telemetria-worker/README.md).
-4. IA na nuvem — [workers-ai/](workers-ai/README.md) (grátis, **já ligada na simulação como exceção aprovada**; falta colar o Worker 1.1.0) ou [claude-api/](claude-api/README.md) (paga): mesmo cliente, publique uma das duas.
+4. IA na nuvem — [workers-ai/](workers-ai/README.md) (grátis, **já ligada na simulação como exceção aprovada**; Worker 1.1.0 no ar desde 21/11/2026; emendas da auditoria: código pronto, ainda não publicado) ou [claude-api/](claude-api/README.md) (paga): mesmo cliente, publique uma das duas.
 5. Documentos sensíveis — [google-drive/](google-drive/README.md).
 6. Voz em nuvem (opcional) — [elevenlabs/](elevenlabs/README.md).
 

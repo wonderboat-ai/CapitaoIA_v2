@@ -4,7 +4,7 @@ O Drive é a **fonte de verdade** do projeto. O site nunca lê o Drive direto (�
 
 ## Pasta `Capitão IA v2` (criada em 26/09/2026 · privada · só o dono)
 
-Hoje com os **dados simulados completos da 1.1.0** (embarcação, equipamentos, guias, agenda e histórico), gerados por `ferramentas/demo/gerar_demo.py` e **sem rótulo de demonstração** nos títulos nem no texto. Os IDs ficam fora do repositório. **Os arquivos novos de `ferramentas/demo/fontes/` ainda precisam ser reenviados ao Drive pelo proprietário** (as cópias de 26/09/2026 têm o rótulo antigo e o Seakeeper §6 antigo); nenhum ID entra no repositório.
+Hoje com os **dados simulados completos da 1.1.0** (embarcação, equipamentos, guias, agenda e histórico), gerados por `ferramentas/demo/gerar_demo.py` e **sem rótulo de demonstração** nos títulos nem no texto. Os IDs ficam fora do repositório. **As 25 fontes de `ferramentas/demo/fontes/` foram reenviadas em 21/11/2026 a pedido do proprietário** (registro do `CLAUDE.md`, «Pendências conhecidas»; as 14 cópias de 26/09/2026, com o rótulo antigo e o Seakeeper §6 antigo, foram para a pasta «99 Arquivo — cópias de 26-09-2026 (versão anterior)», sem apagar). **Doze dos 14 guias de bordo mudaram em 22/11/2026** (a expansão do FAQ dos equipamentos de 91 para 254 itens, commit `e8f50a2`, PR #13; só `Guia de bordo — EPIRB` e `Guia de bordo — Sistema fixo de incêndio` ficaram iguais): pela regra do `CLAUDE.md`, o proprietário precisa reenviar essas fontes do mesmo jeito (as cópias de 21/11/2026 vão para a pasta de arquivo); nenhum reenvio delas está registrado. Nenhum ID entra no repositório.
 
 | Pasta | Arquivo | Uso no app | Pode ir ao site público? |
 |---|---|---|---|

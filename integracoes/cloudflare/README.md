@@ -1,11 +1,11 @@
 # Cloudflare — Workers (borda) e Access (login no servidor)
 
-## Workers do projeto (todos desligados)
+## Workers do projeto (só o `capitao-ia` grátis está publicado, ligado na simulação; os outros, desligados)
 
 | Worker | Pasta | Status | Segredos | Variáveis |
 |---|---|---|---|---|
 | `capitao-telemetria` | `integracoes/telemetria-worker/` | preparado · desligado | `GOOGLE_SA_KEY`, `CHAVE_APP`, `DRIVE_FILE_ID` | `GOOGLE_SA_EMAIL`, `ORIGENS` |
-| `capitao-ia` (grátis) | `integracoes/workers-ai/ia-worker/` | **publicado · ligado na simulação** (1.0.4; 1.1.0 no ar desde 21/11/2026, versão `c0e4a850`) | `CHAVE_APP` (sem chave de API: binding `AI`) | `MODELO`, `MAX_TOKENS`, `GATEWAY`, `ORIGENS` |
+| `capitao-ia` (grátis) | `integracoes/workers-ai/ia-worker/` | **publicado · ligado na simulação** (1.0.4; 1.1.0 no ar desde 21/11/2026, versão `c0e4a850`; emendas da auditoria no `worker.js`: código pronto, ainda não publicado) | `CHAVE_APP` (sem chave de API: binding `AI`) | `MODELO`, `MAX_TOKENS`, `GATEWAY`, `ORIGENS` |
 | `capitao-ia` (paga) | `integracoes/claude-api/ia-worker/` | estrutura · desligado | `ANTHROPIC_API_KEY`, `CHAVE_APP` | `MODELO`, `ESFORCO`, `ORIGENS` |
 | `capitao-voz` | `integracoes/elevenlabs/voz-worker/` | estrutura · opcional | `ELEVENLABS_API_KEY`, `CHAVE_APP` | `ELEVENLABS_VOICE_ID`, `MODELO`, `ORIGENS` |
 

@@ -4,6 +4,8 @@ Nada publicado, nenhuma tela chama. **Alternativa gratuita com o mesmo contrato 
 Sem IA, o chat e a voz respondem **só no aparelho**: resposta pronta (`ANSWERS`) → trecho da base de bordo (`buscaBase`) → resposta de bordo com número e hora (na simulação) ou **SEM DADOS** (modo real).
 Com a IA (hoje o proxy ligado é o do Workers AI), ela entra no SEM DADOS, no trecho do guia e na pergunta sobre o app — no chat e na conversa por voz —, com a ficha de bordo e o histórico. Na 1.1.0 este Worker tem o mesmo `SISTEMA_SIMULACAO`, a mesma escolha por `corpo.modo`, o mesmo filtro de saída (502 com `parou` `rotulo`, `privacidade` ou `seguranca`), o filtro de coordenadas e a ficha de até 16.000 letras (12.000 no modo real) do proxy do Workers AI; `testes/worker_ia.py` confere que o texto de sistema é igual nos dois. Não substitui as respostas prontas nem o SOS: emergência continua roteada no aparelho, offline. Detalhes em [`workers-ai/`](../workers-ai/README.md).
 
+**Estado deste Worker: estrutura, nada publicado** (não há versão no ar para comparar). O `ia-worker/worker.js` já traz as emendas da auditoria de 21/11/2026 (commits `c492944` e `392332a`, PR #13) nas mesmas cinco expressões do Workers AI (`AFIRMA_REAL`, `COORD_RX`, `LOCAL_SEGURANCA`, `DINHEIRO`, `PESSOAIS`; o resumo de cada uma está na seção 1.1.0 do [`workers-ai/README.md`](../workers-ai/README.md)). O filtro tem sete expressões: essas cinco mais `ROTULOS` e `AUTENTICIDADE`, que não mudaram; as sete são idênticas às do `workers-ai/ia-worker/worker.js` (conferido em 25/11/2026). Quem publicar este Worker no lugar do outro leva as emendas junto. No Workers AI, que está no ar sem elas, elas são código pronto, ainda não publicado.
+
 ## Arquivos
 
 | Arquivo | O que é |
